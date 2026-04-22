@@ -1,48 +1,108 @@
 {
   "expo": {
-    "name": "Testting",
+    "name": "The Deft Crew",
     "slug": "Testting",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "testting",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "version": "1.0.1",
+    "orientation": "default",
+    "icon": "./assets/tdc.png",
+    "scheme": "tdcapp",
+    "backgroundColor": "#000000",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/tdc.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#000000"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aqkhan110.tdc",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "This app needs access to the microphone to record voice messages.",
+        "NSLocationWhenInUseUsageDescription": "This app needs access to your location to share it in chat."
+      }
     },
     "android": {
+      "package": "com.aqkhan110.tdc",
+      "versionCode": 8,
+      "permissions": [
+        "INTERNET",
+        "RECORD_AUDIO",
+        "ACCESS_FINE_LOCATION",
+        "FOREGROUND_SERVICE",
+    "FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_MEDIA_LOCATION"
+      ],
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/tdc.png",
+        "backgroundColor": "#000000"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
-    },
-    "plugins": [
-      "expo-router",
-      [
-        "expo-splash-screen",
+      "intentFilters": [
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
+          "action": "VIEW",
+          "data": {
+            "scheme": "geo"
+          }
+        },
+        {
+          "action": "VIEW",
+          "data": {
+            "scheme": "https",
+            "host": "www.google.com",
+            "pathPrefix": "/maps"
           }
         }
       ]
+    },
+    "web": {
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-build-properties",
+         {
+    "android": {
+      "hermesEnabled": true,
+      "compileSdkVersion": 34,
+      "targetSdkVersion": 34,
+      "minSdkVersion": 24
+    },
+    "ios": {
+      "hermesEnabled": true
+    }
+  }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow TDC App to access your microphone."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow TDC App to use your location."
+        }
+      ],
+      "expo-navigation-bar"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    }
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "112506b0-7553-4a1b-afeb-6a37019cc15f"
+      }
+    },
+    "owner": "aqkhan622"
   }
 }
