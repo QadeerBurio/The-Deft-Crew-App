@@ -1,252 +1,447 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { 
   Text, 
   View, 
   StyleSheet, 
   TouchableOpacity, 
-  Dimensions, 
   ScrollView,
-  StatusBar
+  StatusBar,
+  Animated
 } from "react-native";
-import { Ionicons, MaterialCommunityIcons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import BaseScreen from "./BaseScreen";
-
-const { width } = Dimensions.get("window");
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function AboutScreen() {
   const navigation = useNavigation();
 
-  // Updated Feature Grid Data
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const headerFade = useRef(new Animated.Value(0)).current;
+  const heroScale = useRef(new Animated.Value(0.85)).current;
+  const slideUpAnim = useRef(new Animated.Value(30)).current;
+  const featureAnims = useRef([...Array(4)].map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(headerFade, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.spring(slideUpAnim, { toValue: 0, friction: 6, tension: 40, useNativeDriver: true }),
+      Animated.spring(heroScale, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true }),
+      ...featureAnims.map((anim, i) =>
+        Animated.sequence([
+          Animated.delay(300 + i * 100),
+          Animated.spring(anim, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true }),
+        ])
+      ),
+    ]).start();
+  }, []);
+
   const features = [
-    { id: 1, title: "Student Deals", desc: "Exclusive discounts tailored for students.", icon: "school", color: "#FFB300" },
-    { id: 2, title: "Career Hub", desc: "Top-tier internships and job opportunities.", icon: "briefcase-variant", color: "#00A86B" },
-    { id: 3, title: "Student Travel", desc: "Curated budget-friendly travel packages.", icon: "airplane", color: "#E53935" },
-    { id: 4, title: "Global Exchange", desc: "Access to international study programs.", icon: "earth", color: "#7B1FA2" },
+    { id: 1, title: "Student Deals", desc: "Exclusive discounts tailored for students.", icon: "school-outline", color: "#f9c349" },
+    { id: 2, title: "Career Hub", desc: "Top-tier internships and job opportunities.", icon: "briefcase-check-outline", color: "#f9c349" },
+    { id: 3, title: "Student Travel", desc: "Curated budget-friendly travel packages.", icon: "airplane-takeoff", color: "#f9c349" },
+    { id: 4, title: "Global Exchange", desc: "Access to international study programs.", icon: "earth-arrow-right", color: "#f9c349" },
   ];
 
-  return (
-    <BaseScreen>
-      <StatusBar barStyle="dark-content" />
-      
-      {/* Sleek Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-          <Ionicons name="arrow-back" size={24} color="#000000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>About TDC</Text>
-        <View style={{ width: 40 }} /> 
+  const FeatureCard = ({ item, index }) => (
+    <Animated.View style={[styles.featureBox, {
+      opacity: featureAnims[index],
+      transform: [
+        { scale: featureAnims[index].interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) },
+        { translateY: featureAnims[index].interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
+      ],
+    }]}>
+      <View style={[styles.featureIconBox, { backgroundColor: item.color + '15' }]}>
+        <MaterialCommunityIcons name={item.icon} size={28} color={item.color} />
       </View>
+      <Text style={styles.featureTitle}>{item.title}</Text>
+      <Text style={styles.featureDesc}>{item.desc}</Text>
+      <View style={[styles.featureAccentBar, { backgroundColor: item.color }]} />
+    </Animated.View>
+  );
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.container}>
-        
-        {/* Hero Section */}
-        <View style={styles.heroCard}>
-          <View style={styles.logoCircle}>
-             <Text style={{fontSize:25, fontWeight:'800', color:"white", fontFamily:"Cardo"}}>tdc</Text>
-          </View>
-          <Text style={styles.brandName}>The Deft Crew</Text>
-          <View style={styles.taglineBadge}>
-            <Text style={styles.taglineText}>THE STUDENT ECOSYSTEM</Text>
-          </View>
-          <Text style={styles.heroDesc}>
-            We’re building Pakistan's largest 
-            <Text style={{fontWeight: '700'}}> student community</Text>. From savings to 
-            career growth, tdc is your ultimate lifestyle partner.
-          </Text>
-        </View>
+  return (
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      
+      {/* Header */}
+      <Animated.View style={[styles.header, { opacity: headerFade }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
+          <Ionicons name="chevron-back" size={24} color="#1a1a1a" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>About tdc</Text>
+        <View style={{ width: 38 }} />
+      </Animated.View>
 
-        {/* Value Propositions */}
-        <Text style={styles.sectionLabel}>WHAT'S INSIDE THE CREW?</Text>
-        <View style={styles.benefitWrapper}>
-          {[
-            { text: "Verified student-only marketplace.", icon: "check-decagram" },
-            { text: "Seamless, paperless redemption.", icon: "qrcode-scan" },
-            { text: "Community-driven networking.", icon: "account-group" }
-          ].map((item, index) => (
-            <View key={index} style={styles.benefitItem}>
-              <View style={styles.checkIcon}>
-                <MaterialCommunityIcons name={item.icon} size={20} color="#08634f" />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <Animated.View style={{ opacity: fadeAnim }}>
+          
+          {/* Hero Section */}
+          <Animated.View style={[styles.heroCard, { transform: [{ scale: heroScale }] }]}>
+            <View style={styles.heroGradient}>
+              <View style={styles.heroLogoCircle}>
+                <Text style={styles.heroLogoText}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
               </View>
-              <Text style={styles.benefitItemText}>{item.text}</Text>
+              <Text style={styles.heroBrandName}>The Deft Crew</Text>
+              <View style={styles.heroTaglineBadge}>
+                <Text style={styles.heroTaglineText}>THE STUDENT ECOSYSTEM</Text>
+              </View>
+              <Text style={styles.heroDesc}>
+                We're building Pakistan's largest{' '}
+                <Text style={{ fontWeight: '800', color: '#f9c349' }}>student community</Text>
+                . From savings to career growth, tdc is your ultimate lifestyle partner.
+              </Text>
+              
+              {/* Decorative Line */}
+              <View style={styles.decorLine}>
+                <View style={styles.decorSegment} />
+                <View style={styles.decorDiamond} />
+                <View style={styles.decorSegment} />
+              </View>
             </View>
-          ))}
-        </View>
+          </Animated.View>
 
-        {/* Feature Grid - Modern 2x2 */}
-        <Text style={styles.sectionLabel}>CORE PILLARS</Text>
-        <View style={styles.grid}>
-          {features.map((item) => (
-            <TouchableOpacity key={item.id} activeOpacity={0.9} style={styles.featureBox}>
-              <View style={[styles.iconBox, { backgroundColor: item.color + '15' }]}>
-                <MaterialCommunityIcons name={item.icon} size={32} color={item.color} />
-              </View>
-              <Text style={styles.featureTitle}>{item.title}</Text>
-              <Text style={styles.featureDesc}>{item.desc}</Text>
-              <View style={[styles.accentBar, { backgroundColor: item.color }]} />
-            </TouchableOpacity>
-          ))}
-        </View>
+          {/* Value Propositions */}
+          <Animated.View style={[styles.valuesSection, { transform: [{ translateY: slideUpAnim }] }]}>
+            <Text style={styles.sectionTitle}>
+              <View style={styles.sectionDot} />
+              What's Inside The Crew?
+            </Text>
+            <View style={styles.valuesCard}>
+              {[
+                { text: "Verified student-only marketplace.", icon: "shield-check-outline" },
+                { text: "Seamless, paperless redemption.", icon: "cellphone-wireless" },
+                { text: "Community-driven networking.", icon: "account-group-outline" }
+              ].map((item, index) => (
+                <View key={index} style={[styles.valueItem, index < 2 && styles.valueItemBorder]}>
+                  <View style={styles.valueIconBox}>
+                    <MaterialCommunityIcons name={item.icon} size={20} color="#f9c349" />
+                  </View>
+                  <Text style={styles.valueText}>{item.text}</Text>
+                  <Ionicons name="checkmark-circle" size={18} color="#f9c349" style={styles.valueCheck} />
+                </View>
+              ))}
+            </View>
+          </Animated.View>
 
-        <View style={{ height: 50 }} />
+          {/* Core Pillars */}
+          <View style={styles.pillarsSection}>
+            <Text style={styles.sectionTitle}>
+              <View style={styles.sectionDot} />
+              Core Pillars
+            </Text>
+            <View style={styles.grid}>
+              {features.map((item, index) => (
+                <FeatureCard key={item.id} item={item} index={index} />
+              ))}
+            </View>
+          </View>
+
+          {/* Mission Statement */}
+          <Animated.View style={[styles.missionCard, { transform: [{ translateY: slideUpAnim }] }]}>
+            <View style={styles.missionIconCircle}>
+              <MaterialCommunityIcons name="target" size={28} color="#f9c349" />
+            </View>
+            <Text style={styles.missionTitle}>Our Mission</Text>
+            <Text style={styles.missionText}>
+              To empower every student in Pakistan with access to exclusive savings, career opportunities, 
+              and a network that accelerates their professional growth.
+            </Text>
+          </Animated.View>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text style={styles.footerLogo}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
+            <Text style={styles.footerText}>Building a Stronger Student Economy</Text>
+          </View>
+        </Animated.View>
       </ScrollView>
-    </BaseScreen>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  
+  // Header
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 15,
-    paddingVertical: 15,
-    backgroundColor: "#fff",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    backgroundColor: '#fff',
+  },
+  headerBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#f8f8f8',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "800",
-    color: "#1A1A1A",
-    textTransform: "uppercase",
-    letterSpacing: 1,
+    fontWeight: '800',
+    color: '#1a1a1a',
+    letterSpacing: 0.5,
   },
-  iconBtn: {
-    padding: 8,
-    backgroundColor: "#F0F5F4",
-    borderRadius: 12,
+  scrollContent: {
+    paddingBottom: 40,
   },
-  container: {
-    padding: 20,
-  },
+  
+  // Hero
   heroCard: {
-    backgroundColor: "#000000",
-    borderRadius: 30,
-    padding: 30,
-    alignItems: "center",
-    marginBottom: 30,
+    margin: 16,
+    borderRadius: 24,
+    overflow: 'hidden',
     elevation: 10,
-    shadowColor: "#08634f",
-    shadowOffset: { width: 0, height: 10 },
+    shadowColor: "#f9c349",
+    shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.3,
-    shadowRadius: 20,
+    shadowRadius: 15,
   },
-  logoCircle: {
+  heroGradient: {
+    padding: 28,
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+  },
+  heroLogoCircle: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(249, 195, 73, 0.15)",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.3)",
+    borderWidth: 2,
+    borderColor: "rgba(249, 195, 73, 0.3)",
+    marginBottom: 16,
   },
-  brandName: {
+  heroLogoText: {
     fontSize: 28,
+    fontWeight: '900',
+    color: '#fff',
+  },
+  heroBrandName: {
+    fontSize: 22,
     fontWeight: "900",
     color: "#fff",
-    marginTop: 15,
+    marginBottom: 8,
   },
-  taglineBadge: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+  heroTaglineBadge: {
+    backgroundColor: "rgba(249, 195, 73, 0.15)",
+    paddingHorizontal: 14,
+    paddingVertical: 5,
     borderRadius: 20,
-    marginTop: 5,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "rgba(249, 195, 73, 0.3)",
   },
-  taglineText: {
-    color: "#FFB300",
+  heroTaglineText: {
+    color: "#f9c349",
     fontSize: 10,
-    fontWeight: "bold",
-    letterSpacing: 1.5,
+    fontWeight: "900",
+    letterSpacing: 2,
   },
   heroDesc: {
-    color: "#E0F2F1",
-    fontSize: 15,
-    textAlign: "center",
-    marginTop: 20,
-    lineHeight: 22,
-    opacity: 0.9,
-  },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#999",
-    letterSpacing: 2,
-    marginBottom: 15,
-    marginLeft: 5,
-  },
-  benefitWrapper: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 15,
-    marginBottom: 30,
-    borderWidth: 1,
-    borderColor: "#F0F0F0",
-  },
-  benefitItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-  },
-  checkIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: "#E8F5E9",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 15,
-  },
-  benefitItemText: {
+    color: "rgba(255,255,255,0.7)",
     fontSize: 14,
-    color: "#333",
-    fontWeight: "600",
+    textAlign: "center",
+    lineHeight: 21,
+    fontWeight: '500',
+    paddingHorizontal: 5,
+  },
+  decorLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  decorSegment: {
+    width: 25,
+    height: 1.5,
+    backgroundColor: '#f9c349',
+    borderRadius: 1,
+  },
+  decorDiamond: {
+    width: 6,
+    height: 6,
+    backgroundColor: '#f9c349',
+    transform: [{ rotate: '45deg' }],
+    marginHorizontal: 8,
+  },
+  
+  // Values Section
+  valuesSection: {
+    paddingHorizontal: 16,
+    marginTop: 8,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#1a1a1a',
+    marginBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sectionDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#f9c349',
+    marginRight: 10,
+  },
+  valuesCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#f0f0f0',
+  },
+  valueItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  valueItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  valueIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#f9c34915',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  valueText: {
+    fontSize: 13,
+    color: '#1a1a1a',
+    fontWeight: '600',
+    flex: 1,
+  },
+  valueCheck: {
+    marginLeft: 8,
+  },
+  
+  // Pillars Section
+  pillarsSection: {
+    paddingHorizontal: 16,
+    marginTop: 24,
   },
   grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
   featureBox: {
-    width: (width - 55) / 2,
+    width: '47%',
     backgroundColor: "#fff",
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 15,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
-    overflow: "hidden",
-  },
-  iconBox: {
-    width: 60,
-    height: 60,
     borderRadius: 20,
+    padding: 18,
+    marginBottom: 14,
+    borderWidth: 2,
+    borderColor: '#f0f0f0',
+    elevation: 4,
+    shadowColor: "#f9c349",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    overflow: "hidden",
+    position: 'relative',
+  },
+  featureIconBox: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 15,
+    marginBottom: 12,
   },
   featureTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#1A1A1A",
-    marginBottom: 5,
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#1a1a1a",
+    marginBottom: 4,
   },
   featureDesc: {
-    fontSize: 12,
-    color: "#777",
-    lineHeight: 18,
+    fontSize: 11,
+    color: "#666",
+    lineHeight: 16,
+    fontWeight: '500',
   },
-  accentBar: {
+  featureAccentBar: {
     position: "absolute",
     bottom: 0,
-    left: 20,
-    right: 20,
+    left: 18,
+    right: 18,
     height: 3,
-    borderTopLeftRadius: 5,
-    borderTopRightRadius: 5,
-    opacity: 0.5,
+    borderTopLeftRadius: 3,
+    borderTopRightRadius: 3,
+    opacity: 0.6,
+  },
+  
+  // Mission
+  missionCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 24,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#f0f0f0',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: "#f9c349",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  missionIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 18,
+    backgroundColor: '#f9c34915',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  missionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1a1a1a',
+    marginBottom: 8,
+  },
+  missionText: {
+    fontSize: 13,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  
+  // Footer
+  footer: {
+    alignItems: 'center',
+    marginTop: 28,
+    paddingVertical: 10,
+  },
+  footerLogo: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#1a1a1a',
+  },
+  footerText: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 4,
+    fontWeight: '500',
   },
 });

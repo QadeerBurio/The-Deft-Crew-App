@@ -1,49 +1,239 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
-  StyleSheet,
-  Text,
-  View,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  FlatList,
-  Image,
-  Modal,
- 
-  StatusBar,
-  KeyboardAvoidingView,
-  Platform,
-  Dimensions,
-  Share,
   ActivityIndicator,
   Alert,
+  Animated,
+  Dimensions,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  Share,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
-
-const { width, height } = Dimensions.get("window");
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
+const { height } = Dimensions.get("window");
 const API_BASE = "https://the-deft-crew-production.up.railway.app/api/events";
-
-const CATEGORIES = ["All", "Hackathons", "Workshops", "Conferences", "Competitions", "Career Fairs"];
-
+const CATEGORIES = [
+  "All",
+  "Hackathons",
+  "Workshops",
+  "Conferences",
+  "Competitions",
+  "Career Fairs",
+];
+const FALLBACK_BANNER =
+  "https://images.unsplash.com/photo-1523240715632-d984bb4b970e?w=1200";
+const COLORS = {
+  page: "#ffffff",
+  pageAlt: "#f7f7f7",
+  ink: "#000000",
+  body: "#232323",
+  muted: "#6b6b6b",
+  line: "#e8e8e8",
+  card: "#ffffff",
+  surface: "#fafafa",
+  primary: "#000000",
+  secondary: "#f9c349",
+  accent: "#f9c349",
+  danger: "#b42318",
+  goldSoft: "#fff4cf",
+  overlayDark: "rgba(0,0,0,0.76)",
+};
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+const formatCategoryLabel = (cat) => (cat === "All" ? "All Events" : cat);
+const SkeletonCard = () => {
+  const opacity = useRef(new Animated.Value(0.35)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 0.8,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0.35,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [opacity]);
+  return (
+    <Animated.View style={[styles.skeletonCard, { opacity }]}>
+      <View style={styles.skeletonImage} />
+      <View style={styles.skeletonContent}>
+        <View style={styles.skeletonTitle} />
+        <View style={styles.skeletonText} />
+        <View style={styles.skeletonTextShort} />
+        <View style={styles.skeletonFooter}>
+          <View style={styles.skeletonButton} />
+        </View>
+      </View>
+    </Animated.View>
+  );
+};
+const SkeletonList = () => (
+  <View style={styles.listContent}>
+    {[1, 2, 3].map((item) => (
+      <SkeletonCard key={item} />
+    ))}
+  </View>
+);
+const EventCard = ({ item, index, onOpen, onRegister }) => {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(22)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 320,
+        delay: index * 70,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 320,
+        delay: index * 70,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [index, opacity, translateY]);
+  const animatePress = (toValue) => {
+    Animated.spring(scale, {
+      toValue,
+      friction: 8,
+      tension: 90,
+      useNativeDriver: true,
+    }).start();
+  };
+  return (
+    <AnimatedTouchable
+      activeOpacity={0.92}
+      onPress={() => onOpen(item)}
+      onPressIn={() => animatePress(0.985)}
+      onPressOut={() => animatePress(1)}
+      style={[
+        styles.card,
+        {
+          opacity,
+          transform: [{ translateY }, { scale }],
+        },
+      ]}
+    >
+      <View style={styles.cardMedia}>
+        <Image source={{ uri: item.image || FALLBACK_BANNER }} style={styles.cardImage} />
+        <LinearGradient
+          colors={["rgba(0,0,0,0.08)", COLORS.overlayDark]}
+          style={styles.cardOverlay}
+        >
+          <View style={styles.cardTopRow}>
+            <View style={styles.categoryChip}>
+              <Ionicons name="sparkles-outline" size={13} color={COLORS.ink} />
+              <Text style={styles.categoryChipText}>{item.type || "Event"}</Text>
+            </View>
+            <View style={styles.timeChip}>
+              <Ionicons name="time-outline" size={12} color={COLORS.accent} />
+              <Text style={styles.timeChipText}>{item.deadline || "Open"}</Text>
+            </View>
+          </View>
+          <View>
+            <Text style={styles.cardTitle} numberOfLines={2}>
+              {item.title}
+            </Text>
+            <Text style={styles.cardDescription} numberOfLines={2}>
+              {item.description ||
+                "A polished student event experience with practical networking and real growth opportunities."}
+            </Text>
+          </View>
+        </LinearGradient>
+      </View>
+      <View style={styles.cardBody}>
+        <View style={styles.metaRow}>
+          <View style={styles.metaChip}>
+            <Ionicons name="business-outline" size={14} color={COLORS.ink} />
+            <Text style={styles.metaChipText} numberOfLines={1}>
+              {item.organizer || "Organizer"}
+            </Text>
+          </View>
+          <View style={styles.metaChip}>
+            <Ionicons name="location-outline" size={14} color={COLORS.accent} />
+            <Text style={styles.metaChipText} numberOfLines={1}>
+              {item.city || "City"}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.statsPanel}>
+          <View style={styles.statsBlock}>
+            <Text style={styles.statsLabel}>Prize Pool</Text>
+            <Text style={styles.statsValue}>{item.prize || "TBD"}</Text>
+          </View>
+          <View style={styles.statsDivider} />
+          <View style={styles.statsBlock}>
+            <Text style={styles.statsLabel}>Team Size</Text>
+            <Text style={styles.statsValue}>{item.teamSize || "1-4 Members"}</Text>
+          </View>
+        </View>
+        <View style={styles.cardFooter}>
+          <View style={styles.dateBox}>
+            <Text style={styles.dateLabel}>Event Date</Text>
+            <Text style={styles.dateValue}>{item.date || "To be announced"}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.ctaButton}
+            activeOpacity={0.88}
+            onPress={() => onRegister(item)}
+          >
+            <LinearGradient
+              colors={[COLORS.primary, "#2d2d2d"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.ctaGradient}
+            >
+              <Text style={styles.ctaText}>Register</Text>
+              <Ionicons name="arrow-forward" size={16} color={COLORS.accent} />
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </AnimatedTouchable>
+  );
+};
 export default function EventsScreen() {
   const { token, user } = useContext(AuthContext);
   const navigation = useNavigation();
-  
   const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isModalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [activeTab, setActiveTab] = useState("All");
   const [userEventsCount, setUserEventsCount] = useState(0);
-  
-  // Post Event Form State
+  const [registerEvent, setRegisterEvent] = useState(null);
+  const headerScrollY = useRef(new Animated.Value(0)).current;
+  const entranceOpacity = useRef(new Animated.Value(0)).current;
+  const entranceTranslate = useRef(new Animated.Value(24)).current;
+  const glowOpacity = useRef(new Animated.Value(0)).current;
   const [form, setForm] = useState({
     title: "",
     university: "",
@@ -57,75 +247,92 @@ export default function EventsScreen() {
     date: "",
     teamSize: "",
   });
-
-  // Registration Form State
-  const [registerEvent, setRegisterEvent] = useState(null);
   const [regForm, setRegForm] = useState({
     studentName: "",
     whatsapp: "",
     studentId: "",
     email: "",
   });
-
   useEffect(() => {
     if (user?.name) {
-      setRegForm(prev => ({ ...prev, studentName: user.name }));
+      setRegForm((prev) => ({ ...prev, studentName: user.name }));
     }
     if (user?.email) {
-      setRegForm(prev => ({ ...prev, email: user.email }));
+      setRegForm((prev) => ({ ...prev, email: user.email }));
     }
-    fetchEvents();
-    fetchUserEventsCount();
+    bootstrap();
   }, []);
-
-  const fetchEvents = async () => {
+  const bootstrap = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const res = await axios.get(`${API_BASE}/feed`);
-      setEvents(res.data);
-    } catch (e) {
-      console.error("Fetch Error", e);
-      Alert.alert("Error", "Failed to fetch events");
+      await Promise.all([fetchEvents(true), fetchUserEventsCount()]);
+      runEntranceAnimations();
     } finally {
       setLoading(false);
+    }
+  };
+  const runEntranceAnimations = () => {
+    entranceOpacity.setValue(0);
+    entranceTranslate.setValue(24);
+    glowOpacity.setValue(0);
+    Animated.parallel([
+      Animated.timing(entranceOpacity, {
+        toValue: 1,
+        duration: 420,
+        useNativeDriver: true,
+      }),
+      Animated.timing(entranceTranslate, {
+        toValue: 0,
+        duration: 420,
+        useNativeDriver: true,
+      }),
+      Animated.timing(glowOpacity, {
+        toValue: 1,
+        duration: 650,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+  const fetchEvents = async (isInitial = false) => {
+    try {
+      if (!isInitial) {
+        setRefreshing(true);
+      }
+      const res = await axios.get(`${API_BASE}/feed`);
+      setEvents(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.error("Fetch Error", error);
+      Alert.alert("Error", "Failed to fetch events");
+    } finally {
       setRefreshing(false);
     }
   };
-
   const fetchUserEventsCount = async () => {
     if (!token) return;
     try {
       const res = await axios.get(`${API_BASE}/my-events`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      setUserEventsCount(res.data.length);
-    } catch (e) {
-      console.error("Fetch user events count error:", e);
+      setUserEventsCount(Array.isArray(res.data) ? res.data.length : 0);
+    } catch (error) {
+      console.error("Fetch user events count error:", error);
     }
   };
-
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    fetchEvents();
-    fetchUserEventsCount();
+    await Promise.all([fetchEvents(), fetchUserEventsCount()]);
   };
-
   const pickImage = async () => {
-    // const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    // if (status !== 'granted') {
-    //   Alert.alert('Permission Needed', 'Please grant camera roll permissions to upload images');
-    //   return;
-    // }
-    
-    let result = await ImagePicker.launchImageLibraryAsync({
+    const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.7,
     });
-    if (!result.canceled) setSelectedImage(result.assets[0].uri);
+    if (!result.canceled) {
+      setSelectedImage(result.assets[0].uri);
+    }
   };
-
   const uploadToCloudinary = async (imageUri) => {
     const data = new FormData();
     data.append("file", {
@@ -135,38 +342,51 @@ export default function EventsScreen() {
     });
     data.append("upload_preset", "tdc_profiles");
     data.append("cloud_name", "decaxpera");
-
     try {
-      let res = await fetch("https://api.cloudinary.com/v1_1/decaxpera/image/upload", {
+      const res = await fetch("https://api.cloudinary.com/v1_1/decaxpera/image/upload", {
         method: "post",
         body: data,
       });
-      let result = await res.json();
+      const result = await res.json();
       return result.secure_url;
-    } catch (err) {
-      console.error("Cloudinary Error:", err);
+    } catch (error) {
+      console.error("Cloudinary Error:", error);
       return null;
     }
   };
-
+  const resetCreateForm = () => {
+    setSelectedImage(null);
+    setForm({
+      title: "",
+      university: "",
+      city: "",
+      type: "Hackathons",
+      prize: "",
+      deadline: "",
+      description: "",
+      location: "",
+      contact: "",
+      date: "",
+      teamSize: "",
+    });
+  };
   const handlePostEvent = async () => {
     if (!form.title || !form.university || !form.city) {
-      Alert.alert("Validation Error", "Please fill all required fields (Title, University, City)");
+      Alert.alert("Validation Error", "Please fill Title, University, and City.");
       return;
     }
     if (!token) {
-      Alert.alert("Authentication Error", "Please login first");
+      Alert.alert("Authentication Error", "Please login first.");
       return;
     }
-
-    setLoading(true);
-    let imageUrl = "https://images.unsplash.com/photo-1523240715632-d984bb4b970e?w=800";
-
+    setSubmitting(true);
+    let imageUrl = FALLBACK_BANNER;
     if (selectedImage) {
       const uploaded = await uploadToCloudinary(selectedImage);
-      if (uploaded) imageUrl = uploaded;
+      if (uploaded) {
+        imageUrl = uploaded;
+      }
     }
-
     try {
       const eventData = {
         title: form.title,
@@ -180,67 +400,44 @@ export default function EventsScreen() {
         contact: form.contact || user?.email || "contact@event.com",
         image: imageUrl,
         date: form.date || new Date().toLocaleDateString(),
-        teamSize: form.teamSize || "1-4 Members"
+        teamSize: form.teamSize || "1-4 Members",
       };
-
-      const res = await axios.post(
-        `${API_BASE}/create`,
-        eventData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      setEvents([res.data, ...events]);
-      setUserEventsCount(prev => prev + 1);
-      setModalVisible(false);
-      setSelectedImage(null);
-      setForm({
-        title: "",
-        university: "",
-        city: "",
-        type: "Hackathons",
-        prize: "",
-        deadline: "",
-        description: "",
-        location: "",
-        contact: "",
-        date: "",
-        teamSize: "",
+      const res = await axios.post(`${API_BASE}/create`, eventData, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      Alert.alert("Success", "Event Published Successfully!");
-    } catch (e) {
-      console.error(e);
-      Alert.alert("Error", e.response?.data?.message || "Failed to publish event");
+      setEvents((prev) => [res.data, ...prev]);
+      setUserEventsCount((prev) => prev + 1);
+      setModalVisible(false);
+      resetCreateForm();
+      Alert.alert("Success", "Event published successfully.");
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", error.response?.data?.message || "Failed to publish event");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
-
   const handleRegistrationSubmit = async () => {
     if (!regForm.studentName || !regForm.email || !regForm.whatsapp) {
-      Alert.alert("Validation Error", "Please fill all required fields");
+      Alert.alert("Validation Error", "Please fill all required fields.");
       return;
     }
     if (!token) {
-      Alert.alert("Authentication Error", "Please login to register");
+      Alert.alert("Authentication Error", "Please login to register.");
       return;
     }
-    
     try {
       const registrationData = {
         eventId: registerEvent._id,
         studentName: regForm.studentName,
         email: regForm.email,
         whatsapp: regForm.whatsapp,
-        studentId: regForm.studentId || "Not provided"
+        studentId: regForm.studentId || "Not provided",
       };
-
-      await axios.post(
-        `${API_BASE}/register`,
-        registrationData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      Alert.alert("Success", "Registration Successful!");
+      await axios.post(`${API_BASE}/register`, registrationData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      Alert.alert("Success", "Registration successful.");
       setRegisterEvent(null);
       setRegForm({
         studentName: user?.name || "",
@@ -248,462 +445,648 @@ export default function EventsScreen() {
         studentId: "",
         email: user?.email || "",
       });
-    } catch (e) {
-      console.error(e);
-      Alert.alert("Error", e.response?.data?.error || "Registration failed");
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", error.response?.data?.error || "Registration failed");
     }
   };
-
   const onShare = async (title) => {
     try {
       await Share.share({
-        message: `Check out this event: ${title} on CampusFlow!`,
-        title: title,
+        message: `Check out this event: ${title} on tdc. Campuses.`,
+        title,
       });
     } catch (error) {
       console.error(error);
     }
   };
-
-  const EventCard = ({ item }) => (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      style={styles.card}
-      onPress={() => setSelectedEvent(item)}
-    >
-      <Image source={{ uri: item.image }} style={styles.cardImage} />
-      <View style={styles.cardOverlay}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{item.type}</Text>
-        </View>
-      </View>
-      <View style={styles.cardBody}>
-        <Text style={styles.eventTitle}>{item.title}</Text>
-        <View style={styles.metaRow}>
-          <Ionicons name="location-outline" size={14} color="#6366f1" />
-          <Text style={styles.metaText}>
-            {item.organizer} • {item.city}
-          </Text>
-        </View>
-        <View style={styles.cardFooter}>
-          <View>
-            <Text style={styles.prizeLabel}>Prize</Text>
-            <Text style={styles.prizeAmount}>{item.prize || "TBD"}</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.mainBtn}
-            onPress={(e) => {
-              e.stopPropagation();
-              setRegisterEvent(item);
-            }}
-          >
-            <Text style={styles.mainBtnText}>Register</Text>
-            <Ionicons name="arrow-forward" size={16} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-
-  if (loading && events.length === 0) {
+  const filteredEvents = useMemo(() => {
+    if (activeTab === "All") return events;
+    return events.filter((event) => event.type === activeTab);
+  }, [activeTab, events]);
+  const heroOpacity = headerScrollY.interpolate({
+    inputRange: [0, 120],
+    outputRange: [1, 0.96],
+    extrapolate: "clamp",
+  });
+  const heroTranslate = headerScrollY.interpolate({
+    inputRange: [0, 120],
+    outputRange: [0, -6],
+    extrapolate: "clamp",
+  });
+  if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6366f1" />
-      </View>
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <StatusBar barStyle="dark-content" backgroundColor={COLORS.page} />
+        <Animated.View style={[styles.glowTop, { opacity: glowOpacity }]} />
+        <Animated.View style={[styles.glowBottom, { opacity: glowOpacity }]} />
+        <View style={styles.loadingHeaderWrap}>
+          <LinearGradient
+            colors={["#000000", "#1a1a1a", "#2a2a2a"]}
+            style={styles.loadingHeader}
+          >
+            <Text style={styles.loadingHeaderLabel}>Campus Opportunity Network</Text>
+            <Text style={styles.loadingHeaderTitle}>Loading events</Text>
+            <Text style={styles.loadingHeaderText}>
+              Bringing in the latest campus opportunities for you.
+            </Text>
+          </LinearGradient>
+        </View>
+        <SkeletonList />
+      </SafeAreaView>
     );
   }
-
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.brand}>tdc. Campuses</Text>
-          <Text style={styles.subBrand}>Explore Student Opportunities</Text>
-        </View>
-        <View style={styles.headerButtons}>
-          
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={() => setModalVisible(true)}
-          >
-            <Ionicons name="add" size={28} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.notificationBtn}
-            onPress={() => navigation.navigate('EventNotification')}
-          >
-            <Ionicons name="notifications-outline" size={24} color="#000000" />
-            {userEventsCount > 0 && (
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>{userEventsCount}</Text>
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.page} />
+      <Animated.View style={[styles.glowTop, { opacity: glowOpacity }]} />
+      <Animated.View style={[styles.glowBottom, { opacity: glowOpacity }]} />
+      <Animated.View
+        style={[
+          styles.heroShell,
+          {
+            opacity: heroOpacity,
+            transform: [{ translateY: heroTranslate }],
+          },
+        ]}
+      >
+        <LinearGradient
+          colors={["#000000", "#181818", "#262626"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroCard}
+        >
+          <View style={styles.heroNoise} />
+          <View style={styles.navRow}>
+            <View style={styles.brandRow}>
+              <View style={styles.brandBadge}>
+                <Text style={styles.brandTitle}>
+                  tdc<Text style={{ color: COLORS.accent }}>.</Text>
+                </Text>
               </View>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Categories Tab */}
-      <View style={styles.tabScrollArea}>
+              <View>
+                <Text style={styles.brandTitle}>Campuses</Text>
+              </View>
+            </View>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.iconButton}
+                activeOpacity={0.86}
+                onPress={() => setModalVisible(true)}
+              >
+                <Ionicons name="add" size={21} color={COLORS.accent} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.iconButtonSoft}
+                activeOpacity={0.86}
+                onPress={() => navigation.navigate("EventNotification")}
+              >
+                <Ionicons name="notifications-outline" size={20} color="#fff" />
+                {userEventsCount > 0 ? (
+                  <View style={styles.notificationDot}>
+                    <Text style={styles.notificationDotText}>{userEventsCount}</Text>
+                  </View>
+                ) : null}
+              </TouchableOpacity>
+            </View>
+          </View>
+          <Animated.View
+            style={[
+              styles.heroContent,
+              {
+                opacity: entranceOpacity,
+                transform: [{ translateY: entranceTranslate }],
+              },
+            ]}
+          >
+            <Text style={styles.heroLabel}>Campus Opportunity Network</Text>
+            <View style={styles.heroStats}>
+              <View style={styles.heroStat}>
+                <Text style={styles.heroStatNumber}>{events.length}</Text>
+                <Text style={styles.heroStatText}>Live events</Text>
+              </View>
+              <View style={styles.heroStat}>
+                <Text style={styles.heroStatNumber}>{userEventsCount}</Text>
+                <Text style={styles.heroStatText}>Your posts</Text>
+              </View>
+              <View style={styles.heroStat}>
+                <Text style={styles.heroStatNumber}>{CATEGORIES.length - 1}</Text>
+                <Text style={styles.heroStatText}>Categories</Text>
+              </View>
+            </View>
+          </Animated.View>
+        </LinearGradient>
+      </Animated.View>
+      <View style={styles.filterSection}>
+        <Text style={styles.sectionTitle}>Browse by category</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabContent}
+          contentContainerStyle={styles.filtersRow}
         >
-          {CATEGORIES.map((cat) => (
-            <TouchableOpacity
-              key={cat}
-              onPress={() => setActiveTab(cat)}
-              style={[styles.pill, activeTab === cat && styles.pillActive]}
-            >
-              <Text
-                style={[
-                  styles.pillText,
-                  activeTab === cat && styles.pillTextActive,
-                ]}
+          {CATEGORIES.map((cat) => {
+            const active = activeTab === cat;
+            return (
+              <TouchableOpacity
+                key={cat}
+                style={[styles.filterPill, active && styles.filterPillActive]}
+                activeOpacity={0.84}
+                onPress={() => setActiveTab(cat)}
               >
-                {cat}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                {active ? (
+                  <LinearGradient
+                    colors={[COLORS.primary, "#2a2a2a"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={StyleSheet.absoluteFillObject}
+                  />
+                ) : null}
+                <Text style={[styles.filterPillText, active && styles.filterPillTextActive]}>
+                  {formatCategoryLabel(cat)}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
-
-      {/* Events List */}
-      <FlatList
-        data={
-          activeTab === "All"
-            ? events
-            : events.filter((e) => e.type === activeTab)
-        }
-        keyExtractor={(item) => item._id}
-        renderItem={({ item }) => <EventCard item={item} />}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-        refreshing={refreshing}
-        onRefresh={onRefresh}
-      />
-
-      {/* Event Details Modal */}
+      <Animated.View
+        style={[
+          styles.feedSection,
+          {
+            opacity: entranceOpacity,
+            transform: [{ translateY: entranceTranslate }],
+          },
+        ]}
+      >
+        <FlatList
+          data={filteredEvents}
+          keyExtractor={(item) => item._id}
+          renderItem={({ item, index }) => (
+            <EventCard
+              item={item}
+              index={index}
+              onOpen={setSelectedEvent}
+              onRegister={setRegisterEvent}
+            />
+          )}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: headerScrollY } } }],
+            { useNativeDriver: false }
+          )}
+          scrollEventThrottle={16}
+          ListEmptyComponent={
+            !refreshing && (
+              <View style={styles.emptyState}>
+                <LinearGradient
+                  colors={["#ffffff", COLORS.goldSoft]}
+                  style={styles.emptyIconCircle}
+                >
+                  <Ionicons name="calendar-clear-outline" size={54} color={COLORS.ink} />
+                </LinearGradient>
+                <Text style={styles.emptyTitle}>No events found</Text>
+                <Text style={styles.emptyText}>
+                  Switch categories or publish the first standout event for your community.
+                </Text>
+                <TouchableOpacity
+                  style={styles.emptyButton}
+                  activeOpacity={0.86}
+                  onPress={() => setModalVisible(true)}
+                >
+                  <LinearGradient
+                    colors={[COLORS.primary, "#2a2a2a"]}
+                    style={styles.emptyButtonGradient}
+                  >
+                    <Text style={styles.emptyButtonText}>Create Event</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            )
+          }
+        />
+      </Animated.View>
       <Modal visible={!!selectedEvent} animationType="slide" onRequestClose={() => setSelectedEvent(null)}>
-        {selectedEvent && (
-          <View style={styles.detailWrapper}>
-            <ScrollView bounces={false}>
-              <Image
-                source={{ uri: selectedEvent.image }}
-                style={styles.detailImg}
-              />
-              <TouchableOpacity
-                style={styles.detailClose}
-                onPress={() => setSelectedEvent(null)}
-              >
-                <Ionicons name="close" size={24} color="#000" />
-              </TouchableOpacity>
-
-              <View style={styles.detailContent}>
-                <View style={styles.detailHeader}>
-                  <Text style={styles.detailType}>{selectedEvent.type}</Text>
-                  <View style={styles.actionIcons}>
-                    <TouchableOpacity onPress={() => onShare(selectedEvent.title)}>
-                      <Ionicons name="share-social-outline" size={24} color="#000000" />
-                    </TouchableOpacity>
+        {selectedEvent ? (
+          <View style={styles.detailScreen}>
+            <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+              <View>
+                <Image
+                  source={{ uri: selectedEvent.image || FALLBACK_BANNER }}
+                  style={styles.detailBanner}
+                />
+                <LinearGradient
+                  colors={["rgba(0,0,0,0.08)", "rgba(0,0,0,0.90)"]}
+                  style={styles.detailBannerOverlay}
+                />
+                <TouchableOpacity
+                  onPress={() => setSelectedEvent(null)}
+                  activeOpacity={0.86}
+                  style={styles.backButtonWrap}
+                >
+                  <BlurView intensity={90} style={styles.roundGlass}>
+                    <Ionicons name="arrow-back" size={21} color={COLORS.accent} />
+                  </BlurView>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.detailBody}>
+                <View style={styles.detailTopRow}>
+                  <View style={styles.detailTag}>
+                    <Ionicons name="sparkles-outline" size={14} color={COLORS.ink} />
+                    <Text style={styles.detailTagText}>{selectedEvent.type}</Text>
                   </View>
+                  <TouchableOpacity
+                    style={styles.shareButton}
+                    activeOpacity={0.86}
+                    onPress={() => onShare(selectedEvent.title)}
+                  >
+                    <Ionicons name="share-social-outline" size={19} color={COLORS.ink} />
+                  </TouchableOpacity>
                 </View>
-
                 <Text style={styles.detailTitle}>{selectedEvent.title}</Text>
                 <View style={styles.detailOrgRow}>
-                  <Ionicons name="business" size={18} color="#94a3b8" />
+                  <Ionicons name="business-outline" size={16} color={COLORS.accent} />
                   <Text style={styles.detailOrgText}>
-                    {selectedEvent.organizer} • {selectedEvent.city}
+                    {selectedEvent.organizer || "Organizer"} • {selectedEvent.city || "City"}
                   </Text>
                 </View>
-
-                <View style={styles.specGrid}>
-                  <View style={styles.specBox}>
-                    <Ionicons name="calendar-outline" size={20} color="#000000" />
-                    <Text style={styles.specLabel}>Date</Text>
-                    <Text style={styles.specValue}>{selectedEvent.date || "TBA"}</Text>
+                <View style={styles.specRow}>
+                  <View style={styles.specCard}>
+                    <View style={styles.specIcon}>
+                      <Ionicons name="calendar-outline" size={20} color={COLORS.accent} />
+                    </View>
+                    <Text style={styles.specTitle}>Date</Text>
+                    <Text style={styles.specText}>{selectedEvent.date || "TBA"}</Text>
                   </View>
-                  <View style={styles.specBox}>
-                    <Ionicons name="people-outline" size={20} color="#000000" />
-                    <Text style={styles.specLabel}>Team Size</Text>
-                    <Text style={styles.specValue}>
-                      {selectedEvent.teamSize || "1-4 Members"}
-                    </Text>
+                  <View style={[styles.specCard, styles.specCardLast]}>
+                    <View style={styles.specIcon}>
+                      <Ionicons name="people-outline" size={20} color={COLORS.accent} />
+                    </View>
+                    <Text style={styles.specTitle}>Team</Text>
+                    <Text style={styles.specText}>{selectedEvent.teamSize || "1-4"}</Text>
                   </View>
                 </View>
-
-                <Text style={styles.detailHeading}>Description</Text>
-                <Text style={styles.detailDesc}>
-                  {selectedEvent.description || "No description provided."}
-                </Text>
-
-                <Text style={styles.detailHeading}>Location & Venue</Text>
-                <Text style={styles.detailDesc}>{selectedEvent.location || "Online Event"}</Text>
-
-                <Text style={styles.detailHeading}>Contact Info</Text>
-                <Text style={styles.detailDesc}>{selectedEvent.contact || "Not provided"}</Text>
-
+                <View style={styles.sectionCard}>
+                  <Text style={styles.sectionCardTitle}>Description</Text>
+                  <Text style={styles.sectionCardBody}>
+                    {selectedEvent.description || "No description provided."}
+                  </Text>
+                </View>
+                <View style={styles.sectionCard}>
+                  <Text style={styles.sectionCardTitle}>Location</Text>
+                  <Text style={styles.sectionCardBody}>
+                    {selectedEvent.location || "Online event"}
+                  </Text>
+                </View>
+                <View style={styles.sectionCard}>
+                  <Text style={styles.sectionCardTitle}>Contact</Text>
+                  <Text style={styles.sectionCardBody}>
+                    {selectedEvent.contact || "Not provided"}
+                  </Text>
+                </View>
                 <View style={{ height: 120 }} />
               </View>
             </ScrollView>
-
-            <View style={styles.bottomSticky}>
-              <View>
-                <Text style={styles.deadlineLabel}>Register Before</Text>
-                <Text style={styles.deadlineDate}>
-                  {selectedEvent.deadline || "Limited Spots"}
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.finalRegBtn}
-                onPress={() => {
-                  setSelectedEvent(null);
-                  setRegisterEvent(selectedEvent);
-                }}
-              >
-                <Text style={styles.finalRegText}>Register Now</Text>
-              </TouchableOpacity>
+            <View style={styles.stickyFooter}>
+              <BlurView intensity={92} style={styles.stickyBlur}>
+                <View style={styles.stickyContent}>
+                  <View>
+                    <Text style={styles.stickyLabel}>Register before</Text>
+                    <Text style={styles.stickyValue}>
+                      {selectedEvent.deadline || "Limited Spots"}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    activeOpacity={0.88}
+                    onPress={() => {
+                      const eventToRegister = selectedEvent;
+                      setSelectedEvent(null);
+                      setTimeout(() => setRegisterEvent(eventToRegister), 260);
+                    }}
+                  >
+                    <LinearGradient
+                      colors={[COLORS.primary, "#2a2a2a"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.stickyButton}
+                    >
+                      <Text style={styles.stickyButtonText}>Register Now</Text>
+                      <Ionicons name="rocket-outline" size={18} color={COLORS.accent} />
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </BlurView>
             </View>
           </View>
-        )}
+        ) : null}
       </Modal>
-
-      {/* Registration Form Modal */}
-      <Modal visible={!!registerEvent} animationType="slide" onRequestClose={() => setModalVisible(false)}>
-      <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={{ flex: 1 }}
-          >
-        {registerEvent && (
-          <SafeAreaView style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Event Registration</Text>
-              <TouchableOpacity onPress={() => setRegisterEvent(null)}>
-                <Ionicons name="close" size={30} color="#64748b" />
-              </TouchableOpacity>
-              
-            </View>
-            <ScrollView style={styles.form}>
-              <Text style={styles.regTitle}>
-                Registering for: {registerEvent.title}
-              </Text>
-              
-              <Text style={styles.label}>Full Name *</Text>
-              <TextInput 
-                style={styles.input} 
-                placeholder="Enter your full name"
-                value={regForm.studentName}
-                onChangeText={(text) => setRegForm({...regForm, studentName: text})}
-              />
-              
-              <Text style={styles.label}>University Email *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="student@university.edu"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={regForm.email}
-                onChangeText={(text) => setRegForm({...regForm, email: text})}
-              />
-              
-              <Text style={styles.label}>WhatsApp Number *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="+92 3XX XXXXXXX"
-                keyboardType="phone-pad"
-                value={regForm.whatsapp}
-                onChangeText={(text) => setRegForm({...regForm, whatsapp: text})}
-              />
-              
-              <Text style={styles.label}>Student ID / CNIC</Text>
-              <TextInput 
-                style={styles.input} 
-                placeholder="Optional"
-                value={regForm.studentId}
-                onChangeText={(text) => setRegForm({...regForm, studentId: text})}
-              />
-
-              <TouchableOpacity
-                style={styles.submitBtn}
-                onPress={handleRegistrationSubmit}
+      <Modal visible={!!registerEvent} animationType="slide" onRequestClose={() => setRegisterEvent(null)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+        >
+          {registerEvent ? (
+            <SafeAreaView style={styles.modalScreen} edges={["bottom"]}>
+              <LinearGradient
+                colors={["#000000", "#1a1a1a", "#2a2a2a"]}
+                style={styles.modalHero}
               >
-                <Text style={styles.submitBtnText}>Submit Registration</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </SafeAreaView>
-        )}
+                <View style={styles.modalHeroTop}>
+                  <View style={styles.modalHeroTitleRow}>
+                    <Ionicons name="clipboard-outline" size={24} color={COLORS.accent} />
+                    <Text style={styles.modalHeroTitle}>Event Registration</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.modalClose}
+                    onPress={() => setRegisterEvent(null)}
+                    activeOpacity={0.86}
+                  >
+                    <Ionicons name="close" size={25} color={COLORS.accent} />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.modalHeroSubtitle}>{registerEvent.title}</Text>
+              </LinearGradient>
+              <ScrollView style={styles.formScrollView} showsVerticalScrollIndicator={false}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Full Name *</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="Enter your full name"
+                    placeholderTextColor="#8a8a8a"
+                    value={regForm.studentName}
+                    onChangeText={(text) => setRegForm({ ...regForm, studentName: text })}
+                  />
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>University Email *</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="student@university.edu"
+                    placeholderTextColor="#8a8a8a"
+                    value={regForm.email}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    onChangeText={(text) => setRegForm({ ...regForm, email: text })}
+                  />
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>WhatsApp Number *</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="+92 3XX XXXXXXX"
+                    placeholderTextColor="#8a8a8a"
+                    keyboardType="phone-pad"
+                    value={regForm.whatsapp}
+                    onChangeText={(text) => setRegForm({ ...regForm, whatsapp: text })}
+                  />
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Student ID / CNIC</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="Optional"
+                    placeholderTextColor="#8a8a8a"
+                    value={regForm.studentId}
+                    onChangeText={(text) => setRegForm({ ...regForm, studentId: text })}
+                  />
+                </View>
+                <TouchableOpacity
+                  style={styles.primaryFormButton}
+                  activeOpacity={0.88}
+                  onPress={handleRegistrationSubmit}
+                >
+                  <LinearGradient
+                    colors={[COLORS.primary, "#2a2a2a"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.primaryFormGradient}
+                  >
+                    <Text style={styles.primaryFormText}>Submit Registration</Text>
+                    <Ionicons name="checkmark-circle-outline" size={22} color={COLORS.accent} />
+                  </LinearGradient>
+                </TouchableOpacity>
+                <View style={{ height: 36 }} />
+              </ScrollView>
+            </SafeAreaView>
+          ) : null}
         </KeyboardAvoidingView>
       </Modal>
-
-      {/* Create Event Modal */}
       <Modal
         visible={isModalVisible}
         animationType="slide"
         presentationStyle="pageSheet"
+        onRequestClose={() => setModalVisible(false)}
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1 }}
         >
-          <SafeAreaView style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Create New Event</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close-circle" size={32} color="#cbd5e1" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
-              <Text style={styles.label}>Event Title *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., National Coding Competition"
-                onChangeText={(t) => setForm({ ...form, title: t })}
-                value={form.title}
-              />
-
-              <View style={styles.formRow}>
-                <View style={{ flex: 1, marginRight: 10 }}>
-                  <Text style={styles.label}>University/Organizer *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="University Name"
-                    onChangeText={(t) => setForm({ ...form, university: t })}
-                    value={form.university}
-                  />
+          <SafeAreaView style={styles.modalScreen} edges={["bottom"]}>
+            <LinearGradient colors={["#000000", "#1a1a1a", "#2a2a2a"]} style={styles.modalHero}>
+              <View style={styles.modalHeroTop}>
+                <View style={styles.modalHeroTitleRow}>
+                  <Ionicons name="add-circle-outline" size={24} color={COLORS.accent} />
+                  <Text style={styles.modalHeroTitle}>Create New Event</Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>City *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="City"
-                    onChangeText={(t) => setForm({ ...form, city: t })}
-                    value={form.city}
-                  />
-                </View>
+                <TouchableOpacity
+                  style={styles.modalClose}
+                  onPress={() => setModalVisible(false)}
+                  activeOpacity={0.86}
+                >
+                  <Ionicons name="close" size={25} color={COLORS.accent} />
+                </TouchableOpacity>
               </View>
-
-              <Text style={styles.label}>Event Category *</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={{ marginBottom: 20 }}
-              >
-                {CATEGORIES.filter((c) => c !== "All").map((cat) => (
-                  <TouchableOpacity
-                    key={cat}
-                    onPress={() => setForm({ ...form, type: cat })}
-                    style={[
-                      styles.smallPill,
-                      form.type === cat && styles.pillActive,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.smallPillText,
-                        form.type === cat && styles.pillTextActive,
-                      ]}
-                    >
-                      {cat}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              <Text style={styles.label}>Description</Text>
-              <TextInput
-                style={[styles.input, { height: 100, textAlignVertical: "top" }]}
-                placeholder="Describe your event..."
-                multiline
-                onChangeText={(t) => setForm({ ...form, description: t })}
-                value={form.description}
-              />
-
-              <View style={styles.formRow}>
-                <View style={{ flex: 1, marginRight: 10 }}>
-                  <Text style={styles.label}>Event Date</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="15 May 2024"
-                    onChangeText={(t) => setForm({ ...form, date: t })}
-                    value={form.date}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>Team Size</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="2-4 Members"
-                    onChangeText={(t) => setForm({ ...form, teamSize: t })}
-                    value={form.teamSize}
-                  />
-                </View>
+              <Text style={styles.modalHeroSubtitle}>
+                Publish a sharper, more trustworthy event listing for your campus audience
+              </Text>
+            </LinearGradient>
+            <ScrollView style={styles.formScrollView} showsVerticalScrollIndicator={false}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Event Title *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="National Coding Competition"
+                  placeholderTextColor="#8a8a8a"
+                  value={form.title}
+                  onChangeText={(text) => setForm({ ...form, title: text })}
+                />
               </View>
-
-              <Text style={styles.label}>Location/Venue</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Auditorium, Online, etc."
-                onChangeText={(t) => setForm({ ...form, location: t })}
-                value={form.location}
-              />
-
-              <View style={styles.formRow}>
-                <View style={{ flex: 1, marginRight: 10 }}>
-                  <Text style={styles.label}>Prize Pool</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="PKR 100,000"
-                    onChangeText={(t) => setForm({ ...form, prize: t })}
-                    value={form.prize}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>Registration Deadline</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="30 April 2024"
-                    onChangeText={(t) => setForm({ ...form, deadline: t })}
-                    value={form.deadline}
-                  />
-                </View>
-              </View>
-
-              <Text style={styles.label}>Contact Information</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Email or Phone for inquiries"
-                onChangeText={(t) => setForm({ ...form, contact: t })}
-                value={form.contact}
-              />
-
-              <Text style={styles.label}>Event Banner</Text>
-              <TouchableOpacity style={styles.imagePickerBtn} onPress={pickImage}>
-                {selectedImage ? (
-                  <Image source={{ uri: selectedImage }} style={styles.previewImage} />
-                ) : (
-                  <View style={styles.placeholderBox}>
-                    <Ionicons name="camera" size={40} color="#000000" />
-                    <Text style={styles.placeholderText}>Upload Banner Image</Text>
+              <View style={styles.row}>
+                <View style={styles.colLeft}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>University *</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="University name"
+                      placeholderTextColor="#8a8a8a"
+                      value={form.university}
+                      onChangeText={(text) => setForm({ ...form, university: text })}
+                    />
                   </View>
-                )}
-              </TouchableOpacity>
-
+                </View>
+                <View style={styles.colRight}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>City *</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="City"
+                      placeholderTextColor="#8a8a8a"
+                      value={form.city}
+                      onChangeText={(text) => setForm({ ...form, city: text })}
+                    />
+                  </View>
+                </View>
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Event Category *</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {CATEGORIES.filter((item) => item !== "All").map((cat) => {
+                    const selected = form.type === cat;
+                    return (
+                      <TouchableOpacity
+                        key={cat}
+                        activeOpacity={0.86}
+                        onPress={() => setForm({ ...form, type: cat })}
+                        style={[styles.optionPill, selected && styles.optionPillActive]}
+                      >
+                        {selected ? (
+                          <LinearGradient
+                            colors={[COLORS.primary, "#2a2a2a"]}
+                            style={StyleSheet.absoluteFillObject}
+                          />
+                        ) : null}
+                        <Text style={[styles.optionPillText, selected && styles.optionPillTextActive]}>
+                          {cat}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Description</Text>
+                <TextInput
+                  style={[styles.textInput, styles.multiLineInput]}
+                  placeholder="Describe what makes this event worth attending..."
+                  placeholderTextColor="#8a8a8a"
+                  multiline
+                  value={form.description}
+                  onChangeText={(text) => setForm({ ...form, description: text })}
+                />
+              </View>
+              <View style={styles.row}>
+                <View style={styles.colLeft}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Event Date</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="15 May 2026"
+                      placeholderTextColor="#8a8a8a"
+                      value={form.date}
+                      onChangeText={(text) => setForm({ ...form, date: text })}
+                    />
+                  </View>
+                </View>
+                <View style={styles.colRight}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Team Size</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="2-4 Members"
+                      placeholderTextColor="#8a8a8a"
+                      value={form.teamSize}
+                      onChangeText={(text) => setForm({ ...form, teamSize: text })}
+                    />
+                  </View>
+                </View>
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Location / Venue</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Auditorium, online, lab, hall..."
+                  placeholderTextColor="#8a8a8a"
+                  value={form.location}
+                  onChangeText={(text) => setForm({ ...form, location: text })}
+                />
+              </View>
+              <View style={styles.row}>
+                <View style={styles.colLeft}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Prize Pool</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="PKR 100,000"
+                      placeholderTextColor="#8a8a8a"
+                      value={form.prize}
+                      onChangeText={(text) => setForm({ ...form, prize: text })}
+                    />
+                  </View>
+                </View>
+                <View style={styles.colRight}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Registration Deadline</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="30 April 2026"
+                      placeholderTextColor="#8a8a8a"
+                      value={form.deadline}
+                      onChangeText={(text) => setForm({ ...form, deadline: text })}
+                    />
+                  </View>
+                </View>
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Contact Information</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Email or phone number"
+                  placeholderTextColor="#8a8a8a"
+                  value={form.contact}
+                  onChangeText={(text) => setForm({ ...form, contact: text })}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Event Banner</Text>
+                <TouchableOpacity style={styles.uploadCard} activeOpacity={0.88} onPress={pickImage}>
+                  {selectedImage ? (
+                    <Image source={{ uri: selectedImage }} style={styles.uploadPreview} />
+                  ) : (
+                    <View style={styles.uploadPlaceholder}>
+                      <View style={styles.uploadIconCircle}>
+                        <Ionicons name="image-outline" size={30} color={COLORS.ink} />
+                      </View>
+                      <Text style={styles.uploadTitle}>Upload event banner</Text>
+                      <Text style={styles.uploadSubtitle}>Recommended ratio: 16:9</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
               <TouchableOpacity
-                style={styles.submitBtn}
+                style={styles.primaryFormButton}
+                activeOpacity={0.88}
+                disabled={submitting}
                 onPress={handlePostEvent}
-                disabled={loading}
               >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.submitBtnText}>Publish Event</Text>
-                )}
+                <LinearGradient
+                  colors={[COLORS.primary, "#2a2a2a"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.primaryFormGradient}
+                >
+                  {submitting ? (
+                    <ActivityIndicator color={COLORS.accent} />
+                  ) : (
+                    <>
+                      <Text style={styles.primaryFormText}>Publish Event</Text>
+                      <Ionicons name="rocket-outline" size={22} color={COLORS.accent} />
+                    </>
+                  )}
+                </LinearGradient>
               </TouchableOpacity>
-              <View style={{ height: 40 }} />
+              <View style={{ height: 44 }} />
             </ScrollView>
           </SafeAreaView>
         </KeyboardAvoidingView>
@@ -711,273 +1094,818 @@ export default function EventsScreen() {
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fdfdff" },
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  header: {
-    padding: 25,
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.page,
+  },
+  glowTop: {
+    position: "absolute",
+    top: -100,
+    right: -30,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: "rgba(249, 195, 73, 0.16)",
+  },
+  glowBottom: {
+    position: "absolute",
+    left: -50,
+    bottom: 120,
+    width: 210,
+    height: 210,
+    borderRadius: 105,
+    backgroundColor: "rgba(0, 0, 0, 0.05)",
+  },
+  loadingHeaderWrap: {
+    paddingHorizontal: 18,
+    paddingTop: 8,
+  },
+  loadingHeader: {
+    borderRadius: 30,
+    paddingHorizontal: 20,
+    paddingVertical: 22,
+  },
+  loadingHeaderLabel: {
+    color: COLORS.accent,
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  loadingHeaderTitle: {
+    color: "#fff",
+    fontSize: 28,
+    fontWeight: "900",
+    marginTop: 8,
+  },
+  loadingHeaderText: {
+    color: "rgba(255,255,255,0.78)",
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 8,
+  },
+  heroShell: {
+    paddingHorizontal: 18,
+    paddingTop: 4,
+  },
+  heroCard: {
+    borderRadius: 32,
+    padding: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.16,
+    shadowRadius: 24,
+    elevation: 10,
+  },
+  heroNoise: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.04,
+  },
+  navRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingTop: 50,
   },
-  headerButtons: {
+  brandRow: {
     flexDirection: "row",
-    gap: 12,
+    alignItems: "center",
   },
-  brand: { fontSize: 23, fontWeight: "900", color: "#1e293b" },
-  subBrand: { fontSize: 11, color: "#94a3b8" },
-  addBtn: {
-    backgroundColor: "#000",
-    height: 40,
-    width: 40,
+  brandBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 15,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  brandTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "900",
+    textAlign:'center'
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  iconButton: {
+    width: 38,
+    height: 38,
     borderRadius: 15,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "rgba(249,195,73,0.18)",
+    marginRight: 8,
   },
-  notificationBtn: {
-    backgroundColor: "#ebebeb9d",
-    height: 37,
-    width: 37,
-    borderRadius: 40,
+  iconButtonSoft: {
+    width: 38,
+    height: 38,
+    borderRadius: 15,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.10)",
+  },
+  notificationDot: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    backgroundColor: COLORS.accent,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  notificationDotText: {
+    color: COLORS.ink,
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  heroContent: {
+    marginTop: 10,
+  },
+  heroLabel: {
+    color: COLORS.accent,
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+    fontSize: 11,
+    fontWeight: "800",
+    marginBottom: 10,
+  },
+  heroStats: {
+    flexDirection: "row",
+    marginTop: 16,
+  },
+  heroStat: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginRight: 10,
+  },
+  heroStatNumber: {
+    color: COLORS.accent,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  heroStatText: {
+    marginTop: 4,
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  filterSection: {
+    marginTop: 18,
+  },
+  sectionTitle: {
+    paddingHorizontal: 20,
+    color: COLORS.ink,
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 6,
+  },
+  filtersRow: {
+    paddingHorizontal: 20,
+    paddingBottom: 2,
+  },
+  filterPill: {
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    marginRight: 10,
+    borderRadius: 18,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: COLORS.line,
+    overflow: "hidden",
+  },
+  filterPillActive: {
+    borderColor: COLORS.accent,
+  },
+  filterPillText: {
+    color: COLORS.body,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  filterPillTextActive: {
+    color: "#fff",
+  },
+  feedSection: {
+    flex: 1,
+  },
+  listContent: {
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 40,
+  },
+  skeletonCard: {
+    backgroundColor: "#fff",
+    borderRadius: 30,
+    overflow: "hidden",
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: COLORS.line,
+  },
+  skeletonImage: {
+    width: "100%",
+    height: 200,
+    backgroundColor: "#efefef",
+  },
+  skeletonContent: {
+    padding: 18,
+  },
+  skeletonTitle: {
+    height: 28,
+    width: "80%",
+    backgroundColor: COLORS.goldSoft,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  skeletonText: {
+    height: 16,
+    width: "100%",
+    backgroundColor: "#f1f1f1",
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  skeletonTextShort: {
+    height: 16,
+    width: "60%",
+    backgroundColor: "#f1f1f1",
+    borderRadius: 6,
+    marginBottom: 16,
+  },
+  skeletonFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  skeletonButton: {
+    width: 120,
+    height: 48,
+    backgroundColor: COLORS.accent,
+    borderRadius: 18,
+  },
+  card: {
+    backgroundColor: COLORS.card,
+    borderRadius: 30,
+    overflow: "hidden",
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 7,
+    borderWidth: 1,
+    borderColor: COLORS.line,
+  },
+  cardMedia: {
     position: "relative",
   },
-  notificationBadge: {
-    position: "absolute",
-    top: -5,
-    right: -5,
-    backgroundColor: "#ef4444",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: "center",
+  cardImage: {
+    width: "100%",
+    height: 200,
+  },
+  cardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "space-between",
+    padding: 16,
+  },
+  cardTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  categoryChip: {
+    flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 4,
-  },
-  notificationBadgeText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "bold",
-  },
-  tabScrollArea: { marginBottom: 15 },
-  tabContent: { paddingHorizontal: 25, gap: 10 },
-  pill: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 15,
-    backgroundColor: "#f1f5f9",
-  },
-  pillActive: { backgroundColor: "#1e293b" },
-  pillText: { fontWeight: "700", color: "#64748b" },
-  pillTextActive: { color: "#fff" },
-  listContainer: { paddingHorizontal: 25, paddingBottom: 50 },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 25,
-    marginBottom: 25,
-    overflow: "hidden",
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  cardImage: { width: "100%", height: 180 },
-  cardOverlay: { position: "absolute", top: 15, left: 15 },
-  badge: {
-    backgroundColor: "rgba(255,255,255,0.9)",
+    backgroundColor: COLORS.accent,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
+    paddingVertical: 7,
+    borderRadius: 14,
   },
-  badgeText: { fontSize: 11, fontWeight: "800", color: "#000000" },
-  cardBody: { padding: 20 },
-  eventTitle: { fontSize: 20, fontWeight: "800", color: "#1e293b" },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 5 },
-  metaText: { color: "#64748b", fontSize: 14 },
+  categoryChipText: {
+    color: COLORS.ink,
+    fontSize: 12,
+    fontWeight: "800",
+    marginLeft: 5,
+  },
+  timeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.12)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  timeChipText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
+    marginLeft: 4,
+    maxWidth: 104,
+  },
+  cardTitle: {
+    color: "#fff",
+    fontSize: 24,
+    fontWeight: "900",
+    lineHeight: 30,
+    marginBottom: 8,
+  },
+  cardDescription: {
+    color: "rgba(255,255,255,0.84)",
+    fontSize: 13,
+    lineHeight: 20,
+    maxWidth: "92%",
+  },
+  cardBody: {
+    padding: 18,
+  },
+  metaRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 10,
+  },
+  metaChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.line,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 14,
+    marginRight: 8,
+    marginBottom: 8,
+    maxWidth: "48%",
+  },
+  metaChipText: {
+    marginLeft: 6,
+    color: COLORS.ink,
+    fontSize: 10,
+    fontWeight: "600",
+    flexShrink: 1,
+  },
+  statsPanel: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: COLORS.line,
+  },
+  statsBlock: {
+    flex: 1,
+  },
+  statsDivider: {
+    width: 1,
+    height: 34,
+    backgroundColor: COLORS.line,
+    marginHorizontal: 10,
+  },
+  statsLabel: {
+    color: COLORS.muted,
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  statsValue: {
+    color: COLORS.ink,
+    fontSize: 15,
+    fontWeight: "800",
+  },
   cardFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 15,
-    paddingTop: 15,
-    borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
   },
-  prizeLabel: { fontSize: 10, color: "#94a3b8", fontWeight: "800" },
-  prizeAmount: { fontSize: 16, fontWeight: "900", color: "#0f172a" },
-  mainBtn: {
-    backgroundColor: "#000000",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 12,
+  dateBox: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  dateLabel: {
+    color: COLORS.muted,
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  dateValue: {
+    color: COLORS.ink,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  ctaButton: {
+    borderRadius: 18,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    elevation: 5,
+  },
+  ctaGradient: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
   },
-  mainBtnText: { color: "#fff", fontWeight: "800" },
-  detailWrapper: { flex: 1, backgroundColor: "#fff" },
-  detailImg: { width: "100%", height: height * 0.35 },
-  detailClose: {
+  ctaText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "800",
+    marginRight: 6,
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 70,
+    paddingBottom: 40,
+  },
+  emptyIconCircle: {
+    width: 110,
+    height: 110,
+    borderRadius: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: COLORS.line,
+  },
+  emptyTitle: {
+    color: COLORS.ink,
+    fontSize: 22,
+    fontWeight: "900",
+  },
+  emptyText: {
+    marginTop: 8,
+    color: COLORS.body,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center",
+    maxWidth: 290,
+  },
+  emptyButton: {
+    marginTop: 22,
+    borderRadius: 18,
+    overflow: "hidden",
+  },
+  emptyButtonGradient: {
+    paddingHorizontal: 22,
+    paddingVertical: 13,
+  },
+  emptyButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  detailScreen: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  detailBanner: {
+    width: "100%",
+    height: height * 0.3,
+  },
+  detailBannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  backButtonWrap: {
     position: "absolute",
-    top: 50,
+    top: 58,
     left: 20,
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 8,
   },
-  detailContent: {
-    padding: 25,
-    marginTop: -30,
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 35,
-    borderTopRightRadius: 35,
+  roundGlass: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+    backgroundColor: "rgba(0,0,0,0.18)",
   },
-  detailHeader: {
+  detailBody: {
+    marginTop: -28,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 34,
+    borderTopRightRadius: 34,
+    padding: 24,
+  },
+  detailTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 16,
   },
-  detailType: {
-    color: "#000000",
+  detailTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.goldSoft,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 14,
+  },
+  detailTagText: {
+    color: COLORS.ink,
+    fontSize: 13,
     fontWeight: "800",
-    fontSize: 12,
-    letterSpacing: 1,
+    marginLeft: 6,
   },
-  actionIcons: { flexDirection: "row" },
+  shareButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 15,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.line,
+  },
   detailTitle: {
-    fontSize: 28,
+    color: COLORS.ink,
+    fontSize: 30,
     fontWeight: "900",
-    color: "#1e293b",
-    marginTop: 10,
+    lineHeight: 38,
+    marginBottom: 14,
   },
   detailOrgRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginTop: 8,
+    marginBottom: 24,
   },
-  detailOrgText: { color: "#64748b", fontSize: 16, fontWeight: "500" },
-  specGrid: { flexDirection: "row", gap: 15, marginTop: 25 },
-  specBox: {
+  detailOrgText: {
+    marginLeft: 8,
+    color: COLORS.body,
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  specRow: {
+    flexDirection: "row",
+    marginBottom: 24,
+  },
+  specCard: {
     flex: 1,
-    backgroundColor: "#f8fafc",
-    padding: 15,
-    borderRadius: 20,
+    backgroundColor: COLORS.surface,
+    borderRadius: 22,
+    padding: 18,
     borderWidth: 1,
-    borderColor: "#f1f5f9",
+    borderColor: COLORS.line,
+    alignItems: "center",
+    marginRight: 12,
   },
-  specLabel: {
-    fontSize: 11,
-    color: "#94a3b8",
-    fontWeight: "800",
-    marginTop: 5,
+  specCardLast: {
+    marginRight: 0,
   },
-  specValue: { fontSize: 14, fontWeight: "700", color: "#1e293b" },
-  detailHeading: {
-    fontSize: 18,
+  specIcon: {
+    marginBottom: 8,
+  },
+  specTitle: {
+    color: COLORS.muted,
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  specText: {
+    color: COLORS.ink,
+    fontSize: 15,
     fontWeight: "800",
-    color: "#1e293b",
-    marginTop: 25,
+    textAlign: "center",
+  },
+  sectionCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: COLORS.line,
+  },
+  sectionCardTitle: {
+    color: COLORS.ink,
+    fontSize: 17,
+    fontWeight: "800",
     marginBottom: 10,
   },
-  detailDesc: { color: "#64748b", lineHeight: 22, fontSize: 15 },
-  bottomSticky: {
+  sectionCardBody: {
+    color: COLORS.body,
+    fontSize: 15,
+    lineHeight: 23,
+  },
+  stickyFooter: {
     position: "absolute",
     bottom: 0,
     width: "100%",
-    backgroundColor: "#fff",
-    padding: 25,
+  },
+  stickyBlur: {
+    overflow: "hidden",
+  },
+  stickyContent: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 30,
+    backgroundColor: "rgba(255,255,255,0.94)",
     borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
+    borderTopColor: COLORS.line,
   },
-  deadlineLabel: { fontSize: 11, color: "#ef4444", fontWeight: "800" },
-  deadlineDate: { fontSize: 16, fontWeight: "800", color: "#1e293b" },
-  finalRegBtn: {
-    backgroundColor: "#000000",
-    paddingHorizontal: 30,
+  stickyLabel: {
+    color: COLORS.danger,
+    fontSize: 12,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+  stickyValue: {
+    color: COLORS.ink,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  stickyButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 22,
     paddingVertical: 15,
     borderRadius: 18,
   },
-  finalRegText: { color: "#fff", fontWeight: "900", fontSize: 16 },
-  modalContent: { flex: 1, backgroundColor: "#fff" },
-  modalHeader: {
+  stickyButtonText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "900",
+    marginRight: 8,
+  },
+  modalScreen: {
+    flex: 1,
+    backgroundColor: COLORS.page,
+  },
+  modalHero: {
+    paddingHorizontal: 22,
+    paddingTop: Platform.OS === "ios" ? 16 : 24,
+    paddingBottom: 24,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  modalHeroTop: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 25,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
   },
-  modalTitle: { fontSize: 22, fontWeight: "900", color: "#1e293b" },
-  form: { padding: 25 },
-  regTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#000000",
-    marginBottom: 20,
-  },
-  label: { fontSize: 14, fontWeight: "800", color: "#1e293b", marginBottom: 8 },
-  input: {
-    backgroundColor: "#f8fafc",
-    padding: 18,
-    borderRadius: 15,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    fontSize: 16,
-    color: "#000000",
-  },
-  submitBtn: {
-    backgroundColor: "#000000",
-    padding: 20,
-    borderRadius: 15,
+  modalHeroTitleRow: {
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 10,
   },
-  submitBtnText: { color: "#fff", fontSize: 16, fontWeight: "800" },
-  formRow: { flexDirection: "row", marginBottom: 10, gap: 10 },
-  smallPill: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: "#f1f5f9",
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
+  modalHeroTitle: {
+    color: "#fff",
+    fontSize: 24,
+    fontWeight: "900",
+    marginLeft: 10,
   },
-  smallPillText: { fontSize: 12, fontWeight: "700", color: "#64748b" },
-  imagePickerBtn: {
-    width: "100%",
-    height: 150,
-    borderRadius: 15,
-    overflow: "hidden",
-    marginBottom: 20,
-  },
-  previewImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 15,
-  },
-  placeholderBox: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
+  modalClose: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-    borderStyle: "dashed",
-    borderRadius: 15,
+    backgroundColor: "rgba(255,255,255,0.10)",
   },
-  placeholderText: {
+  modalHeroSubtitle: {
     marginTop: 10,
-    color: "#6366f1",
+    color: "rgba(255,255,255,0.84)",
+    fontSize: 14,
     fontWeight: "600",
+  },
+  formScrollView: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  inputGroup: {
+    marginBottom: 4,
+  },
+  inputLabel: {
+    color: COLORS.ink,
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  textInput: {
+    backgroundColor: "#fff",
+    borderWidth: 1.5,
+    borderColor: COLORS.line,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    marginBottom: 18,
+    color: COLORS.ink,
+    fontSize: 15,
+  },
+  multiLineInput: {
+    height: 120,
+    textAlignVertical: "top",
+  },
+  row: {
+    flexDirection: "row",
+  },
+  colLeft: {
+    flex: 1,
+    marginRight: 8,
+  },
+  colRight: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  optionPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: "#fff",
+    marginRight: 8,
+    marginBottom: 18,
+    borderWidth: 1.5,
+    borderColor: COLORS.line,
+    overflow: "hidden",
+  },
+  optionPillActive: {
+    borderColor: COLORS.accent,
+  },
+  optionPillText: {
+    color: COLORS.body,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  optionPillTextActive: {
+    color: "#fff",
+  },
+  uploadCard: {
+    width: "100%",
+    height: 196,
+    borderRadius: 22,
+    marginBottom: 18,
+    overflow: "hidden",
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: COLORS.accent,
+    backgroundColor: "#fff",
+  },
+  uploadPreview: {
+    width: "100%",
+    height: "100%",
+  },
+  uploadPlaceholder: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: COLORS.surface,
+  },
+  uploadIconCircle: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: COLORS.goldSoft,
+  },
+  uploadTitle: {
+    marginTop: 12,
+    color: COLORS.ink,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  uploadSubtitle: {
+    marginTop: 4,
+    color: COLORS.muted,
+    fontSize: 12,
+  },
+  primaryFormButton: {
+    borderRadius: 20,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+  primaryFormGradient: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 17,
+    paddingHorizontal: 20,
+  },
+  primaryFormText: {
+    color: "#fff",
+    fontSize: 17,
+    fontWeight: "800",
+    marginRight: 8,
   },
 });

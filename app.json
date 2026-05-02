@@ -4,12 +4,12 @@
     "slug": "Testting",
     "version": "1.0.1",
     "orientation": "default",
-    "icon": "./assets/tdc.png",
+    "icon": "./assets/tdcs.png",
     "scheme": "tdcapp",
     "backgroundColor": "#000000",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/tdc.png",
+      "image": "./assets/tdcs.png",
       "resizeMode": "cover",
       "backgroundColor": "#000000"
     },
@@ -40,7 +40,7 @@
         "android.permission.ACCESS_MEDIA_LOCATION"
       ],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/tdc.png",
+        "foregroundImage": "./assets/tdcs.png",
         "backgroundColor": "#000000"
       },
       "intentFilters": [

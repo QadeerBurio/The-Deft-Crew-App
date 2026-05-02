@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -10,24 +10,135 @@ import {
   Alert,
   Modal,
   ScrollView,
-  
   StatusBar,
   RefreshControl,
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Animated,
 } from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
 import { AuthContext } from "../../context/AuthContext";
 
 const API_BASE = "https://the-deft-crew-production.up.railway.app/api/events";
 const CATEGORIES = ["Hackathons", "Workshops", "Conferences", "Competitions", "Career Fairs"];
 
+const COLORS = {
+  page: "#ffffff",
+  pageAlt: "#f7f7f7",
+  ink: "#000000",
+  body: "#222222",
+  muted: "#6f6f6f",
+  line: "#e7e7e7",
+  card: "#ffffff",
+  surface: "#fafafa",
+  primary: "#000000",
+  accent: "#f9c349",
+  accentSoft: "#fff3c8",
+  success: "#0f9f6e",
+  danger: "#d92d20",
+  overlay: "rgba(0,0,0,0.78)",
+};
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
+const AnimatedEventCard = ({ item, index, onPress, onEdit, onDelete }) => {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(20)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 320,
+        delay: index * 60,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 320,
+        delay: index * 60,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [index, opacity, translateY]);
+
+  const animatePress = (toValue) => {
+    Animated.spring(scale, {
+      toValue,
+      friction: 8,
+      tension: 90,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  return (
+    <Animated.View
+      style={[
+        styles.eventCardWrapper,
+        {
+          opacity,
+          transform: [{ translateY }, { scale }],
+        },
+      ]}
+    >
+      <AnimatedTouchable
+        style={styles.eventCard}
+        activeOpacity={0.92}
+        onPress={() => onPress(item)}
+        onPressIn={() => animatePress(0.985)}
+        onPressOut={() => animatePress(1)}
+      >
+        <Image source={{ uri: item.image }} style={styles.eventImage} />
+        <View style={styles.eventInfo}>
+          <Text style={styles.eventTitle}>{item.title}</Text>
+          <View style={styles.eventMeta}>
+            <Ionicons name="location-outline" size={14} color={COLORS.accent} />
+            <Text style={styles.eventMetaText}>{item.city}</Text>
+            <View style={styles.dot} />
+            <Ionicons name="calendar-outline" size={14} color={COLORS.ink} />
+            <Text style={styles.eventMetaText}>{item.date || "TBA"}</Text>
+          </View>
+          <View style={styles.statsContainer}>
+            <View style={styles.statBadge}>
+              <Ionicons name="people-outline" size={16} color={COLORS.ink} />
+              <Text style={styles.statText}>View Registered Students</Text>
+            </View>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={24} color="#b8b8b8" />
+      </AnimatedTouchable>
+
+      <View style={styles.actionButtonsRow}>
+        <TouchableOpacity
+          style={[styles.actionIconBtn, styles.editBtn]}
+          onPress={() => onEdit(item)}
+          activeOpacity={0.88}
+        >
+          <Ionicons name="create-outline" size={20} color="#fff" />
+          <Text style={styles.actionIconText}>Edit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionIconBtn, styles.deleteBtn]}
+          onPress={() => onDelete(item)}
+          activeOpacity={0.88}
+        >
+          <Ionicons name="trash-outline" size={20} color={COLORS.ink} />
+          <Text style={styles.deleteActionText}>Delete</Text>
+        </TouchableOpacity>
+      </View>
+    </Animated.View>
+  );
+};
+
 export default function EventNotification({ navigation }) {
-  const { token, user } = useContext(AuthContext);
+  const { token } = useContext(AuthContext);
   const [userEvents, setUserEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [registeredUsers, setRegisteredUsers] = useState([]);
@@ -35,8 +146,6 @@ export default function EventNotification({ navigation }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [fetchingEvents, setFetchingEvents] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  
-  // Edit Event State
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [editForm, setEditForm] = useState({
@@ -55,22 +164,43 @@ export default function EventNotification({ navigation }) {
   const [editImage, setEditImage] = useState(null);
   const [editLoading, setEditLoading] = useState(false);
 
+  const entranceOpacity = useRef(new Animated.Value(0)).current;
+  const entranceTranslate = useRef(new Animated.Value(22)).current;
+
   useEffect(() => {
     fetchUserEvents();
   }, []);
+
+  const runEntranceAnimation = () => {
+    entranceOpacity.setValue(0);
+    entranceTranslate.setValue(22);
+    Animated.parallel([
+      Animated.timing(entranceOpacity, {
+        toValue: 1,
+        duration: 380,
+        useNativeDriver: true,
+      }),
+      Animated.timing(entranceTranslate, {
+        toValue: 0,
+        duration: 380,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
   const fetchUserEvents = async () => {
     if (!token) {
       setFetchingEvents(false);
       return;
     }
-    
+
     setFetchingEvents(true);
     try {
       const res = await axios.get(`${API_BASE}/my-events`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      setUserEvents(res.data);
+      setUserEvents(Array.isArray(res.data) ? res.data : []);
+      runEntranceAnimation();
     } catch (error) {
       console.error("Fetch user events error:", error);
       Alert.alert("Error", "Failed to fetch your events");
@@ -85,9 +215,9 @@ export default function EventNotification({ navigation }) {
     setLoading(true);
     try {
       const res = await axios.get(`${API_BASE}/registrations/${eventId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      setRegisteredUsers(res.data);
+      setRegisteredUsers(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error("Fetch registered users error:", error);
       Alert.alert("Error", "Failed to fetch registered users");
@@ -131,23 +261,23 @@ export default function EventNotification({ navigation }) {
       `Are you sure you want to delete "${event.title}"? This action cannot be undone.`,
       [
         { text: "Cancel", style: "cancel" },
-        { 
-          text: "Delete", 
+        {
+          text: "Delete",
           style: "destructive",
-          onPress: () => confirmDeleteEvent(event._id)
-        }
+          onPress: () => confirmDeleteEvent(event._id),
+        },
       ]
     );
   };
 
   const confirmDeleteEvent = async (eventId) => {
     if (!token) return;
-    
+
     try {
       await axios.delete(`${API_BASE}/event/${eventId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       Alert.alert("Success", "Event deleted successfully");
       fetchUserEvents();
     } catch (error) {
@@ -158,17 +288,18 @@ export default function EventNotification({ navigation }) {
 
   const pickEditImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Needed', 'Please grant camera roll permissions to upload images');
+    if (status !== "granted") {
+      Alert.alert("Permission Needed", "Please grant camera roll permissions to upload images");
       return;
     }
-    
-    let result = await ImagePicker.launchImageLibraryAsync({
+
+    const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.7,
     });
+
     if (!result.canceled) setEditImage(result.assets[0].uri);
   };
 
@@ -183,11 +314,11 @@ export default function EventNotification({ navigation }) {
     data.append("cloud_name", "decaxpera");
 
     try {
-      let res = await fetch("https://api.cloudinary.com/v1_1/decaxpera/image/upload", {
+      const res = await fetch("https://api.cloudinary.com/v1_1/decaxpera/image/upload", {
         method: "post",
         body: data,
       });
-      let result = await res.json();
+      const result = await res.json();
       return result.secure_url;
     } catch (err) {
       console.error("Cloudinary Error:", err);
@@ -216,7 +347,7 @@ export default function EventNotification({ navigation }) {
       };
 
       await axios.put(`${API_BASE}/event/${editingEvent._id}`, updateData, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       Alert.alert("Success", "Event updated successfully");
@@ -232,24 +363,26 @@ export default function EventNotification({ navigation }) {
 
   const UserDetailModal = ({ user, visible, onClose }) => {
     if (!user) return null;
-    
+
     return (
       <Modal visible={visible} animationType="slide" transparent={false}>
         <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Registered Student Details</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={28} color="#1e293b" />
-            </TouchableOpacity>
-          </View>
-          
-          <ScrollView style={styles.detailContainer}>
+          <LinearGradient colors={["#000000", "#1d1d1d"]} style={styles.modalHero}>
+            <View style={styles.modalHeroHeader}>
+              <Text style={styles.modalTitleOnDark}>Registered Student Details</Text>
+              <TouchableOpacity onPress={onClose} style={styles.closeGlass}>
+                <Ionicons name="close" size={24} color={COLORS.accent} />
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+
+          <ScrollView style={styles.detailContainer} showsVerticalScrollIndicator={false}>
             <View style={styles.profileHeader}>
-              <View style={styles.profileAvatar}>
+              <LinearGradient colors={[COLORS.accent, "#f6d980"]} style={styles.profileAvatar}>
                 <Text style={styles.profileAvatarText}>
                   {user.studentName.charAt(0).toUpperCase()}
                 </Text>
-              </View>
+              </LinearGradient>
               <Text style={styles.profileName}>{user.studentName}</Text>
               <Text style={styles.profileDate}>
                 Registered on: {new Date(user.createdAt).toLocaleDateString()}
@@ -258,7 +391,7 @@ export default function EventNotification({ navigation }) {
 
             <View style={styles.detailCard}>
               <View style={styles.detailIconContainer}>
-                <Ionicons name="mail-outline" size={24} color="#6366f1" />
+                <Ionicons name="mail-outline" size={22} color={COLORS.ink} />
               </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Email Address</Text>
@@ -268,7 +401,7 @@ export default function EventNotification({ navigation }) {
 
             <View style={styles.detailCard}>
               <View style={styles.detailIconContainer}>
-                <Ionicons name="logo-whatsapp" size={24} color="#25D366" />
+                <Ionicons name="logo-whatsapp" size={22} color={COLORS.success} />
               </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>WhatsApp Number</Text>
@@ -278,7 +411,7 @@ export default function EventNotification({ navigation }) {
 
             <View style={styles.detailCard}>
               <View style={styles.detailIconContainer}>
-                <Ionicons name="card-outline" size={24} color="#000000" />
+                <Ionicons name="card-outline" size={22} color={COLORS.ink} />
               </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Student ID / CNIC</Text>
@@ -287,12 +420,12 @@ export default function EventNotification({ navigation }) {
             </View>
 
             <View style={styles.actionButtons}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.actionBtn, styles.emailBtn]}
                 onPress={() => {
                   Alert.alert("Contact via Email", `Email: ${user.email}`, [
-                    { text: "Copy Email", onPress: () => console.log(user.email) }, 
-                    { text: "OK" }
+                    { text: "Copy Email", onPress: () => console.log(user.email) },
+                    { text: "OK" },
                   ]);
                 }}
               >
@@ -300,17 +433,17 @@ export default function EventNotification({ navigation }) {
                 <Text style={styles.actionBtnText}>Email</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.actionBtn, styles.whatsappBtn]}
                 onPress={() => {
                   Alert.alert("Contact via WhatsApp", `WhatsApp: ${user.whatsapp}`, [
-                    { text: "Copy Number", onPress: () => console.log(user.whatsapp) }, 
-                    { text: "OK" }
+                    { text: "Copy Number", onPress: () => console.log(user.whatsapp) },
+                    { text: "OK" },
                   ]);
                 }}
               >
-                <Ionicons name="logo-whatsapp" size={20} color="#fff" />
-                <Text style={styles.actionBtnText}>WhatsApp</Text>
+                <Ionicons name="logo-whatsapp" size={20} color={COLORS.ink} />
+                <Text style={styles.whatsappBtnText}>WhatsApp</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -321,27 +454,29 @@ export default function EventNotification({ navigation }) {
 
   const RegisteredUsersModal = ({ event, visible, onClose }) => {
     if (!event) return null;
-    
+
     return (
       <Modal visible={visible} animationType="slide" transparent={false}>
         <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <View>
-              <Text style={styles.modalTitle}>Registered Students</Text>
-              <Text style={styles.eventTitleSmall}>{event.title}</Text>
+          <LinearGradient colors={["#000000", "#1d1d1d"]} style={styles.modalHero}>
+            <View style={styles.modalHeroHeader}>
+              <View>
+                <Text style={styles.modalTitleOnDark}>Registered Students</Text>
+                <Text style={styles.eventTitleSmall}>{event.title}</Text>
+              </View>
+              <TouchableOpacity onPress={onClose} style={styles.closeGlass}>
+                <Ionicons name="close" size={24} color={COLORS.accent} />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={28} color="#1e293b" />
-            </TouchableOpacity>
-          </View>
-          
+          </LinearGradient>
+
           {loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#6366f1" />
+              <ActivityIndicator size="large" color={COLORS.accent} />
             </View>
           ) : registeredUsers.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="people-outline" size={80} color="#cbd5e1" />
+              <Ionicons name="people-outline" size={80} color="#bdbdbd" />
               <Text style={styles.emptyText}>No Registrations Yet</Text>
               <Text style={styles.emptySubText}>
                 When students register for your event, they'll appear here
@@ -350,9 +485,10 @@ export default function EventNotification({ navigation }) {
           ) : (
             <>
               <View style={styles.statsHeader}>
-                <Ionicons name="people" size={20} color="#000000" />
+                <Ionicons name="people" size={20} color={COLORS.ink} />
                 <Text style={styles.statsText}>
-                  Total Registered: {registeredUsers.length} student{registeredUsers.length !== 1 ? 's' : ''}
+                  Total Registered: {registeredUsers.length} student
+                  {registeredUsers.length !== 1 ? "s" : ""}
                 </Text>
               </View>
               <FlatList
@@ -363,21 +499,25 @@ export default function EventNotification({ navigation }) {
                   <TouchableOpacity
                     style={styles.registrationCard}
                     onPress={() => setSelectedUser(item)}
+                    activeOpacity={0.9}
                   >
                     <View style={styles.registrationNumber}>
                       <Text style={styles.registrationNumberText}>{index + 1}</Text>
                     </View>
-                    <View style={styles.registrationAvatar}>
+                    <LinearGradient
+                      colors={[COLORS.accent, "#f6d980"]}
+                      style={styles.registrationAvatar}
+                    >
                       <Text style={styles.avatarText}>
                         {item.studentName.charAt(0).toUpperCase()}
                       </Text>
-                    </View>
+                    </LinearGradient>
                     <View style={styles.registrationInfo}>
                       <Text style={styles.registrationName}>{item.studentName}</Text>
                       <Text style={styles.registrationEmail}>{item.email}</Text>
                       <Text style={styles.registrationWhatsapp}>{item.whatsapp}</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={24} color="#cbd5e1" />
+                    <Ionicons name="chevron-forward" size={24} color="#bdbdbd" />
                   </TouchableOpacity>
                 )}
               />
@@ -388,53 +528,6 @@ export default function EventNotification({ navigation }) {
     );
   };
 
-  const renderEventCard = ({ item }) => (
-    <View style={styles.eventCardWrapper}>
-      <TouchableOpacity
-        style={styles.eventCard}
-        onPress={() => handleEventPress(item)}
-      >
-        <Image source={{ uri: item.image }} style={styles.eventImage} />
-        <View style={styles.eventInfo}>
-          <Text style={styles.eventTitle}>{item.title}</Text>
-          <View style={styles.eventMeta}>
-            <Ionicons name="location-outline" size={14} color="#000000" />
-            <Text style={styles.eventMetaText}>{item.city}</Text>
-            <View style={styles.dot} />
-            <Ionicons name="calendar-outline" size={14} color="#000000" />
-            <Text style={styles.eventMetaText}>{item.date || "TBA"}</Text>
-          </View>
-          <View style={styles.statsContainer}>
-            <View style={styles.statBadge}>
-              <Ionicons name="people-outline" size={16} color="#000000" />
-              <Text style={styles.statText}>View Registered Students</Text>
-            </View>
-          </View>
-        </View>
-        <Ionicons name="chevron-forward" size={24} color="#cbd5e1" />
-      </TouchableOpacity>
-      
-      {/* Edit and Delete Buttons */}
-      <View style={styles.actionButtonsRow}>
-        <TouchableOpacity 
-          style={[styles.actionIconBtn, styles.editBtn]}
-          onPress={() => handleEditEvent(item)}
-        >
-          <Ionicons name="create-outline" size={20} color="#fff" />
-          <Text style={styles.actionIconText}>Edit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.actionIconBtn, styles.deleteBtn]}
-          onPress={() => handleDeleteEvent(item)}
-        >
-          <Ionicons name="trash-outline" size={20} color="#fff" />
-          <Text style={styles.actionIconText}>Delete</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  // Edit Event Modal
   const EditEventModal = () => (
     <Modal visible={editModalVisible} animationType="slide" presentationStyle="pageSheet">
       <KeyboardAvoidingView
@@ -442,37 +535,45 @@ export default function EventNotification({ navigation }) {
         style={{ flex: 1 }}
       >
         <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Edit Event</Text>
-            <TouchableOpacity onPress={() => setEditModalVisible(false)}>
-              <Ionicons name="close-circle" size={32} color="#cbd5e1" />
-            </TouchableOpacity>
-          </View>
+          <LinearGradient colors={["#000000", "#1d1d1d"]} style={styles.modalHero}>
+            <View style={styles.modalHeroHeader}>
+              <Text style={styles.modalTitleOnDark}>Edit Event</Text>
+              <TouchableOpacity
+                onPress={() => setEditModalVisible(false)}
+                style={styles.closeGlass}
+              >
+                <Ionicons name="close" size={24} color={COLORS.accent} />
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
 
           <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
             <Text style={styles.label}>Event Title *</Text>
             <TextInput
               style={styles.input}
               placeholder="Event Title"
+              placeholderTextColor="#8b8b8b"
               value={editForm.title}
               onChangeText={(t) => setEditForm({ ...editForm, title: t })}
             />
 
             <View style={styles.formRow}>
-              <View style={{ flex: 1, marginRight: 10 }}>
+              <View style={styles.formColLeft}>
                 <Text style={styles.label}>University/Organizer *</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="University Name"
+                  placeholderTextColor="#8b8b8b"
                   value={editForm.organizer}
                   onChangeText={(t) => setEditForm({ ...editForm, organizer: t })}
                 />
               </View>
-              <View style={{ flex: 1 }}>
+              <View style={styles.formColRight}>
                 <Text style={styles.label}>City *</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="City"
+                  placeholderTextColor="#8b8b8b"
                   value={editForm.city}
                   onChangeText={(t) => setEditForm({ ...editForm, city: t })}
                 />
@@ -480,20 +581,20 @@ export default function EventNotification({ navigation }) {
             </View>
 
             <Text style={styles.label}>Event Category *</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryRow}>
               {CATEGORIES.map((cat) => (
                 <TouchableOpacity
                   key={cat}
                   onPress={() => setEditForm({ ...editForm, type: cat })}
-                  style={[
-                    styles.smallPill,
-                    editForm.type === cat && styles.pillActive,
-                  ]}
+                  style={[styles.smallPill, editForm.type === cat && styles.pillActive]}
+                  activeOpacity={0.88}
                 >
-                  <Text style={[
-                    styles.smallPillText,
-                    editForm.type === cat && styles.pillTextActive,
-                  ]}>
+                  <Text
+                    style={[
+                      styles.smallPillText,
+                      editForm.type === cat && styles.pillTextActive,
+                    ]}
+                  >
                     {cat}
                   </Text>
                 </TouchableOpacity>
@@ -502,28 +603,31 @@ export default function EventNotification({ navigation }) {
 
             <Text style={styles.label}>Description</Text>
             <TextInput
-              style={[styles.input, { height: 100, textAlignVertical: "top" }]}
+              style={[styles.input, styles.multiLineInput]}
               placeholder="Describe your event..."
+              placeholderTextColor="#8b8b8b"
               multiline
               value={editForm.description}
               onChangeText={(t) => setEditForm({ ...editForm, description: t })}
             />
 
             <View style={styles.formRow}>
-              <View style={{ flex: 1, marginRight: 10 }}>
+              <View style={styles.formColLeft}>
                 <Text style={styles.label}>Event Date</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="15 May 2024"
+                  placeholder="15 May 2026"
+                  placeholderTextColor="#8b8b8b"
                   value={editForm.date}
                   onChangeText={(t) => setEditForm({ ...editForm, date: t })}
                 />
               </View>
-              <View style={{ flex: 1 }}>
+              <View style={styles.formColRight}>
                 <Text style={styles.label}>Team Size</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="2-4 Members"
+                  placeholderTextColor="#8b8b8b"
                   value={editForm.teamSize}
                   onChangeText={(t) => setEditForm({ ...editForm, teamSize: t })}
                 />
@@ -534,25 +638,28 @@ export default function EventNotification({ navigation }) {
             <TextInput
               style={styles.input}
               placeholder="Auditorium, Online, etc."
+              placeholderTextColor="#8b8b8b"
               value={editForm.location}
               onChangeText={(t) => setEditForm({ ...editForm, location: t })}
             />
 
             <View style={styles.formRow}>
-              <View style={{ flex: 1, marginRight: 10 }}>
+              <View style={styles.formColLeft}>
                 <Text style={styles.label}>Prize Pool</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="PKR 100,000"
+                  placeholderTextColor="#8b8b8b"
                   value={editForm.prize}
                   onChangeText={(t) => setEditForm({ ...editForm, prize: t })}
                 />
               </View>
-              <View style={{ flex: 1 }}>
+              <View style={styles.formColRight}>
                 <Text style={styles.label}>Registration Deadline</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="30 April 2024"
+                  placeholder="30 April 2026"
+                  placeholderTextColor="#8b8b8b"
                   value={editForm.deadline}
                   onChangeText={(t) => setEditForm({ ...editForm, deadline: t })}
                 />
@@ -563,19 +670,20 @@ export default function EventNotification({ navigation }) {
             <TextInput
               style={styles.input}
               placeholder="Email or Phone for inquiries"
+              placeholderTextColor="#8b8b8b"
               value={editForm.contact}
               onChangeText={(t) => setEditForm({ ...editForm, contact: t })}
             />
 
             <Text style={styles.label}>Event Banner</Text>
-            <TouchableOpacity style={styles.imagePickerBtn} onPress={pickEditImage}>
+            <TouchableOpacity style={styles.imagePickerBtn} onPress={pickEditImage} activeOpacity={0.9}>
               {editImage ? (
                 <Image source={{ uri: editImage }} style={styles.previewImage} />
               ) : editingEvent?.image ? (
                 <Image source={{ uri: editingEvent.image }} style={styles.previewImage} />
               ) : (
                 <View style={styles.placeholderBox}>
-                  <Ionicons name="camera" size={40} color="#000000" />
+                  <Ionicons name="image-outline" size={40} color={COLORS.ink} />
                   <Text style={styles.placeholderText}>Change Banner Image</Text>
                 </View>
               )}
@@ -585,12 +693,15 @@ export default function EventNotification({ navigation }) {
               style={styles.submitBtn}
               onPress={handleUpdateEvent}
               disabled={editLoading}
+              activeOpacity={0.88}
             >
-              {editLoading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.submitBtnText}>Update Event</Text>
-              )}
+              <LinearGradient colors={["#000000", "#2a2a2a"]} style={styles.submitGradient}>
+                {editLoading ? (
+                  <ActivityIndicator color={COLORS.accent} />
+                ) : (
+                  <Text style={styles.submitBtnText}>Update Event</Text>
+                )}
+              </LinearGradient>
             </TouchableOpacity>
             <View style={{ height: 40 }} />
           </ScrollView>
@@ -602,16 +713,16 @@ export default function EventNotification({ navigation }) {
   if (fetchingEvents) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" />
+        <StatusBar barStyle="dark-content" backgroundColor={COLORS.page} />
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color="#1e293b" />
+            <Ionicons name="arrow-back" size={24} color={COLORS.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Created Events</Text>
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#000000" />
+          <ActivityIndicator size="large" color={COLORS.accent} />
           <Text style={styles.loadingText}>Loading your events...</Text>
         </View>
       </SafeAreaView>
@@ -621,25 +732,26 @@ export default function EventNotification({ navigation }) {
   if (userEvents.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" />
+        <StatusBar barStyle="dark-content" backgroundColor={COLORS.page} />
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color="#1e293b" />
+            <Ionicons name="arrow-back" size={24} color={COLORS.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Created Events</Text>
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.emptyState}>
-          <Ionicons name="calendar-outline" size={80} color="#cbd5e1" />
+          <View style={styles.emptyIconWrap}>
+            <Ionicons name="calendar-outline" size={74} color={COLORS.ink} />
+          </View>
           <Text style={styles.emptyStateTitle}>No Events Created</Text>
           <Text style={styles.emptyStateText}>
             You haven't created any events yet. Create an event to see registered students here.
           </Text>
-          <TouchableOpacity
-            style={styles.createBtn}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.createBtnText}>Create Event</Text>
+          <TouchableOpacity style={styles.createBtn} onPress={() => navigation.goBack()} activeOpacity={0.88}>
+            <LinearGradient colors={["#000000", "#2a2a2a"]} style={styles.createBtnGradient}>
+              <Text style={styles.createBtnText}>Create Event</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -648,31 +760,50 @@ export default function EventNotification({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.page} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#1e293b" />
+          <Ionicons name="arrow-back" size={24} color={COLORS.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Created Events ({userEvents.length})</Text>
         <TouchableOpacity onPress={onRefresh} style={styles.refreshBtn}>
-          <Ionicons name="refresh-outline" size={24} color="#000000" />
+          <Ionicons name="refresh-outline" size={24} color={COLORS.ink} />
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={userEvents}
-        keyExtractor={(item) => item._id}
-        renderItem={renderEventCard}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={["#000000"]}
-          />
-        }
-      />
+      <Animated.View
+        style={[
+          styles.contentWrap,
+          {
+            opacity: entranceOpacity,
+            transform: [{ translateY: entranceTranslate }],
+          },
+        ]}
+      >
+        <FlatList
+          data={userEvents}
+          keyExtractor={(item) => item._id}
+          renderItem={({ item, index }) => (
+            <AnimatedEventCard
+              item={item}
+              index={index}
+              onPress={handleEventPress}
+              onEdit={handleEditEvent}
+              onDelete={handleDeleteEvent}
+            />
+          )}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[COLORS.accent]}
+              tintColor={COLORS.accent}
+            />
+          }
+        />
+      </Animated.View>
 
       <RegisteredUsersModal
         event={selectedEvent}
@@ -697,7 +828,10 @@ export default function EventNotification({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: COLORS.page,
+  },
+  contentWrap: {
+    flex: 1,
   },
   header: {
     flexDirection: "row",
@@ -707,8 +841,8 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
-    paddingTop:40
+    borderBottomColor: COLORS.line,
+    paddingTop: 40,
   },
   backBtn: {
     padding: 8,
@@ -718,21 +852,25 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: "700",
-    color: "#1e293b",
+    fontWeight: "800",
+    color: COLORS.ink,
   },
   listContainer: {
     padding: 16,
+    paddingBottom: 32,
   },
   eventCardWrapper: {
     marginBottom: 16,
     backgroundColor: "#fff",
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: COLORS.line,
   },
   eventCard: {
     flexDirection: "row",
@@ -740,9 +878,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   eventImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
+    width: 86,
+    height: 86,
+    borderRadius: 14,
     marginRight: 12,
   },
   eventInfo: {
@@ -750,30 +888,32 @@ const styles = StyleSheet.create({
   },
   eventTitle: {
     fontSize: 16,
-    fontWeight: "700",
-    color: "#1e293b",
+    fontWeight: "800",
+    color: COLORS.ink,
     marginBottom: 6,
   },
   eventTitleSmall: {
     fontSize: 14,
-    color: "#64748b",
+    color: "rgba(255,255,255,0.72)",
     marginTop: 4,
+    maxWidth: 280,
   },
   eventMeta: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 8,
+    flexWrap: "wrap",
   },
   eventMetaText: {
     fontSize: 12,
-    color: "#64748b",
+    color: COLORS.muted,
     marginLeft: 4,
   },
   dot: {
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#cbd5e1",
+    backgroundColor: "#cfcfcf",
     marginHorizontal: 8,
   },
   statsContainer: {
@@ -782,121 +922,138 @@ const styles = StyleSheet.create({
   statBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#e0e7ff",
+    backgroundColor: COLORS.accentSoft,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderRadius: 12,
-    gap: 6,
   },
   statText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: "#000000",
+    fontWeight: "700",
+    color: COLORS.ink,
+    marginLeft: 6,
   },
   actionButtonsRow: {
     flexDirection: "row",
     borderTopWidth: 1,
-    borderTopColor: "#e2e8f0",
+    borderTopColor: COLORS.line,
   },
   actionIconBtn: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
-    gap: 6,
+    paddingVertical: 12,
   },
   editBtn: {
-    backgroundColor: "#000000",
+    backgroundColor: COLORS.primary,
   },
   deleteBtn: {
-    backgroundColor: "#ef4444",
+    backgroundColor: COLORS.accent,
   },
   actionIconText: {
     color: "#fff",
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
+    marginLeft: 6,
+  },
+  deleteActionText: {
+    color: COLORS.ink,
+    fontSize: 14,
+    fontWeight: "700",
+    marginLeft: 6,
   },
   modalContainer: {
     flex: 1,
     backgroundColor: "#fff",
   },
-  modalHeader: {
+  modalHero: {
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === "ios" ? 14 : 22,
+    paddingBottom: 20,
+  },
+  modalHeroHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1e293b",
+  modalTitleOnDark: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#fff",
   },
-  closeBtn: {
-    padding: 8,
+  closeGlass: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.10)",
   },
   registrationsList: {
     padding: 16,
+    paddingBottom: 28,
   },
   registrationCard: {
     flexDirection: "row",
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 18,
     padding: 16,
     marginBottom: 12,
     alignItems: "center",
     shadowColor: "#000",
     shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
     elevation: 2,
+    borderWidth: 1,
+    borderColor: COLORS.line,
   },
   registrationNumber: {
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#e0e7ff",
+    backgroundColor: COLORS.accent,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
   },
   registrationNumberText: {
     fontSize: 14,
-    fontWeight: "700",
-    color: "#000000",
+    fontWeight: "800",
+    color: COLORS.ink,
   },
   registrationAvatar: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: "#e0e7ff",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
   },
   avatarText: {
     fontSize: 20,
-    fontWeight: "700",
-    color: "#6366f1",
+    fontWeight: "800",
+    color: COLORS.ink,
   },
   registrationInfo: {
     flex: 1,
   },
   registrationName: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#1e293b",
+    fontWeight: "700",
+    color: COLORS.ink,
     marginBottom: 4,
   },
   registrationEmail: {
     fontSize: 13,
-    color: "#64748b",
+    color: COLORS.muted,
     marginBottom: 2,
   },
   registrationWhatsapp: {
     fontSize: 13,
-    color: "#25D366",
+    color: COLORS.success,
+    fontWeight: "600",
   },
   detailContainer: {
     padding: 20,
@@ -906,46 +1063,48 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   profileAvatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#e0e7ff",
+    width: 84,
+    height: 84,
+    borderRadius: 42,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 12,
   },
   profileAvatarText: {
     fontSize: 36,
-    fontWeight: "700",
-    color: "#6366f1",
+    fontWeight: "900",
+    color: COLORS.ink,
   },
   profileName: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1e293b",
+    fontSize: 22,
+    fontWeight: "800",
+    color: COLORS.ink,
   },
   profileDate: {
     fontSize: 12,
-    color: "#94a3b8",
+    color: COLORS.muted,
     marginTop: 4,
   },
   detailCard: {
     flexDirection: "row",
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 18,
     padding: 16,
     marginBottom: 12,
     alignItems: "center",
     shadowColor: "#000",
     shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
     elevation: 2,
+    borderWidth: 1,
+    borderColor: COLORS.line,
   },
   detailIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#e0e7ff",
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: COLORS.accentSoft,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -955,55 +1114,64 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 12,
-    fontWeight: "600",
-    color: "#94a3b8",
+    fontWeight: "700",
+    color: COLORS.muted,
     marginBottom: 4,
   },
   detailValue: {
     fontSize: 16,
-    fontWeight: "500",
-    color: "#1e293b",
+    fontWeight: "600",
+    color: COLORS.ink,
   },
   actionButtons: {
     flexDirection: "row",
-    gap: 12,
     marginTop: 20,
   },
   actionBtn: {
     flex: 1,
     flexDirection: "row",
     padding: 14,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
   },
   emailBtn: {
-    backgroundColor: "#6366f1",
+    backgroundColor: COLORS.primary,
+    marginRight: 6,
   },
   whatsappBtn: {
-    backgroundColor: "#25D366",
+    backgroundColor: COLORS.accent,
+    marginLeft: 6,
   },
   actionBtnText: {
     color: "#fff",
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
+    marginLeft: 8,
+  },
+  whatsappBtnText: {
+    color: COLORS.ink,
+    fontSize: 14,
+    fontWeight: "700",
+    marginLeft: 8,
   },
   statsHeader: {
     flexDirection: "row",
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.accentSoft,
     padding: 16,
     marginHorizontal: 16,
     marginTop: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    borderWidth: 1,
+    borderColor: "#f1dfa2",
   },
   statsText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#6366f1",
+    fontWeight: "700",
+    color: COLORS.ink,
+    marginLeft: 8,
   },
   emptyState: {
     flex: 1,
@@ -1011,29 +1179,42 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 40,
   },
+  emptyIconWrap: {
+    width: 118,
+    height: 118,
+    borderRadius: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.accentSoft,
+    borderWidth: 1,
+    borderColor: "#f1dfa2",
+  },
   emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1e293b",
+    fontSize: 22,
+    fontWeight: "800",
+    color: COLORS.ink,
     marginTop: 20,
     marginBottom: 10,
   },
   emptyStateText: {
     fontSize: 14,
-    color: "#64748b",
+    color: COLORS.muted,
     textAlign: "center",
     marginBottom: 30,
+    lineHeight: 22,
   },
   createBtn: {
-    backgroundColor: "#6366f1",
+    borderRadius: 14,
+    overflow: "hidden",
+  },
+  createBtnGradient: {
     paddingHorizontal: 30,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 14,
   },
   createBtnText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   emptyContainer: {
     flex: 1,
@@ -1043,15 +1224,16 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    fontWeight: "600",
-    color: "#1e293b",
+    fontWeight: "700",
+    color: COLORS.ink,
     marginTop: 20,
   },
   emptySubText: {
     fontSize: 14,
-    color: "#64748b",
+    color: COLORS.muted,
     textAlign: "center",
     marginTop: 10,
+    lineHeight: 22,
   },
   loadingContainer: {
     flex: 1,
@@ -1061,58 +1243,74 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: "#64748b",
+    color: COLORS.muted,
   },
-  // Form Styles
   form: {
     padding: 20,
   },
   label: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#1e293b",
+    color: COLORS.ink,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: "#f8fafc",
+    backgroundColor: COLORS.surface,
     padding: 14,
-    borderRadius: 12,
+    borderRadius: 14,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: COLORS.line,
     fontSize: 14,
-    color: "#1e293b",
+    color: COLORS.ink,
+  },
+  multiLineInput: {
+    height: 100,
+    textAlignVertical: "top",
   },
   formRow: {
     flexDirection: "row",
-    gap: 10,
+  },
+  formColLeft: {
+    flex: 1,
+    marginRight: 8,
+  },
+  formColRight: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  categoryRow: {
+    marginBottom: 20,
   },
   smallPill: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: "#f1f5f9",
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "#fff",
     marginRight: 8,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: COLORS.line,
   },
   smallPillText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: "#64748b",
+    fontWeight: "700",
+    color: COLORS.muted,
   },
   pillActive: {
-    backgroundColor: "#1e293b",
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.accent,
   },
   pillTextActive: {
     color: "#fff",
   },
   imagePickerBtn: {
     width: "100%",
-    height: 150,
-    borderRadius: 12,
+    height: 160,
+    borderRadius: 16,
     overflow: "hidden",
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: COLORS.line,
   },
   previewImage: {
     width: "100%",
@@ -1120,29 +1318,31 @@ const styles = StyleSheet.create({
   },
   placeholderBox: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: COLORS.surface,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#e2e8f0",
+    borderColor: COLORS.accent,
     borderStyle: "dashed",
-    borderRadius: 12,
+    borderRadius: 16,
   },
   placeholderText: {
     marginTop: 10,
-    color: "#6366f1",
-    fontWeight: "600",
+    color: COLORS.ink,
+    fontWeight: "700",
   },
   submitBtn: {
-    backgroundColor: "#6366f1",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
+    borderRadius: 16,
+    overflow: "hidden",
     marginTop: 10,
+  },
+  submitGradient: {
+    padding: 16,
+    alignItems: "center",
   },
   submitBtnText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "800",
   },
 });

@@ -16,28 +16,31 @@ import {
   StatusBar,
   Animated,
   Dimensions,
-
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import aiService from "../services/aiService";
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 const predefinedQuestions = [
-  { id: 1, text: "💎 How to earn points?", icon: "star", color: "#FFD700" },
-  { id: 2, text: "🎁 Referral program", icon: "gift", color: "#FF6B6B" },
-  { id: 3, text: "👑 TDC Premium benefits", icon: "crown", color: "#9B59B6" },
-  { id: 4, text: "🛍️ Brand discounts", icon: "tag", color: "#3498DB" },
-  { id: 5, text: "📞 Contact support", icon: "headset", color: "#2ECC71" },
+  { id: 1, text: "💎 How to earn points?", icon: "star", color: "#f9c349" },
+  { id: 2, text: "🎁 Referral program", icon: "gift", color: "#f9c349" },
+  { id: 3, text: "👑 TDC Premium benefits", icon: "crown", color: "#f9c349" },
+  { id: 4, text: "🛍️ Brand discounts", icon: "tag", color: "#f9c349" },
+  { id: 5, text: "📞 Contact support", icon: "headset", color: "#f9c349" },
 ];
 
 const ChatBotScreen = () => {
   const navigation = useNavigation();
   const flatListRef = useRef();
+  
+  // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
+  const headerFade = useRef(new Animated.Value(0)).current;
+  const slideUpAnim = useRef(new Animated.Value(30)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
   
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -45,6 +48,32 @@ const ChatBotScreen = () => {
   const [showMenu, setShowMenu] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [backendStatus, setBackendStatus] = useState('checking');
+
+  // Pulse animation for online status
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.2,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    
+    if (backendStatus === 'connected') {
+      pulse.start();
+    } else {
+      pulse.stop();
+    }
+    
+    return () => pulse.stop();
+  }, [backendStatus]);
 
   // Animation for welcome message
   useEffect(() => {
@@ -54,9 +83,15 @@ const ChatBotScreen = () => {
         duration: 800,
         useNativeDriver: true,
       }),
-      Animated.timing(slideAnim, {
+      Animated.timing(headerFade, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideUpAnim, {
         toValue: 0,
-        duration: 600,
+        friction: 6,
+        tension: 40,
         useNativeDriver: true,
       }),
     ]).start();
@@ -74,7 +109,7 @@ const ChatBotScreen = () => {
         {
           id: "1",
           text: isHealthy 
-            ? "✨ Hi there! I'm your AI shopping assistant. How can I make your TDC experience amazing today? 🚀"
+            ? "✨ Hi there! I'm your TDC AI assistant. How can I make your experience amazing today? 🚀"
             : "👋 Hi! I'm TDC Assistant. I'm currently in offline mode but I can still help with basic questions! 💪",
           sender: "bot",
           timestamp: new Date(),
@@ -84,10 +119,9 @@ const ChatBotScreen = () => {
     initialize();
   }, []);
 
-  // Android back button handler - FIXED with navigate
+  // Android back button handler
   useEffect(() => {
     const onBackPress = () => {
-      // Navigate to Home screen when back button is pressed
       navigation.navigate('Home');
       return true;
     };
@@ -109,7 +143,7 @@ const ChatBotScreen = () => {
     const messageText = textParam || input;
     if (!messageText.trim() || isLoading) return;
 
-    // Add user message with animation
+    // Add user message
     const userMsg = {
       id: Date.now().toString(),
       text: messageText.trim(),
@@ -191,23 +225,21 @@ const ChatBotScreen = () => {
   };
 
   const renderMessage = ({ item, index }) => {
-    const isLastMessage = index === messages.length - 1;
-    
     return (
       <Animated.View 
         style={[
           styles.messageContainer,
           item.sender === "user" ? styles.userMessageContainer : styles.botMessageContainer,
-          {
+          index === messages.length - 1 && {
             opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
+            transform: [{ translateY: slideUpAnim }],
           }
         ]}
       >
         {item.sender === "bot" && (
           <View style={styles.botAvatarContainer}>
             <View style={styles.botAvatar}>
-              <MaterialCommunityIcons name="robot-happy" size={22} color="#FFF" />
+              <MaterialCommunityIcons name="robot-outline" size={20} color="#fff" />
             </View>
           </View>
         )}
@@ -216,20 +248,18 @@ const ChatBotScreen = () => {
           styles.bubble,
           item.sender === "user" ? styles.userBubble : styles.botBubble
         ]}>
-          <View style={styles.messageContent}>
-            <Text style={[
-              item.sender === "user" ? styles.userText : styles.botText
-            ]}>
-              {item.text}
+          <Text style={[
+            item.sender === "user" ? styles.userText : styles.botText
+          ]}>
+            {item.text}
+          </Text>
+          <View style={styles.messageFooter}>
+            <Text style={styles.timestamp}>
+              {formatTime(item.timestamp)}
             </Text>
-            <View style={styles.messageFooter}>
-              <Text style={styles.timestamp}>
-                {formatTime(item.timestamp)}
-              </Text>
-              {item.sender === "user" && (
-                <Ionicons name="checkmark-done" size={12} color="#9ca3af" />
-              )}
-            </View>
+            {item.sender === "user" && (
+              <Ionicons name="checkmark-done" size={12} color="rgba(255,255,255,0.6)" />
+            )}
           </View>
         </View>
         
@@ -238,9 +268,9 @@ const ChatBotScreen = () => {
             style={styles.contactButton}
             onPress={() => navigation.navigate("ContactUs")}
           >
-            <Ionicons name="headset-outline" size={18} color="#FFF" />
-            <Text style={styles.contactButtonText}>Contact Support Team</Text>
-            <Ionicons name="arrow-forward" size={14} color="#FFF" />
+            <Ionicons name="headset-outline" size={16} color="#1a1a1a" />
+            <Text style={styles.contactButtonText}>Contact Support</Text>
+            <Ionicons name="arrow-forward" size={14} color="#1a1a1a" />
           </TouchableOpacity>
         )}
       </Animated.View>
@@ -253,7 +283,7 @@ const ChatBotScreen = () => {
       <View style={[styles.messageContainer, styles.botMessageContainer]}>
         <View style={styles.botAvatarContainer}>
           <View style={styles.botAvatar}>
-            <MaterialCommunityIcons name="robot-happy" size={22} color="#FFF" />
+            <MaterialCommunityIcons name="robot-outline" size={20} color="#fff" />
           </View>
         </View>
         <View style={[styles.bubble, styles.botBubble, styles.typingBubble]}>
@@ -273,16 +303,16 @@ const ChatBotScreen = () => {
       onPress={() => onPress(item.text)}
       activeOpacity={0.8}
     >
-      <View style={[styles.quickIcon, { backgroundColor: item.color + '20' }]}>
-        <FontAwesome5 name={item.icon} size={18} color={item.color} />
+      <View style={styles.quickIcon}>
+        <FontAwesome5 name={item.icon} size={16} color="#f9c349" />
       </View>
       <Text style={styles.quickCardText}>{item.text}</Text>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -290,19 +320,25 @@ const ChatBotScreen = () => {
       >
         <View style={styles.container}>
           {/* Header */}
-          <View style={styles.header}>
+          <Animated.View style={[styles.header, { opacity: headerFade }]}>
             <TouchableOpacity onPress={() => navigation.navigate('Home')} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={28} color="#1a1a2e" />
+              <Ionicons name="chevron-back" size={24} color="#1a1a1a" />
             </TouchableOpacity>
             
             <View style={styles.headerContent}>
               <View style={styles.headerIcon}>
-                <MaterialCommunityIcons name="robot" size={24} color="#FFF" />
+                <MaterialCommunityIcons name="robot-outline" size={22} color="#1a1a1a" />
               </View>
               <View style={styles.headerTextContainer}>
-                <Text style={styles.headerText}>TDC Assistant</Text>
+                <Text style={styles.headerText}>tdc<Text style={{color:'#f9c349'}}>.</Text> Assistant</Text>
                 <View style={styles.statusContainer}>
-                  <View style={[styles.statusDot, { backgroundColor: backendStatus === 'connected' ? '#4CAF50' : '#FF6B6B' }]} />
+                  <Animated.View style={[
+                    styles.statusDot, 
+                    { 
+                      backgroundColor: backendStatus === 'connected' ? '#4CAF50' : '#FF6B6B',
+                      transform: [{ scale: pulseAnim }]
+                    }
+                  ]} />
                   <Text style={styles.statusText}>
                     {backendStatus === 'connected' ? 'AI Online' : 'Offline Mode'}
                   </Text>
@@ -311,9 +347,9 @@ const ChatBotScreen = () => {
             </View>
             
             <TouchableOpacity onPress={() => setShowMenu(true)} style={styles.menuButton}>
-              <Ionicons name="ellipsis-vertical" size={24} color="#1a1a2e" />
+              <Ionicons name="ellipsis-vertical" size={22} color="#1a1a1a" />
             </TouchableOpacity>
-          </View>
+          </Animated.View>
 
           {/* Messages */}
           <FlatList
@@ -329,7 +365,10 @@ const ChatBotScreen = () => {
           {/* Quick Questions */}
           {messages.length < 3 && (
             <View style={styles.quickContainer}>
-              <Text style={styles.quickTitle}>✨ Quick Questions</Text>
+              <Text style={styles.quickTitle}>
+                <View style={styles.quickDot} />
+                Quick Questions
+              </Text>
               <FlatList
                 data={predefinedQuestions}
                 horizontal
@@ -351,7 +390,7 @@ const ChatBotScreen = () => {
                 value={input}
                 onChangeText={setInput}
                 placeholder="Type your message..."
-                placeholderTextColor="#A0A0A0"
+                placeholderTextColor="#999"
                 multiline
                 maxLength={500}
                 editable={!isLoading}
@@ -362,9 +401,9 @@ const ChatBotScreen = () => {
                 disabled={!input.trim() || isLoading}
               >
                 {isLoading ? (
-                  <ActivityIndicator size="small" color="#FFF" />
+                  <ActivityIndicator size="small" color="#1a1a1a" />
                 ) : (
-                  <Ionicons name="send" size={20} color="#FFF" />
+                  <Ionicons name="send" size={18} color="#1a1a1a" />
                 )}
               </TouchableOpacity>
             </View>
@@ -383,15 +422,15 @@ const ChatBotScreen = () => {
                   <Text style={styles.menuTitle}>Options</Text>
                 </View>
                 <TouchableOpacity style={styles.menuItem} onPress={clearChatHistory}>
-                  <View style={styles.menuIconBg}>
-                    <Ionicons name="trash-outline" size={22} color="#FF6B6B" />
+                  <View style={[styles.menuIconBg, { backgroundColor: '#f9c34915' }]}>
+                    <Ionicons name="trash-outline" size={20} color="#f9c349" />
                   </View>
-                  <Text style={[styles.menuItemText, { color: '#FF6B6B' }]}>Clear Chat History</Text>
+                  <Text style={styles.menuItemText}>Clear Chat History</Text>
                 </TouchableOpacity>
                 <View style={styles.menuDivider} />
                 <TouchableOpacity style={styles.menuItem} onPress={() => setShowMenu(false)}>
                   <View style={styles.menuIconBg}>
-                    <Ionicons name="close-outline" size={22} color="#1a1a2e" />
+                    <Ionicons name="close-outline" size={20} color="#1a1a1a" />
                   </View>
                   <Text style={styles.menuItemText}>Cancel</Text>
                 </TouchableOpacity>
@@ -407,56 +446,57 @@ const ChatBotScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#ffffff",
   },
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FC",
+    backgroundColor: "#ffffff",
   },
+  
+  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: "#ffffff",
     borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    borderBottomColor: '#f0f0f0',
   },
   backButton: {
-    padding: 8,
-    marginLeft: -8,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#f8f8f8',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
   },
   headerIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#1a1a2e",
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    backgroundColor: '#f9c349',
     justifyContent: "center",
     alignItems: "center",
+    marginRight: 10,
   },
   headerTextContainer: {
-    gap: 4,
+    gap: 2,
   },
   headerText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1a1a2e",
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#1a1a1a",
   },
   statusContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
   },
   statusDot: {
     width: 6,
@@ -464,21 +504,26 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   statusText: {
-    fontSize: 11,
-    color: "#666",
-    fontWeight: "500",
+    fontSize: 10,
+    color: "#999",
+    fontWeight: "600",
   },
   menuButton: {
-    padding: 8,
-    marginRight: -8,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#f8f8f8',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
+  
+  // Messages
   messagesList: {
     paddingHorizontal: 16,
-    paddingVertical: 20,
-    paddingBottom: 20,
+    paddingVertical: 16,
   },
   messageContainer: {
-    marginBottom: 20,
+    marginBottom: 16,
     flexDirection: "row",
     alignItems: "flex-end",
   },
@@ -492,61 +537,60 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   botAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#1a1a2e",
+    width: 34,
+    height: 34,
+    borderRadius: 14,
+    backgroundColor: "#1a1a1a",
     justifyContent: "center",
     alignItems: "center",
   },
+  
+  // Bubbles
   bubble: {
     maxWidth: "75%",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 24,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 18,
   },
   userBubble: {
-    backgroundColor: "#1a1a2e",
+    backgroundColor: "#1a1a1a",
     borderBottomRightRadius: 6,
   },
   botBubble: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#f8f8f8",
     borderBottomLeftRadius: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  messageContent: {
-    flex: 1,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
   userText: {
-    color: "#FFFFFF",
-    fontSize: 15,
+    color: "#ffffff",
+    fontSize: 14,
     lineHeight: 20,
-    fontWeight: "400",
+    fontWeight: "500",
   },
   botText: {
-    color: "#1a1a2e",
-    fontSize: 15,
-    lineHeight: 22,
-    fontWeight: "400",
+    color: "#1a1a1a",
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "500",
   },
   messageFooter: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
     gap: 4,
-    marginTop: 6,
+    marginTop: 4,
   },
   timestamp: {
-    fontSize: 10,
-    color: "#A0A0A0",
+    fontSize: 9,
+    color: "#999",
+    fontWeight: "500",
   },
+  
+  // Typing Indicator
   typingBubble: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
   typingIndicator: {
     flexDirection: "row",
@@ -554,115 +598,125 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   typingDot: {
-    width: 8,
-    height: 8,
+    width: 7,
+    height: 7,
     borderRadius: 4,
-    backgroundColor: "#1a1a2e",
-    opacity: 0.4,
+    backgroundColor: "#1a1a1a",
+    opacity: 0.3,
   },
-  typingDot1: {
-    animation: 'pulse 1.4s infinite',
-  },
-  typingDot2: {
-    animation: 'pulse 1.4s infinite 0.2s',
-  },
-  typingDot3: {
-    animation: 'pulse 1.4s infinite 0.4s',
-  },
+  
+  // Contact Button
   contactButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1a1a2e",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 24,
-    marginTop: 12,
-    marginLeft: 44,
-    gap: 8,
+    backgroundColor: "#f9c349",
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    marginTop: 8,
+    marginLeft: 42,
+    gap: 6,
     alignSelf: "flex-start",
   },
   contactButtonText: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "600",
+    color: "#1a1a1a",
+    fontSize: 12,
+    fontWeight: "700",
   },
+  
+  // Quick Questions
   quickContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#F0F0F0",
-  },
-  quickTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1a1a2e",
-    marginBottom: 12,
-  },
-  quickList: {
-    gap: 12,
-  },
-  quickCard: {
-    backgroundColor: "#F8F9FC",
     paddingHorizontal: 16,
     paddingVertical: 12,
+    backgroundColor: "#ffffff",
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  quickTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#1a1a1a",
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  quickDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#f9c349',
+    marginRight: 8,
+  },
+  quickList: {
+    gap: 10,
+  },
+  quickCard: {
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: 16,
-    marginRight: 12,
+    marginRight: 10,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    borderWidth: 1,
-    borderColor: "#F0F0F0",
+    gap: 8,
+    borderWidth: 2,
+    borderColor: '#f0f0f0',
   },
   quickIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: '#f9c34915',
     justifyContent: "center",
     alignItems: "center",
   },
   quickCardText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#1a1a2e",
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#1a1a1a",
   },
+  
+  // Input
   inputWrapper: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: "#ffffff",
     borderTopWidth: 1,
-    borderTopColor: "#F0F0F0",
+    borderTopColor: '#f0f0f0',
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "flex-end",
-    backgroundColor: "#F8F9FC",
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: "#E8E8E8",
+    backgroundColor: "#f8f8f8",
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#f0f0f0',
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   input: {
     flex: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: "#1a1a2e",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: "#1a1a1a",
     maxHeight: 100,
+    fontWeight: '500',
   },
   sendButton: {
-    backgroundColor: "#1a1a2e",
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    backgroundColor: "#f9c349",
+    width: 40,
+    height: 40,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
-    marginLeft: 8,
+    marginLeft: 6,
   },
   sendButtonDisabled: {
-    backgroundColor: "#D0D0D0",
+    backgroundColor: "#f0f0f0",
   },
+  
+  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -670,7 +724,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   menuModal: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#ffffff",
     borderRadius: 20,
     width: width * 0.85,
     maxWidth: 320,
@@ -680,36 +734,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+    borderBottomColor: '#f0f0f0',
   },
   menuTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1a1a2e",
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#1a1a1a",
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 14,
     gap: 12,
   },
   menuIconBg: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#F8F9FC",
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#f8f8f8',
     justifyContent: "center",
     alignItems: "center",
   },
   menuItemText: {
-    fontSize: 16,
-    color: "#1a1a2e",
-    fontWeight: "500",
+    fontSize: 14,
+    color: "#1a1a1a",
+    fontWeight: "600",
   },
   menuDivider: {
     height: 1,
-    backgroundColor: "#F0F0F0",
+    backgroundColor: '#f0f0f0',
   },
 });
 

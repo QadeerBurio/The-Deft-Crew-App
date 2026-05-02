@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, 
-   Platform, StatusBar, KeyboardAvoidingView, Modal, Alert, ActivityIndicator 
+  Platform, StatusBar, KeyboardAvoidingView, Modal, Alert, ActivityIndicator,
+  Animated, Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { resumeAPI } from '../../api/api';
+
+const { width, height } = Dimensions.get("window");
 
 const ResumeBuilder = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
@@ -33,6 +37,14 @@ const ResumeBuilder = ({ navigation, route }) => {
   const [tempData, setTempData] = useState({});
   const [editingIndex, setEditingIndex] = useState(null);
   const [touchedFields, setTouchedFields] = useState({});
+  const [focusedInput, setFocusedInput] = useState(null);
+
+  // Animation Values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideUpAnim = useRef(new Animated.Value(30)).current;
+  const headerFade = useRef(new Animated.Value(0)).current;
+  const modalScale = useRef(new Animated.Value(0.9)).current;
+  const saveScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (route.params?.resumeData) {
@@ -40,6 +52,26 @@ const ResumeBuilder = ({ navigation, route }) => {
     } else {
       fetchResume();
     }
+
+    // Entrance animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(headerFade, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideUpAnim, {
+        toValue: 0,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
   const fetchResume = async () => {
@@ -56,76 +88,44 @@ const ResumeBuilder = ({ navigation, route }) => {
     }
   };
 
-  // Validation functions matching backend validators
   const validateFullName = (name) => {
-    if (!name || name.trim() === '') {
-      return 'Full name is required';
-    }
-    if (name.length > 100) {
-      return 'Name cannot exceed 100 characters';
-    }
+    if (!name || name.trim() === '') return 'Full name is required';
+    if (name.length > 100) return 'Name cannot exceed 100 characters';
     return '';
   };
 
   const validateEmail = (email) => {
-    if (!email || email.trim() === '') {
-      return 'Email is required';
-    }
-    const emailRegex = /^\S+@\S+\.\S+$/;
-    if (!emailRegex.test(email)) {
-      return 'Please enter a valid email (e.g., name@example.com)';
-    }
+    if (!email || email.trim() === '') return 'Email is required';
+    if (!/^\S+@\S+\.\S+$/.test(email)) return 'Please enter a valid email';
     return '';
   };
 
   const validatePhone = (phone) => {
-    if (!phone || phone.trim() === '') {
-      return 'Phone number is required';
-    }
-    const phoneRegex = /^\+?[\d\s-]{10,}$/;
-    if (!phoneRegex.test(phone)) {
-      return 'Please enter a valid phone number (minimum 10 digits)';
-    }
+    if (!phone || phone.trim() === '') return 'Phone number is required';
+    if (!/^\+?[\d\s-]{10,}$/.test(phone)) return 'Minimum 10 digits required';
     return '';
   };
 
   const validateLinkedIn = (url) => {
-    if (!url || url.trim() === '') {
-      return ''; // Optional field
-    }
-    const linkedinRegex = /^(https?:\/\/)?(www\.)?linkedin\.com\/.*$/;
-    if (!linkedinRegex.test(url)) {
-      return 'Please enter a valid LinkedIn URL (e.g., linkedin.com/in/username)';
-    }
+    if (!url || url.trim() === '') return '';
+    if (!/^(https?:\/\/)?(www\.)?linkedin\.com\/.*$/.test(url)) return 'Invalid LinkedIn URL';
     return '';
   };
 
   const validateGitHub = (url) => {
-    if (!url || url.trim() === '') {
-      return ''; // Optional field
-    }
-    const githubRegex = /^(https?:\/\/)?(www\.)?github\.com\/.*$/;
-    if (!githubRegex.test(url)) {
-      return 'Please enter a valid GitHub URL (e.g., github.com/username)';
-    }
+    if (!url || url.trim() === '') return '';
+    if (!/^(https?:\/\/)?(www\.)?github\.com\/.*$/.test(url)) return 'Invalid GitHub URL';
     return '';
   };
 
   const validatePortfolio = (url) => {
-    if (!url || url.trim() === '') {
-      return ''; // Optional field
-    }
-    const urlRegex = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i;
-    if (!urlRegex.test(url)) {
-      return 'Please enter a valid URL (e.g., https://yourwebsite.com)';
-    }
+    if (!url || url.trim() === '') return '';
+    if (!/^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i.test(url)) return 'Invalid URL';
     return '';
   };
 
   const validateSummary = (summary) => {
-    if (summary && summary.length > 500) {
-      return 'Summary cannot exceed 500 characters';
-    }
+    if (summary && summary.length > 500) return 'Summary cannot exceed 500 characters';
     return '';
   };
 
@@ -134,35 +134,26 @@ const ResumeBuilder = ({ navigation, route }) => {
     if (!level) return 'Proficiency level is required';
     const capitalized = level.charAt(0).toUpperCase() + level.slice(1).toLowerCase();
     if (!validLevels.includes(capitalized)) {
-      return 'Proficiency must be: Basic, Conversational, Professional, or Native';
+      return 'Must be: Basic, Conversational, Professional, or Native';
     }
     return '';
   };
 
   const validateField = (field, value) => {
     switch (field) {
-      case 'fullName':
-        return validateFullName(value);
-      case 'email':
-        return validateEmail(value);
-      case 'phone':
-        return validatePhone(value);
-      case 'linkedin':
-        return validateLinkedIn(value);
-      case 'github':
-        return validateGitHub(value);
-      case 'portfolio':
-        return validatePortfolio(value);
-      case 'summary':
-        return validateSummary(value);
-      default:
-        return '';
+      case 'fullName': return validateFullName(value);
+      case 'email': return validateEmail(value);
+      case 'phone': return validatePhone(value);
+      case 'linkedin': return validateLinkedIn(value);
+      case 'github': return validateGitHub(value);
+      case 'portfolio': return validatePortfolio(value);
+      case 'summary': return validateSummary(value);
+      default: return '';
     }
   };
 
   const handleContactChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors({ ...errors, [field]: '' });
     }
@@ -214,12 +205,18 @@ const ResumeBuilder = ({ navigation, route }) => {
     }
     
     setModalVisible(true);
+    modalScale.setValue(0.9);
+    Animated.spring(modalScale, {
+      toValue: 1,
+      friction: 6,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
   };
 
   const saveSectionData = () => {
     const sectionKey = activeSection.toLowerCase();
     
-    // Validate language level if adding/editing languages
     if (activeSection === 'Languages') {
       const levelError = validateLanguageLevel(tempData.level);
       if (levelError) {
@@ -228,7 +225,6 @@ const ResumeBuilder = ({ navigation, route }) => {
       }
     }
     
-    // Validate required fields for each section
     if (activeSection === 'Education') {
       if (!tempData.school || !tempData.degree || !tempData.startDate || !tempData.endDate) {
         Alert.alert('Missing Fields', 'Please fill in all required fields (*)');
@@ -335,23 +331,20 @@ const ResumeBuilder = ({ navigation, route }) => {
     
     setErrors(newErrors);
     
-    // Mark all fields as touched to show errors
-    const allFieldsTouched = {
-      fullName: true,
-      email: true,
-      phone: true,
-      linkedin: true,
-      github: true,
-      portfolio: true,
-      summary: true
-    };
-    setTouchedFields(allFieldsTouched);
+    setTouchedFields({
+      fullName: true, email: true, phone: true,
+      linkedin: true, github: true, portfolio: true, summary: true
+    });
     
-    // Check if there are any errors
     return !Object.values(newErrors).some(error => error !== '');
   };
 
   const handleSave = async () => {
+    Animated.sequence([
+      Animated.timing(saveScale, { toValue: 0.95, duration: 100, useNativeDriver: true }),
+      Animated.timing(saveScale, { toValue: 1, duration: 100, useNativeDriver: true }),
+    ]).start();
+
     if (!validateForm()) {
       Alert.alert('Validation Error', 'Please fix the errors marked in red before saving');
       return;
@@ -365,10 +358,9 @@ const ResumeBuilder = ({ navigation, route }) => {
     } catch (error) {
       console.error('Save error:', error);
       if (error.response?.data?.details) {
-        const serverErrors = error.response.data.details;
-        Alert.alert('Validation Error', Object.values(serverErrors).join('\n'));
+        Alert.alert('Validation Error', Object.values(error.response.data.details).join('\n'));
       } else {
-        Alert.alert('Error', error.response?.data?.error || 'Failed to save resume. Please try again.');
+        Alert.alert('Error', error.response?.data?.error || 'Failed to save resume');
       }
     } finally {
       setLoading(false);
@@ -381,77 +373,73 @@ const ResumeBuilder = ({ navigation, route }) => {
         return (
           <>
             <Text style={styles.modalLabel}>University/School Name *</Text>
-            <TextInput style={styles.modalInput} placeholder="e.g., Stanford University" value={tempData.school} onChangeText={(v) => setTempData({...tempData, school: v})} />
+            <TextInput style={styles.modalInput} placeholder="e.g., Stanford University" placeholderTextColor="#999" value={tempData.school} onChangeText={(v) => setTempData({...tempData, school: v})} />
             
             <Text style={styles.modalLabel}>Degree *</Text>
-            <TextInput style={styles.modalInput} placeholder="e.g., BS Computer Science" value={tempData.degree} onChangeText={(v) => setTempData({...tempData, degree: v})} />
+            <TextInput style={styles.modalInput} placeholder="e.g., BS Computer Science" placeholderTextColor="#999" value={tempData.degree} onChangeText={(v) => setTempData({...tempData, degree: v})} />
             
             <View style={styles.row}>
               <View style={{flex: 1, marginRight: 8}}>
                 <Text style={styles.modalLabel}>Start Date *</Text>
-                <TextInput style={styles.modalInput} placeholder="e.g., 2020" value={tempData.startDate} onChangeText={(v) => setTempData({...tempData, startDate: v})} />
+                <TextInput style={styles.modalInput} placeholder="e.g., 2020" placeholderTextColor="#999" value={tempData.startDate} onChangeText={(v) => setTempData({...tempData, startDate: v})} />
               </View>
               <View style={{flex: 1}}>
                 <Text style={styles.modalLabel}>End Date *</Text>
-                <TextInput style={styles.modalInput} placeholder="e.g., 2024" value={tempData.endDate} onChangeText={(v) => setTempData({...tempData, endDate: v})} />
+                <TextInput style={styles.modalInput} placeholder="e.g., 2024" placeholderTextColor="#999" value={tempData.endDate} onChangeText={(v) => setTempData({...tempData, endDate: v})} />
               </View>
             </View>
-            
-            <Text style={styles.modalLabel}>Description (optional)</Text>
-            <TextInput style={[styles.modalInput, {height: 80}]} multiline placeholder="Describe your studies, achievements, etc." value={tempData.description} onChangeText={(v) => setTempData({...tempData, description: v})} />
           </>
         );
       case 'Experience':
         return (
           <>
             <Text style={styles.modalLabel}>Company Name *</Text>
-            <TextInput style={styles.modalInput} placeholder="e.g., Google, Microsoft" value={tempData.company} onChangeText={(v) => setTempData({...tempData, company: v})} />
+            <TextInput style={styles.modalInput} placeholder="e.g., Google, Microsoft" placeholderTextColor="#999" value={tempData.company} onChangeText={(v) => setTempData({...tempData, company: v})} />
             
             <Text style={styles.modalLabel}>Job Title *</Text>
-            <TextInput style={styles.modalInput} placeholder="e.g., Software Engineer" value={tempData.title} onChangeText={(v) => setTempData({...tempData, title: v})} />
+            <TextInput style={styles.modalInput} placeholder="e.g., Software Engineer" placeholderTextColor="#999" value={tempData.title} onChangeText={(v) => setTempData({...tempData, title: v})} />
             
             <View style={styles.row}>
               <View style={{flex: 1, marginRight: 8}}>
                 <Text style={styles.modalLabel}>Start Date *</Text>
-                <TextInput style={styles.modalInput} placeholder="e.g., Jan 2022" value={tempData.startDate} onChangeText={(v) => setTempData({...tempData, startDate: v})} />
+                <TextInput style={styles.modalInput} placeholder="e.g., Jan 2022" placeholderTextColor="#999" value={tempData.startDate} onChangeText={(v) => setTempData({...tempData, startDate: v})} />
               </View>
               <View style={{flex: 1}}>
                 <Text style={styles.modalLabel}>End Date *</Text>
-                <TextInput style={styles.modalInput} placeholder="e.g., Present" value={tempData.endDate} onChangeText={(v) => setTempData({...tempData, endDate: v})} />
+                <TextInput style={styles.modalInput} placeholder="e.g., Present" placeholderTextColor="#999" value={tempData.endDate} onChangeText={(v) => setTempData({...tempData, endDate: v})} />
               </View>
             </View>
             
             <Text style={styles.modalLabel}>Role Description *</Text>
-            <TextInput style={[styles.modalInput, {height: 100}]} multiline placeholder="Describe your responsibilities and achievements" value={tempData.desc} onChangeText={(v) => setTempData({...tempData, desc: v})} />
+            <TextInput style={[styles.modalInput, {height: 100}]} multiline placeholder="Describe your responsibilities and achievements" placeholderTextColor="#999" value={tempData.desc} onChangeText={(v) => setTempData({...tempData, desc: v})} />
           </>
         );
       case 'Certifications':
         return (
           <>
             <Text style={styles.modalLabel}>Certificate Name *</Text>
-            <TextInput style={styles.modalInput} placeholder="e.g., AWS Certified Solutions Architect" value={tempData.name} onChangeText={(v) => setTempData({...tempData, name: v})} />
+            <TextInput style={styles.modalInput} placeholder="e.g., AWS Certified Solutions Architect" placeholderTextColor="#999" value={tempData.name} onChangeText={(v) => setTempData({...tempData, name: v})} />
             
             <Text style={styles.modalLabel}>Issuing Organization *</Text>
-            <TextInput style={styles.modalInput} placeholder="e.g., Amazon, Google, Microsoft" value={tempData.issuer} onChangeText={(v) => setTempData({...tempData, issuer: v})} />
+            <TextInput style={styles.modalInput} placeholder="e.g., Amazon, Google, Microsoft" placeholderTextColor="#999" value={tempData.issuer} onChangeText={(v) => setTempData({...tempData, issuer: v})} />
             
             <Text style={styles.modalLabel}>Date Obtained *</Text>
-            <TextInput style={styles.modalInput} placeholder="e.g., June 2023" value={tempData.date} onChangeText={(v) => setTempData({...tempData, date: v})} />
+            <TextInput style={styles.modalInput} placeholder="e.g., June 2023" placeholderTextColor="#999" value={tempData.date} onChangeText={(v) => setTempData({...tempData, date: v})} />
           </>
         );
       case 'Languages':
         return (
           <>
             <Text style={styles.modalLabel}>Language *</Text>
-            <TextInput style={styles.modalInput} placeholder="e.g., English, Spanish, Mandarin" value={tempData.language} onChangeText={(v) => setTempData({...tempData, language: v})} />
+            <TextInput style={styles.modalInput} placeholder="e.g., English, Spanish, Mandarin" placeholderTextColor="#999" value={tempData.language} onChangeText={(v) => setTempData({...tempData, language: v})} />
             
             <Text style={styles.modalLabel}>Proficiency Level *</Text>
             <TextInput 
               style={[styles.modalInput, tempData.level && validateLanguageLevel(tempData.level) ? styles.inputError : null]} 
               placeholder="Basic / Conversational / Professional / Native" 
+              placeholderTextColor="#999"
               value={tempData.level} 
-              onChangeText={(v) => {
-                setTempData({...tempData, level: v});
-              }}
+              onChangeText={(v) => setTempData({...tempData, level: v})}
             />
             {tempData.level && validateLanguageLevel(tempData.level) && (
               <Text style={styles.errorText}>{validateLanguageLevel(tempData.level)}</Text>
@@ -472,9 +460,12 @@ const ResumeBuilder = ({ navigation, route }) => {
         style={styles.sectionItemCard}
         onPress={() => openModal(section, index)}
         onLongPress={() => deleteSectionItem(section, index)}
+        activeOpacity={0.7}
       >
         <View style={styles.sectionItemLeft}>
-          <Ionicons name={icon} size={20} color="#4f46e5" />
+          <View style={styles.sectionItemIcon}>
+            <Ionicons name={icon} size={18} color="#f9c349" />
+          </View>
           <View style={styles.sectionItemContent}>
             <Text style={styles.sectionItemTitle}>{item[titleKey]}</Text>
             {subtitleKey && item[subtitleKey] && (
@@ -482,190 +473,247 @@ const ResumeBuilder = ({ navigation, route }) => {
             )}
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
+        <View style={styles.chevronCircle}>
+          <Ionicons name="chevron-forward" size={16} color="#999" />
+        </View>
       </TouchableOpacity>
     ));
   };
 
-  // Helper to check if a field has error
   const hasError = (field) => {
     return errors[field] && touchedFields[field];
   };
 
   if (loading && !formData.fullName) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4f46e5" />
-          <Text style={styles.loadingText}>Loading...</Text>
+          <ActivityIndicator size="large" color="#f9c349" />
+          <Text style={styles.loadingText}>Loading your resume...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" color="#1e293b" size={24} />
+      {/* Top Bar */}
+      <Animated.View style={[styles.topBar, { opacity: headerFade }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
+          <Ionicons name="chevron-back" size={24} color="#1a1a1a" />
         </TouchableOpacity>
         <Text style={styles.topBarTitle}>Resume Editor</Text>
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.saveBtnText}>Save</Text>}
-        </TouchableOpacity>
-      </View>
+        <Animated.View style={{ transform: [{ scale: saveScale }] }}>
+          <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={loading} activeOpacity={0.8}>
+            <LinearGradient
+              colors={['#000', '#1a1a1a']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.saveBtnGradient}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.saveBtnText}>Save</Text>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
+      </Animated.View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.form} showsVerticalScrollIndicator={false}>
-          
-          <View style={styles.sectionContainer}>
-            <Text style={[styles.sectionHeader, hasError('fullName') && styles.sectionHeaderError]}>
-              Contact Information {hasError('fullName') && '⚠️'}
-            </Text>
+          <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }}>
             
-            {/* Full Name Field */}
-            <View>
-              <Text style={[styles.label, hasError('fullName') && styles.labelError]}>Full Name *</Text>
-              <TextInput 
-                style={[styles.input, hasError('fullName') && styles.inputError]} 
-                placeholder="Enter your full name" 
-                value={formData.fullName} 
-                onChangeText={(t) => handleContactChange('fullName', t)}
-                onBlur={() => handleFieldBlur('fullName')}
-              />
-              {hasError('fullName') && (
-                <Text style={styles.errorText}>{errors.fullName}</Text>
-              )}
-            </View>
-            
-            <View style={styles.row}>
-              {/* Email Field */}
-              <View style={{flex: 1, marginRight: 8}}>
-                <Text style={[styles.label, hasError('email') && styles.labelError]}>Email *</Text>
-                <TextInput 
-                  style={[styles.input, hasError('email') && styles.inputError]} 
-                  placeholder="your@email.com" 
-                  keyboardType="email-address" 
-                  value={formData.email} 
-                  onChangeText={(t) => handleContactChange('email', t)}
-                  onBlur={() => handleFieldBlur('email')}
-                />
-                {hasError('email') && (
-                  <Text style={styles.errorText}>{errors.email}</Text>
-                )}
+            {/* Contact Information */}
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeaderRow}>
+                <LinearGradient colors={['#f9c349', '#f9c349']} style={styles.sectionDot} />
+                <Text style={styles.sectionHeader}>Contact Information</Text>
               </View>
               
-              {/* Phone Field */}
-              <View style={{flex: 1}}>
-                <Text style={[styles.label, hasError('phone') && styles.labelError]}>Phone *</Text>
-                <TextInput 
-                  style={[styles.input, hasError('phone') && styles.inputError]} 
-                  placeholder="+1234567890" 
-                  keyboardType="phone-pad" 
-                  value={formData.phone} 
-                  onChangeText={(t) => handleContactChange('phone', t)}
-                  onBlur={() => handleFieldBlur('phone')}
-                />
-                {hasError('phone') && (
-                  <Text style={styles.errorText}>{errors.phone}</Text>
-                )}
-              </View>
-            </View>
-            
-            {/* LinkedIn Field */}
-            <View>
-              <Text style={[styles.label, hasError('linkedin') && styles.labelError]}>LinkedIn (Optional)</Text>
-              <TextInput 
-                style={[styles.input, hasError('linkedin') && styles.inputError]} 
-                placeholder="linkedin.com/in/username" 
-                value={formData.linkedin} 
-                onChangeText={(t) => handleContactChange('linkedin', t)}
-                onBlur={() => handleFieldBlur('linkedin')}
-              />
-              {hasError('linkedin') && (
-                <Text style={styles.errorText}>{errors.linkedin}</Text>
-              )}
-            </View>
-            
-            <View style={styles.row}>
-              {/* GitHub Field */}
-              <View style={{flex: 1, marginRight: 8}}>
-                <Text style={[styles.label, hasError('github') && styles.labelError]}>GitHub (Optional)</Text>
-                <TextInput 
-                  style={[styles.input, hasError('github') && styles.inputError]} 
-                  placeholder="github.com/username" 
-                  value={formData.github} 
-                  onChangeText={(t) => handleContactChange('github', t)}
-                  onBlur={() => handleFieldBlur('github')}
-                />
-                {hasError('github') && (
-                  <Text style={styles.errorText}>{errors.github}</Text>
-                )}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Full Name *</Text>
+                <View style={[styles.inputWrapper, focusedInput === 'name' && styles.inputFocused, hasError('fullName') && styles.inputError]}>
+                  <View style={styles.inputIconContainer}>
+                    <Ionicons name="person-outline" size={18} color={focusedInput === 'name' ? "#f9c349" : "#999"} />
+                  </View>
+                  <TextInput 
+                    style={styles.input} 
+                    placeholder="Enter your full name" 
+                    placeholderTextColor="#999"
+                    value={formData.fullName} 
+                    onChangeText={(t) => handleContactChange('fullName', t)}
+                    onFocus={() => setFocusedInput('name')}
+                    onBlur={() => { handleFieldBlur('fullName'); setFocusedInput(null); }}
+                  />
+                </View>
+                {hasError('fullName') && <Text style={styles.errorText}>{errors.fullName}</Text>}
               </View>
               
-              {/* Portfolio Field */}
-              <View style={{flex: 1}}>
-                <Text style={[styles.label, hasError('portfolio') && styles.labelError]}>Portfolio (Optional)</Text>
-                <TextInput 
-                  style={[styles.input, hasError('portfolio') && styles.inputError]} 
-                  placeholder="yourwebsite.com" 
-                  value={formData.portfolio} 
-                  onChangeText={(t) => handleContactChange('portfolio', t)}
-                  onBlur={() => handleFieldBlur('portfolio')}
-                />
-                {hasError('portfolio') && (
-                  <Text style={styles.errorText}>{errors.portfolio}</Text>
-                )}
+              <View style={styles.row}>
+                <View style={[styles.inputGroup, {flex: 1, marginRight: 8}]}>
+                  <Text style={styles.label}>Email *</Text>
+                  <View style={[styles.inputWrapper, focusedInput === 'email' && styles.inputFocused, hasError('email') && styles.inputError]}>
+                    <View style={styles.inputIconContainer}>
+                      <Ionicons name="mail-outline" size={18} color={focusedInput === 'email' ? "#f9c349" : "#999"} />
+                    </View>
+                    <TextInput 
+                      style={styles.input} 
+                      placeholder="your@email.com" 
+                      placeholderTextColor="#999"
+                      keyboardType="email-address" 
+                      value={formData.email} 
+                      onChangeText={(t) => handleContactChange('email', t)}
+                      onFocus={() => setFocusedInput('email')}
+                      onBlur={() => { handleFieldBlur('email'); setFocusedInput(null); }}
+                    />
+                  </View>
+                  {hasError('email') && <Text style={styles.errorText}>{errors.email}</Text>}
+                </View>
+                
+                <View style={[styles.inputGroup, {flex: 1}]}>
+                  <Text style={styles.label}>Phone *</Text>
+                  <View style={[styles.inputWrapper, focusedInput === 'phone' && styles.inputFocused, hasError('phone') && styles.inputError]}>
+                    <View style={styles.inputIconContainer}>
+                      <Ionicons name="call-outline" size={18} color={focusedInput === 'phone' ? "#f9c349" : "#999"} />
+                    </View>
+                    <TextInput 
+                      style={styles.input} 
+                      placeholder="+1234567890" 
+                      placeholderTextColor="#999"
+                      keyboardType="phone-pad" 
+                      value={formData.phone} 
+                      onChangeText={(t) => handleContactChange('phone', t)}
+                      onFocus={() => setFocusedInput('phone')}
+                      onBlur={() => { handleFieldBlur('phone'); setFocusedInput(null); }}
+                    />
+                  </View>
+                  {hasError('phone') && <Text style={styles.errorText}>{errors.phone}</Text>}
+                </View>
+              </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>LinkedIn (Optional)</Text>
+                <View style={[styles.inputWrapper, focusedInput === 'linkedin' && styles.inputFocused, hasError('linkedin') && styles.inputError]}>
+                  <View style={styles.inputIconContainer}>
+                    <Ionicons name="logo-linkedin" size={18} color={focusedInput === 'linkedin' ? "#f9c349" : "#999"} />
+                  </View>
+                  <TextInput 
+                    style={styles.input} 
+                    placeholder="linkedin.com/in/username" 
+                    placeholderTextColor="#999"
+                    value={formData.linkedin} 
+                    onChangeText={(t) => handleContactChange('linkedin', t)}
+                    onFocus={() => setFocusedInput('linkedin')}
+                    onBlur={() => { handleFieldBlur('linkedin'); setFocusedInput(null); }}
+                  />
+                </View>
+                {hasError('linkedin') && <Text style={styles.errorText}>{errors.linkedin}</Text>}
+              </View>
+              
+              <View style={styles.row}>
+                <View style={[styles.inputGroup, {flex: 1, marginRight: 8}]}>
+                  <Text style={styles.label}>GitHub (Optional)</Text>
+                  <View style={[styles.inputWrapper, focusedInput === 'github' && styles.inputFocused, hasError('github') && styles.inputError]}>
+                    <View style={styles.inputIconContainer}>
+                      <Ionicons name="logo-github" size={18} color={focusedInput === 'github' ? "#f9c349" : "#999"} />
+                    </View>
+                    <TextInput 
+                      style={styles.input} 
+                      placeholder="github.com/username" 
+                      placeholderTextColor="#999"
+                      value={formData.github} 
+                      onChangeText={(t) => handleContactChange('github', t)}
+                      onFocus={() => setFocusedInput('github')}
+                      onBlur={() => { handleFieldBlur('github'); setFocusedInput(null); }}
+                    />
+                  </View>
+                  {hasError('github') && <Text style={styles.errorText}>{errors.github}</Text>}
+                </View>
+                
+                <View style={[styles.inputGroup, {flex: 1}]}>
+                  <Text style={styles.label}>Portfolio (Optional)</Text>
+                  <View style={[styles.inputWrapper, focusedInput === 'portfolio' && styles.inputFocused, hasError('portfolio') && styles.inputError]}>
+                    <View style={styles.inputIconContainer}>
+                      <Ionicons name="globe-outline" size={18} color={focusedInput === 'portfolio' ? "#f9c349" : "#999"} />
+                    </View>
+                    <TextInput 
+                      style={styles.input} 
+                      placeholder="yourwebsite.com" 
+                      placeholderTextColor="#999"
+                      value={formData.portfolio} 
+                      onChangeText={(t) => handleContactChange('portfolio', t)}
+                      onFocus={() => setFocusedInput('portfolio')}
+                      onBlur={() => { handleFieldBlur('portfolio'); setFocusedInput(null); }}
+                    />
+                  </View>
+                  {hasError('portfolio') && <Text style={styles.errorText}>{errors.portfolio}</Text>}
+                </View>
               </View>
             </View>
-          </View>
 
-          <View style={styles.sectionContainer}>
-            <Text style={[styles.sectionHeader, hasError('summary') && styles.sectionHeaderError]}>
-              Professional Summary {hasError('summary') && '⚠️'}
-            </Text>
-            <View style={styles.textAreaContainer}>
-              <TextInput 
-                style={[styles.textArea, hasError('summary') && styles.inputError]} 
-                multiline 
-                placeholder="Write a compelling summary of your professional background... (500 characters max)" 
-                value={formData.summary}
-                onChangeText={(t) => handleContactChange('summary', t)}
-                onBlur={() => handleFieldBlur('summary')}
-                maxLength={500}
-              />
-              <TouchableOpacity style={styles.aiBtn} onPress={handleAIImprove} disabled={aiLoading}>
-                {aiLoading ? (
-                  <ActivityIndicator size="small" color="#7c3aed" />
-                ) : (
-                  <>
-                    <MaterialCommunityIcons name="auto-fix" size={16} color="#7c3aed" />
-                    <Text style={styles.aiBtnText}>AI Improve</Text>
-                  </>
-                )}
-              </TouchableOpacity>
+            {/* Professional Summary */}
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeaderRow}>
+                <LinearGradient colors={['#f9c349', '#f9c349']} style={styles.sectionDot} />
+                <Text style={styles.sectionHeader}>Professional Summary</Text>
+              </View>
+              <View style={[styles.textAreaWrapper, focusedInput === 'summary' && styles.inputFocused, hasError('summary') && styles.inputError]}>
+                <TextInput 
+                  style={styles.textArea} 
+                  multiline 
+                  placeholder="Write a compelling summary of your professional background... (500 characters max)" 
+                  placeholderTextColor="#999"
+                  value={formData.summary}
+                  onChangeText={(t) => handleContactChange('summary', t)}
+                  onFocus={() => setFocusedInput('summary')}
+                  onBlur={() => { handleFieldBlur('summary'); setFocusedInput(null); }}
+                  maxLength={500}
+                />
+                <View style={styles.textAreaFooter}>
+                  <TouchableOpacity style={styles.aiBtn} onPress={handleAIImprove} disabled={aiLoading} activeOpacity={0.7}>
+                    {aiLoading ? (
+                      <ActivityIndicator size="small" color="#f9c349" />
+                    ) : (
+                      <>
+                        <MaterialCommunityIcons name="auto-fix" size={14} color="#f9c349" />
+                        <Text style={styles.aiBtnText}>AI Improve</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                  <Text style={styles.charCount}>{formData.summary?.length || 0}/500</Text>
+                </View>
+              </View>
+              {hasError('summary') && <Text style={styles.errorText}>{errors.summary}</Text>}
             </View>
-            {hasError('summary') && (
-              <Text style={styles.errorText}>{errors.summary}</Text>
-            )}
-            <Text style={styles.charCount}>{formData.summary?.length || 0}/500 characters</Text>
-          </View>
 
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionHeader}>Skills</Text>
-            <View style={styles.skillsContainer}>
+            {/* Skills */}
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeaderRow}>
+                <LinearGradient colors={['#f9c349', '#f9c349']} style={styles.sectionDot} />
+                <Text style={styles.sectionHeader}>Skills</Text>
+              </View>
               <View style={styles.skillsInputRow}>
-                <TextInput 
-                  style={styles.skillsInput} 
-                  placeholder="Add a skill (e.g., React, Python)" 
-                  value={skillsInput}
-                  onChangeText={setSkillsInput}
-                  onSubmitEditing={addSkill}
-                />
-                <TouchableOpacity style={styles.addSkillBtn} onPress={addSkill}>
-                  <Ionicons name="add" size={24} color="#4f46e5" />
+                <View style={[styles.inputWrapper, {flex: 1, marginRight: 10}]}>
+                  <TextInput 
+                    style={styles.input} 
+                    placeholder="Add a skill (e.g., React, Python)" 
+                    placeholderTextColor="#999"
+                    value={skillsInput}
+                    onChangeText={setSkillsInput}
+                    onSubmitEditing={addSkill}
+                  />
+                </View>
+                <TouchableOpacity style={styles.addSkillBtn} onPress={addSkill} activeOpacity={0.7}>
+                  <LinearGradient
+                    colors={['#000', '#1a1a1a']}
+                    style={styles.addSkillGradient}
+                  >
+                    <Ionicons name="add" size={22} color="#fff" />
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
               <View style={styles.skillsList}>
@@ -673,94 +721,115 @@ const ResumeBuilder = ({ navigation, route }) => {
                   <View key={index} style={styles.skillChip}>
                     <Text style={styles.skillChipText}>{skill}</Text>
                     <TouchableOpacity onPress={() => removeSkill(index)}>
-                      <Ionicons name="close-circle" size={16} color="#94a3b8" />
+                      <Ionicons name="close-circle" size={16} color="#999" />
                     </TouchableOpacity>
                   </View>
                 ))}
               </View>
             </View>
-          </View>
 
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionHeader}>Resume Sections</Text>
-            
-            {/* Experience Section */}
-            <View style={styles.sectionGroup}>
-              <View style={styles.sectionGroupHeader}>
-                <Text style={styles.sectionGroupTitle}>Work Experience</Text>
-                <TouchableOpacity onPress={() => openModal('Experience')}>
-                  <Ionicons name="add-circle" size={24} color="#4f46e5" />
-                </TouchableOpacity>
+            {/* Resume Sections */}
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeaderRow}>
+                <LinearGradient colors={['#f9c349', '#f9c349']} style={styles.sectionDot} />
+                <Text style={styles.sectionHeader}>Resume Sections</Text>
               </View>
-              {renderSectionItems('Experience', formData.experience, 'briefcase-outline', 'title', 'company')}
-              {formData.experience.length === 0 && (
-                <Text style={styles.emptyText}>No experience added yet. Tap + to add.</Text>
-              )}
+              
+              {/* Experience */}
+              <View style={styles.sectionGroup}>
+                <View style={styles.sectionGroupHeader}>
+                  <Text style={styles.sectionGroupTitle}>Work Experience</Text>
+                  <TouchableOpacity onPress={() => openModal('Experience')} activeOpacity={0.7}>
+                    <View style={styles.addCircleBtn}>
+                      <Ionicons name="add" size={20} color="#f9c349" />
+                    </View>
+                  </TouchableOpacity>
+                </View>
+                {renderSectionItems('Experience', formData.experience, 'briefcase-outline', 'title', 'company')}
+                {formData.experience.length === 0 && (
+                  <Text style={styles.emptyText}>No experience added yet. Tap + to add.</Text>
+                )}
+              </View>
+
+              {/* Education */}
+              <View style={styles.sectionGroup}>
+                <View style={styles.sectionGroupHeader}>
+                  <Text style={styles.sectionGroupTitle}>Education</Text>
+                  <TouchableOpacity onPress={() => openModal('Education')} activeOpacity={0.7}>
+                    <View style={styles.addCircleBtn}>
+                      <Ionicons name="add" size={20} color="#f9c349" />
+                    </View>
+                  </TouchableOpacity>
+                </View>
+                {renderSectionItems('Education', formData.education, 'school-outline', 'degree', 'school')}
+                {formData.education.length === 0 && (
+                  <Text style={styles.emptyText}>No education added yet. Tap + to add.</Text>
+                )}
+              </View>
+
+              {/* Certifications */}
+              <View style={styles.sectionGroup}>
+                <View style={styles.sectionGroupHeader}>
+                  <Text style={styles.sectionGroupTitle}>Certifications (Max 5)</Text>
+                  <TouchableOpacity onPress={() => openModal('Certifications')} activeOpacity={0.7}>
+                    <View style={styles.addCircleBtn}>
+                      <Ionicons name="add" size={20} color="#f9c349" />
+                    </View>
+                  </TouchableOpacity>
+                </View>
+                {renderSectionItems('Certifications', formData.certifications, 'ribbon-outline', 'name', 'issuer')}
+                {formData.certifications.length === 0 && (
+                  <Text style={styles.emptyText}>No certifications added yet. Tap + to add.</Text>
+                )}
+              </View>
+
+              {/* Languages */}
+              <View style={styles.sectionGroup}>
+                <View style={styles.sectionGroupHeader}>
+                  <Text style={styles.sectionGroupTitle}>Languages (Max 5)</Text>
+                  <TouchableOpacity onPress={() => openModal('Languages')} activeOpacity={0.7}>
+                    <View style={styles.addCircleBtn}>
+                      <Ionicons name="add" size={20} color="#f9c349" />
+                    </View>
+                  </TouchableOpacity>
+                </View>
+                {renderSectionItems('Languages', formData.languages, 'language-outline', 'language', 'level')}
+                {formData.languages.length === 0 && (
+                  <Text style={styles.emptyText}>No languages added yet. Tap + to add.</Text>
+                )}
+              </View>
             </View>
 
-            {/* Education Section */}
-            <View style={styles.sectionGroup}>
-              <View style={styles.sectionGroupHeader}>
-                <Text style={styles.sectionGroupTitle}>Education</Text>
-                <TouchableOpacity onPress={() => openModal('Education')}>
-                  <Ionicons name="add-circle" size={24} color="#4f46e5" />
-                </TouchableOpacity>
-              </View>
-              {renderSectionItems('Education', formData.education, 'school-outline', 'degree', 'school')}
-              {formData.education.length === 0 && (
-                <Text style={styles.emptyText}>No education added yet. Tap + to add.</Text>
-              )}
-            </View>
-
-            {/* Certifications Section */}
-            <View style={styles.sectionGroup}>
-              <View style={styles.sectionGroupHeader}>
-                <Text style={styles.sectionGroupTitle}>Certifications (Max 5)</Text>
-                <TouchableOpacity onPress={() => openModal('Certifications')}>
-                  <Ionicons name="add-circle" size={24} color="#4f46e5" />
-                </TouchableOpacity>
-              </View>
-              {renderSectionItems('Certifications', formData.certifications, 'ribbon-outline', 'name', 'issuer')}
-              {formData.certifications.length === 0 && (
-                <Text style={styles.emptyText}>No certifications added yet. Tap + to add.</Text>
-              )}
-            </View>
-
-            {/* Languages Section */}
-            <View style={styles.sectionGroup}>
-              <View style={styles.sectionGroupHeader}>
-                <Text style={styles.sectionGroupTitle}>Languages (Max 5)</Text>
-                <TouchableOpacity onPress={() => openModal('Languages')}>
-                  <Ionicons name="add-circle" size={24} color="#4f46e5" />
-                </TouchableOpacity>
-              </View>
-              {renderSectionItems('Languages', formData.languages, 'language-outline', 'language', 'level')}
-              {formData.languages.length === 0 && (
-                <Text style={styles.emptyText}>No languages added yet. Tap + to add.</Text>
-              )}
-            </View>
-          </View>
-
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Modal for adding/editing items */}
-      <Modal visible={modalVisible} animationType="slide" transparent={true}>
+      {/* Modal */}
+      <Modal visible={modalVisible} animationType="fade" transparent={true}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+          <Animated.View style={[styles.modalContainer, { transform: [{ scale: modalScale }] }]}>
+            <View style={styles.modalHandle} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{editingIndex !== null ? 'Edit' : 'Add'} {activeSection}</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#1e293b" />
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.modalCloseBtn}>
+                <Ionicons name="close" size={22} color="#1a1a1a" />
               </TouchableOpacity>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false} style={{marginVertical: 20}}>
+            <ScrollView showsVerticalScrollIndicator={false} style={{marginVertical: 15}}>
               {renderModalFields()}
             </ScrollView>
-            <TouchableOpacity style={styles.modalAddBtn} onPress={saveSectionData}>
-              <Text style={styles.modalAddBtnText}>Save to Resume</Text>
+            <TouchableOpacity style={styles.modalAddBtn} onPress={saveSectionData} activeOpacity={0.8}>
+              <LinearGradient
+                colors={['#f9c349', '#1a1a1a']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.modalAddBtnGradient}
+              >
+                <Text style={styles.modalAddBtnText}>Save to Resume</Text>
+                <Ionicons name="checkmark-circle" size={18} color="#fff" />
+              </LinearGradient>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
     </SafeAreaView>
@@ -768,52 +837,273 @@ const ResumeBuilder = ({ navigation, route }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 12, fontSize: 14, color: '#64748b' },
-  topBar: { flexDirection: 'row', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: '#f1f5f9', alignItems: 'center' },
-  topBarTitle: { fontSize: 18, fontWeight: '700', color: '#1e293b' },
-  saveBtn: { backgroundColor: '#4f46e5', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 },
-  saveBtnText: { color: '#fff', fontWeight: '700' },
+  container: { flex: 1, backgroundColor: '#ffffff' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#ffffff' },
+  loadingText: { marginTop: 12, fontSize: 14, color: '#999', fontWeight: '600' },
+  
+  // Top Bar
+  topBar: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 20, 
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#f8f8f8',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  topBarTitle: { fontSize: 18, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.5 },
+  saveBtn: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    elevation: 5,
+    shadowColor: "#f9c349",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  saveBtnGradient: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  saveBtnText: { color: '#fff', fontWeight: '800', fontSize: 14, letterSpacing: 0.5 },
+  
   form: { padding: 20, paddingBottom: 40 },
+  
+  // Sections
   sectionContainer: { marginBottom: 24 },
-  sectionHeader: { fontSize: 16, fontWeight: '800', color: '#1e293b', marginBottom: 16, textTransform: 'uppercase', letterSpacing: 1 },
-  sectionHeaderError: { color: '#ef4444' },
-  label: { fontSize: 13, fontWeight: '600', color: '#475569', marginBottom: 4 },
-  labelError: { color: '#ef4444' },
-  input: { borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 12, fontSize: 15, backgroundColor: '#f8fafc', marginBottom: 12 },
-  inputError: { borderColor: '#ef4444', borderWidth: 2, backgroundColor: '#fef2f2' },
-  errorText: { color: '#ef4444', fontSize: 11, marginTop: -8, marginBottom: 8, marginLeft: 4 },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 10,
+  },
+  sectionHeader: { fontSize: 16, fontWeight: '800', color: '#1a1a1a', letterSpacing: 1, textTransform: 'uppercase' },
+  
+  // Input Styles
+  inputGroup: { marginBottom: 14 },
+  label: { fontSize: 13, fontWeight: '700', color: '#666', marginBottom: 6, letterSpacing: 0.5 },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f8f8',
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    paddingHorizontal: 12,
+    height: 50,
+  },
+  inputFocused: {
+    borderColor: '#f9c349',
+    backgroundColor: '#fff',
+    shadowColor: "#f9c349",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  inputError: { borderColor: '#ef4444' },
+  inputIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  input: { flex: 1, fontSize: 14, color: '#1a1a1a', fontWeight: '500', paddingVertical: 4 },
+  errorText: { color: '#ef4444', fontSize: 11, fontWeight: '600', marginTop: 4, marginLeft: 4 },
   row: { flexDirection: 'row' },
-  textAreaContainer: { position: 'relative' },
-  textArea: { height: 120, borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 16, padding: 15, backgroundColor: '#f8fafc', textAlignVertical: 'top', fontSize: 14 },
-  aiBtn: { position: 'absolute', bottom: 10, right: 10, flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 8, borderRadius: 10, elevation: 3 },
-  aiBtnText: { color: '#7c3aed', fontSize: 11, fontWeight: 'bold', marginLeft: 4 },
-  charCount: { fontSize: 11, color: '#94a3b8', textAlign: 'right', marginTop: 4 },
-  skillsContainer: { marginBottom: 16 },
+  
+  // Text Area
+  textAreaWrapper: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    padding: 12,
+  },
+  textArea: { 
+    height: 120, 
+    textAlignVertical: 'top', 
+    fontSize: 14, 
+    color: '#1a1a1a',
+    fontWeight: '500',
+  },
+  textAreaFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  aiBtn: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#fff', 
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10, 
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+    gap: 5,
+  },
+  aiBtnText: { color: '#f9c349', fontSize: 11, fontWeight: '700' },
+  charCount: { fontSize: 11, color: '#999', fontWeight: '500' },
+  
+  // Skills
   skillsInputRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  skillsInput: { flex: 1, borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 12, fontSize: 15, backgroundColor: '#f8fafc', marginRight: 8 },
-  addSkillBtn: { padding: 8 },
+  addSkillBtn: { borderRadius: 14, overflow: 'hidden', elevation: 4 },
+  addSkillGradient: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   skillsList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  skillChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f5f3ff', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 6 },
-  skillChipText: { fontSize: 13, color: '#4f46e5' },
-  sectionGroup: { marginBottom: 20 },
-  sectionGroupHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionGroupTitle: { fontSize: 16, fontWeight: '600', color: '#1e293b' },
-  sectionItemCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-  sectionItemLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 },
+  skillChip: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#f8f8f8', 
+    paddingHorizontal: 14, 
+    paddingVertical: 8, 
+    borderRadius: 20, 
+    gap: 8,
+    borderWidth: 2,
+    borderColor: '#f0f0f0',
+  },
+  skillChipText: { fontSize: 13, color: '#1a1a1a', fontWeight: '600' },
+  
+  // Section Groups
+  sectionGroup: { 
+    backgroundColor: '#f8f8f8',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 2,
+    borderColor: '#f0f0f0',
+  },
+  sectionGroupHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  sectionGroupTitle: { fontSize: 16, fontWeight: '700', color: '#1a1a1a' },
+  addCircleBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#f0f0f0',
+  },
+  
+  // Section Items
+  sectionItemCard: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  sectionItemLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 10 },
+  sectionItemIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   sectionItemContent: { flex: 1 },
-  sectionItemTitle: { fontSize: 14, fontWeight: '600', color: '#1e293b' },
-  sectionItemSubtitle: { fontSize: 12, color: '#64748b', marginTop: 2 },
-  emptyText: { fontSize: 13, color: '#94a3b8', textAlign: 'center', paddingVertical: 20, fontStyle: 'italic' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContainer: { backgroundColor: '#fff', borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 25, maxHeight: '90%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  modalTitle: { fontSize: 22, fontWeight: '800', color: '#1e293b' },
-  modalLabel: { fontSize: 14, fontWeight: '600', color: '#475569', marginBottom: 6, marginTop: 10 },
-  modalInput: { borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 14, fontSize: 15, backgroundColor: '#f8fafc', marginBottom: 5 },
-  modalAddBtn: { backgroundColor: '#4f46e5', padding: 16, borderRadius: 16, alignItems: 'center', marginTop: 20 },
-  modalAddBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 }
+  sectionItemTitle: { fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
+  sectionItemSubtitle: { fontSize: 12, color: '#999', marginTop: 2, fontWeight: '500' },
+  chevronCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: { fontSize: 13, color: '#999', textAlign: 'center', paddingVertical: 16, fontWeight: '500', fontStyle: 'italic' },
+  
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalContainer: { 
+    backgroundColor: '#fff', 
+    borderTopLeftRadius: 30, 
+    borderTopRightRadius: 30, 
+    padding: 25, 
+    maxHeight: '85%' 
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#e0e0e0',
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  modalHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 10,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  modalTitle: { fontSize: 20, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.5 },
+  modalCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#f8f8f8',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalLabel: { fontSize: 13, fontWeight: '700', color: '#666', marginBottom: 6, marginTop: 12, letterSpacing: 0.5 },
+  modalInput: { 
+    borderWidth: 2, 
+    borderColor: '#f0f0f0', 
+    borderRadius: 14, 
+    padding: 14, 
+    fontSize: 14, 
+    backgroundColor: '#f8f8f8', 
+    marginBottom: 4,
+    color: '#1a1a1a',
+    fontWeight: '500',
+  },
+  modalAddBtn: { borderRadius: 16, overflow: 'hidden', marginTop: 20, elevation: 8 },
+  modalAddBtnGradient: { 
+    padding: 16, 
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  modalAddBtnText: { color: '#fff', fontWeight: '800', fontSize: 16, letterSpacing: 0.5 },
 });
 
 export default ResumeBuilder;

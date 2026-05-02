@@ -1,21 +1,14 @@
-import React, { useState, useEffect, useCallback, useContext } from "react";
+import React, { useState, useEffect, useCallback, useContext, useRef } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  StatusBar,
-  Dimensions,
-  Share,
-  Alert,
-  ActivityIndicator,
-  RefreshControl,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  StatusBar, Dimensions, Share, Alert, ActivityIndicator,
+  RefreshControl, Animated,
 } from "react-native";
-import * as Clipboard from "expo-clipboard"; // Use Expo Clipboard if on Expo
+import * as Clipboard from "expo-clipboard";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import BaseScreen from "./BaseScreen";
+import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
 
@@ -24,7 +17,6 @@ const { width } = Dimensions.get("window");
 export default function PointsScreen() {
   const navigation = useNavigation();
   const { token } = useContext(AuthContext);
-
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userData, setUserData] = useState({
@@ -33,32 +25,29 @@ export default function PointsScreen() {
     canApplyForTdcCard: false,
   });
 
-  const fetchUserData = async () => {
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideUpAnim = useRef(new Animated.Value(30)).current;
+  const headerFade = useRef(new Animated.Value(0)).current;
+  const progressWidth = useRef(new Animated.Value(0)).current;
+  const cardScale = useRef(new Animated.Value(0.95)).current;
+  const shareScale = useRef(new Animated.Value(1)).current;
 
+  const fetchUserData = async () => {
+    if (!token) { setLoading(false); return; }
     try {
       const response = await axios.get(
         "https://the-deft-crew-production.up.railway.app/api/auth/profile/me",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       const data = response.data;
-
       setUserData({
         referralCount: data.referralCount || 0,
         referralCode: data.referralCode || "GENERATING...",
         canApplyForTdcCard: data.canApplyForTdcCard || false,
       });
     } catch (error) {
-      console.log("Fetch Error:", error.message);
-      if (!refreshing) {
-        Alert.alert("Sync Error", "Unable to sync your referral data.");
-      }
+      if (!refreshing) Alert.alert("Sync Error", "Unable to sync your referral data.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -67,281 +56,305 @@ export default function PointsScreen() {
 
   useEffect(() => {
     fetchUserData();
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(headerFade, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.spring(slideUpAnim, { toValue: 0, friction: 6, tension: 40, useNativeDriver: true }),
+      Animated.spring(cardScale, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true }),
+    ]).start();
   }, [token]);
+
+  useEffect(() => {
+    if (userData.referralCount > 0) {
+      Animated.timing(progressWidth, {
+        toValue: Math.min(userData.referralCount / 10, 1),
+        duration: 1000,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [userData.referralCount]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchUserData();
   }, [token]);
 
-  // Logic Calculations
   const referred = userData.referralCount;
   const target = 10;
-  const progressPercent = Math.min((referred / target) * 100, 100) + "%";
+  const progressPercent = Math.min((referred / target) * 100, 100);
   const shareLink = `https://tdc.app/signup?ref=${userData.referralCode}`;
+
+  const progressWidthInterpolated = progressWidth.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
 
   const onShare = async () => {
     if (userData.referralCode === "GENERATING...") {
       Alert.alert("Wait", "Your unique code is still being generated.");
       return;
     }
+    Animated.sequence([
+      Animated.timing(shareScale, { toValue: 0.95, duration: 100, useNativeDriver: true }),
+      Animated.timing(shareScale, { toValue: 1, duration: 100, useNativeDriver: true }),
+    ]).start();
     try {
       await Share.share({
         message: `Join TDC using my referral code: ${userData.referralCode}\nRegister here: ${shareLink}`,
       });
-    } catch (error) {
-      Alert.alert("Error", error.message);
-    }
+    } catch (error) { Alert.alert("Error", error.message); }
   };
 
   const copyToClipboard = async () => {
     await Clipboard.setStringAsync(shareLink);
-    Alert.alert("Success", "Referral link copied to clipboard!");
+    Alert.alert("Copied!", "Referral link copied to clipboard.");
+  };
+
+  const InfoCard = ({ icon, title, content, color, index }) => {
+    const cardAnim = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+      Animated.timing(cardAnim, { toValue: 1, duration: 400, delay: 200 + index * 100, useNativeDriver: true }).start();
+    }, []);
+    
+    return (
+      <Animated.View style={[styles.infoCard, { opacity: cardAnim, transform: [{ translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
+        <View style={[styles.infoIconCircle, { backgroundColor: color + '15' }]}>
+          <MaterialCommunityIcons name={icon} size={22} color={color} />
+        </View>
+        <View style={styles.infoContent}>
+          <Text style={styles.infoTitle}>{title}</Text>
+          <Text style={styles.infoText}>{content}</Text>
+        </View>
+      </Animated.View>
+    );
   };
 
   if (loading) {
     return (
-      <BaseScreen>
+      <SafeAreaView style={styles.container}>
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#0ca96d" />
+          <ActivityIndicator size="large" color="#f9c349" />
         </View>
-      </BaseScreen>
+      </SafeAreaView>
     );
   }
 
-  // InfoCard Sub-component
-  const InfoCard = ({ icon, title, content, color }) => (
-    <View style={styles.card}>
-      <View style={[styles.iconWrapper, { backgroundColor: color + "15" }]}>
-        <MaterialCommunityIcons name={icon} size={26} color={color} />
-      </View>
-      <View style={styles.cardBody}>
-        <View style={styles.titleRow}>
-          <Text style={styles.cardTitle}>{title}</Text>
-          <Ionicons name="sparkles-outline" size={16} color="#08634f" />
-        </View>
-        <Text style={styles.cardText}>{content}</Text>
-      </View>
-    </View>
-  );
-
   return (
-    <BaseScreen>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.headerContainer}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Ionicons name="chevron-back" size={28} color="#000000" />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      
+      {/* Header */}
+      <Animated.View style={[styles.header, { opacity: headerFade }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
+          <Ionicons name="chevron-back" size={24} color="#1a1a1a" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Refer & Elevate</Text>
-        <View style={{ width: 28 }} />
-      </View>
+        <Text style={styles.headerTitle}>Refer & Earn</Text>
+        <View style={{ width: 38 }} />
+      </Animated.View>
 
       <ScrollView
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={["#0ca96d"]}
-          />
-        }
-        contentContainerStyle={styles.contentContainer}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f9c349" colors={["#f9c349"]} />}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        {/* Progress Visual */}
-        <View style={styles.pointsVisualCard}>
-          <Text style={styles.visualLabel}>TDC PRIVILEGE MILESTONE</Text>
-          <View style={styles.visualRow}>
-            <View style={styles.visualItem}>
-              <MaterialCommunityIcons
-                name="account-multiple-plus"
-                size={30}
-                color="#FFF"
-              />
-              <Text style={styles.visualText}>{referred} Joins</Text>
-            </View>
-            <Ionicons name="arrow-forward" size={20} color="#FFF" />
-            <View style={styles.visualItem}>
-              <MaterialCommunityIcons
-                name="card-account-details-star"
-                size={30}
-                color={referred >= 10 ? "#FFD700" : "#555"}
-              />
-              <Text
-                style={[styles.visualText, referred >= 10 && styles.goldText]}
-              >
-                TDC CARD
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }}>
+          
+          {/* Progress Card */}
+          <Animated.View style={[styles.progressCard, { transform: [{ scale: cardScale }] }]}>
+            <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.progressGradient}>
+              <Text style={styles.progressLabel}>tdc PRIVILEGE MILESTONE</Text>
+              
+              <View style={styles.milestoneRow}>
+                <View style={styles.milestoneItem}>
+                  <MaterialCommunityIcons name="account-multiple-plus" size={28} color="#fff" />
+                  <Text style={styles.milestoneNum}>{referred}</Text>
+                  <Text style={styles.milestoneLabel}>Joins</Text>
+                </View>
+                
+                <View style={styles.milestoneArrow}>
+                  <Ionicons name="arrow-forward" size={20} color="rgba(255,255,255,0.5)" />
+                </View>
+                
+                <View style={styles.milestoneItem}>
+                  <View style={[styles.tdcCardIcon, referred >= 10 && styles.tdcCardActive]}>
+                    <MaterialCommunityIcons name="card-account-details-star" size={28} color={referred >= 10 ? "#1a1a1a" : "#666"} />
+                  </View>
+                  <Text style={[styles.milestoneLabel, referred >= 10 && styles.goldText]}>tdc CARD</Text>
+                </View>
+              </View>
+
+              {/* Progress Bar */}
+              <View style={styles.progressTrack}>
+                <Animated.View style={[styles.progressBar, { width: progressWidthInterpolated }]} />
+              </View>
+              
+              <Text style={styles.progressCount}>{referred}/{target} Referrals</Text>
+              <Text style={styles.progressNote}>
+                {referred >= 10 
+                  ? "🎉 Milestone Achieved! Claim your card below."
+                  : `${10 - referred} more referrals needed for the Privilege Card.`}
               </Text>
-            </View>
-          </View>
+            </LinearGradient>
+          </Animated.View>
 
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressBar, { width: progressPercent }]} />
-          </View>
-          <Text style={styles.progressNote}>
-            {referred >= 10
-              ? "Milestone Achieved! Apply below."
-              : `${10 - referred} more referrals needed for the Privilege Card.`}
-          </Text>
-        </View>
-        {/* INFO CARDS */}
-
-        <View style={styles.infoWrapper}>
-          <InfoCard
-            icon="account-plus-outline"
-            color="#08634f"
-            title="Activate TDC Privilege Card"
-            content="Invite 10 verified students using your referral link to activate your official TDC Privilege Card."
-          />
-
-          <InfoCard
-            icon="crown-outline"
-            color="#08634f"
-            title="Unlock Exclusive Discounts"
-            content="Use your TDC Privilege Card to enjoy special discounts and deals at partner brands."
-          />
-
-          <InfoCard
-            icon="share-variant-outline"
-            color="#3498DB"
-            title="Build Your Campus Network"
-            content="Share your referral link with friends and classmates to grow the TDC student community."
-          />
-        </View>
-
-        {/* Link Section */}
-        <TouchableOpacity style={styles.linkBox} onPress={copyToClipboard}>
-          <Text style={styles.linkLabel}>Your Unique Referral Link</Text>
-          <View style={styles.linkRow}>
-            <Text style={styles.linkText} numberOfLines={1}>
-              {shareLink}
+          {/* Info Cards */}
+          <View style={styles.infoSection}>
+            <Text style={styles.sectionTitle}>
+              <View style={styles.sectionDot} />
+              How It Works
             </Text>
-            <Ionicons name="copy-outline" size={18} color="#0ca96d" />
+            <InfoCard
+              icon="account-plus-outline"
+              color="#f9c349"
+              title="Invite Friends"
+              content="Share your unique referral link with verified students to earn referral points."
+              index={0}
+            />
+            <InfoCard
+              icon="crown-outline"
+              color="#f9c349"
+              title="Unlock Privilege Card"
+              content="Reach 10 successful referrals to activate your official tdc Privilege Card."
+              index={1}
+            />
+            <InfoCard
+              icon="pricetags-outline"
+              color="#f9c349"
+              title="Enjoy Exclusive Discounts"
+              content="Use your tdc Privilege Card for special deals at partner brands across Pakistan."
+              index={2}
+            />
           </View>
-        </TouchableOpacity>
 
-        <View style={{ paddingHorizontal: 20, marginTop: 10 }}>
-          {referred >= 10 ? (
-            <TouchableOpacity
-              style={styles.activeCardButton}
-              onPress={() =>
-                Alert.alert(
-                  "Application Sent",
-                  "We are reviewing your referrals!",
-                )
-              }
-            >
-              <Text style={styles.activeCardButtonText}>Claim My TDC Card</Text>
+          {/* Referral Link */}
+          <View style={styles.linkCard}>
+            <Text style={styles.linkLabel}>Your Referral Link</Text>
+            <TouchableOpacity style={styles.linkRow} onPress={copyToClipboard} activeOpacity={0.7}>
+              <Text style={styles.linkText} numberOfLines={1}>{shareLink}</Text>
+              <View style={styles.copyBtn}>
+                <Ionicons name="copy-outline" size={18} color="#f9c349" />
+              </View>
             </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={styles.referButton} onPress={onShare}>
-              <Ionicons name="share-social-outline" size={20} color="#FFF" />
-              <Text style={styles.referButtonText}>Share My Link</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+          </View>
+
+          {/* Action Button */}
+          <View style={styles.actionSection}>
+            {referred >= 10 ? (
+              <Animated.View style={{ transform: [{ scale: shareScale }] }}>
+                <TouchableOpacity
+                  style={styles.claimBtn}
+                  onPress={() => Alert.alert("Application Sent", "We are reviewing your referrals!")}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.claimGradient}>
+                    <MaterialCommunityIcons name="card-account-details-star" size={20} color="#1a1a1a" />
+                    <Text style={styles.claimBtnText}>Claim My tdc Card</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </Animated.View>
+            ) : (
+              <Animated.View style={{ transform: [{ scale: shareScale }] }}>
+                <TouchableOpacity style={styles.shareBtn} onPress={onShare} activeOpacity={0.8}>
+                  <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.shareGradient}>
+                    <Ionicons name="share-social-outline" size={20} color="#1a1a1a" />
+                    <Text style={styles.shareBtnText}>Share My Referral Link</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </Animated.View>
+            )}
+          </View>
+
+          {/* Footer Note */}
+          <Text style={styles.footerNote}>
+            <Ionicons name="information-circle-outline" size={14} color="#f9c349" />
+            {" "}Referrals are verified when students complete their registration.
+          </Text>
+        </Animated.View>
       </ScrollView>
-    </BaseScreen>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#ffffff" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  headerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: "#fff",
+  
+  // Header
+  header: { 
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderBottomWidth: 1, borderBottomColor: '#f0f0f0', backgroundColor: '#fff'
   },
-  headerTitle: { fontSize: 20, fontWeight: "bold" },
-  contentContainer: { paddingBottom: 40 },
-  pointsVisualCard: {
-    backgroundColor: "#000",
-    margin: 20,
-    borderRadius: 25,
-    padding: 25,
-    alignItems: "center",
+  headerBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.5 },
+  scrollContent: { paddingBottom: 40 },
+  
+  // Progress Card
+  progressCard: { margin: 16, borderRadius: 24, overflow: 'hidden', elevation: 10, shadowColor: "#f9c349", shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.3, shadowRadius: 15 },
+  progressGradient: { padding: 24, alignItems: 'center' },
+  progressLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: '800', letterSpacing: 2, marginBottom: 20 },
+  
+  milestoneRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', width: '100%', marginBottom: 24 },
+  milestoneItem: { alignItems: 'center' },
+  milestoneNum: { color: '#fff', fontSize: 22, fontWeight: '900', marginTop: 6 },
+  milestoneLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: '600', marginTop: 2 },
+  milestoneArrow: { paddingHorizontal: 10 },
+  tdcCardIcon: { 
+    width: 50, height: 50, borderRadius: 14, 
+    backgroundColor: 'rgba(255,255,255,0.1)', 
+    justifyContent: 'center', alignItems: 'center' 
   },
-  visualLabel: {
-    color: "#fff",
-    fontSize: 10,
-    letterSpacing: 2,
-    marginBottom: 20,
+  tdcCardActive: { backgroundColor: '#fff' },
+  goldText: { color: '#f9c349', fontWeight: '700' },
+  
+  // Progress Bar
+  progressTrack: { 
+    height: 8, width: '100%', backgroundColor: 'rgba(255,255,255,0.2)', 
+    borderRadius: 4, marginBottom: 8, overflow: 'hidden' 
   },
-  visualRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
-    width: "100%",
-    marginBottom: 20,
+  progressBar: { height: '100%', backgroundColor: '#fff', borderRadius: 4 },
+  progressCount: { color: '#fff', fontSize: 13, fontWeight: '700', marginBottom: 4 },
+  progressNote: { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '500', textAlign: 'center' },
+  
+  // Info Section
+  infoSection: { paddingHorizontal: 16, marginTop: 8 },
+  sectionTitle: { 
+    fontSize: 14, fontWeight: '800', color: '#1a1a1a', marginBottom: 14,
+    flexDirection: 'row', alignItems: 'center' 
   },
-  visualItem: { alignItems: "center" },
-  visualText: { color: "#FFF", fontSize: 12, marginTop: 5 },
-  goldText: { color: "#FFD700", fontWeight: "bold" },
-  progressTrack: {
-    height: 8,
-    width: "100%",
-    backgroundColor: "#333",
-    borderRadius: 4,
-    marginBottom: 10,
+  sectionDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#f9c349', marginRight: 10 },
+  
+  infoCard: { 
+    flexDirection: 'row', backgroundColor: '#fff', padding: 16, borderRadius: 16,
+    marginBottom: 12, borderWidth: 2, borderColor: '#f0f0f0', alignItems: 'flex-start' 
   },
-  progressBar: { height: "100%", backgroundColor: "#0ca96d", borderRadius: 4 },
-  progressNote: { color: "#aaa", fontSize: 11, textAlign: "center" },
-  linkBox: {
-    backgroundColor: "#F8F9FA",
-    marginHorizontal: 20,
-    padding: 15,
-    borderRadius: 15,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
+  infoIconCircle: { 
+    width: 44, height: 44, borderRadius: 14, justifyContent: 'center', 
+    alignItems: 'center', marginRight: 12 
   },
-  linkRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  infoContent: { flex: 1 },
+  infoTitle: { fontSize: 14, fontWeight: '800', color: '#1a1a1a', marginBottom: 3 },
+  infoText: { fontSize: 12, color: '#666', lineHeight: 18, fontWeight: '500' },
+  
+  // Link Card
+  linkCard: { 
+    marginHorizontal: 16, marginTop: 10, backgroundColor: '#f8f8f8', 
+    borderRadius: 16, padding: 16, borderWidth: 2, borderColor: '#f0f0f0' 
   },
-  linkLabel: { fontSize: 12, color: "#7F8C8D", marginBottom: 4 },
-  linkText: { fontSize: 14, fontWeight: "600", color: "#0ca96d", flex: 1 },
-  card: {
-    flexDirection: "row",
-    backgroundColor: "#fff",
-    padding: 18,
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: "#F0F3F5",
-  },
-  iconWrapper: {
-    width: 50,
-    height: 50,
-    borderRadius: 15,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 15,
-  },
-  cardBody: { flex: 1 },
-  cardTitle: { fontSize: 16, fontWeight: "700" },
-  cardText: { fontSize: 13, color: "#666", marginTop: 3 },
-  referButton: {
-    flexDirection: "row",
-    backgroundColor: "#000",
-    padding: 16,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  referButtonText: { color: "#FFF", fontWeight: "bold", marginLeft: 8 },
-  activeCardButton: {
-    backgroundColor: "#0ca96d",
-    padding: 16,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  activeCardButtonText: { color: "#FFF", fontWeight: "bold" },
+  linkLabel: { fontSize: 11, color: '#999', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  linkText: { flex: 1, fontSize: 13, color: '#f9c349', fontWeight: '600' },
+  copyBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#f0f0f0' },
+  
+  // Action
+  actionSection: { paddingHorizontal: 16, marginTop: 20 },
+  shareBtn: { borderRadius: 16, overflow: 'hidden', elevation: 8, shadowColor: "#f9c349", shadowOpacity: 0.3, shadowRadius: 15 },
+  shareGradient: { flexDirection: 'row', paddingVertical: 18, justifyContent: 'center', alignItems: 'center', gap: 10 },
+  shareBtnText: { color: '#1a1a1a', fontWeight: '800', fontSize: 15, letterSpacing: 0.5 },
+  claimBtn: { borderRadius: 16, overflow: 'hidden', elevation: 8 },
+  claimGradient: { flexDirection: 'row', paddingVertical: 18, justifyContent: 'center', alignItems: 'center', gap: 10 },
+  claimBtnText: { color: '#1a1a1a', fontWeight: '800', fontSize: 15 },
+  
+  footerNote: { textAlign: 'center', color: '#999', fontSize: 11, marginTop: 20, paddingHorizontal: 20, fontWeight: '500' },
 });
+

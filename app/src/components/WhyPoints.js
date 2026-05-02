@@ -1,240 +1,194 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  StatusBar,
-  Dimensions,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  StatusBar, Animated,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import BaseScreen from "./BaseScreen";
-
-const { width } = Dimensions.get("window");
+import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function WhyPointsScreen() {
   const navigation = useNavigation();
+  
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideUpAnim = useRef(new Animated.Value(30)).current;
+  const headerFade = useRef(new Animated.Value(0)).current;
+  const heroScale = useRef(new Animated.Value(0.85)).current;
+  const cardAnims = useRef([...Array(5)].map(() => new Animated.Value(0))).current;
 
-  const BenefitCard = ({ icon, title, desc, color }) => (
-    <View style={styles.card}>
-      <View style={[styles.iconBox, { backgroundColor: color + "15" }]}>
-        <MaterialCommunityIcons name={icon} size={28} color={color} />
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(headerFade, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.spring(slideUpAnim, { toValue: 0, friction: 6, tension: 40, useNativeDriver: true }),
+      Animated.spring(heroScale, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true }),
+      ...cardAnims.map((anim, i) =>
+        Animated.sequence([
+          Animated.delay(200 + i * 100),
+          Animated.spring(anim, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true }),
+        ])
+      ),
+    ]).start();
+  }, []);
+
+  const benefits = [
+    { icon: "briefcase-check-outline", color: "#f9c349", title: "Elite Career Hub Access", desc: "Privilege members get first-look access to premium internships and direct referrals to top-tier partner companies." },
+    { icon: "earth-arrow-right", color: "#f9c349", title: "Global Exchange Priority", desc: "Unlock priority applications for international student exchange programs and global academic workshops." },
+    { icon: "airplane-settings", color: "#f9c349", title: "Exclusive Travel Tiers", desc: "Access heavily subsidized student travel packages and 'Privilege-Only' group tours across Pakistan and beyond." },
+    { icon: "ticket-confirmation-outline", color: "#f9c349", title: "Boosted Brand Discounts", desc: "Go beyond standard offers. Privilege status triggers higher percentage discounts at our premium partner brands." },
+    { icon: "shield-star-outline", color: "#f9c349", title: "Campus Leadership", desc: "Elevation to Privilege status marks you as a verified campus leader with networking opportunities." },
+  ];
+
+  const BenefitCard = ({ icon, title, desc, color, index }) => (
+    <Animated.View style={{
+      opacity: cardAnims[index],
+      transform: [{ translateY: cardAnims[index].interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }],
+    }}>
+      <View style={styles.card}>
+        <View style={[styles.iconBox, { backgroundColor: color + '15' }]}>
+          <MaterialCommunityIcons name={icon} size={22} color={color} />
+        </View>
+        <View style={styles.cardContent}>
+          <Text style={styles.cardTitle}>{title}</Text>
+          <Text style={styles.cardDesc}>{desc}</Text>
+        </View>
       </View>
-      <View style={styles.cardTextContent}>
-        <Text style={styles.cardTitle}>{title}</Text>
-        <Text style={styles.cardDesc}>{desc}</Text>
-      </View>
-    </View>
+    </Animated.View>
   );
 
   return (
-    <BaseScreen>
-      <StatusBar barStyle="dark-content" />
-
-      {/* FIXED PROFESSIONAL HEADER */}
-      <View style={styles.headerContainer}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="chevron-back" size={28} color="#000000" />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      
+      {/* Header */}
+      <Animated.View style={[styles.header, { opacity: headerFade }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
+          <Ionicons name="chevron-back" size={24} color="#1a1a1a" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Privilege Benefits</Text>
-        <View style={{ width: 28 }} />
-      </View>
+        <View style={{ width: 38 }} />
+      </Animated.View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.contentContainer}
-      >
-        {/* HERO SECTION */}
-        <View style={styles.heroSection}>
-          <View style={styles.coinStack}>
-            <MaterialCommunityIcons
-              name="crown-outline"
-              size={50}
-              color="#FFB300"
-            />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <Animated.View style={{ opacity: fadeAnim }}>
+          
+          {/* Hero */}
+          <Animated.View style={[styles.heroCard, { transform: [{ scale: heroScale }] }]}>
+            <LinearGradient colors={['#1a1a1a', '#1a1a1a']} style={styles.heroGradient}>
+              <View style={styles.heroIconCircle}>
+                <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.heroIconGradient}>
+                  <MaterialCommunityIcons name="crown-outline" size={40} color="#fff" />
+                </LinearGradient>
+              </View>
+              <Text style={styles.heroTitle}>Why tdc Privilege Matters</Text>
+              <Text style={styles.heroSubtitle}>
+                tdc Privilege is your gateway to the full ecosystem. Verified activity unlocks elite rewards, career growth, and global opportunities.
+              </Text>
+              
+              {/* Decorative Line */}
+              <View style={styles.decorLine}>
+                <View style={styles.decorSegment} />
+                <View style={styles.decorDiamond} />
+                <View style={styles.decorSegment} />
+              </View>
+            </LinearGradient>
+          </Animated.View>
+
+          {/* Benefits */}
+          <View style={styles.benefitsSection}>
+            <Text style={styles.sectionTitle}>
+              <View style={styles.sectionDot} />
+              Exclusive Benefits
+            </Text>
+            {benefits.map((item, i) => (
+              <BenefitCard key={i} {...item} index={i} />
+            ))}
           </View>
-          <Text style={styles.heroTitle}>Why TDC Privilege Matters</Text>
-          <Text style={styles.heroSubtitle}>
-            TDC Privilege is your gateway to the full ecosystem. Verified activity unlocks elite rewards, career growth, and global opportunities.
-          </Text>
-        </View>
 
-        {/* BENEFITS LIST */}
-        <View style={styles.benefitsWrapper}>
-          <BenefitCard
-            icon="briefcase-check-outline"
-            color="#FFB300"
-            title="Elite Career Hub Access"
-            desc="Privilege members get first-look access to premium internships and direct referrals to top-tier partner companies."
-          />
+          {/* Stats */}
+          <Animated.View style={[styles.statsCard, { transform: [{ translateY: slideUpAnim }] }]}>
+            <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.statsGradient}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNum}>10</Text>
+                <Text style={styles.statLabel}>Referrals Needed</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statNum}>50+</Text>
+                <Text style={styles.statLabel}>Partner Brands</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statNum}>100%</Text>
+                <Text style={styles.statLabel}>Free Access</Text>
+              </View>
+            </LinearGradient>
+          </Animated.View>
 
-          <BenefitCard
-            icon="earth-arrow-right"
-            color="#3498DB"
-            title="Global Exchange Priority"
-            desc="Unlock priority applications for international student exchange programs and global academic workshops."
-          />
-
-          <BenefitCard
-            icon="airplane-settings"
-            color="#27AE60"
-            title="Exclusive Travel Tiers"
-            desc="Access heavily subsidized student travel packages and 'Privilege-Only' group tours across Pakistan and beyond."
-          />
-
-          <BenefitCard
-            icon="ticket-confirmation-outline"
-            color="#E74C3C"
-            title="Boosted Brand Discounts"
-            desc="Go beyond standard offers. Privilege status triggers higher percentage discounts at our premium ecommerce partners."
-          />
-
-          <BenefitCard
-            icon="shield-star-outline"
-            color="#9B59B6"
-            title="Campus Leadership"
-            desc="Elevation to Privilege status marks you as a verified campus leader, providing networking opportunities with the Deft Crew core team."
-          />
-        </View>
-
-        {/* BOTTOM MOTIVATION */}
-        <View style={styles.footerInfo}>
-          <Text style={styles.footerText}>
-            Launched by
-            <Text style={{ fontWeight: "800", color: "#1A1A1A" }}> tdc </Text>
-            • Building a Stronger Student Economy
-          </Text>
-        </View>
-        <View style={{ height: 20 }} />
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text style={styles.footerLogo}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
+            <Text style={styles.footerText}>Building a Stronger Student Economy</Text>
+          </View>
+        </Animated.View>
       </ScrollView>
-    </BaseScreen>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: "#ffffff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+  container: { flex: 1, backgroundColor: "#ffffff" },
+  
+  // Header
+  header: { 
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderBottomWidth: 1, borderBottomColor: '#f0f0f0', backgroundColor: '#fff'
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "#F0F5F4",
-    justifyContent: "center",
-    alignItems: "center",
+  headerBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.5 },
+  scrollContent: { paddingBottom: 40 },
+  
+  // Hero
+  heroCard: { margin: 16, borderRadius: 24, overflow: 'hidden', elevation: 10, shadowColor: "#f9c349", shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.3, shadowRadius: 15 },
+  heroGradient: { padding: 28, alignItems: 'center' },
+  heroIconCircle: { marginBottom: 16, borderRadius: 20, overflow: 'hidden' },
+  heroIconGradient: { width: 80, height: 80, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+  heroTitle: { fontSize: 22, fontWeight: '900', color: '#fff', marginBottom: 10, textAlign: 'center' },
+  heroSubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.7)', textAlign: 'center', lineHeight: 21, fontWeight: '500', paddingHorizontal: 5 },
+  decorLine: { flexDirection: 'row', alignItems: 'center', marginTop: 16 },
+  decorSegment: { width: 25, height: 1.5, backgroundColor: '#f9c349', borderRadius: 1 },
+  decorDiamond: { width: 6, height: 6, backgroundColor: '#f9c349', transform: [{ rotate: '45deg' }], marginHorizontal: 8 },
+  
+  // Benefits
+  benefitsSection: { paddingHorizontal: 16, marginTop: 8 },
+  sectionTitle: { 
+    fontSize: 14, fontWeight: '800', color: '#1a1a1a', marginBottom: 14, 
+    flexDirection: 'row', alignItems: 'center' 
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#000000",
-    textTransform: "uppercase",
-    letterSpacing: 1,
+  sectionDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#f9c349', marginRight: 10 },
+  
+  card: { 
+    flexDirection: 'row', backgroundColor: '#fff', padding: 16, borderRadius: 16,
+    marginBottom: 12, borderWidth: 2, borderColor: '#f0f0f0', alignItems: 'flex-start' 
   },
-  contentContainer: {
-    paddingBottom: 40,
-  },
-  heroSection: {
-    backgroundColor: "#000000",
-    paddingVertical: 40,
-    paddingHorizontal: 30,
-    alignItems: "center",
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    elevation: 10,
-    shadowColor: "#08634f",
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
-  },
-  coinStack: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255, 179, 0, 0.3)",
-  },
-  heroTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginBottom: 10,
-    textAlign: "center",
-  },
-  heroSubtitle: {
-    fontSize: 14,
-    color: "#E0F2F1",
-    textAlign: "center",
-    lineHeight: 22,
-    opacity: 0.9,
-  },
-  benefitsWrapper: {
-    paddingHorizontal: 20,
-    marginTop: 25,
-  },
-  card: {
-    flexDirection: "row",
-    backgroundColor: "#FFFFFF",
-    padding: 18,
-    borderRadius: 24,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#F0F2F5",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-  },
-  iconBox: {
-    width: 54,
-    height: 54,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-  },
-  cardTextContent: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1A1A1A",
-    marginBottom: 4,
-  },
-  cardDesc: {
-    fontSize: 12,
-    color: "#777",
-    lineHeight: 18,
-  },
-  footerInfo: {
-    marginTop: 20,
-    paddingHorizontal: 50,
-    alignItems: "center",
-  },
-  footerText: {
-    fontSize: 11,
-    color: "#999",
-    textAlign: "center",
-    lineHeight: 18,
-    fontWeight: "600",
-  },
+  iconBox: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
+  cardContent: { flex: 1 },
+  cardTitle: { fontSize: 14, fontWeight: '800', color: '#1a1a1a', marginBottom: 3 },
+  cardDesc: { fontSize: 12, color: '#666', lineHeight: 18, fontWeight: '500' },
+  
+  // Stats
+  statsCard: { marginHorizontal: 16, marginTop: 20, borderRadius: 16, overflow: 'hidden', elevation: 8, shadowColor: "#f9c349", shadowOpacity: 0.3, shadowRadius: 10 },
+  statsGradient: { flexDirection: 'row', padding: 20 },
+  statItem: { flex: 1, alignItems: 'center' },
+  statNum: { fontSize: 24, fontWeight: '900', color: '#1a1a1a' },
+  statLabel: { fontSize: 10, color: 'rgba(0,0,0,0.6)', fontWeight: '600', marginTop: 3, textAlign: 'center' },
+  statDivider: { width: 1, backgroundColor: 'rgba(0,0,0,0.15)', height: '60%', alignSelf: 'center' },
+  
+  // Footer
+  footer: { alignItems: 'center', marginTop: 24, paddingVertical: 10 },
+  footerLogo: { fontSize: 20, fontWeight: '900', color: '#1a1a1a' },
+  footerText: { fontSize: 11, color: '#999', marginTop: 4, fontWeight: '500' },
 });
+
