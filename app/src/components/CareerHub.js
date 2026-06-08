@@ -11,7 +11,8 @@ import {
   Animated,
   Platform,
   RefreshControl,
-  Easing
+  Easing,
+  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +22,10 @@ import axios from 'axios';
 
 const { width, height } = Dimensions.get('window');
 
+// API Configuration
+const API_BASE_URL = 'https://the-deft-crew-production.up.railway.app/api';
+const JOBS_PUBLIC_ENDPOINT = `${API_BASE_URL}/jobs/public/all`;
+
 // ==========================================
 // SKELETON LOADER COMPONENT
 // ==========================================
@@ -28,7 +33,7 @@ const CareerSkeleton = () => {
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.loop(
+    const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(shimmerAnim, {
           toValue: 1,
@@ -41,7 +46,9 @@ const CareerSkeleton = () => {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    animation.start();
+    return () => animation.stop();
   }, []);
 
   const ShimmerBlock = ({ style }) => {
@@ -121,9 +128,9 @@ const ParticleBackground = () => {
   }))).current;
 
   useEffect(() => {
-    particles.forEach(particle => {
+    const animations = particles.map(particle => {
       const animate = () => {
-        Animated.sequence([
+        return Animated.sequence([
           Animated.delay(particle.delay),
           Animated.timing(particle.opacity, {
             toValue: 0.08,
@@ -137,12 +144,16 @@ const ParticleBackground = () => {
           }),
         ]).start(() => animate());
       };
-      animate();
+      return animate();
     });
+
+    return () => {
+      // Cleanup not strictly necessary for Animated but good practice
+    };
   }, []);
 
   return (
-    <View style={StyleSheet.absoluteFill}>
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {particles.map((particle, index) => (
         <Animated.View
           key={index}
@@ -232,6 +243,66 @@ const AnimatedCard = ({ children, style, delay = 0, onPress }) => {
 };
 
 // ==========================================
+// ERROR STATE COMPONENT
+// ==========================================
+const ErrorState = ({ error, onRetry }) => (
+  <SafeAreaView style={[styles.container, styles.centerContent]} edges={['top']}>
+    <StatusBar barStyle="dark-content" />
+    <ParticleBackground />
+    <View style={styles.errorContainer}>
+      <View style={styles.errorIconContainer}>
+        <LinearGradient
+          colors={['#FEE2E2', '#FECACA']}
+          style={styles.errorIconBg}
+        >
+          <MaterialCommunityIcons name="cloud-off-outline" size={48} color="#EF4444" />
+        </LinearGradient>
+      </View>
+      <Text style={styles.errorTitle}>Connection Error</Text>
+      <Text style={styles.errorMessage}>{error || "Failed to load opportunities. Please check your internet connection."}</Text>
+      <TouchableOpacity 
+        style={styles.retryButton} 
+        onPress={onRetry}
+        activeOpacity={0.8}
+      >
+        <LinearGradient
+          colors={['#1e3a8a', '#2563eb']}
+          style={styles.retryGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+        >
+          <Ionicons name="refresh" size={18} color="#FFF" style={{ marginRight: 8 }} />
+          <Text style={styles.retryText}>Try Again</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={styles.troubleshootButton}
+        onPress={() => Alert.alert(
+          "Troubleshooting",
+          "1. Check your internet connection\n2. Make sure the server is running\n3. Try refreshing the app\n4. Contact support if the issue persists"
+        )}
+      >
+        <Text style={styles.troubleshootText}>Need Help?</Text>
+      </TouchableOpacity>
+    </View>
+  </SafeAreaView>
+);
+
+// ==========================================
+// LOADING STATE COMPONENT
+// ==========================================
+const LoadingState = () => (
+  <SafeAreaView style={[styles.container, styles.centerContent]} edges={['top']}>
+    <StatusBar barStyle="dark-content" />
+    <ParticleBackground />
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color="#f9c349" />
+      <Text style={styles.loadingText}>Loading opportunities...</Text>
+    </View>
+  </SafeAreaView>
+);
+
+// ==========================================
 // MAIN CAREER HUB COMPONENT
 // ==========================================
 const CareerHub = ({ navigation }) => {
@@ -241,6 +312,7 @@ const CareerHub = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Animation refs
   const headerFade = useRef(new Animated.Value(0)).current;
@@ -250,10 +322,20 @@ const CareerHub = ({ navigation }) => {
   
   // Skeleton timer
   const skeletonTimer = useRef(null);
+  const isMounted = useRef(true);
 
+  // Cleanup on unmount
   useEffect(() => {
-    // Continuous banner pulse animation
-    Animated.loop(
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+      if (skeletonTimer.current) clearTimeout(skeletonTimer.current);
+    };
+  }, []);
+
+  // Banner and glow animations
+  useEffect(() => {
+    const bannerAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(bannerPulse, {
           toValue: 1.02,
@@ -266,10 +348,10 @@ const CareerHub = ({ navigation }) => {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    bannerAnimation.start();
 
-    // Continuous glow animation
-    Animated.loop(
+    const glowAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(glowOpacity, {
           toValue: 1,
@@ -282,10 +364,12 @@ const CareerHub = ({ navigation }) => {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    glowAnimation.start();
 
     return () => {
-      if (skeletonTimer.current) clearTimeout(skeletonTimer.current);
+      bannerAnimation.stop();
+      glowAnimation.stop();
     };
   }, []);
 
@@ -300,34 +384,90 @@ const CareerHub = ({ navigation }) => {
 
       // Show skeleton after 800ms if still loading
       if (!isRefresh && !dataLoaded) {
+        if (skeletonTimer.current) clearTimeout(skeletonTimer.current);
         skeletonTimer.current = setTimeout(() => {
-          setShowSkeleton(true);
+          if (isMounted.current) {
+            setShowSkeleton(true);
+          }
         }, 800);
       }
 
-      const jobRes = await axios.get("https://the-deft-crew-production.up.railway.app/api/admin/jobs/public");
+      // console.log('Fetching jobs from:', JOBS_PUBLIC_ENDPOINT);
       
+      const response = await axios.get(JOBS_PUBLIC_ENDPOINT, {
+        timeout: 10000,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        }
+      });
+
+      // console.log('API Response:', response.data);
+
       if (skeletonTimer.current) clearTimeout(skeletonTimer.current);
       
-      setRecentJobs(jobRes.data.slice(0, 3));
+      if (!isMounted.current) return;
+
+      // Handle different response structures
+      let jobs = [];
+      if (response.data && response.data.jobs) {
+        jobs = response.data.jobs;
+      } else if (Array.isArray(response.data)) {
+        jobs = response.data;
+      } else if (response.data && typeof response.data === 'object') {
+        // Try to find jobs array in response
+        const possibleArrays = Object.values(response.data).filter(val => Array.isArray(val));
+        if (possibleArrays.length > 0) {
+          jobs = possibleArrays[0];
+        }
+      }
+
+      // console.log('Parsed jobs:', jobs.length);
+      
+      setRecentJobs(jobs.slice(0, 3));
       setDataLoaded(true);
       setShowSkeleton(false);
       setError(null);
+      setRetryCount(0);
 
-      if (!isRefresh) {
+      if (!isRefresh && isMounted.current) {
         startEntranceAnimations();
       }
     } catch (err) {
-      console.log("Error fetching preview:", err);
+      console.error("Error fetching jobs:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        code: err.code
+      });
+      
       if (skeletonTimer.current) clearTimeout(skeletonTimer.current);
-      setError("Failed to load opportunities. Please try again.");
+      
+      if (!isMounted.current) return;
+
+      let errorMessage = "Failed to load opportunities. Please try again.";
+      
+      if (err.code === 'ECONNABORTED') {
+        errorMessage = "Request timed out. Please check your connection and try again.";
+      } else if (err.response) {
+        // Server responded with error
+        errorMessage = `Server error: ${err.response.data?.message || err.response.statusText || 'Unknown error'}`;
+      } else if (err.request) {
+        // Request made but no response
+        errorMessage = "Unable to reach the server. Please check your internet connection.";
+      }
+      
+      setError(errorMessage);
       setShowSkeleton(false);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (isMounted.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [dataLoaded]);
 
+  // Initial fetch
   useEffect(() => {
     fetchPreviewData();
   }, []);
@@ -348,50 +488,39 @@ const CareerHub = ({ navigation }) => {
     ]).start();
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     fetchPreviewData(true);
-  };
+  }, [fetchPreviewData]);
 
-  const handleRetry = () => {
+  const handleRetry = useCallback(() => {
     setError(null);
+    setLoading(true);
+    setRetryCount(prev => prev + 1);
     fetchPreviewData();
-  };
+  }, [fetchPreviewData]);
 
-  const handleCardPress = (screen) => {
+  const handleCardPress = useCallback((screen) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    navigation.navigate(screen);
-  };
+    if (navigation) {
+      navigation.navigate(screen);
+    }
+  }, [navigation]);
+
+  // // Show loading state
+  // if (loading && !showSkeleton && !error && !dataLoaded) {
+  //   return <LoadingState />;
+  // }
 
   // Show skeleton loader
-  if (showSkeleton && !dataLoaded) {
+  if (showSkeleton && !dataLoaded && !error) {
     return <CareerSkeleton />;
   }
 
   // Show error state
   if (error && !dataLoaded) {
-    return (
-      <SafeAreaView style={[styles.container, styles.centerContent]}>
-        <StatusBar barStyle="dark-content" />
-        <MaterialCommunityIcons name="cloud-off-outline" size={64} color="#94A3B8" />
-        <Text style={styles.errorTitle}>Connection Error</Text>
-        <Text style={styles.errorMessage}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
-          <LinearGradient
-            colors={['#1e3a8a', '#2563eb']}
-            style={styles.retryGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          >
-            <Ionicons name="refresh" size={18} color="#FFF" style={{ marginRight: 8 }} />
-            <Text style={styles.retryText}>Try Again</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
+    return <ErrorState error={error} onRetry={handleRetry} />;
   }
-
-  
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -425,9 +554,9 @@ const CareerHub = ({ navigation }) => {
           }
         ]}>
           <View style={styles.headerBadge}>
-            
-              <Text style={styles.headerBadgeText}>tdc<Text style={{color:"#f9c349"}}>.</Text></Text>
-            
+            <Text style={styles.headerBadgeText}>
+              tdc<Text style={{color:"#f9c349"}}>.</Text>
+            </Text>
           </View>
           <Text style={styles.welcomeText}>Welcome to </Text>
           <Text style={styles.mainTitle}>
@@ -570,13 +699,11 @@ const CareerHub = ({ navigation }) => {
               onPress={() => handleCardPress('Career')}
             >
               <Text style={styles.seeAll}>See All</Text>
-              
+              <Ionicons name="chevron-forward" size={16} color="#1e3a8a" />
             </TouchableOpacity>
           </View>
 
-          {loading && !dataLoaded ? (
-            <ActivityIndicator color="#f9c349" style={{ marginTop: 20 }} />
-          ) : recentJobs.length === 0 ? (
+          {recentJobs.length === 0 ? (
             <View style={styles.emptyState}>
               <MaterialCommunityIcons name="briefcase-outline" size={48} color="#CBD5E1" />
               <Text style={styles.emptyText}>No opportunities available yet</Text>
@@ -607,7 +734,7 @@ const CareerHub = ({ navigation }) => {
                       <View style={styles.jobInfo}>
                         <Text style={styles.jobTitleText} numberOfLines={1}>{job.title}</Text>
                         <Text style={styles.jobMetaText} numberOfLines={1}>
-                          {job.department} • {job.location}
+                          {job.department || 'General'} • {job.location || 'Remote'}
                         </Text>
                       </View>
                     </View>
@@ -626,7 +753,23 @@ const CareerHub = ({ navigation }) => {
           )}
         </Animated.View>
 
-        
+        {/* Stats */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>50+</Text>
+            <Text style={styles.statLabel}>Active Jobs</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>20+</Text>
+            <Text style={styles.statLabel}>Countries</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>100+</Text>
+            <Text style={styles.statLabel}>Hired</Text>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -635,17 +778,17 @@ const CareerHub = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#FFFFFF' ,
-    paddingBottom:20
+    backgroundColor: '#FFFFFF',
+    paddingBottom:70
   },
   centerContent: {
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    
   },
   scrollView: {
     flex: 1,
+    paddingBottom:40
   },
 
   // Background
@@ -676,12 +819,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: 'hidden',
   },
-  headerBadgeGradient: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
   headerBadgeText: {
-    color: '#0000',
+    color: '#000',
     fontWeight: '900',
     fontSize: 26,
     letterSpacing: 2,
@@ -1006,11 +1145,28 @@ const styles = StyleSheet.create({
   },
 
   // Loading & Error
+  loadingContainer: {
+    alignItems: 'center',
+  },
   loadingText: {
     marginTop: 12,
     fontSize: 15,
     color: '#64748B',
     fontWeight: '500',
+  },
+  errorContainer: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorIconContainer: {
+    marginBottom: 20,
+  },
+  errorIconBg: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   errorTitle: {
     fontSize: 20,
@@ -1025,6 +1181,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 24,
     lineHeight: 20,
+    paddingHorizontal: 20,
   },
   retryButton: {
     borderRadius: 12,
@@ -1034,17 +1191,27 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
+    marginBottom: 16,
   },
   retryGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
   },
   retryText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFF',
+  },
+  troubleshootButton: {
+    padding: 12,
+  },
+  troubleshootText: {
+    fontSize: 14,
+    color: '#1e3a8a',
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 });
 

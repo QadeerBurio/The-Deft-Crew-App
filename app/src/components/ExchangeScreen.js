@@ -6,7 +6,6 @@ import {
   FlatList, 
   TouchableOpacity, 
   StatusBar,
-  
   ScrollView,
   TextInput,
   ActivityIndicator,
@@ -21,7 +20,7 @@ import { AuthContext } from '../context/AuthContext';
 import api from "../api/api";
 
 const ExchangeScreen = ({ navigation }) => {
-  const { token, logout } = useContext(AuthContext);
+  const { token, isGuest, logout } = useContext(AuthContext);
   
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,25 +42,47 @@ const ExchangeScreen = ({ navigation }) => {
     }
   };
 
+  // FIX: Show guest alert for actions
+  const showGuestAlert = (action) => {
+    Alert.alert(
+      'Create an Account',
+      `Sign up to ${action} and explore study abroad opportunities!`,
+      [
+        { text: 'Not Now', style: 'cancel' },
+        { 
+          text: 'Sign Up', 
+          onPress: () => navigation.navigate('Login')
+        }
+      ]
+    );
+  };
+
   const fetchPrograms = async () => {
     try {
-      const response = await api.get('/admin/exchange/all', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // FIX: Guest users can see programs too
+      const response = await api.get('/admin/exchange/all');
       const activePrograms = response.data.filter(p => p.active === true);
       setPrograms(activePrograms);
     } catch (err) {
-      if (err.response?.status === 401) {
+      // FIX: Don't logout guest users
+      if (err.response?.status === 401 && !isGuest) {
         Alert.alert("Session Expired", "Please login again to continue.");
         logout();
+      } else if (!isGuest) {
+        console.log('Error fetching programs:', err.message);
       }
+      // Guest users just see empty list on error
+      setPrograms([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  useEffect(() => { if (token) fetchPrograms(); }, [token]);
+  // FIX: Fetch programs even for guest users
+  useEffect(() => { 
+    fetchPrograms(); 
+  }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -83,6 +104,24 @@ const ExchangeScreen = ({ navigation }) => {
   const handleViewDetails = (program) => {
     setSelectedProgram(program);
     setDetailsVisible(true);
+  };
+
+  // FIX: Handle Apply Now for guest users
+  const handleApplyNow = (program) => {
+    if (isGuest) {
+      showGuestAlert('apply for programs');
+      return;
+    }
+    navigation.navigate('ApplicationForm', { program });
+  };
+
+  // FIX: Handle Profile for guest users
+  const handleProfile = () => {
+    if (isGuest) {
+      showGuestAlert('view profile');
+      return;
+    }
+    navigation.navigate('Profile');
   };
 
   const renderItem = ({ item }) => {
@@ -133,9 +172,11 @@ const ExchangeScreen = ({ navigation }) => {
 
             <TouchableOpacity 
                 style={[styles.applyButton, { backgroundColor: color, flex: 1.5 }]} 
-                onPress={() => navigation.navigate('ApplicationForm', { program: item })}
+                onPress={() => handleApplyNow(item)}
             >
-                <Text style={styles.applyButtonText}>Apply Now</Text>
+                <Text style={styles.applyButtonText}>
+                  {isGuest ? 'Sign Up' : 'Apply Now'}
+                </Text>
                 <FontAwesome5 name="arrow-right" size={12} color="#FFF" />
             </TouchableOpacity>
           </View>
@@ -155,7 +196,7 @@ const ExchangeScreen = ({ navigation }) => {
             <Text style={styles.headerSubtitle}>International Hub</Text>
             <Text style={styles.headerTitle}>Study Abroad</Text>
           </View>
-          <TouchableOpacity style={styles.avatarCircle} onPress={() => navigation.navigate('Profile')}>
+          <TouchableOpacity style={styles.avatarCircle} onPress={handleProfile}>
              <FontAwesome5 name="user-graduate" size={16} color="#FFF" />
           </TouchableOpacity>
         </View>
@@ -171,6 +212,16 @@ const ExchangeScreen = ({ navigation }) => {
           />
         </View>
       </View>
+
+      {/* FIX: Guest Banner */}
+      {isGuest && (
+        <View style={styles.guestBanner}>
+          <FontAwesome5 name="info-circle" size={16} color="#1a1a1a" />
+          <Text style={styles.guestBannerText}>
+            Browsing as guest. Sign in to apply for programs!
+          </Text>
+        </View>
+      )}
 
       <View style={styles.content}>
         <View style={styles.filterWrapper}>
@@ -201,6 +252,14 @@ const ExchangeScreen = ({ navigation }) => {
               <View style={styles.emptyContainer}>
                 <FontAwesome5 name="search-location" size={50} color="#DCE1E8" />
                 <Text style={styles.emptyText}>No programs found.</Text>
+                {isGuest && (
+                  <TouchableOpacity 
+                    style={styles.signUpButton}
+                    onPress={() => navigation.navigate('Login')}
+                  >
+                    <Text style={styles.signUpButtonText}>Sign Up to Explore More</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             }
           />
@@ -246,11 +305,19 @@ const ExchangeScreen = ({ navigation }) => {
                 )}
             </ScrollView>
 
+            {/* FIX: Apply button in modal for guests */}
             <TouchableOpacity 
                 style={styles.closeModalBtn} 
-                onPress={() => setDetailsVisible(false)}
+                onPress={() => {
+                  setDetailsVisible(false);
+                  if (selectedProgram) {
+                    handleApplyNow(selectedProgram);
+                  }
+                }}
             >
-                <Text style={styles.closeModalBtnText}>Back to List</Text>
+                <Text style={styles.closeModalBtnText}>
+                  {isGuest ? 'Sign Up to Apply' : 'Apply Now'}
+                </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -261,6 +328,23 @@ const ExchangeScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F0F2F5' },
+  // FIX: Guest banner style
+  guestBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF9E6',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f9c34930',
+    gap: 8
+  },
+  guestBannerText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#1a1a1a',
+    fontWeight: '500'
+  },
   header: { backgroundColor: '#000000', paddingHorizontal: 25, paddingTop: 50, paddingBottom: 25, borderBottomLeftRadius: 40 },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
   headerTitle: { fontSize: 26, fontWeight: '800', color: '#FFF' },
@@ -293,18 +377,26 @@ const styles = StyleSheet.create({
   dateDivider: { width: 1, height: 25, backgroundColor: '#DCE1E8' },
   dateLabel: { fontSize: 9, fontWeight: '900', color: '#9DA8B7', marginBottom: 4 },
   dateValue: { fontSize: 13, fontWeight: '700', color: '#2D3436' },
-  
-  // New Button Layout
   buttonRow: { flexDirection: 'row', gap: 10, marginTop: 5 },
   detailsBtn: { flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: '#F1F3F5', alignItems: 'center', justifyContent: 'center' },
   detailsBtnText: { color: '#495057', fontWeight: '700', fontSize: 14 },
   applyButton: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 14, borderRadius: 16 },
   applyButtonText: { color: '#FFF', fontWeight: '800', marginRight: 10, fontSize: 14 },
-
   emptyContainer: { alignItems: 'center', marginTop: 60 },
   emptyText: { textAlign: 'center', color: '#9DA8B7', fontSize: 14 },
-
-  // Modal Styles
+  // FIX: Sign up button for empty state
+  signUpButton: {
+    marginTop: 20,
+    backgroundColor: '#000',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12
+  },
+  signUpButtonText: {
+    color: '#FFF',
+    fontWeight: '700',
+    fontSize: 14
+  },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 25, maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },

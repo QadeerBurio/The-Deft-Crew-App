@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useContext, useRef } from "rea
 import {
   View, Text, StyleSheet, TouchableOpacity, Dimensions, StatusBar,
   Image, FlatList, ActivityIndicator, RefreshControl, Animated, Platform,
+  Alert
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,7 +29,6 @@ const DEFAULT_IMAGES = {
   default: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=600&fit=crop",
 };
 
-// ✅ Skeleton Components
 const shimmerAnim = new Animated.Value(0);
 Animated.loop(
   Animated.sequence([
@@ -98,7 +98,7 @@ const SkeletonEnrolled = () => {
 };
 
 export default function AISkillsHomeScreen({ navigation }) {
-  const { token, user, logout } = useContext(AuthContext);
+  const { token, user, isGuest, logout } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState("Home");
   const [learningStatus, setLearningStatus] = useState("Continue");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -119,18 +119,15 @@ export default function AISkillsHomeScreen({ navigation }) {
   const tabIndicator = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (token) {
-      loadCourses();
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.timing(headerFade, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.spring(slideUpAnim, { toValue: 0, friction: 6, tension: 40, useNativeDriver: true }),
-        Animated.spring(cardScale, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true }),
-      ]).start();
-    } else {
-      navigation.replace('Login');
-    }
-  }, [token]);
+    // FIX: Don't redirect guest users to login
+    loadCourses();
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(headerFade, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.spring(slideUpAnim, { toValue: 0, friction: 6, tension: 40, useNativeDriver: true }),
+      Animated.spring(cardScale, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true }),
+    ]).start();
+  }, []);
 
   useEffect(() => {
     Animated.spring(tabIndicator, {
@@ -139,42 +136,82 @@ export default function AISkillsHomeScreen({ navigation }) {
     }).start();
   }, [activeTab]);
 
+  // FIX: Show guest alert instead of redirect
+  const showGuestAlert = (action) => {
+    Alert.alert(
+      'Create an Account',
+      `Sign up to ${action} and unlock exclusive student benefits!`,
+      [
+        { text: 'Not Now', style: 'cancel' },
+        { 
+          text: 'Sign Up', 
+          onPress: () => navigation.navigate('Login')
+        }
+      ]
+    );
+  };
+
   const fetchCourses = async () => {
     try {
-      if (!token) { navigation.replace('Login'); return; }
+      // FIX: Guest users can see courses
       let response;
-      try { response = await api.get('/courses/course'); } 
-      catch (firstError) { response = await api.get('/courses/'); }
+      try { 
+        response = await api.get('/courses/course'); 
+      } catch (firstError) { 
+        response = await api.get('/courses/'); 
+      }
 
       if (response.data.success) {
         const transformedCourses = response.data.courses.map(course => ({
-          ...course, id: course.id, _id: course._id,
+          ...course, 
+          id: course.id || course._id, 
+          _id: course._id || course.id,
           image: course.image && course.image !== '' ? course.image : DEFAULT_IMAGES[course.category] || DEFAULT_IMAGES.default,
-          color: course.color || '#f9c349', rating: course.rating || 4.5,
-          provider: course.provider || 'TechDegree Club', level: course.level || 'Beginner',
+          color: course.color || '#f9c349', 
+          rating: course.rating || 4.5,
+          provider: course.provider || 'TechDegree Club', 
+          level: course.level || 'Beginner',
         }));
         setCourses(transformedCourses);
         setError(null);
-      } else { setError(response.data.message || 'Failed to fetch courses'); }
+      } else { 
+        setError(response.data.message || 'Failed to fetch courses'); 
+      }
     } catch (error) {
-      if (error.response?.status === 401) { logout(); navigation.replace('Login'); }
-      else { setError('Network error. Please check your connection.'); }
+      if (error.response?.status === 401 && !isGuest) { 
+        logout(); 
+        navigation.replace('Login'); 
+      } else {
+        // Guest users get empty courses array instead of error
+        setCourses([]);
+        setError('Network error. Please check your connection.');
+      }
     }
   };
 
   const fetchEnrolledCourses = async () => {
+    // FIX: Guest users don't have enrolled courses
+    if (!token || isGuest) {
+      setEnrolledCourses([]);
+      return;
+    }
+    
     try {
-      if (!token) return;
       const response = await api.get('/courses/user/enrolled');
       if (response.data.success) {
         const transformedEnrolled = response.data.courses.map(course => ({
-          ...course, id: course.id, _id: course._id,
+          ...course, 
+          id: course.id || course._id, 
+          _id: course._id || course.id,
           image: course.image && course.image !== '' ? course.image : DEFAULT_IMAGES[course.category] || DEFAULT_IMAGES.default,
         }));
         setEnrolledCourses(transformedEnrolled);
       }
     } catch (error) {
-      if (error.response?.status === 401) { logout(); navigation.replace('Login'); }
+      if (error.response?.status === 401) { 
+        logout(); 
+        navigation.replace('Login'); 
+      }
     }
   };
 
@@ -207,9 +244,20 @@ export default function AISkillsHomeScreen({ navigation }) {
   };
 
   const handleCategorySelect = (id) => { setSelectedCategory(id); toggleMenu(); setActiveTab("Home"); };
+  
+  // FIX: Handle enroll button press for guest users
+  const handleEnroll = (course) => {
+    if (isGuest || !token) {
+      showGuestAlert('enroll in courses');
+      return;
+    }
+    navigation.navigate("CourseDetailScreen", { course });
+  };
+
   const handleImageError = (courseId, category) => {
     setImageErrors(prev => ({ ...prev, [courseId]: DEFAULT_IMAGES[category] || DEFAULT_IMAGES.default }));
   };
+  
   const getImageUrl = (course) => {
     const key = course.id || course._id;
     if (imageErrors[key]) return imageErrors[key];
@@ -223,6 +271,8 @@ export default function AISkillsHomeScreen({ navigation }) {
   }, [selectedCategory, courses]);
 
   const getFilteredEnrolledCourses = () => {
+    if (isGuest) return [];
+    
     if (learningStatus === "Continue") {
       return enrolledCourses.filter(course => course.userProgress && course.userProgress.percentage > 0 && course.userProgress.percentage < 100);
     } else {
@@ -235,7 +285,11 @@ export default function AISkillsHomeScreen({ navigation }) {
       opacity: fadeAnim,
       transform: [{ translateY: slideUpAnim.interpolate({ inputRange: [0, 30], outputRange: [30 * (index % 4), 0] }) }],
     }}>
-      <TouchableOpacity style={styles.gridCard} activeOpacity={0.9} onPress={() => navigation.navigate("CourseDetailScreen", { course: item })}>
+      <TouchableOpacity 
+        style={styles.gridCard} 
+        activeOpacity={0.9} 
+        onPress={() => navigation.navigate("CourseDetailScreen", { course: item })}
+      >
         <Image source={{ uri: getImageUrl(item) }} style={styles.gridImage} onError={() => handleImageError(item.id, item.category)} resizeMode="cover" />
         <LinearGradient colors={['transparent', 'rgba(0,0,0,0.7)']} style={styles.imageOverlay}>
           <View style={styles.levelBadge}><Text style={styles.levelBadgeText}>{item.level}</Text></View>
@@ -251,7 +305,14 @@ export default function AISkillsHomeScreen({ navigation }) {
               <Ionicons name="star" size={12} color="#f9c349" />
               <Text style={styles.gridRating}>{item.rating}</Text>
             </View>
-            <TouchableOpacity style={styles.enrollBtn}><Text style={styles.enrollBtnText}>Enroll</Text></TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.enrollBtn} 
+              onPress={() => handleEnroll(item)}
+            >
+              <Text style={styles.enrollBtnText}>
+                {isGuest ? 'Sign Up' : 'Enroll'}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </TouchableOpacity>
@@ -290,7 +351,7 @@ export default function AISkillsHomeScreen({ navigation }) {
   const CourseList = () => {
     if (loading && !refreshing) return <SkeletonGrid />;
 
-    if (error) {
+    if (error && courses.length === 0) {
       return (
         <View style={styles.centerContainer}>
           <View style={styles.errorIconCircle}>
@@ -309,7 +370,10 @@ export default function AISkillsHomeScreen({ navigation }) {
     const currentCourses = filteredCourses();
     return (
       <FlatList
-        data={currentCourses} renderItem={renderGridItem} keyExtractor={(item) => item.id} numColumns={2}
+        data={currentCourses} 
+        renderItem={renderGridItem} 
+        keyExtractor={(item) => item.id || item._id} 
+        numColumns={2}
         contentContainerStyle={styles.gridContainer}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f9c349" colors={["#f9c349"]} />}
         ListHeaderComponent={
@@ -335,6 +399,26 @@ export default function AISkillsHomeScreen({ navigation }) {
   const MyLearningView = () => {
     if (loading && !refreshing) return <SkeletonEnrolled />;
 
+    // FIX: Show guest message for My Learning tab
+    if (isGuest) {
+      return (
+        <View style={styles.emptyContainer}>
+          <MaterialCommunityIcons name="book-education-outline" size={70} color="#ccc" />
+          <Text style={styles.emptyTitle}>Create an Account</Text>
+          <Text style={styles.emptySub}>Sign up to track your learning progress and enroll in courses!</Text>
+          <TouchableOpacity 
+            style={styles.browseButton} 
+            onPress={() => navigation.navigate('Login')}
+          >
+            <LinearGradient colors={['#1a1a1a', '#1a1a1a']} style={styles.browseGradient}>
+              <Ionicons name="person-add-outline" size={18} color="#fff" />
+              <Text style={styles.browseButtonText}>Sign Up Now</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
     const filteredEnrolled = getFilteredEnrolledCourses();
     return (
       <View style={{ flex: 1 }}>
@@ -347,7 +431,9 @@ export default function AISkillsHomeScreen({ navigation }) {
           </TouchableOpacity>
         </View>
         <FlatList
-          data={filteredEnrolled} renderItem={renderEnrolledItem} keyExtractor={(item) => item.id}
+          data={filteredEnrolled} 
+          renderItem={renderEnrolledItem} 
+          keyExtractor={(item) => item.id || item._id}
           contentContainerStyle={styles.enrolledContainer}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f9c349" colors={["#f9c349"]} />}
           ListEmptyComponent={
@@ -374,13 +460,38 @@ export default function AISkillsHomeScreen({ navigation }) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor="#1a1a1a" />
       
+      {/* Guest Banner */}
+      {isGuest && (
+        <View style={styles.guestBanner}>
+          <Ionicons name="information-circle" size={20} color="#1a1a1a" />
+          <Text style={styles.guestBannerText}>
+            Browsing as guest. Sign in to enroll in courses!
+          </Text>
+        </View>
+      )}
+      
       <Animated.View style={{ opacity: headerFade }}>
         <LinearGradient colors={['#1a1a1a', '#1a1a1a']} style={styles.header}>
           <View style={styles.navRow}>
-            <TouchableOpacity onPress={toggleMenu} style={styles.menuBtn}><Ionicons name={isMenuOpen ? "close" : "menu"} size={24} color="#f9c349" /></TouchableOpacity>
+            <TouchableOpacity onPress={toggleMenu} style={styles.menuBtn}>
+              <Ionicons name={isMenuOpen ? "close" : "menu"} size={24} color="#f9c349" />
+            </TouchableOpacity>
             <Text style={styles.brandText}>tdc<Text style={{color: '#f9c349'}}>.</Text></Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.profileBtn}>
-              <Image source={{ uri: user?.profileImage || 'https://randomuser.me/api/portraits/men/32.jpg' }} style={styles.profileImage} />
+            <TouchableOpacity onPress={() => {
+              if (isGuest) {
+                showGuestAlert('view profile');
+              } else {
+                navigation.navigate('Profile');
+              }
+            }} style={styles.profileBtn}>
+              <Image 
+                source={{ 
+                  uri: isGuest 
+                    ? 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
+                    : user?.profileImage || 'https://randomuser.me/api/portraits/men/32.jpg' 
+                }} 
+                style={styles.profileImage} 
+              />
             </TouchableOpacity>
           </View>
           <TouchableOpacity style={styles.searchBar} onPress={() => navigation.navigate('Search')}>
@@ -391,7 +502,13 @@ export default function AISkillsHomeScreen({ navigation }) {
             <TouchableOpacity style={styles.topTab} onPress={() => setActiveTab("Home")}>
               <Text style={[styles.topTabText, activeTab === "Home" && styles.topTabTextActive]}>Home</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.topTab} onPress={() => setActiveTab("My Learning")}>
+            <TouchableOpacity style={styles.topTab} onPress={() => {
+              if (isGuest) {
+                setActiveTab("My Learning");
+              } else {
+                setActiveTab("My Learning");
+              }
+            }}>
               <Text style={[styles.topTabText, activeTab === "My Learning" && styles.topTabTextActive]}>My Learning</Text>
             </TouchableOpacity>
             <Animated.View style={[styles.tabIndicator, { transform: [{ translateX: tabIndicatorLeft }] }]} />
@@ -426,6 +543,22 @@ export default function AISkillsHomeScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#ffffff" },
+  guestBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF9E6',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f9c34930'
+  },
+  guestBannerText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#1a1a1a',
+    marginLeft: 8,
+    fontWeight: '500'
+  },
   header: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 15 },
   navRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   menuBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
@@ -453,10 +586,7 @@ const styles = StyleSheet.create({
   menuItemText: { fontSize: 14, fontWeight: '700', color: '#fff', flex: 1 },
   menuItemTextActive: { color: '#1a1a1a' },
   closeArea: { flex: 1 },
-  
-  // Skeleton
   skeletonImage: { width: '100%', height: 130, backgroundColor: '#e8e8e8' },
-  
   gridContainer: { padding: 14, paddingTop: 8 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, paddingHorizontal: 2 },
   sectionTitle: { fontSize: 20, fontWeight: '800', color: '#1a1a1a' },
@@ -504,4 +634,3 @@ const styles = StyleSheet.create({
   browseGradient: { flexDirection: 'row', paddingHorizontal: 22, paddingVertical: 13, alignItems: 'center', gap: 8 },
   browseButtonText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 });
-

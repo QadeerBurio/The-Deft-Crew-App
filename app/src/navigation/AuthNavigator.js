@@ -1,5 +1,4 @@
-// app/src/navigation/AppNavigator.js
-
+// navigation/AppNavigator.js
 import React, { useContext } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { AuthContext } from "../context/AuthContext";
@@ -13,15 +12,16 @@ import VerifyOTP from "../screens/VerifyOTPScreen"
 import ResetPassword from "../screens/ResetPasswordScreen"
 import VerificationScreen from "../screens/VerificationScreen";
 import TDCFlow from "../screens/SplashScren";
+
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
-
-  const { user } = useContext(AuthContext);
+  const { user, isGuest } = useContext(AuthContext);
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {!user ? (
+      {!user && !isGuest ? (
+        // No user and not guest - Show auth screens
         <>
           <Stack.Screen name="Splash" component={Splash} />
           <Stack.Screen name="Signup" component={SignupScreen} />
@@ -32,9 +32,8 @@ export default function AppNavigator() {
           <Stack.Screen name="ResetPassword" component={ResetPassword}/>
         </>
       ) : (
-        <>
-        
-        <Stack.Screen name="Drawer" component={DrawerNavigator}  /></>
+        // User logged in OR guest mode - Show main app
+        <Stack.Screen name="Drawer" component={DrawerNavigator} />
       )}
     </Stack.Navigator>
   );

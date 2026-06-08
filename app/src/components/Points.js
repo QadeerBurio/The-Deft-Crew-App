@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useCallback, useContext, useRef } from "react";
+import React, { useState, useEffect, useCallback, useContext, useRef, memo } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  StatusBar, Dimensions, Share, Alert, ActivityIndicator,
+  StatusBar, Dimensions, Share, Alert,
   RefreshControl, Animated,
+  InteractionManager,
+  Platform,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { useNavigation } from "@react-navigation/native";
@@ -11,10 +13,160 @@ import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
+import GuestGuard from "./GuestGuard";
 
 const { width } = Dimensions.get("window");
 
-export default function PointsScreen() {
+// ==========================================
+// ULTRA-FAST CACHE SYSTEM
+// ==========================================
+const MEMORY_CACHE = new Map();
+const CACHE_KEY = 'points_data';
+const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+let pendingFetchPromise = null;
+const FETCH_DEBOUNCE = 5000; // 5 seconds
+let lastFetchTime = 0;
+
+// Image preloading (prevent multiple fetches)
+const preloadedImages = new Set();
+const preloadImage = (url) => {
+  if (!url || preloadedImages.has(url)) return;
+  preloadedImages.add(url);
+};
+
+// ==========================================
+// STATIC SKELETON BLOCK (No animation for speed)
+// ==========================================
+const SkeletonBlock = memo(({ style }) => (
+  <View style={[style, { backgroundColor: '#E8ECF1', borderRadius: 12 }]} />
+));
+
+// ==========================================
+// SKELETON LOADER (Static - renders instantly)
+// ==========================================
+const SkeletonLoader = memo(() => (
+  <SafeAreaView style={styles.container} edges={['top']}>
+    <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+    
+    {/* Header Skeleton */}
+    <View style={styles.header}>
+      <SkeletonBlock style={{ width: 38, height: 38, borderRadius: 12 }} />
+      <SkeletonBlock style={{ width: 100, height: 20, borderRadius: 6 }} />
+      <SkeletonBlock style={{ width: 38, height: 38, borderRadius: 12 }} />
+    </View>
+
+    <ScrollView contentContainerStyle={styles.scrollContent} scrollEnabled={false}>
+      {/* Progress Card Skeleton */}
+      <View style={[styles.progressCard, { backgroundColor: '#E8ECF1', margin: 16, borderRadius: 24, padding: 24 }]}>
+        <SkeletonBlock style={{ width: '60%', height: 10, borderRadius: 4, alignSelf: 'center', marginBottom: 20 }} />
+        
+        <View style={styles.milestoneRow}>
+          <View style={styles.milestoneItem}>
+            <SkeletonBlock style={{ width: 50, height: 50, borderRadius: 14 }} />
+            <SkeletonBlock style={{ width: 30, height: 18, borderRadius: 4, marginTop: 8 }} />
+            <SkeletonBlock style={{ width: 40, height: 10, borderRadius: 4, marginTop: 4 }} />
+          </View>
+          
+          <View style={styles.milestoneArrow}>
+            <SkeletonBlock style={{ width: 24, height: 24, borderRadius: 12 }} />
+          </View>
+          
+          <View style={styles.milestoneItem}>
+            <SkeletonBlock style={{ width: 50, height: 50, borderRadius: 14 }} />
+            <SkeletonBlock style={{ width: 50, height: 10, borderRadius: 4, marginTop: 10 }} />
+          </View>
+        </View>
+
+        <SkeletonBlock style={{ width: '100%', height: 8, borderRadius: 4, marginBottom: 8 }} />
+        <SkeletonBlock style={{ width: '40%', height: 12, borderRadius: 4, alignSelf: 'center', marginBottom: 6 }} />
+        <SkeletonBlock style={{ width: '70%', height: 10, borderRadius: 4, alignSelf: 'center' }} />
+      </View>
+
+      {/* Info Cards Skeleton */}
+      <View style={styles.infoSection}>
+        <SkeletonBlock style={{ width: 120, height: 14, borderRadius: 4, marginBottom: 14 }} />
+        
+        {[1, 2, 3].map((i) => (
+          <View key={i} style={[styles.infoCard, { backgroundColor: '#F5F5F5' }]}>
+            <SkeletonBlock style={{ width: 44, height: 44, borderRadius: 14, marginRight: 12 }} />
+            <View style={{ flex: 1 }}>
+              <SkeletonBlock style={{ width: '70%', height: 14, borderRadius: 4, marginBottom: 6 }} />
+              <SkeletonBlock style={{ width: '90%', height: 10, borderRadius: 4 }} />
+              <SkeletonBlock style={{ width: '60%', height: 10, borderRadius: 4, marginTop: 4 }} />
+            </View>
+          </View>
+        ))}
+      </View>
+
+      {/* Link Card Skeleton */}
+      <View style={[styles.linkCard, { backgroundColor: '#F5F5F5' }]}>
+        <SkeletonBlock style={{ width: 120, height: 10, borderRadius: 4, marginBottom: 8 }} />
+        <SkeletonBlock style={{ width: '100%', height: 36, borderRadius: 10 }} />
+      </View>
+
+      {/* Button Skeleton */}
+      <View style={styles.actionSection}>
+        <SkeletonBlock style={{ width: '100%', height: 55, borderRadius: 16 }} />
+      </View>
+
+      {/* Footer Skeleton */}
+      <SkeletonBlock style={{ width: '80%', height: 10, borderRadius: 4, alignSelf: 'center', marginTop: 20 }} />
+    </ScrollView>
+  </SafeAreaView>
+));
+
+// ==========================================
+// OPTIMIZED INFO CARD (Memoized - No re-render)
+// ==========================================
+const InfoCard = memo(({ icon, title, content, color, index }) => {
+  const cardAnim = useRef(new Animated.Value(0)).current;
+  const hasAnimated = useRef(false);
+  
+  useEffect(() => {
+    if (hasAnimated.current) return;
+    hasAnimated.current = true;
+    
+    const delay = Math.min(index * 50, 150);
+    const animation = InteractionManager.runAfterInteractions(() => {
+      Animated.timing(cardAnim, { 
+        toValue: 1, 
+        duration: 200, 
+        delay,
+        useNativeDriver: true 
+      }).start();
+    });
+    
+    return () => animation?.cancel();
+  }, []);
+  
+  return (
+    <Animated.View style={[
+      styles.infoCard, 
+      { 
+        opacity: cardAnim, 
+        transform: [{ translateY: cardAnim.interpolate({ 
+          inputRange: [0, 1], 
+          outputRange: [15, 0] 
+        })}] 
+      }
+    ]}>
+      <View style={[styles.infoIconCircle, { backgroundColor: color + '15' }]}>
+        <MaterialCommunityIcons name={icon} size={22} color={color} />
+      </View>
+      <View style={styles.infoContent}>
+        <Text style={styles.infoTitle}>{title}</Text>
+        <Text style={styles.infoText}>{content}</Text>
+      </View>
+    </Animated.View>
+  );
+}, (prevProps, nextProps) => {
+  return prevProps.index === nextProps.index && prevProps.title === nextProps.title;
+});
+
+// ==========================================
+// MAIN COMPONENT - ULTRA OPTIMIZED
+// ==========================================
+const PointsScreen = () => {
   const navigation = useNavigation();
   const { token } = useContext(AuthContext);
   const [loading, setLoading] = useState(true);
@@ -25,127 +177,255 @@ export default function PointsScreen() {
     canApplyForTdcCard: false,
   });
 
-  // Animation values
+  // Optimized animation refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideUpAnim = useRef(new Animated.Value(30)).current;
   const headerFade = useRef(new Animated.Value(0)).current;
   const progressWidth = useRef(new Animated.Value(0)).current;
-  const cardScale = useRef(new Animated.Value(0.95)).current;
+  const cardScale = useRef(new Animated.Value(0.98)).current;
   const shareScale = useRef(new Animated.Value(1)).current;
+  const isMounted = useRef(true);
+  const hasInitialFetch = useRef(false);
 
-  const fetchUserData = async () => {
-    if (!token) { setLoading(false); return; }
-    try {
-      const response = await axios.get(
-        "https://the-deft-crew-production.up.railway.app/api/auth/profile/me",
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const data = response.data;
-      setUserData({
-        referralCount: data.referralCount || 0,
-        referralCode: data.referralCode || "GENERATING...",
-        canApplyForTdcCard: data.canApplyForTdcCard || false,
-      });
-    } catch (error) {
-      if (!refreshing) Alert.alert("Sync Error", "Unable to sync your referral data.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+  // ==========================================
+  // ULTRA-FAST FETCH WITH DEDUPLICATION
+  // ==========================================
+  const fetchUserData = useCallback(async (forceRefresh = false) => {
+    const now = Date.now();
+    
+    if (!token) { 
+      if (isMounted.current) setLoading(false); 
+      return; 
     }
-  };
 
-  useEffect(() => {
-    fetchUserData();
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(headerFade, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.spring(slideUpAnim, { toValue: 0, friction: 6, tension: 40, useNativeDriver: true }),
-      Animated.spring(cardScale, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true }),
-    ]).start();
+    // ✅ Check memory cache first (fastest)
+    if (!forceRefresh && MEMORY_CACHE.has(CACHE_KEY)) {
+      const cached = MEMORY_CACHE.get(CACHE_KEY);
+      if ((now - cached.timestamp) < CACHE_TTL) {
+        if (isMounted.current) {
+          setUserData(cached.data);
+          setLoading(false);
+          InteractionManager.runAfterInteractions(() => animateContent());
+        }
+        return;
+      }
+    }
+
+    // ✅ Deduplicate in-flight requests
+    if (pendingFetchPromise) {
+      const result = await pendingFetchPromise;
+      if (isMounted.current && result) {
+        setUserData(result);
+        setLoading(false);
+        InteractionManager.runAfterInteractions(() => animateContent());
+      }
+      return;
+    }
+
+    // ✅ Debounce
+    if (!forceRefresh && (now - lastFetchTime) < FETCH_DEBOUNCE) return;
+    lastFetchTime = now;
+
+    pendingFetchPromise = (async () => {
+      try {
+        const response = await axios.get(
+          "https://the-deft-crew-production.up.railway.app/api/auth/profile/me",
+          { 
+            headers: { Authorization: `Bearer ${token}` },
+            timeout: 8000,
+          }
+        );
+        
+        const data = response.data;
+        const newUserData = {
+          referralCount: data.referralCount || 0,
+          referralCode: data.referralCode || "GENERATING...",
+          canApplyForTdcCard: data.canApplyForTdcCard || false,
+        };
+
+        // ✅ Cache data
+        MEMORY_CACHE.set(CACHE_KEY, { 
+          data: newUserData, 
+          timestamp: now 
+        });
+        
+        pendingFetchPromise = null;
+        return newUserData;
+      } catch (error) {
+        pendingFetchPromise = null;
+        // ✅ Return cached data on error
+        const cached = MEMORY_CACHE.get(CACHE_KEY);
+        return cached?.data || null;
+      }
+    })();
+
+    const result = await pendingFetchPromise;
+    
+    if (isMounted.current) {
+      if (result) {
+        setUserData(result);
+      } else if (!forceRefresh) {
+        // Try cache fallback
+        const cached = MEMORY_CACHE.get(CACHE_KEY);
+        if (cached?.data) setUserData(cached.data);
+      }
+      
+      setLoading(false);
+      InteractionManager.runAfterInteractions(() => animateContent());
+    }
   }, [token]);
 
-  useEffect(() => {
-    if (userData.referralCount > 0) {
-      Animated.timing(progressWidth, {
-        toValue: Math.min(userData.referralCount / 10, 1),
-        duration: 1000,
-        useNativeDriver: false,
-      }).start();
-    }
-  }, [userData.referralCount]);
+  // ==========================================
+  // OPTIMIZED ANIMATIONS (Run after interactions)
+  // ==========================================
+  const animateContent = useCallback(() => {
+    InteractionManager.runAfterInteractions(() => {
+      Animated.parallel([
+        Animated.timing(fadeAnim, { 
+          toValue: 1, 
+          duration: 250, 
+          useNativeDriver: true 
+        }),
+        Animated.timing(headerFade, { 
+          toValue: 1, 
+          duration: 180, 
+          useNativeDriver: true 
+        }),
+        Animated.spring(cardScale, { 
+          toValue: 1, 
+          friction: 8, 
+          tension: 60, 
+          useNativeDriver: true 
+        }),
+      ]).start();
+    });
+  }, [fadeAnim, headerFade, cardScale]);
 
+  // ==========================================
+  // INITIAL FETCH
+  // ==========================================
+  useEffect(() => {
+    isMounted.current = true;
+    if (token && !hasInitialFetch.current) {
+      hasInitialFetch.current = true;
+      fetchUserData();
+    } else if (!token) {
+      setLoading(false);
+    }
+    
+    return () => {
+      isMounted.current = false;
+    };
+  }, [token, fetchUserData]);
+
+  // ==========================================
+  // PROGRESS ANIMATION
+  // ==========================================
+  useEffect(() => {
+    if (userData.referralCount > 0 && !loading) {
+      InteractionManager.runAfterInteractions(() => {
+        Animated.timing(progressWidth, {
+          toValue: Math.min(userData.referralCount / 10, 1),
+          duration: 500,
+          useNativeDriver: false,
+        }).start();
+      });
+    }
+  }, [userData.referralCount, loading, progressWidth]);
+
+  // ==========================================
+  // HANDLERS (Memoized)
+  // ==========================================
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchUserData();
-  }, [token]);
+    fetchUserData(true).finally(() => {
+      if (isMounted.current) setRefreshing(false);
+    });
+  }, [fetchUserData]);
 
-  const referred = userData.referralCount;
-  const target = 10;
-  const progressPercent = Math.min((referred / target) * 100, 100);
-  const shareLink = `https://tdc.app/signup?ref=${userData.referralCode}`;
-
-  const progressWidthInterpolated = progressWidth.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
-  });
-
-  const onShare = async () => {
+  const onShare = useCallback(async () => {
     if (userData.referralCode === "GENERATING...") {
       Alert.alert("Wait", "Your unique code is still being generated.");
       return;
     }
+    
+    // Quick haptic-like scale animation
     Animated.sequence([
-      Animated.timing(shareScale, { toValue: 0.95, duration: 100, useNativeDriver: true }),
-      Animated.timing(shareScale, { toValue: 1, duration: 100, useNativeDriver: true }),
+      Animated.timing(shareScale, { 
+        toValue: 0.95, 
+        duration: 60, 
+        useNativeDriver: true 
+      }),
+      Animated.timing(shareScale, { 
+        toValue: 1, 
+        duration: 60, 
+        useNativeDriver: true 
+      }),
     ]).start();
+    
     try {
       await Share.share({
-        message: `Join TDC using my referral code: ${userData.referralCode}\nRegister here: ${shareLink}`,
+        message: `Join TDC using my referral code: ${userData.referralCode}\nRegister here: https://tdc.app/signup?ref=${userData.referralCode}`,
       });
-    } catch (error) { Alert.alert("Error", error.message); }
-  };
+    } catch (error) { 
+      // User cancelled share - no need to show error
+      if (error.message !== 'User did not share') {
+        Alert.alert("Error", error.message); 
+      }
+    }
+  }, [userData.referralCode, shareScale]);
 
-  const copyToClipboard = async () => {
+  const copyToClipboard = useCallback(async () => {
+    const shareLink = `https://tdc.app/signup?ref=${userData.referralCode}`;
     await Clipboard.setStringAsync(shareLink);
     Alert.alert("Copied!", "Referral link copied to clipboard.");
-  };
+  }, [userData.referralCode]);
 
-  const InfoCard = ({ icon, title, content, color, index }) => {
-    const cardAnim = useRef(new Animated.Value(0)).current;
-    useEffect(() => {
-      Animated.timing(cardAnim, { toValue: 1, duration: 400, delay: 200 + index * 100, useNativeDriver: true }).start();
-    }, []);
-    
-    return (
-      <Animated.View style={[styles.infoCard, { opacity: cardAnim, transform: [{ translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
-        <View style={[styles.infoIconCircle, { backgroundColor: color + '15' }]}>
-          <MaterialCommunityIcons name={icon} size={22} color={color} />
-        </View>
-        <View style={styles.infoContent}>
-          <Text style={styles.infoTitle}>{title}</Text>
-          <Text style={styles.infoText}>{content}</Text>
-        </View>
-      </Animated.View>
-    );
-  };
+  const handleGoBack = useCallback(() => {
+    navigation.goBack();
+  }, [navigation]);
 
+  const handleClaimCard = useCallback(() => {
+    Alert.alert("Application Sent", "We are reviewing your referrals!");
+  }, []);
+
+  // ==========================================
+  // COMPUTED VALUES
+  // ==========================================
+  const referred = userData.referralCount;
+  const target = 10;
+  const shareLink = `https://tdc.app/signup?ref=${userData.referralCode}`;
+  const isMilestoneAchieved = referred >= target;
+  const remainingReferrals = target - referred;
+  
+  const progressWidthInterpolated = progressWidth.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+    extrapolate: 'clamp',
+  });
+
+  // ==========================================
+  // SHOW SKELETON WHILE LOADING
+  // ==========================================
   if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#f9c349" />
-        </View>
-      </SafeAreaView>
-    );
+    return <SkeletonLoader />;
   }
 
   return (
+    <GuestGuard 
+              title="View Your Discounts" 
+              message="Sign in to see your claimed offers and discounts."
+            >
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerFade }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
+        <TouchableOpacity 
+          onPress={handleGoBack} 
+          style={styles.headerBtn}
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <Ionicons name="chevron-back" size={24} color="#1a1a1a" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Refer & Earn</Text>
@@ -153,15 +433,30 @@ export default function PointsScreen() {
       </Animated.View>
 
       <ScrollView
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f9c349" colors={["#f9c349"]} />}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            tintColor="#f9c349" 
+            colors={["#f9c349"]}
+            progressViewOffset={Platform.OS === 'android' ? 20 : 0}
+          />
+        }
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={Platform.OS === 'android'}
+        scrollEventThrottle={16}
       >
-        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }}>
+        <Animated.View style={{ opacity: fadeAnim }}>
           
           {/* Progress Card */}
           <Animated.View style={[styles.progressCard, { transform: [{ scale: cardScale }] }]}>
-            <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.progressGradient}>
+            <LinearGradient 
+              colors={['#f9c349', '#1a1a1a']} 
+              style={styles.progressGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
               <Text style={styles.progressLabel}>tdc PRIVILEGE MILESTONE</Text>
               
               <View style={styles.milestoneRow}>
@@ -176,10 +471,16 @@ export default function PointsScreen() {
                 </View>
                 
                 <View style={styles.milestoneItem}>
-                  <View style={[styles.tdcCardIcon, referred >= 10 && styles.tdcCardActive]}>
-                    <MaterialCommunityIcons name="card-account-details-star" size={28} color={referred >= 10 ? "#1a1a1a" : "#666"} />
+                  <View style={[styles.tdcCardIcon, isMilestoneAchieved && styles.tdcCardActive]}>
+                    <MaterialCommunityIcons 
+                      name="card-account-details-star" 
+                      size={28} 
+                      color={isMilestoneAchieved ? "#1a1a1a" : "#666"} 
+                    />
                   </View>
-                  <Text style={[styles.milestoneLabel, referred >= 10 && styles.goldText]}>tdc CARD</Text>
+                  <Text style={[styles.milestoneLabel, isMilestoneAchieved && styles.goldText]}>
+                    tdc CARD
+                  </Text>
                 </View>
               </View>
 
@@ -190,9 +491,9 @@ export default function PointsScreen() {
               
               <Text style={styles.progressCount}>{referred}/{target} Referrals</Text>
               <Text style={styles.progressNote}>
-                {referred >= 10 
+                {isMilestoneAchieved 
                   ? "🎉 Milestone Achieved! Claim your card below."
-                  : `${10 - referred} more referrals needed for the Privilege Card.`}
+                  : `${remainingReferrals} more referral${remainingReferrals > 1 ? 's' : ''} needed for the Privilege Card.`}
               </Text>
             </LinearGradient>
           </Animated.View>
@@ -229,7 +530,11 @@ export default function PointsScreen() {
           {/* Referral Link */}
           <View style={styles.linkCard}>
             <Text style={styles.linkLabel}>Your Referral Link</Text>
-            <TouchableOpacity style={styles.linkRow} onPress={copyToClipboard} activeOpacity={0.7}>
+            <TouchableOpacity 
+              style={styles.linkRow} 
+              onPress={copyToClipboard} 
+              activeOpacity={0.7}
+            >
               <Text style={styles.linkText} numberOfLines={1}>{shareLink}</Text>
               <View style={styles.copyBtn}>
                 <Ionicons name="copy-outline" size={18} color="#f9c349" />
@@ -239,14 +544,19 @@ export default function PointsScreen() {
 
           {/* Action Button */}
           <View style={styles.actionSection}>
-            {referred >= 10 ? (
+            {isMilestoneAchieved ? (
               <Animated.View style={{ transform: [{ scale: shareScale }] }}>
                 <TouchableOpacity
                   style={styles.claimBtn}
-                  onPress={() => Alert.alert("Application Sent", "We are reviewing your referrals!")}
+                  onPress={handleClaimCard}
                   activeOpacity={0.8}
                 >
-                  <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.claimGradient}>
+                  <LinearGradient 
+                    colors={['#f9c349', '#1a1a1a']} 
+                    style={styles.claimGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
                     <MaterialCommunityIcons name="card-account-details-star" size={20} color="#1a1a1a" />
                     <Text style={styles.claimBtnText}>Claim My tdc Card</Text>
                   </LinearGradient>
@@ -254,8 +564,17 @@ export default function PointsScreen() {
               </Animated.View>
             ) : (
               <Animated.View style={{ transform: [{ scale: shareScale }] }}>
-                <TouchableOpacity style={styles.shareBtn} onPress={onShare} activeOpacity={0.8}>
-                  <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.shareGradient}>
+                <TouchableOpacity 
+                  style={styles.shareBtn} 
+                  onPress={onShare} 
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient 
+                    colors={['#f9c349', '#1a1a1a']} 
+                    style={styles.shareGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
                     <Ionicons name="share-social-outline" size={20} color="#1a1a1a" />
                     <Text style={styles.shareBtnText}>Share My Referral Link</Text>
                   </LinearGradient>
@@ -272,12 +591,15 @@ export default function PointsScreen() {
         </Animated.View>
       </ScrollView>
     </SafeAreaView>
+    </GuestGuard>
   );
-}
+};
 
+// ==========================================
+// STYLES (Unchanged)
+// ==========================================
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#ffffff" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
   
   // Header
   header: { 
@@ -358,3 +680,4 @@ const styles = StyleSheet.create({
   footerNote: { textAlign: 'center', color: '#999', fontSize: 11, marginTop: 20, paddingHorizontal: 20, fontWeight: '500' },
 });
 
+export default PointsScreen;

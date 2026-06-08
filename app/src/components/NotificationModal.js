@@ -11,7 +11,7 @@ import { AuthContext } from '../context/AuthContext';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const NotificationModal = ({ visible, onClose }) => {
-  const { token, setUnreadCount } = useContext(AuthContext);
+  const { token, setUnreadCount, updateUnreadCount } = useContext(AuthContext);
   const [filter, setFilter] = useState('All');
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -25,6 +25,7 @@ const NotificationModal = ({ visible, onClose }) => {
 
   useEffect(() => {
     if (visible) {
+      // Slide in animation
       Animated.parallel([
         Animated.spring(slideAnim, {
           toValue: 0,
@@ -44,7 +45,11 @@ const NotificationModal = ({ visible, onClose }) => {
           useNativeDriver: true,
         }),
       ]).start();
+      
+      // Fetch notifications when modal opens
+      if (token) fetchNotifications();
     } else {
+      // Slide out animation
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: SCREEN_HEIGHT,
@@ -80,6 +85,8 @@ const NotificationModal = ({ visible, onClose }) => {
       });
       const data = response.data.map(n => ({ ...n, time: getTimeAgo(n.createdAt) }));
       setNotifications(data);
+      
+      // Update unread count in context
       const count = data.filter(n => !n.isRead).length;
       setUnreadCount(count);
     } catch (error) {
@@ -89,10 +96,6 @@ const NotificationModal = ({ visible, onClose }) => {
       setRefreshing(false);
     }
   };
-
-  useEffect(() => {
-    if (visible && token) fetchNotifications();
-  }, [visible, token]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -130,11 +133,12 @@ const NotificationModal = ({ visible, onClose }) => {
       });
 
       const deletedItem = notifications.find(n => n._id === id);
+      setNotifications(prev => prev.filter(n => n._id !== id));
+      
+      // Only decrease unread count if the deleted item was unread
       if (deletedItem && !deletedItem.isRead) {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
-
-      setNotifications(prev => prev.filter(n => n._id !== id));
       
       if (selectedNotification?._id === id) {
         setSelectedNotification(null);
@@ -167,6 +171,12 @@ const NotificationModal = ({ visible, onClose }) => {
         }
       ]
     );
+  };
+
+  const handleClose = () => {
+    // Refresh count when closing modal
+    updateUnreadCount(token);
+    onClose();
   };
 
   const handleOpenNotification = (item) => {

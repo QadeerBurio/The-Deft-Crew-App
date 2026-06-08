@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
 import { 
   StyleSheet, Text, View, TextInput, TouchableOpacity, 
-   StatusBar, Alert, Dimensions, ScrollView, Animated, ActivityIndicator, Image
+  StatusBar, Alert, Dimensions, ScrollView, Animated, ActivityIndicator, Image,
+  Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 import * as FileSystem from 'expo-file-system';
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/api";
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 
 const { width } = Dimensions.get('window');
 const CHIP_IMAGE = require('../../../assets/images/chip.png'); 
@@ -30,12 +33,25 @@ export default function PremiumMemberCard() {
 
   const viewShotRef = useRef();
   const flipAnimation = useRef(new Animated.Value(0)).current;
+  const headerFade = useRef(new Animated.Value(0)).current;
+  const cardScale = useRef(new Animated.Value(0.95)).current;
+  const sectionFade = useRef(new Animated.Value(0)).current;
 
   useFocusEffect(
     useCallback(() => {
       fetchUserData();
     }, [])
   );
+
+  useEffect(() => {
+    if (!loading) {
+      Animated.parallel([
+        Animated.timing(headerFade, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.spring(cardScale, { toValue: 1, friction: 6, tension: 40, useNativeDriver: true }),
+        Animated.timing(sectionFade, { toValue: 1, duration: 500, delay: 200, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [loading]);
 
   const fetchUserData = async () => {
     try {
@@ -75,6 +91,7 @@ export default function PremiumMemberCard() {
   };
 
   const toggleFlip = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Animated.spring(flipAnimation, {
       toValue: flipped ? 0 : 180,
       friction: 8,
@@ -95,66 +112,56 @@ export default function PremiumMemberCard() {
   });
 
   const handleDownload = async () => {
-  if (!isVip) return Alert.alert("Locked", "Your Gold Membership is not active.");
+    if (!isVip) return Alert.alert("Locked", "Your Gold Membership is not active.");
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const uri = await captureRef(viewShotRef, {
+        format: "png",
+        quality: 1,
+      });
+      const fileName = `TDC_Card_${Date.now()}.png`;
+      const newPath = FileSystem.documentDirectory + fileName;
+      await FileSystem.copyAsync({ from: uri, to: newPath });
+      Alert.alert("Saved", "Card saved inside app storage.");
+    } catch (e) {
+      Alert.alert("Error", "Could not save image.");
+    }
+  };
 
-  try {
-    const uri = await captureRef(viewShotRef, {
-      format: "png",
-      quality: 1,
-    });
-
-    const fileName = `TDC_Card_${Date.now()}.png`;
-    const newPath = FileSystem.documentDirectory + fileName;
-
-    await FileSystem.copyAsync({
-      from: uri,
-      to: newPath,
-    });
-
-    Alert.alert(
-      "Saved",
-      "Card saved inside app storage (no gallery permission needed)."
-    );
-  } catch (e) {
-    Alert.alert("Error", "Could not save image.");
-  }
-};
-
-  // --- Sub-Components ---
   const GoldPattern = ({ vip }) => (
     <View style={styles.patternOverlay}>
       {[...Array(12)].map((_, i) => (
-        <View key={i} style={[styles.wavyLine, { right: -50 + (i * 15), opacity: vip ? 0.2 : 0.05, borderColor: '#D4AF37' }]} />
+        <View key={i} style={[styles.wavyLine, { right: -50 + (i * 15), opacity: vip ? 0.15 : 0.05, borderColor: '#f9c349' }]} />
       ))}
     </View>
   );
 
   const FrontContent = ({ vip }) => (
-    <LinearGradient colors={vip ? ['#1a1a1a', '#000000'] : ['#2d3748', '#1a202c']} style={styles.full}>
+    <LinearGradient colors={vip ? ['#1a1a1a', '#0a0a0a'] : ['#2d3748', '#1a202c']} style={styles.full}>
       <GoldPattern vip={vip} />
       <View style={styles.cardPadding}>
         <View style={styles.rowBetween}>
           <View style={styles.logoContainer}>
-            <Text style={[styles.textLogoMain, vip && { color: '#D4AF37' }]}>TDC</Text>
+            <Text style={[styles.textLogoMain, vip && { color: '#f9c349' }]}>tdc<Text style={{color: '#f9c349'}}>.</Text></Text>
             <View style={styles.divider} />
-            <Text style={styles.textLogoSub}>GOLD</Text>
+            <Text style={[styles.textLogoSub, vip && { color: '#f9c349' }]}>GOLD</Text>
           </View>
           <Image source={CHIP_IMAGE} style={styles.originalChip} resizeMode="contain" />
         </View>
         <View style={styles.middleRow}>
-           <View>
-              <Text style={[styles.mainTitle, vip && { color: '#E2C275' }]}>MEMBER</Text>
-              <Text style={[styles.cardNumberText, vip && { color: '#FFF' }]}>{userData.cardNumber}</Text>
-           </View>
-           {vip && (
-             <View style={styles.validContainer}>
-                <Text style={styles.validLabel}>VALID THRU</Text>
-                <Text style={styles.validDate}>{expiryDate}</Text>
-             </View>
-           )}
+          <View>
+            <Text style={[styles.mainTitle, vip && { color: '#f9c349' }]}>MEMBER</Text>
+            <Text style={[styles.cardNumberText, vip && { color: '#FFF' }]}>{userData.cardNumber}</Text>
+          </View>
+          {vip && (
+            <View style={styles.validContainer}>
+              <Text style={styles.validLabel}>VALID THRU</Text>
+              <Text style={styles.validDate}>{expiryDate}</Text>
+            </View>
+          )}
         </View>
         <View style={styles.bottomInfo}>
-          <Text style={[styles.label, vip && { color: '#A0AEC0' }]}>ID NUMBER</Text>
+          <Text style={styles.label}>ID NUMBER</Text>
           <Text style={[styles.infoValue, vip && { color: '#FFF' }]}>{userData.id}</Text>
         </View>
       </View>
@@ -163,117 +170,190 @@ export default function PremiumMemberCard() {
   );
 
   const BackContent = ({ vip }) => (
-    <LinearGradient colors={vip ? ['#000000', '#1a1a1a'] : ['#1a202c', '#2d3748']} style={styles.full}>
+    <LinearGradient colors={vip ? ['#0a0a0a', '#1a1a1a'] : ['#1a202c', '#2d3748']} style={styles.full}>
       <GoldPattern vip={vip} />
       <View style={styles.securityStrip} />
       <View style={styles.cardPadding}>
-        <Text style={[styles.backName, vip && { color: '#E2C275' }]}>{userData.name.toUpperCase()}</Text>
+        <Text style={[styles.backName, vip && { color: '#f9c349' }]}>{userData.name.toUpperCase()}</Text>
         <View style={styles.centerContactBox}>
           <Text style={[styles.contactCenterValue, vip && { color: '#FFF' }]}>{userData.phone}</Text>
           <Text style={styles.contactCenterLabel}>REGISTERED MOBILE</Text>
         </View>
         <View style={styles.backFooter}>
-          <Text style={[styles.helplineValue, vip && { color: '#D4AF37' }]}>+92 315 3440945</Text>
-          <Text style={[styles.vipTag, vip && { color: '#D4AF37' }]}>{vip ? "GOLD EDITION" : "BASIC MEMBER"}</Text>
+          <Text style={[styles.helplineValue, vip && { color: '#f9c349' }]}>+92 315 3440945</Text>
+          <Text style={[styles.vipTag, vip && { color: '#f9c349' }]}>{vip ? "GOLD EDITION" : "BASIC MEMBER"}</Text>
         </View>
       </View>
       {vip && <View style={styles.goldBorder} />}
     </LinearGradient>
   );
 
-  if (loading) return <View style={[styles.container, {justifyContent: 'center'}]}><ActivityIndicator size="large" color="#D4AF37" /></View>;
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]} edges={['top', 'bottom']}>
+        <StatusBar barStyle="light-content" backgroundColor="#000000" />
+        <ActivityIndicator size="large" color="#f9c349" />
+        <Text style={{ color: '#999', marginTop: 12, fontWeight: '500' }}>Loading card...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.headerBox}>
-            <Text style={styles.header}>Member Portal</Text>
-            <Text style={styles.subHeader}>The Deft Crew Professional Identity</Text>
-        </View>
-
-        <TouchableOpacity activeOpacity={0.9} onPress={toggleFlip} style={styles.displayCardContainer}>
-          <Animated.View style={[styles.card, { transform: [{ rotateY: frontInterpolate }] }, styles.abs, { backfaceVisibility: 'hidden' }]}>
-            <FrontContent vip={isVip} />
-          </Animated.View>
-          <Animated.View style={[styles.card, { transform: [{ rotateY: backInterpolate }] }, { backfaceVisibility: 'hidden' }]}>
-            <BackContent vip={isVip} />
-          </Animated.View>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <StatusBar barStyle="light-content" backgroundColor="#000000" />
+      
+      {/* Header */}
+      <Animated.View style={[styles.headerNav, { opacity: headerFade }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
+          <Ionicons name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>
-
-        {/* --- DYNAMIC STATUS SECTION --- */}
-        <View style={styles.statusSection}>
-            {isVip ? (
-                <View style={styles.statusBadgeSuccess}>
-                    <Text style={styles.statusTextSuccess}>● PREMIUM ACCESS ACTIVE</Text>
-                </View>
-            ) : paymentStatus === "Pending Verification" ? (
-                <View style={styles.statusBadgePending}>
-                    <ActivityIndicator size="small" color="#D4AF37" style={{marginRight: 10}} />
-                    <Text style={styles.statusTextPending}>WAITING FOR VERIFICATION</Text>
-                </View>
-            ) : (
-                <TouchableOpacity 
-                    style={styles.activateBtn} 
-                    onPress={() => navigation.navigate('Payment')}
-                >
-                    <Text style={styles.activateBtnText}>ACTIVATE GOLD CARD (RS. 750)</Text>
-                </TouchableOpacity>
-            )}
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Membership Card</Text>
+          <Text style={styles.headerSubtitle}>@{user?.name?.toLowerCase()?.replace(/\s/g, '') || 'member'}</Text>
         </View>
+        <View style={{ width: 38 }} />
+      </Animated.View>
 
-        {/* PROMO SECTION */}
-        {!isVip && paymentStatus !== "Pending Verification" && (
-            <View style={styles.promoWrapper}>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Enter Promo Code"
-                    placeholderTextColor="#4A5568"
-                    value={redeemCode}
-                    onChangeText={(val) => setRedeemCode(val.toUpperCase())}
-                    autoCapitalize="characters"
-                />
-                <TouchableOpacity style={styles.applyBtn} onPress={() => Alert.alert("Processing", "Validating code...")}>
-                    <Text style={styles.applyText}>APPLY</Text>
-                </TouchableOpacity>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        
+        {/* Card Section */}
+        <Animated.View style={{ transform: [{ scale: cardScale }] }}>
+          <TouchableOpacity activeOpacity={0.95} onPress={toggleFlip} style={styles.displayCardContainer}>
+            <Animated.View style={[styles.card, { transform: [{ rotateY: frontInterpolate }] }, styles.abs, { backfaceVisibility: 'hidden' }]}>
+              <FrontContent vip={isVip} />
+            </Animated.View>
+            <Animated.View style={[styles.card, { transform: [{ rotateY: backInterpolate }] }, { backfaceVisibility: 'hidden' }]}>
+              <BackContent vip={isVip} />
+            </Animated.View>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Flip Hint */}
+        <Text style={styles.flipHint}>
+          <Ionicons name="swap-horizontal-outline" size={14} color="#666" /> Tap card to flip
+        </Text>
+
+        {/* Status Section */}
+        <Animated.View style={[styles.statusSection, { opacity: sectionFade }]}>
+          {isVip ? (
+            <View style={styles.statusBadgeSuccess}>
+              <View style={[styles.statusDot, { backgroundColor: '#4CAF50' }]} />
+              <Text style={styles.statusTextSuccess}>PREMIUM ACCESS ACTIVE</Text>
             </View>
+          ) : paymentStatus === "Pending Verification" ? (
+            <View style={styles.statusBadgePending}>
+              <ActivityIndicator size="small" color="#f9c349" style={{ marginRight: 10 }} />
+              <Text style={styles.statusTextPending}>WAITING FOR VERIFICATION</Text>
+            </View>
+          ) : (
+            <TouchableOpacity 
+              style={styles.activateBtn} 
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                navigation.navigate('Payment');
+              }}
+              activeOpacity={0.8}
+            >
+              <LinearGradient colors={['#f9c349', '#f7b733']} style={styles.activateBtnGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                <Ionicons name="diamond" size={18} color="#000" style={{ marginRight: 8 }} />
+                <Text style={styles.activateBtnText}>ACTIVATE GOLD CARD (RS. 750)</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
+        </Animated.View>
+
+        {/* Promo Section */}
+        {!isVip && paymentStatus !== "Pending Verification" && (
+          <Animated.View style={[styles.promoWrapper, { opacity: sectionFade }]}>
+            <View style={styles.promoInputRow}>
+              <View style={styles.promoIconBox}>
+                <Ionicons name="pricetag-outline" size={18} color="#f9c349" />
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter Promo Code"
+                placeholderTextColor="#666"
+                value={redeemCode}
+                onChangeText={(val) => setRedeemCode(val.toUpperCase())}
+                autoCapitalize="characters"
+              />
+            </View>
+            <TouchableOpacity 
+              style={styles.applyBtn} 
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                Alert.alert("Processing", "Validating code...");
+              }}
+              activeOpacity={0.8}
+            >
+              <LinearGradient colors={['#1a1a1a', '#2d2d2d']} style={styles.applyBtnGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                <Text style={styles.applyText}>APPLY</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
         )}
 
-        {/* DOWNLOAD BUTTON */}
-        <TouchableOpacity 
+        {/* Download Button */}
+        <Animated.View style={{ opacity: sectionFade, width: '100%' }}>
+          <TouchableOpacity 
             style={[styles.dlBtn, isVip ? styles.dlBtnActive : styles.dlBtnDisabled]} 
             onPress={handleDownload}
             disabled={!isVip}
-        >
-          <Text style={[styles.dlText, isVip && { color: '#000' }]}>
-            {isVip ? "DOWNLOAD DIGITAL CARD" : "ACTIVATE TO DOWNLOAD"}
-          </Text>
-        </TouchableOpacity>
+            activeOpacity={0.8}
+          >
+            {isVip ? (
+              <LinearGradient colors={['#1a1a1a', '#2d2d2d']} style={styles.dlBtnGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                <Ionicons name="download-outline" size={18} color="#f9c349" style={{ marginRight: 8 }} />
+                <Text style={styles.dlTextActive}>DOWNLOAD DIGITAL CARD</Text>
+              </LinearGradient>
+            ) : (
+              <>
+                <Ionicons name="lock-closed-outline" size={16} color="#666" style={{ marginRight: 8 }} />
+                <Text style={styles.dlTextDisabled}>ACTIVATE TO DOWNLOAD</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </Animated.View>
 
-        <Text style={styles.footerNote}>Tap the card to view the back side</Text>
-
-        {/* Hidden ViewShot Capture */}
-        <View style={styles.hiddenCapture}>
-          <ViewShot ref={viewShotRef} options={{ format: "png", quality: 1.0 }}>
-            <View style={styles.sideBySide}>
-                <View style={styles.card}><FrontContent vip={isVip} /></View>
-                <View style={[styles.card, { marginTop: 20 }]}><BackContent vip={isVip} /></View>
-            </View>
-          </ViewShot>
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.footerLogo}>tdc<Text style={{ color: '#f9c349' }}>.</Text></Text>
+          <Text style={styles.footerText}>Building a Stronger Student Economy</Text>
         </View>
       </ScrollView>
+
+      {/* Hidden ViewShot for download */}
+      <View style={styles.hiddenCapture}>
+        <ViewShot ref={viewShotRef} options={{ format: "png", quality: 1.0 }}>
+          <View style={styles.sideBySide}>
+            <View style={styles.captureCard}><FrontContent vip={isVip} /></View>
+            <View style={[styles.captureCard, { marginTop: 20 }]}><BackContent vip={isVip} /></View>
+          </View>
+        </ViewShot>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  scrollContent: { padding: 20, alignItems: 'center' },
-  headerBox: { alignItems: 'center', marginBottom: 25 },
-  header: { color: '#FFF', fontSize: 26, fontWeight: 'bold', letterSpacing: 1 },
-  subHeader: { color: '#718096', fontSize: 13, marginTop: 4 },
-  displayCardContainer: { width: width - 40, height: 230, marginBottom: 10 },
-  card: { width: width - 40, height: 230, borderRadius: 20, overflow: 'hidden', elevation: 10, shadowColor: '#D4AF37', shadowOpacity: 0.1, shadowRadius: 10 },
+  
+  // Header Nav
+  headerNav: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 14, paddingVertical: Platform.OS === 'ios' ? 8 : 10,
+    borderBottomWidth: 1, borderBottomColor: '#1a1a1a', backgroundColor: '#000',
+  },
+  backBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center' },
+  headerCenter: { alignItems: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
+  headerSubtitle: { fontSize: 11, color: '#666', fontWeight: '500', marginTop: 1 },
+  
+  scrollContent: { padding: 16, alignItems: 'center', paddingBottom: 40 },
+  
+  // Card
+  displayCardContainer: { width: width - 32, height: 220, marginTop: 12, marginBottom: 8 },
+  card: { width: width - 32, height: 220, borderRadius: 20, overflow: 'hidden', elevation: 10, shadowColor: '#f9c349', shadowOpacity: 0.1, shadowRadius: 10 },
   abs: { position: 'absolute', top: 0, zIndex: 5 },
   full: { flex: 1 },
   patternOverlay: { ...StyleSheet.absoluteFillObject },
@@ -282,43 +362,77 @@ const styles = StyleSheet.create({
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   logoContainer: { flexDirection: 'row', alignItems: 'center' },
   textLogoMain: { color: '#FFF', fontSize: 20, fontWeight: '900' },
-  textLogoSub: { color: 'rgba(255,255,255,0.6)', fontSize: 16, marginLeft: 8, fontWeight: '300' },
-  divider: { width: 1, height: 18, backgroundColor: 'rgba(255,255,255,0.3)', marginHorizontal: 10 },
+  textLogoSub: { color: 'rgba(255,255,255,0.5)', fontSize: 14, marginLeft: 8, fontWeight: '300' },
+  divider: { width: 1, height: 18, backgroundColor: 'rgba(255,255,255,0.2)', marginHorizontal: 10 },
   originalChip: { width: 48, height: 38 },
   middleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 15 },
-  mainTitle: { color: '#FFF', fontSize: 24, fontWeight: '300', letterSpacing: 2 },
-  cardNumberText: { color: '#FFF', fontSize: 19, fontFamily: 'monospace', marginTop: 5, letterSpacing: 1 },
+  mainTitle: { color: '#FFF', fontSize: 22, fontWeight: '300', letterSpacing: 2 },
+  cardNumberText: { color: '#FFF', fontSize: 18, fontFamily: 'monospace', marginTop: 5, letterSpacing: 1 },
   validContainer: { alignItems: 'center' },
-  validLabel: { color: '#D4AF37', fontSize: 8, fontWeight: 'bold' },
+  validLabel: { color: '#f9c349', fontSize: 8, fontWeight: 'bold' },
   validDate: { color: '#FFF', fontSize: 14, fontWeight: '500' },
   bottomInfo: { marginTop: 'auto' },
-  label: { color: '#718096', fontSize: 10, fontWeight: 'bold', letterSpacing: 1 },
-  infoValue: { color: '#FFF', fontSize: 20, fontWeight: '600' },
+  label: { color: '#666', fontSize: 10, fontWeight: 'bold', letterSpacing: 1 },
+  infoValue: { color: '#FFF', fontSize: 18, fontWeight: '600' },
   securityStrip: { height: 40, width: '100%', backgroundColor: 'rgba(0,0,0,0.8)', marginTop: 20 },
-  backName: { color: '#FFF', fontSize: 22, fontWeight: 'bold', letterSpacing: 1 },
+  backName: { color: '#FFF', fontSize: 20, fontWeight: 'bold', letterSpacing: 1 },
   centerContactBox: { flex: 1, justifyContent: 'center' },
   contactCenterValue: { color: '#FFF', fontSize: 18, letterSpacing: 1 },
-  contactCenterLabel: { color: '#718096', fontSize: 8, marginTop: 4, fontWeight: 'bold' },
+  contactCenterLabel: { color: '#666', fontSize: 8, marginTop: 4, fontWeight: 'bold' },
   backFooter: { marginTop: 'auto', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   helplineValue: { color: '#FFF', fontSize: 14, fontWeight: '500' },
   vipTag: { color: '#FFF', fontSize: 11, fontWeight: '900' },
-  goldBorder: { ...StyleSheet.absoluteFillObject, borderWidth: 1.5, borderColor: 'rgba(212, 175, 55, 0.3)', borderRadius: 20 },
-  statusSection: { marginTop: 25, width: '100%' },
-  statusBadgeSuccess: { padding: 16, backgroundColor: 'rgba(46, 204, 113, 0.15)', borderRadius: 14, borderWidth: 1, borderColor: '#2ecc71', alignItems: 'center' },
-  statusBadgePending: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, backgroundColor: 'rgba(212, 175, 55, 0.1)', borderRadius: 14, borderWidth: 1, borderColor: '#D4AF37' },
-  statusTextSuccess: { color: '#2ecc71', fontWeight: 'bold', letterSpacing: 1 },
-  statusTextPending: { color: '#D4AF37', fontWeight: 'bold', letterSpacing: 1 },
-  activateBtn: { backgroundColor: '#D4AF37', padding: 18, borderRadius: 14, alignItems: 'center', shadowColor: '#D4AF37', shadowOpacity: 0.3, shadowRadius: 5 },
-  activateBtnText: { color: '#000', fontWeight: '900', fontSize: 14 },
-  promoWrapper: { flexDirection: 'row', marginTop: 15, gap: 10, width: '100%' },
-  input: { flex: 1, backgroundColor: '#1A202C', color: '#FFF', borderRadius: 12, padding: 15, fontSize: 14, borderWidth: 1, borderColor: '#2D3748' },
-  applyBtn: { backgroundColor: '#2D3748', paddingHorizontal: 20, justifyContent: 'center', borderRadius: 12 },
-  applyText: { color: '#FFF', fontWeight: 'bold' },
-  dlBtn: { padding: 18, borderRadius: 14, width: '100%', marginTop: 15, alignItems: 'center' },
-  dlBtnActive: { backgroundColor: '#D4AF37' },
-  dlBtnDisabled: { backgroundColor: '#1A202C' },
-  dlText: { color: '#4A5568', fontWeight: 'bold', fontSize: 14 },
-  footerNote: { color: '#4A5568', fontSize: 12, marginTop: 15 },
+  goldBorder: { ...StyleSheet.absoluteFillObject, borderWidth: 1.5, borderColor: 'rgba(249, 195, 73, 0.3)', borderRadius: 20 },
+  
+  // Flip Hint
+  flipHint: { color: '#666', fontSize: 12, fontWeight: '500', marginBottom: 20, flexDirection: 'row', alignItems: 'center' },
+  
+  // Status Section
+  statusSection: { width: '100%', marginTop: 4 },
+  statusBadgeSuccess: { 
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    padding: 16, backgroundColor: 'rgba(76, 175, 80, 0.1)', borderRadius: 14, 
+    borderWidth: 1.5, borderColor: 'rgba(76, 175, 80, 0.3)',
+  },
+  statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 10 },
+  statusBadgePending: { 
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    padding: 16, backgroundColor: 'rgba(249, 195, 73, 0.1)', borderRadius: 14, 
+    borderWidth: 1.5, borderColor: 'rgba(249, 195, 73, 0.3)',
+  },
+  statusTextSuccess: { color: '#4CAF50', fontWeight: '800', letterSpacing: 1, fontSize: 13 },
+  statusTextPending: { color: '#f9c349', fontWeight: '800', letterSpacing: 1, fontSize: 13 },
+  activateBtn: { borderRadius: 14, overflow: 'hidden', elevation: 5, shadowColor: '#f9c349', shadowOpacity: 0.3, shadowRadius: 8 },
+  activateBtnGradient: { padding: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+  activateBtnText: { color: '#000', fontWeight: '900', fontSize: 14, letterSpacing: 0.5 },
+  
+  // Promo
+  promoWrapper: { width: '100%', marginTop: 16 },
+  promoInputRow: { 
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#1a1a1a', 
+    borderRadius: 14, borderWidth: 1.5, borderColor: '#2a2a2a', paddingHorizontal: 14, marginBottom: 10,
+  },
+  promoIconBox: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(249,195,73,0.1)', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
+  input: { flex: 1, color: '#FFF', paddingVertical: 14, fontSize: 14, fontWeight: '500' },
+  applyBtn: { borderRadius: 14, overflow: 'hidden' },
+  applyBtnGradient: { paddingHorizontal: 24, paddingVertical: 14, alignItems: 'center' },
+  applyText: { color: '#f9c349', fontWeight: '800', fontSize: 13 },
+  
+  // Download Button
+  dlBtn: { padding: 16, borderRadius: 14, width: '100%', marginTop: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+  dlBtnActive: { overflow: 'hidden' },
+  dlBtnGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, borderRadius: 14, width: '100%' },
+  dlBtnDisabled: { backgroundColor: '#1a1a1a', borderWidth: 1.5, borderColor: '#2a2a2a' },
+  dlTextActive: { color: '#f9c349', fontWeight: '800', fontSize: 14, letterSpacing: 0.5 },
+  dlTextDisabled: { color: '#666', fontWeight: '600', fontSize: 13 },
+  
+  // Footer
+  footer: { alignItems: 'center', marginTop: 30, marginBottom: 10 },
+  footerLogo: { fontSize: 20, fontWeight: '900', color: '#fff' },
+  footerText: { fontSize: 11, color: '#666', marginTop: 4, fontWeight: '500' },
+  
+  // Hidden Capture
   hiddenCapture: { position: 'absolute', left: -5000 },
   sideBySide: { padding: 20, backgroundColor: '#000' },
+  captureCard: { width: width - 32, height: 220 },
 });

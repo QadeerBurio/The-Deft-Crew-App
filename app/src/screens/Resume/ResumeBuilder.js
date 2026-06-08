@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, 
   Platform, StatusBar, KeyboardAvoidingView, Modal, Alert, ActivityIndicator,
-  Animated, Dimensions
+  Animated, Dimensions, Keyboard
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -37,7 +37,6 @@ const ResumeBuilder = ({ navigation, route }) => {
   const [tempData, setTempData] = useState({});
   const [editingIndex, setEditingIndex] = useState(null);
   const [touchedFields, setTouchedFields] = useState({});
-  const [focusedInput, setFocusedInput] = useState(null);
 
   // Animation Values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -159,24 +158,16 @@ const ResumeBuilder = ({ navigation, route }) => {
     }
   };
 
-  const handleFieldBlur = (field) => {
-    setTouchedFields({ ...touchedFields, [field]: true });
-    const error = validateField(field, formData[field]);
-    if (error) {
-      setErrors({ ...errors, [field]: error });
-    } else {
-      setErrors({ ...errors, [field]: '' });
-    }
-  };
-
   const addSkill = () => {
-    if (skillsInput.trim()) {
-      if (!formData.skills.includes(skillsInput.trim())) {
+    const trimmedSkill = skillsInput.trim();
+    if (trimmedSkill) {
+      if (!formData.skills.includes(trimmedSkill)) {
         setFormData({
           ...formData,
-          skills: [...formData.skills, skillsInput.trim()]
+          skills: [...formData.skills, trimmedSkill]
         });
         setSkillsInput('');
+        Keyboard.dismiss();
       }
     }
   };
@@ -188,6 +179,8 @@ const ResumeBuilder = ({ navigation, route }) => {
   };
 
   const openModal = (section, index = null) => {
+    Keyboard.dismiss();
+    
     const sectionKey = section.toLowerCase();
     
     if ((section === 'Certifications' || section === 'Languages') && formData[sectionKey].length >= 5 && index === null) {
@@ -267,6 +260,7 @@ const ResumeBuilder = ({ navigation, route }) => {
     });
     setModalVisible(false);
     setEditingIndex(null);
+    Keyboard.dismiss();
   };
 
   const deleteSectionItem = (section, index) => {
@@ -340,6 +334,8 @@ const ResumeBuilder = ({ navigation, route }) => {
   };
 
   const handleSave = async () => {
+    Keyboard.dismiss();
+    
     Animated.sequence([
       Animated.timing(saveScale, { toValue: 0.95, duration: 100, useNativeDriver: true }),
       Animated.timing(saveScale, { toValue: 1, duration: 100, useNativeDriver: true }),
@@ -367,25 +363,63 @@ const ResumeBuilder = ({ navigation, route }) => {
     }
   };
 
+  const hasError = (field) => {
+    return errors[field] && touchedFields[field];
+  };
+
   const renderModalFields = () => {
     switch (activeSection) {
       case 'Education':
         return (
           <>
             <Text style={styles.modalLabel}>University/School Name *</Text>
-            <TextInput style={styles.modalInput} placeholder="e.g., Stanford University" placeholderTextColor="#999" value={tempData.school} onChangeText={(v) => setTempData({...tempData, school: v})} />
+            <TextInput 
+              style={styles.modalInput} 
+              placeholder="e.g., Stanford University" 
+              placeholderTextColor="#999" 
+              value={tempData.school || ''} 
+              onChangeText={(v) => setTempData({...tempData, school: v})} 
+            />
             
             <Text style={styles.modalLabel}>Degree *</Text>
-            <TextInput style={styles.modalInput} placeholder="e.g., BS Computer Science" placeholderTextColor="#999" value={tempData.degree} onChangeText={(v) => setTempData({...tempData, degree: v})} />
+            <TextInput 
+              style={styles.modalInput} 
+              placeholder="e.g., BS Computer Science" 
+              placeholderTextColor="#999" 
+              value={tempData.degree || ''} 
+              onChangeText={(v) => setTempData({...tempData, degree: v})} 
+            />
+            
+            <Text style={styles.modalLabel}>CGPA / Grade (Optional)</Text>
+            <TextInput 
+              style={styles.modalInput} 
+              placeholder="e.g., 3.8 / A+" 
+              placeholderTextColor="#999"
+              keyboardType="decimal-pad"
+              value={tempData.cgpa || ''} 
+              onChangeText={(v) => setTempData({...tempData, cgpa: v})} 
+            />
             
             <View style={styles.row}>
               <View style={{flex: 1, marginRight: 8}}>
                 <Text style={styles.modalLabel}>Start Date *</Text>
-                <TextInput style={styles.modalInput} placeholder="e.g., 2020" placeholderTextColor="#999" value={tempData.startDate} onChangeText={(v) => setTempData({...tempData, startDate: v})} />
+                <TextInput 
+                  style={styles.modalInput} 
+                  placeholder="e.g., 2020" 
+                  placeholderTextColor="#999" 
+                  value={tempData.startDate || ''} 
+                  onChangeText={(v) => setTempData({...tempData, startDate: v})} 
+                />
               </View>
               <View style={{flex: 1}}>
                 <Text style={styles.modalLabel}>End Date *</Text>
-                <TextInput style={styles.modalInput} placeholder="e.g., 2024" placeholderTextColor="#999" value={tempData.endDate} onChangeText={(v) => setTempData({...tempData, endDate: v})} />
+                <TextInput 
+                  style={styles.modalInput} 
+                  placeholder="e.g., 2024" 
+                  placeholderTextColor="#999" 
+                  value={tempData.endDate || ''} 
+                  onChangeText={(v) => setTempData({...tempData, endDate: v})} 
+                />
               </View>
             </View>
           </>
@@ -394,51 +428,166 @@ const ResumeBuilder = ({ navigation, route }) => {
         return (
           <>
             <Text style={styles.modalLabel}>Company Name *</Text>
-            <TextInput style={styles.modalInput} placeholder="e.g., Google, Microsoft" placeholderTextColor="#999" value={tempData.company} onChangeText={(v) => setTempData({...tempData, company: v})} />
+            <TextInput 
+              style={styles.modalInput} 
+              placeholder="e.g., Google, Microsoft" 
+              placeholderTextColor="#999" 
+              value={tempData.company || ''} 
+              onChangeText={(v) => setTempData({...tempData, company: v})} 
+            />
             
             <Text style={styles.modalLabel}>Job Title *</Text>
-            <TextInput style={styles.modalInput} placeholder="e.g., Software Engineer" placeholderTextColor="#999" value={tempData.title} onChangeText={(v) => setTempData({...tempData, title: v})} />
+            <TextInput 
+              style={styles.modalInput} 
+              placeholder="e.g., Software Engineer" 
+              placeholderTextColor="#999" 
+              value={tempData.title || ''} 
+              onChangeText={(v) => setTempData({...tempData, title: v})} 
+            />
+            
+            <Text style={styles.modalLabel}>Location (Optional)</Text>
+            <TextInput 
+              style={styles.modalInput} 
+              placeholder="e.g., San Francisco, CA" 
+              placeholderTextColor="#999" 
+              value={tempData.location || ''} 
+              onChangeText={(v) => setTempData({...tempData, location: v})} 
+            />
             
             <View style={styles.row}>
               <View style={{flex: 1, marginRight: 8}}>
                 <Text style={styles.modalLabel}>Start Date *</Text>
-                <TextInput style={styles.modalInput} placeholder="e.g., Jan 2022" placeholderTextColor="#999" value={tempData.startDate} onChangeText={(v) => setTempData({...tempData, startDate: v})} />
+                <TextInput 
+                  style={styles.modalInput} 
+                  placeholder="e.g., Jan 2022" 
+                  placeholderTextColor="#999" 
+                  value={tempData.startDate || ''} 
+                  onChangeText={(v) => setTempData({...tempData, startDate: v})} 
+                />
               </View>
               <View style={{flex: 1}}>
                 <Text style={styles.modalLabel}>End Date *</Text>
-                <TextInput style={styles.modalInput} placeholder="e.g., Present" placeholderTextColor="#999" value={tempData.endDate} onChangeText={(v) => setTempData({...tempData, endDate: v})} />
+                <TextInput 
+                  style={styles.modalInput} 
+                  placeholder="e.g., Present" 
+                  placeholderTextColor="#999" 
+                  value={tempData.endDate || ''} 
+                  onChangeText={(v) => setTempData({...tempData, endDate: v})} 
+                />
               </View>
             </View>
             
             <Text style={styles.modalLabel}>Role Description *</Text>
-            <TextInput style={[styles.modalInput, {height: 100}]} multiline placeholder="Describe your responsibilities and achievements" placeholderTextColor="#999" value={tempData.desc} onChangeText={(v) => setTempData({...tempData, desc: v})} />
+            <TextInput 
+              style={[styles.modalInput, {height: 100}]} 
+              multiline 
+              placeholder="Describe your responsibilities and achievements" 
+              placeholderTextColor="#999" 
+              value={tempData.desc || ''} 
+              onChangeText={(v) => setTempData({...tempData, desc: v})} 
+            />
+          </>
+        );
+      case 'Projects':
+        return (
+          <>
+            <Text style={styles.modalLabel}>Project Name *</Text>
+            <TextInput 
+              style={styles.modalInput} 
+              placeholder="e.g., E-commerce Platform" 
+              placeholderTextColor="#999" 
+              value={tempData.name || ''} 
+              onChangeText={(v) => setTempData({...tempData, name: v})} 
+            />
+            
+            <Text style={styles.modalLabel}>Technologies Used</Text>
+            <TextInput 
+              style={styles.modalInput} 
+              placeholder="e.g., React, Node.js, MongoDB" 
+              placeholderTextColor="#999" 
+              value={tempData.tech || ''} 
+              onChangeText={(v) => setTempData({...tempData, tech: v})} 
+            />
+            
+            <Text style={styles.modalLabel}>Project Link (Optional)</Text>
+            <TextInput 
+              style={styles.modalInput} 
+              placeholder="e.g., github.com/username/project" 
+              placeholderTextColor="#999"
+              autoCapitalize="none"
+              value={tempData.link || ''} 
+              onChangeText={(v) => setTempData({...tempData, link: v})} 
+            />
+            
+            <Text style={styles.modalLabel}>Description *</Text>
+            <TextInput 
+              style={[styles.modalInput, {height: 100}]} 
+              multiline 
+              placeholder="Describe your project and key features" 
+              placeholderTextColor="#999" 
+              value={tempData.desc || ''} 
+              onChangeText={(v) => setTempData({...tempData, desc: v})} 
+            />
           </>
         );
       case 'Certifications':
         return (
           <>
             <Text style={styles.modalLabel}>Certificate Name *</Text>
-            <TextInput style={styles.modalInput} placeholder="e.g., AWS Certified Solutions Architect" placeholderTextColor="#999" value={tempData.name} onChangeText={(v) => setTempData({...tempData, name: v})} />
+            <TextInput 
+              style={styles.modalInput} 
+              placeholder="e.g., AWS Certified Solutions Architect" 
+              placeholderTextColor="#999" 
+              value={tempData.name || ''} 
+              onChangeText={(v) => setTempData({...tempData, name: v})} 
+            />
             
             <Text style={styles.modalLabel}>Issuing Organization *</Text>
-            <TextInput style={styles.modalInput} placeholder="e.g., Amazon, Google, Microsoft" placeholderTextColor="#999" value={tempData.issuer} onChangeText={(v) => setTempData({...tempData, issuer: v})} />
+            <TextInput 
+              style={styles.modalInput} 
+              placeholder="e.g., Amazon, Google, Microsoft" 
+              placeholderTextColor="#999" 
+              value={tempData.issuer || ''} 
+              onChangeText={(v) => setTempData({...tempData, issuer: v})} 
+            />
+            
+            <Text style={styles.modalLabel}>Credential ID (Optional)</Text>
+            <TextInput 
+              style={styles.modalInput} 
+              placeholder="e.g., AWS-ASA-12345" 
+              placeholderTextColor="#999" 
+              value={tempData.credentialId || ''} 
+              onChangeText={(v) => setTempData({...tempData, credentialId: v})} 
+            />
             
             <Text style={styles.modalLabel}>Date Obtained *</Text>
-            <TextInput style={styles.modalInput} placeholder="e.g., June 2023" placeholderTextColor="#999" value={tempData.date} onChangeText={(v) => setTempData({...tempData, date: v})} />
+            <TextInput 
+              style={styles.modalInput} 
+              placeholder="e.g., June 2023" 
+              placeholderTextColor="#999" 
+              value={tempData.date || ''} 
+              onChangeText={(v) => setTempData({...tempData, date: v})} 
+            />
           </>
         );
       case 'Languages':
         return (
           <>
             <Text style={styles.modalLabel}>Language *</Text>
-            <TextInput style={styles.modalInput} placeholder="e.g., English, Spanish, Mandarin" placeholderTextColor="#999" value={tempData.language} onChangeText={(v) => setTempData({...tempData, language: v})} />
+            <TextInput 
+              style={styles.modalInput} 
+              placeholder="e.g., English, Spanish, Mandarin" 
+              placeholderTextColor="#999" 
+              value={tempData.language || ''} 
+              onChangeText={(v) => setTempData({...tempData, language: v})} 
+            />
             
             <Text style={styles.modalLabel}>Proficiency Level *</Text>
             <TextInput 
               style={[styles.modalInput, tempData.level && validateLanguageLevel(tempData.level) ? styles.inputError : null]} 
               placeholder="Basic / Conversational / Professional / Native" 
               placeholderTextColor="#999"
-              value={tempData.level} 
+              value={tempData.level || ''} 
               onChangeText={(v) => setTempData({...tempData, level: v})}
             />
             {tempData.level && validateLanguageLevel(tempData.level) && (
@@ -480,10 +629,6 @@ const ResumeBuilder = ({ navigation, route }) => {
     ));
   };
 
-  const hasError = (field) => {
-    return errors[field] && touchedFields[field];
-  };
-
   if (loading && !formData.fullName) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -523,8 +668,16 @@ const ResumeBuilder = ({ navigation, route }) => {
         </Animated.View>
       </Animated.View>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.form} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.form} 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }}>
             
             {/* Contact Information */}
@@ -536,9 +689,9 @@ const ResumeBuilder = ({ navigation, route }) => {
               
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Full Name *</Text>
-                <View style={[styles.inputWrapper, focusedInput === 'name' && styles.inputFocused, hasError('fullName') && styles.inputError]}>
+                <View style={[styles.inputWrapper, hasError('fullName') && styles.inputError]}>
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="person-outline" size={18} color={focusedInput === 'name' ? "#f9c349" : "#999"} />
+                    <Ionicons name="person-outline" size={18} color="#999" />
                   </View>
                   <TextInput 
                     style={styles.input} 
@@ -546,8 +699,6 @@ const ResumeBuilder = ({ navigation, route }) => {
                     placeholderTextColor="#999"
                     value={formData.fullName} 
                     onChangeText={(t) => handleContactChange('fullName', t)}
-                    onFocus={() => setFocusedInput('name')}
-                    onBlur={() => { handleFieldBlur('fullName'); setFocusedInput(null); }}
                   />
                 </View>
                 {hasError('fullName') && <Text style={styles.errorText}>{errors.fullName}</Text>}
@@ -556,19 +707,18 @@ const ResumeBuilder = ({ navigation, route }) => {
               <View style={styles.row}>
                 <View style={[styles.inputGroup, {flex: 1, marginRight: 8}]}>
                   <Text style={styles.label}>Email *</Text>
-                  <View style={[styles.inputWrapper, focusedInput === 'email' && styles.inputFocused, hasError('email') && styles.inputError]}>
+                  <View style={[styles.inputWrapper, hasError('email') && styles.inputError]}>
                     <View style={styles.inputIconContainer}>
-                      <Ionicons name="mail-outline" size={18} color={focusedInput === 'email' ? "#f9c349" : "#999"} />
+                      <Ionicons name="mail-outline" size={18} color="#999" />
                     </View>
                     <TextInput 
                       style={styles.input} 
                       placeholder="your@email.com" 
                       placeholderTextColor="#999"
                       keyboardType="email-address" 
+                      autoCapitalize="none"
                       value={formData.email} 
                       onChangeText={(t) => handleContactChange('email', t)}
-                      onFocus={() => setFocusedInput('email')}
-                      onBlur={() => { handleFieldBlur('email'); setFocusedInput(null); }}
                     />
                   </View>
                   {hasError('email') && <Text style={styles.errorText}>{errors.email}</Text>}
@@ -576,9 +726,9 @@ const ResumeBuilder = ({ navigation, route }) => {
                 
                 <View style={[styles.inputGroup, {flex: 1}]}>
                   <Text style={styles.label}>Phone *</Text>
-                  <View style={[styles.inputWrapper, focusedInput === 'phone' && styles.inputFocused, hasError('phone') && styles.inputError]}>
+                  <View style={[styles.inputWrapper, hasError('phone') && styles.inputError]}>
                     <View style={styles.inputIconContainer}>
-                      <Ionicons name="call-outline" size={18} color={focusedInput === 'phone' ? "#f9c349" : "#999"} />
+                      <Ionicons name="call-outline" size={18} color="#999" />
                     </View>
                     <TextInput 
                       style={styles.input} 
@@ -587,8 +737,6 @@ const ResumeBuilder = ({ navigation, route }) => {
                       keyboardType="phone-pad" 
                       value={formData.phone} 
                       onChangeText={(t) => handleContactChange('phone', t)}
-                      onFocus={() => setFocusedInput('phone')}
-                      onBlur={() => { handleFieldBlur('phone'); setFocusedInput(null); }}
                     />
                   </View>
                   {hasError('phone') && <Text style={styles.errorText}>{errors.phone}</Text>}
@@ -597,18 +745,17 @@ const ResumeBuilder = ({ navigation, route }) => {
               
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>LinkedIn (Optional)</Text>
-                <View style={[styles.inputWrapper, focusedInput === 'linkedin' && styles.inputFocused, hasError('linkedin') && styles.inputError]}>
+                <View style={[styles.inputWrapper, hasError('linkedin') && styles.inputError]}>
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="logo-linkedin" size={18} color={focusedInput === 'linkedin' ? "#f9c349" : "#999"} />
+                    <Ionicons name="logo-linkedin" size={18} color="#999" />
                   </View>
                   <TextInput 
                     style={styles.input} 
                     placeholder="linkedin.com/in/username" 
                     placeholderTextColor="#999"
+                    autoCapitalize="none"
                     value={formData.linkedin} 
                     onChangeText={(t) => handleContactChange('linkedin', t)}
-                    onFocus={() => setFocusedInput('linkedin')}
-                    onBlur={() => { handleFieldBlur('linkedin'); setFocusedInput(null); }}
                   />
                 </View>
                 {hasError('linkedin') && <Text style={styles.errorText}>{errors.linkedin}</Text>}
@@ -617,18 +764,17 @@ const ResumeBuilder = ({ navigation, route }) => {
               <View style={styles.row}>
                 <View style={[styles.inputGroup, {flex: 1, marginRight: 8}]}>
                   <Text style={styles.label}>GitHub (Optional)</Text>
-                  <View style={[styles.inputWrapper, focusedInput === 'github' && styles.inputFocused, hasError('github') && styles.inputError]}>
+                  <View style={[styles.inputWrapper, hasError('github') && styles.inputError]}>
                     <View style={styles.inputIconContainer}>
-                      <Ionicons name="logo-github" size={18} color={focusedInput === 'github' ? "#f9c349" : "#999"} />
+                      <Ionicons name="logo-github" size={18} color="#999" />
                     </View>
                     <TextInput 
                       style={styles.input} 
                       placeholder="github.com/username" 
                       placeholderTextColor="#999"
+                      autoCapitalize="none"
                       value={formData.github} 
                       onChangeText={(t) => handleContactChange('github', t)}
-                      onFocus={() => setFocusedInput('github')}
-                      onBlur={() => { handleFieldBlur('github'); setFocusedInput(null); }}
                     />
                   </View>
                   {hasError('github') && <Text style={styles.errorText}>{errors.github}</Text>}
@@ -636,18 +782,17 @@ const ResumeBuilder = ({ navigation, route }) => {
                 
                 <View style={[styles.inputGroup, {flex: 1}]}>
                   <Text style={styles.label}>Portfolio (Optional)</Text>
-                  <View style={[styles.inputWrapper, focusedInput === 'portfolio' && styles.inputFocused, hasError('portfolio') && styles.inputError]}>
+                  <View style={[styles.inputWrapper, hasError('portfolio') && styles.inputError]}>
                     <View style={styles.inputIconContainer}>
-                      <Ionicons name="globe-outline" size={18} color={focusedInput === 'portfolio' ? "#f9c349" : "#999"} />
+                      <Ionicons name="globe-outline" size={18} color="#999" />
                     </View>
                     <TextInput 
                       style={styles.input} 
                       placeholder="yourwebsite.com" 
                       placeholderTextColor="#999"
+                      autoCapitalize="none"
                       value={formData.portfolio} 
                       onChangeText={(t) => handleContactChange('portfolio', t)}
-                      onFocus={() => setFocusedInput('portfolio')}
-                      onBlur={() => { handleFieldBlur('portfolio'); setFocusedInput(null); }}
                     />
                   </View>
                   {hasError('portfolio') && <Text style={styles.errorText}>{errors.portfolio}</Text>}
@@ -661,7 +806,7 @@ const ResumeBuilder = ({ navigation, route }) => {
                 <LinearGradient colors={['#f9c349', '#f9c349']} style={styles.sectionDot} />
                 <Text style={styles.sectionHeader}>Professional Summary</Text>
               </View>
-              <View style={[styles.textAreaWrapper, focusedInput === 'summary' && styles.inputFocused, hasError('summary') && styles.inputError]}>
+              <View style={[styles.textAreaWrapper, hasError('summary') && styles.inputError]}>
                 <TextInput 
                   style={styles.textArea} 
                   multiline 
@@ -669,8 +814,6 @@ const ResumeBuilder = ({ navigation, route }) => {
                   placeholderTextColor="#999"
                   value={formData.summary}
                   onChangeText={(t) => handleContactChange('summary', t)}
-                  onFocus={() => setFocusedInput('summary')}
-                  onBlur={() => { handleFieldBlur('summary'); setFocusedInput(null); }}
                   maxLength={500}
                 />
                 <View style={styles.textAreaFooter}>
@@ -705,6 +848,7 @@ const ResumeBuilder = ({ navigation, route }) => {
                     value={skillsInput}
                     onChangeText={setSkillsInput}
                     onSubmitEditing={addSkill}
+                    returnKeyType="done"
                   />
                 </View>
                 <TouchableOpacity style={styles.addSkillBtn} onPress={addSkill} activeOpacity={0.7}>
@@ -767,6 +911,22 @@ const ResumeBuilder = ({ navigation, route }) => {
                 )}
               </View>
 
+              {/* Projects */}
+              <View style={styles.sectionGroup}>
+                <View style={styles.sectionGroupHeader}>
+                  <Text style={styles.sectionGroupTitle}>Projects</Text>
+                  <TouchableOpacity onPress={() => openModal('Projects')} activeOpacity={0.7}>
+                    <View style={styles.addCircleBtn}>
+                      <Ionicons name="add" size={20} color="#f9c349" />
+                    </View>
+                  </TouchableOpacity>
+                </View>
+                {renderSectionItems('Projects', formData.projects, 'code-slash-outline', 'name', 'tech')}
+                {formData.projects.length === 0 && (
+                  <Text style={styles.emptyText}>No projects added yet. Tap + to add.</Text>
+                )}
+              </View>
+
               {/* Certifications */}
               <View style={styles.sectionGroup}>
                 <View style={styles.sectionGroupHeader}>
@@ -815,7 +975,11 @@ const ResumeBuilder = ({ navigation, route }) => {
                 <Ionicons name="close" size={22} color="#1a1a1a" />
               </TouchableOpacity>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false} style={{marginVertical: 15}}>
+            <ScrollView 
+              showsVerticalScrollIndicator={false} 
+              style={{marginVertical: 15}}
+              keyboardShouldPersistTaps="handled"
+            >
               {renderModalFields()}
             </ScrollView>
             <TouchableOpacity style={styles.modalAddBtn} onPress={saveSectionData} activeOpacity={0.8}>
@@ -905,15 +1069,6 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     paddingHorizontal: 12,
     height: 50,
-  },
-  inputFocused: {
-    borderColor: '#f9c349',
-    backgroundColor: '#fff',
-    shadowColor: "#f9c349",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 3,
   },
   inputError: { borderColor: '#ef4444' },
   inputIconContainer: {

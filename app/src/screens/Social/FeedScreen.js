@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, StatusBar, 
   FlatList, TouchableOpacity, Platform, TextInput,
   LayoutAnimation, ActivityIndicator, RefreshControl, Keyboard,
-  Image, Animated, Dimensions
+  Image, Animated, Dimensions, Alert
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -27,7 +27,7 @@ const FeedSkeleton = () => (
 );
 
 export default function FeedScreen({ navigation }) {
-  const { user, unreadCount, updateUnreadCount, token } = useContext(AuthContext);
+  const { user, isGuest, unreadCount, updateUnreadCount, token } = useContext(AuthContext);
   
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -71,13 +71,31 @@ export default function FeedScreen({ navigation }) {
     }
   }, [isSearching, searchQuery]);
 
+  // FIX: Show guest alert for actions
+  const showGuestAlert = (action) => {
+    Alert.alert(
+      'Create an Account',
+      `Sign up to ${action}!`,
+      [
+        { text: 'Not Now', style: 'cancel' },
+        { 
+          text: 'Sign Up', 
+          onPress: () => navigation.navigate('Login')
+        }
+      ]
+    );
+  };
+
   const markPostAsViewed = useCallback(async (postId) => {
+    // FIX: Skip for guest users
+    if (isGuest || !token) return;
+    
     try {
       await axios.post(`${API_URL}/posts/view/${postId}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
     } catch (err) {}
-  }, [token]);
+  }, [token, isGuest]);
 
   const fetchPosts = useCallback(async (category = "All", search = "", loadMore = false) => {
     try {
@@ -92,9 +110,9 @@ export default function FeedScreen({ navigation }) {
         url += `&before=${lastPostRef.current}`;
       }
       
-      const res = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // FIX: Guest users fetch without token
+      const headers = (!isGuest && token) ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.get(url, { headers });
       
       const newPosts = res.data.posts || res.data;
       const moreAvailable = res.data.hasMore !== undefined ? res.data.hasMore : newPosts.length === 10;
@@ -103,7 +121,10 @@ export default function FeedScreen({ navigation }) {
         setPosts(prev => [...prev, ...newPosts]);
         setHasMore(moreAvailable);
       } else {
-        const filteredPosts = newPosts.filter(post => post.author?._id !== user?._id);
+        // FIX: Don't filter posts for guest users (no user to compare)
+        const filteredPosts = isGuest 
+          ? newPosts 
+          : newPosts.filter(post => post.author?._id !== user?._id);
         setPosts(filteredPosts);
         setHasMore(moreAvailable);
       }
@@ -112,7 +133,10 @@ export default function FeedScreen({ navigation }) {
         lastPostRef.current = newPosts[newPosts.length - 1].createdAt;
       }
       
-      updateUnreadCount();
+      // FIX: Only update unread count for logged-in users
+      if (!isGuest) {
+        updateUnreadCount();
+      }
     } catch (err) {
       console.error("Fetch Feed Error:", err);
     } finally {
@@ -120,7 +144,7 @@ export default function FeedScreen({ navigation }) {
       setRefreshing(false);
       setIsLoadingMore(false);
     }
-  }, [token, user]);
+  }, [token, user, isGuest, updateUnreadCount]);
 
   const loadMorePosts = () => {
     if (!hasMore || isLoadingMore || loading) return;
@@ -154,16 +178,18 @@ export default function FeedScreen({ navigation }) {
   const searchUsers = async (query, page = 1, loadMore = false) => {
     if (!query.trim() || query.trim().length < 2) return;
     
-    if (!loadMore) {
+    // FIX: Guest users can still search
+    if (isGuest && !loadMore) {
+      setIsSearchingUsers(true);
+    } else if (!loadMore) {
       setIsSearchingUsers(true);
     } else {
       setSearchLoadingMore(true);
     }
     
     try {
-      const res = await axios.get(`${API_URL}/users/search?q=${query}&page=${page}&limit=20`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const headers = (!isGuest && token) ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.get(`${API_URL}/users/search?q=${query}&page=${page}&limit=20`, { headers });
       
       const newUsers = res.data.users || res.data;
       const moreAvailable = res.data.hasMore !== undefined ? res.data.hasMore : newUsers.length === 20;
@@ -214,13 +240,29 @@ export default function FeedScreen({ navigation }) {
     }
   };
 
+  // FIX: Handle user profile navigation for guests
+  const handleUserPress = (userId) => {
+    if (isGuest) {
+      showGuestAlert('view user profiles');
+      return;
+    }
+    setIsSearching(false);
+    navigation.navigate("UserProfile", { userId });
+  };
+
+  // FIX: Handle notifications for guests
+  const handleNotifications = () => {
+    if (isGuest) {
+      showGuestAlert('view notifications');
+      return;
+    }
+    navigation.navigate("Notifications");
+  };
+
   const renderUserSearchResult = ({ item, index }) => (
     <TouchableOpacity 
       style={styles.userResultItem}
-      onPress={() => {
-        setIsSearching(false);
-        navigation.navigate("UserProfile", { userId: item._id });
-      }}
+      onPress={() => handleUserPress(item._id)}
       activeOpacity={0.7}
     >
       {item.profileImage ? (
@@ -237,7 +279,7 @@ export default function FeedScreen({ navigation }) {
         </Text>
       </View>
       <View style={styles.userArrow}>
-        <Ionicons name="chevron-forward" size={16} color="#f9c349" />
+        <Ionicons name={isGuest ? "lock-closed" : "chevron-forward"} size={16} color="#f9c349" />
       </View>
     </TouchableOpacity>
   );
@@ -298,6 +340,22 @@ export default function FeedScreen({ navigation }) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       
+      {/* FIX: Guest Banner */}
+      {isGuest && (
+        <View style={styles.guestBanner}>
+          <Ionicons name="information-circle" size={18} color="#1a1a1a" />
+          <Text style={styles.guestBannerText}>
+            Browsing as guest
+          </Text>
+          <TouchableOpacity 
+            style={styles.signInButton}
+            onPress={() => navigation.navigate('Login')}
+          >
+            <Text style={styles.signInText}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      
       {/* HEADER */}
       <View style={styles.header}>
         <View style={styles.topBar}>
@@ -310,10 +368,10 @@ export default function FeedScreen({ navigation }) {
                 <TouchableOpacity style={styles.iconBtn} onPress={toggleSearch} activeOpacity={0.7}>
                   <Ionicons name="search-outline" size={22} color="#1a1a1a" />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate("Notifications")} activeOpacity={0.7}>
+                <TouchableOpacity style={styles.iconBtn} onPress={handleNotifications} activeOpacity={0.7}>
                   <View style={styles.badgeContainer}>
                     <Ionicons name="notifications-outline" size={22} color="#1a1a1a" />
-                    {unreadCount > 0 && <View style={styles.redBadge} />}
+                    {!isGuest && unreadCount > 0 && <View style={styles.redBadge} />}
                   </View>
                 </TouchableOpacity>
               </View>
@@ -362,7 +420,7 @@ export default function FeedScreen({ navigation }) {
           ]}>
             <View style={styles.searchHeader}>
               <Text style={styles.searchResultTitle}>
-                <View style={styles.searchResultDot} />
+                <Text style={{color: '#f9c349', marginRight: 4}}>●</Text>
                 Search Results
               </Text>
               {searchResults.length > 0 && (
@@ -413,7 +471,7 @@ export default function FeedScreen({ navigation }) {
               colors={["#f9c349"]}
             />
           }
-          renderItem={({ item }) => <PostCard post={item} onRefresh={onRefresh} navigation={navigation} />}
+          renderItem={({ item }) => <PostCard post={item} onRefresh={onRefresh} navigation={navigation} isGuest={isGuest} />}
           onEndReached={loadMorePosts}
           onEndReachedThreshold={0.3}
           ListFooterComponent={renderFooter}
@@ -425,13 +483,43 @@ export default function FeedScreen({ navigation }) {
         />
       )}
       
-      <FloatingMenu navigation={navigation} />
+      {/* FIX: Only show FloatingMenu for non-guest users */}
+      {!isGuest && <FloatingMenu navigation={navigation} />}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#ffffff" },
+  
+  // Guest Banner
+  guestBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF9E6',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f9c34930'
+  },
+  guestBannerText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#1a1a1a',
+    fontWeight: '500'
+  },
+  signInButton: {
+    backgroundColor: '#f9c349',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8
+  },
+  signInText: {
+    color: '#1a1a1a',
+    fontWeight: '700',
+    fontSize: 11
+  },
   
   // Skeleton
   skeletonContainer: { paddingTop: 8 },
@@ -507,22 +595,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     color: '#1a1a1a',
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  searchResultDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#f9c349',
-    marginRight: 8,
   },
   searchCount: {
     fontSize: 11,
     color: '#999',
     fontWeight: '600',
     marginTop: 4,
-    marginLeft: 14,
+    marginLeft: 10,
   },
   searchListContent: {
     paddingBottom: 20,

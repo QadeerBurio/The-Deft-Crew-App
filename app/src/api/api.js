@@ -1,156 +1,135 @@
-// api.js - Enhanced version with ultra-fast brands fetch
+// api/api.js - Fixed for Guest Mode
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, Platform } from 'react-native';
-import NetInfo from '@react-native-community/netinfo';
 
 const getBaseURL = () => {
-  if (Platform.OS === 'android') {
-    return 'https://the-deft-crew-production.up.railway.app/api';
-  }
   return 'https://the-deft-crew-production.up.railway.app/api';
 };
 
+// Create axios instance with optimized config
 const api = axios.create({
   baseURL: getBaseURL(),
-  timeout: 10000, // Increased timeout
+  timeout: 12000,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
 });
 
-// Enhanced cache system
-class CacheManager {
-  constructor() {
-    this.memoryCache = new Map();
-    this.pendingRequests = new Map();
+// Ultra-fast in-memory cache with TTL
+class MemoryCache {
+  constructor(maxSize = 40) {
+    this.cache = new Map();
+    this.maxSize = maxSize;
+    this.accessOrder = [];
   }
 
-  async get(key, fetchFunction, ttl = 5 * 60 * 1000) {
-    // Check memory cache first
-    const cached = this.memoryCache.get(key);
-    if (cached && Date.now() - cached.timestamp < ttl) {
-      return cached.data;
+  get(key) {
+    const item = this.cache.get(key);
+    if (!item) return null;
+    
+    if (Date.now() > item.expiry) {
+      this.delete(key);
+      return null;
     }
+    
+    this.accessOrder = this.accessOrder.filter(k => k !== key);
+    this.accessOrder.push(key);
+    
+    return item.data;
+  }
 
-    // Check if there's already a pending request for this key
-    if (this.pendingRequests.has(key)) {
-      return this.pendingRequests.get(key);
+  set(key, data, ttlMs = 12000) {
+    if (this.cache.size >= this.maxSize) {
+      const oldest = this.accessOrder.shift();
+      if (oldest) this.cache.delete(oldest);
     }
-
-    // Create new request
-    const promise = fetchFunction().then(async (data) => {
-      this.memoryCache.set(key, {
-        data,
-        timestamp: Date.now(),
-      });
-      this.pendingRequests.delete(key);
-      
-      // Also cache to disk for offline support
-      await AsyncStorage.setItem(`cache_${key}`, JSON.stringify({
-        data,
-        timestamp: Date.now(),
-      }));
-      
-      return data;
-    }).catch(error => {
-      this.pendingRequests.delete(key);
-      throw error;
+    
+    this.cache.set(key, {
+      data,
+      expiry: Date.now() + ttlMs,
     });
-
-    this.pendingRequests.set(key, promise);
-    return promise;
+    
+    this.accessOrder = this.accessOrder.filter(k => k !== key);
+    this.accessOrder.push(key);
   }
 
-  async getOffline(key, ttl = 5 * 60 * 1000) {
-    try {
-      const cached = await AsyncStorage.getItem(`cache_${key}`);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < ttl) {
-          return data;
-        }
-      }
-    } catch (error) {
-      console.error('Error reading from disk cache:', error);
-    }
-    return null;
+  delete(key) {
+    this.cache.delete(key);
+    this.accessOrder = this.accessOrder.filter(k => k !== key);
   }
 
-  clear(key) {
-    if (key) {
-      this.memoryCache.delete(key);
-      AsyncStorage.removeItem(`cache_${key}`);
-    } else {
-      this.memoryCache.clear();
-      AsyncStorage.getAllKeys().then(keys => {
-        keys.filter(key => key.startsWith('cache_')).forEach(key => {
-          AsyncStorage.removeItem(key);
-        });
-      });
+  clear() {
+    this.cache.clear();
+    this.accessOrder = [];
+  }
+
+  has(key) {
+    const item = this.cache.get(key);
+    if (!item) return false;
+    if (Date.now() > item.expiry) {
+      this.delete(key);
+      return false;
     }
+    return true;
   }
 }
 
-export const cacheManager = new CacheManager();
+export const memoryCache = new MemoryCache(100);
 
-// Request deduplication
+// Promise deduplication map
 const pendingRequests = new Map();
 
+// FIXED: Global flag to track guest mode
+let isGuestMode = false;
+
+// FIXED: Export function to set guest mode
+export const setGuestMode = (guestMode) => {
+  isGuestMode = guestMode;
+  console.log('Guest mode set to:', guestMode);
+};
+
+// Request interceptor - FIXED
 api.interceptors.request.use(
   async (config) => {
     try {
-      let token = await AsyncStorage.getItem('token');
-      if (!token) {
-        token = await AsyncStorage.getItem('userToken');
+      // FIXED: Check guest mode flag AND AsyncStorage
+      // Only attach token if NOT in guest mode
+      const guestFlag = await AsyncStorage.getItem('isGuest');
+      
+      if (guestFlag === 'true' || isGuestMode) {
+        // Don't attach any token for guest users
+        // Remove Authorization header if it exists
+        delete config.headers.Authorization;
+        console.log('Guest mode: No token attached');
+      } else {
+        // Only get token for non-guest users
+        const token = await AsyncStorage.getItem('token');
         if (token) {
-          await AsyncStorage.setItem('token', token);
-          await AsyncStorage.removeItem('userToken');
+          config.headers.Authorization = `Bearer ${token}`;
         }
       }
       
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      
-      // Add cache control headers
       config.headers['Cache-Control'] = 'no-cache';
+      config.headers['Pragma'] = 'no-cache';
       
       return config;
     } catch (error) {
-      console.error('Error getting token:', error);
+      console.log('Request interceptor error:', error);
       return config;
     }
   },
   (error) => Promise.reject(error)
 );
 
+// Response interceptor
 let logoutHandler = () => {};
 export const injectLogout = (handler) => {
   logoutHandler = handler;
 };
 
-const clearAuthData = async () => {
-  try {
-    await AsyncStorage.multiRemove(['token', 'userToken', 'authToken', 'user']);
-    cacheManager.clear(); // Clear cache on logout
-  } catch (error) {
-    console.error('Error clearing auth data:', error);
-  }
-};
-
 let isLoggingOut = false;
-
-const isTokenValid = (token) => {
-  if (!token) return false;
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const expirationTime = payload.exp * 1000;
-    return Date.now() < expirationTime;
-  } catch (error) {
-    return false;
-  }
-};
 
 api.interceptors.response.use(
   (response) => response,
@@ -158,34 +137,34 @@ api.interceptors.response.use(
     const originalRequest = error.config;
     
     if (!error.response) {
-      console.log('Network error - no response from server');
       return Promise.reject(error);
     }
     
+    // FIXED: Don't auto-logout for guest users
     if (error.response.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
+      const guestFlag = await AsyncStorage.getItem('isGuest');
       
-      const token = await AsyncStorage.getItem('token');
-      
-      if (token && !isTokenValid(token)) {
-        console.log('Token expired');
+      // If guest mode, just reject without logout alert
+      if (guestFlag === 'true' || isGuestMode) {
+        return Promise.reject(error);
       }
+      
+      originalRequest._retry = true;
       
       if (!isLoggingOut) {
         isLoggingOut = true;
-        await clearAuthData();
+        await AsyncStorage.multiRemove(['token', 'user']);
+        memoryCache.clear();
         
         Alert.alert(
           "Session Expired",
-          "Your session has expired. Please log in again.",
+          "Please log in again.",
           [
             {
               text: "OK",
               onPress: () => {
                 isLoggingOut = false;
-                if (logoutHandler) {
-                  logoutHandler();
-                }
+                logoutHandler?.();
               }
             }
           ]
@@ -197,235 +176,131 @@ api.interceptors.response.use(
   }
 );
 
-// Optimized API methods with parallel fetching
+// Deduplicate requests helper
+async function deduplicatedRequest(key, requestFn, ttlMs = 6000) {
+  const cached = memoryCache.get(key);
+  if (cached) return cached;
+  
+  if (pendingRequests.has(key)) {
+    return pendingRequests.get(key);
+  }
+  
+  const promise = requestFn()
+    .then(data => {
+      memoryCache.set(key, data, ttlMs);
+      pendingRequests.delete(key);
+      return data;
+    })
+    .catch(error => {
+      pendingRequests.delete(key);
+      throw error;
+    });
+  
+  pendingRequests.set(key, promise);
+  return promise;
+}
+
+// Optimized API methods
 export const optimizedAPI = {
-  getHomeData: async (forceRefresh = false) => {
-    const cacheKey = 'home_data';
-    
-    // 1. Try to get from disk cache immediately for instant UI
-    if (!forceRefresh) {
-      const cached = await cacheManager.getOffline(cacheKey, 3 * 60 * 1000);
-      if (cached) return cached;
-    }
-    
-    // 2. Otherwise fetch from network (and memory cache handles deduplication)
-    return cacheManager.get(cacheKey, async () => {
-      const [slidersRes, brandsRes] = await Promise.all([
-        api.get('/sliders').catch(() => ({ data: [] })),
-        api.get('/brands').catch(() => ({ data: [] }))
-      ]);
-      
-      return {
-        sliders: slidersRes.data,
-        brands: brandsRes.data,
-      };
-    }, 3 * 60 * 1000);
-  },
-  
-  // ULTRA-FAST BRANDS FETCH WITH PROGRESSIVE LOADING
+  // Ultra-fast brands fetch with offers summary
   getBrandsFast: async (token, userId, options = {}) => {
-    const {
-      forceRefresh = false,
-      limit = 20,
-      priority = 'high',
-      includeOffers = true
-    } = options;
-    
-    const cacheKey = `brands_fast_${userId}_${limit}`;
-    
-    // Immediate return from memory cache if available (fastest)
-    if (!forceRefresh) {
-      const memoryCached = cacheManager.memoryCache.get(cacheKey);
-      if (memoryCached && Date.now() - memoryCached.timestamp < 60000) { // 1 minute TTL
-        return memoryCached.data;
-      }
-      
-      // Check disk cache for instant UI (50-100ms)
-      const diskCached = await cacheManager.getOffline(cacheKey, 60000);
-      if (diskCached) {
-        // Store in memory cache for even faster subsequent access
-        cacheManager.memoryCache.set(cacheKey, {
-          data: diskCached,
-          timestamp: Date.now(),
-        });
-        return diskCached;
-      }
-    }
-    
-    // Parallel fetch with optimized endpoints
-    return cacheManager.get(cacheKey, async () => {
-      // Fetch minimal brand data first for speed
-      const fetchPromises = [
-        api.get('/brands', {
-          params: { 
-            limit, 
-            fields: 'name,logo,category,slug,_id', // Only fetch essential fields
-            sort: '-createdAt'
-          },
-          timeout: 5000 // Shorter timeout for brands
-        })
-      ];
-      
-      // Conditionally fetch offers if needed
-      if (includeOffers) {
-        fetchPromises.push(
-          api.get('/offers/summary', {
-            params: { limit: 100 },
-            timeout: 5000
-          }).catch(() => ({ data: {} }))
-        );
-      }
-      
-      const results = await Promise.all(fetchPromises);
-      const brandsRes = results[0];
-      const offersSummaryRes = includeOffers ? results[1] : { data: {} };
-      
-      let brandsData = brandsRes.data;
-      
-      // Ensure we always have an array
-      if (!Array.isArray(brandsData)) {
-        brandsData = brandsData?.data || brandsData?.brands || [];
-      }
-      
-      const offersSummary = offersSummaryRes.data || {};
-      
-      // Ultra-fast processing - minimal transformations
-      const brandsWithOffers = brandsData.slice(0, limit).map(brand => ({
-        ...brand,
-        // Optimize image URL without heavy processing
-        logo: brand.logo ? 
-          (brand.logo.startsWith('http') ? brand.logo : `https://the-deft-crew-production.up.railway.app/uploads/brands/${brand.logo}`) 
-          : null,
-        // Quick offer count without processing full offer objects
-        offerCount: offersSummary[brand._id]?.length || 0,
-        hasOffers: (offersSummary[brand._id]?.length || 0) > 0,
-        // Lazy load offers - only IDs for now
-        offerIds: offersSummary[brand._id] || []
-      }));
-      
-      return brandsWithOffers;
-    }, 60000); // 1 minute cache for fast brands
-  },
-  
-  // Progressive brand details loading
-  getBrandsWithOffers: async (token, userId, forceRefresh = false) => {
-    const cacheKey = `brands_offers_${userId}`;
+    const { forceRefresh = false, limit = 100 } = options;
+    const cacheKey = `brands:${userId || 'all'}:${limit}`;
     
     if (!forceRefresh) {
-      const cached = await cacheManager.getOffline(cacheKey, 3 * 60 * 1000);
-      if (cached) {
-        return cached;
-      }
-    }
-    
-    return cacheManager.get(cacheKey, async () => {
-      // Fetch brands and offers in parallel with pagination
-      const [brandsRes, offersSummaryRes] = await Promise.all([
-        api.get('/brands', {
-          params: { limit: 50 } // Limit initial load
-        }),
-        api.get('/offers/summary').catch(() => ({ data: {} }))
-      ]);
-      
-      const brandsData = brandsRes.data;
-      const offersSummary = offersSummaryRes.data;
-      
-      // Process brands with minimal data first
-      const brandsWithOffers = brandsData.map(brand => ({
-        ...brand,
-        logo: brand.logo ? `https://the-deft-crew-production.up.railway.app/uploads/brands/${brand.logo}` : null,
-        offers: offersSummary[brand._id] || [],
-        hasOffers: (offersSummary[brand._id]?.length || 0) > 0
-      }));
-      
-      return brandsWithOffers;
-    }, 3 * 60 * 1000);
-  },
-  
-  // Get brands with pagination for infinite scroll
-  getBrandsPaginated: async (page = 1, limit = 20, token) => {
-    const cacheKey = `brands_page_${page}_${limit}`;
-    
-    return cacheManager.get(cacheKey, async () => {
-      const response = await api.get('/brands', {
-        params: { page, limit, sort: '-createdAt' }
-      });
-      
-      return {
-        brands: response.data,
-        page,
-        limit,
-        hasMore: response.data.length === limit
-      };
-    }, 2 * 60 * 1000); // 2 minutes cache for paginated results
-  },
-  
-  // Prefetch brands in background
-  prefetchBrands: async (userId) => {
-    const cacheKey = `brands_fast_${userId}_20`;
-    
-    // Check if already in cache
-    if (cacheManager.memoryCache.has(cacheKey)) {
-      return cacheManager.memoryCache.get(cacheKey).data;
-    }
-    
-    // Prefetch in background without waiting
-    return cacheManager.get(cacheKey, async () => {
-      const response = await api.get('/brands', {
-        params: { limit: 20, fields: 'name,logo,category,slug,_id' },
-        timeout: 3000
-      });
-      
-      let brandsData = response.data;
-      if (!Array.isArray(brandsData)) {
-        brandsData = brandsData?.data || brandsData?.brands || [];
-      }
-      
-      const simplifiedBrands = brandsData.slice(0, 20).map(brand => ({
-        _id: brand._id,
-        name: brand.name,
-        logo: brand.logo ? `https://the-deft-crew-production.up.railway.app/uploads/brands/${brand.logo}` : null,
-        category: brand.category,
-        slug: brand.slug
-      }));
-      
-      return simplifiedBrands;
-    }, 5 * 60 * 1000);
-  },
-  
-  getBrandDetails: async (brandId, token, forceRefresh = false) => {
-    const cacheKey = `brand_details_${brandId}`;
-    
-    if (!forceRefresh) {
-      const cached = await cacheManager.getOffline(cacheKey, 2 * 60 * 1000);
+      const cached = memoryCache.get(cacheKey);
       if (cached) return cached;
     }
     
-    return cacheManager.get(cacheKey, async () => {
-      const [brandRes, offersRes] = await Promise.all([
-        api.get(`/brands/${brandId}`),
-        api.get(`/offers/brand/${brandId}`)
+    return deduplicatedRequest(cacheKey, async () => {
+      // Parallel fetch: brands + offers summary
+      const [brandsRes, summaryRes] = await Promise.all([
+        api.get('/brands', { 
+          params: { limit, sort: 'name' },
+          timeout: 8000 
+        }).catch(() => ({ data: [] })),
+        api.get('/offers/summary', { timeout: 8000 })
+          .catch(() => ({ data: {} }))
+      ]);
+      
+      const brands = Array.isArray(brandsRes.data) ? brandsRes.data : 
+                    (brandsRes.data?.data || brandsRes.data?.brands || []);
+      const offersSummary = summaryRes.data || {};
+      
+      const baseUrl = 'https://the-deft-crew-production.up.railway.app';
+      
+      // Fast mapping
+      const brandsWithOffers = brands.map(brand => {
+        const brandOffers = offersSummary[brand._id] || [];
+        const firstOffer = brandOffers[0];
+        
+        const formatImage = (path, type = 'offer') => {
+          if (!path) return null;
+          if (path.startsWith('http')) return path;
+          return type === 'brand' 
+            ? `${baseUrl}/uploads/brands/${path}`
+            : `${baseUrl}/${path}`;
+        };
+        
+        return {
+          ...brand,
+          logo: formatImage(brand.logo, 'brand'),
+          offers: brandOffers.map(offer => ({
+            ...offer,
+            image: formatImage(offer.image),
+            displayImage: formatImage(offer.image),
+            isClaimed: offer.claimedBy?.includes(userId) || false,
+            discountPercentage: offer.discountPercentage || 0,
+          })),
+          displayImage: firstOffer?.image 
+            ? formatImage(firstOffer.image) 
+            : formatImage(brand.logo, 'brand') || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+          hasOffer: brandOffers.length > 0,
+          discount: firstOffer?.discountPercentage || 0,
+          category: firstOffer?.category || brand.category || 'General',
+          isOnline: firstOffer?.isOnline || false,
+          isInStore: firstOffer?.isInStore || false,
+        };
+      });
+      
+      return brandsWithOffers;
+    }, 90000); // 1.5 minute cache
+  },
+  
+  // Home data with parallel fetching
+  getHomeData: async (forceRefresh = false) => {
+    const cacheKey = 'home:data';
+    
+    if (!forceRefresh) {
+      const cached = memoryCache.get(cacheKey);
+      if (cached) return cached;
+    }
+    
+    return deduplicatedRequest(cacheKey, async () => {
+      const [slidersRes, brandsRes] = await Promise.all([
+        api.get('/sliders', { timeout: 5000 }).catch(() => ({ data: [] })),
+        api.get('/brands', { params: { limit: 20 }, timeout: 5000 })
+          .catch(() => ({ data: [] }))
       ]);
       
       return {
-        ...brandRes.data,
-        offers: offersRes.data,
+        sliders: slidersRes.data || [],
+        brands: brandsRes.data || [],
       };
-    }, 2 * 60 * 1000); // Shorter TTL for details
+    }, 60000);
   },
   
-  // Clear specific brand caches
-  clearBrandCache: (userId, brandId = null) => {
-    if (brandId) {
-      cacheManager.clear(`brand_details_${brandId}`);
-    } else {
-      cacheManager.clear(`brands_fast_${userId}_20`);
-      cacheManager.clear(`brands_offers_${userId}`);
-      cacheManager.clear(`brands_page_1_20`);
+  // Clear caches
+  clearBrandCache: () => {
+    for (const key of memoryCache.cache.keys()) {
+      if (key.startsWith('brands:') || key.startsWith('brand:')) {
+        memoryCache.delete(key);
+      }
     }
   }
 };
 
+// Keep existing courseAPI and resumeAPI
 export const courseAPI = {
   getAllCourses: () => api.get('/courses'),
   getCourse: () => api.get('/courses/course'),
@@ -433,10 +308,7 @@ export const courseAPI = {
   getCoursesByCategory: (category) => api.get(`/courses/category/${category}`),
   getEnrolledCourses: () => api.get('/courses/user/enrolled'),
   updateProgress: (courseId, data) => api.put(`/courses/${courseId}/progress`, data),
-  enrollCourse: (courseId) => {
-    console.log('Enrolling in course with ID:', courseId);
-    return api.post(`/courses/${courseId}/enroll`);
-  },
+  enrollCourse: (courseId) => api.post(`/courses/${courseId}/enroll`),
 };
 
 export const resumeAPI = {
@@ -459,16 +331,10 @@ export const resumeAPI = {
   getMarketInsights: () => api.get('/resume/market-insights'),
   getTemplateById: (templateId) => api.get(`/resume/templates/${templateId}`),
   generatePDFWithTemplate: async (templateId, options = {}) => {
-    try {
-      console.log('Calling generate-pdf with template:', templateId);
-      const response = await api.post(`/resume/generate-pdf/${templateId}`, options);
-      return response;
-    } catch (error) {
-      console.error('PDF generation API error:', error);
-      throw error;
-    }
+    return api.post(`/resume/generate-pdf/${templateId}`, options);
   },
-  generateMultiplePDFs: (templateIds, options = {}) => api.post('/resume/generate-multiple', { templateIds, options }),
+  generateMultiplePDFs: (templateIds, options = {}) => 
+    api.post('/resume/generate-multiple', { templateIds, options }),
   saveTemplatePreference: (templateId) => api.post('/resume/save-template', { templateId }),
   getTemplateRecommendations: () => api.get('/resume/template-recommendations'),
   getTemplates: () => api.get('/resume/templates'),

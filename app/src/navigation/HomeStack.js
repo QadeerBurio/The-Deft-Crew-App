@@ -30,6 +30,7 @@ export default function HomeStack() {
       <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
       <Stack.Screen name="TravellingScreen" component={TravelingScreen} options={{ headerShown: false }}/>
       
+      
 
     </Stack.Navigator>
   );

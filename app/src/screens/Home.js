@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, useContext } from "react";
 import { 
   ScrollView, 
   StyleSheet, 
@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-
+import { AuthContext } from "../context/AuthContext";
 import Slider from "../screens/Slider";
 import BrandsScreen from "../screens/Brands";
 import ChatBotInterface from "./ChatBotInterface"; 
@@ -22,7 +22,7 @@ import api from '../api/api';
 
 export default function Home() {
   const [isChatVisible, setChatVisible] = useState(false);
-  
+  const { isGuest } = useContext(AuthContext);
   // Animations for floating button
   const floatAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -176,6 +176,7 @@ export default function Home() {
         }
       >
         <Slider data={homeData?.sliders} />
+        
         <BrandsScreen limit={6} />
       </ScrollView>
 

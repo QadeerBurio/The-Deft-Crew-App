@@ -294,8 +294,9 @@ const AnimatedSectionLabel = ({ label, delay = 0 }) => {
   );
 };
 
+// FIXED: CustomDrawerContent with proper context and navigation
 function CustomDrawerContent(props) {
-  const { logout } = useContext(AuthContext);
+  const { logout, isGuest, setIsGuest } = useContext(AuthContext); // FIXED: Added setIsGuest
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.98)).current;
 
@@ -317,6 +318,49 @@ function CustomDrawerContent(props) {
   }, [fadeAnim, scaleAnim]);
 
   let delay = 50;
+
+  // FIXED: Handle navigation to auth screens
+  const navigateToAuth = (screenName) => {
+    // Close the drawer first
+    props.navigation.closeDrawer();
+    
+    // Use setTimeout to ensure drawer closes before navigation
+    setTimeout(() => {
+      // Navigate to parent stack (AppNavigator) which contains Login/Signup screens
+      props.navigation.getParent()?.navigate(screenName);
+    }, 300);
+  };
+
+  // FIXED: Handle guest sign in
+  const handleGuestSignIn = () => {
+    setIsGuest(false);
+    navigateToAuth('Login');
+  };
+
+  // FIXED: Handle guest sign up
+  const handleGuestSignUp = () => {
+    setIsGuest(false);
+    navigateToAuth('Signup');
+  };
+
+  // FIXED: Handle logout
+  const handleLogout = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert('Logout', 'Sign out of your account?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: () => {
+          logout();
+          // Navigate to Login screen after logout
+          setTimeout(() => {
+            props.navigation.getParent()?.navigate('Login');
+          }, 300);
+        },
+      },
+    ]);
+  };
 
   return (
     <SafeAreaView style={styles.drawerContainer} edges={['top', 'bottom']}>
@@ -346,7 +390,9 @@ function CustomDrawerContent(props) {
                 <Text style={styles.headerTitle}>The Deft Crew</Text>
                 <View style={styles.badgeContainer}>
                   <View style={styles.premiumBadge}>
-                    <Text style={styles.premiumText}>STUDENTS REWARDS</Text>
+                    <Text style={styles.premiumText}>
+                      {isGuest ? 'GUEST MODE' : 'STUDENTS BENEFITS'}
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -410,39 +456,71 @@ function CustomDrawerContent(props) {
           },
         ]}
       >
-        <TouchableOpacity
-          style={styles.logoutBtn}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            Alert.alert('Logout', 'Sign out of your account?', [
-              { text: 'Cancel', style: 'cancel' },
-              {
-                text: 'Logout',
-                style: 'destructive',
-                onPress: () => logout(props.navigation),
-              },
-            ]);
-          }}
-        >
-          <Ionicons name="log-out-outline" size={22} color="#f9c349" />
-          <Text style={styles.logoutText}>Log Out</Text>
-        </TouchableOpacity>
+        {isGuest ? (
+          <View style={styles.guestDrawerFooter}>
+            <Text style={styles.guestDrawerText}>Browsing as Guest</Text>
+            <TouchableOpacity 
+              style={styles.signInDrawerBtn}
+              onPress={handleGuestSignIn} // FIXED: Using proper handler
+              activeOpacity={0.7}
+            >
+              <Ionicons name="log-in-outline" size={20} color="#f9c349" style={{ marginRight: 8 }} />
+              <Text style={styles.signInDrawerText}>Sign In to Unlock All Features</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.createAccountDrawerBtn}
+              onPress={handleGuestSignUp} // FIXED: Added sign up option
+              activeOpacity={0.7}
+            >
+              <Ionicons name="person-add-outline" size={20} color="#1a1a1a" style={{ marginRight: 8 }} />
+              <Text style={styles.createAccountDrawerText}>Create Free Account</Text>
+            </TouchableOpacity>
+            <Text style={styles.guestBenefitText}>
+              Unlock exclusive student discounts and benefits!
+            </Text>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.logoutBtn}
+            onPress={handleLogout} // FIXED: Using proper handler
+            activeOpacity={0.7}
+          >
+            <Ionicons name="log-out-outline" size={22} color="#f9c349" />
+            <Text style={styles.logoutText}>Log Out</Text>
+          </TouchableOpacity>
+        )}
       </Animated.View>
     </SafeAreaView>
   );
 }
 
+// FIXED: CustomHeader with proper guest handling
 function CustomHeader({ navigation }) {
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchWidth = useRef(new Animated.Value(0)).current;
   const headerOpacity = useRef(new Animated.Value(0)).current;
-  const { unreadCount, updateUnreadCount, token } = useContext(AuthContext);
+  const { unreadCount, updateUnreadCount, token, isGuest } = useContext(AuthContext); // FIXED: Removed unused vars
   const [notifVisible, setNotifVisible] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
+  // FIXED: Only update notifications for logged-in users
   useEffect(() => {
-    if (token) {
+    if (token && !isGuest) {
+      updateUnreadCount(token);
+      
+      const interval = setInterval(() => {
+        if (token && !isGuest) {
+          updateUnreadCount(token);
+        }
+      }, 30000); // Check every 30 seconds
+      
+      return () => clearInterval(interval);
+    }
+  }, [token, isGuest, updateUnreadCount]);
+
+  useEffect(() => {
+    if (token && !isGuest) {
       updateUnreadCount();
     }
 
@@ -467,7 +545,7 @@ function CustomHeader({ navigation }) {
         }),
       ])
     ).start();
-  }, [headerOpacity, pulseAnim, token, updateUnreadCount]);
+  }, [headerOpacity, pulseAnim, token, isGuest, updateUnreadCount]);
 
   const toggleSearch = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -503,6 +581,29 @@ function CustomHeader({ navigation }) {
       timestamp: Date.now(),
     });
     toggleSearch();
+  };
+
+  // Listen for focus events to refresh notification count
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (token && !isGuest) {
+        updateUnreadCount(token);
+      }
+    });
+    
+    return unsubscribe;
+  }, [navigation, token, isGuest, updateUnreadCount]);
+
+  // FIXED: Handle notification press for guests
+  const handleNotificationPress = () => {
+    if (isGuest) {
+      // Navigate to Login for guests
+      navigation.getParent()?.navigate('Login');
+      return;
+    }
+    
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setNotifVisible(true);
   };
 
   return (
@@ -542,7 +643,9 @@ function CustomHeader({ navigation }) {
                 <Text style={{ color: '#f9c349' }}>CREW</Text>
               </Text>
               <View style={styles.headerBadge}>
-                <Text style={styles.headerBadgeText}>STUDENT REWARDS</Text>
+                <Text style={styles.headerBadgeText}>
+                  {isGuest ? 'GUEST MODE' : 'STUDENT BENEFITS'}
+                </Text>
               </View>
             </View>
           )}
@@ -555,17 +658,21 @@ function CustomHeader({ navigation }) {
 
           {!searchVisible && (
             <TouchableOpacity
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setNotifVisible(true);
-              }}
+              onPress={handleNotificationPress} // FIXED: Using proper handler
               style={[styles.headerCircleBtn, { marginLeft: 10 }]}
             >
               <Ionicons name="notifications-outline" size={20} color="#000" />
-              {unreadCount > 0 && (
+              {/* FIXED: Only show badge for logged-in users */}
+              {!isGuest && unreadCount > 0 && (
                 <Animated.View style={[styles.badges, { transform: [{ scale: pulseAnim }] }]}>
                   <Text style={styles.badgeTexts}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
                 </Animated.View>
+              )}
+              {/* FIXED: Show lock icon for guests */}
+              {isGuest && (
+                <View style={styles.guestLockBadge}>
+                  <Ionicons name="lock-closed" size={7} color="#FFF" />
+                </View>
               )}
             </TouchableOpacity>
           )}
@@ -916,5 +1023,71 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '800',
     textAlign: 'center',
+  },
+  // FIXED: Complete guest styles
+  guestDrawerFooter: {
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  guestDrawerText: {
+    color: '#999',
+    fontSize: 12,
+    marginBottom: 12,
+    fontWeight: '500',
+  },
+  signInDrawerBtn: {
+    backgroundColor: '#1a1a1a',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  signInDrawerText: {
+    color: '#f9c349',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  createAccountDrawerBtn: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#1a1a1a',
+    marginBottom: 12,
+  },
+  createAccountDrawerText: {
+    color: '#1a1a1a',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  guestBenefitText: {
+    color: '#999',
+    fontSize: 11,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    marginTop: 4,
+    lineHeight: 16,
+  },
+  guestLockBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#999',
+    borderRadius: 8,
+    width: 14,
+    height: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFF',
   },
 });

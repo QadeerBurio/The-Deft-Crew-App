@@ -10,6 +10,7 @@ import CreatePostScreen from "./CreatePostScreen";
 import ConfessionScreen from "./ConfessionScreen";
 import MessagesScreen from "./MessageScreen";
 import ProfileScreen from "./ProfileScreen";
+import GuestGuard from "../../components/GuestGuard";
 
 const Tab = createBottomTabNavigator();
 
@@ -105,6 +106,7 @@ const CustomTabBarButton = ({ children, onPress, focused }) => {
 
 export default function Social() {
   return (
+    
     <View style={styles.container}>
       <Tab.Navigator
         initialRouteName="Feed"
@@ -201,6 +203,7 @@ export default function Social() {
         />
       </Tab.Navigator>
     </View>
+    
   );
 }
 
