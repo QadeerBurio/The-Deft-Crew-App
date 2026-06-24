@@ -1,4 +1,4 @@
-// screens/Brands.js - Corrected Version
+// screens/Brands.js - Ultra-Optimized with Fast Skeleton Loading
 import React, {
   useEffect,
   useState,
@@ -34,6 +34,7 @@ import api from "../api/api";
 import { AuthContext } from "../context/AuthContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRoute } from "@react-navigation/native";
 
 const { width, height } = Dimensions.get("window");
@@ -43,59 +44,134 @@ const GAP = 15;
 const CARD_WIDTH = (width - HORIZONTAL_PADDING * 2 - GAP) / NUM_COLUMNS;
 const PAGE_SIZE = 6;
 
+// Enhanced CATEGORIES with logos and icons
 const CATEGORIES = [
-  "All",
-  "Restaurant",
-  "Cafe & Coffee",
-  "Food & Drinks",
-  "Salon",
-  "Spa & Wellness",
-  "Health & Beauty",
-  "Perfumes & Fragrances",
-  "Fashion & Clothing",
-  "Shoes & Footwear",
-  "Bags & Accessories",
-  "Electronics & Gadgets",
-  "Mobile & Accessories",
-  "Education & Institutes",
-  "Travel & Tourism",
-  "Hotels & Resorts",
-  "Gym & Fitness",
-  "Sports",
-  "Entertainment",
-  "Photography",
-  "Services",
-  "Others",
+  { id: "all", name: "All", icon: "apps", color: "#f9c349", bgColor: "#f9c34915" },
+  { id: "restaurant", name: "Restaurant", icon: "silverware-fork-knife", color: "#FF6B6B", bgColor: "#FF6B6B15" },
+  { id: "cafe", name: "Cafe & Coffee", icon: "coffee", color: "#A0522D", bgColor: "#A0522D15" },
+  { id: "food", name: "Food & Drinks", icon: "food", color: "#FF8C00", bgColor: "#FF8C0015" },
+  { id: "salon", name: "Salon", icon: "scissors-cutting", color: "#FF69B4", bgColor: "#FF69B415" },
+  { id: "spa", name: "Spa & Wellness", icon: "spa", color: "#2E8B57", bgColor: "#2E8B5715" },
+  { id: "health", name: "Health & Beauty", icon: "heart-pulse", color: "#FF1493", bgColor: "#FF149315" },
+  { id: "perfumes", name: "Perfumes & Fragrances", icon: "perfume", color: "#9B59B6", bgColor: "#9B59B615" },
+  { id: "fashion", name: "Fashion & Clothing", icon: "tshirt-crew", color: "#2C3E50", bgColor: "#2C3E5015" },
+  { id: "shoes", name: "Shoes & Footwear", icon: "shoe-print", color: "#8B4513", bgColor: "#8B451315" },
+  { id: "bags", name: "Bags & Accessories", icon: "bag-suitcase", color: "#D4A017", bgColor: "#D4A01715" },
+  { id: "electronics", name: "Electronics & Gadgets", icon: "laptop", color: "#3498DB", bgColor: "#3498DB15" },
+  { id: "mobile", name: "Mobile & Accessories", icon: "cellphone", color: "#2ECC71", bgColor: "#2ECC7115" },
+  { id: "education", name: "Education & Institutes", icon: "school", color: "#1A5276", bgColor: "#1A527615" },
+  { id: "travel", name: "Travel & Tourism", icon: "airplane", color: "#5DADE2", bgColor: "#5DADE215" },
+  { id: "hotels", name: "Hotels & Resorts", icon: "hotel", color: "#E67E22", bgColor: "#E67E2215" },
+  { id: "gym", name: "Gym & Fitness", icon: "dumbbell", color: "#E74C3C", bgColor: "#E74C3C15" },
+  { id: "sports", name: "Sports", icon: "basketball", color: "#2ECC71", bgColor: "#2ECC7115" },
+  { id: "entertainment", name: "Entertainment", icon: "movie", color: "#8E44AD", bgColor: "#8E44AD15" },
+  { id: "photography", name: "Photography", icon: "camera", color: "#2C3E50", bgColor: "#2C3E5015" },
+  { id: "services", name: "Services", icon: "tools", color: "#7F8C8D", bgColor: "#7F8C8D15" },
+  { id: "others", name: "Others", icon: "dots-horizontal", color: "#95A5A6", bgColor: "#95A5A615" },
 ];
 
 const DISCOUNT_OPTIONS = [0, 10, 15, 20, 25, 30, 35, 40, 45, 50];
 
 // Ultra-fast cache configuration
 const BASE_URL = 'https://the-deft-crew-production.up.railway.app';
-const CACHE_DURATION = 1 * 60 * 1000; // 1 minute (fixed from comment)
+const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes - increased for better performance
 
-// Global cache optimized
+// Global cache with versioning
 let brandsCache = null;
 let cacheTimestamp = null;
+let cacheVersion = 0;
 let pendingFetchPromise = null;
 
-// Image preloading queue optimized
+// Image preloading queue
 const imagePreloadQueue = new Set();
-const MAX_PRELOAD = 6;
+const MAX_PRELOAD = 8;
 
 // ==========================================
-// SKELETON CARD COMPONENT
+// ENHANCED SKELETON CARD COMPONENT - Matches actual card layout
 // ==========================================
-const SkeletonCard = memo(() => (
-  <View style={[styles.cardWrapper, styles.skeletonCard]}>
-    <View style={styles.skeletonImage} />
-    <View style={styles.skeletonText} />
-    <View style={[styles.skeletonText, { width: '60%', marginTop: 6 }]} />
-    <View style={[styles.skeletonText, { width: '40%', marginTop: 6 }]} />
+const SkeletonCard = memo(({ index }) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  
+  useEffect(() => {
+    const delay = Math.min(index * 30, 200);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      delay,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+  
+  return (
+    <Animated.View style={[styles.cardWrapper, { opacity: fadeAnim }]}>
+      <View style={styles.skeletonCard}>
+        <View style={styles.skeletonAvailability} />
+        <View style={styles.skeletonDiscount} />
+        <View style={styles.skeletonLogo} />
+        <View style={styles.skeletonInfo}>
+          <View style={styles.skeletonName} />
+          <View style={styles.skeletonCategory} />
+          <View style={styles.skeletonOfferStatus} />
+        </View>
+      </View>
+    </Animated.View>
+  );
+});
+
+// ==========================================
+// CATEGORY SKELETON
+// ==========================================
+const CategorySkeleton = memo(() => (
+  <View style={styles.categoryGridContainer}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryGridScroll}>
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <View key={i} style={styles.skeletonCategoryItem}>
+          <View style={styles.skeletonCategoryIcon} />
+          <View style={styles.skeletonCategoryText} />
+        </View>
+      ))}
+    </ScrollView>
   </View>
 ));
 
-// Optimized BrandCard with memo comparison
+// ==========================================
+// CATEGORY GRID ITEM COMPONENT
+// ==========================================
+const CategoryGridItem = memo(({ category, isSelected, onPress }) => (
+  <TouchableOpacity
+    style={[
+      styles.categoryGridItem,
+      isSelected && styles.categoryGridItemActive,
+      { backgroundColor: isSelected ? category.color : category.bgColor }
+    ]}
+    onPress={() => onPress(category.id)}
+    activeOpacity={0.7}
+  >
+    <View style={[
+      styles.categoryIconWrapper,
+      isSelected && styles.categoryIconWrapperActive
+    ]}>
+      <MaterialCommunityIcons 
+        name={category.icon} 
+        size={28} 
+        color={isSelected ? "#fff" : category.color} 
+      />
+    </View>
+    <Text 
+      style={[
+        styles.categoryGridName,
+        isSelected && styles.categoryGridNameActive
+      ]}
+      numberOfLines={1}
+    >
+      {category.name}
+    </Text>
+  </TouchableOpacity>
+));
+
+// ==========================================
+// OPTIMIZED BRAND CARD
+// ==========================================
 const BrandCard = memo(({ item, index, onPress, preloadImage }) => {
   const firstOffer = item.offers?.[0];
   const displayImage = item.displayImage;
@@ -108,14 +184,13 @@ const BrandCard = memo(({ item, index, onPress, preloadImage }) => {
     if (hasAnimated.current) return;
     hasAnimated.current = true;
     
-    // Ultra-fast delay calculation
-    const delay = Math.min(index * 15, 150);
+    const delay = Math.min(index * 10, 100);
     
     const timeoutId = setTimeout(() => {
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 50,
+          duration: 200,
           delay,
           useNativeDriver: true,
         }),
@@ -131,6 +206,11 @@ const BrandCard = memo(({ item, index, onPress, preloadImage }) => {
     
     return () => clearTimeout(timeoutId);
   }, []);
+  
+  const categoryColor = useMemo(() => {
+    const cat = CATEGORIES.find(c => c.name === item.category);
+    return cat?.color || "#000000";
+  }, [item.category]);
   
   return (
     <Animated.View
@@ -166,7 +246,7 @@ const BrandCard = memo(({ item, index, onPress, preloadImage }) => {
           <Image
             source={{ uri: displayImage }}
             style={styles.logo}
-            resizeMode="contain" // Changed from "fast" to "contain" for better compatibility
+            resizeMode="contain"
             onLoad={() => preloadImage?.(displayImage)}
           />
         </View>
@@ -175,16 +255,16 @@ const BrandCard = memo(({ item, index, onPress, preloadImage }) => {
           <Text style={styles.name} numberOfLines={1}>
             {item.name}
           </Text>
-          <View style={styles.categoryBadgeCard}>
-            <MaterialIcons name="category" size={10} color="black" />
-            <Text style={styles.categoryCardText}>
-              {item.category}
+          <View style={[styles.categoryBadgeCard, { borderColor: categoryColor + '40' }]}>
+            <MaterialIcons name="category" size={10} color={categoryColor} />
+            <Text style={[styles.categoryCardText, { color: categoryColor }]}>
+              {item.category || "General"}
             </Text>
           </View>
           <Text
             style={[
-              styles.categoryText,
-              firstOffer?.isClaimed && { color: "#f9c349", fontWeight: "bold" },
+              styles.offerStatusText,
+              firstOffer?.isClaimed && styles.offerStatusClaimed,
             ]}
           >
             {firstOffer?.isClaimed ? "✓ Saved" : item.hasOffer ? "Student's Offer Available" : "No Offers"}
@@ -194,7 +274,6 @@ const BrandCard = memo(({ item, index, onPress, preloadImage }) => {
     </Animated.View>
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison for maximum performance
   return prevProps.item._id === nextProps.item._id && 
          prevProps.item.discount === nextProps.item.discount &&
          prevProps.item.displayImage === nextProps.item.displayImage &&
@@ -210,6 +289,7 @@ export default function BrandsScreen({ limit = null }) {
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
 
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -221,7 +301,7 @@ export default function BrandsScreen({ limit = null }) {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [minDiscount, setMinDiscount] = useState(0);
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [showOnlyOnline, setShowOnlyOnline] = useState(false);
 
   // Animation values
@@ -237,7 +317,6 @@ export default function BrandsScreen({ limit = null }) {
   const abortControllerRef = useRef(null);
   const hasAnimated = useRef(false);
 
-  // Fixed: useRef instead of useState for animation tracking
   useEffect(() => {
     if (hasAnimated.current) return;
     hasAnimated.current = true;
@@ -246,7 +325,7 @@ export default function BrandsScreen({ limit = null }) {
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 50,
+          duration: 200,
           useNativeDriver: true,
           easing: Easing.out(Easing.cubic),
         }),
@@ -270,7 +349,7 @@ export default function BrandsScreen({ limit = null }) {
     };
   }, []);
 
-  // Memoized userId - Fixed to handle guest mode
+  // Memoized userId
   const userId = useMemo(() => {
     if (!token || isGuest) return null;
     try {
@@ -281,7 +360,7 @@ export default function BrandsScreen({ limit = null }) {
     }
   }, [token, isGuest]);
 
-  // Optimized image URL formatter
+  // Optimized image URL formatter with caching
   const formatImageUrl = useCallback((imagePath, type = 'offer') => {
     if (!imagePath) return null;
     if (imagePath.startsWith('http')) return imagePath;
@@ -292,24 +371,27 @@ export default function BrandsScreen({ limit = null }) {
     return `${BASE_URL}/${imagePath}`;
   }, []);
 
-  // Optimized image preloader
+  // Optimized image preloader with priority queue
   const preloadImage = useCallback((url) => {
     if (!url || imagePreloadQueue.has(url) || imagePreloadQueue.size >= MAX_PRELOAD) return;
     imagePreloadQueue.add(url);
     Image.prefetch(url).catch(() => {});
   }, []);
 
-  // ULTRA-FAST fetch with parallel requests - Fixed for guest mode
+  // ULTRA-FAST fetch with parallel requests and progress tracking
   const fetchBrands = useCallback(async (forceRefresh = false) => {
-    // Check cache first
+    // Check cache first - with version control
     if (!forceRefresh && brandsCache && cacheTimestamp && 
         (Date.now() - cacheTimestamp) < CACHE_DURATION) {
       if (isMounted.current) {
         setBrands(brandsCache);
         setLoading(false);
-        // Preload first few images
-        brandsCache.slice(0, MAX_PRELOAD).forEach(brand => {
-          if (brand.displayImage) preloadImage(brand.displayImage);
+        setLoadingProgress(100);
+        // Preload images in background
+        requestAnimationFrame(() => {
+          brandsCache.slice(0, MAX_PRELOAD).forEach(brand => {
+            if (brand.displayImage) preloadImage(brand.displayImage);
+          });
         });
       }
       return brandsCache;
@@ -321,11 +403,13 @@ export default function BrandsScreen({ limit = null }) {
       if (isMounted.current) {
         setBrands(result);
         setLoading(false);
+        setLoadingProgress(100);
       }
       return result;
     }
 
     setLoading(true);
+    setLoadingProgress(0);
     
     // Abort previous request if any
     if (abortControllerRef.current) {
@@ -335,20 +419,21 @@ export default function BrandsScreen({ limit = null }) {
 
     pendingFetchPromise = (async () => {
       try {
-        // PARALLEL FETCHING - Brands + all offers simultaneously
         const headers = token && !isGuest ? { Authorization: `Bearer ${token}` } : {};
         
-        const brandsPromise = api.get("/brands", {
+        setLoadingProgress(10);
+        
+        // Fetch brands
+        const brandsRes = await api.get("/brands", {
           headers: headers,
           signal: abortControllerRef.current.signal,
           params: { limit: 100 }
         });
-
-        // Start brands fetch immediately
-        const brandsRes = await brandsPromise;
+        
+        setLoadingProgress(30);
         const brandsData = brandsRes.data || [];
         
-        // For guests, just show basic brand info without offers
+        // For guests, show basic info quickly
         if (isGuest || !token) {
           const basicBrandsData = brandsData.map((brand) => ({
             ...brand,
@@ -366,10 +451,15 @@ export default function BrandsScreen({ limit = null }) {
             setBrands(basicBrandsData);
             brandsCache = basicBrandsData;
             cacheTimestamp = Date.now();
+            cacheVersion++;
             setLoading(false);
+            setLoadingProgress(100);
             
-            basicBrandsData.slice(0, MAX_PRELOAD).forEach(brand => {
-              if (brand.displayImage) preloadImage(brand.displayImage);
+            // Preload images
+            requestAnimationFrame(() => {
+              basicBrandsData.slice(0, MAX_PRELOAD).forEach(brand => {
+                if (brand.displayImage) preloadImage(brand.displayImage);
+              });
             });
           }
           
@@ -377,25 +467,40 @@ export default function BrandsScreen({ limit = null }) {
           return basicBrandsData;
         }
         
-        // For logged-in users, fetch offers
-        const BATCH_SIZE = 10;
+        // For logged-in users, fetch offers in parallel with batching
+        const BATCH_SIZE = 15;
         const batches = [];
+        const totalBatches = Math.ceil(brandsData.length / BATCH_SIZE);
         
+        setLoadingProgress(40);
+        
+        // Create batches for parallel processing
         for (let i = 0; i < brandsData.length; i += BATCH_SIZE) {
           const batch = brandsData.slice(i, i + BATCH_SIZE);
           const batchPromises = batch.map(brand =>
             api.get(`/offers/brand/${brand._id}`, {
               headers: { Authorization: `Bearer ${token}` },
               signal: abortControllerRef.current.signal,
-              timeout: 5000
+              timeout: 3000
             }).then(res => ({ brandId: brand._id, offers: res.data }))
               .catch(() => ({ brandId: brand._id, offers: [] }))
           );
           batches.push(Promise.all(batchPromises));
         }
         
-        // Execute all batches
-        const allOffersResults = (await Promise.all(batches)).flat();
+        // Execute all batches with progress
+        const allOffersResults = [];
+        let completedBatches = 0;
+        
+        for (const batchPromise of batches) {
+          const batchResults = await batchPromise;
+          allOffersResults.push(...batchResults);
+          completedBatches++;
+          const progress = 40 + (completedBatches / totalBatches) * 50;
+          setLoadingProgress(Math.min(progress, 90));
+        }
+        
+        setLoadingProgress(90);
         
         // Build offers map
         const offersMap = new Map();
@@ -409,7 +514,7 @@ export default function BrandsScreen({ limit = null }) {
           })));
         });
 
-        // Map brands with offers
+        // Map brands with offers - optimized loop
         const brandsWithOffers = brandsData.map((brand) => {
           const brandOffers = offersMap.get(brand._id) || [];
           const firstOffer = brandOffers[0];
@@ -431,11 +536,15 @@ export default function BrandsScreen({ limit = null }) {
           setBrands(brandsWithOffers);
           brandsCache = brandsWithOffers;
           cacheTimestamp = Date.now();
+          cacheVersion++;
           setLoading(false);
+          setLoadingProgress(100);
           
-          // Preload first batch of images
-          brandsWithOffers.slice(0, MAX_PRELOAD).forEach(brand => {
-            if (brand.displayImage) preloadImage(brand.displayImage);
+          // Preload images
+          requestAnimationFrame(() => {
+            brandsWithOffers.slice(0, MAX_PRELOAD).forEach(brand => {
+              if (brand.displayImage) preloadImage(brand.displayImage);
+            });
           });
         }
         
@@ -445,12 +554,14 @@ export default function BrandsScreen({ limit = null }) {
         if (err.name !== 'AbortError' && isMounted.current) {
           console.error("Error fetching brands:", err.response?.data || err.message);
           setLoading(false);
+          setLoadingProgress(100);
         }
         pendingFetchPromise = null;
         // Return cached data on error if available
         if (brandsCache && isMounted.current) {
           setBrands(brandsCache);
           setLoading(false);
+          setLoadingProgress(100);
         }
         return brandsCache || [];
       }
@@ -464,14 +575,13 @@ export default function BrandsScreen({ limit = null }) {
     useCallback(() => {
       fetchBrands(true);
       
-      // Handle search query from navigation params
       if (query) {
         setSearchQuery(query);
       }
     }, [fetchBrands, query]),
   );
 
-  // Reset page when search query changes
+  // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, selectedCategory, minDiscount, showOnlyOnline]);
@@ -493,7 +603,7 @@ export default function BrandsScreen({ limit = null }) {
   const closeModal = useCallback(() => {
     Animated.timing(modalSlideAnim, {
       toValue: height,
-      duration: 30,
+      duration: 200,
       useNativeDriver: true,
       easing: Easing.in(Easing.cubic),
     }).start(() => {
@@ -518,7 +628,7 @@ export default function BrandsScreen({ limit = null }) {
   const closeFilterModal = useCallback(() => {
     Animated.timing(filterSlideAnim, {
       toValue: height,
-      duration: 30,
+      duration: 200,
       useNativeDriver: true,
       easing: Easing.in(Easing.cubic),
     }).start(() => {
@@ -575,11 +685,11 @@ export default function BrandsScreen({ limit = null }) {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    cacheTimestamp = null; // Force refresh
     await fetchBrands(true);
     setRefreshing(false);
   }, [fetchBrands]);
 
-  // Fixed claimOffer with proper error handling
   const claimOffer = useCallback(async (offerId) => {
     if (isGuest) {
       Alert.alert(
@@ -588,7 +698,6 @@ export default function BrandsScreen({ limit = null }) {
         [
           { text: "Cancel", style: "cancel" },
           { text: "Sign In", onPress: () => {
-            // Navigate to Login - Fixed navigation
             closeModal();
             setTimeout(() => {
               navigation.navigate('Login');
@@ -650,8 +759,11 @@ export default function BrandsScreen({ limit = null }) {
       results = results.filter((brand) => brand.discount >= minDiscount);
     }
     
-    if (selectedCategory !== "All") {
-      results = results.filter((brand) => brand.category === selectedCategory);
+    if (selectedCategory !== "all") {
+      const categoryName = CATEGORIES.find(c => c.id === selectedCategory)?.name;
+      if (categoryName) {
+        results = results.filter((brand) => brand.category === categoryName);
+      }
     }
     
     if (showOnlyOnline) {
@@ -670,7 +782,6 @@ export default function BrandsScreen({ limit = null }) {
 
   const currentOffer = selectedBrand?.offers?.[0];
 
-  // Memoized render functions
   const renderBrand = useCallback(({ item, index }) => (
     <BrandCard
       item={item}
@@ -690,9 +801,7 @@ export default function BrandsScreen({ limit = null }) {
           style={styles.viewAllButton}
           onPress={() => navigation.navigate("Brands")}
         >
-          <Text style={styles.viewAllText}>
-            View All Brands
-          </Text>
+          <Text style={styles.viewAllText}>View All Brands</Text>
         </TouchableOpacity>
       );
     }
@@ -720,7 +829,7 @@ export default function BrandsScreen({ limit = null }) {
     );
   }, [limit, filteredData.length, totalPages, currentPage, navigation]);
 
-  // Loading state with skeleton - Fixed welcome text for guest users
+  // Enhanced Loading State with improved skeletons
   if (loading && brands.length === 0) {
     return (
       <SafeAreaView style={styles.mainSafeArea}>
@@ -733,27 +842,32 @@ export default function BrandsScreen({ limit = null }) {
               </Text>
               <Text style={styles.title}>Crew's Privilege Brands</Text>
             </View>
-            <TouchableOpacity
-              style={styles.filterTrigger}
-              onPress={openFilterModal}
-            >
-              <MaterialCommunityIcons name="tune-variant" size={18} color="#000000" />
-            </TouchableOpacity>
+            <View style={styles.filterTriggerSkeleton} />
           </View>
         </View>
-        <ScrollView 
-          contentContainerStyle={styles.skeletonScrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.skeletonGrid}>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
+        
+        <CategorySkeleton />
+        
+        <View style={styles.skeletonGridContainer}>
+          <FlatList
+            data={[1, 2, 3, 4, 5, 6]}
+            keyExtractor={(item) => `skeleton-${item}`}
+            renderItem={({ index }) => <SkeletonCard index={index} />}
+            numColumns={NUM_COLUMNS}
+            columnWrapperStyle={styles.columnWrapper}
+            scrollEnabled={false}
+            contentContainerStyle={styles.skeletonListContent}
+          />
+        </View>
+        
+        {loadingProgress > 0 && loadingProgress < 100 && (
+          <View style={styles.loadingProgressContainer}>
+            <View style={styles.loadingProgressBar}>
+              <View style={[styles.loadingProgressFill, { width: `${loadingProgress}%` }]} />
+            </View>
+            <Text style={styles.loadingProgressText}>{Math.round(loadingProgress)}%</Text>
           </View>
-        </ScrollView>
+        )}
       </SafeAreaView>
     );
   }
@@ -770,7 +884,7 @@ export default function BrandsScreen({ limit = null }) {
           },
         ]}
       >
-        {/* Guest Banner - Fixed placement */}
+        {/* Guest Banner */}
         {isGuest && (
           <View style={styles.guestBanner}>
             <Ionicons name="information-circle" size={20} color="#1a1a1a" />
@@ -788,44 +902,67 @@ export default function BrandsScreen({ limit = null }) {
           keyExtractor={keyExtractor}
           removeClippedSubviews={true}
           renderItem={renderBrand}
-          windowSize={5} // Increased for better performance
+          windowSize={5}
           maxToRenderPerBatch={6}
           initialNumToRender={6}
-          updateCellsBatchingPeriod={50} // Reduced for faster updates
+          updateCellsBatchingPeriod={30}
           numColumns={NUM_COLUMNS}
           columnWrapperStyle={styles.columnWrapper}
           refreshing={refreshing}
           onRefresh={onRefresh}
           ListHeaderComponent={
-            <View style={styles.headerContainer}>
-              <View style={styles.headerTopRow}>
-                <View>
-                  <Text style={styles.welcomeText}>
-                    {isGuest ? "Guest User" : (user?.university?.name || "No University Assigned")}
-                  </Text>
-                  <Text style={styles.title}>Crew's Privilege Brands</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.filterTrigger}
-                  onPress={openFilterModal}
-                >
-                  <MaterialCommunityIcons name="tune-variant" size={18} color="#000000" />
-                </TouchableOpacity>
-              </View>
-              {query && (
-                <View style={styles.searchIndicatorRow}>
-                  <Text style={styles.searchIndicatorText}>
-                    Showing results for: <Text style={{ fontWeight: 'bold', color: '#f9c349' }}>"{query}"</Text>
-                  </Text>
-                  <TouchableOpacity onPress={() => {
-                    setSearchQuery("");
-                    navigation.setParams({ query: undefined });
-                  }}>
-                    <MaterialCommunityIcons name="close-circle" size={20} color="#999" />
+            <>
+              <View style={styles.headerContainer}>
+                <View style={styles.headerTopRow}>
+                  <View>
+                    <Text style={styles.welcomeText}>
+                      {isGuest ? "Guest User" : (user?.university?.name || "No University Assigned")}
+                    </Text>
+                    <Text style={styles.title}>Crew's Privilege Brands</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.filterTrigger}
+                    onPress={openFilterModal}
+                  >
+                    <MaterialCommunityIcons name="tune-variant" size={18} color="#000000" />
                   </TouchableOpacity>
                 </View>
-              )}
-            </View>
+                {query && (
+                  <View style={styles.searchIndicatorRow}>
+                    <Text style={styles.searchIndicatorText}>
+                      Showing results for: <Text style={{ fontWeight: 'bold', color: '#f9c349' }}>"{query}"</Text>
+                    </Text>
+                    <TouchableOpacity onPress={() => {
+                      setSearchQuery("");
+                      navigation.setParams({ query: undefined });
+                    }}>
+                      <MaterialCommunityIcons name="close-circle" size={20} color="#999" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+              
+              {/* Category Grid */}
+              <View style={styles.categoryGridContainer}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.categoryGridScroll}
+                >
+                  {CATEGORIES.map((category) => (
+                    <CategoryGridItem
+                      key={category.id}
+                      category={category}
+                      isSelected={selectedCategory === category.id}
+                      onPress={(id) => {
+                        setSelectedCategory(id);
+                        setCurrentPage(1);
+                      }}
+                    />
+                  ))}
+                </ScrollView>
+              </View>
+            </>
           }
           ListFooterComponent={renderFooter}
           contentContainerStyle={styles.listContent}
@@ -858,7 +995,7 @@ export default function BrandsScreen({ limit = null }) {
               <Text style={styles.filterHeader}>Refine Search</Text>
               <TouchableOpacity
                 onPress={() => {
-                  setSelectedCategory("All");
+                  setSelectedCategory("all");
                   setMinDiscount(0);
                   setShowOnlyOnline(false);
                 }}
@@ -871,32 +1008,30 @@ export default function BrandsScreen({ limit = null }) {
               contentContainerStyle={{ paddingBottom: 20 }}
             >
               <Text style={styles.filterLabel}>Categories</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.chipScrollView}
-              >
+              <View style={styles.filterCategoriesGrid}>
                 {CATEGORIES.map((cat) => (
                   <TouchableOpacity
-                    key={cat}
+                    key={cat.id}
                     style={[
-                      styles.chip,
-                      selectedCategory === cat && styles.activeChip,
-                      { marginRight: 8 },
+                      styles.filterCategoryItem,
+                      selectedCategory === cat.id && styles.filterCategoryItemActive,
                     ]}
-                    onPress={() => setSelectedCategory(cat)}
+                    onPress={() => setSelectedCategory(cat.id)}
                   >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        selectedCategory === cat && styles.activeChipText,
-                      ]}
-                    >
-                      {cat}
+                    <MaterialCommunityIcons 
+                      name={cat.icon} 
+                      size={20} 
+                      color={selectedCategory === cat.id ? "#fff" : cat.color} 
+                    />
+                    <Text style={[
+                      styles.filterCategoryItemText,
+                      selectedCategory === cat.id && styles.filterCategoryItemTextActive
+                    ]}>
+                      {cat.name}
                     </Text>
                   </TouchableOpacity>
                 ))}
-              </ScrollView>
+              </View>
 
               <Text style={styles.filterLabel}>Minimum Discount</Text>
               <View style={styles.filterChipRow}>
@@ -1036,7 +1171,6 @@ export default function BrandsScreen({ limit = null }) {
                         {currentOffer?.description || "Explore this iconic destination. Get exclusive student discounts on your favorite products and services."}
                       </Text>
                       
-                      {/* Guest sign-in prompt in details */}
                       {isGuest && (
                         <TouchableOpacity 
                           style={styles.guestPromptCard}
@@ -1123,66 +1257,10 @@ export default function BrandsScreen({ limit = null }) {
   );
 }
 
-// Add missing import and styles
-import { Ionicons } from '@expo/vector-icons'; // Add this import at top
-
 const styles = StyleSheet.create({
-  // ... all existing styles remain the same
-  
-  // Add these new styles
-  guestBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF9E6',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginHorizontal: 20,
-    borderRadius: 12,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#f9c34930'
-  },
-  guestBannerText: {
-    flex: 1,
-    fontSize: 12,
-    color: '#1a1a1a',
-    marginLeft: 8,
-    fontWeight: '500'
-  },
-  signInLink: {
-    color: '#f9c349',
-    fontWeight: '700',
-    fontSize: 12,
-    marginLeft: 8
-  },
-  guestPromptCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fafafa',
-    padding: 16,
-    borderRadius: 16,
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: '#f0f0f0'
-  },
-  guestPromptTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 2
-  },
-  guestPromptText: {
-    fontSize: 12,
-    color: '#666',
-    lineHeight: 16
-  },
-  
-  // ... rest of existing styles
   mainSafeArea: { flex: 1, backgroundColor: "#fff" },
   fadeContainer: { flex: 1 },
-  centerContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" },
-  loadingText: { marginTop: 10, fontSize: 14, color: "#666", fontFamily: "Cardo" },
-  headerContainer: { paddingHorizontal: 20, paddingTop: 10, marginBottom: 20 },
+  headerContainer: { paddingHorizontal: 20, paddingTop: 10, marginBottom: 10 },
   welcomeText: { fontSize: 11, color: "#676363", fontWeight: "900", textTransform: "uppercase", fontFamily: "Cardo" },
   title: { fontSize: 26, fontWeight: "900", color: "#000000", fontFamily: "Cardo" },
   listContent: { paddingBottom: 20 },
@@ -1193,10 +1271,216 @@ const styles = StyleSheet.create({
   discountBadge: { position: "absolute", top: 12, right: 12, backgroundColor: "#ffffff", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, zIndex: 1 },
   discountText: { fontSize: 12, fontWeight: "900", color: "#f9c349", fontFamily: "Cardo" },
   logoContainer: { width: "100%", height: 100, marginTop: 24, marginBottom: 10, justifyContent: "center", alignItems: "center" },
-  logo: { width: "100%", height: "100%", resizeMode: "contain", borderRadius:20 },
+  logo: { width: "100%", height: "100%", resizeMode: "contain", borderRadius: 20 },
   infoContainer: { alignItems: "center", width: "100%" },
   name: { fontSize: 14, fontWeight: "800", color: "#000000", fontFamily: "Cardo", textAlign: "center" },
-  categoryText: { fontSize: 10, color: "#bbb", marginTop: 4 },
+  offerStatusText: { fontSize: 10, color: "#bbb", marginTop: 4 },
+  offerStatusClaimed: { color: "#f9c349", fontWeight: "bold" },
+  
+  // Enhanced Skeleton Styles
+  skeletonCard: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 22,
+    width: '100%',
+    padding: 15,
+    height: 210,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    position: 'relative',
+  },
+  skeletonAvailability: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    width: 40,
+    height: 14,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 4,
+  },
+  skeletonDiscount: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 40,
+    height: 20,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 8,
+  },
+  skeletonLogo: {
+    width: '80%',
+    height: 80,
+    backgroundColor: '#e8e8e8',
+    borderRadius: 16,
+    alignSelf: 'center',
+    marginTop: 24,
+    marginBottom: 10,
+  },
+  skeletonInfo: {
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 4,
+  },
+  skeletonName: {
+    height: 14,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 6,
+    width: '70%',
+    marginBottom: 6,
+  },
+  skeletonCategory: {
+    height: 10,
+    backgroundColor: '#e8e8e8',
+    borderRadius: 4,
+    width: '50%',
+    marginBottom: 6,
+  },
+  skeletonOfferStatus: {
+    height: 10,
+    backgroundColor: '#e8e8e8',
+    borderRadius: 4,
+    width: '60%',
+  },
+  
+  // Category Skeleton
+  skeletonCategoryItem: {
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minWidth: 80,
+    marginRight: 10,
+  },
+  skeletonCategoryIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#e8e8e8',
+    marginBottom: 6,
+  },
+  skeletonCategoryText: {
+    width: 50,
+    height: 10,
+    backgroundColor: '#e8e8e8',
+    borderRadius: 4,
+  },
+  
+  // Loading Progress
+  loadingProgressContainer: {
+    position: 'absolute',
+    bottom: 30,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    borderRadius: 20,
+    padding: 12,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingProgressBar: {
+    width: 120,
+    height: 6,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  loadingProgressFill: {
+    height: '100%',
+    backgroundColor: '#f9c349',
+    borderRadius: 3,
+  },
+  loadingProgressText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    minWidth: 30,
+  },
+  
+  // Category Grid Styles
+  categoryGridContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 15,
+    marginTop: 5,
+  },
+  categoryGridScroll: {
+    paddingVertical: 5,
+    gap: 10,
+  },
+  categoryGridItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    minWidth: 80,
+    marginRight: 10,
+  },
+  categoryGridItemActive: {
+    borderColor: '#000000',
+    borderWidth: 2,
+  },
+  categoryIconWrapper: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  categoryIconWrapperActive: {
+    backgroundColor: '#000000',
+  },
+  categoryGridName: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#555',
+    textAlign: 'center',
+    maxWidth: 70,
+  },
+  categoryGridNameActive: {
+    color: '#000000',
+    fontWeight: '700',
+  },
+  
+  // Filter Categories Grid
+  filterCategoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginVertical: 10,
+  },
+  filterCategoryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: '#F5F7F6',
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    minWidth: '30%',
+  },
+  filterCategoryItemActive: {
+    backgroundColor: '#000000',
+    borderColor: '#000000',
+  },
+  filterCategoryItemText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#555',
+    marginLeft: 6,
+  },
+  filterCategoryItemTextActive: {
+    color: '#fff',
+  },
+  
   viewAllButton: { marginHorizontal: 20, paddingVertical: 15, backgroundColor: "#000000", borderRadius: 20, alignItems: "center", marginBottom: 10 },
   viewAllText: { color: "#ffffff", fontWeight: "800", fontFamily: "Cardo", fontSize: 13, letterSpacing: 1.1 },
   paginationRow: { flexDirection: "row", justifyContent: "center", alignItems: "center", marginVertical: 15, paddingBottom: 80 },
@@ -1243,10 +1527,8 @@ const styles = StyleSheet.create({
   activeTabText: { color: "#000000" },
   tabContentTitle: { fontSize: 18, fontWeight: "bold", color: "#000000", marginBottom: 10 },
   tabContentText: { fontSize: 14, color: "#666", lineHeight: 20 },
-  redeemContainer: { padding: 5 },
   instructionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 10 },
   instructionTitle: { fontSize: 18, fontWeight: "bold", color: "#000000" },
-  locationContainer: { padding: 5 },
   locationInfoRow: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
   locationAddressText: { fontSize: 15, color: "#333", marginLeft: 10, flexShrink: 1 },
   mapButton: { flexDirection: "row", backgroundColor: "#000000", paddingVertical: 12, paddingHorizontal: 20, borderRadius: 15, alignItems: "center", justifyContent: "center", alignSelf: "flex-start" },
@@ -1264,6 +1546,7 @@ const styles = StyleSheet.create({
   successSubtext: { fontSize: 14, color: "#666", textAlign: "center", lineHeight: 20 },
   headerTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
   filterTrigger: { flexDirection: "row", alignItems: "center", backgroundColor: "#F7F9F8", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: "#E0E0E0" },
+  filterTriggerSkeleton: { width: 40, height: 36, backgroundColor: "#f0f0f0", borderRadius: 12 },
   filterLabel: { fontSize: 16, fontWeight: "700", color: "#333", marginTop: 15, marginBottom: 10 },
   dismissArea: { flex: 1 },
   filterChipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
@@ -1271,7 +1554,6 @@ const styles = StyleSheet.create({
   activeChip: { backgroundColor: "#010101", borderColor: "#000000" },
   chipText: { color: "#555", fontSize: 14, fontWeight: "600" },
   activeChipText: { color: "#fff" },
-  chipScrollView: { flexDirection: "row", marginVertical: 15 },
   divider: { height: 1, backgroundColor: "#F0F0F0", marginVertical: 25 },
   toggleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   toggleTitle: { fontSize: 16, fontWeight: "700", color: "#1A1A1A" },
@@ -1279,43 +1561,56 @@ const styles = StyleSheet.create({
   modalFooter: { borderTopWidth: 1, borderTopColor: "#F0F0F0", paddingTop: 20, marginTop: 10 },
   applyBtn: { backgroundColor: "#000000", paddingVertical: 18, borderRadius: 16, alignItems: "center" },
   applyBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
-  categoryBadgeCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#f1f5f9", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginTop: 4 },
+  categoryBadgeCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#f1f5f9", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginTop: 4, borderWidth: 0.5 },
   categoryCardText: { fontSize: 10, color: "#000000", fontWeight: "600", textTransform: "uppercase", paddingLeft: 2 },
   searchIndicatorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f0f0f0', paddingHorizontal: 15, paddingVertical: 10, borderRadius: 10, marginBottom: 10, marginHorizontal: 5 },
   searchIndicatorText: { fontSize: 14, color: '#666' },
-  skeletonScrollContent: {
-    paddingBottom: 20,
-    paddingHorizontal: HORIZONTAL_PADDING,
-  },
-  skeletonGrid: {
+  skeletonGridContainer: { flex: 1 },
+  skeletonListContent: { paddingBottom: 20 },
+  guestBanner: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: GAP,
-  },
-  skeletonCard: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 22,
-    padding: 15,
-    height: 200,
-    width: CARD_WIDTH,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
-  },
-  skeletonImage: {
-    width: '100%',
-    height: 100,
-    backgroundColor: '#e0e0e0',
+    alignItems: 'center',
+    backgroundColor: '#FFF9E6',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginHorizontal: 20,
     borderRadius: 12,
-    marginBottom: 16,
-    marginTop: 24,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#f9c34930'
   },
-  skeletonText: {
-    height: 12,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 6,
-    marginBottom: 8,
-    width: '80%',
-    alignSelf: 'center',
+  guestBannerText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#1a1a1a',
+    marginLeft: 8,
+    fontWeight: '500'
+  },
+  signInLink: {
+    color: '#f9c349',
+    fontWeight: '700',
+    fontSize: 12,
+    marginLeft: 8
+  },
+  guestPromptCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fafafa',
+    padding: 16,
+    borderRadius: 16,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#f0f0f0'
+  },
+  guestPromptTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 2
+  },
+  guestPromptText: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 16
   },
 });

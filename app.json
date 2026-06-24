@@ -2,16 +2,16 @@
   "expo": {
     "name": "The Deft Crew",
     "slug": "Testting",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "default",
-    "icon": "./assets/tdcs.png",
+    "icon": "./assets/tdc.png",
     "scheme": "tdcapp",
-    "backgroundColor": "#000000",
+    "backgroundColor": "#f9c349",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/tdcs.png",
+      "image": "./assets/tdc.png",
       "resizeMode": "cover",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#f9c349"
     },
     "ios": {
       "supportsTablet": true,
@@ -24,11 +24,8 @@
     },
     "android": {
       "package": "com.aqkhan110.tdc",
-      // "versionCode": 8,
       "permissions": [
         "INTERNET",
-        // "RECORD_AUDIO",
-        // "ACCESS_FINE_LOCATION",
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_MEDIA_PLAYBACK",
         "android.permission.RECORD_AUDIO",
@@ -99,7 +96,8 @@
         }
       ],
       "expo-navigation-bar",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
