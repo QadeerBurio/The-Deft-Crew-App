@@ -6,11 +6,16 @@ import {
   TouchableOpacity, 
   ScrollView,
   StatusBar,
-  Animated
+  Animated,
+  Dimensions,
+  Platform
 } from "react-native";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+const { width, height } = Dimensions.get("window");
 
 export default function AboutScreen() {
   const navigation = useNavigation();
@@ -18,71 +23,252 @@ export default function AboutScreen() {
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerFade = useRef(new Animated.Value(0)).current;
-  const heroScale = useRef(new Animated.Value(0.85)).current;
-  const slideUpAnim = useRef(new Animated.Value(30)).current;
-  const featureAnims = useRef([...Array(4)].map(() => new Animated.Value(0))).current;
+  const heroScale = useRef(new Animated.Value(0.8)).current;
+  const heroRotate = useRef(new Animated.Value(0)).current;
+  const slideUpAnim = useRef(new Animated.Value(50)).current;
+  const featureAnims = useRef([...Array(7)].map(() => new Animated.Value(0))).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    // Hero rotation animation
+    const rotateHero = Animated.loop(
+      Animated.sequence([
+        Animated.timing(heroRotate, {
+          toValue: 1,
+          duration: 20000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(heroRotate, {
+          toValue: 0,
+          duration: 20000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    rotateHero.start();
+
+    // Glow pulse animation
+    const glowPulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    glowPulse.start();
+
+    // Pulse animation
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulse.start();
+
+    // Main entrance animations
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(headerFade, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.spring(slideUpAnim, { toValue: 0, friction: 6, tension: 40, useNativeDriver: true }),
-      Animated.spring(heroScale, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.timing(headerFade, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.spring(slideUpAnim, { toValue: 0, friction: 8, tension: 40, useNativeDriver: true }),
+      Animated.spring(heroScale, { toValue: 1, friction: 6, tension: 50, useNativeDriver: true }),
       ...featureAnims.map((anim, i) =>
         Animated.sequence([
-          Animated.delay(300 + i * 100),
-          Animated.spring(anim, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true }),
+          Animated.delay(200 + i * 120),
+          Animated.spring(anim, { toValue: 1, friction: 6, tension: 45, useNativeDriver: true }),
         ])
       ),
     ]).start();
   }, []);
 
   const features = [
-    { id: 1, title: "Student Deals", desc: "Exclusive discounts tailored for students.", icon: "school-outline", color: "#f9c349" },
-    { id: 2, title: "Career Hub", desc: "Top-tier internships and job opportunities.", icon: "briefcase-check-outline", color: "#f9c349" },
-    { id: 3, title: "Student Travel", desc: "Curated budget-friendly travel packages.", icon: "airplane-takeoff", color: "#f9c349" },
-    { id: 4, title: "Global Exchange", desc: "Access to international study programs.", icon: "earth-arrow-right", color: "#f9c349" },
+    { 
+      id: 1, 
+      title: "Student Deals", 
+      desc: "Exclusive discounts tailored for students across 200+ brands.", 
+      icon: "school-outline", 
+      color: "#f9c349",
+      gradient: ['#f9c349', '#f5a623']
+    },
+    { 
+      id: 2, 
+      title: "Skills Share", 
+      desc: "Connect with fellow students to share expertise and learn new skills.", 
+      icon: "account-group-outline", 
+      color: "#a29bfe",
+      gradient: ['#a29bfe', '#6c5ce7']
+    },
+    { 
+      id: 3, 
+      title: "Premium Events", 
+      desc: "Access workshops, seminars, and networking events.", 
+      icon: "calendar-star-outline", 
+      color: "#fd79a8",
+      gradient: ['#fd79a8', '#e84393']
+    },
+    { 
+      id: 4, 
+      title: "Resume Builder", 
+      desc: "Create ATS-optimized resumes with AI-powered suggestions.", 
+      icon: "file-document-outline", 
+      color: "#00b894",
+      gradient: ['#00b894', '#00a381']
+    },
+    { 
+      id: 5, 
+      title: "Scholarships", 
+      desc: "Access internal grants and external scholarships like Erasmus+.", 
+      icon: "school-outline", 
+      color: "#ffa502",
+      gradient: ['#ffa502', '#f9a825']
+    },
+    
+    { 
+      id: 7, 
+      title: "Student Travel", 
+      desc: "Curated budget-friendly travel packages for students.", 
+      icon: "airplane-takeoff", 
+      color: "#6c5ce7",
+      gradient: ['#6c5ce7', '#5a4bd1']
+    },
   ];
 
-  const FeatureCard = ({ item, index }) => (
-    <Animated.View style={[styles.featureBox, {
-      opacity: featureAnims[index],
-      transform: [
-        { scale: featureAnims[index].interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) },
-        { translateY: featureAnims[index].interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
-      ],
-    }]}>
-      <View style={[styles.featureIconBox, { backgroundColor: item.color + '15' }]}>
-        <MaterialCommunityIcons name={item.icon} size={28} color={item.color} />
-      </View>
-      <Text style={styles.featureTitle}>{item.title}</Text>
-      <Text style={styles.featureDesc}>{item.desc}</Text>
-      <View style={[styles.featureAccentBar, { backgroundColor: item.color }]} />
-    </Animated.View>
-  );
+  const spin = heroRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  const glowOpacity = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.6],
+  });
+
+  const FeatureCard = ({ item, index }) => {
+    const translateY = featureAnims[index].interpolate({
+      inputRange: [0, 1],
+      outputRange: [30, 0],
+    });
+
+    const scale = featureAnims[index].interpolate({
+      inputRange: [0, 0.5, 1],
+      outputRange: [0.8, 1.05, 1],
+    });
+
+    return (
+      <Animated.View 
+        style={[
+          styles.featureWrapper,
+          {
+            opacity: featureAnims[index],
+            transform: [
+              { scale },
+              { translateY },
+            ],
+          },
+        ]}
+      >
+        <LinearGradient
+          colors={['#ffffff', '#fafafa']}
+          style={styles.featureBox}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={[styles.featureIconBox, { backgroundColor: item.color + '15' }]}>
+            <LinearGradient
+              colors={item.gradient}
+              style={styles.featureIconGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <MaterialCommunityIcons name={item.icon} size={24} color="#fff" />
+            </LinearGradient>
+          </View>
+          <Text style={styles.featureTitle}>{item.title}</Text>
+          <Text style={styles.featureDesc}>{item.desc}</Text>
+          <View style={[styles.featureAccentBar, { backgroundColor: item.color }]} />
+        </LinearGradient>
+      </Animated.View>
+    );
+  };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerFade }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()} 
+          style={styles.headerBtn}
+          activeOpacity={0.7}
+        >
           <Ionicons name="chevron-back" size={24} color="#1a1a1a" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>About tdc</Text>
-        <View style={{ width: 38 }} />
+        <TouchableOpacity style={styles.headerBtn} activeOpacity={0.7}>
+          <Ionicons name="share-outline" size={22} color="#1a1a1a" />
+        </TouchableOpacity>
       </Animated.View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={styles.scrollContent}
+        bounces={true}
+      >
         <Animated.View style={{ opacity: fadeAnim }}>
           
           {/* Hero Section */}
-          <Animated.View style={[styles.heroCard, { transform: [{ scale: heroScale }] }]}>
-            <View style={styles.heroGradient}>
-              <View style={styles.heroLogoCircle}>
-                <Text style={styles.heroLogoText}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
-              </View>
+          <Animated.View 
+            style={[
+              styles.heroWrapper,
+              { 
+                transform: [
+                  { scale: heroScale },
+                  { translateY: slideUpAnim },
+                ] 
+              }
+            ]}
+          >
+            <LinearGradient
+              colors={['#1a1a1a', '#2d2d2d', '#1a1a1a']}
+              style={styles.heroCard}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Animated.View
+                style={[
+                  styles.heroGlow,
+                  { opacity: glowOpacity },
+                ]}
+              />
+              
+              <Animated.View style={[styles.heroLogoCircle, { transform: [{ rotate: spin }] }]}>
+                <LinearGradient
+                  colors={['#f9c349', '#f5a623']}
+                  style={styles.heroIconGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Text style={styles.heroLogoText}>tdc</Text>
+                </LinearGradient>
+              </Animated.View>
+              
               <Text style={styles.heroBrandName}>The Deft Crew</Text>
               <View style={styles.heroTaglineBadge}>
                 <Text style={styles.heroTaglineText}>THE STUDENT ECOSYSTEM</Text>
@@ -93,44 +279,112 @@ export default function AboutScreen() {
                 . From savings to career growth, tdc is your ultimate lifestyle partner.
               </Text>
               
-              {/* Decorative Line */}
               <View style={styles.decorLine}>
                 <View style={styles.decorSegment} />
                 <View style={styles.decorDiamond} />
                 <View style={styles.decorSegment} />
               </View>
-            </View>
+
+              {/* Floating particles */}
+              <View style={styles.particlesContainer}>
+                {[...Array(6)].map((_, i) => {
+                  const particleAnim = useRef(new Animated.Value(0)).current;
+                  
+                  useEffect(() => {
+                    Animated.loop(
+                      Animated.sequence([
+                        Animated.timing(particleAnim, {
+                          toValue: 1,
+                          duration: 1500 + Math.random() * 1000,
+                          useNativeDriver: true,
+                        }),
+                        Animated.timing(particleAnim, {
+                          toValue: 0,
+                          duration: 1500 + Math.random() * 1000,
+                          useNativeDriver: true,
+                        }),
+                      ])
+                    ).start();
+                  }, []);
+
+                  const particleTranslateY = particleAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, -15 - Math.random() * 20],
+                  });
+
+                  return (
+                    <Animated.View
+                      key={i}
+                      style={[
+                        styles.particle,
+                        {
+                          top: 10 + Math.random() * 80,
+                          left: 10 + Math.random() * 80,
+                          backgroundColor: ['#f9c349', '#4ecdc4', '#6c5ce7', '#ff6b6b', '#a29bfe', '#fd79a8'][i % 6],
+                          transform: [{ translateY: particleTranslateY }],
+                          opacity: particleAnim.interpolate({
+                            inputRange: [0, 0.5, 1],
+                            outputRange: [0.2, 0.7, 0.2],
+                          }),
+                        },
+                      ]}
+                    />
+                  );
+                })}
+              </View>
+            </LinearGradient>
           </Animated.View>
+
+          
 
           {/* Value Propositions */}
           <Animated.View style={[styles.valuesSection, { transform: [{ translateY: slideUpAnim }] }]}>
-            <Text style={styles.sectionTitle}>
-              <View style={styles.sectionDot} />
-              What's Inside The Crew?
-            </Text>
-            <View style={styles.valuesCard}>
+            <View style={styles.sectionHeader}>
+              <LinearGradient
+                colors={['#f9c349', '#f5a623']}
+                style={styles.sectionDot}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              />
+              <Text style={styles.sectionTitle}>What's Inside The Crew?</Text>
+              <View style={styles.sectionLine} />
+            </View>
+            
+            <LinearGradient
+              colors={['#ffffff', '#fafafa']}
+              style={styles.valuesCard}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
               {[
-                { text: "Verified student-only marketplace.", icon: "shield-check-outline" },
-                { text: "Seamless, paperless redemption.", icon: "cellphone-wireless" },
-                { text: "Community-driven networking.", icon: "account-group-outline" }
+                { text: "Verified student-only marketplace.", icon: "shield-check-outline", color: "#f9c349" },
+                { text: "Seamless, paperless redemption.", icon: "cellphone-wireless", color: "#4ecdc4" },
+                { text: "Community-driven networking.", icon: "account-group-outline", color: "#6c5ce7" },
+                { text: "AI-powered career tools.", icon: "robot-outline", color: "#a29bfe" }
               ].map((item, index) => (
-                <View key={index} style={[styles.valueItem, index < 2 && styles.valueItemBorder]}>
-                  <View style={styles.valueIconBox}>
-                    <MaterialCommunityIcons name={item.icon} size={20} color="#f9c349" />
+                <View key={index} style={[styles.valueItem, index < 3 && styles.valueItemBorder]}>
+                  <View style={[styles.valueIconBox, { backgroundColor: item.color + '15' }]}>
+                    <MaterialCommunityIcons name={item.icon} size={20} color={item.color} />
                   </View>
                   <Text style={styles.valueText}>{item.text}</Text>
-                  <Ionicons name="checkmark-circle" size={18} color="#f9c349" style={styles.valueCheck} />
+                  <Ionicons name="checkmark-circle" size={18} color={item.color} style={styles.valueCheck} />
                 </View>
               ))}
-            </View>
+            </LinearGradient>
           </Animated.View>
 
           {/* Core Pillars */}
           <View style={styles.pillarsSection}>
-            <Text style={styles.sectionTitle}>
-              <View style={styles.sectionDot} />
-              Core Pillars
-            </Text>
+            <View style={styles.sectionHeader}>
+              <LinearGradient
+                colors={['#f9c349', '#f5a623']}
+                style={styles.sectionDot}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              />
+              <Text style={styles.sectionTitle}>Core Pillars</Text>
+              <View style={styles.sectionLine} />
+            </View>
             <View style={styles.grid}>
               {features.map((item, index) => (
                 <FeatureCard key={item.id} item={item} index={index} />
@@ -138,23 +392,31 @@ export default function AboutScreen() {
             </View>
           </View>
 
-          {/* Mission Statement */}
-          <Animated.View style={[styles.missionCard, { transform: [{ translateY: slideUpAnim }] }]}>
-            <View style={styles.missionIconCircle}>
-              <MaterialCommunityIcons name="target" size={28} color="#f9c349" />
-            </View>
-            <Text style={styles.missionTitle}>Our Mission</Text>
-            <Text style={styles.missionText}>
-              To empower every student in Pakistan with access to exclusive savings, career opportunities, 
-              and a network that accelerates their professional growth.
-            </Text>
-          </Animated.View>
-
           {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={styles.footerLogo}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
-            <Text style={styles.footerText}>Building a Stronger Student Economy</Text>
-          </View>
+          <Animated.View 
+            style={[
+              styles.footer,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideUpAnim }],
+              },
+            ]}
+          >
+            <LinearGradient
+              colors={['#f8f9fa', '#f8f9fa']}
+              style={styles.footerGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Text style={styles.footerLogo}>
+                tdc<Text style={styles.footerLogoAccent}>.</Text>
+              </Text>
+              <Text style={styles.footerText}>Building a Stronger Student Economy.</Text>
+              <View style={styles.footerLine} />
+             
+              <Text style={styles.footerSubText}>© 2026 tdc Privilege Program</Text>
+            </LinearGradient>
+          </Animated.View>
         </Animated.View>
       </ScrollView>
     </SafeAreaView>
@@ -164,7 +426,7 @@ export default function AboutScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#f8f9fa",
   },
   
   // Header
@@ -172,19 +434,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fff',
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   headerBtn: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     borderRadius: 12,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   headerTitle: {
     fontSize: 18,
@@ -194,34 +469,79 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 40,
+    paddingTop: 8,
   },
   
   // Hero
-  heroCard: {
-    margin: 16,
+  heroWrapper: {
+    marginHorizontal: 16,
+    marginVertical: 12,
     borderRadius: 24,
     overflow: 'hidden',
-    elevation: 10,
-    shadowColor: "#f9c349",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#f9c349',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.2,
+        shadowRadius: 30,
+      },
+      android: {
+        elevation: 20,
+      },
+    }),
   },
-  heroGradient: {
-    padding: 28,
+  heroCard: {
+    padding: 30,
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    position: 'relative',
+    overflow: 'hidden',
+    minHeight: 320,
+  },
+  heroGlow: {
+    position: 'absolute',
+    top: -50,
+    right: -50,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: '#f9c349',
+    opacity: 0.3,
+  },
+  particlesContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  particle: {
+    position: 'absolute',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   heroLogoCircle: {
+    marginBottom: 16,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  heroIconGradient: {
     width: 80,
     height: 80,
-    borderRadius: 40,
-    backgroundColor: "rgba(249, 195, 73, 0.15)",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "rgba(249, 195, 73, 0.3)",
-    marginBottom: 16,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#f9c349',
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.3,
+        shadowRadius: 15,
+      },
+      android: {
+        elevation: 10,
+      },
+    }),
   },
   heroLogoText: {
     fontSize: 28,
@@ -233,6 +553,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#fff",
     marginBottom: 8,
+    letterSpacing: 0.5,
   },
   heroTaglineBadge: {
     backgroundColor: "rgba(249, 195, 73, 0.15)",
@@ -250,58 +571,119 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   heroDesc: {
-    color: "rgba(255,255,255,0.7)",
+    color: "rgba(255,255,255,0.8)",
     fontSize: 14,
     textAlign: "center",
-    lineHeight: 21,
+    lineHeight: 22,
     fontWeight: '500',
     paddingHorizontal: 5,
   },
   decorLine: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 20,
+    opacity: 0.6,
   },
   decorSegment: {
-    width: 25,
-    height: 1.5,
+    width: 30,
+    height: 2,
     backgroundColor: '#f9c349',
     borderRadius: 1,
   },
   decorDiamond: {
-    width: 6,
-    height: 6,
+    width: 8,
+    height: 8,
     backgroundColor: '#f9c349',
     transform: [{ rotate: '45deg' }],
-    marginHorizontal: 8,
+    marginHorizontal: 10,
+  },
+  
+  // Quick Stats
+  quickStats: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    marginTop: 8,
+    gap: 8,
+  },
+  statCard: {
+    flex: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  statCardGradient: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#1a1a1a',
+  },
+  statLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: 'rgba(0,0,0,0.6)',
+    marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   
   // Values Section
   valuesSection: {
     paddingHorizontal: 16,
-    marginTop: 8,
+    marginTop: 16,
   },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#1a1a1a',
-    marginBottom: 14,
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 4,
   },
   sectionDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#f9c349',
-    marginRight: 10,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1a1a1a',
+    letterSpacing: 0.5,
+  },
+  sectionLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(0,0,0,0.08)',
+    marginLeft: 12,
   },
   valuesCard: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
-    borderWidth: 2,
-    borderColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   valueItem: {
     flexDirection: 'row',
@@ -310,13 +692,12 @@ const styles = StyleSheet.create({
   },
   valueItemBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   valueIconBox: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#f9c34915',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -341,47 +722,62 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-  featureBox: {
-    width: '47%',
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 14,
-    borderWidth: 2,
-    borderColor: '#f0f0f0',
-    elevation: 4,
-    shadowColor: "#f9c349",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    overflow: "hidden",
-    position: 'relative',
-  },
-  featureIconBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
+  featureWrapper: {
+    width: '48%',
     marginBottom: 12,
   },
+  featureBox: {
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    position: 'relative',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  featureIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10,
+    overflow: 'hidden',
+  },
+  featureIconGradient: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   featureTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "800",
     color: "#1a1a1a",
     marginBottom: 4,
+    letterSpacing: 0.3,
   },
   featureDesc: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#666",
-    lineHeight: 16,
+    lineHeight: 15,
     fontWeight: '500',
   },
   featureAccentBar: {
     position: "absolute",
     bottom: 0,
-    left: 18,
-    right: 18,
+    left: 16,
+    right: 16,
     height: 3,
     borderTopLeftRadius: 3,
     borderTopRightRadius: 3,
@@ -389,59 +785,126 @@ const styles = StyleSheet.create({
   },
   
   // Mission
-  missionCard: {
+  missionWrapper: {
     marginHorizontal: 16,
-    marginTop: 12,
+    marginTop: 20,
+    borderRadius: 16,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  missionCard: {
     padding: 24,
-    borderRadius: 20,
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#f0f0f0',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: "#f9c349",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
   },
   missionIconCircle: {
     width: 60,
     height: 60,
     borderRadius: 18,
-    backgroundColor: '#f9c34915',
-    justifyContent: 'center',
-    alignItems: 'center',
+    overflow: 'hidden',
     marginBottom: 12,
   },
+  missionIconGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   missionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
-    color: '#1a1a1a',
+    color: '#fff',
     marginBottom: 8,
+    letterSpacing: 0.5,
   },
   missionText: {
     fontSize: 13,
-    color: '#666',
+    color: 'rgba(255,255,255,0.7)',
     textAlign: 'center',
     lineHeight: 20,
     fontWeight: '500',
   },
+  missionButton: {
+    marginTop: 16,
+    width: '100%',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  missionButtonGradient: {
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  missionButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
   
   // Footer
   footer: {
+    marginHorizontal: 16,
+    marginTop: 24,
+    borderRadius: 16,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
+  },
+  footerGradient: {
     alignItems: 'center',
-    marginTop: 28,
-    paddingVertical: 10,
+    paddingVertical: 5,
+    paddingHorizontal: 20,
   },
   footerLogo: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '900',
-    color: '#1a1a1a',
+    color: '#000000',
+    letterSpacing: 1,
+  },
+  footerLogoAccent: {
+    color: '#f9c349',
   },
   footerText: {
-    fontSize: 11,
-    color: '#999',
-    marginTop: 4,
+    fontSize: 12,
+    color: 'rgba(0, 0, 0, 0.6)',
+    marginTop: 6,
     fontWeight: '500',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+  footerLine: {
+    width: 40,
+    height: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    marginTop: 12,
+  },
+ 
+  
+  
+  footerSubText: {
+    fontSize: 10,
+    color: 'rgba(0, 0, 0, 0.3)',
+    marginTop: 12,
+    fontWeight: '400',
+    letterSpacing: 0.5,
   },
 });

@@ -31,268 +31,502 @@ import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
 import GuestGuard from "./GuestGuard";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 // ==========================================
 // ULTRA-FAST CACHE SYSTEM
 // ==========================================
 const MEMORY_CACHE = new Map();
 const CACHE_KEY = "points_data";
-const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+const CACHE_TTL = 2 * 60 * 1000;
 let pendingFetchPromise = null;
-const FETCH_DEBOUNCE = 5000; // 5 seconds
+const FETCH_DEBOUNCE = 5000;
 let lastFetchTime = 0;
 
-// Image preloading (prevent multiple fetches)
-const preloadedImages = new Set();
-const preloadImage = (url) => {
-  if (!url || preloadedImages.has(url)) return;
-  preloadedImages.add(url);
-};
-
 // ==========================================
-// STORE CONFIGURATION (Cross-Platform)
+// STORE CONFIGURATION
 // ==========================================
 const PLAY_STORE_PACKAGE = "com.aqkhan110.tdc";
 const APP_STORE_ID = "6765877675";
 const APP_STORE_URL = `https://apps.apple.com/br/app/the-deft-crew/id${APP_STORE_ID}`;
 
 // ==========================================
-// STATIC SKELETON BLOCK (No animation for speed)
+// TIER DEFINITIONS
 // ==========================================
-const SkeletonBlock = memo(({ style }) => (
-  <View style={[style, { backgroundColor: "#E8ECF1", borderRadius: 12 }]} />
-));
+const TIERS = [
+  {
+    id: "tdc_card",
+    name: "TDC PRIVILEGE CARD",
+    minDownloads: 10,
+    icon: "card-account-details-star",
+    color: "#f9c349",
+    bgColor: "#f9c34915",
+    gradient: ["#f9c349", "#f5a623"],
+    perks: ["TDC Privilege Card", "Exclusive Discounts", "Partner Brand Access"],
+    reward: "TDC Privilege Card Unlocked",
+    isCardTier: true,
+  },
+  {
+    id: "rookie",
+    name: "DEFT ROOKIE",
+    minDownloads: 50,
+    icon: "shield-star",
+    color: "#6C63FF",
+    bgColor: "#6C63FF15",
+    gradient: ["#6C63FF", "#5A52D5"],
+    perks: [
+      "Digital Badge",
+      "VIP Access to Partner Brands",
+      "Professional Community Access",
+    ],
+    reward: "Digital Badge + VIP Access",
+  },
+  {
+    id: "main_character",
+    name: "DEFT MAIN CHARACTER",
+    minDownloads: 100,
+    icon: "account-star",
+    color: "#FF6B6B",
+    bgColor: "#FF6B6B15",
+    gradient: ["#FF6B6B", "#E55A5A"],
+    perks: [
+      "PKR 2,000 Cash",
+      "Experience Certificate",
+      "Recommendation Letter",
+      "Priority VIP Access",
+      "All Previous Perks",
+    ],
+    reward: "PKR 2,000 + Certificate",
+  },
+  {
+    id: "pro",
+    name: "DEFT PRO",
+    minDownloads: 500,
+    icon: "crown",
+    color: "#FFD93D",
+    bgColor: "#FFD93D15",
+    gradient: ["#FFD93D", "#F5C800"],
+    perks: [
+      "PKR 5,000 Cash",
+      "Instagram Feature",
+      "Internship Consideration",
+      "Leadership Mentorship",
+      "Unlimited VIP Access",
+      "All Previous Perks",
+    ],
+    reward: "PKR 5,000 + Mentorship",
+  },
+  {
+    id: "goat",
+    name: "DEFT GOAT",
+    minDownloads: 2000,
+    icon: "trophy",
+    color: "#FF6B35",
+    bgColor: "#FF6B3515",
+    gradient: ["#FF6B35", "#E55A2A"],
+    perks: [
+      "PKR 10,000 Cash",
+      "Guaranteed Paid Internship",
+      "Expanded Leadership Access",
+      "All Previous Perks",
+    ],
+    reward: "PKR 10,000 + Internship",
+  },
+  {
+    id: "founder",
+    name: "DEFT FOUNDER CIRCLE",
+    minDownloads: 5000,
+    icon: "crown-circle",
+    color: "#FFD700",
+    bgColor: "#FFD70015",
+    gradient: ["#FFD700", "#FFC000"],
+    perks: [
+      "PKR 15,000 Cash",
+      "Founder Job Recommendation Letter",
+      "Founder LinkedIn Recommendation",
+      "Lifetime Founder Mentorship",
+      "All Previous Perks",
+    ],
+    reward: "PKR 15,000 + Mentorship",
+  },
+];
 
 // ==========================================
-// SKELETON LOADER (Static - renders instantly)
+// SKELETON LOADER
 // ==========================================
 const SkeletonLoader = memo(() => (
   <SafeAreaView style={styles.container} edges={["top"]}>
     <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-
-    {/* Header Skeleton */}
     <View style={styles.header}>
-      <SkeletonBlock style={{ width: 38, height: 38, borderRadius: 12 }} />
-      <SkeletonBlock style={{ width: 100, height: 20, borderRadius: 6 }} />
-      <SkeletonBlock style={{ width: 38, height: 38, borderRadius: 12 }} />
+      <View style={{ width: 38, height: 38, backgroundColor: "#E8ECF1", borderRadius: 12 }} />
+      <View style={{ width: 100, height: 20, backgroundColor: "#E8ECF1", borderRadius: 6 }} />
+      <View style={{ width: 38, height: 38, backgroundColor: "#E8ECF1", borderRadius: 12 }} />
     </View>
-
-    <ScrollView
-      contentContainerStyle={styles.scrollContent}
-      scrollEnabled={false}
-    >
-      {/* Progress Card Skeleton */}
-      <View
-        style={[
-          styles.progressCard,
-          {
-            backgroundColor: "#E8ECF1",
-            margin: 16,
-            borderRadius: 24,
-            padding: 24,
-          },
-        ]}
-      >
-        <SkeletonBlock
-          style={{
-            width: "60%",
-            height: 10,
-            borderRadius: 4,
-            alignSelf: "center",
-            marginBottom: 20,
-          }}
-        />
-
-        <View style={styles.milestoneRow}>
-          <View style={styles.milestoneItem}>
-            <SkeletonBlock
-              style={{ width: 50, height: 50, borderRadius: 14 }}
-            />
-            <SkeletonBlock
-              style={{ width: 30, height: 18, borderRadius: 4, marginTop: 8 }}
-            />
-            <SkeletonBlock
-              style={{ width: 40, height: 10, borderRadius: 4, marginTop: 4 }}
-            />
-          </View>
-
-          <View style={styles.milestoneArrow}>
-            <SkeletonBlock
-              style={{ width: 24, height: 24, borderRadius: 12 }}
-            />
-          </View>
-
-          <View style={styles.milestoneItem}>
-            <SkeletonBlock
-              style={{ width: 50, height: 50, borderRadius: 14 }}
-            />
-            <SkeletonBlock
-              style={{ width: 50, height: 10, borderRadius: 4, marginTop: 10 }}
-            />
-          </View>
-        </View>
-
-        <SkeletonBlock
-          style={{ width: "100%", height: 8, borderRadius: 4, marginBottom: 8 }}
-        />
-        <SkeletonBlock
-          style={{
-            width: "40%",
-            height: 12,
-            borderRadius: 4,
-            alignSelf: "center",
-            marginBottom: 6,
-          }}
-        />
-        <SkeletonBlock
-          style={{
-            width: "70%",
-            height: 10,
-            borderRadius: 4,
-            alignSelf: "center",
-          }}
-        />
-      </View>
-
-      {/* Info Cards Skeleton */}
-      <View style={styles.infoSection}>
-        <SkeletonBlock
-          style={{ width: 120, height: 14, borderRadius: 4, marginBottom: 14 }}
-        />
-
-        {[1, 2, 3].map((i) => (
-          <View
-            key={i}
-            style={[styles.infoCard, { backgroundColor: "#F5F5F5" }]}
-          >
-            <SkeletonBlock
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 14,
-                marginRight: 12,
-              }}
-            />
+    <ScrollView contentContainerStyle={styles.scrollContent}>
+      <View style={{ margin: 16, padding: 24, backgroundColor: "#E8ECF1", borderRadius: 24, height: 200 }} />
+      <View style={{ paddingHorizontal: 16 }}>
+        <View style={{ width: 120, height: 14, backgroundColor: "#E8ECF1", borderRadius: 4, marginBottom: 14 }} />
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <View key={i} style={{ flexDirection: "row", backgroundColor: "#F5F5F5", padding: 16, borderRadius: 16, marginBottom: 12 }}>
+            <View style={{ width: 50, height: 50, backgroundColor: "#E8ECF1", borderRadius: 14, marginRight: 14 }} />
             <View style={{ flex: 1 }}>
-              <SkeletonBlock
-                style={{
-                  width: "70%",
-                  height: 14,
-                  borderRadius: 4,
-                  marginBottom: 6,
-                }}
-              />
-              <SkeletonBlock
-                style={{ width: "90%", height: 10, borderRadius: 4 }}
-              />
-              <SkeletonBlock
-                style={{
-                  width: "60%",
-                  height: 10,
-                  borderRadius: 4,
-                  marginTop: 4,
-                }}
-              />
+              <View style={{ width: "70%", height: 14, backgroundColor: "#E8ECF1", borderRadius: 4, marginBottom: 6 }} />
+              <View style={{ width: "90%", height: 10, backgroundColor: "#E8ECF1", borderRadius: 4 }} />
             </View>
           </View>
         ))}
       </View>
-
-      {/* Link Card Skeleton */}
-      <View style={[styles.linkCard, { backgroundColor: "#F5F5F5" }]}>
-        <SkeletonBlock
-          style={{ width: 120, height: 10, borderRadius: 4, marginBottom: 8 }}
-        />
-        <SkeletonBlock
-          style={{ width: "100%", height: 36, borderRadius: 10 }}
-        />
-      </View>
-
-      {/* Button Skeleton */}
-      <View style={styles.actionSection}>
-        <SkeletonBlock
-          style={{ width: "100%", height: 55, borderRadius: 16 }}
-        />
-      </View>
-
-      {/* Footer Skeleton */}
-      <SkeletonBlock
-        style={{
-          width: "80%",
-          height: 10,
-          borderRadius: 4,
-          alignSelf: "center",
-          marginTop: 20,
-        }}
-      />
     </ScrollView>
   </SafeAreaView>
 ));
 
 // ==========================================
-// OPTIMIZED INFO CARD (Memoized - No re-render)
+// HERO PROGRESS CARD
 // ==========================================
-const InfoCard = memo(
-  ({ icon, title, content, color, index }) => {
+const HeroProgressCard = memo(({ referred, isCardUnlocked, cardPulse, onClaimCard }) => {
+  const glowAnim = useRef(new Animated.Value(0)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: false,
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0,
+          duration: 1500,
+          useNativeDriver: false,
+        }),
+      ])
+    ).start();
+
+    Animated.loop(
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 20000,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  const glowInterpolate = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 8],
+  });
+
+  const rotateInterpolate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "360deg"],
+  });
+
+  const progress = Math.min(referred / 10, 1);
+
+  return (
+    <Animated.View
+      style={[
+        styles.heroCard,
+        {
+          transform: [{ scale: cardPulse }],
+          shadowOpacity: glowInterpolate.interpolate({
+            inputRange: [0, 8],
+            outputRange: [0.2, 0.5],
+          }),
+        },
+      ]}
+    >
+      <LinearGradient
+        colors={isCardUnlocked ? ["#1a1a1a", "#2d2d2d"] : ["#1a1a1a", "#2d2d2d"]}
+        style={styles.heroGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        {/* Animated Background Orbs */}
+        <Animated.View
+          style={[
+            styles.heroOrb1,
+            {
+              transform: [{ rotate: rotateInterpolate }],
+            },
+          ]}
+        />
+        <Animated.View
+          style={[
+            styles.heroOrb2,
+            {
+              transform: [{ rotate: rotateInterpolate }],
+            },
+          ]}
+        />
+
+        <View style={styles.heroContent}>
+          <View style={styles.heroHeader}>
+            <View>
+              <Text style={styles.heroLabel}>YOUR PROGRESS</Text>
+              <View style={styles.heroCountContainer}>
+                <Text style={styles.heroCount}>{referred}</Text>
+                <Text style={styles.heroCountLabel}>Referrals</Text>
+              </View>
+            </View>
+            {isCardUnlocked ? (
+              <View style={styles.heroBadgeActive}>
+                <MaterialCommunityIcons
+                  name="card-account-details-star"
+                  size={20}
+                  color="#1a1a1a"
+                />
+                <Text style={styles.heroBadgeText}>CARD ACTIVE</Text>
+              </View>
+            ) : (
+              <View style={styles.heroBadgeLocked}>
+                <Ionicons name="lock-closed" size={16} color="#999" />
+                <Text style={styles.heroBadgeLockedText}>LOCKED</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Circular Progress */}
+          <View style={styles.heroProgressContainer}>
+            <View style={styles.heroProgressCircle}>
+              <Animated.View
+                style={[
+                  styles.heroProgressRing,
+                  {
+                    transform: [{ rotate: `${progress * 360}deg` }],
+                  },
+                ]}
+              >
+                <LinearGradient
+                  colors={isCardUnlocked ? ["#f9c349", "#f5a623"] : ["#666", "#444"]}
+                  style={styles.heroRingGradient}
+                />
+              </Animated.View>
+              <View style={styles.heroProgressInner}>
+                <MaterialCommunityIcons
+                  name={isCardUnlocked ? "card-account-details-star" : "card-outline"}
+                  size={32}
+                  color={isCardUnlocked ? "#f9c349" : "#666"}
+                />
+                <Text style={[styles.heroProgressPercent, isCardUnlocked && styles.heroProgressPercentActive]}>
+                  {Math.round(progress * 100)}%
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.heroProgressText}>
+              <Text style={styles.heroProgressTitle}>
+                {isCardUnlocked
+                  ? "🎉 TDC Privilege Card Unlocked!"
+                  : `${10 - referred} more referral${10 - referred > 1 ? "s" : ""} to unlock`}
+              </Text>
+              <Text style={styles.heroProgressSubtitle}>
+                {isCardUnlocked
+                  ? "Show your card at partner brands for exclusive discounts"
+                  : "Keep sharing your referral link to unlock the TDC Card"}
+              </Text>
+            </View>
+          </View>
+
+          {isCardUnlocked && (
+            <TouchableOpacity style={styles.heroClaimBtn} onPress={onClaimCard} activeOpacity={0.8}>
+              <LinearGradient
+                colors={["#f9c349", "#f5a623"]}
+                style={styles.heroClaimGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Text style={styles.heroClaimText}>View My TDC Card →</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
+        </View>
+      </LinearGradient>
+    </Animated.View>
+  );
+});
+
+// ==========================================
+// ANIMATED TIER CARD
+// ==========================================
+const AnimatedTierCard = memo(
+  ({ tier, index, currentDownloads, isUnlocked, isNext }) => {
     const cardAnim = useRef(new Animated.Value(0)).current;
+    const scaleAnim = useRef(new Animated.Value(0.95)).current;
+    const shimmerAnim = useRef(new Animated.Value(0)).current;
     const hasAnimated = useRef(false);
 
     useEffect(() => {
       if (hasAnimated.current) return;
       hasAnimated.current = true;
+      const delay = Math.min(index * 60, 200);
 
-      const delay = Math.min(index * 50, 150);
-      const animation = InteractionManager.runAfterInteractions(() => {
-        Animated.timing(cardAnim, {
-          toValue: 1,
-          duration: 200,
-          delay,
-          useNativeDriver: true,
-        }).start();
+      InteractionManager.runAfterInteractions(() => {
+        Animated.parallel([
+          Animated.timing(cardAnim, {
+            toValue: 1,
+            duration: 400,
+            delay,
+            useNativeDriver: true,
+          }),
+          Animated.spring(scaleAnim, {
+            toValue: 1,
+            friction: 8,
+            tension: 40,
+            delay,
+            useNativeDriver: true,
+          }),
+        ]).start();
       });
 
-      return () => animation?.cancel();
+      if (isUnlocked) {
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(shimmerAnim, {
+              toValue: 1,
+              duration: 2000,
+              useNativeDriver: false,
+            }),
+            Animated.timing(shimmerAnim, {
+              toValue: 0,
+              duration: 2000,
+              useNativeDriver: false,
+            }),
+          ])
+        ).start();
+      }
+
+      return () => {
+        // Cleanup
+      };
     }, []);
+
+    const progress = Math.min(currentDownloads / tier.minDownloads, 1);
+    const isCardTier = tier.isCardTier || false;
+
+    const shimmerInterpolate = shimmerAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: ["0%", "100%"],
+    });
 
     return (
       <Animated.View
         style={[
-          styles.infoCard,
+          styles.tierCard,
+          isUnlocked && styles.tierCardUnlocked,
+          isNext && styles.tierCardNext,
+          isCardTier && styles.tierCardSpecial,
           {
             opacity: cardAnim,
-            transform: [
-              {
-                translateY: cardAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [15, 0],
-                }),
-              },
-            ],
+            transform: [{ scale: scaleAnim }],
           },
         ]}
       >
-        <View
-          style={[styles.infoIconCircle, { backgroundColor: color + "15" }]}
+        {/* Shimmer effect for unlocked cards */}
+        {isUnlocked && (
+          <Animated.View
+            style={[
+              styles.tierShimmer,
+              {
+                transform: [{ translateX: shimmerInterpolate }],
+              },
+            ]}
+          />
+        )}
+
+        <LinearGradient
+          colors={
+            isUnlocked
+              ? [tier.color, tier.color + "CC"]
+              : ["#f0f0f0", "#e8e8e8"]
+          }
+          style={[styles.tierIconContainer, isCardTier && styles.tierIconSpecial]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
         >
-          <MaterialCommunityIcons name={icon} size={22} color={color} />
-        </View>
-        <View style={styles.infoContent}>
-          <Text style={styles.infoTitle}>{title}</Text>
-          <Text style={styles.infoText}>{content}</Text>
+          <MaterialCommunityIcons
+            name={tier.icon}
+            size={isCardTier ? 32 : 28}
+            color={isUnlocked ? "#fff" : "#999"}
+          />
+        </LinearGradient>
+
+        <View style={styles.tierContent}>
+          <View style={styles.tierHeader}>
+            <Text style={[styles.tierName, isUnlocked && styles.tierNameActive, isCardTier && styles.tierNameSpecial]}>
+              {tier.name}
+            </Text>
+            {isUnlocked ? (
+              <View style={styles.unlockedBadge}>
+                <Ionicons name="checkmark-circle" size={14} color="#fff" />
+                <Text style={styles.unlockedText}>UNLOCKED</Text>
+              </View>
+            ) : isNext ? (
+              <View style={styles.nextBadge}>
+                <Text style={styles.nextText}>NEXT</Text>
+              </View>
+            ) : null}
+          </View>
+
+          <Text style={[styles.tierReward, isCardTier && styles.tierRewardSpecial]}>
+            {tier.reward}
+          </Text>
+
+          <View style={styles.tierProgressContainer}>
+            <View style={styles.tierProgressTrack}>
+              <Animated.View
+                style={[
+                  styles.tierProgressBar,
+                  {
+                    width: `${Math.min(progress * 100, 100)}%`,
+                    backgroundColor: isUnlocked ? tier.color : "#ddd",
+                  },
+                ]}
+              />
+            </View>
+            <Text style={styles.tierProgressText}>
+              {isUnlocked
+                ? "✓ Unlocked"
+                : `${currentDownloads}/${tier.minDownloads} ${isCardTier ? "referrals" : "downloads"}`}
+            </Text>
+          </View>
+
+          <View style={styles.perksList}>
+            {tier.perks.slice(0, 3).map((perk, i) => (
+              <View key={i} style={styles.perkItem}>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={12}
+                  color={isUnlocked ? tier.color : "#ccc"}
+                />
+                <Text
+                  style={[styles.perkText, isUnlocked && styles.perkTextActive]}
+                  numberOfLines={1}
+                >
+                  {perk}
+                </Text>
+              </View>
+            ))}
+            {tier.perks.length > 3 && (
+              <Text style={styles.perkMore}>+{tier.perks.length - 3} more</Text>
+            )}
+          </View>
         </View>
       </Animated.View>
     );
   },
   (prevProps, nextProps) => {
     return (
-      prevProps.index === nextProps.index && prevProps.title === nextProps.title
+      prevProps.tier.id === nextProps.tier.id &&
+      prevProps.isUnlocked === nextProps.isUnlocked &&
+      prevProps.currentDownloads === nextProps.currentDownloads
     );
   },
 );
 
 // ==========================================
-// MAIN COMPONENT - ULTRA OPTIMIZED (Cross-Platform)
+// MAIN COMPONENT
 // ==========================================
 const PointsScreen = () => {
   const navigation = useNavigation();
@@ -305,17 +539,15 @@ const PointsScreen = () => {
     canApplyForTdcCard: false,
   });
 
-  // Optimized animation refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerFade = useRef(new Animated.Value(0)).current;
-  const progressWidth = useRef(new Animated.Value(0)).current;
-  const cardScale = useRef(new Animated.Value(0.98)).current;
   const shareScale = useRef(new Animated.Value(1)).current;
+  const cardPulse = useRef(new Animated.Value(1)).current;
   const isMounted = useRef(true);
   const hasInitialFetch = useRef(false);
 
   // ==========================================
-  // GET DOWNLOAD LINK BASED ON PLATFORM
+  // GET DOWNLOAD LINK
   // ==========================================
   const getDownloadLink = useCallback(() => {
     if (Platform.OS === "ios") {
@@ -326,29 +558,23 @@ const PointsScreen = () => {
   }, [userData.referralCode]);
 
   // ==========================================
-  // OPEN STORE FUNCTION (Cross-Platform)
+  // OPEN STORE
   // ==========================================
   const openStore = useCallback(async () => {
     try {
       if (Platform.OS === "ios") {
-        // iOS - Open App Store
         const appStoreUrl = `itms-apps://apps.apple.com/br/app/id${APP_STORE_ID}`;
         const webFallbackUrl = APP_STORE_URL;
-        
         const supported = await Linking.canOpenURL(appStoreUrl);
-        
         if (supported) {
           await Linking.openURL(appStoreUrl);
         } else {
           await Linking.openURL(webFallbackUrl);
         }
       } else {
-        // Android - Open Play Store
         const playStoreUrl = `market://details?id=${PLAY_STORE_PACKAGE}`;
         const webFallbackUrl = `https://play.google.com/store/apps/details?id=${PLAY_STORE_PACKAGE}`;
-        
         const supported = await Linking.canOpenURL(playStoreUrl);
-        
         if (supported) {
           await Linking.openURL(playStoreUrl);
         } else {
@@ -357,15 +583,16 @@ const PointsScreen = () => {
       }
     } catch (error) {
       console.error("Error opening store:", error);
-      const webUrl = Platform.OS === "ios" 
-        ? APP_STORE_URL 
-        : `https://play.google.com/store/apps/details?id=${PLAY_STORE_PACKAGE}`;
+      const webUrl =
+        Platform.OS === "ios"
+          ? APP_STORE_URL
+          : `https://play.google.com/store/apps/details?id=${PLAY_STORE_PACKAGE}`;
       await Linking.openURL(webUrl);
     }
   }, []);
 
   // ==========================================
-  // ULTRA-FAST FETCH WITH DEDUPLICATION
+  // FETCH USER DATA
   // ==========================================
   const fetchUserData = useCallback(
     async (forceRefresh = false) => {
@@ -376,7 +603,6 @@ const PointsScreen = () => {
         return;
       }
 
-      // ✅ Check memory cache first (fastest)
       if (!forceRefresh && MEMORY_CACHE.has(CACHE_KEY)) {
         const cached = MEMORY_CACHE.get(CACHE_KEY);
         if (now - cached.timestamp < CACHE_TTL) {
@@ -389,7 +615,6 @@ const PointsScreen = () => {
         }
       }
 
-      // ✅ Deduplicate in-flight requests
       if (pendingFetchPromise) {
         const result = await pendingFetchPromise;
         if (isMounted.current && result) {
@@ -400,7 +625,6 @@ const PointsScreen = () => {
         return;
       }
 
-      // ✅ Debounce
       if (!forceRefresh && now - lastFetchTime < FETCH_DEBOUNCE) return;
       lastFetchTime = now;
 
@@ -421,7 +645,6 @@ const PointsScreen = () => {
             canApplyForTdcCard: data.canApplyForTdcCard || false,
           };
 
-          // ✅ Cache data
           MEMORY_CACHE.set(CACHE_KEY, {
             data: newUserData,
             timestamp: now,
@@ -431,7 +654,6 @@ const PointsScreen = () => {
           return newUserData;
         } catch (error) {
           pendingFetchPromise = null;
-          // ✅ Return cached data on error
           const cached = MEMORY_CACHE.get(CACHE_KEY);
           return cached?.data || null;
         }
@@ -443,11 +665,9 @@ const PointsScreen = () => {
         if (result) {
           setUserData(result);
         } else if (!forceRefresh) {
-          // Try cache fallback
           const cached = MEMORY_CACHE.get(CACHE_KEY);
           if (cached?.data) setUserData(cached.data);
         }
-
         setLoading(false);
         InteractionManager.runAfterInteractions(() => animateContent());
       }
@@ -456,30 +676,44 @@ const PointsScreen = () => {
   );
 
   // ==========================================
-  // OPTIMIZED ANIMATIONS (Run after interactions)
+  // ANIMATIONS
   // ==========================================
   const animateContent = useCallback(() => {
     InteractionManager.runAfterInteractions(() => {
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 250,
+          duration: 300,
           useNativeDriver: true,
         }),
         Animated.timing(headerFade, {
           toValue: 1,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-        Animated.spring(cardScale, {
-          toValue: 1,
-          friction: 8,
-          tension: 60,
+          duration: 200,
           useNativeDriver: true,
         }),
       ]).start();
     });
-  }, [fadeAnim, headerFade, cardScale]);
+  }, [fadeAnim, headerFade]);
+
+  // Card pulse animation when unlocked
+  useEffect(() => {
+    if (userData.referralCount >= 10 && !loading) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(cardPulse, {
+            toValue: 1.02,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(cardPulse, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    }
+  }, [userData.referralCount, loading, cardPulse]);
 
   // ==========================================
   // INITIAL FETCH
@@ -492,29 +726,13 @@ const PointsScreen = () => {
     } else if (!token) {
       setLoading(false);
     }
-
     return () => {
       isMounted.current = false;
     };
   }, [token, fetchUserData]);
 
   // ==========================================
-  // PROGRESS ANIMATION
-  // ==========================================
-  useEffect(() => {
-    if (userData.referralCount > 0 && !loading) {
-      InteractionManager.runAfterInteractions(() => {
-        Animated.timing(progressWidth, {
-          toValue: Math.min(userData.referralCount / 10, 1),
-          duration: 500,
-          useNativeDriver: false,
-        }).start();
-      });
-    }
-  }, [userData.referralCount, loading, progressWidth]);
-
-  // ==========================================
-  // HANDLERS (Memoized)
+  // HANDLERS
   // ==========================================
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -529,7 +747,6 @@ const PointsScreen = () => {
       return;
     }
 
-    // Quick haptic-like scale animation
     Animated.sequence([
       Animated.timing(shareScale, {
         toValue: 0.95,
@@ -544,10 +761,9 @@ const PointsScreen = () => {
     ]).start();
 
     try {
-      // Create platform-specific share message
       let downloadUrl;
       let storeName;
-      
+
       if (Platform.OS === "ios") {
         downloadUrl = `${APP_STORE_URL}?referrer=utm_source%3Dshare%26utm_medium%3Dreferral%26utm_campaign%3D${userData.referralCode}`;
         storeName = "App Store";
@@ -563,7 +779,6 @@ const PointsScreen = () => {
         title: "Join TDC - Refer & Earn",
       });
     } catch (error) {
-      // User cancelled share - no need to show error
       if (error.message !== "User did not share") {
         Alert.alert("Error", error.message);
       }
@@ -585,28 +800,23 @@ const PointsScreen = () => {
   }, [navigation]);
 
   const handleClaimCard = useCallback(() => {
-    Alert.alert("Application Sent", "We are reviewing your referrals!");
+    Alert.alert(
+      "🎉 TDC Privilege Card Unlocked!",
+      "Congratulations! You've reached 10 referrals. Your TDC Privilege Card is now active. Show this to partner brands for exclusive discounts!",
+    );
   }, []);
 
   // ==========================================
   // COMPUTED VALUES
   // ==========================================
   const referred = userData.referralCount;
-  const target = 10;
   const shareLink = getDownloadLink();
-  const isMilestoneAchieved = referred >= target;
-  const remainingReferrals = target - referred;
   const storeName = Platform.OS === "ios" ? "App Store" : "Google Play";
   const storeIcon = Platform.OS === "ios" ? "logo-apple" : "google-play";
-
-  const progressWidthInterpolated = progressWidth.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0%", "100%"],
-    extrapolate: "clamp",
-  });
+  const isCardUnlocked = referred >= 10;
 
   // ==========================================
-  // SHOW SKELETON WHILE LOADING
+  // RENDER
   // ==========================================
   if (loading) {
     return <SkeletonLoader />;
@@ -620,7 +830,6 @@ const PointsScreen = () => {
       <SafeAreaView style={styles.container} edges={["top"]}>
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
-        {/* Header */}
         <Animated.View style={[styles.header, { opacity: headerFade }]}>
           <TouchableOpacity
             onPress={handleGoBack}
@@ -650,117 +859,42 @@ const PointsScreen = () => {
           scrollEventThrottle={16}
         >
           <Animated.View style={{ opacity: fadeAnim }}>
-            {/* Progress Card */}
-            <Animated.View
-              style={[
-                styles.progressCard,
-                { transform: [{ scale: cardScale }] },
-              ]}
-            >
-              <LinearGradient
-                colors={["#f9c349", "#1a1a1a"]}
-                style={styles.progressGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Text style={styles.progressLabel}>
-                  tdc PRIVILEGE MILESTONE
+            {/* Hero Progress Card */}
+            <HeroProgressCard
+              referred={referred}
+              isCardUnlocked={isCardUnlocked}
+              cardPulse={cardPulse}
+              onClaimCard={handleClaimCard}
+            />
+
+            {/* Tier List */}
+            <View style={styles.tierSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Achievement Tiers</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Unlock rewards as you grow your referrals
                 </Text>
+              </View>
 
-                <View style={styles.milestoneRow}>
-                  <View style={styles.milestoneItem}>
-                    <MaterialCommunityIcons
-                      name="account-multiple-plus"
-                      size={28}
-                      color="#fff"
-                    />
-                    <Text style={styles.milestoneNum}>{referred}</Text>
-                    <Text style={styles.milestoneLabel}>Joins</Text>
-                  </View>
-
-                  <View style={styles.milestoneArrow}>
-                    <Ionicons
-                      name="arrow-forward"
-                      size={20}
-                      color="rgba(255,255,255,0.5)"
-                    />
-                  </View>
-
-                  <View style={styles.milestoneItem}>
-                    <View
-                      style={[
-                        styles.tdcCardIcon,
-                        isMilestoneAchieved && styles.tdcCardActive,
-                      ]}
-                    >
-                      <MaterialCommunityIcons
-                        name="card-account-details-star"
-                        size={28}
-                        color={isMilestoneAchieved ? "#1a1a1a" : "#666"}
-                      />
-                    </View>
-                    <Text
-                      style={[
-                        styles.milestoneLabel,
-                        isMilestoneAchieved && styles.goldText,
-                      ]}
-                    >
-                      tdc CARD
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Progress Bar */}
-                <View style={styles.progressTrack}>
-                  <Animated.View
-                    style={[
-                      styles.progressBar,
-                      { width: progressWidthInterpolated },
-                    ]}
+              {TIERS.map((tier, index) => {
+                const isUnlocked = referred >= tier.minDownloads;
+                const isNext =
+                  !isUnlocked &&
+                  (index === 0 || referred >= TIERS[index - 1].minDownloads);
+                return (
+                  <AnimatedTierCard
+                    key={tier.id}
+                    tier={tier}
+                    index={index}
+                    currentDownloads={referred}
+                    isUnlocked={isUnlocked}
+                    isNext={isNext}
                   />
-                </View>
-
-                <Text style={styles.progressCount}>
-                  {referred}/{target} Referrals
-                </Text>
-                <Text style={styles.progressNote}>
-                  {isMilestoneAchieved
-                    ? "🎉 Milestone Achieved! Claim your card below."
-                    : `${remainingReferrals} more referral${remainingReferrals > 1 ? "s" : ""} needed for the Privilege Card.`}
-                </Text>
-              </LinearGradient>
-            </Animated.View>
-
-            {/* Info Cards */}
-            <View style={styles.infoSection}>
-              <Text style={styles.sectionTitle}>
-                <View style={styles.sectionDot} />
-                How It Works
-              </Text>
-              <InfoCard
-                icon="account-plus-outline"
-                color="#f9c349"
-                title="Invite Friends"
-                content="Share your unique referral link with verified students to earn referral points."
-                index={0}
-              />
-              <InfoCard
-                icon="crown-outline"
-                color="#f9c349"
-                title="Unlock Privilege Card"
-                content="Reach 10 successful referrals to activate your official tdc Privilege Card."
-                index={1}
-              />
-              <InfoCard
-                icon="pricetags-outline"
-                color="#f9c349"
-                title="Enjoy Exclusive Discounts"
-                content="Use your tdc Privilege Card for special deals at partner brands across Pakistan."
-                index={2}
-              />
+                );
+              })}
             </View>
 
-            {/* Download App Link - Platform Specific */}
+            {/* Download App Link */}
             <View style={styles.linkCard}>
               <Text style={styles.linkLabel}>Download TDC App</Text>
               <TouchableOpacity
@@ -801,55 +935,31 @@ const PointsScreen = () => {
               </Text>
             </View>
 
-            {/* Action Button */}
+            {/* Share Button */}
             <View style={styles.actionSection}>
-              {isMilestoneAchieved ? (
-                <Animated.View style={{ transform: [{ scale: shareScale }] }}>
-                  <TouchableOpacity
-                    style={styles.claimBtn}
-                    onPress={handleClaimCard}
-                    activeOpacity={0.8}
+              <Animated.View style={{ transform: [{ scale: shareScale }] }}>
+                <TouchableOpacity
+                  style={styles.shareBtn}
+                  onPress={onShare}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={["#f9c349", "#1a1a1a"]}
+                    style={styles.shareGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
                   >
-                    <LinearGradient
-                      colors={["#f9c349", "#1a1a1a"]}
-                      style={styles.claimGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                    >
-                      <MaterialCommunityIcons
-                        name="card-account-details-star"
-                        size={20}
-                        color="#1a1a1a"
-                      />
-                      <Text style={styles.claimBtnText}>Claim My tdc Card</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </Animated.View>
-              ) : (
-                <Animated.View style={{ transform: [{ scale: shareScale }] }}>
-                  <TouchableOpacity
-                    style={styles.shareBtn}
-                    onPress={onShare}
-                    activeOpacity={0.8}
-                  >
-                    <LinearGradient
-                      colors={["#f9c349", "#1a1a1a"]}
-                      style={styles.shareGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                    >
-                      <Ionicons
-                        name="share-social-outline"
-                        size={20}
-                        color="#1a1a1a"
-                      />
-                      <Text style={styles.shareBtnText}>
-                        Share My Referral Link
-                      </Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </Animated.View>
-              )}
+                    <Ionicons
+                      name="share-social-outline"
+                      size={20}
+                      color="#1a1a1a"
+                    />
+                    <Text style={styles.shareBtnText}>
+                      Share My Referral Link
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </Animated.View>
             </View>
 
             {/* Footer Note */}
@@ -859,8 +969,8 @@ const PointsScreen = () => {
                 size={14}
                 color="#f9c349"
               />{" "}
-              Referrals are verified when students complete their registration
-              through your link.
+              Rewards are performance-based and tied to verified app downloads
+              through your unique referral link.
             </Text>
           </Animated.View>
         </ScrollView>
@@ -873,9 +983,8 @@ const PointsScreen = () => {
 // STYLES
 // ==========================================
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffff" },
+  container: { flex: 1, backgroundColor: "#f8f9fc" },
 
-  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -902,135 +1011,372 @@ const styles = StyleSheet.create({
   },
   scrollContent: { paddingBottom: 40 },
 
-  // Progress Card
-  progressCard: {
+  // Hero Card
+  heroCard: {
     margin: 16,
     borderRadius: 24,
     overflow: "hidden",
-    elevation: 10,
+    elevation: 12,
     shadowColor: "#f9c349",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 16,
   },
-  progressGradient: { padding: 24, alignItems: "center" },
-  progressLabel: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 2,
-    marginBottom: 20,
-  },
-
-  milestoneRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
-    width: "100%",
-    marginBottom: 24,
-  },
-  milestoneItem: { alignItems: "center" },
-  milestoneNum: {
-    color: "#fff",
-    fontSize: 22,
-    fontWeight: "900",
-    marginTop: 6,
-  },
-  milestoneLabel: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 11,
-    fontWeight: "600",
-    marginTop: 2,
-  },
-  milestoneArrow: { paddingHorizontal: 10 },
-  tdcCardIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  tdcCardActive: { backgroundColor: "#fff" },
-  goldText: { color: "#f9c349", fontWeight: "700" },
-
-  // Progress Bar
-  progressTrack: {
-    height: 8,
-    width: "100%",
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 4,
-    marginBottom: 8,
+  heroGradient: {
+    padding: 24,
+    position: "relative",
     overflow: "hidden",
   },
-  progressBar: { height: "100%", backgroundColor: "#fff", borderRadius: 4 },
-  progressCount: {
+  heroOrb1: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: "rgba(249,195,73,0.05)",
+    top: -80,
+    right: -60,
+  },
+  heroOrb2: {
+    position: "absolute",
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: "rgba(249,195,73,0.03)",
+    bottom: -40,
+    left: -40,
+  },
+  heroContent: { position: "relative", zIndex: 1 },
+  heroHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  heroLabel: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+  },
+  heroCountContainer: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 8,
+  },
+  heroCount: {
     color: "#fff",
-    fontSize: 13,
+    fontSize: 36,
+    fontWeight: "900",
+    marginTop: 2,
+  },
+  heroCountLabel: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  heroBadgeActive: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f9c349",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 24,
+    gap: 6,
+  },
+  heroBadgeText: {
+    color: "#1a1a1a",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  heroBadgeLocked: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 24,
+    gap: 6,
+  },
+  heroBadgeLockedText: {
+    color: "#999",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  heroProgressContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  heroProgressCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+  },
+  heroProgressRing: {
+    position: "absolute",
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    overflow: "hidden",
+  },
+  heroRingGradient: {
+    width: "50%",
+    height: "100%",
+    borderTopLeftRadius: 40,
+    borderBottomLeftRadius: 40,
+  },
+  heroProgressInner: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+  },
+  heroProgressPercent: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  heroProgressPercentActive: {
+    color: "#f9c349",
+  },
+  heroProgressText: {
+    flex: 1,
+  },
+  heroProgressTitle: {
+    color: "#fff",
+    fontSize: 15,
     fontWeight: "700",
     marginBottom: 4,
   },
-  progressNote: {
-    color: "rgba(255,255,255,0.7)",
+  heroProgressSubtitle: {
+    color: "rgba(255,255,255,0.6)",
     fontSize: 12,
     fontWeight: "500",
-    textAlign: "center",
+    lineHeight: 16,
   },
-
-  // Info Section
-  infoSection: { paddingHorizontal: 16, marginTop: 8 },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#1a1a1a",
-    marginBottom: 14,
-    flexDirection: "row",
+  heroClaimBtn: {
+    marginTop: 16,
+    borderRadius: 14,
+    overflow: "hidden",
+  },
+  heroClaimGradient: {
+    paddingVertical: 14,
     alignItems: "center",
   },
-  sectionDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#f9c349",
-    marginRight: 10,
+  heroClaimText: {
+    color: "#1a1a1a",
+    fontSize: 15,
+    fontWeight: "800",
   },
 
-  infoCard: {
+  // Tier Section
+  tierSection: {
+    paddingHorizontal: 16,
+    marginTop: 4,
+  },
+  sectionHeader: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#1a1a1a",
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: "#999",
+    fontWeight: "500",
+  },
+
+  // Tier Card
+  tierCard: {
     flexDirection: "row",
     backgroundColor: "#fff",
+    borderRadius: 18,
     padding: 16,
-    borderRadius: 16,
     marginBottom: 12,
     borderWidth: 2,
     borderColor: "#f0f0f0",
     alignItems: "flex-start",
+    position: "relative",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  infoIconCircle: {
-    width: 44,
-    height: 44,
+  tierCardUnlocked: {
+    borderColor: "#f9c349",
+    backgroundColor: "#FFFDF5",
+    shadowColor: "#f9c349",
+    shadowOpacity: 0.08,
+  },
+  tierCardNext: {
+    borderColor: "#f9c349",
+    borderStyle: "dashed",
+  },
+  tierCardSpecial: {
+    borderColor: "#f9c349",
+    borderWidth: 3,
+    backgroundColor: "#FFFDF5",
+    shadowColor: "#f9c349",
+    shadowOpacity: 0.12,
+  },
+  tierShimmer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "30%",
+    height: "100%",
+    backgroundColor: "rgba(255,255,255,0.3)",
+    transform: [{ skewX: "-20deg" }],
+  },
+  tierIconContainer: {
+    width: 50,
+    height: 50,
     borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: 14,
+    flexShrink: 0,
   },
-  infoContent: { flex: 1 },
-  infoTitle: {
+  tierIconSpecial: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+  },
+  tierContent: { flex: 1 },
+  tierHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  tierName: {
     fontSize: 14,
     fontWeight: "800",
     color: "#1a1a1a",
-    marginBottom: 3,
   },
-  infoText: { fontSize: 12, color: "#666", lineHeight: 18, fontWeight: "500" },
+  tierNameActive: {
+    color: "#f9c349",
+  },
+  tierNameSpecial: {
+    color: "#f9c349",
+    fontSize: 15,
+  },
+  unlockedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f9c349",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 14,
+    gap: 4,
+  },
+  unlockedText: {
+    color: "#1a1a1a",
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  nextBadge: {
+    backgroundColor: "#f0f0f0",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 14,
+  },
+  nextText: {
+    color: "#666",
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  tierReward: {
+    fontSize: 12,
+    color: "#666",
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  tierRewardSpecial: {
+    color: "#f9c349",
+    fontWeight: "700",
+  },
+  tierProgressContainer: {
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  tierProgressTrack: {
+    flex: 1,
+    height: 4,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  tierProgressBar: {
+    height: "100%",
+    borderRadius: 2,
+  },
+  tierProgressText: {
+    fontSize: 10,
+    color: "#999",
+    fontWeight: "600",
+    minWidth: 60,
+    textAlign: "right",
+  },
+  perksList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 8,
+    gap: 6,
+  },
+  perkItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8f8f8",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+  },
+  perkText: {
+    fontSize: 10,
+    color: "#999",
+    fontWeight: "500",
+  },
+  perkTextActive: {
+    color: "#1a1a1a",
+  },
+  perkMore: {
+    fontSize: 10,
+    color: "#999",
+    fontWeight: "600",
+    paddingHorizontal: 4,
+  },
 
   // Link Card
   linkCard: {
     marginHorizontal: 16,
     marginTop: 10,
-    backgroundColor: "#f8f8f8",
-    borderRadius: 16,
+    backgroundColor: "#fff",
+    borderRadius: 18,
     padding: 16,
     borderWidth: 2,
     borderColor: "#f0f0f0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   linkLabel: {
     fontSize: 11,
@@ -1046,7 +1392,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: "#fff",
+    backgroundColor: "#f8f8f8",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
@@ -1069,12 +1415,12 @@ const styles = StyleSheet.create({
   // Action
   actionSection: { paddingHorizontal: 16, marginTop: 20 },
   shareBtn: {
-    borderRadius: 16,
+    borderRadius: 18,
     overflow: "hidden",
     elevation: 8,
     shadowColor: "#f9c349",
     shadowOpacity: 0.3,
-    shadowRadius: 15,
+    shadowRadius: 16,
   },
   shareGradient: {
     flexDirection: "row",
@@ -1089,15 +1435,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     letterSpacing: 0.5,
   },
-  claimBtn: { borderRadius: 16, overflow: "hidden", elevation: 8 },
-  claimGradient: {
-    flexDirection: "row",
-    paddingVertical: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 10,
-  },
-  claimBtnText: { color: "#1a1a1a", fontWeight: "800", fontSize: 15 },
 
   footerNote: {
     textAlign: "center",

@@ -11,6 +11,7 @@ import {
   Linking,
   Dimensions,
   StatusBar,
+  ScrollView,
 } from 'react-native';
 import {
   createDrawerNavigator,
@@ -54,10 +55,7 @@ import ExchangeScreen from '../components/ExchangeScreen';
 import ApplicationForm from '../components/ApplicationForm';
 import BookingScreen from '../components/BookingScreen';
 import PaymentScreen from '../components/PaymentScreen';
-import Courses from '../screens/Courses/Courses';
-import AISkillsScreen from '../screens/Courses/AiSkillsScreen';
-import CourseDetailScreen from '../screens/Courses/CourseDetailScreen';
-import EnrollmentFormScreen from '../screens/Courses/EnrollmentFormScreen';
+import Courses from '../screens/Courses';
 import ResumeDashboard from '../screens/Resume/ResumeDashboard';
 import ResumeBuilder from '../screens/Resume/ResumeBuilder';
 import Social from '../screens/Social/Social';
@@ -294,56 +292,54 @@ const AnimatedSectionLabel = ({ label, delay = 0 }) => {
   );
 };
 
-// FIXED: CustomDrawerContent with proper context and navigation
 function CustomDrawerContent(props) {
-  const { logout, isGuest, setIsGuest } = useContext(AuthContext); // FIXED: Added setIsGuest
+  const { logout, isGuest, setIsGuest } = useContext(AuthContext);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.98)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 220,
+        duration: 400,
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
       Animated.timing(scaleAnim, {
         toValue: 1,
-        duration: 220,
+        duration: 400,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 400,
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
     ]).start();
-  }, [fadeAnim, scaleAnim]);
+  }, [fadeAnim, scaleAnim, slideAnim]);
 
   let delay = 50;
 
-  // FIXED: Handle navigation to auth screens
   const navigateToAuth = (screenName) => {
-    // Close the drawer first
     props.navigation.closeDrawer();
-    
-    // Use setTimeout to ensure drawer closes before navigation
     setTimeout(() => {
-      // Navigate to parent stack (AppNavigator) which contains Login/Signup screens
       props.navigation.getParent()?.navigate(screenName);
     }, 300);
   };
 
-  // FIXED: Handle guest sign in
   const handleGuestSignIn = () => {
     setIsGuest(false);
     navigateToAuth('Login');
   };
 
-  // FIXED: Handle guest sign up
   const handleGuestSignUp = () => {
     setIsGuest(false);
     navigateToAuth('Signup');
   };
 
-  // FIXED: Handle logout
   const handleLogout = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert('Logout', 'Sign out of your account?', [
@@ -353,7 +349,6 @@ function CustomDrawerContent(props) {
         style: 'destructive',
         onPress: () => {
           logout();
-          // Navigate to Login screen after logout
           setTimeout(() => {
             props.navigation.getParent()?.navigate('Login');
           }, 300);
@@ -447,10 +442,7 @@ function CustomDrawerContent(props) {
             opacity: fadeAnim,
             transform: [
               {
-                translateY: fadeAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [20, 0],
-                }),
+                translateY: slideAnim,
               },
             ],
           },
@@ -461,7 +453,7 @@ function CustomDrawerContent(props) {
             <Text style={styles.guestDrawerText}>Browsing as Guest</Text>
             <TouchableOpacity 
               style={styles.signInDrawerBtn}
-              onPress={handleGuestSignIn} // FIXED: Using proper handler
+              onPress={handleGuestSignIn}
               activeOpacity={0.7}
             >
               <Ionicons name="log-in-outline" size={20} color="#f9c349" style={{ marginRight: 8 }} />
@@ -469,7 +461,7 @@ function CustomDrawerContent(props) {
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.createAccountDrawerBtn}
-              onPress={handleGuestSignUp} // FIXED: Added sign up option
+              onPress={handleGuestSignUp}
               activeOpacity={0.7}
             >
               <Ionicons name="person-add-outline" size={20} color="#1a1a1a" style={{ marginRight: 8 }} />
@@ -482,7 +474,7 @@ function CustomDrawerContent(props) {
         ) : (
           <TouchableOpacity
             style={styles.logoutBtn}
-            onPress={handleLogout} // FIXED: Using proper handler
+            onPress={handleLogout}
             activeOpacity={0.7}
           >
             <Ionicons name="log-out-outline" size={22} color="#f9c349" />
@@ -494,17 +486,17 @@ function CustomDrawerContent(props) {
   );
 }
 
-// FIXED: CustomHeader with proper guest handling
 function CustomHeader({ navigation }) {
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchWidth = useRef(new Animated.Value(0)).current;
   const headerOpacity = useRef(new Animated.Value(0)).current;
-  const { unreadCount, updateUnreadCount, token, isGuest } = useContext(AuthContext); // FIXED: Removed unused vars
+  const headerTranslateY = useRef(new Animated.Value(-20)).current;
+  const { unreadCount, updateUnreadCount, token, isGuest } = useContext(AuthContext);
   const [notifVisible, setNotifVisible] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const searchScale = useRef(new Animated.Value(0.8)).current;
 
-  // FIXED: Only update notifications for logged-in users
   useEffect(() => {
     if (token && !isGuest) {
       updateUnreadCount(token);
@@ -513,7 +505,7 @@ function CustomHeader({ navigation }) {
         if (token && !isGuest) {
           updateUnreadCount(token);
         }
-      }, 30000); // Check every 30 seconds
+      }, 30000);
       
       return () => clearInterval(interval);
     }
@@ -524,52 +516,77 @@ function CustomHeader({ navigation }) {
       updateUnreadCount();
     }
 
-    Animated.timing(headerOpacity, {
-      toValue: 1,
-      duration: 180,
-      easing: Easing.out(Easing.ease),
-      useNativeDriver: true,
-    }).start();
+    Animated.parallel([
+      Animated.timing(headerOpacity, {
+        toValue: 1,
+        duration: 300,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(headerTranslateY, {
+        toValue: 0,
+        duration: 300,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
 
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.12,
-          duration: 400,
+          toValue: 1.15,
+          duration: 500,
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 400,
+          duration: 500,
           useNativeDriver: true,
         }),
       ])
     ).start();
-  }, [headerOpacity, pulseAnim, token, isGuest, updateUnreadCount]);
+  }, [headerOpacity, headerTranslateY, pulseAnim, token, isGuest, updateUnreadCount]);
 
   const toggleSearch = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     if (searchVisible) {
-      Animated.timing(searchWidth, {
-        toValue: 0,
-        duration: 160,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: false,
-      }).start(() => {
+      Animated.parallel([
+        Animated.timing(searchWidth, {
+          toValue: 0,
+          duration: 200,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: false,
+        }),
+        Animated.timing(searchScale, {
+          toValue: 0.8,
+          duration: 200,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
         setSearchVisible(false);
         setSearchQuery('');
+        searchScale.setValue(0.8);
       });
     } else {
       setSearchVisible(true);
-      Animated.timing(searchWidth, {
-        toValue: width * 0.5,
-        duration: 180,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: false,
-      }).start();
+      Animated.parallel([
+        Animated.timing(searchWidth, {
+          toValue: width * 0.5,
+          duration: 200,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: false,
+        }),
+        Animated.timing(searchScale, {
+          toValue: 1,
+          duration: 200,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
-  }, [searchVisible, searchWidth]);
+  }, [searchVisible, searchWidth, searchScale]);
 
   const submitSearch = () => {
     const trimmedQuery = searchQuery.trim();
@@ -583,7 +600,6 @@ function CustomHeader({ navigation }) {
     toggleSearch();
   };
 
-  // Listen for focus events to refresh notification count
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       if (token && !isGuest) {
@@ -594,10 +610,8 @@ function CustomHeader({ navigation }) {
     return unsubscribe;
   }, [navigation, token, isGuest, updateUnreadCount]);
 
-  // FIXED: Handle notification press for guests
   const handleNotificationPress = () => {
     if (isGuest) {
-      // Navigate to Login for guests
       navigation.getParent()?.navigate('Login');
       return;
     }
@@ -610,7 +624,15 @@ function CustomHeader({ navigation }) {
     <SafeAreaView edges={['top']} style={styles.headerSafe}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      <Animated.View style={[styles.headerMain, { opacity: headerOpacity }]}>
+      <Animated.View 
+        style={[
+          styles.headerMain, 
+          { 
+            opacity: headerOpacity,
+            transform: [{ translateY: headerTranslateY }]
+          }
+        ]}
+      >
         <TouchableOpacity
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -623,7 +645,15 @@ function CustomHeader({ navigation }) {
 
         <View style={styles.headerCenter}>
           {searchVisible ? (
-            <Animated.View style={[styles.headerSearchWrap, { width: searchWidth }]}>
+            <Animated.View 
+              style={[
+                styles.headerSearchWrap, 
+                { 
+                  width: searchWidth,
+                  transform: [{ scale: searchScale }]
+                }
+              ]}
+            >
               <Ionicons name="search-outline" size={18} color="#f9c349" style={styles.searchIcon} />
               <TextInput
                 style={styles.headerInput}
@@ -639,36 +669,28 @@ function CustomHeader({ navigation }) {
           ) : (
             <View style={styles.logoContainer}>
               <Text style={styles.headerAppTitle}>
-                <Text style={{ color: '#000' }}>DEFT</Text>
+                <Text style={{ color: '#000' }}> DEFT</Text>
                 <Text style={{ color: '#f9c349' }}>CREW</Text>
               </Text>
-              <View style={styles.headerBadge}>
-                <Text style={styles.headerBadgeText}>
-                  {isGuest ? 'GUEST MODE' : 'STUDENT BENEFITS'}
-                </Text>
-              </View>
+              
             </View>
           )}
         </View>
 
         <View style={styles.headerRight}>
-          <TouchableOpacity onPress={toggleSearch} style={styles.headerCircleBtn}>
-            <Ionicons name={searchVisible ? 'close' : 'search-outline'} size={20} color="#000" />
-          </TouchableOpacity>
+         
 
           {!searchVisible && (
             <TouchableOpacity
-              onPress={handleNotificationPress} // FIXED: Using proper handler
+              onPress={handleNotificationPress}
               style={[styles.headerCircleBtn, { marginLeft: 10 }]}
             >
               <Ionicons name="notifications-outline" size={20} color="#000" />
-              {/* FIXED: Only show badge for logged-in users */}
               {!isGuest && unreadCount > 0 && (
                 <Animated.View style={[styles.badges, { transform: [{ scale: pulseAnim }] }]}>
                   <Text style={styles.badgeTexts}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
                 </Animated.View>
               )}
-              {/* FIXED: Show lock icon for guests */}
               {isGuest && (
                 <View style={styles.guestLockBadge}>
                   <Ionicons name="lock-closed" size={7} color="#FFF" />
@@ -684,7 +706,73 @@ function CustomHeader({ navigation }) {
   );
 }
 
+// Animated Screen Wrapper Component
+const AnimatedScreenWrapper = ({ children }) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.96)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, scaleAnim]);
+
+  return (
+    <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}>
+      {children}
+    </Animated.View>
+  );
+};
+
+// Animated Screen Component
+const AnimatedScreen = ({ component: Component, ...props }) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 400,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, slideAnim]);
+
+  return (
+    <Animated.View 
+      style={{ 
+        flex: 1, 
+        opacity: fadeAnim, 
+        transform: [{ translateY: slideAnim }] 
+      }}
+    >
+      <Component {...props} />
+    </Animated.View>
+  );
+};
+
 export default function DrawerNavigator() {
+  const routeAnim = useRef(new Animated.Value(0)).current;
+
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
       <Drawer.Navigator
@@ -709,9 +797,20 @@ export default function DrawerNavigator() {
             return <CustomHeader navigation={navigation} />;
           },
           headerShown: true,
+          cardStyleInterpolator: ({ current: { progress } }) => ({
+            cardStyle: {
+              opacity: progress,
+            },
+          }),
         })}
       >
-        <Drawer.Screen name="HomeTabs" component={TabNavigator} />
+        <Drawer.Screen name="HomeTabs">
+          {(props) => (
+            <AnimatedScreenWrapper>
+              <TabNavigator {...props} />
+            </AnimatedScreenWrapper>
+          )}
+        </Drawer.Screen>
         <Drawer.Screen
           name="Profile"
           component={ProfileStack}
@@ -722,7 +821,10 @@ export default function DrawerNavigator() {
           component={TravelingScreen}
           options={{ headerShown: false }}
         />
-        <Drawer.Screen name="Brands" component={Brands} />
+        <Drawer.Screen 
+          name="Brands" 
+          component={Brands}
+        />
 
         {[
           { name: 'University', comp: University },
@@ -745,9 +847,6 @@ export default function DrawerNavigator() {
           { name: 'ApplicationForm', comp: ApplicationForm },
           { name: 'Payment', comp: PaymentScreen },
           { name: 'Courses', comp: Courses },
-          { name: 'AiSkillsScreen', comp: AISkillsScreen },
-          { name: 'CourseDetailScreen', comp: CourseDetailScreen },
-          { name: 'EnrollmentFormScreen', comp: EnrollmentFormScreen },
           { name: 'ResumeDashboard', comp: ResumeDashboard },
           { name: 'ResumeBuilder', comp: ResumeBuilder },
           { name: 'Social', comp: Social },
@@ -777,9 +876,10 @@ export default function DrawerNavigator() {
           <Drawer.Screen
             key={item.name}
             name={item.name}
-            component={item.comp}
             options={{ headerShown: false }}
-          />
+          >
+            {(props) => <AnimatedScreen component={item.comp} {...props} />}
+          </Drawer.Screen>
         ))}
       </Drawer.Navigator>
     </SafeAreaView>
@@ -1024,7 +1124,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
   },
-  // FIXED: Complete guest styles
   guestDrawerFooter: {
     alignItems: 'center',
     paddingVertical: 4,

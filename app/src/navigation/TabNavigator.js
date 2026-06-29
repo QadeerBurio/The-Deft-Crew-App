@@ -7,7 +7,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-cont
 
 import HomeStack from "./HomeStack";
 import Social from "../screens/Social/Social"; 
-import CampusToolsScreen from "../screens/Courses/Courses";
+import CampusToolsScreen from "../screens/Courses";
 import Traveling from "../components/TravellingScreen";
 import CareerHub from "../components/CareerHub";
 

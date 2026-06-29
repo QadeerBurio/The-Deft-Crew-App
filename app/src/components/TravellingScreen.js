@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useContext, useCallback, useRef, memo } from 'react';
-import { 
-  View, Text, StyleSheet, Image, TouchableOpacity, 
-  TextInput, ImageBackground, Dimensions, StatusBar, FlatList, 
+import {
+  View, Text, StyleSheet, Image, TouchableOpacity,
+  TextInput, ImageBackground, Dimensions, StatusBar, FlatList,
   Modal, Alert, BackHandler, Animated,
   ScrollView,
   InteractionManager,
@@ -11,14 +11,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons, Feather, Fontisto, Entypo, AntDesign } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
-import { AuthContext } from '../context/AuthContext'; 
+import { AuthContext } from '../context/AuthContext';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
 
-const API_URL = 'https://the-deft-crew-production.up.railway.app/api/auth/packages/public'; 
+const API_URL = 'https://the-deft-crew-production.up.railway.app/api/auth/packages/public';
 
 // ==========================================
 // ULTRA-FAST CACHE SYSTEM
@@ -64,7 +64,7 @@ const CATEGORIES = [
 ];
 
 const getIconComponent = (type) => {
-  switch(type) {
+  switch (type) {
     case 'FontAwesome5': return FontAwesome5;
     case 'Ionicons': return Ionicons;
     case 'MaterialCommunityIcons': return MaterialCommunityIcons;
@@ -78,6 +78,9 @@ const getIconComponent = (type) => {
 
 const ITEMS_PER_PAGE = 10;
 
+// ==========================================
+// SKELETON COMPONENT
+// ==========================================
 const SkeletonBlock = memo(({ style }) => (
   <View style={[style, { backgroundColor: '#E8ECF1', borderRadius: 12 }]} />
 ));
@@ -111,7 +114,7 @@ const CategoryCard = memo(({ category, isActive, onPress, index }) => {
     hasAnimated.current = true;
 
     const delay = index * 50;
-    
+
     InteractionManager.runAfterInteractions(() => {
       Animated.parallel([
         Animated.spring(scaleAnim, {
@@ -161,7 +164,7 @@ const CategoryCard = memo(({ category, isActive, onPress, index }) => {
   }, [isActive]);
 
   const IconComponent = getIconComponent(category.iconType);
-  
+
   const handlePressIn = useCallback(() => {
     Animated.spring(scaleAnim, {
       toValue: 0.92,
@@ -216,17 +219,17 @@ const CategoryCard = memo(({ category, isActive, onPress, index }) => {
           <Animated.View style={{
             transform: [{ scale: isActive ? pulseAnim : 1 }]
           }}>
-            <IconComponent 
-              name={category.icon} 
-              size={22} 
-              color={isActive ? '#f9c349' : category.color} 
+            <IconComponent
+              name={category.icon}
+              size={22}
+              color={isActive ? '#f9c349' : category.color}
               solid={category.iconType === 'FontAwesome5'}
             />
           </Animated.View>
         </LinearGradient>
-        
+
         <View style={styles.categoryTextContainer}>
-          <Text 
+          <Text
             style={[
               styles.categoryCardText,
               isActive && styles.categoryCardTextActive
@@ -244,7 +247,7 @@ const CategoryCard = memo(({ category, isActive, onPress, index }) => {
             ]} />
           )}
         </View>
-        
+
         {isActive && (
           <LinearGradient
             colors={['#f9c349', '#f9c349']}
@@ -258,6 +261,9 @@ const CategoryCard = memo(({ category, isActive, onPress, index }) => {
   );
 });
 
+// ==========================================
+// ANIMATED PACKAGE CARD
+// ==========================================
 const AnimatedCard = memo(({ item, index, onPress, isGuest }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -269,7 +275,7 @@ const AnimatedCard = memo(({ item, index, onPress, isGuest }) => {
     hasAnimated.current = true;
 
     const delay = Math.min(index * 30, 150);
-    
+
     InteractionManager.runAfterInteractions(() => {
       Animated.parallel([
         Animated.timing(fadeAnim, {
@@ -319,22 +325,22 @@ const AnimatedCard = memo(({ item, index, onPress, isGuest }) => {
   return (
     <Animated.View style={[
       styles.mainCard,
-      { 
-        opacity: fadeAnim, 
+      {
+        opacity: fadeAnim,
         transform: [
           { scale: scaleAnim },
           { translateY: translateYAnim }
-        ] 
+        ]
       }
     ]}>
-      <TouchableOpacity 
+      <TouchableOpacity
         activeOpacity={0.9}
         onPress={handlePress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
       >
-        <Image 
-          source={{ uri: item.image || 'https://via.placeholder.com/300' }} 
+        <Image
+          source={{ uri: item.image || 'https://via.placeholder.com/300' }}
           style={styles.cardImg}
           resizeMode="cover"
         />
@@ -366,12 +372,12 @@ const AnimatedCard = memo(({ item, index, onPress, isGuest }) => {
     </Animated.View>
   );
 }, (prevProps, nextProps) => {
-  return prevProps.item._id === nextProps.item._id && 
-         prevProps.index === nextProps.index;
+  return prevProps.item._id === nextProps.item._id &&
+    prevProps.index === nextProps.index;
 });
 
 // ==========================================
-// ENHANCED PAGINATION COMPONENT WITH ANIMATIONS
+// ENHANCED PAGINATION COMPONENT
 // ==========================================
 const PaginationControls = memo(({ currentPage, totalPages, onPageChange, isLoading }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -394,11 +400,10 @@ const PaginationControls = memo(({ currentPage, totalPages, onPageChange, isLoad
     ]).start();
   }, [currentPage]);
 
-  // Generate page numbers to show
   useMemo(() => {
     const pages = [];
     const maxVisible = 5;
-    
+
     if (totalPages <= maxVisible) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
@@ -454,27 +459,27 @@ const PaginationControls = memo(({ currentPage, totalPages, onPageChange, isLoad
 
   return (
     <Animated.View style={[
-      styles.paginationContainer, 
-      { 
+      styles.paginationContainer,
+      {
         opacity: fadeAnim,
         transform: [{ translateY: slideAnim }]
       }
     ]}>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[styles.paginationArrow, currentPage === 1 && styles.paginationDisabled]}
         onPress={handlePrev}
         disabled={currentPage === 1}
         activeOpacity={0.7}
       >
-        <Ionicons 
-          name="chevron-back" 
-          size={22} 
-          color={currentPage === 1 ? '#CCC' : '#1a1a1a'} 
+        <Ionicons
+          name="chevron-back"
+          size={22}
+          color={currentPage === 1 ? '#CCC' : '#1a1a1a'}
         />
       </TouchableOpacity>
 
-      <ScrollView 
-        horizontal 
+      <ScrollView
+        horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.pageNumbersContainer}
       >
@@ -486,7 +491,7 @@ const PaginationControls = memo(({ currentPage, totalPages, onPageChange, isLoad
               </View>
             );
           }
-          
+
           const isActive = page === currentPage;
           return (
             <TouchableOpacity
@@ -512,16 +517,16 @@ const PaginationControls = memo(({ currentPage, totalPages, onPageChange, isLoad
         })}
       </ScrollView>
 
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[styles.paginationArrow, currentPage === totalPages && styles.paginationDisabled]}
         onPress={handleNext}
         disabled={currentPage === totalPages}
         activeOpacity={0.7}
       >
-        <Ionicons 
-          name="chevron-forward" 
-          size={22} 
-          color={currentPage === totalPages ? '#CCC' : '#1a1a1a'} 
+        <Ionicons
+          name="chevron-forward"
+          size={22}
+          color={currentPage === totalPages ? '#CCC' : '#1a1a1a'}
         />
       </TouchableOpacity>
     </Animated.View>
@@ -567,8 +572,8 @@ const LoadMoreIndicator = memo(({ isLoading, onLoadMore, hasMore }) => {
 
   return (
     <Animated.View style={[styles.loadMoreContainer, { opacity: fadeAnim }]}>
-      <TouchableOpacity 
-        onPress={onLoadMore} 
+      <TouchableOpacity
+        onPress={onLoadMore}
         disabled={isLoading}
         style={styles.loadMoreButton}
         activeOpacity={0.7}
@@ -584,8 +589,11 @@ const LoadMoreIndicator = memo(({ isLoading, onLoadMore, hasMore }) => {
   );
 });
 
+// ==========================================
+// MAIN SCREEN COMPONENT
+// ==========================================
 const TravelingScreen = () => {
-  const { token, isGuest } = useContext(AuthContext); 
+  const { token, isGuest } = useContext(AuthContext);
   const navigation = useNavigation();
 
   const [activeCategory, setActiveCategory] = useState('All');
@@ -600,6 +608,7 @@ const TravelingScreen = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
 
+  // Animation Refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideUpAnim = useRef(new Animated.Value(0)).current;
   const heroAnim = useRef(new Animated.Value(0)).current;
@@ -609,7 +618,7 @@ const TravelingScreen = () => {
   const modalSlideAnim = useRef(new Animated.Value(height)).current;
   const headerTitleAnim = useRef(new Animated.Value(0)).current;
   const countAnim = useRef(new Animated.Value(0)).current;
-  
+
   const isMounted = useRef(true);
   const hasInitialFetch = useRef(false);
   const packagesScrollRef = useRef(null);
@@ -620,14 +629,17 @@ const TravelingScreen = () => {
       `Sign up to ${action} and explore amazing travel packages!`,
       [
         { text: 'Not Now', style: 'cancel' },
-        { 
-          text: 'Sign Up', 
+        {
+          text: 'Sign Up',
           onPress: () => navigation.navigate('Login')
         }
       ]
     );
   };
 
+  // ==========================================
+  // FETCH PACKAGES
+  // ==========================================
   const fetchPackages = useCallback(async (forceRefresh = false) => {
     const now = Date.now();
 
@@ -658,7 +670,7 @@ const TravelingScreen = () => {
     }
 
     if (!forceRefresh && (now - lastFetchTime) < FETCH_DEBOUNCE) return;
-    
+
     lastFetchTime = now;
 
     if (isMounted.current && packages.length === 0) setLoading(true);
@@ -668,35 +680,35 @@ const TravelingScreen = () => {
         const response = await axios.get(API_URL, {
           timeout: 8000,
         });
-        
+
         const data = response.data || [];
-        
+
         if (isMounted.current) {
           setPackages(data);
           memoryCache = data;
           cacheTimestamp = Date.now();
           setCurrentPage(1);
           setVisibleCount(ITEMS_PER_PAGE);
-          
+
           setTimeout(() => {
             if (isMounted.current) {
               setLoading(false);
               animateContent();
             }
           }, 150);
-          
+
           InteractionManager.runAfterInteractions(() => {
             data.slice(0, 6).forEach(item => {
               if (item.image) preloadImage(item.image);
             });
           });
         }
-        
+
         pendingFetchPromise = null;
         return data;
       } catch (error) {
         console.error("Fetch Error:", error.message);
-        
+
         if (isMounted.current) {
           if (memoryCache) {
             setPackages(memoryCache);
@@ -705,12 +717,12 @@ const TravelingScreen = () => {
           }
           setLoading(false);
           animateContent();
-          
+
           if (!memoryCache) {
             Alert.alert("Connection Error", "Could not fetch packages. Please try again.");
           }
         }
-        
+
         pendingFetchPromise = null;
         return memoryCache || [];
       }
@@ -719,6 +731,9 @@ const TravelingScreen = () => {
     return pendingFetchPromise;
   }, [packages.length]);
 
+  // ==========================================
+  // ANIMATE CONTENT ON LOAD
+  // ==========================================
   const animateContent = useCallback(() => {
     InteractionManager.runAfterInteractions(() => {
       Animated.parallel([
@@ -772,18 +787,24 @@ const TravelingScreen = () => {
     });
   }, [fadeAnim, heroAnim, categoriesAnim, searchAnim, slideUpAnim, headerTitleAnim, countAnim]);
 
+  // ==========================================
+  // INITIAL LOAD
+  // ==========================================
   useEffect(() => {
     isMounted.current = true;
     if (!hasInitialFetch.current) {
       hasInitialFetch.current = true;
       fetchPackages();
     }
-    
+
     return () => {
       isMounted.current = false;
     };
   }, [fetchPackages]);
 
+  // ==========================================
+  // HANDLE REFRESH
+  // ==========================================
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
     fetchPackages(true).finally(() => {
@@ -791,6 +812,9 @@ const TravelingScreen = () => {
     });
   }, [fetchPackages]);
 
+  // ==========================================
+  // HANDLE PAGE CHANGE
+  // ==========================================
   const handlePageChange = useCallback((page) => {
     setCurrentPage(page);
     setVisibleCount(ITEMS_PER_PAGE);
@@ -799,35 +823,38 @@ const TravelingScreen = () => {
     }
   }, []);
 
+  // ==========================================
+  // HANDLE LOAD MORE
+  // ==========================================
   const handleLoadMore = useCallback(() => {
     const totalItems = filteredData.length;
     const currentItems = paginatedData.length;
-    
+
     if (currentItems < totalItems && !isLoadingMore) {
       setIsLoadingMore(true);
-      
-      // Simulate loading more items
+
       setTimeout(() => {
         if (isMounted.current) {
           const nextCount = Math.min(visibleCount + ITEMS_PER_PAGE, totalItems);
           setVisibleCount(nextCount);
           setIsLoadingMore(false);
-          
-          // Animate the new items appearing
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
       }, 600);
     }
   }, [filteredData, paginatedData, isLoadingMore, visibleCount]);
 
+  // ==========================================
+  // MODAL HANDLERS
+  // ==========================================
   const openModal = useCallback((item) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelectedDestination(item);
     setModalVisible(true);
-    
+
     modalScaleAnim.setValue(0);
     modalSlideAnim.setValue(height);
-    
+
     InteractionManager.runAfterInteractions(() => {
       Animated.parallel([
         Animated.spring(modalScaleAnim, {
@@ -878,6 +905,9 @@ const TravelingScreen = () => {
     return () => backHandler.remove();
   }, [modalVisible, closeModal]);
 
+  // ==========================================
+  // HANDLE CATEGORY PRESS
+  // ==========================================
   const handleCategoryPress = useCallback((categoryName) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setActiveCategory(categoryName);
@@ -885,6 +915,9 @@ const TravelingScreen = () => {
     setVisibleCount(ITEMS_PER_PAGE);
   }, []);
 
+  // ==========================================
+  // HANDLE BOOK NOW
+  // ==========================================
   const handleBookNow = useCallback((item) => {
     if (isGuest) {
       closeModal();
@@ -893,34 +926,37 @@ const TravelingScreen = () => {
       }, 300);
       return;
     }
-    
+
     closeModal();
     setTimeout(() => {
       navigation.navigate('Booking', { item });
     }, 300);
   }, [isGuest, closeModal, navigation]);
 
+  // ==========================================
+  // FILTER AND PAGINATE DATA
+  // ==========================================
   const { filteredData, paginatedData, totalPages, hasMore } = useMemo(() => {
     let list = packages;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      list = list.filter(item => 
-        item.name?.toLowerCase().includes(q) || 
+      list = list.filter(item =>
+        item.name?.toLowerCase().includes(q) ||
         item.location?.toLowerCase().includes(q)
       );
     }
     if (activeCategory !== 'All') {
       list = list.filter(item => item.category === activeCategory);
     }
-    
+
     const total = Math.ceil(list.length / ITEMS_PER_PAGE);
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     const end = Math.min(start + visibleCount, list.length);
     const paginated = list.slice(start, end);
-    
-    return { 
-      filteredData: list, 
-      paginatedData: paginated, 
+
+    return {
+      filteredData: list,
+      paginatedData: paginated,
       totalPages: total,
       hasMore: end < list.length
     };
@@ -932,32 +968,32 @@ const TravelingScreen = () => {
   }, [searchQuery, activeCategory]);
 
   // ==========================================
-  // RENDER HORIZONTAL CATEGORIES
+  // RENDER CATEGORIES
   // ==========================================
   const renderCategories = useCallback(() => {
     const displayCategories = showAllCategories ? CATEGORIES.slice(0, 12) : CATEGORIES.slice(0, 6);
-    
+
     return (
       <Animated.View style={[
         styles.categoriesContainer,
         {
           opacity: categoriesAnim,
           transform: [{ translateY: categoriesAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [30, 0]
-          })}]
+              inputRange: [0, 1],
+              outputRange: [30, 0]
+            })}]
         }
       ]}>
         <View style={styles.categoriesHeader}>
           <Animated.View style={{
             transform: [{ translateX: headerTitleAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [-20, 0]
-            })}]
+                inputRange: [0, 1],
+                outputRange: [-20, 0]
+              })}]
           }}>
             <Text style={styles.categoriesTitle}>Explore Categories</Text>
           </Animated.View>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               setShowAllCategories(!showAllCategories);
@@ -969,7 +1005,7 @@ const TravelingScreen = () => {
             </Text>
           </TouchableOpacity>
         </View>
-        
+
         <Animated.FlatList
           horizontal
           data={displayCategories}
@@ -997,11 +1033,11 @@ const TravelingScreen = () => {
   }, [showAllCategories, activeCategory, handleCategoryPress, categoriesAnim, headerTitleAnim]);
 
   // ==========================================
-  // RENDER PACKAGES GRID - FIXED
+  // RENDER PACKAGES GRID
   // ==========================================
   const renderPackagesGrid = useCallback(() => {
     if (!paginatedData || paginatedData.length === 0) return null;
-    
+
     const rows = [];
     for (let i = 0; i < paginatedData.length; i += 2) {
       const row = [];
@@ -1018,10 +1054,10 @@ const TravelingScreen = () => {
               const globalIndex = rowIndex * 2 + colIndex;
               return (
                 <View key={item._id || `item-${globalIndex}`} style={styles.cardContainer}>
-                  <AnimatedCard 
-                    item={item} 
-                    index={globalIndex} 
-                    onPress={openModal} 
+                  <AnimatedCard
+                    item={item}
+                    index={globalIndex}
+                    onPress={openModal}
                     isGuest={isGuest}
                   />
                 </View>
@@ -1033,19 +1069,22 @@ const TravelingScreen = () => {
     );
   }, [paginatedData, openModal, isGuest]);
 
+  // ==========================================
+  // MAIN RENDER
+  // ==========================================
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      
+
       {isGuest && (
         <Animated.View style={[
           styles.guestBanner,
           {
             opacity: fadeAnim,
             transform: [{ translateY: fadeAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [-10, 0]
-            })}]
+                inputRange: [0, 1],
+                outputRange: [-10, 0]
+              })}]
           }
         ]}>
           <Ionicons name="information-circle" size={18} color="#1a1a1a" />
@@ -1054,7 +1093,7 @@ const TravelingScreen = () => {
           </Text>
         </Animated.View>
       )}
-      
+
       <View style={styles.container}>
         <View style={styles.fixedHeader}>
           <Animated.View style={[
@@ -1062,13 +1101,13 @@ const TravelingScreen = () => {
             {
               opacity: heroAnim,
               transform: [{ scale: heroAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0.95, 1]
-              })}]
+                  inputRange: [0, 1],
+                  outputRange: [0.95, 1]
+                })}]
             }
           ]}>
-            <ImageBackground 
-              source={require('../../../assets/tdcaq.png')} 
+            <ImageBackground
+              source={require('../../../assets/tdcaq.png')}
               style={styles.heroImage}
               imageStyle={styles.heroImageStyle}
             >
@@ -1083,24 +1122,24 @@ const TravelingScreen = () => {
                   ]}>
                     Find Your Next{'\n'}Adventure
                   </Animated.Text>
-                  
+
                   <Animated.View style={[
                     styles.searchBar,
                     {
                       opacity: searchAnim,
                       transform: [{ scale: searchAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.9, 1]
-                      })}]
+                          inputRange: [0, 1],
+                          outputRange: [0.9, 1]
+                        })}]
                     }
                   ]}>
                     <Ionicons name="search" size={20} color="#999" />
-                    <TextInput 
-                      placeholder="Where to go?" 
+                    <TextInput
+                      placeholder="Where to go?"
                       placeholderTextColor="#999"
-                      style={styles.searchInput} 
-                      value={searchQuery} 
-                      onChangeText={setSearchQuery} 
+                      style={styles.searchInput}
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
                     />
                     {searchQuery.length > 0 && (
                       <TouchableOpacity onPress={() => setSearchQuery('')}>
@@ -1113,26 +1152,25 @@ const TravelingScreen = () => {
             </ImageBackground>
           </Animated.View>
 
-          {/* MODERN HORIZONTAL CATEGORIES */}
           {renderCategories()}
 
           <Animated.View style={[
             styles.listHeader,
-            { 
+            {
               opacity: fadeAnim,
               transform: [{ translateY: fadeAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [10, 0]
-              })}]
+                  inputRange: [0, 1],
+                  outputRange: [10, 0]
+                })}]
             }
           ]}>
             <Animated.Text style={[
               styles.listTitle,
               {
                 transform: [{ translateX: headerTitleAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [-15, 0]
-                })}]
+                    inputRange: [0, 1],
+                    outputRange: [-15, 0]
+                  })}]
               }
             ]}>
               {activeCategory === 'All' ? 'All Packages' : activeCategory}
@@ -1149,7 +1187,7 @@ const TravelingScreen = () => {
         </View>
 
         {loading ? (
-          <ScrollView 
+          <ScrollView
             style={styles.packagesScrollView}
             contentContainerStyle={styles.skeletonContainer}
             showsVerticalScrollIndicator={false}
@@ -1168,12 +1206,12 @@ const TravelingScreen = () => {
         ) : (
           <Animated.View style={[
             styles.packagesScrollContainer,
-            { 
+            {
               opacity: slideUpAnim,
               transform: [{ translateY: slideUpAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [30, 0]
-              })}]
+                  inputRange: [0, 1],
+                  outputRange: [30, 0]
+                })}]
             }
           ]}>
             <ScrollView
@@ -1187,17 +1225,15 @@ const TravelingScreen = () => {
               {paginatedData && paginatedData.length > 0 ? (
                 <>
                   {renderPackagesGrid()}
-                  
-                  {/* Load More Button - appears when there are more items to load */}
+
                   {hasMore && (
-                    <LoadMoreIndicator 
+                    <LoadMoreIndicator
                       isLoading={isLoadingMore}
                       onLoadMore={handleLoadMore}
                       hasMore={hasMore}
                     />
                   )}
-                  
-                  {/* Show "All loaded" message when all items are visible */}
+
                   {!hasMore && filteredData && filteredData.length > ITEMS_PER_PAGE && (
                     <View style={styles.allLoadedContainer}>
                       <Text style={styles.allLoadedText}>
@@ -1212,7 +1248,7 @@ const TravelingScreen = () => {
                   <Text style={styles.emptyText}>No packages found.</Text>
                   <Text style={styles.emptySubText}>Try adjusting your search or category</Text>
                   {isGuest && (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.signUpButton}
                       onPress={() => navigation.navigate('Login')}
                     >
@@ -1223,7 +1259,6 @@ const TravelingScreen = () => {
               )}
             </ScrollView>
 
-            {/* Enhanced Pagination Controls */}
             {totalPages > 1 && (
               <PaginationControls
                 currentPage={currentPage}
@@ -1236,10 +1271,13 @@ const TravelingScreen = () => {
         )}
       </View>
 
-      <Modal 
-        visible={modalVisible} 
+      {/* ========================================== */}
+      {/* PACKAGE DETAIL MODAL */}
+      {/* ========================================== */}
+      <Modal
+        visible={modalVisible}
         transparent
-        animationType="none" 
+        animationType="none"
         onRequestClose={closeModal}
         statusBarTranslucent
       >
@@ -1252,8 +1290,8 @@ const TravelingScreen = () => {
               <>
                 <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
                   <View style={styles.modalImageContainer}>
-                    <Image 
-                      source={{ uri: selectedDestination.image || 'https://via.placeholder.com/400' }} 
+                    <Image
+                      source={{ uri: selectedDestination.image || 'https://via.placeholder.com/400' }}
                       style={styles.modalImage}
                       resizeMode="cover"
                     />
@@ -1261,8 +1299,8 @@ const TravelingScreen = () => {
                       colors={['rgba(0,0,0,0.6)', 'transparent', 'rgba(0,0,0,0.5)']}
                       style={styles.modalImageGradient}
                     />
-                    <TouchableOpacity 
-                      style={styles.modalCloseButton} 
+                    <TouchableOpacity
+                      style={styles.modalCloseButton}
                       onPress={closeModal}
                       activeOpacity={0.8}
                     >
@@ -1270,7 +1308,7 @@ const TravelingScreen = () => {
                         <Ionicons name="arrow-back" size={24} color="#FFF" />
                       </BlurView>
                     </TouchableOpacity>
-                    
+
                     <View style={styles.modalImageContent}>
                       <View style={styles.modalCategoryBadge}>
                         <Text style={styles.modalCategoryText}>{selectedDestination.category || 'Package'}</Text>
@@ -1282,7 +1320,7 @@ const TravelingScreen = () => {
                       </View>
                     </View>
                   </View>
-                  
+
                   <View style={styles.modalDetails}>
                     <View style={styles.modalPriceRow}>
                       <View>
@@ -1311,7 +1349,7 @@ const TravelingScreen = () => {
                         <Ionicons name="list-outline" size={20} color="#FFA500" />
                         <Text style={styles.modalSectionTitle}>Requirements & Important Info</Text>
                       </View>
-                      
+
                       <View style={styles.requirementsList}>
                         <View style={styles.requirementItem}>
                           <Ionicons name="document-text-outline" size={20} color="#f9c349" />
@@ -1348,7 +1386,7 @@ const TravelingScreen = () => {
                         <Text style={styles.policyText}>• Name changes allowed with additional fee</Text>
                       </View>
                     </View>
-                    
+
                     <View style={{ height: 100 }} />
                   </View>
                 </ScrollView>
@@ -1360,13 +1398,13 @@ const TravelingScreen = () => {
                         <Text style={styles.footerLabel}>Total Price</Text>
                         <Text style={styles.footerPrice}>{selectedDestination.price || 'PKR 0'}</Text>
                       </View>
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         style={styles.bookButton}
                         onPress={() => handleBookNow(selectedDestination)}
                         activeOpacity={0.8}
                       >
                         <LinearGradient
-                          colors={['#1a1a1a', '#1a1a1a']}
+                          colors={['#1a1a1a', '#2d2d2d']}
                           style={styles.bookButtonGradient}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 0 }}
@@ -1389,10 +1427,13 @@ const TravelingScreen = () => {
   );
 };
 
+// ==========================================
+// STYLES
+// ==========================================
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: 'transparent' },
+  safeArea: { flex: 1, backgroundColor: '#F8F9FA' },
   container: { flex: 1, backgroundColor: '#F8F9FA' },
-  
+
   guestBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1409,7 +1450,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginLeft: 8
   },
-  
+
   fixedHeader: {
     backgroundColor: '#F8F9FA',
     zIndex: 10,
@@ -1419,27 +1460,37 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  
+
   heroContainer: { width: '100%', height: 130, overflow: 'hidden' },
   heroImage: { width: '100%', height: '100%' },
   heroImageStyle: { resizeMode: 'stretch' },
   heroGradient: { flex: 1, justifyContent: 'flex-end' },
   heroContent: { paddingHorizontal: 20, paddingTop: 40, paddingBottom: 10 },
-  heroMainText: { 
-    color: '#FFF', fontSize: 28, fontWeight: 'bold',
-    textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3, marginBottom: 16,
+  heroMainText: {
+    color: '#FFF',
+    fontSize: 28,
+    fontWeight: 'bold',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+    marginBottom: 16,
   },
-  
-  searchBar: { 
-    flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.95)', height: 38, 
-    borderRadius: 14, alignItems: 'center', paddingHorizontal: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1, shadowRadius: 8, elevation: 5,
+
+  searchBar: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    height: 38,
+    borderRadius: 14,
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
   searchInput: { flex: 1, marginLeft: 8, fontSize: 14, color: '#333' },
-  
-  // MODERN HORIZONTAL CATEGORIES STYLES
+
   categoriesContainer: {
     paddingVertical: 8,
     backgroundColor: '#F8F9FA',
@@ -1473,8 +1524,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 4,
   },
-  
-  // CATEGORY CARD - SMALL & HORIZONTAL
+
   categoryCardWrapper: {
     width: width * 0.22,
     marginRight: 0,
@@ -1548,7 +1598,7 @@ const styles = StyleSheet.create({
     height: 2,
     borderRadius: 2,
   },
-  
+
   listHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1571,30 +1621,30 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 8,
   },
-  
+
   packagesScrollContainer: { flex: 1, paddingBottom: 50 },
   packagesScrollView: { flex: 1, paddingBottom: 50, paddingTop: 6 },
   packagesScrollContent: { paddingHorizontal: 20, paddingBottom: 50 },
   packagesGridContainer: { paddingBottom: 10 },
-  
+
   skeletonContainer: { paddingHorizontal: 20, paddingTop: 20 },
-  
-  flatListRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
+
+  flatListRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 15,
   },
   cardContainer: {
     width: (width - 50) / 2,
   },
-  mainCard: { 
-    backgroundColor: '#FFF', 
-    borderRadius: 16, 
+  mainCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#000', 
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1, 
-    shadowRadius: 12, 
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
     elevation: 4,
   },
   cardImg: { width: '100%', height: 110, resizeMode: 'cover' },
@@ -1610,8 +1660,7 @@ const styles = StyleSheet.create({
   cardPrice: { fontSize: 16, fontWeight: 'bold', color: '#1a1a1a' },
   ratingBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF9E6', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6 },
   ratingText: { fontSize: 10, marginLeft: 3, color: '#f9c349', fontWeight: '600' },
-  
-  // ENHANCED PAGINATION STYLES
+
   paginationContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -1693,8 +1742,7 @@ const styles = StyleSheet.create({
     color: '#999',
     fontWeight: '600',
   },
-  
-  // LOAD MORE STYLES
+
   loadMoreContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -1732,11 +1780,11 @@ const styles = StyleSheet.create({
     color: '#999',
     fontWeight: '500',
   },
-  
+
   emptyState: { alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
   emptyText: { textAlign: 'center', color: '#999', marginTop: 20, fontSize: 16, fontWeight: '600' },
   emptySubText: { textAlign: 'center', color: '#CCC', marginTop: 8, fontSize: 13 },
-  
+
   signUpButton: {
     marginTop: 20,
     backgroundColor: '#1a1a1a',
@@ -1749,7 +1797,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14
   },
-  
+
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
   modalContent: { flex: 1, backgroundColor: '#FFF' },
   modalImageContainer: { height: height * 0.3, position: 'relative' },
@@ -1774,20 +1822,20 @@ const styles = StyleSheet.create({
   modalSectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   modalSectionTitle: { fontSize: 18, fontWeight: '700', color: '#2D3748', marginLeft: 8 },
   modalDescription: { color: '#4A5568', lineHeight: 24, fontSize: 15 },
-  requirementsList: { 
+  requirementsList: {
     gap: 12,
   },
-  requirementItem: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: '#F8F9FA', 
-    padding: 12, 
-    borderRadius: 10, 
+  requirementItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    padding: 12,
+    borderRadius: 10,
   },
-  requirementText: { 
-    flex: 1, 
-    fontSize: 13, 
-    color: '#2D3748', 
+  requirementText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#2D3748',
     fontWeight: '500',
     marginLeft: 12
   },
