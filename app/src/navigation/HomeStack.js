@@ -11,6 +11,7 @@ import BookingScreen from "../components/BookingScreen";
 import PaymentScreen from "../components/PaymentScreen";
 import TravelingScreen from "../components/TravellingScreen";
 import EditProfileScreen from "../screens/Social/EditProfileScreen";
+import ChatHistoryScreen from "../screens/ChatHistoryScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -29,6 +30,7 @@ export default function HomeStack() {
       <Stack.Screen name="Payment" component={PaymentScreen} />
       <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
       <Stack.Screen name="TravellingScreen" component={TravelingScreen} options={{ headerShown: false }}/>
+      <Stack.Screen name="ChatHistory" component={ChatHistoryScreen} />
       
       
 

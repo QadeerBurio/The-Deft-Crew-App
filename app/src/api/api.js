@@ -4,6 +4,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, Platform } from 'react-native';
 
 const getBaseURL = () => {
+  if (__DEV__) {
+    return 'http://192.168.18.128:5000/api';
+  }
   return 'https://the-deft-crew-production.up.railway.app/api';
 };
 
