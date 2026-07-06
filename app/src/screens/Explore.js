@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Ionicons, FontAwesome5, Feather, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
 
@@ -24,15 +24,15 @@ const COLUMN_WIDTH = (width - 60) / 2;
 // ─── Particle Background ──────────────────────────────────────────────
 const ParticleBackground = () => {
   const particles = useRef(
-    [...Array(20)].map(() => ({
+    [...Array(25)].map(() => ({
       x: Math.random() * width,
       y: Math.random() * 900,
       size: Math.random() * 6 + 2,
       opacity: new Animated.Value(0),
       duration: 4000 + Math.random() * 4000,
       delay: Math.random() * 3000,
-      color: ['#f9c349', '#6366f1', '#a855f7', '#f43f5e', '#10b981', '#06b6d4', '#fb923c'][
-        Math.floor(Math.random() * 7)
+      color: ['#f9c349', '#6366f1', '#a855f7', '#f43f5e', '#10b981', '#06b6d4', '#fb923c', '#8b5cf6', '#ec4899'][
+        Math.floor(Math.random() * 9)
       ],
     }))
   ).current;
@@ -80,7 +80,7 @@ const ParticleBackground = () => {
   );
 };
 
-// ─── Enhanced Skeleton with Shimmer ──────────────────────────────────
+// ─── Skeleton ──────────────────────────────────────────────────────────
 const DashboardSkeleton = () => {
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
@@ -142,12 +142,12 @@ const DashboardSkeleton = () => {
           </View>
           <View style={styles.gridContainer}>
             <View style={styles.gridColumn}>
-              <ShimmerBlock style={{ width: '100%', height: 220, borderRadius: 28, marginBottom: 20 }} />
+              <ShimmerBlock style={{ width: '100%', height: 230, borderRadius: 28, marginBottom: 20 }} />
               <ShimmerBlock style={{ width: '100%', height: 180, borderRadius: 28 }} />
             </View>
             <View style={[styles.gridColumn, { marginTop: 25 }]}>
               <ShimmerBlock style={{ width: '100%', height: 180, borderRadius: 28, marginBottom: 20 }} />
-              <ShimmerBlock style={{ width: '100%', height: 220, borderRadius: 28 }} />
+              <ShimmerBlock style={{ width: '100%', height: 230, borderRadius: 28 }} />
             </View>
           </View>
           <View style={{ marginHorizontal: 24, marginTop: 5 }}>
@@ -166,6 +166,7 @@ const AnimatedGridCard = ({ item, index, navigation }) => {
   const slideAnim = useRef(new Animated.Value(24)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -191,7 +192,6 @@ const AnimatedGridCard = ({ item, index, navigation }) => {
       }),
     ]).start();
 
-    // Glow pulse for large cards
     if (item.size === 'large') {
       Animated.loop(
         Animated.sequence([
@@ -206,6 +206,17 @@ const AnimatedGridCard = ({ item, index, navigation }) => {
             useNativeDriver: true,
           }),
         ])
+      ).start();
+    }
+
+    if (item.hasShimmer) {
+      Animated.loop(
+        Animated.timing(shimmerAnim, {
+          toValue: 1,
+          duration: 1500,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
       ).start();
     }
   }, [index]);
@@ -251,6 +262,23 @@ const AnimatedGridCard = ({ item, index, navigation }) => {
     outputRange: [0, 0.15],
   });
 
+  const shimmerTranslate = shimmerAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-100, 100],
+  });
+
+  const cardHeight = item.size === 'large' ? 230 : 180;
+
+  // Render icon function
+  const renderIcon = () => {
+    // If iconComponent is provided as React element
+    if (item.iconComponent) {
+      return item.iconComponent;
+    }
+    // Fallback to MaterialCommunityIcons
+    return <MaterialCommunityIcons name={item.icon || 'star'} size={24} color="#FFF" />;
+  };
+
   return (
     <Animated.View
       style={{
@@ -271,7 +299,7 @@ const AnimatedGridCard = ({ item, index, navigation }) => {
       )}
       <TouchableOpacity
         activeOpacity={0.9}
-        style={[styles.gridItem, { height: item.size === 'large' ? 230 : 180 }]}
+        style={[styles.gridItem, { height: cardHeight }]}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           navigation.navigate(item.routeName);
@@ -280,46 +308,52 @@ const AnimatedGridCard = ({ item, index, navigation }) => {
         onPressOut={handlePressOut}
       >
         <LinearGradient
-          colors={['#FFFFFF', '#F8FAFC']}
-          style={styles.whiteCard}
+          colors={item.gradientColors || ['#FFFFFF', '#F8FAFC']}
+          style={[styles.whiteCard, item.cardStyle]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
+          {item.hasShimmer && (
+            <Animated.View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                transform: [{ translateX: shimmerTranslate }],
+                opacity: 0.3,
+              }}
+            >
+              <LinearGradient
+                colors={['transparent', 'rgba(255,255,255,0.8)', 'transparent']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+            </Animated.View>
+          )}
+
           <View style={styles.cardHeader}>
             <LinearGradient
               colors={item.colors}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.iconCircle}
+              style={[styles.iconCircle, item.iconCircleStyle]}
             >
-              <MaterialCommunityIcons name={item.icon} size={24} color="#FFF" />
+              {renderIcon()}
             </LinearGradient>
-            <View style={styles.cardStatus}>
-              <Animated.View
-                style={[
-                  styles.statusDot,
-                  {
-                    backgroundColor: item.colors[0],
-                    transform: [
-                      {
-                        scale: glowAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [0.8, 1.2],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
-              />
+            <View style={[styles.cardNumberBadge, item.badgeStyle]}>
+              <Text style={[styles.cardNumberText, item.badgeTextStyle]}>{item.number}</Text>
             </View>
           </View>
 
           <View style={styles.cardInfo}>
-            <Text style={styles.cardMainText}>{item.name}</Text>
-            <Text style={styles.cardSubText}>{item.sub}</Text>
+            <Text style={[styles.cardMainText, item.titleStyle]}>{item.name}</Text>
+            <Text style={[styles.cardSubText, item.subStyle]}>{item.sub}</Text>
           </View>
 
-          <View style={styles.plusIcon}>
+          <View style={[styles.plusIcon, item.plusStyle]}>
             <LinearGradient
               colors={item.colors}
               start={{ x: 0, y: 0 }}
@@ -330,8 +364,7 @@ const AnimatedGridCard = ({ item, index, navigation }) => {
             </LinearGradient>
           </View>
 
-          {/* Decorative gradient line */}
-          <View style={styles.cardDecorLine}>
+          <View style={[styles.cardDecorLine, item.decorStyle]}>
             <LinearGradient
               colors={item.colors}
               start={{ x: 0, y: 0 }}
@@ -345,8 +378,8 @@ const AnimatedGridCard = ({ item, index, navigation }) => {
   );
 };
 
-// ─── Main Dashboard ──────────────────────────────────────────────────
-const ModernDashboard = () => {
+// ─── StudentDashboard ──────────────────────────────────────────────────
+const Explore = () => {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(true);
   const [showSkeleton, setShowSkeleton] = useState(false);
@@ -459,39 +492,83 @@ const ModernDashboard = () => {
   const menuItems = [
     {
       id: 1,
-      name: 'SkillsShare',
-      routeName: 'AiSkillsScreen',
-      icon: 'brain',
-      sub: 'tdc. Mastery',
-      colors: ['#6366f1', '#a855f7'],
+      number: '01',
+      name: 'Exclusive Discounts',
+      routeName: 'Brands',
+      sub: 'Student Offers & Deals',
+      colors: ['#f9c349', '#f59e0b'],
+      gradientColors: ['#FFFBEB', '#FEF3C7'],
       size: 'large',
+      hasShimmer: true,
+      cardStyle: { borderColor: '#FDE68A' },
+      iconCircleStyle: { shadowColor: '#f9c349' },
+      badgeStyle: { borderColor: '#FDE68A', backgroundColor: '#FFFBEB' },
+      badgeTextStyle: { color: '#D97706' },
+      titleStyle: { color: '#92400E' },
+      subStyle: { color: '#B45309' },
+      plusStyle: { borderColor: '#FDE68A' },
+      decorStyle: { left: 20, right: 20 },
+      iconComponent: <FontAwesome5 name="tags" size={24} color="#FFF" />,
     },
     {
       id: 2,
-      name: 'Events',
+      number: '02',
+      name: 'Events Hub',
       routeName: 'Events',
-      icon: 'calendar-star',
-      sub: 'Meetups & Conferences',
-      colors: ['#f43f5e', '#fb923c'],
+      sub: 'Campus & Community',
+      colors: ['#ec4899', '#f43f5e'],
+      gradientColors: ['#FDF2F8', '#FCE7F3'],
       size: 'small',
+      hasShimmer: false,
+      cardStyle: { borderColor: '#FBCFE8' },
+      iconCircleStyle: { shadowColor: '#ec4899' },
+      badgeStyle: { borderColor: '#FBCFE8', backgroundColor: '#FDF2F8' },
+      badgeTextStyle: { color: '#BE185D' },
+      titleStyle: { color: '#831843' },
+      subStyle: { color: '#9D174D' },
+      plusStyle: { borderColor: '#FBCFE8' },
+      decorStyle: { left: 20, right: 20 },
+      iconComponent: <Ionicons name="calendar" size={24} color="#FFF" />,
     },
     {
       id: 3,
-      name: 'Resume',
-      routeName: 'ResumeDashboard',
-      icon: 'file-document-edit',
-      sub: 'Builder & Templates',
-      colors: ['#06b6d4', '#3b82f6'],
+      number: '03',
+      name: 'Travel & Explore',
+      routeName: 'Travelling',
+      sub: 'Adventure Awaits',
+      colors: ['#06b6d4', '#0ea5e9'],
+      gradientColors: ['#F0F9FF', '#E0F2FE'],
       size: 'small',
+      hasShimmer: false,
+      cardStyle: { borderColor: '#BAE6FD' },
+      iconCircleStyle: { shadowColor: '#06b6d4' },
+      badgeStyle: { borderColor: '#BAE6FD', backgroundColor: '#F0F9FF' },
+      badgeTextStyle: { color: '#0369A1' },
+      titleStyle: { color: '#0C4A6E' },
+      subStyle: { color: '#075985' },
+      plusStyle: { borderColor: '#BAE6FD' },
+      decorStyle: { left: 20, right: 20 },
+      iconComponent: <MaterialIcons name="travel-explore" size={24} color="#FFF" />,
     },
     {
       id: 4,
-      name: 'Jobs',
-      routeName: 'CareerHub',
-      icon: 'briefcase-variant',
-      sub: 'Careers & Hiring',
-      colors: ['#f9c349', '#f59e0b'],
+      number: '04',
+      name: 'Social Connect',
+      routeName: 'Social',
+      sub: 'Network & Collaborate',
+      colors: ['#8b5cf6', '#6d28d9'],
+      gradientColors: ['#F5F3FF', '#EDE9FE'],
       size: 'large',
+      hasShimmer: true,
+      cardStyle: { borderColor: '#DDD6FE' },
+      iconCircleStyle: { shadowColor: '#8b5cf6' },
+      badgeStyle: { borderColor: '#DDD6FE', backgroundColor: '#F5F3FF' },
+      badgeTextStyle: { color: '#6D28D9' },
+      titleStyle: { color: '#4C1D95' },
+      subStyle: { color: '#5B21B6' },
+      plusStyle: { borderColor: '#DDD6FE' },
+      decorStyle: { left: 20, right: 20 },
+      iconComponent: <MaterialCommunityIcons name="account-multiple" size={24} color="#FFF" />,
     },
   ];
 
@@ -528,14 +605,23 @@ const ModernDashboard = () => {
             <View>
               <View style={styles.brandRow}>
                 <Text style={styles.brandTitle}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
-                
               </View>
               <View style={styles.subBadge}>
-                
-                
+                <View style={styles.subBadgeDot} />
+                <Text style={styles.brandSubtitle}>STUDENT HUB</Text>
               </View>
             </View>
-            
+            <View style={styles.headerRight}>
+              <View style={styles.headerBadge}>
+                <Text style={styles.headerBadgeText}>🎓 STUDENT</Text>
+              </View>
+            </View>
+          </Animated.View>
+
+          {/* Welcome Message */}
+          <Animated.View style={[styles.welcomeContainer, { opacity: sectionFade }]}>
+            <Text style={styles.welcomeTitle}>Welcome to Your Hub! 🚀</Text>
+            <Text style={styles.welcomeSub}>Explore exclusive features designed just for you</Text>
           </Animated.View>
 
           {/* Section Label */}
@@ -543,7 +629,7 @@ const ModernDashboard = () => {
             style={[styles.sectionLabelContainer, { opacity: sectionFade }]}
           >
             <View style={styles.sectionLine} />
-            <Text style={styles.sectionLabel}>DIGITAL WORKSPACE</Text>
+            <Text style={styles.sectionLabel}>EXPLORE FEATURES</Text>
             <View style={styles.sectionLine} />
           </Animated.View>
 
@@ -575,7 +661,7 @@ const ModernDashboard = () => {
             </View>
           </View>
 
-          {/* Stats Footer */}
+          {/* Quick Stats */}
           <Animated.View
             style={[
               styles.statsContainer,
@@ -584,35 +670,37 @@ const ModernDashboard = () => {
           >
             <View style={styles.statItem}>
               <LinearGradient
-                colors={['rgba(99, 102, 241, 0.12)', 'rgba(168, 85, 247, 0.12)']}
-                style={styles.statIconBox}
-              >
-                <Ionicons name="people" size={20} color="#6366f1" />
-              </LinearGradient>
-              <Text style={styles.statNumber}>2.4k</Text>
-              <Text style={styles.statLabel}>Members</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <LinearGradient
                 colors={['rgba(249, 195, 73, 0.12)', 'rgba(245, 158, 11, 0.12)']}
                 style={styles.statIconBox}
               >
-                <Ionicons name="briefcase" size={20} color="#f9c349" />
+                <FontAwesome5 name="tags" size={18} color="#f9c349" />
               </LinearGradient>
-              <Text style={styles.statNumber}>50+</Text>
-              <Text style={styles.statLabel}>Jobs</Text>
+              <Text style={styles.statNumber}>100+</Text>
+              <Text style={styles.statLabel}>Discounts</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <LinearGradient
-                colors={['rgba(244, 63, 94, 0.12)', 'rgba(251, 146, 60, 0.12)']}
+                colors={['rgba(236, 72, 153, 0.12)', 'rgba(244, 63, 94, 0.12)']}
                 style={styles.statIconBox}
               >
-                <Ionicons name="calendar" size={20} color="#f43f5e" />
+                <Ionicons name="calendar" size={18} color="#ec4899" />
               </LinearGradient>
-              <Text style={styles.statNumber}>12</Text>
+              <Text style={styles.statNumber}>25+</Text>
               <Text style={styles.statLabel}>Events</Text>
+            </View>
+           
+            
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <LinearGradient
+                colors={['rgba(139, 92, 246, 0.12)', 'rgba(109, 40, 217, 0.12)']}
+                style={styles.statIconBox}
+              >
+                <MaterialCommunityIcons name="account-multiple" size={18} color="#8b5cf6" />
+              </LinearGradient>
+              <Text style={styles.statNumber}>500+</Text>
+              <Text style={styles.statLabel}>Connections</Text>
             </View>
           </Animated.View>
         </ScrollView>
@@ -653,19 +741,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingTop: Platform.OS === 'android' ? 18 : 12,
-    marginBottom: 20,
+    marginBottom: 8,
   },
   brandRow: { flexDirection: 'row', alignItems: 'baseline' },
   brandTitle: {
     fontSize: 36,
     fontWeight: '900',
     color: '#0F172A',
-    letterSpacing: -1.5,
-  },
-  brandHub: {
-    fontSize: 36,
-    fontWeight: '300',
-    color: '#64748B',
     letterSpacing: -1.5,
   },
   subBadge: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
@@ -682,15 +764,43 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     letterSpacing: 2,
   },
-  profileBtn: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden' },
-  profileCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
+  headerRight: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  profileInitial: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
+  headerBadge: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  headerBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#D97706',
+    letterSpacing: 0.5,
+  },
+
+  // Welcome
+  welcomeContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 20,
+    marginTop: 4,
+  },
+  welcomeTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.5,
+  },
+  welcomeSub: {
+    fontSize: 13,
+    color: '#94A3B8',
+    marginTop: 4,
+    fontWeight: '500',
+  },
 
   // Section
   sectionLabelContainer: {
@@ -732,7 +842,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     padding: 20,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#F1F5F9',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -740,14 +850,15 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 4,
     position: 'relative',
+    overflow: 'hidden',
   },
   cardDecorLine: {
     position: 'absolute',
     top: 0,
     left: 28,
     right: 28,
-    height: 2,
-    borderRadius: 1,
+    height: 2.5,
+    borderRadius: 1.5,
     overflow: 'hidden',
   },
   decorLineInner: { width: '100%', height: '100%' },
@@ -771,17 +882,22 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 4,
   },
-  cardStatus: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+  cardNumberBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
   },
-  statusDot: { width: 7, height: 7, borderRadius: 3.5 },
+  cardNumberText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: 0.5,
+  },
   cardInfo: { flex: 1, justifyContent: 'flex-end' },
   cardMainText: {
     color: '#0F172A',
@@ -855,4 +971,4 @@ const styles = StyleSheet.create({
   statDivider: { width: 1, height: 45, backgroundColor: '#F1F5F9' },
 });
 
-export default ModernDashboard;
+export default Explore;

@@ -12,6 +12,7 @@ import VerifyOTP from "../screens/VerifyOTPScreen"
 import ResetPassword from "../screens/ResetPasswordScreen"
 import VerificationScreen from "../screens/VerificationScreen";
 import TDCFlow from "../screens/SplashScren";
+import ResumeStack from "./ResumeNavigator";
 
 const Stack = createNativeStackNavigator();
 
@@ -30,6 +31,11 @@ export default function AppNavigator() {
           <Stack.Screen name="ForgotPassword" component={ForgotPassword}/>
           <Stack.Screen name="VerifyOTP" component={VerifyOTP}/>
           <Stack.Screen name="ResetPassword" component={ResetPassword}/>
+          <Stack.Screen 
+        name="Resume" 
+        component={ResumeStack}
+        options={{ headerShown: false }}
+      />
         </>
       ) : (
         // User logged in OR guest mode - Show main app

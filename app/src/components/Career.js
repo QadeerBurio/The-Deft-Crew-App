@@ -241,6 +241,11 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
         <Animated.View style={[styles.applyModalContent, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
           <View style={styles.modalDragHandle} />
           
+          {/* Close X Button */}
+          <TouchableOpacity style={styles.closeXButton} onPress={onClose}>
+            <Ionicons name="close" size={24} color="#1a1a1a" />
+          </TouchableOpacity>
+          
           {/* Application Status Banner */}
           {myApplication && (
             <View style={[styles.statusBanner, { backgroundColor: getStatusColor(myApplication.status) + "15" }]}>
@@ -498,6 +503,12 @@ const InterviewDetailsModal = ({ visible, interview, onClose }) => {
         <TouchableWithoutFeedback onPress={onClose}><View style={styles.interviewModalBackdrop} /></TouchableWithoutFeedback>
         <Animated.View style={[styles.interviewModalContent, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
           <View style={styles.interviewModalHandle} />
+          
+          {/* Close X Button */}
+          <TouchableOpacity style={styles.closeXButton} onPress={onClose}>
+            <Ionicons name="close" size={24} color="#1a1a1a" />
+          </TouchableOpacity>
+          
           <View style={styles.interviewModalHeader}>
             <View style={styles.interviewModalIcon}>
               <MaterialCommunityIcons name="calendar-clock" size={28} color="#f9c349" />
@@ -592,6 +603,12 @@ const ApplicationsModal = ({ visible, applications, onClose, onInterviewPress })
         <TouchableWithoutFeedback onPress={onClose}><View style={StyleSheet.absoluteFill} /></TouchableWithoutFeedback>
         <View style={styles.applicationsModalContent}>
           <View style={styles.modalDragHandle} />
+          
+          {/* Close X Button */}
+          <TouchableOpacity style={styles.closeXButton} onPress={onClose}>
+            <Ionicons name="close" size={24} color="#1a1a1a" />
+          </TouchableOpacity>
+          
           <Text style={styles.applicationsModalTitle}>My Applications</Text>
           <Text style={styles.applicationsModalCount}>{applications.length} applications</Text>
           {applications.length === 0 ? (
@@ -886,6 +903,12 @@ const Career = ({ navigation }) => {
         <TouchableWithoutFeedback onPress={() => setShowFilters(false)}><View style={StyleSheet.absoluteFill} /></TouchableWithoutFeedback>
         <View style={styles.filterModalContent}>
           <View style={styles.modalDragHandle} />
+          
+          {/* Close X Button */}
+          <TouchableOpacity style={styles.closeXButton} onPress={() => setShowFilters(false)}>
+            <Ionicons name="close" size={24} color="#1a1a1a" />
+          </TouchableOpacity>
+          
           <Text style={styles.filterModalTitle}>Filter Jobs</Text>
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.filterGroup}>
@@ -1024,6 +1047,12 @@ const Career = ({ navigation }) => {
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}><View style={StyleSheet.absoluteFill} /></TouchableWithoutFeedback>
           <View style={styles.applyModalContent}>
             <View style={styles.modalDragHandle} />
+            
+            {/* Close X Button */}
+            <TouchableOpacity style={styles.closeXButton} onPress={() => setModalVisible(false)}>
+              <Ionicons name="close" size={24} color="#1a1a1a" />
+            </TouchableOpacity>
+            
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 30 }}>
               
               {/* Job Details Header */}
@@ -1310,7 +1339,7 @@ const Career = ({ navigation }) => {
 
 // ==================== COMPLETE STYLES ====================
 const styles = StyleSheet.create({
-  // ... (keep all existing styles the same)
+  // ... (keep all existing styles)
   container: { flex: 1, backgroundColor: "#ffffff" },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f0f0f0', backgroundColor: '#fff' },
   headerBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center', position: 'relative' },
@@ -1370,6 +1399,10 @@ const styles = StyleSheet.create({
   filterModalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
   filterModalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: height * 0.7 },
   modalDragHandle: { width: 40, height: 5, backgroundColor: '#e0e0e0', borderRadius: 3, alignSelf: 'center', marginBottom: 16 },
+  
+  // Close X Button - NEW
+  closeXButton: { position: 'absolute', top: 12, right: 16, zIndex: 10, width: 36, height: 36, borderRadius: 18, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center' },
+  
   filterModalTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a', marginBottom: 16 },
   filterGroup: { marginBottom: 16 },
   filterLabel: { fontSize: 13, fontWeight: '700', color: '#1a1a1a', marginBottom: 8 },
@@ -1443,26 +1476,19 @@ const styles = StyleSheet.create({
   applyModalExp: { fontSize: 13, color: '#666', fontWeight: '600', marginTop: 6, marginLeft: 12 },
   locTypeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
   locTypeText: { fontSize: 12, color: '#f9c349', fontWeight: '600' },
-  
-  // NEW: Status Banner Styles
   statusBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 14, marginBottom: 12, marginHorizontal: 20, borderWidth: 1, borderColor: '#f0f0f0' },
   statusDot: { width: 10, height: 10, borderRadius: 5 },
   statusBannerTitle: { fontSize: 11, color: '#999', fontWeight: '600' },
   statusBannerStatus: { fontSize: 14, fontWeight: '800' },
   statusBadgeLarge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
   statusBadgeLargeText: { fontSize: 11, fontWeight: '700' },
-  
-  // NEW: Interview Banner in Job Details
   interviewBanner: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#f9c34910', padding: 14, borderRadius: 14, marginBottom: 12, marginHorizontal: 20, borderWidth: 1, borderColor: '#f9c34920' },
   interviewBannerIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#f9c34920', justifyContent: 'center', alignItems: 'center' },
   interviewBannerTitle: { fontSize: 12, fontWeight: '700', color: '#1a1a1a' },
   interviewBannerDate: { fontSize: 11, color: '#f9c349', fontWeight: '600', marginTop: 2 },
-  
-  // Application Info Box
   applicationInfoBox: { backgroundColor: '#fafafa', padding: 12, borderRadius: 12, marginTop: 10, width: '100%', borderWidth: 1, borderColor: '#f0f0f0' },
   applicationInfoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 6 },
   applicationInfoText: { fontSize: 12, color: '#666', flex: 1, lineHeight: 18 },
-  
   detailSection: { marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   sectionHeading: { fontSize: 14, fontWeight: '800', color: '#1a1a1a', marginBottom: 10 },
   descriptionText: { fontSize: 13, color: '#666', lineHeight: 20 },

@@ -2,14 +2,17 @@ import React from "react";
 import { View, StyleSheet, TouchableOpacity, Dimensions, Platform, StatusBar } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Svg, { Path } from "react-native-svg";
-import { Octicons, MaterialCommunityIcons, MaterialIcons, Ionicons, Foundation } from "@expo/vector-icons";
+import { Octicons, MaterialCommunityIcons, MaterialIcons, Ionicons, Foundation, FontAwesome5 } from "@expo/vector-icons";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation } from '@react-navigation/native';
 
 import HomeStack from "./HomeStack";
 import Social from "../screens/Social/Social"; 
-import CampusToolsScreen from "../screens/Courses";
+import CampusToolsScreen from "../screens/StudentDashboard";
 import Traveling from "../components/TravellingScreen";
 import CareerHub from "../components/CareerHub";
+import Explore from "../screens/Explore";
+import ProfileScreen from "../screens/ProfileScreen";
 
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get("window");
@@ -70,6 +73,12 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
     navigation.navigate("Social");
   };
 
+  // Get the current index for each tab
+  const homeIndex = state.routes.findIndex(route => route.name === "Home");
+  const exploreIndex = state.routes.findIndex(route => route.name === "Explore");
+  const campusIndex = state.routes.findIndex(route => route.name === "Campus");
+  const profileIndex = state.routes.findIndex(route => route.name === "Profile");
+
   return (
     <View style={[styles.tabBarWrapper, { height: TAB_HEIGHT + insets.bottom + 10 }]}>
       {/* Background SVG extending into bottom inset */}
@@ -81,26 +90,28 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
         {/* Home Button */}
         <TouchableOpacity 
           style={styles.tabItem}
-          onPress={() => navigation.navigate("Home")}
+          onPress={() => {
+            navigation.navigate("Home", { screen: "HomeStackMain" });
+          }}
           activeOpacity={0.7}
         >
           <Octicons 
             name="home" 
             size={24} 
-            color={state.index === 0 ? "#f9c349" : "#9AA0A6"} 
+            color={state.index === homeIndex ? "#f9c349" : "#9AA0A6"} 
           />
         </TouchableOpacity>
         
-        {/* Traveling Button */}
+        {/* Explore/Traveling Button */}
         <TouchableOpacity 
           style={styles.tabItem}
-          onPress={() => navigation.navigate("Traveling")}
+          onPress={() => navigation.navigate("Explore")}
           activeOpacity={0.7}
         >
           <MaterialIcons 
-            name="travel-explore" 
+            name="explore" 
             size={24} 
-            color={state.index === 1 ? "#f9c349" : "#9AA0A6"} 
+            color={state.index === exploreIndex ? "#f9c349" : "#9AA0A6"} 
           />
         </TouchableOpacity>
         
@@ -119,29 +130,29 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
           </View>
         </TouchableOpacity>
         
-        {/* Campus Button */}
+        {/* Campus/Tools Button */}
         <TouchableOpacity 
           style={styles.tabItem}
           onPress={() => navigation.navigate("Campus")}
           activeOpacity={0.7}
         >
-          <Ionicons 
-            name="apps-outline" 
+          <MaterialCommunityIcons 
+            name="school-outline" 
             size={24} 
-            color={state.index === 3 ? "#f9c349" : "#9AA0A6"} 
+            color={state.index === campusIndex ? "#f9c349" : "#9AA0A6"} 
           />
         </TouchableOpacity>
         
-        {/* CareerHub Button */}
+        {/* Profile Button - Fixed with proper icon and color */}
         <TouchableOpacity 
           style={styles.tabItem}
-          onPress={() => navigation.navigate("CareerHub")}
+          onPress={() => navigation.navigate("Profile")}
           activeOpacity={0.7}
         >
           <MaterialCommunityIcons 
-            name="briefcase-outline" 
+            name="account-circle" 
             size={24} 
-            color={state.index === 4 ? "#f9c349" : "#9AA0A6"} 
+            color={state.index === profileIndex ? "#f9c349" : "#9AA0A6"} 
           />
         </TouchableOpacity>
         
@@ -160,15 +171,23 @@ export default function HomeTabs() {
         screenOptions={{ 
           headerShown: false, 
           tabBarShowLabel: false,
-          contentStyle: { backgroundColor: '#FFFFFF' }
+          contentStyle: { backgroundColor: '#FFFFFF' },
+          lazy: false,
         }}
         initialRouteName="Home"
+        backBehavior="history"
       >
-        <Tab.Screen name="Home" component={HomeStack} />
-        <Tab.Screen name="Traveling" component={Traveling} />
+        <Tab.Screen 
+          name="Home" 
+          component={HomeStack}
+          options={{
+            unmountOnBlur: false,
+          }}
+        />
+        <Tab.Screen name="Explore" component={Explore} />
         <Tab.Screen name="Social" component={Social} />
         <Tab.Screen name="Campus" component={CampusToolsScreen} />
-        <Tab.Screen name="CareerHub" component={CareerHub} />
+        <Tab.Screen name="Profile" component={ProfileScreen} />
       </Tab.Navigator>
     </SafeAreaProvider>
   );
@@ -212,9 +231,9 @@ const styles = StyleSheet.create({
   },
   centerButton: {
     position: 'absolute',
-    top: -28,
-    width: 60,
-    height: 60,
+    top: -2,
+    width: 55,
+    height: 55,
     borderRadius: 30,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',

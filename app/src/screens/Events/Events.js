@@ -24,6 +24,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -763,143 +765,164 @@ export default function EventsScreen() {
         />
       </Animated.View>
 
-      {/* Event Detail Modal */}
+      {/* Event Detail Modal - Fixed for all phones */}
       <Modal
         visible={!!selectedEvent}
         animationType="slide"
+        presentationStyle="fullScreen"
         onRequestClose={() => setSelectedEvent(null)}
+        statusBarTranslucent={true}
       >
-        {selectedEvent && (
-          <View style={styles.detailScreen}>
-            <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
-              <View>
-                <Image
-                  source={{ uri: selectedEvent.image || FALLBACK_BANNER }}
-                  style={styles.detailBanner}
-                />
-                <LinearGradient
-                  colors={["rgba(0,0,0,0.1)", "rgba(0,0,0,0.85)"]}
-                  style={styles.detailBannerOverlay}
-                />
-                <TouchableOpacity
-                  onPress={() => setSelectedEvent(null)}
-                  activeOpacity={0.86}
-                  style={styles.backButtonWrap}
+        <SafeAreaView style={styles.detailScreen} edges={["top"]}>
+          {selectedEvent && (
+            <>
+              <View style={styles.detailContainer}>
+                <ScrollView 
+                  showsVerticalScrollIndicator={false} 
+                  bounces={false}
+                  contentContainerStyle={styles.detailScrollContent}
                 >
-                  <BlurView intensity={90} style={styles.roundGlass}>
-                    <Ionicons name="arrow-back" size={21} color={COLORS.accent} />
-                  </BlurView>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.detailBody}>
-                <View style={styles.detailTopRow}>
-                  <View style={[styles.detailTag, { backgroundColor: CATEGORY_CONFIG[selectedEvent.type]?.bg || COLORS.goldSoft }]}>
-                    <Ionicons
-                      name={CATEGORY_CONFIG[selectedEvent.type]?.icon || "sparkles-outline"}
-                      size={14}
-                      color={CATEGORY_CONFIG[selectedEvent.type]?.color || COLORS.primary}
+                  <View style={styles.detailImageWrapper}>
+                    <Image
+                      source={{ uri: selectedEvent.image || FALLBACK_BANNER }}
+                      style={styles.detailBanner}
+                      resizeMode="cover"
                     />
-                    <Text style={[styles.detailTagText, { color: CATEGORY_CONFIG[selectedEvent.type]?.color || COLORS.primary }]}>
-                      {selectedEvent.type}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={styles.detailTitle}>{selectedEvent.title}</Text>
-                <View style={styles.detailOrgRow}>
-                  <LinearGradient
-                    colors={[COLORS.gradientStart, COLORS.gradientEnd]}
-                    style={styles.detailAvatarSmall}
-                  >
-                    <Text style={styles.detailAvatarText}>
-                      {selectedEvent.organizer?.charAt(0) || "O"}
-                    </Text>
-                  </LinearGradient>
-                  <View>
-                    <Text style={styles.detailOrgName}>{selectedEvent.organizer || "Organizer"}</Text>
-                    <Text style={styles.detailOrgLocation}>
-                      <Ionicons name="location-outline" size={12} color={COLORS.muted} /> {selectedEvent.city || "City"}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.specRow}>
-                  <View style={styles.specCard}>
-                    <View style={styles.specIcon}>
-                      <Ionicons name="calendar-outline" size={20} color={COLORS.accent} />
-                    </View>
-                    <Text style={styles.specTitle}>Date</Text>
-                    <Text style={styles.specText}>{selectedEvent.date || "TBA"}</Text>
-                  </View>
-                  <View style={[styles.specCard, styles.specCardLast]}>
-                    <View style={styles.specIcon}>
-                      <Ionicons name="people-outline" size={20} color={COLORS.accent} />
-                    </View>
-                    <Text style={styles.specTitle}>Team</Text>
-                    <Text style={styles.specText}>{selectedEvent.teamSize || "1-4"}</Text>
-                  </View>
-                  <View style={[styles.specCard, styles.specCardLast]}>
-                    <View style={styles.specIcon}>
-                      <Ionicons name="trophy-outline" size={20} color={COLORS.accent} />
-                    </View>
-                    <Text style={styles.specTitle}>Prize</Text>
-                    <Text style={styles.specText}>{selectedEvent.prize || "TBD"}</Text>
-                  </View>
-                </View>
-                <View style={styles.sectionCard}>
-                  <Text style={styles.sectionCardTitle}>Description</Text>
-                  <Text style={styles.sectionCardBody}>
-                    {selectedEvent.description || "No description provided."}
-                  </Text>
-                </View>
-                <View style={styles.sectionCard}>
-                  <Text style={styles.sectionCardTitle}>Location</Text>
-                  <Text style={styles.sectionCardBody}>
-                    <Ionicons name="location-outline" size={14} color={COLORS.accent} /> {selectedEvent.location || "Online event"}
-                  </Text>
-                </View>
-                <View style={styles.sectionCard}>
-                  <Text style={styles.sectionCardTitle}>Contact</Text>
-                  <Text style={styles.sectionCardBody}>
-                    <Ionicons name="mail-outline" size={14} color={COLORS.accent} /> {selectedEvent.contact || "Not provided"}
-                  </Text>
-                </View>
-                <View style={{ height: 120 }} />
-              </View>
-            </ScrollView>
-            <View style={styles.stickyFooter}>
-              <BlurView intensity={92} style={styles.stickyBlur}>
-                <View style={styles.stickyContent}>
-                  <View>
-                    <Text style={styles.stickyLabel}>Register before</Text>
-                    <Text style={styles.stickyValue}>
-                      {selectedEvent.deadline || "Limited Spots"}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    activeOpacity={0.88}
-                    onPress={() => {
-                      const e = selectedEvent;
-                      setSelectedEvent(null);
-                      setTimeout(() => setRegisterEvent(e), 260);
-                    }}
-                  >
                     <LinearGradient
-                      colors={[COLORS.primary, COLORS.gradientEnd]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.stickyButton}
+                      colors={["rgba(0,0,0,0.1)", "rgba(0,0,0,0.85)"]}
+                      style={styles.detailBannerOverlay}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setSelectedEvent(null)}
+                      activeOpacity={0.86}
+                      style={styles.backButtonWrap}
                     >
-                      <Text style={styles.stickyButtonText}>Register Now</Text>
-                      <Ionicons name="rocket-outline" size={18} color={COLORS.accent} />
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </View>
-              </BlurView>
-            </View>
-          </View>
-        )}
+                      <BlurView intensity={90} style={styles.roundGlass}>
+                        <Ionicons name="arrow-back" size={21} color={COLORS.accent} />
+                      </BlurView>
+                    </TouchableOpacity>
+                  </View>
+                  
+                  <View style={styles.detailBody}>
+                    <View style={styles.detailTopRow}>
+                      <View style={[styles.detailTag, { backgroundColor: CATEGORY_CONFIG[selectedEvent.type]?.bg || COLORS.goldSoft }]}>
+                        <Ionicons
+                          name={CATEGORY_CONFIG[selectedEvent.type]?.icon || "sparkles-outline"}
+                          size={14}
+                          color={CATEGORY_CONFIG[selectedEvent.type]?.color || COLORS.primary}
+                        />
+                        <Text style={[styles.detailTagText, { color: CATEGORY_CONFIG[selectedEvent.type]?.color || COLORS.primary }]}>
+                          {selectedEvent.type}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    <Text style={styles.detailTitle}>{selectedEvent.title}</Text>
+                    
+                    <View style={styles.detailOrgRow}>
+                      <LinearGradient
+                        colors={[COLORS.gradientStart, COLORS.gradientEnd]}
+                        style={styles.detailAvatarSmall}
+                      >
+                        <Text style={styles.detailAvatarText}>
+                          {selectedEvent.organizer?.charAt(0) || "O"}
+                        </Text>
+                      </LinearGradient>
+                      <View>
+                        <Text style={styles.detailOrgName}>{selectedEvent.organizer || "Organizer"}</Text>
+                        <Text style={styles.detailOrgLocation}>
+                          <Ionicons name="location-outline" size={12} color={COLORS.muted} /> {selectedEvent.city || "City"}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.specRow}>
+                      <View style={styles.specCard}>
+                        <View style={styles.specIcon}>
+                          <Ionicons name="calendar-outline" size={20} color={COLORS.accent} />
+                        </View>
+                        <Text style={styles.specTitle}>Date</Text>
+                        <Text style={styles.specText}>{selectedEvent.date || "TBA"}</Text>
+                      </View>
+                      <View style={[styles.specCard, styles.specCardLast]}>
+                        <View style={styles.specIcon}>
+                          <Ionicons name="people-outline" size={20} color={COLORS.accent} />
+                        </View>
+                        <Text style={styles.specTitle}>Team</Text>
+                        <Text style={styles.specText}>{selectedEvent.teamSize || "1-4"}</Text>
+                      </View>
+                      <View style={[styles.specCard, styles.specCardLast]}>
+                        <View style={styles.specIcon}>
+                          <Ionicons name="trophy-outline" size={20} color={COLORS.accent} />
+                        </View>
+                        <Text style={styles.specTitle}>Prize</Text>
+                        <Text style={styles.specText}>{selectedEvent.prize || "TBD"}</Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.sectionCard}>
+                      <Text style={styles.sectionCardTitle}>Description</Text>
+                      <Text style={styles.sectionCardBody}>
+                        {selectedEvent.description || "No description provided."}
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.sectionCard}>
+                      <Text style={styles.sectionCardTitle}>Location</Text>
+                      <Text style={styles.sectionCardBody}>
+                        <Ionicons name="location-outline" size={14} color={COLORS.accent} /> {selectedEvent.location || "Online event"}
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.sectionCard}>
+                      <Text style={styles.sectionCardTitle}>Contact</Text>
+                      <Text style={styles.sectionCardBody}>
+                        <Ionicons name="mail-outline" size={14} color={COLORS.accent} /> {selectedEvent.contact || "Not provided"}
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.detailBottomSpacer} />
+                  </View>
+                </ScrollView>
+              </View>
+              
+              {/* Sticky Footer */}
+              <View style={styles.stickyFooter}>
+                <BlurView intensity={92} style={styles.stickyBlur}>
+                  <View style={styles.stickyContent}>
+                    <View>
+                      <Text style={styles.stickyLabel}>Register before</Text>
+                      <Text style={styles.stickyValue}>
+                        {selectedEvent.deadline || "Limited Spots"}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      activeOpacity={0.88}
+                      onPress={() => {
+                        const e = selectedEvent;
+                        setSelectedEvent(null);
+                        setTimeout(() => setRegisterEvent(e), 260);
+                      }}
+                    >
+                      <LinearGradient
+                        colors={[COLORS.primary, COLORS.gradientEnd]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.stickyButton}
+                      >
+                        <Text style={styles.stickyButtonText}>Register Now</Text>
+                        <Ionicons name="rocket-outline" size={18} color={COLORS.accent} />
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
+                </BlurView>
+              </View>
+            </>
+          )}
+        </SafeAreaView>
       </Modal>
 
-      {/* Registration Modal */}
+      {/* Registration Modal - Fixed for all phones */}
       <GuestGuard
         title="View Your Discounts"
         message="Sign in to see your claimed offers and discounts."
@@ -907,81 +930,348 @@ export default function EventsScreen() {
         <Modal
           visible={!!registerEvent}
           animationType="slide"
+          presentationStyle="fullScreen"
           onRequestClose={() => setRegisterEvent(null)}
+          statusBarTranslucent={true}
         >
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={{ flex: 1 }}
-          >
+          <SafeAreaView style={styles.modalScreen} edges={["top", "bottom"]}>
             {registerEvent && (
-              <SafeAreaView style={styles.modalScreen} edges={["bottom"]}>
-                <LinearGradient
-                  colors={[COLORS.gradientStart, COLORS.gradientEnd]}
-                  style={styles.modalHero}
-                >
-                  <View style={styles.modalHeroTop}>
-                    <View style={styles.modalHeroTitleRow}>
-                      <Ionicons name="clipboard-outline" size={24} color={COLORS.accent} />
-                      <Text style={styles.modalHeroTitle}>Register</Text>
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <View style={styles.modalContainer}>
+                  <LinearGradient
+                    colors={[COLORS.gradientStart, COLORS.gradientEnd]}
+                    style={styles.modalHero}
+                  >
+                    <View style={styles.modalHeroTop}>
+                      <View style={styles.modalHeroTitleRow}>
+                        <Ionicons name="clipboard-outline" size={24} color={COLORS.accent} />
+                        <Text style={styles.modalHeroTitle}>Register</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.modalClose}
+                        onPress={() => setRegisterEvent(null)}
+                        activeOpacity={0.86}
+                      >
+                        <Ionicons name="close" size={25} color={COLORS.accent} />
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity
-                      style={styles.modalClose}
-                      onPress={() => setRegisterEvent(null)}
-                      activeOpacity={0.86}
+                    <Text style={styles.modalHeroSubtitle}>{registerEvent.title}</Text>
+                  </LinearGradient>
+                  
+                  <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    style={styles.keyboardAvoidView}
+                    keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+                  >
+                    <ScrollView 
+                      style={styles.formScrollView}
+                      showsVerticalScrollIndicator={false}
+                      contentContainerStyle={styles.formScrollContent}
+                      keyboardShouldPersistTaps="handled"
                     >
-                      <Ionicons name="close" size={25} color={COLORS.accent} />
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>Full Name *</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="Enter your full name"
+                          placeholderTextColor="#8a8a8a"
+                          value={regForm.studentName}
+                          onChangeText={(text) => setRegForm({ ...regForm, studentName: text })}
+                        />
+                      </View>
+                      
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>University Email *</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="student@university.edu"
+                          placeholderTextColor="#8a8a8a"
+                          value={regForm.email}
+                          keyboardType="email-address"
+                          autoCapitalize="none"
+                          onChangeText={(text) => setRegForm({ ...regForm, email: text })}
+                        />
+                      </View>
+                      
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>WhatsApp Number *</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="+92 3XX XXXXXXX"
+                          placeholderTextColor="#8a8a8a"
+                          keyboardType="phone-pad"
+                          value={regForm.whatsapp}
+                          onChangeText={(text) => setRegForm({ ...regForm, whatsapp: text })}
+                        />
+                      </View>
+                      
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>Student ID / CNIC</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="Optional"
+                          placeholderTextColor="#8a8a8a"
+                          value={regForm.studentId}
+                          onChangeText={(text) => setRegForm({ ...regForm, studentId: text })}
+                        />
+                      </View>
+                      
+                      <TouchableOpacity
+                        style={styles.primaryFormButton}
+                        activeOpacity={0.88}
+                        onPress={handleRegistrationSubmit}
+                      >
+                        <LinearGradient
+                          colors={[COLORS.primary, COLORS.gradientEnd]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={styles.primaryFormGradient}
+                        >
+                          <Text style={styles.primaryFormText}>Submit Registration</Text>
+                          <Ionicons name="checkmark-circle-outline" size={22} color={COLORS.accent} />
+                        </LinearGradient>
+                      </TouchableOpacity>
+                      
+                      <View style={styles.formBottomSpacer} />
+                    </ScrollView>
+                  </KeyboardAvoidingView>
+                </View>
+              </TouchableWithoutFeedback>
+            )}
+          </SafeAreaView>
+        </Modal>
+      </GuestGuard>
+
+      {/* Create Event Modal - Fixed for all phones */}
+      <Modal
+        visible={isModalVisible}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setModalVisible(false)}
+        statusBarTranslucent={true}
+      >
+        <SafeAreaView style={styles.modalScreen} edges={["top", "bottom"]}>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.modalContainer}>
+              <LinearGradient
+                colors={[COLORS.gradientStart, COLORS.gradientEnd]}
+                style={styles.modalHero}
+              >
+                <View style={styles.modalHeroTop}>
+                  <View style={styles.modalHeroTitleRow}>
+                    <Ionicons name="add-circle-outline" size={24} color={COLORS.accent} />
+                    <Text style={styles.modalHeroTitle}>Create Event</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.modalClose}
+                    onPress={() => setModalVisible(false)}
+                    activeOpacity={0.86}
+                  >
+                    <Ionicons name="close" size={25} color={COLORS.accent} />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.modalHeroSubtitle}>
+                  Publish an event and connect with your campus community
+                </Text>
+              </LinearGradient>
+              
+              <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={styles.keyboardAvoidView}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+              >
+                <ScrollView 
+                  style={styles.formScrollView}
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.formScrollContent}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Event Title *</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="Enter event title"
+                      placeholderTextColor="#8a8a8a"
+                      value={form.title}
+                      onChangeText={(text) => setForm({ ...form, title: text })}
+                    />
+                  </View>
+                  
+                  <View style={styles.row}>
+                    <View style={styles.colLeft}>
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>University *</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="University name"
+                          placeholderTextColor="#8a8a8a"
+                          value={form.university}
+                          onChangeText={(text) => setForm({ ...form, university: text })}
+                        />
+                      </View>
+                    </View>
+                    <View style={styles.colRight}>
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>City *</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="City"
+                          placeholderTextColor="#8a8a8a"
+                          value={form.city}
+                          onChangeText={(text) => setForm({ ...form, city: text })}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Category *</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      {CATEGORIES.filter((item) => item !== "All").map((cat) => {
+                        const selected = form.type === cat;
+                        const config = CATEGORY_CONFIG[cat];
+                        return (
+                          <TouchableOpacity
+                            key={cat}
+                            activeOpacity={0.86}
+                            onPress={() => setForm({ ...form, type: cat })}
+                            style={[
+                              styles.optionPill,
+                              selected && styles.optionPillActive,
+                              { borderColor: selected ? config.color : COLORS.line }
+                            ]}
+                          >
+                            {selected && (
+                              <LinearGradient
+                                colors={[config.color, config.color + "80"]}
+                                style={StyleSheet.absoluteFillObject}
+                              />
+                            )}
+                            <Ionicons
+                              name={config.icon}
+                              size={14}
+                              color={selected ? "#fff" : config.color}
+                              style={{ marginRight: 4 }}
+                            />
+                            <Text style={[styles.optionPillText, selected && styles.optionPillTextActive]}>
+                              {cat}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+                  
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Description</Text>
+                    <TextInput
+                      style={[styles.textInput, styles.multiLineInput]}
+                      placeholder="Describe your event..."
+                      placeholderTextColor="#8a8a8a"
+                      multiline
+                      value={form.description}
+                      onChangeText={(text) => setForm({ ...form, description: text })}
+                    />
+                  </View>
+                  
+                  <View style={styles.row}>
+                    <View style={styles.colLeft}>
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>Event Date</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="15 May 2026"
+                          placeholderTextColor="#8a8a8a"
+                          value={form.date}
+                          onChangeText={(text) => setForm({ ...form, date: text })}
+                        />
+                      </View>
+                    </View>
+                    <View style={styles.colRight}>
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>Team Size</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="2-4 Members"
+                          placeholderTextColor="#8a8a8a"
+                          value={form.teamSize}
+                          onChangeText={(text) => setForm({ ...form, teamSize: text })}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Location / Venue</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="Auditorium, online, lab..."
+                      placeholderTextColor="#8a8a8a"
+                      value={form.location}
+                      onChangeText={(text) => setForm({ ...form, location: text })}
+                    />
+                  </View>
+                  
+                  <View style={styles.row}>
+                    <View style={styles.colLeft}>
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>Prize Pool</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="PKR 100,000"
+                          placeholderTextColor="#8a8a8a"
+                          value={form.prize}
+                          onChangeText={(text) => setForm({ ...form, prize: text })}
+                        />
+                      </View>
+                    </View>
+                    <View style={styles.colRight}>
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>Deadline</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="30 April 2026"
+                          placeholderTextColor="#8a8a8a"
+                          value={form.deadline}
+                          onChangeText={(text) => setForm({ ...form, deadline: text })}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Contact Info</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="Email or phone"
+                      placeholderTextColor="#8a8a8a"
+                      value={form.contact}
+                      onChangeText={(text) => setForm({ ...form, contact: text })}
+                    />
+                  </View>
+                  
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Event Banner</Text>
+                    <TouchableOpacity style={styles.uploadCard} activeOpacity={0.88} onPress={pickImage}>
+                      {selectedImage ? (
+                        <Image source={{ uri: selectedImage }} style={styles.uploadPreview} />
+                      ) : (
+                        <View style={styles.uploadPlaceholder}>
+                          <View style={styles.uploadIconCircle}>
+                            <Ionicons name="image-outline" size={30} color={COLORS.primary} />
+                          </View>
+                          <Text style={styles.uploadTitle}>Upload banner</Text>
+                          <Text style={styles.uploadSubtitle}>Recommended 16:9 ratio</Text>
+                        </View>
+                      )}
                     </TouchableOpacity>
                   </View>
-                  <Text style={styles.modalHeroSubtitle}>{registerEvent.title}</Text>
-                </LinearGradient>
-                <ScrollView style={styles.formScrollView} showsVerticalScrollIndicator={false}>
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Full Name *</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="Enter your full name"
-                      placeholderTextColor="#8a8a8a"
-                      value={regForm.studentName}
-                      onChangeText={(text) => setRegForm({ ...regForm, studentName: text })}
-                    />
-                  </View>
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>University Email *</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="student@university.edu"
-                      placeholderTextColor="#8a8a8a"
-                      value={regForm.email}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      onChangeText={(text) => setRegForm({ ...regForm, email: text })}
-                    />
-                  </View>
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>WhatsApp Number *</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="+92 3XX XXXXXXX"
-                      placeholderTextColor="#8a8a8a"
-                      keyboardType="phone-pad"
-                      value={regForm.whatsapp}
-                      onChangeText={(text) => setRegForm({ ...regForm, whatsapp: text })}
-                    />
-                  </View>
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Student ID / CNIC</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="Optional"
-                      placeholderTextColor="#8a8a8a"
-                      value={regForm.studentId}
-                      onChangeText={(text) => setRegForm({ ...regForm, studentId: text })}
-                    />
-                  </View>
+                  
                   <TouchableOpacity
                     style={styles.primaryFormButton}
                     activeOpacity={0.88}
-                    onPress={handleRegistrationSubmit}
+                    disabled={submitting}
+                    onPress={handlePostEvent}
                   >
                     <LinearGradient
                       colors={[COLORS.primary, COLORS.gradientEnd]}
@@ -989,250 +1279,23 @@ export default function EventsScreen() {
                       end={{ x: 1, y: 0 }}
                       style={styles.primaryFormGradient}
                     >
-                      <Text style={styles.primaryFormText}>Submit Registration</Text>
-                      <Ionicons name="checkmark-circle-outline" size={22} color={COLORS.accent} />
+                      {submitting ? (
+                        <ActivityIndicator color={COLORS.accent} />
+                      ) : (
+                        <>
+                          <Text style={styles.primaryFormText}>Publish Event</Text>
+                          <Ionicons name="rocket-outline" size={22} color={COLORS.accent} />
+                        </>
+                      )}
                     </LinearGradient>
                   </TouchableOpacity>
-                  <View style={{ height: 36 }} />
+                  
+                  <View style={styles.formBottomSpacer} />
                 </ScrollView>
-              </SafeAreaView>
-            )}
-          </KeyboardAvoidingView>
-        </Modal>
-      </GuestGuard>
-
-      {/* Create Event Modal */}
-      <Modal
-        visible={isModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={{ flex: 1 }}
-        >
-          <SafeAreaView style={styles.modalScreen} edges={["bottom"]}>
-            <LinearGradient
-              colors={[COLORS.gradientStart, COLORS.gradientEnd]}
-              style={styles.modalHero}
-            >
-              <View style={styles.modalHeroTop}>
-                <View style={styles.modalHeroTitleRow}>
-                  <Ionicons name="add-circle-outline" size={24} color={COLORS.accent} />
-                  <Text style={styles.modalHeroTitle}>Create Event</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.modalClose}
-                  onPress={() => setModalVisible(false)}
-                  activeOpacity={0.86}
-                >
-                  <Ionicons name="close" size={25} color={COLORS.accent} />
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.modalHeroSubtitle}>
-                Publish an event and connect with your campus community
-              </Text>
-            </LinearGradient>
-            <ScrollView style={styles.formScrollView} showsVerticalScrollIndicator={false}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Event Title *</Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Enter event title"
-                  placeholderTextColor="#8a8a8a"
-                  value={form.title}
-                  onChangeText={(text) => setForm({ ...form, title: text })}
-                />
-              </View>
-              <View style={styles.row}>
-                <View style={styles.colLeft}>
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>University *</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="University name"
-                      placeholderTextColor="#8a8a8a"
-                      value={form.university}
-                      onChangeText={(text) => setForm({ ...form, university: text })}
-                    />
-                  </View>
-                </View>
-                <View style={styles.colRight}>
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>City *</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="City"
-                      placeholderTextColor="#8a8a8a"
-                      value={form.city}
-                      onChangeText={(text) => setForm({ ...form, city: text })}
-                    />
-                  </View>
-                </View>
-              </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Category *</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {CATEGORIES.filter((item) => item !== "All").map((cat) => {
-                    const selected = form.type === cat;
-                    const config = CATEGORY_CONFIG[cat];
-                    return (
-                      <TouchableOpacity
-                        key={cat}
-                        activeOpacity={0.86}
-                        onPress={() => setForm({ ...form, type: cat })}
-                        style={[
-                          styles.optionPill,
-                          selected && styles.optionPillActive,
-                          { borderColor: selected ? config.color : COLORS.line }
-                        ]}
-                      >
-                        {selected && (
-                          <LinearGradient
-                            colors={[config.color, config.color + "80"]}
-                            style={StyleSheet.absoluteFillObject}
-                          />
-                        )}
-                        <Ionicons
-                          name={config.icon}
-                          size={14}
-                          color={selected ? "#fff" : config.color}
-                          style={{ marginRight: 4 }}
-                        />
-                        <Text style={[styles.optionPillText, selected && styles.optionPillTextActive]}>
-                          {cat}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Description</Text>
-                <TextInput
-                  style={[styles.textInput, styles.multiLineInput]}
-                  placeholder="Describe your event..."
-                  placeholderTextColor="#8a8a8a"
-                  multiline
-                  value={form.description}
-                  onChangeText={(text) => setForm({ ...form, description: text })}
-                />
-              </View>
-              <View style={styles.row}>
-                <View style={styles.colLeft}>
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Event Date</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="15 May 2026"
-                      placeholderTextColor="#8a8a8a"
-                      value={form.date}
-                      onChangeText={(text) => setForm({ ...form, date: text })}
-                    />
-                  </View>
-                </View>
-                <View style={styles.colRight}>
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Team Size</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="2-4 Members"
-                      placeholderTextColor="#8a8a8a"
-                      value={form.teamSize}
-                      onChangeText={(text) => setForm({ ...form, teamSize: text })}
-                    />
-                  </View>
-                </View>
-              </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Location / Venue</Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Auditorium, online, lab..."
-                  placeholderTextColor="#8a8a8a"
-                  value={form.location}
-                  onChangeText={(text) => setForm({ ...form, location: text })}
-                />
-              </View>
-              <View style={styles.row}>
-                <View style={styles.colLeft}>
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Prize Pool</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="PKR 100,000"
-                      placeholderTextColor="#8a8a8a"
-                      value={form.prize}
-                      onChangeText={(text) => setForm({ ...form, prize: text })}
-                    />
-                  </View>
-                </View>
-                <View style={styles.colRight}>
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Deadline</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="30 April 2026"
-                      placeholderTextColor="#8a8a8a"
-                      value={form.deadline}
-                      onChangeText={(text) => setForm({ ...form, deadline: text })}
-                    />
-                  </View>
-                </View>
-              </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Contact Info</Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Email or phone"
-                  placeholderTextColor="#8a8a8a"
-                  value={form.contact}
-                  onChangeText={(text) => setForm({ ...form, contact: text })}
-                />
-              </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Event Banner</Text>
-                <TouchableOpacity style={styles.uploadCard} activeOpacity={0.88} onPress={pickImage}>
-                  {selectedImage ? (
-                    <Image source={{ uri: selectedImage }} style={styles.uploadPreview} />
-                  ) : (
-                    <View style={styles.uploadPlaceholder}>
-                      <View style={styles.uploadIconCircle}>
-                        <Ionicons name="image-outline" size={30} color={COLORS.primary} />
-                      </View>
-                      <Text style={styles.uploadTitle}>Upload banner</Text>
-                      <Text style={styles.uploadSubtitle}>Recommended 16:9 ratio</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </View>
-              <TouchableOpacity
-                style={styles.primaryFormButton}
-                activeOpacity={0.88}
-                disabled={submitting}
-                onPress={handlePostEvent}
-              >
-                <LinearGradient
-                  colors={[COLORS.primary, COLORS.gradientEnd]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.primaryFormGradient}
-                >
-                  {submitting ? (
-                    <ActivityIndicator color={COLORS.accent} />
-                  ) : (
-                    <>
-                      <Text style={styles.primaryFormText}>Publish Event</Text>
-                      <Ionicons name="rocket-outline" size={22} color={COLORS.accent} />
-                    </>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-              <View style={{ height: 44 }} />
-            </ScrollView>
-          </SafeAreaView>
-        </KeyboardAvoidingView>
+              </KeyboardAvoidingView>
+            </View>
+          </TouchableWithoutFeedback>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -1659,11 +1722,34 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
 
-  // Detail Modal
-  detailScreen: { flex: 1, backgroundColor: "#fff" },
-  detailBanner: { width: "100%", height: height * 0.28 },
-  detailBannerOverlay: { ...StyleSheet.absoluteFillObject },
-  backButtonWrap: { position: "absolute", top: 48, left: 16 },
+  // Detail Modal - Fixed
+  detailScreen: { 
+    flex: 1, 
+    backgroundColor: "#fff" 
+  },
+  detailContainer: { 
+    flex: 1 
+  },
+  detailScrollContent: {
+    paddingBottom: 100,
+  },
+  detailImageWrapper: {
+    position: "relative",
+    width: "100%",
+    height: height * 0.3,
+  },
+  detailBanner: { 
+    width: "100%", 
+    height: "100%" 
+  },
+  detailBannerOverlay: { 
+    ...StyleSheet.absoluteFillObject 
+  },
+  backButtonWrap: { 
+    position: "absolute", 
+    top: Platform.OS === "ios" ? 12 : 16, 
+    left: 16 
+  },
   roundGlass: {
     width: 40,
     height: 40,
@@ -1693,7 +1779,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 10,
   },
-  detailTagText: { fontSize: 12, fontWeight: "800", marginLeft: 4 },
+  detailTagText: { 
+    fontSize: 12, 
+    fontWeight: "800", 
+    marginLeft: 4 
+  },
   shareButton: {
     width: 38,
     height: 38,
@@ -1755,8 +1845,18 @@ const styles = StyleSheet.create({
   },
   specCardLast: { marginRight: 0 },
   specIcon: { marginBottom: 4 },
-  specTitle: { color: COLORS.muted, fontSize: 10, fontWeight: "700", marginBottom: 1 },
-  specText: { color: COLORS.primary, fontSize: 13, fontWeight: "800", textAlign: "center" },
+  specTitle: { 
+    color: COLORS.muted, 
+    fontSize: 10, 
+    fontWeight: "700", 
+    marginBottom: 1 
+  },
+  specText: { 
+    color: COLORS.primary, 
+    fontSize: 13, 
+    fontWeight: "800", 
+    textAlign: "center" 
+  },
   sectionCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 16,
@@ -1765,23 +1865,52 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.line,
   },
-  sectionCardTitle: { color: COLORS.primary, fontSize: 15, fontWeight: "800", marginBottom: 6 },
-  sectionCardBody: { color: COLORS.body, fontSize: 13, lineHeight: 20 },
-  stickyFooter: { position: "absolute", bottom: 0, width: "100%" },
-  stickyBlur: { overflow: "hidden" },
+  sectionCardTitle: { 
+    color: COLORS.primary, 
+    fontSize: 15, 
+    fontWeight: "800", 
+    marginBottom: 6 
+  },
+  sectionCardBody: { 
+    color: COLORS.body, 
+    fontSize: 13, 
+    lineHeight: 20 
+  },
+  detailBottomSpacer: { 
+    height: 20 
+  },
+  stickyFooter: { 
+    position: "absolute", 
+    bottom: 0, 
+    width: "100%",
+    backgroundColor: "rgba(255,255,255,0.95)",
+  },
+  stickyBlur: { 
+    overflow: "hidden",
+    backgroundColor: "rgba(255,255,255,0.92)",
+  },
   stickyContent: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 24,
-    backgroundColor: "rgba(255,255,255,0.95)",
+    paddingBottom: Platform.OS === "ios" ? 34 : 16,
+    backgroundColor: "transparent",
     borderTopWidth: 1,
     borderTopColor: COLORS.line,
   },
-  stickyLabel: { color: COLORS.danger, fontSize: 10, fontWeight: "800", marginBottom: 1 },
-  stickyValue: { color: COLORS.primary, fontSize: 15, fontWeight: "900" },
+  stickyLabel: { 
+    color: COLORS.danger, 
+    fontSize: 10, 
+    fontWeight: "800", 
+    marginBottom: 1 
+  },
+  stickyValue: { 
+    color: COLORS.primary, 
+    fontSize: 15, 
+    fontWeight: "900" 
+  },
   stickyButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -1789,10 +1918,24 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     borderRadius: 14,
   },
-  stickyButtonText: { color: "#fff", fontSize: 13, fontWeight: "900", marginRight: 4 },
+  stickyButtonText: { 
+    color: "#fff", 
+    fontSize: 13, 
+    fontWeight: "900", 
+    marginRight: 4 
+  },
 
-  // Modals
-  modalScreen: { flex: 1, backgroundColor: COLORS.page },
+  // Modals - Fixed
+  modalScreen: { 
+    flex: 1, 
+    backgroundColor: COLORS.page 
+  },
+  modalContainer: { 
+    flex: 1 
+  },
+  keyboardAvoidView: { 
+    flex: 1 
+  },
   modalHero: {
     paddingHorizontal: 18,
     paddingTop: Platform.OS === "ios" ? 14 : 18,
@@ -1800,9 +1943,21 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 26,
     borderBottomRightRadius: 26,
   },
-  modalHeroTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  modalHeroTitleRow: { flexDirection: "row", alignItems: "center" },
-  modalHeroTitle: { color: "#fff", fontSize: 20, fontWeight: "900", marginLeft: 8 },
+  modalHeroTop: { 
+    flexDirection: "row", 
+    justifyContent: "space-between", 
+    alignItems: "center" 
+  },
+  modalHeroTitleRow: { 
+    flexDirection: "row", 
+    alignItems: "center" 
+  },
+  modalHeroTitle: { 
+    color: "#fff", 
+    fontSize: 20, 
+    fontWeight: "900", 
+    marginLeft: 8 
+  },
   modalClose: {
     width: 34,
     height: 34,
@@ -1817,9 +1972,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
-  formScrollView: { paddingHorizontal: 16, paddingTop: 14 },
-  inputGroup: { marginBottom: 0 },
-  inputLabel: { color: COLORS.primary, fontSize: 12, fontWeight: "700", marginBottom: 4 },
+  formScrollView: { 
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  formScrollContent: {
+    paddingTop: 14,
+    paddingBottom: 20,
+  },
+  inputGroup: { 
+    marginBottom: 0 
+  },
+  inputLabel: { 
+    color: COLORS.primary, 
+    fontSize: 12, 
+    fontWeight: "700", 
+    marginBottom: 4 
+  },
   textInput: {
     backgroundColor: "#fff",
     borderWidth: 1.5,
@@ -1831,10 +2000,21 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontSize: 13,
   },
-  multiLineInput: { height: 90, textAlignVertical: "top" },
-  row: { flexDirection: "row" },
-  colLeft: { flex: 1, marginRight: 5 },
-  colRight: { flex: 1, marginLeft: 5 },
+  multiLineInput: { 
+    height: 90, 
+    textAlignVertical: "top" 
+  },
+  row: { 
+    flexDirection: "row" 
+  },
+  colLeft: { 
+    flex: 1, 
+    marginRight: 5 
+  },
+  colRight: { 
+    flex: 1, 
+    marginLeft: 5 
+  },
   optionPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -1847,9 +2027,17 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     overflow: "hidden",
   },
-  optionPillActive: { borderColor: "transparent" },
-  optionPillText: { color: COLORS.body, fontSize: 11, fontWeight: "700" },
-  optionPillTextActive: { color: "#fff" },
+  optionPillActive: { 
+    borderColor: "transparent" 
+  },
+  optionPillText: { 
+    color: COLORS.body, 
+    fontSize: 11, 
+    fontWeight: "700" 
+  },
+  optionPillTextActive: { 
+    color: "#fff" 
+  },
   uploadCard: {
     width: "100%",
     height: 160,
@@ -1861,7 +2049,10 @@ const styles = StyleSheet.create({
     borderColor: COLORS.accent,
     backgroundColor: "#fff",
   },
-  uploadPreview: { width: "100%", height: "100%" },
+  uploadPreview: { 
+    width: "100%", 
+    height: "100%" 
+  },
   uploadPlaceholder: {
     flex: 1,
     justifyContent: "center",
@@ -1876,8 +2067,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: COLORS.goldSoft,
   },
-  uploadTitle: { marginTop: 8, color: COLORS.primary, fontSize: 13, fontWeight: "800" },
-  uploadSubtitle: { marginTop: 1, color: COLORS.muted, fontSize: 10 },
+  uploadTitle: { 
+    marginTop: 8, 
+    color: COLORS.primary, 
+    fontSize: 13, 
+    fontWeight: "800" 
+  },
+  uploadSubtitle: { 
+    marginTop: 1, 
+    color: COLORS.muted, 
+    fontSize: 10 
+  },
   primaryFormButton: {
     borderRadius: 16,
     overflow: "hidden",
@@ -1886,6 +2086,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 14,
     elevation: 6,
+    marginTop: 8,
   },
   primaryFormGradient: {
     flexDirection: "row",
@@ -1894,5 +2095,13 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     paddingHorizontal: 16,
   },
-  primaryFormText: { color: "#fff", fontSize: 15, fontWeight: "800", marginRight: 6 },
+  primaryFormText: { 
+    color: "#fff", 
+    fontSize: 15, 
+    fontWeight: "800", 
+    marginRight: 6 
+  },
+  formBottomSpacer: { 
+    height: Platform.OS === "ios" ? 40 : 30 
+  },
 });

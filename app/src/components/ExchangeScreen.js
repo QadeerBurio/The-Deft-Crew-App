@@ -20,18 +20,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
-import api from "../api/api";
+import api, { publicAPI } from "../api/api";
 
 const { width, height } = Dimensions.get('window');
 
 const ExchangeScreen = ({ navigation }) => {
-  const { token, isGuest, logout } = useContext(AuthContext);
+  const { token, isGuest, logout, user } = useContext(AuthContext);
 
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDegree, setSelectedDegree] = useState('Bachelors');
   const [searchQuery, setSearchQuery] = useState('');
+  const [error, setError] = useState(null);
 
   // Details Modal State
   const [detailsVisible, setDetailsVisible] = useState(false);
@@ -41,7 +42,6 @@ const ExchangeScreen = ({ navigation }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const modalAnim = useRef(new Animated.Value(height)).current;
-  const scrollY = useRef(new Animated.Value(0)).current;
 
   const degrees = ['Bachelors', 'Masters', 'PhD'];
 
@@ -103,17 +103,36 @@ const ExchangeScreen = ({ navigation }) => {
 
   const fetchPrograms = async () => {
     try {
-      const response = await api.get('/admin/exchange/all');
-      const activePrograms = response.data.filter(p => p.active === true);
+      setError(null);
+      
+      const response = await publicAPI.getExchangePrograms();
+      
+      const programsData = Array.isArray(response) ? response : [];
+      const activePrograms = programsData.filter(p => p.active !== false);
       setPrograms(activePrograms);
+      
+      if (activePrograms.length === 0) {
+        console.log('No active programs found');
+      }
     } catch (err) {
+      console.error('Error fetching programs:', err);
+      
       if (err.response?.status === 401 && !isGuest) {
         Alert.alert("Session Expired", "Please login again to continue.");
         logout();
+      } else if (err.response?.status === 404) {
+        setError('Programs endpoint not found. Please try again later.');
+        setPrograms([]);
       } else if (!isGuest) {
-        console.log('Error fetching programs:', err.message);
+        Alert.alert(
+          'Network Error',
+          'Unable to load exchange programs. Please check your connection.',
+          [{ text: 'Retry', onPress: fetchPrograms }]
+        );
+        setPrograms([]);
+      } else {
+        setPrograms([]);
       }
-      setPrograms([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -126,17 +145,20 @@ const ExchangeScreen = ({ navigation }) => {
 
   const onRefresh = () => {
     setRefreshing(true);
+    publicAPI.clearPublicCache();
     fetchPrograms();
   };
 
   const filteredPrograms = useMemo(() => {
+    if (!Array.isArray(programs)) return [];
+    
     return programs.filter(p => {
       const matchesDegree = p.degree === selectedDegree;
       const query = searchQuery.toLowerCase();
-      const matchesSearch =
-        p.title.toLowerCase().includes(query) ||
-        p.university.toLowerCase().includes(query) ||
-        p.location.toLowerCase().includes(query);
+      const matchesSearch = 
+        (p.title || '').toLowerCase().includes(query) ||
+        (p.university || '').toLowerCase().includes(query) ||
+        (p.location || '').toLowerCase().includes(query);
       return matchesDegree && matchesSearch;
     });
   }, [selectedDegree, searchQuery, programs]);
@@ -164,7 +186,7 @@ const ExchangeScreen = ({ navigation }) => {
 
   // Card Item Component with Animation
   const CardItem = ({ item, index }) => {
-    const { color, bg } = getDegreeStyle(item.degree);
+    const { color, bg } = getDegreeStyle(item.degree || 'Bachelors');
     const scaleAnim = useRef(new Animated.Value(0.95)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -172,7 +194,7 @@ const ExchangeScreen = ({ navigation }) => {
       Animated.parallel([
         Animated.spring(scaleAnim, {
           toValue: 1,
-          delay: index * 80,
+          delay: Math.min(index * 80, 400),
           useNativeDriver: true,
           friction: 8,
           tension: 40,
@@ -180,7 +202,7 @@ const ExchangeScreen = ({ navigation }) => {
         Animated.timing(opacityAnim, {
           toValue: 1,
           duration: 400,
-          delay: index * 80,
+          delay: Math.min(index * 80, 400),
           useNativeDriver: true,
         })
       ]).start();
@@ -207,24 +229,24 @@ const ExchangeScreen = ({ navigation }) => {
               <View style={styles.cardHeader}>
                 <View style={styles.titleArea}>
                   <Text style={styles.programTitle} numberOfLines={1}>
-                    {item.title}
+                    {item.title || 'Program'}
                   </Text>
                   <View style={styles.universityRow}>
                     <FontAwesome5 name="university" size={12} color="#6B7280" />
                     <Text style={styles.universityName} numberOfLines={1}>
-                      {item.university}
+                      {item.university || 'University'}
                     </Text>
                   </View>
                   <View style={styles.locationRow}>
                     <Ionicons name="location-outline" size={14} color="#6B7280" />
-                    <Text style={styles.locationText}>{item.location}</Text>
+                    <Text style={styles.locationText}>{item.location || 'Location'}</Text>
                     <View style={styles.dotSeparator} />
                     <Ionicons name="time-outline" size={14} color="#6B7280" />
-                    <Text style={styles.locationText}>{item.duration}</Text>
+                    <Text style={styles.locationText}>{item.duration || 'Duration'}</Text>
                   </View>
                 </View>
                 <View style={[styles.degreeBadge, { backgroundColor: bg, borderColor: color }]}>
-                  <Text style={[styles.degreeText, { color: color }]}>{item.degree}</Text>
+                  <Text style={[styles.degreeText, { color: color }]}>{item.degree || 'N/A'}</Text>
                 </View>
               </View>
 
@@ -233,19 +255,19 @@ const ExchangeScreen = ({ navigation }) => {
                   <Text style={styles.dateLabel}>
                     <FontAwesome5 name="calendar-alt" size={10} color="#9CA3AF" /> OPENS
                   </Text>
-                  <Text style={styles.dateValue}>{item.appStart}</Text>
+                  <Text style={styles.dateValue}>{item.appStart || 'TBD'}</Text>
                 </View>
                 <View style={styles.dateDivider} />
                 <View style={styles.dateBox}>
                   <Text style={[styles.dateLabel, { color: '#EF4444' }]}>
                     <FontAwesome5 name="clock" size={10} color="#EF4444" /> DEADLINE
                   </Text>
-                  <Text style={[styles.dateValue, { color: '#EF4444' }]}>{item.deadline}</Text>
+                  <Text style={[styles.dateValue, { color: '#EF4444' }]}>{item.deadline || 'TBD'}</Text>
                 </View>
               </View>
 
               <TouchableOpacity
-                style={[styles.detailsBtn]}
+                style={styles.detailsBtn}
                 onPress={() => handleViewDetails(item)}
                 activeOpacity={0.7}
               >
@@ -263,6 +285,22 @@ const ExchangeScreen = ({ navigation }) => {
     return <CardItem item={item} index={index} />;
   };
 
+  // Render error state
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={50} color="#EF4444" />
+          <Text style={styles.errorTitle}>Oops! Something went wrong</Text>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchPrograms}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -278,10 +316,19 @@ const ExchangeScreen = ({ navigation }) => {
         ]}
       >
         <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.headerSubtitle}>🌍 International Hub</Text>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerSubtitle}>🌍 Global Education</Text>
             <Text style={styles.headerTitle}>Study Abroad</Text>
           </View>
+          
           <TouchableOpacity
             style={styles.avatarCircle}
             onPress={handleProfile}
@@ -382,7 +429,7 @@ const ExchangeScreen = ({ navigation }) => {
         ) : (
           <FlatList
             data={filteredPrograms}
-            keyExtractor={item => item._id}
+            keyExtractor={item => item._id || Math.random().toString()}
             renderItem={renderItem}
             refreshControl={
               <RefreshControl
@@ -401,7 +448,7 @@ const ExchangeScreen = ({ navigation }) => {
                 </View>
                 <Text style={styles.emptyTitle}>No programs found</Text>
                 <Text style={styles.emptyText}>
-                  Try adjusting your search or filters
+                  {searchQuery ? 'Try adjusting your search' : 'Check back later for new opportunities'}
                 </Text>
                 {isGuest && (
                   <TouchableOpacity
@@ -445,9 +492,9 @@ const ExchangeScreen = ({ navigation }) => {
               <View style={styles.modalHeaderLeft}>
                 <Text style={styles.modalTitle}>Program Details</Text>
                 {selectedProgram && (
-                  <View style={[styles.modalDegreeBadge, { backgroundColor: getDegreeStyle(selectedProgram.degree).bg, borderColor: getDegreeStyle(selectedProgram.degree).color }]}>
-                    <Text style={[styles.modalDegreeText, { color: getDegreeStyle(selectedProgram.degree).color }]}>
-                      {selectedProgram.degree}
+                  <View style={[styles.modalDegreeBadge, { backgroundColor: getDegreeStyle(selectedProgram.degree || 'Bachelors').bg, borderColor: getDegreeStyle(selectedProgram.degree || 'Bachelors').color }]}>
+                    <Text style={[styles.modalDegreeText, { color: getDegreeStyle(selectedProgram.degree || 'Bachelors').color }]}>
+                      {selectedProgram.degree || 'N/A'}
                     </Text>
                   </View>
                 )}
@@ -468,17 +515,17 @@ const ExchangeScreen = ({ navigation }) => {
               {selectedProgram && (
                 <>
                   <View style={styles.modalProgramInfo}>
-                    <Text style={styles.modalProgramTitle}>{selectedProgram.title}</Text>
+                    <Text style={styles.modalProgramTitle}>{selectedProgram.title || 'Program'}</Text>
                     <View style={styles.modalUniversityRow}>
                       <FontAwesome5 name="university" size={14} color="#6B7280" />
-                      <Text style={styles.modalUniversity}>{selectedProgram.university}</Text>
+                      <Text style={styles.modalUniversity}>{selectedProgram.university || 'University'}</Text>
                     </View>
                     <View style={styles.modalLocationRow}>
                       <Ionicons name="location-outline" size={16} color="#6B7280" />
-                      <Text style={styles.modalLocation}>{selectedProgram.location}</Text>
+                      <Text style={styles.modalLocation}>{selectedProgram.location || 'Location'}</Text>
                       <View style={styles.modalDot} />
                       <Ionicons name="time-outline" size={16} color="#6B7280" />
-                      <Text style={styles.modalDuration}>{selectedProgram.duration}</Text>
+                      <Text style={styles.modalDuration}>{selectedProgram.duration || 'Duration'}</Text>
                     </View>
                   </View>
 
@@ -521,12 +568,12 @@ const ExchangeScreen = ({ navigation }) => {
                   <View style={styles.modalDateInfo}>
                     <View style={styles.modalDateBox}>
                       <Text style={styles.modalDateLabel}>Application Opens</Text>
-                      <Text style={styles.modalDateValue}>{selectedProgram.appStart}</Text>
+                      <Text style={styles.modalDateValue}>{selectedProgram.appStart || 'TBD'}</Text>
                     </View>
                     <View style={styles.modalDateDivider} />
                     <View style={styles.modalDateBox}>
                       <Text style={[styles.modalDateLabel, { color: '#EF4444' }]}>Deadline</Text>
-                      <Text style={[styles.modalDateValue, { color: '#EF4444' }]}>{selectedProgram.deadline}</Text>
+                      <Text style={[styles.modalDateValue, { color: '#EF4444' }]}>{selectedProgram.deadline || 'TBD'}</Text>
                     </View>
                   </View>
                 </>
@@ -568,7 +615,7 @@ const styles = StyleSheet.create({
   // Header
   header: {
     backgroundColor: '#000000',
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 24,
     borderBottomLeftRadius: 32,
@@ -591,18 +638,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '800',
     color: '#FFF',
-    letterSpacing: -0.5,
+    letterSpacing: 0.5,
+    textAlign: 'center',
   },
   headerSubtitle: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#94A3B8',
     textTransform: 'uppercase',
     letterSpacing: 1.5,
     marginBottom: 2,
+    textAlign: 'center',
   },
   avatarCircle: {
     width: 44,
@@ -644,12 +707,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    justifyContent: 'center',
   },
   guestBannerText: {
     flex: 1,
     fontSize: 13,
     color: '#92400E',
     fontWeight: '500',
+    textAlign: 'center',
   },
   guestBannerLink: {
     fontWeight: '700',
@@ -1085,6 +1150,37 @@ const styles = StyleSheet.create({
   applyModalBtnText: {
     color: '#FFF',
     fontWeight: '800',
+    fontSize: 16,
+  },
+  // Error State
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorText: {
+    textAlign: 'center',
+    color: '#6B7280',
+    fontSize: 14,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#000000',
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  retryButtonText: {
+    color: '#FFF',
+    fontWeight: '700',
     fontSize: 16,
   },
 });

@@ -38,7 +38,7 @@ const SHADOW = "rgba(0,0,0,0.08)";
 // ─── Data ─────────────────────────────────────────────────────────────────────
 const FEATURES = [
   { id: "discount",     title: "Discounts",    icon: "pricetag-outline", iconType: "Ionicons", desc: "Save on top brands", screen: "Brands", gradient: ["#FF6B6B", "#FF8E53"] },
-  { id: "traveling",   title: "Travelling",   icon: "airplane",        iconType: "Ionicons",               desc: "Flights & hotels", screen: "Traveling", gradient: ["#4FC3F7", "#29B6F6"] },
+  { id: "traveling",   title: "Travelling",   icon: "airplane",        iconType: "Ionicons",               desc: "Flights & hotels", screen: "Travelling", gradient: ["#4FC3F7", "#29B6F6"] },
   { id: "learning",    title: "SkillsShare",   icon: "book",           iconType: "Ionicons",               desc: "Courses & tutorials", screen: "AiSkillsScreen", gradient: ["#81C784", "#4CAF50"] },
   { id: "events",      title: "Events",       icon: "calendar",        iconType: "Ionicons",               desc: "Local events", screen: "Events", gradient: ["#CE93D8", "#AB47BC"] },
   { id: "resume",      title: "Resume",       icon: "document-text-outline", iconType: "Ionicons", desc: "Build your CV", screen: "ResumeDashboard", gradient: ["#FFA726", "#FF9800"] },
@@ -47,251 +47,11 @@ const FEATURES = [
   { id: "social",      title: "Social Activity", icon: "people", iconType: "Ionicons",              desc: "Post & share", screen: "Social", gradient: ["#EC407A", "#AD1457"] },
 ];
 
-const SLIDES = [
-  {
-    id: "1",
-    title: "Scholarship\nOpportunities 2025",
-    subtitle: "Find your perfect match",
-    tag: "🎓 STUDY",
-    accent: GOLD,
-    bg: DARK,
-    icon: "school-outline",
-  },
-  {
-    id: "2",
-    title: "Global Grants\n& Funding Programs",
-    subtitle: "Apply for financial aid",
-    tag: "💰 FUNDING",
-    accent: "#4FC3F7",
-    bg: "#0a2e5c",
-    icon: "card-outline",
-  },
-  {
-    id: "3",
-    title: "Job Listings\nCurated For You",
-    subtitle: "Discover your dream career",
-    tag: "💼 CAREER",
-    accent: DARK,
-    bg: GOLD,
-    icon: "briefcase-outline",
-  },
-  {
-    id: "4",
-    title: "Career Growth\n& Opportunities",
-    subtitle: "Build your future",
-    tag: "📈 GROWTH",
-    accent: WHITE,
-    bg: "#1a1a2e",
-    icon: "trending-up-outline",
-  },
-  {
-    id: "5",
-    title: "Tech Events\n& Conferences",
-    subtitle: "Stay ahead of the curve",
-    tag: "🗓️ EVENTS",
-    accent: "#FF6B6B",
-    bg: "#1e1e2e",
-    icon: "calendar-outline",
-  },
-  {
-    id: "6",
-    title: "Networking\nMeetups",
-    subtitle: "Connect with industry experts",
-    tag: "🤝 CONNECT",
-    accent: GOLD,
-    bg: "#0d0d0d",
-    icon: "people-outline",
-  },
-  {
-    id: "7",
-    title: "Exclusive Deals\n& Discounts",
-    subtitle: "Save big on premium services",
-    tag: "🛍️ SAVE",
-    accent: "#FF6B6B",
-    bg: "#1a0a0a",
-    icon: "pricetag-outline",
-  },
-  {
-    id: "8",
-    title: "Limited Time\nSpecial Offers",
-    subtitle: "Don't miss out",
-    tag: "⚡ FLASH",
-    accent: GOLD,
-    bg: "#0a2a1a",
-    icon: "flash-outline",
-  },
-  {
-    id: "9",
-    title: "Travel Packages\n& Adventures",
-    subtitle: "Explore the world",
-    tag: "🌍 EXPLORE",
-    accent: "#4FC3F7",
-    bg: "#0a1a2a",
-    icon: "airplane-outline",
-  },
-  {
-    id: "10",
-    title: "Vacation Deals\n& Getaways",
-    subtitle: "Your next trip awaits",
-    tag: "🏖️ RELAX",
-    accent: GOLD,
-    bg: "#0a0a1a",
-    icon: "umbrella-outline",
-  },
-];
-
 const OFFERS = [
   { id: "1", title: "Travel Packages", amount: "10% OFF", icon: "airplane-outline", bg: DARK, text: WHITE, accent: GOLD },
   { id: "2", title: "Online Courses",  amount: "15% OFF", icon: "school-outline", bg: GOLD, text: DARK, accent: DARK },
   { id: "3", title: "Brand Partners",  amount: "10% OFF", icon: "storefront-outline", bg: "#1e1e2e", text: WHITE, accent: GOLD },
 ];
-
-const PROGRESS = [
-  { id: "1", value: "80%", label: "Resume",       icon: "document-text-outline", color: GOLD, pct: 0.8 },
-  { id: "2", value: "12",  label: "Applications", icon: "send-outline", color: "#4FC3F7", pct: 0.6 },
-  { id: "3", value: "5",   label: "Events Held",  icon: "calendar-outline", color: "#FF6B6B", pct: 0.5 },
-  { id: "4", value: "7",   label: "Opportunities", icon: "briefcase-outline", color: DARK, pct: 0.7 },
-];
-
-// ─── Hero Carousel ──────────────────────────────────────────────────────────
-const CARD_W = width * 0.9;
-const CARD_SPACING = 12;
-
-function HeroCarousel() {
-  const scrollX = useRef(new Animated.Value(0)).current;
-  const flatRef = useRef(null);
-  const currentIdx = useRef(0);
-  const intervalRef = useRef(null);
-
-  const startAutoPlay = () => {
-    intervalRef.current = setInterval(() => {
-      currentIdx.current = (currentIdx.current + 1) % SLIDES.length;
-      flatRef.current?.scrollToOffset({
-        offset: currentIdx.current * (CARD_W + CARD_SPACING),
-        animated: true,
-      });
-    }, 3200);
-  };
-
-  useEffect(() => {
-    startAutoPlay();
-    return () => clearInterval(intervalRef.current);
-  }, []);
-
-  const onMomentumScrollEnd = (e) => {
-    const idx = Math.round(e.nativeEvent.contentOffset.x / (CARD_W + CARD_SPACING));
-    currentIdx.current = idx;
-  };
-
-  return (
-    <View style={styles.carouselWrapper}>
-      <Animated.FlatList
-        ref={flatRef}
-        data={SLIDES}
-        keyExtractor={(item) => item.id}
-        horizontal
-        pagingEnabled={false}
-        snapToInterval={CARD_W + CARD_SPACING}
-        decelerationRate="fast"
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ 
-          paddingHorizontal: (width - CARD_W) / 2,
-        }}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: true }
-        )}
-        onMomentumScrollEnd={onMomentumScrollEnd}
-        onScrollBeginDrag={() => clearInterval(intervalRef.current)}
-        onScrollEndDrag={startAutoPlay}
-        scrollEventThrottle={16}
-        renderItem={({ item, index }) => {
-          const inputRange = [
-            (index - 1) * (CARD_W + CARD_SPACING),
-            index * (CARD_W + CARD_SPACING),
-            (index + 1) * (CARD_W + CARD_SPACING),
-          ];
-          const scale = scrollX.interpolate({
-            inputRange,
-            outputRange: [0.92, 1, 0.92],
-            extrapolate: "clamp",
-          });
-          const opacity = scrollX.interpolate({
-            inputRange,
-            outputRange: [0.6, 1, 0.6],
-            extrapolate: "clamp",
-          });
-
-          return (
-            <Animated.View
-              style={[
-                styles.carouselCard,
-                {
-                  backgroundColor: item.bg,
-                  transform: [{ scale }],
-                  opacity,
-                },
-              ]}
-            >
-              <View style={styles.cardContent}>
-                <View style={styles.cardHeader}>
-                  <View style={[styles.tag, { backgroundColor: item.accent + "22" }]}>
-                    <Text style={[styles.tagText, { color: item.accent }]}>{item.tag}</Text>
-                  </View>
-                  <View style={[styles.iconCircle, { backgroundColor: item.accent + "18" }]}>
-                    <Ionicons name={item.icon} size={28} color={item.accent} />
-                  </View>
-                </View>
-                
-                <Text style={[styles.cardTitle, { color: item.accent }]}>{item.title}</Text>
-                <Text style={[styles.cardSubtitle, { color: item.accent + "AA" }]}>{item.subtitle}</Text>
-                
-                <TouchableOpacity 
-                  style={[styles.cardButton, { backgroundColor: item.accent }]} 
-                  activeOpacity={0.85}
-                >
-                  <Text style={[styles.cardButtonText, { color: item.bg }]}>Explore Now →</Text>
-                </TouchableOpacity>
-              </View>
-            </Animated.View>
-          );
-        }}
-      />
-
-      <View style={styles.dotsContainer}>
-        {SLIDES.map((_, i) => {
-          const inputRange = [
-            (i - 1) * (CARD_W + CARD_SPACING),
-            i * (CARD_W + CARD_SPACING),
-            (i + 1) * (CARD_W + CARD_SPACING),
-          ];
-          const dotScale = scrollX.interpolate({
-            inputRange,
-            outputRange: [0.6, 1, 0.6],
-            extrapolate: "clamp",
-          });
-          const dotOpacity = scrollX.interpolate({
-            inputRange,
-            outputRange: [0.3, 1, 0.3],
-            extrapolate: "clamp",
-          });
-          return (
-            <Animated.View
-              key={i}
-              style={[
-                styles.dot,
-                { 
-                  transform: [{ scale: dotScale }],
-                  opacity: dotOpacity 
-                }
-              ]}
-            />
-          );
-        })}
-      </View>
-    </View>
-  );
-}
 
 // ─── Animated Section Wrapper ─────────────────────────────────────────────────
 function FadeInView({ delay = 0, children, style }) {
@@ -312,102 +72,19 @@ function FadeInView({ delay = 0, children, style }) {
   );
 }
 
-// ─── Animated Feature Card ──────────────────────────────────────────────────
-function AnimatedFeatureCard({ feature, index, onPress }) {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-  const [isPressed, setIsPressed] = useState(false);
-
-  useEffect(() => {
-    const pulseDelay = index * 100;
-    const pulseAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, {
-          toValue: 1,
-          duration: 2000,
-          delay: pulseDelay,
-          useNativeDriver: true,
-        }),
-        Animated.timing(glowAnim, {
-          toValue: 0,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    pulseAnimation.start();
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(rotateAnim, {
-          toValue: 1,
-          duration: 3000,
-          delay: pulseDelay,
-          useNativeDriver: true,
-        }),
-        Animated.timing(rotateAnim, {
-          toValue: 0,
-          duration: 3000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    return () => pulseAnimation.stop();
-  }, []);
-
-  const glowIntensity = glowAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 1],
-  });
-
-  const rotate = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '2deg'],
-  });
-
-  const handlePressIn = () => {
-    setIsPressed(true);
-    Animated.spring(scaleAnim, {
-      toValue: 0.92,
-      friction: 3,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    setIsPressed(false);
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      friction: 3,
-      useNativeDriver: true,
-    }).start();
-  };
-
+// ─── Static Feature Card (No Animations) ──────────────────────────────────
+function FeatureCard({ feature, onPress }) {
   const gradientColors = feature.gradient || ['#f9c349', '#f9c349'];
 
   return (
-    <Animated.View style={{ 
+    <View style={{ 
       width: (width - 48) / 3,
-      transform: [{ scale: scaleAnim }, { rotate }],
     }}>
       <TouchableOpacity
-        style={[styles.featureCard, isPressed && styles.featureCardPressed]}
-        activeOpacity={1}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
+        style={styles.featureCard}
+        activeOpacity={0.7}
         onPress={onPress}
       >
-        <Animated.View 
-          style={[
-            styles.featureGlow,
-            { 
-              opacity: glowIntensity,
-              backgroundColor: gradientColors[0] + '15',
-            }
-          ]} 
-        />
         <View 
           style={[
             styles.featureIcon,
@@ -430,7 +107,7 @@ function AnimatedFeatureCard({ feature, index, onPress }) {
           <Text style={[styles.featureHoverText, { color: gradientColors[0] }]}>→</Text>
         </View>
       </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -498,92 +175,6 @@ function AnimatedOfferCard({ offer, index }) {
           <Text style={[styles.offerCtaText, { color: offer.accent }]}>Get →</Text>
         </View>
       </TouchableOpacity>
-    </Animated.View>
-  );
-}
-
-// ─── Animated Progress Card ─────────────────────────────────────────────────
-function AnimatedProgressCard({ progress, index }) {
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-  const progressWidth = useRef(new Animated.Value(0)).current;
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const delay = index * 150;
-    Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 4,
-        delay,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 500,
-        delay,
-        useNativeDriver: true,
-      }),
-      Animated.timing(progressWidth, {
-        toValue: progress.pct * 100,
-        duration: 1000,
-        delay: delay + 300,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false,
-      }),
-    ]).start();
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(rotateAnim, {
-          toValue: 1,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(rotateAnim, {
-          toValue: 0,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
-
-  const rotate = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '5deg'],
-  });
-
-  return (
-    <Animated.View 
-      style={[
-        { width: (width - 40) / 2 },
-        { transform: [{ scale: scaleAnim }, { rotate }] },
-        { opacity: opacityAnim }
-      ]}
-    >
-      <View style={styles.progressCard}>
-        <View style={[styles.progressIcon, { backgroundColor: progress.color + "18" }]}>
-          <Ionicons name={progress.icon} size={22} color={progress.color} />
-          <View style={[styles.progressPulse, { backgroundColor: progress.color + '30' }]} />
-        </View>
-        <Text style={styles.progressValue}>{progress.value}</Text>
-        <Text style={styles.progressLabel}>{progress.label}</Text>
-        <View style={styles.progressTrack}>
-          <Animated.View
-            style={[
-              styles.progressFill,
-              { 
-                backgroundColor: progress.color,
-                width: progressWidth.interpolate({
-                  inputRange: [0, 100],
-                  outputRange: ["0%", "100%"]
-                })
-              }
-            ]}
-          />
-        </View>
-      </View>
     </Animated.View>
   );
 }
@@ -682,10 +273,7 @@ export default function Home({ navigation }) {
   const onRefresh = useCallback(() => refetch(), [refetch]);
 
   const handleFeaturePress = (screen) => {
-    if (screen === "Social" || screen === "Confession") {
-      Alert.alert("Coming Soon", `The ${screen} feature is under development. Stay tuned!`, [{ text: "OK" }]);
-      return;
-    }
+   
     if (navigation && screen) {
       navigation.navigate(screen);
     }
@@ -725,19 +313,13 @@ export default function Home({ navigation }) {
 
             <View style={styles.featuresGrid}>
               {FEATURES.map((feat, i) => (
-                <AnimatedFeatureCard
+                <FeatureCard
                   key={feat.id}
                   feature={feat}
-                  index={i}
                   onPress={() => handleFeaturePress(feat.screen)}
                 />
               ))}
             </View>
-
-            {/* ── Hero Carousel ── */}
-            <FadeInView delay={100}>
-              <HeroCarousel />
-            </FadeInView>
 
             {/* ── Exclusive Offers ── */}
             <FadeInView delay={450}>
@@ -747,17 +329,6 @@ export default function Home({ navigation }) {
             <View style={styles.offersRow}>
               {OFFERS.map((o, i) => (
                 <AnimatedOfferCard key={o.id} offer={o} index={i} />
-              ))}
-            </View>
-
-            {/* ── Progress ── */}
-            <FadeInView delay={550}>
-              <SectionHeader title="Your Progress" sub="Track your achievements" />
-            </FadeInView>
-
-            <View style={styles.progressGrid}>
-              {PROGRESS.map((p, i) => (
-                <AnimatedProgressCard key={p.id} progress={p} index={i} />
               ))}
             </View>
 
@@ -848,44 +419,6 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 16 },
   bottomSpacer: { height: 100 },
 
-  // Carousel
-  carouselWrapper: { marginVertical: 8 },
-  carouselCard: {
-    width: CARD_W,
-    borderRadius: 20,
-    padding: 20,
-    marginRight: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-    minHeight: 170,
-  },
-  cardContent: { flex: 1, justifyContent: "space-between" },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  tag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  tagText: { fontSize: 10, fontWeight: "700", letterSpacing: 0.3 },
-  iconCircle: { width: 44, height: 44, borderRadius: 22, justifyContent: "center", alignItems: "center" },
-  cardTitle: { fontSize: 17, fontWeight: "800", lineHeight: 22, letterSpacing: -0.2, marginBottom: 2 },
-  cardSubtitle: { fontSize: 12, fontWeight: "500", marginBottom: 12 },
-  cardButton: { alignSelf: "flex-start", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 14 },
-  cardButtonText: { fontSize: 12, fontWeight: "700" },
-  dotsContainer: { 
-    flexDirection: "row", 
-    justifyContent: "center", 
-    alignItems: "center", 
-    marginTop: 12, 
-    gap: 6,
-    height: 10,
-  },
-  dot: { 
-    width: 8,
-    height: 8, 
-    borderRadius: 4, 
-    backgroundColor: DARK,
-  },
-
   // Features
   featuresGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: 'flex-start' },
   featureCard: {
@@ -899,23 +432,6 @@ const styles = StyleSheet.create({
     borderColor: BORDER,
     position: 'relative',
     overflow: 'hidden',
-  },
-  featureCardPressed: {
-    borderColor: GOLD,
-    shadowColor: GOLD,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  featureGlow: {
-    position: 'absolute',
-    top: -20,
-    left: -20,
-    right: -20,
-    bottom: -20,
-    borderRadius: 40,
-    opacity: 0.3,
   },
   featureIcon: {
     width: 44,
@@ -982,42 +498,6 @@ const styles = StyleSheet.create({
   offerLabel: { fontSize: 9, fontWeight: "600", lineHeight: 12 },
   offerCta: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, alignSelf: "flex-start" },
   offerCtaText: { fontSize: 10, fontWeight: "700" },
-
-  // Progress
-  progressGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  progressCard: {
-    width: (width - 40) / 2,
-    backgroundColor: LIGHT,
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: BORDER,
-    alignItems: "center",
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  progressIcon: { 
-    width: 40, 
-    height: 40, 
-    borderRadius: 20, 
-    justifyContent: "center", 
-    alignItems: "center", 
-    marginBottom: 6,
-    position: 'relative',
-  },
-  progressPulse: {
-    position: 'absolute',
-    top: -4,
-    left: -4,
-    right: -4,
-    bottom: -4,
-    borderRadius: 24,
-    opacity: 0.3,
-  },
-  progressValue: { fontSize: 20, fontWeight: "900", color: DARK },
-  progressLabel: { fontSize: 10, color: MUTED, marginTop: 2, textAlign: "center" },
-  progressTrack: { width: "100%", height: 4, backgroundColor: BORDER, borderRadius: 2, marginTop: 8, overflow: "hidden" },
-  progressFill: { height: "100%", borderRadius: 2 },
 
   // FAB
   fab: { position: "absolute", bottom: 30, right: 16 },

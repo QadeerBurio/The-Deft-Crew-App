@@ -1,9 +1,9 @@
 import React, { useRef, useEffect } from "react";
-import { 
-  Text, 
-  View, 
-  StyleSheet, 
-  TouchableOpacity, 
+import {
+  Text,
+  View,
+  StyleSheet,
+  TouchableOpacity,
   ScrollView,
   StatusBar,
   Animated,
@@ -14,11 +14,17 @@ import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-ico
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Video, ResizeMode } from "expo-av";
 
 const { width, height } = Dimensions.get("window");
 
 export default function AboutScreen() {
   const navigation = useNavigation();
+  const videoRef = useRef(null);
+  const [isPlaying, setIsPlaying] = React.useState(false);
+  const [isMuted, setIsMuted] = React.useState(true);
+  const [videoStatus, setVideoStatus] = React.useState({});
+  const [isVideoReady, setIsVideoReady] = React.useState(false);
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -29,6 +35,8 @@ export default function AboutScreen() {
   const featureAnims = useRef([...Array(7)].map(() => new Animated.Value(0))).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  const videoSource = require("../../../assets/images/tdcss.mp4");
 
   useEffect(() => {
     // Hero rotation animation
@@ -95,55 +103,102 @@ export default function AboutScreen() {
         ])
       ),
     ]).start();
+
+    // Cleanup video on unmount
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.pauseAsync();
+      }
+    };
   }, []);
 
+  const handlePlayPause = async () => {
+    if (videoRef.current && isVideoReady) {
+      try {
+        if (isPlaying) {
+          await videoRef.current.pauseAsync();
+        } else {
+          await videoRef.current.playAsync();
+        }
+        setIsPlaying(!isPlaying);
+      } catch (error) {
+        console.log('Video play/pause error:', error);
+      }
+    }
+  };
+
+  const handleMute = async () => {
+    if (videoRef.current) {
+      try {
+        await videoRef.current.setIsMutedAsync(!isMuted);
+        setIsMuted(!isMuted);
+      } catch (error) {
+        console.log('Video mute error:', error);
+      }
+    }
+  };
+
+  const handlePlaybackStatusUpdate = (status) => {
+    setVideoStatus(status);
+    if (status.isLoaded) {
+      setIsVideoReady(true);
+    }
+  };
+
+  const formatTime = (millis) => {
+    if (!millis) return "0:00";
+    const totalSeconds = Math.floor(millis / 1000);
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  };
+
   const features = [
-    { 
-      id: 1, 
-      title: "Student Deals", 
-      desc: "Exclusive discounts tailored for students across 200+ brands.", 
-      icon: "school-outline", 
+    {
+      id: 1,
+      title: "Student Deals",
+      desc: "Exclusive discounts tailored for students across 200+ brands.",
+      icon: "school-outline",
       color: "#f9c349",
       gradient: ['#f9c349', '#f5a623']
     },
-    { 
-      id: 2, 
-      title: "Skills Share", 
-      desc: "Connect with fellow students to share expertise and learn new skills.", 
-      icon: "account-group-outline", 
+    {
+      id: 2,
+      title: "Skills Share",
+      desc: "Connect with fellow students to share expertise and learn new skills.",
+      icon: "account-group-outline",
       color: "#a29bfe",
       gradient: ['#a29bfe', '#6c5ce7']
     },
-    { 
-      id: 3, 
-      title: "Premium Events", 
-      desc: "Access workshops, seminars, and networking events.", 
-      icon: "calendar-star-outline", 
+    {
+      id: 3,
+      title: "Premium Events",
+      desc: "Access workshops, seminars, and networking events.",
+      icon: "calendar-star-outline",
       color: "#fd79a8",
       gradient: ['#fd79a8', '#e84393']
     },
-    { 
-      id: 4, 
-      title: "Resume Builder", 
-      desc: "Create ATS-optimized resumes with AI-powered suggestions.", 
-      icon: "file-document-outline", 
+    {
+      id: 4,
+      title: "Resume Builder",
+      desc: "Create ATS-optimized resumes with AI-powered suggestions.",
+      icon: "file-document-outline",
       color: "#00b894",
       gradient: ['#00b894', '#00a381']
     },
-    { 
-      id: 5, 
-      title: "Scholarships", 
-      desc: "Access internal grants and external scholarships like Erasmus+.", 
-      icon: "school-outline", 
+    {
+      id: 5,
+      title: "Scholarships",
+      desc: "Access internal grants and external scholarships like Erasmus+.",
+      icon: "school-outline",
       color: "#ffa502",
       gradient: ['#ffa502', '#f9a825']
     },
-    
-    { 
-      id: 7, 
-      title: "Student Travel", 
-      desc: "Curated budget-friendly travel packages for students.", 
-      icon: "airplane-takeoff", 
+    {
+      id: 7,
+      title: "Student Travel",
+      desc: "Curated budget-friendly travel packages for students.",
+      icon: "airplane-takeoff",
       color: "#6c5ce7",
       gradient: ['#6c5ce7', '#5a4bd1']
     },
@@ -171,7 +226,7 @@ export default function AboutScreen() {
     });
 
     return (
-      <Animated.View 
+      <Animated.View
         style={[
           styles.featureWrapper,
           {
@@ -210,11 +265,11 @@ export default function AboutScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      
+
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerFade }]}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()} 
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
           style={styles.headerBtn}
           activeOpacity={0.7}
         >
@@ -226,22 +281,22 @@ export default function AboutScreen() {
         </TouchableOpacity>
       </Animated.View>
 
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
+      <ScrollView
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         bounces={true}
       >
         <Animated.View style={{ opacity: fadeAnim }}>
-          
+
           {/* Hero Section */}
-          <Animated.View 
+          <Animated.View
             style={[
               styles.heroWrapper,
-              { 
+              {
                 transform: [
                   { scale: heroScale },
                   { translateY: slideUpAnim },
-                ] 
+                ]
               }
             ]}
           >
@@ -257,7 +312,7 @@ export default function AboutScreen() {
                   { opacity: glowOpacity },
                 ]}
               />
-              
+
               <Animated.View style={[styles.heroLogoCircle, { transform: [{ rotate: spin }] }]}>
                 <LinearGradient
                   colors={['#f9c349', '#f5a623']}
@@ -268,7 +323,7 @@ export default function AboutScreen() {
                   <Text style={styles.heroLogoText}>tdc</Text>
                 </LinearGradient>
               </Animated.View>
-              
+
               <Text style={styles.heroBrandName}>The Deft Crew</Text>
               <View style={styles.heroTaglineBadge}>
                 <Text style={styles.heroTaglineText}>THE STUDENT ECOSYSTEM</Text>
@@ -278,7 +333,7 @@ export default function AboutScreen() {
                 <Text style={{ fontWeight: '800', color: '#f9c349' }}>student community</Text>
                 . From savings to career growth, tdc is your ultimate lifestyle partner.
               </Text>
-              
+
               <View style={styles.decorLine}>
                 <View style={styles.decorSegment} />
                 <View style={styles.decorDiamond} />
@@ -289,7 +344,7 @@ export default function AboutScreen() {
               <View style={styles.particlesContainer}>
                 {[...Array(6)].map((_, i) => {
                   const particleAnim = useRef(new Animated.Value(0)).current;
-                  
+
                   useEffect(() => {
                     Animated.loop(
                       Animated.sequence([
@@ -335,7 +390,79 @@ export default function AboutScreen() {
             </LinearGradient>
           </Animated.View>
 
-          
+          {/* Video Section - Full Working Video from App Intro */}
+          <Animated.View style={[styles.videoWrapper, { transform: [{ translateY: slideUpAnim }] }]}>
+            <LinearGradient
+              colors={['#f8f9fa', '#ffffff']}
+              style={styles.videoGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.videoContainer}>
+                <Video
+                  ref={videoRef}
+                  source={videoSource}
+                  style={styles.video}
+                  resizeMode={ResizeMode.COVER}
+                  isLooping
+                  shouldPlay={false}
+                  isMuted={isMuted}
+                  onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+                  useNativeControls={false}
+                  onLoad={() => setIsVideoReady(true)}
+                  onError={(error) => console.log('Video error:', error)}
+                />
+
+                {/* Video Overlay Controls */}
+                <View style={styles.videoOverlay}>
+                  <TouchableOpacity
+                    onPress={handlePlayPause}
+                    style={styles.playBtn}
+                    activeOpacity={0.8}
+                    disabled={!isVideoReady}
+                  >
+                    <LinearGradient
+                      colors={['#f9c349', '#f5a623']}
+                      style={styles.playBtnGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons
+                        name={isPlaying ? "pause" : "play"}
+                        size={30}
+                        color="#fff"
+                        style={{ marginLeft: isPlaying ? 0 : 3 }}
+                      />
+                    </LinearGradient>
+                  </TouchableOpacity>
+
+                  {/* Bottom Controls */}
+                  <View style={styles.videoBottomControls}>
+                    <View style={styles.progressSection}>
+                      <Text style={styles.timeLabel}>{formatTime(videoStatus.positionMillis)}</Text>
+                      <View style={styles.progressBarBase}>
+                        <View style={[styles.progressBarFill, {
+                          width: videoStatus.durationMillis && videoStatus.durationMillis > 0
+                            ? `${(videoStatus.positionMillis / videoStatus.durationMillis) * 100}%`
+                            : '0%'
+                        }]} />
+                      </View>
+                      <Text style={styles.timeLabel}>{formatTime(videoStatus.durationMillis)}</Text>
+                    </View>
+
+                    <View style={styles.videoActions}>
+                      <TouchableOpacity onPress={handleMute} style={styles.videoIconBtn} activeOpacity={0.7}>
+                        <Ionicons name={isMuted ? "volume-mute" : "volume-high"} size={20} color="#333" />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.videoIconBtn} activeOpacity={0.7}>
+                        <Ionicons name="expand-outline" size={20} color="#333" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </LinearGradient>
+          </Animated.View>
 
           {/* Value Propositions */}
           <Animated.View style={[styles.valuesSection, { transform: [{ translateY: slideUpAnim }] }]}>
@@ -349,7 +476,7 @@ export default function AboutScreen() {
               <Text style={styles.sectionTitle}>What's Inside The Crew?</Text>
               <View style={styles.sectionLine} />
             </View>
-            
+
             <LinearGradient
               colors={['#ffffff', '#fafafa']}
               style={styles.valuesCard}
@@ -393,7 +520,7 @@ export default function AboutScreen() {
           </View>
 
           {/* Footer */}
-          <Animated.View 
+          <Animated.View
             style={[
               styles.footer,
               {
@@ -413,7 +540,7 @@ export default function AboutScreen() {
               </Text>
               <Text style={styles.footerText}>Building a Stronger Student Economy.</Text>
               <View style={styles.footerLine} />
-             
+
               <Text style={styles.footerSubText}>© 2026 tdc Privilege Program</Text>
             </LinearGradient>
           </Animated.View>
@@ -428,7 +555,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8f9fa",
   },
-  
+
   // Header
   header: {
     flexDirection: 'row',
@@ -471,7 +598,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     paddingTop: 8,
   },
-  
+
   // Hero
   heroWrapper: {
     marginHorizontal: 16,
@@ -597,48 +724,119 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '45deg' }],
     marginHorizontal: 10,
   },
-  
-  // Quick Stats
-  quickStats: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    marginTop: 8,
-    gap: 8,
-  },
-  statCard: {
-    flex: 1,
-    borderRadius: 12,
-    overflow: 'hidden',
+
+  // Video Section
+  videoWrapper: {
+    marginHorizontal: 16,
+    marginBottom: 24,
+    borderRadius: 20,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
-        shadowRadius: 8,
+        shadowRadius: 20,
       },
       android: {
-        elevation: 4,
+        elevation: 8,
       },
     }),
   },
-  statCardGradient: {
-    paddingVertical: 12,
+  videoGradient: {
+    flex: 1,
+    padding: 2,
+  },
+  videoContainer: {
+    flex: 1,
+    height: 200,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+  },
+  video: {
+    flex: 1,
+  },
+  videoOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  playBtn: {
+    borderRadius: 30,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#f9c349',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 15,
+      },
+      android: {
+        elevation: 10,
+      },
+    }),
+  },
+  playBtnGradient: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  videoBottomControls: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 12,
+    paddingBottom: 10,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+  },
+  progressSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8
+  },
+  progressBarBase: {
+    flex: 1,
+    height: 3,
+    backgroundColor: "rgba(0,0,0,0.1)",
+    marginHorizontal: 8,
+    borderRadius: 1.5,
+    overflow: 'hidden'
+  },
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: "#f9c349",
+    borderRadius: 1.5
+  },
+  timeLabel: {
+    color: "rgba(0,0,0,0.5)",
+    fontSize: 10,
+    fontWeight: "600",
+    width: 35,
+    textAlign: "center"
+  },
+  videoActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+  videoIconBtn: {
+    padding: 5,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 8,
+    width: 32,
+    height: 32,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  statNumber: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#1a1a1a',
-  },
-  statLabel: {
-    fontSize: 9,
-    fontWeight: '600',
-    color: 'rgba(0,0,0,0.6)',
-    marginTop: 2,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  
+
   // Values Section
   valuesSection: {
     paddingHorizontal: 16,
@@ -711,7 +909,7 @@ const styles = StyleSheet.create({
   valueCheck: {
     marginLeft: 8,
   },
-  
+
   // Pillars Section
   pillarsSection: {
     paddingHorizontal: 16,
@@ -783,74 +981,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 3,
     opacity: 0.6,
   },
-  
-  // Mission
-  missionWrapper: {
-    marginHorizontal: 16,
-    marginTop: 20,
-    borderRadius: 16,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
-  },
-  missionCard: {
-    padding: 24,
-    alignItems: 'center',
-  },
-  missionIconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 18,
-    overflow: 'hidden',
-    marginBottom: 12,
-  },
-  missionIconGradient: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  missionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#fff',
-    marginBottom: 8,
-    letterSpacing: 0.5,
-  },
-  missionText: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.7)',
-    textAlign: 'center',
-    lineHeight: 20,
-    fontWeight: '500',
-  },
-  missionButton: {
-    marginTop: 16,
-    width: '100%',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  missionButtonGradient: {
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  missionButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1a1a1a',
-  },
-  
+
   // Footer
   footer: {
     marginHorizontal: 16,
@@ -897,9 +1028,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.1)',
     marginTop: 12,
   },
- 
-  
-  
   footerSubText: {
     fontSize: 10,
     color: 'rgba(0, 0, 0, 0.3)',

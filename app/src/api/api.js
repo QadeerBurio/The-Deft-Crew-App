@@ -5,7 +5,7 @@ import { Alert, Platform } from 'react-native';
 
 const getBaseURL = () => {
   if (__DEV__) {
-    return 'http://192.168.18.128:5000/api';
+    return 'http://192.168.18.93:5000/api';
   }
   return 'https://the-deft-crew-production.up.railway.app/api';
 };
@@ -303,45 +303,8 @@ export const optimizedAPI = {
   }
 };
 
-// Keep existing courseAPI and resumeAPI
-export const courseAPI = {
-  getAllCourses: () => api.get('/courses'),
-  getCourse: () => api.get('/courses/course'),
-  getCourseById: (id) => api.get(`/courses/${id}`),
-  getCoursesByCategory: (category) => api.get(`/courses/category/${category}`),
-  getEnrolledCourses: () => api.get('/courses/user/enrolled'),
-  updateProgress: (courseId, data) => api.put(`/courses/${courseId}/progress`, data),
-  enrollCourse: (courseId) => api.post(`/courses/${courseId}/enroll`),
-};
 
-export const resumeAPI = {
-  getResume: () => api.get('/resume'),
-  saveResume: (data) => api.post('/resume', data),
-  updateSection: (section, data) => api.patch(`/resume/${section}`, { data }),
-  deleteResume: () => api.delete('/resume'),
-  generatePDF: (templateId = 'modern') => api.post('/resume/generate-pdf', { templateId }),
-  generateShareLink: () => api.post('/resume/share'),
-  getPublicResume: (publicUrl) => api.get(`/resume/public/${publicUrl}`),
-  improveText: (text, type) => api.post('/resume/ai-improve', { text, type }),
-  getAnalytics: () => api.get('/resume/analytics'),
-  exportResume: () => api.get('/resume/export/json'),
-  importResume: (data) => api.post('/resume/import/json', { data }),
-  getAllTemplates: (filters = {}) => {
-    const queryString = new URLSearchParams(filters).toString();
-    return api.get(`/resume/templates/all${queryString ? `?${queryString}` : ''}`);
-  },
-  getTemplatesByCategory: (category) => api.get(`/resume/templates/category/${category}`),
-  getMarketInsights: () => api.get('/resume/market-insights'),
-  getTemplateById: (templateId) => api.get(`/resume/templates/${templateId}`),
-  generatePDFWithTemplate: async (templateId, options = {}) => {
-    return api.post(`/resume/generate-pdf/${templateId}`, options);
-  },
-  generateMultiplePDFs: (templateIds, options = {}) => 
-    api.post('/resume/generate-multiple', { templateIds, options }),
-  saveTemplatePreference: (templateId) => api.post('/resume/save-template', { templateId }),
-  getTemplateRecommendations: () => api.get('/resume/template-recommendations'),
-  getTemplates: () => api.get('/resume/templates'),
-  updateTemplate: (templateId) => api.patch(`/resume/template/${templateId}`),
-};
+
+
 
 export default api;

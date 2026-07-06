@@ -33,37 +33,59 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
+import { BlurView } from "expo-blur";
 
 const { width } = Dimensions.get("window");
 
+// Animated Menu Item Component
 const MenuItem = ({ item, index, isLast }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const itemFade = useRef(new Animated.Value(0)).current;
-  const itemSlide = useRef(new Animated.Value(20)).current;
+  const itemSlide = useRef(new Animated.Value(30)).current;
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(itemFade, {
         toValue: 1,
-        duration: 400,
-        delay: index * 60,
+        duration: 500,
+        delay: index * 80,
         useNativeDriver: true,
       }),
       Animated.spring(itemSlide, {
         toValue: 0,
-        friction: 8,
-        tension: 40,
-        delay: index * 60,
+        friction: 7,
+        tension: 35,
+        delay: index * 80,
         useNativeDriver: true,
       }),
     ]).start();
-  }, [index, itemFade, itemSlide]);
+  }, [index]);
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, {
+          toValue: 1,
+          duration: 1200,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmerAnim, {
+          toValue: 0,
+          duration: 1200,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
-      toValue: 0.94,
-      friction: 5,
-      tension: 50,
+      toValue: 0.92,
+      friction: 4,
+      tension: 40,
       useNativeDriver: true,
     }).start();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -72,8 +94,8 @@ const MenuItem = ({ item, index, isLast }) => {
   const handlePressOut = () => {
     Animated.spring(scaleAnim, {
       toValue: 1,
-      friction: 5,
-      tension: 50,
+      friction: 4,
+      tension: 40,
       useNativeDriver: true,
     }).start();
   };
@@ -86,20 +108,24 @@ const MenuItem = ({ item, index, isLast }) => {
       }}
     >
       <TouchableOpacity
-        style={[styles.menuItem, isLast && { borderBottomWidth: 0 }]}
+        style={[
+          styles.menuItem,
+          isLast && { borderBottomWidth: 0 },
+          item.danger && styles.menuItemDanger,
+        ]}
         onPress={item.onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        activeOpacity={0.7}
+        activeOpacity={0.8}
       >
         <View style={styles.menuLeft}>
           <LinearGradient
-            colors={[item.color + "25", item.color + "10"]}
-            style={[styles.menuIconBox, { backgroundColor: "transparent" }]}
+            colors={[item.color + "20", item.color + "08"]}
+            style={styles.menuIconBox}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            <Icon name={item.icon} size={22} color={item.color} />
+            <Icon name={item.icon} size={20} color={item.color} />
           </LinearGradient>
           <View style={styles.menuTextContainer}>
             <Text
@@ -134,9 +160,9 @@ const MenuItem = ({ item, index, isLast }) => {
           ) : (
             <Icon
               name="chevron-forward"
-              size={18}
+              size={16}
               color="#C0C0C0"
-              style={{ opacity: 0.5 }}
+              style={{ opacity: 0.4 }}
             />
           )}
         </View>
@@ -164,7 +190,7 @@ export default function ProfileScreen() {
 
   // Animation References
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideUpAnim = useRef(new Animated.Value(40)).current;
+  const slideUpAnim = useRef(new Animated.Value(30)).current;
   const headerFade = useRef(new Animated.Value(0)).current;
   const avatarScale = useRef(new Animated.Value(0.8)).current;
   const statsScale = useRef(new Animated.Value(0.9)).current;
@@ -194,49 +220,49 @@ export default function ProfileScreen() {
         }),
       ])
     ).start();
-  }, [shimmerAnim]);
+  }, []);
 
   const startEntranceAnimations = useCallback(() => {
     Animated.parallel([
       Animated.timing(headerFade, {
         toValue: 1,
-        duration: 600,
+        duration: 500,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.spring(avatarScale, {
         toValue: 1,
-        friction: 6,
-        tension: 45,
+        friction: 5,
+        tension: 40,
         useNativeDriver: true,
       }),
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 700,
+        duration: 600,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.spring(slideUpAnim, {
         toValue: 0,
-        friction: 8,
-        tension: 40,
+        friction: 7,
+        tension: 35,
         useNativeDriver: true,
       }),
       Animated.spring(statsScale, {
         toValue: 1,
-        friction: 6,
-        tension: 45,
+        friction: 5,
+        tension: 40,
         useNativeDriver: true,
       }),
       Animated.timing(menuFade, {
         toValue: 1,
-        duration: 600,
-        delay: 200,
+        duration: 500,
+        delay: 150,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
     ]).start();
-  }, [avatarScale, fadeAnim, headerFade, menuFade, slideUpAnim, statsScale]);
+  }, []);
 
   const fetchProfileData = useCallback(async () => {
     try {
@@ -288,7 +314,7 @@ export default function ProfileScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.9,
+      quality: 0.8,
     });
 
     if (!result.canceled) {
@@ -367,13 +393,13 @@ export default function ProfileScreen() {
     Animated.parallel([
       Animated.spring(modalScale, {
         toValue: 1,
-        friction: 7,
-        tension: 40,
+        friction: 6,
+        tension: 35,
         useNativeDriver: true,
       }),
       Animated.timing(modalOpacity, {
         toValue: 1,
-        duration: 300,
+        duration: 250,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
@@ -384,13 +410,13 @@ export default function ProfileScreen() {
     Animated.parallel([
       Animated.timing(modalScale, {
         toValue: 0.7,
-        duration: 200,
+        duration: 150,
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(modalOpacity, {
         toValue: 0,
-        duration: 200,
+        duration: 150,
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),
@@ -404,28 +430,28 @@ export default function ProfileScreen() {
   const handleShake = () => {
     Animated.sequence([
       Animated.timing(shakeAnim, {
-        toValue: 10,
-        duration: 50,
+        toValue: 8,
+        duration: 40,
         useNativeDriver: true,
       }),
       Animated.timing(shakeAnim, {
-        toValue: -10,
-        duration: 50,
+        toValue: -8,
+        duration: 40,
         useNativeDriver: true,
       }),
       Animated.timing(shakeAnim, {
-        toValue: 5,
-        duration: 50,
+        toValue: 4,
+        duration: 40,
         useNativeDriver: true,
       }),
       Animated.timing(shakeAnim, {
-        toValue: -5,
-        duration: 50,
+        toValue: -4,
+        duration: 40,
         useNativeDriver: true,
       }),
       Animated.timing(shakeAnim, {
         toValue: 0,
-        duration: 50,
+        duration: 40,
         useNativeDriver: true,
       }),
     ]).start();
@@ -543,39 +569,19 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backBtn}
-          activeOpacity={0.7}
-        >
-          <Icon name="chevron-back" size={24} color="#1a1a1a" />
-        </TouchableOpacity>
-        
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerLogo}>
-            User Profile
-          </Text>
-        </View>
-        
-        
-      </View>
+      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fc" />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        bounces={false}
         contentContainerStyle={styles.scrollContent}
       >
+        {/* Compact Profile Header */}
         <Animated.View
           style={[styles.profileHeader, { opacity: headerFade }]}
         >
           <LinearGradient
             colors={["#ffffff", "#fafafa"]}
             style={styles.profileHeaderGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
           >
             <View style={styles.profileHeaderContent}>
               <Animated.View
@@ -614,7 +620,7 @@ export default function ProfileScreen() {
                       colors={["#f9c349", "#f5a623"]}
                       style={styles.cameraBadgeGradient}
                     >
-                      <Icon name="camera" size={12} color="#000" />
+                      <Icon name="camera" size={11} color="#000" />
                     </LinearGradient>
                   </View>
                 </TouchableOpacity>
@@ -623,46 +629,40 @@ export default function ProfileScreen() {
               <View style={styles.userInfo}>
                 <Text style={styles.userName}>{user?.name || "Student"}</Text>
                 <View style={styles.emailRow}>
-                  <Icon name="mail-outline" size={13} color="#999" />
+                  <Icon name="mail-outline" size={12} color="#999" />
                   <Text style={styles.userEmail}>{user?.email || ""}</Text>
                 </View>
+                {selectedImage && (
+                  <TouchableOpacity
+                    style={styles.saveBtn}
+                    onPress={handleSaveProfile}
+                    disabled={isSaving}
+                  >
+                    <LinearGradient
+                      colors={["#05ae7c", "#06d6a0"]}
+                      style={styles.saveBtnGradient}
+                    >
+                      {isSaving ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <>
+                          <Icon
+                            name="cloud-upload-outline"
+                            size={14}
+                            color="#fff"
+                          />
+                          <Text style={styles.saveBtnText}>Save</Text>
+                        </>
+                      )}
+                    </LinearGradient>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
-
-            {selectedImage && (
-              <Animated.View style={{ opacity: fadeAnim }}>
-                <TouchableOpacity
-                  style={styles.saveBtn}
-                  onPress={handleSaveProfile}
-                  disabled={isSaving}
-                  activeOpacity={0.8}
-                >
-                  <LinearGradient
-                    colors={["#05ae7c", "#06d6a0"]}
-                    style={styles.saveBtnGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                  >
-                    {isSaving ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <>
-                        <Icon
-                          name="cloud-upload-outline"
-                          size={16}
-                          color="#fff"
-                          style={{ marginRight: 6 }}
-                        />
-                        <Text style={styles.saveBtnText}>Save Photo</Text>
-                      </>
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
-              </Animated.View>
-            )}
           </LinearGradient>
         </Animated.View>
 
+        {/* Compact Stats Card */}
         <Animated.View
           style={[
             styles.statsCard,
@@ -670,37 +670,37 @@ export default function ProfileScreen() {
           ]}
         >
           <View style={styles.statItem}>
-            <LinearGradient
-              colors={["#05ae7c18", "#05ae7c08"]}
-              style={styles.statIconBox}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Icon name="wallet-outline" size={22} color="#05ae7c" />
-            </LinearGradient>
-            <Text style={styles.statLabel}>Total Saved</Text>
-            <View style={styles.statValueRow}>
-              <Text style={[styles.statValue, { color: "#05ae7c" }]}>
-                {totalSaved.toFixed(0)}
-              </Text>
-              <Text style={styles.statCurrency}> PKR</Text>
+            <View style={styles.statIconBox}>
+              <Icon name="wallet-outline" size={18} color="#05ae7c" />
             </View>
+            <Text style={styles.statLabel}>Saved</Text>
+            <Text style={[styles.statValue, { color: "#05ae7c" }]}>
+              {totalSaved.toFixed(0)}
+            </Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <LinearGradient
-              colors={["#f9c34918", "#f9c34908"]}
-              style={styles.statIconBox}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Icon name="gift-outline" size={22} color="#f9c349" />
-            </LinearGradient>
-            <Text style={styles.statLabel}>Redemptions</Text>
-            <Text style={styles.statValue}>{redemptionCount}</Text>
+            <View style={[styles.statIconBox, { backgroundColor: "#f9c34915" }]}>
+              <Icon name="gift-outline" size={18} color="#f9c349" />
+            </View>
+            <Text style={styles.statLabel}>Used</Text>
+            <Text style={[styles.statValue, { color: "#f9c349" }]}>
+              {redemptionCount}
+            </Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <View style={[styles.statIconBox, { backgroundColor: "#9b59b615" }]}>
+              <Icon name="card-outline" size={18} color="#9b59b6" />
+            </View>
+            <Text style={styles.statLabel}>Discounts</Text>
+            <Text style={[styles.statValue, { color: "#9b59b6" }]}>
+              {claimedOffers.length}
+            </Text>
           </View>
         </Animated.View>
 
+        {/* Menu Cards with Animation */}
         <Animated.View
           style={{
             opacity: menuFade,
@@ -720,28 +720,6 @@ export default function ProfileScreen() {
             </View>
           </View>
         </Animated.View>
-
-        {/* Footer Section - Fully Centered */}
-        <View style={styles.footerContainer}>
-          <Animated.View 
-            style={[
-              styles.footerContent,
-              {
-                opacity: fadeAnim,
-                transform: [{ scale: statsScale }],
-              }
-            ]}
-          >
-            <Text style={styles.footerLogo}>
-              tdc<Text style={styles.footerLogoAccent}>.</Text>
-            </Text>
-            <Text style={styles.footerText}>
-              Building a Stronger Student Economy
-            </Text>
-            <View style={styles.footerDivider} />
-            <Text style={styles.footerVersion}>v1.0.2 • Karachi, Pakistan</Text>
-          </Animated.View>
-        </View>
       </ScrollView>
 
       {/* Membership Card Modal */}
@@ -860,7 +838,7 @@ export default function ProfileScreen() {
                   <View style={styles.deleteModalIcon}>
                     <MaterialCommunityIcons
                       name="alert-circle"
-                      size={40}
+                      size={36}
                       color="#FF5252"
                     />
                   </View>
@@ -876,7 +854,7 @@ export default function ProfileScreen() {
                   <View style={styles.warningItem}>
                     <Icon
                       name="close-circle"
-                      size={18}
+                      size={16}
                       color="#FF5252"
                     />
                     <Text style={styles.warningText}>
@@ -886,7 +864,7 @@ export default function ProfileScreen() {
                   <View style={styles.warningItem}>
                     <Icon
                       name="close-circle"
-                      size={18}
+                      size={16}
                       color="#FF5252"
                     />
                     <Text style={styles.warningText}>
@@ -896,7 +874,7 @@ export default function ProfileScreen() {
                   <View style={styles.warningItem}>
                     <Icon
                       name="close-circle"
-                      size={18}
+                      size={16}
                       color="#FF5252"
                     />
                     <Text style={styles.warningText}>
@@ -931,7 +909,7 @@ export default function ProfileScreen() {
                   >
                     <MaterialCommunityIcons
                       name="pause-circle"
-                      size={40}
+                      size={36}
                       color="#FF9800"
                     />
                   </View>
@@ -947,7 +925,7 @@ export default function ProfileScreen() {
                     style={styles.alternativeItem}
                     onPress={closeDeleteModal}
                   >
-                    <Icon name="create-outline" size={20} color="#f9c349" />
+                    <Icon name="create-outline" size={18} color="#f9c349" />
                     <Text style={styles.alternativeText}>
                       Update your profile
                     </Text>
@@ -958,7 +936,7 @@ export default function ProfileScreen() {
                   >
                     <Icon
                       name="help-circle-outline"
-                      size={20}
+                      size={18}
                       color="#f9c349"
                     />
                     <Text style={styles.alternativeText}>
@@ -993,7 +971,7 @@ export default function ProfileScreen() {
                   >
                     <MaterialCommunityIcons
                       name="delete-forever"
-                      size={40}
+                      size={36}
                       color="#FF5252"
                     />
                   </View>
@@ -1054,325 +1032,230 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8f9fc" },
+  container: { flex: 1, backgroundColor: "#f8f9fc", paddingBottom:30 },
+  scrollContent: { paddingBottom: 40 },
   
-  // Header Styles
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: Platform.OS === "ios" ? 8 : 12,
-    backgroundColor: "#ffffff",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.04)",
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "#f5f5f7",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerCenter: { 
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerLogo: {
-    fontSize: 22,
-    fontWeight: "900",
-    color: "#1a1a1a",
-    letterSpacing: -0.5,
-  },
-  headerLogoAccent: {
-    color: "#f9c349",
-  },
-  notificationBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "#f5f5f7",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  notificationDot: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#FF5252",
-    borderWidth: 2,
-    borderColor: "#fff",
-  },
-  
-  scrollContent: { paddingBottom: 20 },
-  
-  // Profile Header Styles
+  // Compact Profile Header
   profileHeader: {
     marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 24,
+    marginTop: 12,
+    borderRadius: 20,
     overflow: "hidden",
     backgroundColor: "#fff",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowRadius: 10,
+    elevation: 2,
   },
-  profileHeaderGradient: { padding: 20 },
+  profileHeaderGradient: { padding: 16 },
   profileHeaderContent: { flexDirection: "row", alignItems: "center" },
   avatarContainer: {},
   avatarRing: {
-    width: 88,
-    height: 88,
-    borderRadius: 50,
-    padding: 3,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    padding: 2,
     justifyContent: "center",
     alignItems: "center",
   },
-  avatarImage: { width: 78, height: 78, borderRadius: 50 },
+  avatarImage: { width: 64, height: 64, borderRadius: 32 },
   avatarPlaceholder: {
-    width: 78,
-    height: 78,
-    borderRadius: 50,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: "#1a1a1a",
     justifyContent: "center",
     alignItems: "center",
   },
-  avatarText: { fontSize: 34, fontWeight: "900", color: "#f9c349" },
+  avatarText: { fontSize: 28, fontWeight: "900", color: "#f9c349" },
   cameraBadge: {
     position: "absolute",
-    bottom: -2,
-    right: -2,
+    bottom: -1,
+    right: -1,
     borderRadius: 50,
     overflow: "hidden",
-    borderWidth: 3,
+    borderWidth: 2.5,
     borderColor: "#fff",
   },
   cameraBadgeGradient: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     justifyContent: "center",
     alignItems: "center",
   },
-  userInfo: { marginLeft: 18, flex: 1 },
-  userName: { fontSize: 22, fontWeight: "700", color: "#1a1a1a", letterSpacing: -0.3 },
-  emailRow: { flexDirection: "row", alignItems: "center", marginTop: 4, gap: 4 },
-  userEmail: { fontSize: 13, color: "#999", fontWeight: "500" },
+  userInfo: { marginLeft: 14, flex: 1 },
+  userName: { fontSize: 18, fontWeight: "700", color: "#1a1a1a", letterSpacing: -0.3 },
+  emailRow: { flexDirection: "row", alignItems: "center", marginTop: 2, gap: 4 },
+  userEmail: { fontSize: 12, color: "#999", fontWeight: "500" },
   saveBtn: {
-    marginTop: 16,
-    borderRadius: 12,
+    marginTop: 8,
+    borderRadius: 10,
     overflow: "hidden",
     alignSelf: "flex-start",
   },
   saveBtnGradient: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 12,
+    borderRadius: 10,
+    gap: 4,
   },
-  saveBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  saveBtnText: { color: "#fff", fontSize: 11, fontWeight: "700" },
   
-  // Stats Card Styles
+  // Compact Stats Card
   statsCard: {
     flexDirection: "row",
     backgroundColor: "#fff",
     marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 20,
-    padding: 18,
+    marginTop: 12,
+    borderRadius: 16,
+    padding: 14,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowRadius: 10,
+    elevation: 2,
   },
   statItem: { flex: 1, alignItems: "center" },
   statIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#05ae7c15",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 4,
   },
   statDivider: {
     width: 1,
     backgroundColor: "rgba(0,0,0,0.06)",
-    marginHorizontal: 10,
+    marginHorizontal: 8,
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#999",
     fontWeight: "600",
-    letterSpacing: 0.5,
-    marginBottom: 4,
+    letterSpacing: 0.3,
+    marginBottom: 2,
   },
-  statValueRow: { flexDirection: "row", alignItems: "baseline" },
-  statValue: { fontSize: 22, fontWeight: "700", color: "#1a1a1a", letterSpacing: -0.3 },
-  statCurrency: { fontSize: 11, fontWeight: "600", color: "#999" },
+  statValue: { fontSize: 18, fontWeight: "700", color: "#1a1a1a" },
   
   // Menu Styles
-  menuContainer: { paddingHorizontal: 16, marginTop: 20 },
+  menuContainer: { paddingHorizontal: 16, marginTop: 12 },
   menuCard: {
     backgroundColor: "#fff",
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowRadius: 10,
+    elevation: 2,
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 18,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.04)",
   },
+  menuItemDanger: {
+    borderBottomColor: "rgba(231, 76, 60, 0.08)",
+  },
   menuLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
   menuIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 16,
+    marginRight: 14,
   },
   menuTextContainer: { flex: 1 },
-  menuItemTitle: { fontSize: 15, fontWeight: "600", color: "#1a1a1a" },
+  menuItemTitle: { fontSize: 14, fontWeight: "600", color: "#1a1a1a" },
   menuItemSubtitle: {
-    fontSize: 11,
-    color: "#999",
-    marginTop: 2,
-    fontWeight: "500",
-  },
-  menuRight: { marginLeft: 10 },
-  menuBadge: { borderRadius: 12, overflow: "hidden" },
-  menuBadgeGradient: { paddingHorizontal: 12, paddingVertical: 5 },
-  menuBadgeText: { fontSize: 11, fontWeight: "700", color: "#fff" },
-  
-  // Footer Styles - Fully Centered
-  footerContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 40,
-    marginBottom: 12,
-    paddingHorizontal: 20,
-  },
-  footerContent: {
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-  },
-  footerLogo: {
-    fontSize: 28,
-    fontWeight: "900",
-    color: "#1a1a1a",
-    letterSpacing: -0.5,
-    marginBottom: 6,
-  },
-  footerLogoAccent: {
-    color: "#f9c349",
-  },
-  footerText: {
-    fontSize: 12,
-    color: "#999",
-    fontWeight: "500",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  footerDivider: {
-    width: 40,
-    height: 2,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 1,
-    marginVertical: 8,
-  },
-  footerVersion: {
     fontSize: 10,
-    color: "#ccc",
+    color: "#999",
+    marginTop: 1,
     fontWeight: "500",
-    textAlign: "center",
   },
+  menuRight: { marginLeft: 8 },
+  menuBadge: { borderRadius: 10, overflow: "hidden" },
+  menuBadgeGradient: { paddingHorizontal: 10, paddingVertical: 3 },
+  menuBadgeText: { fontSize: 10, fontWeight: "700", color: "#fff" },
   
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.65)",
+    backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
   membershipCard: {
     width: width * 0.92,
-    borderRadius: 30,
+    borderRadius: 28,
     overflow: "hidden",
     elevation: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 12 },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
-    shadowRadius: 24,
+    shadowRadius: 20,
   },
   membershipGradient: {
-    padding: 32,
+    padding: 28,
     alignItems: "center",
-    borderRadius: 30,
+    borderRadius: 28,
   },
   cardSparkles: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
   cardTitle: {
     color: "rgba(255,255,255,0.85)",
     fontWeight: "800",
-    letterSpacing: 4,
-    fontSize: 14,
-    marginBottom: 28,
+    letterSpacing: 3,
+    fontSize: 13,
+    marginBottom: 24,
   },
-  cardBody: { alignItems: "center", marginBottom: 30 },
-  diamondBox: { marginBottom: 22 },
+  cardBody: { alignItems: "center", marginBottom: 26 },
+  diamondBox: { marginBottom: 18 },
   diamondGradient: {
-    width: 92,
-    height: 92,
-    borderRadius: 22,
+    width: 80,
+    height: 80,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
     transform: [{ rotate: "45deg" }],
   },
   cardPromoTitle: {
     color: "#fff",
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "800",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   cardPromoDesc: {
     color: "rgba(255,255,255,0.85)",
     textAlign: "center",
-    lineHeight: 22,
-    fontSize: 14,
-    paddingHorizontal: 10,
+    lineHeight: 20,
+    fontSize: 13,
+    paddingHorizontal: 8,
   },
   priceHighlight: { color: "#FFD700", fontWeight: "800" },
-  cardBtn: { borderRadius: 16, overflow: "hidden", width: "100%", elevation: 5 },
+  cardBtn: { borderRadius: 14, overflow: "hidden", width: "100%", elevation: 4 },
   cardBtnGradient: {
-    paddingHorizontal: 28,
-    paddingVertical: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
   },
-  cardBtnText: { color: "#000", fontWeight: "800", fontSize: 16 },
+  cardBtnText: { color: "#000", fontWeight: "800", fontSize: 14 },
   maybeLater: {
     color: "rgba(255,255,255,0.5)",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "500",
   },
   
@@ -1386,100 +1269,100 @@ const styles = StyleSheet.create({
   },
   deleteModalContent: {
     backgroundColor: "#fff",
-    borderRadius: 28,
-    padding: 24,
+    borderRadius: 24,
+    padding: 22,
     width: "100%",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 12 },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 10,
+    shadowRadius: 20,
+    elevation: 8,
   },
-  deleteModalHeader: { alignItems: "center", marginBottom: 20 },
+  deleteModalHeader: { alignItems: "center", marginBottom: 16 },
   deleteModalIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: "#FFEBEE",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 14,
   },
   deleteModalTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "700",
     color: "#1a1a1a",
-    marginBottom: 8,
+    marginBottom: 6,
     letterSpacing: -0.3,
   },
   deleteModalDesc: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#666",
     textAlign: "center",
-    lineHeight: 20,
+    lineHeight: 18,
   },
-  warningList: { marginBottom: 20 },
+  warningList: { marginBottom: 16 },
   warningItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   warningText: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#666",
-    marginLeft: 10,
+    marginLeft: 8,
     fontWeight: "500",
   },
-  alternativeList: { marginBottom: 20 },
+  alternativeList: { marginBottom: 16 },
   alternativeItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     backgroundColor: "#f8f9fc",
-    borderRadius: 14,
-    marginBottom: 8,
+    borderRadius: 12,
+    marginBottom: 6,
   },
   alternativeText: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#1a1a1a",
-    marginLeft: 12,
+    marginLeft: 10,
     fontWeight: "500",
   },
-  deleteModalBtns: { flexDirection: "row", gap: 12 },
+  deleteModalBtns: { flexDirection: "row", gap: 10 },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
     backgroundColor: "rgba(0,0,0,0.04)",
     alignItems: "center",
   },
-  cancelBtnText: { fontSize: 14, fontWeight: "600", color: "#666" },
+  cancelBtnText: { fontSize: 13, fontWeight: "600", color: "#666" },
   continueBtn: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
     backgroundColor: "#FF5252",
     alignItems: "center",
   },
-  continueBtnText: { fontSize: 14, fontWeight: "600", color: "#fff" },
+  continueBtnText: { fontSize: 13, fontWeight: "600", color: "#fff" },
   confirmInput: {
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: "rgba(0,0,0,0.06)",
-    borderRadius: 16,
-    padding: 14,
-    fontSize: 14,
+    borderRadius: 14,
+    padding: 12,
+    fontSize: 13,
     color: "#1a1a1a",
-    marginBottom: 20,
+    marginBottom: 16,
     fontWeight: "500",
   },
   deleteFinalBtn: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
     backgroundColor: "#ccc",
     alignItems: "center",
   },
   deleteFinalBtnActive: { backgroundColor: "#FF5252" },
-  deleteFinalBtnText: { fontSize: 14, fontWeight: "600", color: "#fff" },
+  deleteFinalBtnText: { fontSize: 13, fontWeight: "600", color: "#fff" },
 });

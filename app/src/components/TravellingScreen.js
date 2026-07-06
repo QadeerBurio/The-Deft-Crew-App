@@ -40,130 +40,51 @@ const preloadImage = (url) => {
 };
 
 // ==========================================
-// CATEGORIES WITH ICONS & COLORS
+// CATEGORIES WITH SIMPLE TEXT ONLY
 // ==========================================
 const CATEGORIES = [
-  { id: 'all', name: 'All', icon: 'grid', iconType: 'Feather', color: '#1a1a1a', bgColor: '#f0f0f0' },
-  { id: 'international-tours', name: 'International Tours', icon: 'globe-americas', iconType: 'FontAwesome5', color: '#FF6B6B', bgColor: '#FFE8E8' },
-  { id: 'pakistan-tours', name: 'Pakistan Tours', icon: 'flag', iconType: 'FontAwesome5', color: '#4CAF50', bgColor: '#E8F5E9' },
-  { id: 'flights', name: 'Flights', icon: 'airplane', iconType: 'Ionicons', color: '#2196F3', bgColor: '#E3F2FD' },
-  { id: 'hotels', name: 'Hotels', icon: 'hotel', iconType: 'Fontisto', color: '#FF9800', bgColor: '#FFF3E0' },
-  { id: 'visa-services', name: 'Visa Services', icon: 'passport', iconType: 'FontAwesome5', color: '#9C27B0', bgColor: '#F3E5F5' },
-  { id: 'study-abroad', name: 'Study Abroad', icon: 'school', iconType: 'Ionicons', color: '#3F51B5', bgColor: '#E8EAF6' },
-  { id: 'travel-insurance', name: 'Travel Insurance', icon: 'shield-alt', iconType: 'FontAwesome5', color: '#E91E63', bgColor: '#FCE4EC' },
-  { id: 'transport-services', name: 'Transport Services', icon: 'bus', iconType: 'FontAwesome5', color: '#795548', bgColor: '#EFEBE9' },
-  { id: 'adventure-tourism', name: 'Adventure Tourism', icon: 'mountain', iconType: 'FontAwesome5', color: '#FF5722', bgColor: '#FBE9E7' },
-  { id: 'honeymoon-packages', name: 'Honeymoon Packages', icon: 'heart', iconType: 'FontAwesome5', color: '#E91E63', bgColor: '#FCE4EC' },
-  { id: 'family-tours', name: 'Family Tours', icon: 'users', iconType: 'FontAwesome5', color: '#FF9800', bgColor: '#FFF3E0' },
-  { id: 'group-tours', name: 'Group Tours', icon: 'people', iconType: 'Ionicons', color: '#009688', bgColor: '#E0F2F1' },
-  { id: 'corporate-travel', name: 'Corporate Travel', icon: 'briefcase', iconType: 'FontAwesome5', color: '#607D8B', bgColor: '#ECEFF1' },
-  { id: 'cruise-tours', name: 'Cruise Tours', icon: 'sailboat', iconType: 'FontAwesome5', color: '#00BCD4', bgColor: '#E0F7FA' },
-  { id: 'events-conferences', name: 'Events & Conferences', icon: 'calendar', iconType: 'FontAwesome5', color: '#FFC107', bgColor: '#FFF8E1' },
-  { id: 'student-tours', name: 'Student Tours', icon: 'graduation-cap', iconType: 'FontAwesome5', color: '#8BC34A', bgColor: '#F1F8E9' },
-  { id: 'luxury-travel', name: 'Luxury Travel', icon: 'crown', iconType: 'FontAwesome5', color: '#FFD700', bgColor: '#FFFDE7' },
+  { id: 'all', name: 'All' },
+  { id: 'international-tours', name: 'Tours' },
+  { id: 'flights', name: 'Flights' },
+  { id: 'hotels', name: 'Hotels' },
+  { id: 'visa-services', name: 'Visa' },
+  { id: 'study-abroad', name: 'Study' },
+  { id: 'travel-insurance', name: 'Insurance' },
+  { id: 'transport-services', name: 'Transport' },
+  { id: 'adventure-tourism', name: 'Adventure' },
+  { id: 'honeymoon-packages', name: 'Honeymoon' },
+  { id: 'family-tours', name: 'Family' },
+  { id: 'group-tours', name: 'Group' },
+  { id: 'corporate-travel', name: 'Corporate' },
+  { id: 'cruise-tours', name: 'Cruise' },
+  { id: 'events-conferences', name: 'Events' },
+  { id: 'student-tours', name: 'Student' },
+  { id: 'luxury-travel', name: 'Luxury' },
 ];
-
-const getIconComponent = (type) => {
-  switch (type) {
-    case 'FontAwesome5': return FontAwesome5;
-    case 'Ionicons': return Ionicons;
-    case 'MaterialCommunityIcons': return MaterialCommunityIcons;
-    case 'Feather': return Feather;
-    case 'Fontisto': return Fontisto;
-    case 'Entypo': return Entypo;
-    case 'AntDesign': return AntDesign;
-    default: return Ionicons;
-  }
-};
 
 const ITEMS_PER_PAGE = 10;
 
 // ==========================================
-// SKELETON COMPONENT
-// ==========================================
-const SkeletonBlock = memo(({ style }) => (
-  <View style={[style, { backgroundColor: '#E8ECF1', borderRadius: 12 }]} />
-));
-
-const SkeletonCard = memo(() => (
-  <View style={[styles.mainCard, { backgroundColor: '#F5F5F5' }]}>
-    <View style={[styles.cardImg, { backgroundColor: '#E8ECF1' }]} />
-    <View style={styles.cardInfo}>
-      <SkeletonBlock style={{ width: '85%', height: 16, borderRadius: 4, marginBottom: 8 }} />
-      <SkeletonBlock style={{ width: '60%', height: 12, borderRadius: 4, marginBottom: 10 }} />
-      <View style={styles.cardFooter}>
-        <SkeletonBlock style={{ width: 60, height: 18, borderRadius: 4 }} />
-        <SkeletonBlock style={{ width: 50, height: 18, borderRadius: 6 }} />
-      </View>
-    </View>
-  </View>
-));
-
-// ==========================================
-// ENHANCED CATEGORY CARD COMPONENT
+// MODERN CATEGORY CARD (Text Only)
 // ==========================================
 const CategoryCard = memo(({ category, isActive, onPress, index }) => {
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
-  const translateYAnim = useRef(new Animated.Value(30)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const hasAnimated = useRef(false);
 
   useEffect(() => {
-    if (hasAnimated.current) return;
-    hasAnimated.current = true;
-
     const delay = index * 50;
-
-    InteractionManager.runAfterInteractions(() => {
-      Animated.parallel([
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          delay,
-          friction: 8,
-          tension: 60,
-          useNativeDriver: true,
-        }),
-        Animated.spring(translateYAnim, {
-          toValue: 0,
-          delay,
-          friction: 8,
-          tension: 60,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          delay,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    });
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      delay,
+      useNativeDriver: true,
+    }).start();
   }, []);
 
-  useEffect(() => {
-    if (isActive) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.spring(pulseAnim, {
-            toValue: 1.05,
-            friction: 3,
-            tension: 100,
-            useNativeDriver: true,
-          }),
-          Animated.spring(pulseAnim, {
-            toValue: 1,
-            friction: 3,
-            tension: 100,
-            useNativeDriver: true,
-          }),
-        ]),
-        { iterations: 2 }
-      ).start();
-    }
-  }, [isActive]);
-
-  const IconComponent = getIconComponent(category.iconType);
+  const handlePress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress(category.name);
+  }, [category.name, onPress]);
 
   const handlePressIn = useCallback(() => {
     Animated.spring(scaleAnim, {
@@ -183,104 +104,54 @@ const CategoryCard = memo(({ category, isActive, onPress, index }) => {
     }).start();
   }, [scaleAnim]);
 
-  const handlePress = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onPress(category.name);
-  }, [category.name, onPress]);
-
   return (
     <Animated.View style={[
-      styles.categoryCardWrapper,
-      {
-        opacity: fadeAnim,
-        transform: [
-          { scale: Animated.multiply(scaleAnim, pulseAnim) },
-          { translateY: translateYAnim }
-        ]
-      }
+      styles.categoryWrapper,
+      { opacity: fadeAnim }
     ]}>
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={handlePress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        style={[
-          styles.categoryCard,
-          isActive && styles.categoryCardActive
-        ]}
       >
-        <LinearGradient
-          colors={isActive ? ['#1a1a1a', '#2d2d2d'] : ['#FFFFFF', '#FFFFFF']}
-          style={[
-            styles.categoryIconCircle,
-            isActive && styles.categoryIconCircleActive
-          ]}
-        >
-          <Animated.View style={{
-            transform: [{ scale: isActive ? pulseAnim : 1 }]
-          }}>
-            <IconComponent
-              name={category.icon}
-              size={22}
-              color={isActive ? '#f9c349' : category.color}
-              solid={category.iconType === 'FontAwesome5'}
-            />
-          </Animated.View>
-        </LinearGradient>
-
-        <View style={styles.categoryTextContainer}>
-          <Text
-            style={[
-              styles.categoryCardText,
-              isActive && styles.categoryCardTextActive
-            ]}
-            numberOfLines={1}
-          >
+        <Animated.View style={[
+          styles.categoryCard,
+          isActive && styles.categoryCardActive,
+          { transform: [{ scale: scaleAnim }] }
+        ]}>
+          <Text style={[
+            styles.categoryName,
+            isActive && styles.categoryNameActive
+          ]}>
             {category.name}
           </Text>
-          {isActive && (
-            <Animated.View style={[
-              styles.categoryActiveDot,
-              {
-                transform: [{ scale: pulseAnim }]
-              }
-            ]} />
-          )}
-        </View>
-
-        {isActive && (
-          <LinearGradient
-            colors={['#f9c349', '#f9c349']}
-            style={styles.categoryActiveBorder}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          />
-        )}
+        </Animated.View>
       </TouchableOpacity>
     </Animated.View>
   );
 });
 
 // ==========================================
-// ANIMATED PACKAGE CARD
+// MODERN PACKAGE CARD
 // ==========================================
-const AnimatedCard = memo(({ item, index, onPress, isGuest }) => {
+const PackageCard = memo(({ item, index, onPress, isGuest }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const translateYAnim = useRef(new Animated.Value(20)).current;
+  const translateYAnim = useRef(new Animated.Value(30)).current;
   const hasAnimated = useRef(false);
 
   useEffect(() => {
     if (hasAnimated.current) return;
     hasAnimated.current = true;
 
-    const delay = Math.min(index * 30, 150);
+    const delay = Math.min(index * 50, 200);
 
     InteractionManager.runAfterInteractions(() => {
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 300,
+          duration: 400,
           delay,
           useNativeDriver: true,
         }),
@@ -301,7 +172,7 @@ const AnimatedCard = memo(({ item, index, onPress, isGuest }) => {
 
   const handlePressIn = useCallback(() => {
     Animated.spring(scaleAnim, {
-      toValue: 0.95,
+      toValue: 0.96,
       friction: 8,
       tension: 100,
       useNativeDriver: true,
@@ -324,7 +195,7 @@ const AnimatedCard = memo(({ item, index, onPress, isGuest }) => {
 
   return (
     <Animated.View style={[
-      styles.mainCard,
+      styles.packageCard,
       {
         opacity: fadeAnim,
         transform: [
@@ -340,31 +211,30 @@ const AnimatedCard = memo(({ item, index, onPress, isGuest }) => {
         onPressOut={handlePressOut}
       >
         <Image
-          source={{ uri: item.image || 'https://via.placeholder.com/300' }}
-          style={styles.cardImg}
+          source={{ uri: item.image || 'https://via.placeholder.com/300x200' }}
+          style={styles.packageImage}
           resizeMode="cover"
         />
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.7)']}
-          style={styles.cardGradient}
+          colors={['transparent', 'rgba(0,0,0,0.6)']}
+          style={styles.packageGradient}
         />
-        <View style={styles.badge}>
-          <Text style={styles.badgeText} numberOfLines={1}>{item.category}</Text>
+        <View style={styles.packageBadge}>
+          <Text style={styles.packageBadgeText}>{item.category || 'Package'}</Text>
         </View>
-        <TouchableOpacity style={styles.cardFavoriteBtn} activeOpacity={0.7}>
-          <Ionicons name="heart-outline" size={18} color="#FFF" />
-        </TouchableOpacity>
-        <View style={styles.cardInfo}>
-          <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
-          <View style={styles.cardLocRow}>
-            <Ionicons name="location-sharp" size={12} color="#f9c349" />
-            <Text style={styles.cardLocText} numberOfLines={1}>{item.location || 'Pakistan'}</Text>
+        <View style={styles.packageInfo}>
+          <Text style={styles.packageName} numberOfLines={1}>{item.name || 'Package'}</Text>
+          <View style={styles.packageLocation}>
+            <Ionicons name="location" size={12} color="#f9c349" />
+            <Text style={styles.packageLocationText} numberOfLines={1}>
+              {item.location || 'Pakistan'}
+            </Text>
           </View>
-          <View style={styles.cardFooter}>
-            <Text style={styles.cardPrice}>{item.price}</Text>
-            <View style={styles.ratingBox}>
-              <FontAwesome5 name="star" size={8} color="#f9c349" solid />
-              <Text style={styles.ratingText}>4.8</Text>
+          <View style={styles.packageFooter}>
+            <Text style={styles.packagePrice}>{item.price || 'PKR 0'}</Text>
+            <View style={styles.packageRating}>
+              <FontAwesome5 name="star" size={10} color="#f9c349" solid />
+              <Text style={styles.packageRatingText}>4.8</Text>
             </View>
           </View>
         </View>
@@ -377,28 +247,10 @@ const AnimatedCard = memo(({ item, index, onPress, isGuest }) => {
 });
 
 // ==========================================
-// ENHANCED PAGINATION COMPONENT
+// PAGINATION CONTROLS
 // ==========================================
-const PaginationControls = memo(({ currentPage, totalPages, onPageChange, isLoading }) => {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+const PaginationControls = memo(({ currentPage, totalPages, onPageChange }) => {
   const [visiblePages, setVisiblePages] = useState([]);
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        friction: 8,
-        tension: 60,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [currentPage]);
 
   useMemo(() => {
     const pages = [];
@@ -410,23 +262,17 @@ const PaginationControls = memo(({ currentPage, totalPages, onPageChange, isLoad
       }
     } else {
       if (currentPage <= 3) {
-        for (let i = 1; i <= 4; i++) {
-          pages.push(i);
-        }
+        for (let i = 1; i <= 4; i++) pages.push(i);
         pages.push('...');
         pages.push(totalPages);
       } else if (currentPage >= totalPages - 2) {
         pages.push(1);
         pages.push('...');
-        for (let i = totalPages - 3; i <= totalPages; i++) {
-          pages.push(i);
-        }
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
       } else {
         pages.push(1);
         pages.push('...');
-        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
-          pages.push(i);
-        }
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
         pages.push('...');
         pages.push(totalPages);
       }
@@ -458,78 +304,52 @@ const PaginationControls = memo(({ currentPage, totalPages, onPageChange, isLoad
   if (totalPages <= 1) return null;
 
   return (
-    <Animated.View style={[
-      styles.paginationContainer,
-      {
-        opacity: fadeAnim,
-        transform: [{ translateY: slideAnim }]
-      }
-    ]}>
+    <View style={styles.paginationContainer}>
       <TouchableOpacity
-        style={[styles.paginationArrow, currentPage === 1 && styles.paginationDisabled]}
+        style={[styles.paginationButton, currentPage === 1 && styles.paginationDisabled]}
         onPress={handlePrev}
         disabled={currentPage === 1}
-        activeOpacity={0.7}
       >
-        <Ionicons
-          name="chevron-back"
-          size={22}
-          color={currentPage === 1 ? '#CCC' : '#1a1a1a'}
-        />
+        <Ionicons name="chevron-back" size={20} color={currentPage === 1 ? '#CCC' : '#333'} />
       </TouchableOpacity>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.pageNumbersContainer}
-      >
-        {visiblePages.map((page, index) => {
-          if (page === '...') {
-            return (
-              <View key={`ellipsis-${index}`} style={styles.pageEllipsis}>
-                <Text style={styles.ellipsisText}>…</Text>
-              </View>
-            );
-          }
-
-          const isActive = page === currentPage;
+      {visiblePages.map((page, index) => {
+        if (page === '...') {
           return (
-            <TouchableOpacity
-              key={`page-${page}`}
-              onPress={() => handlePagePress(page)}
-              activeOpacity={0.7}
-              style={[
-                styles.pageNumber,
-                isActive && styles.pageNumberActive
-              ]}
-            >
-              <Animated.Text style={[
-                styles.pageNumberText,
-                isActive && styles.pageNumberTextActive
-              ]}>
-                {page}
-              </Animated.Text>
-              {isActive && (
-                <Animated.View style={styles.pageNumberActiveDot} />
-              )}
-            </TouchableOpacity>
+            <View key={`ellipsis-${index}`} style={styles.paginationEllipsis}>
+              <Text style={styles.ellipsisText}>…</Text>
+            </View>
           );
-        })}
-      </ScrollView>
+        }
+
+        const isActive = page === currentPage;
+        return (
+          <TouchableOpacity
+            key={`page-${page}`}
+            onPress={() => handlePagePress(page)}
+            style={[
+              styles.paginationPage,
+              isActive && styles.paginationPageActive
+            ]}
+          >
+            <Text style={[
+              styles.paginationPageText,
+              isActive && styles.paginationPageTextActive
+            ]}>
+              {page}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
 
       <TouchableOpacity
-        style={[styles.paginationArrow, currentPage === totalPages && styles.paginationDisabled]}
+        style={[styles.paginationButton, currentPage === totalPages && styles.paginationDisabled]}
         onPress={handleNext}
         disabled={currentPage === totalPages}
-        activeOpacity={0.7}
       >
-        <Ionicons
-          name="chevron-forward"
-          size={22}
-          color={currentPage === totalPages ? '#CCC' : '#1a1a1a'}
-        />
+        <Ionicons name="chevron-forward" size={20} color={currentPage === totalPages ? '#CCC' : '#333'} />
       </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
 });
 
@@ -537,60 +357,29 @@ const PaginationControls = memo(({ currentPage, totalPages, onPageChange, isLoad
 // LOAD MORE INDICATOR
 // ==========================================
 const LoadMoreIndicator = memo(({ isLoading, onLoadMore, hasMore }) => {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (isLoading) {
-      Animated.loop(
-        Animated.timing(rotateAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        })
-      ).start();
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [isLoading]);
-
-  const spin = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg']
-  });
-
   if (!hasMore) return null;
 
   return (
-    <Animated.View style={[styles.loadMoreContainer, { opacity: fadeAnim }]}>
-      <TouchableOpacity
-        onPress={onLoadMore}
-        disabled={isLoading}
-        style={styles.loadMoreButton}
-        activeOpacity={0.7}
-      >
-        <Animated.View style={{ transform: [{ rotate: spin }] }}>
-          <ActivityIndicator size="small" color="#f9c349" />
-        </Animated.View>
-        <Text style={styles.loadMoreText}>
-          {isLoading ? 'Loading more...' : 'Load More Packages'}
-        </Text>
-      </TouchableOpacity>
-    </Animated.View>
+    <TouchableOpacity
+      onPress={onLoadMore}
+      disabled={isLoading}
+      style={styles.loadMoreButton}
+      activeOpacity={0.7}
+    >
+      {isLoading ? (
+        <ActivityIndicator size="small" color="#f9c349" />
+      ) : (
+        <>
+          <Feather name="plus-circle" size={18} color="#f9c349" />
+          <Text style={styles.loadMoreText}>Load More</Text>
+        </>
+      )}
+    </TouchableOpacity>
   );
 });
 
 // ==========================================
-// MAIN SCREEN COMPONENT
+// MAIN SCREEN
 // ==========================================
 const TravelingScreen = () => {
   const { token, isGuest } = useContext(AuthContext);
@@ -599,7 +388,7 @@ const TravelingScreen = () => {
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAllCategories, setShowAllCategories] = useState(false);
-  const [selectedDestination, setSelectedDestination] = useState(null);
+  const [selectedPackage, setSelectedPackage] = useState(null);
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -607,17 +396,6 @@ const TravelingScreen = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
-
-  // Animation Refs
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideUpAnim = useRef(new Animated.Value(0)).current;
-  const heroAnim = useRef(new Animated.Value(0)).current;
-  const categoriesAnim = useRef(new Animated.Value(0)).current;
-  const searchAnim = useRef(new Animated.Value(0)).current;
-  const modalScaleAnim = useRef(new Animated.Value(0)).current;
-  const modalSlideAnim = useRef(new Animated.Value(height)).current;
-  const headerTitleAnim = useRef(new Animated.Value(0)).current;
-  const countAnim = useRef(new Animated.Value(0)).current;
 
   const isMounted = useRef(true);
   const hasInitialFetch = useRef(false);
@@ -629,10 +407,7 @@ const TravelingScreen = () => {
       `Sign up to ${action} and explore amazing travel packages!`,
       [
         { text: 'Not Now', style: 'cancel' },
-        {
-          text: 'Sign Up',
-          onPress: () => navigation.navigate('Login')
-        }
+        { text: 'Sign Up', onPress: () => navigation.navigate('Login') }
       ]
     );
   };
@@ -649,11 +424,6 @@ const TravelingScreen = () => {
         setLoading(false);
         setCurrentPage(1);
         setVisibleCount(ITEMS_PER_PAGE);
-        InteractionManager.runAfterInteractions(() => {
-          memoryCache.slice(0, 6).forEach(item => {
-            if (item.image) preloadImage(item.image);
-          });
-        });
       }
       return;
     }
@@ -670,17 +440,13 @@ const TravelingScreen = () => {
     }
 
     if (!forceRefresh && (now - lastFetchTime) < FETCH_DEBOUNCE) return;
-
     lastFetchTime = now;
 
     if (isMounted.current && packages.length === 0) setLoading(true);
 
     pendingFetchPromise = (async () => {
       try {
-        const response = await axios.get(API_URL, {
-          timeout: 8000,
-        });
-
+        const response = await axios.get(API_URL, { timeout: 8000 });
         const data = response.data || [];
 
         if (isMounted.current) {
@@ -689,26 +455,15 @@ const TravelingScreen = () => {
           cacheTimestamp = Date.now();
           setCurrentPage(1);
           setVisibleCount(ITEMS_PER_PAGE);
-
           setTimeout(() => {
-            if (isMounted.current) {
-              setLoading(false);
-              animateContent();
-            }
+            if (isMounted.current) setLoading(false);
           }, 150);
-
-          InteractionManager.runAfterInteractions(() => {
-            data.slice(0, 6).forEach(item => {
-              if (item.image) preloadImage(item.image);
-            });
-          });
         }
 
         pendingFetchPromise = null;
         return data;
       } catch (error) {
         console.error("Fetch Error:", error.message);
-
         if (isMounted.current) {
           if (memoryCache) {
             setPackages(memoryCache);
@@ -716,13 +471,10 @@ const TravelingScreen = () => {
             setVisibleCount(ITEMS_PER_PAGE);
           }
           setLoading(false);
-          animateContent();
-
           if (!memoryCache) {
             Alert.alert("Connection Error", "Could not fetch packages. Please try again.");
           }
         }
-
         pendingFetchPromise = null;
         return memoryCache || [];
       }
@@ -730,62 +482,6 @@ const TravelingScreen = () => {
 
     return pendingFetchPromise;
   }, [packages.length]);
-
-  // ==========================================
-  // ANIMATE CONTENT ON LOAD
-  // ==========================================
-  const animateContent = useCallback(() => {
-    InteractionManager.runAfterInteractions(() => {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        Animated.spring(heroAnim, {
-          toValue: 1,
-          friction: 10,
-          tension: 60,
-          useNativeDriver: true,
-        }),
-        Animated.spring(categoriesAnim, {
-          toValue: 1,
-          delay: 100,
-          friction: 10,
-          tension: 60,
-          useNativeDriver: true,
-        }),
-        Animated.spring(searchAnim, {
-          toValue: 1,
-          delay: 50,
-          friction: 10,
-          tension: 60,
-          useNativeDriver: true,
-        }),
-        Animated.spring(slideUpAnim, {
-          toValue: 1,
-          delay: 150,
-          friction: 10,
-          tension: 60,
-          useNativeDriver: true,
-        }),
-        Animated.spring(headerTitleAnim, {
-          toValue: 1,
-          delay: 200,
-          friction: 10,
-          tension: 60,
-          useNativeDriver: true,
-        }),
-        Animated.spring(countAnim, {
-          toValue: 1,
-          delay: 250,
-          friction: 10,
-          tension: 60,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    });
-  }, [fadeAnim, heroAnim, categoriesAnim, searchAnim, slideUpAnim, headerTitleAnim, countAnim]);
 
   // ==========================================
   // INITIAL LOAD
@@ -796,10 +492,7 @@ const TravelingScreen = () => {
       hasInitialFetch.current = true;
       fetchPackages();
     }
-
-    return () => {
-      isMounted.current = false;
-    };
+    return () => { isMounted.current = false; };
   }, [fetchPackages]);
 
   // ==========================================
@@ -832,7 +525,6 @@ const TravelingScreen = () => {
 
     if (currentItems < totalItems && !isLoadingMore) {
       setIsLoadingMore(true);
-
       setTimeout(() => {
         if (isMounted.current) {
           const nextCount = Math.min(visibleCount + ITEMS_PER_PAGE, totalItems);
@@ -849,49 +541,14 @@ const TravelingScreen = () => {
   // ==========================================
   const openModal = useCallback((item) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setSelectedDestination(item);
+    setSelectedPackage(item);
     setModalVisible(true);
-
-    modalScaleAnim.setValue(0);
-    modalSlideAnim.setValue(height);
-
-    InteractionManager.runAfterInteractions(() => {
-      Animated.parallel([
-        Animated.spring(modalScaleAnim, {
-          toValue: 1,
-          friction: 8,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-        Animated.spring(modalSlideAnim, {
-          toValue: 0,
-          friction: 8,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    });
-  }, [modalScaleAnim, modalSlideAnim]);
+  }, []);
 
   const closeModal = useCallback(() => {
-    Animated.parallel([
-      Animated.timing(modalScaleAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(modalSlideAnim, {
-        toValue: height,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      if (isMounted.current) {
-        setModalVisible(false);
-        setSelectedDestination(null);
-      }
-    });
-  }, [modalScaleAnim, modalSlideAnim]);
+    setModalVisible(false);
+    setSelectedPackage(null);
+  }, []);
 
   useEffect(() => {
     const backAction = () => {
@@ -921,16 +578,11 @@ const TravelingScreen = () => {
   const handleBookNow = useCallback((item) => {
     if (isGuest) {
       closeModal();
-      setTimeout(() => {
-        showGuestAlert('book travel packages');
-      }, 300);
+      setTimeout(() => showGuestAlert('book travel packages'), 300);
       return;
     }
-
     closeModal();
-    setTimeout(() => {
-      navigation.navigate('Booking', { item });
-    }, 300);
+    setTimeout(() => navigation.navigate('Booking', { item }), 300);
   }, [isGuest, closeModal, navigation]);
 
   // ==========================================
@@ -971,28 +623,12 @@ const TravelingScreen = () => {
   // RENDER CATEGORIES
   // ==========================================
   const renderCategories = useCallback(() => {
-    const displayCategories = showAllCategories ? CATEGORIES.slice(0, 12) : CATEGORIES.slice(0, 6);
+    const displayCategories = showAllCategories ? CATEGORIES : CATEGORIES.slice(0, 8);
 
     return (
-      <Animated.View style={[
-        styles.categoriesContainer,
-        {
-          opacity: categoriesAnim,
-          transform: [{ translateY: categoriesAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [30, 0]
-            })}]
-        }
-      ]}>
+      <View style={styles.categoriesWrapper}>
         <View style={styles.categoriesHeader}>
-          <Animated.View style={{
-            transform: [{ translateX: headerTitleAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [-20, 0]
-              })}]
-          }}>
-            <Text style={styles.categoriesTitle}>Explore Categories</Text>
-          </Animated.View>
+          <Text style={styles.categoriesTitle}>Categories</Text>
           <TouchableOpacity
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1001,36 +637,30 @@ const TravelingScreen = () => {
             style={styles.viewAllButton}
           >
             <Text style={styles.viewAllText}>
-              {showAllCategories ? "Show Less" : "View All"}
+              {showAllCategories ? 'Show Less' : 'View All'}
             </Text>
           </TouchableOpacity>
         </View>
 
-        <Animated.FlatList
+        <FlatList
           horizontal
           data={displayCategories}
           keyExtractor={(item) => item.id}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoriesList}
-          renderItem={({ item, index }) => {
-            const isActive = activeCategory === item.name;
-            return (
-              <CategoryCard
-                category={item}
-                isActive={isActive}
-                onPress={handleCategoryPress}
-                index={index}
-              />
-            );
-          }}
-          snapToInterval={width * 0.25}
-          decelerationRate="fast"
-          bounces={false}
-          ItemSeparatorComponent={() => <View style={{ width: 8 }} />}
+          renderItem={({ item, index }) => (
+            <CategoryCard
+              category={item}
+              isActive={activeCategory === item.name}
+              onPress={handleCategoryPress}
+              index={index}
+            />
+          )}
+          ItemSeparatorComponent={() => <View style={{ width: 6 }} />}
         />
-      </Animated.View>
+      </View>
     );
-  }, [showAllCategories, activeCategory, handleCategoryPress, categoriesAnim, headerTitleAnim]);
+  }, [showAllCategories, activeCategory, handleCategoryPress]);
 
   // ==========================================
   // RENDER PACKAGES GRID
@@ -1047,14 +677,14 @@ const TravelingScreen = () => {
     }
 
     return (
-      <View style={styles.packagesGridContainer}>
+      <View style={styles.gridContainer}>
         {rows.map((row, rowIndex) => (
-          <View key={`row-${rowIndex}`} style={styles.flatListRow}>
+          <View key={`row-${rowIndex}`} style={styles.gridRow}>
             {row.map((item, colIndex) => {
               const globalIndex = rowIndex * 2 + colIndex;
               return (
-                <View key={item._id || `item-${globalIndex}`} style={styles.cardContainer}>
-                  <AnimatedCard
+                <View key={item._id || `item-${globalIndex}`} style={styles.gridItem}>
+                  <PackageCard
                     item={item}
                     index={globalIndex}
                     onPress={openModal}
@@ -1070,72 +700,68 @@ const TravelingScreen = () => {
   }, [paginatedData, openModal, isGuest]);
 
   // ==========================================
+  // HANDLE BACK BUTTON
+  // ==========================================
+  const handleBackPress = useCallback(() => {
+    navigation.goBack();
+  }, [navigation]);
+
+  // ==========================================
   // MAIN RENDER
   // ==========================================
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle="dark-content" backgroundColor="#F5F6FA" translucent={false} />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={handleBackPress}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={24} color="#1A1A2E" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Travel Packages</Text>
+        <View style={styles.headerRight} />
+      </View>
 
       {isGuest && (
-        <Animated.View style={[
-          styles.guestBanner,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: fadeAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [-10, 0]
-              })}]
-          }
-        ]}>
-          <Ionicons name="information-circle" size={18} color="#1a1a1a" />
+        <View style={styles.guestBanner}>
+          <Ionicons name="information-circle" size={18} color="#f9c349" />
           <Text style={styles.guestBannerText}>
             Browsing as guest. Sign in to book packages!
           </Text>
-        </Animated.View>
+        </View>
       )}
 
       <View style={styles.container}>
-        <View style={styles.fixedHeader}>
-          <Animated.View style={[
-            styles.heroContainer,
-            {
-              opacity: heroAnim,
-              transform: [{ scale: heroAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.95, 1]
-                })}]
-            }
-          ]}>
+        <ScrollView
+          ref={packagesScrollRef}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          onRefresh={handleRefresh}
+          refreshing={refreshing}
+        >
+          {/* Hero Section */}
+          <View style={styles.heroContainer}>
             <ImageBackground
               source={require('../../../assets/tdcaq.png')}
               style={styles.heroImage}
               imageStyle={styles.heroImageStyle}
             >
               <LinearGradient
-                colors={['rgba(0,0,0,0.5)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.2)']}
+                colors={['rgba(0,0,0,0.5)', 'rgba(0,0,0,0.2)']}
                 style={styles.heroGradient}
               >
                 <View style={styles.heroContent}>
-                  <Animated.Text style={[
-                    styles.heroMainText,
-                    { opacity: fadeAnim }
-                  ]}>
-                    Find Your Next{'\n'}Adventure
-                  </Animated.Text>
-
-                  <Animated.View style={[
-                    styles.searchBar,
-                    {
-                      opacity: searchAnim,
-                      transform: [{ scale: searchAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [0.9, 1]
-                        })}]
-                    }
-                  ]}>
+                  <Text style={styles.heroTitle}>Find Your Next{'\n'}Adventure</Text>
+                  
+                  {/* Search Bar */}
+                  <View style={styles.searchContainer}>
                     <Ionicons name="search" size={20} color="#999" />
                     <TextInput
-                      placeholder="Where to go?"
+                      placeholder="Search destinations..."
                       placeholderTextColor="#999"
                       style={styles.searchInput}
                       value={searchQuery}
@@ -1146,82 +772,33 @@ const TravelingScreen = () => {
                         <Ionicons name="close-circle" size={20} color="#999" />
                       </TouchableOpacity>
                     )}
-                  </Animated.View>
+                  </View>
                 </View>
               </LinearGradient>
             </ImageBackground>
-          </Animated.View>
+          </View>
 
+          {/* Categories */}
           {renderCategories()}
 
-          <Animated.View style={[
-            styles.listHeader,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: fadeAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [10, 0]
-                })}]
-            }
-          ]}>
-            <Animated.Text style={[
-              styles.listTitle,
-              {
-                transform: [{ translateX: headerTitleAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [-15, 0]
-                  })}]
-              }
-            ]}>
+          {/* Results Header */}
+          <View style={styles.resultsHeader}>
+            <Text style={styles.resultsTitle}>
               {activeCategory === 'All' ? 'All Packages' : activeCategory}
-            </Animated.Text>
-            <Animated.Text style={[
-              styles.countText,
-              {
-                transform: [{ scale: countAnim }]
-              }
-            ]}>
+            </Text>
+            <Text style={styles.resultsCount}>
               {filteredData?.length || 0} packages
-            </Animated.Text>
-          </Animated.View>
-        </View>
+            </Text>
+          </View>
 
-        {loading ? (
-          <ScrollView
-            style={styles.packagesScrollView}
-            contentContainerStyle={styles.skeletonContainer}
-            showsVerticalScrollIndicator={false}
-          >
-            {[1, 2, 3, 4].map((row) => (
-              <View key={row} style={styles.flatListRow}>
-                <View style={styles.cardContainer}>
-                  <SkeletonCard />
-                </View>
-                <View style={styles.cardContainer}>
-                  <SkeletonCard />
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-        ) : (
-          <Animated.View style={[
-            styles.packagesScrollContainer,
-            {
-              opacity: slideUpAnim,
-              transform: [{ translateY: slideUpAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [30, 0]
-                })}]
-            }
-          ]}>
-            <ScrollView
-              ref={packagesScrollRef}
-              style={styles.packagesScrollView}
-              contentContainerStyle={styles.packagesScrollContent}
-              showsVerticalScrollIndicator={false}
-              onRefresh={handleRefresh}
-              refreshing={refreshing}
-            >
+          {/* Packages Grid */}
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#f9c349" />
+              <Text style={styles.loadingText}>Loading packages...</Text>
+            </View>
+          ) : (
+            <>
               {paginatedData && paginatedData.length > 0 ? (
                 <>
                   {renderPackagesGrid()}
@@ -1244,59 +821,55 @@ const TravelingScreen = () => {
                 </>
               ) : (
                 <View style={styles.emptyState}>
-                  <MaterialCommunityIcons name="bag-suitcase-off" size={60} color="#CCC" />
-                  <Text style={styles.emptyText}>No packages found.</Text>
+                  <Feather name="package" size={60} color="#CCC" />
+                  <Text style={styles.emptyText}>No packages found</Text>
                   <Text style={styles.emptySubText}>Try adjusting your search or category</Text>
                   {isGuest && (
                     <TouchableOpacity
                       style={styles.signUpButton}
                       onPress={() => navigation.navigate('Login')}
                     >
-                      <Text style={styles.signUpButtonText}>Sign Up to Explore More</Text>
+                      <Text style={styles.signUpButtonText}>Sign Up to Explore</Text>
                     </TouchableOpacity>
                   )}
                 </View>
               )}
-            </ScrollView>
+            </>
+          )}
 
-            {totalPages > 1 && (
-              <PaginationControls
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-                isLoading={isLoadingMore}
-              />
-            )}
-          </Animated.View>
-        )}
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          )}
+
+          <View style={styles.bottomSpacer} />
+        </ScrollView>
       </View>
 
-      {/* ========================================== */}
-      {/* PACKAGE DETAIL MODAL */}
-      {/* ========================================== */}
+      {/* Package Detail Modal */}
       <Modal
         visible={modalVisible}
         transparent
-        animationType="none"
+        animationType="slide"
         onRequestClose={closeModal}
-        statusBarTranslucent
       >
-        <Animated.View style={[styles.modalOverlay, { opacity: modalScaleAnim }]}>
-          <Animated.View style={[
-            styles.modalContent,
-            { transform: [{ translateY: modalSlideAnim }] }
-          ]}>
-            {selectedDestination && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {selectedPackage && (
               <>
                 <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
                   <View style={styles.modalImageContainer}>
                     <Image
-                      source={{ uri: selectedDestination.image || 'https://via.placeholder.com/400' }}
+                      source={{ uri: selectedPackage.image || 'https://via.placeholder.com/400x300' }}
                       style={styles.modalImage}
                       resizeMode="cover"
                     />
                     <LinearGradient
-                      colors={['rgba(0,0,0,0.6)', 'transparent', 'rgba(0,0,0,0.5)']}
+                      colors={['rgba(0,0,0,0.5)', 'transparent', 'rgba(0,0,0,0.6)']}
                       style={styles.modalImageGradient}
                     />
                     <TouchableOpacity
@@ -1304,19 +877,17 @@ const TravelingScreen = () => {
                       onPress={closeModal}
                       activeOpacity={0.8}
                     >
-                      <BlurView intensity={80} style={styles.modalCloseBlur}>
-                        <Ionicons name="arrow-back" size={24} color="#FFF" />
-                      </BlurView>
+                      <Ionicons name="close" size={24} color="#FFF" />
                     </TouchableOpacity>
 
                     <View style={styles.modalImageContent}>
                       <View style={styles.modalCategoryBadge}>
-                        <Text style={styles.modalCategoryText}>{selectedDestination.category || 'Package'}</Text>
+                        <Text style={styles.modalCategoryText}>{selectedPackage.category || 'Package'}</Text>
                       </View>
-                      <Text style={styles.modalTitle}>{selectedDestination.name || 'Package'}</Text>
+                      <Text style={styles.modalTitle}>{selectedPackage.name || 'Package'}</Text>
                       <View style={styles.modalLocation}>
-                        <Ionicons name="location-outline" size={16} color="#FFF" />
-                        <Text style={styles.modalLocationText}>{selectedDestination.location || 'Pakistan'}</Text>
+                        <Ionicons name="location" size={16} color="#FFF" />
+                        <Text style={styles.modalLocationText}>{selectedPackage.location || 'Pakistan'}</Text>
                       </View>
                     </View>
                   </View>
@@ -1324,8 +895,8 @@ const TravelingScreen = () => {
                   <View style={styles.modalDetails}>
                     <View style={styles.modalPriceRow}>
                       <View>
-                        <Text style={styles.priceLabelText}>Price per person</Text>
-                        <Text style={styles.modalPrice}>{selectedDestination.price || 'PKR 0'}</Text>
+                        <Text style={styles.priceLabel}>Price per person</Text>
+                        <Text style={styles.modalPrice}>{selectedPackage.price || 'PKR 0'}</Text>
                       </View>
                       <View style={styles.modalRating}>
                         <FontAwesome5 name="star" size={12} color="#f9c349" solid />
@@ -1334,94 +905,75 @@ const TravelingScreen = () => {
                       </View>
                     </View>
 
-                    {selectedDestination.description && (
+                    {selectedPackage.description && (
                       <View style={styles.modalSection}>
-                        <View style={styles.modalSectionHeader}>
-                          <Ionicons name="information-circle-outline" size={20} color="#f9c349" />
-                          <Text style={styles.modalSectionTitle}>Description</Text>
-                        </View>
-                        <Text style={styles.modalDescription}>{selectedDestination.description}</Text>
+                        <Text style={styles.modalSectionTitle}>Description</Text>
+                        <Text style={styles.modalDescription}>{selectedPackage.description}</Text>
                       </View>
                     )}
 
                     <View style={styles.modalSection}>
-                      <View style={styles.modalSectionHeader}>
-                        <Ionicons name="list-outline" size={20} color="#FFA500" />
-                        <Text style={styles.modalSectionTitle}>Requirements & Important Info</Text>
-                      </View>
-
+                      <Text style={styles.modalSectionTitle}>Requirements</Text>
                       <View style={styles.requirementsList}>
                         <View style={styles.requirementItem}>
-                          <Ionicons name="document-text-outline" size={20} color="#f9c349" />
+                          <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
                           <Text style={styles.requirementText}>Valid passport with 6+ months validity</Text>
                         </View>
                         <View style={styles.requirementItem}>
-                          <Ionicons name="medkit-outline" size={20} color="#f9c349" />
+                          <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
                           <Text style={styles.requirementText}>Travel insurance mandatory</Text>
                         </View>
                         <View style={styles.requirementItem}>
-                          <Ionicons name="card-outline" size={20} color="#f9c349" />
+                          <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
                           <Text style={styles.requirementText}>Visa requirements as per destination</Text>
                         </View>
                         <View style={styles.requirementItem}>
-                          <Ionicons name="fitness-outline" size={20} color="#f9c349" />
+                          <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
                           <Text style={styles.requirementText}>Good physical health condition</Text>
-                        </View>
-                        <View style={styles.requirementItem}>
-                          <Ionicons name="cash-outline" size={20} color="#f9c349" />
-                          <Text style={styles.requirementText}>Full payment 15 days before departure</Text>
                         </View>
                       </View>
                     </View>
 
                     <View style={styles.modalSection}>
-                      <View style={styles.modalSectionHeader}>
-                        <Ionicons name="alert-circle-outline" size={20} color="#FF4444" />
-                        <Text style={styles.modalSectionTitle}>Cancellation Policy</Text>
-                      </View>
-                      <View style={styles.policyItem}>
+                      <Text style={styles.modalSectionTitle}>Cancellation Policy</Text>
+                      <View style={styles.policyContainer}>
                         <Text style={styles.policyText}>• Free cancellation up to 10 days before departure</Text>
                         <Text style={styles.policyText}>• 50% refund for cancellation 7-8 days before</Text>
                         <Text style={styles.policyText}>• No refund for cancellation within 6 days</Text>
-                        <Text style={styles.policyText}>• Name changes allowed with additional fee</Text>
                       </View>
                     </View>
-
-                    <View style={{ height: 100 }} />
                   </View>
                 </ScrollView>
 
                 <View style={styles.modalFooter}>
-                  <BlurView intensity={100} style={styles.modalFooterBlur}>
-                    <View style={styles.modalFooterContent}>
-                      <View>
-                        <Text style={styles.footerLabel}>Total Price</Text>
-                        <Text style={styles.footerPrice}>{selectedDestination.price || 'PKR 0'}</Text>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.bookButton}
-                        onPress={() => handleBookNow(selectedDestination)}
-                        activeOpacity={0.8}
-                      >
-                        <LinearGradient
-                          colors={['#1a1a1a', '#2d2d2d']}
-                          style={styles.bookButtonGradient}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                        >
-                          <Text style={styles.bookButtonText}>
-                            {isGuest ? 'Sign Up to Book' : 'Book Now'}
-                          </Text>
-                          <Ionicons name="arrow-forward" size={20} color="#f9c349" />
-                        </LinearGradient>
-                      </TouchableOpacity>
+                  <View style={styles.modalFooterContent}>
+                    <View>
+                      <Text style={styles.footerLabel}>Total Price</Text>
+                      <Text style={styles.footerPrice}>{selectedPackage.price || 'PKR 0'}</Text>
                     </View>
-                  </BlurView>
+                    <TouchableOpacity
+                      style={styles.bookButton}
+                      onPress={() => handleBookNow(selectedPackage)}
+                      activeOpacity={0.8}
+                    >
+                      <LinearGradient
+                        colors={['#f9c349', '#f0b800']}
+                        style={styles.bookButtonGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                      >
+                        <Text style={styles.bookButtonText}>
+                          {isGuest ? 'Sign Up to Book' : 'Book Now'}
+                        </Text>
+                        <Ionicons name="arrow-forward" size={20} color="#1A1A2E" />
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </>
             )}
-          </Animated.View>
-        </Animated.View>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -1431,56 +983,107 @@ const TravelingScreen = () => {
 // STYLES
 // ==========================================
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F8F9FA' },
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F5F6FA',
+  },
 
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#F5F6FA',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8ECF0',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A2E',
+  },
+  headerRight: {
+    width: 40,
+  },
+
+  // Guest Banner
   guestBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF9E6',
     paddingHorizontal: 16,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#f9c34930'
+    borderBottomColor: '#f9c34930',
   },
   guestBannerText: {
     flex: 1,
-    fontSize: 12,
-    color: '#1a1a1a',
+    fontSize: 11,
+    color: '#1A1A2E',
     fontWeight: '500',
-    marginLeft: 8
+    marginLeft: 8,
   },
 
-  fixedHeader: {
-    backgroundColor: '#F8F9FA',
-    zIndex: 10,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F6FA',
+  },
+  scrollContent: {
+    paddingBottom: 16,
   },
 
-  heroContainer: { width: '100%', height: 130, overflow: 'hidden' },
-  heroImage: { width: '100%', height: '100%' },
-  heroImageStyle: { resizeMode: 'stretch' },
-  heroGradient: { flex: 1, justifyContent: 'flex-end' },
-  heroContent: { paddingHorizontal: 20, paddingTop: 40, paddingBottom: 10 },
-  heroMainText: {
+  // Hero
+  heroContainer: {
+    width: '100%',
+    height: 160,
+    overflow: 'hidden',
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroImageStyle: {
+    resizeMode: 'cover',
+  },
+  heroGradient: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  heroContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  heroTitle: {
     color: '#FFF',
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
-    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-    marginBottom: 16,
+    textShadowRadius: 4,
+    marginBottom: 10,
   },
 
-  searchBar: {
+  // Search
+  searchContainer: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255,255,255,0.95)',
-    height: 38,
-    borderRadius: 14,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     paddingHorizontal: 14,
     shadowColor: '#000',
@@ -1489,51 +1092,54 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-  searchInput: { flex: 1, marginLeft: 8, fontSize: 14, color: '#333' },
+  searchInput: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#333',
+  },
 
-  categoriesContainer: {
-    paddingVertical: 8,
-    backgroundColor: '#F8F9FA',
+  // Categories
+  categoriesWrapper: {
+    paddingVertical: 10,
+    backgroundColor: '#F5F6FA',
   },
   categoriesHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   categoriesTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1A202C',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1A2E',
   },
   viewAllButton: {
-    backgroundColor: '#FFF',
-    paddingHorizontal: 14,
-    paddingVertical: 5,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8ECF0',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
   },
   viewAllText: {
-    fontSize: 11,
-    color: '#1a1a1a',
-    fontWeight: '700',
+    fontSize: 12,
+    color: '#f9c349',
+    fontWeight: '600',
   },
   categoriesList: {
     paddingHorizontal: 20,
-    paddingVertical: 4,
+    paddingVertical: 2,
   },
 
-  categoryCardWrapper: {
-    width: width * 0.22,
-    marginRight: 0,
+  // Category Card (Text Only)
+  categoryWrapper: {
+    width: width * 0.18,
   },
   categoryCard: {
     alignItems: 'center',
-    paddingVertical: 2,
-    paddingHorizontal: 3,
-    borderRadius: 14,
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
     backgroundColor: '#FFF',
     borderWidth: 1,
     borderColor: '#F0F0F0',
@@ -1542,222 +1148,168 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 2,
-    position: 'relative',
-    minHeight: 60,
+    minHeight: 36,
   },
   categoryCardActive: {
-    backgroundColor: '#F0F0F0',
-    borderColor: '#F0F0F0',
-    shadowColor: '#F0F0F0',
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
+    backgroundColor: '#1A1A2E',
+    borderColor: '#1A1A2E',
   },
-  categoryIconCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
-    marginBottom: 4,
-  },
-  categoryIconCircleActive: {
-    backgroundColor: 'rgba(249, 195, 73, 0.12)',
-    borderColor: 'rgba(249, 195, 73, 0.3)',
-  },
-  categoryTextContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  categoryCardText: {
-    fontSize: 10,
-    color: '#4A5568',
+  categoryName: {
+    fontSize: 11,
+    color: '#666',
+    fontWeight: '500',
     textAlign: 'center',
+  },
+  categoryNameActive: {
+    color: '#f9c349',
     fontWeight: '600',
   },
-  categoryCardTextActive: {
-    color: '#f9c349',
-    fontWeight: '700',
-  },
-  categoryActiveDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: '#f9c349',
-    marginLeft: 4,
-  },
-  categoryActiveBorder: {
-    position: 'absolute',
-    bottom: -1,
-    left: '20%',
-    right: '20%',
-    height: 2,
-    borderRadius: 2,
-  },
 
-  listHeader: {
+  // Results Header
+  resultsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 4,
-    backgroundColor: '#F8F9FA',
+    paddingVertical: 6,
+    backgroundColor: '#F5F6FA',
   },
-  listTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1A202C',
+  resultsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1A2E',
   },
-  countText: {
+  resultsCount: {
+    fontSize: 11,
     color: '#999',
-    fontSize: 12,
     fontWeight: '500',
-    backgroundColor: '#F0F0F0',
+    backgroundColor: '#FFF',
     paddingHorizontal: 10,
-    paddingVertical: 3,
+    paddingVertical: 2,
     borderRadius: 8,
   },
 
-  packagesScrollContainer: { flex: 1, paddingBottom: 50 },
-  packagesScrollView: { flex: 1, paddingBottom: 50, paddingTop: 6 },
-  packagesScrollContent: { paddingHorizontal: 20, paddingBottom: 50 },
-  packagesGridContainer: { paddingBottom: 10 },
-
-  skeletonContainer: { paddingHorizontal: 20, paddingTop: 20 },
-
-  flatListRow: {
+  // Grid
+  gridContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 4,
+  },
+  gridRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 15,
+    marginBottom: 10,
   },
-  cardContainer: {
-    width: (width - 50) / 2,
+  gridItem: {
+    width: (width - 52) / 2,
   },
-  mainCard: {
+
+  // Package Card
+  packageCard: {
     backgroundColor: '#FFF',
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 12,
-    elevation: 4,
+    elevation: 3,
   },
-  cardImg: { width: '100%', height: 110, resizeMode: 'cover' },
-  cardGradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 80 },
-  badge: { position: 'absolute', top: 10, left: 10, backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
-  badgeText: { color: '#FFF', fontSize: 9, fontWeight: 'bold' },
-  cardFavoriteBtn: { position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 15, width: 30, height: 30, justifyContent: 'center', alignItems: 'center' },
-  cardInfo: { padding: 12 },
-  cardTitle: { fontWeight: 'bold', fontSize: 14, color: '#1A202C', marginBottom: 4 },
-  cardLocRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2, marginBottom: 4 },
-  cardLocText: { fontSize: 11, color: '#718096', marginLeft: 4 },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
-  cardPrice: { fontSize: 16, fontWeight: 'bold', color: '#1a1a1a' },
-  ratingBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF9E6', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6 },
-  ratingText: { fontSize: 10, marginLeft: 3, color: '#f9c349', fontWeight: '600' },
-
-  paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#F8F9FA',
-    borderTopWidth: 1,
-    borderTopColor: '#E8ECF0',
+  packageImage: {
+    width: '100%',
+    height: 120,
+    resizeMode: 'cover',
   },
-  paginationArrow: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E8ECF0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
-    marginHorizontal: 4,
-  },
-  paginationDisabled: {
-    opacity: 0.4,
-    backgroundColor: '#F5F5F5',
-  },
-  pageNumbersContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-  },
-  pageNumber: {
-    minWidth: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    position: 'relative',
-    marginHorizontal: 2,
-  },
-  pageNumberActive: {
-    backgroundColor: '#1a1a1a',
-    shadowColor: '#1a1a1a',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  pageNumberText: {
-    fontSize: 14,
-    color: '#4A5568',
-    fontWeight: '500',
-  },
-  pageNumberTextActive: {
-    color: '#FFF',
-    fontWeight: '700',
-  },
-  pageNumberActiveDot: {
+  packageGradient: {
     position: 'absolute',
-    bottom: 2,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#f9c349',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 60,
   },
-  pageEllipsis: {
-    width: 28,
-    height: 36,
-    justifyContent: 'center',
+  packageBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  packageBadgeText: {
+    color: '#FFF',
+    fontSize: 8,
+    fontWeight: '600',
+  },
+  packageInfo: {
+    padding: 10,
+  },
+  packageName: {
+    fontWeight: '600',
+    fontSize: 13,
+    color: '#1A1A2E',
+    marginBottom: 2,
+  },
+  packageLocation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  packageLocationText: {
+    fontSize: 10,
+    color: '#718096',
+    marginLeft: 4,
+  },
+  packageFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  ellipsisText: {
-    fontSize: 16,
-    color: '#999',
+  packagePrice: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1A1A2E',
+  },
+  packageRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF9E6',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  packageRatingText: {
+    fontSize: 10,
+    marginLeft: 3,
+    color: '#f9c349',
     fontWeight: '600',
   },
 
-  loadMoreContainer: {
+  // Loading
+  loadingContainer: {
+    paddingVertical: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    marginVertical: 8,
   },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+
+  // Load More
   loadMoreButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#FFF',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E8ECF0',
+    marginHorizontal: 20,
+    marginVertical: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
@@ -1766,89 +1318,328 @@ const styles = StyleSheet.create({
   },
   loadMoreText: {
     fontSize: 14,
-    color: '#1a1a1a',
+    color: '#1A1A2E',
     fontWeight: '600',
-    marginLeft: 12,
+    marginLeft: 8,
   },
+
   allLoadedContainer: {
     alignItems: 'center',
-    paddingVertical: 20,
-    marginTop: 8,
+    paddingVertical: 12,
   },
   allLoadedText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#999',
     fontWeight: '500',
   },
 
-  emptyState: { alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
-  emptyText: { textAlign: 'center', color: '#999', marginTop: 20, fontSize: 16, fontWeight: '600' },
-  emptySubText: { textAlign: 'center', color: '#CCC', marginTop: 8, fontSize: 13 },
+  // Pagination
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    marginTop: 2,
+  },
+  paginationButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E8ECF0',
+    marginHorizontal: 4,
+  },
+  paginationDisabled: {
+    opacity: 0.4,
+  },
+  paginationEllipsis: {
+    width: 28,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ellipsisText: {
+    fontSize: 14,
+    color: '#999',
+    fontWeight: '600',
+  },
+  paginationPage: {
+    minWidth: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    marginHorizontal: 2,
+  },
+  paginationPageActive: {
+    backgroundColor: '#1A1A2E',
+  },
+  paginationPageText: {
+    fontSize: 13,
+    color: '#666',
+    fontWeight: '500',
+  },
+  paginationPageTextActive: {
+    color: '#FFF',
+    fontWeight: '700',
+  },
 
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 50,
+    paddingBottom: 30,
+  },
+  emptyText: {
+    color: '#666',
+    marginTop: 16,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptySubText: {
+    color: '#999',
+    marginTop: 4,
+    fontSize: 13,
+  },
   signUpButton: {
     marginTop: 20,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#1A1A2E',
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 12
+    borderRadius: 12,
   },
   signUpButtonText: {
     color: '#f9c349',
     fontWeight: '700',
-    fontSize: 14
+    fontSize: 14,
   },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
-  modalContent: { flex: 1, backgroundColor: '#FFF' },
-  modalImageContainer: { height: height * 0.3, position: 'relative' },
-  modalImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-  modalImageGradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  modalCloseButton: { position: 'absolute', top: 50, left: 20, zIndex: 10 },
-  modalCloseBlur: { borderRadius: 12, padding: 8, width: 40, height: 40, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
-  modalImageContent: { position: 'absolute', bottom: 20, left: 20, right: 20 },
-  modalCategoryBadge: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, alignSelf: 'flex-start', marginBottom: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
-  modalCategoryText: { color: '#FFF', fontWeight: 'bold', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 },
-  modalTitle: { fontSize: 28, fontWeight: 'bold', color: '#FFF', marginBottom: 8, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 },
-  modalLocation: { flexDirection: 'row', alignItems: 'center' },
-  modalLocationText: { color: '#FFF', marginLeft: 6, fontSize: 14, opacity: 0.9 },
-  modalDetails: { padding: 24, backgroundColor: '#FFF' },
-  modalPriceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-  priceLabelText: { color: '#718096', fontSize: 12, marginBottom: 4, fontWeight: '500' },
-  modalPrice: { fontSize: 28, fontWeight: 'bold', color: '#1a1a1a' },
-  modalRating: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF9E6', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },
-  modalRatingText: { fontSize: 14, fontWeight: 'bold', color: '#f9c349', marginLeft: 4 },
-  modalRatingCount: { fontSize: 11, color: '#718096', marginLeft: 4 },
-  modalSection: { marginBottom: 24 },
-  modalSectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  modalSectionTitle: { fontSize: 18, fontWeight: '700', color: '#2D3748', marginLeft: 8 },
-  modalDescription: { color: '#4A5568', lineHeight: 24, fontSize: 15 },
+  bottomSpacer: {
+    height: 16,
+  },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  modalContent: {
+    flex: 1,
+    backgroundColor: '#FFF',
+    marginTop: 40,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    overflow: 'hidden',
+  },
+  modalImageContainer: {
+    height: height * 0.32,
+    position: 'relative',
+  },
+  modalImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  modalImageGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  modalCloseButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalImageContent: {
+    position: 'absolute',
+    bottom: 16,
+    left: 20,
+    right: 20,
+  },
+  modalCategoryBadge: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  modalCategoryText: {
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFF',
+    marginBottom: 4,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  modalLocation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modalLocationText: {
+    color: '#FFF',
+    marginLeft: 6,
+    fontSize: 13,
+    opacity: 0.9,
+  },
+  modalDetails: {
+    padding: 20,
+    backgroundColor: '#FFF',
+  },
+  modalPriceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  priceLabel: {
+    color: '#718096',
+    fontSize: 11,
+    marginBottom: 2,
+    fontWeight: '500',
+  },
+  modalPrice: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1A1A2E',
+  },
+  modalRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF9E6',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  modalRatingText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#f9c349',
+    marginLeft: 4,
+  },
+  modalRatingCount: {
+    fontSize: 10,
+    color: '#718096',
+    marginLeft: 4,
+  },
+  modalSection: {
+    marginBottom: 20,
+  },
+  modalSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1A2E',
+    marginBottom: 8,
+  },
+  modalDescription: {
+    color: '#4A5568',
+    lineHeight: 22,
+    fontSize: 14,
+  },
   requirementsList: {
-    gap: 12,
+    gap: 8,
   },
   requirementItem: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F8F9FA',
-    padding: 12,
-    borderRadius: 10,
+    padding: 10,
+    borderRadius: 8,
   },
   requirementText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 12,
     color: '#2D3748',
     fontWeight: '500',
-    marginLeft: 12
+    marginLeft: 10,
   },
-  policyItem: { backgroundColor: '#FFF5F5', padding: 16, borderRadius: 12 },
-  policyText: { fontSize: 13, color: '#FF4444', lineHeight: 20, marginBottom: 4 },
-  modalFooter: { position: 'absolute', bottom: 0, width: '100%' },
-  modalFooterBlur: { borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.08)' },
-  modalFooterContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingBottom: 30 },
-  footerLabel: { color: '#718096', fontSize: 12, fontWeight: '500', marginBottom: 4 },
-  footerPrice: { fontSize: 22, fontWeight: 'bold', color: '#1a1a1a' },
-  bookButton: { borderRadius: 14, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 5 },
-  bookButtonGradient: { paddingHorizontal: 28, paddingVertical: 14, flexDirection: 'row', alignItems: 'center' },
-  bookButtonText: { color: '#f9c349', fontWeight: 'bold', fontSize: 16, letterSpacing: 0.5, marginRight: 8 }
+  policyContainer: {
+    backgroundColor: '#FFF5F5',
+    padding: 14,
+    borderRadius: 10,
+  },
+  policyText: {
+    fontSize: 12,
+    color: '#E53E3E',
+    lineHeight: 18,
+    marginBottom: 2,
+  },
+  modalFooter: {
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    backgroundColor: '#FFF',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+  },
+  modalFooterContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    paddingBottom: 20,
+  },
+  footerLabel: {
+    color: '#718096',
+    fontSize: 11,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  footerPrice: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1A1A2E',
+  },
+  bookButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#f9c349',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  bookButtonGradient: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  bookButtonText: {
+    color: '#1A1A2E',
+    fontWeight: '700',
+    fontSize: 15,
+    letterSpacing: 0.3,
+    marginRight: 8,
+  },
 });
 
 export default TravelingScreen;

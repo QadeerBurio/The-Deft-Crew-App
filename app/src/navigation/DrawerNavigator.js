@@ -40,8 +40,6 @@ import ContactUs from '../components/ContactUs';
 import PointsScreen from '../components/Points';
 import WhyPointsScreen from '../components/WhyPoints';
 import HowItWorksScreen from '../components/HowItsWorks';
-import HowToRedeemScreen from '../components/HowToRedeem';
-import AppIntroScreen from '../components/AppIntro';
 import WhyEduBoostScreen from '../components/WhyEduBoost';
 import AboutScreen from '../components/AboutScreen';
 import TermsScreen from '../components/Terms';
@@ -55,7 +53,6 @@ import ExchangeScreen from '../components/ExchangeScreen';
 import ApplicationForm from '../components/ApplicationForm';
 import BookingScreen from '../components/BookingScreen';
 import PaymentScreen from '../components/PaymentScreen';
-import Courses from '../screens/Courses';
 import ResumeDashboard from '../screens/Resume/ResumeDashboard';
 import ResumeBuilder from '../screens/Resume/ResumeBuilder';
 import Social from '../screens/Social/Social';
@@ -68,8 +65,7 @@ import SettingsScreen from '../screens/Social/SettingItem';
 import EditProfileScreen from '../screens/Social/EditProfileScreen';
 import Events from '../screens/Events/Events';
 import EventNotification from '../screens/Events/EventNotification';
-import PDFViewer from '../screens/Resume/PdfViewer';
-import TemplateSelection from '../screens/Resume/TemplateScreen';
+
 import YourAccount from '../screens/Social/YourAccount';
 import SecurityAndAccess from '../screens/Social/SecurityAnd Access';
 import PrivacyAndSafety from '../screens/Social/PrivacyAndSafety';
@@ -80,173 +76,113 @@ import FloatingMenu from '../screens/Social/FloatingMenu';
 import TDCFlow from '../screens/SplashScren';
 import MyDiscountScreen from '../screens/MyDiscountScreen';
 import ProfileStack from './ProfileStack';
+import Home from '../screens/Home';
+import StudentDashboard from '../screens/StudentDashboard';
+import Explore from '../screens/Explore';
+import ResumeShareScreen from '../screens/Resume/ResumeShare';
+import ResumeViewScreen from '../screens/Resume/ViewResume';
+import ResumeAnalyticsScreen from '../screens/Resume/ResumeAnalytics';
+import ResumeSettingsScreen from '../screens/Resume/ResumeSetting';
+import ResumeTemplateScreen from '../screens/Resume/ResumeTemplate';
+import EnhancedCareerScreen from '../screens/Resume/EnhanceCareer';
 
 const { width } = Dimensions.get('window');
 const Drawer = createDrawerNavigator();
 
+// DRAWER_ITEMS with enhanced icons (increased size)
 const DRAWER_ITEMS = [
   {
-    section: 'Discovery',
-    items: [
-      {
-        label: 'Home',
-        icon: (size) => <Ionicons name="home-outline" color="#f9c349" size={size} />,
-        route: 'HomeTabs',
-      },
-      {
-        label: "Crew's Privilege Brands",
-        icon: (size) => (
-          <MaterialCommunityIcons name="shopping-outline" color="#f9c349" size={size} />
-        ),
-        route: 'Brands',
-      },
-      {
-        label: 'User Dashboard',
-        icon: (size) => <FontAwesome5 name="user-circle" color="#f9c349" size={size - 2} />,
-        route: 'Profile',
-      },
-    ],
+    label: 'Home',
+    icon: (size) => <Ionicons name="home-outline" color="#f9c349" size={size + 5} />,
+    route: 'HomeTabs',
   },
   {
-    section: 'Rewards',
-    items: [
-      {
-        label: 'Refer & Earn',
-        icon: (size) => (
-          <MaterialCommunityIcons
-            name="account-multiple-plus-outline"
-            size={size}
-            color="#f9c349"
-          />
-        ),
-        route: 'Points',
-      },
-      {
-        label: 'Privilege Benefits',
-        icon: (size) => (
-          <MaterialCommunityIcons name="trophy-outline" size={size} color="#f9c349" />
-        ),
-        route: 'WhyPoints',
-      },
-      {
-        label: 'Redeem',
-        icon: (size) => (
-          <MaterialCommunityIcons name="gift-outline" size={size} color="#f9c349" />
-        ),
-        route: 'How to Redeem',
-      },
-    ],
+    label: 'Privilege Benefits',
+    icon: (size) => (
+      <MaterialCommunityIcons name="trophy-outline" size={size + 5} color="#f9c349" />
+    ),
+    route: 'WhyPoints',
   },
   {
-    section: 'Support & Help',
-    items: [
-      {
-        label: 'How it Works',
-        icon: (size) => <Ionicons name="cog-outline" color="#f9c349" size={size} />,
-        route: 'How It Works',
-      },
-      {
-        label: 'Contact Us',
-        icon: (size) => <Ionicons name="mail-unread-outline" color="#f9c349" size={size} />,
-        route: 'ContactUs',
-      },
-      {
-        label: 'Chat on WhatsApp',
-        icon: (size) => <FontAwesome name="whatsapp" color="#25D366" size={size} />,
-        action: 'whatsapp',
-      },
-      {
-        label: 'FAQ',
-        icon: (size) => <Ionicons name="chatbubbles-outline" color="#f9c349" size={size} />,
-        route: 'FAQ',
-      },
-    ],
+    label: 'Refer & Earn',
+    icon: (size) => (
+      <MaterialCommunityIcons
+        name="account-multiple-plus-outline"
+        size={size + 5}
+        color="#f9c349"
+      />
+    ),
+    route: 'Points',
   },
   {
-    section: 'Information',
-    items: [
-      {
-        label: 'About TDC',
-        icon: (size) => (
-          <Ionicons name="information-circle-outline" color="#f9c349" size={size} />
-        ),
-        route: 'About',
-      },
-      {
-        label: 'App Introduction',
-        icon: (size) => <Ionicons name="play-outline" color="#f9c349" size={size} />,
-        route: 'App Intro',
-      },
-      {
-        label: 'Privacy Policy',
-        icon: (size) => (
-          <MaterialCommunityIcons name="shield-lock-outline" color="#f9c349" size={size} />
-        ),
-        route: 'Privacy Policy',
-      },
-      {
-        label: 'Terms & Conditions',
-        icon: (size) => (
-          <MaterialCommunityIcons name="file-document-outline" color="#f9c349" size={size} />
-        ),
-        route: 'Terms & Conditions',
-      },
-      {
-        label: 'Disclaimer',
-        icon: (size) => <Ionicons name="alert-circle-outline" color="#f9c349" size={size} />,
-        route: 'Disclaimer',
-      },
-    ],
+    label: 'About TDC',
+    icon: (size) => (
+      <Ionicons name="information-circle-outline" color="#f9c349" size={size + 5} />
+    ),
+    route: 'About',
+  },
+  {
+    label: 'How it Works',
+    icon: (size) => <Ionicons name="cog-outline" color="#f9c349" size={size + 5} />,
+    route: 'How It Works',
+  },
+  {
+    label: 'Terms & Conditions',
+    icon: (size) => (
+      <MaterialCommunityIcons name="file-document-outline" color="#f9c349" size={size + 5} />
+    ),
+    route: 'Terms & Conditions',
+  },
+  {
+    label: 'Privacy Policy',
+    icon: (size) => (
+      <MaterialCommunityIcons name="shield-lock-outline" color="#f9c349" size={size + 5} />
+    ),
+    route: 'Privacy Policy',
+  },
+  {
+    label: 'Disclaimer',
+    icon: (size) => <Ionicons name="alert-circle-outline" color="#f9c349" size={size + 5} />,
+    route: 'Disclaimer',
   },
 ];
 
-const openWhatsApp = async () => {
-  const phoneNumber = '923222969595';
-  const message =
-    'Hello TDC Support Team,\n\nI am using The Deft Crew app and need assistance with [mention issue].\n\nThank you!';
-  const url = `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
-  const fallbackUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-
-  try {
-    const supported = await Linking.canOpenURL(url);
-    if (supported) {
-      await Linking.openURL(url);
-    } else {
-      await Linking.openURL(fallbackUrl);
-    }
-  } catch (error) {
-    Alert.alert('Error', 'WhatsApp is not installed or could not be opened.');
-  }
-};
-
 const AnimatedDrawerItem = ({ label, icon, onPress, delay = 0 }) => {
-  const translateX = useRef(new Animated.Value(-16)).current;
+  const translateX = useRef(new Animated.Value(-20)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.9)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(translateX, {
         toValue: 0,
-        duration: 180,
+        duration: 250,
         delay,
-        easing: Easing.out(Easing.ease),
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
         useNativeDriver: true,
       }),
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 180,
+        duration: 250,
         delay,
         useNativeDriver: true,
       }),
+      Animated.timing(scale, {
+        toValue: 1,
+        duration: 250,
+        delay,
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
+        useNativeDriver: true,
+      }),
     ]).start();
-  }, [delay, opacity, translateX]);
+  }, [delay, opacity, translateX, scale]);
 
   return (
-    <Animated.View style={{ opacity, transform: [{ translateX }] }}>
+    <Animated.View style={{ opacity, transform: [{ translateX }, { scale }] }}>
       <DrawerItem
         label={label}
-        labelStyle={styles.drawerItemLabel}
-        style={styles.drawerItem}
+        labelStyle={[styles.drawerItemLabel, { fontSize: 16 }]}
+        style={[styles.drawerItem, { marginVertical: 2 }]}
         icon={({ size }) => icon(size)}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -257,65 +193,30 @@ const AnimatedDrawerItem = ({ label, icon, onPress, delay = 0 }) => {
   );
 };
 
-const AnimatedSectionLabel = ({ label, delay = 0 }) => {
-  const slideAnim = useRef(new Animated.Value(-10)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 160,
-        delay,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 160,
-        delay,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [delay, opacity, slideAnim]);
-
-  return (
-    <Animated.View
-      style={[
-        styles.sectionContainer,
-        { opacity, transform: [{ translateX: slideAnim }] },
-      ]}
-    >
-      <View style={styles.sectionLine} />
-      <Text style={styles.sectionText}>{label}</Text>
-    </Animated.View>
-  );
-};
-
 function CustomDrawerContent(props) {
   const { logout, isGuest, setIsGuest } = useContext(AuthContext);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const slideAnim = useRef(new Animated.Value(40)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 400,
-        easing: Easing.out(Easing.ease),
+        duration: 500,
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
         useNativeDriver: true,
       }),
       Animated.timing(scaleAnim, {
         toValue: 1,
-        duration: 400,
-        easing: Easing.out(Easing.ease),
+        duration: 500,
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 400,
-        easing: Easing.out(Easing.ease),
+        duration: 500,
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
         useNativeDriver: true,
       }),
     ]).start();
@@ -382,10 +283,10 @@ function CustomDrawerContent(props) {
               </View>
 
               <View style={styles.headerTextContainer}>
-                <Text style={styles.headerTitle}>The Deft Crew</Text>
+                <Text style={[styles.headerTitle, { fontSize: 22 }]}>The Deft Crew</Text>
                 <View style={styles.badgeContainer}>
                   <View style={styles.premiumBadge}>
-                    <Text style={styles.premiumText}>
+                    <Text style={[styles.premiumText, { fontSize: 11 }]}>
                       {isGuest ? 'GUEST MODE' : 'STUDENTS BENEFITS'}
                     </Text>
                   </View>
@@ -399,39 +300,31 @@ function CustomDrawerContent(props) {
                 }}
                 style={styles.closeIcon}
               >
-                <Ionicons name="close" size={22} color="#fff" />
+                <Ionicons name="close" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
           </View>
         </Animated.View>
 
         <Animated.View style={{ opacity: fadeAnim, paddingBottom: 20 }}>
-          {DRAWER_ITEMS.map((group, groupIndex) => (
-            <View key={group.section}>
-              <AnimatedSectionLabel label={group.section} delay={groupIndex * 40} />
-
-              {group.items.map((item) => {
-                delay += 30;
-                return (
-                  <AnimatedDrawerItem
-                    key={item.label}
-                    label={item.label}
-                    icon={item.icon}
-                    delay={delay}
-                    onPress={() => {
-                      if (item.action === 'whatsapp') {
-                        openWhatsApp();
-                        return;
-                      }
-                      props.navigation.navigate(item.route);
-                    }}
-                  />
-                );
-              })}
-
-              {groupIndex !== DRAWER_ITEMS.length - 1 && <View style={styles.divider} />}
-            </View>
-          ))}
+          {DRAWER_ITEMS.map((item, index) => {
+            delay += 30;
+            return (
+              <AnimatedDrawerItem
+                key={item.label}
+                label={item.label}
+                icon={item.icon}
+                delay={delay}
+                onPress={() => {
+                  if (item.action === 'whatsapp') {
+                    openWhatsApp();
+                    return;
+                  }
+                  props.navigation.navigate(item.route);
+                }}
+              />
+            );
+          })}
         </Animated.View>
       </DrawerContentScrollView>
 
@@ -456,16 +349,16 @@ function CustomDrawerContent(props) {
               onPress={handleGuestSignIn}
               activeOpacity={0.7}
             >
-              <Ionicons name="log-in-outline" size={20} color="#f9c349" style={{ marginRight: 8 }} />
-              <Text style={styles.signInDrawerText}>Sign In to Unlock All Features</Text>
+              <Ionicons name="log-in-outline" size={22} color="#f9c349" style={{ marginRight: 10 }} />
+              <Text style={[styles.signInDrawerText, { fontSize: 16 }]}>Sign In to Unlock All Features</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.createAccountDrawerBtn}
               onPress={handleGuestSignUp}
               activeOpacity={0.7}
             >
-              <Ionicons name="person-add-outline" size={20} color="#1a1a1a" style={{ marginRight: 8 }} />
-              <Text style={styles.createAccountDrawerText}>Create Free Account</Text>
+              <Ionicons name="person-add-outline" size={22} color="#1a1a1a" style={{ marginRight: 10 }} />
+              <Text style={[styles.createAccountDrawerText, { fontSize: 16 }]}>Create Free Account</Text>
             </TouchableOpacity>
             <Text style={styles.guestBenefitText}>
               Unlock exclusive student discounts and benefits!
@@ -477,8 +370,8 @@ function CustomDrawerContent(props) {
             onPress={handleLogout}
             activeOpacity={0.7}
           >
-            <Ionicons name="log-out-outline" size={22} color="#f9c349" />
-            <Text style={styles.logoutText}>Log Out</Text>
+            <Ionicons name="log-out-outline" size={24} color="#f9c349" />
+            <Text style={[styles.logoutText, { fontSize: 17 }]}>Log Out</Text>
           </TouchableOpacity>
         )}
       </Animated.View>
@@ -519,14 +412,14 @@ function CustomHeader({ navigation }) {
     Animated.parallel([
       Animated.timing(headerOpacity, {
         toValue: 1,
-        duration: 300,
-        easing: Easing.out(Easing.ease),
+        duration: 400,
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
         useNativeDriver: true,
       }),
       Animated.timing(headerTranslateY, {
         toValue: 0,
-        duration: 300,
-        easing: Easing.out(Easing.ease),
+        duration: 400,
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
         useNativeDriver: true,
       }),
     ]).start();
@@ -554,14 +447,14 @@ function CustomHeader({ navigation }) {
       Animated.parallel([
         Animated.timing(searchWidth, {
           toValue: 0,
-          duration: 200,
-          easing: Easing.out(Easing.ease),
+          duration: 250,
+          easing: Easing.bezier(0.22, 1, 0.36, 1),
           useNativeDriver: false,
         }),
         Animated.timing(searchScale, {
           toValue: 0.8,
-          duration: 200,
-          easing: Easing.out(Easing.ease),
+          duration: 250,
+          easing: Easing.bezier(0.22, 1, 0.36, 1),
           useNativeDriver: true,
         }),
       ]).start(() => {
@@ -573,15 +466,15 @@ function CustomHeader({ navigation }) {
       setSearchVisible(true);
       Animated.parallel([
         Animated.timing(searchWidth, {
-          toValue: width * 0.5,
-          duration: 200,
-          easing: Easing.out(Easing.ease),
+          toValue: width * 0.55,
+          duration: 250,
+          easing: Easing.bezier(0.22, 1, 0.36, 1),
           useNativeDriver: false,
         }),
         Animated.timing(searchScale, {
           toValue: 1,
-          duration: 200,
-          easing: Easing.out(Easing.ease),
+          duration: 250,
+          easing: Easing.bezier(0.22, 1, 0.36, 1),
           useNativeDriver: true,
         }),
       ]).start();
@@ -640,7 +533,7 @@ function CustomHeader({ navigation }) {
           }}
           style={styles.headerCircleBtn}
         >
-          <Ionicons name="menu-outline" size={22} color="#000" />
+          <Ionicons name="menu-outline" size={24} color="#000" />
         </TouchableOpacity>
 
         <View style={styles.headerCenter}>
@@ -654,7 +547,7 @@ function CustomHeader({ navigation }) {
                 }
               ]}
             >
-              <Ionicons name="search-outline" size={18} color="#f9c349" style={styles.searchIcon} />
+              <Ionicons name="search-outline" size={20} color="#f9c349" style={styles.searchIcon} />
               <TextInput
                 style={styles.headerInput}
                 placeholder="Search brands..."
@@ -668,32 +561,29 @@ function CustomHeader({ navigation }) {
             </Animated.View>
           ) : (
             <View style={styles.logoContainer}>
-              <Text style={styles.headerAppTitle}>
-                <Text style={{ color: '#000' }}> DEFT</Text>
+              <Text style={[styles.headerAppTitle, { fontSize: 22 }]}>
+                <Text style={{ color: '#000' }}>DEFT</Text>
                 <Text style={{ color: '#f9c349' }}>CREW</Text>
               </Text>
-              
             </View>
           )}
         </View>
 
         <View style={styles.headerRight}>
-         
-
           {!searchVisible && (
             <TouchableOpacity
               onPress={handleNotificationPress}
               style={[styles.headerCircleBtn, { marginLeft: 10 }]}
             >
-              <Ionicons name="notifications-outline" size={20} color="#000" />
+              <Ionicons name="notifications-outline" size={22} color="#000" />
               {!isGuest && unreadCount > 0 && (
                 <Animated.View style={[styles.badges, { transform: [{ scale: pulseAnim }] }]}>
-                  <Text style={styles.badgeTexts}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                  <Text style={[styles.badgeTexts, { fontSize: 10 }]}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
                 </Animated.View>
               )}
               {isGuest && (
                 <View style={styles.guestLockBadge}>
-                  <Ionicons name="lock-closed" size={7} color="#FFF" />
+                  <Ionicons name="lock-closed" size={8} color="#FFF" />
                 </View>
               )}
             </TouchableOpacity>
@@ -710,26 +600,33 @@ function CustomHeader({ navigation }) {
 const AnimatedScreenWrapper = ({ children }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.96)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 400,
-        easing: Easing.out(Easing.ease),
+        duration: 500,
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
         useNativeDriver: true,
       }),
       Animated.timing(scaleAnim, {
         toValue: 1,
-        duration: 400,
-        easing: Easing.out(Easing.ease),
+        duration: 500,
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 500,
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
         useNativeDriver: true,
       }),
     ]).start();
-  }, [fadeAnim, scaleAnim]);
+  }, [fadeAnim, scaleAnim, slideAnim]);
 
   return (
-    <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}>
+    <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ scale: scaleAnim }, { translateY: slideAnim }] }}>
       {children}
     </Animated.View>
   );
@@ -738,31 +635,38 @@ const AnimatedScreenWrapper = ({ children }) => {
 // Animated Screen Component
 const AnimatedScreen = ({ component: Component, ...props }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const slideAnim = useRef(new Animated.Value(40)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 400,
-        easing: Easing.out(Easing.ease),
+        duration: 500,
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 400,
-        easing: Easing.out(Easing.ease),
+        duration: 500,
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 500,
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
         useNativeDriver: true,
       }),
     ]).start();
-  }, [fadeAnim, slideAnim]);
+  }, [fadeAnim, slideAnim, scaleAnim]);
 
   return (
     <Animated.View 
       style={{ 
         flex: 1, 
         opacity: fadeAnim, 
-        transform: [{ translateY: slideAnim }] 
+        transform: [{ translateY: slideAnim }, { scale: scaleAnim }] 
       }}
     >
       <Component {...props} />
@@ -825,16 +729,21 @@ export default function DrawerNavigator() {
           name="Brands" 
           component={Brands}
         />
+         <Drawer.Screen 
+          name="Explore" 
+          component={Explore}
+        />
 
         {[
           { name: 'University', comp: University },
           { name: 'ContactUs', comp: ContactUs },
+          { name: 'Home', comp: Home },
+          
           { name: 'BrandOffers', comp: BrandOffersScreen },
           { name: 'Points', comp: PointsScreen },
           { name: 'WhyPoints', comp: WhyPointsScreen },
           { name: 'How It Works', comp: HowItWorksScreen },
-          { name: 'How to Redeem', comp: HowToRedeemScreen },
-          { name: 'App Intro', comp: AppIntroScreen },
+          
           { name: 'Why EduBoost', comp: WhyEduBoostScreen },
           { name: 'About', comp: AboutScreen },
           { name: 'Terms & Conditions', comp: TermsScreen },
@@ -846,9 +755,15 @@ export default function DrawerNavigator() {
           { name: 'Exchange', comp: ExchangeScreen },
           { name: 'ApplicationForm', comp: ApplicationForm },
           { name: 'Payment', comp: PaymentScreen },
-          { name: 'Courses', comp: Courses },
+          { name: 'StudentDashboard', comp: StudentDashboard },
           { name: 'ResumeDashboard', comp: ResumeDashboard },
           { name: 'ResumeBuilder', comp: ResumeBuilder },
+          { name: 'ResumeShare', comp: ResumeShareScreen },
+          { name: 'ResumeView', comp: ResumeViewScreen },
+          { name: 'EnhancedCareer', comp: EnhancedCareerScreen },
+          { name: 'ResumeAnalytics', comp: ResumeAnalyticsScreen },
+          { name: 'ResumeSettings', comp: ResumeSettingsScreen },
+          { name: 'ResumeTemplate', comp: ResumeTemplateScreen },
           { name: 'Social', comp: Social },
           { name: 'MessagesScreen', comp: MessagesScreen },
           { name: 'ChatDetailScreen', comp: ChatDetailScreen },
@@ -865,8 +780,8 @@ export default function DrawerNavigator() {
           { name: 'Events', comp: Events },
           { name: 'EventNotification', comp: EventNotification },
           { name: 'PostDetailScreen', comp: PostDetailScreen },
-          { name: 'PDFViewer', comp: PDFViewer },
-          { name: 'TemplateSelection', comp: TemplateSelection },
+          
+          
           { name: 'TDCFlow', comp: TDCFlow },
           { name: 'ProfileScreen', comp: ProfileScreen },
           { name: 'ProfileDetails', comp: ProfileDetails },
@@ -911,7 +826,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   headerGradient: {
-    paddingVertical: 22,
+    paddingVertical: 24,
     paddingHorizontal: 20,
     backgroundColor: '#000',
   },
@@ -920,18 +835,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
+    width: 56,
+    height: 56,
+    borderRadius: 20,
     backgroundColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: '#f9c349',
   },
   avatarText: {
     color: '#ffffff',
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '900',
     letterSpacing: 0.8,
   },
@@ -951,8 +866,8 @@ const styles = StyleSheet.create({
   },
   premiumBadge: {
     backgroundColor: '#f9c349',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
     borderRadius: 22,
   },
   premiumText: {
@@ -962,9 +877,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   closeIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.08)',
@@ -972,7 +887,7 @@ const styles = StyleSheet.create({
   drawerItem: {
     borderRadius: 14,
     marginHorizontal: 8,
-    marginVertical: 1,
+    marginVertical: 2,
   },
   drawerItemLabel: {
     color: '#333',
@@ -980,37 +895,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: -8,
   },
-  sectionContainer: {
-    marginTop: 18,
-    marginLeft: 18,
-    marginBottom: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sectionLine: {
-    width: 4,
-    height: 16,
-    backgroundColor: '#f9c349',
-    marginRight: 8,
-    borderRadius: 2,
-  },
-  sectionText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#999',
-    textTransform: 'uppercase',
-    letterSpacing: 1.3,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#f0f0f0',
-    marginVertical: 14,
-    marginHorizontal: 15,
-  },
   footer: {
     paddingHorizontal: 18,
-    paddingTop: 12,
-    paddingBottom: 12,
+    paddingTop: 14,
+    paddingBottom: 14,
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
     backgroundColor: '#fff',
@@ -1020,9 +908,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fff',
-    padding: 14,
+    padding: 16,
     borderRadius: 15,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#f9c349',
   },
   logoutText: {
@@ -1079,17 +967,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerCircleBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerSearchWrap: {
-    height: 40,
+    height: 44,
     backgroundColor: '#f8f9fa',
-    borderRadius: 20,
+    borderRadius: 22,
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1110,8 +998,8 @@ const styles = StyleSheet.create({
     right: -3,
     backgroundColor: '#f9c349',
     borderRadius: 11,
-    minWidth: 18,
-    height: 18,
+    minWidth: 20,
+    height: 20,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4,
@@ -1182,8 +1070,8 @@ const styles = StyleSheet.create({
     right: -2,
     backgroundColor: '#999',
     borderRadius: 8,
-    width: 14,
-    height: 14,
+    width: 16,
+    height: 16,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,

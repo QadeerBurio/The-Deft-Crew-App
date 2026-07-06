@@ -1,723 +1,1655 @@
-import React, { useState, useEffect, useCallback, useRef, useContext } from "react";
+// app/src/screens/Resume/ResumeDashboardScreen.js
+import React, { useState, useContext, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
+  StyleSheet,
   ScrollView,
   TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  Platform,
-  StatusBar,
+  SafeAreaView,
   RefreshControl,
   Alert,
+  Dimensions,
   Share,
   ActivityIndicator,
   Modal,
-  Image,
+  Platform,
+  FlatList,
+  TextInput,
   Animated,
-  TouchableWithoutFeedback
-} from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons, Feather } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import { useFocusEffect } from '@react-navigation/native';
-import { resumeAPI } from '../../api/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Clipboard from 'expo-clipboard';
-import * as Haptics from 'expo-haptics';
-import { AuthContext } from "../../context/AuthContext";
-import GuestGuard from "../../components/GuestGuard";
+  StatusBar,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { AuthContext } from '../../context/AuthContext';
+import { ResumeContext } from '../../context/ResumeContext';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Print from 'expo-print';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import { renderResumeHTML } from '../../services/templateService';
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get('window');
 
-const ResumeDashboard = ({ navigation }) => {
-  const { token, user } = useContext(AuthContext);
-  const [resumeData, setResumeData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [completionScore, setCompletionScore] = useState(0);
-  const [userName, setUserName] = useState('');
-  const [shareUrl, setShareUrl] = useState('');
-  const [analytics, setAnalytics] = useState(null);
-  const [showInsightsModal, setShowInsightsModal] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [marketInsights, setMarketInsights] = useState([]);
-  const [fullInsights, setFullInsights] = useState(null);
-  const [loadingInsights, setLoadingInsights] = useState(false);
-  const [profileImageError, setProfileImageError] = useState(false);
+const ResumeDashboardScreen = ({ navigation }) => {
+  const { user, isGuest } = useContext(AuthContext);
+  const {
+    resumes = [],
+    fetchResumes,
+    loadResume,
+    deleteResume,
+    getRecommendedJobs,
+    updateResume,
+    loading,
+    initialized,
+  } = useContext(ResumeContext);
 
+  // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideUpAnim = useRef(new Animated.Value(50)).current;
-  const cardScale = useRef(new Animated.Value(0.95)).current;
-  const progressWidth = useRef(new Animated.Value(0)).current;
-  const headerFade = useRef(new Animated.Value(0)).current;
-  const actionStagger = useRef([...Array(4)].map(() => new Animated.Value(0))).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const modalScale = useRef(new Animated.Value(0.9)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const [selectedResume, setSelectedResume] = useState(null);
+  const [recommendations, setRecommendations] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [downloadModalVisible, setDownloadModalVisible] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [showAllResumes, setShowAllResumes] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredResumes, setFilteredResumes] = useState([]);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
 
+  // Entrance animation
   useEffect(() => {
-    loadUserData();
-    fetchResume();
-    fetchAnalytics();
-    fetchMarketInsights();
-    
-    Animated.sequence([
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.timing(headerFade, { toValue: 1, duration: 400, useNativeDriver: true }),
-      ]),
-      Animated.spring(slideUpAnim, { toValue: 0, friction: 6, tension: 40, useNativeDriver: true }),
-      Animated.spring(cardScale, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true }),
-      ...actionStagger.map((anim, i) =>
-        Animated.sequence([
-          Animated.delay(i * 60),
-          Animated.spring(anim, { toValue: 1, friction: 6, tension: 40, useNativeDriver: true }),
-        ])
-      ),
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }),
     ]).start();
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.03, duration: 1500, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
-      ])
-    ).start();
   }, []);
 
+  // Initial load
   useEffect(() => {
-    if (completionScore > 0) {
-      Animated.timing(progressWidth, {
-        toValue: completionScore,
-        duration: 1000,
-        useNativeDriver: false,
-      }).start();
-    }
-  }, [completionScore]);
+    const loadData = async () => {
+      setIsLoading(true);
+      await fetchResumes();
+      setIsLoading(false);
+    };
+    loadData();
+  }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchResume();
-      fetchAnalytics();
-      fetchMarketInsights();
-    }, [])
-  );
-
-  const loadUserData = async () => {
-    try {
-      const userStr = await AsyncStorage.getItem('user');
-      if (userStr) {
-        const userData = JSON.parse(userStr);
-        setUserName(userData.name || userData.fullName || 'User');
-      }
-    } catch (error) {
-      console.error('Error loading user:', error);
+  // Set selected resume when resumes load
+  useEffect(() => {
+    if (resumes && resumes.length > 0 && !selectedResume) {
+      const firstResume = resumes[0];
+      setSelectedResume(firstResume);
+      loadResume(firstResume._id);
+      fetchRecommendations(firstResume._id);
     }
-  };
-
-  const fetchResume = async () => {
-    try {
-      setLoading(true);
-      const response = await resumeAPI.getResume();
-      setResumeData(response.data);
-      if (response.data.completionScore) {
-        setCompletionScore(response.data.completionScore);
-      }
-    } catch (error) {
-      console.error('Error fetching resume:', error);
-      // Don't show alert for new users (404 is expected)
-      if (error.response?.status !== 404) {
-        // Silent fail for new users
-      }
-    } finally {
-      setLoading(false);
+    if (resumes && resumes.length > 0) {
+      setFilteredResumes(resumes);
     }
-  };
+  }, [resumes]);
 
-  const fetchAnalytics = async () => {
-    try {
-      const response = await resumeAPI.getAnalytics();
-      setAnalytics(response.data);
-      if (response.data?.completionScore) {
-        setCompletionScore(response.data.completionScore);
-      }
-    } catch (error) {
-      console.error('Error fetching analytics:', error);
-      // Silent fail - use fallbacks
+  // Fetch recommendations when selected resume changes
+  useEffect(() => {
+    if (selectedResume && selectedResume._id) {
+      fetchRecommendations(selectedResume._id);
     }
-  };
+  }, [selectedResume]);
 
-  const fetchMarketInsights = async () => {
-    try {
-      setLoadingInsights(true);
-      const response = await resumeAPI.getMarketInsights();
-      
-      if (response.data && response.data.insights) {
-        const insights = response.data.insights;
-        setFullInsights(insights);
-        
-        if (insights.topJobRoles && insights.topJobRoles.length > 0) {
-          const formattedInsights = insights.topJobRoles.slice(0, 3).map(role => ({
-            title: role.title,
-            match: `${role.match || 70}%`,
-            trend: role.trend || '+10%',
-            description: role.description || 'Growing demand in the market',
-            salary: role.salary || '$60,000 - $100,000',
-            skills: role.requiredSkills || []
-          }));
-          setMarketInsights(formattedInsights);
-        } else {
-          setMarketInsights(getFallbackInsights());
-        }
-      } else {
-        setMarketInsights(getFallbackInsights());
-      }
-    } catch (error) {
-      console.error('Error fetching market insights:', error);
-      setMarketInsights(getFallbackInsights());
-    } finally {
-      setLoadingInsights(false);
-    }
-  };
-
-  const getFallbackInsights = () => [
-    { title: "Software Developer", match: "85%", trend: "+12%", description: "High demand in your area", salary: "$75,000 - $115,000", skills: ["JavaScript", "React", "Node.js"] },
-    { title: "Full Stack Developer", match: "78%", trend: "+15%", description: "Growing market demand", salary: "$80,000 - $120,000", skills: ["React", "Node.js", "MongoDB"] },
-    { title: "DevOps Engineer", match: "65%", trend: "+18%", description: "Fastest growing role", salary: "$90,000 - $140,000", skills: ["Docker", "Kubernetes", "AWS"] }
-  ];
-
-  const getProfileImageUrl = () => {
-    if (user?.profileImage && !profileImageError) return user.profileImage;
-    if (userName && userName !== 'User') {
-      return `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=1a1a1a&color=f9c349&bold=true&length=2`;
-    }
-    return 'https://ui-avatars.com/api/?name=User&background=1a1a1a&color=f9c349&bold=true';
-  };
-
-  const handleViewResume = async () => {
-    if (!resumeData?.fullName) {
-      Alert.alert('No Resume', 'Please create a resume first');
-      return;
-    }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setGenerating(true);
-    try {
-      const currentTemplateId = resumeData.templateId || 'modern_001';
-      const response = await resumeAPI.generatePDFWithTemplate(currentTemplateId);
-      if (response.data && response.data.pdfUrl) {
-        navigation.navigate('PDFViewer', { 
-          pdfUrl: response.data.pdfUrl,
-          filename: response.data.filename || `resume_${Date.now()}.pdf`,
-          resumeData: resumeData 
-        });
-      } else {
-        throw new Error('No PDF URL received');
-      }
-    } catch (error) {
-      console.error('View resume error:', error);
-      Alert.alert('Error', 'Failed to generate resume preview.');
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const handleGeneratePDF = () => {
-    if (!resumeData?.fullName) {
-      Alert.alert('No Resume', 'Please create a resume first');
-      return;
-    }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    navigation.navigate('TemplateSelection', { resumeData, mode: 'pdf' });
-  };
-
-  const handleShareResume = async () => {
-    if (!resumeData?.fullName) {
-      Alert.alert('No Resume', 'Please create a resume first');
-      return;
-    }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    try {
-      const response = await resumeAPI.generateShareLink();
-      const { shareUrl: url } = response.data;
-      setShareUrl(url);
-      await Share.share({
-        message: `Check out my professional resume: ${url}`,
-        title: 'Share Resume',
+  // Filter resumes on search
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredResumes(resumes);
+    } else {
+      const query = searchQuery.toLowerCase().trim();
+      const filtered = resumes.filter(r => {
+        const name = `${r.personalInfo?.firstName || ''} ${r.personalInfo?.lastName || ''}`.toLowerCase();
+        const title = r.professionalSummary?.title?.toLowerCase() || '';
+        const jobTitle = r.targetJob?.jobTitle?.toLowerCase() || '';
+        return name.includes(query) || title.includes(query) || jobTitle.includes(query);
       });
+      setFilteredResumes(filtered);
+    }
+  }, [searchQuery, resumes]);
+
+  // Refresh data
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchResumes();
+    if (resumes && resumes.length > 0) {
+      const firstResume = resumes[0];
+      setSelectedResume(firstResume);
+      await fetchRecommendations(firstResume._id);
+    }
+    setRefreshing(false);
+  }, [resumes]);
+
+  // Fetch recommendations
+  const fetchRecommendations = async (resumeId) => {
+    try {
+      setRecommendationsLoading(true);
+      const jobs = await getRecommendedJobs(resumeId);
+      setRecommendations(jobs || []);
+    } catch (error) {
+      console.error('Fetch recommendations error:', error);
+      setRecommendations([]);
+    } finally {
+      setRecommendationsLoading(false);
+    }
+  };
+
+  // Handle resume selection
+  const handleSelectResume = (resume) => {
+    if (resume && resume._id) {
+      setSelectedResume(resume);
+      loadResume(resume._id);
+      setShowAllResumes(false);
+    }
+  };
+
+  // Handle delete resume
+  const handleDeleteResume = (resumeId) => {
+    Alert.alert(
+      'Delete Resume',
+      'Are you sure you want to delete this resume? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteResume(resumeId);
+              const remaining = resumes.filter(r => r._id !== resumeId);
+              if (selectedResume?._id === resumeId) {
+                setSelectedResume(remaining.length > 0 ? remaining[0] : null);
+              }
+              await fetchResumes();
+              Alert.alert('✅ Success', 'Resume deleted successfully');
+            } catch (error) {
+              Alert.alert('❌ Error', 'Failed to delete resume');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // Handle download resume as PDF
+  const handleDownloadResume = async (resume, format = 'pdf') => {
+    if (!resume) {
+      Alert.alert('Error', 'No resume selected');
+      return;
+    }
+
+    try {
+      setDownloading(true);
+      setDownloadProgress(10);
+      setDownloadModalVisible(true);
+
+      const html = renderResumeHTML(resume, resume.template || 'modern');
+      setDownloadProgress(30);
+
+      const { uri } = await Print.printToFileAsync({ 
+        html,
+        base64: false
+      });
+      setDownloadProgress(70);
+
+      if (resume._id) {
+        await updateResume(resume._id, { 
+          downloadCount: (resume.downloadCount || 0) + 1 
+        });
+      }
+      setDownloadProgress(90);
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: `Resume_${resume.personalInfo?.firstName || 'Resume'}.pdf`,
+          UTI: 'com.adobe.pdf',
+        });
+        setDownloadProgress(100);
+        Alert.alert('✅ Success', 'Resume downloaded successfully!');
+      } else {
+        const fileName = `Resume_${resume.personalInfo?.firstName || 'Resume'}_${Date.now()}.pdf`;
+        const fileUri = FileSystem.documentDirectory + fileName;
+        await FileSystem.copyAsync({
+          from: uri,
+          to: fileUri,
+        });
+        setDownloadProgress(100);
+        Alert.alert(
+          '✅ Success', 
+          `Resume saved to: ${fileUri}`,
+          [
+            {
+              text: 'Open File',
+              onPress: () => {
+                if (Platform.OS === 'ios') {
+                  Sharing.shareAsync(fileUri);
+                } else {
+                  Sharing.shareAsync(fileUri);
+                }
+              }
+            },
+            { text: 'OK' }
+          ]
+        );
+      }
+
+      setTimeout(() => {
+        setDownloadModalVisible(false);
+        setDownloading(false);
+        setDownloadProgress(0);
+      }, 1000);
+    } catch (error) {
+      console.error('Download error:', error);
+      setDownloading(false);
+      setDownloadModalVisible(false);
+      setDownloadProgress(0);
+      Alert.alert('❌ Error', 'Failed to download resume: ' + error.message);
+    }
+  };
+
+  // Handle download as HTML
+  const handleDownloadHTML = async (resume) => {
+    if (!resume) {
+      Alert.alert('Error', 'No resume selected');
+      return;
+    }
+
+    try {
+      setDownloading(true);
+      setDownloadProgress(10);
+      setDownloadModalVisible(true);
+
+      const html = renderResumeHTML(resume, resume.template || 'modern');
+      setDownloadProgress(50);
+
+      const fileName = `Resume_${resume.personalInfo?.firstName || 'Resume'}_${Date.now()}.html`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+      await FileSystem.writeAsStringAsync(fileUri, html, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      setDownloadProgress(80);
+
+      if (resume._id) {
+        await updateResume(resume._id, { 
+          downloadCount: (resume.downloadCount || 0) + 1 
+        });
+      }
+      setDownloadProgress(100);
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'text/html',
+          dialogTitle: `Resume_${resume.personalInfo?.firstName || 'Resume'}.html`,
+        });
+      }
+
+      setTimeout(() => {
+        setDownloadModalVisible(false);
+        setDownloading(false);
+        setDownloadProgress(0);
+      }, 1000);
+    } catch (error) {
+      console.error('Download HTML error:', error);
+      setDownloading(false);
+      setDownloadModalVisible(false);
+      setDownloadProgress(0);
+      Alert.alert('❌ Error', 'Failed to download HTML resume');
+    }
+  };
+
+  // Handle download as JSON
+  const handleDownloadJSON = async (resume) => {
+    if (!resume) {
+      Alert.alert('Error', 'No resume selected');
+      return;
+    }
+
+    try {
+      setDownloading(true);
+      setDownloadProgress(10);
+      setDownloadModalVisible(true);
+
+      const jsonData = JSON.stringify(resume, null, 2);
+      setDownloadProgress(50);
+
+      const fileName = `Resume_${resume.personalInfo?.firstName || 'Resume'}_${Date.now()}.json`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+      await FileSystem.writeAsStringAsync(fileUri, jsonData, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      setDownloadProgress(80);
+
+      if (resume._id) {
+        await updateResume(resume._id, { 
+          downloadCount: (resume.downloadCount || 0) + 1 
+        });
+      }
+      setDownloadProgress(100);
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'application/json',
+          dialogTitle: `Resume_${resume.personalInfo?.firstName || 'Resume'}.json`,
+        });
+      }
+
+      setTimeout(() => {
+        setDownloadModalVisible(false);
+        setDownloading(false);
+        setDownloadProgress(0);
+      }, 1000);
+    } catch (error) {
+      console.error('Download JSON error:', error);
+      setDownloading(false);
+      setDownloadModalVisible(false);
+      setDownloadProgress(0);
+      Alert.alert('❌ Error', 'Failed to download JSON resume');
+    }
+  };
+
+  // Handle share resume
+  const handleShareResume = async (resume) => {
+    try {
+      if (!resume) {
+        Alert.alert('Error', 'No resume selected');
+        return;
+      }
+      
+      const shareMessage = `
+📄 Resume: ${resume?.personalInfo?.firstName || ''} ${resume?.personalInfo?.lastName || ''}
+
+${resume?.professionalSummary?.summary || ''}
+
+🎯 Target Job: ${resume?.targetJob?.jobTitle || 'Not specified'}
+
+💼 Experience: ${resume?.workExperience?.length || 0} positions
+🎓 Education: ${resume?.education?.length || 0} degrees
+🔧 Skills: ${resume?.skills?.map(s => s.name).join(', ') || 'None listed'}
+
+${resume?.completionPercentage || 0}% Complete
+      `;
+
+      const result = await Share.share({
+        message: shareMessage,
+        title: `${resume?.personalInfo?.firstName || ''}'s Resume`,
+      });
+
+      if (result.action === Share.sharedAction) {
+        if (resume._id) {
+          await updateResume(resume._id, { 
+            shareCount: (resume.shareCount || 0) + 1 
+          });
+        }
+        Alert.alert('✅ Success', 'Resume shared successfully!');
+      }
     } catch (error) {
       console.error('Share error:', error);
-      Alert.alert('Error', 'Failed to generate share link');
+      Alert.alert('❌ Error', 'Failed to share resume');
     }
   };
 
-  const handleCopyLink = async () => {
-    if (!resumeData?.fullName) {
-      Alert.alert('No Resume', 'Please create a resume first');
+  // Handle apply to job
+  const handleApplyToJob = (job) => {
+    Alert.alert(
+      'Apply for Position',
+      `Would you like to apply for ${job.title} at ${job.companyName || job.company || 'Company'}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Apply',
+          onPress: () => {
+            navigation.navigate('EnhancedCareer', { jobId: job._id, job });
+          }
+        }
+      ]
+    );
+  };
+
+  // Handle save job
+  const handleSaveJob = (job) => {
+    Alert.alert('✅ Job Saved', `${job.title} has been saved to your favorites.`);
+  };
+
+  // Navigation handlers
+  const handleViewResume = (resume) => {
+    if (!resume || !resume._id) {
+      Alert.alert('Error', 'No resume selected');
       return;
     }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
-      let url = shareUrl;
-      if (!url) {
-        const response = await resumeAPI.generateShareLink();
-        url = response.data.shareUrl;
-        setShareUrl(url);
-      }
-      await Clipboard.setStringAsync(url);
-      Alert.alert('Success', 'Link copied to clipboard!');
+      navigation.navigate('ResumeView', { resumeId: resume._id });
     } catch (error) {
-      Alert.alert('Error', 'Failed to generate share link');
+      console.error('Navigation error:', error);
+      Alert.alert('Error', 'Failed to open resume view');
     }
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await Promise.all([fetchResume(), fetchAnalytics(), fetchMarketInsights()]);
-    setRefreshing(false);
+  const handleCreateTemplate = (resume) => {
+    if (!resume || !resume._id) {
+      Alert.alert('Error', 'No resume selected');
+      return;
+    }
+    try {
+      navigation.navigate('ResumeTemplate', { resumeId: resume._id });
+    } catch (error) {
+      console.error('Navigation error:', error);
+      Alert.alert('Error', 'Failed to open templates');
+    }
   };
 
-  const showInsightsWithAnimation = () => {
-    setShowInsightsModal(true);
-    modalScale.setValue(0.9);
-    Animated.spring(modalScale, { toValue: 1, friction: 6, tension: 40, useNativeDriver: true }).start();
+  const handleEditResume = (resume) => {
+    if (!resume || !resume._id) {
+      Alert.alert('Error', 'No resume selected');
+      return;
+    }
+    try {
+      navigation.navigate('ResumeBuilder', { resumeId: resume._id });
+    } catch (error) {
+      console.error('Navigation error:', error);
+      Alert.alert('Error', 'Failed to open resume builder');
+    }
   };
 
-  const getScoreColor = (score) => {
-    if (score >= 80) return '#f9c349';
-    if (score >= 60) return '#f9c349';
-    return '#ef4444';
+  const handleAnalytics = (resume) => {
+    if (!resume || !resume._id) {
+      Alert.alert('Error', 'No resume selected');
+      return;
+    }
+    try {
+      navigation.navigate('ResumeAnalytics', { resumeId: resume._id });
+    } catch (error) {
+      console.error('Navigation error:', error);
+      Alert.alert('Error', 'Failed to open analytics');
+    }
   };
 
-  const getScoreMessage = (score) => {
-    if (score >= 80) return 'Excellent! Your resume is ready';
-    if (score >= 60) return 'Good progress, keep going!';
-    if (score >= 40) return 'Room for improvement';
-    return 'Need more details';
+  const handleSettings = (resume) => {
+    if (!resume || !resume._id) {
+      Alert.alert('Error', 'No resume selected');
+      return;
+    }
+    try {
+      navigation.navigate('ResumeSettings', { resumeId: resume._id });
+    } catch (error) {
+      console.error('Navigation error:', error);
+      Alert.alert('Error', 'Failed to open settings');
+    }
   };
 
-  const getProfileCompletionMessage = () => {
-    if (completionScore === 100) return "🎉 Congratulations! Your profile is 100% complete!";
-    const remaining = 100 - completionScore;
-    return `📈 Your profile is ${completionScore}% complete. Add ${remaining}% more details!`;
+  // Get status color
+  const getStatusColor = (percentage) => {
+    if (percentage >= 80) return '#2ECC71';
+    if (percentage >= 50) return '#f9c349';
+    if (percentage >= 30) return '#E67E22';
+    return '#E74C3C';
   };
 
-  const allRecommendations = analytics?.recommendations || [
-    { priority: 'high', message: 'Complete your profile', action: 'Add personal details' },
-    { priority: 'high', message: 'Add work experience', action: 'Showcase your career' },
-    { priority: 'medium', message: 'Add technical skills', action: 'List your expertise' },
-    { priority: 'low', message: 'Add certifications', action: 'Validate your skills' }
-  ];
+  // Get status text
+  const getStatusText = (percentage) => {
+    if (percentage >= 80) return 'Excellent';
+    if (percentage >= 50) return 'Good';
+    if (percentage >= 30) return 'Needs Work';
+    return 'Incomplete';
+  };
 
-  const progressWidthInterpolated = progressWidth.interpolate({
-    inputRange: [0, 100],
-    outputRange: ['0%', '100%'],
-  });
+  // Render recommendations
+  const renderRecommendations = () => {
+    if (recommendationsLoading) {
+      return (
+        <View style={styles.recommendationsLoading}>
+          <ActivityIndicator size="large" color="#f9c349" />
+          <Text style={styles.loadingText}>Finding best matches...</Text>
+        </View>
+      );
+    }
 
-  const actionButtons = [
-    { icon: "eye-outline", label: "View", color: "#1a1a1a", onPress: handleViewResume, disabled: !resumeData?.fullName, loading: generating },
-    { icon: "document-outline", label: "PDF", color: "#1a1a1a", onPress: handleGeneratePDF, disabled: !resumeData?.fullName },
-    { icon: "share-outline", label: "Share", color: "#1a1a1a", onPress: handleShareResume, disabled: !resumeData?.fullName },
-    { icon: "create-outline", label: "Edit", color: "#1a1a1a", onPress: () => navigation.navigate("ResumeBuilder", { resumeData }) },
-  ];
+    if (!recommendations || recommendations.length === 0) {
+      return (
+        <View style={styles.emptyJobsContainer}>
+          <Ionicons name="briefcase-outline" size={48} color="#ccc" />
+          <Text style={styles.emptyJobsText}>
+            Complete your resume to get personalized job matches.
+          </Text>
+          <TouchableOpacity
+            style={styles.buildResumeButton}
+            onPress={() => navigation.navigate('ResumeBuilder')}
+          >
+            <Text style={styles.buildResumeButtonText}>Build Your Resume</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
 
-  if (loading) {
+    return recommendations.map((job, index) => {
+      const matchColor = job.matchPercentage >= 80 ? '#2ECC71' : 
+                         job.matchPercentage >= 60 ? '#f9c349' : '#E74C3C';
+      
+      return (
+        <Animated.View 
+          key={job._id || index} 
+          style={[
+            styles.jobCard,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
+        >
+          {job.urgent && (
+            <View style={styles.urgentBadge}>
+              <Text style={styles.urgentBadgeText}>URGENT</Text>
+            </View>
+          )}
+          {job.featured && (
+            <View style={styles.featuredBadge}>
+              <Text style={styles.featuredBadgeText}>FEATURED</Text>
+            </View>
+          )}
+          
+          <View style={styles.jobHeader}>
+            <View style={styles.jobTitleContainer}>
+              <Text style={styles.jobTitle}>{job.title}</Text>
+              <View style={[styles.matchBadge, { backgroundColor: matchColor }]}>
+                <Text style={styles.matchText}>{job.matchPercentage}% Match</Text>
+              </View>
+            </View>
+            <Text style={styles.jobCompany}>{job.companyName || job.company || 'Company'}</Text>
+          </View>
+          
+          <View style={styles.jobDetails}>
+            <View style={styles.jobDetailItem}>
+              <Ionicons name="business-outline" size={16} color="#666" />
+              <Text style={styles.jobDetailText}>{job.department || 'Technology'}</Text>
+            </View>
+            <View style={styles.jobDetailItem}>
+              <Ionicons name="location-outline" size={16} color="#666" />
+              <Text style={styles.jobDetailText}>{job.location || 'Remote'}</Text>
+            </View>
+            <View style={styles.jobDetailItem}>
+              <Ionicons name="cash-outline" size={16} color="#666" />
+              <Text style={styles.jobDetailText}>{job.salary || 'Competitive'}</Text>
+            </View>
+            <View style={styles.jobDetailItem}>
+              <Ionicons name="time-outline" size={16} color="#666" />
+              <Text style={styles.jobDetailText}>{job.type || 'Full-time'}</Text>
+            </View>
+          </View>
+          
+          {job.matchedSkills && job.matchedSkills.length > 0 && (
+            <View style={styles.matchedSkillsContainer}>
+              <Text style={styles.matchedSkillsLabel}>Matched Skills:</Text>
+              <View style={styles.matchedSkillsList}>
+                {job.matchedSkills.slice(0, 4).map((skill, idx) => (
+                  <View key={idx} style={styles.matchedSkillTag}>
+                    <Text style={styles.matchedSkillText}>{skill}</Text>
+                  </View>
+                ))}
+                {job.matchedSkills.length > 4 && (
+                  <Text style={styles.moreSkillsText}>+{job.matchedSkills.length - 4} more</Text>
+                )}
+              </View>
+            </View>
+          )}
+          
+          {job.matchReasons && job.matchReasons.length > 0 && (
+            <View style={styles.matchReasonsContainer}>
+              <Text style={styles.matchReasonsLabel}>Why this matches:</Text>
+              <View style={styles.matchReasonsList}>
+                {job.matchReasons.slice(0, 3).map((reason, idx) => (
+                  <View key={idx} style={styles.matchReasonTag}>
+                    <Ionicons name="checkmark-circle" size={12} color="#2ECC71" />
+                    <Text style={styles.matchReasonText}>{reason}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+          
+          <Text style={styles.jobDescription} numberOfLines={2}>
+            {job.description || 'Great opportunity to join our team and grow your career.'}
+          </Text>
+          
+          <View style={styles.jobActions}>
+            <TouchableOpacity 
+              style={styles.applyButton}
+              onPress={() => handleApplyToJob(job)}
+            >
+              <Text style={styles.applyButtonText}>Apply Now</Text>
+              <Ionicons name="arrow-forward" size={16} color="#f9c349" />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.saveJobButton}
+              onPress={() => handleSaveJob(job)}
+            >
+              <Ionicons name="bookmark-outline" size={20} color="#666" />
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      );
+    });
+  };
+
+  // Render download modal
+  const renderDownloadModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={downloadModalVisible}
+      onRequestClose={() => {
+        if (!downloading) {
+          setDownloadModalVisible(false);
+        }
+      }}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>
+              {downloading ? 'Downloading Resume...' : 'Download Options'}
+            </Text>
+            {!downloading && (
+              <TouchableOpacity onPress={() => setDownloadModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {downloading ? (
+            <View style={styles.downloadProgressContainer}>
+              <ActivityIndicator size="large" color="#f9c349" />
+              <Text style={styles.downloadProgressText}>
+                {downloadProgress}% Complete
+              </Text>
+              <View style={styles.progressBar}>
+                <View 
+                  style={[
+                    styles.progressFill, 
+                    { width: `${downloadProgress}%` }
+                  ]} 
+                />
+              </View>
+              <Text style={styles.downloadStatusText}>
+                {downloadProgress < 30 && 'Generating resume...'}
+                {downloadProgress >= 30 && downloadProgress < 70 && 'Creating PDF...'}
+                {downloadProgress >= 70 && downloadProgress < 100 && 'Saving file...'}
+                {downloadProgress >= 100 && 'Complete!'}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.downloadOptions}>
+              <TouchableOpacity
+                style={styles.downloadOption}
+                onPress={() => handleDownloadResume(selectedResume, 'pdf')}
+              >
+                <View style={[styles.downloadOptionIcon, { backgroundColor: '#E74C3C' }]}>
+                  <Ionicons name="document-text" size={28} color="#fff" />
+                </View>
+                <View style={styles.downloadOptionInfo}>
+                  <Text style={styles.downloadOptionTitle}>PDF Resume</Text>
+                  <Text style={styles.downloadOptionDesc}>
+                    Professional PDF format, ready for printing
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#ccc" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.downloadOption}
+                onPress={() => handleDownloadHTML(selectedResume)}
+              >
+                <View style={[styles.downloadOptionIcon, { backgroundColor: '#f9c349' }]}>
+                  <Ionicons name="code" size={28} color="#fff" />
+                </View>
+                <View style={styles.downloadOptionInfo}>
+                  <Text style={styles.downloadOptionTitle}>HTML Resume</Text>
+                  <Text style={styles.downloadOptionDesc}>
+                    Web-ready HTML format with styling
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#ccc" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.downloadOption}
+                onPress={() => handleDownloadJSON(selectedResume)}
+              >
+                <View style={[styles.downloadOptionIcon, { backgroundColor: '#9B59B6' }]}>
+                  <Ionicons name="database" size={28} color="#fff" />
+                </View>
+                <View style={styles.downloadOptionInfo}>
+                  <Text style={styles.downloadOptionTitle}>JSON Data</Text>
+                  <Text style={styles.downloadOptionDesc}>
+                    Raw resume data in JSON format
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#ccc" />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+
+  // Loading state
+  if (isLoading || (loading && resumes.length === 0)) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-        <HeaderBar navigation={navigation} />
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#f9c349" />
-          <Text style={styles.loadingText}>Loading your resume...</Text>
+          <Text style={styles.loadingText}>Loading your resumes...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
+  const safeResumes = Array.isArray(resumes) ? resumes : [];
+  const hasResumes = safeResumes.length > 0;
+
   return (
-    
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      <HeaderBar navigation={navigation} />
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f9c349" colors={["#f9c349"]} progressBackgroundColor="#fff" />
-        }
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      
+      <Animated.View 
+        style={[
+          styles.contentContainer,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }]
+          }
+        ]}
       >
-        <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }]}>
-          <Text style={styles.welcomeText}>Hello, {userName.split(' ')[0]}!</Text>
-          <Text style={styles.subText}>{getProfileCompletionMessage()}</Text>
-        </Animated.View>
-
-        <Animated.View style={[styles.mainCard, { transform: [{ scale: cardScale }] }]}>
-          <LinearGradient colors={['#1a1a1a', '#1a1a1a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.gradientCard}>
-            <View style={styles.decorCircle1} />
-            <View style={styles.decorCircle2} />
-            <View style={styles.cardHeader}>
-              <View>
-                <Text style={styles.cardLabel}>RESUME STRENGTH</Text>
-                <Text style={styles.cardValue}>{completionScore}% Complete</Text>
-              </View>
-              <View style={styles.trophyContainer}>
-                <MaterialCommunityIcons name={completionScore === 100 ? "trophy" : "shield-check"} size={32} color="#1a1a1a" />
-              </View>
-            </View>
-            <View style={styles.progressContainer}>
-              <View style={styles.progressTrack}>
-                <Animated.View style={[styles.progressFill, { width: progressWidthInterpolated, backgroundColor: getScoreColor(completionScore) }]} />
-              </View>
-              <Text style={styles.progressText}>{getScoreMessage(completionScore)}</Text>
-            </View>
-            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-              <TouchableOpacity style={styles.whiteButton} onPress={() => navigation.navigate("ResumeBuilder", { resumeData })} activeOpacity={0.8}>
-                <Text style={styles.whiteButtonText}>{resumeData?.fullName ? 'Enhance with AI' : 'Create Resume'}</Text>
-                <Ionicons name="sparkles" color="#f9c349" size={16} />
-              </TouchableOpacity>
-            </Animated.View>
-          </LinearGradient>
-        </Animated.View>
-
-        <View style={styles.actionRow}>
-          {actionButtons.map((action, index) => (
-            <Animated.View key={index} style={{
-              opacity: actionStagger[index],
-              transform: [{ 
-                translateY: actionStagger[index].interpolate({ inputRange: [0, 1], outputRange: [30, 0] })
-              }, { 
-                scale: actionStagger[index].interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] })
-              }],
-            }}>
-              <ActionItem {...action} />
-            </Animated.View>
-          ))}
-        </View>
-
-        <View style={styles.sectionHeaderRow}>
-          <View style={styles.sectionTitleRow}>
-            <LinearGradient colors={['#f9c349', '#f9c349']} style={styles.sectionDot} />
-            <Text style={styles.sectionTitle}>AI Market Insights</Text>
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>Hello,</Text>
+            <Text style={styles.userName}>
+              {isGuest ? 'Guest User' : user?.name || 'User'}
+            </Text>
           </View>
-          <TouchableOpacity onPress={showInsightsWithAnimation} activeOpacity={0.7}>
-            <Text style={styles.seeAll}>See details →</Text>
+          <TouchableOpacity
+            style={styles.newResumeButton}
+            onPress={() => navigation.navigate('ResumeBuilder')}
+          >
+            <Ionicons name="add" size={20} color="#fff" />
+            <Text style={styles.newResumeButtonText}>New</Text>
           </TouchableOpacity>
         </View>
 
-        {loadingInsights ? (
-          <View style={styles.insightsLoadingContainer}>
-            <ActivityIndicator size="small" color="#f9c349" />
-            <Text style={styles.insightsLoadingText}>Analyzing market data...</Text>
-          </View>
-        ) : (
-          <View style={styles.insightGrid}>
-            {marketInsights.slice(0, 2).map((insight, index) => (
-              <InsightCard key={index} title={insight.title} match={insight.match} trend={insight.trend} icon={index === 0 ? "trending-up" : "cpu"} color={index === 0 ? "#f9c349" : "#1a1a1a"} />
-            ))}
-          </View>
-        )}
+       
 
-        <View style={styles.sectionTitleRow}>
-          <LinearGradient colors={['#f9c349', '#f9c349']} style={styles.sectionDot} />
-          <Text style={styles.sectionTitle}>Top Recommendations</Text>
-        </View>
-        {allRecommendations.slice(0, 2).map((rec, index) => (
-          <TouchableOpacity key={index} style={styles.jobCard} onPress={() => {
-            if (rec.message.toLowerCase().includes('resume') || rec.message.toLowerCase().includes('profile')) {
-              navigation.navigate("ResumeBuilder", { resumeData });
-            }
-          }} activeOpacity={0.7}>
-            <View style={[styles.jobIconBg, { backgroundColor: rec.priority === 'high' ? '#1a1a1a' : '#f9c349' }]}>
-              <MaterialCommunityIcons name={rec.priority === 'high' ? 'alert-circle' : 'lightbulb'} size={24} color={rec.priority === 'high' ? '#f9c349' : '#1a1a1a'} />
-            </View>
-            <View style={styles.jobInfo}>
-              <Text style={styles.jobName}>{rec.message}</Text>
-              <Text style={styles.jobMeta}>{rec.action}</Text>
-            </View>
-            <View style={styles.chevronCircle}>
-              <Feather name="chevron-right" size={18} color="#1a1a1a" />
-            </View>
-          </TouchableOpacity>
-        ))}
-
-        <View style={styles.completionCard}>
-          <View style={styles.completionHeader}>
-            <MaterialCommunityIcons name="progress-check" size={22} color="#f9c349" />
-            <Text style={styles.completionTitle}>Profile Completion Progress</Text>
-          </View>
-          <View style={styles.completionProgressTrack}>
-            <Animated.View style={[styles.completionProgressFill, { width: progressWidthInterpolated, backgroundColor: getScoreColor(completionScore) }]} />
-          </View>
-          <View style={styles.completionFooter}>
-            <Text style={styles.completionText}>{completionScore}% Complete</Text>
-            {completionScore === 100 && (
-              <View style={styles.perfectBadge}>
-                <MaterialCommunityIcons name="star-circle" size={16} color="#f9c349" />
-                <Text style={styles.perfectText}>Perfect!</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {resumeData?.fullName && (
-          <View style={styles.brandLinkBox}>
-            <View style={styles.brandLeft}>
-              <View style={styles.linkIconCircle}>
-                <Feather name="link-2" size={16} color="#f9c349" />
-              </View>
-              <Text style={styles.brandUrl} numberOfLines={1}>
-                tdc.app/me/{resumeData.fullName?.toLowerCase().replace(/\s/g, '') || 'user'}
-              </Text>
-            </View>
-            <TouchableOpacity style={styles.copyBadge} onPress={handleCopyLink} activeOpacity={0.7}>
-              <Text style={styles.copyText}>Get Link</Text>
-              <Ionicons name="copy-outline" size={12} color="#f9c349" />
-            </TouchableOpacity>
-          </View>
-        )}
-      </ScrollView>
-
-      {/* AI Market Insights Modal */}
-      <Modal visible={showInsightsModal} animationType="fade" transparent onRequestClose={() => setShowInsightsModal(false)}>
-        <TouchableWithoutFeedback onPress={() => setShowInsightsModal(false)}>
-          <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback>
-              <Animated.View style={[styles.modalContainer, { transform: [{ scale: modalScale }] }]}>
-                <View style={styles.modalHandle} />
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>AI Market Insights</Text>
-                  <TouchableOpacity onPress={() => setShowInsightsModal(false)} style={styles.modalCloseBtn}>
-                    <Ionicons name="close" size={22} color="#1a1a1a" />
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          contentContainerStyle={styles.scrollContent}
+        >
+          {hasResumes ? (
+            <>
+              {/* Resume Selector */}
+              <View style={styles.resumeSelector}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {(searchQuery.trim() ? filteredResumes : safeResumes).map((resume, index) => (
+                    <TouchableOpacity
+                      key={resume._id || `resume-${index}`}
+                      style={[
+                        styles.resumeTab,
+                        selectedResume?._id === resume._id && styles.resumeTabActive
+                      ]}
+                      onPress={() => handleSelectResume(resume)}
+                    >
+                      <Text style={[
+                        styles.resumeTabText,
+                        selectedResume?._id === resume._id && styles.resumeTabTextActive
+                      ]}>
+                        {resume?.personalInfo?.firstName || 'Resume'}
+                      </Text>
+                      <View style={[
+                        styles.resumeTabBadge,
+                        { backgroundColor: getStatusColor(resume?.completionPercentage || 0) }
+                      ]}>
+                        <Text style={styles.resumeTabBadgeText}>
+                          {resume?.completionPercentage || 0}%
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+                {safeResumes.length > 1 && (
+                  <TouchableOpacity
+                    style={styles.viewAllButton}
+                    onPress={() => setShowAllResumes(!showAllResumes)}
+                  >
+                    <Text style={styles.viewAllText}>
+                      {showAllResumes ? 'Show Less' : `+${safeResumes.length - 1} more`}
+                    </Text>
                   </TouchableOpacity>
-                </View>
-                <ScrollView showsVerticalScrollIndicator={false}>
-                  {loadingInsights ? (
-                    <View style={styles.modalLoadingContainer}>
-                      <ActivityIndicator size="large" color="#f9c349" />
-                      <Text style={styles.modalLoadingText}>Generating insights...</Text>
-                    </View>
-                  ) : (
-                    <>
-                      <Text style={styles.modalSectionTitle}>🎯 Top Matching Roles</Text>
-                      {marketInsights.map((insight, index) => (
-                        <View key={index} style={styles.detailInsightCard}>
-                          <View style={styles.detailInsightHeader}>
-                            <Text style={styles.detailInsightTitle}>{insight.title}</Text>
-                            <View style={styles.matchBadge}>
-                              <Text style={styles.matchText}>{insight.match} Match</Text>
-                            </View>
-                          </View>
-                          <Text style={styles.trendText}>📈 Market Trend: {insight.trend}</Text>
-                          <Text style={styles.descriptionText}>{insight.description}</Text>
-                          <Text style={styles.salaryText}>💰 Salary Range: {insight.salary}</Text>
-                          <View style={styles.skillsContainer}>
-                            {insight.skills && insight.skills.map((skill, idx) => (
-                              <View key={idx} style={styles.skillTag}>
-                                <Text style={styles.skillTagText}>{skill}</Text>
-                              </View>
-                            ))}
+                )}
+              </View>
+
+              {selectedResume ? (
+                <>
+                  {/* Stats Card with Gold Gradient */}
+                  <View style={styles.statsCard}>
+                    <LinearGradient
+                      colors={['#000000', '#1a1a1a', '#f9c349']}
+                      style={styles.statsGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <View style={styles.statsContent}>
+                        <View style={styles.statsLeft}>
+                          <Text style={styles.resumeName}>
+                            {selectedResume?.personalInfo?.firstName || 'Untitled'} {selectedResume?.personalInfo?.lastName || ''}
+                          </Text>
+                          <Text style={styles.resumeTitle}>
+                            {selectedResume?.professionalSummary?.title || 'No title set'}
+                          </Text>
+                          <View style={styles.statusContainer}>
+                            <View style={[
+                              styles.statusDot,
+                              { backgroundColor: getStatusColor(selectedResume?.completionPercentage || 0) }
+                            ]} />
+                            <Text style={styles.statusText}>
+                              {getStatusText(selectedResume?.completionPercentage || 0)}
+                            </Text>
                           </View>
                         </View>
-                      ))}
+                        <View style={styles.statsRight}>
+                          <Text style={styles.percentageText}>
+                            {selectedResume?.completionPercentage || 0}%
+                          </Text>
+                          <Text style={styles.percentageLabel}>Complete</Text>
+                        </View>
+                      </View>
+                    </LinearGradient>
+                  </View>
 
-                      {fullInsights?.skillGaps && fullInsights.skillGaps.length > 0 && (
-                        <>
-                          <Text style={styles.modalSectionTitle}>📚 Skills to Develop</Text>
-                          {fullInsights.skillGaps.slice(0, 3).map((gap, index) => (
-                            <View key={index} style={styles.skillGapCard}>
-                              <View style={styles.skillGapIcon}>
-                                <MaterialCommunityIcons name="lightning-bolt" size={22} color="#f9c349" />
-                              </View>
-                              <View style={styles.skillGapContent}>
-                                <Text style={styles.skillGapTitle}>{gap.skill}</Text>
-                                <Text style={styles.skillGapSuggestion}>{gap.suggestion}</Text>
-                                <Text style={styles.skillGapTime}>⏱️ {gap.estimatedTimeToLearn}</Text>
-                              </View>
-                            </View>
-                          ))}
-                        </>
-                      )}
+                  {/* Resume Stats */}
+                  <View style={styles.resumeStats}>
+                    <View style={styles.resumeStatItem}>
+                      <Ionicons name="eye-outline" size={18} color="#f9c349" />
+                      <Text style={styles.resumeStatText}>
+                        {selectedResume.viewCount || 0} views
+                      </Text>
+                    </View>
+                    <View style={styles.resumeStatItem}>
+                      <Ionicons name="download-outline" size={18} color="#f9c349" />
+                      <Text style={styles.resumeStatText}>
+                        {selectedResume.downloadCount || 0} downloads
+                      </Text>
+                    </View>
+                    <View style={styles.resumeStatItem}>
+                      <Ionicons name="share-outline" size={18} color="#f9c349" />
+                      <Text style={styles.resumeStatText}>
+                        {selectedResume.shareCount || 0} shares
+                      </Text>
+                    </View>
+                  </View>
 
-                      {fullInsights?.salaryInsights && fullInsights.salaryInsights.length > 0 && (
-                        <>
-                          <Text style={styles.modalSectionTitle}>💰 Salary Insights</Text>
-                          {fullInsights.salaryInsights.map((salary, index) => (
-                            <View key={index} style={styles.salaryCard}>
-                              <Text style={styles.salaryTitle}>{salary.title}</Text>
-                              <Text style={styles.salaryRange}>${salary.min.toLocaleString()} - ${salary.max.toLocaleString()}</Text>
-                              <Text style={styles.salaryDesc}>{salary.description}</Text>
-                            </View>
-                          ))}
-                        </>
-                      )}
-                    </>
-                  )}
-                </ScrollView>
-              </Animated.View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
+                  {/* Quick Action Cards */}
+                  <View style={styles.quickActions}>
+                    <TouchableOpacity
+                      style={styles.quickActionCard}
+                      onPress={() => handleViewResume(selectedResume)}
+                    >
+                      <View style={[styles.quickActionIcon, { backgroundColor: '#f9c349' }]}>
+                        <Ionicons name="eye-outline" size={24} color="#000" />
+                      </View>
+                      <Text style={styles.quickActionLabel}>View</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.quickActionCard}
+                      onPress={() => handleEditResume(selectedResume)}
+                    >
+                      <View style={[styles.quickActionIcon, { backgroundColor: '#000' }]}>
+                        <Ionicons name="create-outline" size={24} color="#f9c349" />
+                      </View>
+                      <Text style={styles.quickActionLabel}>Edit</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.quickActionCard}
+                      onPress={() => setDownloadModalVisible(true)}
+                    >
+                      <View style={[styles.quickActionIcon, { backgroundColor: '#f9c349' }]}>
+                        <Ionicons name="download-outline" size={24} color="#000" />
+                      </View>
+                      <Text style={styles.quickActionLabel}>Download</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.quickActionCard}
+                      onPress={() => handleShareResume(selectedResume)}
+                    >
+                      <View style={[styles.quickActionIcon, { backgroundColor: '#000' }]}>
+                        <Ionicons name="share-outline" size={24} color="#f9c349" />
+                      </View>
+                      <Text style={styles.quickActionLabel}>Share</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.quickActionCard}
+                      onPress={() => handleCreateTemplate(selectedResume)}
+                    >
+                      <View style={[styles.quickActionIcon, { backgroundColor: '#f9c349' }]}>
+                        <Ionicons name="color-palette-outline" size={24} color="#000" />
+                      </View>
+                      <Text style={styles.quickActionLabel}>Templates</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.quickActionCard}
+                      onPress={() => handleAnalytics(selectedResume)}
+                    >
+                      <View style={[styles.quickActionIcon, { backgroundColor: '#000' }]}>
+                        <Ionicons name="stats-chart-outline" size={24} color="#f9c349" />
+                      </View>
+                      <Text style={styles.quickActionLabel}>Analytics</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Recommendations Section */}
+                  <View style={styles.recommendationsSection}>
+                    <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionTitle}>Recommended Jobs</Text>
+                      <TouchableOpacity>
+                        <Text style={styles.seeAllText}>See All</Text>
+                      </TouchableOpacity>
+                    </View>
+                    {renderRecommendations()}
+                  </View>
+                </>
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="document-text-outline" size={64} color="#ccc" />
+                  <Text style={styles.emptyTitle}>No Resume Selected</Text>
+                  <Text style={styles.emptyDescription}>
+                    Please select a resume from the list above.
+                  </Text>
+                </View>
+              )}
+            </>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="document-text-outline" size={64} color="#ccc" />
+              <Text style={styles.emptyTitle}>No Resume Found</Text>
+              <Text style={styles.emptyDescription}>
+                Create your first resume to get started with your job search.
+              </Text>
+              <TouchableOpacity
+                style={styles.createButton}
+                onPress={() => navigation.navigate('ResumeBuilder')}
+              >
+                <LinearGradient
+                  colors={['#000', '#f9c349']}
+                  style={styles.createButtonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Text style={styles.createButtonText}>Create Resume</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          )}
+          
+          {/* Bottom Spacer */}
+          <View style={styles.bottomSpacer} />
+        </ScrollView>
+      </Animated.View>
+
+      {/* Download Modal */}
+      {renderDownloadModal()}
     </SafeAreaView>
-   
   );
 };
 
-// Header Bar Component
-const HeaderBar = ({ navigation }) => (
-  <View style={styles.headerNav}>
-    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
-      <Ionicons name="chevron-back" size={24} color="#1a1a1a" />
-    </TouchableOpacity>
-    <View style={styles.headerCenter}>
-      <Text style={styles.headerNavTitle}>Resume Dashboard</Text>
-    </View>
-    <View style={{ width: 38 }} />
-  </View>
-);
-
-// Action Item Component
-const ActionItem = ({ icon, label, color, onPress, disabled, loading }) => (
-  <TouchableOpacity style={[styles.actionItem, disabled && styles.actionDisabled]} onPress={onPress} disabled={disabled || loading} activeOpacity={0.7}>
-    <View style={[styles.actionIconCircle, { backgroundColor: disabled ? '#f5f5f5' : '#1a1a1a' }]}>
-      {loading ? <ActivityIndicator size="small" color="#f9c349" /> : <Ionicons name={icon} size={20} color={disabled ? '#ccc' : '#f9c349'} />}
-    </View>
-    <Text style={[styles.actionLabel, disabled && styles.actionDisabledText]}>{label}</Text>
-  </TouchableOpacity>
-);
-
-// Insight Card Component
-const InsightCard = ({ title, match, trend, icon, color }) => (
-  <View style={styles.insightCard}>
-    <View style={styles.insightHeader}>
-      <View style={[styles.insightIconCircle, { backgroundColor: color + '15' }]}>
-        <Feather name={icon} size={16} color={color} />
-      </View>
-      <View style={[styles.trendBadge, { backgroundColor: color + '15' }]}>
-        <Ionicons name="arrow-up" size={10} color="#16a34a" />
-        <Text style={styles.trendText}>{trend}</Text>
-      </View>
-    </View>
-    <Text style={styles.insightTitle} numberOfLines={1}>{title}</Text>
-    <Text style={[styles.insightMatch, { color: color }]}>{match} Match</Text>
-  </View>
-);
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffff" },
-  
-  // Header Nav
-  headerNav: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 14, paddingVertical: Platform.OS === 'ios' ? 8 : 10,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    
   },
-  backBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center' },
-  headerCenter: { alignItems: 'center' },
-  headerNavTitle: { fontSize: 18, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.5 },
-  
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 12, fontSize: 14, color: '#999', fontWeight: '600' },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
-  
-  header: { marginVertical: 20 },
-  welcomeText: { fontSize: 28, fontWeight: "900", color: "#1a1a1a", letterSpacing: -0.5 },
-  subText: { color: "#666", fontSize: 14, marginTop: 6, lineHeight: 20, fontWeight: '500' },
-  
-  mainCard: { borderRadius: 24, overflow: "hidden", elevation: 15, shadowColor: "#f9c349", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 20 },
-  gradientCard: { padding: 25, position: 'relative', overflow: 'hidden' },
-  decorCircle1: { position: 'absolute', top: -40, right: -40, width: 150, height: 150, borderRadius: 75, borderWidth: 25, borderColor: 'rgba(255,255,255,0.05)' },
-  decorCircle2: { position: 'absolute', bottom: -30, left: -30, width: 100, height: 100, borderRadius: 50, borderWidth: 15, borderColor: 'rgba(255,255,255,0.05)' },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  cardLabel: { color: "rgba(255,255,255,0.8)", fontSize: 11, fontWeight: "800", letterSpacing: 2 },
-  cardValue: { color: "#fff", fontSize: 24, fontWeight: "800", marginTop: 4 },
-  trophyContainer: { width: 50, height: 50, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
-  progressContainer: { marginTop: 25 },
-  progressTrack: { height: 8, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 4, overflow: 'hidden' },
-  progressFill: { height: 8, borderRadius: 4 },
-  progressText: { color: "#fff", fontSize: 12, fontWeight: "600", marginTop: 8, alignSelf: "flex-end", opacity: 0.9 },
-  whiteButton: { backgroundColor: "#fff", marginTop: 20, paddingVertical: 14, borderRadius: 14, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8 },
-  whiteButtonText: { color: "#1a1a1a", fontWeight: "800", fontSize: 14, letterSpacing: 0.5 },
-  
-  actionRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginTop: 28, marginBottom: 8, paddingHorizontal: 4 },
-  actionItem: { alignItems: "center", width: 68 },
-  actionDisabled: { opacity: 0.5 },
-  actionIconCircle: { width: 52, height: 52, borderRadius: 16, justifyContent: "center", alignItems: "center", marginBottom: 8, elevation: 4 },
-  actionLabel: { fontSize: 12, fontWeight: "700", color: "#1a1a1a", letterSpacing: 0.5, textAlign: 'center' },
-  actionDisabledText: { color: '#ccc' },
-  
-  sectionHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 32, marginBottom: 14 },
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14, marginTop: 10 },
-  sectionDot: { width: 8, height: 8, borderRadius: 4 },
-  sectionTitle: { fontSize: 18, fontWeight: "800", color: "#1a1a1a" },
-  seeAll: { fontSize: 13, color: "#f9c349", fontWeight: "700" },
-  
-  insightsLoadingContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 24, gap: 10, backgroundColor: '#f8f8f8', borderRadius: 16 },
-  insightsLoadingText: { fontSize: 14, color: '#999', fontWeight: '500' },
-  insightGrid: { flexDirection: "row", justifyContent: "space-between", marginBottom: 20, gap: 12 },
-  insightCard: { backgroundColor: "#fff", padding: 16, borderRadius: 20, borderWidth: 2, borderColor: "#f0f0f0", flex: 1 },
-  insightHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
-  insightIconCircle: { width: 34, height: 34, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-  trendBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, gap: 2 },
-  trendText: { color: "#16a34a", fontSize: 10, fontWeight: "700" },
-  insightTitle: { fontSize: 14, fontWeight: "700", color: "#1a1a1a", marginBottom: 4 },
-  insightMatch: { fontSize: 12, fontWeight: "600" },
-  
-  jobCard: { backgroundColor: "#fff", padding: 16, borderRadius: 20, flexDirection: "row", alignItems: "center", borderWidth: 2, borderColor: "#f0f0f0", marginBottom: 10 },
-  jobIconBg: { width: 48, height: 48, borderRadius: 14, justifyContent: "center", alignItems: "center" },
-  jobInfo: { flex: 1, marginLeft: 14 },
-  jobName: { fontSize: 14, fontWeight: "700", color: "#1a1a1a" },
-  jobMeta: { fontSize: 11, color: "#999", marginTop: 3, fontWeight: '500' },
-  chevronCircle: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center' },
-  
-  completionCard: { backgroundColor: "#fff", padding: 20, borderRadius: 20, borderWidth: 2, borderColor: "#f0f0f0", marginTop: 20 },
-  completionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
-  completionTitle: { fontSize: 16, fontWeight: "700", color: "#1a1a1a" },
-  completionProgressTrack: { height: 10, backgroundColor: "#f0f0f0", borderRadius: 5, overflow: "hidden" },
-  completionProgressFill: { height: 10, borderRadius: 5 },
-  completionFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
-  completionText: { fontSize: 13, color: "#999", fontWeight: '600' },
-  perfectBadge: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: "#fffbf0", borderRadius: 10, borderWidth: 1, borderColor: '#f9c34930' },
-  perfectText: { fontSize: 11, color: "#1a1a1a", fontWeight: "700" },
-  
-  brandLinkBox: { marginTop: 25, padding: 14, backgroundColor: "#f8f8f8", borderRadius: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderWidth: 2, borderColor: "#f0f0f0", borderStyle: "dashed" },
-  brandLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
-  linkIconCircle: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#fffbf0', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#f9c34930' },
-  brandUrl: { fontSize: 12, color: "#1a1a1a", fontWeight: "500", flex: 1 },
-  copyBadge: { backgroundColor: "#1a1a1a", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  copyText: { color: "#f9c349", fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
-  
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modalContainer: { backgroundColor: '#fff', borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 25, maxHeight: '85%' },
-  modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#e0e0e0', alignSelf: 'center', marginBottom: 20 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  modalTitle: { fontSize: 20, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.5 },
-  modalCloseBtn: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center' },
-  modalLoadingContainer: { alignItems: 'center', justifyContent: 'center', padding: 40 },
-  modalLoadingText: { marginTop: 12, fontSize: 14, color: '#999', fontWeight: '500' },
-  modalSectionTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a', marginTop: 20, marginBottom: 12 },
-  
-  detailInsightCard: { backgroundColor: '#f8f8f8', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 2, borderColor: '#f0f0f0' },
-  detailInsightHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  detailInsightTitle: { fontSize: 16, fontWeight: '700', color: '#1a1a1a', flex: 1 },
-  matchBadge: { backgroundColor: '#1a1a1a', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, marginLeft: 10 },
-  matchText: { color: '#f9c349', fontSize: 10, fontWeight: '700' },
-  descriptionText: { fontSize: 12, color: '#666', marginTop: 4, fontWeight: '500', lineHeight: 18 },
-  salaryText: { fontSize: 13, color: '#f9c349', fontWeight: '600', marginTop: 6 },
-  skillsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
-  skillTag: { backgroundColor: '#fff', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#f0f0f0' },
-  skillTagText: { fontSize: 10, color: '#1a1a1a', fontWeight: '600' },
-  
-  skillGapCard: { flexDirection: 'row', backgroundColor: '#fffbf0', padding: 16, borderRadius: 14, marginBottom: 12, gap: 14, borderWidth: 1, borderColor: '#f9c34920' },
-  skillGapIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#f9c34930' },
-  skillGapContent: { flex: 1 },
-  skillGapTitle: { fontSize: 14, fontWeight: '700', color: '#1a1a1a' },
-  skillGapSuggestion: { fontSize: 12, color: '#666', marginTop: 4, fontWeight: '500' },
-  skillGapTime: { fontSize: 11, color: '#f9c349', marginTop: 6, fontWeight: '600' },
-  
-  salaryCard: { backgroundColor: '#f8f8f8', padding: 16, borderRadius: 14, marginBottom: 12, borderWidth: 2, borderColor: '#f0f0f0' },
-  salaryTitle: { fontSize: 14, fontWeight: '700', color: '#1a1a1a' },
-  salaryRange: { fontSize: 20, fontWeight: '800', color: '#f9c349', marginTop: 6 },
-  salaryDesc: { fontSize: 11, color: '#666', marginTop: 4, fontWeight: '500' },
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    
+  },
+  contentContainer: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    marginTop:40
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+  },
+  bottomSpacer: {
+    height: Platform.OS === 'ios' ? 20 : 10,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 4 : 8,
+    paddingBottom: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  greeting: {
+    fontSize: 13,
+    color: '#999',
+    fontWeight: '400',
+  },
+  userName: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#000',
+  },
+  newResumeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#000',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  newResumeButtonText: {
+    color: '#f9c349',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e8e8e8',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#000',
+  },
+  resumeSelector: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#fff',
+    marginTop: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  resumeTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginRight: 10,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  resumeTabActive: {
+    backgroundColor: '#000',
+    borderColor: '#f9c349',
+  },
+  resumeTabText: {
+    fontSize: 13,
+    color: '#666',
+    fontWeight: '500',
+  },
+  resumeTabTextActive: {
+    color: '#fff',
+  },
+  resumeTabBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 10,
+    marginLeft: 6,
+  },
+  resumeTabBadgeText: {
+    fontSize: 10,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  viewAllButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  viewAllText: {
+    fontSize: 12,
+    color: '#f9c349',
+    fontWeight: '500',
+  },
+  statsCard: {
+    marginHorizontal: 16,
+    marginVertical: 16,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  statsGradient: {
+    padding: 24,
+  },
+  statsContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  statsLeft: {
+    flex: 1,
+  },
+  resumeName: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  resumeTitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: 2,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  statusText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '500',
+  },
+  statsRight: {
+    alignItems: 'center',
+  },
+  percentageText: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#f9c349',
+  },
+  percentageLabel: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '500',
+  },
+  resumeStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 16,
+    marginBottom: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  resumeStatItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  resumeStatText: {
+    fontSize: 13,
+    color: '#333',
+    marginLeft: 6,
+    fontWeight: '500',
+  },
+  quickActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 12,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  quickActionCard: {
+    width: '33.33%',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  quickActionIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  quickActionLabel: {
+    fontSize: 12,
+    color: '#333',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  recommendationsSection: {
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    marginTop: 4,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
+  },
+  seeAllText: {
+    fontSize: 13,
+    color: '#f9c349',
+    fontWeight: '500',
+  },
+  jobCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  jobHeader: {
+    marginBottom: 8,
+  },
+  jobTitleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  jobTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+    flex: 1,
+  },
+  matchBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  matchText: {
+    fontSize: 10,
+    color: '#fff',
+    fontWeight: '700',
+  },
+  jobCompany: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+  },
+  jobDetails: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginVertical: 6,
+  },
+  jobDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+    marginVertical: 2,
+  },
+  jobDetailText: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 4,
+  },
+  matchedSkillsContainer: {
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  matchedSkillsLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  matchedSkillsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  matchedSkillTag: {
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 6,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#e8e8e8',
+  },
+  matchedSkillText: {
+    fontSize: 11,
+    color: '#333',
+    fontWeight: '500',
+  },
+  moreSkillsText: {
+    fontSize: 11,
+    color: '#999',
+    marginLeft: 4,
+  },
+  matchReasonsContainer: {
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  matchReasonsLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 2,
+  },
+  matchReasonsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  matchReasonTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0faf4',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    marginRight: 6,
+    marginBottom: 4,
+  },
+  matchReasonText: {
+    fontSize: 11,
+    color: '#2ECC71',
+    marginLeft: 2,
+  },
+  jobDescription: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+    marginVertical: 6,
+  },
+  jobActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  applyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    marginTop: 6,
+  },
+  applyButtonText: {
+    fontSize: 14,
+    color: '#000',
+    fontWeight: '600',
+    marginRight: 4,
+  },
+  saveJobButton: {
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#e8e8e8',
+    borderRadius: 8,
+  },
+  urgentBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#E74C3C',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    zIndex: 1,
+  },
+  urgentBadgeText: {
+    fontSize: 10,
+    color: '#fff',
+    fontWeight: '700',
+  },
+  featuredBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 80,
+    backgroundColor: '#f9c349',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    zIndex: 1,
+  },
+  featuredBadgeText: {
+    fontSize: 10,
+    color: '#000',
+    fontWeight: '700',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#000',
+    marginTop: 16,
+  },
+  emptyDescription: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 8,
+    paddingHorizontal: 40,
+  },
+  createButton: {
+    marginTop: 20,
+    borderRadius: 25,
+    overflow: 'hidden',
+  },
+  createButtonGradient: {
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  createButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyJobsContainer: {
+    alignItems: 'center',
+    paddingVertical: 30,
+  },
+  emptyJobsText: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 12,
+    paddingHorizontal: 20,
+  },
+  buildResumeButton: {
+    backgroundColor: '#000',
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 12,
+  },
+  buildResumeButtonText: {
+    color: '#f9c349',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  recommendationsLoading: {
+    padding: 30,
+    alignItems: 'center',
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    width: width - 32,
+    maxHeight: '80%',
+    paddingBottom: Platform.OS === 'ios' ? 20 : 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.25,
+    shadowRadius: 30,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
+  },
+  downloadOptions: {
+    padding: 16,
+  },
+  downloadOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f5f5f5',
+  },
+  downloadOptionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  downloadOptionInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  downloadOptionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#000',
+  },
+  downloadOptionDesc: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 2,
+  },
+  downloadProgressContainer: {
+    padding: 30,
+    alignItems: 'center',
+  },
+  downloadProgressText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
+    marginTop: 16,
+  },
+  progressBar: {
+    width: '100%',
+    height: 6,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 3,
+    marginTop: 12,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#f9c349',
+    borderRadius: 3,
+  },
+  downloadStatusText: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
+  },
 });
 
-export default ResumeDashboard;
+export default ResumeDashboardScreen;
