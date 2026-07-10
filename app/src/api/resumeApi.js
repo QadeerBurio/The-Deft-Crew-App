@@ -1,13 +1,12 @@
-// app/src/api/resumeApi.js
 import api from './api';
 import { memoryCache } from './api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 
 export const resumeApi = {
   // Create new resume
   createResume: async (resumeData) => {
     try {
-      console.log('Creating resume with data');
-      
       const cleanData = { ...resumeData };
       
       // Initialize empty objects if not present
@@ -125,14 +124,26 @@ export const resumeApi = {
   // Update resume
   updateResume: async (resumeId, updates) => {
     try {
-      console.log('Updating resume:', resumeId);
-      
       const response = await api.put(`/resume/${resumeId}`, updates);
       memoryCache.delete(`resume:${resumeId}`);
+      memoryCache.delete(`recommendations:${resumeId}`);
       memoryCache.delete('resumes:all');
       return response.data;
     } catch (error) {
       console.error('Update resume error:', error);
+      throw error;
+    }
+  },
+
+  optimizeResume: async (resumeId, optimizeData) => {
+    try {
+      const response = await api.post(`/resume/${resumeId}/optimize`, optimizeData);
+      memoryCache.delete(`resume:${resumeId}`);
+      memoryCache.delete(`recommendations:${resumeId}`);
+      memoryCache.delete('resumes:all');
+      return response.data;
+    } catch (error) {
+      console.error('Optimize resume error:', error);
       throw error;
     }
   },
@@ -142,6 +153,7 @@ export const resumeApi = {
     try {
       const response = await api.delete(`/resume/${resumeId}`);
       memoryCache.delete(`resume:${resumeId}`);
+      memoryCache.delete(`recommendations:${resumeId}`);
       memoryCache.delete('resumes:all');
       return response.data;
     } catch (error) {
@@ -151,14 +163,27 @@ export const resumeApi = {
   },
 
   // Upload resume file
- // FIXED: Upload resume file with better error handling
   uploadResume: async (formData, onProgress) => {
     try {
-      console.log('📤 Uploading resume file...');
+      console.log('📤 Starting resume upload API call...');
+      
+      // Clear all related cache before upload
+      memoryCache.delete('resumes:all');
       
       const response = await api.post('/resume/upload', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json',
+        },
+        transformRequest: (data, headers) => {
+          if (headers) {
+            if (typeof headers.setContentType === 'function') {
+              headers.setContentType(undefined);
+            } else {
+              delete headers['Content-Type'];
+              delete headers['content-type'];
+            }
+          }
+          return data;
         },
         onUploadProgress: (progressEvent) => {
           if (onProgress && progressEvent.total) {
@@ -166,33 +191,61 @@ export const resumeApi = {
             onProgress(progress);
           }
         },
-        timeout: 60000, // 60 second timeout
+        timeout: 60000,
       });
-      
-      console.log('✅ Upload response received');
+
+      console.log('✅ Resume upload API successful');
+      // Clear cache after successful upload
       memoryCache.delete('resumes:all');
-      
       return response.data;
     } catch (error) {
-      console.error('❌ Upload resume error:', error);
-      
-      // Extract error message from response
+      console.error('❌ Resume upload API error:', error);
       let errorMessage = 'Failed to upload resume';
       if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
         errorMessage = error.response.data?.error || error.response.data?.message || errorMessage;
         console.error('Server error response:', error.response.data);
       } else if (error.request) {
-        // The request was made but no response was received
         errorMessage = 'No response from server. Please check your connection.';
-        console.error('No response received:', error.request);
+        console.error('Network error - no response received');
       } else {
-        // Something happened in setting up the request that triggered an Error
         errorMessage = error.message || errorMessage;
+        console.error('Request setup error:', error.message);
       }
-      
       throw new Error(errorMessage);
+    }
+  },
+
+  // Save a job (write behavioral affinity signal to backend)
+  saveJob: async (jobId) => {
+    try {
+      const response = await api.post(`/jobs/bookmarks/${jobId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Save job error:', error);
+      throw new Error(error.response?.data?.error || 'Failed to save job');
+    }
+  },
+
+  // Remove a saved job bookmark
+  unsaveJob: async (jobId) => {
+    try {
+      const response = await api.delete(`/jobs/bookmarks/${jobId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Unsave job error:', error);
+      throw new Error(error.response?.data?.error || 'Failed to remove saved job');
+    }
+  },
+
+  // Log a job interaction (view/ignore/dismiss) for behavioral personalization
+  logJobInteraction: async (jobId, interactionType) => {
+    try {
+      const response = await api.post(`/jobs/interactions/${jobId}`, { interactionType });
+      return response.data;
+    } catch (error) {
+      // Non-critical — fail silently
+      console.warn('Log interaction error (non-critical):', error?.message);
+      return null;
     }
   },
 
@@ -200,6 +253,11 @@ export const resumeApi = {
  // Get recommendations
   getRecommendations: async (resumeId) => {
     try {
+      const isValidObjectId = (id) => id && /^[0-9a-fA-F]{24}$/.test(id);
+      if (!isValidObjectId(resumeId)) {
+        return { success: true, data: [] };
+      }
+
       const cacheKey = `recommendations:${resumeId}`;
       const cached = memoryCache.get(cacheKey);
       if (cached) return cached;
@@ -213,9 +271,14 @@ export const resumeApi = {
       return { data: [] };
     }
   },
- // Get job recommendations based on resume
+  // Get job recommendations based on resume
   getJobRecommendations: async (resumeId = null, params = {}) => {
     try {
+      const isValidObjectId = (id) => id && /^[0-9a-fA-F]{24}$/.test(id);
+      if (resumeId && !isValidObjectId(resumeId)) {
+        return { recommendations: [], total: 0 };
+      }
+
       const { limit = 10, page = 1 } = params;
       const cacheKey = resumeId ? `recommendations:${resumeId}` : 'recommendations:top';
       
@@ -317,6 +380,69 @@ export const resumeApi = {
     } catch (error) {
       console.error('Get analytics error:', error);
       return { data: null };
+    }
+  },
+
+  // Enhance text with AI (Work, Projects, Summary)
+  enhanceText: async (text, context) => {
+    try {
+      const response = await api.post('/resume/enhance-text', { text, context });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.error || 'Failed to enhance text');
+    }
+  },
+
+  // Get AI skill suggestions
+  suggestSkills: async (currentSkills, targetRole) => {
+    try {
+      const response = await api.post('/resume/suggest-skills', { currentSkills, targetRole });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.error || 'Failed to get skill suggestions');
+    }
+  },
+
+  // Check resume fit against job
+  checkResumeFit: async (resumeId, jobId) => {
+    try {
+      const response = await api.post(`/resume/${resumeId}/check-fit`, { jobId });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.error || 'Failed to check resume fit');
+    }
+  },
+
+  // Debug resume upload
+  debugResume: async (resumeId) => {
+    try {
+      const response = await api.get(`/resume/${resumeId}/debug`);
+      return response.data;
+    } catch (error) {
+      console.error('Debug resume error:', error);
+      throw new Error(error.response?.data?.error || 'Failed to get debug info');
+    }
+  },
+
+  // Optimize and tailor resume for job
+  optimizeResume: async (resumeId, optimizeData) => {
+    try {
+      const response = await api.post(`/resume/${resumeId}/optimize`, optimizeData);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.error || 'Failed to optimize resume');
+    }
+  },
+
+  // Duplicate resume
+  duplicateResume: async (resumeId) => {
+    try {
+      const response = await api.post(`/resume/${resumeId}/duplicate`);
+      memoryCache.delete('resumes:all');
+      return response.data;
+    } catch (error) {
+      console.error('Duplicate resume error:', error);
+      throw error;
     }
   },
 };

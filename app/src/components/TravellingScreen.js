@@ -15,6 +15,7 @@ import { AuthContext } from '../context/AuthContext';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import TravelChatBot from './TravelChatBot';
 
 const { width, height } = Dimensions.get('window');
 
@@ -975,6 +976,7 @@ const TravelingScreen = () => {
           </View>
         </View>
       </Modal>
+      <TravelChatBot />
     </SafeAreaView>
   );
 };

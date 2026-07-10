@@ -227,6 +227,7 @@ const ResumeTemplateScreen = () => {
         desiredSalary: resumeData.targetJob.desiredSalary || '',
         availability: resumeData.targetJob.availability || '',
       } : null,
+      customStyles: resumeData.customStyles || {},
     };
   };
 
@@ -245,7 +246,7 @@ const ResumeTemplateScreen = () => {
       const formattedResume = formatResumeForTemplate(resume);
       
       // Generate the actual HTML using the template service
-      const html = renderResumeHTML(formattedResume, template.id);
+      const html = renderResumeHTML(formattedResume, template.id, formattedResume.customStyles || {});
       setPreviewHTML(html);
     } catch (error) {
       console.error('Error generating preview:', error);

@@ -277,10 +277,15 @@ const AnimatedGridCard = ({ item, index, navigation }) => {
         style={[styles.gridItem, { height: cardHeight }]}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          navigation.navigate(item.routeName);
+          if (item.routeName === 'ResumeDashboard') {
+            navigation.navigate('Home', { screen: 'Resume' });
+          } else {
+            navigation.navigate(item.routeName);
+          }
         }}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
+
       >
         <LinearGradient
           colors={['#FFFFFF', '#F8FAFC']}

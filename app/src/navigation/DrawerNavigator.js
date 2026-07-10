@@ -49,12 +49,14 @@ import FAQScreen from '../components/FAQ';
 import Card from '../components/Card';
 import NotificationModal from '../components/NotificationModal';
 import Career from '../components/Career';
+import TDCCareers from '../components/TDCCareers';
 import ExchangeScreen from '../components/ExchangeScreen';
 import ApplicationForm from '../components/ApplicationForm';
 import BookingScreen from '../components/BookingScreen';
 import PaymentScreen from '../components/PaymentScreen';
-import ResumeDashboard from '../screens/Resume/ResumeDashboard';
-import ResumeBuilder from '../screens/Resume/ResumeBuilder';
+// Note: Resume screens (ResumeDashboard, ResumeBuilder, ResumeView, etc.) are NOT
+// imported here. They are registered exclusively inside ResumeNavigator.js.
+// The Drawer navigates to 'ResumeStack' which mounts the full ResumeNavigator.
 import Social from '../screens/Social/Social';
 import ChatDetailScreen from '../screens/Social/ChatDetails';
 import MessagesScreen from '../screens/Social/MessageScreen';
@@ -79,11 +81,6 @@ import ProfileStack from './ProfileStack';
 import Home from '../screens/Home';
 import StudentDashboard from '../screens/StudentDashboard';
 import Explore from '../screens/Explore';
-import ResumeShareScreen from '../screens/Resume/ResumeShare';
-import ResumeViewScreen from '../screens/Resume/ViewResume';
-import ResumeAnalyticsScreen from '../screens/Resume/ResumeAnalytics';
-import ResumeSettingsScreen from '../screens/Resume/ResumeSetting';
-import ResumeTemplateScreen from '../screens/Resume/ResumeTemplate';
 import EnhancedCareerScreen from '../screens/Resume/EnhanceCareer';
 
 const { width } = Dimensions.get('window');
@@ -144,6 +141,13 @@ const DRAWER_ITEMS = [
     label: 'Disclaimer',
     icon: (size) => <Ionicons name="alert-circle-outline" color="#f9c349" size={size + 5} />,
     route: 'Disclaimer',
+  },
+  {
+    label: 'Careers at TDC',
+    icon: (size) => (
+      <MaterialCommunityIcons name="briefcase-outline" size={size + 5} color="#f9c349" />
+    ),
+    route: 'TDCCareers',
   },
 ];
 
@@ -751,19 +755,15 @@ export default function DrawerNavigator() {
           { name: 'Disclaimer', comp: DisclaimerScreen },
           { name: 'FAQ', comp: FAQScreen },
           { name: 'Career', comp: Career },
+          { name: 'TDCCareers', comp: TDCCareers },
           { name: 'Booking', comp: BookingScreen },
           { name: 'Exchange', comp: ExchangeScreen },
           { name: 'ApplicationForm', comp: ApplicationForm },
           { name: 'Payment', comp: PaymentScreen },
           { name: 'StudentDashboard', comp: StudentDashboard },
-          { name: 'ResumeDashboard', comp: ResumeDashboard },
-          { name: 'ResumeBuilder', comp: ResumeBuilder },
-          { name: 'ResumeShare', comp: ResumeShareScreen },
-          { name: 'ResumeView', comp: ResumeViewScreen },
+          // NOTE: Resume screens removed — they are registered in ResumeNavigator.js only.
+          // Navigate to 'ResumeStack' in HomeStack to reach the Resume section.
           { name: 'EnhancedCareer', comp: EnhancedCareerScreen },
-          { name: 'ResumeAnalytics', comp: ResumeAnalyticsScreen },
-          { name: 'ResumeSettings', comp: ResumeSettingsScreen },
-          { name: 'ResumeTemplate', comp: ResumeTemplateScreen },
           { name: 'Social', comp: Social },
           { name: 'MessagesScreen', comp: MessagesScreen },
           { name: 'ChatDetailScreen', comp: ChatDetailScreen },

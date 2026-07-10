@@ -41,7 +41,8 @@ const FEATURES = [
   { id: "traveling",   title: "Travelling",   icon: "airplane",        iconType: "Ionicons",               desc: "Flights & hotels", screen: "Travelling", gradient: ["#4FC3F7", "#29B6F6"] },
   { id: "learning",    title: "SkillsShare",   icon: "book",           iconType: "Ionicons",               desc: "Courses & tutorials", screen: "AiSkillsScreen", gradient: ["#81C784", "#4CAF50"] },
   { id: "events",      title: "Events",       icon: "calendar",        iconType: "Ionicons",               desc: "Local events", screen: "Events", gradient: ["#CE93D8", "#AB47BC"] },
-  { id: "resume",      title: "Resume",       icon: "document-text-outline", iconType: "Ionicons", desc: "Build your CV", screen: "ResumeDashboard", gradient: ["#FFA726", "#FF9800"] },
+  { id: "resume",      title: "Resume",       icon: "document-text-outline", iconType: "Ionicons", desc: "Build your CV", screen: "Resume", gradient: ["#FFA726", "#FF9800"] },
+
   { id: "jobs",        title: "Jobs",         icon: "briefcase",       iconType: "FontAwesome5",           desc: "Dream careers", screen: "Career", gradient: ["#EF5350", "#D32F2F"] },
   { id: "scholar",     title: "Scholarships", icon: "school-outline",  iconType: "Ionicons",           desc: "Education funds", screen: "Exchange", gradient: ["#42A5F5", "#1A237E"] },
   { id: "social",      title: "Social Activity", icon: "people", iconType: "Ionicons",              desc: "Post & share", screen: "Social", gradient: ["#EC407A", "#AD1457"] },

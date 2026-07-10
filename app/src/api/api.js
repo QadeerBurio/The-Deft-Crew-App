@@ -2,10 +2,14 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 const getBaseURL = () => {
   if (__DEV__) {
-    return 'http://192.168.18.93:5000/api';
+    const manifest = Constants.expoConfig || Constants.manifest || {};
+    const hostUri = manifest.hostUri;
+    const devIp = hostUri ? hostUri.split(':')[0] : '192.168.18.128';
+    return `http://${devIp}:5000/api`;
   }
   return 'https://the-deft-crew-production.up.railway.app/api';
 };
@@ -302,9 +306,126 @@ export const optimizedAPI = {
     }
   }
 };
+// ==================== JOB BOOKMARK API ====================
 
+/**
+ * Get all saved/bookmarked jobs for the current user.
+ * Returns: { success, bookmarks: [{ job, savedAt, tag }], total }
+ */
+export const getBookmarkedJobs = async () => {
+  const response = await api.get('/jobs/bookmarks');
+  return response.data;
+};
 
+/**
+ * Bookmark a job. Optional tag e.g. "Apply Later", "Dream Job"
+ * Returns: { success, message, jobId, tag }
+ * Throws 409 if already bookmarked.
+ */
+export const bookmarkJob = async (jobId, tag = '') => {
+  const response = await api.post(`/jobs/bookmarks/${jobId}`, { tag });
+  return response.data;
+};
 
+/**
+ * Remove a bookmarked job.
+ * Returns: { success, message, jobId }
+ */
+export const removeBookmark = async (jobId) => {
+  const response = await api.delete(`/jobs/bookmarks/${jobId}`);
+  return response.data;
+};
 
+// ==================== JOB INTELLIGENCE API ====================
+
+/**
+ * GET /api/jobs/feed — Personalised job feed using hybrid recommendation engine.
+ * Falls back to featured jobs if user has no resume.
+ * @param {{ page?, limit?, type?, locationType?, experienceLevel? }} params
+ */
+export const getPersonalizedFeed = async (params = {}) => {
+  const response = await api.get('/jobs/feed', { params });
+  return response.data;
+};
+
+/**
+ * GET /api/jobs/similar/:jobId — Jobs semantically similar to a given job.
+ * Used on the job detail screen's "Similar Roles" section.
+ * @param {string} jobId
+ * @param {number} limit
+ */
+export const getSimilarJobs = async (jobId, limit = 6) => {
+  const response = await api.get(`/jobs/similar/${jobId}`, { params: { limit } });
+  return response.data;
+};
+
+/**
+ * GET /api/jobs/recommendations — Full paginated personalised recommendations.
+ * @param {{ page?, limit? }} params
+ */
+export const getJobRecommendations = async (params = {}) => {
+  const response = await api.get('/jobs/recommendations', { params });
+  return response.data;
+};
+
+/**
+ * GET /api/jobs/recommendations/top — Quick top-N for dashboard widgets.
+ * @param {number} limit
+ */
+export const getTopRecommendations = async (limit = 5) => {
+  const response = await api.get('/jobs/recommendations/top', { params: { limit } });
+  return response.data;
+};
+
+// ==================== SKILL INTELLIGENCE API ====================
+
+/**
+ * GET /api/jobs/:jobId/skill-gap — Analyse skill gap between resume and job.
+ * @param {string} jobId
+ * @param {string} [resumeId] - Optional specific resumeId
+ */
+export const getSkillGap = async (jobId, resumeId) => {
+  const response = await api.get(`/jobs/${jobId}/skill-gap`, {
+    params: resumeId ? { resumeId } : {}
+  });
+  return response.data;
+};
+
+/**
+ * POST /api/jobs/:jobId/skill-gap/refresh — Force-refresh skill gap analysis.
+ * @param {string} jobId
+ * @param {string} [resumeId] - Optional specific resumeId
+ */
+export const refreshSkillGap = async (jobId, resumeId) => {
+  const response = await api.post(`/jobs/${jobId}/skill-gap/refresh`, { resumeId });
+  return response.data;
+};
+
+/**
+ * POST /api/jobs/:jobId/validate-application — "Should I apply?" verdict & hints.
+ * @param {string} jobId
+ * @param {string} [resumeId] - Optional specific resumeId
+ */
+export const validateApplication = async (jobId, resumeId) => {
+  const response = await api.post(`/jobs/${jobId}/validate-application`, { resumeId });
+  return response.data;
+};
+
+/**
+ * GET /api/jobs/:jobId/ats-score — Get lightweight ATS score and match counts.
+ * @param {string} jobId
+ */
+export const getAtsScore = async (jobId) => {
+  const response = await api.get(`/jobs/${jobId}/ats-score`);
+  return response.data;
+};
+
+// ==================== PUBLIC API ====================
+export const publicAPI = {
+  getExchangePrograms: async () => {
+    const response = await api.get('/admin/exchange/all');
+    return response.data;
+  }
+};
 
 export default api;

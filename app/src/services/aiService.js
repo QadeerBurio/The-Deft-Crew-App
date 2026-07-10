@@ -158,15 +158,21 @@ class AIService {
       }
 
       let processedChars = 0;
+      let buffer = '';
 
       xhr.onreadystatechange = () => {
         if (xhr.readyState === 3 || xhr.readyState === 4) {
           const currentText = xhr.responseText;
           const chunk = currentText.substring(processedChars);
           processedChars = currentText.length;
+          
+          buffer += chunk;
 
-          const frames = chunk.split('\n\n');
-          for (const frame of frames) {
+          const parts = buffer.split('\n\n');
+          // The last element of parts might be incomplete. Save it in the buffer.
+          buffer = parts.pop() || '';
+
+          for (const frame of parts) {
             const cleanFrame = frame.trim();
             if (!cleanFrame) continue;
 
@@ -185,7 +191,7 @@ class AIService {
                     onError(new Error(dataObject.error));
                   }
                 } catch (e) {
-                  // Skip partial buffer parse errors
+                  // Skip partial JSON parsing errors
                 }
               }
             }
@@ -193,6 +199,24 @@ class AIService {
         }
 
         if (xhr.readyState === 4) {
+          // Process any remaining data left in the buffer at the end of stream
+          if (buffer.trim()) {
+            const cleanFrame = buffer.trim();
+            if (cleanFrame.startsWith('data: ')) {
+              const dataString = cleanFrame.replace('data: ', '').trim();
+              if (dataString !== '[DONE]') {
+                try {
+                  const dataObject = JSON.parse(dataString);
+                  if (dataObject.token && onToken) {
+                    onToken(dataObject.token);
+                  }
+                  if (dataObject.error && onError) {
+                    onError(new Error(dataObject.error));
+                  }
+                } catch (e) {}
+              }
+            }
+          }
           if (xhr.status >= 400 && onError) {
             onError(new Error(`Streaming failed with status: ${xhr.status}`));
           }
@@ -200,7 +224,7 @@ class AIService {
       };
 
       xhr.onerror = (err) => {
-        if (onError) onError(err);
+        if (onError) onError(new Error('Network request failed or CORS error.'));
       };
 
       xhr.send(

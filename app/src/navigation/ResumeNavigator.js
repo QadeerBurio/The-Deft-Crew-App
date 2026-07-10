@@ -72,8 +72,7 @@ export default function ResumeStack() {
         name="ResumeView" 
         component={ResumeViewScreen}
         options={{
-          headerShown: true,
-          header: () => <CustomHeader title="Resume Preview" showBack />
+          headerShown: false
         }}
       />
       
@@ -81,8 +80,7 @@ export default function ResumeStack() {
         name="ResumeTemplate" 
         component={ResumeTemplateScreen}
         options={{
-          headerShown: true,
-          header: () => <CustomHeader title="Choose Template" showBack />
+          headerShown: false
         }}
       />
       
@@ -90,8 +88,7 @@ export default function ResumeStack() {
         name="ResumeShare" 
         component={ResumeShareScreen}
         options={{
-          headerShown: true,
-          header: () => <CustomHeader title="Share Resume" showBack />
+          headerShown: false
         }}
       />
       
@@ -99,8 +96,7 @@ export default function ResumeStack() {
         name="ResumeAnalytics" 
         component={ResumeAnalyticsScreen}
         options={{
-          headerShown: true,
-          header: () => <CustomHeader title="Resume Analytics" showBack />
+          headerShown: false
         }}
       />
       
@@ -108,8 +104,7 @@ export default function ResumeStack() {
         name="ResumeSettings" 
         component={ResumeSettingsScreen}
         options={{
-          headerShown: true,
-          header: () => <CustomHeader title="Resume Settings" showBack />
+          headerShown: false
         }}
       />
     </Stack.Navigator>

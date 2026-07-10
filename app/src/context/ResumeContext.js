@@ -5,6 +5,16 @@ import { Alert } from 'react-native';
 import resumeApi from '../api/resumeApi';
 import { AuthContext } from './AuthContext';
 
+const getErrorMessage = (error, defaultMsg = 'An error occurred') => {
+  if (error.response?.data?.error) {
+    return error.response.data.error;
+  }
+  if (error.response?.data?.message) {
+    return error.response.data.message;
+  }
+  return error.message || defaultMsg;
+};
+
 export const ResumeContext = createContext();
 
 export default function ResumeProvider({ children }) {
@@ -50,7 +60,7 @@ export default function ResumeProvider({ children }) {
       }
     } catch (error) {
       console.error('Fetch resumes error:', error);
-      setError(error.message || 'Failed to fetch resumes');
+      setError(getErrorMessage(error, 'Failed to fetch resumes'));
       setResumes([]);
     } finally {
       setLoading(false);
@@ -129,10 +139,11 @@ export default function ResumeProvider({ children }) {
       return null;
     } catch (error) {
       console.error('Create resume error:', error);
-      setError(error.message || 'Failed to create resume');
+      const errMsg = getErrorMessage(error, 'Failed to create resume');
+      setError(errMsg);
       setLoading(false);
-      Alert.alert('Error', error.message || 'Failed to create resume');
-      throw error;
+      Alert.alert('Error', errMsg);
+      throw new Error(errMsg);
     }
   };
 
@@ -173,9 +184,10 @@ export default function ResumeProvider({ children }) {
       return null;
     } catch (error) {
       console.error('Update resume error:', error);
-      setError(error.message || 'Failed to update resume');
+      const errMsg = getErrorMessage(error, 'Failed to update resume');
+      setError(errMsg);
       setLoading(false);
-      throw error;
+      throw new Error(errMsg);
     }
   };
 
@@ -205,106 +217,14 @@ export default function ResumeProvider({ children }) {
       setLoading(false);
     } catch (error) {
       console.error('Delete resume error:', error);
-      setError(error.message || 'Failed to delete resume');
+      const errMsg = getErrorMessage(error, 'Failed to delete resume');
+      setError(errMsg);
       setLoading(false);
-      throw error;
+      throw new Error(errMsg);
     }
   };
 
-  // Calculate completion percentage (same as model)
-  const calculateCompletionPercentage = (resume) => {
-    try {
-      let total = 0;
-      let completed = 0;
 
-      // Personal Info (15%)
-      if (resume.personalInfo) {
-        const hasName = resume.personalInfo.firstName && resume.personalInfo.firstName.trim() !== '';
-        const hasEmail = resume.personalInfo.email && resume.personalInfo.email.trim() !== '';
-        const hasPhone = resume.personalInfo.phone && resume.personalInfo.phone.trim() !== '';
-        if (hasName) completed += 5;
-        if (hasEmail) completed += 5;
-        if (hasPhone) completed += 5;
-        total += 15;
-      }
-
-      // Professional Summary (10%)
-      if (resume.professionalSummary && resume.professionalSummary.summary && resume.professionalSummary.summary.trim() !== '') {
-        completed += 10;
-      }
-      total += 10;
-
-      // Education (15%)
-      if (resume.education && resume.education.length > 0) {
-        const validEducation = resume.education.filter(e => e.institution && e.institution.trim() !== '');
-        if (validEducation.length > 0) {
-          completed += Math.min(15, validEducation.length * 5);
-        }
-      }
-      total += 15;
-
-      // Skills (10%)
-      if (resume.skills && resume.skills.length > 0) {
-        const validSkills = resume.skills.filter(s => s.name && s.name.trim() !== '');
-        if (validSkills.length > 0) {
-          completed += Math.min(10, validSkills.length * 2);
-        }
-      }
-      total += 10;
-
-      // Work Experience (20%)
-      if (resume.workExperience && resume.workExperience.length > 0) {
-        const validExperience = resume.workExperience.filter(w => w.company && w.company.trim() !== '');
-        if (validExperience.length > 0) {
-          completed += Math.min(20, validExperience.length * 5);
-        }
-      }
-      total += 20;
-
-      // Certifications (5%)
-      if (resume.certifications && resume.certifications.length > 0) {
-        const validCerts = resume.certifications.filter(c => c.name && c.name.trim() !== '');
-        if (validCerts.length > 0) {
-          completed += Math.min(5, validCerts.length * 2);
-        }
-      }
-      total += 5;
-
-      // Projects (5%)
-      if (resume.projects && resume.projects.length > 0) {
-        const validProjects = resume.projects.filter(p => p.name && p.name.trim() !== '');
-        if (validProjects.length > 0) {
-          completed += Math.min(5, validProjects.length * 2);
-        }
-      }
-      total += 5;
-
-      // Languages (5%)
-      if (resume.languages && resume.languages.length > 0) {
-        const validLanguages = resume.languages.filter(l => l.name && l.name.trim() !== '');
-        if (validLanguages.length > 0) {
-          completed += Math.min(5, validLanguages.length * 2);
-        }
-      }
-      total += 5;
-
-      // Target Jobs (15%)
-      if (resume.targetJobs && resume.targetJobs.length > 0) {
-        const validJobs = resume.targetJobs.filter(j => j.jobTitle && j.jobTitle.trim() !== '');
-        if (validJobs.length > 0) {
-          completed += Math.min(15, validJobs.length * 5);
-        }
-      } else if (resume.targetJob && resume.targetJob.jobTitle && resume.targetJob.jobTitle.trim() !== '') {
-        completed += 15;
-      }
-      total += 15;
-
-      return Math.min(Math.round((completed / total) * 100), 100);
-    } catch (error) {
-      console.error('Error calculating completion:', error);
-      return 0;
-    }
-  };
 
   // Upload and parse resume
   const uploadResume = async (file) => {
@@ -395,6 +315,10 @@ export default function ResumeProvider({ children }) {
         name: file.name || 'resume.pdf',
       });
 
+      // Bypass Axios v1.6.0+ React Native FormData detection bug
+      const dummyProto = Object.create(FormData.prototype);
+      Object.setPrototypeOf(formData, dummyProto);
+
       // Upload and parse the resume
       const response = await resumeApi.uploadResume(formData, (progress) => {
         setUploadProgress(progress);
@@ -402,95 +326,29 @@ export default function ResumeProvider({ children }) {
 
       if (response?.success) {
         const newResume = response.data;
-        
-        // Ensure parsed data is properly merged into the resume
-        if (newResume.uploadedResume?.parsedData) {
-          const parsedData = newResume.uploadedResume.parsedData;
-          
-          console.log('📊 Parsed data received:', JSON.stringify(parsedData, null, 2));
-          
-          // Merge personal info
-          if (parsedData.personalInfo) {
-            newResume.personalInfo = {
-              ...newResume.personalInfo,
-              ...parsedData.personalInfo
-            };
-          }
-          
-          // Merge professional summary
-          if (parsedData.professionalSummary) {
-            newResume.professionalSummary = {
-              ...newResume.professionalSummary,
-              ...parsedData.professionalSummary
-            };
-          }
-          
-          // Merge education
-          if (parsedData.education && parsedData.education.length > 0) {
-            newResume.education = parsedData.education;
-          }
-          
-          // Merge skills
-          if (parsedData.skills && parsedData.skills.length > 0) {
-            newResume.skills = parsedData.skills;
-          }
-          
-          // Merge work experience
-          if (parsedData.workExperience && parsedData.workExperience.length > 0) {
-            newResume.workExperience = parsedData.workExperience;
-          }
-          
-          // Merge certifications
-          if (parsedData.certifications && parsedData.certifications.length > 0) {
-            newResume.certifications = parsedData.certifications;
-          }
-          
-          // Merge projects
-          if (parsedData.projects && parsedData.projects.length > 0) {
-            newResume.projects = parsedData.projects;
-          }
-          
-          // Merge languages
-          if (parsedData.languages && parsedData.languages.length > 0) {
-            newResume.languages = parsedData.languages;
-          }
-          
-          // Calculate completion percentage
-          const completionPercentage = calculateCompletionPercentage(newResume);
-          newResume.completionPercentage = completionPercentage;
-          newResume.isComplete = completionPercentage >= 85;
-          
-          console.log(`📊 Calculated completion: ${completionPercentage}%`);
-          
-          // Update the resume with merged data
-          const updatedResume = await resumeApi.updateResume(newResume._id, {
-            personalInfo: newResume.personalInfo,
-            professionalSummary: newResume.professionalSummary,
-            education: newResume.education,
-            skills: newResume.skills,
-            workExperience: newResume.workExperience,
-            certifications: newResume.certifications,
-            projects: newResume.projects,
-            languages: newResume.languages,
-            completionPercentage: newResume.completionPercentage,
-            isComplete: newResume.isComplete
-          });
-          
-          if (updatedResume?.success) {
-            const finalResume = updatedResume.data;
-            setResumes([finalResume, ...resumes]);
-            setCurrentResume(finalResume);
-            setLoading(false);
-            setUploadProgress(100);
-            return finalResume;
-          }
-        }
-        
-        // If no parsed data, return the original response
         setResumes([newResume, ...resumes]);
         setCurrentResume(newResume);
         setLoading(false);
         setUploadProgress(100);
+
+        // Notify user about missing critical fields
+        const missingFields = [];
+        const pi = newResume.personalInfo || {};
+        if (!pi.title && !newResume.professionalSummary?.title) {
+          missingFields.push('Professional Title');
+        }
+        if (!pi.location && !pi.city) {
+          missingFields.push('Location');
+        }
+        if (missingFields.length > 0) {
+          setTimeout(() => {
+            Alert.alert(
+              'Missing Fields ⚠️',
+              `Your uploaded resume did not contain: ${missingFields.join(' & ')}. Please fill these in on Step 1 — Personal Info.`
+            );
+          }, 800);
+        }
+
         return newResume;
       }
       
@@ -499,11 +357,12 @@ export default function ResumeProvider({ children }) {
       return null;
     } catch (error) {
       console.error('Upload resume error:', error);
-      setError(error.message || 'Failed to upload resume');
+      const errMsg = getErrorMessage(error, 'Failed to upload resume');
+      setError(errMsg);
       setLoading(false);
       setUploadProgress(0);
-      Alert.alert('Upload Error', error.message || 'Failed to upload resume file');
-      throw error;
+      Alert.alert('Upload Error', errMsg);
+      throw new Error(errMsg);
     }
   };
 
@@ -514,15 +373,23 @@ const getRecommendedJobs = async (resumeId) => {
     if (isGuest) {
       return [
         {
-          title: "Software Engineer",
-          company: "Tech Company",
-          location: "Remote",
+          title: "Frontend Development Intern",
+          company: "ClickTake",
+          location: "Karachi (In person)",
           matchPercentage: 85,
-          salary: "$100k - $130k",
+          salary: "Not Specified",
           postedAt: "2 days ago",
-          description: "Join our growing team as a Software Engineer..."
+          description: "Internship focusing on Frontend React Native development..."
         },
-        // ... more guest recommendations
+        {
+          title: "SEO Intern (Remote)",
+          company: "ClickTake",
+          location: "Remote (Pakistan)",
+          matchPercentage: 78,
+          salary: "Not Specified",
+          postedAt: "3 days ago",
+          description: "Internship focusing on search engine optimization..."
+        }
       ];
     }
 
@@ -542,7 +409,12 @@ const getRecommendedJobs = async (resumeId) => {
       }
       const response = await resumeApi.updateTemplate(resumeId, template);
       if (response?.success) {
-        return response.data;
+        const updatedResume = response.data;
+        setResumes(resumes.map(r => r._id === resumeId ? updatedResume : r));
+        if (currentResume?._id === resumeId) {
+          setCurrentResume(updatedResume);
+        }
+        return updatedResume;
       }
       return null;
     } catch (error) {
@@ -589,9 +461,7 @@ const getRecommendedJobs = async (resumeId) => {
 
   // Initialize
   useEffect(() => {
-    if (!initialized) {
-      fetchResumes();
-    }
+    fetchResumes();
   }, [token, isGuest]);
 // Get job recommendations for a resume
 const getJobRecommendations = async (resumeId = null, params = {}) => {
@@ -602,47 +472,34 @@ const getJobRecommendations = async (resumeId = null, params = {}) => {
         recommendations: [
           {
             _id: '1',
-            title: 'Software Engineer',
-            companyName: 'Tech Company',
+            title: 'Frontend Development Intern',
+            companyName: 'ClickTake',
             department: 'Engineering',
-            location: 'Remote',
-            type: 'Full-time',
-            salary: '$100k - $130k',
+            location: 'Karachi (In person)',
+            type: 'Internship',
+            salary: 'Not Specified',
             matchPercentage: 85,
-            matchedSkills: ['JavaScript', 'React', 'Node.js'],
-            matchReasons: ['Matched 3 skills', 'Full-time', 'Remote'],
-            description: 'Join our growing team as a Software Engineer...',
+            matchedSkills: ['JavaScript', 'React', 'React Native'],
+            matchReasons: ['Matched 3 skills', 'Internship', 'Remote friendly'],
+            description: 'Internship focusing on Frontend React Native development...',
             urgent: true,
             featured: true
           },
           {
             _id: '2',
-            title: 'Full Stack Developer',
-            companyName: 'Startup Inc',
-            department: 'Technology',
-            location: 'New York, NY',
-            type: 'Full-time',
-            salary: '$90k - $120k',
+            title: 'SEO Intern (Remote)',
+            companyName: 'ClickTake',
+            department: 'Marketing',
+            location: 'Remote (Pakistan)',
+            type: 'Internship',
+            salary: 'Not Specified',
             matchPercentage: 78,
-            matchedSkills: ['Python', 'React', 'MongoDB'],
-            matchReasons: ['Matched 2 skills', 'Full-time'],
-            description: 'Looking for a Full Stack Developer to join our team...'
-          },
-          {
-            _id: '3',
-            title: 'React Native Developer',
-            companyName: 'Mobile First',
-            department: 'Engineering',
-            location: 'Remote',
-            type: 'Remote',
-            salary: '$85k - $110k',
-            matchPercentage: 72,
-            matchedSkills: ['React Native', 'JavaScript'],
-            matchReasons: ['Matched 2 skills', 'Remote'],
-            description: 'Build amazing mobile apps with React Native...'
+            matchedSkills: ['SEO', 'Google Analytics'],
+            matchReasons: ['Matched 2 skills', 'Internship'],
+            description: 'Internship focusing on search engine optimization...'
           }
         ],
-        total: 3,
+        total: 2,
         hasResume: true
       };
     }
@@ -663,33 +520,24 @@ const getTopJobRecommendations = async (limit = 5) => {
         recommendations: [
           {
             _id: '1',
-            title: 'Software Engineer',
-            companyName: 'Tech Company',
-            location: 'Remote',
-            type: 'Full-time',
-            salary: '$100k - $130k',
+            title: 'Frontend Development Intern',
+            companyName: 'ClickTake',
+            location: 'Karachi (In person)',
+            type: 'Internship',
+            salary: 'Not Specified',
             matchPercentage: 85
           },
           {
             _id: '2',
-            title: 'Full Stack Developer',
-            companyName: 'Startup Inc',
-            location: 'New York, NY',
-            type: 'Full-time',
-            salary: '$90k - $120k',
+            title: 'SEO Intern (Remote)',
+            companyName: 'ClickTake',
+            location: 'Remote (Pakistan)',
+            type: 'Internship',
+            salary: 'Not Specified',
             matchPercentage: 78
-          },
-          {
-            _id: '3',
-            title: 'React Native Developer',
-            companyName: 'Mobile First',
-            location: 'Remote',
-            type: 'Remote',
-            salary: '$85k - $110k',
-            matchPercentage: 72
           }
         ],
-        total: 3,
+        total: 2,
         hasResume: true
       };
     }
@@ -723,49 +571,137 @@ const applyToJob = async (jobId, applicationData) => {
   }
 };
 
-// Get my applications
-const getMyApplications = async () => {
-  try {
-    if (isGuest) {
+  // Get my applications
+  const getMyApplications = async () => {
+    try {
+      if (isGuest) {
+        return [];
+      }
+      
+      const response = await resumeApi.getMyApplications();
+      return response;
+    } catch (error) {
+      console.error('Get applications error:', error);
       return [];
     }
-    
-    const response = await resumeApi.getMyApplications();
-    return response;
-  } catch (error) {
-    console.error('Get applications error:', error);
-    return [];
-  }
-};
+  };
 
-// Update the return object with new methods
-return (
-  <ResumeContext.Provider
-    value={{
-      resumes,
-      currentResume,
-      loading,
-      uploadProgress,
-      error,
-      initialized,
-      fetchResumes,
-      createResume,
-      updateResume,
-      deleteResume,
-      uploadResume,
-      getRecommendedJobs,
-      getJobRecommendations,
-      getTopJobRecommendations,
-      applyToJob,
-      getMyApplications,
-      updateTemplate,
-      getAnalytics,
-      loadResume,
-      setCurrentResume,
-      clearError: () => setError(null),
-    }}
-  >
-    {children}
-  </ResumeContext.Provider>
-);
+  // Check resume fit against job (compatibility)
+  const checkResumeFit = async (resumeId, jobId) => {
+    try {
+      const response = await resumeApi.checkResumeFit(resumeId, jobId);
+      return response;
+    } catch (error) {
+      console.error('Check resume fit context error:', error);
+      throw error;
+    }
+  };
+
+  // Optimize resume (Flow C - Instant AI Match)
+  const optimizeResume = async (resumeId, optimizeData) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await resumeApi.optimizeResume(resumeId, optimizeData);
+      if (response?.success) {
+        const optimizedResume = response.data;
+        setResumes(resumes.map(r => r._id === resumeId ? optimizedResume : r));
+        setCurrentResume(optimizedResume);
+        setLoading(false);
+        return optimizedResume;
+      }
+      setLoading(false);
+      return null;
+    } catch (error) {
+      console.error('Optimize resume context error:', error);
+      const errMsg = getErrorMessage(error, 'Failed to optimize resume');
+      setError(errMsg);
+      setLoading(false);
+      throw new Error(errMsg);
+    }
+  };
+
+  // Duplicate resume
+  const duplicateResume = async (resumeId) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (isGuest) {
+        const found = resumes.find(r => r._id === resumeId);
+        if (!found) {
+          throw new Error('Resume not found');
+        }
+        const duplicate = {
+          ...found,
+          _id: `guest_${Date.now()}`,
+          isPrimary: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        if (duplicate.personalInfo) {
+          duplicate.personalInfo = {
+            ...duplicate.personalInfo,
+            firstName: `Copy of ${duplicate.personalInfo.firstName || 'Resume'}`
+          };
+        }
+        const updatedResumes = [duplicate, ...resumes];
+        setResumes(updatedResumes);
+        await AsyncStorage.setItem('guestResumes', JSON.stringify(updatedResumes));
+        setLoading(false);
+        return duplicate;
+      }
+
+      const response = await resumeApi.duplicateResume(resumeId);
+      if (response?.success) {
+        const duplicated = response.data;
+        setResumes([duplicated, ...resumes]);
+        setLoading(false);
+        return duplicated;
+      }
+      setLoading(false);
+      return null;
+    } catch (error) {
+      console.error('Duplicate resume error:', error);
+      const errMsg = getErrorMessage(error, 'Failed to duplicate resume');
+      setError(errMsg);
+      setLoading(false);
+      throw new Error(errMsg);
+    }
+  };
+
+  // Update the return object with new methods
+  return (
+    <ResumeContext.Provider
+      value={{
+        resumes,
+        currentResume,
+        loading,
+        uploadProgress,
+        error,
+        initialized,
+        fetchResumes,
+        createResume,
+        updateResume,
+        deleteResume,
+        uploadResume,
+        optimizeResume,
+        checkResumeFit,
+        getRecommendedJobs,
+        getJobRecommendations,
+        getTopJobRecommendations,
+        applyToJob,
+        getMyApplications,
+        updateTemplate,
+        getAnalytics,
+        loadResume,
+        setCurrentResume,
+        duplicateResume,
+        clearError: () => setError(null),
+      }}
+    >
+      {children}
+    </ResumeContext.Provider>
+  );
 }

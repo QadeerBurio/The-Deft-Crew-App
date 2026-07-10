@@ -10,6 +10,8 @@ import {
   Alert,
   SafeAreaView,
   ActivityIndicator,
+  Platform,
+  ToastAndroid,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -89,7 +91,11 @@ const ResumeSettingsScreen = () => {
           settings: settings
         });
         
-        Alert.alert('Success', 'Settings saved successfully');
+        if (Platform.OS === 'android') {
+          ToastAndroid.show('Settings saved successfully', ToastAndroid.SHORT);
+        } else {
+          Alert.alert('Success', 'Settings saved successfully');
+        }
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to save settings');
@@ -201,10 +207,15 @@ const ResumeSettingsScreen = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Resume Settings</Text>
-          <Text style={styles.headerSubtitle}>
-            Customize your resume preferences
-          </Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#000" />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>Resume Settings</Text>
+            <Text style={styles.headerSubtitle}>
+              Customize your resume preferences
+            </Text>
+          </View>
         </View>
 
         {/* Visibility Settings */}
@@ -438,6 +449,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    marginRight: 15,
+    padding: 4,
+  },
+  headerTitleContainer: {
+    flex: 1,
   },
   headerTitle: {
     fontSize: 22,

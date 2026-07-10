@@ -19,6 +19,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { ResumeContext } from '../../context/ResumeContext';
 import { AuthContext } from '../../context/AuthContext';
 import * as Print from 'expo-print';
+import { renderResumeHTML } from '../../services/templateService';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import QRCode from 'react-native-qrcode-svg';
@@ -104,7 +105,7 @@ View full resume: ${shareLink}
 
   const handleSharePDF = async () => {
     try {
-      const html = generateResumeHTML(resume);
+      const html = renderResumeHTML(resume, resume?.template || 'modern_ats', resume?.customStyles || {}, true);
       const { uri } = await Print.printToFileAsync({ html });
       
       if (await Sharing.isAvailableAsync()) {
@@ -246,10 +247,15 @@ View full resume: ${shareLink}
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Share Resume</Text>
-          <Text style={styles.headerSubtitle}>
-            Share your resume with recruiters and employers
-          </Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#000" />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>Share Resume</Text>
+            <Text style={styles.headerSubtitle}>
+              Share your resume with recruiters and employers
+            </Text>
+          </View>
         </View>
 
         {/* Resume Info */}
@@ -442,6 +448,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    marginRight: 15,
+    padding: 4,
+  },
+  headerTitleContainer: {
+    flex: 1,
   },
   headerTitle: {
     fontSize: 22,

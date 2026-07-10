@@ -18,15 +18,17 @@ import {
   TextInput,
   Animated,
   StatusBar,
+  Linking,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../../context/AuthContext';
 import { ResumeContext } from '../../context/ResumeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Print from 'expo-print';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { renderResumeHTML } from '../../services/templateService';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -38,10 +40,18 @@ const ResumeDashboardScreen = ({ navigation }) => {
     loadResume,
     deleteResume,
     getRecommendedJobs,
+    getJobRecommendations,
     updateResume,
+    optimizeResume,
+    checkResumeFit,
     loading,
     initialized,
+    duplicateResume,
   } = useContext(ResumeContext);
+
+  const safeResumes = Array.isArray(resumes) ? resumes : [];
+
+  const [recommendationsError, setRecommendationsError] = useState(null);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -58,7 +68,13 @@ const ResumeDashboardScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredResumes, setFilteredResumes] = useState([]);
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+  const [expandedJobId, setExpandedJobId] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [skillGapVisible, setSkillGapVisible] = useState(false);
+  const [skillGapData, setSkillGapData] = useState({ missingSkills: [], message: "" });
+  // Track which jobs the user has bookmarked in this session
+  const [savedJobIds, setSavedJobIds] = useState(new Set());
+  const [savingJobId, setSavingJobId] = useState(null);
 
   // Entrance animation
   useEffect(() => {
@@ -82,26 +98,43 @@ const ResumeDashboardScreen = ({ navigation }) => {
     ]).start();
   }, []);
 
-  // Initial load
-  useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      await fetchResumes();
-      setIsLoading(false);
-    };
-    loadData();
-  }, []);
+  // Sync and fetch data on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      const loadData = async () => {
+        if (safeResumes.length === 0) {
+          setIsLoading(true);
+        }
+        await fetchResumes();
+        setIsLoading(false);
+      };
+      loadData();
+    }, [safeResumes.length])
+  );
 
-  // Set selected resume when resumes load
+  // Set selected resume and sync latest counts when resumes load
   useEffect(() => {
-    if (resumes && resumes.length > 0 && !selectedResume) {
-      const firstResume = resumes[0];
-      setSelectedResume(firstResume);
-      loadResume(firstResume._id);
-      fetchRecommendations(firstResume._id);
-    }
-    if (resumes && resumes.length > 0) {
-      setFilteredResumes(resumes);
+    if (safeResumes && safeResumes.length > 0) {
+      if (selectedResume) {
+        const fresh = safeResumes.find(r => r._id === selectedResume._id);
+        if (fresh) {
+          setSelectedResume(fresh);
+        } else {
+          const firstResume = safeResumes[0];
+          setSelectedResume(firstResume);
+          loadResume(firstResume._id);
+          fetchRecommendations(firstResume._id);
+        }
+      } else {
+        const firstResume = safeResumes[0];
+        setSelectedResume(firstResume);
+        loadResume(firstResume._id);
+        fetchRecommendations(firstResume._id);
+      }
+      setFilteredResumes(safeResumes);
+    } else {
+      setSelectedResume(null);
+      setFilteredResumes([]);
     }
   }, [resumes]);
 
@@ -115,10 +148,10 @@ const ResumeDashboardScreen = ({ navigation }) => {
   // Filter resumes on search
   useEffect(() => {
     if (searchQuery.trim() === '') {
-      setFilteredResumes(resumes);
+      setFilteredResumes(safeResumes);
     } else {
       const query = searchQuery.toLowerCase().trim();
-      const filtered = resumes.filter(r => {
+      const filtered = safeResumes.filter(r => {
         const name = `${r.personalInfo?.firstName || ''} ${r.personalInfo?.lastName || ''}`.toLowerCase();
         const title = r.professionalSummary?.title?.toLowerCase() || '';
         const jobTitle = r.targetJob?.jobTitle?.toLowerCase() || '';
@@ -132,23 +165,27 @@ const ResumeDashboardScreen = ({ navigation }) => {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchResumes();
-    if (resumes && resumes.length > 0) {
-      const firstResume = resumes[0];
+    if (safeResumes && safeResumes.length > 0) {
+      const firstResume = safeResumes[0];
       setSelectedResume(firstResume);
       await fetchRecommendations(firstResume._id);
     }
     setRefreshing(false);
   }, [resumes]);
 
-  // Fetch recommendations
+  // Fetch recommendations using the hybrid AI engine (GET /api/jobs/recommendations/:resumeId)
+  // This uses the 9-stage pipeline: embeddings + skill weights + behavioral boost.
   const fetchRecommendations = async (resumeId) => {
     try {
       setRecommendationsLoading(true);
-      const jobs = await getRecommendedJobs(resumeId);
-      setRecommendations(jobs || []);
+      setRecommendationsError(null);
+      const response = await getJobRecommendations(resumeId, { limit: 10, page: 1 });
+      const jobs = response?.recommendations || [];
+      setRecommendations(jobs);
     } catch (error) {
       console.error('Fetch recommendations error:', error);
       setRecommendations([]);
+      setRecommendationsError('Failed to load personalized recommendations. Please try again.');
     } finally {
       setRecommendationsLoading(false);
     }
@@ -203,7 +240,7 @@ const ResumeDashboardScreen = ({ navigation }) => {
       setDownloadProgress(10);
       setDownloadModalVisible(true);
 
-      const html = renderResumeHTML(resume, resume.template || 'modern');
+      const html = renderResumeHTML(resume, resume.template || 'modern_ats', resume.customStyles || {}, true);
       setDownloadProgress(30);
 
       const { uri } = await Print.printToFileAsync({ 
@@ -211,6 +248,17 @@ const ResumeDashboardScreen = ({ navigation }) => {
         base64: false
       });
       setDownloadProgress(70);
+
+      // Clean name parameters for safe filename
+      const firstName = (resume.personalInfo?.firstName || 'User').trim().replace(/[^a-zA-Z0-9]/g, '_');
+      const lastName = (resume.personalInfo?.lastName || 'Resume').trim().replace(/[^a-zA-Z0-9]/g, '_');
+      const fileName = `${firstName}_${lastName}_Resume.pdf`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+      
+      await FileSystem.copyAsync({
+        from: uri,
+        to: fileUri,
+      });
 
       if (resume._id) {
         await updateResume(resume._id, { 
@@ -220,38 +268,16 @@ const ResumeDashboardScreen = ({ navigation }) => {
       setDownloadProgress(90);
 
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
+        await Sharing.shareAsync(fileUri, {
           mimeType: 'application/pdf',
-          dialogTitle: `Resume_${resume.personalInfo?.firstName || 'Resume'}.pdf`,
+          dialogTitle: `${firstName} ${lastName} Resume`,
           UTI: 'com.adobe.pdf',
         });
         setDownloadProgress(100);
         Alert.alert('✅ Success', 'Resume downloaded successfully!');
       } else {
-        const fileName = `Resume_${resume.personalInfo?.firstName || 'Resume'}_${Date.now()}.pdf`;
-        const fileUri = FileSystem.documentDirectory + fileName;
-        await FileSystem.copyAsync({
-          from: uri,
-          to: fileUri,
-        });
         setDownloadProgress(100);
-        Alert.alert(
-          '✅ Success', 
-          `Resume saved to: ${fileUri}`,
-          [
-            {
-              text: 'Open File',
-              onPress: () => {
-                if (Platform.OS === 'ios') {
-                  Sharing.shareAsync(fileUri);
-                } else {
-                  Sharing.shareAsync(fileUri);
-                }
-              }
-            },
-            { text: 'OK' }
-          ]
-        );
+        Alert.alert('✅ Success', `Resume saved as: ${fileName}`);
       }
 
       setTimeout(() => {
@@ -280,7 +306,7 @@ const ResumeDashboardScreen = ({ navigation }) => {
       setDownloadProgress(10);
       setDownloadModalVisible(true);
 
-      const html = renderResumeHTML(resume, resume.template || 'modern');
+      const html = renderResumeHTML(resume, resume.template || 'modern_ats', resume.customStyles || {}, true);
       setDownloadProgress(50);
 
       const fileName = `Resume_${resume.personalInfo?.firstName || 'Resume'}_${Date.now()}.html`;
@@ -409,26 +435,139 @@ ${resume?.completionPercentage || 0}% Complete
     }
   };
 
-  // Handle apply to job
-  const handleApplyToJob = (job) => {
-    Alert.alert(
-      'Apply for Position',
-      `Would you like to apply for ${job.title} at ${job.companyName || job.company || 'Company'}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Apply',
-          onPress: () => {
-            navigation.navigate('EnhancedCareer', { jobId: job._id, job });
-          }
-        }
-      ]
-    );
+  // Handle compatibility checking & AI Optimization Flow
+  const handleOptimizeResumeFlow = async (job) => {
+    if (isGuest) {
+      Alert.alert('Login Required', 'Please log in to optimize your resume.');
+      return;
+    }
+
+    if (!selectedResume || !selectedResume._id) {
+      Alert.alert('No Resume Found', 'Please create or upload a resume first.');
+      return;
+    }
+
+    try {
+      // 1. Show pre-check loader
+      setDownloading(true);
+      setDownloadProgress(10);
+      setDownloadModalVisible(true);
+
+      // 2. Check compatibility fit
+      const fitResult = await checkResumeFit(selectedResume._id, job._id);
+      
+      if (!fitResult.meetsRequirements) {
+        setDownloadModalVisible(false);
+        setDownloading(false);
+        
+        setSkillGapData({
+          missingSkills: fitResult.missingSkills || [],
+          message: "Your current expertise does not fully match the requirements for this role. To apply, you should enhance your skills in"
+        });
+        setSkillGapVisible(true);
+        return;
+      }
+
+      // 3. Compatibility passes, proceed to optimize
+      setDownloadProgress(40);
+      const tailored = await optimizeResume(selectedResume._id, {
+        jobId: job._id,
+        jobTitle: job.title,
+        jobDescription: job.description || `Target role: ${job.title}`
+      });
+
+      if (!tailored) {
+        throw new Error('AI tailoring returned empty results.');
+      }
+
+      setDownloadProgress(75);
+
+      // 4. Generate local PDF from tailored draft
+      const html = renderResumeHTML(tailored, tailored.template || 'modern_ats', tailored.customStyles || {}, true);
+      setDownloadProgress(85);
+
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      
+      const firstName = (tailored.personalInfo?.firstName || 'User').trim().replace(/[^a-zA-Z0-9]/g, '_');
+      const lastName = (tailored.personalInfo?.lastName || 'Resume').trim().replace(/[^a-zA-Z0-9]/g, '_');
+      const fileName = `${firstName}_${lastName}_Optimized_Resume.pdf`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+      
+      await FileSystem.copyAsync({ from: uri, to: fileUri });
+      setDownloadProgress(100);
+
+      // Open PDF share dialog
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'application/pdf',
+          dialogTitle: `${firstName} ${lastName} Optimized Resume`,
+          UTI: 'com.adobe.pdf',
+        });
+      } else {
+        Alert.alert('✅ Success', `Optimized resume saved as: ${fileName}`);
+      }
+
+      setTimeout(() => {
+        setDownloadModalVisible(false);
+        setDownloading(false);
+        setDownloadProgress(0);
+      }, 1000);
+
+    } catch (error) {
+      console.error('Optimization flow error:', error);
+      setDownloading(false);
+      setDownloadModalVisible(false);
+      setDownloadProgress(0);
+      Alert.alert('❌ Error', 'Failed to optimize resume: ' + error.message);
+    }
   };
 
-  // Handle save job
-  const handleSaveJob = (job) => {
-    Alert.alert('✅ Job Saved', `${job.title} has been saved to your favorites.`);
+  // Handle apply to job — always redirects to external url/website if available, or fallback
+  const handleApplyToJob = (job) => {
+    const applyUrl = job.externalUrl || job.companyWebsite || 'https://pk.indeed.com/q-remote-internship-jobs.html';
+    Linking.openURL(applyUrl).catch(() => {
+      Alert.alert('Cannot Open Link', 'The application link could not be opened.');
+    });
+  };
+
+  // Handle save job — writes to backend bookmark API and logs behavioral signal
+  const handleSaveJob = async (job) => {
+    if (isGuest) {
+      Alert.alert('Login Required', 'Please log in to save jobs.');
+      return;
+    }
+    if (!job?._id || savingJobId === job._id) return;
+
+    try {
+      setSavingJobId(job._id);
+      const { resumeApi } = require('../../api/resumeApi');
+
+      if (savedJobIds.has(job._id)) {
+        // Toggle off — unsave
+        await resumeApi.unsaveJob(job._id);
+        setSavedJobIds(prev => {
+          const next = new Set(prev);
+          next.delete(job._id);
+          return next;
+        });
+        Alert.alert('✅ Removed', `"${job.title}" removed from saved jobs.`);
+      } else {
+        // Save job
+        await resumeApi.saveJob(job._id);
+        setSavedJobIds(prev => new Set([...prev, job._id]));
+        Alert.alert('✅ Saved', `"${job.title}" saved to your bookmarks!`);
+      }
+    } catch (error) {
+      const alreadySaved = error?.message?.toLowerCase().includes('already');
+      if (alreadySaved) {
+        setSavedJobIds(prev => new Set([...prev, job._id]));
+        Alert.alert('ℹ️ Already saved', `"${job.title}" is already in your saved jobs.`);
+      } else {
+        Alert.alert('❌ Error', 'Failed to save job. Please try again.');
+      }
+    } finally {
+      setSavingJobId(null);
+    }
   };
 
   // Navigation handlers
@@ -497,6 +636,21 @@ ${resume?.completionPercentage || 0}% Complete
     }
   };
 
+  const handleDuplicateResume = async (resumeId) => {
+    try {
+      setIsLoading(true);
+      const duplicated = await duplicateResume(resumeId);
+      if (duplicated) {
+        setSelectedResume(duplicated);
+        Alert.alert('✅ Success', 'Resume duplicated successfully!');
+      }
+    } catch (error) {
+      Alert.alert('❌ Error', 'Failed to duplicate resume: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Get status color
   const getStatusColor = (percentage) => {
     if (percentage >= 80) return '#2ECC71';
@@ -524,18 +678,39 @@ ${resume?.completionPercentage || 0}% Complete
       );
     }
 
+    if (recommendationsError) {
+      return (
+        <View style={styles.emptyJobsContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color="#E74C3C" />
+          <Text style={styles.emptyJobsTitle}>Connection Issue</Text>
+          <Text style={styles.emptyJobsText}>{recommendationsError}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => fetchRecommendations(selectedResume._id)}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
     if (!recommendations || recommendations.length === 0) {
       return (
         <View style={styles.emptyJobsContainer}>
           <Ionicons name="briefcase-outline" size={48} color="#ccc" />
+          <Text style={styles.emptyJobsTitle}>No Matches Found Yet</Text>
           <Text style={styles.emptyJobsText}>
-            Complete your resume to get personalized job matches.
+            {selectedResume
+              ? "We couldn't find any job matches for your current skills. Try editing your resume to add more skills or certifications."
+              : "Complete your resume to get personalized job matches."}
           </Text>
           <TouchableOpacity
             style={styles.buildResumeButton}
-            onPress={() => navigation.navigate('ResumeBuilder')}
+            onPress={() => navigation.navigate('ResumeBuilder', selectedResume ? { resumeId: selectedResume._id } : undefined)}
           >
-            <Text style={styles.buildResumeButtonText}>Build Your Resume</Text>
+            <Text style={styles.buildResumeButtonText}>
+              {selectedResume ? "Update Your Resume" : "Build Your Resume"}
+            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -626,23 +801,47 @@ ${resume?.completionPercentage || 0}% Complete
             </View>
           )}
           
-          <Text style={styles.jobDescription} numberOfLines={2}>
-            {job.description || 'Great opportunity to join our team and grow your career.'}
-          </Text>
+          <TouchableOpacity onPress={() => setExpandedJobId(expandedJobId === job._id ? null : job._id)}>
+            <Text 
+              style={styles.jobDescription} 
+              numberOfLines={expandedJobId === job._id ? undefined : 3}
+            >
+              {job.description || 'Great opportunity to join our team and grow your career.'}
+            </Text>
+            <Text style={{ color: '#f9c349', fontSize: 12, fontWeight: '600', marginTop: 2, marginBottom: 6 }}>
+              {expandedJobId === job._id ? 'Show Less ▲' : 'Read Full Description ▼'}
+            </Text>
+          </TouchableOpacity>
           
+          <TouchableOpacity 
+            style={[styles.optimizeButton, { backgroundColor: '#f9c349' }]}
+            onPress={() => handleApplyToJob(job)}
+          >
+            <Text style={[styles.optimizeButtonText, { color: '#000' }]}>Apply Now</Text>
+            <Ionicons name="arrow-forward" size={16} color="#000" style={{ marginLeft: 4 }} />
+          </TouchableOpacity>
+
           <View style={styles.jobActions}>
             <TouchableOpacity 
               style={styles.applyButton}
-              onPress={() => handleApplyToJob(job)}
+              onPress={() => handleOptimizeResumeFlow(job)}
             >
-              <Text style={styles.applyButtonText}>Apply Now</Text>
-              <Ionicons name="arrow-forward" size={16} color="#f9c349" />
+              <Ionicons name="sparkles" size={14} color="#f9c349" style={{ marginRight: 4 }} />
+              <Text style={styles.applyButtonText}>Optimize Resume</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.saveJobButton}
               onPress={() => handleSaveJob(job)}
+              disabled={savingJobId === job._id}
             >
-              <Ionicons name="bookmark-outline" size={20} color="#666" />
+              {savingJobId === job._id
+                ? <ActivityIndicator size="small" color="#f9c349" />
+                : <Ionicons 
+                    name={savedJobIds.has(job._id) ? 'bookmark' : 'bookmark-outline'} 
+                    size={20} 
+                    color={savedJobIds.has(job._id) ? '#f9c349' : '#666'} 
+                  />
+              }
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -756,7 +955,7 @@ ${resume?.completionPercentage || 0}% Complete
   if (isLoading || (loading && resumes.length === 0)) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#f9c349" />
           <Text style={styles.loadingText}>Loading your resumes...</Text>
@@ -765,12 +964,11 @@ ${resume?.completionPercentage || 0}% Complete
     );
   }
 
-  const safeResumes = Array.isArray(resumes) ? resumes : [];
   const hasResumes = safeResumes.length > 0;
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       
       <Animated.View 
         style={[
@@ -791,9 +989,18 @@ ${resume?.completionPercentage || 0}% Complete
           </View>
           <TouchableOpacity
             style={styles.newResumeButton}
-            onPress={() => navigation.navigate('ResumeBuilder')}
+            onPress={() => {
+              if (!isGuest && resumes && resumes.length >= 2) {
+                Alert.alert(
+                  'Limit Reached ⚠️',
+                  'Maximum 2 resumes allowed per user. Please delete an existing resume to create a new one.'
+                );
+                return;
+              }
+              navigation.navigate('ResumeBuilder');
+            }}
           >
-            <Ionicons name="add" size={20} color="#fff" />
+            <Ionicons name="add" size={20} color="#000" />
             <Text style={styles.newResumeButtonText}>New</Text>
           </TouchableOpacity>
         </View>
@@ -910,67 +1117,64 @@ ${resume?.completionPercentage || 0}% Complete
                     </View>
                   </View>
 
-                  {/* Quick Action Cards */}
-                  <View style={styles.quickActions}>
+                  {/* Simplified Action Row */}
+                  <View style={styles.simplifiedActionRow}>
                     <TouchableOpacity
-                      style={styles.quickActionCard}
+                      style={styles.actionBtnPrimary}
                       onPress={() => handleViewResume(selectedResume)}
                     >
-                      <View style={[styles.quickActionIcon, { backgroundColor: '#f9c349' }]}>
-                        <Ionicons name="eye-outline" size={24} color="#000" />
-                      </View>
-                      <Text style={styles.quickActionLabel}>View</Text>
+                      <Ionicons name="document-text-outline" size={18} color="#000000" />
+                      <Text style={styles.actionBtnTextPrimary}>View & Download</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={styles.quickActionCard}
+                      style={styles.actionBtnSecondary}
                       onPress={() => handleEditResume(selectedResume)}
                     >
-                      <View style={[styles.quickActionIcon, { backgroundColor: '#000' }]}>
-                        <Ionicons name="create-outline" size={24} color="#f9c349" />
-                      </View>
-                      <Text style={styles.quickActionLabel}>Edit</Text>
+                      <Ionicons name="create-outline" size={18} color="#f9c349" />
+                      <Text style={styles.actionBtnTextSecondary}>Edit Details</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={styles.quickActionCard}
-                      onPress={() => setDownloadModalVisible(true)}
+                      style={styles.actionBtnDanger}
+                      onPress={() => handleDeleteResume(selectedResume._id)}
                     >
-                      <View style={[styles.quickActionIcon, { backgroundColor: '#f9c349' }]}>
-                        <Ionicons name="download-outline" size={24} color="#000" />
-                      </View>
-                      <Text style={styles.quickActionLabel}>Download</Text>
+                      <Ionicons name="trash-outline" size={18} color="#E74C3C" />
                     </TouchableOpacity>
+                  </View>
 
-                    <TouchableOpacity
-                      style={styles.quickActionCard}
-                      onPress={() => handleShareResume(selectedResume)}
-                    >
-                      <View style={[styles.quickActionIcon, { backgroundColor: '#000' }]}>
-                        <Ionicons name="share-outline" size={24} color="#f9c349" />
+                  {/* ATS Compatibility Score Card */}
+                  <View style={styles.atsScoreCard}>
+                    <View style={styles.atsScoreHeader}>
+                      <View>
+                        <Text style={styles.atsScoreTitle}>ATS Compatibility Score</Text>
+                        <Text style={styles.atsScoreSubtitle}>Based on AI career profile analysis</Text>
                       </View>
-                      <Text style={styles.quickActionLabel}>Share</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.quickActionCard}
-                      onPress={() => handleCreateTemplate(selectedResume)}
-                    >
-                      <View style={[styles.quickActionIcon, { backgroundColor: '#f9c349' }]}>
-                        <Ionicons name="color-palette-outline" size={24} color="#000" />
+                      <View style={styles.atsScoreBadgeContainer}>
+                        <Text style={styles.atsScoreValue}>
+                          {selectedResume.careerProfile?.atsScore || 0}
+                        </Text>
+                        <Text style={styles.atsScoreMax}>/100</Text>
                       </View>
-                      <Text style={styles.quickActionLabel}>Templates</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.quickActionCard}
-                      onPress={() => handleAnalytics(selectedResume)}
-                    >
-                      <View style={[styles.quickActionIcon, { backgroundColor: '#000' }]}>
-                        <Ionicons name="stats-chart-outline" size={24} color="#f9c349" />
+                    </View>
+                    
+                    {selectedResume.careerProfile?.atsKeywords && selectedResume.careerProfile.atsKeywords.length > 0 ? (
+                      <View style={styles.atsKeywordsSection}>
+                        <Text style={styles.atsKeywordsTitle}>Extracted ATS Keywords</Text>
+                        <View style={styles.atsKeywordsList}>
+                          {selectedResume.careerProfile.atsKeywords.slice(0, 10).map((keyword, idx) => (
+                            <View key={idx} style={styles.atsKeywordTag}>
+                              <Text style={styles.atsKeywordText}>{keyword}</Text>
+                            </View>
+                          ))}
+                        </View>
                       </View>
-                      <Text style={styles.quickActionLabel}>Analytics</Text>
-                    </TouchableOpacity>
+                    ) : (
+                      <View style={styles.atsPendingContainer}>
+                        <ActivityIndicator size="small" color="#f9c349" />
+                        <Text style={styles.atsPendingText}>AI profile enrichment in progress...</Text>
+                      </View>
+                    )}
                   </View>
 
                   {/* Recommendations Section */}
@@ -1024,25 +1228,112 @@ ${resume?.completionPercentage || 0}% Complete
 
       {/* Download Modal */}
       {renderDownloadModal()}
+
+      {/* Skill Gap Custom Alert Modal */}
+      <Modal visible={skillGapVisible} transparent animationType="fade" onRequestClose={() => setSkillGapVisible(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: '#ffffff', borderRadius: 20, width: '100%', maxWidth: 360, overflow: 'hidden', borderWidth: 1.5, borderColor: '#f9c349' }}>
+            {/* Header */}
+            <View style={{ backgroundColor: '#1a1a1a', paddingVertical: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <MaterialCommunityIcons name="alert-decagram" size={48} color="#f9c349" />
+              <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: '800', marginTop: 8 }}>Skill Gap Warning</Text>
+            </View>
+            
+            {/* Body */}
+            <View style={{ padding: 24 }}>
+              <Text style={{ fontSize: 14, color: '#333333', lineHeight: 22, textAlign: 'center', marginBottom: 16 }}>
+                Your current expertise does not fully match the requirements for this role. To apply, you should enhance your skills in{' '}
+                <Text style={{ fontWeight: '800', color: '#1a1a1a' }}>{skillGapData.missingSkills.join(', ') || 'key required skills'}</Text>
+                {'. '}Developing these skills will significantly increase your chances of selection.
+              </Text>
+
+              {/* Action Button */}
+              <TouchableOpacity 
+                style={{ backgroundColor: '#f9c349', paddingVertical: 12, borderRadius: 12, alignItems: 'center', marginTop: 8 }}
+                onPress={() => setSkillGapVisible(false)}
+              >
+                <Text style={{ color: '#1a1a1a', fontWeight: '800', fontSize: 14 }}>I will enhance them!</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  simplifiedActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  actionBtnPrimary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f9c349',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    flex: 2,
+    marginRight: 8,
+    shadowColor: '#f9c349',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  actionBtnTextPrimary: {
+    color: '#000000',
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+  },
+  actionBtnSecondary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#f9c349',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    flex: 2,
+    marginRight: 8,
+  },
+  actionBtnTextSecondary: {
+    color: '#f9c349',
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+  },
+  actionBtnDanger: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFEBEE',
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FFCDD2',
+  },
   safeArea: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-    
+    backgroundColor: '#ffffff',
   },
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-    
+    backgroundColor: '#ffffff',
   },
   contentContainer: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-    marginTop:40
+    backgroundColor: '#ffffff',
+    marginTop: 40,
   },
   scrollContent: {
     flexGrow: 1,
@@ -1056,11 +1347,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    backgroundColor: '#ffffff',
   },
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#666',
+    color: '#64748B',
   },
   header: {
     flexDirection: 'row',
@@ -1069,24 +1361,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 4 : 8,
     paddingBottom: 12,
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#E2E8F0',
   },
   greeting: {
     fontSize: 13,
-    color: '#999',
+    color: '#64748B',
     fontWeight: '400',
   },
   userName: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#000',
+    color: '#0F172A',
   },
   newResumeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#000',
+    backgroundColor: '#f9c349',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 25,
@@ -1097,7 +1389,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   newResumeButtonText: {
-    color: '#f9c349',
+    color: '#000000',
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 4,
@@ -1105,13 +1397,13 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     marginHorizontal: 16,
     marginTop: 12,
     paddingHorizontal: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e8e8e8',
+    borderColor: '#E2E8F0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
@@ -1125,15 +1417,15 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     fontSize: 14,
-    color: '#000',
+    color: '#0F172A',
   },
   resumeSelector: {
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     marginTop: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#E2E8F0',
   },
   resumeTab: {
     flexDirection: 'row',
@@ -1142,21 +1434,21 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginRight: 10,
     borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#1E293B',
     borderWidth: 1,
     borderColor: 'transparent',
   },
   resumeTabActive: {
-    backgroundColor: '#000',
+    backgroundColor: '#f9c349',
     borderColor: '#f9c349',
   },
   resumeTabText: {
     fontSize: 13,
-    color: '#666',
+    color: '#94A3B8',
     fontWeight: '500',
   },
   resumeTabTextActive: {
-    color: '#fff',
+    color: '#000000',
   },
   resumeTabBadge: {
     paddingHorizontal: 6,
@@ -1311,7 +1603,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#000',
+    color: '#0F172A',
   },
   seeAllText: {
     fontSize: 13,
@@ -1507,12 +1799,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#000',
+    color: '#0F172A',
     marginTop: 16,
   },
   emptyDescription: {
     fontSize: 14,
-    color: '#666',
+    color: '#94A3B8',
     textAlign: 'center',
     marginTop: 8,
     paddingHorizontal: 40,
@@ -1645,10 +1937,142 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9c349',
     borderRadius: 3,
   },
-  downloadStatusText: {
-    fontSize: 14,
-    color: '#666',
+  optimizeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#f9c349',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
     marginTop: 8,
+    marginBottom: 4,
+    width: '100%',
+  },
+  optimizeButtonText: {
+    color: '#000',
+    fontSize: 13,
+    fontWeight: '700',
+    marginLeft: 6,
+  },
+  actionBtnSecondaryIcon: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#f9c349',
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  atsScoreCard: {
+    backgroundColor: '#0F172A',
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#f9c349',
+  },
+  atsScoreHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(249, 195, 73, 0.2)',
+    paddingBottom: 12,
+    marginBottom: 12,
+  },
+  atsScoreTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  atsScoreSubtitle: {
+    fontSize: 11,
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+  atsScoreBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    backgroundColor: 'rgba(249, 195, 73, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(249, 195, 73, 0.3)',
+  },
+  atsScoreValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#f9c349',
+  },
+  atsScoreMax: {
+    fontSize: 11,
+    color: '#94A3B8',
+    marginLeft: 2,
+  },
+  atsKeywordsSection: {
+    marginTop: 4,
+  },
+  atsKeywordsTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#94A3B8',
+    marginBottom: 8,
+  },
+  atsKeywordsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  atsKeywordTag: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginRight: 6,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  atsKeywordText: {
+    fontSize: 11,
+    color: '#E2E8F0',
+    fontWeight: '500',
+  },
+  atsPendingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  atsPendingText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginLeft: 8,
+  },
+  emptyJobsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    marginTop: 12,
+  },
+  retryButton: {
+    backgroundColor: '#f9c349',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginTop: 12,
+  },
+  retryButtonText: {
+    color: '#000',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
 

@@ -41,6 +41,10 @@ export default function VerificationScreen({ navigation }) {
     try {
       setLoading(true);
       const formData = new FormData();
+      
+      // Bypass Axios v1.6.0+ React Native FormData detection bug
+      const dummyProto = Object.create(FormData.prototype);
+      Object.setPrototypeOf(formData, dummyProto);
 
       const createFileData = (uri) => {
         const fileName = uri.split('/').pop();
@@ -61,10 +65,19 @@ export default function VerificationScreen({ navigation }) {
       const response = await api.put("/auth/verify-student-docs", formData, {
         headers: {
           'Accept': 'application/json',
-          'Content-Type': 'multipart/form-data',
         },
         timeout: 60000, // 60 seconds timeout
-        transformRequest: (data) => data, 
+        transformRequest: (data, headers) => {
+          if (headers) {
+            if (typeof headers.setContentType === 'function') {
+              headers.setContentType(undefined);
+            } else {
+              delete headers['Content-Type'];
+              delete headers['content-type'];
+            }
+          }
+          return data;
+        }, 
       });
 
       if (response.status === 200) {

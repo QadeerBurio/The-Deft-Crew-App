@@ -63,8 +63,25 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
   const insets = useSafeAreaInsets();
   const focusedRoute = state.routes[state.index];
   
-  // Hide bar on Social screen
-  if (focusedRoute?.name === "Social") return null;
+  // Helper to resolve nested route state recursively
+  const getNestedRouteName = (route) => {
+    if (!route.state) return null;
+    const activeRoute = route.state.routes[route.state.index];
+    if (activeRoute.state) {
+      return getNestedRouteName(activeRoute);
+    }
+    return activeRoute.name;
+  };
+
+  const nestedRouteName = getNestedRouteName(focusedRoute);
+  
+  // Hide bottom tab bar on specific screens
+  const hideTabBarScreens = ["ResumeView", "ResumeBuilder", "ResumeTemplate", "ResumeShare", "ResumeAnalytics", "ResumeSettings"];
+  
+  // Hide bar on Social screen or specific nested stack screens
+  if (focusedRoute?.name === "Social" || (nestedRouteName && hideTabBarScreens.includes(nestedRouteName))) {
+    return null;
+  }
 
   const getIconColor = (isFocused) => isFocused ? "#f9c349" : "#9AA0A6";
 

@@ -199,7 +199,7 @@ export const ChatProvider = ({ children }) => {
     };
 
     const handleError = (err) => {
-      console.error('Stream processing error:', err.message);
+      console.error('Stream processing error:', err?.message || err || 'Unknown stream error');
       setIsStreaming(false);
       setIsLoading(false);
       activeStreamRef.current = null;

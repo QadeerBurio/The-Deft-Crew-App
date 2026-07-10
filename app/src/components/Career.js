@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useContext } from "react";
 import {
   StyleSheet,
   Text,
@@ -28,9 +28,24 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import GuestGuard from "./GuestGuard";
+import Constants from 'expo-constants';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
+import { renderResumeHTML } from '../services/templateService';
+import { ResumeContext } from '../context/ResumeContext';
 
 const { width, height } = Dimensions.get("window");
-const API_URL = "https://the-deft-crew-production.up.railway.app/api/jobs";
+const getBaseURL = () => {
+  if (__DEV__) {
+    const manifest = Constants.expoConfig || Constants.manifest || {};
+    const hostUri = manifest.hostUri;
+    const devIp = hostUri ? hostUri.split(':')[0] : '192.168.18.128';
+    return `http://${devIp}:5000/api`;
+  }
+  return 'https://the-deft-crew-production.up.railway.app/api';
+};
+const API_URL = `${getBaseURL()}/jobs`;
 
 const COLORS = {
   page: "#ffffff",
@@ -51,15 +66,17 @@ const COLORS = {
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 // ==================== ENHANCED CAREER CARD ====================
-const CareerCard = ({ item, index, onPress, hasApplied }) => {
+const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended, onOptimizePress }) => {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(18)).current;
   const scale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    // Limit staggered delay to first 8 items to avoid compounding scroll lags
+    const animDelay = Math.min(index, 8) * 55;
     Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 320, delay: index * 55, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 320, delay: index * 55, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 320, delay: animDelay, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 320, delay: animDelay, useNativeDriver: true }),
     ]).start();
   }, [index]);
 
@@ -176,6 +193,20 @@ const CareerCard = ({ item, index, onPress, hasApplied }) => {
         </View>
       )}
 
+      {/* Optimize Button */}
+      {isRecommended && (
+        <TouchableOpacity 
+          style={styles.optimizeCardBtn}
+          onPress={(e) => {
+            e.stopPropagation(); // prevent opening normal apply modal
+            onOptimizePress();
+          }}
+        >
+          <Ionicons name="sparkles" size={14} color="#000" />
+          <Text style={styles.optimizeCardBtnText}>Optimize Resume</Text>
+        </TouchableOpacity>
+      )}
+
       {/* Footer */}
       <View style={styles.cardFooter}>
         <Text style={styles.viewDetailsLabel}>
@@ -189,7 +220,7 @@ const CareerCard = ({ item, index, onPress, hasApplied }) => {
       </View>
     </AnimatedTouchable>
   );
-};
+});
 
 // ==================== JOB DETAILS MODAL (For Applied Jobs) ====================
 const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
@@ -655,12 +686,17 @@ const ApplicationsModal = ({ visible, applications, onClose, onInterviewPress })
 
 // ==================== MAIN CAREER SCREEN ====================
 const Career = ({ navigation }) => {
+  const { resumes = [], optimizeResume, checkResumeFit } = useContext(ResumeContext);
+  const [optimizing, setOptimizing] = useState(false);
+  const [skillGapVisible, setSkillGapVisible] = useState(false);
+  const [skillGapData, setSkillGapData] = useState({ missingSkills: [], message: "" });
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({ type: "", locationType: "", experienceLevel: "", category: "", datePosted: "all" });
+  const [filters, setFilters] = useState({ type: "Internship", locationType: "", experienceLevel: "", category: "", datePosted: "all" });
+  const scope = 'pakistan';
   const [showFilters, setShowFilters] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedJob, setSelectedJob] = useState(null);
@@ -675,6 +711,12 @@ const Career = ({ navigation }) => {
   const [selectedInterview, setSelectedInterview] = useState(null);
   const [showInterviewModal, setShowInterviewModal] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
+
+  // Pagination & infinite scroll states
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [totalJobsCount, setTotalJobsCount] = useState(0);
   
   // NEW: State for job details modal (applied jobs)
   const [showJobDetailsModal, setShowJobDetailsModal] = useState(false);
@@ -724,13 +766,39 @@ const Career = ({ navigation }) => {
     ]).start();
   }, []);
 
-  const fetchJobs = useCallback(async () => {
+  const fetchJobs = useCallback(async (pageNum = 1, shouldAppend = false) => {
+    // Explicitly enforce numeric pages and prevent React Event pollution
+    const cleanPage = typeof pageNum === 'number' && !isNaN(pageNum) ? pageNum : 1;
+    const cleanAppend = typeof shouldAppend === 'boolean' ? shouldAppend : false;
+
+    if (cleanPage === 1) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
     setError(false);
+    
+    console.log(`📡 [Career.js] Requested page: ${cleanPage}, shouldAppend: ${cleanAppend}, search: "${search}"`);
+    
     try {
-      const queryParams = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => { if (value) queryParams.append(key, value); });
-      const response = await axios.get(`${API_URL}/public/all?${queryParams}`, { timeout: 10000 });
+      // Construct query string manually to avoid JSC compatibility issues in React Native
+      // Always send isExternal=true — General Jobs never shows TDC openings
+      let queryString = `page=${cleanPage}&limit=20&scope=${scope}`;
+      if (search) queryString += `&search=${encodeURIComponent(search)}`;
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value && key !== "datePosted") {
+          queryString += `&${key}=${encodeURIComponent(value)}`;
+        }
+      });
+
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const response = await axios.get(token ? `${API_URL}/feed?${queryString}` : `${API_URL}/public/all?${queryString}`, { headers, timeout: 10000 });
       let jobsData = Array.isArray(response.data.jobs) ? response.data.jobs : [];
+      const total = response.data.total || 0;
+      const respPage = response.data.page || cleanPage;
+      
+      console.log(`✅ [Career.js] Received page: ${respPage}, Total: ${total}, jobsData length: ${jobsData.length}`);
+
       if (filters.datePosted && filters.datePosted !== "all") {
         const now = new Date();
         jobsData = jobsData.filter(job => {
@@ -744,11 +812,41 @@ const Career = ({ navigation }) => {
           }
         });
       }
-      setJobs(jobsData);
+
+      setJobs(prev => {
+        const combined = cleanAppend ? [...prev, ...jobsData] : jobsData;
+        const seen = new Set();
+        const unique = combined.filter(j => {
+          if (!j._id) return true;
+          if (seen.has(j._id)) return false;
+          seen.add(j._id);
+          return true;
+        });
+
+        const duplicateCount = combined.length - unique.length;
+        if (duplicateCount > 0) {
+          console.log(`⚠️ [Career.js] Filtered out ${duplicateCount} duplicate jobs`);
+        }
+
+        // Set hasMore dynamically inside updater to avoid fetchJobs dependencies
+        setHasMore(unique.length < total);
+        console.log(`📊 [Career.js] Current jobs list length: ${unique.length}, hasMore: ${unique.length < total}`);
+        return unique;
+      });
+
+      setPage(cleanPage);
+      setTotalJobsCount(total);
       runEntranceAnimation();
-    } catch (err) { setError(true); setJobs([]); }
-    finally { setLoading(false); setRefreshing(false); }
-  }, [filters, runEntranceAnimation]);
+    } catch (err) { 
+      setError(true); 
+      console.error(`❌ [Career.js] Fetch error:`, err.message);
+      if (!cleanAppend) setJobs([]); 
+    } finally { 
+      setLoading(false); 
+      setLoadingMore(false);
+      setRefreshing(false); 
+    }
+  }, [filters, search, runEntranceAnimation, token]);
 
   const fetchMyApplications = async () => {
     if (!token) return;
@@ -760,10 +858,23 @@ const Career = ({ navigation }) => {
     } catch (err) { console.log("Error fetching applications:", err); }
   };
 
-  useEffect(() => { fetchJobs(); }, [fetchJobs]);
+  // Debounced search and filters execution effect
+  useEffect(() => {
+    // Reset page and clear current jobs list instantly on search/filters/scope change
+    setPage(1);
+    setJobs([]);
+    setHasMore(true);
+
+    const delayDebounceFn = setTimeout(() => {
+      fetchJobs(1, false);
+    }, 450);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [search, filters, fetchJobs]);
+
   useEffect(() => { if (token) fetchMyApplications(); }, [token]);
 
-  const onRefresh = () => { setRefreshing(true); fetchJobs(); if (token) fetchMyApplications(); };
+  const onRefresh = () => { setRefreshing(true); fetchJobs(1, false); if (token) fetchMyApplications(); };
 
   const handleInputChange = (field, value) => {
     setApplicationForm(prev => ({ ...prev, [field]: value }));
@@ -812,6 +923,84 @@ const Career = ({ navigation }) => {
     return myApplications.find(app => app.jobId?._id === jobId);
   };
 
+  const handleOptimizeResumeFlow = async (job) => {
+    if (!token) {
+      Alert.alert(
+        "Login Required",
+        "Please login to optimize your resume.",
+        [
+          { text: "Cancel" },
+          { text: "Login", onPress: () => navigation.navigate("Login") }
+        ]
+      );
+      return;
+    }
+
+    const resumeToOptimize = resumes.find(r => r.isPrimary) || resumes[0];
+    if (!resumeToOptimize) {
+      Alert.alert(
+        "No Resume Found",
+        "Please create or upload a resume first in the Resume Dashboard."
+      );
+      return;
+    }
+
+    try {
+      setOptimizing(true);
+
+      // Check fit
+      const fitResult = await checkResumeFit(resumeToOptimize._id, job._id);
+
+      if (!fitResult.meetsRequirements) {
+        setOptimizing(false);
+        setSkillGapData({
+          missingSkills: fitResult.missingSkills || [],
+          message: `your expertise are not that much for this role to apply this role you need to enhance your skills`
+        });
+        setSkillGapVisible(true);
+        return;
+      }
+
+      // Optimize
+      const tailored = await optimizeResume(resumeToOptimize._id, {
+        jobId: job._id,
+        jobTitle: job.title,
+        jobDescription: job.description || `Target role: ${job.title}`
+      });
+
+      if (!tailored) {
+        throw new Error('AI tailoring returned empty results.');
+      }
+
+      // Generate local PDF
+      const html = renderResumeHTML(tailored, tailored.template || 'modern_ats', tailored.customStyles || {}, true);
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+
+      const firstName = (tailored.personalInfo?.firstName || 'User').trim().replace(/[^a-zA-Z0-9]/g, '_');
+      const lastName = (tailored.personalInfo?.lastName || 'Resume').trim().replace(/[^a-zA-Z0-9]/g, '_');
+      const fileName = `${firstName}_${lastName}_Optimized_Resume.pdf`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+
+      await FileSystem.copyAsync({ from: uri, to: fileUri });
+      setOptimizing(false);
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'application/pdf',
+          dialogTitle: `${firstName} ${lastName} Optimized Resume`,
+          UTI: 'com.adobe.pdf',
+        });
+      } else {
+        Alert.alert('✅ Success', `Optimized resume saved as: ${fileName}`);
+      }
+
+    } catch (error) {
+      console.error('Career optimization flow error:', error);
+      setOptimizing(false);
+      Alert.alert('❌ Error', 'Failed to optimize resume: ' + error.message);
+    }
+  };
+
   const handleApply = async () => {
     if (!token) { Alert.alert("Login Required", "Please login to apply", [{ text: "Cancel" }, { text: "Login", onPress: () => navigation.navigate("Login") }]); return; }
     if (!validateForm()) { 
@@ -842,20 +1031,50 @@ const Career = ({ navigation }) => {
     setValidationErrors({});
   };
 
-  // MODIFIED: Open appropriate modal based on application status
+  // Open modal — always redirect to actual portal of internship
   const openApplyModal = (job) => {
     setSelectedJob(job);
-    
+    const applyUrl = job.externalUrl || job.companyWebsite || 'https://pk.indeed.com/q-remote-internship-jobs.html';
+    Linking.openURL(applyUrl).catch(() => {
+      Alert.alert('Cannot Open Link', 'The application link could not be opened.');
+    });
+    return;
+
+    const isTDC = (job.companyName || '').toLowerCase().includes('deft crew') || 
+                  (job.companyName || '').toLowerCase().includes('tdc') || 
+                  (job.company || '').toLowerCase().includes('deft crew') || 
+                  (job.company || '').toLowerCase().includes('tdc');
+
+    // External jobs: never use in-app form — redirect to employer's website (except TDC)
+    if (job.isExternal && !isTDC) {
+      const applyUrl = job.externalUrl || job.companyWebsite;
+      if (applyUrl) {
+        Linking.canOpenURL(applyUrl).then(supported => {
+          if (supported) {
+            Linking.openURL(applyUrl);
+          } else {
+            Alert.alert('Cannot Open Link', 'The application link could not be opened.');
+          }
+        });
+      } else {
+        Alert.alert(
+          'Apply Externally',
+          `Visit ${job.companyName || 'the company website'} directly to apply for this position.`,
+          [{ text: 'OK' }]
+        );
+      }
+      return;
+    }
+
+    // Internal TDC job — track application status or show form
     if (checkAlreadyApplied(job._id)) {
-      // If already applied, show job details with status instead of application form
       const myApp = findMyApplication(job._id);
       setSelectedAppliedJob(job);
       setSelectedMyApplication(myApp);
       setShowJobDetailsModal(true);
       return;
     }
-    
-    // Not applied yet, show application form
+
     setApplicationForm(prev => ({ ...prev, fullName: user?.name || "", email: user?.email || "" }));
     setValidationErrors({});
     setModalVisible(true);
@@ -890,11 +1109,7 @@ const Career = ({ navigation }) => {
     transform: [{ scale: scrollY.interpolate({ inputRange: [0, 80], outputRange: [1, 0.98], extrapolate: 'clamp' }) }],
   };
 
-  const filteredData = jobs.filter(job =>
-    !search || job.title?.toLowerCase().includes(search.toLowerCase()) || job.department?.toLowerCase().includes(search.toLowerCase()) ||
-    job.location?.toLowerCase().includes(search.toLowerCase()) || job.companyName?.toLowerCase().includes(search.toLowerCase()) ||
-    job.skills?.some(skill => skill.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filteredData = jobs; // Filtered server-side dynamically via search API parameter
 
   // ==================== FILTER MODAL ====================
   const FilterModal = () => (
@@ -954,7 +1169,7 @@ const Career = ({ navigation }) => {
           </ScrollView>
           <View style={styles.filterActions}>
             <TouchableOpacity style={styles.clearFiltersBtn} onPress={() => { clearAllFilters(); setShowFilters(false); }}><Text style={styles.clearFiltersText}>Clear All</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.applyFiltersBtn} onPress={() => { setShowFilters(false); fetchJobs(); }}><View style={styles.applyFiltersGradient}><Text style={styles.applyFiltersText}>Apply Filters</Text></View></TouchableOpacity>
+            <TouchableOpacity style={styles.applyFiltersBtn} onPress={() => { setShowFilters(false); fetchJobs(1, false); }}><View style={styles.applyFiltersGradient}><Text style={styles.applyFiltersText}>Apply Filters</Text></View></TouchableOpacity>
           </View>
         </View>
       </View>
@@ -972,8 +1187,8 @@ const Career = ({ navigation }) => {
           <Ionicons name="chevron-back" size={22} color="#1a1a1a" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>tdc<Text style={{color:'#f9c349'}}>.</Text> Careers</Text>
-          <Text style={styles.headerSub}>Find Your Dream Job</Text>
+          <Text style={styles.headerTitle}>tdc<Text style={{color:'#f9c349'}}>.</Text> Internships</Text>
+          <Text style={styles.headerSub}>Find Your Dream Internship</Text>
         </View>
         <TouchableOpacity style={styles.headerBtn} onPress={() => {
           if (!token) { Alert.alert("Login Required", "Please login"); return; }
@@ -988,7 +1203,7 @@ const Career = ({ navigation }) => {
       <View style={styles.searchWrapper}>
         <View style={styles.searchBar}>
           <Ionicons name="search" size={18} color="#999" />
-          <TextInput style={styles.searchInput} placeholder="Search jobs, skills, companies..." placeholderTextColor="#999" value={search} onChangeText={setSearch} />
+          <TextInput style={styles.searchInput} placeholder="Search internships, skills, companies..." placeholderTextColor="#999" value={search} onChangeText={setSearch} />
           {search.length > 0 && <TouchableOpacity onPress={() => setSearch("")}><Ionicons name="close-circle" size={18} color="#999" /></TouchableOpacity>}
           <TouchableOpacity onPress={() => setShowFilters(true)} style={styles.filterIcon}>
             <Ionicons name="options-outline" size={20} color="#1a1a1a" />
@@ -1004,21 +1219,45 @@ const Career = ({ navigation }) => {
         <View style={styles.centerSection}>
           <MaterialCommunityIcons name="wifi-off" size={50} color="#ddd" />
           <Text style={styles.errorTitle}>Connection Error</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={fetchJobs}><View style={styles.retryGradient}><Text style={styles.retryText}>Retry</Text></View></TouchableOpacity>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => fetchJobs(1, false)}><View style={styles.retryGradient}><Text style={styles.retryText}>Retry</Text></View></TouchableOpacity>
         </View>
       ) : (
         <Animated.View style={[styles.listWrap, { opacity: entranceOpacity, transform: [{ translateY: entranceTranslate }] }]}>
           <FlatList
             data={filteredData}
-            renderItem={({ item, index }) => <CareerCard item={item} index={index} onPress={() => openApplyModal(item)} hasApplied={checkAlreadyApplied(item._id)} />}
+            renderItem={({ item, index }) => (
+              <CareerCard 
+                item={item} 
+                index={index} 
+                onPress={() => openApplyModal(item)} 
+                hasApplied={checkAlreadyApplied(item._id)} 
+                isRecommended={item.isRecommended || item.matchPercentage >= 50}
+                onOptimizePress={() => handleOptimizeResumeFlow(item)}
+              />
+            )}
             keyExtractor={(item, index) => item._id || `${item.title}-${index}`}
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}
             onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#f9c349"]} tintColor="#f9c349" />}
+            onEndReached={() => {
+              if (hasMore && !loadingMore) {
+                fetchJobs(page + 1, true);
+              }
+            }}
+            onEndReachedThreshold={0.25}
+            initialNumToRender={8}
+            maxToRenderPerBatch={10}
+            windowSize={5}
+            removeClippedSubviews={Platform.OS === 'android'}
+            ListFooterComponent={loadingMore && (
+              <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color="#f9c349" />
+              </View>
+            )}
             ListHeaderComponent={filteredData.length > 0 && (
               <View style={styles.listHeader}>
-                <Text style={styles.resultCount}>{filteredData.length} jobs found</Text>
+                <Text style={styles.resultCount}>{totalJobsCount} jobs found</Text>
                 {filters.datePosted !== "all" && <View style={styles.activeFilterBadge}><Text style={styles.activeFilterText}>{filters.datePosted === "24h" ? "Past 24h" : filters.datePosted === "week" ? "Past week" : "Past month"}</Text></View>}
               </View>
             )}
@@ -1032,6 +1271,47 @@ const Career = ({ navigation }) => {
       <FilterModal />
       <ApplicationsModal visible={showApplicationsModal} applications={myApplications} onClose={() => setShowApplicationsModal(false)} onInterviewPress={openInterviewDetails} />
       <InterviewDetailsModal visible={showInterviewModal} interview={selectedInterview} onClose={() => setShowInterviewModal(false)} />
+      
+      {/* Optimizing Overlay Modal */}
+      <Modal visible={optimizing} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#fff', padding: 24, borderRadius: 16, alignItems: 'center', width: width * 0.8 }}>
+            <ActivityIndicator size="large" color="#f9c349" />
+            <Text style={{ marginTop: 16, fontSize: 16, fontWeight: '700', color: '#1a1a1a' }}>Optimizing Resume...</Text>
+            <Text style={{ marginTop: 6, fontSize: 12, color: '#999', textAlign: 'center' }}>AI is customizing your resume achievements & profile for this role.</Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Skill Gap Custom Alert Modal */}
+      <Modal visible={skillGapVisible} transparent animationType="fade" onRequestClose={() => setSkillGapVisible(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: '#ffffff', borderRadius: 20, width: '100%', maxWidth: 360, overflow: 'hidden', borderWidth: 1.5, borderColor: '#f9c349' }}>
+            {/* Header */}
+            <View style={{ backgroundColor: '#1a1a1a', paddingVertical: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <MaterialCommunityIcons name="alert-decagram" size={48} color="#f9c349" />
+              <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: '800', marginTop: 8 }}>Skill Gap Warning</Text>
+            </View>
+            
+            {/* Body */}
+            <View style={{ padding: 24 }}>
+              <Text style={{ fontSize: 14, color: '#333333', lineHeight: 22, textAlign: 'center', marginBottom: 16 }}>
+                your expertise are not that much for this role to apply this role you need to enhance your skills{' '}
+                <Text style={{ fontWeight: '800', color: '#1a1a1a' }}>{skillGapData.missingSkills.join(', ') || 'key required skills'}</Text>
+                {' '}and then your chances of selection could increase
+              </Text>
+
+              {/* Action Button */}
+              <TouchableOpacity 
+                style={{ backgroundColor: '#f9c349', paddingVertical: 12, borderRadius: 12, alignItems: 'center', marginTop: 8 }}
+                onPress={() => setSkillGapVisible(false)}
+              >
+                <Text style={{ color: '#1a1a1a', fontWeight: '800', fontSize: 14 }}>I will enhance them!</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       
       {/* NEW: Job Details Modal for Applied Jobs */}
       <JobDetailsModal 
@@ -1531,6 +1811,32 @@ const styles = StyleSheet.create({
   shareBtnText: { fontWeight: '700', color: '#1a1a1a', fontSize: 13 },
   cancelBtn: { flex: 1, height: 44, borderRadius: 12, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#f0f0f0' },
   cancelBtnText: { fontWeight: '700', color: '#999', fontSize: 13 },
+  // Pakistan / Worldwide scope toggle
+  scopeToggleRow: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
+  scopeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 22, borderWidth: 1.5, borderColor: '#f0f0f0', backgroundColor: '#fafafa' },
+  scopeBtnActive: { backgroundColor: '#1a1a1a', borderColor: '#1a1a1a' },
+  scopeFlag: { fontSize: 14 },
+  scopeBtnText: { fontSize: 13, fontWeight: '700', color: '#999' },
+  scopeBtnTextActive: { color: '#f9c349' },
+  optimizeCardBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff8e7',
+    borderWidth: 1,
+    borderColor: '#f9c349',
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginTop: 10,
+    marginBottom: 4,
+    marginHorizontal: 4,
+  },
+  optimizeCardBtnText: {
+    color: '#1a1a1a',
+    fontSize: 12,
+    fontWeight: '700',
+    marginLeft: 6,
+  },
 });
 
 export default Career;

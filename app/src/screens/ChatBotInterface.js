@@ -244,9 +244,9 @@ const ChatBotInterface = ({ onClose }) => {
     sendMessage(question);
   };
 
-  const handleFeatureCardPress = (suggestedQuery) => {
+  const handleFeatureCardPress = (suggestedQuery, category) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setInput(suggestedQuery);
+    sendMessage(suggestedQuery, category);
   };
 
   const handleRefresh = async () => {
@@ -408,7 +408,7 @@ const ChatBotInterface = ({ onClose }) => {
                 </TouchableOpacity>
 
                 {/* 💼 Jobs & Careers */}
-                <TouchableOpacity onPress={() => handleFeatureCardPress('Active internships and job opportunities')} style={styles.welcomeCard}>
+                <TouchableOpacity onPress={() => handleFeatureCardPress('Show me active internships and job opportunities on TDC', 'jobs')} style={styles.welcomeCard}>
                   <Text style={styles.cardEmoji}>💼</Text>
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle}>Jobs & Careers</Text>
@@ -417,7 +417,7 @@ const ChatBotInterface = ({ onClose }) => {
                 </TouchableOpacity>
 
                 {/* 🏷 Brand Discounts */}
-                <TouchableOpacity onPress={() => handleFeatureCardPress('Latest brand discounts for students')} style={styles.welcomeCard}>
+                <TouchableOpacity onPress={() => handleFeatureCardPress('Show me the latest brand discounts and student deals', 'offers')} style={styles.welcomeCard}>
                   <Text style={styles.cardEmoji}>🏷</Text>
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle}>Brand Discounts</Text>
@@ -426,7 +426,7 @@ const ChatBotInterface = ({ onClose }) => {
                 </TouchableOpacity>
 
                 {/* 🎁 Exclusive Offers */}
-                <TouchableOpacity onPress={() => handleFeatureCardPress('Show exclusive student discounts and deals')} style={styles.welcomeCard}>
+                <TouchableOpacity onPress={() => handleFeatureCardPress('Show exclusive student discounts and promo deals', 'offers')} style={styles.welcomeCard}>
                   <Text style={styles.cardEmoji}>🎁</Text>
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle}>Exclusive Offers</Text>
@@ -435,7 +435,7 @@ const ChatBotInterface = ({ onClose }) => {
                 </TouchableOpacity>
 
                 {/* ✈ Travel Packages */}
-                <TouchableOpacity onPress={() => handleFeatureCardPress('Travel packages and tour plans')} style={styles.welcomeCard}>
+                <TouchableOpacity onPress={() => handleFeatureCardPress('Show me student travel packages and tour plans', 'packages')} style={styles.welcomeCard}>
                   <Text style={styles.cardEmoji}>✈</Text>
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle}>Travel Packages</Text>
@@ -444,7 +444,7 @@ const ChatBotInterface = ({ onClose }) => {
                 </TouchableOpacity>
 
                 {/* 📚 Learning Platform */}
-                <TouchableOpacity onPress={() => handleFeatureCardPress('Notes, lectures and books database')} style={styles.welcomeCard}>
+                <TouchableOpacity onPress={() => handleFeatureCardPress('Show notes, lectures and books available on TDC', 'notes')} style={styles.welcomeCard}>
                   <Text style={styles.cardEmoji}>📚</Text>
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle}>Learning Platform</Text>
@@ -453,7 +453,7 @@ const ChatBotInterface = ({ onClose }) => {
                 </TouchableOpacity>
 
                 {/* 🏆 TDC Gold Card */}
-                <TouchableOpacity onPress={() => handleFeatureCardPress('Benefits of TDC Gold Card')} style={styles.welcomeCard}>
+                <TouchableOpacity onPress={() => handleFeatureCardPress('What are the benefits of TDC Gold Card membership?', 'tdc_knowledge')} style={styles.welcomeCard}>
                   <Text style={styles.cardEmoji}>🏆</Text>
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle}>TDC Gold Card</Text>
@@ -462,7 +462,7 @@ const ChatBotInterface = ({ onClose }) => {
                 </TouchableOpacity>
 
                 {/* 👥 Social Features */}
-                <TouchableOpacity onPress={() => handleFeatureCardPress('TDC social networking features')} style={styles.welcomeCard}>
+                <TouchableOpacity onPress={() => handleFeatureCardPress('Tell me about TDC social networking and community features', 'tdc_knowledge')} style={styles.welcomeCard}>
                   <Text style={styles.cardEmoji}>👥</Text>
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle}>Social Features</Text>
@@ -471,7 +471,7 @@ const ChatBotInterface = ({ onClose }) => {
                 </TouchableOpacity>
 
                 {/* 🔔 Notifications */}
-                <TouchableOpacity onPress={() => handleFeatureCardPress('How to check push notification updates')} style={styles.welcomeCard}>
+                <TouchableOpacity onPress={() => handleFeatureCardPress('How do I manage push notification settings in the TDC app?', 'tdc_knowledge')} style={styles.welcomeCard}>
                   <Text style={styles.cardEmoji}>🔔</Text>
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle}>Notifications</Text>
@@ -480,7 +480,7 @@ const ChatBotInterface = ({ onClose }) => {
                 </TouchableOpacity>
 
                 {/* ⭐ Reward Points */}
-                <TouchableOpacity onPress={() => handleFeatureCardPress('How can I earn rewards points?')} style={styles.welcomeCard}>
+                <TouchableOpacity onPress={() => handleFeatureCardPress('How can I earn and redeem TDC reward points?', 'tdc_knowledge')} style={styles.welcomeCard}>
                   <Text style={styles.cardEmoji}>⭐</Text>
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle}>Reward Points</Text>
