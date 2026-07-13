@@ -8,7 +8,7 @@ const getBaseURL = () => {
   if (__DEV__) {
     const manifest = Constants.expoConfig || Constants.manifest || {};
     const hostUri = manifest.hostUri;
-    const devIp = hostUri ? hostUri.split(':')[0] : '192.168.18.128';
+    const devIp = hostUri ? hostUri.split(':')[0] : '192.168.18.93';
     return `http://${devIp}:5000/api`;
   }
   return 'https://the-deft-crew-production.up.railway.app/api';
@@ -306,6 +306,9 @@ export const optimizedAPI = {
     }
   }
 };
+
+
+
 // ==================== JOB BOOKMARK API ====================
 
 /**
@@ -426,6 +429,278 @@ export const publicAPI = {
     const response = await api.get('/admin/exchange/all');
     return response.data;
   }
+  
 };
+
+
+
+// ============ SKILLSWAP API FUNCTIONS ============
+
+// Listings
+// api/api.js - Update getListings
+export const getListings = async ({ type, page, limit }) => {
+  const params = {};
+  if (type && type !== 'All') params.type = type.toLowerCase();
+  if (page) params.page = page;
+  if (limit) params.limit = limit;
+  
+  const response = await api.get('/listings', { params });
+  
+  // The backend now populates ownerId with user data
+  // Just return the data as-is
+  return response.data;
+};
+
+export const getListingById = async (id) => {
+  const response = await api.get(`/listings/${id}`);
+  return response.data;
+};
+
+// In api/api.js - Update the createListing function
+export const createListing = async (payload) => {
+  try {
+    // Get the current user from AsyncStorage to include owner details
+    const userStr = await AsyncStorage.getItem('user');
+    let ownerData = null;
+    
+    if (userStr) {
+      try {
+        ownerData = JSON.parse(userStr);
+      } catch (e) {
+        console.log('Error parsing user data:', e);
+      }
+    }
+    
+    // If we have user data, include it in the payload
+    if (ownerData) {
+      payload.owner = {
+        name: ownerData.name || ownerData.fullName || ownerData.username || 'User',
+        email: ownerData.email || '',
+        profileImage: ownerData.profileImage || ''
+      };
+    }
+    
+    const response = await api.post('/listings', payload);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getMyListings = async (ownerId) => {
+  const response = await api.get(`/listings/mine/${ownerId}`);
+  return response.data;
+};
+
+export const closeListing = async (listingId, ownerId) => {
+  const response = await api.patch(`/listings/${listingId}/close`, { ownerId });
+  return response.data;
+};
+
+
+// ==================== SKILL OFFER API FUNCTIONS ====================
+
+/**
+ * Create a skill offer for a listing
+ * @param {Object} payload - { listingId, message, offeredSkillName, offeredSkillLevel, proposedPrice, applicationNotes }
+ */
+export const createSkillOffer = async (payload) => {
+  try {
+    const response = await api.post('/skill-offers', payload);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Get all offers for a listing (listing owner only)
+ * @param {string} listingId
+ */
+export const getOffersForListing = async (listingId) => {
+  try {
+    const response = await api.get(`/skill-offers/listing/${listingId}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Get current user's skill offers
+ */
+export const getMySkillOffers = async () => {
+  try {
+    const response = await api.get('/skill-offers/my-offers');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// In api/api.js - Update the updateOfferStatus function
+
+/**
+ * Update an offer status (accept/reject) - listing owner only
+ * @param {string} offerId
+ * @param {string} status - 'accepted' or 'rejected'
+ */
+export const updateOfferStatus = async (offerId, status) => {
+  try {
+    // Ensure status is valid
+    if (!['accepted', 'rejected'].includes(status)) {
+      throw new Error('Invalid status. Must be "accepted" or "rejected"');
+    }
+    
+    const response = await api.patch(`/skill-offers/${offerId}/status`, { status });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Withdraw an offer - offeror only
+ * @param {string} offerId
+ */
+export const withdrawSkillOffer = async (offerId) => {
+  try {
+    const response = await api.patch(`/skill-offers/${offerId}/withdraw`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ==================== MATCH CHAT API FUNCTIONS ====================
+
+/**
+ * Get conversation for a match
+ * @param {string} matchId
+ */
+export const getMatchConversation = async (matchId) => {
+  try {
+    const response = await api.get(`/chat/match/${matchId}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Get all active matches for the current user
+ */
+export const getMyMatches = async () => {
+  try {
+    const response = await api.get('/chat/my-matches');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Get messages for a conversation
+ * @param {string} conversationId
+ * @param {Object} params - { page, limit }
+ */
+export const getConversationMessages = async (conversationId, params = {}) => {
+  try {
+    const response = await api.get(`/chat/messages/${conversationId}`, { params });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Mark messages as read
+ * @param {string} conversationId
+ * @param {Array} messageIds
+ */
+export const markMessagesRead = async (conversationId, messageIds) => {
+  try {
+    const response = await api.patch(`/chat/messages/read`, { conversationId, messageIds });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ==================== INQUIRY API FUNCTIONS ====================
+
+
+
+
+
+/**
+ * Get all inquiries for the current user
+ */
+export const getMyInquiries = async () => {
+  try {
+    const response = await api.get('/inquiries/my-inquiries');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ==================== LISTING API FUNCTIONS ====================
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Get suggested matches for a listing (barter only)
+ * @param {string} listingId
+ */
+export const getSuggestedMatches = async (listingId) => {
+  try {
+    const response = await api.get(`/listings/${listingId}/suggested-matches`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ==================== INQUIRY API FUNCTIONS ====================
+
+/**
+ * Start an inquiry thread for a listing
+ * @param {string} listingId
+ * @param {string} userId
+ * @param {string} message
+ */
+export const startInquiry = async (listingId, userId, message) => {
+  try {
+    const response = await api.post('/inquiries', { listingId, userId, message });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Get inquiry for a listing and user
+ * @param {string} listingId
+ * @param {string} userId
+ */
+export const getInquiryForListing = async (listingId, userId) => {
+  try {
+    const response = await api.get(`/inquiries/listing/${listingId}/user/${userId}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+
 
 export default api;

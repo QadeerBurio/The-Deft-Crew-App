@@ -16,13 +16,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import api from "../api/api";
 import { AuthContext } from "../context/AuthContext";
 
 const { width, height } = Dimensions.get("window");
 
 export default function SignIn({ navigation }) {
-  // FIXED: Get all needed context values
   const { setUser, setToken, loginAsGuest } = useContext(AuthContext);
 
   // Form States
@@ -65,7 +65,16 @@ export default function SignIn({ navigation }) {
     outputRange: ['0deg', '360deg'],
   });
 
-  useEffect(() => {
+  // Function to start animations - ONLY ONCE
+  const startAnimations = () => {
+    // Reset animation values
+    fadeAnim.setValue(0);
+    slideUpAnim.setValue(50);
+    logoScale.setValue(0.5);
+    logoRotate.setValue(0);
+    inputAnim1.setValue(0);
+    inputAnim2.setValue(0);
+
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -107,7 +116,15 @@ export default function SignIn({ navigation }) {
         }),
       ]),
     ]).start();
+  };
+
+  // Run animation only on initial mount
+  useEffect(() => {
+    startAnimations();
   }, []);
+
+  // Don't use useFocusEffect to prevent re-animation on focus
+  // This prevents the double animation issue
 
   const showNotification = (title, message, type = "success") => {
     setNotification({ title, message, type });
@@ -177,7 +194,7 @@ export default function SignIn({ navigation }) {
   const hideLoadingOverlay = () => {
     Animated.timing(overlayOpacity, {
       toValue: 0,
-      duration: 30,
+      duration: 300,
       useNativeDriver: true,
     }).start(() => {
       setShowLoading(false);
@@ -205,17 +222,14 @@ export default function SignIn({ navigation }) {
     }
   };
 
-  // FIXED: Handle guest browse
   const handleGuestBrowse = async () => {
     try {
       await loginAsGuest();
-      // Navigation will happen automatically via AppNavigator
     } catch (error) {
       showNotification("Error", "Could not enter guest mode. Please try again.", "error");
     }
   };
 
-  // FIXED: Handle login with proper error handling
   const handleLogin = async () => {
     // Button animation
     Animated.sequence([
@@ -266,7 +280,6 @@ export default function SignIn({ navigation }) {
       showLoadingOverlay();
       setLoading(true);
       
-      // FIXED: Log the request for debugging
       console.log("Attempting login with:", { email: email.trim() });
       
       const res = await api.post("/auth/login", { 
@@ -276,44 +289,38 @@ export default function SignIn({ navigation }) {
       
       const { token, user } = res.data;
 
-      // FIXED: Check if response has required data
       if (!token || !user) {
         hideLoadingOverlay();
         setLoading(false);
         return showNotification("Login Failed", "Invalid response from server. Please try again.", "error");
       }
 
-      // FIXED: Check user role
       if (user.role && user.role !== "student") {
         hideLoadingOverlay();
         setLoading(false);
         return showNotification("Access Denied", "This portal is for Students only.", "error");
       }
 
-      // Set authorization header
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       
       hideLoadingOverlay();
       showNotification("Welcome Back! 🎉", `Great to see you, ${user.fullName || 'Student'}.`, "success");
       
-      // FIXED: Set token first, then user
       setTimeout(() => {
         hideNotification();
-        setToken(token);  // Set token first
-        setUser(user);    // Then set user
+        setToken(token);
+        setUser(user);
       }, 2000);
 
     } catch (err) {
       hideLoadingOverlay();
       setLoading(false);
       
-      // FIXED: Better error handling
       console.log("Login error:", err.response?.status, err.response?.data);
       
       let errorMessage = "Invalid credentials. Please try again.";
       
       if (err.response) {
-        // Server responded with error
         switch (err.response.status) {
           case 400:
             errorMessage = err.response.data?.message || "Invalid email or password.";
@@ -334,7 +341,6 @@ export default function SignIn({ navigation }) {
             errorMessage = err.response.data?.message || "Login failed. Please try again.";
         }
       } else if (err.request) {
-        // Request made but no response
         errorMessage = "Network error. Please check your internet connection.";
       }
       
@@ -680,7 +686,7 @@ export default function SignIn({ navigation }) {
               </TouchableOpacity>
             </Animated.View>
             
-            {/* Guest Browse Button - FIXED */}
+            {/* Guest Browse Button */}
             <Animated.View style={{ opacity: fadeAnim }}>
               <TouchableOpacity 
                 style={styles.guestButton}
@@ -1020,7 +1026,6 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
     fontWeight: '600',
   },
-  // FIXED: Guest button styles
   guestButton: {
     flexDirection: 'row',
     alignItems: 'center',

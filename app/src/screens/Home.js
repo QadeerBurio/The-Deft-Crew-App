@@ -39,7 +39,7 @@ const SHADOW = "rgba(0,0,0,0.08)";
 const FEATURES = [
   { id: "discount",     title: "Discounts",    icon: "pricetag-outline", iconType: "Ionicons", desc: "Save on top brands", screen: "Brands", gradient: ["#FF6B6B", "#FF8E53"] },
   { id: "traveling",   title: "Travelling",   icon: "airplane",        iconType: "Ionicons",               desc: "Flights & hotels", screen: "Travelling", gradient: ["#4FC3F7", "#29B6F6"] },
-  { id: "learning",    title: "SkillsShare",   icon: "book",           iconType: "Ionicons",               desc: "Courses & tutorials", screen: "AiSkillsScreen", gradient: ["#81C784", "#4CAF50"] },
+  { id: "dashboard",    title: "SkillsShare",   icon: "book",           iconType: "Ionicons",               desc: "Courses & tutorials", screen: "Dashboard", gradient: ["#81C784", "#4CAF50"] },
   { id: "events",      title: "Events",       icon: "calendar",        iconType: "Ionicons",               desc: "Local events", screen: "Events", gradient: ["#CE93D8", "#AB47BC"] },
   { id: "resume",      title: "Resume",       icon: "document-text-outline", iconType: "Ionicons", desc: "Build your CV", screen: "Resume", gradient: ["#FFA726", "#FF9800"] },
 

@@ -18,6 +18,7 @@ import {
   DrawerContentScrollView,
   DrawerItem,
 } from '@react-navigation/drawer';
+import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Ionicons,
@@ -54,9 +55,6 @@ import ExchangeScreen from '../components/ExchangeScreen';
 import ApplicationForm from '../components/ApplicationForm';
 import BookingScreen from '../components/BookingScreen';
 import PaymentScreen from '../components/PaymentScreen';
-// Note: Resume screens (ResumeDashboard, ResumeBuilder, ResumeView, etc.) are NOT
-// imported here. They are registered exclusively inside ResumeNavigator.js.
-// The Drawer navigates to 'ResumeStack' which mounts the full ResumeNavigator.
 import Social from '../screens/Social/Social';
 import ChatDetailScreen from '../screens/Social/ChatDetails';
 import MessagesScreen from '../screens/Social/MessageScreen';
@@ -82,9 +80,23 @@ import Home from '../screens/Home';
 import StudentDashboard from '../screens/StudentDashboard';
 import Explore from '../screens/Explore';
 import EnhancedCareerScreen from '../screens/Resume/EnhanceCareer';
+import Dashboard from '../screens/skillshare/Dashboard';
+import CreateListingScreen from '../screens/skillshare/CreateListingScreen';
+import ListingDetailScreen from '../screens/skillshare/ListingDetailScreen';
+import SelectListingTypeScreen from '../screens/skillshare/SelectListingTypeScreen';
+import CreateOfferScreen from '../screens/skillshare/CreateOfferScreen';
+import ManageOffersScreen from '../screens/skillshare/ManageOffersScreen';
+import MyOffersScreen from '../screens/skillshare/MyOffersScreen';
+import MyListingsScreen from '../screens/skillshare/MyListingDetails';
+import MatchChatScreen from '../screens/skillshare/MatchChatScreen';
+import InquiryChatScreen from '../screens/skillshare/InquiryChatScreen';
+import SkillProfile from '../screens/skillshare/SkillProfile';
+import ActivityScreen from '../screens/skillshare/ActivityScreen';
+import MyInquiriesScreen from '../screens/skillshare/MyInquiryScreen';
 
 const { width } = Dimensions.get('window');
 const Drawer = createDrawerNavigator();
+const Stack = createStackNavigator();
 
 // DRAWER_ITEMS with enhanced icons (increased size)
 const DRAWER_ITEMS = [
@@ -678,6 +690,33 @@ const AnimatedScreen = ({ component: Component, ...props }) => {
   );
 };
 
+// ===== DASHBOARD STACK NAVIGATOR =====
+// This ensures proper back navigation from Dashboard screens
+function DashboardStackNavigator() {
+  return (
+    <Stack.Navigator 
+      screenOptions={{ 
+        headerShown: false,
+        cardStyle: { backgroundColor: '#fff' }
+      }}
+    >
+      <Stack.Screen name="DashboardMain" component={Dashboard} />
+      <Stack.Screen name="CreateListing" component={CreateListingScreen} />
+      <Stack.Screen name="ListingDetail" component={ListingDetailScreen} />
+      <Stack.Screen name="SelectListingTypeScreen" component={SelectListingTypeScreen} />
+      <Stack.Screen name="CreateOffer" component={CreateOfferScreen} />
+      <Stack.Screen name="ManageOffers" component={ManageOffersScreen} />
+      <Stack.Screen name="MyOffers" component={MyOffersScreen} />
+      <Stack.Screen name="MyListings" component={MyListingsScreen} />
+      <Stack.Screen name="MatchChat" component={MatchChatScreen} />
+      <Stack.Screen name="InquiryChat" component={InquiryChatScreen} />
+      <Stack.Screen name="SkillProfile" component={SkillProfile} />
+      <Stack.Screen name="Activity" component={ActivityScreen} />
+      <Stack.Screen name="MyInquiries" component={MyInquiriesScreen} />
+    </Stack.Navigator>
+  );
+}
+
 export default function DrawerNavigator() {
   const routeAnim = useRef(new Animated.Value(0)).current;
 
@@ -696,6 +735,19 @@ export default function DrawerNavigator() {
               'Travelling',
               'ChatDetailScreen',
               'MessagesScreen',
+              'DashboardMain',
+              'CreateListing',
+              'ListingDetail',
+              'SelectListingTypeScreen',
+              'CreateOffer',
+              'ManageOffers',
+              'MyOffers',
+              'MyListings',
+              'MatchChat',
+              'InquiryChat',
+              'SkillProfile',
+              'Activity',
+              'MyInquiries',
             ];
 
             if (hiddenRoutes.includes(routeName)) {
@@ -719,35 +771,45 @@ export default function DrawerNavigator() {
             </AnimatedScreenWrapper>
           )}
         </Drawer.Screen>
+        
         <Drawer.Screen
           name="Profile"
           component={ProfileStack}
           options={{ headerShown: false }}
         />
+        
         <Drawer.Screen
           name="Travelling"
           component={TravelingScreen}
           options={{ headerShown: false }}
         />
+        
         <Drawer.Screen 
           name="Brands" 
           component={Brands}
         />
-         <Drawer.Screen 
+        
+        <Drawer.Screen 
           name="Explore" 
           component={Explore}
         />
 
+        {/* Dashboard Stack - contains all skillshare screens with proper back navigation */}
+        <Drawer.Screen 
+          name="Dashboard" 
+          component={DashboardStackNavigator}
+          options={{ headerShown: false }}
+        />
+
+        {/* Individual Screens - Social and Events remain as individual screens */}
         {[
           { name: 'University', comp: University },
           { name: 'ContactUs', comp: ContactUs },
           { name: 'Home', comp: Home },
-          
           { name: 'BrandOffers', comp: BrandOffersScreen },
           { name: 'Points', comp: PointsScreen },
           { name: 'WhyPoints', comp: WhyPointsScreen },
           { name: 'How It Works', comp: HowItWorksScreen },
-          
           { name: 'Why EduBoost', comp: WhyEduBoostScreen },
           { name: 'About', comp: AboutScreen },
           { name: 'Terms & Conditions', comp: TermsScreen },
@@ -761,8 +823,6 @@ export default function DrawerNavigator() {
           { name: 'ApplicationForm', comp: ApplicationForm },
           { name: 'Payment', comp: PaymentScreen },
           { name: 'StudentDashboard', comp: StudentDashboard },
-          // NOTE: Resume screens removed — they are registered in ResumeNavigator.js only.
-          // Navigate to 'ResumeStack' in HomeStack to reach the Resume section.
           { name: 'EnhancedCareer', comp: EnhancedCareerScreen },
           { name: 'Social', comp: Social },
           { name: 'MessagesScreen', comp: MessagesScreen },
@@ -780,8 +840,6 @@ export default function DrawerNavigator() {
           { name: 'Events', comp: Events },
           { name: 'EventNotification', comp: EventNotification },
           { name: 'PostDetailScreen', comp: PostDetailScreen },
-          
-          
           { name: 'TDCFlow', comp: TDCFlow },
           { name: 'ProfileScreen', comp: ProfileScreen },
           { name: 'ProfileDetails', comp: ProfileDetails },

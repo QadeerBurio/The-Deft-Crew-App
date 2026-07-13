@@ -1,4 +1,4 @@
-// context/AuthContext.js - Updated with setGuestMode
+// context/AuthContext.js
 import React, { createContext, useState, useEffect, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
@@ -7,7 +7,7 @@ import { jwtDecode } from "jwt-decode";
 
 export const AuthContext = createContext();
 
-export default function AuthProvider({ children }) {
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -19,7 +19,7 @@ export default function AuthProvider({ children }) {
     setToken(null);
     setUnreadCount(0);
     setIsGuest(false);
-    setGuestMode(false); // FIXED: Update API instance
+    setGuestMode(false);
     await AsyncStorage.multiRemove(["user", "token", "isGuest"]);
   }, []);
 
@@ -31,14 +31,13 @@ export default function AuthProvider({ children }) {
     }
   }, [clearAllData]);
 
-  // FIXED: Guest login function
   const loginAsGuest = useCallback(async () => {
     try {
       if (user || token) {
         await clearAllData();
       }
       setIsGuest(true);
-      setGuestMode(true); // FIXED: Tell API about guest mode
+      setGuestMode(true);
       await AsyncStorage.setItem("isGuest", "true");
     } catch (e) {
       console.error("Guest Login Error:", e);
@@ -60,7 +59,7 @@ export default function AuthProvider({ children }) {
       const wasGuest = await AsyncStorage.getItem("isGuest");
       if (wasGuest === "true") {
         setIsGuest(true);
-        setGuestMode(true); // FIXED: Set guest mode on load
+        setGuestMode(true);
         setLoading(false);
         return;
       }
@@ -73,9 +72,10 @@ export default function AuthProvider({ children }) {
           console.log("Token expired, logging out...");
           await clearAllData();
         } else {
-          setUser(JSON.parse(storedUser));
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
           setToken(storedToken);
-          setGuestMode(false); // FIXED: Not guest mode
+          setGuestMode(false);
           verifyToken(storedToken);
         }
       }
@@ -124,7 +124,7 @@ export default function AuthProvider({ children }) {
     const save = async () => {
       if (user && token) {
         setIsGuest(false);
-        setGuestMode(false); // FIXED: Clear guest mode
+        setGuestMode(false);
         await AsyncStorage.multiRemove(["isGuest"]);
         await AsyncStorage.setItem("user", JSON.stringify(user));
         await AsyncStorage.setItem("token", token);
@@ -138,6 +138,34 @@ export default function AuthProvider({ children }) {
       updateUnreadCount(token);
     }
   }, [token, user, isGuest]);
+
+  // FIXED: Helper function to get current user ID
+  const getCurrentUserId = useCallback(() => {
+    if (isGuest) return 'guest-user';
+    if (!user) return null;
+    return user._id || user.id || user.userId || null;
+  }, [user, isGuest]);
+
+  const isAuthenticated = useCallback(() => {
+    return !!(user && !isGuest && token);
+  }, [user, isGuest, token]);
+
+  const getUserEmail = useCallback(() => {
+    if (isGuest) return 'guest@example.com';
+    if (!user) return null;
+    return user.email || null;
+  }, [user, isGuest]);
+
+  const getUserName = useCallback(() => {
+    if (isGuest) return 'Guest User';
+    if (!user) return null;
+    return user.name || user.fullName || user.username || 'User';
+  }, [user, isGuest]);
+
+  // NEW: Get full user object with all fields
+  const getUser = useCallback(() => {
+    return user;
+  }, [user]);
 
   if (loading) return null;
 
@@ -156,9 +184,16 @@ export default function AuthProvider({ children }) {
         isGuest,
         setIsGuest,
         loginAsGuest,
+        getCurrentUserId,
+        isAuthenticated,
+        getUserEmail,
+        getUserName,
+        getUser, // NEW
       }}
     >
       {children}
     </AuthContext.Provider>
   );
 }
+
+export default AuthProvider;

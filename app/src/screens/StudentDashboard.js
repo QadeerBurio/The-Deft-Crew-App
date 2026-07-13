@@ -464,7 +464,7 @@ const StudentDashboard = () => {
       id: 2,
       number: '02',
       name: 'SkillsShare',
-      routeName: 'AiSkillsScreen',
+      routeName: 'Dashboard',
       icon: 'brain',
       sub: 'tdc. Mastery',
       colors: ['#6366f1', '#a855f7'],
@@ -612,7 +612,7 @@ const StudentDashboard = () => {
               >
                 <Ionicons name="calendar" size={20} color="#f43f5e" />
               </LinearGradient>
-              <Text style={styles.statNumber}>12</Text>
+              <Text style={styles.statNumber}>25+</Text>
               <Text style={styles.statLabel}>Events</Text>
             </View>
           </Animated.View>
@@ -807,8 +807,8 @@ const styles = StyleSheet.create({
   },
   plusIcon: {
     position: 'absolute',
-    bottom: 15,
-    right: 15,
+    bottom: 25,
+    right: 5,
     width: 34,
     height: 34,
     borderRadius: 12,

@@ -573,7 +573,7 @@ const TravelChatBot = () => {
             style={styles.fabBareTouch}
           >
             <Image
-              source={require('../../../assets/travel_mascot.png')}
+              source={require('../../../assets/travel.png')}
               style={styles.fabBareMascotImage}
               resizeMode="contain"
             />
@@ -758,10 +758,10 @@ const msgStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   fabContainer: {
-    position: 'absolute', bottom: 85, right: 16, zIndex: 9999,
+    position: 'absolute', bottom: 35, right: 12, zIndex: 9999,
   },
   fabBareTouch: {
-    width: 100, height: 100, justifyContent: 'center', alignItems: 'center',
+    width: 85, height: 85, justifyContent: 'center', alignItems: 'center',
   },
   fabBareMascotImage: {
     width: 100, height: 100,

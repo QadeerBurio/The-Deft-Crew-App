@@ -94,8 +94,8 @@ const FloatingMenu = ({ navigation }) => {
     <GestureDetector gesture={gesture}>
       <Animated.View style={[styles.mainContainer, containerStyle]}>
         
-        {/* TOP: Brands */}
-        {renderMiniBtn(Ionicons, "pricetags", "Brands", "Home", 0, -60)}
+        {/* TOP: Home */}
+        {renderMiniBtn(Ionicons, "home", "Home", "Home", 0, -60)}
 
         {/* BOTTOM: Travelling */}
         {renderMiniBtn(Ionicons, "airplane", "Travel", "Traveling", 0, 60)}

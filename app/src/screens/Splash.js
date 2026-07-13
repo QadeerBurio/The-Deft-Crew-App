@@ -26,6 +26,7 @@ const ONBOARDING_DATA = [
     offer: "STUDY ABROAD",
     icon: "globe-outline",
     stat: "50+ Countries",
+    category: "Education"
   },
   {
     id: "2",
@@ -36,9 +37,43 @@ const ONBOARDING_DATA = [
     offer: "HIRED FAST",
     icon: "briefcase-outline",
     stat: "1000+ Partners",
+    category: "Career"
   },
   {
     id: "3",
+    title: "Skill Share",
+    tagline: "LEARN & GROW",
+    description:
+      "Access premium skill-sharing sessions from industry experts. Master new skills and stay ahead in your field.",
+    offer: "SKILL UP",
+    icon: "school-outline",
+    stat: "200+ Courses",
+    category: "Learning"
+  },
+  {
+    id: "4",
+    title: "Resume Builder",
+    tagline: "CAREER BOOST",
+    description:
+      "Create professional, ATS-friendly resumes with our AI-powered builder. Get noticed by top employers.",
+    offer: "GET HIRED",
+    icon: "document-text-outline",
+    stat: "95% Success Rate",
+    category: "Career"
+  },
+  {
+    id: "5",
+    title: "Premium Events",
+    tagline: "NETWORK & CONNECT",
+    description:
+      "Gain exclusive access to premium networking events, industry conferences, and elite gatherings.",
+    offer: "VIP ACCESS",
+    icon: "calendar-outline",
+    stat: "500+ Events",
+    category: "Events"
+  },
+  {
+    id: "6",
     title: "Wanderlust",
     tagline: "TRAVEL & ADVENTURE",
     description:
@@ -46,9 +81,10 @@ const ONBOARDING_DATA = [
     offer: "EXPLORE MORE",
     icon: "airplane-outline",
     stat: "30% Off Travel",
+    category: "Travel"
   },
   {
-    id: "4",
+    id: "7",
     title: "Unmatched Savings",
     tagline: "LIFESTYLE DISCOUNTS",
     description:
@@ -56,6 +92,7 @@ const ONBOARDING_DATA = [
     offer: "Exclusive Discount",
     icon: "pricetags-outline",
     stat: "Save 50%",
+    category: "Savings"
   },
 ];
 
@@ -288,8 +325,8 @@ export default function TDCFlow({ navigation }) {
             {/* Bottom Section */}
             <View style={styles.cardBottom}>
               <View style={styles.memberInfo}>
-                <Text style={styles.memberLabel}>MEMBER</Text>
-                <Text style={styles.memberId}>#2026</Text>
+                <Text style={styles.memberLabel}>CATEGORY</Text>
+                <Text style={styles.memberId}>{item.category}</Text>
               </View>
               <View style={styles.activeBadge}>
                 <View style={styles.activeDot} />
@@ -313,7 +350,7 @@ export default function TDCFlow({ navigation }) {
       <StatusBar barStyle="dark-content" />
 
       {/* Skip Button */}
-      {currentIndex < 3 && (
+      {currentIndex < ONBOARDING_DATA.length - 1 && (
         <TouchableOpacity 
           style={styles.skipButton}
           onPress={completeOnboarding}
@@ -412,10 +449,10 @@ export default function TDCFlow({ navigation }) {
               style={styles.buttonGradient}
             >
               <Text style={styles.buttonText}>
-                {currentIndex === 3 ? "GET STARTED" : "NEXT"}
+                {currentIndex === ONBOARDING_DATA.length - 1 ? "GET STARTED" : "NEXT"}
               </Text>
               <Ionicons
-                name={currentIndex === 3 ? "checkmark-circle" : "arrow-forward"}
+                name={currentIndex === ONBOARDING_DATA.length - 1 ? "checkmark-circle" : "arrow-forward"}
                 size={20}
                 color="#000"
               />
@@ -524,7 +561,6 @@ const styles = StyleSheet.create({
   estText: {
     color: "rgba(255,255,255,0.5)",
     fontSize: 10,
-    
   },
 
   // Skip Button
@@ -571,7 +607,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#f0f0f0',
-    marginTop:-30
+    marginTop: -30
   },
 
   cardBorder: {
@@ -739,7 +775,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#fff',
+    backgroundColor: '#f9c349',
     marginRight: 8,
   },
 
@@ -794,7 +830,7 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     marginHorizontal: 4,
-    marginTop:15
+    marginTop: 45
   },
 
   button: {
