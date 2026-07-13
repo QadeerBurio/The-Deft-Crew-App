@@ -424,16 +424,6 @@ export const resumeApi = {
     }
   },
 
-  // Optimize and tailor resume for job
-  optimizeResume: async (resumeId, optimizeData) => {
-    try {
-      const response = await api.post(`/resume/${resumeId}/optimize`, optimizeData);
-      return response.data;
-    } catch (error) {
-      throw new Error(error.response?.data?.error || 'Failed to optimize resume');
-    }
-  },
-
   // Duplicate resume
   duplicateResume: async (resumeId) => {
     try {

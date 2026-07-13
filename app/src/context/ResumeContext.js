@@ -427,16 +427,27 @@ const getRecommendedJobs = async (resumeId) => {
   const getAnalytics = async (resumeId) => {
     try {
       if (isGuest) {
+        const idHash = (resumeId || "default").split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const views = (idHash % 60) + 40;
+        const downloads = (idHash % 20) + 10;
+        const shares = (idHash % 10) + 3;
+        const applications = (idHash % 8) + 2;
+        const skillMatch = (idHash % 25) + 70;
+
         return {
-          views: Math.floor(Math.random() * 100) + 20,
-          downloads: Math.floor(Math.random() * 30) + 5,
-          shares: Math.floor(Math.random() * 15) + 2,
-          applications: Math.floor(Math.random() * 10) + 1,
-          viewHistory: Array.from({ length: 30 }, (_, i) => ({
-            date: new Date(Date.now() - i * 86400000),
-            views: Math.floor(Math.random() * 8) + 1
-          })),
-          skillMatch: Math.floor(Math.random() * 30) + 70,
+          views,
+          downloads,
+          shares,
+          applications,
+          viewHistory: Array.from({ length: 30 }, (_, i) => {
+            const date = new Date(Date.now() - (29 - i) * 86400000);
+            const dayFactor = (idHash + date.getDate() + date.getMonth()) % 6;
+            return {
+              date,
+              views: dayFactor + 1
+            };
+          }),
+          skillMatch,
           completeness: currentResume?.completionPercentage || 50,
           strength: currentResume?.isComplete ? 90 : 65,
           improvements: []
