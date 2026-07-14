@@ -108,8 +108,10 @@ const renderMarkdownContent = (text) => {
 };
 
 // ─── MESSAGE BUBBLE ───────────────────────────────────────────────────
-const MessageBubble = React.memo(({ item, onCopy, onShare }) => {
+const MessageBubble = React.memo(({ item, onCopy, onShare, isLast }) => {
   const isUser = item.role === 'user';
+  const [showActions, setShowActions] = useState(false);
+  
   return (
     <View style={[msgStyles.row, isUser ? msgStyles.rowUser : msgStyles.rowAssistant]}>
       {!isUser && (
@@ -119,6 +121,12 @@ const MessageBubble = React.memo(({ item, onCopy, onShare }) => {
             style={msgStyles.avatarImage}
             resizeMode="contain"
           />
+          {/* Floating response indicator - appears once when response is complete */}
+          {isLast && item.content && !item.isStreaming && (
+            <Animated.View style={[msgStyles.responseIndicator, msgStyles.responseComplete]}>
+              <Ionicons name="checkmark-done-circle" size={16} color="#10B981" />
+            </Animated.View>
+          )}
         </View>
       )}
       {isUser ? (
@@ -131,25 +139,31 @@ const MessageBubble = React.memo(({ item, onCopy, onShare }) => {
           <Text style={msgStyles.userText}>{item.content}</Text>
         </LinearGradient>
       ) : (
-        <View style={[msgStyles.bubble, msgStyles.bubbleAssistant]}>
-          <View>{renderMarkdownContent(item.content)}</View>
-          {item.content ? (
-            <View style={msgStyles.actions}>
-              <TouchableOpacity onPress={() => onCopy(item.content)} style={msgStyles.actionBtn}>
-                <Feather name="copy" size={13} color="#94A3B8" />
-                <Text style={msgStyles.actionText}>Copy</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => onShare(item.content)} style={msgStyles.actionBtn}>
-                <Feather name="share" size={13} color="#94A3B8" />
-                <Text style={msgStyles.actionText}>Share</Text>
-              </TouchableOpacity>
-              <View style={msgStyles.tagBadge}>
-                <Ionicons name="shield-checkmark" size={11} color="#10B981" />
-                <Text style={msgStyles.tagText}>TDC Verified Info</Text>
+        <TouchableOpacity 
+          activeOpacity={0.9}
+          onLongPress={() => setShowActions(!showActions)}
+          style={msgStyles.bubbleWrapper}
+        >
+          <View style={[msgStyles.bubble, msgStyles.bubbleAssistant]}>
+            <View>{renderMarkdownContent(item.content)}</View>
+            {(item.content && showActions) || isLast ? (
+              <View style={msgStyles.actions}>
+                <TouchableOpacity onPress={() => onCopy(item.content)} style={msgStyles.actionBtn}>
+                  <Feather name="copy" size={13} color="#94A3B8" />
+                  <Text style={msgStyles.actionText}>Copy</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => onShare(item.content)} style={msgStyles.actionBtn}>
+                  <Feather name="share" size={13} color="#94A3B8" />
+                  <Text style={msgStyles.actionText}>Share</Text>
+                </TouchableOpacity>
+                <View style={msgStyles.tagBadge}>
+                  <Ionicons name="shield-checkmark" size={11} color="#10B981" />
+                  <Text style={msgStyles.tagText}>TDC Verified Info</Text>
+                </View>
               </View>
-            </View>
-          ) : null}
-        </View>
+            ) : null}
+          </View>
+        </TouchableOpacity>
       )}
     </View>
   );
@@ -360,7 +374,12 @@ const TravelChatBot = () => {
 
     // Create placeholder for assistant response
     const assistantId = (Date.now() + 1).toString();
-    setMessages((prev) => [...prev, { id: assistantId, role: 'assistant', content: '' }]);
+    setMessages((prev) => [...prev, { 
+      id: assistantId, 
+      role: 'assistant', 
+      content: '',
+      isStreaming: true 
+    }]);
     scrollToEnd();
 
     try {
@@ -402,6 +421,11 @@ const TravelChatBot = () => {
 
             if (dataString === '[DONE]') {
               setIsStreaming(false);
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantId ? { ...m, isStreaming: false } : m
+                )
+              );
               scrollToEnd();
             } else {
               try {
@@ -418,7 +442,7 @@ const TravelChatBot = () => {
                   setMessages((prev) =>
                     prev.map((m) =>
                       m.id === assistantId
-                        ? { ...m, content: 'Sorry, something went wrong. Please try again.' }
+                        ? { ...m, content: 'Sorry, something went wrong. Please try again.', isStreaming: false }
                         : m
                     )
                   );
@@ -453,12 +477,17 @@ const TravelChatBot = () => {
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantId
-                  ? { ...m, content: 'Travel assistant is temporarily unavailable. Please try again later.' }
+                  ? { ...m, content: 'Travel assistant is temporarily unavailable. Please try again later.', isStreaming: false }
                   : m
               )
             );
           }
           setIsStreaming(false);
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, isStreaming: false } : m
+            )
+          );
           scrollToEnd();
         }
       };
@@ -467,7 +496,7 @@ const TravelChatBot = () => {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
-              ? { ...m, content: 'Network error. Please check your connection and try again.' }
+              ? { ...m, content: 'Network error. Please check your connection and try again.', isStreaming: false }
               : m
           )
         );
@@ -479,7 +508,7 @@ const TravelChatBot = () => {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantId
-            ? { ...m, content: 'Something went wrong. Please try again.' }
+            ? { ...m, content: 'Something went wrong. Please try again.', isStreaming: false }
             : m
         )
       );
@@ -488,9 +517,17 @@ const TravelChatBot = () => {
   }, [inputText, isStreaming, messages, scrollToEnd]);
 
   // ─── RENDER ───────────────────────────────────────────────────────
-  const renderItem = useCallback(({ item }) => (
-    <MessageBubble item={item} onCopy={handleCopy} onShare={handleShare} />
-  ), [handleCopy, handleShare]);
+  const renderItem = useCallback(({ item, index }) => {
+    const isLast = index === messages.length - 1 && !isStreaming;
+    return (
+      <MessageBubble 
+        item={item} 
+        onCopy={handleCopy} 
+        onShare={handleShare} 
+        isLast={isLast}
+      />
+    );
+  }, [messages.length, isStreaming, handleCopy, handleShare]);
 
   const keyExtractor = useCallback((item) => item.id, []);
 
@@ -577,6 +614,7 @@ const TravelChatBot = () => {
               style={styles.fabBareMascotImage}
               resizeMode="contain"
             />
+            <Text style={styles.fabLabel}>Travel Assist</Text>
           </TouchableOpacity>
         </Animated.View>
       )}
@@ -584,7 +622,7 @@ const TravelChatBot = () => {
       {/* ── CHAT MODAL ─────────────────────────────────────────────── */}
       <Modal visible={isOpen} animationType="none" transparent statusBarTranslucent>
         <Animated.View style={[styles.modalContainer, { transform: [{ translateY: modalSlide }] }]}>
-          <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+          <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
             <KeyboardAvoidingView
               style={styles.flex}
               behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -705,7 +743,7 @@ const TravelChatBot = () => {
                 </View>
               </View>
             </KeyboardAvoidingView>
-          </View>
+          </SafeAreaView>
         </Animated.View>
       </Modal>
     </>
@@ -724,7 +762,25 @@ const msgStyles = StyleSheet.create({
     shadowColor: '#94A3B8', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: 1,
   },
   avatarImage: { width: 38, height: 38 },
-  bubble: { maxWidth: '80%', padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 },
+  responseIndicator: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 2,
+    borderWidth: 2,
+    borderColor: '#10B981',
+  },
+  responseComplete: {
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  bubbleWrapper: { maxWidth: '80%' },
+  bubble: { padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 },
   bubbleUser: {
     borderTopLeftRadius: 20, borderBottomLeftRadius: 20, borderTopRightRadius: 20, borderBottomRightRadius: 4,
     shadowColor: '#f9c349', shadowOpacity: 0.15,
@@ -758,22 +814,50 @@ const msgStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   fabContainer: {
-    position: 'absolute', bottom: 35, right: 12, zIndex: 9999,
+    position: 'absolute', 
+    bottom: 35, 
+    right: 12, 
+    zIndex: 9999,
+    alignItems: 'center',
   },
   fabBareTouch: {
-    width: 85, height: 85, justifyContent: 'center', alignItems: 'center',
+    width: 85, 
+    height: 85, 
+    justifyContent: 'center', 
+    alignItems: 'center',
   },
   fabBareMascotImage: {
-    width: 100, height: 100,
+    width: 100, 
+    height: 100,
   },
-  modalContainer: { flex: 1, backgroundColor: '#FFF' },
-  safeArea: { flex: 1, backgroundColor: '#F5F6FA' },
+  fabLabel: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#1A1A2E',
+    marginTop: -4,
+  },
+  modalContainer: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  safeArea: { 
+    flex: 1, 
+    backgroundColor: '#F5F6FA',
+    marginTop: 0,
+    marginBottom: 0,
+  },
   
   // Header centered to 8pt Grid
   header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 10, minHeight: 64, backgroundColor: '#F5F6FA',
-    borderBottomWidth: 1, borderBottomColor: '#E8ECF0',
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    paddingHorizontal: 16, 
+    paddingVertical: 10, 
+    minHeight: 64, 
+    backgroundColor: '#F5F6FA',
+    borderBottomWidth: 1, 
+    borderBottomColor: '#E8ECF0',
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center' },
   headerIcon: {
@@ -846,6 +930,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
     gap: 6,
+    marginRight: 8,
   },
   pillChipIcon: {
     fontSize: 13.5,
@@ -857,17 +942,30 @@ const styles = StyleSheet.create({
   },
 
   inputBar: {
-    backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F1F5F9',
-    paddingHorizontal: 12, paddingVertical: 10, paddingBottom: Platform.OS === 'ios' ? 8 : 10,
+    backgroundColor: '#FFF', 
+    borderTopWidth: 1, 
+    borderTopColor: '#F1F5F9',
+    paddingHorizontal: 12, 
+    paddingVertical: 10, 
+    paddingBottom: Platform.OS === 'ios' ? 8 : 10,
   },
   inputWrap: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#F8FAFC', borderRadius: 24,
-    borderWidth: 1, borderColor: '#E2E8F0', paddingLeft: 12, paddingRight: 4,
+    flexDirection: 'row', 
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC', 
+    borderRadius: 24,
+    borderWidth: 1, 
+    borderColor: '#E2E8F0', 
+    paddingLeft: 12, 
+    paddingRight: 4,
   },
   textInput: {
-    flex: 1, fontSize: 14, color: '#334155', maxHeight: 100,
-    paddingLeft: 12, paddingRight: 8,
+    flex: 1, 
+    fontSize: 14, 
+    color: '#334155', 
+    maxHeight: 100,
+    paddingLeft: 12, 
+    paddingRight: 8,
     paddingVertical: Platform.OS === 'ios' ? 10 : 8,
   },
   sendBtn: {

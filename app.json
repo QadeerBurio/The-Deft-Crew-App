@@ -4,7 +4,7 @@
     "slug": "Testting",
     "version": "1.0.3",
     "orientation": "default",
-    "icon": "./assets/tdc.png",
+    "icon": "./assets/tdcs.png",
     "scheme": "tdcapp",
     "backgroundColor": "#f9c349",
     "userInterfaceStyle": "dark",

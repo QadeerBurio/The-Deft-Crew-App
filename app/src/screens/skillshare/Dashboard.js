@@ -16,9 +16,10 @@ import {
   Pressable,
   ScrollView,
   Platform,
-  Image
+  Image,
+  Alert
 } from 'react-native';
-import { getListings } from '../../api/api';
+import { getListings, getMyMatches } from '../../api/api';
 import { timeAgo } from '../../utils/time';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { AuthContext } from '../../context/AuthContext';
@@ -26,12 +27,20 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
 
-// Create a separate component for list items
+// Create a separate component for list items with enhanced animation
 const ListingItem = React.memo(({ item, index, navigation }) => {
   const isBarter = item.type === 'barter';
   const isJob = item.type === 'job';
   const itemFadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const bgAnim = useRef(new Animated.Value(0)).current;
+  const cardScaleAnim = useRef(new Animated.Value(1)).current;
+  const isMounted = useRef(true);
+  
+  // Check if listing has offers or matches
+  const hasOffers = item.offerCount > 0 || item._offerCount > 0;
+  const hasMatch = item.status === 'matched';
+  const offerCount = item.offerCount || item._offerCount || 0;
   
   useEffect(() => {
     Animated.timing(itemFadeAnim, {
@@ -40,24 +49,50 @@ const ListingItem = React.memo(({ item, index, navigation }) => {
       delay: index * 80,
       useNativeDriver: true,
     }).start();
+
+    return () => {
+      isMounted.current = false;
+      itemFadeAnim.stopAnimation();
+      cardScaleAnim.stopAnimation();
+      bgAnim.stopAnimation();
+    };
   }, []);
 
   const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.97,
-      tension: 150,
-      friction: 10,
-      useNativeDriver: true,
-    }).start();
+    if (!isMounted.current) return;
+    
+    // Scale down animation on press
+    Animated.parallel([
+      Animated.spring(cardScaleAnim, {
+        toValue: 0.97,
+        tension: 150,
+        friction: 10,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bgAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: false,
+      })
+    ]).start();
   };
 
   const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      tension: 150,
-      friction: 10,
-      useNativeDriver: true,
-    }).start();
+    if (!isMounted.current) return;
+    
+    Animated.parallel([
+      Animated.spring(cardScaleAnim, {
+        toValue: 1,
+        tension: 150,
+        friction: 10,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bgAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: false,
+      })
+    ]).start();
   };
 
   const getTypeIcon = () => {
@@ -78,13 +113,19 @@ const ListingItem = React.memo(({ item, index, navigation }) => {
     return ['#34C759', '#28A745'];
   };
 
+  // Background color interpolation for press effect
+  const backgroundColor = bgAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['#FFFFFF', '#F5F5F5']
+  });
+
   return (
     <Animated.View 
       style={[
         styles.cardWrapper,
         {
           opacity: itemFadeAnim,
-          transform: [{ scale: scaleAnim }]
+          transform: [{ scale: cardScaleAnim }]
         }
       ]}
     >
@@ -95,104 +136,117 @@ const ListingItem = React.memo(({ item, index, navigation }) => {
         onPressOut={handlePressOut}
         activeOpacity={1}
       >
-        <LinearGradient
-          colors={['#FFFFFF', '#F8F9FA']}
-          style={styles.cardGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={styles.cardContent}>
-            <View style={styles.cardHeader}>
-              <View style={styles.cardHeaderLeft}>
-                <LinearGradient
-                  colors={getTypeGradient()}
-                  style={styles.typeBadge}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Ionicons name={getTypeIcon()} size={12} color="#fff" />
-                  <Text style={styles.typeBadgeText}>
-                    {isBarter ? 'Barter' : isJob ? 'Job' : 'Paid'}
-                  </Text>
-                </LinearGradient>
-              </View>
-              <View style={styles.timeContainer}>
-                <Ionicons name="time-outline" size={12} color="#C7C7CC" />
-                <Text style={styles.timeText}>{timeAgo(item.createdAt)}</Text>
-              </View>
-            </View>
-
-            <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
-
-            <View style={styles.cardDetails}>
-              {isJob ? (
-                <>
-                  <View style={styles.detailItem}>
-                    <View style={styles.detailIconCircle}>
-                      <Ionicons name="construct-outline" size={13} color="#f9c349" />
-                    </View>
-                    <Text style={styles.detailText}>{item.skillNeeded?.skillName || 'Skill needed'}</Text>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <View style={styles.detailIconCircle}>
-                      <Ionicons name="cash-outline" size={13} color="#f9c349" />
-                    </View>
-                    <Text style={styles.detailText}>${item.budget}</Text>
-                  </View>
-                </>
-              ) : (
-                <>
-                  <View style={styles.detailItem}>
-                    <View style={styles.detailIconCircle}>
-                      <Ionicons name="star-outline" size={13} color="#f9c349" />
-                    </View>
-                    <Text style={styles.detailText}>{item.skillOffered?.skillName || 'Skill offered'}</Text>
-                  </View>
-                  {isBarter ? (
-                    <View style={styles.detailItem}>
-                      <View style={styles.detailIconCircle}>
-                        <Ionicons name="swap-horizontal-outline" size={13} color="#f9c349" />
-                      </View>
-                      <Text style={styles.detailText}>{item.skillWanted?.skillName || 'Skill wanted'}</Text>
-                    </View>
-                  ) : (
-                    <View style={styles.detailItem}>
-                      <View style={styles.detailIconCircle}>
-                        <Ionicons name="time-outline" size={13} color="#f9c349" />
-                      </View>
-                      <Text style={styles.detailText}>${item.price} • {item.duration}</Text>
-                    </View>
-                  )}
-                </>
+        <Animated.View style={[styles.cardContent, { backgroundColor }]}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderLeft}>
+              <LinearGradient
+                colors={getTypeGradient()}
+                style={styles.typeBadge}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Ionicons name={getTypeIcon()} size={12} color="#fff" />
+                <Text style={styles.typeBadgeText}>
+                  {isBarter ? 'Barter' : isJob ? 'Job' : 'Paid'}
+                </Text>
+              </LinearGradient>
+              
+              {/* Offer/Match Status Badge */}
+              {hasMatch && (
+                <View style={styles.matchBadge}>
+                  <Ionicons name="checkmark-circle" size={12} color="#34C759" />
+                  <Text style={styles.matchBadgeText}>Matched</Text>
+                </View>
+              )}
+              {hasOffers && !hasMatch && (
+                <View style={styles.offerBadge}>
+                  <Ionicons name="mail-outline" size={12} color="#f9c349" />
+                  <Text style={styles.offerBadgeText}>{offerCount} offer{offerCount > 1 ? 's' : ''}</Text>
+                </View>
               )}
             </View>
+            <View style={styles.timeContainer}>
+              <Ionicons name="time-outline" size={12} color="#C7C7CC" />
+              <Text style={styles.timeText}>{timeAgo(item.createdAt)}</Text>
+            </View>
+          </View>
 
-            <View style={styles.cardFooter}>
-              <View style={styles.footerLeft}>
-                <View style={[styles.statusDot, { backgroundColor: '#34C759' }]} />
-                <Text style={styles.footerText}>Available</Text>
-              </View>
-              <View style={styles.footerAction}>
-                <Text style={styles.footerActionText}>View Details</Text>
-                <View style={styles.footerArrowCircle}>
-                  <Ionicons name="arrow-forward" size={12} color="#fff" />
+          <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
+
+          <View style={styles.cardDetails}>
+            {isJob ? (
+              <>
+                <View style={styles.detailItem}>
+                  <View style={styles.detailIconCircle}>
+                    <Ionicons name="construct-outline" size={13} color="#f9c349" />
+                  </View>
+                  <Text style={styles.detailText}>{item.skillNeeded?.skillName || 'Skill needed'}</Text>
                 </View>
+                <View style={styles.detailItem}>
+                  <View style={styles.detailIconCircle}>
+                    <Ionicons name="cash-outline" size={13} color="#f9c349" />
+                  </View>
+                  <Text style={styles.detailText}>${item.budget}</Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.detailItem}>
+                  <View style={styles.detailIconCircle}>
+                    <Ionicons name="star-outline" size={13} color="#f9c349" />
+                  </View>
+                  <Text style={styles.detailText}>{item.skillOffered?.skillName || 'Skill offered'}</Text>
+                </View>
+                {isBarter ? (
+                  <View style={styles.detailItem}>
+                    <View style={styles.detailIconCircle}>
+                      <Ionicons name="swap-horizontal-outline" size={13} color="#f9c349" />
+                    </View>
+                    <Text style={styles.detailText}>{item.skillWanted?.skillName || 'Skill wanted'}</Text>
+                  </View>
+                ) : (
+                  <View style={styles.detailItem}>
+                    <View style={styles.detailIconCircle}>
+                      <Ionicons name="time-outline" size={13} color="#f9c349" />
+                    </View>
+                    <Text style={styles.detailText}>${item.price} • {item.duration}</Text>
+                  </View>
+                )}
+              </>
+            )}
+          </View>
+
+          <View style={styles.cardFooter}>
+            <View style={styles.footerLeft}>
+              <View style={[styles.statusDot, { 
+                backgroundColor: hasMatch ? '#34C759' : hasOffers ? '#f9c349' : '#34C759' 
+              }]} />
+              <Text style={styles.footerText}>
+                {hasMatch ? 'Matched' : hasOffers ? `${offerCount} offer${offerCount > 1 ? 's' : ''}` : 'Available'}
+              </Text>
+            </View>
+            <View style={styles.footerAction}>
+              <Text style={styles.footerActionText}>View Details</Text>
+              <View style={styles.footerArrowCircle}>
+                <Ionicons name="arrow-forward" size={12} color="#fff" />
               </View>
             </View>
           </View>
-        </LinearGradient>
+        </Animated.View>
       </TouchableOpacity>
     </Animated.View>
   );
 });
 
 export default function Dashboard({ navigation }) {
-  const { user, isGuest, logout } = useContext(AuthContext);
+  const { user, isGuest, logout, getCurrentUserId } = useContext(AuthContext);
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
+  const [matches, setMatches] = useState([]);
+  const [matchedListings, setMatchedListings] = useState([]);
   
   const [activeFilter, setActiveFilter] = useState('All');
   const [page, setPage] = useState(1);
@@ -239,7 +293,27 @@ export default function Dashboard({ navigation }) {
         useNativeDriver: true,
       }),
     ]).start();
+    
+    fetchMatches();
   }, []);
+
+  const fetchMatches = async () => {
+    try {
+      const userId = getCurrentUserId();
+      if (!userId || isGuest) return;
+      
+      const data = await getMyMatches();
+      setMatches(data.matches || []);
+      
+      // Extract listing IDs from matches
+      const matchedIds = (data.matches || [])
+        .filter(m => m.listingId)
+        .map(m => m.listingId._id || m.listingId);
+      setMatchedListings(matchedIds);
+    } catch (err) {
+      console.log('Error fetching matches:', err);
+    }
+  };
 
   const fetchListings = async (isRefresh = false, currentFilter = activeFilter) => {
     if (isFetchingRef.current) return;
@@ -260,17 +334,26 @@ export default function Dashboard({ navigation }) {
         limit: 10 
       });
       
-      const newData = res || [];
+      // Add offer count to each listing
+      const listingsWithOffers = (res || []).map(listing => {
+        // Check if this listing has a match
+        const isMatched = matchedListings.includes(listing._id);
+        return {
+          ...listing,
+          status: isMatched ? 'matched' : listing.status,
+          _offerCount: listing.offerCount || 0,
+        };
+      });
       
       if (isRefresh) {
-        setListings(newData);
+        setListings(listingsWithOffers);
       } else {
-        const newIds = new Set(newData.map(item => item._id));
+        const newIds = new Set(listingsWithOffers.map(item => item._id));
         const filteredPrev = listings.filter(item => !newIds.has(item._id));
-        setListings([...filteredPrev, ...newData]);
+        setListings([...filteredPrev, ...listingsWithOffers]);
       }
       
-      if (newData.length < 10) {
+      if (listingsWithOffers.length < 10) {
         setHasMore(false);
       } else {
         setPage(fetchPage + 1);
@@ -290,10 +373,11 @@ export default function Dashboard({ navigation }) {
   useEffect(() => {
     setLoading(true);
     fetchListings(true);
-  }, [activeFilter]);
+  }, [activeFilter, matchedListings]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
+    fetchMatches();
     fetchListings(true);
   }, [activeFilter]);
 
@@ -330,6 +414,53 @@ export default function Dashboard({ navigation }) {
     }).start(() => {
       setProfileMenuVisible(false);
     });
+  };
+
+  // Navigate to My Chats
+  const goToMyChats = () => {
+    closeProfileMenu();
+    navigation.navigate('MyMatches');
+  };
+
+  // Navigate to My Offers
+  const goToMyOffers = () => {
+    closeProfileMenu();
+    navigation.navigate('MyOffers');
+  };
+
+  // Navigate to My Listings
+  const goToMyListings = () => {
+    closeProfileMenu();
+    navigation.navigate('MyListings');
+  };
+
+  // Navigate to My Stats
+  const goToMyStats = () => {
+    closeProfileMenu();
+    navigation.navigate('SkillProfile');
+  };
+
+  // Navigate to My Activity
+  const goToMyActivity = () => {
+    closeProfileMenu();
+    navigation.navigate('Activity');
+  };
+
+  // Handle Logout
+  const handleLogout = () => {
+    closeProfileMenu();
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Logout', 
+          style: 'destructive',
+          onPress: logout 
+        }
+      ]
+    );
   };
 
   const renderFilterChip = (filter) => {
@@ -443,7 +574,7 @@ export default function Dashboard({ navigation }) {
           </View>
           <View style={styles.statsCard}>
             <LinearGradient
-              colors={['#000000', '#000000']}
+              colors={['#000000', '#1a1a1a']}
               style={styles.statsCardGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -471,83 +602,122 @@ export default function Dashboard({ navigation }) {
     </Animated.View>
   );
 
-  const renderProfileMenu = () => (
-    <Modal
-      animationType="none"
-      transparent={true}
-      visible={profileMenuVisible}
-      onRequestClose={closeProfileMenu}
-    >
-      <Pressable style={styles.menuOverlay} onPress={closeProfileMenu}>
-        <Animated.View 
-          style={[
-            styles.menuContainer,
-            {
-              opacity: menuAnim,
-              transform: [
-                {
-                  scale: menuAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.9, 1]
-                  })
-                },
-                {
-                  translateY: menuAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [-10, 0]
-                  })
-                }
-              ]
-            }
-          ]}
-        >
-          <LinearGradient
-            colors={['#FFFFFF', '#FFFDF5']}
-            style={styles.menuContent}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+  const renderProfileMenu = () => {
+    const hasMatches = matches.length > 0;
+    
+    return (
+      <Modal
+        animationType="none"
+        transparent={true}
+        visible={profileMenuVisible}
+        onRequestClose={closeProfileMenu}
+      >
+        <Pressable style={styles.menuOverlay} onPress={closeProfileMenu}>
+          <Animated.View 
+            style={[
+              styles.menuContainer,
+              {
+                opacity: menuAnim,
+                transform: [
+                  {
+                    scale: menuAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.9, 1]
+                    })
+                  },
+                  {
+                    translateY: menuAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-10, 0]
+                    })
+                  }
+                ]
+              }
+            ]}
           >
-           
-
-           
-
-            <TouchableOpacity 
-              style={styles.menuItem}
-              onPress={() => {
-                closeProfileMenu();
-                navigation.navigate('SkillProfile');
-              }}
+            <LinearGradient
+              colors={['#FFFFFF', '#FFFDF5']}
+              style={styles.menuContent}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
             >
-              <View style={[styles.menuIconContainer, { backgroundColor: '#f9c34910' }]}>
-                <Ionicons name="person-outline" size={20} color="#f9c349" />
+              {/* Profile Header */}
+              <View style={styles.menuHeader}>
+                
+                <View style={styles.menuUserInfo}>
+                  <Text style={styles.menuUserName}>{currentUserName}</Text>
+                
+                </View>
               </View>
-              <Text style={styles.menuItemText}>My Stats</Text>
-              <Ionicons name="chevron-forward-outline" size={18} color="#C7C7CC" style={styles.menuArrow} />
-            </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.menuItem}
-              onPress={() => {
-                closeProfileMenu();
-                navigation.navigate('Activity');
-              }}
-            >
-              <View style={[styles.menuIconContainer, { backgroundColor: '#4A90D910' }]}>
-                <Ionicons name="time-outline" size={20} color="#4A90D9" />
-              </View>
-              <Text style={styles.menuItemText}>My Activity</Text>
-              <Ionicons name="chevron-forward-outline" size={18} color="#C7C7CC" style={styles.menuArrow} />
-            </TouchableOpacity>
+              <View style={styles.menuDivider} />
+
+              {/* My Chats - with match count badge */}
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={goToMyChats}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.menuIconContainer, { backgroundColor: '#34C75915' }]}>
+                  <Ionicons name="chatbubbles-outline" size={20} color="#34C759" />
+                </View>
+                <Text style={styles.menuItemText}>My Chats</Text>
+                {hasMatches && (
+                  <View style={styles.matchCountBadge}>
+                    <Text style={styles.matchCountText}>{matches.length}</Text>
+                  </View>
+                )}
+                <Ionicons name="chevron-forward-outline" size={18} color="#C7C7CC" style={styles.menuArrow} />
+              </TouchableOpacity>
+
+              {/* My Offers */}
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={goToMyOffers}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.menuIconContainer, { backgroundColor: '#f9c34915' }]}>
+                  <Ionicons name="git-pull-request-outline" size={20} color="#f9c349" />
+                </View>
+                <Text style={styles.menuItemText}>My Offers</Text>
+                <Ionicons name="chevron-forward-outline" size={18} color="#C7C7CC" style={styles.menuArrow} />
+              </TouchableOpacity>
+
+              {/* My Listings - NEW */}
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={goToMyListings}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.menuIconContainer, { backgroundColor: '#4A90D915' }]}>
+                  <Ionicons name="list-outline" size={20} color="#4A90D9" />
+                </View>
+                <Text style={styles.menuItemText}>My Listings</Text>
+                <Ionicons name="chevron-forward-outline" size={18} color="#C7C7CC" style={styles.menuArrow} />
+              </TouchableOpacity>
+
+             
+
+              {/* My Activity */}
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={goToMyActivity}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.menuIconContainer, { backgroundColor: '#8E8E9315' }]}>
+                  <Ionicons name="time-outline" size={20} color="#8E8E93" />
+                </View>
+                <Text style={styles.menuItemText}>My Activity</Text>
+                <Ionicons name="chevron-forward-outline" size={18} color="#C7C7CC" style={styles.menuArrow} />
+              </TouchableOpacity>
 
             
-
-
-           
-          </LinearGradient>
-        </Animated.View>
-      </Pressable>
-    </Modal>
-  );
+            </LinearGradient>
+          </Animated.View>
+        </Pressable>
+      </Modal>
+    );
+  };
 
   if (error && listings.length === 0) {
     return (
@@ -884,9 +1054,6 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
     overflow: 'hidden',
     ...Platform.select({
       ios: {
@@ -900,11 +1067,12 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  cardGradient: {
-    borderRadius: 16,
-  },
   cardContent: {
     padding: 16,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -915,6 +1083,7 @@ const styles = StyleSheet.create({
   cardHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
   },
   typeBadge: {
     flexDirection: 'row',
@@ -929,6 +1098,38 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.3,
+  },
+  matchBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#34C75915',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#34C75930',
+  },
+  matchBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#34C759',
+  },
+  offerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9c34915',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#f9c34930',
+  },
+  offerBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#f9c349',
   },
   timeContainer: {
     flexDirection: 'row',
@@ -988,6 +1189,7 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 12,
     color: '#8E8E93',
+    fontWeight: '500',
   },
   footerAction: {
     flexDirection: 'row',
@@ -1095,7 +1297,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: Platform.OS === 'ios' ? 85 : 80,
     right: 16,
-    width: 180,
+    width: 220,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     ...Platform.select({
@@ -1123,35 +1325,17 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 12,
   },
-  menuAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: 'hidden',
-  },
-  menuAvatarGradient: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  menuAvatarText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  menuUserInfo: {
-    flex: 1,
-  },
+
+ 
+  
+  
+  
   menuUserName: {
     fontSize: 14,
     fontWeight: '700',
     color: '#1C1C1E',
   },
-  menuUserEmail: {
-    fontSize: 11,
-    color: '#8E8E93',
-    marginTop: 1,
-  },
+ 
   menuDivider: {
     height: 1,
     backgroundColor: '#F0F0F0',
@@ -1161,7 +1345,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   menuIconContainer: {
     width: 36,
@@ -1180,13 +1364,20 @@ const styles = StyleSheet.create({
   menuArrow: {
     marginLeft: 'auto',
   },
-  menuLogoutItem: {
-    marginTop: 2,
+ 
+ 
+
+  matchCountBadge: {
+    backgroundColor: '#f9c349',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    minWidth: 20,
+    alignItems: 'center',
   },
-  menuLogoutText: {
-    color: '#FF3B30',
-  },
-  menuLogoutIcon: {
-    backgroundColor: 'rgba(255,59,48,0.1)',
+  matchCountText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

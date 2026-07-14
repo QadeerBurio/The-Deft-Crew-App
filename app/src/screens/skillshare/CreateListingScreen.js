@@ -183,15 +183,32 @@ export default function CreateListingScreen({ route, navigation }) {
 
       await createListing(payload);
       
+      // Show a brief success message and navigate automatically
       Alert.alert(
         "🎉 Listing Posted!",
         "Your listing is now live and ready for others to see.",
-        [{ text: "OK", onPress: () => navigation.navigate('Dashboard', { refreshTimestamp: Date.now() }) }]
+        [
+          { 
+            text: "OK", 
+            onPress: () => {
+              // Reset navigation stack and go to Dashboard
+              navigation.reset({
+                index: 0,
+                routes: [
+                  { 
+                    name: 'Dashboard', 
+                    params: { refreshTimestamp: Date.now() } 
+                  }
+                ],
+              });
+            }
+          }
+        ],
+        { cancelable: false }
       );
     } catch (err) {
       const serverError = err.response?.data?.error || err.message || 'An unexpected error occurred';
       setError(serverError);
-    } finally {
       setSubmitting(false);
     }
   };
@@ -571,7 +588,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
-    marginTop:34
+    marginTop: 34,
   },
   backButton: {
     width: 40,

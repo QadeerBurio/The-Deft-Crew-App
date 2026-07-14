@@ -1,3 +1,4 @@
+// screens/ManageOffersScreen.js
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import {
   View,
@@ -8,8 +9,10 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
-  SafeAreaView
+  SafeAreaView,
+  StatusBar
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { getOffersForListing, updateOfferStatus } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
 import { timeAgo } from '../../utils/time';
@@ -26,10 +29,18 @@ export default function ManageOffersScreen({ route, navigation }) {
   const fetchOffers = useCallback(async () => {
     try {
       setError(null);
+      console.log('Fetching offers for listing:', id);
       const data = await getOffersForListing(id);
+      console.log('Offers fetched:', data.offers?.length || 0);
       setOffers(data.offers || []);
     } catch (err) {
+      console.error('Error fetching offers:', err);
       setError(err.response?.data?.error || err.message || 'Failed to load offers');
+      
+      // Show more detailed error for debugging
+      if (err.response?.data?.debug) {
+        console.log('Debug info:', err.response.data.debug);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -46,7 +57,6 @@ export default function ManageOffersScreen({ route, navigation }) {
   };
 
   const handleOfferAction = async (offerId, action) => {
-    // Map the action to the correct status value
     const statusMap = {
       'accept': 'accepted',
       'reject': 'rejected'
@@ -65,7 +75,6 @@ export default function ManageOffersScreen({ route, navigation }) {
           style: action === 'accept' ? 'default' : 'destructive',
           onPress: async () => {
             try {
-              // Send the correct status value
               const result = await updateOfferStatus(offerId, status);
               
               Alert.alert(
@@ -142,13 +151,17 @@ export default function ManageOffersScreen({ route, navigation }) {
             <TouchableOpacity
               style={[styles.actionButton, styles.acceptButton]}
               onPress={() => handleOfferAction(item._id, 'accept')}
+              activeOpacity={0.7}
             >
+              <Ionicons name="checkmark-outline" size={18} color="#FFFFFF" />
               <Text style={styles.acceptButtonText}>Accept</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, styles.rejectButton]}
               onPress={() => handleOfferAction(item._id, 'reject')}
+              activeOpacity={0.7}
             >
+              <Ionicons name="close-outline" size={18} color="#FF3B30" />
               <Text style={styles.rejectButtonText}>Reject</Text>
             </TouchableOpacity>
           </View>
@@ -160,7 +173,7 @@ export default function ManageOffersScreen({ route, navigation }) {
   if (loading && !refreshing) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#f9c349" />
       </View>
     );
   }
@@ -168,8 +181,9 @@ export default function ManageOffersScreen({ route, navigation }) {
   if (error) {
     return (
       <View style={styles.centerContainer}>
+        <Ionicons name="alert-circle-outline" size={48} color="#FF3B30" />
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={fetchOffers}>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchOffers} activeOpacity={0.7}>
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -178,10 +192,26 @@ export default function ManageOffersScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      
       <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="chevron-back" size={24} color="#1C1C1E" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Manage Offers</Text>
+        <View style={styles.headerPlaceholder} />
+      </View>
+
+      <View style={styles.statsContainer}>
         <Text style={styles.headerSubtitle}>
           {offers.length} offer{offers.length !== 1 ? 's' : ''}
+        </Text>
+        <Text style={styles.statsDetail}>
+          {offers.filter(o => o.status === 'pending').length} pending
         </Text>
       </View>
 
@@ -195,6 +225,7 @@ export default function ManageOffersScreen({ route, navigation }) {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
+            <Ionicons name="people-outline" size={64} color="#C7C7CC" />
             <Text style={styles.emptyText}>No offers yet</Text>
             <Text style={styles.emptySubtext}>Check back later for offers on your listing</Text>
           </View>
@@ -217,21 +248,52 @@ const styles = StyleSheet.create({
     backgroundColor: '#F2F2F7',
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
   },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F2F2F7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#1C1C1E',
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerPlaceholder: {
+    width: 40,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
   headerSubtitle: {
     fontSize: 14,
+    fontWeight: '600',
     color: '#8E8E93',
-    marginTop: 2,
+  },
+  statsDetail: {
+    fontSize: 14,
+    color: '#f9c349',
+    fontWeight: '600',
   },
   listContent: {
     padding: 16,
@@ -240,7 +302,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -310,6 +372,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
   },
   acceptButton: {
     backgroundColor: '#34C759',
@@ -330,13 +395,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   emptyContainer: {
-    padding: 40,
+    padding: 60,
     alignItems: 'center',
   },
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#8E8E93',
+    marginTop: 16,
   },
   emptySubtext: {
     fontSize: 14,
@@ -347,13 +413,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#FF3B30',
     textAlign: 'center',
-    marginBottom: 16,
+    marginVertical: 12,
   },
   retryButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#f9c349',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
+    marginTop: 8,
   },
   retryButtonText: {
     color: '#FFFFFF',

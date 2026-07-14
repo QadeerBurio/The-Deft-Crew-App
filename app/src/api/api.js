@@ -9,7 +9,7 @@ const getBaseURL = () => {
     const manifest = Constants.expoConfig || Constants.manifest || {};
     const hostUri = manifest.hostUri;
     const devIp = hostUri ? hostUri.split(':')[0] : '192.168.18.93';
-    return `http://${devIp}:5000/api`;
+    return `https://the-deft-crew-production.up.railway.app/api`;
   }
   return 'https://the-deft-crew-production.up.railway.app/api';
 };
@@ -513,15 +513,25 @@ export const createSkillOffer = async (payload) => {
   }
 };
 
+// In api/api.js - Update the getOffersForListing function
+
 /**
  * Get all offers for a listing (listing owner only)
  * @param {string} listingId
  */
 export const getOffersForListing = async (listingId) => {
   try {
+    console.log('Fetching offers for listing:', listingId);
     const response = await api.get(`/skill-offers/listing/${listingId}`);
+    console.log('Offers response:', response.data);
     return response.data;
   } catch (error) {
+    console.error('Error in getOffersForListing:', error);
+    // Log more details about the error
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+    }
     throw error;
   }
 };

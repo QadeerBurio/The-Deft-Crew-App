@@ -26,7 +26,7 @@ import {
   FontAwesome5,
   FontAwesome,
 } from '@expo/vector-icons';
-import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
+import { getFocusedRouteNameFromRoute, useNavigation, CommonActions } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 
 import { AuthContext } from '../context/AuthContext';
@@ -93,6 +93,8 @@ import InquiryChatScreen from '../screens/skillshare/InquiryChatScreen';
 import SkillProfile from '../screens/skillshare/SkillProfile';
 import ActivityScreen from '../screens/skillshare/ActivityScreen';
 import MyInquiriesScreen from '../screens/skillshare/MyInquiryScreen';
+import MyMatches from '../screens/skillshare/MyMatches';
+import ChatMatch from '../screens/skillshare/ChatMatch';
 
 const { width } = Dimensions.get('window');
 const Drawer = createDrawerNavigator();
@@ -104,6 +106,8 @@ const DRAWER_ITEMS = [
     label: 'Home',
     icon: (size) => <Ionicons name="home-outline" color="#f9c349" size={size + 5} />,
     route: 'HomeTabs',
+    // Add this to reset navigation when going home
+    resetNavigation: true,
   },
   {
     label: 'Privilege Benefits',
@@ -274,6 +278,29 @@ function CustomDrawerContent(props) {
     ]);
   };
 
+  const handleNavigation = (route, resetNavigation = false) => {
+    props.navigation.closeDrawer();
+    setTimeout(() => {
+      if (resetNavigation) {
+        // Reset the navigation stack to go to HomeTabs with fresh state
+        props.navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [
+              { 
+                name: route,
+                // Pass params to ensure HomeTabs resets properly
+                params: { reset: Date.now() }
+              },
+            ],
+          })
+        );
+      } else {
+        props.navigation.navigate(route);
+      }
+    }, 300);
+  };
+
   return (
     <SafeAreaView style={styles.drawerContainer} edges={['top', 'bottom']}>
       <DrawerContentScrollView
@@ -336,7 +363,7 @@ function CustomDrawerContent(props) {
                     openWhatsApp();
                     return;
                   }
-                  props.navigation.navigate(item.route);
+                  handleNavigation(item.route, item.resetNavigation || false);
                 }}
               />
             );
@@ -713,6 +740,8 @@ function DashboardStackNavigator() {
       <Stack.Screen name="SkillProfile" component={SkillProfile} />
       <Stack.Screen name="Activity" component={ActivityScreen} />
       <Stack.Screen name="MyInquiries" component={MyInquiriesScreen} />
+      <Stack.Screen name="MyMatches" component={MyMatches} />
+      <Stack.Screen name="ChatMatch" component={ChatMatch} />
     </Stack.Navigator>
   );
 }
@@ -764,7 +793,13 @@ export default function DrawerNavigator() {
           }),
         })}
       >
-        <Drawer.Screen name="HomeTabs">
+        <Drawer.Screen 
+          name="HomeTabs" 
+          options={{
+            // This ensures HomeTabs always mounts fresh
+            unmountOnBlur: false,
+          }}
+        >
           {(props) => (
             <AnimatedScreenWrapper>
               <TabNavigator {...props} />

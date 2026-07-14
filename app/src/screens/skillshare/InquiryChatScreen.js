@@ -24,7 +24,7 @@ import { getConversationMessages, markMessagesRead } from '../../api/api';
 import { timeAgo } from '../../utils/time';
 
 const { width, height } = Dimensions.get('window');
-const SOCKET_URL = __DEV__ ? 'http://192.168.18.93:5000' : 'https://the-deft-crew-production.up.railway.app';
+const SOCKET_URL = __DEV__ ? 'https://the-deft-crew-production.up.railway.app' : 'https://the-deft-crew-production.up.railway.app';
 
 // Message Bubble Component with animations
 const MessageBubble = React.memo(({ item, isOwn, timeAgo }) => {

@@ -31,7 +31,7 @@ import GuestGuard from "./GuestGuard";
 const { width, height } = Dimensions.get("window");
 
 const getBaseURL = () => {
-  if (__DEV__) return "http://192.168.18.128:5000/api";
+  if (__DEV__) return "https://the-deft-crew-production.up.railway.app/api";
   return "https://the-deft-crew-production.up.railway.app/api";
 };
 const API_URL = `${getBaseURL()}/jobs`;
