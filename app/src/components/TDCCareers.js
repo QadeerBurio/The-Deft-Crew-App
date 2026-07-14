@@ -337,6 +337,27 @@ const TDCCareers = ({ navigation }) => {
       const result = await DocumentPicker.getDocumentAsync({ type: ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"], copyToCacheDirectory: true });
       if (result.assets?.length > 0) {
         const file = result.assets[0];
+
+        // Client-side validation: check file format and size
+        const allowedExtensions = ['pdf', 'doc', 'docx'];
+        const fileExt = file.name?.split('.').pop()?.toLowerCase();
+
+        if (!allowedExtensions.includes(fileExt)) {
+          Alert.alert(
+            'Unsupported Format ⚠️',
+            'Only PDF (.pdf), Word (.doc), and Word OpenXML (.docx) formats are supported.'
+          );
+          return;
+        }
+
+        if (file.size && file.size > 10 * 1024 * 1024) {
+          Alert.alert(
+            'File Too Large ⚠️',
+            'The selected file exceeds the 10MB limit. Please upload a smaller document.'
+          );
+          return;
+        }
+
         setSelectedResume({ uri: file.uri, name: file.name, mimeType: file.mimeType, size: file.size });
         if (validationErrors.resume) setValidationErrors(prev => { const u = { ...prev }; delete u.resume; return u; });
       }

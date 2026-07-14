@@ -115,7 +115,7 @@ export const CAREER_VERSION_TAGS = [
  * @param {{ jobId?, jobDescription? }} payload
  */
 export const tailorResume = async (resumeId, payload) => {
-  const response = await api.post(`/resume/${resumeId}/tailor`, payload);
+  const response = await api.post(`/resume/${resumeId}/tailor`, payload, { timeout: 60000 });
   return response.data;
 };
 

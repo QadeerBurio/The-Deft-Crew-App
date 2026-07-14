@@ -904,14 +904,39 @@ const Career = ({ navigation }) => {
   const pickResume = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'], copyToCacheDirectory: true });
+      
+      let file = null;
       if (result.assets && result.assets.length > 0) {
-        const file = result.assets[0];
-        setSelectedResume({ uri: file.uri, name: file.name, mimeType: file.mimeType, size: file.size });
+        file = result.assets[0];
+      } else if (result.type === 'success') {
+        file = result;
+      }
+
+      if (file) {
+        // Client-side validation: check file format and size
+        const allowedExtensions = ['pdf', 'doc', 'docx'];
+        const fileExt = file.name?.split('.').pop()?.toLowerCase();
+
+        if (!allowedExtensions.includes(fileExt)) {
+          Alert.alert(
+            'Unsupported Format ⚠️',
+            'Only PDF (.pdf), Word (.doc), and Word OpenXML (.docx) formats are supported.'
+          );
+          return;
+        }
+
+        if (file.size && file.size > 10 * 1024 * 1024) {
+          Alert.alert(
+            'File Too Large ⚠️',
+            'The selected file exceeds the 10MB limit. Please upload a smaller document.'
+          );
+          return;
+        }
+
+        setSelectedResume({ uri: file.uri, name: file.name, mimeType: file.mimeType || file.type, size: file.size });
         if (validationErrors.resume) {
           setValidationErrors(prev => { const u = { ...prev }; delete u.resume; return u; });
         }
-      } else if (result.type === 'success') {
-        setSelectedResume({ uri: result.uri, name: result.name, mimeType: result.mimeType, size: result.size });
       }
     } catch (err) { Alert.alert("Error", "Failed to pick resume."); }
   };

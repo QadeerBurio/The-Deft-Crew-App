@@ -46,13 +46,35 @@ const EnhanceCareer = () => {
         copyToCacheDirectory: true,
       });
 
-      if (result.type === 'success') {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const pickedFile = result.assets[0];
+
+        // Client-side validation: check file format and size
+        const allowedExtensions = ['pdf', 'doc', 'docx'];
+        const fileExt = pickedFile.name?.split('.').pop()?.toLowerCase();
+
+        if (!allowedExtensions.includes(fileExt)) {
+          Alert.alert(
+            'Unsupported Format ⚠️',
+            'Only PDF (.pdf), Word (.doc), and Word OpenXML (.docx) formats are supported.'
+          );
+          return;
+        }
+
+        if (pickedFile.size && pickedFile.size > 10 * 1024 * 1024) {
+          Alert.alert(
+            'File Too Large ⚠️',
+            'The selected file exceeds the 10MB limit. Please upload a smaller document.'
+          );
+          return;
+        }
+
         setFormData(prev => ({
           ...prev,
           resume: {
-            uri: result.uri,
-            name: result.name,
-            type: result.mimeType || 'application/pdf',
+            uri: pickedFile.uri,
+            name: pickedFile.name,
+            type: pickedFile.mimeType || 'application/pdf',
           }
         }));
         Alert.alert('✅ Success', 'Resume uploaded successfully');

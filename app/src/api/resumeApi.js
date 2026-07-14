@@ -2,31 +2,32 @@ import api from './api';
 import { memoryCache } from './api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import * as FileSystem from 'expo-file-system';
 
 export const resumeApi = {
   // Create new resume
   createResume: async (resumeData) => {
     try {
       const cleanData = { ...resumeData };
-      
+
       // Initialize empty objects if not present
       if (!cleanData.personalInfo) {
         cleanData.personalInfo = {};
       }
-      
+
       // Ensure all personalInfo fields exist
       const personalInfoFields = [
-        'firstName', 'lastName', 'email', 'phone', 'address', 
-        'city', 'state', 'country', 'postalCode', 'linkedin', 
+        'firstName', 'lastName', 'email', 'phone', 'address',
+        'city', 'state', 'country', 'postalCode', 'linkedin',
         'github', 'portfolio'
       ];
-      
+
       personalInfoFields.forEach(field => {
         if (!cleanData.personalInfo[field]) {
           cleanData.personalInfo[field] = '';
         }
       });
-      
+
       // Ensure professionalSummary has required fields
       if (!cleanData.professionalSummary) {
         cleanData.professionalSummary = {
@@ -35,7 +36,7 @@ export const resumeApi = {
           experienceLevel: 'Mid Level'
         };
       }
-      
+
       // Ensure targetJob has required fields
       if (!cleanData.targetJob) {
         cleanData.targetJob = {
@@ -44,7 +45,7 @@ export const resumeApi = {
           jobType: 'Full-time'
         };
       }
-      
+
       // Clean arrays
       const arrayFields = ['education', 'skills', 'workExperience', 'certifications', 'projects', 'languages', 'references', 'targetJobs'];
       arrayFields.forEach(field => {
@@ -52,7 +53,7 @@ export const resumeApi = {
           cleanData[field] = [];
         }
       });
-      
+
       // Ensure settings
       if (!cleanData.settings) {
         cleanData.settings = {
@@ -77,7 +78,7 @@ export const resumeApi = {
           defaultTemplate: 'modern'
         };
       }
-      
+
       const response = await api.post('/resume', cleanData);
       memoryCache.delete('resumes:all');
       return response.data;
@@ -137,7 +138,7 @@ export const resumeApi = {
 
   optimizeResume: async (resumeId, optimizeData) => {
     try {
-      const response = await api.post(`/resume/${resumeId}/optimize`, optimizeData);
+      const response = await api.post(`/resume/${resumeId}/optimize`, optimizeData, { timeout: 60000 });
       memoryCache.delete(`resume:${resumeId}`);
       memoryCache.delete(`recommendations:${resumeId}`);
       memoryCache.delete('resumes:all');
@@ -165,25 +166,13 @@ export const resumeApi = {
   // Upload resume file
   uploadResume: async (formData, onProgress) => {
     try {
-      console.log('📤 Starting resume upload API call...');
-      
       // Clear all related cache before upload
       memoryCache.delete('resumes:all');
-      
+
       const response = await api.post('/resume/upload', formData, {
         headers: {
           'Accept': 'application/json',
-        },
-        transformRequest: (data, headers) => {
-          if (headers) {
-            if (typeof headers.setContentType === 'function') {
-              headers.setContentType(undefined);
-            } else {
-              delete headers['Content-Type'];
-              delete headers['content-type'];
-            }
-          }
-          return data;
+          'Content-Type': null, // Suppress Axios default & fallback headers
         },
         onUploadProgress: (progressEvent) => {
           if (onProgress && progressEvent.total) {
@@ -194,22 +183,17 @@ export const resumeApi = {
         timeout: 60000,
       });
 
-      console.log('✅ Resume upload API successful');
       // Clear cache after successful upload
       memoryCache.delete('resumes:all');
       return response.data;
     } catch (error) {
-      console.error('❌ Resume upload API error:', error);
       let errorMessage = 'Failed to upload resume';
       if (error.response) {
         errorMessage = error.response.data?.error || error.response.data?.message || errorMessage;
-        console.error('Server error response:', error.response.data);
       } else if (error.request) {
         errorMessage = 'No response from server. Please check your connection.';
-        console.error('Network error - no response received');
       } else {
         errorMessage = error.message || errorMessage;
-        console.error('Request setup error:', error.message);
       }
       throw new Error(errorMessage);
     }
@@ -250,7 +234,7 @@ export const resumeApi = {
   },
 
   // Get recommendations
- // Get recommendations
+  // Get recommendations
   getRecommendations: async (resumeId) => {
     try {
       const isValidObjectId = (id) => id && /^[0-9a-fA-F]{24}$/.test(id);
@@ -281,16 +265,16 @@ export const resumeApi = {
 
       const { limit = 10, page = 1 } = params;
       const cacheKey = resumeId ? `recommendations:${resumeId}` : 'recommendations:top';
-      
+
       let url = '/jobs/recommendations';
       if (resumeId) {
         url = `/jobs/recommendations/${resumeId}`;
       }
-      
+
       const response = await api.get(url, {
         params: { limit, page }
       });
-      
+
       return response.data;
     } catch (error) {
       console.error('Get job recommendations error:', error);
@@ -315,7 +299,7 @@ export const resumeApi = {
   applyToJob: async (jobId, applicationData) => {
     try {
       const formData = new FormData();
-      
+
       Object.keys(applicationData).forEach(key => {
         if (key === 'resume' && applicationData.resume) {
           formData.append('resume', {
@@ -327,14 +311,14 @@ export const resumeApi = {
           formData.append(key, applicationData[key].toString());
         }
       });
-      
+
       const response = await api.post(`/jobs/apply/${jobId}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
         timeout: 60000,
       });
-      
+
       // Clear recommendations cache
       memoryCache.delete('recommendations:*');
       return response.data;
@@ -386,7 +370,7 @@ export const resumeApi = {
   // Enhance text with AI (Work, Projects, Summary)
   enhanceText: async (text, context) => {
     try {
-      const response = await api.post('/resume/enhance-text', { text, context });
+      const response = await api.post('/resume/enhance-text', { text, context }, { timeout: 60000 });
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Failed to enhance text');
@@ -396,7 +380,7 @@ export const resumeApi = {
   // Get AI skill suggestions
   suggestSkills: async (currentSkills, targetRole) => {
     try {
-      const response = await api.post('/resume/suggest-skills', { currentSkills, targetRole });
+      const response = await api.post('/resume/suggest-skills', { currentSkills, targetRole }, { timeout: 60000 });
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Failed to get skill suggestions');
@@ -406,7 +390,7 @@ export const resumeApi = {
   // Check resume fit against job
   checkResumeFit: async (resumeId, jobId) => {
     try {
-      const response = await api.post(`/resume/${resumeId}/check-fit`, { jobId });
+      const response = await api.post(`/resume/${resumeId}/check-fit`, { jobId }, { timeout: 60000 });
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Failed to check resume fit');

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { 
-  View, Text, TouchableOpacity, StyleSheet, ScrollView, 
+import {
+  View, Text, TouchableOpacity, StyleSheet, ScrollView,
   ActivityIndicator, Alert, Image, Platform // Fixed spelling here
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +23,7 @@ export default function VerificationScreen({ navigation }) {
     }
 
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'], 
+      mediaTypes: ['images'],
       allowsEditing: true,
       quality: 0.2, // Slightly increased from 0.1 for better legibility while keeping file size low
     });
@@ -41,7 +41,7 @@ export default function VerificationScreen({ navigation }) {
     try {
       setLoading(true);
       const formData = new FormData();
-      
+
       // Bypass Axios v1.6.0+ React Native FormData detection bug
       const dummyProto = Object.create(FormData.prototype);
       Object.setPrototypeOf(formData, dummyProto);
@@ -61,23 +61,12 @@ export default function VerificationScreen({ navigation }) {
       formData.append("studentIdCard", createFileData(docs.studentIdCard));
       if (docs.cnicBack) formData.append("cnicBack", createFileData(docs.cnicBack));
 
-      // Sending request with explicit timeout and error handling
       const response = await api.put("/auth/verify-student-docs", formData, {
         headers: {
           'Accept': 'application/json',
+          'Content-Type': null,
         },
         timeout: 60000, // 60 seconds timeout
-        transformRequest: (data, headers) => {
-          if (headers) {
-            if (typeof headers.setContentType === 'function') {
-              headers.setContentType(undefined);
-            } else {
-              delete headers['Content-Type'];
-              delete headers['content-type'];
-            }
-          }
-          return data;
-        }, 
       });
 
       if (response.status === 200) {
@@ -87,7 +76,7 @@ export default function VerificationScreen({ navigation }) {
 
     } catch (err) {
       console.error("Upload Error:", err);
-      
+
       // Detailed error feedback
       if (err.code === 'ECONNABORTED') {
         Alert.alert("Connection Timeout", "Upload took too long. Please check your internet and try again.");
@@ -102,8 +91,8 @@ export default function VerificationScreen({ navigation }) {
   };
 
   const DocCard = ({ label, field, icon }) => (
-    <TouchableOpacity 
-      style={[styles.docCard, docs[field] && styles.docCardActive]} 
+    <TouchableOpacity
+      style={[styles.docCard, docs[field] && styles.docCardActive]}
       onPress={() => pickImage(field)}
     >
       {docs[field] ? (
@@ -134,8 +123,8 @@ export default function VerificationScreen({ navigation }) {
         <DocCard label="Student ID Card" field="studentIdCard" icon="school-outline" />
       </View>
 
-      <TouchableOpacity 
-        style={[styles.submitButton, loading && { opacity: 0.7 }]} 
+      <TouchableOpacity
+        style={[styles.submitButton, loading && { opacity: 0.7 }]}
         onPress={handleSubmit}
         disabled={loading}
       >
@@ -150,9 +139,9 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: "900", color: "#000" },
   subtitle: { fontSize: 15, color: "#7a7a7a", marginBottom: 30 },
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
-  docCard: { 
-    width: "48%", height: 160, backgroundColor: "#f9f9f9", borderRadius: 20, 
-    borderWidth: 1, borderColor: "#eee", marginBottom: 15, overflow: "hidden" 
+  docCard: {
+    width: "48%", height: 160, backgroundColor: "#f9f9f9", borderRadius: 20,
+    borderWidth: 1, borderColor: "#eee", marginBottom: 15, overflow: "hidden"
   },
   docCardActive: { borderColor: "#000", borderWidth: 2 },
   cardContent: { flex: 1, justifyContent: "center", alignItems: "center" },

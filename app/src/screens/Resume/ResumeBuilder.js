@@ -386,7 +386,30 @@ const ResumeBuilderScreen = () => {
         copyToCacheDirectory: true,
       });
       if (!res.canceled && res.assets && res.assets.length > 0) {
-        return res.assets[0];
+        const pickedFile = res.assets[0];
+        
+        // Client-side validation: check file format and size
+        const allowedExtensions = ['pdf', 'doc', 'docx'];
+        const fileExt = pickedFile.name?.split('.').pop()?.toLowerCase();
+        
+        if (!allowedExtensions.includes(fileExt)) {
+          Alert.alert(
+            'Unsupported Format ⚠️', 
+            'Only PDF (.pdf), Word (.doc), and Word OpenXML (.docx) formats are supported.'
+          );
+          return null;
+        }
+
+        // Limit size to 10MB to avoid backend out-of-memory or timeout issues
+        if (pickedFile.size && pickedFile.size > 10 * 1024 * 1024) {
+          Alert.alert(
+            'File Too Large ⚠️', 
+            'The selected file exceeds the 10MB limit. Please upload a smaller document.'
+          );
+          return null;
+        }
+
+        return pickedFile;
       }
       return null;
     } catch (err) {

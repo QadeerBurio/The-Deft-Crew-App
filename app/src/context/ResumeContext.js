@@ -1,7 +1,7 @@
 // app/src/context/ResumeContext.js
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import resumeApi from '../api/resumeApi';
 import { AuthContext } from './AuthContext';
 
@@ -31,7 +31,7 @@ export default function ResumeProvider({ children }) {
     try {
       setLoading(true);
       setError(null);
-      
+
       if (isGuest) {
         const storedResumes = await AsyncStorage.getItem('guestResumes');
         if (storedResumes) {
@@ -118,7 +118,7 @@ export default function ResumeProvider({ children }) {
           targetJobs: resumeData.targetJobs || [],
           targetJob: resumeData.targetJob || {},
         };
-        
+
         const updatedResumes = [...resumes, newResume];
         setResumes(updatedResumes);
         await AsyncStorage.setItem('guestResumes', JSON.stringify(updatedResumes));
@@ -236,7 +236,7 @@ export default function ResumeProvider({ children }) {
       if (isGuest) {
         const newResume = {
           _id: `guest_${Date.now()}`,
-          personalInfo: { 
+          personalInfo: {
             firstName: file.name?.split('.')[0] || 'Resume',
             lastName: '',
             email: '',
@@ -297,7 +297,7 @@ export default function ResumeProvider({ children }) {
           shareCount: 0,
           viewsHistory: []
         };
-        
+
         const updatedResumes = [...resumes, newResume];
         setResumes(updatedResumes);
         await AsyncStorage.setItem('guestResumes', JSON.stringify(updatedResumes));
@@ -307,17 +307,32 @@ export default function ResumeProvider({ children }) {
         return newResume;
       }
 
+      let fileUri = file.uri;
+
+      // Resolve content:// URIs on Android to local cache to prevent permission/read failures
+      if (Platform.OS === 'android' && fileUri.startsWith('content://')) {
+        try {
+          const FileSystem = require('expo-file-system');
+          const tempFileName = file.name || 'resume.pdf';
+          const cacheUri = `${FileSystem.cacheDirectory}${tempFileName}`;
+          await FileSystem.copyAsync({
+            from: fileUri,
+            to: cacheUri,
+          });
+          fileUri = cacheUri;
+          console.log('🔄 Resolved content:// URI to local cache URI:', fileUri);
+        } catch (copyError) {
+          console.error('❌ Failed to cache content:// URI:', copyError);
+        }
+      }
+
       // Create form data for upload
       const formData = new FormData();
       formData.append('resume', {
-        uri: file.uri,
+        uri: fileUri,
         type: file.type || 'application/pdf',
         name: file.name || 'resume.pdf',
       });
-
-      // Bypass Axios v1.6.0+ React Native FormData detection bug
-      const dummyProto = Object.create(FormData.prototype);
-      Object.setPrototypeOf(formData, dummyProto);
 
       // Upload and parse the resume
       const response = await resumeApi.uploadResume(formData, (progress) => {
@@ -351,7 +366,7 @@ export default function ResumeProvider({ children }) {
 
         return newResume;
       }
-      
+
       setLoading(false);
       setUploadProgress(0);
       return null;
@@ -367,39 +382,39 @@ export default function ResumeProvider({ children }) {
   };
 
   // Get recommended jobs
- // app/src/context/ResumeContext.js - This is already complete
-const getRecommendedJobs = async (resumeId) => {
-  try {
-    if (isGuest) {
-      return [
-        {
-          title: "Frontend Development Intern",
-          company: "ClickTake",
-          location: "Karachi (In person)",
-          matchPercentage: 85,
-          salary: "Not Specified",
-          postedAt: "2 days ago",
-          description: "Internship focusing on Frontend React Native development..."
-        },
-        {
-          title: "SEO Intern (Remote)",
-          company: "ClickTake",
-          location: "Remote (Pakistan)",
-          matchPercentage: 78,
-          salary: "Not Specified",
-          postedAt: "3 days ago",
-          description: "Internship focusing on search engine optimization..."
-        }
-      ];
-    }
+  // app/src/context/ResumeContext.js - This is already complete
+  const getRecommendedJobs = async (resumeId) => {
+    try {
+      if (isGuest) {
+        return [
+          {
+            title: "Frontend Development Intern",
+            company: "ClickTake",
+            location: "Karachi (In person)",
+            matchPercentage: 85,
+            salary: "Not Specified",
+            postedAt: "2 days ago",
+            description: "Internship focusing on Frontend React Native development..."
+          },
+          {
+            title: "SEO Intern (Remote)",
+            company: "ClickTake",
+            location: "Remote (Pakistan)",
+            matchPercentage: 78,
+            salary: "Not Specified",
+            postedAt: "3 days ago",
+            description: "Internship focusing on search engine optimization..."
+          }
+        ];
+      }
 
-    const response = await resumeApi.getRecommendations(resumeId);
-    return response?.data || [];
-  } catch (error) {
-    console.error('Get recommendations error:', error);
-    return [];
-  }
-};
+      const response = await resumeApi.getRecommendations(resumeId);
+      return response?.data || [];
+    } catch (error) {
+      console.error('Get recommendations error:', error);
+      return [];
+    }
+  };
 
   // Update template
   const updateTemplate = async (resumeId, template) => {
@@ -474,113 +489,113 @@ const getRecommendedJobs = async (resumeId) => {
   useEffect(() => {
     fetchResumes();
   }, [token, isGuest]);
-// Get job recommendations for a resume
-const getJobRecommendations = async (resumeId = null, params = {}) => {
-  try {
-    if (isGuest) {
-      // Return mock recommendations for guest
-      return {
-        recommendations: [
-          {
-            _id: '1',
-            title: 'Frontend Development Intern',
-            companyName: 'ClickTake',
-            department: 'Engineering',
-            location: 'Karachi (In person)',
-            type: 'Internship',
-            salary: 'Not Specified',
-            matchPercentage: 85,
-            matchedSkills: ['JavaScript', 'React', 'React Native'],
-            matchReasons: ['Matched 3 skills', 'Internship', 'Remote friendly'],
-            description: 'Internship focusing on Frontend React Native development...',
-            urgent: true,
-            featured: true
-          },
-          {
-            _id: '2',
-            title: 'SEO Intern (Remote)',
-            companyName: 'ClickTake',
-            department: 'Marketing',
-            location: 'Remote (Pakistan)',
-            type: 'Internship',
-            salary: 'Not Specified',
-            matchPercentage: 78,
-            matchedSkills: ['SEO', 'Google Analytics'],
-            matchReasons: ['Matched 2 skills', 'Internship'],
-            description: 'Internship focusing on search engine optimization...'
-          }
-        ],
-        total: 2,
-        hasResume: true
-      };
+  // Get job recommendations for a resume
+  const getJobRecommendations = async (resumeId = null, params = {}) => {
+    try {
+      if (isGuest) {
+        // Return mock recommendations for guest
+        return {
+          recommendations: [
+            {
+              _id: '1',
+              title: 'Frontend Development Intern',
+              companyName: 'ClickTake',
+              department: 'Engineering',
+              location: 'Karachi (In person)',
+              type: 'Internship',
+              salary: 'Not Specified',
+              matchPercentage: 85,
+              matchedSkills: ['JavaScript', 'React', 'React Native'],
+              matchReasons: ['Matched 3 skills', 'Internship', 'Remote friendly'],
+              description: 'Internship focusing on Frontend React Native development...',
+              urgent: true,
+              featured: true
+            },
+            {
+              _id: '2',
+              title: 'SEO Intern (Remote)',
+              companyName: 'ClickTake',
+              department: 'Marketing',
+              location: 'Remote (Pakistan)',
+              type: 'Internship',
+              salary: 'Not Specified',
+              matchPercentage: 78,
+              matchedSkills: ['SEO', 'Google Analytics'],
+              matchReasons: ['Matched 2 skills', 'Internship'],
+              description: 'Internship focusing on search engine optimization...'
+            }
+          ],
+          total: 2,
+          hasResume: true
+        };
+      }
+
+      const response = await resumeApi.getJobRecommendations(resumeId, params);
+      return response;
+    } catch (error) {
+      console.error('Get job recommendations error:', error);
+      return { recommendations: [], total: 0 };
     }
+  };
 
-    const response = await resumeApi.getJobRecommendations(resumeId, params);
-    return response;
-  } catch (error) {
-    console.error('Get job recommendations error:', error);
-    return { recommendations: [], total: 0 };
-  }
-};
+  // Get top job recommendations
+  const getTopJobRecommendations = async (limit = 5) => {
+    try {
+      if (isGuest) {
+        return {
+          recommendations: [
+            {
+              _id: '1',
+              title: 'Frontend Development Intern',
+              companyName: 'ClickTake',
+              location: 'Karachi (In person)',
+              type: 'Internship',
+              salary: 'Not Specified',
+              matchPercentage: 85
+            },
+            {
+              _id: '2',
+              title: 'SEO Intern (Remote)',
+              companyName: 'ClickTake',
+              location: 'Remote (Pakistan)',
+              type: 'Internship',
+              salary: 'Not Specified',
+              matchPercentage: 78
+            }
+          ],
+          total: 2,
+          hasResume: true
+        };
+      }
 
-// Get top job recommendations
-const getTopJobRecommendations = async (limit = 5) => {
-  try {
-    if (isGuest) {
-      return {
-        recommendations: [
-          {
-            _id: '1',
-            title: 'Frontend Development Intern',
-            companyName: 'ClickTake',
-            location: 'Karachi (In person)',
-            type: 'Internship',
-            salary: 'Not Specified',
-            matchPercentage: 85
-          },
-          {
-            _id: '2',
-            title: 'SEO Intern (Remote)',
-            companyName: 'ClickTake',
-            location: 'Remote (Pakistan)',
-            type: 'Internship',
-            salary: 'Not Specified',
-            matchPercentage: 78
-          }
-        ],
-        total: 2,
-        hasResume: true
-      };
+      const response = await resumeApi.getTopJobRecommendations(limit);
+      return response;
+    } catch (error) {
+      console.error('Get top recommendations error:', error);
+      return { recommendations: [], total: 0 };
     }
+  };
 
-    const response = await resumeApi.getTopJobRecommendations(limit);
-    return response;
-  } catch (error) {
-    console.error('Get top recommendations error:', error);
-    return { recommendations: [], total: 0 };
-  }
-};
+  // Apply to a job
+  const applyToJob = async (jobId, applicationData) => {
+    try {
+      setLoading(true);
 
-// Apply to a job
-const applyToJob = async (jobId, applicationData) => {
-  try {
-    setLoading(true);
-    
-    if (isGuest) {
-      Alert.alert('Login Required', 'Please login or create an account to apply for jobs.');
+      if (isGuest) {
+        Alert.alert('Login Required', 'Please login or create an account to apply for jobs.');
+        setLoading(false);
+        return null;
+      }
+
+      const response = await resumeApi.applyToJob(jobId, applicationData);
       setLoading(false);
-      return null;
+      return response;
+    } catch (error) {
+      console.error('Apply to job error:', error);
+      setLoading(false);
+      throw error;
     }
-    
-    const response = await resumeApi.applyToJob(jobId, applicationData);
-    setLoading(false);
-    return response;
-  } catch (error) {
-    console.error('Apply to job error:', error);
-    setLoading(false);
-    throw error;
-  }
-};
+  };
 
   // Get my applications
   const getMyApplications = async () => {
@@ -588,7 +603,7 @@ const applyToJob = async (jobId, applicationData) => {
       if (isGuest) {
         return [];
       }
-      
+
       const response = await resumeApi.getMyApplications();
       return response;
     } catch (error) {
@@ -613,7 +628,7 @@ const applyToJob = async (jobId, applicationData) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await resumeApi.optimizeResume(resumeId, optimizeData);
       if (response?.success) {
         const optimizedResume = response.data;
