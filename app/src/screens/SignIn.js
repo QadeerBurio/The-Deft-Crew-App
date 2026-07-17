@@ -686,8 +686,8 @@ export default function SignIn({ navigation }) {
               </TouchableOpacity>
             </Animated.View>
             
-            {/* Guest Browse Button */}
-            {/* <Animated.View style={{ opacity: fadeAnim }}>
+            {/* Guest Browse Button  */}
+             <Animated.View style={{ opacity: fadeAnim }}>
               <TouchableOpacity 
                 style={styles.guestButton}
                 onPress={handleGuestBrowse}
@@ -696,7 +696,7 @@ export default function SignIn({ navigation }) {
                 <Ionicons name="globe-outline" size={20} color="#1a1a1a" style={{ marginRight: 8 }} />
                 <Text style={styles.guestButtonText}>Browse as Guest</Text>
               </TouchableOpacity>
-            </Animated.View> */}
+            </Animated.View>
 
             {/* Footer */}
             <View style={styles.footer}>

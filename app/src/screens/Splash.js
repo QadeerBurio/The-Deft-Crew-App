@@ -857,7 +857,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     marginRight: 8,
-    letterSpacing: 2,
+    letterSpacing: 1,
+    textAlign:'center',
+    justifyContent:'center'
   },
 
   counter: {

@@ -95,6 +95,13 @@ import ActivityScreen from '../screens/skillshare/ActivityScreen';
 import MyInquiriesScreen from '../screens/skillshare/MyInquiryScreen';
 import MyMatches from '../screens/skillshare/MyMatches';
 import ChatMatch from '../screens/skillshare/ChatMatch';
+// Add these imports:
+import DigitalBadgeScreen from '../components/DigitalBadgeScreen';
+import MainCharacterScreen from '../components/MainCharacterScreen';
+import DeftProScreen from '../components/DeftProScreen';
+import DeftGoatScreen from '../components/DeftGoatScreen';
+import FounderCircleScreen from '../components/FounderCircleScreen';
+
 
 const { width } = Dimensions.get('window');
 const Drawer = createDrawerNavigator();
@@ -880,6 +887,11 @@ export default function DrawerNavigator() {
           { name: 'ProfileDetails', comp: ProfileDetails },
           { name: 'Card', comp: Card },
           { name: 'MyDiscountScreen', comp: MyDiscountScreen },
+          { name: 'DigitalBadge', comp: DigitalBadgeScreen },
+          { name: 'MainCharacter', comp: MainCharacterScreen },
+          { name: 'DeftPro', comp: DeftProScreen },
+          { name: 'DeftGoat', comp: DeftGoatScreen },
+          { name: 'FounderCircle', comp: FounderCircleScreen },
         ].map((item) => (
           <Drawer.Screen
             key={item.name}

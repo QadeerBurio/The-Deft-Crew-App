@@ -1,3 +1,4 @@
+// ==================== PointsScreen.js (COMPLETE WITH NAVIGATION) ====================
 import React, {
   useState,
   useEffect,
@@ -51,7 +52,7 @@ const APP_STORE_ID = "6765877675";
 const APP_STORE_URL = `https://apps.apple.com/br/app/the-deft-crew/id${APP_STORE_ID}`;
 
 // ==========================================
-// TIER DEFINITIONS
+// TIER DEFINITIONS WITH NAVIGATION
 // ==========================================
 const TIERS = [
   {
@@ -65,6 +66,7 @@ const TIERS = [
     perks: ["TDC Privilege Card", "Exclusive Discounts", "Partner Brand Access"],
     reward: "TDC Privilege Card Unlocked",
     isCardTier: true,
+    destination: "Card",
   },
   {
     id: "rookie",
@@ -80,6 +82,7 @@ const TIERS = [
       "Professional Community Access",
     ],
     reward: "Digital Badge + VIP Access",
+    destination: "DigitalBadge",
   },
   {
     id: "main_character",
@@ -97,6 +100,7 @@ const TIERS = [
       "All Previous Perks",
     ],
     reward: "PKR 2,000 + Certificate",
+    destination: "MainCharacter",
   },
   {
     id: "pro",
@@ -115,6 +119,7 @@ const TIERS = [
       "All Previous Perks",
     ],
     reward: "PKR 5,000 + Mentorship",
+    destination: "DeftPro",
   },
   {
     id: "goat",
@@ -131,6 +136,7 @@ const TIERS = [
       "All Previous Perks",
     ],
     reward: "PKR 10,000 + Internship",
+    destination: "DeftGoat",
   },
   {
     id: "founder",
@@ -148,6 +154,7 @@ const TIERS = [
       "All Previous Perks",
     ],
     reward: "PKR 15,000 + Mentorship",
+    destination: "FounderCircle",
   },
 ];
 
@@ -193,12 +200,12 @@ const HeroProgressCard = memo(({ referred, isCardUnlocked, cardPulse, onClaimCar
         Animated.timing(glowAnim, {
           toValue: 1,
           duration: 1500,
-          useNativeDriver: false,
+          useNativeDriver: true,
         }),
         Animated.timing(glowAnim, {
           toValue: 0,
           duration: 1500,
-          useNativeDriver: false,
+          useNativeDriver: true,
         }),
       ])
     ).start();
@@ -210,12 +217,12 @@ const HeroProgressCard = memo(({ referred, isCardUnlocked, cardPulse, onClaimCar
         useNativeDriver: true,
       })
     ).start();
-  }, []);
 
-  const glowInterpolate = glowAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 8],
-  });
+    return () => {
+      glowAnim.stopAnimation();
+      rotateAnim.stopAnimation();
+    };
+  }, []);
 
   const rotateInterpolate = rotateAnim.interpolate({
     inputRange: [0, 1],
@@ -230,10 +237,6 @@ const HeroProgressCard = memo(({ referred, isCardUnlocked, cardPulse, onClaimCar
         styles.heroCard,
         {
           transform: [{ scale: cardPulse }],
-          shadowOpacity: glowInterpolate.interpolate({
-            inputRange: [0, 8],
-            outputRange: [0.2, 0.5],
-          }),
         },
       ]}
     >
@@ -243,7 +246,6 @@ const HeroProgressCard = memo(({ referred, isCardUnlocked, cardPulse, onClaimCar
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        {/* Animated Background Orbs */}
         <Animated.View
           style={[
             styles.heroOrb1,
@@ -287,7 +289,6 @@ const HeroProgressCard = memo(({ referred, isCardUnlocked, cardPulse, onClaimCar
             )}
           </View>
 
-          {/* Circular Progress */}
           <View style={styles.heroProgressContainer}>
             <View style={styles.heroProgressCircle}>
               <Animated.View
@@ -348,10 +349,10 @@ const HeroProgressCard = memo(({ referred, isCardUnlocked, cardPulse, onClaimCar
 });
 
 // ==========================================
-// ANIMATED TIER CARD
+// ANIMATED TIER CARD WITH NAVIGATION
 // ==========================================
 const AnimatedTierCard = memo(
-  ({ tier, index, currentDownloads, isUnlocked, isNext }) => {
+  ({ tier, index, currentDownloads, isUnlocked, isNext, onPress }) => {
     const cardAnim = useRef(new Animated.Value(0)).current;
     const scaleAnim = useRef(new Animated.Value(0.95)).current;
     const shimmerAnim = useRef(new Animated.Value(0)).current;
@@ -386,134 +387,153 @@ const AnimatedTierCard = memo(
             Animated.timing(shimmerAnim, {
               toValue: 1,
               duration: 2000,
-              useNativeDriver: false,
+              useNativeDriver: true,
             }),
             Animated.timing(shimmerAnim, {
               toValue: 0,
               duration: 2000,
-              useNativeDriver: false,
+              useNativeDriver: true,
             }),
           ])
         ).start();
       }
 
       return () => {
-        // Cleanup
+        cardAnim.stopAnimation();
+        scaleAnim.stopAnimation();
+        shimmerAnim.stopAnimation();
       };
     }, []);
 
     const progress = Math.min(currentDownloads / tier.minDownloads, 1);
     const isCardTier = tier.isCardTier || false;
 
-    const shimmerInterpolate = shimmerAnim.interpolate({
+    const shimmerTransform = shimmerAnim.interpolate({
       inputRange: [0, 1],
-      outputRange: ["0%", "100%"],
+      outputRange: [-100, 300],
     });
 
+    const handlePress = () => {
+      if (isUnlocked && tier.destination) {
+        onPress(tier.destination);
+      } else if (!isUnlocked) {
+        Alert.alert(
+          "🔒 Achievement Locked",
+          `You need ${tier.minDownloads} referrals to unlock "${tier.name}"\n\nCurrent: ${currentDownloads} referrals`,
+          [{ text: "Keep Going!", style: "default" }]
+        );
+      }
+    };
+
     return (
-      <Animated.View
-        style={[
-          styles.tierCard,
-          isUnlocked && styles.tierCardUnlocked,
-          isNext && styles.tierCardNext,
-          isCardTier && styles.tierCardSpecial,
-          {
-            opacity: cardAnim,
-            transform: [{ scale: scaleAnim }],
-          },
-        ]}
+      <TouchableOpacity
+        onPress={handlePress}
+        activeOpacity={0.7}
+        disabled={!isUnlocked && !isNext}
       >
-        {/* Shimmer effect for unlocked cards */}
-        {isUnlocked && (
-          <Animated.View
-            style={[
-              styles.tierShimmer,
-              {
-                transform: [{ translateX: shimmerInterpolate }],
-              },
-            ]}
-          />
-        )}
-
-        <LinearGradient
-          colors={
-            isUnlocked
-              ? [tier.color, tier.color + "CC"]
-              : ["#f0f0f0", "#e8e8e8"]
-          }
-          style={[styles.tierIconContainer, isCardTier && styles.tierIconSpecial]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+        <Animated.View
+          style={[
+            styles.tierCard,
+            isUnlocked && styles.tierCardUnlocked,
+            isNext && styles.tierCardNext,
+            isCardTier && styles.tierCardSpecial,
+            {
+              opacity: cardAnim,
+              transform: [{ scale: scaleAnim }],
+            },
+          ]}
         >
-          <MaterialCommunityIcons
-            name={tier.icon}
-            size={isCardTier ? 32 : 28}
-            color={isUnlocked ? "#fff" : "#999"}
-          />
-        </LinearGradient>
+          {isUnlocked && (
+            <Animated.View
+              style={[
+                styles.tierShimmer,
+                {
+                  transform: [{ translateX: shimmerTransform }],
+                },
+              ]}
+            />
+          )}
 
-        <View style={styles.tierContent}>
-          <View style={styles.tierHeader}>
-            <Text style={[styles.tierName, isUnlocked && styles.tierNameActive, isCardTier && styles.tierNameSpecial]}>
-              {tier.name}
-            </Text>
-            {isUnlocked ? (
-              <View style={styles.unlockedBadge}>
-                <Ionicons name="checkmark-circle" size={14} color="#fff" />
-                <Text style={styles.unlockedText}>UNLOCKED</Text>
-              </View>
-            ) : isNext ? (
-              <View style={styles.nextBadge}>
-                <Text style={styles.nextText}>NEXT</Text>
-              </View>
-            ) : null}
-          </View>
+          <LinearGradient
+            colors={
+              isUnlocked
+                ? [tier.color, tier.color + "CC"]
+                : ["#f0f0f0", "#e8e8e8"]
+            }
+            style={[styles.tierIconContainer, isCardTier && styles.tierIconSpecial]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <MaterialCommunityIcons
+              name={tier.icon}
+              size={isCardTier ? 32 : 28}
+              color={isUnlocked ? "#fff" : "#999"}
+            />
+          </LinearGradient>
 
-          <Text style={[styles.tierReward, isCardTier && styles.tierRewardSpecial]}>
-            {tier.reward}
-          </Text>
-
-          <View style={styles.tierProgressContainer}>
-            <View style={styles.tierProgressTrack}>
-              <Animated.View
-                style={[
-                  styles.tierProgressBar,
-                  {
-                    width: `${Math.min(progress * 100, 100)}%`,
-                    backgroundColor: isUnlocked ? tier.color : "#ddd",
-                  },
-                ]}
-              />
+          <View style={styles.tierContent}>
+            <View style={styles.tierHeader}>
+              <Text style={[styles.tierName, isUnlocked && styles.tierNameActive, isCardTier && styles.tierNameSpecial]}>
+                {tier.name}
+              </Text>
+              {isUnlocked ? (
+                <View style={styles.unlockedBadge}>
+                  <Ionicons name="checkmark-circle" size={14} color="#fff" />
+                  <Text style={styles.unlockedText}>UNLOCKED</Text>
+                </View>
+              ) : isNext ? (
+                <View style={styles.nextBadge}>
+                  <Text style={styles.nextText}>NEXT</Text>
+                </View>
+              ) : null}
             </View>
-            <Text style={styles.tierProgressText}>
-              {isUnlocked
-                ? "✓ Unlocked"
-                : `${currentDownloads}/${tier.minDownloads} ${isCardTier ? "referrals" : "downloads"}`}
-            </Text>
-          </View>
 
-          <View style={styles.perksList}>
-            {tier.perks.slice(0, 3).map((perk, i) => (
-              <View key={i} style={styles.perkItem}>
-                <Ionicons
-                  name="checkmark-circle"
-                  size={12}
-                  color={isUnlocked ? tier.color : "#ccc"}
+            <Text style={[styles.tierReward, isCardTier && styles.tierRewardSpecial]}>
+              {tier.reward}
+            </Text>
+
+            <View style={styles.tierProgressContainer}>
+              <View style={styles.tierProgressTrack}>
+                <Animated.View
+                  style={[
+                    styles.tierProgressBar,
+                    {
+                      width: `${Math.min(progress * 100, 100)}%`,
+                      backgroundColor: isUnlocked ? tier.color : "#ddd",
+                    },
+                  ]}
                 />
-                <Text
-                  style={[styles.perkText, isUnlocked && styles.perkTextActive]}
-                  numberOfLines={1}
-                >
-                  {perk}
-                </Text>
               </View>
-            ))}
-            {tier.perks.length > 3 && (
-              <Text style={styles.perkMore}>+{tier.perks.length - 3} more</Text>
-            )}
+              <Text style={styles.tierProgressText}>
+                {isUnlocked
+                  ? "✓ Unlocked"
+                  : `${currentDownloads}/${tier.minDownloads} ${isCardTier ? "referrals" : "downloads"}`}
+              </Text>
+            </View>
+
+            <View style={styles.perksList}>
+              {tier.perks.slice(0, 3).map((perk, i) => (
+                <View key={i} style={styles.perkItem}>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={12}
+                    color={isUnlocked ? tier.color : "#ccc"}
+                  />
+                  <Text
+                    style={[styles.perkText, isUnlocked && styles.perkTextActive]}
+                    numberOfLines={1}
+                  >
+                    {perk}
+                  </Text>
+                </View>
+              ))}
+              {tier.perks.length > 3 && (
+                <Text style={styles.perkMore}>+{tier.perks.length - 3} more</Text>
+              )}
+            </View>
           </View>
-        </View>
-      </Animated.View>
+        </Animated.View>
+      </TouchableOpacity>
     );
   },
   (prevProps, nextProps) => {
@@ -530,13 +550,16 @@ const AnimatedTierCard = memo(
 // ==========================================
 const PointsScreen = () => {
   const navigation = useNavigation();
-  const { token } = useContext(AuthContext);
+  const { token, user } = useContext(AuthContext);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userData, setUserData] = useState({
     referralCount: 0,
     referralCode: "",
     canApplyForTdcCard: false,
+    isVip: false,
+    paymentStatus: "None",
+    _id: null,
   });
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -545,6 +568,7 @@ const PointsScreen = () => {
   const cardPulse = useRef(new Animated.Value(1)).current;
   const isMounted = useRef(true);
   const hasInitialFetch = useRef(false);
+  const hasCheckedVIP = useRef(false);
 
   // ==========================================
   // GET DOWNLOAD LINK
@@ -631,7 +655,7 @@ const PointsScreen = () => {
       pendingFetchPromise = (async () => {
         try {
           const response = await axios.get(
-            "https://the-deft-crew-production.up.railway.app/api/auth/profile/me",
+            "http://192.168.1.7:5000/api/auth/profile/me",
             {
               headers: { Authorization: `Bearer ${token}` },
               timeout: 8000,
@@ -643,6 +667,9 @@ const PointsScreen = () => {
             referralCount: data.referralCount || 0,
             referralCode: data.referralCode || "GENERATING...",
             canApplyForTdcCard: data.canApplyForTdcCard || false,
+            isVip: data.isVip || false,
+            paymentStatus: data.paymentStatus || "None",
+            _id: data._id,
           };
 
           MEMORY_CACHE.set(CACHE_KEY, {
@@ -676,6 +703,67 @@ const PointsScreen = () => {
   );
 
   // ==========================================
+  // CHECK AND ACTIVATE VIP
+  // ==========================================
+  const checkAndActivateVIP = useCallback(async () => {
+    if (hasCheckedVIP.current || !userData._id || loading) return;
+    
+    try {
+      if (userData.referralCount >= 10) {
+        console.log("🎯 Checking VIP status for user:", userData._id);
+        console.log("📊 Referral count:", userData.referralCount);
+        console.log("📊 Current isVip:", userData.isVip);
+
+        if (userData.isVip) {
+          console.log("✅ User already has VIP activated");
+          hasCheckedVIP.current = true;
+          return;
+        }
+
+        console.log("🔄 Attempting to activate VIP...");
+        
+        const response = await axios.post(
+          `http://192.168.1.7:5000/api/auth/activate-vip/${userData._id}`,
+          {},
+          { 
+            headers: { Authorization: `Bearer ${token}` },
+            timeout: 10000
+          }
+        );
+        
+        console.log("📥 VIP Activation Response:", response.data);
+        
+        if (response.data.success) {
+          console.log("✅ VIP activated successfully!");
+          await fetchUserData(true);
+          
+          Alert.alert(
+            "🎉 TDC Privilege Card Unlocked!",
+            "Congratulations! You've reached 10 referrals and your TDC Privilege Card is now active. Tap 'View My TDC Card' to see your digital card.",
+            [
+              { 
+                text: "View Card", 
+                onPress: () => navigation.navigate('Card') 
+              },
+              { text: "OK", style: "cancel" }
+            ]
+          );
+        }
+      } else {
+        console.log(`📊 User has ${userData.referralCount} referrals, needs 10 for VIP`);
+      }
+    } catch (error) {
+      console.error("❌ VIP activation check failed:", error);
+      if (error.response) {
+        console.error("Response data:", error.response.data);
+        console.error("Response status:", error.response.status);
+      }
+    } finally {
+      hasCheckedVIP.current = true;
+    }
+  }, [userData.referralCount, userData.isVip, userData._id, token, loading, fetchUserData, navigation]);
+
+  // ==========================================
   // ANIMATIONS
   // ==========================================
   const animateContent = useCallback(() => {
@@ -697,8 +785,9 @@ const PointsScreen = () => {
 
   // Card pulse animation when unlocked
   useEffect(() => {
+    let pulseAnimation = null;
     if (userData.referralCount >= 10 && !loading) {
-      Animated.loop(
+      pulseAnimation = Animated.loop(
         Animated.sequence([
           Animated.timing(cardPulse, {
             toValue: 1.02,
@@ -711,9 +800,28 @@ const PointsScreen = () => {
             useNativeDriver: true,
           }),
         ])
-      ).start();
+      );
+      pulseAnimation.start();
     }
+    return () => {
+      if (pulseAnimation) {
+        pulseAnimation.stop();
+      }
+    };
   }, [userData.referralCount, loading, cardPulse]);
+
+  // ==========================================
+  // DEBUG - Log user data changes
+  // ==========================================
+  useEffect(() => {
+    console.log("📊 User Data Update:", {
+      referralCount: userData.referralCount,
+      isVip: userData.isVip,
+      canApplyForTdcCard: userData.canApplyForTdcCard,
+      paymentStatus: userData.paymentStatus,
+      _id: userData._id
+    });
+  }, [userData]);
 
   // ==========================================
   // INITIAL FETCH
@@ -732,10 +840,23 @@ const PointsScreen = () => {
   }, [token, fetchUserData]);
 
   // ==========================================
+  // CHECK VIP STATUS AFTER DATA LOADS
+  // ==========================================
+  useEffect(() => {
+    if (!loading && userData._id) {
+      const timer = setTimeout(() => {
+        checkAndActivateVIP();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, userData._id, checkAndActivateVIP]);
+
+  // ==========================================
   // HANDLERS
   // ==========================================
   const onRefresh = useCallback(() => {
     setRefreshing(true);
+    hasCheckedVIP.current = false;
     fetchUserData(true).finally(() => {
       if (isMounted.current) setRefreshing(false);
     });
@@ -799,12 +920,21 @@ const PointsScreen = () => {
     navigation.goBack();
   }, [navigation]);
 
+  // ==========================================
+  // HANDLE VIEW CARD
+  // ==========================================
   const handleClaimCard = useCallback(() => {
-    Alert.alert(
-      "🎉 TDC Privilege Card Unlocked!",
-      "Congratulations! You've reached 10 referrals. Your TDC Privilege Card is now active. Show this to partner brands for exclusive discounts!",
-    );
-  }, []);
+    console.log("🔄 Navigating to Card");
+    navigation.navigate('Card');
+  }, [navigation]);
+
+  // ==========================================
+  // HANDLE TIER PRESS - NAVIGATION
+  // ==========================================
+  const handleTierPress = useCallback((destination) => {
+    console.log(`🔄 Navigating to ${destination}`);
+    navigation.navigate(destination);
+  }, [navigation]);
 
   // ==========================================
   // COMPUTED VALUES
@@ -872,7 +1002,7 @@ const PointsScreen = () => {
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Achievement Tiers</Text>
                 <Text style={styles.sectionSubtitle}>
-                  Unlock rewards as you grow your referrals
+                  Tap on unlocked tiers to view your rewards
                 </Text>
               </View>
 
@@ -889,6 +1019,7 @@ const PointsScreen = () => {
                     currentDownloads={referred}
                     isUnlocked={isUnlocked}
                     isNext={isNext}
+                    onPress={handleTierPress}
                   />
                 );
               })}
@@ -1233,7 +1364,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     left: 0,
-    width: "30%",
+    width: 100,
     height: "100%",
     backgroundColor: "rgba(255,255,255,0.3)",
     transform: [{ skewX: "-20deg" }],

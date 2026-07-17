@@ -247,6 +247,10 @@ const BrandCard = memo(({ item, index, onPress, preloadImage }) => {
             source={{ uri: displayImage }}
             style={styles.logo}
             resizeMode="contain"
+            onError={(e) => {
+              // If image fails to load, use default icon
+              console.log('Image failed to load:', displayImage);
+            }}
             onLoad={() => preloadImage?.(displayImage)}
           />
         </View>
@@ -360,15 +364,33 @@ export default function BrandsScreen({ limit = null }) {
     }
   }, [token, isGuest]);
 
-  // Optimized image URL formatter with caching
+  // ==========================================
+  // FIXED: Optimized image URL formatter with better path handling
+  // ==========================================
   const formatImageUrl = useCallback((imagePath, type = 'offer') => {
     if (!imagePath) return null;
-    if (imagePath.startsWith('http')) return imagePath;
+    
+    // If it's already a full URL, return it
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+    
+    // Remove leading slashes to avoid double slashes
+    const cleanPath = imagePath.replace(/^\/+/, '');
     
     if (type === 'brand') {
-      return `${BASE_URL}/uploads/brands/${imagePath}`;
+      // For brand logos - check if path already includes 'uploads/brands'
+      if (cleanPath.startsWith('uploads/brands/')) {
+        return `${BASE_URL}/${cleanPath}`;
+      }
+      return `${BASE_URL}/uploads/brands/${cleanPath}`;
     }
-    return `${BASE_URL}/${imagePath}`;
+    
+    // For offers - check if path already includes 'uploads'
+    if (cleanPath.startsWith('uploads/')) {
+      return `${BASE_URL}/${cleanPath}`;
+    }
+    return `${BASE_URL}/${cleanPath}`;
   }, []);
 
   // Optimized image preloader with priority queue
@@ -435,17 +457,21 @@ export default function BrandsScreen({ limit = null }) {
         
         // For guests, show basic info quickly
         if (isGuest || !token) {
-          const basicBrandsData = brandsData.map((brand) => ({
-            ...brand,
-            logo: formatImageUrl(brand.logo, 'brand'),
-            offers: [],
-            displayImage: formatImageUrl(brand.logo, 'brand') || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
-            hasOffer: false,
-            discount: 0,
-            category: brand.category || "General",
-            isOnline: false,
-            isInStore: false,
-          }));
+          const basicBrandsData = brandsData.map((brand) => {
+            // FIXED: Better logo handling
+            const logoUrl = formatImageUrl(brand.logo, 'brand');
+            return {
+              ...brand,
+              logo: logoUrl,
+              offers: [],
+              displayImage: logoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+              hasOffer: false,
+              discount: 0,
+              category: brand.category || "General",
+              isOnline: brand.isOnline || false,
+              isInStore: brand.isInStore || false,
+            };
+          });
 
           if (isMounted.current) {
             setBrands(basicBrandsData);
@@ -519,16 +545,25 @@ export default function BrandsScreen({ limit = null }) {
           const brandOffers = offersMap.get(brand._id) || [];
           const firstOffer = brandOffers[0];
           
+          // FIXED: Better display image logic with proper fallbacks
+          let displayImage;
+          if (firstOffer?.image) {
+            displayImage = firstOffer.image;
+          } else {
+            const logoUrl = formatImageUrl(brand.logo, 'brand');
+            displayImage = logoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+          }
+          
           return {
             ...brand,
             logo: formatImageUrl(brand.logo, 'brand'),
             offers: brandOffers,
-            displayImage: firstOffer?.image || formatImageUrl(brand.logo, 'brand') || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+            displayImage: displayImage,
             hasOffer: brandOffers.length > 0,
             discount: firstOffer?.discountPercentage || 0,
             category: firstOffer?.category || brand.category || "General",
-            isOnline: firstOffer?.isOnline || false,
-            isInStore: firstOffer?.isInStore || false,
+            isOnline: firstOffer?.isOnline || brand.isOnline || false,
+            isInStore: firstOffer?.isInStore || brand.isInStore || false,
           };
         });
 

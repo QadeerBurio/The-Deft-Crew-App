@@ -1,14 +1,17 @@
+// ==================== PremiumMemberCard.js (FIXED) ====================
 import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
 import { 
   StyleSheet, Text, View, TextInput, TouchableOpacity, 
   StatusBar, Alert, Dimensions, ScrollView, Animated, ActivityIndicator, Image,
-  Platform
+  Platform, PermissionsAndroid
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import ViewShot, { captureRef } from 'react-native-view-shot';
+import ViewShot from 'react-native-view-shot';
 import * as FileSystem from 'expo-file-system';
+import * as MediaLibrary from 'expo-media-library';
+import * as Sharing from 'expo-sharing';
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/api";
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -27,6 +30,7 @@ export default function PremiumMemberCard() {
   const [expiryDate, setExpiryDate] = useState('--/--');
   const [loading, setLoading] = useState(true);
   const [paymentStatus, setPaymentStatus] = useState("None");
+  const [downloading, setDownloading] = useState(false);
   const [userData, setUserData] = useState({
     name: "", id: "", phone: "", email: "", website: "www.tdc.co", cardNumber: "0000 0000 0000 0000"
   });
@@ -53,14 +57,25 @@ export default function PremiumMemberCard() {
     }
   }, [loading]);
 
+  // ==========================================
+  // FETCH USER DATA - CHECK VIP STATUS
+  // ==========================================
   const fetchUserData = async () => {
     try {
-      const res = await api.get(`/auth/${user._id}`, {
+      const res = await api.get('/auth/profile/me', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       const data = res.data;
-      setIsVip(data.isVip);
+      
+      console.log("📊 PremiumCard - User Data:", {
+        isVip: data.isVip,
+        paymentStatus: data.paymentStatus,
+        referralCount: data.referralCount
+      });
+      
+      const isVipActive = data.isVip === true || data.paymentStatus === "Verified";
+      setIsVip(isVipActive);
       setPaymentStatus(data.paymentStatus || "None");
 
       if (data.vipExpiry) {
@@ -70,11 +85,11 @@ export default function PremiumMemberCard() {
 
       setUserData({
         name: data.name || "MEMBER NAME",
-        id: data.rollNo || "N/A",
+        id: data.rollNo || data._id?.slice(-6) || "N/A",
         phone: data.phone || "No Phone",
         email: data.email || "No Email",
         website: data.instagram ? `@${data.instagram}` : "www.tdc.co",
-        cardNumber: generateCardNumber(user._id)
+        cardNumber: generateCardNumber(data._id)
       });
     } catch (error) {
       console.error("Fetch error:", error);
@@ -88,6 +103,162 @@ export default function PremiumMemberCard() {
     const seed = parseInt(mongoId.substring(mongoId.length - 6), 16);
     const lastFour = 1000 + (seed % 9000); 
     return `4412 88${mongoId.substring(0, 2)} ${mongoId.substring(2, 6)} ${lastFour}`;
+  };
+
+  // ==========================================
+  // REQUEST PERMISSIONS FOR ANDROID
+  // ==========================================
+  const requestPermissions = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+          {
+            title: "Storage Permission",
+            message: "App needs access to storage to save your card.",
+            buttonNeutral: "Ask Me Later",
+            buttonNegative: "Cancel",
+            buttonPositive: "OK"
+          }
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } catch (err) {
+        console.warn(err);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // ==========================================
+  // DOWNLOAD CARD - FIXED
+  // ==========================================
+  const handleDownload = async () => {
+    if (!isVip) {
+      Alert.alert("Locked", "Your Gold Membership is not active.");
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setDownloading(true);
+
+    try {
+      // Request permissions for Android
+      if (Platform.OS === 'android') {
+        const hasPermission = await requestPermissions();
+        if (!hasPermission) {
+          Alert.alert("Permission Denied", "Cannot save card without storage permission.");
+          setDownloading(false);
+          return;
+        }
+      }
+
+      // Request media library permissions for iOS
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert("Permission Denied", "Cannot save card without media library permission.");
+        setDownloading(false);
+        return;
+      }
+
+      // Capture the view
+      const uri = await viewShotRef.current.capture();
+      console.log("📸 Captured URI:", uri);
+
+      if (!uri) {
+        Alert.alert("Error", "Failed to capture card image.");
+        setDownloading(false);
+        return;
+      }
+
+      const fileName = `TDC_Card_${Date.now()}.png`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+      
+      // Copy to documents directory
+      await FileSystem.copyAsync({
+        from: uri,
+        to: fileUri
+      });
+
+      console.log("💾 File saved to:", fileUri);
+
+      // Save to media library
+      const asset = await MediaLibrary.createAssetAsync(fileUri);
+      
+      if (asset) {
+        // Create album if it doesn't exist
+        const album = await MediaLibrary.getAlbumAsync('TDC Cards');
+        if (album) {
+          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+        } else {
+          await MediaLibrary.createAlbumAsync('TDC Cards', asset, false);
+        }
+
+        Alert.alert(
+          "✅ Card Saved!",
+          "Your TDC Card has been saved to your device gallery.",
+          [
+            { text: "Open Gallery", onPress: () => {
+              // For iOS, we can open the gallery app
+              if (Platform.OS === 'ios') {
+                Linking.openURL('photos://');
+              }
+            }},
+            { text: "OK", style: "cancel" }
+          ]
+        );
+      } else {
+        Alert.alert("Error", "Failed to save to gallery.");
+      }
+
+    } catch (error) {
+      console.error("❌ Download error:", error);
+      Alert.alert("Error", error.message || "Could not save image. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  // ==========================================
+  // SHARE CARD - NEW OPTION
+  // ==========================================
+  const handleShare = async () => {
+    if (!isVip) {
+      Alert.alert("Locked", "Your Gold Membership is not active.");
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    try {
+      const uri = await viewShotRef.current.capture();
+      
+      if (!uri) {
+        Alert.alert("Error", "Failed to capture card image.");
+        return;
+      }
+
+      const fileName = `TDC_Card_${Date.now()}.png`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+      
+      await FileSystem.copyAsync({
+        from: uri,
+        to: fileUri
+      });
+
+      const shareResult = await Sharing.shareAsync(fileUri, {
+        mimeType: 'image/png',
+        dialogTitle: 'Share your TDC Card',
+      });
+
+      if (shareResult.action === Sharing.SharedAction) {
+        console.log("📤 Card shared successfully");
+      }
+
+    } catch (error) {
+      console.error("❌ Share error:", error);
+      Alert.alert("Error", "Could not share card. Please try again.");
+    }
   };
 
   const toggleFlip = () => {
@@ -110,23 +281,6 @@ export default function PremiumMemberCard() {
     inputRange: [0, 180],
     outputRange: ['180deg', '360deg'],
   });
-
-  const handleDownload = async () => {
-    if (!isVip) return Alert.alert("Locked", "Your Gold Membership is not active.");
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    try {
-      const uri = await captureRef(viewShotRef, {
-        format: "png",
-        quality: 1,
-      });
-      const fileName = `TDC_Card_${Date.now()}.png`;
-      const newPath = FileSystem.documentDirectory + fileName;
-      await FileSystem.copyAsync({ from: uri, to: newPath });
-      Alert.alert("Saved", "Card saved inside app storage.");
-    } catch (e) {
-      Alert.alert("Error", "Could not save image.");
-    }
-  };
 
   const GoldPattern = ({ vip }) => (
     <View style={styles.patternOverlay}>
@@ -216,9 +370,18 @@ export default function PremiumMemberCard() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
-        {/* Card Section */}
-        <Animated.View style={{ transform: [{ scale: cardScale }] }}>
-          <TouchableOpacity activeOpacity={0.95} onPress={toggleFlip} style={styles.displayCardContainer}>
+        {/* Card Section - Wrap in ViewShot */}
+        <ViewShot 
+          ref={viewShotRef} 
+          options={{ 
+            format: "png", 
+            quality: 1.0,
+            width: width - 32,
+            height: 220,
+          }}
+          style={styles.displayCardContainer}
+        >
+          <TouchableOpacity activeOpacity={0.95} onPress={toggleFlip} style={styles.cardWrapper}>
             <Animated.View style={[styles.card, { transform: [{ rotateY: frontInterpolate }] }, styles.abs, { backfaceVisibility: 'hidden' }]}>
               <FrontContent vip={isVip} />
             </Animated.View>
@@ -226,7 +389,7 @@ export default function PremiumMemberCard() {
               <BackContent vip={isVip} />
             </Animated.View>
           </TouchableOpacity>
-        </Animated.View>
+        </ViewShot>
 
         {/* Flip Hint */}
         <Text style={styles.flipHint}>
@@ -239,6 +402,9 @@ export default function PremiumMemberCard() {
             <View style={styles.statusBadgeSuccess}>
               <View style={[styles.statusDot, { backgroundColor: '#4CAF50' }]} />
               <Text style={styles.statusTextSuccess}>PREMIUM ACCESS ACTIVE</Text>
+              {expiryDate !== '--/--' && (
+                <Text style={styles.statusExpiry}>Expires: {expiryDate}</Text>
+              )}
             </View>
           ) : paymentStatus === "Pending Verification" ? (
             <View style={styles.statusBadgePending}>
@@ -293,18 +459,25 @@ export default function PremiumMemberCard() {
           </Animated.View>
         )}
 
-        {/* Download Button */}
-        <Animated.View style={{ opacity: sectionFade, width: '100%' }}>
+        {/* Download & Share Buttons */}
+        <Animated.View style={{ opacity: sectionFade, width: '100%', gap: 10 }}>
+          {/* Download Button */}
           <TouchableOpacity 
             style={[styles.dlBtn, isVip ? styles.dlBtnActive : styles.dlBtnDisabled]} 
             onPress={handleDownload}
-            disabled={!isVip}
+            disabled={!isVip || downloading}
             activeOpacity={0.8}
           >
             {isVip ? (
               <LinearGradient colors={['#1a1a1a', '#2d2d2d']} style={styles.dlBtnGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-                <Ionicons name="download-outline" size={18} color="#f9c349" style={{ marginRight: 8 }} />
-                <Text style={styles.dlTextActive}>DOWNLOAD DIGITAL CARD</Text>
+                {downloading ? (
+                  <ActivityIndicator size="small" color="#f9c349" />
+                ) : (
+                  <>
+                    <Ionicons name="download-outline" size={18} color="#f9c349" style={{ marginRight: 8 }} />
+                    <Text style={styles.dlTextActive}>DOWNLOAD DIGITAL CARD</Text>
+                  </>
+                )}
               </LinearGradient>
             ) : (
               <>
@@ -313,6 +486,20 @@ export default function PremiumMemberCard() {
               </>
             )}
           </TouchableOpacity>
+
+          {/* Share Button (only show for VIP) */}
+          {isVip && (
+            <TouchableOpacity 
+              style={styles.shareBtnCard} 
+              onPress={handleShare}
+              activeOpacity={0.8}
+            >
+              <LinearGradient colors={['#2d2d2d', '#1a1a1a']} style={styles.shareBtnGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                <Ionicons name="share-social-outline" size={18} color="#f9c349" style={{ marginRight: 8 }} />
+                <Text style={styles.shareBtnText}>SHARE CARD</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
         </Animated.View>
 
         {/* Footer */}
@@ -321,16 +508,6 @@ export default function PremiumMemberCard() {
           <Text style={styles.footerText}>Building a Stronger Student Economy</Text>
         </View>
       </ScrollView>
-
-      {/* Hidden ViewShot for download */}
-      <View style={styles.hiddenCapture}>
-        <ViewShot ref={viewShotRef} options={{ format: "png", quality: 1.0 }}>
-          <View style={styles.sideBySide}>
-            <View style={styles.captureCard}><FrontContent vip={isVip} /></View>
-            <View style={[styles.captureCard, { marginTop: 20 }]}><BackContent vip={isVip} /></View>
-          </View>
-        </ViewShot>
-      </View>
     </SafeAreaView>
   );
 }
@@ -353,6 +530,7 @@ const styles = StyleSheet.create({
   
   // Card
   displayCardContainer: { width: width - 32, height: 220, marginTop: 12, marginBottom: 8 },
+  cardWrapper: { width: width - 32, height: 220 },
   card: { width: width - 32, height: 220, borderRadius: 20, overflow: 'hidden', elevation: 10, shadowColor: '#f9c349', shadowOpacity: 0.1, shadowRadius: 10 },
   abs: { position: 'absolute', top: 0, zIndex: 5 },
   full: { flex: 1 },
@@ -393,6 +571,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     padding: 16, backgroundColor: 'rgba(76, 175, 80, 0.1)', borderRadius: 14, 
     borderWidth: 1.5, borderColor: 'rgba(76, 175, 80, 0.3)',
+    flexWrap: 'wrap',
   },
   statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 10 },
   statusBadgePending: { 
@@ -402,6 +581,7 @@ const styles = StyleSheet.create({
   },
   statusTextSuccess: { color: '#4CAF50', fontWeight: '800', letterSpacing: 1, fontSize: 13 },
   statusTextPending: { color: '#f9c349', fontWeight: '800', letterSpacing: 1, fontSize: 13 },
+  statusExpiry: { color: '#666', fontSize: 11, fontWeight: '500', marginLeft: 10 },
   activateBtn: { borderRadius: 14, overflow: 'hidden', elevation: 5, shadowColor: '#f9c349', shadowOpacity: 0.3, shadowRadius: 8 },
   activateBtnGradient: { padding: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
   activateBtnText: { color: '#000', fontWeight: '900', fontSize: 14, letterSpacing: 0.5 },
@@ -426,13 +606,32 @@ const styles = StyleSheet.create({
   dlTextActive: { color: '#f9c349', fontWeight: '800', fontSize: 14, letterSpacing: 0.5 },
   dlTextDisabled: { color: '#666', fontWeight: '600', fontSize: 13 },
   
+  // Share Button
+  shareBtnCard: { 
+    borderRadius: 14, 
+    overflow: 'hidden', 
+    width: '100%',
+    marginTop: 8,
+  },
+  shareBtnGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 14,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#2d2d2d',
+  },
+  shareBtnText: {
+    color: '#f9c349',
+    fontWeight: '700',
+    fontSize: 14,
+    letterSpacing: 0.5,
+  },
+  
   // Footer
   footer: { alignItems: 'center', marginTop: 30, marginBottom: 10 },
   footerLogo: { fontSize: 20, fontWeight: '900', color: '#fff' },
   footerText: { fontSize: 11, color: '#666', marginTop: 4, fontWeight: '500' },
-  
-  // Hidden Capture
-  hiddenCapture: { position: 'absolute', left: -5000 },
-  sideBySide: { padding: 20, backgroundColor: '#000' },
-  captureCard: { width: width - 32, height: 220 },
 });
