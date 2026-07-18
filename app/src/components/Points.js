@@ -655,7 +655,7 @@ const PointsScreen = () => {
       pendingFetchPromise = (async () => {
         try {
           const response = await axios.get(
-            "http://192.168.1.7:5000/api/auth/profile/me",
+            "http://192.168.18.93:5000/api/auth/profile/me",
             {
               headers: { Authorization: `Bearer ${token}` },
               timeout: 8000,
@@ -723,7 +723,7 @@ const PointsScreen = () => {
         console.log("🔄 Attempting to activate VIP...");
         
         const response = await axios.post(
-          `http://192.168.1.7:5000/api/auth/activate-vip/${userData._id}`,
+          `http://192.168.18.93:5000/api/auth/activate-vip/${userData._id}`,
           {},
           { 
             headers: { Authorization: `Bearer ${token}` },
