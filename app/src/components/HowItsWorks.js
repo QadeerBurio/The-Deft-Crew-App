@@ -259,22 +259,7 @@ export default function HowItWorks() {
         <TouchableOpacity 
           style={styles.stepContainer}
           activeOpacity={0.7}
-          onPress={() => {
-            // Navigate to respective screens based on step
-            if (title.includes("Skills Share")) {
-              navigation.navigate("SkillsShare");
-            } else if (title.includes("Events")) {
-              navigation.navigate("Events");
-            } else if (title.includes("Resume")) {
-              navigation.navigate("ResumeBuilder");
-            } else if (title.includes("Career")) {
-              navigation.navigate("CareerHub");
-            } else if (title.includes("Travel")) {
-              navigation.navigate("Travel");
-            } else if (title.includes("Brands")) {
-              navigation.navigate("Brands");
-            }
-          }}
+          
         >
           <View style={styles.leftColumn}>
             <Animated.View 

@@ -123,6 +123,13 @@ const DRAWER_ITEMS = [
     ),
     route: 'WhyPoints',
   },
+   {
+    label: 'Careers at TDC',
+    icon: (size) => (
+      <MaterialCommunityIcons name="briefcase-outline" size={size + 5} color="#f9c349" />
+    ),
+    route: 'TDCCareers',
+  },
   {
     label: 'Refer & Earn',
     icon: (size) => (
@@ -165,13 +172,7 @@ const DRAWER_ITEMS = [
     icon: (size) => <Ionicons name="alert-circle-outline" color="#f9c349" size={size + 5} />,
     route: 'Disclaimer',
   },
-  {
-    label: 'Careers at TDC',
-    icon: (size) => (
-      <MaterialCommunityIcons name="briefcase-outline" size={size + 5} color="#f9c349" />
-    ),
-    route: 'TDCCareers',
-  },
+ 
 ];
 
 const AnimatedDrawerItem = ({ label, icon, onPress, delay = 0 }) => {
@@ -343,15 +344,7 @@ function CustomDrawerContent(props) {
                 </View>
               </View>
 
-              <TouchableOpacity
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  props.navigation.closeDrawer();
-                }}
-                style={styles.closeIcon}
-              >
-                <Ionicons name="close" size={24} color="#fff" />
-              </TouchableOpacity>
+              
             </View>
           </View>
         </Animated.View>
@@ -926,12 +919,12 @@ const styles = StyleSheet.create({
   },
   drawerHeaderBG: {
     backgroundColor: '#000',
-    marginBottom: 18,
+    marginBottom: 12,
     borderBottomRightRadius: 30,
     overflow: 'hidden',
   },
   headerGradient: {
-    paddingVertical: 24,
+    paddingVertical: 20,
     paddingHorizontal: 20,
     backgroundColor: '#000',
   },
@@ -1002,8 +995,8 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: 18,
-    paddingTop: 14,
-    paddingBottom: 14,
+    paddingTop: 5,
+    paddingBottom: 10,
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
     backgroundColor: '#fff',

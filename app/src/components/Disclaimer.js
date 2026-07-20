@@ -409,17 +409,7 @@ export default function DisclaimerScreen() {
                   By continuing to use tdc services, you acknowledge and accept these terms.
                 </Text>
               </View>
-              <TouchableOpacity style={styles.legalButton} activeOpacity={0.8}>
-                <LinearGradient
-                  colors={['#f9c349', '#f5a623']}
-                  style={styles.legalButtonGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                >
-                  <Text style={styles.legalButtonText}>I Understand</Text>
-                  <Ionicons name="checkmark-circle" size={18} color="#1a1a1a" />
-                </LinearGradient>
-              </TouchableOpacity>
+              
             </LinearGradient>
           </Animated.View>
 

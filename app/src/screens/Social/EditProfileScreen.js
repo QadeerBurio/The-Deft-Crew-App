@@ -28,6 +28,14 @@ export default function EditProfileScreen({ navigation }) {
   const [rollNo, setRollNo] = useState("");
   const [profileImage, setProfileImage] = useState(null);
 
+  // Focus states
+  const [nameFocused, setNameFocused] = useState(false);
+  const [headlineFocused, setHeadlineFocused] = useState(false);
+  const [bioFocused, setBioFocused] = useState(false);
+  const [schoolFocused, setSchoolFocused] = useState(false);
+  const [degreeFocused, setDegreeFocused] = useState(false);
+  const [rollNoFocused, setRollNoFocused] = useState(false);
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideUpAnim = useRef(new Animated.Value(30)).current;
   const headerFade = useRef(new Animated.Value(0)).current;
@@ -180,35 +188,125 @@ export default function EditProfileScreen({ navigation }) {
 
             {/* Form */}
             <View style={styles.form}>
-              <CustomInput 
-                label="Full Name" value={name} onChange={setName} 
-                placeholder="Abdul Qadeer" icon="person-outline" required 
-              />
-              <CustomInput 
-                label="Headline" value={headline} onChange={setHeadline} 
-                placeholder="Computer Systems Engineer" icon="briefcase-outline" 
-              />
-              <CustomInput 
-                label="Bio" value={bio} onChange={setBio} 
-                placeholder="MERN Stack Developer | React Native | Open Source..." 
-                icon="information-circle-outline" multiline 
-              />
+              {/* Name Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Full Name <Text style={styles.requiredStar}>*</Text></Text>
+                <View style={[styles.inputWrapper, nameFocused && styles.inputFocused]}>
+                  <View style={styles.inputIconContainer}>
+                    <Ionicons name="person-outline" size={18} color={nameFocused ? "#f9c349" : "#999"} />
+                  </View>
+                  <TextInput 
+                    style={styles.input}
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="Abdul Qadeer"
+                    placeholderTextColor="#999"
+                    onFocus={() => setNameFocused(true)}
+                    onBlur={() => setNameFocused(false)}
+                  />
+                </View>
+              </View>
+
+              {/* Headline Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Headline</Text>
+                <View style={[styles.inputWrapper, headlineFocused && styles.inputFocused]}>
+                  <View style={styles.inputIconContainer}>
+                    <Ionicons name="briefcase-outline" size={18} color={headlineFocused ? "#f9c349" : "#999"} />
+                  </View>
+                  <TextInput 
+                    style={styles.input}
+                    value={headline}
+                    onChangeText={setHeadline}
+                    placeholder="Computer Systems Engineer"
+                    placeholderTextColor="#999"
+                    onFocus={() => setHeadlineFocused(false)}
+                    onBlur={() => setHeadlineFocused(false)}
+                  />
+                </View>
+              </View>
+
+              {/* Bio Input - Multiline */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Bio</Text>
+                <View style={[styles.inputWrapper, bioFocused && styles.inputFocused]}>
+                  <View style={styles.inputIconContainer}>
+                    <Ionicons name="information-circle-outline" size={18} color={bioFocused ? "#f9c349" : "#999"} />
+                  </View>
+                  <TextInput 
+                    style={[styles.input, styles.multiline]}
+                    value={bio}
+                    onChangeText={setBio}
+                    placeholder="MERN Stack Developer | React Native | Open Source..."
+                    placeholderTextColor="#999"
+                    multiline={false}
+                    numberOfLines={1}
+                    textAlignVertical="top"
+                    onFocus={() => setBioFocused(false)}
+                    onBlur={() => setBioFocused(false)}
+                  />
+                </View>
+              </View>
               
               <View style={styles.divider} />
               <Text style={styles.sectionLabel}>Education</Text>
               
-              <CustomInput 
-                label="University / School" value={school} onChange={setSchool} 
-                placeholder="MUET, Jamshoro" icon="school-outline" 
-              />
-              <CustomInput 
-                label="Degree Program" value={degree} onChange={setDegree} 
-                placeholder="BS Software Engineering" icon="ribbon-outline" 
-              />
-              <CustomInput 
-                label="Roll Number" value={rollNo} onChange={setRollNo} 
-                placeholder="21CS042" icon="id-card-outline" 
-              />
+              {/* School Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>University / School</Text>
+                <View style={[styles.inputWrapper, schoolFocused && styles.inputFocused]}>
+                  <View style={styles.inputIconContainer}>
+                    <Ionicons name="school-outline" size={18} color={schoolFocused ? "#f9c349" : "#999"} />
+                  </View>
+                  <TextInput 
+                    style={styles.input}
+                    value={school}
+                    onChangeText={setSchool}
+                    placeholder="MUET, Jamshoro"
+                    placeholderTextColor="#999"
+                    onFocus={() => setSchoolFocused(false)}
+                    onBlur={() => setSchoolFocused(false)}
+                  />
+                </View>
+              </View>
+
+              {/* Degree Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Degree Program</Text>
+                <View style={[styles.inputWrapper, degreeFocused && styles.inputFocused]}>
+                  <View style={styles.inputIconContainer}>
+                    <Ionicons name="ribbon-outline" size={18} color={degreeFocused ? "#f9c349" : "#999"} />
+                  </View>
+                  <TextInput 
+                    style={styles.input}
+                    value={degree}
+                    onChangeText={setDegree}
+                    placeholder="BS Software Engineering"
+                    placeholderTextColor="#999"
+                    onFocus={() => setDegreeFocused(false)}
+                    onBlur={() => setDegreeFocused(false)}
+                  />
+                </View>
+              </View>
+
+              {/* Roll Number Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Roll Number</Text>
+                <View style={[styles.inputWrapper, rollNoFocused && styles.inputFocused]}>
+                  <View style={styles.inputIconContainer}>
+                    <Ionicons name="id-card-outline" size={18} color={rollNoFocused ? "#f9c349" : "#999"} />
+                  </View>
+                  <TextInput 
+                    style={styles.input}
+                    value={rollNo}
+                    onChangeText={setRollNo}
+                    placeholder="21CS042"
+                    placeholderTextColor="#999"
+                    onFocus={() => setRollNoFocused(false)}
+                    onBlur={() => setRollNoFocused(false)}
+                  />
+                </View>
+              </View>
             </View>
 
           </Animated.View>
@@ -217,35 +315,6 @@ export default function EditProfileScreen({ navigation }) {
     </SafeAreaView>
   );
 }
-
-const CustomInput = ({ label, value, onChange, placeholder, icon, multiline = false, required = false }) => {
-  const [focused, setFocused] = useState(false);
-  
-  return (
-    <View style={styles.inputGroup}>
-      <Text style={styles.label}>
-        {label} {required && <Text style={styles.requiredStar}>*</Text>}
-      </Text>
-      <View style={[styles.inputWrapper, focused && styles.inputFocused]}>
-        {icon && (
-          <View style={styles.inputIconContainer}>
-            <Ionicons name={icon} size={18} color={focused ? "#f9c349" : "#999"} />
-          </View>
-        )}
-        <TextInput 
-          style={[styles.input, multiline && styles.multiline]}
-          value={value}
-          onChangeText={onChange}
-          placeholder={placeholder}
-          placeholderTextColor="#999"
-          multiline={multiline}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-        />
-      </View>
-    </View>
-  );
-};
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#ffffff" },
@@ -293,6 +362,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center', marginRight: 10
   },
   input: { flex: 1, paddingVertical: 10, fontSize: 15, color: '#1a1a1a', fontWeight: '500' },
-  multiline: { minHeight: 50, textAlignVertical: 'top', paddingTop: 14 },
+  multiline: { 
+    minHeight: 50, 
+    textAlignVertical: 'top', 
+    paddingTop: 12,
+    paddingBottom: 12,
+  },
 });
-

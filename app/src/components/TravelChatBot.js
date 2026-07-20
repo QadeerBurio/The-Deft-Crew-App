@@ -308,6 +308,19 @@ const TravelChatBot = () => {
     }
   }, [isStreaming]);
 
+  // Keyboard show listener to scroll to end
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => {
+        scrollToEnd();
+      }
+    );
+    return () => {
+      keyboardDidShowListener.remove();
+    };
+  }, []);
+
   const openChat = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsOpen(true);
@@ -625,8 +638,9 @@ const TravelChatBot = () => {
           <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
             <KeyboardAvoidingView
               style={styles.flex}
-              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
               keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+              enabled={true}
             >
               {/* ── HEADER ──────────────────────────────────────────── */}
               <View style={styles.header}>
@@ -842,7 +856,7 @@ const styles = StyleSheet.create({
   },
   safeArea: { 
     flex: 1, 
-    backgroundColor: '#F5F6FA',
+    backgroundColor: '#f4f4f4',
     marginTop: 0,
     marginBottom: 0,
   },

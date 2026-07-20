@@ -145,7 +145,8 @@ const ExchangeScreen = ({ navigation }) => {
 
   const onRefresh = () => {
     setRefreshing(true);
-    publicAPI.clearPublicCache();
+    // Remove the clearPublicCache call since it doesn't exist
+    // publicAPI.clearPublicCache();
     fetchPrograms();
   };
 

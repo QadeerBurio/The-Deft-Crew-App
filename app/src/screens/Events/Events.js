@@ -1397,7 +1397,7 @@ const styles = StyleSheet.create({
 
   // Horizontal Category Scroll
   categoryScrollContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     paddingTop: 14,
     paddingBottom: 8,
   },
@@ -1405,7 +1405,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   categoryScrollTitle: {
     fontSize: 17,
@@ -1424,14 +1424,14 @@ const styles = StyleSheet.create({
   categoryScrollItem: {
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal:8,
     paddingVertical: 12,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: COLORS.line,
-    marginRight: 10,
-    minWidth: 80,
-    height: 80,
+    marginRight: 2,
+    minWidth: 50,
+    height: 65,
     position: "relative",
     overflow: "hidden",
   },
@@ -1439,12 +1439,12 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   categoryScrollIcon: {
-    width: 32,
-    height: 32,
+    width: 25,
+    height: 25,
     borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 1,
   },
   categoryScrollLabel: {
     fontSize: 11,

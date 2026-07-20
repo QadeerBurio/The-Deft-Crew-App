@@ -1134,7 +1134,7 @@ const styles = StyleSheet.create({
 
   // Category Card (Text Only)
   categoryWrapper: {
-    width: width * 0.18,
+    width: width * 0.25,
   },
   categoryCard: {
     alignItems: 'center',

@@ -472,65 +472,8 @@ export default function Slider() {
                     
                     <Text style={styles.modalDesc}>{selectedOffer.description}</Text>
                     
-                    <View style={styles.infoCard}>
-                      <View style={styles.infoItem}>
-                        <View style={styles.infoIconContainer}>
-                          <Text style={styles.infoIcon}>🎯</Text>
-                        </View>
-                        <View style={styles.infoTextContainer}>
-                          <Text style={styles.infoLabel}>Exclusive Offer</Text>
-                          <Text style={styles.infoText}>Available for all students</Text>
-                        </View>
-                      </View>
-                      
-                      <View style={styles.infoItem}>
-                        <View style={styles.infoIconContainer}>
-                          <Text style={styles.infoIcon}>⭐</Text>
-                        </View>
-                        <View style={styles.infoTextContainer}>
-                          <Text style={styles.infoLabel}>Limited Time</Text>
-                          <Text style={styles.infoText}>Grab before it's gone</Text>
-                        </View>
-                      </View>
-                      
-                      <View style={styles.infoItem}>
-                        <View style={styles.infoIconContainer}>
-                          <Text style={styles.infoIcon}>📱</Text>
-                        </View>
-                        <View style={styles.infoTextContainer}>
-                          <Text style={styles.infoLabel}>Multi-Platform</Text>
-                          <Text style={styles.infoText}>Valid on App & Website</Text>
-                        </View>
-                      </View>
-                    </View>
-
-                    <Animated.View style={{ 
-                      transform: [{ scale: pulseAnim }], 
-                      width: '100%' 
-                    }}>
-                      <TouchableOpacity 
-                        style={[styles.saveBtn, isSaved && styles.savedBtnActive]} 
-                        onPress={toggleSave}
-                        activeOpacity={0.8}
-                      >
-                        <Animated.View style={{ 
-                          flexDirection: 'row', 
-                          alignItems: 'center',
-                          transform: [
-                            {
-                              scale: likeAnim.interpolate({
-                                inputRange: [0, 0.5, 1],
-                                outputRange: [1, 1.3, 1]
-                              })
-                            }
-                          ]
-                        }}>
-                          <Text style={[styles.saveBtnText, isSaved && styles.savedBtnTextActive]}>
-                            {isSaved ? "✓ Saved" : "❤️ Save"}
-                          </Text>
-                        </Animated.View>
-                      </TouchableOpacity>
-                    </Animated.View>
+                    
+                    
                     
                     <TouchableOpacity 
                       style={styles.bottomCloseBtn} 
