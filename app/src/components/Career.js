@@ -114,6 +114,12 @@ const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended
 
       {/* Type & Experience Badges */}
       <View style={styles.badgeRow}>
+        {(item.isExternal === false && /deft crew|tdc/i.test(item.companyName || '')) && (
+          <View style={styles.tdcBadge}>
+            <Ionicons name="sparkles" size={11} color="#f9c349" />
+            <Text style={styles.tdcBadgeText}>TDC Career</Text>
+          </View>
+        )}
         <View style={styles.typeBadge}>
           <Ionicons name="briefcase-outline" size={11} color="#f9c349" />
           <Text style={styles.typeBadgeText}>{item.type || "Full-time"}</Text>
@@ -695,7 +701,7 @@ const Career = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({ type: "Internship", locationType: "", experienceLevel: "", category: "", datePosted: "all" });
+  const [filters, setFilters] = useState({ type: "All", locationType: "", experienceLevel: "", category: "", datePosted: "all", isTdc: false });
   const scope = 'pakistan';
   const [showFilters, setShowFilters] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -782,17 +788,22 @@ const Career = ({ navigation }) => {
     
     try {
       // Construct query string manually to avoid JSC compatibility issues in React Native
-      // Always send isExternal=true — General Jobs never shows TDC openings
-      let queryString = `page=${cleanPage}&limit=20&scope=${scope}`;
+      let queryString = `page=${cleanPage}&limit=30&scope=${scope}`;
       if (search) queryString += `&search=${encodeURIComponent(search)}`;
+      if (filters.isTdc) {
+        queryString += `&isExternal=false`;
+      }
       Object.entries(filters).forEach(([key, value]) => {
-        if (value && key !== "datePosted") {
+        if (value && key !== "datePosted" && key !== "isTdc" && (key !== "type" || value !== "All")) {
           queryString += `&${key}=${encodeURIComponent(value)}`;
         }
       });
 
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const response = await axios.get(token ? `${API_URL}/feed?${queryString}` : `${API_URL}/public/all?${queryString}`, { headers, timeout: 10000 });
+      const requestUrl = filters.isTdc 
+        ? `${API_URL}/public/tdc?${queryString}` 
+        : `${API_URL}/public/all?${queryString}`;
+      const response = await axios.get(requestUrl, { headers, timeout: 10000 });
       let jobsData = Array.isArray(response.data.jobs) ? response.data.jobs : [];
       const total = response.data.total || 0;
       const respPage = response.data.page || cleanPage;
@@ -1232,7 +1243,28 @@ const Career = ({ navigation }) => {
           {search.length > 0 && <TouchableOpacity onPress={() => setSearch("")}><Ionicons name="close-circle" size={18} color="#999" /></TouchableOpacity>}
           <TouchableOpacity onPress={() => setShowFilters(true)} style={styles.filterIcon}>
             <Ionicons name="options-outline" size={20} color="#1a1a1a" />
-            {Object.values(filters).some(v => v && v !== "all") && <View style={styles.filterDot} />}
+            {Object.values(filters).some(v => v && v !== "all" && v !== false) && <View style={styles.filterDot} />}
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* ===== TOP QUICK FILTER TABS ===== */}
+      <View style={styles.topTabsWrapper}>
+        <View style={styles.topTabsContainer}>
+          <TouchableOpacity
+            style={[styles.topTabChip, !filters.isTdc && styles.topTabChipActive]}
+            onPress={() => setFilters(prev => ({ ...prev, isTdc: false }))}
+          >
+            <Ionicons name="grid-outline" size={13} color={!filters.isTdc ? "#1a1a1a" : "#666"} />
+            <Text style={[styles.topTabChipText, !filters.isTdc && styles.topTabChipTextActive]}>All Listings</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.topTabChip, filters.isTdc && styles.topTabChipTdcActive]}
+            onPress={() => setFilters(prev => ({ ...prev, isTdc: true }))}
+          >
+            <Ionicons name="sparkles" size={14} color={filters.isTdc ? "#1a1a1a" : "#f9c349"} />
+            <Text style={[styles.topTabChipText, filters.isTdc && styles.topTabChipTdcTextActive]}>⭐ TDC Careers</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1265,21 +1297,30 @@ const Career = ({ navigation }) => {
             showsVerticalScrollIndicator={false}
             onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#f9c349"]} tintColor="#f9c349" />}
-            onEndReached={() => {
-              if (hasMore && !loadingMore) {
-                fetchJobs(page + 1, true);
-              }
-            }}
-            onEndReachedThreshold={0.25}
-            initialNumToRender={8}
-            maxToRenderPerBatch={10}
+            initialNumToRender={10}
+            maxToRenderPerBatch={15}
             windowSize={5}
             removeClippedSubviews={Platform.OS === 'android'}
-            ListFooterComponent={loadingMore && (
-              <View style={{ paddingVertical: 16, alignItems: 'center' }}>
-                <ActivityIndicator size="small" color="#f9c349" />
-              </View>
-            )}
+            ListFooterComponent={
+              loadingMore ? (
+                <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                  <ActivityIndicator size="small" color="#f9c349" />
+                  <Text style={{ marginTop: 8, fontSize: 13, color: '#666', fontWeight: '600' }}>Loading more listings...</Text>
+                </View>
+              ) : (hasMore && filteredData.length > 0) ? (
+                <TouchableOpacity
+                  style={styles.showMoreButton}
+                  onPress={() => fetchJobs(page + 1, true)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="sparkles" size={16} color="#1a1a1a" />
+                  <Text style={styles.showMoreButtonText}>
+                    Show All Listings ({totalJobsCount - filteredData.length} remaining)
+                  </Text>
+                  <Ionicons name="chevron-down" size={16} color="#1a1a1a" />
+                </TouchableOpacity>
+              ) : null
+            }
             ListHeaderComponent={filteredData.length > 0 && (
               <View style={styles.listHeader}>
                 <Text style={styles.resultCount}>{totalJobsCount} jobs found</Text>
@@ -1861,6 +1902,89 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     marginLeft: 6,
+  },
+  tdcBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#1a1a1a',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  tdcBadgeText: {
+    fontSize: 9,
+    color: '#f9c349',
+    fontWeight: '800',
+  },
+  topTabsWrapper: {
+    paddingVertical: 6,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f5f5f5',
+  },
+  topTabsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 10,
+    alignItems: 'center',
+  },
+  topTabChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 22,
+    backgroundColor: '#f8f8f8',
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  topTabChipActive: {
+    backgroundColor: '#f9c349',
+    borderColor: '#f9c349',
+  },
+  topTabChipTdcActive: {
+    backgroundColor: '#f9c349',
+    borderColor: '#1a1a1a',
+  },
+  topTabChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+  },
+  topTabChipTextActive: {
+    color: '#1a1a1a',
+    fontWeight: '800',
+  },
+  topTabChipTdcTextActive: {
+    color: '#1a1a1a',
+    fontWeight: '900',
+  },
+  showMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#f9c349',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 14,
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 28,
+    shadowColor: '#f9c349',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  showMoreButtonText: {
+    color: '#1a1a1a',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
 });
 
