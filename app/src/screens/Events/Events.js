@@ -14,6 +14,7 @@ import {
   FlatList,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -37,9 +38,11 @@ import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import GuestGuard from "../../components/GuestGuard";
+import io from "socket.io-client";
 
 const { height, width } = Dimensions.get("window");
 const API_BASE = "https://the-deft-crew-production.up.railway.app/api/events";
+const SOCKET_URL = "https://the-deft-crew-production.up.railway.app";
 
 // ─── Category Configuration ──────────────────────────────────────────────
 const CATEGORY_CONFIG = {
@@ -49,6 +52,8 @@ const CATEGORY_CONFIG = {
   Conferences: { icon: "people-outline", color: "#dc2626", bg: "#fef2f2" },
   Competitions: { icon: "trophy-outline", color: "#d97706", bg: "#fffbeb" },
   "Career Fairs": { icon: "briefcase-outline", color: "#059669", bg: "#ecfdf5" },
+  Concerts: { icon: "musical-notes-outline", color: "#ec4899", bg: "#fce7f3" },
+  Poetry: { icon: "book-outline", color: "#8b5cf6", bg: "#f3e8ff" },
 };
 
 const CATEGORIES = Object.keys(CATEGORY_CONFIG);
@@ -340,7 +345,6 @@ export default function EventsScreen() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [activeTab, setActiveTab] = useState("All");
   const [userEventsCount, setUserEventsCount] = useState(0);
-  const [registerEvent, setRegisterEvent] = useState(null);
 
   // ── Animations ──
   const headerOpacity = useRef(new Animated.Value(0)).current;
@@ -361,18 +365,85 @@ export default function EventsScreen() {
     contact: "",
     date: "",
     teamSize: "",
-  });
-  const [regForm, setRegForm] = useState({
-    studentName: "",
-    whatsapp: "",
-    studentId: "",
-    email: "",
+    registrationUrl: "",
   });
 
+  const handleRegister = (eventItem) => {
+    if (!eventItem) return;
+
+    let targetUrl =
+      eventItem.registrationUrl ||
+      eventItem.externalUrl ||
+      eventItem.organizerWebsite;
+
+    if (
+      !targetUrl &&
+      eventItem.contact &&
+      (eventItem.contact.startsWith("http://") ||
+        eventItem.contact.startsWith("https://") ||
+        eventItem.contact.startsWith("www."))
+    ) {
+      targetUrl = eventItem.contact;
+    }
+
+    if (targetUrl) {
+      let formattedUrl = targetUrl.trim();
+      if (
+        !formattedUrl.startsWith("http://") &&
+        !formattedUrl.startsWith("https://")
+      ) {
+        formattedUrl = `https://${formattedUrl}`;
+      }
+      Linking.openURL(formattedUrl).catch(() => {
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(
+          (eventItem.title || "") +
+            " " +
+            (eventItem.organizer || "") +
+            " event registration"
+        )}`;
+        Linking.openURL(searchUrl).catch(() => {
+          Alert.alert("Notice", "Unable to open registration link.");
+        });
+      });
+    } else {
+      const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(
+        (eventItem.title || "") +
+          " " +
+          (eventItem.organizer || "") +
+          " event registration"
+      )}`;
+      Linking.openURL(searchUrl).catch(() => {
+        Alert.alert("Notice", "No registration link available for this event.");
+      });
+    }
+  };
+
   useEffect(() => {
-    if (user?.name) setRegForm((prev) => ({ ...prev, studentName: user.name }));
-    if (user?.email) setRegForm((prev) => ({ ...prev, email: user.email }));
     bootstrap();
+
+    // ── Real-Time Socket.io Connection ──
+    const socket = io(SOCKET_URL, { transports: ["websocket"] });
+    socket.emit("subscribe_events");
+
+    socket.on("events:new_imported", (data) => {
+      if (data?.events && Array.isArray(data.events)) {
+        setEvents((prev) => {
+          const existingIds = new Set(prev.map((e) => e._id));
+          const newUnique = data.events.filter((e) => !existingIds.has(e._id));
+          return [...newUnique, ...prev];
+        });
+      } else {
+        fetchEvents();
+      }
+    });
+
+    socket.on("events:expired", () => {
+      fetchEvents();
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   const bootstrap = async () => {
@@ -435,7 +506,8 @@ export default function EventsScreen() {
     try {
       if (!isInitial) setRefreshing(true);
       const res = await axios.get(`${API_BASE}/feed`);
-      setEvents(Array.isArray(res.data) ? res.data : []);
+      const fetchedEvents = Array.isArray(res.data) ? res.data : (res.data?.events || []);
+      setEvents(fetchedEvents);
     } catch (error) {
       Alert.alert("Error", "Failed to fetch events");
     } finally {
@@ -503,6 +575,7 @@ export default function EventsScreen() {
       contact: "",
       date: "",
       teamSize: "",
+      registrationUrl: "",
     });
   };
 
@@ -535,6 +608,8 @@ export default function EventsScreen() {
         image: imageUrl,
         date: form.date || new Date().toLocaleDateString(),
         teamSize: form.teamSize || "1-4 Members",
+        registrationUrl: form.registrationUrl || "",
+        externalUrl: form.registrationUrl || "",
       };
       const res = await axios.post(`${API_BASE}/create`, eventData, {
         headers: { Authorization: `Bearer ${token}` },
@@ -551,43 +626,20 @@ export default function EventsScreen() {
     }
   };
 
-  const handleRegistrationSubmit = async () => {
-    if (!regForm.studentName || !regForm.email || !regForm.whatsapp) {
-      Alert.alert("Validation Error", "Please fill all required fields.");
-      return;
-    }
-    if (!token) {
-      Alert.alert("Authentication Error", "Please login to register.");
-      return;
-    }
-    try {
-      await axios.post(
-        `${API_BASE}/register`,
-        {
-          eventId: registerEvent._id,
-          studentName: regForm.studentName,
-          email: regForm.email,
-          whatsapp: regForm.whatsapp,
-          studentId: regForm.studentId || "Not provided",
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      Alert.alert("Success", "Registration successful.");
-      setRegisterEvent(null);
-      setRegForm({
-        studentName: user?.name || "",
-        whatsapp: "",
-        studentId: "",
-        email: user?.email || "",
-      });
-    } catch (error) {
-      Alert.alert("Error", error.response?.data?.error || "Registration failed");
-    }
-  };
-
   const filteredEvents = useMemo(() => {
-    if (activeTab === "All") return events;
-    return events.filter((event) => event.type === activeTab);
+    return events.filter((event) => {
+      // Exclude expired or rejected events
+      if (event.isExpired || event.status === "expired" || event.status === "rejected") {
+        return false;
+      }
+      if (activeTab === "All") return true;
+
+      const categoryMatch = event.type === activeTab || 
+        (Array.isArray(event.categories) && event.categories.includes(activeTab)) ||
+        (Array.isArray(event.tags) && event.tags.includes(activeTab));
+
+      return categoryMatch;
+    });
   }, [activeTab, events]);
 
   // ─── Horizontal Category Scroll ──────────────────────────────────────────
@@ -722,7 +774,7 @@ export default function EventsScreen() {
               item={item}
               index={index}
               onOpen={setSelectedEvent}
-              onRegister={setRegisterEvent}
+              onRegister={handleRegister}
             />
           )}
           contentContainerStyle={styles.listContent}
@@ -901,7 +953,7 @@ export default function EventsScreen() {
                       onPress={() => {
                         const e = selectedEvent;
                         setSelectedEvent(null);
-                        setTimeout(() => setRegisterEvent(e), 260);
+                        handleRegister(e);
                       }}
                     >
                       <LinearGradient
@@ -911,7 +963,7 @@ export default function EventsScreen() {
                         style={styles.stickyButton}
                       >
                         <Text style={styles.stickyButtonText}>Register Now</Text>
-                        <Ionicons name="rocket-outline" size={18} color={COLORS.accent} />
+                        <Ionicons name="open-outline" size={18} color={COLORS.accent} />
                       </LinearGradient>
                     </TouchableOpacity>
                   </View>
@@ -921,126 +973,6 @@ export default function EventsScreen() {
           )}
         </SafeAreaView>
       </Modal>
-
-      {/* Registration Modal - Fixed for all phones */}
-      <GuestGuard
-        title="View Your Discounts"
-        message="Sign in to see your claimed offers and discounts."
-      >
-        <Modal
-          visible={!!registerEvent}
-          animationType="slide"
-          presentationStyle="fullScreen"
-          onRequestClose={() => setRegisterEvent(null)}
-          statusBarTranslucent={true}
-        >
-          <SafeAreaView style={styles.modalScreen} edges={["top", "bottom"]}>
-            {registerEvent && (
-              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                <View style={styles.modalContainer}>
-                  <LinearGradient
-                    colors={[COLORS.gradientStart, COLORS.gradientEnd]}
-                    style={styles.modalHero}
-                  >
-                    <View style={styles.modalHeroTop}>
-                      <View style={styles.modalHeroTitleRow}>
-                        <Ionicons name="clipboard-outline" size={24} color={COLORS.accent} />
-                        <Text style={styles.modalHeroTitle}>Register</Text>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.modalClose}
-                        onPress={() => setRegisterEvent(null)}
-                        activeOpacity={0.86}
-                      >
-                        <Ionicons name="close" size={25} color={COLORS.accent} />
-                      </TouchableOpacity>
-                    </View>
-                    <Text style={styles.modalHeroSubtitle}>{registerEvent.title}</Text>
-                  </LinearGradient>
-                  
-                  <KeyboardAvoidingView
-                    behavior={Platform.OS === "ios" ? "padding" : "height"}
-                    style={styles.keyboardAvoidView}
-                    keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-                  >
-                    <ScrollView 
-                      style={styles.formScrollView}
-                      showsVerticalScrollIndicator={false}
-                      contentContainerStyle={styles.formScrollContent}
-                      keyboardShouldPersistTaps="handled"
-                    >
-                      <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>Full Name *</Text>
-                        <TextInput
-                          style={styles.textInput}
-                          placeholder="Enter your full name"
-                          placeholderTextColor="#8a8a8a"
-                          value={regForm.studentName}
-                          onChangeText={(text) => setRegForm({ ...regForm, studentName: text })}
-                        />
-                      </View>
-                      
-                      <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>University Email *</Text>
-                        <TextInput
-                          style={styles.textInput}
-                          placeholder="student@university.edu"
-                          placeholderTextColor="#8a8a8a"
-                          value={regForm.email}
-                          keyboardType="email-address"
-                          autoCapitalize="none"
-                          onChangeText={(text) => setRegForm({ ...regForm, email: text })}
-                        />
-                      </View>
-                      
-                      <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>WhatsApp Number *</Text>
-                        <TextInput
-                          style={styles.textInput}
-                          placeholder="+92 3XX XXXXXXX"
-                          placeholderTextColor="#8a8a8a"
-                          keyboardType="phone-pad"
-                          value={regForm.whatsapp}
-                          onChangeText={(text) => setRegForm({ ...regForm, whatsapp: text })}
-                        />
-                      </View>
-                      
-                      <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>Student ID / CNIC</Text>
-                        <TextInput
-                          style={styles.textInput}
-                          placeholder="Optional"
-                          placeholderTextColor="#8a8a8a"
-                          value={regForm.studentId}
-                          onChangeText={(text) => setRegForm({ ...regForm, studentId: text })}
-                        />
-                      </View>
-                      
-                      <TouchableOpacity
-                        style={styles.primaryFormButton}
-                        activeOpacity={0.88}
-                        onPress={handleRegistrationSubmit}
-                      >
-                        <LinearGradient
-                          colors={[COLORS.primary, COLORS.gradientEnd]}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={styles.primaryFormGradient}
-                        >
-                          <Text style={styles.primaryFormText}>Submit Registration</Text>
-                          <Ionicons name="checkmark-circle-outline" size={22} color={COLORS.accent} />
-                        </LinearGradient>
-                      </TouchableOpacity>
-                      
-                      <View style={styles.formBottomSpacer} />
-                    </ScrollView>
-                  </KeyboardAvoidingView>
-                </View>
-              </TouchableWithoutFeedback>
-            )}
-          </SafeAreaView>
-        </Modal>
-      </GuestGuard>
 
       {/* Create Event Modal - Fixed for all phones */}
       <Modal
@@ -1247,6 +1179,19 @@ export default function EventsScreen() {
                       placeholderTextColor="#8a8a8a"
                       value={form.contact}
                       onChangeText={(text) => setForm({ ...form, contact: text })}
+                    />
+                  </View>
+                  
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Original Event / Registration Link</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="https://forms.google.com/... or https://luma.com/..."
+                      placeholderTextColor="#8a8a8a"
+                      value={form.registrationUrl}
+                      onChangeText={(text) => setForm({ ...form, registrationUrl: text })}
+                      autoCapitalize="none"
+                      keyboardType="url"
                     />
                   </View>
                   
@@ -1528,7 +1473,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 16,
     paddingTop: 6,
-    paddingBottom: 40,
+    paddingBottom: Platform.OS === "android" ? 120 : 60,
   },
   card: {
     backgroundColor: COLORS.card,
@@ -1877,7 +1822,7 @@ const styles = StyleSheet.create({
     lineHeight: 20 
   },
   detailBottomSpacer: { 
-    height: 20 
+    height: 120 
   },
   stickyFooter: { 
     position: "absolute", 
@@ -1895,7 +1840,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: Platform.OS === "ios" ? 34 : 16,
+    paddingBottom: Platform.OS === "android" ? 54 : 34,
     backgroundColor: "transparent",
     borderTopWidth: 1,
     borderTopColor: COLORS.line,
