@@ -425,14 +425,11 @@ export default function EventsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [activeTab, setActiveTab] = useState("All");
-<<<<<<< HEAD
-  const [userEventsCount, setUserEventsCount] = useState(0);
-=======
   const [registerEvent, setRegisterEvent] = useState(null);
   const [registeredEventIds, setRegisteredEventIds] = useState([]);
   const [showApplied, setShowApplied] = useState(false);
   const [appliedEventsData, setAppliedEventsData] = useState([]);
->>>>>>> origin/main
+  const [userEventsCount, setUserEventsCount] = useState(0);
 
   // ── Animations ──
   const headerOpacity = useRef(new Animated.Value(0)).current;
@@ -441,7 +438,6 @@ export default function EventsScreen() {
   const filterTranslate = useRef(new Animated.Value(20)).current;
   const listOpacity = useRef(new Animated.Value(0)).current;
 
-<<<<<<< HEAD
   const [form, setForm] = useState({
     title: "",
     university: "",
@@ -455,13 +451,14 @@ export default function EventsScreen() {
     date: "",
     teamSize: "",
     registrationUrl: "",
-=======
+  });
+
   const [regForm, setRegForm] = useState({
     studentName: "",
     whatsapp: "",
     studentId: "",
     email: "",
->>>>>>> origin/main
+  });
   });
 
   const handleRegister = (eventItem) => {
@@ -637,122 +634,8 @@ export default function EventsScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-<<<<<<< HEAD
-    await Promise.all([fetchEvents(), fetchUserEventsCount()]);
-  };
-
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [16, 9],
-      quality: 0.7,
-    });
-    if (!result.canceled) setSelectedImage(result.assets[0].uri);
-  };
-
-  const uploadToCloudinary = async (imageUri) => {
-    const data = new FormData();
-    data.append("file", {
-      uri: imageUri,
-      type: "image/jpeg",
-      name: "event_image.jpg",
-    });
-    data.append("upload_preset", "tdc_profiles");
-    data.append("cloud_name", "decaxpera");
-    try {
-      const res = await fetch("https://api.cloudinary.com/v1_1/decaxpera/image/upload", {
-        method: "post",
-        body: data,
-      });
-      const result = await res.json();
-      return result.secure_url;
-    } catch (error) {
-      return null;
-    }
-  };
-
-  const resetCreateForm = () => {
-    setSelectedImage(null);
-    setForm({
-      title: "",
-      university: "",
-      city: "",
-      type: "Hackathons",
-      prize: "",
-      deadline: "",
-      description: "",
-      location: "",
-      contact: "",
-      date: "",
-      teamSize: "",
-      registrationUrl: "",
-    });
-  };
-
-  const handlePostEvent = async () => {
-    if (!form.title || !form.university || !form.city) {
-      Alert.alert("Validation Error", "Please fill Title, University, and City.");
-      return;
-    }
-    if (!token) {
-      Alert.alert("Authentication Error", "Please login first.");
-      return;
-    }
-    setSubmitting(true);
-    let imageUrl = FALLBACK_BANNER;
-    if (selectedImage) {
-      const uploaded = await uploadToCloudinary(selectedImage);
-      if (uploaded) imageUrl = uploaded;
-    }
-    try {
-      const eventData = {
-        title: form.title,
-        organizer: form.university,
-        city: form.city,
-        type: form.type,
-        description: form.description || "",
-        prize: form.prize || "TBD",
-        deadline: form.deadline || "Limited spots",
-        location: form.location || "Online/Venue TBD",
-        contact: form.contact || user?.email || "contact@event.com",
-        image: imageUrl,
-        date: form.date || new Date().toLocaleDateString(),
-        teamSize: form.teamSize || "1-4 Members",
-        registrationUrl: form.registrationUrl || "",
-        externalUrl: form.registrationUrl || "",
-      };
-      const res = await axios.post(`${API_BASE}/create`, eventData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setEvents((prev) => [res.data, ...prev]);
-      setUserEventsCount((prev) => prev + 1);
-      setModalVisible(false);
-      resetCreateForm();
-      Alert.alert("Success", "Event published successfully.");
-    } catch (error) {
-      Alert.alert("Error", error.response?.data?.message || "Failed to publish event");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const filteredEvents = useMemo(() => {
-    return events.filter((event) => {
-      // Exclude expired or rejected events
-      if (event.isExpired || event.status === "expired" || event.status === "rejected") {
-        return false;
-      }
-      if (activeTab === "All") return true;
-
-      const categoryMatch = event.type === activeTab || 
-        (Array.isArray(event.categories) && event.categories.includes(activeTab)) ||
-        (Array.isArray(event.tags) && event.tags.includes(activeTab));
-
-      return categoryMatch;
-    });
-  }, [activeTab, events]);
-=======
+  const onRefresh = async () => {
+    setRefreshing(true);
     await Promise.all([fetchEvents(), fetchRegisteredEvents()]);
   };
 
@@ -847,7 +730,6 @@ export default function EventsScreen() {
   };
 
   const appliedCount = registeredEventIds.length;
->>>>>>> origin/main
 
   // ─── Horizontal Category Scroll ──────────────────────────────────────────
   const CategoryScroll = () => {
@@ -980,13 +862,9 @@ export default function EventsScreen() {
               item={item}
               index={index}
               onOpen={setSelectedEvent}
-<<<<<<< HEAD
               onRegister={handleRegister}
-=======
-              onRegister={setRegisterEvent}
               isRegistered={isEventRegistered(item._id)}
               onCancel={handleCancelRegistration}
->>>>>>> origin/main
             />
           )}
           contentContainerStyle={styles.listContent}
@@ -1180,7 +1058,6 @@ export default function EventsScreen() {
                         {selectedEvent.deadline || "Limited Spots"}
                       </Text>
                     </View>
-<<<<<<< HEAD
                     <TouchableOpacity
                       activeOpacity={0.88}
                       onPress={() => {
@@ -1199,41 +1076,6 @@ export default function EventsScreen() {
                         <Ionicons name="open-outline" size={18} color={COLORS.accent} />
                       </LinearGradient>
                     </TouchableOpacity>
-=======
-                    {isEventRegistered(selectedEvent._id) ? (
-                      <TouchableOpacity
-                        style={styles.cancelButton}
-                        onPress={() => {
-                          const e = selectedEvent;
-                          setSelectedEvent(null);
-                          setTimeout(() => handleCancelRegistration(e), 260);
-                        }}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="close-circle" size={18} color={COLORS.danger} />
-                        <Text style={styles.cancelButtonText}>Cancel</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <TouchableOpacity
-                        activeOpacity={0.88}
-                        onPress={() => {
-                          const e = selectedEvent;
-                          setSelectedEvent(null);
-                          setTimeout(() => setRegisterEvent(e), 260);
-                        }}
-                      >
-                        <LinearGradient
-                          colors={[COLORS.accent, "#f5a623"]}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={styles.stickyButton}
-                        >
-                          <Text style={styles.stickyButtonText}>Register</Text>
-                          <Ionicons name="arrow-forward" size={16} color="#fff" />
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    )}
->>>>>>> origin/main
                   </View>
                 </BlurView>
               </View>
