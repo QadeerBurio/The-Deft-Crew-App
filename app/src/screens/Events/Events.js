@@ -45,7 +45,6 @@ const SOCKET_URL = "https://the-deft-crew-production.up.railway.app";
 
 // ─── Category Configuration ──────────────────────────────────────────────
 const CATEGORY_CONFIG = {
-<<<<<<< HEAD
   All: { icon: "apps-outline", color: "#1a1a2e", bg: "#f0f2f6" },
   Hackathons: { icon: "code-outline", color: "#2563eb", bg: "#dbeafe" },
   Workshops: { icon: "construct-outline", color: "#7c3aed", bg: "#ede9fe" },
@@ -54,14 +53,6 @@ const CATEGORY_CONFIG = {
   "Career Fairs": { icon: "briefcase-outline", color: "#059669", bg: "#ecfdf5" },
   Concerts: { icon: "musical-notes-outline", color: "#ec4899", bg: "#fce7f3" },
   Poetry: { icon: "book-outline", color: "#8b5cf6", bg: "#f3e8ff" },
-=======
-  All: { icon: "apps", color: "#1a1a2e", bg: "#f0f2f6" },
-  Hackathons: { icon: "code-slash", color: "#2563eb", bg: "#dbeafe" },
-  Workshops: { icon: "construct", color: "#7c3aed", bg: "#ede9fe" },
-  Conferences: { icon: "people", color: "#dc2626", bg: "#fef2f2" },
-  Competitions: { icon: "trophy", color: "#d97706", bg: "#fffbeb" },
-  "Career Fairs": { icon: "briefcase", color: "#059669", bg: "#ecfdf5" },
->>>>>>> origin/main
 };
 
 const CATEGORIES = Object.keys(CATEGORY_CONFIG);
