@@ -378,40 +378,7 @@ export default function DisclaimerScreen() {
             ))}
           </View>
 
-          {/* Legal Footer */}
-          <Animated.View 
-            style={[
-              styles.legalWrapper,
-              {
-                transform: [{ translateY: slideUpAnim }],
-                opacity: fadeAnim,
-              },
-            ]}
-          >
-            <LinearGradient
-              colors={['#1a1a1a', '#2d2d2d']}
-              style={styles.legalFooter}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.legalContent}>
-                <View style={styles.legalIconCircle}>
-                  <LinearGradient
-                    colors={['#f9c349', '#f5a623']}
-                    style={styles.legalIconGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <MaterialCommunityIcons name="scale-balance" size={24} color="#fff" />
-                  </LinearGradient>
-                </View>
-                <Text style={styles.legalText}>
-                  By continuing to use tdc services, you acknowledge and accept these terms.
-                </Text>
-              </View>
-              
-            </LinearGradient>
-          </Animated.View>
+          
 
           {/* Footer */}
           <Animated.View 

@@ -65,6 +65,30 @@ const COLORS = {
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
+// ==================== HELPER FUNCTION ====================
+const formatUrl = (url) => {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  
+  // If it's already a valid URL with protocol, return it
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  
+  // If it starts with www., add https://
+  if (trimmed.startsWith('www.')) {
+    return 'https://' + trimmed;
+  }
+  
+  // If it's a relative URL or just a domain, add https://
+  if (!trimmed.includes('://') && !trimmed.startsWith('mailto:')) {
+    return 'https://' + trimmed;
+  }
+  
+  return trimmed;
+};
+
 // ==================== ENHANCED CAREER CARD ====================
 const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended, onOptimizePress }) => {
   const opacity = useRef(new Animated.Value(0)).current;
@@ -72,7 +96,6 @@ const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended
   const scale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Limit staggered delay to first 8 items to avoid compounding scroll lags
     const animDelay = Math.min(index, 8) * 55;
     Animated.parallel([
       Animated.timing(opacity, { toValue: 1, duration: 320, delay: animDelay, useNativeDriver: true }),
@@ -84,6 +107,28 @@ const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended
     Animated.spring(scale, { toValue, friction: 8, tension: 90, useNativeDriver: true }).start();
   };
 
+  // Check if this is a TDC job (internal) - Updated detection
+  const isTDC = 
+    // Check company name for TDC branding
+    (item.companyName || '').toLowerCase().includes('deft crew') || 
+    (item.companyName || '').toLowerCase().includes('tdc') || 
+    (item.company || '').toLowerCase().includes('deft crew') || 
+    (item.company || '').toLowerCase().includes('tdc') ||
+    // Check if it's marked as internal
+    item.isExternal === false ||
+    // Check if it has an internal application URL
+    (item.applyUrl && item.applyUrl.includes('/apply/')) ||
+    // Check if it was created by TDC
+    item.createdBy === 'tdc' ||
+    item.createdBy === 'admin' ||
+    item.source === 'tdc' ||
+    item.source === 'internal' ||
+    // Check if it has TDC application form fields
+    item.applicationType === 'tdc' ||
+    item.applicationType === 'internal';
+
+  const isExternal = item.isExternal === true || item.source === 'external' || item.applicationType === 'external';
+
   return (
     <AnimatedTouchable
       style={[styles.card, { opacity, transform: [{ translateY }, { scale }] }]}
@@ -92,7 +137,6 @@ const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended
       onPressIn={() => animatePress(0.97)}
       onPressOut={() => animatePress(1)}
     >
-      {/* Applied Banner - Enhanced */}
       {hasApplied && (
         <View style={styles.appliedBanner}>
           <Ionicons name="checkmark-circle" size={14} color="#10b981" />
@@ -100,7 +144,6 @@ const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended
         </View>
       )}
 
-      {/* Company & Title */}
       <View style={[styles.cardCompHeader, hasApplied && { paddingRight: 100 }]}>
         {item.companyName && (
           <View style={styles.companyNameRow}>
@@ -112,12 +155,17 @@ const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended
         {item.department && <Text style={styles.departmentText}>{item.department}</Text>}
       </View>
 
-      {/* Type & Experience Badges */}
       <View style={styles.badgeRow}>
-        {(item.isExternal === false && /deft crew|tdc/i.test(item.companyName || '')) && (
+        {isTDC && !isExternal && (
           <View style={styles.tdcBadge}>
             <Ionicons name="sparkles" size={11} color="#f9c349" />
-            <Text style={styles.tdcBadgeText}>TDC Career</Text>
+            <Text style={styles.tdcBadgeText}>Easy Apply</Text>
+          </View>
+        )}
+        {isExternal && (
+          <View style={styles.externalBadge}>
+            <Ionicons name="open-outline" size={11} color="#3b82f6" />
+            <Text style={styles.externalBadgeText}>External</Text>
           </View>
         )}
         <View style={styles.typeBadge}>
@@ -138,7 +186,6 @@ const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended
         )}
       </View>
 
-      {/* Meta Info */}
       <View style={styles.infoRow}>
         <View style={styles.metaItem}>
           <Ionicons name="location-sharp" size={14} color="#f9c349" />
@@ -165,7 +212,6 @@ const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended
         )}
       </View>
 
-      {/* Skills */}
       {item.skills?.length > 0 && (
         <View style={styles.skillsRow}>
           {item.skills.slice(0, 4).map((skill, idx) => (
@@ -181,7 +227,6 @@ const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended
         </View>
       )}
 
-      {/* Urgent / Featured Tags */}
       {(item.urgent || item.featured) && (
         <View style={styles.tagRow}>
           {item.urgent && (
@@ -199,12 +244,11 @@ const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended
         </View>
       )}
 
-      {/* Optimize Button */}
-      {isRecommended && (
+      {isRecommended && isTDC && !isExternal && (
         <TouchableOpacity 
           style={styles.optimizeCardBtn}
           onPress={(e) => {
-            e.stopPropagation(); // prevent opening normal apply modal
+            e.stopPropagation();
             onOptimizePress();
           }}
         >
@@ -213,15 +257,14 @@ const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended
         </TouchableOpacity>
       )}
 
-      {/* Footer */}
       <View style={styles.cardFooter}>
         <Text style={styles.viewDetailsLabel}>
-          {hasApplied ? "✓ View Details" : "Tap to Apply"}
+          {hasApplied ? "✓ View Details" : isTDC && !isExternal ? "Apply Now" : "Apply on Company Site"}
         </Text>
         <Ionicons 
-          name={hasApplied ? "eye-outline" : "arrow-forward-circle"} 
+          name={hasApplied ? "eye-outline" : isTDC && !isExternal ? "arrow-forward-circle" : "open-outline"} 
           size={22} 
-          color={hasApplied ? "#10b981" : "#f9c349"} 
+          color={hasApplied ? "#10b981" : isTDC && !isExternal ? "#f9c349" : "#3b82f6"} 
         />
       </View>
     </AnimatedTouchable>
@@ -278,12 +321,10 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
         <Animated.View style={[styles.applyModalContent, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
           <View style={styles.modalDragHandle} />
           
-          {/* Close X Button */}
           <TouchableOpacity style={styles.closeXButton} onPress={onClose}>
             <Ionicons name="close" size={24} color="#1a1a1a" />
           </TouchableOpacity>
           
-          {/* Application Status Banner */}
           {myApplication && (
             <View style={[styles.statusBanner, { backgroundColor: getStatusColor(myApplication.status) + "15" }]}>
               <View style={[styles.statusDot, { backgroundColor: getStatusColor(myApplication.status) }]} />
@@ -301,14 +342,10 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
             </View>
           )}
 
-          {/* Interview Info if available */}
           {myApplication?.interviewDate && (
             <TouchableOpacity 
               style={styles.interviewBanner}
-              onPress={() => {
-                onClose();
-                // We'll pass this up to parent
-              }}
+              onPress={onClose}
             >
               <View style={styles.interviewBannerIcon}>
                 <Ionicons name="calendar" size={20} color="#f9c349" />
@@ -330,7 +367,6 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
           )}
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 30 }}>
-            {/* Job Details Header */}
             <View style={styles.applyModalHeader}>
               {job?.companyName && <Text style={styles.applyModalCompany}>{job.companyName}</Text>}
               <Text style={styles.applyModalJobTitle}>{job?.title}</Text>
@@ -363,7 +399,6 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
                 </View>
               )}
 
-              {/* Application Info */}
               {myApplication && (
                 <View style={styles.applicationInfoBox}>
                   <View style={styles.applicationInfoRow}>
@@ -384,7 +419,6 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
               )}
             </View>
 
-            {/* Description */}
             {job?.description && (
               <View style={styles.detailSection}>
                 <Text style={styles.sectionHeading}>📋 Description</Text>
@@ -392,7 +426,6 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
               </View>
             )}
 
-            {/* Requirements */}
             {job?.requirements?.length > 0 && (
               <View style={styles.detailSection}>
                 <Text style={styles.sectionHeading}>✅ Requirements</Text>
@@ -405,7 +438,6 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
               </View>
             )}
 
-            {/* Responsibilities */}
             {job?.responsibilities?.length > 0 && (
               <View style={styles.detailSection}>
                 <Text style={styles.sectionHeading}>🎯 Responsibilities</Text>
@@ -418,7 +450,6 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
               </View>
             )}
 
-            {/* Benefits */}
             {job?.benefits?.length > 0 && (
               <View style={styles.detailSection}>
                 <Text style={styles.sectionHeading}>🎁 Benefits</Text>
@@ -433,7 +464,6 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
               </View>
             )}
 
-            {/* Skills */}
             {job?.skills?.length > 0 && (
               <View style={styles.detailSection}>
                 <Text style={styles.sectionHeading}>💡 Required Skills</Text>
@@ -447,7 +477,6 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
               </View>
             )}
 
-            {/* Company Info */}
             {(job?.companyName || job?.companyWebsite) && (
               <View style={styles.detailSection}>
                 <Text style={styles.sectionHeading}>🏢 Company Info</Text>
@@ -460,7 +489,6 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
               </View>
             )}
 
-            {/* Action Buttons */}
             <View style={styles.modalButtonRow}>
               <TouchableOpacity style={styles.shareBtn} onPress={() => {
                 Share.share({ message: `🚀 Career Opportunity!\n\n${job.title}\n${job.companyName || job.department}\n${job.location}\nSalary: ${job.salary}\n\nApply via TDC App!` });
@@ -541,7 +569,6 @@ const InterviewDetailsModal = ({ visible, interview, onClose }) => {
         <Animated.View style={[styles.interviewModalContent, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
           <View style={styles.interviewModalHandle} />
           
-          {/* Close X Button */}
           <TouchableOpacity style={styles.closeXButton} onPress={onClose}>
             <Ionicons name="close" size={24} color="#1a1a1a" />
           </TouchableOpacity>
@@ -641,7 +668,6 @@ const ApplicationsModal = ({ visible, applications, onClose, onInterviewPress })
         <View style={styles.applicationsModalContent}>
           <View style={styles.modalDragHandle} />
           
-          {/* Close X Button */}
           <TouchableOpacity style={styles.closeXButton} onPress={onClose}>
             <Ionicons name="close" size={24} color="#1a1a1a" />
           </TouchableOpacity>
@@ -718,13 +744,11 @@ const Career = ({ navigation }) => {
   const [showInterviewModal, setShowInterviewModal] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
 
-  // Pagination & infinite scroll states
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [totalJobsCount, setTotalJobsCount] = useState(0);
   
-  // NEW: State for job details modal (applied jobs)
   const [showJobDetailsModal, setShowJobDetailsModal] = useState(false);
   const [selectedAppliedJob, setSelectedAppliedJob] = useState(null);
   const [selectedMyApplication, setSelectedMyApplication] = useState(null);
@@ -773,7 +797,6 @@ const Career = ({ navigation }) => {
   }, []);
 
   const fetchJobs = useCallback(async (pageNum = 1, shouldAppend = false) => {
-    // Explicitly enforce numeric pages and prevent React Event pollution
     const cleanPage = typeof pageNum === 'number' && !isNaN(pageNum) ? pageNum : 1;
     const cleanAppend = typeof shouldAppend === 'boolean' ? shouldAppend : false;
 
@@ -787,7 +810,6 @@ const Career = ({ navigation }) => {
     console.log(`📡 [Career.js] Requested page: ${cleanPage}, shouldAppend: ${cleanAppend}, search: "${search}"`);
     
     try {
-      // Construct query string manually to avoid JSC compatibility issues in React Native
       let queryString = `page=${cleanPage}&limit=30&scope=${scope}`;
       if (search) queryString += `&search=${encodeURIComponent(search)}`;
       if (filters.isTdc) {
@@ -839,7 +861,6 @@ const Career = ({ navigation }) => {
           console.log(`⚠️ [Career.js] Filtered out ${duplicateCount} duplicate jobs`);
         }
 
-        // Set hasMore dynamically inside updater to avoid fetchJobs dependencies
         setHasMore(unique.length < total);
         console.log(`📊 [Career.js] Current jobs list length: ${unique.length}, hasMore: ${unique.length < total}`);
         return unique;
@@ -869,9 +890,7 @@ const Career = ({ navigation }) => {
     } catch (err) { console.log("Error fetching applications:", err); }
   };
 
-  // Debounced search and filters execution effect
   useEffect(() => {
-    // Reset page and clear current jobs list instantly on search/filters/scope change
     setPage(1);
     setJobs([]);
     setHasMore(true);
@@ -924,7 +943,6 @@ const Career = ({ navigation }) => {
       }
 
       if (file) {
-        // Client-side validation: check file format and size
         const allowedExtensions = ['pdf', 'doc', 'docx'];
         const fileExt = file.name?.split('.').pop()?.toLowerCase();
 
@@ -954,10 +972,18 @@ const Career = ({ navigation }) => {
 
   const checkAlreadyApplied = (jobId) => appliedJobIds.has(jobId);
   
-  // NEW: Find my application for a specific job
   const findMyApplication = (jobId) => {
     return myApplications.find(app => app.jobId?._id === jobId);
   };
+
+  // ==================== FIXED: openInterviewDetails function ====================
+  const openInterviewDetails = (application) => {
+    if (application.interviewDate) { 
+      setSelectedInterview(application); 
+      setShowInterviewModal(true); 
+    }
+  };
+  // ======================================================================
 
   const handleOptimizeResumeFlow = async (job) => {
     if (!token) {
@@ -984,7 +1010,6 @@ const Career = ({ navigation }) => {
     try {
       setOptimizing(true);
 
-      // Check fit
       const fitResult = await checkResumeFit(resumeToOptimize._id, job._id);
 
       if (!fitResult.meetsRequirements) {
@@ -997,7 +1022,6 @@ const Career = ({ navigation }) => {
         return;
       }
 
-      // Optimize
       const tailored = await optimizeResume(resumeToOptimize._id, {
         jobId: job._id,
         jobTitle: job.title,
@@ -1008,7 +1032,6 @@ const Career = ({ navigation }) => {
         throw new Error('AI tailoring returned empty results.');
       }
 
-      // Generate local PDF
       const html = renderResumeHTML(tailored, tailored.template || 'modern_ats', tailored.customStyles || {}, true);
       const { uri } = await Print.printToFileAsync({ html, base64: false });
 
@@ -1037,10 +1060,133 @@ const Career = ({ navigation }) => {
     }
   };
 
+  // ============================================================
+  // FIXED: openApplyModal function - properly handles all job types
+  // ============================================================
+  const openApplyModal = (job) => {
+    setSelectedJob(job);
+    
+    // Check if this is a TDC job (internal) by checking multiple criteria
+    const isTDC = 
+      // Check company name for TDC branding
+      (job.companyName || '').toLowerCase().includes('deft crew') || 
+      (job.companyName || '').toLowerCase().includes('tdc') || 
+      (job.company || '').toLowerCase().includes('deft crew') || 
+      (job.company || '').toLowerCase().includes('tdc') ||
+      // Check if it's marked as internal
+      job.isExternal === false ||
+      // Check if it has an internal application URL
+      (job.applyUrl && job.applyUrl.includes('/apply/')) ||
+      // Check if it was created by TDC
+      job.createdBy === 'tdc' ||
+      job.createdBy === 'admin' ||
+      job.source === 'tdc' ||
+      job.source === 'internal' ||
+      // Check if it has TDC application form fields
+      job.applicationType === 'tdc' ||
+      job.applicationType === 'internal';
+
+    // For EXTERNAL jobs (clearly marked as external or from external source)
+    if (job.isExternal === true || job.source === 'external' || job.applicationType === 'external') {
+      // Try to find a valid URL for external application
+      const applyUrl = job.externalUrl || job.companyWebsite || job.applyUrl || job.url || job.applicationLink;
+      
+      if (applyUrl) {
+        const formattedUrl = formatUrl(applyUrl);
+        
+        if (formattedUrl) {
+          Linking.canOpenURL(formattedUrl)
+            .then(supported => {
+              if (supported) {
+                Linking.openURL(formattedUrl);
+              } else {
+                Alert.alert(
+                  'Cannot Open Link',
+                  `Unable to open the application link. Please visit ${job.companyName || 'the company'} website directly to apply.`,
+                  [
+                    { text: 'OK' },
+                    { 
+                      text: 'Search Company', 
+                      onPress: () => {
+                        const searchQuery = encodeURIComponent(`${job.companyName || job.title} careers`);
+                        Linking.openURL(`https://www.google.com/search?q=${searchQuery}`);
+                      }
+                    }
+                  ]
+                );
+              }
+            })
+            .catch(() => {
+              Alert.alert(
+                'Cannot Open Link',
+                `Unable to open the application link. Please visit ${job.companyName || 'the company'} website directly to apply.`,
+                [
+                  { text: 'OK' },
+                  { 
+                    text: 'Search Company', 
+                    onPress: () => {
+                      const searchQuery = encodeURIComponent(`${job.companyName || job.title} careers`);
+                      Linking.openURL(`https://www.google.com/search?q=${searchQuery}`);
+                    }
+                  }
+                ]
+              );
+            });
+        } else {
+          Alert.alert(
+            'Apply on Company Website',
+            `Please visit ${job.companyName || 'the company'} website to apply for this position.`,
+            [
+              { text: 'OK' },
+              { 
+                text: 'Search', 
+                onPress: () => {
+                  const searchQuery = encodeURIComponent(`${job.companyName || job.title} careers`);
+                  Linking.openURL(`https://www.google.com/search?q=${searchQuery}`);
+                }
+              }
+            ]
+          );
+        }
+      } else {
+        // No URL available
+        Alert.alert(
+          'External Application',
+          `Please visit ${job.companyName || 'the company'} website to apply for this position.`,
+          [
+            { text: 'OK' },
+            { 
+              text: 'Search', 
+              onPress: () => {
+                const searchQuery = encodeURIComponent(`${job.companyName || job.title} careers`);
+                Linking.openURL(`https://www.google.com/search?q=${searchQuery}`);
+              }
+            }
+          ]
+        );
+      }
+      return;
+    }
+
+    // For TDC INTERNAL jobs (including manual posts) - check if already applied
+    if (checkAlreadyApplied(job._id)) {
+      const myApp = findMyApplication(job._id);
+      setSelectedAppliedJob(job);
+      setSelectedMyApplication(myApp);
+      setShowJobDetailsModal(true);
+      return;
+    }
+
+    // Show application form for TDC internal jobs
+    setApplicationForm(prev => ({ ...prev, fullName: user?.name || "", email: user?.email || "" }));
+    setValidationErrors({});
+    setModalVisible(true);
+  };
+  // ============================================================
+
   const handleApply = async () => {
     if (!token) { Alert.alert("Login Required", "Please login to apply", [{ text: "Cancel" }, { text: "Login", onPress: () => navigation.navigate("Login") }]); return; }
     if (!validateForm()) { 
-      // Scroll to first error
       Alert.alert("Missing Information", "Please fill all required fields marked with *");
       return; 
     }
@@ -1067,73 +1213,6 @@ const Career = ({ navigation }) => {
     setValidationErrors({});
   };
 
-  // Open modal — always redirect to actual portal of internship
-  const openApplyModal = (job) => {
-    setSelectedJob(job);
-    const applyUrl = job.externalUrl || job.companyWebsite || 'https://pk.indeed.com/q-remote-internship-jobs.html';
-    Linking.openURL(applyUrl).catch(() => {
-      Alert.alert('Cannot Open Link', 'The application link could not be opened.');
-    });
-    return;
-
-    const isTDC = (job.companyName || '').toLowerCase().includes('deft crew') || 
-                  (job.companyName || '').toLowerCase().includes('tdc') || 
-                  (job.company || '').toLowerCase().includes('deft crew') || 
-                  (job.company || '').toLowerCase().includes('tdc');
-
-    // External jobs: never use in-app form — redirect to employer's website (except TDC)
-    if (job.isExternal && !isTDC) {
-      const applyUrl = job.externalUrl || job.companyWebsite;
-      if (applyUrl) {
-        Linking.canOpenURL(applyUrl).then(supported => {
-          if (supported) {
-            Linking.openURL(applyUrl);
-          } else {
-            Alert.alert('Cannot Open Link', 'The application link could not be opened.');
-          }
-        });
-      } else {
-        Alert.alert(
-          'Apply Externally',
-          `Visit ${job.companyName || 'the company website'} directly to apply for this position.`,
-          [{ text: 'OK' }]
-        );
-      }
-      return;
-    }
-
-    // Internal TDC job — track application status or show form
-    if (checkAlreadyApplied(job._id)) {
-      const myApp = findMyApplication(job._id);
-      setSelectedAppliedJob(job);
-      setSelectedMyApplication(myApp);
-      setShowJobDetailsModal(true);
-      return;
-    }
-
-    setApplicationForm(prev => ({ ...prev, fullName: user?.name || "", email: user?.email || "" }));
-    setValidationErrors({});
-    setModalVisible(true);
-  };
-
-  // NEW: Open interview from job details modal
-  const openInterviewFromDetails = () => {
-    if (selectedMyApplication?.interviewDate) {
-      setShowJobDetailsModal(false);
-      setTimeout(() => {
-        setSelectedInterview(selectedMyApplication);
-        setShowInterviewModal(true);
-      }, 300);
-    }
-  };
-
-  const openInterviewDetails = (application) => {
-    if (application.interviewDate) { 
-      setSelectedInterview(application); 
-      setShowInterviewModal(true); 
-    }
-  };
-
   const shareJob = async (job) => {
     try { await Share.share({ message: `🚀 Career Opportunity!\n\n${job.title}\n${job.companyName || job.department}\n${job.location}\nSalary: ${job.salary}\n\nApply via TDC App!` }); } catch (err) {}
   };
@@ -1145,7 +1224,7 @@ const Career = ({ navigation }) => {
     transform: [{ scale: scrollY.interpolate({ inputRange: [0, 80], outputRange: [1, 0.98], extrapolate: 'clamp' }) }],
   };
 
-  const filteredData = jobs; // Filtered server-side dynamically via search API parameter
+  const filteredData = jobs;
 
   // ==================== FILTER MODAL ====================
   const FilterModal = () => (
@@ -1155,7 +1234,6 @@ const Career = ({ navigation }) => {
         <View style={styles.filterModalContent}>
           <View style={styles.modalDragHandle} />
           
-          {/* Close X Button */}
           <TouchableOpacity style={styles.closeXButton} onPress={() => setShowFilters(false)}>
             <Ionicons name="close" size={24} color="#1a1a1a" />
           </TouchableOpacity>
@@ -1213,7 +1291,6 @@ const Career = ({ navigation }) => {
   );
 
   return (
-    
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
@@ -1223,8 +1300,8 @@ const Career = ({ navigation }) => {
           <Ionicons name="chevron-back" size={22} color="#1a1a1a" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>tdc<Text style={{color:'#f9c349'}}>.</Text> Internships</Text>
-          <Text style={styles.headerSub}>Find Your Dream Internship</Text>
+          <Text style={styles.headerTitle}>tdc<Text style={{color:'#f9c349'}}>.</Text> Careers</Text>
+          <Text style={styles.headerSub}>Find Your Dream Job</Text>
         </View>
         <TouchableOpacity style={styles.headerBtn} onPress={() => {
           if (!token) { Alert.alert("Login Required", "Please login"); return; }
@@ -1239,7 +1316,7 @@ const Career = ({ navigation }) => {
       <View style={styles.searchWrapper}>
         <View style={styles.searchBar}>
           <Ionicons name="search" size={18} color="#999" />
-          <TextInput style={styles.searchInput} placeholder="Search internships, skills, companies..." placeholderTextColor="#999" value={search} onChangeText={setSearch} />
+          <TextInput style={styles.searchInput} placeholder="Search jobs, skills, companies..." placeholderTextColor="#999" value={search} onChangeText={setSearch} />
           {search.length > 0 && <TouchableOpacity onPress={() => setSearch("")}><Ionicons name="close-circle" size={18} color="#999" /></TouchableOpacity>}
           <TouchableOpacity onPress={() => setShowFilters(true)} style={styles.filterIcon}>
             <Ionicons name="options-outline" size={20} color="#1a1a1a" />
@@ -1264,7 +1341,7 @@ const Career = ({ navigation }) => {
             onPress={() => setFilters(prev => ({ ...prev, isTdc: true }))}
           >
             <Ionicons name="sparkles" size={14} color={filters.isTdc ? "#1a1a1a" : "#f9c349"} />
-            <Text style={[styles.topTabChipText, filters.isTdc && styles.topTabChipTdcTextActive]}>⭐ TDC Careers</Text>
+            <Text style={[styles.topTabChipText, filters.isTdc && styles.topTabChipTdcTextActive]}> Easy Apply</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1335,8 +1412,17 @@ const Career = ({ navigation }) => {
       )}
 
       <FilterModal />
-      <ApplicationsModal visible={showApplicationsModal} applications={myApplications} onClose={() => setShowApplicationsModal(false)} onInterviewPress={openInterviewDetails} />
-      <InterviewDetailsModal visible={showInterviewModal} interview={selectedInterview} onClose={() => setShowInterviewModal(false)} />
+      <ApplicationsModal 
+        visible={showApplicationsModal} 
+        applications={myApplications} 
+        onClose={() => setShowApplicationsModal(false)} 
+        onInterviewPress={openInterviewDetails} 
+      />
+      <InterviewDetailsModal 
+        visible={showInterviewModal} 
+        interview={selectedInterview} 
+        onClose={() => setShowInterviewModal(false)} 
+      />
       
       {/* Optimizing Overlay Modal */}
       <Modal visible={optimizing} transparent animationType="fade">
@@ -1353,21 +1439,16 @@ const Career = ({ navigation }) => {
       <Modal visible={skillGapVisible} transparent animationType="fade" onRequestClose={() => setSkillGapVisible(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
           <View style={{ backgroundColor: '#ffffff', borderRadius: 20, width: '100%', maxWidth: 360, overflow: 'hidden', borderWidth: 1.5, borderColor: '#f9c349' }}>
-            {/* Header */}
             <View style={{ backgroundColor: '#1a1a1a', paddingVertical: 20, alignItems: 'center', justifyContent: 'center' }}>
               <MaterialCommunityIcons name="alert-decagram" size={48} color="#f9c349" />
               <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: '800', marginTop: 8 }}>Skill Gap Warning</Text>
             </View>
-            
-            {/* Body */}
             <View style={{ padding: 24 }}>
               <Text style={{ fontSize: 14, color: '#333333', lineHeight: 22, textAlign: 'center', marginBottom: 16 }}>
                 your expertise are not that much for this role to apply this role you need to enhance your skills{' '}
                 <Text style={{ fontWeight: '800', color: '#1a1a1a' }}>{skillGapData.missingSkills.join(', ') || 'key required skills'}</Text>
                 {' '}and then your chances of selection could increase
               </Text>
-
-              {/* Action Button */}
               <TouchableOpacity 
                 style={{ backgroundColor: '#f9c349', paddingVertical: 12, borderRadius: 12, alignItems: 'center', marginTop: 8 }}
                 onPress={() => setSkillGapVisible(false)}
@@ -1379,7 +1460,7 @@ const Career = ({ navigation }) => {
         </View>
       </Modal>
       
-      {/* NEW: Job Details Modal for Applied Jobs */}
+      {/* Job Details Modal for Applied Jobs */}
       <JobDetailsModal 
         visible={showJobDetailsModal}
         job={selectedAppliedJob}
@@ -1387,21 +1468,19 @@ const Career = ({ navigation }) => {
         onClose={() => setShowJobDetailsModal(false)}
       />
 
-      {/* ===== APPLICATION FORM MODAL (For non-applied jobs) ===== */}
+      {/* ===== APPLICATION FORM MODAL ===== */}
       <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
         <View style={styles.applyModalOverlay}>
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}><View style={StyleSheet.absoluteFill} /></TouchableWithoutFeedback>
           <View style={styles.applyModalContent}>
             <View style={styles.modalDragHandle} />
             
-            {/* Close X Button */}
             <TouchableOpacity style={styles.closeXButton} onPress={() => setModalVisible(false)}>
               <Ionicons name="close" size={24} color="#1a1a1a" />
             </TouchableOpacity>
             
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 30 }}>
               
-              {/* Job Details Header */}
               <View style={styles.applyModalHeader}>
                 {selectedJob?.companyName && <Text style={styles.applyModalCompany}>{selectedJob.companyName}</Text>}
                 <Text style={styles.applyModalJobTitle}>{selectedJob?.title}</Text>
@@ -1435,7 +1514,6 @@ const Career = ({ navigation }) => {
                 )}
               </View>
 
-              {/* Description */}
               {selectedJob?.description && (
                 <View style={styles.detailSection}>
                   <Text style={styles.sectionHeading}>📋 Description</Text>
@@ -1443,7 +1521,6 @@ const Career = ({ navigation }) => {
                 </View>
               )}
 
-              {/* Requirements */}
               {selectedJob?.requirements?.length > 0 && (
                 <View style={styles.detailSection}>
                   <Text style={styles.sectionHeading}>✅ Requirements</Text>
@@ -1456,7 +1533,6 @@ const Career = ({ navigation }) => {
                 </View>
               )}
 
-              {/* Responsibilities */}
               {selectedJob?.responsibilities?.length > 0 && (
                 <View style={styles.detailSection}>
                   <Text style={styles.sectionHeading}>🎯 Responsibilities</Text>
@@ -1469,7 +1545,6 @@ const Career = ({ navigation }) => {
                 </View>
               )}
 
-              {/* Benefits */}
               {selectedJob?.benefits?.length > 0 && (
                 <View style={styles.detailSection}>
                   <Text style={styles.sectionHeading}>🎁 Benefits</Text>
@@ -1484,7 +1559,6 @@ const Career = ({ navigation }) => {
                 </View>
               )}
 
-              {/* Skills */}
               {selectedJob?.skills?.length > 0 && (
                 <View style={styles.detailSection}>
                   <Text style={styles.sectionHeading}>💡 Required Skills</Text>
@@ -1498,7 +1572,6 @@ const Career = ({ navigation }) => {
                 </View>
               )}
 
-              {/* Company Info */}
               {(selectedJob?.companyName || selectedJob?.companyWebsite) && (
                 <View style={styles.detailSection}>
                   <Text style={styles.sectionHeading}>🏢 Company Info</Text>
@@ -1516,7 +1589,6 @@ const Career = ({ navigation }) => {
                 <Text style={styles.sectionHeading}>📝 Application Form</Text>
                 <Text style={styles.formRequiredNote}>* Required fields</Text>
 
-                {/* Full Name */}
                 <Text style={styles.formLabel}>Full Name *</Text>
                 <TextInput 
                   style={[styles.formInput, validationErrors.fullName && styles.formInputError]} 
@@ -1527,7 +1599,6 @@ const Career = ({ navigation }) => {
                 />
                 {validationErrors.fullName && <Text style={styles.errorText}>{validationErrors.fullName}</Text>}
 
-                {/* Email */}
                 <Text style={styles.formLabel}>Email Address *</Text>
                 <TextInput 
                   style={[styles.formInput, validationErrors.email && styles.formInputError]} 
@@ -1540,7 +1611,6 @@ const Career = ({ navigation }) => {
                 />
                 {validationErrors.email && <Text style={styles.errorText}>{validationErrors.email}</Text>}
 
-                {/* Phone */}
                 <Text style={styles.formLabel}>Phone Number *</Text>
                 <TextInput 
                   style={[styles.formInput, validationErrors.phone && styles.formInputError]} 
@@ -1552,11 +1622,9 @@ const Career = ({ navigation }) => {
                 />
                 {validationErrors.phone && <Text style={styles.errorText}>{validationErrors.phone}</Text>}
 
-                {/* Address */}
                 <Text style={styles.formLabel}>Address</Text>
                 <TextInput style={styles.formInput} placeholder="Street address" placeholderTextColor="#999" value={applicationForm.address} onChangeText={t => handleInputChange("address", t)} />
 
-                {/* City & Country */}
                 <View style={styles.formRow}>
                   <View style={styles.formHalf}>
                     <Text style={styles.formLabel}>City</Text>
@@ -1568,7 +1636,6 @@ const Career = ({ navigation }) => {
                   </View>
                 </View>
 
-                {/* Professional Info */}
                 <Text style={styles.formLabel}>Current Company</Text>
                 <TextInput style={styles.formInput} placeholder="Your current employer" placeholderTextColor="#999" value={applicationForm.currentCompany} onChangeText={t => handleInputChange("currentCompany", t)} />
 
@@ -1584,21 +1651,6 @@ const Career = ({ navigation }) => {
                 <Text style={styles.formLabel}>Notice Period</Text>
                 <TextInput style={styles.formInput} placeholder="e.g., 2 weeks" placeholderTextColor="#999" value={applicationForm.noticePeriod} onChangeText={t => handleInputChange("noticePeriod", t)} />
 
-                {/* Work Authorization */}
-                <Text style={styles.formLabel}>Work Authorization</Text>
-                <View style={styles.workAuthRow}>
-                  {["Citizen", "Permanent Resident", "Work Visa", "Need Sponsorship", "Other"].map(opt => (
-                    <TouchableOpacity 
-                      key={opt} 
-                      style={[styles.workAuthChip, applicationForm.workAuthorization === opt && styles.workAuthChipActive]}
-                      onPress={() => handleInputChange("workAuthorization", opt)}
-                    >
-                      <Text style={[styles.workAuthChipText, applicationForm.workAuthorization === opt && styles.workAuthChipTextActive]}>{opt}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {/* Cover Letter */}
                 <Text style={styles.formLabel}>Cover Letter *</Text>
                 <TextInput 
                   style={[styles.formInput, styles.formTextArea, validationErrors.coverLetter && styles.formInputError]} 
@@ -1611,17 +1663,9 @@ const Career = ({ navigation }) => {
                 />
                 {validationErrors.coverLetter && <Text style={styles.errorText}>{validationErrors.coverLetter}</Text>}
 
-                {/* URLs */}
-                <Text style={styles.formLabel}>Portfolio URL</Text>
-                <TextInput style={styles.formInput} placeholder="https://yourportfolio.com" placeholderTextColor="#999" autoCapitalize="none" value={applicationForm.portfolioUrl} onChangeText={t => handleInputChange("portfolioUrl", t)} />
-
                 <Text style={styles.formLabel}>LinkedIn URL</Text>
                 <TextInput style={styles.formInput} placeholder="https://linkedin.com/in/yourprofile" placeholderTextColor="#999" autoCapitalize="none" value={applicationForm.linkedInUrl} onChangeText={t => handleInputChange("linkedInUrl", t)} />
 
-                <Text style={styles.formLabel}>GitHub URL</Text>
-                <TextInput style={styles.formInput} placeholder="https://github.com/yourusername" placeholderTextColor="#999" autoCapitalize="none" value={applicationForm.githubUrl} onChangeText={t => handleInputChange("githubUrl", t)} />
-
-                {/* Resume Upload */}
                 <Text style={styles.formLabel}>Resume *</Text>
                 <TouchableOpacity 
                   style={[styles.resumeBtn, validationErrors.resume && styles.resumeBtnError]} 
@@ -1642,7 +1686,6 @@ const Career = ({ navigation }) => {
                 </TouchableOpacity>
                 {validationErrors.resume && <Text style={styles.errorText}>{validationErrors.resume}</Text>}
 
-                {/* Upload Progress */}
                 {submitting && uploadProgress > 0 && (
                   <View style={styles.progressBar}>
                     <View style={[styles.progressFill, { width: `${uploadProgress}%` }]} />
@@ -1650,7 +1693,6 @@ const Career = ({ navigation }) => {
                   </View>
                 )}
 
-                {/* Submit */}
                 <TouchableOpacity style={styles.submitBtn} onPress={handleApply} disabled={submitting}>
                   <View style={styles.submitBtnGradient}>
                     {submitting ? (
@@ -1679,13 +1721,11 @@ const Career = ({ navigation }) => {
         </View>
       </Modal>
     </SafeAreaView>
-    
   );
 };
 
 // ==================== COMPLETE STYLES ====================
 const styles = StyleSheet.create({
-  // ... (keep all existing styles)
   container: { flex: 1, backgroundColor: "#ffffff" },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f0f0f0', backgroundColor: '#fff' },
   headerBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center', position: 'relative' },
@@ -1715,6 +1755,10 @@ const styles = StyleSheet.create({
   jobTitle: { fontSize: 17, fontWeight: '800', color: '#1a1a1a', lineHeight: 22 },
   departmentText: { fontSize: 12, color: '#999', fontWeight: '600', marginTop: 2 },
   badgeRow: { flexDirection: 'row', gap: 8, marginBottom: 10, flexWrap: 'wrap' },
+  tdcBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#1a1a1a', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
+  tdcBadgeText: { fontSize: 9, color: '#f9c349', fontWeight: '800' },
+  externalBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#3b82f615', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: '#3b82f630' },
+  externalBadgeText: { fontSize: 9, color: '#3b82f6', fontWeight: '800' },
   typeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#f9c34915', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#f9c34930' },
   typeBadgeText: { fontSize: 10, color: '#1a1a1a', fontWeight: '700' },
   expBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#8b5cf615', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#8b5cf630' },
@@ -1745,10 +1789,7 @@ const styles = StyleSheet.create({
   filterModalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
   filterModalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: height * 0.7 },
   modalDragHandle: { width: 40, height: 5, backgroundColor: '#e0e0e0', borderRadius: 3, alignSelf: 'center', marginBottom: 16 },
-  
-  // Close X Button - NEW
   closeXButton: { position: 'absolute', top: 12, right: 16, zIndex: 10, width: 36, height: 36, borderRadius: 18, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center' },
-  
   filterModalTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a', marginBottom: 16 },
   filterGroup: { marginBottom: 16 },
   filterLabel: { fontSize: 13, fontWeight: '700', color: '#1a1a1a', marginBottom: 8 },
@@ -1877,7 +1918,6 @@ const styles = StyleSheet.create({
   shareBtnText: { fontWeight: '700', color: '#1a1a1a', fontSize: 13 },
   cancelBtn: { flex: 1, height: 44, borderRadius: 12, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#f0f0f0' },
   cancelBtnText: { fontWeight: '700', color: '#999', fontSize: 13 },
-  // Pakistan / Worldwide scope toggle
   scopeToggleRow: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
   scopeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 22, borderWidth: 1.5, borderColor: '#f0f0f0', backgroundColor: '#fafafa' },
   scopeBtnActive: { backgroundColor: '#1a1a1a', borderColor: '#1a1a1a' },
@@ -1902,20 +1942,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     marginLeft: 6,
-  },
-  tdcBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: '#1a1a1a',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  tdcBadgeText: {
-    fontSize: 9,
-    color: '#f9c349',
-    fontWeight: '800',
   },
   topTabsWrapper: {
     paddingVertical: 6,

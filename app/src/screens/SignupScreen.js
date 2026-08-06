@@ -25,52 +25,130 @@ const { width, height } = Dimensions.get("window");
 const isTablet = Math.min(width, height) >= 768;
 
 const UNIVERSITIES = [
+  "Aga Khan Higher Secondary School",
   "Aga Khan University",
-  "Baqai Medical University",
+  "Air University",
+  "Allama Iqbal Open University",
+  "Alpha College",
+  "Aror University of Art, Architecture, Design & Heritage",
+  "Bahria University Islamabad",
   "Bahria University Karachi",
-  "NED University of Engineering & Technology",
-  "University of Karachi",
+  "Baqai Medical University",
+  "Beaconhouse",
+  "Cedar College",
+  "City School",
+  "COMMECS College",
+  "COMSATS University Islamabad",
+  "COMSATS University Lahore Campus",
+  "COMSATS University Sahiwal Campus",
+  "COMSATS University Vehari Campus",
+  "Dawood University of Engineering & Technology Karachi",
+  "DHA Suffa University",
+  "Dow International Medical College",
+  "Faisalabad Medical University",
+  "FAST-NUCES Karachi",
+  "FAST-NUCES Lahore",
+  "Fatima Jinnah Medical University",
+  "FMH College of Medicine & Dentistry",
+  "Foundation University Medical College",
+  "Gambat Institute of Medical Sciences (GIMS)",
+  "Gilgit Medical College",
+  "Government College University Faisalabad",
+  "Government College University Lahore",
+  "Greenwich University",
+  "Habib University Karachi",
+  "Hamdard University Karachi",
+  "Ilma University Karachi",
+  "Indus Medical College",
+  "Indus University",
+  "Indus Valley School of Art and Architecture (IVS)",
   "Institute of Business Administration (IBA Karachi)",
   "Institute of Business Management (IoBM)",
-  "SZABIST",
-  "FAST-NUCES Karachi",
-  "Sir Syed University of Engineering & Technology",
-  "Dawood University of Engineering & Technology",
-  "Hamdard University",
+  "International Islamic University Islamabad",
   "Iqra University",
+  "Islamabad Medical & Dental College",
+  "Isra Medical College",
+  "Isra University",
+  "Jhalawan Medical College",
+  "Jinnah Medical & Dental College",
   "Jinnah Sindh Medical University",
-  "Dow University of Health Sciences",
-  "Indus University",
-  "Benazir Bhutto Shaheed University Lyari",
-  "Federal Urdu University",
-  "Karachi Institute of Economics & Technology (KIET)",
-  "Muhammad Ali Jinnah University",
-  "Habib University",
-  "Shaheed Zulfikar Ali Bhutto Institute of Science & Technology",
-  "Preston University Karachi",
-  "Mohi-ud-Din Islamic University Karachi",
-  "Greenwich University",
-  "Newports Institute of Communications & Economics",
-  "Textile Institute of Pakistan",
-  "Sindh Madressatul Islam University",
-  "DHA Suffa University",
-  "Usman Institute of Technology",
   "Jinnah University for Women",
-  "Ziauddin University",
-  "Al-Hamd Islamic University Karachi Campus",
-  "Virtual University of Pakistan Karachi Campus",
-  "Allama Iqbal Open University Karachi Campus",
-  "Iqra National University Karachi Campus",
-  "Dadabhoy Institute of Higher Education",
+  "Karakoram International University",
+  "Karachi Institute of Economics and Technology (KIET)",
+  "Karachi Institute of Medical Sciences",
+  "Karachi Medical & Dental College",
+  "Karachi School of Business and Leadership (KSBL)",
   "KASBIT",
-  "CAMS Institute of Business & Technology",
-  "Pakistan Institute of Engineering & Applied Sciences Karachi Campus",
-  "APWA Government College for Women",
-  "Government College University Hyderabad Karachi Campus",
-  "Royal Institute of Science & Technology",
-  "Metropolitan University Karachi",
-  "Ilma University",
-  "The Millennium Universal College (TMUC) Karachi",
+  "Khawaja Muhammad Safdar Medical College",
+  "Khyber Medical College",
+  "Khyber Medical University",
+  "King Edward Medical University",
+  "Lahore Medical & Dental College",
+  "Lahore University of Management Sciences (LUMS)",
+  "Liaquat College of Medicine & Dentistry",
+  "Liaquat University of Medical & Health Sciences",
+  "Loralai Medical College",
+  "Lyceum",
+  "Makran Medical College",
+  "Mehran University of Engineering & Technology (MUET)",
+  "Meritorious College",
+  "Mohtarma Benazir Bhutto Shaheed Medical College",
+  "Muhammad Ali Jinnah University",
+  "National Defence University",
+  "National Textile University",
+  "National University of Medical Sciences (NUMS)",
+  "National University of Modern Languages (NUML)",
+  "National University of Sciences & Technology (NUST)",
+  "NCR-CET College",
+  "NED University of Engineering & Technology",
+  "Newports Institute of Communications and Economics",
+  "Nixor College",
+  "Pakistan Institute of Engineering & Applied Sciences (PIEAS)",
+  "Pakistan Institute of Medical Sciences (PIMS)",
+  "Peoples University of Medical & Health Sciences",
+  "Pir Mehr Ali Shah Arid Agriculture University",
+  "Punjab Medical College",
+  "Quaid-e-Awam University of Engineering, Science & Technology (QUEST)",
+  "Quaid-e-Azam Medical College",
+  "Quaid-i-Azam University",
+  "Rawalpindi Medical University",
+  "Riphah International University",
+  "Salim Habib University",
+  "Salim Sohail University",
+  "Sceptre College",
+  "Shah Abdul Latif University",
+  "Shaheed Benazir Bhutto University Nawabshah",
+  "Shaheed Mohtarma Benazir Bhutto Medical University Larkana",
+  "Sindh Madressatul Islam University",
+  "Sir Syed University of Engineering & Technology",
+  "Southshore School",
+  "Sukkur IBA University",
+  "SZABIST",
+  "Tabani's School & College",
+  "The Islamia University of Bahawalpur",
+  "Titan College",
+  "United Medical and Dental College (UMDC)",
+  "University of Agriculture Faisalabad",
+  "University of Azad Jammu & Kashmir",
+  "University of Balochistan",
+  "University of Central Punjab",
+  "University of Chakwal",
+  "University of Engineering & Technology Lahore",
+  "University of Engineering & Technology Peshawar",
+  "University of Gujrat",
+  "University of Karachi",
+  "University of Lahore",
+  "University of Management & Technology",
+  "University of Okara",
+  "University of Peshawar",
+  "University of Sahiwal",
+  "University of Sindh Jamshoro",
+  "University of South Asia",
+  "University of the Punjab",
+  "Women University Multan",
+  "Ziauddin Medical College",
+  "Ziauddin University",
+  "Ziauddin University Sukkur"
 ];
 
 export default function SignupScreen({ navigation }) {
@@ -78,6 +156,7 @@ export default function SignupScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState(null);
   const [showUniversityModal, setShowUniversityModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -131,6 +210,15 @@ export default function SignupScreen({ navigation }) {
     if (isTablet) return Math.min(width - 72, 720);
     return width;
   }, []);
+
+  // Filter universities based on search query
+  const filteredUniversities = useMemo(() => {
+    if (!searchQuery.trim()) return UNIVERSITIES;
+    const query = searchQuery.toLowerCase().trim();
+    return UNIVERSITIES.filter(uni => 
+      uni.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
 
   useEffect(() => {
     if (route.params?.ref) {
@@ -366,6 +454,24 @@ export default function SignupScreen({ navigation }) {
     }
   };
 
+  const openUniversityModal = () => {
+    setSearchQuery("");
+    setFocusedInput("uni");
+    setShowUniversityModal(true);
+  };
+
+  const closeUniversityModal = () => {
+    setShowUniversityModal(false);
+    setFocusedInput(null);
+    setSearchQuery("");
+  };
+
+  const selectUniversity = (uni) => {
+    setUniversity(uni);
+    clearError("university");
+    closeUniversityModal();
+  };
+
   const inputFields = [
     {
       key: "name",
@@ -392,7 +498,7 @@ export default function SignupScreen({ navigation }) {
     {
       key: "phone",
       icon: "call-outline",
-      placeholder: "Phone (Optional) 03xxxxxxxxx",
+      placeholder: "Phone (Optional)",
       value: phone,
       onChange: setPhone,
       keyboardType: "phone-pad",
@@ -550,6 +656,7 @@ export default function SignupScreen({ navigation }) {
               </View>
             </View>
 
+            {/* Modern Toggle Container */}
             <Animated.View
               style={[
                 styles.toggleContainer,
@@ -578,8 +685,14 @@ export default function SignupScreen({ navigation }) {
                 onPress={() => setIsAlumni(false)}
                 activeOpacity={0.7}
               >
+                <Ionicons 
+                  name={!isAlumni ? "school" : "school-outline"} 
+                  size={16} 
+                  color={!isAlumni ? "#f9c349" : "#999"} 
+                  style={styles.toggleIcon}
+                />
                 <Text style={[styles.toggleLabel, !isAlumni && styles.toggleLabelActive]}>
-                  Current Student
+                  Student
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -587,12 +700,19 @@ export default function SignupScreen({ navigation }) {
                 onPress={() => setIsAlumni(true)}
                 activeOpacity={0.7}
               >
+                <Ionicons 
+                  name={isAlumni ? "ribbon" : "ribbon-outline"} 
+                  size={16} 
+                  color={isAlumni ? "#f9c349" : "#999"} 
+                  style={styles.toggleIcon}
+                />
                 <Text style={[styles.toggleLabel, isAlumni && styles.toggleLabelActive]}>
                   Alumni
                 </Text>
               </TouchableOpacity>
             </Animated.View>
 
+            {/* Input Fields */}
             {inputFields.map((field, index) => (
               <Animated.View
                 key={field.key}
@@ -611,6 +731,7 @@ export default function SignupScreen({ navigation }) {
                       : focusedInput === field.key
                         ? "#f9c349"
                         : "transparent",
+                    borderWidth: focusedInput === field.key || (field.errorKey && errors[field.errorKey]) ? 1.5 : 0,
                   },
                   {
                     transform: [
@@ -630,12 +751,7 @@ export default function SignupScreen({ navigation }) {
                   },
                 ]}
               >
-                <View
-                  style={[
-                    styles.inputIconContainer,
-                    field.errorKey && errors[field.errorKey] && { backgroundColor: "#ffebee" },
-                  ]}
-                >
+                <View style={styles.inputIconContainer}>
                   <Ionicons
                     name={field.icon}
                     size={18}
@@ -659,7 +775,10 @@ export default function SignupScreen({ navigation }) {
                     field.errorKey && clearError(field.errorKey);
                   }}
                   onBlur={() => setFocusedInput(null)}
-                  style={[styles.input, field.errorKey && errors[field.errorKey] && { color: "#ff4444" }]}
+                  style={[
+                    styles.input,
+                    field.errorKey && errors[field.errorKey] && { color: "#ff4444" }
+                  ]}
                   keyboardType={field.keyboardType}
                   autoCapitalize={field.autoCapitalize}
                   autoCorrect={false}
@@ -670,26 +789,29 @@ export default function SignupScreen({ navigation }) {
 
                 {field.key === "email" && field.value.length > 0 && validateEmail(field.value) && !errors.email && (
                   <View style={styles.checkmarkContainer}>
-                    <Ionicons name="checkmark-circle" size={20} color="#f9c349" />
+                    <Ionicons name="checkmark-circle" size={18} color="#f9c349" />
                   </View>
                 )}
 
                 {field.errorKey && errors[field.errorKey] && (
                   <View style={styles.checkmarkContainer}>
-                    <Ionicons name="alert-circle" size={20} color="#ff4444" />
+                    <Ionicons name="alert-circle" size={18} color="#ff4444" />
                   </View>
                 )}
               </Animated.View>
             ))}
 
+            {/* University Dropdown */}
             <Animated.View
               style={[
                 styles.inputWrapper,
+                styles.universityWrapper,
                 isTablet && styles.inputWrapperTablet,
                 {
                   opacity: inputAnims[5],
                   backgroundColor: errors.university ? "#fff5f5" : focusedInput === "uni" ? "#fff" : "#f8f8f8",
                   borderColor: errors.university ? "#ff4444" : focusedInput === "uni" ? "#f9c349" : "transparent",
+                  borderWidth: focusedInput === "uni" || errors.university ? 1.5 : 0,
                   transform: [
                     {
                       translateX: inputAnims[5].interpolate({
@@ -707,7 +829,7 @@ export default function SignupScreen({ navigation }) {
                 },
               ]}
             >
-              <View style={[styles.inputIconContainer, errors.university && { backgroundColor: "#ffebee" }]}>
+              <View style={styles.inputIconContainer}>
                 <Ionicons
                   name="school-outline"
                   size={18}
@@ -718,10 +840,7 @@ export default function SignupScreen({ navigation }) {
               <TouchableOpacity
                 style={styles.selectorButton}
                 activeOpacity={0.8}
-                onPress={() => {
-                  setFocusedInput("uni");
-                  setShowUniversityModal(true);
-                }}
+                onPress={openUniversityModal}
               >
                 <Text
                   style={[
@@ -733,10 +852,15 @@ export default function SignupScreen({ navigation }) {
                 >
                   {university || "Select University"}
                 </Text>
-                <Ionicons name="chevron-down" size={18} color={errors.university ? "#ff4444" : "#999"} />
+                <Ionicons 
+                  name={showUniversityModal ? "chevron-up" : "chevron-down"} 
+                  size={16} 
+                  color={errors.university ? "#ff4444" : "#999"} 
+                />
               </TouchableOpacity>
             </Animated.View>
 
+            {/* Password Field */}
             <Animated.View
               style={[
                 styles.inputWrapper,
@@ -745,6 +869,7 @@ export default function SignupScreen({ navigation }) {
                   opacity: inputAnims[6],
                   backgroundColor: errors.password ? "#fff5f5" : focusedInput === "pass" ? "#fff" : "#f8f8f8",
                   borderColor: errors.password ? "#ff4444" : focusedInput === "pass" ? "#f9c349" : "transparent",
+                  borderWidth: focusedInput === "pass" || errors.password ? 1.5 : 0,
                   transform: [
                     {
                       translateX: inputAnims[6].interpolate({
@@ -762,7 +887,7 @@ export default function SignupScreen({ navigation }) {
                 },
               ]}
             >
-              <View style={[styles.inputIconContainer, errors.password && { backgroundColor: "#ffebee" }]}>
+              <View style={styles.inputIconContainer}>
                 <Ionicons
                   name="lock-closed-outline"
                   size={18}
@@ -798,6 +923,7 @@ export default function SignupScreen({ navigation }) {
               </TouchableOpacity>
             </Animated.View>
 
+            {/* Confirm Password Field */}
             <Animated.View
               style={[
                 styles.inputWrapper,
@@ -806,6 +932,7 @@ export default function SignupScreen({ navigation }) {
                   opacity: inputAnims[7],
                   backgroundColor: errors.confirmPassword ? "#fff5f5" : focusedInput === "confirm" ? "#fff" : "#f8f8f8",
                   borderColor: errors.confirmPassword ? "#ff4444" : focusedInput === "confirm" ? "#f9c349" : "transparent",
+                  borderWidth: focusedInput === "confirm" || errors.confirmPassword ? 1.5 : 0,
                   transform: [
                     {
                       translateX: inputAnims[7].interpolate({
@@ -823,7 +950,7 @@ export default function SignupScreen({ navigation }) {
                 },
               ]}
             >
-              <View style={[styles.inputIconContainer, errors.confirmPassword && { backgroundColor: "#ffebee" }]}>
+              <View style={styles.inputIconContainer}>
                 <Ionicons
                   name="shield-checkmark-outline"
                   size={18}
@@ -859,14 +986,15 @@ export default function SignupScreen({ navigation }) {
               </TouchableOpacity>
             </Animated.View>
 
+            {/* Referral Code Field */}
             <Animated.View
               style={[
                 styles.inputWrapper,
                 styles.referralWrapper,
                 isTablet && styles.inputWrapperTablet,
-                focusedInput === "ref" && styles.referralFocused,
                 {
                   opacity: inputAnims[8],
+                  borderWidth: focusedInput === "ref" ? 1.5 : 0,
                   transform: [
                     {
                       translateX: inputAnims[8].interpolate({
@@ -884,7 +1012,7 @@ export default function SignupScreen({ navigation }) {
                 },
               ]}
             >
-              <View style={styles.inputIconContainer}>
+              <View style={[styles.inputIconContainer, styles.referralIconContainer]}>
                 <Ionicons name="gift-outline" size={18} color="#f9c349" />
               </View>
               <TextInput
@@ -894,7 +1022,7 @@ export default function SignupScreen({ navigation }) {
                 onChangeText={setReferralCode}
                 onFocus={() => setFocusedInput("ref")}
                 onBlur={() => setFocusedInput(null)}
-                style={styles.input}
+                style={[styles.input, styles.referralInput]}
                 autoCapitalize="characters"
                 autoCorrect={false}
               />
@@ -935,51 +1063,90 @@ export default function SignupScreen({ navigation }) {
           visible={showUniversityModal}
           transparent
           animationType="fade"
-          onRequestClose={() => {
-            setShowUniversityModal(false);
-            setFocusedInput(null);
-          }}
+          onRequestClose={closeUniversityModal}
         >
           <Pressable
             style={styles.modalBackdrop}
-            onPress={() => {
-              setShowUniversityModal(false);
-              setFocusedInput(null);
-            }}
+            onPress={closeUniversityModal}
           >
             <Pressable style={[styles.modalCard, isTablet && styles.modalCardTablet]}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Select University</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setShowUniversityModal(false);
-                    setFocusedInput(null);
-                  }}
-                >
-                  <Ionicons name="close" size={22} color="#666" />
+                <View style={styles.modalHeaderLeft}>
+                  <Ionicons name="school-outline" size={22} color="#1a1a1a" />
+                  <Text style={styles.modalTitle}>Select University</Text>
+                </View>
+                <TouchableOpacity onPress={closeUniversityModal} style={styles.modalCloseButton}>
+                  <Ionicons name="close" size={20} color="#666" />
                 </TouchableOpacity>
               </View>
 
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {UNIVERSITIES.map((uni) => (
-                  <TouchableOpacity
-                    key={uni}
-                    style={[styles.modalOption, university === uni && styles.modalOptionActive]}
-                    onPress={() => {
-                      setUniversity(uni);
-                      clearError("university");
-                      setShowUniversityModal(false);
-                      setFocusedInput(null);
-                    }}
-                  >
-                    <Text style={[styles.modalOptionText, university === uni && styles.modalOptionTextActive]}>
-                      {uni}
-                    </Text>
-                    {university === uni && (
-                      <Ionicons name="checkmark-circle" size={20} color="#f9c349" />
-                    )}
-                  </TouchableOpacity>
-                ))}
+              <View style={styles.searchContainer}>
+                <View style={styles.searchInputWrapper}>
+                  <Ionicons name="search-outline" size={18} color="#999" style={styles.searchIcon} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search universities..."
+                    placeholderTextColor="#999"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    autoFocus={true}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearSearchButton}>
+                      <Ionicons name="close-circle" size={18} color="#999" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+
+              <Text style={styles.resultsCount}>
+                {filteredUniversities.length} {filteredUniversities.length === 1 ? 'university' : 'universities'} found
+              </Text>
+
+              <ScrollView 
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                style={styles.modalScrollView}
+              >
+                {filteredUniversities.length > 0 ? (
+                  filteredUniversities.map((uni) => (
+                    <TouchableOpacity
+                      key={uni}
+                      style={[styles.modalOption, university === uni && styles.modalOptionActive]}
+                      onPress={() => selectUniversity(uni)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.modalOptionContent}>
+                        <Ionicons 
+                          name={university === uni ? "checkmark-circle" : "school-outline"} 
+                          size={18} 
+                          color={university === uni ? "#f9c349" : "#999"} 
+                          style={styles.modalOptionIcon}
+                        />
+                        <Text 
+                          style={[
+                            styles.modalOptionText, 
+                            university === uni && styles.modalOptionTextActive
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {uni}
+                        </Text>
+                      </View>
+                      {university === uni && (
+                        <Ionicons name="checkmark" size={18} color="#f9c349" />
+                      )}
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <View style={styles.noResultsContainer}>
+                    <Ionicons name="school-outline" size={48} color="#ddd" />
+                    <Text style={styles.noResultsText}>No universities found</Text>
+                    <Text style={styles.noResultsSubtext}>Try adjusting your search</Text>
+                  </View>
+                )}
               </ScrollView>
             </Pressable>
           </Pressable>
@@ -1009,8 +1176,8 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#fff",
     borderRadius: 0,
-    paddingHorizontal: 30,
-    paddingVertical: 30,
+    paddingHorizontal: 24,
+    paddingVertical: 24,
     width: "100%",
     alignSelf: "center",
   },
@@ -1139,11 +1306,11 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 20,
     marginTop: 2,
   },
   logoBadge: {
-    marginBottom: 20,
+    marginBottom: 16,
     borderRadius: 50,
     overflow: "hidden",
     elevation: 10,
@@ -1153,65 +1320,69 @@ const styles = StyleSheet.create({
     shadowRadius: 15,
   },
   logoGradient: {
-    width: 70,
-    height: 70,
+    width: 64,
+    height: 64,
     borderRadius: 50,
     justifyContent: "center",
     alignItems: "center",
   },
   logoText: {
-    fontSize: 32,
+    fontSize: 28,
     color: "#fff",
     fontWeight: "900",
     letterSpacing: -1,
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "900",
     color: "#1a1a1a",
     letterSpacing: 1,
   },
   subtitle: {
     color: "#666",
-    marginTop: 3,
-    fontSize: 14,
+    marginTop: 4,
+    fontSize: 13,
     letterSpacing: 0.5,
   },
   decorativeLine: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 10,
+    marginTop: 12,
   },
   lineSegment: {
-    width: 25,
+    width: 20,
     height: 2,
     backgroundColor: "#f9c349",
     borderRadius: 1,
   },
   diamond: {
-    width: 7,
-    height: 7,
+    width: 6,
+    height: 6,
     backgroundColor: "#1a1a1a",
     transform: [{ rotate: "45deg" }],
     marginHorizontal: 8,
   },
   toggleContainer: {
     flexDirection: "row",
-    backgroundColor: "#f8f8f8",
-    borderRadius: 16,
-    padding: 4,
-    marginBottom: 10,
-    borderWidth: 2,
-    borderColor: "#f0f0f0",
+    backgroundColor: "#f5f5f5",
+    borderRadius: 12,
+    padding: 3,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#eee",
   },
   toggleContainerTablet: {
-    marginBottom: 18,
+    marginBottom: 16,
   },
   toggleButton: {
     flex: 1,
-    paddingVertical: 10,
+    flexDirection: "row",
     alignItems: "center",
-    borderRadius: 13,
+    justifyContent: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    gap: 6,
   },
   toggleActive: {
     backgroundColor: "#1a1a1a",
@@ -1220,6 +1391,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
+  },
+  toggleIcon: {
+    marginRight: 4,
   },
   toggleLabel: {
     fontSize: 13,
@@ -1234,31 +1408,36 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#f8f8f8",
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: "transparent",
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    marginBottom: 8,
-    height: 56,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+    height: 48,
   },
   inputWrapperTablet: {
-    height: 62,
-    marginBottom: 14,
-    paddingHorizontal: 16,
+    height: 54,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+  },
+  universityWrapper: {
+    marginBottom: 10,
   },
   referralWrapper: {
     backgroundColor: "#fffbf0",
     borderColor: "#f9c34930",
-    marginTop: 8,
+    marginBottom: 12,
   },
-  referralFocused: {
-    borderColor: "#f9c349",
-    backgroundColor: "#fff",
+  referralIconContainer: {
+    backgroundColor: "#f9c34920",
+  },
+  referralInput: {
+    color: "#1a1a1a",
   },
   inputIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     backgroundColor: "#f0f0f0",
     justifyContent: "center",
     alignItems: "center",
@@ -1267,12 +1446,12 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     paddingVertical: 8,
-    fontSize: isTablet ? 16 : 15,
+    fontSize: isTablet ? 15 : 14,
     color: "#1a1a1a",
     fontWeight: "500",
   },
   eyeButton: {
-    padding: 8,
+    padding: 6,
     marginLeft: 4,
   },
   checkmarkContainer: {
@@ -1280,15 +1459,15 @@ const styles = StyleSheet.create({
   },
   selectorButton: {
     flex: 1,
-    minHeight: 40,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingVertical: 8,
   },
   selectorText: {
     flex: 1,
     color: "#1a1a1a",
-    fontSize: isTablet ? 16 : 15,
+    fontSize: isTablet ? 15 : 14,
     fontWeight: "500",
     marginRight: 8,
   },
@@ -1299,49 +1478,49 @@ const styles = StyleSheet.create({
     color: "#ff4444",
   },
   button: {
-    borderRadius: 16,
+    borderRadius: 12,
     overflow: "hidden",
     elevation: 8,
     shadowColor: "#1a1a1a",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    marginTop: 18,
-    marginBottom: 10,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    marginTop: 16,
+    marginBottom: 8,
   },
   buttonGradient: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    padding: 17,
+    padding: 15,
   },
   buttonText: {
     color: "#f9c349",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "800",
-    letterSpacing: 2,
+    letterSpacing: 1.5,
     marginRight: 8,
   },
   footer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: 20,
-    marginBottom: 20,
+    marginTop: 16,
+    marginBottom: 16,
   },
   footerText: {
     color: "#999",
-    fontSize: 14,
+    fontSize: 13,
   },
   signupLink: {
     color: "#1a1a1a",
     fontWeight: "800",
-    fontSize: 14,
+    fontSize: 13,
     textDecorationLine: "underline",
   },
   brandingFooter: {
     alignItems: "center",
-    marginTop: 40,
-    marginBottom: 20,
+    marginTop: 30,
+    marginBottom: 16,
   },
   brandingText: {
     color: "#ccc",
@@ -1351,51 +1530,123 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 20,
   },
   modalCard: {
     backgroundColor: "#fff",
-    borderRadius: 24,
+    borderRadius: 20,
     maxHeight: height * 0.7,
-    padding: 18,
+    width: "100%",
+    padding: 20,
   },
   modalCardTablet: {
-    alignSelf: "center",
-    width: 560,
+    maxWidth: 560,
+    padding: 24,
   },
   modalHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: 16,
+  },
+  modalHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "800",
     color: "#1a1a1a",
   },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#f5f5f5",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  searchContainer: {
+    marginBottom: 8,
+  },
+  searchInputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1.5,
+    borderColor: "#eee",
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: "#1a1a1a",
+  },
+  clearSearchButton: {
+    padding: 4,
+  },
+  resultsCount: {
+    fontSize: 12,
+    color: "#999",
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  modalScrollView: {
+    maxHeight: height * 0.5,
+  },
   modalOption: {
-    minHeight: 52,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    minHeight: 44,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    marginBottom: 2,
   },
   modalOptionActive: {
-    backgroundColor: "#111",
+    backgroundColor: "#f9c34915",
+  },
+  modalOptionContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  modalOptionIcon: {
+    marginRight: 10,
   },
   modalOptionText: {
     flex: 1,
     color: "#1a1a1a",
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "500",
-    marginRight: 12,
   },
   modalOptionTextActive: {
-    color: "#fff",
+    color: "#1a1a1a",
+    fontWeight: "600",
+  },
+  noResultsContainer: {
+    alignItems: "center",
+    paddingVertical: 30,
+  },
+  noResultsText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#666",
+    marginTop: 12,
+  },
+  noResultsSubtext: {
+    fontSize: 13,
+    color: "#999",
+    marginTop: 4,
   },
 });

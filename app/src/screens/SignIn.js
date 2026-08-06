@@ -69,7 +69,7 @@ export default function SignIn({ navigation }) {
   const startAnimations = () => {
     // Reset animation values
     fadeAnim.setValue(0);
-    slideUpAnim.setValue(50);
+    slideUpAnim.setValue(0.5);
     logoScale.setValue(0.5);
     logoRotate.setValue(0);
     inputAnim1.setValue(0);

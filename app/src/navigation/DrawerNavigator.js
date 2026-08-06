@@ -12,6 +12,7 @@ import {
   Dimensions,
   StatusBar,
   ScrollView,
+  Image,
 } from 'react-native';
 import {
   createDrawerNavigator,
@@ -28,6 +29,7 @@ import {
 } from '@expo/vector-icons';
 import { getFocusedRouteNameFromRoute, useNavigation, CommonActions } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { AuthContext } from '../context/AuthContext';
 import TabNavigator from './TabNavigator';
@@ -95,128 +97,223 @@ import ActivityScreen from '../screens/skillshare/ActivityScreen';
 import MyInquiriesScreen from '../screens/skillshare/MyInquiryScreen';
 import MyMatches from '../screens/skillshare/MyMatches';
 import ChatMatch from '../screens/skillshare/ChatMatch';
-// Add these imports:
 import DigitalBadgeScreen from '../components/DigitalBadgeScreen';
 import MainCharacterScreen from '../components/MainCharacterScreen';
 import DeftProScreen from '../components/DeftProScreen';
 import DeftGoatScreen from '../components/DeftGoatScreen';
 import FounderCircleScreen from '../components/FounderCircleScreen';
+import CreatePostScreen from '../screens/Social/CreatePostScreen';
+import ChangePassword from '../screens/Social/ChangePassword';
+import FeedScreen from '../screens/Social/FeedScreen';
 
-
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
 
-// DRAWER_ITEMS with enhanced icons (increased size)
+// DRAWER_ITEMS - NO "Messages" route here
 const DRAWER_ITEMS = [
   {
     label: 'Home',
-    icon: (size) => <Ionicons name="home-outline" color="#f9c349" size={size + 5} />,
+    icon: (size, color) => <Ionicons name="home-outline" color={color} size={size} />,
     route: 'HomeTabs',
-    // Add this to reset navigation when going home
     resetNavigation: true,
   },
+  
   {
     label: 'Privilege Benefits',
-    icon: (size) => (
-      <MaterialCommunityIcons name="trophy-outline" size={size + 5} color="#f9c349" />
+    icon: (size, color) => (
+      <MaterialCommunityIcons name="trophy-outline" size={size} color={color} />
     ),
     route: 'WhyPoints',
-  },
-   {
-    label: 'Careers at TDC',
-    icon: (size) => (
-      <MaterialCommunityIcons name="briefcase-outline" size={size + 5} color="#f9c349" />
-    ),
-    route: 'TDCCareers',
+    resetNavigation: false,
   },
   {
     label: 'Refer & Earn',
-    icon: (size) => (
+    icon: (size, color) => (
       <MaterialCommunityIcons
         name="account-multiple-plus-outline"
-        size={size + 5}
-        color="#f9c349"
+        size={size}
+        color={color}
       />
     ),
     route: 'Points',
+    resetNavigation: false,
   },
   {
     label: 'About TDC',
-    icon: (size) => (
-      <Ionicons name="information-circle-outline" color="#f9c349" size={size + 5} />
+    icon: (size, color) => (
+      <Ionicons name="information-circle-outline" color={color} size={size} />
     ),
     route: 'About',
+    resetNavigation: false,
   },
   {
     label: 'How it Works',
-    icon: (size) => <Ionicons name="cog-outline" color="#f9c349" size={size + 5} />,
+    icon: (size, color) => <Ionicons name="cog-outline" color={color} size={size} />,
     route: 'How It Works',
+    resetNavigation: false,
   },
   {
     label: 'Terms & Conditions',
-    icon: (size) => (
-      <MaterialCommunityIcons name="file-document-outline" color="#f9c349" size={size + 5} />
+    icon: (size, color) => (
+      <MaterialCommunityIcons name="file-document-outline" color={color} size={size} />
     ),
     route: 'Terms & Conditions',
+    resetNavigation: false,
   },
   {
     label: 'Privacy Policy',
-    icon: (size) => (
-      <MaterialCommunityIcons name="shield-lock-outline" color="#f9c349" size={size + 5} />
+    icon: (size, color) => (
+      <MaterialCommunityIcons name="shield-lock-outline" color={color} size={size} />
     ),
     route: 'Privacy Policy',
+    resetNavigation: false,
   },
   {
     label: 'Disclaimer',
-    icon: (size) => <Ionicons name="alert-circle-outline" color="#f9c349" size={size + 5} />,
+    icon: (size, color) => <Ionicons name="alert-circle-outline" color={color} size={size} />,
     route: 'Disclaimer',
+    resetNavigation: false,
   },
- 
 ];
 
-const AnimatedDrawerItem = ({ label, icon, onPress, delay = 0 }) => {
-  const translateX = useRef(new Animated.Value(-20)).current;
+// Modern Animated Drawer Item
+const AnimatedDrawerItem = ({ label, icon, onPress, delay = 0, isActive = false }) => {
+  const translateX = useRef(new Animated.Value(-30)).current;
   const opacity = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.9)).current;
+  const scale = useRef(new Animated.Value(0.95)).current;
+  const [isPressed, setIsPressed] = useState(false);
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(translateX, {
         toValue: 0,
-        duration: 250,
+        duration: 450,
         delay,
-        easing: Easing.bezier(0.22, 1, 0.36, 1),
+        easing: Easing.bezier(0.34, 1.56, 0.64, 1),
         useNativeDriver: true,
       }),
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 250,
+        duration: 450,
         delay,
         useNativeDriver: true,
       }),
       Animated.timing(scale, {
         toValue: 1,
-        duration: 250,
+        duration: 450,
         delay,
-        easing: Easing.bezier(0.22, 1, 0.36, 1),
+        easing: Easing.bezier(0.34, 1.56, 0.64, 1),
         useNativeDriver: true,
       }),
     ]).start();
-  }, [delay, opacity, translateX, scale]);
+  }, [delay]);
 
   return (
     <Animated.View style={{ opacity, transform: [{ translateX }, { scale }] }}>
-      <DrawerItem
-        label={label}
-        labelStyle={[styles.drawerItemLabel, { fontSize: 16 }]}
-        style={[styles.drawerItem, { marginVertical: 2 }]}
-        icon={({ size }) => icon(size)}
-        onPress={() => {
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPressIn={() => {
+          setIsPressed(true);
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          onPress();
         }}
-      />
+        onPressOut={() => setIsPressed(false)}
+        onPress={onPress}
+        style={[
+          styles.drawerItemContainer,
+          isActive && styles.drawerItemActive,
+          isPressed && styles.drawerItemPressed,
+        ]}
+      >
+        <View style={[styles.drawerItemIconWrapper, isActive && styles.drawerItemIconActive]}>
+          {icon(22, isActive ? '#f9c349' : '#666')}
+        </View>
+        <Text style={[styles.drawerItemLabel, isActive && styles.drawerItemLabelActive]}>
+          {label}
+        </Text>
+        {isActive && <View style={styles.drawerItemActiveIndicator} />}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
+
+// Enhanced Drawer Header
+const DrawerHeader = ({ isGuest }) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(-30)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        easing: Easing.bezier(0.34, 1.56, 0.64, 1),
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 600,
+        easing: Easing.bezier(0.34, 1.56, 0.64, 1),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        styles.drawerHeader,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
+        },
+      ]}
+    >
+      <LinearGradient
+        colors={['#1a1a1a', '#2d2d2d']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.drawerHeaderGradient}
+      >
+        <View style={styles.headerContent}>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatarCircle}>
+              <LinearGradient
+                colors={['#000', '#000']}
+                style={styles.avatarGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={styles.avatarText}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
+              </LinearGradient>
+            </View>
+            <View style={styles.avatarGlow} />
+          </View>
+
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>The Deft Crew</Text>
+            <View style={styles.badgeWrapper}>
+              <LinearGradient
+                colors={['#f9c349', '#f9c349']}
+                style={styles.premiumBadge}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Text style={styles.premiumText}>
+                  {isGuest ? '👤 GUEST MODE' : 'STUDENT BENEFITS'}
+                </Text>
+              </LinearGradient>
+            </View>
+          </View>
+        </View>
+      </LinearGradient>
     </Animated.View>
   );
 };
@@ -224,39 +321,22 @@ const AnimatedDrawerItem = ({ label, icon, onPress, delay = 0 }) => {
 function CustomDrawerContent(props) {
   const { logout, isGuest, setIsGuest } = useContext(AuthContext);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
-  const slideAnim = useRef(new Animated.Value(40)).current;
+  const [activeRoute, setActiveRoute] = useState('HomeTabs');
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 500,
-        easing: Easing.bezier(0.22, 1, 0.36, 1),
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 500,
-        easing: Easing.bezier(0.22, 1, 0.36, 1),
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 500,
-        easing: Easing.bezier(0.22, 1, 0.36, 1),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [fadeAnim, scaleAnim, slideAnim]);
-
-  let delay = 50;
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   const navigateToAuth = (screenName) => {
     props.navigation.closeDrawer();
     setTimeout(() => {
       props.navigation.getParent()?.navigate(screenName);
-    }, 300);
+    }, 350);
   };
 
   const handleGuestSignIn = () => {
@@ -271,100 +351,88 @@ function CustomDrawerContent(props) {
 
   const handleLogout = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert('Logout', 'Sign out of your account?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: () => {
-          logout();
-          setTimeout(() => {
-            props.navigation.getParent()?.navigate('Login');
-          }, 300);
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: () => {
+            logout();
+            setTimeout(() => {
+              props.navigation.getParent()?.navigate('Login');
+            }, 350);
+          },
         },
-      },
-    ]);
+      ],
+      { cancelable: true }
+    );
   };
 
+  // FIXED: Safe navigation - NO RESET to "Messages"
   const handleNavigation = (route, resetNavigation = false) => {
+    setActiveRoute(route);
     props.navigation.closeDrawer();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     setTimeout(() => {
-      if (resetNavigation) {
-        // Reset the navigation stack to go to HomeTabs with fresh state
+      try {
+        if (resetNavigation) {
+          // Only reset to routes that exist in the drawer navigator
+          // "HomeTabs" is the only one that should use reset
+          if (route === 'HomeTabs') {
+            props.navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [{ name: 'HomeTabs' }],
+              })
+            );
+          } else {
+            // For other routes, just navigate normally
+            props.navigation.navigate(route);
+          }
+        } else {
+          // Normal navigation
+          props.navigation.navigate(route);
+        }
+      } catch (error) {
+        console.error('Navigation error:', error);
+        // Fallback to HomeTabs
         props.navigation.dispatch(
           CommonActions.reset({
             index: 0,
-            routes: [
-              { 
-                name: route,
-                // Pass params to ensure HomeTabs resets properly
-                params: { reset: Date.now() }
-              },
-            ],
+            routes: [{ name: 'HomeTabs' }],
           })
         );
-      } else {
-        props.navigation.navigate(route);
       }
-    }, 300);
+    }, 350);
   };
+
+  let delay = 50;
 
   return (
     <SafeAreaView style={styles.drawerContainer} edges={['top', 'bottom']}>
+      <DrawerHeader isGuest={isGuest} />
+
       <DrawerContentScrollView
         {...props}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.drawerScrollContent}
       >
-        <Animated.View
-          style={[
-            styles.drawerHeaderBG,
-            {
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
-        >
-          <View style={styles.headerGradient}>
-            <View style={styles.headerContent}>
-              <View style={styles.avatarCircle}>
-                <Text style={styles.avatarText}>
-                  tdc<Text style={{ color: '#f9c349' }}>.</Text>
-                </Text>
-              </View>
-
-              <View style={styles.headerTextContainer}>
-                <Text style={[styles.headerTitle, { fontSize: 22 }]}>The Deft Crew</Text>
-                <View style={styles.badgeContainer}>
-                  <View style={styles.premiumBadge}>
-                    <Text style={[styles.premiumText, { fontSize: 11 }]}>
-                      {isGuest ? 'GUEST MODE' : 'STUDENTS BENEFITS'}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              
-            </View>
-          </View>
-        </Animated.View>
-
-        <Animated.View style={{ opacity: fadeAnim, paddingBottom: 20 }}>
+        <Animated.View style={{ opacity: fadeAnim, paddingTop: 8 }}>
           {DRAWER_ITEMS.map((item, index) => {
-            delay += 30;
+            delay += 20;
+            const isActive = activeRoute === item.route;
             return (
               <AnimatedDrawerItem
                 key={item.label}
                 label={item.label}
                 icon={item.icon}
                 delay={delay}
-                onPress={() => {
-                  if (item.action === 'whatsapp') {
-                    openWhatsApp();
-                    return;
-                  }
-                  handleNavigation(item.route, item.resetNavigation || false);
-                }}
+                isActive={isActive}
+                onPress={() => handleNavigation(item.route, item.resetNavigation || false)}
               />
             );
           })}
@@ -378,7 +446,10 @@ function CustomDrawerContent(props) {
             opacity: fadeAnim,
             transform: [
               {
-                translateY: slideAnim,
+                translateY: fadeAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [20, 0],
+                }),
               },
             ],
           },
@@ -386,35 +457,42 @@ function CustomDrawerContent(props) {
       >
         {isGuest ? (
           <View style={styles.guestDrawerFooter}>
-            <Text style={styles.guestDrawerText}>Browsing as Guest</Text>
-            <TouchableOpacity 
+            <Text style={styles.guestDrawerText}>👋 Browsing as Guest</Text>
+            <TouchableOpacity
               style={styles.signInDrawerBtn}
               onPress={handleGuestSignIn}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
             >
-              <Ionicons name="log-in-outline" size={22} color="#f9c349" style={{ marginRight: 10 }} />
-              <Text style={[styles.signInDrawerText, { fontSize: 16 }]}>Sign In to Unlock All Features</Text>
+              <LinearGradient
+                colors={['#f9c349', '#f7971e']}
+                style={styles.signInGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Ionicons name="log-in-outline" size={20} color="#1a1a1a" />
+                <Text style={styles.signInDrawerText}>Sign In</Text>
+              </LinearGradient>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.createAccountDrawerBtn}
               onPress={handleGuestSignUp}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
             >
-              <Ionicons name="person-add-outline" size={22} color="#1a1a1a" style={{ marginRight: 10 }} />
-              <Text style={[styles.createAccountDrawerText, { fontSize: 16 }]}>Create Free Account</Text>
+              <Ionicons name="person-add-outline" size={20} color="#f9c349" />
+              <Text style={styles.createAccountDrawerText}>Create Account</Text>
             </TouchableOpacity>
             <Text style={styles.guestBenefitText}>
-              Unlock exclusive student discounts and benefits!
+              Unlock exclusive student discounts!
             </Text>
           </View>
         ) : (
           <TouchableOpacity
             style={styles.logoutBtn}
             onPress={handleLogout}
-            activeOpacity={0.7}
+            activeOpacity={0.8}
           >
-            <Ionicons name="log-out-outline" size={24} color="#f9c349" />
-            <Text style={[styles.logoutText, { fontSize: 17 }]}>Log Out</Text>
+            <Ionicons name="log-out-outline" size={22} color="#f9c349" />
+            <Text style={styles.logoutText}>Log Out</Text>
           </TouchableOpacity>
         )}
       </Animated.View>
@@ -604,9 +682,9 @@ function CustomHeader({ navigation }) {
             </Animated.View>
           ) : (
             <View style={styles.logoContainer}>
-              <Text style={[styles.headerAppTitle, { fontSize: 22 }]}>
-                <Text style={{ color: '#000' }}>DEFT</Text>
-                <Text style={{ color: '#f9c349' }}>CREW</Text>
+              <Text style={[styles.headerAppTitle, { fontSize: 36 }]}>
+                <Text style={{ color: '#000' }}>tdc</Text>
+                <Text style={{ color: '#f9c349' }}>.</Text>
               </Text>
             </View>
           )}
@@ -718,7 +796,6 @@ const AnimatedScreen = ({ component: Component, ...props }) => {
 };
 
 // ===== DASHBOARD STACK NAVIGATOR =====
-// This ensures proper back navigation from Dashboard screens
 function DashboardStackNavigator() {
   return (
     <Stack.Navigator 
@@ -796,7 +873,6 @@ export default function DrawerNavigator() {
         <Drawer.Screen 
           name="HomeTabs" 
           options={{
-            // This ensures HomeTabs always mounts fresh
             unmountOnBlur: false,
           }}
         >
@@ -822,6 +898,7 @@ export default function DrawerNavigator() {
         <Drawer.Screen 
           name="Brands" 
           component={Brands}
+          options={{ headerShown: false }}
         />
         
         <Drawer.Screen 
@@ -829,14 +906,22 @@ export default function DrawerNavigator() {
           component={Explore}
         />
 
-        {/* Dashboard Stack - contains all skillshare screens with proper back navigation */}
         <Drawer.Screen 
           name="Dashboard" 
           component={DashboardStackNavigator}
           options={{ headerShown: false }}
         />
+        <Drawer.Screen 
+          name="CreatePostScreen" 
+          component={CreatePostScreen}
+          options={{ headerShown: false }}
+        />
+        <Drawer.Screen 
+          name="ChangePassword" 
+          component={ChangePassword}
+          options={{ headerShown: false }}
+        />
 
-        {/* Individual Screens - Social and Events remain as individual screens */}
         {[
           { name: 'University', comp: University },
           { name: 'ContactUs', comp: ContactUs },
@@ -873,6 +958,7 @@ export default function DrawerNavigator() {
           { name: 'FloatingMenu', comp: FloatingMenu },
           { name: 'EditProfileScreen', comp: EditProfileScreen },
           { name: 'Events', comp: Events },
+          { name: 'Messages', comp: Social },
           { name: 'EventNotification', comp: EventNotification },
           { name: 'PostDetailScreen', comp: PostDetailScreen },
           { name: 'TDCFlow', comp: TDCFlow },
@@ -906,47 +992,70 @@ const styles = StyleSheet.create({
   },
   drawerContainer: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f8f9fa',
   },
   drawerStyle: {
-    width: width * 0.84,
+    width: width * 0.85,
     borderTopRightRadius: 30,
     borderBottomRightRadius: 30,
     overflow: 'hidden',
+    backgroundColor: 'transparent',
   },
   drawerScrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 10,
+    paddingHorizontal: 12,
   },
-  drawerHeaderBG: {
-    backgroundColor: '#000',
-    marginBottom: 12,
-    borderBottomRightRadius: 30,
+  drawerHeader: {
+    marginBottom: 8,
+    borderBottomRightRadius: 25,
     overflow: 'hidden',
+    marginHorizontal: 12,
+    marginTop: 8,
   },
-  headerGradient: {
-    paddingVertical: 20,
-    paddingHorizontal: 20,
-    backgroundColor: '#000',
+  drawerHeaderGradient: {
+    paddingVertical: 22,
+    paddingHorizontal: 18,
+    borderBottomRightRadius: 25,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+  avatarContainer: {
+    position: 'relative',
+  },
   avatarCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 20,
-    backgroundColor: '#000000',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: '#f9c349',
+    overflow: 'hidden',
+  },
+  avatarGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   avatarText: {
-    color: '#ffffff',
-    fontSize: 24,
+    color: '#fff',
+    fontSize: 20,
     fontWeight: '900',
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
+  },
+  avatarGlow: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#f9c349',
+    opacity: 0.6,
   },
   headerTextContainer: {
     marginLeft: 14,
@@ -954,68 +1063,153 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: '800',
     color: '#fff',
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
   },
-  badgeContainer: {
-    marginTop: 5,
-    flexDirection: 'row',
+  badgeWrapper: {
+    marginTop: 6,
   },
   premiumBadge: {
-    backgroundColor: '#f9c349',
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 5,
-    borderRadius: 22,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
   },
   premiumText: {
-    color: '#000',
+    color: '#1a1a1a',
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: 0.5,
   },
-  closeIcon: {
+  drawerItemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    marginVertical: 2,
+    backgroundColor: 'transparent',
+  },
+  drawerItemActive: {
+    backgroundColor: 'rgba(249, 195, 73, 0.12)',
+  },
+  drawerItemPressed: {
+    transform: [{ scale: 0.96 }],
+  },
+  drawerItemIconWrapper: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginRight: 14,
+    backgroundColor: 'rgba(0,0,0,0.05)',
   },
-  drawerItem: {
-    borderRadius: 14,
-    marginHorizontal: 8,
-    marginVertical: 2,
+  drawerItemIconActive: {
+    backgroundColor: 'rgba(249, 195, 73, 0.2)',
   },
   drawerItemLabel: {
-    color: '#333',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
-    marginLeft: -8,
+    color: '#555',
+    letterSpacing: 0.2,
+    flex: 1,
+  },
+  drawerItemLabelActive: {
+    color: '#f9c349',
+    fontWeight: '700',
+  },
+  drawerItemActiveIndicator: {
+    width: 4,
+    height: 24,
+    borderRadius: 2,
+    backgroundColor: '#f9c349',
   },
   footer: {
     paddingHorizontal: 18,
-    paddingTop: 5,
-    paddingBottom: 10,
+    paddingTop: 12,
+    paddingBottom: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    backgroundColor: '#fff',
+    borderTopColor: 'rgba(0,0,0,0.06)',
+    backgroundColor: '#f8f9fa',
   },
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 15,
-    borderWidth: 1.5,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 2,
     borderColor: '#f9c349',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   logoutText: {
     marginLeft: 12,
     color: '#f9c349',
     fontWeight: '700',
     fontSize: 16,
+  },
+  guestDrawerFooter: {
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  guestDrawerText: {
+    color: '#888',
+    fontSize: 13,
+    marginBottom: 10,
+    fontWeight: '600',
+  },
+  signInDrawerBtn: {
+    width: '100%',
+    marginBottom: 10,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  signInGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+  },
+  signInDrawerText: {
+    color: '#1a1a1a',
+    fontWeight: '700',
+    fontSize: 15,
+    marginLeft: 10,
+  },
+  createAccountDrawerBtn: {
+    backgroundColor: 'transparent',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#f9c349',
+    width: '100%',
+    marginBottom: 10,
+  },
+  createAccountDrawerText: {
+    color: '#f9c349',
+    fontWeight: '700',
+    fontSize: 15,
+    marginLeft: 10,
+  },
+  guestBenefitText: {
+    color: '#999',
+    fontSize: 11,
+    textAlign: 'center',
+    paddingHorizontal: 10,
+    marginTop: 2,
+    lineHeight: 16,
   },
   headerSafe: {
     backgroundColor: '#fff',
@@ -1046,19 +1240,6 @@ const styles = StyleSheet.create({
     fontSize: 21,
     fontWeight: '900',
     letterSpacing: 0.8,
-  },
-  headerBadge: {
-    backgroundColor: '#f9c349',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    marginTop: 4,
-  },
-  headerBadgeText: {
-    fontSize: 8,
-    fontWeight: '800',
-    color: '#000',
-    letterSpacing: 0.5,
   },
   headerRight: {
     flexDirection: 'row',
@@ -1109,58 +1290,6 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '800',
     textAlign: 'center',
-  },
-  guestDrawerFooter: {
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  guestDrawerText: {
-    color: '#999',
-    fontSize: 12,
-    marginBottom: 12,
-    fontWeight: '500',
-  },
-  signInDrawerBtn: {
-    backgroundColor: '#1a1a1a',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 12,
-    width: '100%',
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  signInDrawerText: {
-    color: '#f9c349',
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  createAccountDrawerBtn: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 12,
-    width: '100%',
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#1a1a1a',
-    marginBottom: 12,
-  },
-  createAccountDrawerText: {
-    color: '#1a1a1a',
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  guestBenefitText: {
-    color: '#999',
-    fontSize: 11,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-    marginTop: 4,
-    lineHeight: 16,
   },
   guestLockBadge: {
     position: 'absolute',

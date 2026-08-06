@@ -35,28 +35,29 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { BlurView } from "expo-blur";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
-// Animated Menu Item Component
+// Modern Menu Item Component with glass morphism
 const MenuItem = ({ item, index, isLast }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const itemFade = useRef(new Animated.Value(0)).current;
-  const itemSlide = useRef(new Animated.Value(30)).current;
-  const shimmerAnim = useRef(new Animated.Value(0)).current;
+  const itemSlide = useRef(new Animated.Value(40)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(itemFade, {
         toValue: 1,
-        duration: 500,
-        delay: index * 80,
+        duration: 600,
+        delay: index * 60,
         useNativeDriver: true,
+        easing: Easing.out(Easing.cubic),
       }),
       Animated.spring(itemSlide, {
         toValue: 0,
-        friction: 7,
-        tension: 35,
-        delay: index * 80,
+        friction: 8,
+        tension: 40,
+        delay: index * 60,
         useNativeDriver: true,
       }),
     ]).start();
@@ -65,16 +66,16 @@ const MenuItem = ({ item, index, isLast }) => {
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(shimmerAnim, {
+        Animated.timing(glowAnim, {
           toValue: 1,
-          duration: 1200,
-          easing: Easing.linear,
+          duration: 2000,
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
-        Animated.timing(shimmerAnim, {
+        Animated.timing(glowAnim, {
           toValue: 0,
-          duration: 1200,
-          easing: Easing.linear,
+          duration: 2000,
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
       ])
@@ -83,8 +84,8 @@ const MenuItem = ({ item, index, isLast }) => {
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
-      toValue: 0.92,
-      friction: 4,
+      toValue: 0.96,
+      friction: 5,
       tension: 40,
       useNativeDriver: true,
     }).start();
@@ -94,11 +95,16 @@ const MenuItem = ({ item, index, isLast }) => {
   const handlePressOut = () => {
     Animated.spring(scaleAnim, {
       toValue: 1,
-      friction: 4,
+      friction: 5,
       tension: 40,
       useNativeDriver: true,
     }).start();
   };
+
+  const glowOpacity = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.6],
+  });
 
   return (
     <Animated.View
@@ -116,22 +122,31 @@ const MenuItem = ({ item, index, isLast }) => {
         onPress={item.onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        activeOpacity={0.8}
+        activeOpacity={0.7}
       >
+        <Animated.View
+          style={[
+            styles.menuGlow,
+            {
+              opacity: glowOpacity,
+              backgroundColor: item.color + "20",
+            },
+          ]}
+        />
         <View style={styles.menuLeft}>
           <LinearGradient
-            colors={[item.color + "20", item.color + "08"]}
+            colors={[item.color + "25", item.color + "08"]}
             style={styles.menuIconBox}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            <Icon name={item.icon} size={20} color={item.color} />
+            <Icon name={item.icon} size={22} color={item.color} />
           </LinearGradient>
           <View style={styles.menuTextContainer}>
             <Text
               style={[
                 styles.menuItemTitle,
-                item.danger && { color: "#E74C3C" },
+                item.danger && { color: "#FF4757" },
               ]}
             >
               {item.name}
@@ -145,7 +160,7 @@ const MenuItem = ({ item, index, isLast }) => {
           {item.rightText !== undefined && item.rightText !== null ? (
             <View style={styles.menuBadge}>
               <LinearGradient
-                colors={["#f9c349", "#f5a623"]}
+                colors={["#f9c349", "#f9c349"]}
                 style={styles.menuBadgeGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
@@ -158,12 +173,13 @@ const MenuItem = ({ item, index, isLast }) => {
               </LinearGradient>
             </View>
           ) : (
-            <Icon
-              name="chevron-forward"
-              size={16}
-              color="#C0C0C0"
-              style={{ opacity: 0.4 }}
-            />
+            <View style={styles.chevronContainer}>
+              <Icon
+                name="chevron-forward"
+                size={14}
+                color="#C0C0C0"
+              />
+            </View>
           )}
         </View>
       </TouchableOpacity>
@@ -188,19 +204,27 @@ export default function ProfileScreen() {
   const [confirmText, setConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
 
+  // Sign Out Modal States
+  const [showSignOutModal, setShowSignOutModal] = useState(false);
+
   // Animation References
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideUpAnim = useRef(new Animated.Value(30)).current;
+  const slideUpAnim = useRef(new Animated.Value(40)).current;
   const headerFade = useRef(new Animated.Value(0)).current;
-  const avatarScale = useRef(new Animated.Value(0.8)).current;
-  const statsScale = useRef(new Animated.Value(0.9)).current;
+  const avatarScale = useRef(new Animated.Value(0.6)).current;
+  const statsScale = useRef(new Animated.Value(0.8)).current;
   const menuFade = useRef(new Animated.Value(0)).current;
   const shimmerAnim = useRef(new Animated.Value(0)).current;
+  const headerTranslate = useRef(new Animated.Value(-20)).current;
 
   // Delete Modal Animations
-  const modalScale = useRef(new Animated.Value(0.7)).current;
+  const modalScale = useRef(new Animated.Value(0.8)).current;
   const modalOpacity = useRef(new Animated.Value(0)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  // Sign Out Modal Animations
+  const signOutModalScale = useRef(new Animated.Value(0.8)).current;
+  const signOutModalOpacity = useRef(new Animated.Value(0)).current;
 
   // Shimmer Animation
   useEffect(() => {
@@ -226,14 +250,14 @@ export default function ProfileScreen() {
     Animated.parallel([
       Animated.timing(headerFade, {
         toValue: 1,
-        duration: 500,
+        duration: 700,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.spring(avatarScale, {
         toValue: 1,
-        friction: 5,
-        tension: 40,
+        friction: 6,
+        tension: 50,
         useNativeDriver: true,
       }),
       Animated.timing(fadeAnim, {
@@ -244,21 +268,27 @@ export default function ProfileScreen() {
       }),
       Animated.spring(slideUpAnim, {
         toValue: 0,
-        friction: 7,
-        tension: 35,
+        friction: 8,
+        tension: 40,
         useNativeDriver: true,
       }),
       Animated.spring(statsScale, {
         toValue: 1,
-        friction: 5,
-        tension: 40,
+        friction: 6,
+        tension: 50,
         useNativeDriver: true,
       }),
       Animated.timing(menuFade, {
         toValue: 1,
-        duration: 500,
-        delay: 150,
+        duration: 600,
+        delay: 100,
         easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.spring(headerTranslate, {
+        toValue: 0,
+        friction: 8,
+        tension: 40,
         useNativeDriver: true,
       }),
     ]).start();
@@ -279,6 +309,8 @@ export default function ProfileScreen() {
       setRedemptionCount(savingsRes.data.redemptionCount || 0);
     } catch (err) {
       console.log("Error fetching profile data:", err);
+      setTotalSaved(0);
+      setRedemptionCount(0);
     }
   }, [token]);
 
@@ -299,6 +331,10 @@ export default function ProfileScreen() {
         closeDeleteModal();
         return true;
       }
+      if (showSignOutModal) {
+        closeSignOutModal();
+        return true;
+      }
       return false;
     };
     const backHandler = BackHandler.addEventListener(
@@ -306,7 +342,7 @@ export default function ProfileScreen() {
       backAction
     );
     return () => backHandler.remove();
-  }, [ecardModalVisible, showDeleteModal]);
+  }, [ecardModalVisible, showDeleteModal, showSignOutModal]);
 
   const pickImage = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -363,24 +399,50 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleLogout = () => {
+  // Sign Out Functions
+  const openSignOutModal = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    Alert.alert(
-      "Sign Out",
-      "Are you sure you want to leave?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Sign Out",
-          style: "destructive",
-          onPress: () => {
-            setUser(null);
-            setToken(null);
-          },
-        },
-      ],
-      { cancelable: true }
-    );
+    setShowSignOutModal(true);
+    
+    Animated.parallel([
+      Animated.spring(signOutModalScale, {
+        toValue: 1,
+        friction: 7,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(signOutModalOpacity, {
+        toValue: 1,
+        duration: 250,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeSignOutModal = () => {
+    Animated.parallel([
+      Animated.timing(signOutModalScale, {
+        toValue: 0.8,
+        duration: 200,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(signOutModalOpacity, {
+        toValue: 0,
+        duration: 200,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowSignOutModal(false);
+    });
+  };
+
+  const handleSignOut = () => {
+    setUser(null);
+    setToken(null);
+    closeSignOutModal();
   };
 
   // Delete Account Functions
@@ -393,8 +455,8 @@ export default function ProfileScreen() {
     Animated.parallel([
       Animated.spring(modalScale, {
         toValue: 1,
-        friction: 6,
-        tension: 35,
+        friction: 7,
+        tension: 40,
         useNativeDriver: true,
       }),
       Animated.timing(modalOpacity, {
@@ -409,14 +471,14 @@ export default function ProfileScreen() {
   const closeDeleteModal = () => {
     Animated.parallel([
       Animated.timing(modalScale, {
-        toValue: 0.7,
-        duration: 150,
+        toValue: 0.8,
+        duration: 200,
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(modalOpacity, {
         toValue: 0,
-        duration: 150,
+        duration: 200,
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),
@@ -430,28 +492,28 @@ export default function ProfileScreen() {
   const handleShake = () => {
     Animated.sequence([
       Animated.timing(shakeAnim, {
-        toValue: 8,
-        duration: 40,
+        toValue: 10,
+        duration: 50,
         useNativeDriver: true,
       }),
       Animated.timing(shakeAnim, {
-        toValue: -8,
-        duration: 40,
+        toValue: -10,
+        duration: 50,
         useNativeDriver: true,
       }),
       Animated.timing(shakeAnim, {
-        toValue: 4,
-        duration: 40,
+        toValue: 5,
+        duration: 50,
         useNativeDriver: true,
       }),
       Animated.timing(shakeAnim, {
-        toValue: -4,
-        duration: 40,
+        toValue: -5,
+        duration: 50,
         useNativeDriver: true,
       }),
       Animated.timing(shakeAnim, {
         toValue: 0,
-        duration: 40,
+        duration: 50,
         useNativeDriver: true,
       }),
     ]).start();
@@ -517,7 +579,7 @@ export default function ProfileScreen() {
           name: "Membership Card",
           subtitle: "Access your digital TDC card",
           icon: "card-outline",
-          color: "#9b59b6",
+          color: "#A855F7",
           onPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             setEcardModalVisible(true);
@@ -527,7 +589,7 @@ export default function ProfileScreen() {
           name: "Loyalty Points",
           subtitle: "Your earned rewards balance",
           icon: "gift-outline",
-          color: "#f9c349",
+          color: "#FF6B6B",
           rightText: "250 pts",
           onPress: () =>
             Alert.alert("Coming Soon!", "We're building our rewards shop!"),
@@ -536,7 +598,7 @@ export default function ProfileScreen() {
           name: "My Discounts",
           subtitle: "Track your savings and redemptions",
           icon: "pricetag-outline",
-          color: "#05ae7c",
+          color: "#4ECDC4",
           rightText: claimedOffers.length,
           onPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -548,39 +610,44 @@ export default function ProfileScreen() {
           },
         },
         {
-          name: "Delete Account",
-          subtitle: "Permanently remove your account",
-          icon: "trash-outline",
-          color: "#E74C3C",
-          onPress: openDeleteModal,
-          danger: true,
-        },
-        {
           name: "Sign Out",
           subtitle: "Log out of your account",
           icon: "log-out-outline",
-          color: "#E74C3C",
-          onPress: handleLogout,
+          color: "#FF4757",
+          onPress: openSignOutModal,
           danger: true,
         },
+        
       ],
     },
   ];
 
+  const formatSavedAmount = (amount) => {
+    if (amount === 0) return "0";
+    if (amount >= 1000) return (amount / 1000).toFixed(1) + "k";
+    return amount.toFixed(0);
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fc" />
+      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Compact Profile Header */}
+        {/* Modern Profile Header with Glass Effect */}
         <Animated.View
-          style={[styles.profileHeader, { opacity: headerFade }]}
+          style={[
+            styles.profileHeader,
+            {
+              opacity: headerFade,
+              transform: [{ translateY: headerTranslate }],
+            },
+          ]}
         >
           <LinearGradient
-            colors={["#ffffff", "#fafafa"]}
+            colors={["#FFFFFF", "#F8FAFC"]}
             style={styles.profileHeaderGradient}
           >
             <View style={styles.profileHeaderContent}>
@@ -592,7 +659,7 @@ export default function ProfileScreen() {
               >
                 <TouchableOpacity onPress={pickImage} activeOpacity={0.8}>
                   <LinearGradient
-                    colors={["#f9c349", "#e8b82a"]}
+                    colors={["#f9c349", "#f9c349"]}
                     style={styles.avatarRing}
                   >
                     {selectedImage ? (
@@ -617,10 +684,10 @@ export default function ProfileScreen() {
                   </LinearGradient>
                   <View style={styles.cameraBadge}>
                     <LinearGradient
-                      colors={["#f9c349", "#f5a623"]}
+                      colors={["#f9c349", "#f9c349"]}
                       style={styles.cameraBadgeGradient}
                     >
-                      <Icon name="camera" size={11} color="#000" />
+                      <Icon name="camera" size={12} color="#1A1A1A" />
                     </LinearGradient>
                   </View>
                 </TouchableOpacity>
@@ -629,7 +696,7 @@ export default function ProfileScreen() {
               <View style={styles.userInfo}>
                 <Text style={styles.userName}>{user?.name || "Student"}</Text>
                 <View style={styles.emailRow}>
-                  <Icon name="mail-outline" size={12} color="#999" />
+                  <Icon name="mail-outline" size={13} color="#94A3B8" />
                   <Text style={styles.userEmail}>{user?.email || ""}</Text>
                 </View>
                 {selectedImage && (
@@ -639,17 +706,17 @@ export default function ProfileScreen() {
                     disabled={isSaving}
                   >
                     <LinearGradient
-                      colors={["#05ae7c", "#06d6a0"]}
+                      colors={["#4ECDC4", "#44B39D"]}
                       style={styles.saveBtnGradient}
                     >
                       {isSaving ? (
-                        <ActivityIndicator size="small" color="#fff" />
+                        <ActivityIndicator size="small" color="#FFF" />
                       ) : (
                         <>
                           <Icon
                             name="cloud-upload-outline"
                             size={14}
-                            color="#fff"
+                            color="#FFF"
                           />
                           <Text style={styles.saveBtnText}>Save</Text>
                         </>
@@ -662,45 +729,38 @@ export default function ProfileScreen() {
           </LinearGradient>
         </Animated.View>
 
-        {/* Compact Stats Card */}
+        {/* Modern Stats Card with Glass Effect */}
         <Animated.View
           style={[
             styles.statsCard,
-            { opacity: fadeAnim, transform: [{ scale: statsScale }] },
+            {
+              opacity: fadeAnim,
+              transform: [{ scale: statsScale }],
+            },
           ]}
         >
           <View style={styles.statItem}>
-            <View style={styles.statIconBox}>
-              <Icon name="wallet-outline" size={18} color="#05ae7c" />
-            </View>
-            <Text style={styles.statLabel}>Saved</Text>
-            <Text style={[styles.statValue, { color: "#05ae7c" }]}>
-              {totalSaved.toFixed(0)}
-            </Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <View style={[styles.statIconBox, { backgroundColor: "#f9c34915" }]}>
-              <Icon name="gift-outline" size={18} color="#f9c349" />
+            <View style={[styles.statIconBox, { backgroundColor: "#FFD93D20" }]}>
+              <Icon name="gift-outline" size={20} color="#f9c349" />
             </View>
             <Text style={styles.statLabel}>Used</Text>
             <Text style={[styles.statValue, { color: "#f9c349" }]}>
-              {redemptionCount}
+              {redemptionCount || 0}
             </Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <View style={[styles.statIconBox, { backgroundColor: "#9b59b615" }]}>
-              <Icon name="card-outline" size={18} color="#9b59b6" />
+            <View style={[styles.statIconBox, { backgroundColor: "#A855F720" }]}>
+              <Icon name="card-outline" size={20} color="#A855F7" />
             </View>
             <Text style={styles.statLabel}>Discounts</Text>
-            <Text style={[styles.statValue, { color: "#9b59b6" }]}>
-              {claimedOffers.length}
+            <Text style={[styles.statValue, { color: "#A855F7" }]}>
+              {claimedOffers.length || 0}
             </Text>
           </View>
         </Animated.View>
 
-        {/* Menu Cards with Animation */}
+        {/* Modern Menu Section */}
         <Animated.View
           style={{
             opacity: menuFade,
@@ -720,9 +780,12 @@ export default function ProfileScreen() {
             </View>
           </View>
         </Animated.View>
+
+        {/* Version Footer */}
+        <Text style={styles.versionText}>Version 2.0.0</Text>
       </ScrollView>
 
-      {/* Membership Card Modal */}
+      {/* Membership Card Modal with Modern Design */}
       <Modal
         visible={ecardModalVisible}
         animationType="fade"
@@ -738,22 +801,22 @@ export default function ProfileScreen() {
             onPress={(e) => e.stopPropagation()}
           >
             <LinearGradient
-              colors={["#9b59b6", "#6c3a8a", "#9b59b6"]}
+              colors={["#fff", "#f9c349", "#000"]}
               style={styles.membershipGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
               <View style={styles.cardSparkles}>
-                {[...Array(6)].map((_, i) => (
+                {[...Array(8)].map((_, i) => (
                   <Icon
                     key={i}
                     name="sparkles"
                     size={16}
-                    color="rgba(255,255,255,0.12)"
+                    color="rgba(255,255,255,0.08)"
                     style={{
                       position: "absolute",
-                      top: `${10 + i * 14}%`,
-                      left: `${8 + (i % 3) * 30}%`,
+                      top: `${10 + i * 12}%`,
+                      left: `${8 + (i % 4) * 25}%`,
                     }}
                   />
                 ))}
@@ -764,17 +827,17 @@ export default function ProfileScreen() {
               <View style={styles.cardBody}>
                 <View style={styles.diamondBox}>
                   <LinearGradient
-                    colors={["#FFD700", "#FFA500"]}
+                    colors={["#f9c349", "#f9c349"]}
                     style={styles.diamondGradient}
                   >
-                    <Icon name="diamond" size={45} color="#000" />
+                    <Icon name="diamond" size={50} color="#1A1A1A" />
                   </LinearGradient>
                 </View>
                 <Text style={styles.cardPromoTitle}>Unlock Full Access</Text>
                 <Text style={styles.cardPromoDesc}>
                   Get exclusive student discounts at all partner brands for
                   just{" "}
-                  <Text style={styles.priceHighlight}>700-Rs / year</Text>
+                  <Text style={styles.priceHighlight}>750-Rs / year</Text>
                 </Text>
               </View>
               <TouchableOpacity
@@ -787,7 +850,7 @@ export default function ProfileScreen() {
                 activeOpacity={0.8}
               >
                 <LinearGradient
-                  colors={["#FFD700", "#FFA500", "#FFD700"]}
+                  colors={["#f9c349", "#f9c349"]}
                   style={styles.cardBtnGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -795,8 +858,8 @@ export default function ProfileScreen() {
                   <Text style={styles.cardBtnText}>GET MEMBERSHIP</Text>
                   <Icon
                     name="arrow-forward-circle"
-                    size={20}
-                    color="#000"
+                    size={22}
+                    color="#1A1A1A"
                     style={{ marginLeft: 8 }}
                   />
                 </LinearGradient>
@@ -812,7 +875,57 @@ export default function ProfileScreen() {
         </Pressable>
       </Modal>
 
-      {/* Delete Account Modal */}
+      {/* Modern Sign Out Modal */}
+      <Modal
+        visible={showSignOutModal}
+        transparent
+        animationType="none"
+        onRequestClose={closeSignOutModal}
+      >
+        <View style={styles.deleteModalOverlay}>
+          <Animated.View
+            style={[
+              styles.deleteModalContent,
+              {
+                opacity: signOutModalOpacity,
+                transform: [{ scale: signOutModalScale }],
+              },
+            ]}
+          >
+            <View style={styles.deleteModalHeader}>
+              <View style={[styles.deleteModalIcon, { backgroundColor: "#FFD93D20" }]}>
+                <MaterialCommunityIcons
+                  name="logout"
+                  size={40}
+                  color="#f9c349"
+                />
+              </View>
+              <Text style={styles.deleteModalTitle}>Sign Out?</Text>
+              <Text style={styles.deleteModalDesc}>
+                Are you sure you want to sign out of your account?
+              </Text>
+            </View>
+            <View style={styles.deleteModalBtns}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={closeSignOutModal}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.continueBtn, { backgroundColor: "#f9c349" }]}
+                onPress={handleSignOut}
+              >
+                <Text style={[styles.continueBtnText, { color: "#1A1A1A" }]}>
+                  Sign Out
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
+
+      {/* Modern Delete Account Modal */}
       <Modal
         visible={showDeleteModal}
         transparent
@@ -835,11 +948,11 @@ export default function ProfileScreen() {
             {deleteStep === 1 && (
               <>
                 <View style={styles.deleteModalHeader}>
-                  <View style={styles.deleteModalIcon}>
+                  <View style={[styles.deleteModalIcon, { backgroundColor: "#FF475720" }]}>
                     <MaterialCommunityIcons
                       name="alert-circle"
-                      size={36}
-                      color="#FF5252"
+                      size={40}
+                      color="#FF4757"
                     />
                   </View>
                   <Text style={styles.deleteModalTitle}>
@@ -854,8 +967,8 @@ export default function ProfileScreen() {
                   <View style={styles.warningItem}>
                     <Icon
                       name="close-circle"
-                      size={16}
-                      color="#FF5252"
+                      size={18}
+                      color="#FF4757"
                     />
                     <Text style={styles.warningText}>
                       Your profile will be removed
@@ -864,8 +977,8 @@ export default function ProfileScreen() {
                   <View style={styles.warningItem}>
                     <Icon
                       name="close-circle"
-                      size={16}
-                      color="#FF5252"
+                      size={18}
+                      color="#FF4757"
                     />
                     <Text style={styles.warningText}>
                       All connections will be lost
@@ -874,8 +987,8 @@ export default function ProfileScreen() {
                   <View style={styles.warningItem}>
                     <Icon
                       name="close-circle"
-                      size={16}
-                      color="#FF5252"
+                      size={18}
+                      color="#FF4757"
                     />
                     <Text style={styles.warningText}>
                       Referral history will be deleted
@@ -904,13 +1017,13 @@ export default function ProfileScreen() {
                   <View
                     style={[
                       styles.deleteModalIcon,
-                      { backgroundColor: "#FFF3E0" },
+                      { backgroundColor: "#FFD93D20" },
                     ]}
                   >
                     <MaterialCommunityIcons
                       name="pause-circle"
-                      size={36}
-                      color="#FF9800"
+                      size={40}
+                      color="#f9c349"
                     />
                   </View>
                   <Text style={styles.deleteModalTitle}>
@@ -925,7 +1038,7 @@ export default function ProfileScreen() {
                     style={styles.alternativeItem}
                     onPress={closeDeleteModal}
                   >
-                    <Icon name="create-outline" size={18} color="#f9c349" />
+                    <Icon name="create-outline" size={20} color="#f9c349" />
                     <Text style={styles.alternativeText}>
                       Update your profile
                     </Text>
@@ -936,7 +1049,7 @@ export default function ProfileScreen() {
                   >
                     <Icon
                       name="help-circle-outline"
-                      size={18}
+                      size={20}
                       color="#f9c349"
                     />
                     <Text style={styles.alternativeText}>
@@ -952,10 +1065,12 @@ export default function ProfileScreen() {
                     <Text style={styles.cancelBtnText}>Keep Account</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.continueBtn}
+                    style={[styles.continueBtn, { backgroundColor: "#f9c349" }]}
                     onPress={handleNextStep}
                   >
-                    <Text style={styles.continueBtnText}>Still Delete</Text>
+                    <Text style={[styles.continueBtnText, { color: "#1A1A1A" }]}>
+                      Still Delete
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -966,19 +1081,19 @@ export default function ProfileScreen() {
                   <View
                     style={[
                       styles.deleteModalIcon,
-                      { backgroundColor: "#FFEBEE" },
+                      { backgroundColor: "#FF475720" },
                     ]}
                   >
                     <MaterialCommunityIcons
                       name="delete-forever"
-                      size={36}
-                      color="#FF5252"
+                      size={40}
+                      color="#FF4757"
                     />
                   </View>
                   <Text
                     style={[
                       styles.deleteModalTitle,
-                      { color: "#FF5252" },
+                      { color: "#FF4757" },
                     ]}
                   >
                     Final Confirmation
@@ -990,7 +1105,7 @@ export default function ProfileScreen() {
                 <TextInput
                   style={styles.confirmInput}
                   placeholder='Type "delete my account"'
-                  placeholderTextColor="#999"
+                  placeholderTextColor="#94A3B8"
                   value={confirmText}
                   onChangeText={setConfirmText}
                   autoCapitalize="none"
@@ -1014,7 +1129,7 @@ export default function ProfileScreen() {
                     disabled={deleting}
                   >
                     {deleting ? (
-                      <ActivityIndicator color="#fff" size="small" />
+                      <ActivityIndicator color="#FFF" size="small" />
                     ) : (
                       <Text style={styles.deleteFinalBtnText}>
                         Delete Permanently
@@ -1032,337 +1147,503 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8f9fc", paddingBottom:30 },
-  scrollContent: { paddingBottom: 40 },
+  container: { 
+    flex: 1, 
+    backgroundColor: "#F8FAFC",
+  },
+  scrollContent: { 
+    paddingBottom: 60,
+  },
   
-  // Compact Profile Header
+  // Modern Profile Header
   profileHeader: {
     marginHorizontal: 16,
     marginTop: 12,
-    borderRadius: 20,
+    borderRadius: 24,
     overflow: "hidden",
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 24,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.5)",
   },
-  profileHeaderGradient: { padding: 16 },
-  profileHeaderContent: { flexDirection: "row", alignItems: "center" },
+  profileHeaderGradient: { 
+    padding: 20,
+  },
+  profileHeaderContent: { 
+    flexDirection: "row", 
+    alignItems: "center",
+  },
   avatarContainer: {},
   avatarRing: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    padding: 3,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#f9c349",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+  },
+  avatarImage: { 
+    width: 72, 
+    height: 72, 
+    borderRadius: 36,
+  },
+  avatarPlaceholder: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    padding: 2,
+    backgroundColor: "#1A1A1A",
     justifyContent: "center",
     alignItems: "center",
   },
-  avatarImage: { width: 64, height: 64, borderRadius: 32 },
-  avatarPlaceholder: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#1a1a1a",
-    justifyContent: "center",
-    alignItems: "center",
+  avatarText: { 
+    fontSize: 32, 
+    fontWeight: "800", 
+    color: "#f9c349",
   },
-  avatarText: { fontSize: 28, fontWeight: "900", color: "#f9c349" },
   cameraBadge: {
     position: "absolute",
-    bottom: -1,
-    right: -1,
+    bottom: 0,
+    right: 0,
     borderRadius: 50,
     overflow: "hidden",
-    borderWidth: 2.5,
-    borderColor: "#fff",
+    borderWidth: 3,
+    borderColor: "#FFFFFF",
   },
   cameraBadgeGradient: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
   },
-  userInfo: { marginLeft: 14, flex: 1 },
-  userName: { fontSize: 18, fontWeight: "700", color: "#1a1a1a", letterSpacing: -0.3 },
-  emailRow: { flexDirection: "row", alignItems: "center", marginTop: 2, gap: 4 },
-  userEmail: { fontSize: 12, color: "#999", fontWeight: "500" },
+  userInfo: { 
+    marginLeft: 16, 
+    flex: 1,
+  },
+  userName: { 
+    fontSize: 20, 
+    fontWeight: "700", 
+    color: "#1A1A1A", 
+    letterSpacing: -0.5,
+    marginBottom: 2,
+  },
+  emailRow: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    marginTop: 2, 
+    gap: 6,
+  },
+  userEmail: { 
+    fontSize: 13, 
+    color: "#94A3B8", 
+    fontWeight: "500",
+  },
   saveBtn: {
     marginTop: 8,
-    borderRadius: 10,
+    borderRadius: 12,
     overflow: "hidden",
     alignSelf: "flex-start",
   },
   saveBtnGradient: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 10,
-    gap: 4,
+    borderRadius: 12,
+    gap: 6,
   },
-  saveBtnText: { color: "#fff", fontSize: 11, fontWeight: "700" },
+  saveBtnText: { 
+    color: "#FFFFFF", 
+    fontSize: 12, 
+    fontWeight: "700",
+  },
   
-  // Compact Stats Card
+  // Modern Stats Card
   statsCard: {
     flexDirection: "row",
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     marginHorizontal: 16,
-    marginTop: 12,
-    borderRadius: 16,
-    padding: 14,
+    marginTop: 16,
+    borderRadius: 20,
+    padding: 18,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
+    shadowRadius: 16,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.5)",
   },
-  statItem: { flex: 1, alignItems: "center" },
+  statItem: { 
+    flex: 1, 
+    alignItems: "center",
+  },
   statIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: "#05ae7c15",
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 6,
   },
   statDivider: {
     width: 1,
     backgroundColor: "rgba(0,0,0,0.06)",
-    marginHorizontal: 8,
+    marginHorizontal: 12,
   },
   statLabel: {
-    fontSize: 10,
-    color: "#999",
+    fontSize: 11,
+    color: "#94A3B8",
     fontWeight: "600",
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
     marginBottom: 2,
   },
-  statValue: { fontSize: 18, fontWeight: "700", color: "#1a1a1a" },
+  statValue: { 
+    fontSize: 20, 
+    fontWeight: "700", 
+    color: "#1A1A1A",
+  },
   
-  // Menu Styles
-  menuContainer: { paddingHorizontal: 16, marginTop: 12 },
+  // Modern Menu Styles
+  menuContainer: { 
+    paddingHorizontal: 16, 
+    marginTop: 16,
+  },
   menuCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
+    shadowRadius: 16,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.5)",
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.04)",
+    position: "relative",
+    overflow: "hidden",
   },
   menuItemDanger: {
-    borderBottomColor: "rgba(231, 76, 60, 0.08)",
+    borderBottomColor: "rgba(255, 71, 87, 0.06)",
   },
-  menuLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
+  menuGlow: {
+    position: "absolute",
+    top: -20,
+    right: -20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    opacity: 0,
+  },
+  menuLeft: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    flex: 1,
+  },
   menuIconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 14,
+    marginRight: 16,
   },
-  menuTextContainer: { flex: 1 },
-  menuItemTitle: { fontSize: 14, fontWeight: "600", color: "#1a1a1a" },
+  menuTextContainer: { 
+    flex: 1,
+  },
+  menuItemTitle: { 
+    fontSize: 15, 
+    fontWeight: "600", 
+    color: "#1A1A1A",
+    letterSpacing: -0.3,
+  },
   menuItemSubtitle: {
-    fontSize: 10,
-    color: "#999",
-    marginTop: 1,
+    fontSize: 11,
+    color: "#94A3B8",
+    marginTop: 2,
     fontWeight: "500",
   },
-  menuRight: { marginLeft: 8 },
-  menuBadge: { borderRadius: 10, overflow: "hidden" },
-  menuBadgeGradient: { paddingHorizontal: 10, paddingVertical: 3 },
-  menuBadgeText: { fontSize: 10, fontWeight: "700", color: "#fff" },
+  menuRight: { 
+    marginLeft: 8,
+  },
+  menuBadge: { 
+    borderRadius: 12, 
+    overflow: "hidden",
+  },
+  menuBadgeGradient: { 
+    paddingHorizontal: 12, 
+    paddingVertical: 4,
+  },
+  menuBadgeText: { 
+    fontSize: 11, 
+    fontWeight: "700", 
+    color: "#1A1A1A",
+  },
+  chevronContainer: {
+    width: 24,
+    height: 24,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   
-  // Modal Styles
+  // Version Text
+  versionText: {
+    textAlign: "center",
+    fontSize: 12,
+    color: "#CBD5E1",
+    marginTop: 24,
+    fontWeight: "500",
+    letterSpacing: 0.5,
+  },
+  
+  // Modern Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
+    backdropFilter: "blur(10px)",
   },
   membershipCard: {
     width: width * 0.92,
-    borderRadius: 28,
+    borderRadius: 32,
     overflow: "hidden",
-    elevation: 20,
+    elevation: 24,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: { width: 0, height: 20 },
     shadowOpacity: 0.3,
-    shadowRadius: 20,
+    shadowRadius: 32,
   },
   membershipGradient: {
-    padding: 28,
+    padding: 32,
     alignItems: "center",
-    borderRadius: 28,
+    borderRadius: 32,
   },
-  cardSparkles: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
+  cardSparkles: { 
+    position: "absolute", 
+    top: 0, 
+    left: 0, 
+    right: 0, 
+    bottom: 0,
+  },
   cardTitle: {
-    color: "rgba(255,255,255,0.85)",
+    color: "rgba(255,255,255,0.8)",
     fontWeight: "800",
-    letterSpacing: 3,
-    fontSize: 13,
-    marginBottom: 24,
+    letterSpacing: 4,
+    fontSize: 14,
+    marginBottom: 28,
+    textTransform: "uppercase",
   },
-  cardBody: { alignItems: "center", marginBottom: 26 },
-  diamondBox: { marginBottom: 18 },
+  cardBody: { 
+    alignItems: "center", 
+    marginBottom: 30,
+  },
+  diamondBox: { 
+    marginBottom: 20,
+  },
   diamondGradient: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
+    width: 88,
+    height: 88,
+    borderRadius: 24,
     justifyContent: "center",
     alignItems: "center",
     transform: [{ rotate: "45deg" }],
   },
   cardPromoTitle: {
-    color: "#fff",
-    fontSize: 22,
+    color: "#FFFFFF",
+    fontSize: 24,
     fontWeight: "800",
     marginBottom: 8,
+    letterSpacing: -0.5,
   },
   cardPromoDesc: {
     color: "rgba(255,255,255,0.85)",
     textAlign: "center",
-    lineHeight: 20,
-    fontSize: 13,
-    paddingHorizontal: 8,
+    lineHeight: 22,
+    fontSize: 14,
+    paddingHorizontal: 12,
   },
-  priceHighlight: { color: "#FFD700", fontWeight: "800" },
-  cardBtn: { borderRadius: 14, overflow: "hidden", width: "100%", elevation: 4 },
+  priceHighlight: { 
+    color: "#f9c349", 
+    fontWeight: "800",
+  },
+  cardBtn: { 
+    borderRadius: 16, 
+    overflow: "hidden", 
+    width: "100%", 
+    elevation: 6,
+    shadowColor: "#f9c349",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+  },
   cardBtnGradient: {
     paddingHorizontal: 24,
-    paddingVertical: 14,
+    paddingVertical: 16,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
   },
-  cardBtnText: { color: "#000", fontWeight: "800", fontSize: 14 },
+  cardBtnText: { 
+    color: "#1A1A1A", 
+    fontWeight: "800", 
+    fontSize: 15,
+    letterSpacing: 0.5,
+  },
   maybeLater: {
-    color: "rgba(255,255,255,0.5)",
-    fontSize: 12,
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 13,
     fontWeight: "500",
   },
   
-  // Delete Modal Styles
+  // Modern Delete Modal Styles
   deleteModalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
   deleteModalContent: {
-    backgroundColor: "#fff",
-    borderRadius: 24,
-    padding: 22,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 28,
+    padding: 24,
     width: "100%",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.15,
+    shadowRadius: 32,
+    elevation: 12,
   },
-  deleteModalHeader: { alignItems: "center", marginBottom: 16 },
+  deleteModalHeader: { 
+    alignItems: "center", 
+    marginBottom: 20,
+  },
   deleteModalIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#FFEBEE",
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 14,
+    marginBottom: 16,
   },
   deleteModalTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "700",
-    color: "#1a1a1a",
+    color: "#1A1A1A",
     marginBottom: 6,
-    letterSpacing: -0.3,
+    letterSpacing: -0.5,
   },
   deleteModalDesc: {
-    fontSize: 12,
-    color: "#666",
+    fontSize: 13,
+    color: "#64748B",
     textAlign: "center",
-    lineHeight: 18,
+    lineHeight: 20,
   },
-  warningList: { marginBottom: 16 },
+  warningList: { 
+    marginBottom: 20,
+  },
   warningItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   warningText: {
-    fontSize: 12,
-    color: "#666",
-    marginLeft: 8,
-    fontWeight: "500",
-  },
-  alternativeList: { marginBottom: 16 },
-  alternativeItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: "#f8f9fc",
-    borderRadius: 12,
-    marginBottom: 6,
-  },
-  alternativeText: {
-    fontSize: 12,
-    color: "#1a1a1a",
+    fontSize: 13,
+    color: "#64748B",
     marginLeft: 10,
     fontWeight: "500",
   },
-  deleteModalBtns: { flexDirection: "row", gap: 10 },
+  alternativeList: { 
+    marginBottom: 20,
+  },
+  alternativeItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.04)",
+  },
+  alternativeText: {
+    fontSize: 13,
+    color: "#1A1A1A",
+    marginLeft: 12,
+    fontWeight: "500",
+  },
+  deleteModalBtns: { 
+    flexDirection: "row", 
+    gap: 12,
+  },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: "rgba(0,0,0,0.04)",
+    paddingVertical: 14,
+    borderRadius: 16,
+    backgroundColor: "#F1F5F9",
     alignItems: "center",
   },
-  cancelBtnText: { fontSize: 13, fontWeight: "600", color: "#666" },
+  cancelBtnText: { 
+    fontSize: 14, 
+    fontWeight: "600", 
+    color: "#64748B",
+  },
   continueBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: "#FF5252",
+    paddingVertical: 14,
+    borderRadius: 16,
+    backgroundColor: "#FF4757",
     alignItems: "center",
   },
-  continueBtnText: { fontSize: 13, fontWeight: "600", color: "#fff" },
+  continueBtnText: { 
+    fontSize: 14, 
+    fontWeight: "600", 
+    color: "#FFFFFF",
+  },
   confirmInput: {
-    borderWidth: 1.5,
-    borderColor: "rgba(0,0,0,0.06)",
-    borderRadius: 14,
-    padding: 12,
-    fontSize: 13,
-    color: "#1a1a1a",
-    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: "#E2E8F0",
+    borderRadius: 16,
+    padding: 14,
+    fontSize: 14,
+    color: "#1A1A1A",
+    marginBottom: 20,
     fontWeight: "500",
+    backgroundColor: "#F8FAFC",
   },
   deleteFinalBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: "#ccc",
+    paddingVertical: 14,
+    borderRadius: 16,
+    backgroundColor: "#CBD5E1",
     alignItems: "center",
   },
-  deleteFinalBtnActive: { backgroundColor: "#FF5252" },
-  deleteFinalBtnText: { fontSize: 13, fontWeight: "600", color: "#fff" },
+  deleteFinalBtnActive: { 
+    backgroundColor: "#FF4757",
+  },
+  deleteFinalBtnText: { 
+    fontSize: 14, 
+    fontWeight: "600", 
+    color: "#FFFFFF",
+  },
 });

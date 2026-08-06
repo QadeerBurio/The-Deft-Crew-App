@@ -94,7 +94,7 @@ export default function PrivacyAndSafety({ navigation }) {
           {/* Hero Section */}
           <View style={styles.heroSection}>
             <Animated.View style={{ transform: [{ scale: iconScale }] }}>
-              <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.heroIconCircle}>
+              <LinearGradient colors={['#f9c349', '#f9c349']} style={styles.heroIconCircle}>
                 <Ionicons name="shield-checkmark" size={45} color="#fff" />
               </LinearGradient>
             </Animated.View>
@@ -158,7 +158,7 @@ export default function PrivacyAndSafety({ navigation }) {
           </View>
 
           {/* Privacy Controls */}
-          <Text style={styles.sectionTitle}>
+          {/* <Text style={styles.sectionTitle}>
             <View style={styles.sectionDot} />
             Privacy Controls
           </Text>
@@ -191,9 +191,9 @@ export default function PrivacyAndSafety({ navigation }) {
               toggleValue={dataCollection}
               onToggle={setDataCollection}
             />
-          </View>
+          </View> */}
 
-          {/* Data Sharing */}
+          {/* Data Sharing
           <Text style={styles.sectionTitle}>
             <View style={styles.sectionDot} />
             Data & Permissions
@@ -228,7 +228,7 @@ export default function PrivacyAndSafety({ navigation }) {
                 ]
               )}
             />
-          </View>
+          </View> */}
 
           <Text style={styles.footerNote}>
             <Ionicons name="information-circle-outline" size={14} color="#f9c349" />

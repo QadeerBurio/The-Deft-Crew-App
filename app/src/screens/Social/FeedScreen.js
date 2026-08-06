@@ -13,6 +13,7 @@ import { AuthContext } from '../../context/AuthContext';
 import PostCard, { PostCardSkeleton } from "./PostCard";
 import StoriesSection from './StoriesSection';
 import FloatingMenu from "./FloatingMenu";
+import ConfessionScreen from './ConfessionScreen';
 
 const { width, height } = Dimensions.get('window');
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
@@ -28,6 +29,9 @@ const FeedSkeleton = () => (
 
 export default function FeedScreen({ navigation }) {
   const { user, isGuest, unreadCount, updateUnreadCount, token } = useContext(AuthContext);
+  
+  // Tab state
+  const [activeTab, setActiveTab] = useState("Feed");
   
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +53,18 @@ export default function FeedScreen({ navigation }) {
   const headerScale = useRef(new Animated.Value(1)).current;
   const searchFadeAnim = useRef(new Animated.Value(0)).current;
   const searchSlideAnim = useRef(new Animated.Value(-20)).current;
+  const fabScale = useRef(new Animated.Value(1)).current;
+  const fabTranslateY = useRef(new Animated.Value(0)).current;
+
+  // Animate FAB based on active tab
+  useEffect(() => {
+    Animated.spring(fabTranslateY, {
+      toValue: activeTab === "Feed" ? 0 : 100,
+      friction: 6,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  }, [activeTab]);
 
   // Animate search overlay
   useEffect(() => {
@@ -87,7 +103,6 @@ export default function FeedScreen({ navigation }) {
   };
 
   const markPostAsViewed = useCallback(async (postId) => {
-    // FIX: Skip for guest users
     if (isGuest || !token) return;
     
     try {
@@ -110,7 +125,6 @@ export default function FeedScreen({ navigation }) {
         url += `&before=${lastPostRef.current}`;
       }
       
-      // FIX: Guest users fetch without token
       const headers = (!isGuest && token) ? { Authorization: `Bearer ${token}` } : {};
       const res = await axios.get(url, { headers });
       
@@ -121,7 +135,6 @@ export default function FeedScreen({ navigation }) {
         setPosts(prev => [...prev, ...newPosts]);
         setHasMore(moreAvailable);
       } else {
-        // FIX: Don't filter posts for guest users (no user to compare)
         const filteredPosts = isGuest 
           ? newPosts 
           : newPosts.filter(post => post.author?._id !== user?._id);
@@ -133,7 +146,6 @@ export default function FeedScreen({ navigation }) {
         lastPostRef.current = newPosts[newPosts.length - 1].createdAt;
       }
       
-      // FIX: Only update unread count for logged-in users
       if (!isGuest) {
         updateUnreadCount();
       }
@@ -152,14 +164,18 @@ export default function FeedScreen({ navigation }) {
   };
 
   useEffect(() => {
-    fetchPosts(selectedCategory, searchQuery);
-  }, [selectedCategory]);
+    if (activeTab === "Feed") {
+      fetchPosts(selectedCategory, searchQuery);
+    }
+  }, [selectedCategory, activeTab]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     lastPostRef.current = null;
-    fetchPosts(selectedCategory, searchQuery);
-  }, [selectedCategory, searchQuery]);
+    if (activeTab === "Feed") {
+      fetchPosts(selectedCategory, searchQuery);
+    }
+  }, [selectedCategory, searchQuery, activeTab]);
 
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
     viewableItems.forEach(item => {
@@ -178,7 +194,6 @@ export default function FeedScreen({ navigation }) {
   const searchUsers = async (query, page = 1, loadMore = false) => {
     if (!query.trim() || query.trim().length < 2) return;
     
-    // FIX: Guest users can still search
     if (isGuest && !loadMore) {
       setIsSearchingUsers(true);
     } else if (!loadMore) {
@@ -240,7 +255,6 @@ export default function FeedScreen({ navigation }) {
     }
   };
 
-  // FIX: Handle user profile navigation for guests
   const handleUserPress = (userId) => {
     if (isGuest) {
       showGuestAlert('view user profiles');
@@ -250,13 +264,34 @@ export default function FeedScreen({ navigation }) {
     navigation.navigate("UserProfile", { userId });
   };
 
-  // FIX: Handle notifications for guests
   const handleNotifications = () => {
     if (isGuest) {
       showGuestAlert('view notifications');
       return;
     }
     navigation.navigate("Notifications");
+  };
+
+  const handleTabSwitch = (tab) => {
+    setActiveTab(tab);
+    if (tab === "Feed") {
+      fetchPosts(selectedCategory, searchQuery);
+    }
+  };
+
+  // Handle FAB press with animation
+  const handleFabPress = () => {
+    // Animate button press
+    Animated.sequence([
+      Animated.timing(fabScale, { toValue: 0.8, duration: 100, useNativeDriver: true }),
+      Animated.spring(fabScale, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }),
+    ]).start();
+
+    if (isGuest) {
+      showGuestAlert('create a post');
+      return;
+    }
+    navigation.navigate('CreatePostScreen');
   };
 
   const renderUserSearchResult = ({ item, index }) => (
@@ -336,11 +371,42 @@ export default function FeedScreen({ navigation }) {
     </View>
   );
 
+  // Render Feed content
+  const renderFeed = () => (
+    <>
+      {loading && !refreshing ? (
+        <FeedSkeleton />
+      ) : (
+        <FlatList
+          data={posts}
+          keyExtractor={(item) => item._id}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh} 
+              tintColor="#f9c349"
+              colors={["#f9c349"]}
+            />
+          }
+          renderItem={({ item }) => <PostCard post={item} onRefresh={onRefresh} navigation={navigation} isGuest={isGuest} />}
+          onEndReached={loadMorePosts}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={renderFooter}
+          onViewableItemsChanged={onViewableItemsChanged.current}
+          viewabilityConfig={viewabilityConfig.current}
+          contentContainerStyle={{ paddingBottom: 100 }}
+          ListEmptyComponent={!loading ? renderEmpty : null}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+    </>
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       
-      {/* FIX: Guest Banner */}
+      {/* Guest Banner */}
       {isGuest && (
         <View style={styles.guestBanner}>
           <Ionicons name="information-circle" size={18} color="#1a1a1a" />
@@ -365,9 +431,6 @@ export default function FeedScreen({ navigation }) {
                 <Text style={styles.logoText}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
               </Animated.View>
               <View style={styles.topIcons}>
-                <TouchableOpacity style={styles.iconBtn} onPress={toggleSearch} activeOpacity={0.7}>
-                  <Ionicons name="search-outline" size={22} color="#1a1a1a" />
-                </TouchableOpacity>
                 <TouchableOpacity style={styles.iconBtn} onPress={handleNotifications} activeOpacity={0.7}>
                   <View style={styles.badgeContainer}>
                     <Ionicons name="notifications-outline" size={22} color="#1a1a1a" />
@@ -409,81 +472,65 @@ export default function FeedScreen({ navigation }) {
           )}
         </View>
 
-        {/* Search Overlay with Full User List */}
-        {isSearching && searchQuery.length > 0 && (
-          <Animated.View style={[
-            styles.searchOverlay,
-            {
-              opacity: searchFadeAnim,
-              transform: [{ translateY: searchSlideAnim }],
-            }
-          ]}>
-            <View style={styles.searchHeader}>
-              <Text style={styles.searchResultTitle}>
-                <Text style={{color: '#f9c349', marginRight: 4}}>●</Text>
-                Search Results
-              </Text>
-              {searchResults.length > 0 && (
-                <Text style={styles.searchCount}>
-                  {searchResults.length} {searchResults.length === 1 ? 'user' : 'users'} found
-                </Text>
-              )}
-            </View>
-            
-            {isSearchingUsers && searchResults.length === 0 ? (
-              <View style={styles.searchLoadingContainer}>
-                <ActivityIndicator size="large" color="#f9c349" />
-                <Text style={styles.searchLoadingText}>Searching users...</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={searchResults}
-                keyExtractor={(item) => item._id}
-                renderItem={renderUserSearchResult}
-                ListEmptyComponent={renderSearchEmpty}
-                ListFooterComponent={renderSearchFooter}
-                onEndReached={loadMoreSearchResults}
-                onEndReachedThreshold={0.5}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.searchListContent}
-                keyboardShouldPersistTaps="handled"
-              />
-            )}
-          </Animated.View>
-        )}
-
-        {/* Stories */}
-        {!isSearching && <StoriesSection navigation={navigation} />}
+        {/* Tabs */}
+        <View style={styles.tabsContainer}>
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === "Feed" && styles.activeTab]}
+            onPress={() => handleTabSwitch("Feed")}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.tabText, activeTab === "Feed" && styles.activeTabText]}>
+              Feed
+            </Text>
+            {activeTab === "Feed" && <View style={styles.activeTabIndicator} />}
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === "Confession" && styles.activeTab]}
+            onPress={() => handleTabSwitch("Confession")}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.tabText, activeTab === "Confession" && styles.activeTabText]}>
+              Confession
+            </Text>
+            {activeTab === "Confession" && <View style={styles.activeTabIndicator} />}
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* FEED */}
-      {loading && !refreshing ? (
-        <FeedSkeleton />
+      {/* Content based on active tab */}
+      {activeTab === "Feed" ? (
+        renderFeed()
       ) : (
-        <FlatList
-          data={posts}
-          keyExtractor={(item) => item._id}
-          refreshControl={
-            <RefreshControl 
-              refreshing={refreshing} 
-              onRefresh={onRefresh} 
-              tintColor="#f9c349"
-              colors={["#f9c349"]}
-            />
-          }
-          renderItem={({ item }) => <PostCard post={item} onRefresh={onRefresh} navigation={navigation} isGuest={isGuest} />}
-          onEndReached={loadMorePosts}
-          onEndReachedThreshold={0.3}
-          ListFooterComponent={renderFooter}
-          onViewableItemsChanged={onViewableItemsChanged.current}
-          viewabilityConfig={viewabilityConfig.current}
-          contentContainerStyle={{ paddingBottom: 80 }}
-          ListEmptyComponent={!loading ? renderEmpty : null}
-          showsVerticalScrollIndicator={false}
-        />
+        <ConfessionScreen navigation={navigation} />
       )}
       
-      {/* FIX: Only show FloatingMenu for non-guest users */}
+      {/* FAB Button - Only visible on Feed screen */}
+      {activeTab === "Feed" && (
+        <Animated.View 
+          style={[
+            styles.fabContainer, 
+            { 
+              transform: [{ scale: fabScale }],
+              opacity: fabTranslateY.interpolate({
+                inputRange: [0, 100],
+                outputRange: [1, 0],
+              })
+            }
+          ]}
+        >
+          <TouchableOpacity style={styles.fab} onPress={handleFabPress} activeOpacity={0.8}>
+            <LinearGradient 
+              colors={['#1a1a1a', '#2d2d2d']} 
+              style={styles.fabGradient}
+            >
+              <Ionicons name="add" size={28} color="#f9c349" />
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
+      )}
+      
+      {/* FloatingMenu for other actions */}
       {!isGuest && <FloatingMenu navigation={navigation} />}
     </SafeAreaView>
   );
@@ -728,4 +775,63 @@ const styles = StyleSheet.create({
   loadingText: { color: '#999', fontSize: 13, fontWeight: '500' },
   footerEnd: { paddingVertical: 24, alignItems: 'center' },
   footerEndText: { color: '#ccc', fontSize: 12, fontWeight: '500' },
+
+  // Tabs
+  tabsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  activeTab: {},
+  tabText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#999',
+  },
+  activeTabText: {
+    color: '#1a1a1a',
+    fontWeight: '700',
+  },
+  activeTabIndicator: {
+    position: 'absolute',
+    bottom: -1,
+    left: '30%',
+    right: '30%',
+    height: 3,
+    backgroundColor: '#f9c349',
+    borderRadius: 2,
+  },
+
+  // FAB - Only shown on Feed
+  fabContainer: {
+    position: 'absolute', 
+    bottom: 140, 
+    right: 17, 
+    elevation: 8,
+    shadowColor: "#1a1a1a",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+  },
+  fab: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  fabGradient: { 
+    width: 47, 
+    height: 47, 
+    borderRadius: 47, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+  },
+
 });

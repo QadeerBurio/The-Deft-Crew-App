@@ -13,6 +13,7 @@ import TravelingScreen from "../components/TravellingScreen";
 import EditProfileScreen from "../screens/Social/EditProfileScreen";
 import ChatHistoryScreen from "../screens/ChatHistoryScreen";
 import ResumeStack from "./ResumeNavigator";
+import Social from "../screens/Social/Social";
 
 const Stack = createNativeStackNavigator();
 
@@ -41,6 +42,8 @@ export default function HomeStack() {
       <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
       <Stack.Screen name="TravellingScreen" component={TravelingScreen} options={{ headerShown: false }}/>
       <Stack.Screen name="ChatHistory" component={ChatHistoryScreen} />
+      <Stack.Screen name="Social" component={Social} options={{ headerShown: false }} />
+
     </Stack.Navigator>
   );
 }

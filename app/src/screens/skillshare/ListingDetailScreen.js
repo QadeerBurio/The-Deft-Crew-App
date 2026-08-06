@@ -20,7 +20,7 @@ import {
   RefreshControl,
   Image
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { getListingById } from '../../api/api';
 import { timeAgo } from '../../utils/time';
 import { AuthContext } from '../../context/AuthContext';
@@ -45,9 +45,27 @@ export default function ListingDetailScreen({ route, navigation }) {
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const slideAnim = useRef(new Animated.Value(40)).current;
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  const fabAnim = useRef(new Animated.Value(0)).current;
+  const floatingY = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
   const modalAnim = useRef(new Animated.Value(0)).current;
+  
+  const card1Anim = useRef(new Animated.Value(0)).current;
+  const card2Anim = useRef(new Animated.Value(0)).current;
+  const card3Anim = useRef(new Animated.Value(0)).current;
+
+  const floating = floatingY.interpolate({
+    inputRange: [-8, 8],
+    outputRange: [-8, 8],
+  });
+
+  const spin = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   // Use refs to prevent infinite loops
   const isFetching = useRef(false);
@@ -55,6 +73,50 @@ export default function ListingDetailScreen({ route, navigation }) {
   const isMounted = useRef(true);
 
   useEffect(() => {
+    // Floating animation
+    const floatAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatingY, {
+          toValue: 8,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatingY, {
+          toValue: -8,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    floatAnimation.start();
+
+    // Pulse animation
+    const pulseAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.95,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulseAnimation.start();
+
+    // Rotate animation
+    const rotate = Animated.loop(
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 20000,
+        useNativeDriver: true,
+      })
+    );
+    rotate.start();
+
     // Entrance animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -62,17 +124,43 @@ export default function ListingDetailScreen({ route, navigation }) {
         duration: 600,
         useNativeDriver: true,
       }),
-      Animated.timing(slideAnim, {
+      Animated.spring(slideAnim, {
         toValue: 0,
-        duration: 600,
+        tension: 50,
+        friction: 8,
         useNativeDriver: true,
       }),
-      Animated.timing(scaleAnim, {
+      Animated.spring(headerAnim, {
         toValue: 1,
-        duration: 600,
+        tension: 40,
+        friction: 7,
         useNativeDriver: true,
-      })
+      }),
+      Animated.spring(fabAnim, {
+        toValue: 1,
+        tension: 40,
+        friction: 7,
+        delay: 300,
+        useNativeDriver: true,
+      }),
     ]).start();
+
+    // Card animations
+    const cardAnimations = [
+      { anim: card1Anim, delay: 200 },
+      { anim: card2Anim, delay: 400 },
+      { anim: card3Anim, delay: 600 }
+    ];
+
+    cardAnimations.forEach(({ anim, delay }) => {
+      Animated.spring(anim, {
+        toValue: 1,
+        tension: 40,
+        friction: 8,
+        delay: delay,
+        useNativeDriver: true,
+      }).start();
+    });
   }, []);
 
   const fetchListing = useCallback(async (isRefresh = false) => {
@@ -100,7 +188,6 @@ export default function ListingDetailScreen({ route, navigation }) {
 
       const currentUserId = getCurrentUserId();
       if (data && currentUserId && data.ownerId !== currentUserId && data.status === 'open') {
-        // Check for existing inquiry
         try {
           const thread = await getInquiryForListing(id, currentUserId);
           if (isMounted.current) {
@@ -113,7 +200,6 @@ export default function ListingDetailScreen({ route, navigation }) {
           }
         }
 
-        // Check for active match
         try {
           const matches = await getMyMatches(currentUserId);
           if (isMounted.current) {
@@ -228,7 +314,6 @@ export default function ListingDetailScreen({ route, navigation }) {
     }
   };
 
-  // Get user data from listing owner
   const getOwnerData = () => {
     const owner = listing?.owner || {};
     return {
@@ -238,6 +323,51 @@ export default function ListingDetailScreen({ route, navigation }) {
     };
   };
 
+  const getTypeColor = () => {
+    if (listing?.type === 'barter') return '#f9c349';
+    if (listing?.type === 'job') return '#FF6B6B';
+    return '#34C759';
+  };
+
+  const getTypeGradient = () => {
+    if (listing?.type === 'barter') return ['#f9c349', '#f5a623'];
+    if (listing?.type === 'job') return ['#FF6B6B', '#EE5A24'];
+    return ['#34C759', '#28A745'];
+  };
+
+  const getTypeIcon = () => {
+    if (listing?.type === 'barter') return 'swap-horizontal';
+    if (listing?.type === 'job') return 'briefcase';
+    return 'cash';
+  };
+
+  const renderAnimatedCard = (anim, children) => (
+    <Animated.View
+      style={[
+        styles.animatedCard,
+        {
+          opacity: anim,
+          transform: [
+            {
+              scale: anim.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0.92, 1.02, 1]
+              })
+            },
+            {
+              translateY: anim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [20, 0]
+              })
+            }
+          ]
+        }
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
+
   const renderActionButtons = () => {
     if (!listing) return null;
 
@@ -245,15 +375,32 @@ export default function ListingDetailScreen({ route, navigation }) {
     
     if (!currentUserId || isGuest) {
       return (
-        <Animated.View style={[styles.closedContainer, { opacity: fadeAnim }]}>
-          <Ionicons name="log-in-outline" size={32} color="#f9c349" />
-          <Text style={styles.closedText}>Please log in to interact with this listing.</Text>
-          <TouchableOpacity 
-            style={styles.primaryButton}
-            onPress={() => navigation.navigate('Login')}
+        <Animated.View style={[styles.actionContainer, { opacity: fadeAnim }]}>
+          <LinearGradient
+            colors={['#FFFFFF', '#F8F9FA']}
+            style={styles.actionCard}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
           >
-            <Text style={styles.primaryButtonText}>Login</Text>
-          </TouchableOpacity>
+            <Ionicons name="log-in" size={32} color="#f9c349" />
+            <Text style={styles.actionTitle}>Sign in to interact</Text>
+            <Text style={styles.actionSubtitle}>Login to ask questions or make offers</Text>
+            <TouchableOpacity 
+              style={styles.primaryButton}
+              onPress={() => navigation.navigate('Login')}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#f9c349', '#f5a623']}
+                style={styles.buttonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={styles.primaryButtonText}>Login Now</Text>
+                <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+              </LinearGradient>
+            </TouchableOpacity>
+          </LinearGradient>
         </Animated.View>
       );
     }
@@ -272,8 +419,17 @@ export default function ListingDetailScreen({ route, navigation }) {
             id: listing._id, 
             type: listing.type 
           })}
+          activeOpacity={0.8}
         >
-          <Text style={styles.primaryButtonText}>{btnText}</Text>
+          <LinearGradient
+            colors={['#f9c349', '#f5a623']}
+            style={styles.buttonGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Ionicons name="settings" size={18} color="#FFFFFF" />
+            <Text style={styles.primaryButtonText}>{btnText}</Text>
+          </LinearGradient>
         </TouchableOpacity>
       );
     }
@@ -281,8 +437,16 @@ export default function ListingDetailScreen({ route, navigation }) {
     if (listing.status !== 'open') {
       return (
         <View style={styles.closedContainer}>
-          <Ionicons name="lock-closed-outline" size={32} color="#8E8E93" />
-          <Text style={styles.closedText}>This listing is no longer accepting offers.</Text>
+          <LinearGradient
+            colors={['#FFFFFF', '#F8F9FA']}
+            style={styles.closedCard}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Ionicons name="lock-closed" size={32} color="#8E8E93" />
+            <Text style={styles.closedTitle}>Listing Closed</Text>
+            <Text style={styles.closedSubtitle}>This listing is no longer accepting offers.</Text>
+          </LinearGradient>
         </View>
       );
     }
@@ -296,41 +460,60 @@ export default function ListingDetailScreen({ route, navigation }) {
               listingId: listing._id 
             });
           }}
+          activeOpacity={0.8}
         >
-          <Ionicons name="chatbubble-ellipses-outline" size={20} color="#FFFFFF" style={styles.buttonIcon} />
-          <Text style={styles.primaryButtonText}>Go to Match Chat</Text>
+          <LinearGradient
+            colors={['#34C759', '#28A745']}
+            style={styles.buttonGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Ionicons name="chatbubble-ellipses" size={18} color="#FFFFFF" />
+            <Text style={styles.primaryButtonText}>Chat Now</Text>
+          </LinearGradient>
         </TouchableOpacity>
       );
     }
 
-    const offerBtnText = isBarter ? 'Make an Offer' : 
+    const offerBtnText = isBarter ? 'Make Offer' : 
                          listing.type === 'job' ? 'Apply Now' : 
-                         'Request to Enroll';
+                         'Enroll Now';
     
     return (
       <View style={styles.actionRow}>
         <TouchableOpacity 
-          style={[styles.actionButton, styles.primaryButton]}
+          style={[styles.actionButton, styles.primaryButton, { flex: 1.5 }]}
           onPress={() => navigation.navigate('CreateOffer', { listing })}
+          activeOpacity={0.8}
         >
-          <Text style={styles.primaryButtonText}>{offerBtnText}</Text>
+          <LinearGradient
+            colors={getTypeGradient()}
+            style={styles.buttonGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Ionicons name="send" size={18} color="#FFFFFF" />
+            <Text style={styles.primaryButtonText}>{offerBtnText}</Text>
+          </LinearGradient>
         </TouchableOpacity>
         
         {existingInquiryThread ? (
           <TouchableOpacity 
-            style={[styles.actionButton, styles.secondaryButton]}
+            style={[styles.actionButton, styles.secondaryButton, { flex: 1 }]}
             onPress={() => navigation.navigate('InquiryChat', {
               threadId: existingInquiryThread._id,
               listingTitle: listing.title,
               otherParticipantId: listing.ownerId,
               listingId: listing._id
             })}
+            activeOpacity={0.7}
           >
-            <Text style={styles.secondaryButtonText}>View Questions</Text>
+            <Ionicons name="chatbubble" size={18} color="#1C1C1E" />
+            <Text style={styles.secondaryButtonText}>Chat</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity 
-            style={[styles.actionButton, styles.secondaryButton]}
+            style={[styles.actionButton, styles.secondaryButton, { flex: 1 }]}
             onPress={() => {
               setModalVisible(true);
               Animated.spring(modalAnim, {
@@ -340,8 +523,10 @@ export default function ListingDetailScreen({ route, navigation }) {
                 useNativeDriver: true,
               }).start();
             }}
+            activeOpacity={0.7}
           >
-            <Text style={styles.secondaryButtonText}>Ask Question</Text>
+            <Ionicons name="help-circle" size={18} color="#1C1C1E" />
+            <Text style={styles.secondaryButtonText}>Ask</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -362,9 +547,9 @@ export default function ListingDetailScreen({ route, navigation }) {
   if (loading) {
     return (
       <SafeAreaView style={styles.centerContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <StatusBar barStyle="dark-content" backgroundColor="#F8F9FC" />
         <ActivityIndicator size="large" color="#f9c349" />
-        <Text style={styles.loadingText}>Loading listing...</Text>
+        <Text style={styles.loadingText}>Loading...</Text>
       </SafeAreaView>
     );
   }
@@ -372,14 +557,14 @@ export default function ListingDetailScreen({ route, navigation }) {
   if (error || !listing) {
     return (
       <SafeAreaView style={styles.centerContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-        <Ionicons name="alert-circle-outline" size={60} color="#FF3B30" />
+        <StatusBar barStyle="dark-content" backgroundColor="#F8F9FC" />
+        <Ionicons name="alert-circle" size={60} color="#FF3B30" />
         <Text style={styles.errorText}>{error || 'Listing not found'}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={() => {
           fetchCount.current = 0;
           fetchListing();
         }}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+          <Text style={styles.retryButtonText}>Try Again</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -388,26 +573,56 @@ export default function ListingDetailScreen({ route, navigation }) {
   const isBarter = listing.type === 'barter';
   const ownerData = getOwnerData();
   const ownerInitial = ownerData.name !== 'Anonymous' ? ownerData.name.charAt(0).toUpperCase() : 'U';
+  const typeColor = getTypeColor();
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor="#F8F9FC" />
       
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-        >
-          <Ionicons 
-            name={Platform.OS === 'ios' ? 'chevron-back' : 'chevron-back'} 
-            size={24} 
-            color="#1C1C1E" 
-          />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>Listing Details</Text>
-        <View style={styles.headerPlaceholder} />
+      {/* Background Decoration */}
+      <View style={styles.bgDecorations}>
+        <Animated.View style={[styles.bgOrb, styles.bgOrb1, { transform: [{ rotate: spin }] }]} />
+        <Animated.View style={[styles.bgOrb, styles.bgOrb2, { transform: [{ translateY: floating }] }]} />
       </View>
+
+      {/* Header */}
+      <Animated.View 
+        style={[
+          styles.header,
+          {
+            opacity: headerAnim,
+            transform: [
+              {
+                translateY: headerAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-15, 0]
+                })
+              }
+            ]
+          }
+        ]}
+      >
+        <LinearGradient
+          colors={['#FFFFFF', '#F8F9FC']}
+          style={styles.headerGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.headerContent}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="chevron-back" size={22} color="#1C1C1E" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Details</Text>
+            <TouchableOpacity style={styles.shareButton}>
+              <Ionicons name="share-outline" size={22} color="#1C1C1E" />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </Animated.View>
 
       <ScrollView 
         style={styles.scrollView}
@@ -427,151 +642,220 @@ export default function ListingDetailScreen({ route, navigation }) {
             styles.mainContent,
             {
               opacity: fadeAnim,
-              transform: [
-                { translateY: slideAnim },
-                { scale: scaleAnim }
-              ]
+              transform: [{ translateY: slideAnim }]
             }
           ]}
         >
-          <View style={styles.headerRow}>
-            <View style={[styles.badge, 
-              isBarter ? styles.badgeBarter : 
-              listing.type === 'job' ? styles.badgeJob : 
-              styles.badgePaid
-            ]}>
-              <Text style={[styles.badgeText,
-                isBarter ? styles.badgeBarterText : 
-                listing.type === 'job' ? styles.badgeJobText : 
-                styles.badgePaidText
-              ]}>
-                {isBarter ? '↔ Barter' : listing.type === 'job' ? '💼 Job' : '💰 Paid'}
+          {/* Status & Type Badges */}
+          <View style={styles.badgeRow}>
+            <View style={[styles.typeBadge, { backgroundColor: typeColor + '15' }]}>
+              <Ionicons name={getTypeIcon()} size={16} color={typeColor} />
+              <Text style={[styles.typeBadgeText, { color: typeColor }]}>
+                {isBarter ? 'Exchange' : listing.type === 'job' ? 'Job' : 'Paid'}
               </Text>
             </View>
             <View style={[styles.statusBadge, 
               listing.status === 'open' ? styles.statusOpen : styles.statusClosed
             ]}>
+              <View style={[styles.statusDot, 
+                listing.status === 'open' ? styles.statusDotOpen : styles.statusDotClosed
+              ]} />
               <Text style={[styles.statusText, 
                 listing.status === 'open' ? styles.statusTextOpen : styles.statusTextClosed
               ]}>
-                {listing.status.toUpperCase()}
+                {listing.status === 'open' ? 'Active' : 'Closed'}
               </Text>
             </View>
           </View>
 
+          {/* Title */}
           <Text style={styles.title}>{listing.title}</Text>
-          
-         
-          
-          <Text style={styles.description}>{listing.description}</Text>
 
-          {listing.type !== 'job' && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Skill Offered</Text>
-              <View style={styles.card}>
-                <View style={styles.detailRow}>
-                  <Ionicons name="star-outline" size={18} color="#f9c349" />
-                  <Text style={styles.detailLabel}>Skill: <Text style={styles.detailValue}>{listing.skillOffered?.skillName}</Text></Text>
+          {/* Owner Card */}
+          {renderAnimatedCard(card1Anim, (
+            <View style={styles.ownerCard}>
+              <LinearGradient
+                colors={['#FFFFFF', '#FAFBFF']}
+                style={styles.ownerCardGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <View style={styles.ownerAvatarContainer}>
+                  {ownerData.profileImage ? (
+                    <Image source={{ uri: ownerData.profileImage }} style={styles.ownerAvatar} />
+                  ) : (
+                    <LinearGradient
+                      colors={['#f9c349', '#f5a623']}
+                      style={styles.ownerAvatar}
+                    >
+                      <Text style={styles.ownerAvatarText}>{ownerInitial}</Text>
+                    </LinearGradient>
+                  )}
+                  <View style={styles.ownerStatusDot} />
                 </View>
-                <View style={styles.detailRow}>
-                  <Ionicons name="analytics-outline" size={18} color="#f9c349" />
-                  <Text style={styles.detailLabel}>Experience: <Text style={styles.detailValue}>{listing.skillOffered?.yearsOfExperience} years</Text></Text>
+                <View style={styles.ownerInfo}>
+                  <Text style={styles.ownerName}>{ownerData.name}</Text>
+                  <View style={styles.ownerMeta}>
+                    <Ionicons name="time" size={12} color="#8E8E93" />
+                    <Text style={styles.ownerMetaText}>Posted {timeAgo(listing.createdAt)}</Text>
+                  </View>
                 </View>
-                <View style={styles.detailRow}>
-                  <Ionicons name="trending-up-outline" size={18} color="#f9c349" />
-                  <Text style={styles.detailLabel}>Proficiency: <Text style={styles.detailValue}>{listing.skillOffered?.proficiencyLevel}</Text></Text>
+              </LinearGradient>
+            </View>
+          ))}
+
+          {/* Description */}
+          <View style={styles.descriptionContainer}>
+            <Text style={styles.description}>{listing.description}</Text>
+          </View>
+
+          {/* Details Card */}
+          {listing.type !== 'job' && renderAnimatedCard(card2Anim, (
+            <View style={styles.detailCard}>
+              <LinearGradient
+                colors={['#FFFFFF', '#FFFDF5']}
+                style={styles.detailCardGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <View style={styles.detailHeader}>
+                  <View style={styles.detailIconContainer}>
+                    <Ionicons name="star" size={16} color="#f9c349" />
+                  </View>
+                  <Text style={styles.detailTitle}>Skill Offered</Text>
                 </View>
                 
-                {listing.skillOffered?.experienceDetails ? (
-                  <View style={styles.detailRow}>
-                    <Ionicons name="document-text-outline" size={18} color="#f9c349" />
-                    <Text style={styles.detailLabel}>Details: <Text style={styles.detailValue}>{listing.skillOffered.experienceDetails}</Text></Text>
+                <View style={styles.detailGrid}>
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailLabel}>Skill</Text>
+                    <Text style={styles.detailValue}>{listing.skillOffered?.skillName}</Text>
                   </View>
-                ) : null}
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailLabel}>Experience</Text>
+                    <Text style={styles.detailValue}>{listing.skillOffered?.yearsOfExperience} years</Text>
+                  </View>
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailLabel}>Level</Text>
+                    <View style={[styles.levelBadge, { backgroundColor: typeColor + '15' }]}>
+                      <Text style={[styles.levelBadgeText, { color: typeColor }]}>
+                        {listing.skillOffered?.proficiencyLevel}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
 
-                {listing.skillOffered?.portfolioLinks && listing.skillOffered.portfolioLinks.length > 0 && (
-                  <View style={styles.linksContainer}>
-                    <Text style={styles.linksTitle}>Portfolio Links:</Text>
+                {listing.skillOffered?.experienceDetails && (
+                  <View style={styles.experienceContainer}>
+                    <Text style={styles.experienceLabel}>Experience Details</Text>
+                    <Text style={styles.experienceText}>{listing.skillOffered.experienceDetails}</Text>
+                  </View>
+                )}
+
+                {listing.skillOffered?.portfolioLinks?.length > 0 && (
+                  <View style={styles.portfolioContainer}>
+                    <Text style={styles.portfolioLabel}>Portfolio</Text>
                     {listing.skillOffered.portfolioLinks.map((link, index) => (
                       <TouchableOpacity key={index} onPress={() => handleOpenLink(link)}>
-                        <Text style={styles.linkText}>• {link}</Text>
+                        <Text style={styles.portfolioLink}>• {link}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 )}
-              </View>
+              </LinearGradient>
             </View>
-          )}
+          ))}
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {isBarter ? 'Seeking' : 
-               listing.type === 'job' ? 'Requirement & Terms' : 
-               'Pricing & Details'}
-            </Text>
-            <View style={styles.card}>
-              {isBarter ? (
-                <>
-                  <View style={styles.detailRow}>
-                    <Ionicons name="swap-horizontal-outline" size={18} color="#f9c349" />
-                    <Text style={styles.detailLabel}>Wants: <Text style={styles.detailValue}>{listing.skillWanted?.skillName}</Text></Text>
+          {/* Requirements Card */}
+          {renderAnimatedCard(card3Anim, (
+            <View style={styles.detailCard}>
+              <LinearGradient
+                colors={['#FFFFFF', '#FAFBFF']}
+                style={styles.detailCardGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <View style={styles.detailHeader}>
+                  <View style={styles.detailIconContainer}>
+                    <Ionicons name={isBarter ? 'swap-horizontal' : listing.type === 'job' ? 'briefcase' : 'cash'} size={16} color="#f9c349" />
                   </View>
-                  {listing.skillWanted?.notes ? (
-                    <View style={styles.detailRow}>
-                      <Ionicons name="chatbox-outline" size={18} color="#f9c349" />
-                      <Text style={styles.detailLabel}>Notes: <Text style={styles.detailValue}>{listing.skillWanted.notes}</Text></Text>
+                  <Text style={styles.detailTitle}>
+                    {isBarter ? 'Skill Wanted' : listing.type === 'job' ? 'Job Details' : 'Pricing'}
+                  </Text>
+                </View>
+
+                {isBarter ? (
+                  <>
+                    <View style={styles.detailGrid}>
+                      <View style={styles.detailItem}>
+                        <Text style={styles.detailLabel}>Skill</Text>
+                        <Text style={styles.detailValue}>{listing.skillWanted?.skillName}</Text>
+                      </View>
                     </View>
-                  ) : null}
-                </>
-              ) : listing.type === 'job' ? (
-                <>
-                  <View style={styles.detailRow}>
-                    <Ionicons name="construct-outline" size={18} color="#f9c349" />
-                    <Text style={styles.detailLabel}>Skill Needed: <Text style={styles.detailValue}>{listing.skillNeeded?.skillName}</Text></Text>
-                  </View>
-                  {listing.skillNeeded?.experienceLevel && (
-                    <View style={styles.detailRow}>
-                      <Ionicons name="bar-chart-outline" size={18} color="#f9c349" />
-                      <Text style={styles.detailLabel}>Experience Level: <Text style={styles.detailValue}>{listing.skillNeeded.experienceLevel}</Text></Text>
+                    {listing.skillWanted?.notes && (
+                      <View style={styles.experienceContainer}>
+                        <Text style={styles.experienceLabel}>Notes</Text>
+                        <Text style={styles.experienceText}>{listing.skillWanted.notes}</Text>
+                      </View>
+                    )}
+                  </>
+                ) : listing.type === 'job' ? (
+                  <>
+                    <View style={styles.detailGrid}>
+                      <View style={styles.detailItem}>
+                        <Text style={styles.detailLabel}>Skill</Text>
+                        <Text style={styles.detailValue}>{listing.skillNeeded?.skillName}</Text>
+                      </View>
+                      {listing.skillNeeded?.experienceLevel && (
+                        <View style={styles.detailItem}>
+                          <Text style={styles.detailLabel}>Level</Text>
+                          <Text style={styles.detailValue}>{listing.skillNeeded.experienceLevel}</Text>
+                        </View>
+                      )}
                     </View>
-                  )}
-                  {listing.skillNeeded?.notes ? (
-                    <View style={styles.detailRow}>
-                      <Ionicons name="chatbox-outline" size={18} color="#f9c349" />
-                      <Text style={styles.detailLabel}>Notes: <Text style={styles.detailValue}>{listing.skillNeeded.notes}</Text></Text>
+                    {listing.skillNeeded?.notes && (
+                      <View style={styles.experienceContainer}>
+                        <Text style={styles.experienceLabel}>Notes</Text>
+                        <Text style={styles.experienceText}>{listing.skillNeeded.notes}</Text>
+                      </View>
+                    )}
+                    <View style={styles.divider} />
+                    <View style={styles.compensationRow}>
+                      <View style={styles.compensationItem}>
+                        <Text style={styles.compensationLabel}>Budget</Text>
+                        <Text style={styles.compensationValue}>${listing.budget}</Text>
+                      </View>
+                      <View style={styles.compensationDivider} />
+                      <View style={styles.compensationItem}>
+                        <Text style={styles.compensationLabel}>Positions</Text>
+                        <Text style={styles.compensationValue}>{listing.positionsFilled || 0}/{listing.positionsAvailable || 1}</Text>
+                      </View>
                     </View>
-                  ) : null}
-                  <View style={styles.divider} />
-                  <View style={styles.detailRow}>
-                    <Ionicons name="cash-outline" size={18} color="#34C759" />
-                    <Text style={styles.detailLabel}>Budget: <Text style={[styles.detailValue, styles.budgetValue]}>${listing.budget}</Text></Text>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <Ionicons name="people-outline" size={18} color="#34C759" />
-                    <Text style={styles.detailLabel}>Positions: <Text style={styles.detailValue}>{listing.positionsFilled || 0} of {listing.positionsAvailable || 1} filled</Text></Text>
-                  </View>
-                </>
-              ) : (
-                <>
-                  <View style={styles.detailRow}>
-                    <Ionicons name="cash-outline" size={18} color="#34C759" />
-                    <Text style={styles.detailLabel}>Price: <Text style={[styles.detailValue, styles.priceValue]}>${listing.price}</Text></Text>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <Ionicons name="time-outline" size={18} color="#34C759" />
-                    <Text style={styles.detailLabel}>Duration: <Text style={styles.detailValue}>{listing.duration}</Text></Text>
-                  </View>
-                  {listing.syllabus ? (
-                    <View style={styles.detailRow}>
-                      <Ionicons name="book-outline" size={18} color="#34C759" />
-                      <Text style={styles.detailLabel}>Syllabus: <Text style={styles.detailValue}>{listing.syllabus}</Text></Text>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.detailGrid}>
+                      <View style={styles.detailItem}>
+                        <Text style={styles.detailLabel}>Price</Text>
+                        <Text style={[styles.detailValue, styles.priceHighlight]}>${listing.price}</Text>
+                      </View>
+                      <View style={styles.detailItem}>
+                        <Text style={styles.detailLabel}>Duration</Text>
+                        <Text style={styles.detailValue}>{listing.duration}</Text>
+                      </View>
                     </View>
-                  ) : null}
-                </>
-              )}
+                    {listing.syllabus && (
+                      <View style={styles.experienceContainer}>
+                        <Text style={styles.experienceLabel}>Roadmap</Text>
+                        <Text style={styles.experienceText}>{listing.syllabus}</Text>
+                      </View>
+                    )}
+                  </>
+                )}
+              </LinearGradient>
             </View>
-          </View>
+          ))}
 
+          {/* Action Buttons */}
           <View style={styles.footer}>
             {renderActionButtons()}
           </View>
@@ -605,41 +889,60 @@ export default function ListingDetailScreen({ route, navigation }) {
               }
             ]}
           >
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Ask a Question</Text>
-            <Text style={styles.modalSubtitle}>
-              Ask the owner about this listing
-            </Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="What would you like to ask?"
-              placeholderTextColor="#8E8E93"
-              value={inquiryText}
-              onChangeText={setInquiryText}
-              multiline
-              autoFocus
-              numberOfLines={4}
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={styles.modalButtonCancel} 
-                onPress={closeModal}
-                disabled={submittingInquiry}
-              >
-                <Text style={styles.modalButtonCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButtonSend, (!inquiryText.trim() || submittingInquiry) && styles.modalButtonDisabled]} 
-                onPress={handleSendInquiry}
-                disabled={!inquiryText.trim() || submittingInquiry}
-              >
-                {submittingInquiry ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.modalButtonSendText}>Send</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+            <LinearGradient
+              colors={['#FFFFFF', '#F8F9FC']}
+              style={styles.modalGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.modalHandle} />
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Ask Question</Text>
+                <TouchableOpacity onPress={closeModal}>
+                  <Ionicons name="close" size={24} color="#8E8E93" />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.modalSubtitle}>Ask the owner about this listing</Text>
+              <View style={styles.modalInputContainer}>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="What would you like to ask?"
+                  placeholderTextColor="#8E8E93"
+                  value={inquiryText}
+                  onChangeText={setInquiryText}
+                  multiline
+                  autoFocus
+                  numberOfLines={4}
+                />
+              </View>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={styles.modalButtonCancel} 
+                  onPress={closeModal}
+                  disabled={submittingInquiry}
+                >
+                  <Text style={styles.modalButtonCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.modalButtonSend, (!inquiryText.trim() || submittingInquiry) && styles.modalButtonDisabled]} 
+                  onPress={handleSendInquiry}
+                  disabled={!inquiryText.trim() || submittingInquiry}
+                >
+                  <LinearGradient
+                    colors={['#f9c349', '#f5a623']}
+                    style={styles.modalButtonGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    {submittingInquiry ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.modalButtonSendText}>Send</Text>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
           </Animated.View>
         </TouchableOpacity>
       </Modal>
@@ -650,43 +953,82 @@ export default function ListingDetailScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F8F9FC',
+  },
+  bgDecorations: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    overflow: 'hidden',
+  },
+  bgOrb: {
+    position: 'absolute',
+    borderRadius: 999,
+    opacity: 0.03,
+  },
+  bgOrb1: {
+    width: 200,
+    height: 200,
+    top: -80,
+    right: -80,
+    backgroundColor: '#f9c349',
+  },
+  bgOrb2: {
+    width: 150,
+    height: 150,
+    bottom: -50,
+    left: -50,
+    backgroundColor: '#34C759',
   },
   header: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.03)',
+    marginTop: Platform.OS === 'android' ? 34 : 0,
+  },
+  headerGradient: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    marginTop:34
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F8F9FA',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F8F9FC',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: '#1C1C1E',
-    flex: 1,
-    textAlign: 'center',
+    letterSpacing: -0.3,
   },
-  headerPlaceholder: {
-    width: 40,
+  shareButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F8F9FC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
-    paddingBottom: 40,
+    padding: 14,
+    paddingBottom: 80,
   },
   mainContent: {
     flex: 1,
@@ -696,62 +1038,56 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F8F9FC',
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
     color: '#8E8E93',
   },
-  headerRow: {
+  badgeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  badge: {
+  typeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
+    gap: 6,
   },
-  badgeBarter: {
-    backgroundColor: '#FFF8F0',
-    borderWidth: 1,
-    borderColor: '#f9c349',
-  },
-  badgePaid: {
-    backgroundColor: '#F0FFF4',
-    borderWidth: 1,
-    borderColor: '#34C759',
-  },
-  badgeJob: {
-    backgroundColor: '#FFF0F0',
-    borderWidth: 1,
-    borderColor: '#FF6B6B',
-  },
-  badgeText: {
+  typeBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-  },
-  badgeBarterText: {
-    color: '#f9c349',
-  },
-  badgePaidText: {
-    color: '#34C759',
-  },
-  badgeJobText: {
-    color: '#FF6B6B',
+    letterSpacing: 0.3,
   },
   statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
+    gap: 6,
   },
   statusOpen: {
     backgroundColor: '#F0FFF4',
   },
   statusClosed: {
     backgroundColor: '#FFF0F0',
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  statusDotOpen: {
+    backgroundColor: '#34C759',
+  },
+  statusDotClosed: {
+    backgroundColor: '#FF3B30',
   },
   statusText: {
     fontSize: 11,
@@ -765,54 +1101,66 @@ const styles = StyleSheet.create({
     color: '#FF3B30',
   },
   title: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '800',
     color: '#1C1C1E',
-    marginBottom: 12,
-    lineHeight: 32,
+    marginBottom: 14,
+    lineHeight: 30,
+    letterSpacing: -0.5,
   },
-  ownerSection: {
-    marginBottom: 16,
+  animatedCard: {
+    marginBottom: 12,
   },
   ownerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderRadius: 14,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
+  },
+  ownerCardGradient: {
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ownerAvatarContainer: {
+    position: 'relative',
   },
   ownerAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
   ownerAvatarText: {
     color: '#FFFFFF',
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '700',
   },
+  ownerStatusDot: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#34C759',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
   ownerInfo: {
+    marginLeft: 12,
     flex: 1,
   },
   ownerName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#1C1C1E',
-  },
-  ownerEmail: {
-    fontSize: 13,
-    color: '#8E8E93',
-    marginTop: 1,
   },
   ownerMeta: {
     flexDirection: 'row',
@@ -824,143 +1172,268 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#8E8E93',
   },
-  description: {
-    fontSize: 16,
-    color: '#3A3A3C',
-    lineHeight: 24,
-    marginBottom: 24,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1C1C1E',
-    marginBottom: 10,
-  },
-  card: {
+  descriptionContainer: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  description: {
+    fontSize: 15,
+    color: '#3A3A3C',
+    lineHeight: 22,
+  },
+  detailCard: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: 'rgba(0,0,0,0.03)',
   },
-  detailRow: {
+  detailCardGradient: {
+    padding: 14,
+  },
+  detailHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
     gap: 8,
   },
-  detailLabel: {
-    fontSize: 15,
-    color: '#8E8E93',
-    fontWeight: '500',
+  detailIconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: '#f9c34915',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  detailTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1C1C1E',
+    letterSpacing: -0.2,
+  },
+  detailGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  detailItem: {
     flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#F8F9FC',
+    padding: 10,
+    borderRadius: 10,
+  },
+  detailLabel: {
+    fontSize: 11,
+    color: '#8E8E93',
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    marginBottom: 2,
   },
   detailValue: {
+    fontSize: 14,
     color: '#1C1C1E',
-    fontWeight: '400',
+    fontWeight: '600',
   },
-  priceValue: {
+  priceHighlight: {
     color: '#34C759',
-    fontWeight: '700',
     fontSize: 16,
   },
-  budgetValue: {
-    color: '#34C759',
+  levelBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginTop: 2,
+  },
+  levelBadgeText: {
+    fontSize: 11,
     fontWeight: '700',
-    fontSize: 16,
+  },
+  experienceContainer: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: '#F8F9FC',
+    borderRadius: 10,
+  },
+  experienceLabel: {
+    fontSize: 11,
+    color: '#8E8E93',
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    marginBottom: 2,
+  },
+  experienceText: {
+    fontSize: 13,
+    color: '#1C1C1E',
+    lineHeight: 18,
+  },
+  portfolioContainer: {
+    marginTop: 10,
+  },
+  portfolioLabel: {
+    fontSize: 11,
+    color: '#8E8E93',
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    marginBottom: 4,
+  },
+  portfolioLink: {
+    fontSize: 13,
+    color: '#007AFF',
+    textDecorationLine: 'underline',
+    paddingVertical: 2,
   },
   divider: {
     height: 1,
     backgroundColor: '#F0F0F0',
     marginVertical: 10,
   },
-  linksContainer: {
-    marginTop: 6,
+  compensationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FC',
+    borderRadius: 10,
+    padding: 10,
   },
-  linksTitle: {
-    fontSize: 14,
+  compensationItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  compensationLabel: {
+    fontSize: 11,
     color: '#8E8E93',
-    fontWeight: '500',
-    marginBottom: 4,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
-  linkText: {
-    fontSize: 14,
-    color: '#007AFF',
-    textDecorationLine: 'underline',
+  compensationValue: {
+    fontSize: 16,
+    color: '#1C1C1E',
+    fontWeight: '700',
     marginTop: 2,
-    paddingVertical: 2,
+  },
+  compensationDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#E5E5EA',
   },
   footer: {
+    marginTop: 4,
+  },
+  actionContainer: {
     marginTop: 8,
-    marginBottom: 20,
+  },
+  actionCard: {
+    padding: 20,
+    borderRadius: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  actionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1C1C1E',
+    marginTop: 8,
+  },
+  actionSubtitle: {
+    fontSize: 13,
+    color: '#8E8E93',
+    marginTop: 2,
+    marginBottom: 12,
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   actionButton: {
-    flex: 1,
-    paddingVertical: 14,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: 'hidden',
   },
   primaryButton: {
-    backgroundColor: '#f9c349',
-    paddingVertical: 14,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 8,
+    overflow: 'hidden',
     shadowColor: '#f9c349',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
+  buttonGradient: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
   primaryButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
+    letterSpacing: 0.3,
   },
   secondaryButton: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E5E5EA',
-    flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 4,
   },
   secondaryButtonText: {
     color: '#1C1C1E',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
   closedContainer: {
-    backgroundColor: '#FFFFFF',
-    padding: 24,
-    borderRadius: 16,
+    marginTop: 8,
+  },
+  closedCard: {
+    padding: 20,
+    borderRadius: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#F0F0F0',
-    gap: 12,
+    borderColor: 'rgba(0,0,0,0.03)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  closedText: {
-    fontSize: 15,
+  closedTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1C1C1E',
+    marginTop: 8,
+  },
+  closedSubtitle: {
+    fontSize: 13,
     color: '#8E8E93',
-    fontWeight: '500',
-    textAlign: 'center',
+    marginTop: 2,
   },
   errorText: {
     fontSize: 16,
@@ -985,9 +1458,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
   },
-  buttonIcon: {
-    marginRight: 4,
-  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -997,6 +1467,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
+    overflow: 'hidden',
+  },
+  modalGradient: {
     padding: 24,
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
   },
@@ -1008,6 +1481,12 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: 16,
   },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
@@ -1016,19 +1495,21 @@ const styles = StyleSheet.create({
   modalSubtitle: {
     fontSize: 14,
     color: '#8E8E93',
-    marginTop: 4,
+    marginBottom: 16,
+  },
+  modalInputContainer: {
+    backgroundColor: '#F8F9FC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
     marginBottom: 16,
   },
   modalInput: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
     padding: 16,
     fontSize: 16,
     minHeight: 100,
     textAlignVertical: 'top',
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
+    color: '#1C1C1E',
   },
   modalButtons: {
     flexDirection: 'row',
@@ -1039,7 +1520,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F8F9FC',
     borderWidth: 1,
     borderColor: '#E5E5EA',
   },
@@ -1050,13 +1531,16 @@ const styles = StyleSheet.create({
   },
   modalButtonSend: {
     flex: 1,
-    paddingVertical: 14,
     borderRadius: 12,
+    overflow: 'hidden',
+  },
+  modalButtonGradient: {
+    paddingVertical: 14,
     alignItems: 'center',
-    backgroundColor: '#f9c349',
+    justifyContent: 'center',
   },
   modalButtonDisabled: {
-    backgroundColor: '#F5E5C8',
+    opacity: 0.5,
   },
   modalButtonSendText: {
     color: '#FFFFFF',

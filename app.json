@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "The Deft Crew",
+    "name": "tdc",
     "slug": "Testting",
-    "version": "1.0.5",
+    "version": "1.0.7",
     "orientation": "default",
     "icon": "./assets/tdcs.png",
     "scheme": "tdcapp",
