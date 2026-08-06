@@ -488,9 +488,22 @@ export const createListing = async (payload) => {
   }
 };
 
-export const getMyListings = async (ownerId) => {
-  const response = await api.get(`/listings/mine/${ownerId}`);
-  return response.data;
+// api/api.js - Fix getMyListings
+
+/**
+ * Get current user's listings
+ * Uses the /mine endpoint which gets listings from the authenticated user
+ */
+export const getMyListings = async () => {
+  try {
+    // The backend /mine endpoint uses the authenticated user's token
+    // No need to pass ownerId as it's extracted from the token
+    const response = await api.get('/listings/mine');
+    return response.data.listings || response.data || [];
+  } catch (error) {
+    console.error('Error fetching my listings:', error);
+    throw error;
+  }
 };
 
 export const closeListing = async (listingId, ownerId) => {
@@ -537,14 +550,19 @@ export const getOffersForListing = async (listingId) => {
   }
 };
 
+// api/api.js - Fix getMySkillOffers
+
 /**
  * Get current user's skill offers
  */
 export const getMySkillOffers = async () => {
   try {
     const response = await api.get('/skill-offers/my-offers');
+    // The backend returns { success: true, offers: [...] }
+    // Return the offers array directly or the whole response
     return response.data;
   } catch (error) {
+    console.error('Error fetching my offers:', error);
     throw error;
   }
 };

@@ -12,6 +12,7 @@ import {
   Animated,
   Dimensions,
   StatusBar,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -34,6 +35,8 @@ const BookingScreen = () => {
   const [loading, setLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [focusedInput, setFocusedInput] = useState(null);
+  const scrollViewRef = useRef(null);
+  const inputRefs = useRef({});
 
   // Animation Values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -59,7 +62,7 @@ const BookingScreen = () => {
   const [notification, setNotification] = useState(null);
   const [showLoading, setShowLoading] = useState(false);
 
-  // Form state
+  // Form state - Updated with PKR currency
   const [formData, setFormData] = useState({
     fullName: user?.name || '',
     email: user?.email || '',
@@ -129,7 +132,49 @@ const BookingScreen = () => {
         }),
       ])
     ).start();
+
+    // Keyboard listeners for auto-scroll
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      handleKeyboardShow
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      handleKeyboardHide
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
   }, []);
+
+  const handleKeyboardShow = (event) => {
+    // Scroll to focused input
+    const inputName = focusedInput;
+    if (inputName && inputRefs.current[inputName]) {
+      setTimeout(() => {
+        inputRefs.current[inputName]?.measureLayout(
+          scrollViewRef.current,
+          (x, y) => {
+            const keyboardHeight = event.endCoordinates.height;
+            const inputPosition = y - 100;
+            if (inputPosition > 0) {
+              scrollViewRef.current?.scrollTo({
+                y: inputPosition,
+                animated: true,
+              });
+            }
+          },
+          () => {}
+        );
+      }, 300);
+    }
+  };
+
+  const handleKeyboardHide = () => {
+    // Optionally scroll back to top or maintain position
+  };
 
   const showNotification = (title, message, type = "success") => {
     setNotification({ title, message, type });
@@ -249,7 +294,6 @@ const BookingScreen = () => {
   const handleInputChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
     
-    // Only validate if field has been touched
     if (touched[field]) {
       const errorMsg = validateField(field, value);
       setErrors({ ...errors, [field]: errorMsg || null });
@@ -258,6 +302,10 @@ const BookingScreen = () => {
 
   const handleInputFocus = (field) => {
     setFocusedInput(field);
+    // Highlight the input
+    if (inputRefs.current[field]) {
+      // The input will be scrolled on keyboard show
+    }
   };
 
   const handleInputBlur = (field) => {
@@ -295,7 +343,10 @@ const BookingScreen = () => {
   };
 
   const calculateTotalPrice = () => {
-    return (item.price * formData.numberOfTravelers).toFixed(2);
+    // Convert to PKR (assuming 1 USD = 280 PKR)
+    const pkrRate = 280;
+    const totalInPKR = (item.price * formData.numberOfTravelers * pkrRate);
+    return totalInPKR.toFixed(0);
   };
 
   const handleSubmit = async () => {
@@ -321,6 +372,9 @@ const BookingScreen = () => {
     showLoadingOverlay();
     setLoading(true);
     
+    const pkrRate = 280;
+    const totalInPKR = (item.price * formData.numberOfTravelers * pkrRate);
+    
     const bookingData = {
       packageId: item._id,
       packageName: item.name,
@@ -332,7 +386,8 @@ const BookingScreen = () => {
       customerPhone: formData.phone,
       travelDate: formData.travelDate,
       numberOfTravelers: formData.numberOfTravelers,
-      totalAmount: parseFloat(calculateTotalPrice()),
+      totalAmount: parseFloat(totalInPKR),
+      currency: 'PKR',
       specialRequests: formData.specialRequests,
       paymentMethod: formData.paymentMethod,
       status: 'pending',
@@ -383,17 +438,24 @@ const BookingScreen = () => {
     });
   };
 
-  // FIXED: Use transform scaleX instead of width for animation
   const loadingScaleX = loadingProgress.interpolate({
     inputRange: [0, 1],
     outputRange: [0, 1],
   });
 
-  // FIXED: Use transform scaleX instead of width for notification progress
   const notificationScaleX = notificationSlide.interpolate({
     inputRange: [-200, 0],
     outputRange: [0, 1],
   });
+
+  // Payment methods with icons
+  const paymentMethods = [
+    { id: 'Cash on Delivery', icon: 'cash-outline', label: 'Cash on Delivery' },
+    { id: 'Credit Card', icon: 'card-outline', label: 'Credit Card' },
+    { id: 'Bank Transfer', icon: 'swap-horizontal-outline', label: 'Bank Transfer' },
+    { id: 'JazzCash', icon: 'phone-portrait-outline', label: 'JazzCash' },
+    { id: 'EasyPaisa', icon: 'phone-portrait-outline', label: 'EasyPaisa' },
+  ];
 
   return (
     <View style={styles.rootContainer}>
@@ -404,7 +466,7 @@ const BookingScreen = () => {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Top Notification Bar - FIXED */}
+        {/* Top Notification Bar */}
         {notification && (
           <Animated.View 
             style={[
@@ -466,7 +528,6 @@ const BookingScreen = () => {
                 )}
               </View>
               
-              {/* FIXED: Using transform scaleX instead of width */}
               {notification.type === 'success' && (
                 <View style={styles.notificationProgressBar}>
                   <Animated.View 
@@ -483,35 +544,35 @@ const BookingScreen = () => {
           </Animated.View>
         )}
 
-        {/* Loading Overlay - FIXED */}
+        {/* Loading Overlay */}
         {showLoading && (
           <Animated.View style={[styles.loadingOverlay, { opacity: overlayOpacity }]}>
+            <ActivityIndicator size="large" color="#f9c349" />
+            <Text style={styles.loadingText}>Submitting Booking...</Text>
             
-              <ActivityIndicator size="large" color="#f9c349" />
-              <Text style={styles.loadingText}>Submitting Booking...</Text>
-              
-              <View style={styles.loadingProgressContainer}>
-                <Animated.View 
-                  style={[
-                    styles.loadingProgressBar,
-                    { transform: [{ scaleX: loadingScaleX }] }
-                  ]}
-                >
-                  <LinearGradient
-                    colors={['#f9c349', '#f7b733']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.progressGradientFill}
-                  />
-                </Animated.View>
-              </View>
-            
+            <View style={styles.loadingProgressContainer}>
+              <Animated.View 
+                style={[
+                  styles.loadingProgressBar,
+                  { transform: [{ scaleX: loadingScaleX }] }
+                ]}
+              >
+                <LinearGradient
+                  colors={['#f9c349', '#f7b733']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.progressGradientFill}
+                />
+              </Animated.View>
+            </View>
           </Animated.View>
         )}
 
         <ScrollView 
+          ref={scrollViewRef}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
         >
           {/* Header */}
           <Animated.View style={[styles.header, { opacity: headerFade }]}>
@@ -547,8 +608,8 @@ const BookingScreen = () => {
                     <Ionicons name="airplane" size={24} color="#1a1a1a" />
                   </View>
                   <View style={styles.priceTag}>
-                    <Text style={styles.priceCurrency}>$</Text>
-                    <Text style={styles.priceTagText}>{item.price}</Text>
+                    <Text style={styles.priceCurrency}>PKR</Text>
+                    <Text style={styles.priceTagText}>{(item.price * 280).toFixed(0)}</Text>
                     <Text style={styles.priceTagSub}>/person</Text>
                   </View>
                 </View>
@@ -587,13 +648,16 @@ const BookingScreen = () => {
               {/* Full Name */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Full Name *</Text>
-                <View style={[
-                  styles.inputWrapper, 
-                  focusedInput === 'name' && styles.inputFocused, 
-                  errors.fullName && touched.fullName && styles.inputError
-                ]}>
+                <View 
+                  ref={ref => inputRefs.current['fullName'] = ref}
+                  style={[
+                    styles.inputWrapper, 
+                    focusedInput === 'fullName' && styles.inputFocused, 
+                    errors.fullName && touched.fullName && styles.inputError
+                  ]}
+                >
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="person-outline" size={18} color={focusedInput === 'name' ? "#f9c349" : "#999"} />
+                    <Ionicons name="person-outline" size={18} color={focusedInput === 'fullName' ? "#f9c349" : "#999"} />
                   </View>
                   <TextInput
                     style={styles.input}
@@ -601,9 +665,10 @@ const BookingScreen = () => {
                     placeholderTextColor="#999"
                     value={formData.fullName}
                     onChangeText={(text) => handleInputChange('fullName', text)}
-                    onFocus={() => handleInputFocus('name')}
+                    onFocus={() => handleInputFocus('fullName')}
                     onBlur={() => handleInputBlur('fullName')}
                     editable={!loading}
+                    returnKeyType="next"
                   />
                   {formData.fullName.length > 0 && !errors.fullName && (
                     <Ionicons name="checkmark-circle" size={20} color="#f9c349" />
@@ -615,11 +680,14 @@ const BookingScreen = () => {
               {/* Email */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Email Address *</Text>
-                <View style={[
-                  styles.inputWrapper, 
-                  focusedInput === 'email' && styles.inputFocused, 
-                  errors.email && touched.email && styles.inputError
-                ]}>
+                <View 
+                  ref={ref => inputRefs.current['email'] = ref}
+                  style={[
+                    styles.inputWrapper, 
+                    focusedInput === 'email' && styles.inputFocused, 
+                    errors.email && touched.email && styles.inputError
+                  ]}
+                >
                   <View style={styles.inputIconContainer}>
                     <Ionicons name="mail-outline" size={18} color={focusedInput === 'email' ? "#f9c349" : "#999"} />
                   </View>
@@ -634,6 +702,7 @@ const BookingScreen = () => {
                     onFocus={() => handleInputFocus('email')}
                     onBlur={() => handleInputBlur('email')}
                     editable={!loading}
+                    returnKeyType="next"
                   />
                   {formData.email.length > 0 && !errors.email && /\S+@\S+\.\S+/.test(formData.email) && (
                     <Ionicons name="checkmark-circle" size={20} color="#f9c349" />
@@ -645,11 +714,14 @@ const BookingScreen = () => {
               {/* Phone */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Phone Number *</Text>
-                <View style={[
-                  styles.inputWrapper, 
-                  focusedInput === 'phone' && styles.inputFocused, 
-                  errors.phone && touched.phone && styles.inputError
-                ]}>
+                <View 
+                  ref={ref => inputRefs.current['phone'] = ref}
+                  style={[
+                    styles.inputWrapper, 
+                    focusedInput === 'phone' && styles.inputFocused, 
+                    errors.phone && touched.phone && styles.inputError
+                  ]}
+                >
                   <View style={styles.inputIconContainer}>
                     <Ionicons name="call-outline" size={18} color={focusedInput === 'phone' ? "#f9c349" : "#999"} />
                   </View>
@@ -663,6 +735,7 @@ const BookingScreen = () => {
                     onFocus={() => handleInputFocus('phone')}
                     onBlur={() => handleInputBlur('phone')}
                     editable={!loading}
+                    returnKeyType="next"
                   />
                 </View>
                 {errors.phone && touched.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
@@ -682,6 +755,7 @@ const BookingScreen = () => {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Travel Date *</Text>
                 <TouchableOpacity 
+                  ref={ref => inputRefs.current['travelDate'] = ref}
                   style={[styles.inputWrapper, errors.travelDate && touched.travelDate && styles.inputError]}
                   onPress={() => setShowDatePicker(true)}
                   disabled={loading}
@@ -734,35 +808,42 @@ const BookingScreen = () => {
                 {errors.numberOfTravelers && touched.numberOfTravelers && <Text style={styles.errorText}>{errors.numberOfTravelers}</Text>}
               </View>
 
-              {/* Payment Method */}
+              {/* Payment Method - Grid Layout */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Payment Method</Text>
-                <View style={styles.paymentOptions}>
-                  {['Cash on Delivery', 'Credit Card', 'Bank Transfer'].map((method) => (
+                <View style={styles.paymentGrid}>
+                  {paymentMethods.map((method) => (
                     <TouchableOpacity
-                      key={method}
+                      key={method.id}
                       style={[
-                        styles.paymentOption,
-                        formData.paymentMethod === method && styles.paymentOptionActive
+                        styles.paymentGridItem,
+                        formData.paymentMethod === method.id && styles.paymentGridItemActive
                       ]}
-                      onPress={() => handleInputChange('paymentMethod', method)}
+                      onPress={() => handleInputChange('paymentMethod', method.id)}
                       disabled={loading}
                       activeOpacity={0.7}
                     >
-                      <Ionicons 
-                        name={
-                          method === 'Cash on Delivery' ? 'cash-outline' :
-                          method === 'Credit Card' ? 'card-outline' : 'swap-horizontal-outline'
-                        } 
-                        size={18} 
-                        color={formData.paymentMethod === method ? '#f9c349' : '#999'} 
-                      />
-                      <Text style={[
-                        styles.paymentOptionText,
-                        formData.paymentMethod === method && styles.paymentOptionTextActive
+                      <View style={[
+                        styles.paymentIconContainer,
+                        formData.paymentMethod === method.id && styles.paymentIconContainerActive
                       ]}>
-                        {method}
+                        <Ionicons 
+                          name={method.icon} 
+                          size={24} 
+                          color={formData.paymentMethod === method.id ? '#f9c349' : '#666'} 
+                        />
+                      </View>
+                      <Text style={[
+                        styles.paymentGridLabel,
+                        formData.paymentMethod === method.id && styles.paymentGridLabelActive
+                      ]}>
+                        {method.label}
                       </Text>
+                      {formData.paymentMethod === method.id && (
+                        <View style={styles.paymentCheckmark}>
+                          <Ionicons name="checkmark-circle" size={20} color="#f9c349" />
+                        </View>
+                      )}
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -771,7 +852,10 @@ const BookingScreen = () => {
               {/* Special Requests */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Special Requests (Optional)</Text>
-                <View style={[styles.inputWrapper, styles.textAreaWrapper, focusedInput === 'requests' && styles.inputFocused]}>
+                <View 
+                  ref={ref => inputRefs.current['requests'] = ref}
+                  style={[styles.inputWrapper, styles.textAreaWrapper, focusedInput === 'requests' && styles.inputFocused]}
+                >
                   <TextInput
                     style={[styles.input, styles.textArea]}
                     placeholder="Any special requirements or preferences?"
@@ -780,14 +864,14 @@ const BookingScreen = () => {
                     onChangeText={(text) => handleInputChange('specialRequests', text)}
                     multiline
                     numberOfLines={4}
-                    onFocus={() => setFocusedInput('requests')}
+                    onFocus={() => handleInputFocus('requests')}
                     onBlur={() => setFocusedInput(null)}
                     editable={!loading}
                   />
                 </View>
               </View>
 
-              {/* Price Summary */}
+              {/* Price Summary - Updated with PKR */}
               <View style={styles.summaryCard}>
                 <View style={styles.summaryHeader}>
                   <Ionicons name="receipt-outline" size={20} color="#1a1a1a" />
@@ -795,8 +879,8 @@ const BookingScreen = () => {
                 </View>
                 <View style={styles.summaryDivider} />
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Package Price</Text>
-                  <Text style={styles.summaryValue}>${item.price} × {formData.numberOfTravelers}</Text>
+                  <Text style={styles.summaryLabel}>Package Price (PKR)</Text>
+                  <Text style={styles.summaryValue}>PKR {(item.price * 280).toFixed(0)} × {formData.numberOfTravelers}</Text>
                 </View>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Service Fee</Text>
@@ -810,7 +894,7 @@ const BookingScreen = () => {
                 <View style={styles.summaryRow}>
                   <Text style={styles.totalLabel}>Total Amount</Text>
                   <View style={styles.totalAmountContainer}>
-                    <Text style={styles.totalCurrency}>$</Text>
+                    <Text style={styles.totalCurrency}>PKR</Text>
                     <Text style={styles.totalAmount}>{calculateTotalPrice()}</Text>
                   </View>
                 </View>
@@ -979,18 +1063,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 999,
   },
-  loadingCard: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    elevation: 15,
-    shadowColor: "#f9c349",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    width: '75%',
-    padding: 35,
-    alignItems: 'center',
-  },
   loadingText: {
     color: '#f9c349',
     fontSize: 18,
@@ -1105,7 +1177,7 @@ const styles = StyleSheet.create({
   },
   priceCurrency: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     marginRight: 2,
   },
@@ -1278,35 +1350,67 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
   },
-  paymentOptions: {
+
+  // Payment Methods - Grid Layout
+  paymentGrid: {
     flexDirection: 'row',
-    gap: 8,
+    flexWrap: 'wrap',
+    gap: 10,
   },
-  paymentOption: {
+  paymentGridItem: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: '#f0f0f0',
-    alignItems: 'center',
+    minWidth: (width - 60) / 3 - 10,
+    maxWidth: (width - 60) / 3 - 10,
     backgroundColor: '#f8f8f8',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 6,
+    borderRadius: 16,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    position: 'relative',
+    paddingTop: 16,
+    paddingBottom: 16,
   },
-  paymentOptionActive: {
+  paymentGridItemActive: {
     backgroundColor: '#1a1a1a',
-    borderColor: '#1a1a1a',
+    borderColor: '#f9c349',
+    elevation: 5,
+    shadowColor: "#f9c349",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
-  paymentOptionText: {
+  paymentIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  paymentIconContainerActive: {
+    backgroundColor: '#1a1a1a',
+    borderWidth: 1,
+    borderColor: '#f9c349',
+  },
+  paymentGridLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#999',
-    letterSpacing: 0.5,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 14,
   },
-  paymentOptionTextActive: {
+  paymentGridLabelActive: {
     color: '#f9c349',
   },
+  paymentCheckmark: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+  },
+
+  // Price Summary
   summaryCard: {
     backgroundColor: '#f8f8f8',
     borderRadius: 16,
@@ -1377,6 +1481,8 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#f9c349',
   },
+
+  // Submit Button
   submitBtn: {
     borderRadius: 16,
     overflow: 'hidden',
@@ -1404,7 +1510,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 10,
-   
     justifyContent: 'center',
     alignItems: 'center',
   },

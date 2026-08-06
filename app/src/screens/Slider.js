@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Image,
@@ -12,6 +12,7 @@ import {
   ScrollView,
   TouchableWithoutFeedback,
   RefreshControl,
+  InteractionManager,
 } from "react-native";
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -22,11 +23,13 @@ const ITEM_HEIGHT = height * 0.22;
 const ITEM_SPACING = (width - ITEM_WIDTH) / 2;
 
 const BASE_URL = "https://the-deft-crew-production.up.railway.app";
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+const FETCH_TIMEOUT = 3000; // 3 seconds timeout
 
 // ==========================================
-// SKELETON LOADER COMPONENT
+// SKELETON LOADER COMPONENT (Optimized)
 // ==========================================
-const SliderSkeleton = () => {
+const SliderSkeleton = React.memo(() => {
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -34,12 +37,12 @@ const SliderSkeleton = () => {
       Animated.sequence([
         Animated.timing(shimmerAnim, {
           toValue: 1,
-          duration: 1000,
+          duration: 600,
           useNativeDriver: true,
         }),
         Animated.timing(shimmerAnim, {
           toValue: 0,
-          duration: 1000,
+          duration: 600,
           useNativeDriver: true,
         }),
       ])
@@ -50,7 +53,7 @@ const SliderSkeleton = () => {
 
   const translateX = shimmerAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [-200, 200],
+    outputRange: [-150, 150],
   });
 
   return (
@@ -80,7 +83,7 @@ const SliderSkeleton = () => {
       </View>
     </View>
   );
-};
+});
 
 export default function Slider() {
   const [data, setData] = useState([]);
@@ -89,6 +92,7 @@ export default function Slider() {
   const scrollX = useRef(new Animated.Value(0)).current;
   const flatListRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isMounted, setIsMounted] = useState(true);
 
   const [selectedOffer, setSelectedOffer] = useState(null);
   const [isModalVisible, setModalVisible] = useState(false);
@@ -101,67 +105,26 @@ export default function Slider() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const likeAnim = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    let timer;
-    let interval;
-    
-    if (data.length > 0 && !loading) {
-      timer = setInterval(() => {
-        let nextIndex = currentIndex + 1;
-        if (nextIndex >= data.length) {
-          nextIndex = 0;
-        }
-        
-        flatListRef.current?.scrollToOffset({
-          offset: nextIndex * ITEM_WIDTH,
-          animated: true,
-        });
-      }, 4000);
-      
-      interval = setInterval(() => {
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.1,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-        ]).start();
-      }, 2000);
-    }
-    
-    return () => {
-      clearInterval(timer);
-      clearInterval(interval);
-    };
-  }, [currentIndex, data.length, loading]);
+  // Memoized cache key
+  const CACHE_KEY = useMemo(() => 'slider_data_cache', []);
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
+  // Optimized fetch with caching and timeout
   const fetchData = useCallback(async (isRefresh = false) => {
     try {
+      // Check cache first (unless refreshing)
+      if (!isRefresh) {
+        const cachedData = await getCachedData();
+        if (cachedData && cachedData.length > 0) {
+          setData(cachedData);
+          setLoading(false);
+          return;
+        }
+      }
+
       if (!isRefresh) setLoading(true);
-      
+
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
       
       const cacheBuster = isRefresh ? `?_=${Date.now()}` : '';
       
@@ -169,7 +132,8 @@ export default function Slider() {
         signal: controller.signal,
         headers: {
           'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
+          'Pragma': 'no-cache',
+          'Accept': 'application/json'
         }
       });
       
@@ -181,39 +145,150 @@ export default function Slider() {
       
       const json = await response.json();
       
+      // Process data efficiently
       let visibleData = [];
       
       if (Array.isArray(json)) {
-        visibleData = json.filter((item) => item && item.active !== false);
-      } else if (json && typeof json === 'object') {
-        if (Array.isArray(json.data)) {
-          visibleData = json.data.filter((item) => item && item.active !== false);
-        } else if (Array.isArray(json.offers)) {
-          visibleData = json.offers.filter((item) => item && item.active !== false);
-        } else if (Array.isArray(json.sliders)) {
-          visibleData = json.sliders.filter((item) => item && item.active !== false);
-        } else {
-          visibleData = [];
-        }
-      } else {
-        visibleData = [];
+        visibleData = json.filter(item => item && item.active !== false);
+      } else if (json?.data && Array.isArray(json.data)) {
+        visibleData = json.data.filter(item => item && item.active !== false);
+      } else if (json?.offers && Array.isArray(json.offers)) {
+        visibleData = json.offers.filter(item => item && item.active !== false);
+      } else if (json?.sliders && Array.isArray(json.sliders)) {
+        visibleData = json.sliders.filter(item => item && item.active !== false);
       }
       
-      setData(visibleData);
-      setLoading(false);
-      setRefreshing(false);
+      // Cache the data
+      await cacheData(visibleData);
+      
+      if (isMounted) {
+        setData(visibleData);
+        setLoading(false);
+        setRefreshing(false);
+      }
       
     } catch (err) {
       console.error("Slider Fetch Error:", err);
-      setLoading(false);
-      setRefreshing(false);
-      setData([]);
+      if (isMounted) {
+        setLoading(false);
+        setRefreshing(false);
+        // Try to use cached data as fallback
+        const cachedData = await getCachedData();
+        if (cachedData && cachedData.length > 0) {
+          setData(cachedData);
+        } else {
+          setData([]);
+        }
+      }
     }
+  }, [isMounted]);
+
+  // Cache helpers
+  const cacheData = async (data) => {
+    try {
+      const cacheEntry = {
+        data: data,
+        timestamp: Date.now()
+      };
+      // Use AsyncStorage or any storage solution
+      // For now, using localStorage polyfill for web
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(CACHE_KEY, JSON.stringify(cacheEntry));
+      }
+    } catch (error) {
+      // Silent fail for cache
+    }
+  };
+
+  const getCachedData = async () => {
+    try {
+      if (typeof window !== 'undefined') {
+        const cached = window.localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const cacheEntry = JSON.parse(cached);
+          const isExpired = Date.now() - cacheEntry.timestamp > CACHE_DURATION;
+          if (!isExpired && cacheEntry.data?.length > 0) {
+            return cacheEntry.data;
+          }
+        }
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  // Initial load with priority
+  useEffect(() => {
+    setIsMounted(true);
+    
+    // Use InteractionManager for smoother initial render
+    InteractionManager.runAfterInteractions(() => {
+      fetchData();
+    });
+
+    return () => {
+      setIsMounted(false);
+    };
   }, []);
 
+  // Auto-slide timer with optimized interval
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (data.length <= 1 || loading) return;
+    
+    let timer = setInterval(() => {
+      let nextIndex = currentIndex + 1;
+      if (nextIndex >= data.length) {
+        nextIndex = 0;
+      }
+      
+      flatListRef.current?.scrollToOffset({
+        offset: nextIndex * ITEM_WIDTH,
+        animated: true,
+      });
+    }, 4000);
+    
+    return () => clearInterval(timer);
+  }, [currentIndex, data.length, loading]);
+
+  // Pulse animation with optimized timing
+  useEffect(() => {
+    if (data.length === 0) return;
+    
+    let interval = setInterval(() => {
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, 2500);
+    
+    return () => clearInterval(interval);
+  }, [data.length]);
+
+  // Entrance animation (only once)
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        friction: 10,
+        tension: 50,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -231,13 +306,13 @@ export default function Slider() {
     Animated.parallel([
       Animated.spring(modalScale, {
         toValue: 1,
-        friction: 8,
-        tension: 40,
+        friction: 10,
+        tension: 50,
         useNativeDriver: true,
       }),
       Animated.timing(modalAnim, {
         toValue: 1,
-        duration: 300,
+        duration: 200,
         useNativeDriver: true,
       }),
     ]).start();
@@ -248,13 +323,13 @@ export default function Slider() {
     Animated.parallel([
       Animated.spring(modalScale, {
         toValue: 0.9,
-        friction: 8,
-        tension: 40,
+        friction: 10,
+        tension: 50,
         useNativeDriver: true,
       }),
       Animated.timing(modalAnim, {
         toValue: 0,
-        duration: 250,
+        duration: 200,
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -266,17 +341,17 @@ export default function Slider() {
   const toggleSave = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
-    Animated.sequence([
+    Animation.sequence([
       Animated.spring(likeAnim, {
         toValue: 1,
-        friction: 3,
-        tension: 100,
+        friction: 5,
+        tension: 150,
         useNativeDriver: true,
       }),
       Animated.spring(likeAnim, {
         toValue: 0,
-        friction: 3,
-        tension: 100,
+        friction: 5,
+        tension: 150,
         useNativeDriver: true,
       }),
     ]).start();
@@ -284,22 +359,17 @@ export default function Slider() {
     setIsSaved(!isSaved);
   }, [isSaved]);
 
-  const renderItem = ({ item, index }) => {
+  // Optimized renderItem with memo
+  const renderItem = useCallback(({ item, index }) => {
     const scale = scrollX.interpolate({
       inputRange: [(index - 1) * ITEM_WIDTH, index * ITEM_WIDTH, (index + 1) * ITEM_WIDTH],
-      outputRange: [0.92, 1, 0.92],
+      outputRange: [0.93, 1, 0.93],
       extrapolate: "clamp",
     });
 
     const translateY = scrollX.interpolate({
       inputRange: [(index - 1) * ITEM_WIDTH, index * ITEM_WIDTH, (index + 1) * ITEM_WIDTH],
-      outputRange: [8, 0, 8],
-      extrapolate: "clamp",
-    });
-
-    const rotate = scrollX.interpolate({
-      inputRange: [(index - 1) * ITEM_WIDTH, index * ITEM_WIDTH, (index + 1) * ITEM_WIDTH],
-      outputRange: ['-1deg', '0deg', '1deg'],
+      outputRange: [5, 0, 5],
       extrapolate: "clamp",
     });
 
@@ -313,10 +383,15 @@ export default function Slider() {
           <Animated.View style={[
             styles.card, 
             { 
-              transform: [{ scale }, { translateY }, { rotate }],
+              transform: [{ scale }, { translateY }],
             }
           ]}>
-            <Image source={{ uri: item.image }} style={styles.image} />
+            <Image 
+              source={{ uri: item.image }} 
+              style={styles.image}
+              resizeMode="cover"
+              loading="lazy"
+            />
             <LinearGradient
               colors={['transparent', 'rgba(0,0,0,0.85)']}
               style={styles.gradientOverlay}
@@ -340,10 +415,70 @@ export default function Slider() {
         </TouchableOpacity>
       </View>
     );
-  };
+  }, [scrollX, handlePress]);
 
+  // Key extractor memo
+  const keyExtractor = useCallback((item, index) => item?._id || `item-${index}`, []);
+
+  // Optimized scroll handler
+  const onScroll = useCallback(Animated.event(
+    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+    { useNativeDriver: true }
+  ), []);
+
+  const onMomentumScrollEnd = useCallback((ev) => {
+    const newIndex = Math.round(ev.nativeEvent.contentOffset.x / ITEM_WIDTH);
+    if (newIndex !== currentIndex) {
+      setCurrentIndex(newIndex);
+    }
+  }, [currentIndex]);
+
+  // Memoized dot indicators
+  const renderDots = useMemo(() => {
+    return data.map((_, i) => {
+      const scaleX = scrollX.interpolate({
+        inputRange: [(i - 1) * ITEM_WIDTH, i * ITEM_WIDTH, (i + 1) * ITEM_WIDTH],
+        outputRange: [0.6, 2, 0.6],
+        extrapolate: "clamp",
+      });
+      
+      const opacity = scrollX.interpolate({
+        inputRange: [(i - 1) * ITEM_WIDTH, i * ITEM_WIDTH, (i + 1) * ITEM_WIDTH],
+        outputRange: [0.3, 1, 0.3],
+        extrapolate: "clamp",
+      });
+      
+      return (
+        <Animated.View
+          key={i}
+          style={[
+            styles.dot,
+            { 
+              transform: [{ scaleX }],
+              opacity,
+            },
+          ]}
+        />
+      );
+    });
+  }, [data, scrollX]);
+
+  // Show skeleton on initial load
   if (loading && data.length === 0) {
     return <SliderSkeleton />;
+  }
+
+  // Show empty state
+  if (!loading && data.length === 0) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyEmoji}>📭</Text>
+        <Text style={styles.emptyText}>No Offers Available</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={onRefresh}>
+          <Text style={styles.retryBtnText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
   }
 
   return (
@@ -356,17 +491,11 @@ export default function Slider() {
         showsHorizontalScrollIndicator={false}
         snapToInterval={ITEM_WIDTH}
         snapToAlignment="center"
-        decelerationRate="fast"
+        decelerationRate={Platform.OS === 'ios' ? 0.92 : 0.9}
         contentContainerStyle={{ paddingHorizontal: ITEM_SPACING - 4 }}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: true }
-        )}
-        onMomentumScrollEnd={(ev) => {
-          const newIndex = Math.round(ev.nativeEvent.contentOffset.x / ITEM_WIDTH);
-          setCurrentIndex(newIndex);
-        }}
-        keyExtractor={(item, index) => item?._id || index.toString()}
+        onScroll={onScroll}
+        onMomentumScrollEnd={onMomentumScrollEnd}
+        keyExtractor={keyExtractor}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -375,37 +504,17 @@ export default function Slider() {
             colors={["#FFD700"]}
           />
         }
+        maxToRenderPerBatch={3}
+        windowSize={5}
+        removeClippedSubviews={Platform.OS === 'android'}
+        initialNumToRender={2}
       />
 
       <View style={styles.dotContainer}>
-        {data.map((_, i) => {
-          const scaleX = scrollX.interpolate({
-            inputRange: [(i - 1) * ITEM_WIDTH, i * ITEM_WIDTH, (i + 1) * ITEM_WIDTH],
-            outputRange: [0.6, 2, 0.6],
-            extrapolate: "clamp",
-          });
-          
-          const opacity = scrollX.interpolate({
-            inputRange: [(i - 1) * ITEM_WIDTH, i * ITEM_WIDTH, (i + 1) * ITEM_WIDTH],
-            outputRange: [0.3, 1, 0.3],
-            extrapolate: "clamp",
-          });
-          
-          return (
-            <Animated.View
-              key={i}
-              style={[
-                styles.dot,
-                { 
-                  transform: [{ scaleX }],
-                  opacity,
-                },
-              ]}
-            />
-          );
-        })}
+        {renderDots}
       </View>
 
+      {/* Modal Component remains the same but optimized */}
       <Modal 
         animationType="none" 
         transparent={true} 
@@ -452,6 +561,7 @@ export default function Slider() {
                         source={{ uri: selectedOffer.image }} 
                         style={styles.modalImage}
                         resizeMode="cover"
+                        loading="lazy"
                       />
                       <LinearGradient
                         colors={['rgba(0,0,0,0.4)', 'transparent']}
@@ -472,9 +582,6 @@ export default function Slider() {
                     
                     <Text style={styles.modalDesc}>{selectedOffer.description}</Text>
                     
-                    
-                    
-                    
                     <TouchableOpacity 
                       style={styles.bottomCloseBtn} 
                       onPress={closeModal}
@@ -492,6 +599,9 @@ export default function Slider() {
     </Animated.View>
   );
 }
+
+// Styles remain the same as provided in the original code
+// ... (all styles remain unchanged)
 
 const styles = StyleSheet.create({
   container: { 

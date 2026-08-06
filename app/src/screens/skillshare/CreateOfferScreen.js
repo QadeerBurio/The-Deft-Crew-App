@@ -16,9 +16,10 @@ import {
   Animated,
   Dimensions
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { createSkillOffer } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
 
@@ -32,30 +33,120 @@ export default function CreateOfferScreen({ route, navigation }) {
   const [proposedPrice, setProposedPrice] = useState('');
   const [applicationNotes, setApplicationNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [focusedInput, setFocusedInput] = useState(null);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const slideAnim = useRef(new Animated.Value(40)).current;
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  const fabAnim = useRef(new Animated.Value(0)).current;
+  const floatingY = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  
+  const card1Anim = useRef(new Animated.Value(0)).current;
+  const card2Anim = useRef(new Animated.Value(0)).current;
+  const card3Anim = useRef(new Animated.Value(0)).current;
+
+  const floating = floatingY.interpolate({
+    inputRange: [-8, 8],
+    outputRange: [-8, 8],
+  });
+
+  const spin = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   useEffect(() => {
+    // Floating animation
+    const floatAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatingY, {
+          toValue: 8,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatingY, {
+          toValue: -8,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    floatAnimation.start();
+
+    // Pulse animation
+    const pulseAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.95,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulseAnimation.start();
+
+    // Rotate animation
+    const rotate = Animated.loop(
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 20000,
+        useNativeDriver: true,
+      })
+    );
+    rotate.start();
+
+    // Entrance animations
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 600,
         useNativeDriver: true,
       }),
-      Animated.timing(slideAnim, {
+      Animated.spring(slideAnim, {
         toValue: 0,
-        duration: 600,
+        tension: 50,
+        friction: 8,
         useNativeDriver: true,
       }),
-      Animated.timing(scaleAnim, {
+      Animated.spring(headerAnim, {
         toValue: 1,
-        duration: 600,
+        tension: 40,
+        friction: 7,
         useNativeDriver: true,
-      })
+      }),
+      Animated.spring(fabAnim, {
+        toValue: 1,
+        tension: 40,
+        friction: 7,
+        delay: 300,
+        useNativeDriver: true,
+      }),
     ]).start();
+
+    // Card animations
+    const cardAnimations = [
+      { anim: card1Anim, delay: 200 },
+      { anim: card2Anim, delay: 400 },
+      { anim: card3Anim, delay: 600 }
+    ];
+
+    cardAnimations.forEach(({ anim, delay }) => {
+      Animated.spring(anim, {
+        toValue: 1,
+        tension: 40,
+        friction: 8,
+        delay: delay,
+        useNativeDriver: true,
+      }).start();
+    });
   }, []);
 
   const isBarter = listing.type === 'barter';
@@ -69,7 +160,6 @@ export default function CreateOfferScreen({ route, navigation }) {
       return;
     }
 
-    // Validate based on listing type
     if (isBarter && !offeredSkillName.trim()) {
       Alert.alert('Error', 'Please enter the skill you want to offer');
       return;
@@ -115,8 +205,8 @@ export default function CreateOfferScreen({ route, navigation }) {
       await createSkillOffer(payload);
 
       Alert.alert(
-        '🎉 Offer Submitted!',
-        'Your offer has been submitted. The listing owner will review it.',
+        '🎉 Success!',
+        'Your offer has been submitted successfully!',
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (err) {
@@ -147,183 +237,300 @@ export default function CreateOfferScreen({ route, navigation }) {
     );
   };
 
-  const getOfferTitle = () => {
-    if (isBarter) return 'Make a Barter Offer';
-    if (isJob) return 'Apply for This Job';
-    return 'Request to Enroll';
-  };
-
-  const getOfferIcon = () => {
-    if (isBarter) return 'swap-horizontal-outline';
-    if (isJob) return 'briefcase-outline';
-    return 'cash-outline';
-  };
-
-  const getOfferColor = () => {
+  const getTypeColor = () => {
     if (isBarter) return '#f9c349';
     if (isJob) return '#FF6B6B';
     return '#34C759';
   };
 
+  const getTypeGradient = () => {
+    if (isBarter) return ['#f9c349', '#f5a623'];
+    if (isJob) return ['#FF6B6B', '#EE5A24'];
+    return ['#34C759', '#28A745'];
+  };
+
+  const getOfferTitle = () => {
+    if (isBarter) return 'Trade Skills';
+    if (isJob) return 'Apply Now';
+    return 'Enroll Now';
+  };
+
+  const getOfferIcon = () => {
+    if (isBarter) return 'swap-horizontal';
+    if (isJob) return 'briefcase';
+    return 'cash';
+  };
+
+  const renderAnimatedCard = (anim, children) => (
+    <Animated.View
+      style={[
+        styles.animatedCard,
+        {
+          opacity: anim,
+          transform: [
+            {
+              scale: anim.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0.92, 1.02, 1]
+              })
+            },
+            {
+              translateY: anim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [20, 0]
+              })
+            }
+          ]
+        }
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor="#F8F9FC" />
       
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-        >
-          <Ionicons 
-            name={Platform.OS === 'ios' ? 'chevron-back' : 'chevron-back'} 
-            size={24} 
-            color="#1C1C1E" 
-          />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>Create Offer</Text>
-        <View style={styles.headerPlaceholder} />
+      {/* Background Decorations */}
+      <View style={styles.bgDecorations}>
+        <Animated.View style={[styles.bgOrb, styles.bgOrb1, { transform: [{ rotate: spin }] }]} />
+        <Animated.View style={[styles.bgOrb, styles.bgOrb2, { transform: [{ translateY: floating }] }]} />
       </View>
+
+      {/* Header */}
+      <Animated.View 
+        style={[
+          styles.header,
+          {
+            opacity: headerAnim,
+            transform: [
+              {
+                translateY: headerAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-15, 0]
+                })
+              }
+            ]
+          }
+        ]}
+      >
+        <LinearGradient
+          colors={['#FFFFFF', '#F8F9FC']}
+          style={styles.headerGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.headerContent}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="chevron-back" size={22} color="#1C1C1E" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Submit Offer</Text>
+            <View style={styles.headerPlaceholder} />
+          </View>
+        </LinearGradient>
+      </Animated.View>
 
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
       >
         <ScrollView 
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           <Animated.View 
             style={[
               styles.mainContent,
               {
                 opacity: fadeAnim,
-                transform: [
-                  { translateY: slideAnim },
-                  { scale: scaleAnim }
-                ]
+                transform: [{ translateY: slideAnim }]
               }
             ]}
           >
-            <View style={[styles.headerBox, { borderColor: getOfferColor() }]}>
-              <View style={styles.headerBoxContent}>
-                <View style={[styles.iconContainer, { backgroundColor: getOfferColor() + '15' }]}>
-                  <Ionicons name={getOfferIcon()} size={28} color={getOfferColor()} />
-                </View>
-                <View style={styles.headerBoxText}>
-                  <Text style={[styles.headerTitleText, { color: getOfferColor() }]}>
-                    {getOfferTitle()}
-                  </Text>
-                  <Text style={styles.listingTitle} numberOfLines={2}>
-                    {listing.title}
-                  </Text>
-                </View>
+            {/* Listing Info Card */}
+            {renderAnimatedCard(card1Anim, (
+              <View style={styles.listingCard}>
+                <LinearGradient
+                  colors={['#FFFFFF', '#FFFDF5']}
+                  style={styles.listingCardGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View style={styles.listingCardContent}>
+                    <View style={[styles.listingIcon, { backgroundColor: getTypeColor() + '15' }]}>
+                      <Ionicons name={getOfferIcon()} size={22} color={getTypeColor()} />
+                    </View>
+                    <View style={styles.listingInfo}>
+                      <View style={styles.listingBadge}>
+                        <Text style={[styles.listingBadgeText, { color: getTypeColor() }]}>
+                          {isBarter ? 'Barter' : isJob ? 'Job' : 'Paid'}
+                        </Text>
+                      </View>
+                      <Text style={styles.listingTitle} numberOfLines={2}>
+                        {listing.title}
+                      </Text>
+                    </View>
+                  </View>
+                </LinearGradient>
               </View>
-            </View>
+            ))}
 
-            {isBarter && (
+            {/* Offer Type Card */}
+            {renderAnimatedCard(card2Anim, (
+              <View style={styles.offerTypeCard}>
+                <LinearGradient
+                  colors={getTypeGradient()}
+                  style={styles.offerTypeGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View style={styles.offerTypeContent}>
+                    <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+                      <Ionicons name={getOfferIcon()} size={28} color="#FFFFFF" />
+                    </Animated.View>
+                    <Text style={styles.offerTypeTitle}>{getOfferTitle()}</Text>
+                    <Text style={styles.offerTypeSubtitle}>
+                      {isBarter ? 'Trade your skill' : isJob ? 'Apply for position' : 'Enroll in service'}
+                    </Text>
+                  </View>
+                </LinearGradient>
+              </View>
+            ))}
+
+            {/* Form Section */}
+            {renderAnimatedCard(card3Anim, (
               <View style={styles.formSection}>
-                <View style={styles.sectionHeader}>
-                  <Ionicons name="star-outline" size={20} color="#f9c349" />
-                  <Text style={styles.sectionTitle}>Skill You're Offering</Text>
+                {isBarter && (
+                  <>
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>Your Skill</Text>
+                      <View style={[styles.inputWrapper, focusedInput === 'skill' && styles.inputWrapperFocused]}>
+                        <MaterialCommunityIcons name="lightbulb-on" size={20} color="#8E8E93" style={styles.inputIcon} />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="What skill are you offering?"
+                          placeholderTextColor="#8E8E93"
+                          value={offeredSkillName}
+                          onChangeText={setOfferedSkillName}
+                          onFocus={() => setFocusedInput(false)}
+                          onBlur={() => setFocusedInput(false)}
+                        />
+                      </View>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>Your Level</Text>
+                      {renderProficiencyChips(offeredSkillLevel, setOfferedSkillLevel)}
+                    </View>
+                  </>
+                )}
+
+                {isPaid && (
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Proposed Price</Text>
+                    <View style={[styles.inputWrapper, styles.priceWrapper, focusedInput === 'price' && styles.inputWrapperFocused]}>
+                      <Text style={styles.priceSymbol}>$</Text>
+                      <TextInput
+                        style={[styles.input, styles.priceInput]}
+                        placeholder="Enter amount"
+                        placeholderTextColor="#8E8E93"
+                        keyboardType="numeric"
+                        value={proposedPrice}
+                        onChangeText={setProposedPrice}
+                        onFocus={() => setFocusedInput(false)}
+                        onBlur={() => setFocusedInput(false)}
+                      />
+                    </View>
+                  </View>
+                )}
+
+                {isJob && (
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Why You're a Good Fit</Text>
+                    <View style={[styles.inputWrapper, styles.textAreaWrapper, focusedInput === 'notes' && styles.inputWrapperFocused]}>
+                      <TextInput
+                        style={[styles.input, styles.textArea]}
+                        placeholder="Describe your experience and qualifications..."
+                        placeholderTextColor="#8E8E93"
+                        multiline
+                        numberOfLines={4}
+                        value={applicationNotes}
+                        onChangeText={setApplicationNotes}
+                        onFocus={() => setFocusedInput(false)}
+                        onBlur={() => setFocusedInput(false)}
+                      />
+                    </View>
+                  </View>
+                )}
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Your Message</Text>
+                  <View style={[styles.inputWrapper, styles.textAreaWrapper, focusedInput === 'message' && styles.inputWrapperFocused]}>
+                    <TextInput
+                      style={[styles.input, styles.textArea]}
+                      placeholder={isBarter ? 'Why do you want to trade?' : isJob ? 'Any additional info...' : 'Any questions...'}
+                      placeholderTextColor="#8E8E93"
+                      multiline
+                      numberOfLines={4}
+                      value={message}
+                      onChangeText={setMessage}
+                      onFocus={() => setFocusedInput(false)}
+                      onBlur={() => setFocusedInput(false)}
+                    />
+                  </View>
                 </View>
-
-                <Text style={styles.label}>Skill Name *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g. React Native"
-                  placeholderTextColor="#8E8E93"
-                  value={offeredSkillName}
-                  onChangeText={setOfferedSkillName}
-                />
-
-                <Text style={styles.label}>Your Skill Level *</Text>
-                {renderProficiencyChips(offeredSkillLevel, setOfferedSkillLevel)}
               </View>
-            )}
-
-            {isPaid && (
-              <View style={styles.formSection}>
-                <View style={styles.sectionHeader}>
-                  <Ionicons name="cash-outline" size={20} color="#34C759" />
-                  <Text style={styles.sectionTitle}>Proposed Price</Text>
-                </View>
-
-                <Text style={styles.label}>Your Price ($) *</Text>
-                <View style={styles.priceInputContainer}>
-                  <Text style={styles.priceSymbol}>$</Text>
-                  <TextInput
-                    style={[styles.input, styles.priceInput]}
-                    placeholder="100"
-                    placeholderTextColor="#8E8E93"
-                    keyboardType="numeric"
-                    value={proposedPrice}
-                    onChangeText={setProposedPrice}
-                  />
-                </View>
-              </View>
-            )}
-
-            {isJob && (
-              <View style={styles.formSection}>
-                <View style={styles.sectionHeader}>
-                  <Ionicons name="document-text-outline" size={20} color="#FF6B6B" />
-                  <Text style={styles.sectionTitle}>Why You're a Good Fit</Text>
-                </View>
-
-                <Text style={styles.label}>Application Notes *</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  placeholder="Describe your experience and why you're interested..."
-                  placeholderTextColor="#8E8E93"
-                  multiline
-                  numberOfLines={4}
-                  value={applicationNotes}
-                  onChangeText={setApplicationNotes}
-                />
-              </View>
-            )}
-
-            <View style={styles.formSection}>
-              <View style={styles.sectionHeader}>
-                <Ionicons name="chatbubble-outline" size={20} color="#f9c349" />
-                <Text style={styles.sectionTitle}>Your Message</Text>
-              </View>
-
-              <Text style={styles.label}>Message *</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder={
-                  isBarter ? 'Why do you want to trade skills?' : 
-                  isJob ? 'Any additional information about your application...' :
-                  'Any questions or additional information...'
-                }
-                placeholderTextColor="#8E8E93"
-                multiline
-                numberOfLines={4}
-                value={message}
-                onChangeText={setMessage}
-              />
-            </View>
-
+            ))}
+          </Animated.View>
+        </ScrollView>
+        
+        {/* Footer */}
+        <Animated.View 
+          style={[
+            styles.footer,
+            {
+              transform: [{ translateY: fabAnim }],
+              opacity: fabAnim
+            }
+          ]}
+        >
+          <LinearGradient
+            colors={['#FFFFFF', '#F8F9FA']}
+            style={styles.footerGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
             <TouchableOpacity
               style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
               onPress={handleSubmit}
               disabled={submitting}
               activeOpacity={0.8}
             >
-              {submitting ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <>
-                  <Ionicons name="send-outline" size={20} color="#FFFFFF" />
-                  <Text style={styles.submitButtonText}>Submit Offer</Text>
-                </>
-              )}
+              <LinearGradient
+                colors={getTypeGradient()}
+                style={styles.submitGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                {submitting ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <>
+                    <Ionicons name="send" size={18} color="#FFFFFF" />
+                    <Text style={styles.submitButtonText}>Submit</Text>
+                  </>
+                )}
+              </LinearGradient>
             </TouchableOpacity>
-          </Animated.View>
-        </ScrollView>
+          </LinearGradient>
+        </Animated.View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -332,143 +539,230 @@ export default function CreateOfferScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F8F9FC',
+  },
+  bgDecorations: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    overflow: 'hidden',
+  },
+  bgOrb: {
+    position: 'absolute',
+    borderRadius: 999,
+    opacity: 0.03,
+  },
+  bgOrb1: {
+    width: 200,
+    height: 200,
+    top: -80,
+    right: -80,
+    backgroundColor: '#f9c349',
+  },
+  bgOrb2: {
+    width: 150,
+    height: 150,
+    bottom: -50,
+    left: -50,
+    backgroundColor: '#34C759',
   },
   header: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.03)',
+    marginTop: Platform.OS === 'android' ? 34 : 0,
+  },
+  headerGradient: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    marginTop:34
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F8F9FA',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F8F9FC',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: '#1C1C1E',
-    flex: 1,
-    textAlign: 'center',
+    letterSpacing: -0.3,
   },
   headerPlaceholder: {
-    width: 40,
+    width: 36,
   },
   keyboardView: {
     flex: 1,
   },
   content: {
-    padding: 16,
-    paddingBottom: 40,
+    padding: 14,
+    paddingBottom: 80,
   },
   mainContent: {
     flex: 1,
   },
-  headerBox: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 24,
-    borderWidth: 1.5,
-    borderColor: '#f9c349',
+  animatedCard: {
+    marginBottom: 12,
+  },
+  listingCard: {
+    borderRadius: 14,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
   },
-  headerBoxContent: {
+  listingCardGradient: {
+    padding: 14,
+  },
+  listingCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
-    backgroundColor: '#FFF8F0',
+  listingIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 12,
   },
-  headerBoxText: {
+  listingInfo: {
     flex: 1,
   },
-  headerTitleText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#f9c349',
+  listingBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: '#f9c34915',
     marginBottom: 2,
   },
+  listingBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
   listingTitle: {
-    fontSize: 14,
-    color: '#8E8E93',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1C1C1E',
+    letterSpacing: -0.2,
+  },
+  offerTypeCard: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  offerTypeGradient: {
+    padding: 16,
+  },
+  offerTypeContent: {
+    alignItems: 'center',
+  },
+  offerTypeTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginTop: 8,
+    letterSpacing: -0.3,
+  },
+  offerTypeSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
     fontWeight: '500',
   },
   formSection: {
     backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 16,
+    padding: 14,
+    borderRadius: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: 'rgba(0,0,0,0.03)',
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 8,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1C1C1E',
+  inputGroup: {
+    marginBottom: 14,
   },
   label: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#8E8E93',
-    marginBottom: 8,
-    marginTop: 12,
+    marginBottom: 4,
+    letterSpacing: 0.3,
   },
-  input: {
-    backgroundColor: '#F8F9FA',
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FC',
     borderWidth: 1,
     borderColor: '#E5E5EA',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === 'ios' ? 10 : 6,
+    minHeight: 42,
+  },
+  inputWrapperFocused: {
+    borderColor: '#f9c349',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#f9c349',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  inputIcon: {
+    marginRight: 8,
+  },
+  input: {
+    flex: 1,
+    fontSize: 14,
     color: '#1C1C1E',
+    padding: 0,
+    height: Platform.OS === 'ios' ? 22 : 28,
+  },
+  textAreaWrapper: {
+    minHeight: 60,
+    alignItems: 'flex-start',
+    paddingTop: Platform.OS === 'ios' ? 10 : 6,
   },
   textArea: {
-    minHeight: 100,
+    minHeight: 40,
     textAlignVertical: 'top',
+    height: Platform.OS === 'ios' ? 60 : 50,
   },
   chipContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 4,
-    gap: 8,
+    gap: 6,
   },
   chip: {
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    backgroundColor: '#F8F9FA',
+    paddingVertical: 5,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: '#F8F9FC',
     borderWidth: 1,
     borderColor: '#E5E5EA',
   },
@@ -477,52 +771,65 @@ const styles = StyleSheet.create({
     borderColor: '#f9c349',
   },
   chipText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#8E8E93',
     fontWeight: '600',
   },
   chipTextActive: {
     color: '#FFFFFF',
   },
-  priceInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    position: 'relative',
+  priceWrapper: {
+    paddingHorizontal: 8,
   },
   priceSymbol: {
-    position: 'absolute',
-    left: 16,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#8E8E93',
-    zIndex: 1,
+    paddingHorizontal: 4,
   },
   priceInput: {
-    paddingLeft: 32,
-    flex: 1,
+    paddingLeft: 0,
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.03)',
+  },
+  footerGradient: {
+    paddingVertical: 2,
+    paddingHorizontal: 2,
+    borderRadius: 12,
   },
   submitButton: {
-    backgroundColor: '#f9c349',
-    paddingVertical: 16,
-    borderRadius: 14,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#f9c349',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  submitGradient: {
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-    shadowColor: '#f9c349',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    gap: 6,
   },
   submitButtonDisabled: {
-    backgroundColor: '#F5E5C8',
+    opacity: 0.5,
     shadowOpacity: 0,
   },
   submitButtonText: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });

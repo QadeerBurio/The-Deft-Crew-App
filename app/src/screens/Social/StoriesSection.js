@@ -98,34 +98,54 @@ export default function StoriesSection() {
 
   useFocusEffect(useCallback(() => { fetchStories(); }, []));
 
+  // FIXED: Improved fetchStories function
   const fetchStories = async () => {
     try {
       setLoading(true);
       const res = await axios.get(`${API_URL}/stories`, config);
-      if (!Array.isArray(res.data)) return;
+      if (!Array.isArray(res.data)) {
+        setLoading(false);
+        return;
+      }
 
       const grouped = res.data.reduce((acc, story) => {
         if (!story.author?._id) return acc;
         const userId = story.author._id;
         if (!acc[userId]) {
           acc[userId] = { 
-            id: userId, user: story.author.name, avatar: story.author.profileImage,
-            latestTimestamp: new Date(story.createdAt).getTime(), images: [], 
-            isMe: userId === user?._id, hasUnseenStories: false 
+            id: userId, 
+            user: story.author.name, 
+            avatar: story.author.profileImage,
+            latestTimestamp: new Date(story.createdAt).getTime(), 
+            images: [], 
+            isMe: userId === user?._id, 
+            hasUnseenStories: false 
           };
         }
         acc[userId].images.push(story);
+        // Update latest timestamp if this story is newer
+        const storyTime = new Date(story.createdAt).getTime();
+        if (storyTime > acc[userId].latestTimestamp) {
+          acc[userId].latestTimestamp = storyTime;
+        }
         return acc;
       }, {});
 
+      // Process each group
       Object.values(grouped).forEach(group => {
         group.images.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-        if (!group.isMe) group.hasUnseenStories = group.images.some(s => !s.hasViewed);
+        if (!group.isMe) {
+          group.hasUnseenStories = group.images.some(s => !s.hasViewed);
+        }
       });
 
       const allGroups = Object.values(grouped);
-      setMyStory(allGroups.find(g => g.isMe) || null);
       
+      // Find my story (even if it's newly uploaded)
+      const myStoryGroup = allGroups.find(g => g.isMe) || null;
+      setMyStory(myStoryGroup);
+      
+      // Filter others (24 hours active)
       const now = Date.now();
       const activeOthers = allGroups
         .filter(g => !g.isMe)
@@ -133,8 +153,11 @@ export default function StoriesSection() {
         .sort((a, b) => b.latestTimestamp - a.latestTimestamp);
 
       setStories(activeOthers);
-    } catch (err) { console.error(err.message); }
-    finally { setLoading(false); }
+    } catch (err) {
+      console.error('Error fetching stories:', err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const markStoryAsSeen = async (storyId) => {
@@ -149,7 +172,7 @@ export default function StoriesSection() {
     } catch (err) { Alert.alert("Error", "Could not load viewers"); }
   };
 
-  // ✅ Pick image WITHOUT forced crop - auto detect and display full image
+  // Pick image WITHOUT forced crop - auto detect and display full image
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -159,9 +182,9 @@ export default function StoriesSection() {
 
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false,        // ✅ NO forced crop
-      aspect: undefined,           // ✅ Auto detect aspect ratio
-      quality: 0.95,              // ✅ High quality
+      allowsEditing: false,        // NO forced crop
+      aspect: undefined,           // Auto detect aspect ratio
+      quality: 0.95,              // High quality
       allowsMultipleSelection: false,
     });
     
@@ -181,7 +204,11 @@ export default function StoriesSection() {
     openStory(story);
   };
 
-  const cancelUpload = () => { setUploadPreviewUri(null); setStoryCaption(""); setIsUploadModalVisible(false); };
+  const cancelUpload = () => { 
+    setUploadPreviewUri(null); 
+    setStoryCaption(""); 
+    setIsUploadModalVisible(false); 
+  };
 
   const uploadToCloudinary = async (fileUri) => {
     try {
@@ -196,17 +223,54 @@ export default function StoriesSection() {
     } catch (e) { return null; }
   };
 
+  // FIXED: Updated handleShareStory with immediate update
   const handleShareStory = async () => {
     if (isUploading) return;
     setIsUploading(true);
     try {
       const cloudinaryUrl = await uploadToCloudinary(uploadPreviewUri);
       if (!cloudinaryUrl) throw new Error("Upload failed");
-      await axios.post(`${API_URL}/stories/upload`, { image: cloudinaryUrl, caption: storyCaption }, config);
+      
+      const response = await axios.post(
+        `${API_URL}/stories/upload`, 
+        { image: cloudinaryUrl, caption: storyCaption }, 
+        config
+      );
+      
+      // Add the new story to existing myStory state immediately
+      if (response.data && response.data.story) {
+        const newStory = response.data.story;
+        setMyStory(prev => {
+          if (!prev) {
+            // Create new group if no existing story
+            return {
+              id: user._id,
+              user: user.name,
+              avatar: user.profileImage,
+              latestTimestamp: new Date(newStory.createdAt).getTime(),
+              images: [newStory],
+              isMe: true,
+              hasUnseenStories: false
+            };
+          } else {
+            // Add to existing stories
+            return {
+              ...prev,
+              images: [...prev.images, newStory],
+              latestTimestamp: new Date(newStory.createdAt).getTime()
+            };
+          }
+        });
+      }
+      
       cancelUpload();
-      fetchStories();
-    } catch (err) { Alert.alert("Error", "Failed to share story."); }
-    finally { setIsUploading(false); }
+      fetchStories(); // Still fetch to sync with server
+    } catch (err) {
+      Alert.alert("Error", "Failed to share story.");
+      console.error(err);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleShareStoryExternal = async () => {
@@ -270,12 +334,17 @@ export default function StoriesSection() {
   const closeViewer = () => {
     if (progressTimeout.current) clearTimeout(progressTimeout.current);
     progress.stopAnimation();
-    setIsViewerVisible(false); setIsCommentVisible(false);
-    setIsViewersModalVisible(false); setIsPaused(false);
+    setIsViewerVisible(false); 
+    setIsCommentVisible(false);
+    setIsViewersModalVisible(false); 
+    setIsPaused(false);
     setSelectedStory(null);
   };
 
-  const navigateToUserProfile = (userId) => { closeViewer(); navigation.navigate("UserProfile", { userId }); };
+  const navigateToUserProfile = (userId) => { 
+    closeViewer(); 
+    navigation.navigate("UserProfile", { userId }); 
+  };
 
   const handleLike = async (storyId) => {
     try {
@@ -336,7 +405,8 @@ export default function StoriesSection() {
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: async () => {
           await axios.delete(`${API_URL}/stories/${storyId}`, config);
-          closeViewer(); fetchStories();
+          closeViewer(); 
+          fetchStories();
       }}
     ]);
   };
@@ -348,17 +418,26 @@ export default function StoriesSection() {
 
   const isLiked = selectedStory?.images?.[currentImageIndex]?.likes?.includes(user?._id);
 
+  // FIXED: Updated renderMyStoryCircle
   const renderMyStoryCircle = () => {
     const hasStory = myStory !== null && myStory.images?.length > 0;
+    
+    // Get the latest story image (last in the array after sorting)
+    const latestStoryImage = hasStory ? 
+      myStory.images[myStory.images.length - 1]?.image : 
+      (user?.profileImage || 'https://via.placeholder.com/150');
     
     return (
       <View style={styles.storyItemContainer}>
         <View style={styles.storyImageWrapper}>
           <GradientStoryRing hasUnseen={false} style={styles.storyRing}>
             <View style={styles.myStoryContainer}>
-              <TouchableOpacity onPress={hasStory ? openMyStory : pickImage} activeOpacity={0.7}>
+              <TouchableOpacity 
+                onPress={hasStory ? openMyStory : pickImage} 
+                activeOpacity={0.7}
+              >
                 <Image 
-                  source={{ uri: hasStory ? myStory.images[myStory.images.length - 1]?.image : (user?.profileImage || 'https://via.placeholder.com/150') }} 
+                  source={{ uri: latestStoryImage }} 
                   style={[styles.storyImage, !hasStory && { opacity: 0.6 }]} 
                 />
               </TouchableOpacity>
@@ -367,7 +446,10 @@ export default function StoriesSection() {
                 onPress={pickImage}
                 activeOpacity={0.7}
               >
-                <LinearGradient colors={['#1a1a1a', '#1a1a1a']} style={hasStory ? styles.addIconGradientSmall : styles.addIconGradientLarge}>
+                <LinearGradient 
+                  colors={['#1a1a1a', '#1a1a1a']} 
+                  style={hasStory ? styles.addIconGradientSmall : styles.addIconGradientLarge}
+                >
                   <Ionicons name="add" size={hasStory ? 14 : 24} color="#f9c349" />
                 </LinearGradient>
               </TouchableOpacity>
@@ -401,7 +483,9 @@ export default function StoriesSection() {
           <SkeletonStories />
         ) : (
           <FlatList
-            data={stories} horizontal showsHorizontalScrollIndicator={false}
+            data={stories}
+            horizontal 
+            showsHorizontalScrollIndicator={false}
             keyExtractor={(item) => item?.id || Math.random().toString()}
             renderItem={({ item }) => renderOtherStoryCircle(item)}
             ListEmptyComponent={
@@ -421,18 +505,32 @@ export default function StoriesSection() {
         <View style={styles.previewContainer}>
           <SafeAreaView style={styles.safeArea}>
             <View style={styles.previewHeader}>
-              <TouchableOpacity onPress={cancelUpload} style={styles.closeIconButton}><Ionicons name="close" size={24} color="#fff" /></TouchableOpacity>
+              <TouchableOpacity onPress={cancelUpload} style={styles.closeIconButton}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
               <Text style={styles.previewTitle}>New Story</Text>
               <View style={{width: 28}} />
             </View>
           </SafeAreaView>
-          {/* ✅ Auto-sized full image display */}
           <View style={styles.previewImageWrapper}>
             <Image source={{ uri: uploadPreviewUri }} style={styles.previewImageAuto} resizeMode="contain" />
           </View>
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.previewFooter}>
-            <TextInput style={styles.captionInput} placeholder="Write a caption..." placeholderTextColor="#999" value={storyCaption} onChangeText={setStoryCaption} multiline maxLength={500} />
-            <TouchableOpacity style={styles.shareButton} onPress={handleShareStory} disabled={isUploading} activeOpacity={0.8}>
+            <TextInput 
+              style={styles.captionInput} 
+              placeholder="Write a caption..." 
+              placeholderTextColor="#999" 
+              value={storyCaption} 
+              onChangeText={setStoryCaption} 
+              multiline 
+              maxLength={500} 
+            />
+            <TouchableOpacity 
+              style={styles.shareButton} 
+              onPress={handleShareStory} 
+              disabled={isUploading} 
+              activeOpacity={0.8}
+            >
               <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.shareButtonGradient}>
                 {isUploading ? <ActivityIndicator color="#fff" /> : <Text style={styles.shareText}>Share to Story</Text>}
               </LinearGradient>
@@ -482,7 +580,6 @@ export default function StoriesSection() {
                 </View>
               </View>
 
-              {/* ✅ Auto-sized full image viewer */}
               <TouchableOpacity activeOpacity={1} style={styles.viewerImageWrapper} onPress={togglePause}>
                 <Image source={{ uri: selectedStory?.images?.[currentImageIndex]?.image }} style={styles.viewerImageAuto} resizeMode="contain" />
                 <Animated.View style={[styles.heartOverlay, { opacity: heartOpacity, transform: [{ scale: likeScale }] }]}>
@@ -531,82 +628,582 @@ export default function StoriesSection() {
           </View>
         </Modal>
       )}
+
+      {/* COMMENT MODAL */}
+      <Modal visible={isCommentVisible} animationType="slide" transparent onRequestClose={() => setIsCommentVisible(false)}>
+        <View style={styles.commentModalContainer}>
+          <View style={styles.commentModalContent}>
+            <View style={styles.commentModalHeader}>
+              <Text style={styles.commentModalTitle}>Comments</Text>
+              <TouchableOpacity onPress={() => setIsCommentVisible(false)}>
+                <Ionicons name="close" size={24} color="#1a1a1a" />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={currentComments}
+              keyExtractor={(item) => item._id || Math.random().toString()}
+              renderItem={({ item }) => (
+                <View style={styles.commentItem}>
+                  <Image source={{ uri: item.user?.profileImage || 'https://via.placeholder.com/40' }} style={styles.commentAvatar} />
+                  <View style={styles.commentContent}>
+                    <Text style={styles.commentUsername}>{item.user?.name || 'User'}</Text>
+                    <Text style={styles.commentText}>{item.text}</Text>
+                  </View>
+                </View>
+              )}
+              ListEmptyComponent={
+                <View style={styles.noCommentsContainer}>
+                  <Text style={styles.noCommentsText}>No comments yet</Text>
+                </View>
+              }
+            />
+            <View style={styles.commentInputContainer}>
+              <TextInput
+                style={styles.commentInput}
+                placeholder="Write a comment..."
+                value={commentText}
+                onChangeText={setCommentText}
+                multiline
+              />
+              <TouchableOpacity 
+                style={styles.commentSendButton} 
+                onPress={handlePostComment} 
+                disabled={isCommenting || !commentText.trim()}
+              >
+                <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.commentSendGradient}>
+                  {isCommenting ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="send" size={20} color="#fff" />}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* VIEWERS MODAL */}
+      <Modal visible={isViewersModalVisible} animationType="slide" transparent onRequestClose={() => setIsViewersModalVisible(false)}>
+        <View style={styles.commentModalContainer}>
+          <View style={styles.commentModalContent}>
+            <View style={styles.commentModalHeader}>
+              <Text style={styles.commentModalTitle}>Story Views</Text>
+              <TouchableOpacity onPress={() => setIsViewersModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#1a1a1a" />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={viewersList}
+              keyExtractor={(item) => item._id || Math.random().toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity 
+                  style={styles.viewerItem} 
+                  onPress={() => {
+                    setIsViewersModalVisible(false);
+                    navigation.navigate("UserProfile", { userId: item._id });
+                  }}
+                >
+                  <Image source={{ uri: item.profileImage || 'https://via.placeholder.com/40' }} style={styles.viewerAvatar} />
+                  <Text style={styles.viewerName}>{item.name || 'User'}</Text>
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={
+                <View style={styles.noCommentsContainer}>
+                  <Text style={styles.noCommentsText}>No viewers yet</Text>
+                </View>
+              }
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: { backgroundColor: '#ffffff' },
-  storiesContainer: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 5, minHeight: 80 },
-  storiesListContent: { alignItems: 'center', paddingRight: 14 },
+  storiesContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingHorizontal: 14, 
+    paddingVertical: 5, 
+    minHeight: 80 
+  },
+  storiesListContent: { 
+    alignItems: 'center', 
+    paddingRight: 14 
+  },
   
   // Skeleton
-  skeletonContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 4 },
-  skeletonItem: { alignItems: 'center', width: 72 },
-  skeletonRing: { width: 66, height: 66, borderRadius: 33, borderWidth: 2, borderColor: '#f0f0f0', padding: 2, justifyContent: 'center', alignItems: 'center' },
-  skeletonImage: { width: 58, height: 58, borderRadius: 29, backgroundColor: '#e8e8e8' },
-  skeletonName: { width: 50, height: 8, borderRadius: 4, backgroundColor: '#e8e8e8', marginTop: 6 },
+  skeletonContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8, 
+    paddingLeft: 4 
+  },
+  skeletonItem: { 
+    alignItems: 'center', 
+    width: 72 
+  },
+  skeletonRing: { 
+    width: 66, 
+    height: 66, 
+    borderRadius: 33, 
+    borderWidth: 2, 
+    borderColor: '#f0f0f0', 
+    padding: 2, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  skeletonImage: { 
+    width: 58, 
+    height: 58, 
+    borderRadius: 29, 
+    backgroundColor: '#e8e8e8' 
+  },
+  skeletonName: { 
+    width: 50, 
+    height: 8, 
+    borderRadius: 4, 
+    backgroundColor: '#e8e8e8', 
+    marginTop: 6 
+  },
   
-  storyItemContainer: { alignItems: 'center', width: 72 },
-  storyImageWrapper: { marginBottom: 5 },
-  storyRing: { width: 66, height: 66, borderRadius: 33, justifyContent: 'center', alignItems: 'center' },
-  innerWhiteBorder: { width: '100%', height: '100%', borderRadius: 33, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' },
-  storyImage: { width: 58, height: 58, borderRadius: 29, backgroundColor: '#f5f5f5' },
-  myStoryContainer: { position: 'relative' },
-  addIconSmall: { position: 'absolute', bottom: -3, right: -3, borderRadius: 10, borderWidth: 2, borderColor: '#fff', overflow: 'hidden', zIndex: 10 },
-  addIconGradientSmall: { width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-  addIconLarge: { position: 'absolute', bottom: -5, right: -5, borderRadius: 14, borderWidth: 3, borderColor: '#fff', overflow: 'hidden', zIndex: 10 },
-  addIconGradientLarge: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  storyUsername: { fontSize: 11, color: '#1a1a1a', fontWeight: '600', textAlign: 'center', maxWidth: 68, marginTop: 4 },
-  storySeparator: { width: 1, height: 45, backgroundColor: '#f0f0f0', marginHorizontal: 6 },
-  emptyStoriesContainer: { flexDirection: 'row', alignItems: 'center', paddingLeft: 8, gap: 10 },
-  emptyStoriesText: { fontSize: 13, color: '#999', fontWeight: '500' },
+  storyItemContainer: { 
+    alignItems: 'center', 
+    width: 72 
+  },
+  storyImageWrapper: { 
+    marginBottom: 5 
+  },
+  storyRing: { 
+    width: 66, 
+    height: 66, 
+    borderRadius: 33, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  innerWhiteBorder: { 
+    width: '100%', 
+    height: '100%', 
+    borderRadius: 33, 
+    backgroundColor: '#fff', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  storyImage: { 
+    width: 58, 
+    height: 58, 
+    borderRadius: 29, 
+    backgroundColor: '#f5f5f5' 
+  },
+  myStoryContainer: { 
+    position: 'relative' 
+  },
+  addIconSmall: { 
+    position: 'absolute', 
+    bottom: -3, 
+    right: -3, 
+    borderRadius: 10, 
+    borderWidth: 2, 
+    borderColor: '#fff', 
+    overflow: 'hidden', 
+    zIndex: 10 
+  },
+  addIconGradientSmall: { 
+    width: 20, 
+    height: 20, 
+    borderRadius: 10, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  addIconLarge: { 
+    position: 'absolute', 
+    bottom: -5, 
+    right: -5, 
+    borderRadius: 14, 
+    borderWidth: 3, 
+    borderColor: '#fff', 
+    overflow: 'hidden', 
+    zIndex: 10 
+  },
+  addIconGradientLarge: { 
+    width: 28, 
+    height: 28, 
+    borderRadius: 14, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  storyUsername: { 
+    fontSize: 11, 
+    color: '#1a1a1a', 
+    fontWeight: '600', 
+    textAlign: 'center', 
+    maxWidth: 68, 
+    marginTop: 4 
+  },
+  storySeparator: { 
+    width: 1, 
+    height: 45, 
+    backgroundColor: '#f0f0f0', 
+    marginHorizontal: 6 
+  },
+  emptyStoriesContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingLeft: 8, 
+    gap: 10 
+  },
+  emptyStoriesText: { 
+    fontSize: 13, 
+    color: '#999', 
+    fontWeight: '500' 
+  },
   
-  previewContainer: { flex: 1, backgroundColor: '#1a1a1a' },
-  safeArea: { backgroundColor: 'rgba(0,0,0,0.9)' },
-  previewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14 },
-  closeIconButton: { width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
-  previewTitle: { color: '#fff', fontSize: 17, fontWeight: '800' },
-  // ✅ Auto image wrapper - fills available space
-  previewImageWrapper: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  previewImageAuto: { width: width, flex: 1 },
-  previewFooter: { padding: 18, backgroundColor: '#1a1a1a', paddingBottom: Platform.OS === 'ios' ? 38 : 18 },
-  captionInput: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 14, padding: 14, color: '#fff', fontSize: 15, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  shareButton: { borderRadius: 14, overflow: 'hidden', elevation: 8 },
-  shareButtonGradient: { height: 54, justifyContent: 'center', alignItems: 'center', borderRadius: 14 },
-  shareText: { color: '#fff', fontWeight: '800', fontSize: 16, letterSpacing: 0.5 },
+  previewContainer: { 
+    flex: 1, 
+    backgroundColor: '#1a1a1a' 
+  },
+  safeArea: { 
+    backgroundColor: 'rgba(0,0,0,0.9)' 
+  },
+  previewHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    padding: 14 
+  },
+  closeIconButton: { 
+    width: 38, 
+    height: 38, 
+    borderRadius: 12, 
+    backgroundColor: 'rgba(255,255,255,0.1)', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  previewTitle: { 
+    color: '#fff', 
+    fontSize: 17, 
+    fontWeight: '800' 
+  },
+  previewImageWrapper: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  previewImageAuto: { 
+    width: width, 
+    flex: 1 
+  },
+  previewFooter: { 
+    padding: 18, 
+    backgroundColor: '#1a1a1a', 
+    paddingBottom: Platform.OS === 'ios' ? 38 : 18 
+  },
+  captionInput: { 
+    backgroundColor: 'rgba(255,255,255,0.1)', 
+    borderRadius: 14, 
+    padding: 14, 
+    color: '#fff', 
+    fontSize: 15, 
+    marginBottom: 14, 
+    borderWidth: 1, 
+    borderColor: 'rgba(255,255,255,0.1)' 
+  },
+  shareButton: { 
+    borderRadius: 14, 
+    overflow: 'hidden', 
+    elevation: 8 
+  },
+  shareButtonGradient: { 
+    height: 54, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    borderRadius: 14 
+  },
+  shareText: { 
+    color: '#fff', 
+    fontWeight: '800', 
+    fontSize: 16, 
+    letterSpacing: 0.5 
+  },
   
-  viewerContainer: { flex: 1, backgroundColor: '#1a1a1a' },
-  fullStory: { flex: 1 },
-  progressBarsContainer: { flexDirection: 'row', paddingHorizontal: 8, paddingTop: 10, gap: 4 },
-  progressBarBg: { flex: 1, height: 3, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 2, overflow: 'hidden' },
-  progressBarFill: { height: '100%', backgroundColor: '#f9c349', borderRadius: 2 },
-  viewerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12 },
-  viewerHeaderLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  viewerAvatar: { width: 40, height: 40, borderRadius: 12, borderWidth: 2, borderColor: '#f9c349', marginRight: 10 },
-  viewerUserInfo: { flex: 1 },
-  viewerUsername: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  viewerTimeAgo: { color: 'rgba(255,255,255,0.6)', fontSize: 11, marginTop: 1 },
-  viewerHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  viewsPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, gap: 4 },
-  viewsPillText: { color: '#fff', fontSize: 11, fontWeight: '600' },
-  headerIconBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
-  closeViewerBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
-  // ✅ Auto image viewer - fills screen properly
-  viewerImageWrapper: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  viewerImageAuto: { width: width, flex: 1 },
-  heartOverlay: { position: 'absolute', alignSelf: 'center', zIndex: 10 },
-  pauseOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', zIndex: 5 },
-  pauseIconContainer: { borderRadius: 30, overflow: 'hidden' },
-  captionBlur: { position: 'absolute', bottom: 20, alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20, overflow: 'hidden' },
-  captionTextMain: { color: '#fff', textAlign: 'center', fontSize: 14, fontWeight: '500' },
-  touchNavigationOverlay: { ...StyleSheet.absoluteFillObject, flexDirection: 'row' },
-  touchLeft: { flex: 1 },
-  touchRight: { flex: 1 },
-  viewerFooter: { paddingHorizontal: 16, paddingVertical: 12, paddingBottom: Platform.OS === 'ios' ? 34 : 16 },
-  footerActions: { flexDirection: 'row', alignItems: 'center' },
-  actionButton: { flexDirection: 'row', alignItems: 'center', marginRight: 20, gap: 6 },
-  actionText: { color: '#fff', fontWeight: '600', fontSize: 13 },
-  deleteButton: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(249,195,73,0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(249,195,73,0.2)' },
-});
+  viewerContainer: { 
+    flex: 1, 
+    backgroundColor: '#1a1a1a' 
+  },
+  fullStory: { 
+    flex: 1 
+  },
+  progressBarsContainer: { 
+    flexDirection: 'row', 
+    paddingHorizontal: 8, 
+    paddingTop: 10, 
+    gap: 4 
+  },
+  progressBarBg: { 
+    flex: 1, 
+    height: 3, 
+    backgroundColor: 'rgba(255,255,255,0.3)', 
+    borderRadius: 2, 
+    overflow: 'hidden' 
+  },
+  progressBarFill: { 
+    height: '100%', 
+    backgroundColor: '#f9c349', 
+    borderRadius: 2 
+  },
+  viewerHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 14, 
+    paddingVertical: 12 
+  },
+  viewerHeaderLeft: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    flex: 1 
+  },
+  viewerAvatar: { 
+    width: 40, 
+    height: 40, 
+    borderRadius: 12, 
+    borderWidth: 2, 
+    borderColor: '#f9c349', 
+    marginRight: 10 
+  },
+  viewerUserInfo: { 
+    flex: 1 
+  },
+  viewerUsername: { 
+    color: '#fff', 
+    fontWeight: '700', 
+    fontSize: 14 
+  },
+  viewerTimeAgo: { 
+    color: 'rgba(255,255,255,0.6)', 
+    fontSize: 11, 
+    marginTop: 1 
+  },
+  viewerHeaderRight: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8 
+  },
+  viewsPill: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: 'rgba(255,255,255,0.15)', 
+    paddingHorizontal: 10, 
+    paddingVertical: 5, 
+    borderRadius: 14, 
+    gap: 4 
+  },
+  viewsPillText: { 
+    color: '#fff', 
+    fontSize: 11, 
+    fontWeight: '600' 
+  },
+  headerIconBtn: { 
+    width: 36, 
+    height: 36, 
+    borderRadius: 10, 
+    backgroundColor: 'rgba(255,255,255,0.1)', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  closeViewerBtn: { 
+    width: 36, 
+    height: 36, 
+    borderRadius: 10, 
+    backgroundColor: 'rgba(255,255,255,0.1)', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  viewerImageWrapper: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  viewerImageAuto: { 
+    width: width, 
+    flex: 1 
+  },
+  heartOverlay: { 
+    position: 'absolute', 
+    alignSelf: 'center', 
+    zIndex: 10 
+  },
+  pauseOverlay: { 
+    ...StyleSheet.absoluteFillObject, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    zIndex: 5 
+  },
+  pauseIconContainer: { 
+    borderRadius: 30, 
+    overflow: 'hidden' 
+  },
+  captionBlur: { 
+    position: 'absolute', 
+    bottom: 20, 
+    alignSelf: 'center', 
+    paddingVertical: 10, 
+    paddingHorizontal: 20, 
+    borderRadius: 20, 
+    overflow: 'hidden' 
+  },
+  captionTextMain: { 
+    color: '#fff', 
+    textAlign: 'center', 
+    fontSize: 14, 
+    fontWeight: '500' 
+  },
+  touchNavigationOverlay: { 
+    ...StyleSheet.absoluteFillObject, 
+    flexDirection: 'row' 
+  },
+  touchLeft: { 
+    flex: 1 
+  },
+  touchRight: { 
+    flex: 1 
+  },
+  viewerFooter: { 
+    paddingHorizontal: 16, 
+    paddingVertical: 12, 
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16 
+  },
+  footerActions: { 
+    flexDirection: 'row', 
+    alignItems: 'center' 
+  },
+  actionButton: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginRight: 20, 
+    gap: 6 
+  },
+  actionText: { 
+    color: '#fff', 
+    fontWeight: '600', 
+    fontSize: 13 
+  },
+  deleteButton: { 
+    width: 36, 
+    height: 36, 
+    borderRadius: 10, 
+    backgroundColor: 'rgba(249,195,73,0.1)', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    borderWidth: 1, 
+    borderColor: 'rgba(249,195,73,0.2)' 
+  },
 
+  // Comment Modal Styles
+  commentModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  commentModalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: height * 0.7,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+  },
+  commentModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  commentModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
+  commentItem: {
+    flexDirection: 'row',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f5f5f5',
+  },
+  commentAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 12,
+  },
+  commentContent: {
+    flex: 1,
+  },
+  commentUsername: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 2,
+  },
+  commentText: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
+  },
+  commentInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  commentInput: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    fontSize: 14,
+    maxHeight: 80,
+  },
+  commentSendButton: {
+    marginLeft: 8,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  commentSendGradient: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noCommentsContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  noCommentsText: {
+    color: '#999',
+    fontSize: 14,
+  },
+
+  // Viewers Modal Styles
+  viewerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f5f5f5',
+  },
+  viewerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  viewerName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1a1a1a',
+  },
+});

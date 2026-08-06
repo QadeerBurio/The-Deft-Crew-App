@@ -165,7 +165,7 @@ export default function EditProfileScreen({ navigation }) {
             {/* Profile Image Section */}
             <View style={styles.imageSection}>
               <TouchableOpacity onPress={pickImage} activeOpacity={0.8} disabled={uploadingImage}>
-                <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.avatarRing}>
+                <LinearGradient colors={['#f9c349', '#f9c349']} style={styles.avatarRing}>
                   {uploadingImage ? (
                     <View style={styles.avatarPlaceholder}>
                       <ActivityIndicator size="large" color="#fff" />

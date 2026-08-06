@@ -2,15 +2,12 @@ import React from "react";
 import { View, StyleSheet, TouchableOpacity, Dimensions, Platform, StatusBar } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Svg, { Path } from "react-native-svg";
-import { Octicons, MaterialCommunityIcons, MaterialIcons, Ionicons, Foundation, FontAwesome5 } from "@expo/vector-icons";
+import { Octicons, MaterialCommunityIcons, MaterialIcons, Foundation } from "@expo/vector-icons";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
-import { useNavigation } from '@react-navigation/native';
 
 import HomeStack from "./HomeStack";
 import Social from "../screens/Social/Social"; 
 import CampusToolsScreen from "../screens/StudentDashboard";
-import Traveling from "../components/TravellingScreen";
-import CareerHub from "../components/CareerHub";
 import Explore from "../screens/Explore";
 import ProfileScreen from "../screens/ProfileScreen";
 
@@ -76,14 +73,12 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
   const nestedRouteName = getNestedRouteName(focusedRoute);
   
   // Hide bottom tab bar on specific screens
-  const hideTabBarScreens = ["ResumeView", "ResumeBuilder", "ResumeTemplate", "ResumeShare", "ResumeAnalytics", "ResumeSettings"];
+  const hideTabBarScreens = ["ResumeView", "ResumeBuilder", "ResumeTemplate", "ResumeShare", "ResumeAnalytics", "ResumeSettings", "Brands"];
   
   // Hide bar on Social screen or specific nested stack screens
   if (focusedRoute?.name === "Social" || (nestedRouteName && hideTabBarScreens.includes(nestedRouteName))) {
     return null;
   }
-
-  const getIconColor = (isFocused) => isFocused ? "#f9c349" : "#9AA0A6";
 
   const handleSocialPress = () => {
     // Direct navigation to Social screen
@@ -160,7 +155,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
           />
         </TouchableOpacity>
         
-        {/* Profile Button - Fixed with proper icon and color */}
+        {/* Profile Button */}
         <TouchableOpacity 
           style={styles.tabItem}
           onPress={() => navigation.navigate("Profile")}
@@ -178,7 +173,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
   );
 };
 
-export default function HomeTabs() {
+export default function TabNavigator() {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="dark-content" backgroundColor="white" />

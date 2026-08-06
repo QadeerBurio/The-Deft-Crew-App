@@ -1,9 +1,9 @@
-// ==================== PremiumMemberCard.js (FIXED) ====================
+// ==================== PremiumMemberCard.js (UPDATED WITH IMAGE STYLE) ====================
 import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
 import { 
   StyleSheet, Text, View, TextInput, TouchableOpacity, 
   StatusBar, Alert, Dimensions, ScrollView, Animated, ActivityIndicator, Image,
-  Platform, PermissionsAndroid
+  Platform, PermissionsAndroid, Linking, ImageBackground
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,7 +18,8 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 
 const { width } = Dimensions.get('window');
-const CHIP_IMAGE = require('../../../assets/images/chip.png'); 
+const CHIP_IMAGE = require('../../../assets/images/chip.png');
+const BACKGROUND_IMAGE = require('../../../assets/images/background.jpeg');
 
 export default function PremiumMemberCard() {
   const { user, token } = useContext(AuthContext);
@@ -57,9 +58,6 @@ export default function PremiumMemberCard() {
     }
   }, [loading]);
 
-  // ==========================================
-  // FETCH USER DATA - CHECK VIP STATUS
-  // ==========================================
   const fetchUserData = async () => {
     try {
       const res = await api.get('/auth/profile/me', {
@@ -105,9 +103,6 @@ export default function PremiumMemberCard() {
     return `4412 88${mongoId.substring(0, 2)} ${mongoId.substring(2, 6)} ${lastFour}`;
   };
 
-  // ==========================================
-  // REQUEST PERMISSIONS FOR ANDROID
-  // ==========================================
   const requestPermissions = async () => {
     if (Platform.OS === 'android') {
       try {
@@ -130,9 +125,6 @@ export default function PremiumMemberCard() {
     return true;
   };
 
-  // ==========================================
-  // DOWNLOAD CARD - FIXED
-  // ==========================================
   const handleDownload = async () => {
     if (!isVip) {
       Alert.alert("Locked", "Your Gold Membership is not active.");
@@ -143,7 +135,6 @@ export default function PremiumMemberCard() {
     setDownloading(true);
 
     try {
-      // Request permissions for Android
       if (Platform.OS === 'android') {
         const hasPermission = await requestPermissions();
         if (!hasPermission) {
@@ -153,7 +144,6 @@ export default function PremiumMemberCard() {
         }
       }
 
-      // Request media library permissions for iOS
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert("Permission Denied", "Cannot save card without media library permission.");
@@ -161,7 +151,7 @@ export default function PremiumMemberCard() {
         return;
       }
 
-      // Capture the view
+      console.log("📸 Starting capture...");
       const uri = await viewShotRef.current.capture();
       console.log("📸 Captured URI:", uri);
 
@@ -171,44 +161,86 @@ export default function PremiumMemberCard() {
         return;
       }
 
+      if (!uri.startsWith('file://') && !uri.startsWith('/')) {
+        console.error("Invalid URI format:", uri);
+        Alert.alert("Error", "Invalid image format captured.");
+        setDownloading(false);
+        return;
+      }
+
       const fileName = `TDC_Card_${Date.now()}.png`;
-      const fileUri = FileSystem.documentDirectory + fileName;
       
-      // Copy to documents directory
+      let fileUri;
+      if (Platform.OS === 'android') {
+        fileUri = FileSystem.cacheDirectory + fileName;
+      } else {
+        fileUri = FileSystem.documentDirectory + fileName;
+      }
+      
+      console.log("💾 Saving to:", fileUri);
+
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (!fileInfo.exists) {
+        console.error("Source file does not exist:", uri);
+        Alert.alert("Error", "Image file not found. Please try again.");
+        setDownloading(false);
+        return;
+      }
+
       await FileSystem.copyAsync({
         from: uri,
         to: fileUri
       });
 
-      console.log("💾 File saved to:", fileUri);
+      const copiedFileInfo = await FileSystem.getInfoAsync(fileUri);
+      if (!copiedFileInfo.exists) {
+        console.error("File was not copied successfully");
+        Alert.alert("Error", "Failed to save image. Please try again.");
+        setDownloading(false);
+        return;
+      }
 
-      // Save to media library
-      const asset = await MediaLibrary.createAssetAsync(fileUri);
-      
-      if (asset) {
-        // Create album if it doesn't exist
-        const album = await MediaLibrary.getAlbumAsync('TDC Cards');
+      console.log("✅ File saved successfully at:", fileUri);
+
+      try {
+        const asset = await MediaLibrary.createAssetAsync(fileUri);
+        console.log("📱 Asset created:", asset);
+        
+        const albumName = 'TDC Cards';
+        const album = await MediaLibrary.getAlbumAsync(albumName);
+        
         if (album) {
           await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+          console.log("✅ Added to existing album:", albumName);
         } else {
-          await MediaLibrary.createAlbumAsync('TDC Cards', asset, false);
+          await MediaLibrary.createAlbumAsync(albumName, asset, false);
+          console.log("✅ Created new album:", albumName);
         }
+
+        await FileSystem.deleteAsync(fileUri, { idempotent: true });
+        console.log("🧹 Cleaned up temporary file");
 
         Alert.alert(
           "✅ Card Saved!",
-          "Your TDC Card has been saved to your device gallery.",
+          `Your TDC Card has been saved to your device gallery in the "${albumName}" album.`,
           [
-            { text: "Open Gallery", onPress: () => {
-              // For iOS, we can open the gallery app
-              if (Platform.OS === 'ios') {
-                Linking.openURL('photos://');
+            { 
+              text: "Open Gallery", 
+              onPress: () => {
+                if (Platform.OS === 'ios') {
+                  Linking.openURL('photos://');
+                } else {
+                  Linking.openURL('content://media/internal/images/media');
+                }
               }
-            }},
+            },
             { text: "OK", style: "cancel" }
           ]
         );
-      } else {
-        Alert.alert("Error", "Failed to save to gallery.");
+      } catch (mediaError) {
+        console.error("❌ MediaLibrary error:", mediaError);
+        const asset = await MediaLibrary.createAssetAsync(fileUri);
+        Alert.alert("✅ Card Saved!", "Your TDC Card has been saved to your device gallery.");
       }
 
     } catch (error) {
@@ -219,9 +251,6 @@ export default function PremiumMemberCard() {
     }
   };
 
-  // ==========================================
-  // SHARE CARD - NEW OPTION
-  // ==========================================
   const handleShare = async () => {
     if (!isVip) {
       Alert.alert("Locked", "Your Gold Membership is not active.");
@@ -231,6 +260,12 @@ export default function PremiumMemberCard() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
+      if (flipped) {
+        setFlipped(false);
+        flipAnimation.setValue(0);
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+
       const uri = await viewShotRef.current.capture();
       
       if (!uri) {
@@ -253,6 +288,7 @@ export default function PremiumMemberCard() {
 
       if (shareResult.action === Sharing.SharedAction) {
         console.log("📤 Card shared successfully");
+        await FileSystem.deleteAsync(fileUri, { idempotent: true });
       }
 
     } catch (error) {
@@ -264,7 +300,7 @@ export default function PremiumMemberCard() {
   const toggleFlip = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Animated.spring(flipAnimation, {
-      toValue: flipped ? 0 : 180,
+      toValue: flipped ? 0 : 1,
       friction: 8,
       tension: 10,
       useNativeDriver: true,
@@ -273,39 +309,55 @@ export default function PremiumMemberCard() {
   };
 
   const frontInterpolate = flipAnimation.interpolate({
-    inputRange: [0, 180],
+    inputRange: [0, 1],
     outputRange: ['0deg', '180deg'],
   });
 
   const backInterpolate = flipAnimation.interpolate({
-    inputRange: [0, 180],
+    inputRange: [0, 1],
     outputRange: ['180deg', '360deg'],
   });
 
-  const GoldPattern = ({ vip }) => (
-    <View style={styles.patternOverlay}>
-      {[...Array(12)].map((_, i) => (
-        <View key={i} style={[styles.wavyLine, { right: -50 + (i * 15), opacity: vip ? 0.15 : 0.05, borderColor: '#f9c349' }]} />
-      ))}
-    </View>
-  );
-
+  // ==========================================
+  // FRONT CARD - Updated Design
+  // ==========================================
   const FrontContent = ({ vip }) => (
-    <LinearGradient colors={vip ? ['#1a1a1a', '#0a0a0a'] : ['#2d3748', '#1a202c']} style={styles.full}>
+    <ImageBackground 
+      source={BACKGROUND_IMAGE} 
+      style={styles.full}
+      imageStyle={styles.backgroundImageStyle}
+    >
+      <LinearGradient 
+        colors={vip ? ['rgba(0,0,0,0.2)', 'rgba(0,0,0,0.6)'] : ['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']} 
+        style={styles.overlayGradient}
+      />
+      
       <GoldPattern vip={vip} />
+      
       <View style={styles.cardPadding}>
+        {/* Top Row: Logo + Chip */}
         <View style={styles.rowBetween}>
           <View style={styles.logoContainer}>
-            <Text style={[styles.textLogoMain, vip && { color: '#f9c349' }]}>tdc<Text style={{color: '#f9c349'}}>.</Text></Text>
-            <View style={styles.divider} />
-            <Text style={[styles.textLogoSub, vip && { color: '#f9c349' }]}>GOLD</Text>
+            <View style={styles.logoCircle}>
+              <Text style={styles.textLogoMain}>tdc<Text style={styles.logoHighlight}>.</Text></Text>
+            </View>
           </View>
           <Image source={CHIP_IMAGE} style={styles.originalChip} resizeMode="contain" />
         </View>
-        <View style={styles.middleRow}>
-          <View>
-            <Text style={[styles.mainTitle, vip && { color: '#f9c349' }]}>MEMBER</Text>
-            <Text style={[styles.cardNumberText, vip && { color: '#FFF' }]}>{userData.cardNumber}</Text>
+        
+        {/* Middle: Member ID in Center */}
+        <View style={styles.middleRowCentered}>
+          <View style={styles.centerContent}>
+            <Text style={styles.memberLabel}>CARD NUMBER</Text>
+            <Text style={[styles.memberIdText, vip && styles.vipText]}>{userData.cardNumber}</Text>
+          </View>
+        </View>
+        
+        {/* Bottom: Card Number and Valid Thru */}
+        <View style={styles.bottomRow}>
+          <View style={styles.cardNumberContainer}>
+            <Text style={styles.cardNumberLabel}>MEMBER</Text>
+            <Text style={[styles.memberIdText, vip && styles.vipText]}>{userData.id}</Text>
           </View>
           {vip && (
             <View style={styles.validContainer}>
@@ -314,32 +366,76 @@ export default function PremiumMemberCard() {
             </View>
           )}
         </View>
-        <View style={styles.bottomInfo}>
-          <Text style={styles.label}>ID NUMBER</Text>
-          <Text style={[styles.infoValue, vip && { color: '#FFF' }]}>{userData.id}</Text>
-        </View>
       </View>
+      
       {vip && <View style={styles.goldBorder} />}
-    </LinearGradient>
+    </ImageBackground>
   );
 
+  // ==========================================
+  // BACK CARD - Updated Design
+  // ==========================================
   const BackContent = ({ vip }) => (
-    <LinearGradient colors={vip ? ['#0a0a0a', '#1a1a1a'] : ['#1a202c', '#2d3748']} style={styles.full}>
+    <ImageBackground 
+      source={BACKGROUND_IMAGE} 
+      style={styles.full}
+      imageStyle={styles.backgroundImageStyle}
+    >
+      <LinearGradient 
+        colors={vip ? ['rgba(0,0,0,0.2)', 'rgba(0,0,0,0.6)'] : ['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']} 
+        style={styles.overlayGradient}
+      />
+      
       <GoldPattern vip={vip} />
-      <View style={styles.securityStrip} />
+      
       <View style={styles.cardPadding}>
-        <Text style={[styles.backName, vip && { color: '#f9c349' }]}>{userData.name.toUpperCase()}</Text>
-        <View style={styles.centerContactBox}>
-          <Text style={[styles.contactCenterValue, vip && { color: '#FFF' }]}>{userData.phone}</Text>
-          <Text style={styles.contactCenterLabel}>REGISTERED MOBILE</Text>
+        {/* Black Bar - Barcode Style */}
+        <View style={styles.barcodeStrip}>
+          <View style={styles.barcodePattern}>
+            {[...Array(30)].map((_, i) => (
+              <View 
+                key={i} 
+                style={[
+                  styles.barcodeLine, 
+                  { 
+                    height: 20 + Math.random() * 15,
+                    width: 2 + Math.random() * 7,
+                    backgroundColor: i % 3 === 0 ? '#000' : '#333'
+                  }
+                ]} 
+              />
+            ))}
+          </View>
         </View>
+        
+        {/* Name */}
+        <Text style={[styles.backName, vip && styles.vipName]}>{userData.name.toUpperCase()}</Text>
+        
+        {/* Contact Info - Centered */}
+        <View style={styles.centerContactBox}>
+          <Text style={[styles.contactValue, vip && styles.vipText]}>{userData.phone}</Text>
+          <Text style={styles.contactLabel}>REGISTERED MOBILE</Text>
+        </View>
+        
+        {/* Bottom Footer */}
         <View style={styles.backFooter}>
-          <Text style={[styles.helplineValue, vip && { color: '#f9c349' }]}>+92 315 3440945</Text>
-          <Text style={[styles.vipTag, vip && { color: '#f9c349' }]}>{vip ? "GOLD EDITION" : "BASIC MEMBER"}</Text>
+          <Text style={[styles.footerTag, vip && styles.vipTag]}>
+            {vip ? " PREMIER CARD" : "BASIC MEMBER"}
+          </Text>
+          <Text style={[styles.footerTag, vip && styles.vipTag]}>tdc<Text style={styles.logoHighlight}>.</Text></Text>
         </View>
       </View>
+      
       {vip && <View style={styles.goldBorder} />}
-    </LinearGradient>
+    </ImageBackground>
+  );
+
+  const GoldPattern = ({ vip }) => (
+    <View style={styles.patternOverlay}>
+      {[...Array(12)].map((_, i) => (
+        <View key={i} style={[styles.wavyLine, { right: -50 + (i * 15), opacity: vip ? 0.12 : 0.05, borderColor: '#FFD700' }]} />
+      ))}
+    </View>
   );
 
   if (loading) {
@@ -354,12 +450,11 @@ export default function PremiumMemberCard() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="light-content" backgroundColor="#000000" />
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       
-      {/* Header */}
       <Animated.View style={[styles.headerNav, { opacity: headerFade }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
-          <Ionicons name="chevron-back" size={24} color="#fff" />
+          <Ionicons name="chevron-back" size={24} color="#000" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Membership Card</Text>
@@ -370,33 +465,31 @@ export default function PremiumMemberCard() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
-        {/* Card Section - Wrap in ViewShot */}
-        <ViewShot 
-          ref={viewShotRef} 
-          options={{ 
-            format: "png", 
-            quality: 1.0,
-            width: width - 32,
-            height: 220,
-          }}
-          style={styles.displayCardContainer}
-        >
-          <TouchableOpacity activeOpacity={0.95} onPress={toggleFlip} style={styles.cardWrapper}>
-            <Animated.View style={[styles.card, { transform: [{ rotateY: frontInterpolate }] }, styles.abs, { backfaceVisibility: 'hidden' }]}>
-              <FrontContent vip={isVip} />
-            </Animated.View>
-            <Animated.View style={[styles.card, { transform: [{ rotateY: backInterpolate }] }, { backfaceVisibility: 'hidden' }]}>
-              <BackContent vip={isVip} />
-            </Animated.View>
-          </TouchableOpacity>
-        </ViewShot>
+        <View style={styles.displayCardContainer}>
+          <ViewShot 
+            ref={viewShotRef} 
+            options={{ 
+              format: "png", 
+              quality: 1.0,
+              snapshotContentContainer: true,
+            }}
+            style={styles.viewShotStyle}
+          >
+            <TouchableOpacity activeOpacity={0.95} onPress={toggleFlip} style={styles.cardWrapper}>
+              <Animated.View style={[styles.card, { transform: [{ rotateY: frontInterpolate }] }, styles.abs, { backfaceVisibility: 'hidden' }]}>
+                <FrontContent vip={isVip} />
+              </Animated.View>
+              <Animated.View style={[styles.card, { transform: [{ rotateY: backInterpolate }] }, styles.abs, { backfaceVisibility: 'hidden' }]}>
+                <BackContent vip={isVip} />
+              </Animated.View>
+            </TouchableOpacity>
+          </ViewShot>
+        </View>
 
-        {/* Flip Hint */}
         <Text style={styles.flipHint}>
           <Ionicons name="swap-horizontal-outline" size={14} color="#666" /> Tap card to flip
         </Text>
 
-        {/* Status Section */}
         <Animated.View style={[styles.statusSection, { opacity: sectionFade }]}>
           {isVip ? (
             <View style={styles.statusBadgeSuccess}>
@@ -420,7 +513,7 @@ export default function PremiumMemberCard() {
               }}
               activeOpacity={0.8}
             >
-              <LinearGradient colors={['#f9c349', '#f7b733']} style={styles.activateBtnGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+              <LinearGradient colors={['#f9c349', '#e8b830']} style={styles.activateBtnGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
                 <Ionicons name="diamond" size={18} color="#000" style={{ marginRight: 8 }} />
                 <Text style={styles.activateBtnText}>ACTIVATE GOLD CARD (RS. 750)</Text>
               </LinearGradient>
@@ -428,7 +521,6 @@ export default function PremiumMemberCard() {
           )}
         </Animated.View>
 
-        {/* Promo Section */}
         {!isVip && paymentStatus !== "Pending Verification" && (
           <Animated.View style={[styles.promoWrapper, { opacity: sectionFade }]}>
             <View style={styles.promoInputRow}>
@@ -438,7 +530,7 @@ export default function PremiumMemberCard() {
               <TextInput
                 style={styles.input}
                 placeholder="Enter Promo Code"
-                placeholderTextColor="#666"
+                placeholderTextColor="#999"
                 value={redeemCode}
                 onChangeText={(val) => setRedeemCode(val.toUpperCase())}
                 autoCapitalize="characters"
@@ -459,9 +551,7 @@ export default function PremiumMemberCard() {
           </Animated.View>
         )}
 
-        {/* Download & Share Buttons */}
-        <Animated.View style={{ opacity: sectionFade, width: '100%', gap: 10 }}>
-          {/* Download Button */}
+        <Animated.View style={[styles.actionButtons, { opacity: sectionFade }]}>
           <TouchableOpacity 
             style={[styles.dlBtn, isVip ? styles.dlBtnActive : styles.dlBtnDisabled]} 
             onPress={handleDownload}
@@ -480,14 +570,13 @@ export default function PremiumMemberCard() {
                 )}
               </LinearGradient>
             ) : (
-              <>
+              <View style={styles.dlBtnDisabledContent}>
                 <Ionicons name="lock-closed-outline" size={16} color="#666" style={{ marginRight: 8 }} />
                 <Text style={styles.dlTextDisabled}>ACTIVATE TO DOWNLOAD</Text>
-              </>
+              </View>
             )}
           </TouchableOpacity>
 
-          {/* Share Button (only show for VIP) */}
           {isVip && (
             <TouchableOpacity 
               style={styles.shareBtnCard} 
@@ -502,9 +591,8 @@ export default function PremiumMemberCard() {
           )}
         </Animated.View>
 
-        {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerLogo}>tdc<Text style={{ color: '#f9c349' }}>.</Text></Text>
+          <Text style={styles.footerLogo}>tdc<Text style={styles.logoHighlight}>.</Text></Text>
           <Text style={styles.footerText}>Building a Stronger Student Economy</Text>
         </View>
       </ScrollView>
@@ -513,105 +601,437 @@ export default function PremiumMemberCard() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
+  container: { flex: 1, backgroundColor: '#ffffff' },
   
-  // Header Nav
   headerNav: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 14, paddingVertical: Platform.OS === 'ios' ? 8 : 10,
-    borderBottomWidth: 1, borderBottomColor: '#1a1a1a', backgroundColor: '#000',
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    paddingHorizontal: 14, 
+    paddingVertical: Platform.OS === 'ios' ? 6 : 10,
+    borderBottomWidth: 1, 
+    borderBottomColor: '#f0f0f0', 
+    backgroundColor: '#ffffff',
   },
-  backBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center' },
+  backBtn: { 
+    width: 38, 
+    height: 38, 
+    borderRadius: 12, 
+    backgroundColor: '#f5f5f5', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
   headerCenter: { alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
-  headerSubtitle: { fontSize: 11, color: '#666', fontWeight: '500', marginTop: 1 },
+  headerTitle: { 
+    fontSize: 18, 
+    fontWeight: '800', 
+    color: '#050505', 
+    letterSpacing: 0.5 
+  },
+  headerSubtitle: { 
+    fontSize: 11, 
+    color: '#666', 
+    fontWeight: '500', 
+    marginTop: 1 
+  },
   
-  scrollContent: { padding: 16, alignItems: 'center', paddingBottom: 40 },
+  scrollContent: { 
+    padding: 16, 
+    alignItems: 'center', 
+    paddingBottom: 40 
+  },
   
-  // Card
-  displayCardContainer: { width: width - 32, height: 220, marginTop: 12, marginBottom: 8 },
-  cardWrapper: { width: width - 32, height: 220 },
-  card: { width: width - 32, height: 220, borderRadius: 20, overflow: 'hidden', elevation: 10, shadowColor: '#f9c349', shadowOpacity: 0.1, shadowRadius: 10 },
-  abs: { position: 'absolute', top: 0, zIndex: 5 },
+  displayCardContainer: { 
+    width: width - 32, 
+    height: 220, 
+    marginTop: 12, 
+    marginBottom: 8,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  viewShotStyle: {
+    width: width - 32,
+    height: 220,
+  },
+  cardWrapper: { 
+    width: width - 32, 
+    height: 220,
+    position: 'relative',
+  },
+  card: { 
+    width: width - 32, 
+    height: 220, 
+    borderRadius: 20, 
+    overflow: 'hidden', 
+    elevation: 10, 
+    shadowColor: '#f9c349', 
+    shadowOpacity: 0.1, 
+    shadowRadius: 10,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  abs: { position: 'absolute', top: 0, left: 0, zIndex: 5 },
   full: { flex: 1 },
+  
+  backgroundImageStyle: {
+    resizeMode: 'cover',
+    borderRadius: 20,
+  },
+  overlayGradient: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 20,
+  },
+  
   patternOverlay: { ...StyleSheet.absoluteFillObject },
-  wavyLine: { position: 'absolute', height: '150%', width: 200, borderWidth: 0.5, borderRadius: 100, top: -50, transform: [{ rotate: '15deg' }] },
-  cardPadding: { padding: 24, flex: 1 },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  logoContainer: { flexDirection: 'row', alignItems: 'center' },
-  textLogoMain: { color: '#FFF', fontSize: 20, fontWeight: '900' },
-  textLogoSub: { color: 'rgba(255,255,255,0.5)', fontSize: 14, marginLeft: 8, fontWeight: '300' },
-  divider: { width: 1, height: 18, backgroundColor: 'rgba(255,255,255,0.2)', marginHorizontal: 10 },
+  wavyLine: { 
+    position: 'absolute', 
+    height: '150%', 
+    width: 200, 
+    borderWidth: 0.5, 
+    borderRadius: 100, 
+    top: -50, 
+    transform: [{ rotate: '15deg' }] 
+  },
+  cardPadding: { padding: 20, flex: 1 },
+  
+  // Front Card Styles
+  rowBetween: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center' 
+  },
+  logoContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center' 
+  },
+  logoCircle: {
+    backgroundColor: '#000',
+    height: 45, 
+    width: 45, 
+    borderRadius: 45, 
+    alignContent: 'center', 
+    alignItems: 'center', 
+    justifyContent: 'center'
+  },
+  textLogoMain: { 
+    color: '#FFF', 
+    fontSize: 22, 
+    fontWeight: '900',
+    textShadowColor: 'rgba(0,0,0,0.5)', 
+    textShadowOffset: { width: 0, height: 1 }, 
+    textShadowRadius: 3,
+  },
+  logoHighlight: {
+    color: '#f9c349'
+  },
   originalChip: { width: 48, height: 38 },
-  middleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 15 },
-  mainTitle: { color: '#FFF', fontSize: 22, fontWeight: '300', letterSpacing: 2 },
-  cardNumberText: { color: '#FFF', fontSize: 18, fontFamily: 'monospace', marginTop: 5, letterSpacing: 1 },
-  validContainer: { alignItems: 'center' },
-  validLabel: { color: '#f9c349', fontSize: 8, fontWeight: 'bold' },
-  validDate: { color: '#FFF', fontSize: 14, fontWeight: '500' },
-  bottomInfo: { marginTop: 'auto' },
-  label: { color: '#666', fontSize: 10, fontWeight: 'bold', letterSpacing: 1 },
-  infoValue: { color: '#FFF', fontSize: 18, fontWeight: '600' },
-  securityStrip: { height: 40, width: '100%', backgroundColor: 'rgba(0,0,0,0.8)', marginTop: 20 },
-  backName: { color: '#FFF', fontSize: 20, fontWeight: 'bold', letterSpacing: 1 },
-  centerContactBox: { flex: 1, justifyContent: 'center' },
-  contactCenterValue: { color: '#FFF', fontSize: 18, letterSpacing: 1 },
-  contactCenterLabel: { color: '#666', fontSize: 8, marginTop: 4, fontWeight: 'bold' },
-  backFooter: { marginTop: 'auto', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  helplineValue: { color: '#FFF', fontSize: 14, fontWeight: '500' },
-  vipTag: { color: '#FFF', fontSize: 11, fontWeight: '900' },
-  goldBorder: { ...StyleSheet.absoluteFillObject, borderWidth: 1.5, borderColor: 'rgba(249, 195, 73, 0.3)', borderRadius: 20 },
   
-  // Flip Hint
-  flipHint: { color: '#666', fontSize: 12, fontWeight: '500', marginBottom: 20, flexDirection: 'row', alignItems: 'center' },
+  // Member ID in Center
+  middleRowCentered: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    marginVertical: 5,
+  },
+  centerContent: { 
+    alignItems: 'center',
+  },
+  memberLabel: { 
+    color: 'rgba(255,255,255,0.6)', 
+    fontSize: 12, 
+    fontWeight: '900', 
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  memberIdText: { 
+    color: '#FFF', 
+    fontSize: 28, 
+    fontWeight: '700',
+    letterSpacing: 2,
+    textShadowColor: 'rgba(0,0,0,0.5)', 
+    textShadowOffset: { width: 0, height: 2 }, 
+    textShadowRadius: 4,
+  },
+  vipText: {
+    color: '#f9c349'
+  },
   
-  // Status Section
+  // Bottom Row
+  bottomRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'flex-end',
+    marginTop: 'auto',
+  },
+  cardNumberContainer: { 
+    flex: 1,
+  },
+  cardNumberLabel: { 
+    color: 'rgba(255,255,255,0.4)', 
+    fontSize: 8, 
+    fontWeight: '600', 
+    letterSpacing: 1 
+  },
+  validContainer: { 
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  validLabel: { 
+    color: '#f9c349', 
+    fontSize: 7, 
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  validDate: { 
+    color: '#FFF', 
+    fontSize: 12, 
+    fontWeight: '500',
+    textShadowColor: 'rgba(0,0,0,0.5)', 
+    textShadowOffset: { width: 0, height: 1 }, 
+    textShadowRadius: 2,
+  },
+  
+  // Back Card Styles
+  barcodeStrip: {
+    backgroundColor: 'rgba(255, 248, 220, 0.95)',
+    padding: 8,
+    borderRadius: 4,
+    marginBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  barcodePattern: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 1,
+    height: 35,
+    flexWrap: 'wrap',
+  },
+  barcodeLine: {
+    marginHorizontal: 0.5,
+  },
+  
+  backName: { 
+    color: '#FFF', 
+    fontSize: 20, 
+    fontWeight: 'bold', 
+    letterSpacing: 1,
+    textShadowColor: 'rgba(0,0,0,0.5)', 
+    textShadowOffset: { width: 0, height: 1 }, 
+    textShadowRadius: 3,
+    marginBottom: 8,
+  },
+  vipName: {
+    color: '#f9c349'
+  },
+  centerContactBox: { 
+    flex: 1, 
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  contactValue: { 
+    color: '#FFF', 
+    fontSize: 18, 
+    letterSpacing: 1,
+    textShadowColor: 'rgba(0,0,0,0.5)', 
+    textShadowOffset: { width: 0, height: 1 }, 
+    textShadowRadius: 3,
+  },
+  contactLabel: { 
+    color: 'rgba(255,255,255,0.6)', 
+    fontSize: 8, 
+    marginTop: 4, 
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  backFooter: { 
+    marginTop: 'auto', 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+  },
+  footerTag: { 
+    color: 'rgba(255,255,255,0.4)', 
+    fontSize: 16, 
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  vipTag: {
+    color: '#f9c349'
+  },
+  
+  goldBorder: { 
+    ...StyleSheet.absoluteFillObject, 
+    borderWidth: 1.5, 
+    borderColor: 'rgba(255, 215, 0, 0.3)', 
+    borderRadius: 20,
+  },
+  
+  flipHint: { 
+    color: '#666', 
+    fontSize: 12, 
+    fontWeight: '500', 
+    marginBottom: 20, 
+    flexDirection: 'row', 
+    alignItems: 'center' 
+  },
+  
   statusSection: { width: '100%', marginTop: 4 },
   statusBadgeSuccess: { 
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    padding: 16, backgroundColor: 'rgba(76, 175, 80, 0.1)', borderRadius: 14, 
-    borderWidth: 1.5, borderColor: 'rgba(76, 175, 80, 0.3)',
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    padding: 16, 
+    backgroundColor: 'rgba(76, 175, 80, 0.1)', 
+    borderRadius: 14, 
+    borderWidth: 1.5, 
+    borderColor: 'rgba(76, 175, 80, 0.3)',
     flexWrap: 'wrap',
   },
   statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 10 },
   statusBadgePending: { 
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    padding: 16, backgroundColor: 'rgba(249, 195, 73, 0.1)', borderRadius: 14, 
-    borderWidth: 1.5, borderColor: 'rgba(249, 195, 73, 0.3)',
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    padding: 16, 
+    backgroundColor: 'rgba(255, 215, 0, 0.1)', 
+    borderRadius: 14, 
+    borderWidth: 1.5, 
+    borderColor: 'rgba(255, 215, 0, 0.3)',
   },
-  statusTextSuccess: { color: '#4CAF50', fontWeight: '800', letterSpacing: 1, fontSize: 13 },
-  statusTextPending: { color: '#f9c349', fontWeight: '800', letterSpacing: 1, fontSize: 13 },
-  statusExpiry: { color: '#666', fontSize: 11, fontWeight: '500', marginLeft: 10 },
-  activateBtn: { borderRadius: 14, overflow: 'hidden', elevation: 5, shadowColor: '#f9c349', shadowOpacity: 0.3, shadowRadius: 8 },
-  activateBtnGradient: { padding: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
-  activateBtnText: { color: '#000', fontWeight: '900', fontSize: 14, letterSpacing: 0.5 },
+  statusTextSuccess: { 
+    color: '#4CAF50', 
+    fontWeight: '800', 
+    letterSpacing: 1, 
+    fontSize: 13 
+  },
+  statusTextPending: { 
+    color: '#f9c349', 
+    fontWeight: '800', 
+    letterSpacing: 1, 
+    fontSize: 13 
+  },
+  statusExpiry: { 
+    color: '#666', 
+    fontSize: 11, 
+    fontWeight: '500', 
+    marginLeft: 10 
+  },
+  activateBtn: { 
+    borderRadius: 14, 
+    overflow: 'hidden', 
+    elevation: 5, 
+    shadowColor: '#f9c349', 
+    shadowOpacity: 0.3, 
+    shadowRadius: 8 
+  },
+  activateBtnGradient: { 
+    padding: 16, 
+    alignItems: 'center', 
+    flexDirection: 'row', 
+    justifyContent: 'center' 
+  },
+  activateBtnText: { 
+    color: '#000000', 
+    fontWeight: '900', 
+    fontSize: 14, 
+    letterSpacing: 0.5 
+  },
   
-  // Promo
   promoWrapper: { width: '100%', marginTop: 16 },
   promoInputRow: { 
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#1a1a1a', 
-    borderRadius: 14, borderWidth: 1.5, borderColor: '#2a2a2a', paddingHorizontal: 14, marginBottom: 10,
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#ffffff', 
+    borderRadius: 14, 
+    borderWidth: 1.5, 
+    borderColor: '#e0e0e0', 
+    paddingHorizontal: 14, 
+    marginBottom: 10,
   },
-  promoIconBox: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(249,195,73,0.1)', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-  input: { flex: 1, color: '#FFF', paddingVertical: 14, fontSize: 14, fontWeight: '500' },
+  promoIconBox: { 
+    width: 36, 
+    height: 36, 
+    borderRadius: 10, 
+    backgroundColor: 'rgba(255,215,0,0.1)', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginRight: 10 
+  },
+  input: { 
+    flex: 1, 
+    color: '#0b0b0b', 
+    paddingVertical: 14, 
+    fontSize: 14, 
+    fontWeight: '500' 
+  },
   applyBtn: { borderRadius: 14, overflow: 'hidden' },
-  applyBtnGradient: { paddingHorizontal: 24, paddingVertical: 14, alignItems: 'center' },
-  applyText: { color: '#f9c349', fontWeight: '800', fontSize: 13 },
+  applyBtnGradient: { 
+    paddingHorizontal: 24, 
+    paddingVertical: 14, 
+    alignItems: 'center' 
+  },
+  applyText: { 
+    color: '#f9c349', 
+    fontWeight: '800', 
+    fontSize: 13 
+  },
   
-  // Download Button
-  dlBtn: { padding: 16, borderRadius: 14, width: '100%', marginTop: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
-  dlBtnActive: { overflow: 'hidden' },
-  dlBtnGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, borderRadius: 14, width: '100%' },
-  dlBtnDisabled: { backgroundColor: '#1a1a1a', borderWidth: 1.5, borderColor: '#2a2a2a' },
-  dlTextActive: { color: '#f9c349', fontWeight: '800', fontSize: 14, letterSpacing: 0.5 },
-  dlTextDisabled: { color: '#666', fontWeight: '600', fontSize: 13 },
+  actionButtons: {
+    width: '100%',
+    gap: 10,
+    marginTop: 16,
+  },
   
-  // Share Button
+  dlBtn: { 
+    borderRadius: 14, 
+    width: '100%', 
+    overflow: 'hidden',
+  },
+  dlBtnActive: { 
+    overflow: 'hidden' 
+  },
+  dlBtnGradient: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    padding: 16, 
+    borderRadius: 14, 
+    width: '100%' 
+  },
+  dlBtnDisabled: { 
+    backgroundColor: '#f5f5f5', 
+    borderWidth: 1.5, 
+    borderColor: '#e0e0e0',
+    padding: 16,
+    borderRadius: 14,
+  },
+  dlBtnDisabledContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dlTextActive: { 
+    color: '#f9c349', 
+    fontWeight: '800', 
+    fontSize: 14, 
+    letterSpacing: 0.5 
+  },
+  dlTextDisabled: { 
+    color: '#999', 
+    fontWeight: '600', 
+    fontSize: 13 
+  },
+  
   shareBtnCard: { 
     borderRadius: 14, 
     overflow: 'hidden', 
     width: '100%',
-    marginTop: 8,
   },
   shareBtnGradient: {
     flexDirection: 'row',
@@ -630,8 +1050,20 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   
-  // Footer
-  footer: { alignItems: 'center', marginTop: 30, marginBottom: 10 },
-  footerLogo: { fontSize: 20, fontWeight: '900', color: '#fff' },
-  footerText: { fontSize: 11, color: '#666', marginTop: 4, fontWeight: '500' },
+  footer: { 
+    alignItems: 'center', 
+    marginTop: 30, 
+    marginBottom: 10 
+  },
+  footerLogo: { 
+    fontSize: 20, 
+    fontWeight: '900', 
+    color: '#000' 
+  },
+  footerText: { 
+    fontSize: 11, 
+    color: '#666', 
+    marginTop: 4, 
+    fontWeight: '500' 
+  },
 });

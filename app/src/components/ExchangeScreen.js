@@ -15,12 +15,15 @@ import {
   Linking,
   Animated,
   Dimensions,
-  Platform
+  Platform,
+  SafeAreaView as RNSafeAreaView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 import api, { publicAPI } from "../api/api";
+import { WebView } from 'react-native-webview';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
 
@@ -38,10 +41,19 @@ const ExchangeScreen = ({ navigation }) => {
   const [detailsVisible, setDetailsVisible] = useState(false);
   const [selectedProgram, setSelectedProgram] = useState(null);
 
+  // WebView Modal State
+  const [webViewVisible, setWebViewVisible] = useState(false);
+  const [webViewUrl, setWebViewUrl] = useState('');
+  const [webViewLoading, setWebViewLoading] = useState(true);
+  const [webViewProgress, setWebViewProgress] = useState(0);
+
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const modalAnim = useRef(new Animated.Value(height)).current;
+  const webViewFade = useRef(new Animated.Value(0)).current;
+  const webViewSlide = useRef(new Animated.Value(height)).current;
+  const progressWidth = useRef(new Animated.Value(0)).current;
 
   const degrees = ['Bachelors', 'Masters', 'PhD'];
 
@@ -86,6 +98,47 @@ const ExchangeScreen = ({ navigation }) => {
       }).start();
     }
   }, [detailsVisible]);
+
+  // WebView animation - full screen
+  useEffect(() => {
+    if (webViewVisible) {
+      Animated.parallel([
+        Animated.timing(webViewFade, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(webViewSlide, {
+          toValue: 0,
+          tension: 70,
+          friction: 12,
+          useNativeDriver: true,
+        })
+      ]).start();
+    } else {
+      Animated.timing(webViewFade, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
+      Animated.timing(webViewSlide, {
+        toValue: height,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [webViewVisible]);
+
+  // Progress bar animation
+  useEffect(() => {
+    if (webViewLoading) {
+      Animated.timing(progressWidth, {
+        toValue: webViewProgress / 100,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [webViewProgress]);
 
   const showGuestAlert = (action) => {
     Alert.alert(
@@ -145,8 +198,6 @@ const ExchangeScreen = ({ navigation }) => {
 
   const onRefresh = () => {
     setRefreshing(true);
-    // Remove the clearPublicCache call since it doesn't exist
-    // publicAPI.clearPublicCache();
     fetchPrograms();
   };
 
@@ -169,12 +220,33 @@ const ExchangeScreen = ({ navigation }) => {
     setDetailsVisible(true);
   };
 
+  // Updated handleApplyNow to open university website inside WebView
   const handleApplyNow = (program) => {
     if (isGuest) {
       showGuestAlert('apply for programs');
       return;
     }
-    navigation.navigate('ApplicationForm', { program });
+
+    // Check if program has a link
+    if (program?.link) {
+      // Validate URL format
+      let url = program.link;
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+      }
+
+      // Open in WebView instead of external browser
+      setWebViewUrl(url);
+      setWebViewVisible(true);
+      setWebViewLoading(true);
+      setWebViewProgress(0);
+    } else {
+      Alert.alert(
+        'No Website Available',
+        'This program does not have a website link available.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const handleProfile = () => {
@@ -184,6 +256,28 @@ const ExchangeScreen = ({ navigation }) => {
     }
     navigation.navigate('Profile');
   };
+
+  // Close WebView
+  const closeWebView = () => {
+    setWebViewVisible(false);
+    setWebViewUrl('');
+    setWebViewLoading(true);
+  };
+
+  // Open in external browser
+  const openInBrowser = () => {
+    if (webViewUrl) {
+      Linking.openURL(webViewUrl).catch((err) => {
+        console.error('Failed to open URL:', err);
+        Alert.alert('Error', 'Unable to open in browser');
+      });
+    }
+  };
+
+  const progressWidthInterpolated = progressWidth.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
 
   // Card Item Component with Animation
   const CardItem = ({ item, index }) => {
@@ -536,7 +630,14 @@ const ExchangeScreen = ({ navigation }) => {
                     <Ionicons name="globe-outline" size={16} color="#6B7280" /> University Website
                   </Text>
                   <TouchableOpacity
-                    onPress={() => selectedProgram?.link && Linking.openURL(selectedProgram.link)}
+                    onPress={() => {
+                      setDetailsVisible(false);
+                      setTimeout(() => {
+                        if (selectedProgram) {
+                          handleApplyNow(selectedProgram);
+                        }
+                      }, 300);
+                    }}
                     style={styles.linkContainer}
                     activeOpacity={0.7}
                   >
@@ -601,6 +702,115 @@ const ExchangeScreen = ({ navigation }) => {
                 color="#FFF"
               />
             </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
+
+      {/* WebView Modal - FULL SCREEN like HelpCenter */}
+      <Modal
+        animationType="none"
+        transparent={true}
+        visible={webViewVisible}
+        onRequestClose={closeWebView}
+        statusBarTranslucent={true}
+      >
+        <View style={styles.webViewFullScreen}>
+          <Animated.View
+            style={[
+              styles.webViewContainer,
+              {
+                opacity: webViewFade,
+                transform: [{ translateY: webViewSlide }]
+              }
+            ]}
+          >
+            {/* WebView Header */}
+            <View style={styles.webViewHeader}>
+              <TouchableOpacity onPress={closeWebView} style={styles.webViewHeaderBtn} activeOpacity={0.7}>
+                <Ionicons name="close" size={24} color="#1a1a1a" />
+              </TouchableOpacity>
+              
+              <View style={styles.webViewHeaderCenter}>
+                <Text style={styles.webViewHeaderTitle}>University Website</Text>
+                <Text style={styles.webViewHeaderSubtitle} numberOfLines={1}>
+                  {selectedProgram?.university || 'Loading...'}
+                </Text>
+              </View>
+
+              <TouchableOpacity onPress={openInBrowser} style={styles.webViewHeaderBtn} activeOpacity={0.7}>
+                <Ionicons name="open-outline" size={22} color="#f9c349" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Progress Bar */}
+            {webViewLoading && (
+              <View style={styles.webViewProgressContainer}>
+                <Animated.View style={[styles.webViewProgressBar, { width: progressWidthInterpolated }]}>
+                  <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.webViewProgressGradient} />
+                </Animated.View>
+              </View>
+            )}
+
+            {/* WebView */}
+            <View style={styles.webViewWrapper}>
+              <WebView 
+                source={{ uri: webViewUrl }} 
+                onLoadStart={() => setWebViewLoading(true)}
+                onLoadEnd={() => setWebViewLoading(false)}
+                onLoadProgress={({ nativeEvent }) => setWebViewProgress(nativeEvent.progress * 100)}
+                style={styles.webView}
+                javaScriptEnabled={true}
+                domStorageEnabled={true}
+                startInLoadingState={true}
+                scalesPageToFit={true}
+                renderLoading={() => null}
+                showsVerticalScrollIndicator={true}
+                showsHorizontalScrollIndicator={true}
+              />
+              
+              {/* Loading Overlay */}
+              {webViewLoading && (
+                <Animated.View style={[styles.webViewLoaderContainer, { opacity: webViewFade }]}>
+                  <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.webViewLoaderIcon}>
+                    <Ionicons name="school" size={40} color="#fff" />
+                  </LinearGradient>
+                  <Text style={styles.webViewLoadingTitle}>Loading University Website</Text>
+                  <Text style={styles.webViewLoadingSubtitle}>Fetching program details...</Text>
+                  <ActivityIndicator size="small" color="#f9c349" style={{ marginTop: 16 }} />
+                </Animated.View>
+              )}
+
+              {/* Bottom Toolbar */}
+              <Animated.View style={[styles.webViewBottomBar, { opacity: webViewFade }]}>
+                <TouchableOpacity style={styles.webViewToolbarBtn} onPress={closeWebView} activeOpacity={0.7}>
+                  <Ionicons name="close-circle" size={24} color="#666" />
+                </TouchableOpacity>
+                
+                <View style={{ flex: 1 }} />
+                
+                <TouchableOpacity style={styles.webViewToolbarBtn} onPress={openInBrowser} activeOpacity={0.7}>
+                  <Ionicons name="compass-outline" size={22} color="#f9c349" />
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={styles.webViewToolbarBtn} onPress={() => {
+                  if (webViewUrl) {
+                    Alert.alert(
+                      'Share Link',
+                      `Share this university website link: ${webViewUrl}`,
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Copy Link', onPress: () => {
+                          // You can add clipboard functionality here
+                          Alert.alert('Copied!', 'Link copied to clipboard');
+                        }}
+                      ]
+                    );
+                  }
+                }} activeOpacity={0.7}>
+                  <Ionicons name="share-outline" size={22} color="#f9c349" />
+                </TouchableOpacity>
+              </Animated.View>
+            </View>
           </Animated.View>
         </View>
       </Modal>
@@ -1183,6 +1393,127 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: '700',
     fontSize: 16,
+  },
+
+  // WebView Styles - FULL SCREEN
+  webViewFullScreen: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  webViewContainer: {
+    flex: 1,
+    backgroundColor: '#FFF',
+    position: 'absolute',
+    top: 37,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  webViewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 50 : 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    backgroundColor: '#fff',
+    zIndex: 10,
+  },
+  webViewHeaderBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#f8f8f8',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  webViewHeaderCenter: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  webViewHeaderTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1a1a1a',
+    letterSpacing: 0.3,
+  },
+  webViewHeaderSubtitle: {
+    fontSize: 11,
+    color: '#999',
+    fontWeight: '500',
+    marginTop: 2,
+    maxWidth: width * 0.6,
+  },
+  webViewProgressContainer: {
+    height: 3,
+    backgroundColor: '#f0f0f0',
+    overflow: 'hidden',
+    zIndex: 10,
+  },
+  webViewProgressBar: {
+    height: '100%',
+  },
+  webViewProgressGradient: {
+    width: '100%',
+    height: '100%',
+  },
+  webViewWrapper: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  webView: {
+    flex: 1,
+  },
+  webViewLoaderContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    zIndex: 5,
+  },
+  webViewLoaderIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  webViewLoadingTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1a1a1a',
+  },
+  webViewLoadingSubtitle: {
+    fontSize: 13,
+    color: '#999',
+    marginTop: 6,
+    fontWeight: '500',
+  },
+  webViewBottomBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    backgroundColor: '#fff',
+    paddingBottom: Platform.OS === 'ios' ? 30 : 8,
+    zIndex: 10,
+  },
+  webViewToolbarBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

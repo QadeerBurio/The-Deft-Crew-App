@@ -20,6 +20,7 @@ import {
   Share,
   Linking,
   Animated,
+  KeyboardAvoidingView,
 } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -186,6 +187,10 @@ const TDCCareers = ({ navigation }) => {
   const [validationErrors, setValidationErrors] = useState({});
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailJob, setDetailJob] = useState(null);
+  
+  // Refs for form inputs
+  const scrollViewRef = useRef(null);
+  const formRef = useRef(null);
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -245,7 +250,6 @@ const TDCCareers = ({ navigation }) => {
     setError(false);
 
     try {
-      // Always fetches from /public/tdc — TDC internal openings only
       let queryString = `page=${cleanPage}&limit=20`;
       if (search) queryString += `&search=${encodeURIComponent(search)}`;
       Object.entries(filters).forEach(([key, value]) => {
@@ -295,15 +299,38 @@ const TDCCareers = ({ navigation }) => {
     }
   }, [filters, search, runEntranceAnimation]);
 
-  const fetchMyApplications = async () => {
-    if (!token) return;
+  // FIXED: fetchMyApplications with proper error handling
+  const fetchMyApplications = useCallback(async () => {
+    if (!token) {
+      setMyApplications([]);
+      setAppliedJobIds(new Set());
+      return;
+    }
+    
     try {
-      const response = await axios.get(`${API_URL}/my-applications`, { headers: { Authorization: `Bearer ${token}` } });
+      const response = await axios.get(`${API_URL}/my-applications`, { 
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 10000
+      });
+      
       const applications = Array.isArray(response.data) ? response.data : [];
       setMyApplications(applications);
-      setAppliedJobIds(new Set(applications.map(app => app.jobId?._id).filter(Boolean)));
-    } catch (err) { console.log("Error fetching applications:", err); }
-  };
+      
+      // Update applied job IDs
+      const appliedIds = new Set(
+        applications
+          .map(app => app.jobId?._id)
+          .filter(Boolean)
+      );
+      setAppliedJobIds(appliedIds);
+      
+      return applications;
+    } catch (err) {
+      console.log("Error fetching applications:", err);
+      // Don't clear applications on error
+      return [];
+    }
+  }, [token]);
 
   useEffect(() => {
     setPage(1); setJobs([]); setHasMore(true);
@@ -311,9 +338,13 @@ const TDCCareers = ({ navigation }) => {
     return () => clearTimeout(t);
   }, [search, filters, fetchJobs]);
 
-  useEffect(() => { if (token) fetchMyApplications(); }, [token]);
+  useEffect(() => { if (token) fetchMyApplications(); }, [token, fetchMyApplications]);
 
-  const onRefresh = () => { setRefreshing(true); fetchJobs(1, false); if (token) fetchMyApplications(); };
+  const onRefresh = () => { 
+    setRefreshing(true); 
+    fetchJobs(1, false); 
+    if (token) fetchMyApplications(); 
+  };
 
   const handleInputChange = (field, value) => {
     setApplicationForm(prev => ({ ...prev, [field]: value }));
@@ -334,11 +365,13 @@ const TDCCareers = ({ navigation }) => {
 
   const pickResume = async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({ type: ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"], copyToCacheDirectory: true });
+      const result = await DocumentPicker.getDocumentAsync({ 
+        type: ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"], 
+        copyToCacheDirectory: true 
+      });
       if (result.assets?.length > 0) {
         const file = result.assets[0];
 
-        // Client-side validation: check file format and size
         const allowedExtensions = ['pdf', 'doc', 'docx'];
         const fileExt = file.name?.split('.').pop()?.toLowerCase();
 
@@ -364,64 +397,161 @@ const TDCCareers = ({ navigation }) => {
     } catch (err) { Alert.alert("Error", "Failed to pick resume."); }
   };
 
+  // FIXED: Better resetForm function
+  const resetForm = useCallback(() => {
+    setApplicationForm({ 
+      fullName: user?.name || "", 
+      email: user?.email || "", 
+      phone: "", 
+      address: "", 
+      city: "", 
+      country: "", 
+      coverLetter: "", 
+      portfolioUrl: "", 
+      linkedInUrl: "", 
+      githubUrl: "", 
+      currentCompany: "", 
+      currentPosition: "", 
+      yearsOfExperience: "", 
+      expectedSalary: "", 
+      noticePeriod: "", 
+      workAuthorization: "Citizen" 
+    });
+    setSelectedResume(null);
+    setValidationErrors({});
+    setUploadProgress(0);
+    setSubmitting(false);
+  }, [user]);
+
+  // FIXED: handleApply function with proper reset and state updates
   const handleApply = async () => {
     if (!token) {
       Alert.alert("Login Required", "Please login to apply", [
         { text: "Cancel" },
         { text: "Login", onPress: () => navigation.navigate("Login") }
-      ]); return;
+      ]);
+      return;
     }
+    
     if (!validateForm()) {
-      Alert.alert("Missing Information", "Please fill all required fields marked with *"); return;
+      Alert.alert("Missing Information", "Please fill all required fields marked with *");
+      return;
     }
-    setSubmitting(true); setUploadProgress(0);
+    
+    setSubmitting(true);
+    setUploadProgress(0);
+    
     try {
       const formData = new FormData();
-      Object.entries(applicationForm).forEach(([key, value]) => formData.append(key, value || ""));
-      formData.append("resume", { uri: selectedResume.uri, type: selectedResume.mimeType || "application/octet-stream", name: selectedResume.name });
+      Object.entries(applicationForm).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          formData.append(key, value.toString());
+        }
+      });
+      
+      // Fix: Ensure resume is properly appended
+      if (selectedResume) {
+        formData.append("resume", { 
+          uri: selectedResume.uri, 
+          type: selectedResume.mimeType || "application/octet-stream", 
+          name: selectedResume.name 
+        });
+      }
+      
       await axios.post(`${API_URL}/apply/${selectedJob._id}`, formData, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
-        onUploadProgress: (e) => setUploadProgress(Math.round((e.loaded * 100) / e.total)),
+        headers: { 
+          Authorization: `Bearer ${token}`, 
+          "Content-Type": "multipart/form-data" 
+        },
+        onUploadProgress: (e) => {
+          const progress = Math.round((e.loaded * 100) / e.total);
+          setUploadProgress(progress);
+        },
         timeout: 60000,
       });
-      Platform.OS === "android"
-        ? ToastAndroid.show("Application Submitted! 🎉", ToastAndroid.LONG)
-        : Alert.alert("Success!", "Your application has been submitted to The Deft Crew team.");
-      setModalVisible(false); resetForm(); fetchMyApplications();
+      
+      // Success notification
+      if (Platform.OS === "android") {
+        ToastAndroid.show("Application Submitted! 🎉", ToastAndroid.LONG);
+      } else {
+        Alert.alert("Success!", "Your application has been submitted to The Deft Crew team.");
+      }
+      
+      // FIXED: Properly close modal and reset form
+      setModalVisible(false);
+      
+      // FIXED: Reset form completely after submission
+      resetForm();
+      
+      // FIXED: Refresh applications to update applied status
+      await fetchMyApplications();
+      
+      // FIXED: Force refresh jobs to update applied status in list
+      await fetchJobs(1, false);
+      
     } catch (err) {
-      Alert.alert("Error", err.response?.data?.error || "Failed to submit application");
-    } finally { setSubmitting(false); setUploadProgress(0); }
+      console.error("Application error:", err);
+      Alert.alert(
+        "Error", 
+        err.response?.data?.error || err.message || "Failed to submit application"
+      );
+    } finally {
+      setSubmitting(false);
+      setUploadProgress(0);
+    }
   };
 
-  const resetForm = () => {
-    setApplicationForm({ fullName: user?.name || "", email: user?.email || "", phone: "", address: "", city: "", country: "", coverLetter: "", portfolioUrl: "", linkedInUrl: "", githubUrl: "", currentCompany: "", currentPosition: "", yearsOfExperience: "", expectedSalary: "", noticePeriod: "", workAuthorization: "Citizen" });
-    setSelectedResume(null);
-    setValidationErrors({});
-  };
-
+  // FIXED: openApplyModal with better handling
   const openApplyModal = (job) => {
     setSelectedJob(job);
     const alreadyApplied = appliedJobIds.has(job._id);
+    
     if (alreadyApplied) {
+      // Show detail modal for already applied jobs
       setDetailJob(job);
       setShowDetailModal(true);
       return;
     }
-    setApplicationForm(prev => ({ ...prev, fullName: user?.name || "", email: user?.email || "" }));
+    
+    // Reset form before showing for new application
+    resetForm();
+    setApplicationForm(prev => ({ 
+      ...prev, 
+      fullName: user?.name || "", 
+      email: user?.email || "" 
+    }));
     setValidationErrors({});
+    setSelectedResume(null);
     setModalVisible(true);
   };
 
-  const headerAnimatedStyle = {
-    opacity: scrollY.interpolate({ inputRange: [0, 80], outputRange: [1, 0.95], extrapolate: "clamp" }),
-    transform: [{ scale: scrollY.interpolate({ inputRange: [0, 80], outputRange: [1, 0.98], extrapolate: "clamp" }) }],
+  // FIXED: Handle modal close properly
+  const handleModalClose = () => {
+    Keyboard.dismiss();
+    setModalVisible(false);
+    resetForm();
+  };
+
+  const loadMore = () => {
+    if (!loadingMore && hasMore && !loading) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchJobs(nextPage, true);
+    }
   };
 
   // ==================== FILTER MODAL ====================
   const FilterModal = () => (
-    <Modal visible={showFilters} animationType="slide" transparent onRequestClose={() => setShowFilters(false)}>
+    <Modal 
+      visible={showFilters} 
+      animationType="slide" 
+      transparent 
+      onRequestClose={() => setShowFilters(false)}
+    >
       <View style={styles.filterModalOverlay}>
-        <TouchableWithoutFeedback onPress={() => setShowFilters(false)}><View style={StyleSheet.absoluteFill} /></TouchableWithoutFeedback>
+        <TouchableWithoutFeedback onPress={() => setShowFilters(false)}>
+          <View style={StyleSheet.absoluteFill} />
+        </TouchableWithoutFeedback>
         <View style={styles.filterModalContent}>
           <View style={styles.modalDragHandle} />
           <TouchableOpacity style={styles.closeXButton} onPress={() => setShowFilters(false)}>
@@ -433,8 +563,14 @@ const TDCCareers = ({ navigation }) => {
               <Text style={styles.filterLabel}>Date Posted</Text>
               <View style={styles.filterOptions}>
                 {[{ label: "Any Time", value: "all" }, { label: "Past 24 Hours", value: "24h" }, { label: "Past Week", value: "week" }, { label: "Past Month", value: "month" }].map(o => (
-                  <TouchableOpacity key={o.value} style={[styles.filterChip, filters.datePosted === o.value && styles.filterChipActive]} onPress={() => setFilters(p => ({ ...p, datePosted: o.value }))}>
-                    <Text style={[styles.filterChipText, filters.datePosted === o.value && styles.filterChipTextActive]}>{o.label}</Text>
+                  <TouchableOpacity 
+                    key={o.value} 
+                    style={[styles.filterChip, filters.datePosted === o.value && styles.filterChipActive]} 
+                    onPress={() => setFilters(p => ({ ...p, datePosted: o.value }))}
+                  >
+                    <Text style={[styles.filterChipText, filters.datePosted === o.value && styles.filterChipTextActive]}>
+                      {o.label}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -443,8 +579,14 @@ const TDCCareers = ({ navigation }) => {
               <Text style={styles.filterLabel}>Job Type</Text>
               <View style={styles.filterOptions}>
                 {["Full-time", "Part-time", "Contract", "Internship"].map(t => (
-                  <TouchableOpacity key={t} style={[styles.filterChip, filters.type === t && styles.filterChipActive]} onPress={() => setFilters(p => ({ ...p, type: p.type === t ? "" : t }))}>
-                    <Text style={[styles.filterChipText, filters.type === t && styles.filterChipTextActive]}>{t}</Text>
+                  <TouchableOpacity 
+                    key={t} 
+                    style={[styles.filterChip, filters.type === t && styles.filterChipActive]} 
+                    onPress={() => setFilters(p => ({ ...p, type: p.type === t ? "" : t }))}
+                  >
+                    <Text style={[styles.filterChipText, filters.type === t && styles.filterChipTextActive]}>
+                      {t}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -453,14 +595,23 @@ const TDCCareers = ({ navigation }) => {
               <Text style={styles.filterLabel}>Work Location</Text>
               <View style={styles.filterOptions}>
                 {["Remote", "On-site", "Hybrid"].map(lt => (
-                  <TouchableOpacity key={lt} style={[styles.filterChip, filters.locationType === lt && styles.filterChipActive]} onPress={() => setFilters(p => ({ ...p, locationType: p.locationType === lt ? "" : lt }))}>
-                    <Text style={[styles.filterChipText, filters.locationType === lt && styles.filterChipTextActive]}>{lt}</Text>
+                  <TouchableOpacity 
+                    key={lt} 
+                    style={[styles.filterChip, filters.locationType === lt && styles.filterChipActive]} 
+                    onPress={() => setFilters(p => ({ ...p, locationType: p.locationType === lt ? "" : lt }))}
+                  >
+                    <Text style={[styles.filterChipText, filters.locationType === lt && styles.filterChipTextActive]}>
+                      {lt}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
           </ScrollView>
-          <TouchableOpacity style={styles.clearFiltersBtn} onPress={() => { setFilters({ type: "", locationType: "", experienceLevel: "", category: "", datePosted: "all" }); setShowFilters(false); }}>
+          <TouchableOpacity style={styles.clearFiltersBtn} onPress={() => { 
+            setFilters({ type: "", locationType: "", experienceLevel: "", category: "", datePosted: "all" }); 
+            setShowFilters(false); 
+          }}>
             <Text style={styles.clearFiltersBtnText}>Clear All Filters</Text>
           </TouchableOpacity>
         </View>
@@ -471,12 +622,33 @@ const TDCCareers = ({ navigation }) => {
   // ==================== JOB DETAIL MODAL (for applied jobs) ====================
   const DetailModal = () => {
     const myApp = myApplications.find(a => a.jobId?._id === detailJob?._id);
-    const getStatusColor = (s) => ({ pending: COLORS.warning, reviewed: COLORS.info, shortlisted: COLORS.success, interview: COLORS.purple, rejected: COLORS.error, hired: "#059669" }[s?.toLowerCase()] || COLORS.muted);
-    const getStatusLabel = (s) => ({ pending: "Pending Review", reviewed: "Reviewed", shortlisted: "Shortlisted", interview: "Interview Stage", rejected: "Not Selected", hired: "Hired! 🎉" }[s?.toLowerCase()] || s || "Unknown");
+    const getStatusColor = (s) => ({ 
+      pending: COLORS.warning, 
+      reviewed: COLORS.info, 
+      shortlisted: COLORS.success, 
+      interview: COLORS.purple, 
+      rejected: COLORS.error, 
+      hired: "#059669" 
+    }[s?.toLowerCase()] || COLORS.muted);
+    const getStatusLabel = (s) => ({ 
+      pending: "Pending Review", 
+      reviewed: "Reviewed", 
+      shortlisted: "Shortlisted", 
+      interview: "Interview Stage", 
+      rejected: "Not Selected", 
+      hired: "Hired! 🎉" 
+    }[s?.toLowerCase()] || s || "Unknown");
     return (
-      <Modal visible={showDetailModal} animationType="slide" transparent onRequestClose={() => setShowDetailModal(false)}>
+      <Modal 
+        visible={showDetailModal} 
+        animationType="slide" 
+        transparent 
+        onRequestClose={() => setShowDetailModal(false)}
+      >
         <View style={styles.detailModalOverlay}>
-          <TouchableWithoutFeedback onPress={() => setShowDetailModal(false)}><View style={StyleSheet.absoluteFill} /></TouchableWithoutFeedback>
+          <TouchableWithoutFeedback onPress={() => setShowDetailModal(false)}>
+            <View style={StyleSheet.absoluteFill} />
+          </TouchableWithoutFeedback>
           <View style={styles.detailModalContent}>
             <View style={styles.modalDragHandle} />
             <TouchableOpacity style={styles.closeXButton} onPress={() => setShowDetailModal(false)}>
@@ -489,7 +661,9 @@ const TDCCareers = ({ navigation }) => {
                 <View style={[styles.statusDot, { backgroundColor: getStatusColor(myApp.status) }]} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.statusBannerTitle}>Application Status</Text>
-                  <Text style={[styles.statusBannerStatus, { color: getStatusColor(myApp.status) }]}>{getStatusLabel(myApp.status)}</Text>
+                  <Text style={[styles.statusBannerStatus, { color: getStatusColor(myApp.status) }]}>
+                    {getStatusLabel(myApp.status)}
+                  </Text>
                 </View>
               </View>
             )}
@@ -502,7 +676,11 @@ const TDCCareers = ({ navigation }) => {
                 <View style={styles.detailSection}>
                   <Text style={styles.sectionHeading}>💡 Required Skills</Text>
                   <View style={styles.skillsGrid}>
-                    {detailJob.skills.map((s, i) => <View key={i} style={styles.skillBadgeLarge}><Text style={styles.skillBadgeLargeText}>{s}</Text></View>)}
+                    {detailJob.skills.map((s, i) => (
+                      <View key={i} style={styles.skillBadgeLarge}>
+                        <Text style={styles.skillBadgeLargeText}>{s}</Text>
+                      </View>
+                    ))}
                   </View>
                 </View>
               )}
@@ -517,107 +695,214 @@ const TDCCareers = ({ navigation }) => {
   };
 
   // ==================== APPLICATION FORM MODAL ====================
-  const AppFormModal = () => (
-    <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => { setModalVisible(false); resetForm(); }}>
-      <KeyboardAvoidView>
-        <View style={styles.formModalOverlay}>
-          <View style={styles.formModalContent}>
-            <View style={styles.modalDragHandle} />
-            <TouchableOpacity style={styles.closeXButton} onPress={() => { setModalVisible(false); resetForm(); }}>
-              <Ionicons name="close" size={24} color="#fff" />
-            </TouchableOpacity>
-            <Text style={styles.formModalTitle}>Apply to TDC</Text>
-            <Text style={styles.formModalSubtitle}>{selectedJob?.title}</Text>
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              <Text style={styles.formRequiredNote}>* Required fields</Text>
+  const AppFormModal = () => {
+    return (
+      <Modal 
+        visible={modalVisible} 
+        animationType="slide" 
+        transparent 
+        onRequestClose={handleModalClose}
+        statusBarTranslucent={true}
+      >
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.formModalOverlay}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.formModalOverlay}>
+              <TouchableWithoutFeedback>
+                <View style={styles.formModalContent}>
+                  <View style={styles.modalDragHandle} />
+                  <TouchableOpacity style={styles.closeXButton} onPress={handleModalClose}>
+                    <Ionicons name="close" size={24} color="#fff" />
+                  </TouchableOpacity>
+                  <Text style={styles.formModalTitle}>Apply to TDC</Text>
+                  <Text style={styles.formModalSubtitle}>{selectedJob?.title}</Text>
+                  
+                  <ScrollView 
+                    ref={scrollViewRef}
+                    showsVerticalScrollIndicator={false} 
+                    keyboardShouldPersistTaps="handled"
+                    contentContainerStyle={styles.formScrollContent}
+                  >
+                    <Text style={styles.formRequiredNote}>* Required fields</Text>
 
-              {/* Personal Info */}
-              <Text style={styles.formLabel}>Full Name *</Text>
-              <TextInput style={[styles.formInput, validationErrors.fullName && styles.formInputError]} placeholder="Your full name" placeholderTextColor="#555" value={applicationForm.fullName} onChangeText={v => handleInputChange("fullName", v)} />
-              {validationErrors.fullName && <Text style={styles.errorText}>{validationErrors.fullName}</Text>}
+                    {/* Personal Info */}
+                    <Text style={styles.formLabel}>Full Name *</Text>
+                    <TextInput 
+                      style={[styles.formInput, validationErrors.fullName && styles.formInputError]} 
+                      placeholder="Your full name" 
+                      placeholderTextColor="#555" 
+                      value={applicationForm.fullName} 
+                      onChangeText={v => handleInputChange("fullName", v)}
+                      editable={!submitting}
+                    />
+                    {validationErrors.fullName && <Text style={styles.errorText}>{validationErrors.fullName}</Text>}
 
-              <Text style={styles.formLabel}>Email *</Text>
-              <TextInput style={[styles.formInput, validationErrors.email && styles.formInputError]} placeholder="your@email.com" placeholderTextColor="#555" value={applicationForm.email} onChangeText={v => handleInputChange("email", v)} keyboardType="email-address" autoCapitalize="none" />
-              {validationErrors.email && <Text style={styles.errorText}>{validationErrors.email}</Text>}
+                    <Text style={styles.formLabel}>Email *</Text>
+                    <TextInput 
+                      style={[styles.formInput, validationErrors.email && styles.formInputError]} 
+                      placeholder="your@email.com" 
+                      placeholderTextColor="#555" 
+                      value={applicationForm.email} 
+                      onChangeText={v => handleInputChange("email", v)} 
+                      keyboardType="email-address" 
+                      autoCapitalize="none"
+                      editable={!submitting}
+                    />
+                    {validationErrors.email && <Text style={styles.errorText}>{validationErrors.email}</Text>}
 
-              <Text style={styles.formLabel}>Phone *</Text>
-              <TextInput style={[styles.formInput, validationErrors.phone && styles.formInputError]} placeholder="+92 300 1234567" placeholderTextColor="#555" value={applicationForm.phone} onChangeText={v => handleInputChange("phone", v)} keyboardType="phone-pad" />
-              {validationErrors.phone && <Text style={styles.errorText}>{validationErrors.phone}</Text>}
+                    <Text style={styles.formLabel}>Phone *</Text>
+                    <TextInput 
+                      style={[styles.formInput, validationErrors.phone && styles.formInputError]} 
+                      placeholder="+92 300 1234567" 
+                      placeholderTextColor="#555" 
+                      value={applicationForm.phone} 
+                      onChangeText={v => handleInputChange("phone", v)} 
+                      keyboardType="phone-pad"
+                      editable={!submitting}
+                    />
+                    {validationErrors.phone && <Text style={styles.errorText}>{validationErrors.phone}</Text>}
 
-              <View style={styles.formRow}>
-                <View style={styles.formHalf}>
-                  <Text style={styles.formLabel}>City</Text>
-                  <TextInput style={styles.formInput} placeholder="Karachi" placeholderTextColor="#555" value={applicationForm.city} onChangeText={v => handleInputChange("city", v)} />
+                    <View style={styles.formRow}>
+                      <View style={styles.formHalf}>
+                        <Text style={styles.formLabel}>City</Text>
+                        <TextInput 
+                          style={styles.formInput} 
+                          placeholder="Karachi" 
+                          placeholderTextColor="#555" 
+                          value={applicationForm.city} 
+                          onChangeText={v => handleInputChange("city", v)}
+                          editable={!submitting}
+                        />
+                      </View>
+                      <View style={styles.formHalf}>
+                        <Text style={styles.formLabel}>Country</Text>
+                        <TextInput 
+                          style={styles.formInput} 
+                          placeholder="Pakistan" 
+                          placeholderTextColor="#555" 
+                          value={applicationForm.country} 
+                          onChangeText={v => handleInputChange("country", v)}
+                          editable={!submitting}
+                        />
+                      </View>
+                    </View>
+
+                    <Text style={styles.formLabel}>LinkedIn Profile</Text>
+                    <TextInput 
+                      style={styles.formInput} 
+                      placeholder="linkedin.com/in/yourprofile" 
+                      placeholderTextColor="#555" 
+                      value={applicationForm.linkedInUrl} 
+                      onChangeText={v => handleInputChange("linkedInUrl", v)} 
+                      autoCapitalize="none"
+                      editable={!submitting}
+                    />
+
+                    <Text style={styles.formLabel}>Portfolio / GitHub</Text>
+                    <TextInput 
+                      style={styles.formInput} 
+                      placeholder="github.com/yourprofile" 
+                      placeholderTextColor="#555" 
+                      value={applicationForm.portfolioUrl} 
+                      onChangeText={v => handleInputChange("portfolioUrl", v)} 
+                      autoCapitalize="none"
+                      editable={!submitting}
+                    />
+
+                    <View style={styles.formRow}>
+                      <View style={styles.formHalf}>
+                        <Text style={styles.formLabel}>Years of Experience</Text>
+                        <TextInput 
+                          style={styles.formInput} 
+                          placeholder="3" 
+                          placeholderTextColor="#555" 
+                          value={applicationForm.yearsOfExperience} 
+                          onChangeText={v => handleInputChange("yearsOfExperience", v)} 
+                          keyboardType="numeric"
+                          editable={!submitting}
+                        />
+                      </View>
+                      <View style={styles.formHalf}>
+                        <Text style={styles.formLabel}>Expected Salary</Text>
+                        <TextInput 
+                          style={styles.formInput} 
+                          placeholder="PKR 100,000" 
+                          placeholderTextColor="#555" 
+                          value={applicationForm.expectedSalary} 
+                          onChangeText={v => handleInputChange("expectedSalary", v)}
+                          editable={!submitting}
+                        />
+                      </View>
+                    </View>
+
+                    <Text style={styles.formLabel}>Cover Letter *</Text>
+                    <TextInput 
+                      style={[styles.formInput, styles.formTextArea, validationErrors.coverLetter && styles.formInputError]} 
+                      placeholder="Tell us why you're a great fit for this role at TDC..." 
+                      placeholderTextColor="#555" 
+                      value={applicationForm.coverLetter} 
+                      onChangeText={v => handleInputChange("coverLetter", v)} 
+                      multiline 
+                      numberOfLines={5} 
+                      textAlignVertical="top"
+                      editable={!submitting}
+                    />
+                    {validationErrors.coverLetter && <Text style={styles.errorText}>{validationErrors.coverLetter}</Text>}
+
+                    {/* Resume Upload */}
+                    <Text style={styles.formLabel}>Resume *</Text>
+                    <TouchableOpacity 
+                      style={[styles.resumeBtn, validationErrors.resume && styles.resumeBtnError]} 
+                      onPress={pickResume}
+                      disabled={submitting}
+                    >
+                      <Ionicons name={selectedResume ? "document-text" : "cloud-upload-outline"} size={20} color={selectedResume ? "#f9c349" : "#555"} />
+                      <Text style={[styles.resumeBtnText, selectedResume && { color: "#f9c349" }]}>
+                        {selectedResume ? selectedResume.name : "Upload Resume (PDF/DOC)"}
+                      </Text>
+                    </TouchableOpacity>
+                    {validationErrors.resume && <Text style={styles.errorText}>{validationErrors.resume}</Text>}
+
+                    {uploadProgress > 0 && uploadProgress < 100 && (
+                      <View style={styles.progressBar}>
+                        <View style={[styles.progressFill, { width: `${uploadProgress}%` }]} />
+                      </View>
+                    )}
+
+                    {/* Submit */}
+                    <TouchableOpacity 
+                      style={styles.submitBtn} 
+                      onPress={handleApply} 
+                      disabled={submitting} 
+                      activeOpacity={0.85}
+                    >
+                      <View style={styles.submitBtnGradient}>
+                        {submitting ? <ActivityIndicator color="#0d0d0d" /> : (
+                          <>
+                            <Ionicons name="send" size={16} color="#0d0d0d" />
+                            <Text style={styles.submitBtnText}>Submit Application</Text>
+                          </>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                    
+                    <View style={{ height: 40 }} />
+                  </ScrollView>
                 </View>
-                <View style={styles.formHalf}>
-                  <Text style={styles.formLabel}>Country</Text>
-                  <TextInput style={styles.formInput} placeholder="Pakistan" placeholderTextColor="#555" value={applicationForm.country} onChangeText={v => handleInputChange("country", v)} />
-                </View>
-              </View>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
+      </Modal>
+    );
+  };
 
-              <Text style={styles.formLabel}>LinkedIn Profile</Text>
-              <TextInput style={styles.formInput} placeholder="linkedin.com/in/yourprofile" placeholderTextColor="#555" value={applicationForm.linkedInUrl} onChangeText={v => handleInputChange("linkedInUrl", v)} autoCapitalize="none" />
-
-              <Text style={styles.formLabel}>Portfolio / GitHub</Text>
-              <TextInput style={styles.formInput} placeholder="github.com/yourprofile" placeholderTextColor="#555" value={applicationForm.portfolioUrl} onChangeText={v => handleInputChange("portfolioUrl", v)} autoCapitalize="none" />
-
-              <View style={styles.formRow}>
-                <View style={styles.formHalf}>
-                  <Text style={styles.formLabel}>Years of Experience</Text>
-                  <TextInput style={styles.formInput} placeholder="3" placeholderTextColor="#555" value={applicationForm.yearsOfExperience} onChangeText={v => handleInputChange("yearsOfExperience", v)} keyboardType="numeric" />
-                </View>
-                <View style={styles.formHalf}>
-                  <Text style={styles.formLabel}>Expected Salary</Text>
-                  <TextInput style={styles.formInput} placeholder="PKR 100,000" placeholderTextColor="#555" value={applicationForm.expectedSalary} onChangeText={v => handleInputChange("expectedSalary", v)} />
-                </View>
-              </View>
-
-              <Text style={styles.formLabel}>Cover Letter *</Text>
-              <TextInput style={[styles.formInput, styles.formTextArea, validationErrors.coverLetter && styles.formInputError]} placeholder="Tell us why you're a great fit for this role at TDC..." placeholderTextColor="#555" value={applicationForm.coverLetter} onChangeText={v => handleInputChange("coverLetter", v)} multiline numberOfLines={5} textAlignVertical="top" />
-              {validationErrors.coverLetter && <Text style={styles.errorText}>{validationErrors.coverLetter}</Text>}
-
-              {/* Resume Upload */}
-              <Text style={styles.formLabel}>Resume *</Text>
-              <TouchableOpacity style={[styles.resumeBtn, validationErrors.resume && styles.resumeBtnError]} onPress={pickResume}>
-                <Ionicons name={selectedResume ? "document-text" : "cloud-upload-outline"} size={20} color={selectedResume ? "#f9c349" : "#555"} />
-                <Text style={[styles.resumeBtnText, selectedResume && { color: "#f9c349" }]}>
-                  {selectedResume ? selectedResume.name : "Upload Resume (PDF/DOC)"}
-                </Text>
-              </TouchableOpacity>
-              {validationErrors.resume && <Text style={styles.errorText}>{validationErrors.resume}</Text>}
-
-              {uploadProgress > 0 && uploadProgress < 100 && (
-                <View style={styles.progressBar}>
-                  <View style={[styles.progressFill, { width: `${uploadProgress}%` }]} />
-                </View>
-              )}
-
-              {/* Submit */}
-              <TouchableOpacity style={styles.submitBtn} onPress={handleApply} disabled={submitting} activeOpacity={0.85}>
-                <View style={styles.submitBtnGradient}>
-                  {submitting ? <ActivityIndicator color="#0d0d0d" /> : (
-                    <>
-                      <Ionicons name="send" size={16} color="#0d0d0d" />
-                      <Text style={styles.submitBtnText}>Submit Application</Text>
-                    </>
-                  )}
-                </View>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </View>
-      </KeyboardAvoidView>
-    </Modal>
-  );
-
-  const KeyboardAvoidView = ({ children }) => children;
-
-  const loadMore = () => {
-    if (!loadingMore && hasMore && !loading) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      fetchJobs(nextPage, true);
-    }
+  // HEADER ANIMATION STYLE
+  const headerAnimatedStyle = {
+    opacity: scrollY.interpolate({ inputRange: [0, 80], outputRange: [1, 0.95], extrapolate: "clamp" }),
+    transform: [{ scale: scrollY.interpolate({ inputRange: [0, 80], outputRange: [1, 0.98], extrapolate: "clamp" }) }],
   };
 
   return (
@@ -729,9 +1014,16 @@ const TDCCareers = ({ navigation }) => {
         <AppFormModal />
 
         {/* My Applications Modal */}
-        <Modal visible={showApplicationsModal} animationType="slide" transparent onRequestClose={() => setShowApplicationsModal(false)}>
+        <Modal 
+          visible={showApplicationsModal} 
+          animationType="slide" 
+          transparent 
+          onRequestClose={() => setShowApplicationsModal(false)}
+        >
           <View style={styles.appsModalOverlay}>
-            <TouchableWithoutFeedback onPress={() => setShowApplicationsModal(false)}><View style={StyleSheet.absoluteFill} /></TouchableWithoutFeedback>
+            <TouchableWithoutFeedback onPress={() => setShowApplicationsModal(false)}>
+              <View style={StyleSheet.absoluteFill} />
+            </TouchableWithoutFeedback>
             <View style={styles.appsModalContent}>
               <View style={styles.modalDragHandle} />
               <TouchableOpacity style={styles.closeXButton} onPress={() => setShowApplicationsModal(false)}>
@@ -758,7 +1050,9 @@ const TDCCareers = ({ navigation }) => {
                             <Text style={styles.appCompany}>The Deft Crew</Text>
                           </View>
                           <View style={[styles.appStatus, { backgroundColor: sc + "25" }]}>
-                            <Text style={[styles.appStatusText, { color: sc }]}>{statusLabels[app.status?.toLowerCase()] || app.status}</Text>
+                            <Text style={[styles.appStatusText, { color: sc }]}>
+                              {statusLabels[app.status?.toLowerCase()] || app.status}
+                            </Text>
                           </View>
                         </View>
                         <Text style={styles.appDate}>Applied: {new Date(app.appliedAt).toLocaleDateString()}</Text>
@@ -868,6 +1162,7 @@ const styles = StyleSheet.create({
   formModalTitle: { fontSize: 20, fontWeight: "900", color: COLORS.primary, marginTop: 16, marginBottom: 2 },
   formModalSubtitle: { fontSize: 13, color: "#f9c349", fontWeight: "700", marginBottom: 16 },
   formRequiredNote: { fontSize: 11, color: COLORS.error, fontWeight: "600", marginBottom: 12 },
+  formScrollContent: { paddingBottom: 20 },
   formLabel: { fontSize: 12, fontWeight: "700", color: COLORS.primary, marginBottom: 5, marginTop: 8 },
   formInput: { borderWidth: 1, borderColor: COLORS.line, borderRadius: 12, padding: 12, fontSize: 13, marginBottom: 4, backgroundColor: COLORS.surface, color: COLORS.primary },
   formInputError: { borderColor: COLORS.error, backgroundColor: "#1a0000" },

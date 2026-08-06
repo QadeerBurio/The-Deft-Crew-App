@@ -2,7 +2,8 @@ import React, { useState, useContext, useEffect, useCallback, useRef } from "rea
 import { 
   View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, 
   Modal, KeyboardAvoidingView, Platform, StatusBar, Dimensions, 
-  Image, Alert, ActivityIndicator, RefreshControl, Share, Animated
+  Image, Alert, ActivityIndicator, RefreshControl, Share, Animated,
+  Keyboard, TouchableWithoutFeedback
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,7 +14,7 @@ import { AuthContext } from "../../context/AuthContext";
 const { height, width } = Dimensions.get('window');
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
 
-// Enhanced Skeleton Component
+// Modern Skeleton Component
 const ConfessionSkeleton = () => {
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
@@ -22,12 +23,12 @@ const ConfessionSkeleton = () => {
       Animated.sequence([
         Animated.timing(shimmerAnim, { 
           toValue: 1, 
-          duration: 1200, 
+          duration: 1000, 
           useNativeDriver: true 
         }),
         Animated.timing(shimmerAnim, { 
           toValue: 0, 
-          duration: 1200, 
+          duration: 1000, 
           useNativeDriver: true 
         }),
       ])
@@ -41,116 +42,26 @@ const ConfessionSkeleton = () => {
     outputRange: [0.3, 0.7, 0.3]
   });
 
-  const shimmerTranslate = shimmerAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-100, 100]
-  });
-
-  const SkeletonCard = ({ hasImage }) => (
-    <View style={styles.skeletonCard}>
-      <View style={styles.skeletonHeader}>
-        <Animated.View style={[
-          styles.skeletonAvatar,
-          { opacity: shimmerOpacity }
-        ]}>
-          <Animated.View style={[
-            styles.shimmerOverlay,
-            { transform: [{ translateX: shimmerTranslate }] }
-          ]} />
-        </Animated.View>
-        <View style={styles.skeletonHeaderText}>
-          <Animated.View style={[
-            styles.skeletonLine,
-            { width: 130, height: 14, opacity: shimmerOpacity }
-          ]}>
-            <Animated.View style={[
-              styles.shimmerOverlay,
-              { transform: [{ translateX: shimmerTranslate }] }
-            ]} />
-          </Animated.View>
-          <Animated.View style={[
-            styles.skeletonLine,
-            { width: 90, height: 10, marginTop: 6, opacity: shimmerOpacity }
-          ]}>
-            <Animated.View style={[
-              styles.shimmerOverlay,
-              { transform: [{ translateX: shimmerTranslate }] }
-            ]} />
-          </Animated.View>
-        </View>
-      </View>
-      
-      <Animated.View style={[
-        styles.skeletonLine,
-        { width: '95%', height: 12, marginTop: 16, opacity: shimmerOpacity }
-      ]}>
-        <Animated.View style={[
-          styles.shimmerOverlay,
-          { transform: [{ translateX: shimmerTranslate }] }
-        ]} />
-      </Animated.View>
-      <Animated.View style={[
-        styles.skeletonLine,
-        { width: '75%', height: 12, marginTop: 8, opacity: shimmerOpacity }
-      ]}>
-        <Animated.View style={[
-          styles.shimmerOverlay,
-          { transform: [{ translateX: shimmerTranslate }] }
-        ]} />
-      </Animated.View>
-      
-      {hasImage && (
-        <Animated.View style={[
-          styles.skeletonImage,
-          { opacity: shimmerOpacity }
-        ]}>
-          <Animated.View style={[
-            styles.shimmerOverlay,
-            { transform: [{ translateX: shimmerTranslate }] }
-          ]} />
-        </Animated.View>
-      )}
-      
-      <View style={styles.skeletonFooter}>
-        <View style={styles.skeletonActions}>
-          <Animated.View style={[
-            styles.skeletonAction,
-            { opacity: shimmerOpacity }
-          ]} />
-          <Animated.View style={[
-            styles.skeletonAction,
-            { opacity: shimmerOpacity }
-          ]} />
-        </View>
-      </View>
-    </View>
-  );
-
   return (
     <View style={styles.skeletonContainer}>
-      <View style={styles.skeletonTitle}>
-        <Animated.View style={[
-          styles.skeletonLine,
-          { width: 150, height: 28, opacity: shimmerOpacity }
-        ]}>
-          <Animated.View style={[
-            styles.shimmerOverlay,
-            { transform: [{ translateX: shimmerTranslate }] }
-          ]} />
-        </Animated.View>
-        <Animated.View style={[
-          styles.skeletonLine,
-          { width: 200, height: 12, marginTop: 8, opacity: shimmerOpacity }
-        ]}>
-          <Animated.View style={[
-            styles.shimmerOverlay,
-            { transform: [{ translateX: shimmerTranslate }] }
-          ]} />
-        </Animated.View>
-      </View>
-      <SkeletonCard hasImage={true} />
-      <SkeletonCard hasImage={false} />
-      <SkeletonCard hasImage={true} />
+      {[1, 2, 3].map((i) => (
+        <View key={i} style={styles.skeletonCard}>
+          <View style={styles.skeletonHeader}>
+            <Animated.View style={[styles.skeletonAvatar, { opacity: shimmerOpacity }]} />
+            <View style={styles.skeletonHeaderText}>
+              <Animated.View style={[styles.skeletonLine, { width: 100, height: 12, opacity: shimmerOpacity }]} />
+              <Animated.View style={[styles.skeletonLine, { width: 70, height: 10, marginTop: 6, opacity: shimmerOpacity }]} />
+            </View>
+          </View>
+          <Animated.View style={[styles.skeletonLine, { width: '90%', height: 14, marginTop: 12, opacity: shimmerOpacity }]} />
+          <Animated.View style={[styles.skeletonLine, { width: '70%', height: 14, marginTop: 8, opacity: shimmerOpacity }]} />
+          <Animated.View style={[styles.skeletonImage, { opacity: shimmerOpacity }]} />
+          <View style={styles.skeletonFooter}>
+            <Animated.View style={[styles.skeletonAction, { opacity: shimmerOpacity }]} />
+            <Animated.View style={[styles.skeletonAction, { opacity: shimmerOpacity }]} />
+          </View>
+        </View>
+      ))}
     </View>
   );
 };
@@ -161,6 +72,8 @@ export default function ConfessionScreen() {
   const [confessions, setConfessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedPosts, setExpandedPosts] = useState({});
+  const [textLineCounts, setTextLineCounts] = useState({});
 
   const [modalVisible, setModalVisible] = useState(false);
   const [newConfession, setNewConfession] = useState("");
@@ -172,10 +85,18 @@ export default function ConfessionScreen() {
   const [commentText, setCommentText] = useState("");
   const [commentLoading, setCommentLoading] = useState(false);
 
-  // Enhanced animations
+  // Animations
   const fabScale = useRef(new Animated.Value(1)).current;
   const modalSlide = useRef(new Animated.Value(300)).current;
-  const headerFade = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 400,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   useEffect(() => {
     if (modalVisible) {
@@ -187,13 +108,6 @@ export default function ConfessionScreen() {
         useNativeDriver: true 
       }).start();
     }
-    
-    // Header entrance animation
-    Animated.timing(headerFade, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
   }, [modalVisible]);
 
   const fetchConfessions = useCallback(async () => {
@@ -210,7 +124,6 @@ export default function ConfessionScreen() {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       
       const data = await response.json();
-      // ✅ Filter: Only show confessions from same university
       const userUniversity = user?.university?.name || user?.university?._id;
       const filteredData = data.filter(confession => {
         if (!userUniversity) return true;
@@ -230,6 +143,32 @@ export default function ConfessionScreen() {
   useEffect(() => {
     fetchConfessions();
   }, [fetchConfessions]);
+
+  const toggleExpand = (postId) => {
+    setExpandedPosts(prev => ({
+      ...prev,
+      [postId]: !prev[postId]
+    }));
+  };
+
+  const handleTextLayout = (postId, event) => {
+    const lines = event.nativeEvent.lines.length;
+    // Only set if > 7 lines and not already set
+    if (lines > 7 && textLineCounts[postId] !== lines) {
+      setTextLineCounts(prev => ({
+        ...prev,
+        [postId]: lines
+      }));
+    }
+    // If <= 7 lines, ensure it's not in the state
+    if (lines <= 7 && textLineCounts[postId] !== undefined) {
+      setTextLineCounts(prev => {
+        const newState = {...prev};
+        delete newState[postId];
+        return newState;
+      });
+    }
+  };
 
   const handleLike = async (id) => {
     if (!token) return;
@@ -254,7 +193,7 @@ export default function ConfessionScreen() {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
     } catch (err) { 
-      fetchConfessions(); // Revert on error
+      fetchConfessions();
     }
   };
 
@@ -335,94 +274,166 @@ export default function ConfessionScreen() {
     setModalVisible(true);
   };
 
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!status) return Alert.alert("Permission required", "Allow access to your photos.");
+    
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.7,
+    });
+    
+    if (!result.canceled) setSelectedImage(result.assets[0].uri);
+  };
+
   const renderConfession = ({ item, index }) => {
     const isLiked = item.likedByCurrentUser;
+    const isExpanded = expandedPosts[item._id] || false;
+    const lineCount = textLineCounts[item._id] || 0;
+    const shouldShowMore = lineCount > 7;
+    // Also check if text might be long (fallback check)
+    const textLength = item.text?.length || 0;
+    const likelyLongText = textLength > 200;
 
     return (
-      <Animated.View style={styles.card}>
-        {/* Enhanced Header */}
+      <Animated.View 
+        style={[
+          styles.card,
+          {
+            opacity: fadeAnim,
+            transform: [{
+              translateY: fadeAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [15, 0]
+              })
+            }]
+          }
+        ]}
+      >
+        {/* Card Header - Anonymous */}
         <View style={styles.cardHeader}>
-          <View style={styles.headerInfo}>
+          <View style={styles.headerLeft}>
             <LinearGradient 
-              colors={['#6d6b67', '#6a6968']} 
-              start={{ x: 0, y: 0 }} 
-              end={{ x: 1, y: 1 }}
-              style={styles.secretIcon}
+              colors={['#1a1a1a', '#2d2d2d']} 
+              style={styles.avatarCircle}
             >
-              <Ionicons name="eye-off" size={16} color="#fff" />
+              <Ionicons name="person" size={18} color="#f9c349" />
             </LinearGradient>
             <View>
-              <Text style={styles.anonymousText}>Anonymous Confession</Text>
-              <Text style={styles.timeText}>
-                {item.location || "TDC Campus"} </Text>
-              <Text style={styles.timeText}> {new Date(item.createdAt).toLocaleDateString('en-US', { 
+              <Text style={styles.anonymousName}>Anonymous</Text>
+              <Text style={styles.postTime}>
+                {new Date(item.createdAt).toLocaleDateString('en-US', { 
                   month: 'short', 
-                  day: 'numeric', 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
                 })}
               </Text>
             </View>
           </View>
+          <View style={styles.badgeContainer}>
+            <LinearGradient
+              colors={['#f9c349', '#e6b800']}
+              style={styles.confessionBadge}
+            >
+              <Ionicons name="lock-closed" size={10} color="#fff" />
+              <Text style={styles.badgeText}>Confession</Text>
+            </LinearGradient>
+          </View>
         </View>
 
-        {/* Enhanced Content */}
-        {item.text ? (
-          <Text style={styles.confessionText}>
-            {item.text}
-          </Text>
-        ) : null}
+        {/* Content with Show More */}
+        {item.text && (
+          <View>
+            <Text 
+              style={styles.confessionText}
+              numberOfLines={isExpanded ? undefined : 7}
+              onTextLayout={(event) => {
+                // This will fire when text is measured
+                const lines = event.nativeEvent.lines.length;
+                if (lines > 7) {
+                  setTextLineCounts(prev => ({
+                    ...prev,
+                    [item._id]: lines
+                  }));
+                } else {
+                  // If 7 or fewer lines, remove from state
+                  setTextLineCounts(prev => {
+                    const newState = {...prev};
+                    delete newState[item._id];
+                    return newState;
+                  });
+                }
+              }}
+            >
+              {item.text}
+            </Text>
+            {(shouldShowMore || likelyLongText) && (
+              <TouchableOpacity 
+                onPress={() => toggleExpand(item._id)} 
+                style={styles.showMoreBtn}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.showMoreText}>
+                  {isExpanded ? 'Show less' : `Show more`}
+                </Text>
+                <Ionicons 
+                  name={isExpanded ? 'chevron-up' : 'chevron-down'} 
+                  size={16} 
+                  color="#f9c349" 
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
         
-        {/* Enhanced Image Display */}
-        {item.image ? (
+        {item.image && (
           <View style={styles.imageContainer}>
             <Image 
               source={{ uri: item.image }} 
               style={styles.postImage}
               resizeMode="cover"
-              onError={() => console.log('Image load error')}
             />
             <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.03)']}
-              style={styles.imageGradient}
+              colors={['transparent', 'rgba(0,0,0,0.05)']}
+              style={styles.imageOverlay}
             />
           </View>
-        ) : null}
+        )}
 
-        {/* Enhanced Footer */}
+        {/* Footer Actions */}
         <View style={styles.cardFooter}>
-          <View style={styles.footerLeft}>
-            <TouchableOpacity 
-              style={[styles.actionBtn, isLiked && styles.actionBtnLiked]} 
-              onPress={() => handleLike(item._id)} 
-              activeOpacity={0.7}
-            >
-              <Ionicons 
-                name={isLiked ? "heart" : "heart-outline"} 
-                size={20} 
-                color={isLiked ? "#ff4757" : "#666"} 
-              />
-              <Text style={[styles.actionText, isLiked && {color: "#ff4757"}]}>
-                {item.likes > 0 ? item.likes : 'Like'}
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.actionBtn} 
-              onPress={() => openComments(item)} 
-              activeOpacity={0.7}
-            >
-              <Ionicons name="chatbubble-outline" size={18} color="#666" />
-              <Text style={styles.actionText}>
-                {item.comments?.length > 0 ? item.comments.length : 'Comment'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity 
+            style={[styles.actionBtn, isLiked && styles.actionBtnLiked]} 
+            onPress={() => handleLike(item._id)} 
+            activeOpacity={0.7}
+          >
+            <Ionicons 
+              name={isLiked ? "heart" : "heart-outline"} 
+              size={20} 
+              color={isLiked ? "#f9c349" : "#666"} 
+            />
+            <Text style={[styles.actionText, isLiked && {color: "#f9c349"}]}>
+              {item.likes > 0 ? item.likes : 'Like'}
+            </Text>
+          </TouchableOpacity>
           
           <TouchableOpacity 
-            style={styles.shareBtn}
+            style={styles.actionBtn} 
+            onPress={() => openComments(item)} 
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chatbubble-outline" size={18} color="#666" />
+            <Text style={styles.actionText}>
+              {item.comments?.length > 0 ? item.comments.length : 'Comment'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.actionBtn}
             onPress={() => Share.share({ 
-              message: ` Anonymous Confession: "${item.text}"\n\nShared via TDC App` 
+              message: `💭 Anonymous Confession: "${item.text}"\n\nShared via TDC` 
             })}
           >
             <Ionicons name="share-social-outline" size={18} color="#666" />
@@ -435,635 +446,550 @@ export default function ConfessionScreen() {
   if (loading) return <ConfessionSkeleton />;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      
-      {/* Enhanced Header */}
-      <Animated.View style={[styles.header, { opacity: headerFade }]}>
-        <LinearGradient
-          colors={['#ffffff', '#fafafa']}
-          style={styles.headerGradient}
-        >
-          <View style={styles.headerTop}>
-            <View style={styles.logoContainer}>
-              <Text style={styles.logoText}>tdc</Text>
-              <Text style={styles.logoDot}>.</Text>
-            </View>
-            <View style={styles.headerBadge}>
-              <Text style={styles.headerLabel}>💭 Confessions</Text>
-            </View>
-          </View>
-        </LinearGradient>
-        <View style={styles.headerSubContainer}>
-          <Ionicons name="school" size={15} color="#f9c349" />
-          <Text style={styles.headerSub}>
-            {user?.university?.name || "Your Campus"} 
-            
-          </Text>
-        </View>
-        <View style={styles.headerDivider} />
-      </Animated.View>
-
-      {/* Feed */}
-      <FlatList
-        data={confessions}
-        renderItem={renderConfession}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
-            onRefresh={() => { 
-              setRefreshing(true); 
-              fetchConfessions(); 
-            }} 
-            tintColor="#f9c349"
-            colors={["#f9c349"]}
-            progressBackgroundColor="#ffffff"
-          />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <LinearGradient
-              colors={['#f8f9fa', '#ffffff']}
-              style={styles.emptyState}
-            >
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.container}>
+        <FlatList
+          data={confessions}
+          renderItem={renderConfession}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={() => { 
+                setRefreshing(true); 
+                fetchConfessions(); 
+              }} 
+              tintColor="#f9c349"
+              colors={["#f9c349"]}
+              progressBackgroundColor="#ffffff"
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
               <View style={styles.emptyIconCircle}>
                 <Ionicons name="chatbubble-ellipses-outline" size={50} color="#f9c349" />
               </View>
-              <Text style={styles.emptyText}>🌟 No Confessions Yet</Text>
-              <Text style={styles.emptySubText}>
-                Be the first to share your thoughts anonymously!
+              <Text style={styles.emptyTitle}>No Confessions Yet</Text>
+              <Text style={styles.emptySubtitle}>
+                Share your thoughts anonymously with your campus community
               </Text>
               <TouchableOpacity 
-                style={styles.emptyActionBtn}
+                style={styles.emptyBtn}
                 onPress={handleFabPress}
               >
-                <Text style={styles.emptyActionText}>Create First Confession</Text>
-                <Ionicons name="arrow-forward" size={16} color="#f9c349" />
-              </TouchableOpacity>
-            </LinearGradient>
-          </View>
-        }
-        showsVerticalScrollIndicator={false}
-      />
-
-      {/* Enhanced FAB */}
-      <Animated.View style={[styles.fabContainer, { transform: [{ scale: fabScale }] }]}>
-        <TouchableOpacity 
-          style={styles.fab} 
-          onPress={handleFabPress} 
-          activeOpacity={0.8}
-        >
-          <LinearGradient 
-            colors={['#1a1a1a', '#2d2d2d']} 
-            style={styles.fabGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Ionicons name="pencil" size={22} color="#f9c349" />
-          </LinearGradient>
-        </TouchableOpacity>
-      </Animated.View>
-
-      {/* Create Post Modal */}
-      <Modal visible={modalVisible} animationType="fade" transparent onRequestClose={resetForm}>
-        <View style={styles.modalOverlay}>
-          <Animated.View style={[styles.modalContent, { transform: [{ translateY: modalSlide }] }]}>
-            <View style={styles.dragHandle} />
-            <View style={styles.modalHeader}>
-              <View style={styles.modalHeaderLeft}>
-                <Ionicons name="lock-closed" size={16} color="#f9c349" />
-                <Text style={styles.modalTitle}>Anonymous Confession</Text>
-              </View>
-              <TouchableOpacity onPress={resetForm} style={styles.closeBtn}>
-                <Ionicons name="close" size={22} color="#1a1a1a" />
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.anonymityNotice}>
-              <Ionicons name="shield-checkmark" size={14} color="#f9c349" />
-              <Text style={styles.anonymityText}>
-                Your identity is 100% anonymous
-              </Text>
-            </View>
-            
-            <TextInput
-              style={styles.input}
-              placeholder="What's on your mind? 🤔"
-              placeholderTextColor="#999"
-              multiline
-              value={newConfession}
-              onChangeText={setNewConfession}
-              maxLength={1000}
-            />
-            
-            <Text style={styles.charCount}>
-              {newConfession.length}/1000
-            </Text>
-            
-            {selectedImage && (
-              <View style={styles.previewContainer}>
-                <Image source={{ uri: selectedImage }} style={styles.previewImage} />
-                <TouchableOpacity style={styles.removeImage} onPress={() => setSelectedImage(null)}>
-                  <LinearGradient
-                    colors={['rgba(0,0,0,0.8)', 'rgba(0,0,0,0.6)']}
-                    style={styles.removeImageGradient}
-                  >
-                    <Ionicons name="close-circle" size={24} color="#fff" />
-                  </LinearGradient>
-                </TouchableOpacity>
-              </View>
-            )}
-            
-            <TouchableOpacity 
-              style={styles.imagePickBtn} 
-              onPress={async () => {
-                let result = await ImagePicker.launchImageLibraryAsync({ 
-                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                  quality: 0.8 
-                });
-                if (!result.canceled) setSelectedImage(result.assets[0].uri);
-              }}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="image-outline" size={20} color="#f9c349" />
-              <Text style={styles.imagePickText}>Add Photo</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.submitBtn} 
-              onPress={handlePost} 
-              disabled={posting} 
-              activeOpacity={0.8}
-            >
-              <LinearGradient 
-                colors={['#1a1a1a', '#2d2d2d']} 
-                style={styles.gradientBtn}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                {posting ? (
-                  <ActivityIndicator color="#f9c349" />
-                ) : (
-                  <>
-                    <Text style={styles.submitText}>Share Anonymously</Text>
-                    <Ionicons name="send" size={18} color="#f9c349" />
-                  </>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-          </Animated.View>
-        </View>
-      </Modal>
-
-      {/* Comments Modal */}
-      <Modal visible={commentModalVisible} animationType="slide" transparent onRequestClose={() => setCommentModalVisible(false)}>
-        <View style={styles.commentModalOverlay}>
-          <View style={styles.commentModalContainer}>
-            <View style={styles.dragHandle} />
-            <View style={styles.commentHeader}>
-              <View style={styles.commentHeaderLeft}>
-                <Ionicons name="chatbubbles" size={18} color="#f9c349" />
-                <Text style={styles.commentTitle}>Comments</Text>
-                {selectedPost?.comments?.length > 0 && (
-                  <View style={styles.commentCountBadge}>
-                    <Text style={styles.commentCountText}>
-                      {selectedPost.comments.length}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              <TouchableOpacity onPress={() => setCommentModalVisible(false)} style={styles.closeBtn}>
-                <Ionicons name="close" size={22} color="#1a1a1a" />
-              </TouchableOpacity>
-            </View>
-
-            <FlatList
-              data={selectedPost?.comments || []}
-              keyExtractor={(item, index) => item._id || index.toString()}
-              contentContainerStyle={{ padding: 16, flexGrow: 1 }}
-              ListEmptyComponent={
-                <View style={styles.emptyComments}>
-                  <Ionicons name="chatbubble-outline" size={50} color="#f9c349" />
-                  <Text style={styles.emptyCommentText}>
-                    No comments yet. Be the first! 🌟
-                  </Text>
-                </View>
-              }
-              renderItem={({ item }) => (
-                <View style={styles.commentItem}>
-                  <LinearGradient
-                    colors={['#747065', '#2d2d2d']}
-                    style={styles.commentAvatar}
-                  >
-                    <Ionicons name="person" size={14} color="#fff" />
-                  </LinearGradient>
-                  <View style={styles.commentBody}>
-                    <Text style={styles.commentUser}>🤫 Anonymous</Text>
-                    <Text style={styles.commentTextContent}>{item.text}</Text>
-                    <Text style={styles.commentTime}>
-                      {new Date(item.createdAt).toLocaleDateString()}
-                    </Text>
-                  </View>
-                </View>
-              )}
-            />
-
-            <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
-              <View style={styles.commentInputContainer}>
-                <TextInput
-                  style={styles.commentInput}
-                  placeholder="Write an anonymous comment..."
-                  placeholderTextColor="#999"
-                  value={commentText}
-                  onChangeText={setCommentText}
-                  multiline
-                  maxLength={500}
-                />
-                <TouchableOpacity 
-                  onPress={handlePostComment} 
-                  disabled={commentLoading || !commentText.trim()}
-                  style={[styles.sendBtn, !commentText.trim() && styles.sendBtnDisabled]}
+                <LinearGradient
+                  colors={['#1a1a1a', '#2d2d2d']}
+                  style={styles.emptyBtnGradient}
                 >
-                  <LinearGradient
-                    colors={commentText.trim() ? ['#1a1a1a', '#2d2d2d'] : ['#ccc', '#ddd']}
-                    style={styles.sendBtnGradient}
+                  <Text style={styles.emptyBtnText}>Create Confession</Text>
+                  <Ionicons name="arrow-forward" size={18} color="#f9c349" />
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          }
+          showsVerticalScrollIndicator={false}
+        />
+
+        {/* FAB Button */}
+        <Animated.View style={[styles.fabContainer, { transform: [{ scale: fabScale }] }]}>
+          <TouchableOpacity style={styles.fab} onPress={handleFabPress} activeOpacity={0.8}>
+            <LinearGradient 
+              colors={['#1a1a1a', '#2d2d2d']} 
+              style={styles.fabGradient}
+            >
+              <Ionicons name="add" size={28} color="#f9c349" />
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Create Confession Modal - FIXED */}
+        <Modal 
+          visible={modalVisible} 
+          animationType="fade" 
+          transparent 
+          onRequestClose={resetForm}
+        >
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.modalOverlay}
+          >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <View style={styles.modalOverlay}>
+                <Animated.View style={[styles.modalContent, { transform: [{ translateY: modalSlide }] }]}>
+                  <View style={styles.dragHandle} />
+                  
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Share Confession</Text>
+                    <TouchableOpacity onPress={resetForm} style={styles.closeBtn}>
+                      <Ionicons name="close" size={22} color="#1a1a1a" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.anonymityBadge}>
+                    <Ionicons name="shield-checkmark" size={14} color="#f9c349" />
+                    <Text style={styles.anonymityText}>
+                      Your identity is 100% anonymous
+                    </Text>
+                  </View>
+                  
+                  <TextInput
+                    style={styles.input}
+                    placeholder="What's on your mind? 🤔"
+                    placeholderTextColor="#999"
+                    multiline
+                    value={newConfession}
+                    onChangeText={setNewConfession}
+                    maxLength={1000}
+                    returnKeyType="done"
+                    blurOnSubmit={true}
+                  />
+                  
+                  <Text style={styles.charCount}>
+                    {newConfession.length}/1000
+                  </Text>
+                  
+                  
+
+                  
+
+                  <TouchableOpacity 
+                    style={styles.submitBtn} 
+                    onPress={handlePost} 
+                    disabled={posting} 
+                    activeOpacity={0.8}
                   >
-                    <Ionicons name="send" size={18} color="#fff" />
-                  </LinearGradient>
-                </TouchableOpacity>
+                    <LinearGradient 
+                      colors={['#1a1a1a', '#2d2d2d']} 
+                      style={styles.submitGradient}
+                    >
+                      {posting ? (
+                        <ActivityIndicator color="#f9c349" />
+                      ) : (
+                        <>
+                          <Text style={styles.submitText}>Post Confession</Text>
+                          <Ionicons name="send" size={18} color="#f9c349" />
+                        </>
+                      )}
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </Animated.View>
               </View>
-            </KeyboardAvoidingView>
-          </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
+        </Modal>
+
+        {/* Comments Modal - FIXED */}
+        <Modal 
+          visible={commentModalVisible} 
+          animationType="slide" 
+          transparent 
+          onRequestClose={() => setCommentModalVisible(false)}
+        >
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.commentModalOverlay}
+          >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <View style={styles.commentModalOverlay}>
+                <View style={styles.commentModalContainer}>
+                  <View style={styles.dragHandle} />
+                  
+                  <View style={styles.commentHeader}>
+                    <View style={styles.commentHeaderLeft}>
+                      <Ionicons name="chatbubbles" size={20} color="#f9c349" />
+                      <Text style={styles.commentTitle}>Comments</Text>
+                      {selectedPost?.comments?.length > 0 && (
+                        <View style={styles.commentCount}>
+                          <Text style={styles.commentCountText}>
+                            {selectedPost.comments.length}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <TouchableOpacity onPress={() => setCommentModalVisible(false)} style={styles.closeBtn}>
+                      <Ionicons name="close" size={22} color="#1a1a1a" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <FlatList
+                    data={selectedPost?.comments || []}
+                    keyExtractor={(item, index) => item._id || index.toString()}
+                    contentContainerStyle={styles.commentList}
+                    ListEmptyComponent={
+                      <View style={styles.emptyComments}>
+                        <Ionicons name="chatbubble-outline" size={50} color="#e0e0e0" />
+                        <Text style={styles.emptyCommentTitle}>No comments yet</Text>
+                        <Text style={styles.emptyCommentSub}>Be the first to comment!</Text>
+                      </View>
+                    }
+                    renderItem={({ item }) => (
+                      <View style={styles.commentItem}>
+                        <View style={styles.commentAvatar}>
+                          <Ionicons name="person" size={14} color="#f9c349" />
+                        </View>
+                        <View style={styles.commentBody}>
+                          <Text style={styles.commentUser}>Anonymous</Text>
+                          <Text style={styles.commentText}>{item.text}</Text>
+                          <Text style={styles.commentTime}>
+                            {new Date(item.createdAt).toLocaleDateString()}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                  />
+
+                  <View style={styles.commentInputContainer}>
+                    <TextInput
+                      style={styles.commentInput}
+                      placeholder="Write an anonymous comment..."
+                      placeholderTextColor="#999"
+                      value={commentText}
+                      onChangeText={setCommentText}
+                      multiline
+                      maxLength={800}
+                      returnKeyType="done"
+                      blurOnSubmit={true}
+                    />
+                    <TouchableOpacity 
+                      onPress={handlePostComment} 
+                      disabled={commentLoading || !commentText.trim()}
+                      style={[styles.sendBtn, !commentText.trim() && styles.sendBtnDisabled]}
+                    >
+                      <LinearGradient
+                        colors={commentText.trim() ? ['#1a1a1a', '#2d2d2d'] : ['#ccc', '#ddd']}
+                        style={styles.sendBtnGradient}
+                      >
+                        <Ionicons name="send" size={18} color="#fff" />
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
+        </Modal>
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: "#ffffff" 
+    backgroundColor: "#f8f9fa" 
   },
-  
-  // Enhanced Skeleton Styles
+
+  // Skeleton
   skeletonContainer: { 
-    flex: 1, 
-    backgroundColor: '#ffffff',
-    padding: 16 
-  },
-  skeletonTitle: {
-    paddingVertical: 12,
-    marginBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0'
+    padding: 12,
+    paddingTop: 4,
   },
   skeletonCard: { 
     backgroundColor: '#fff', 
-    borderRadius: 20, 
-    padding: 20, 
-    marginBottom: 16, 
+    borderRadius: 16, 
+    padding: 16, 
+    marginBottom: 12,
     borderWidth: 1, 
     borderColor: '#f0f0f0',
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
-    overflow: 'hidden'
   },
   skeletonHeader: { 
     flexDirection: 'row', 
     alignItems: 'center',
-    marginBottom: 8
-  },
-  skeletonHeaderText: {
-    flex: 1
+    marginBottom: 12
   },
   skeletonAvatar: { 
-    width: 44, 
-    height: 44, 
-    borderRadius: 14, 
+    width: 40, 
+    height: 40, 
+    borderRadius: 12, 
     backgroundColor: '#f0f0f0', 
-    marginRight: 12,
-    overflow: 'hidden'
+    marginRight: 12
+  },
+  skeletonHeaderText: { flex: 1 },
+  skeletonLine: { 
+    backgroundColor: '#f0f0f0', 
+    borderRadius: 4
   },
   skeletonImage: {
     width: '100%',
-    height: 200,
+    height: 180,
     borderRadius: 12,
     backgroundColor: '#f0f0f0',
-    marginTop: 12,
-    overflow: 'hidden'
+    marginTop: 12
   },
   skeletonFooter: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
     marginTop: 16,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f5f5f5'
-  },
-  skeletonActions: {
-    flexDirection: 'row',
+    borderTopColor: '#f5f5f5',
     gap: 24
   },
   skeletonAction: {
     width: 60,
     height: 20,
     backgroundColor: '#f0f0f0',
-    borderRadius: 10,
-    overflow: 'hidden'
+    borderRadius: 10
   },
-  shimmerOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-    width: '100%',
-  },
-  skeletonLine: { 
-    backgroundColor: '#f0f0f0', 
-    borderRadius: 6,
-    overflow: 'hidden'
-  },
-  
-  // Enhanced Header Styles
-  header: { 
-    backgroundColor: '#ffffff',
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-  },
-  headerGradient: {
-    paddingHorizontal: 16, 
-    paddingVertical: 12,
-  },
-  headerTop: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between',
-    marginBottom: 4
-  },
-  logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  logoText: { 
-    fontSize: 28, 
-    fontWeight: '900', 
-    color: '#1a1a1a',
-    letterSpacing: -1,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'normal',
-  },
-  logoDot: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#f9c349',
-    marginLeft: -2,
-  },
-  headerBadge: {
-    backgroundColor: '#f8f9fa',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
-  },
-  headerLabel: { 
-    fontSize: 15, 
-    fontWeight: '700', 
-    color: '#1a1a1a',
-    letterSpacing: 0.3,
-  },
-  headerSubContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    gap: 6,
-  },
-  headerSub: { 
-    color: '#666', 
-    fontSize: 11, 
-    fontWeight: '500',
-  },
-  headerSubAccent: {
-    color: '#f9c349',
-    fontWeight: '600',
-  },
-  headerDivider: {
-    height: 3,
-    backgroundColor: '#f9c349',
-    width: '40%',
-    marginLeft: 16,
-    borderRadius: 2,
-  },
-  
-  // List Styles
+
+  // List Content
   listContent: { 
-    padding: 16, 
-    paddingBottom: 100 
+    padding: 12,
+    paddingBottom: 100,
+    paddingTop: 4,
   },
-  
-  // Enhanced Card Styles
+
+  // Card Styles
   card: { 
-    backgroundColor: "#fff", 
-    borderRadius: 20, 
-   
-    marginBottom: 16, 
-    padding:10,
+    backgroundColor: '#fff', 
+    borderRadius: 16, 
+    marginBottom: 12, 
+    marginTop:8,
+    padding: 16,
     borderWidth: 1, 
-    borderColor: "#f0f0f0",
+    borderColor: '#f0f0f0',
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
-    transform: [{ scale: 1 }],
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   cardHeader: { 
-    flexDirection: "row", 
-    marginBottom: 10,
-    alignItems: 'flex-start'
-  },
-  headerInfo: { 
     flexDirection: 'row', 
+    justifyContent: 'space-between', 
     alignItems: 'center',
-    flex: 1
+    marginBottom: 12
   },
-  secretIcon: { 
-    width: 44, 
-    height: 44, 
-    borderRadius: 14, 
-    justifyContent: "center", 
-    alignItems: "center", 
-    marginRight: 12,
-    shadowColor: "#f9c349",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
+  headerLeft: { 
+    flexDirection: 'row', 
+    alignItems: 'center' 
   },
-  anonymousText: { 
-    fontWeight: "700", 
-    color: "#1a1a1a", 
-    fontSize: 15,
-    letterSpacing: 0.3,
+  avatarCircle: { 
+    width: 40, 
+    height: 40, 
+    borderRadius: 12, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    marginRight: 12
   },
-  timeText: { 
+  anonymousName: { 
+    fontWeight: '700', 
+    fontSize: 14, 
+    color: '#1a1a1a' 
+  },
+  postTime: { 
     fontSize: 11, 
-    color: "#999", 
-    marginTop: 3, 
-    fontWeight: '500',
-    letterSpacing: 0.2,
+    color: '#999', 
+    marginTop: 2,
+    fontWeight: '500'
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+  },
+  confessionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   confessionText: { 
     fontSize: 15, 
-    color: "#1a1a1a", 
+    color: '#1a1a1a', 
     lineHeight: 24, 
-    marginBottom: 5, 
-    fontWeight: '500',
-    fontStyle: 'italic',
-    
-    padding: 14,
-    borderRadius: 12,
-    
-    
+    marginBottom: 4,
+    fontWeight: '400',
   },
-  
-  // Enhanced Image Container
+  showMoreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    gap: 6,
+    marginTop: 2,
+  },
+  showMoreText: {
+    fontSize: 13,
+    color: '#f9c349',
+    fontWeight: '700',
+  },
   imageContainer: {
     position: 'relative',
-    marginBottom: 10,
+    marginBottom: 12,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#f8f8f8',
   },
   postImage: { 
     width: '100%', 
-    height: 320, 
+    height: 280, 
     borderRadius: 12,
     backgroundColor: '#f8f8f8',
-    
   },
-  imageGradient: {
+  imageOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     height: 40,
   },
-  
-  // Enhanced Footer
   cardFooter: { 
-    flexDirection: "row", 
-    justifyContent: "space-between", 
-    alignItems: "center", 
-    borderTopWidth: 1, 
-    borderTopColor: "#f5f5f5", 
-    paddingTop: 14,
-    marginTop: 4,
-  },
-  footerLeft: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    gap: 8 
+    borderTopWidth: 1, 
+    borderTopColor: '#f5f5f5', 
+    paddingTop: 12,
+    gap: 8,
   },
   actionBtn: { 
-    flexDirection: "row", 
-    alignItems: "center", 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingVertical: 6,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 16,
     backgroundColor: '#f8f9fa',
     gap: 6,
   },
   actionBtnLiked: {
-    backgroundColor: '#fff5f5',
+    backgroundColor: '#fef9f0',
   },
   actionText: { 
-    color: "#666", 
+    color: '#666', 
     fontSize: 13, 
-    fontWeight: "600" 
+    fontWeight: '600' 
   },
-  shareBtn: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#f8f9fa',
+
+  // Empty State
+  emptyContainer: { 
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+    paddingTop: 60,
   },
-  
-  // Enhanced FAB
+  emptyIconCircle: { 
+    width: 80, 
+    height: 80, 
+    borderRadius: 20, 
+    backgroundColor: '#fef9f0', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fdebd0',
+    marginBottom: 20,
+  },
+  emptyTitle: { 
+    fontSize: 22, 
+    fontWeight: '800', 
+    color: '#1a1a1a',
+    marginBottom: 8,
+  },
+  emptySubtitle: { 
+    fontSize: 14, 
+    color: '#999', 
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  emptyBtn: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: "#1a1a1a",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  emptyBtnGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    gap: 8,
+  },
+  emptyBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+
+  // FAB
   fabContainer: {
-    position: "absolute", 
-    bottom: 24, 
-    right: 16, 
-    elevation: 8, 
-    shadowColor: "#f9c349", 
-    shadowOffset: { width: 0, height: 4 }, 
-    shadowOpacity: 0.3, 
-    shadowRadius: 10,
+    position: 'absolute', 
+    bottom: 140, 
+    right:17, 
+    elevation: 8,
+    shadowColor: "#1a1a1a",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
   },
   fab: {
-    borderRadius: 18,
+    borderRadius: 16,
     overflow: 'hidden',
   },
   fabGradient: { 
-    width: 58, 
-    height: 58, 
-    borderRadius: 18, 
-    justifyContent: "center", 
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: '#f9c34933',
+    width: 47, 
+    height: 47, 
+    borderRadius: 47, 
+    justifyContent: 'center', 
+    alignItems: 'center',
   },
-  
-  // Enhanced Modal Styles
+
+  // Modal
   modalOverlay: { 
     flex: 1, 
-    backgroundColor: "rgba(0,0,0,0.5)", 
-    justifyContent: "flex-end" 
+    backgroundColor: 'rgba(0,0,0,0.5)', 
+    justifyContent: 'flex-end' 
   },
   modalContent: { 
-    backgroundColor: "#fff", 
-    borderTopLeftRadius: 28, 
-    borderTopRightRadius: 28, 
-    padding: 24, 
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24, 
-    maxHeight: height * 0.85 
+    backgroundColor: '#fff', 
+    borderTopLeftRadius: 24, 
+    borderTopRightRadius: 24, 
+    padding: 20, 
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    maxHeight: height * 0.85,
+    marginBottom: Platform.OS === 'ios' ? 20 : 0, // Add extra margin for iOS
   },
   dragHandle: { 
     width: 40, 
-    height: 5, 
+    height: 4, 
     backgroundColor: '#e0e0e0', 
-    borderRadius: 3, 
+    borderRadius: 2, 
     alignSelf: 'center', 
-    marginBottom: 20 
+    marginBottom: 16,
   },
   modalHeader: { 
-    flexDirection: "row", 
-    justifyContent: "space-between", 
-    alignItems: "center", 
-    marginBottom: 12 
-  },
-  modalHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 12,
   },
   modalTitle: { 
     fontSize: 20, 
-    fontWeight: "800", 
-    color: '#1a1a1a',
-    letterSpacing: 0.3,
+    fontWeight: '800', 
+    color: '#1a1a1a' 
   },
-  anonymityNotice: {
+  closeBtn: { 
+    width: 36, 
+    height: 36, 
+    borderRadius: 10, 
+    backgroundColor: '#f8f8f8', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  anonymityBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -1072,32 +998,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 10,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#fdebd0',
   },
   anonymityText: {
     fontSize: 12,
     color: '#f9c349',
     fontWeight: '600',
   },
-  closeBtn: { 
-    width: 38, 
-    height: 38, 
-    borderRadius: 12, 
-    backgroundColor: '#f8f8f8', 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
-  
   input: { 
     fontSize: 15, 
     minHeight: 120, 
+    maxHeight: 200,
     textAlignVertical: 'top',
     borderWidth: 2, 
-    borderColor: "#f0f0f0", 
-    borderRadius: 16, 
-    padding: 16,
-    marginBottom: 8, 
+    borderColor: '#f0f0f0', 
+    borderRadius: 14, 
+    padding: 14,
+    marginBottom: 6, 
     color: '#1a1a1a', 
     backgroundColor: '#fafafa',
     lineHeight: 22,
@@ -1106,38 +1022,36 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#999',
     textAlign: 'right',
-    marginBottom: 16,
-    fontWeight: '500',
+    marginBottom: 12,
   },
   previewContainer: { 
     position: 'relative', 
-    marginBottom: 16,
+    marginBottom: 12,
     borderRadius: 12,
     overflow: 'hidden',
   },
   previewImage: { 
     width: '100%', 
-    height: 200, 
-    borderRadius: 12 
+    height: 180, 
+    borderRadius: 12,
   },
   removeImage: { 
     position: 'absolute', 
-    top: 10, 
-    right: 10,
-    borderRadius: 12,
+    top: 8, 
+    right: 8,
   },
-  removeImageGradient: {
+  removeImageBtn: {
+    backgroundColor: 'rgba(0,0,0,0.6)',
     borderRadius: 12,
     padding: 4,
   },
-  
   imagePickBtn: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    marginBottom: 16,
-    padding: 16, 
-    backgroundColor: "#fafafa", 
-    borderRadius: 16,
+    marginBottom: 12,
+    padding: 14, 
+    backgroundColor: '#fafafa', 
+    borderRadius: 14,
     justifyContent: 'center', 
     borderWidth: 2, 
     borderColor: '#f0f0f0', 
@@ -1149,52 +1063,43 @@ const styles = StyleSheet.create({
     fontWeight: '700', 
     fontSize: 14 
   },
-  
   submitBtn: { 
-    borderRadius: 16, 
+    borderRadius: 14, 
     overflow: 'hidden',
-    elevation: 4,
-    shadowColor: "#1a1a1a",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    marginBottom: 10,
   },
-  gradientBtn: { 
-    paddingVertical: 16, 
-    alignItems: "center", 
+  submitGradient: { 
+    paddingVertical: 14, 
+    alignItems: 'center', 
     flexDirection: 'row', 
     justifyContent: 'center', 
-    gap: 10 
+    gap: 10,
   },
   submitText: { 
-    color: "#fff", 
-    fontWeight: "800", 
-    fontSize: 16, 
-    letterSpacing: 0.5 
+    color: '#fff', 
+    fontWeight: '700', 
+    fontSize: 16,
   },
-  
-  // Enhanced Comments Modal
+
+  // Comments Modal
   commentModalOverlay: { 
     flex: 1, 
-    backgroundColor: "rgba(0,0,0,0.5)", 
-    justifyContent: "flex-end" 
+    backgroundColor: 'rgba(0,0,0,0.5)', 
+    justifyContent: 'flex-end' 
   },
   commentModalContainer: { 
     backgroundColor: '#fff', 
     height: height * 0.7, 
-    borderTopLeftRadius: 28, 
-    borderTopRightRadius: 28,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
+    borderTopLeftRadius: 24, 
+    borderTopRightRadius: 24,
+    marginBottom: Platform.OS === 'ios' ? 20 : 0,
   },
   commentHeader: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center', 
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderBottomWidth: 1, 
     borderBottomColor: '#f0f0f0' 
   },
@@ -1204,104 +1109,103 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   commentTitle: { 
-    fontSize: 20, 
+    fontSize: 18, 
     fontWeight: '800', 
     color: '#1a1a1a' 
   },
-  commentCountBadge: {
-    backgroundColor: '#1a1a1a',
+  commentCount: {
+    backgroundColor: '#f8f8f8',
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
   commentCountText: {
-    color: '#fff',
     fontSize: 12,
     fontWeight: '700',
+    color: '#666',
   },
-  
+  commentList: {
+    padding: 16,
+    flexGrow: 1,
+  },
   emptyComments: { 
     alignItems: 'center', 
-    paddingVertical: 60 
+    paddingVertical: 60,
   },
-  emptyCommentText: { 
-    color: '#999', 
-    marginTop: 14, 
-    fontWeight: '500',
-    fontSize: 15,
+  emptyCommentTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#999',
+    marginTop: 12,
   },
-  
+  emptyCommentSub: {
+    fontSize: 13,
+    color: '#ccc',
+    marginTop: 4,
+  },
   commentItem: { 
     flexDirection: 'row', 
-    marginBottom: 22 
+    marginBottom: 16,
   },
   commentAvatar: { 
-    width: 38, 
-    height: 38, 
-    borderRadius: 12, 
+    width: 36, 
+    height: 36, 
+    borderRadius: 10, 
+    backgroundColor: '#f8f8f8',
     justifyContent: 'center', 
     alignItems: 'center', 
     marginRight: 12,
-    shadowColor: "#f9c349",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
   commentBody: { 
     flex: 1, 
     backgroundColor: '#f8f9fa', 
-    padding: 14, 
-    borderRadius: 16, 
-    borderTopLeftRadius: 6 
+    padding: 12, 
+    borderRadius: 14, 
+    borderTopLeftRadius: 6,
   },
   commentUser: { 
     fontWeight: '700', 
-    fontSize: 13, 
-    marginBottom: 4, 
+    fontSize: 12, 
+    marginBottom: 2, 
     color: '#1a1a1a' 
   },
-  commentTextContent: { 
+  commentText: { 
     color: '#444', 
     fontSize: 14, 
-    lineHeight: 22 
+    lineHeight: 20,
   },
   commentTime: {
     fontSize: 10,
     color: '#aaa',
     marginTop: 4,
-    fontWeight: '500',
   },
-  
   commentInputContainer: { 
     flexDirection: 'row', 
     alignItems: 'center', 
     padding: 16, 
     borderTopWidth: 1, 
     borderTopColor: '#f0f0f0', 
-    gap: 10 
+    gap: 10,
+    backgroundColor: '#fff',
   },
   commentInput: { 
     flex: 1, 
-    minHeight: 44, 
-    maxHeight: 120, 
+    minHeight: 42, 
+    maxHeight: 100, 
     backgroundColor: '#f8f9fa', 
-    borderRadius: 22, 
+    borderRadius: 20, 
     paddingHorizontal: 16, 
     paddingVertical: 10,
     fontSize: 14, 
     color: '#1a1a1a' 
   },
   sendBtn: { 
-    width: 44, 
-    height: 44, 
-    borderRadius: 22, 
+    width: 42, 
+    height: 42, 
+    borderRadius: 21, 
     overflow: 'hidden',
-    elevation: 3,
-    shadowColor: "#1a1a1a",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
   },
   sendBtnGradient: {
     width: '100%',
@@ -1311,65 +1215,5 @@ const styles = StyleSheet.create({
   },
   sendBtnDisabled: { 
     opacity: 0.5 
-  },
-  
-  // Enhanced Empty State
-  emptyContainer: { 
-    flex: 1,
-    paddingTop: 60 
-  },
-  emptyState: {
-    alignItems: 'center',
-    padding: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#f0f0f0',
-    borderStyle: 'dashed',
-  },
-  emptyIconCircle: { 
-    width: 90, 
-    height: 90, 
-    borderRadius: 22, 
-    backgroundColor: '#fef9f0', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    borderWidth: 2, 
-    borderColor: '#fdebd0', 
-    marginBottom: 20,
-    shadowColor: "#f9c349",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  emptyText: { 
-    color: '#1a1a1a', 
-    fontSize: 20, 
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  emptySubText: { 
-    color: '#999', 
-    fontSize: 14, 
-    marginBottom: 24,
-    fontWeight: '500',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  emptyActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#fef9f0',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: '#fdebd0',
-  },
-  emptyActionText: {
-    color: '#f9c349',
-    fontWeight: '700',
-    fontSize: 14,
   },
 });

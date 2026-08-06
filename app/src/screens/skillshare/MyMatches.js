@@ -24,93 +24,78 @@ import { timeAgo } from '../../utils/time';
 
 const { width, height } = Dimensions.get('window');
 
-// Match Item Component with animations - FIXED
+// Match Item Component with enhanced animations
 const MatchItem = React.memo(({ item, index, onPress }) => {
   const itemFadeAnim = useRef(new Animated.Value(0)).current;
-  const itemSlideAnim = useRef(new Animated.Value(30)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const itemSlideAnim = useRef(new Animated.Value(40)).current;
+  const scaleAnim = useRef(new Animated.Value(0.92)).current;
   const cardScaleAnim = useRef(new Animated.Value(1)).current;
-  // Use a separate animated value for background that doesn't conflict
-  const bgValue = useRef(new Animated.Value(0)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
   const isMounted = useRef(true);
 
   useEffect(() => {
-    // All animations use native driver where possible
-    // For opacity, we use native driver but with a separate value
     Animated.parallel([
       Animated.timing(itemFadeAnim, {
         toValue: 1,
-        duration: 400,
-        delay: index * 80,
+        duration: 500,
+        delay: index * 60,
         useNativeDriver: true,
       }),
       Animated.spring(itemSlideAnim, {
         toValue: 0,
-        friction: 7,
-        tension: 35,
-        delay: index * 80,
+        friction: 8,
+        tension: 40,
+        delay: index * 60,
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
         toValue: 1,
-        friction: 5,
-        tension: 40,
-        delay: index * 80,
+        friction: 6,
+        tension: 45,
+        delay: index * 60,
+        useNativeDriver: true,
+      }),
+      Animated.timing(glowAnim, {
+        toValue: 1,
+        duration: 800,
+        delay: index * 60 + 200,
         useNativeDriver: true,
       })
     ]).start();
 
     return () => {
       isMounted.current = false;
-      // Stop all animations on unmount
       itemFadeAnim.stopAnimation();
       itemSlideAnim.stopAnimation();
       scaleAnim.stopAnimation();
       cardScaleAnim.stopAnimation();
-      bgValue.stopAnimation();
+      glowAnim.stopAnimation();
     };
   }, []);
 
   const handlePressIn = () => {
     if (!isMounted.current) return;
-    
-    // Only animate scale with native driver
     Animated.spring(cardScaleAnim, {
-      toValue: 0.97,
+      toValue: 0.96,
       tension: 150,
       friction: 10,
-      useNativeDriver: true,
-    }).start();
-    
-    // Update background value (non-native)
-    Animated.timing(bgValue, {
-      toValue: 1,
-      duration: 150,
       useNativeDriver: true,
     }).start();
   };
 
   const handlePressOut = () => {
     if (!isMounted.current) return;
-    
     Animated.spring(cardScaleAnim, {
       toValue: 1,
       tension: 150,
       friction: 10,
       useNativeDriver: true,
     }).start();
-    
-    Animated.timing(bgValue, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
   };
 
-  // Interpolate background color
-  const backgroundColor = bgValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['#FFFFFF', '#F5F5F5']
+  const glowOpacity = glowAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, 0.3, 0],
   });
 
   // Get the other user in the match
@@ -119,16 +104,12 @@ const MatchItem = React.memo(({ item, index, onPress }) => {
   const userInitial = userName.charAt(0).toUpperCase();
   const userImage = otherUser?.profileImage || null;
   
-  // Get listing details
   const listing = item.listingId || {};
   const listingTitle = listing.title || 'Untitled Listing';
   const listingType = listing.type || 'barter';
   
-  // Get last message or match info
-  const lastMessage = item.conversation?.lastMessage || 'Match created!';
+  const lastMessage = item.conversation?.lastMessage || '✨ Match created!';
   const lastActivity = item.updatedAt || item.createdAt || new Date();
-  
-  // Check if there are unread messages
   const unreadCount = item.conversation?.unreadCount || 0;
 
   const getTypeIcon = () => {
@@ -141,6 +122,12 @@ const MatchItem = React.memo(({ item, index, onPress }) => {
     if (listingType === 'barter') return '#f9c349';
     if (listingType === 'job') return '#4A90D9';
     return '#34C759';
+  };
+
+  const getTypeEmoji = () => {
+    if (listingType === 'barter') return '🔄';
+    if (listingType === 'job') return '💼';
+    return '💰';
   };
 
   return (
@@ -156,26 +143,31 @@ const MatchItem = React.memo(({ item, index, onPress }) => {
         onPressOut={handlePressOut}
         activeOpacity={1}
       >
-        <Animated.View style={[styles.matchCard, { backgroundColor, transform: [{ scale: cardScaleAnim }] }]}>
+        <Animated.View style={[styles.matchCard, { transform: [{ scale: cardScaleAnim }] }]}>
           <LinearGradient
-            colors={['rgba(249, 195, 73, 0.05)', 'rgba(249, 195, 73, 0.02)']}
+            colors={['#FFFFFF', '#FAFBFF']}
             style={styles.matchCardGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
+            <Animated.View style={[styles.glowEffect, { opacity: glowOpacity }]} />
+            
             <View style={styles.matchCardContent}>
-              {/* Left - User Avatar */}
+              {/* Left - User Avatar with status */}
               <View style={styles.avatarContainer}>
-                {userImage ? (
-                  <Image source={{ uri: userImage }} style={styles.avatar} />
-                ) : (
-                  <LinearGradient
-                    colors={['#f9c349', '#f5a623']}
-                    style={styles.avatarPlaceholder}
-                  >
-                    <Text style={styles.avatarText}>{userInitial}</Text>
-                  </LinearGradient>
-                )}
+                <View style={styles.avatarWrapper}>
+                  {userImage ? (
+                    <Image source={{ uri: userImage }} style={styles.avatar} />
+                  ) : (
+                    <LinearGradient
+                      colors={['#f9c349', '#f5a623']}
+                      style={styles.avatarPlaceholder}
+                    >
+                      <Text style={styles.avatarText}>{userInitial}</Text>
+                    </LinearGradient>
+                  )}
+                  <View style={styles.onlineIndicator} />
+                </View>
                 {unreadCount > 0 && (
                   <View style={styles.unreadBadge}>
                     <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
@@ -189,31 +181,32 @@ const MatchItem = React.memo(({ item, index, onPress }) => {
                   <Text style={styles.userName} numberOfLines={1}>
                     {userName}
                   </Text>
-                  <View style={[styles.typeBadge, { backgroundColor: getTypeColor() + '15' }]}>
-                    <Ionicons name={getTypeIcon()} size={10} color={getTypeColor()} />
+                  <View style={[styles.typeBadge, { backgroundColor: getTypeColor() + '12' }]}>
                     <Text style={[styles.typeBadgeText, { color: getTypeColor() }]}>
-                      {listingType.charAt(0).toUpperCase() + listingType.slice(1)}
+                      {getTypeEmoji()} {listingType.charAt(0).toUpperCase() + listingType.slice(1)}
                     </Text>
                   </View>
                 </View>
 
                 <Text style={styles.listingTitle} numberOfLines={1}>
-                  {listingTitle}
+                  📌 {listingTitle}
                 </Text>
 
                 <View style={styles.messagePreview}>
-                  <Ionicons name="chatbubble-outline" size={12} color="#8E8E93" />
+                  <View style={styles.messageIconContainer}>
+                    <Ionicons name="chatbubble-ellipses" size={14} color="#f9c349" />
+                  </View>
                   <Text style={styles.messageText} numberOfLines={1}>
                     {lastMessage}
                   </Text>
                 </View>
               </View>
 
-              {/* Right - Time */}
+              {/* Right - Time & Arrow */}
               <View style={styles.timeContainer}>
                 <Text style={styles.timeText}>{timeAgo(lastActivity)}</Text>
                 <View style={styles.arrowContainer}>
-                  <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+                  <Ionicons name="chevron-forward" size={20} color="#f9c349" />
                 </View>
               </View>
             </View>
@@ -235,12 +228,69 @@ export default function MyMatches({ navigation }) {
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const slideAnim = useRef(new Animated.Value(40)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
-  const headerAnim = useRef(new Animated.Value(-20)).current;
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  const floatingY = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+
+  const floating = floatingY.interpolate({
+    inputRange: [-6, 6],
+    outputRange: [-6, 6],
+  });
+
+  const spin = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   useEffect(() => {
-    // All animations use native driver where possible
+    // Floating animation
+    const floatAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatingY, {
+          toValue: 6,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatingY, {
+          toValue: -6,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    floatAnimation.start();
+
+    // Pulse animation
+    const pulseAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.95,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulseAnimation.start();
+
+    // Rotate animation
+    const rotate = Animated.loop(
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 20000,
+        useNativeDriver: true,
+      })
+    );
+    rotate.start();
+
+    // Entrance animations
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -249,32 +299,34 @@ export default function MyMatches({ navigation }) {
       }),
       Animated.spring(slideAnim, {
         toValue: 0,
-        friction: 7,
-        tension: 35,
+        tension: 50,
+        friction: 8,
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
         toValue: 1,
-        friction: 5,
         tension: 40,
+        friction: 7,
         useNativeDriver: true,
       }),
       Animated.spring(headerAnim, {
-        toValue: 0,
-        friction: 7,
+        toValue: 1,
         tension: 40,
+        friction: 7,
         useNativeDriver: true,
-      })
+      }),
     ]).start();
     
     fetchMatches();
     
     return () => {
-      // Clean up animations
       fadeAnim.stopAnimation();
       slideAnim.stopAnimation();
       scaleAnim.stopAnimation();
       headerAnim.stopAnimation();
+      floatingY.stopAnimation();
+      pulseAnim.stopAnimation();
+      rotateAnim.stopAnimation();
     };
   }, []);
 
@@ -308,18 +360,14 @@ export default function MyMatches({ navigation }) {
       const data = await getMyMatches();
       const matchesData = data.matches || [];
       
-      // Process matches to extract user info
       const processedMatches = matchesData.map(match => {
-        // Get the other user
         const listingOwnerId = match.listingOwnerId?._id || match.listingOwnerId;
         const offerorId = match.offerorId?._id || match.offerorId;
         const currentUserId = userId;
         
         let otherUser = match.otherUser || match.offerorId || match.listingOwnerId;
         
-        // If otherUser is an ObjectId or doesn't have name, try to get from match data
         if (!otherUser?.name && !otherUser?.fullName) {
-          // Try to find the other user from the match data
           if (listingOwnerId && listingOwnerId !== currentUserId) {
             otherUser = match.listingOwnerId;
           } else if (offerorId && offerorId !== currentUserId) {
@@ -350,7 +398,6 @@ export default function MyMatches({ navigation }) {
 
   const handleMatchPress = (match) => {
     try {
-      // Navigate to chat screen with match details
       navigation.navigate('MatchChat', {
         matchId: match._id,
         listingId: match.listingId?._id || match.listingId,
@@ -359,7 +406,6 @@ export default function MyMatches({ navigation }) {
       });
     } catch (err) {
       console.error('Navigation error:', err);
-      // Try to navigate with minimal params
       navigation.navigate('MatchChat', {
         matchId: match._id,
         otherUser: match.otherUser
@@ -377,7 +423,7 @@ export default function MyMatches({ navigation }) {
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={styles.centerContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <StatusBar barStyle="dark-content" backgroundColor="#F8F9FC" />
         <ActivityIndicator size="large" color="#f9c349" />
         <Text style={styles.loadingText}>Loading your matches...</Text>
       </SafeAreaView>
@@ -387,41 +433,68 @@ export default function MyMatches({ navigation }) {
   if (isGuest) {
     return (
       <SafeAreaView style={styles.centerContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-        <Ionicons name="person-outline" size={64} color="#C7C7CC" />
-        <Text style={styles.emptyTitle}>Login Required</Text>
-        <Text style={styles.emptySubtext}>Please login to view your matches</Text>
-        <TouchableOpacity
-          style={styles.loginButton}
-          onPress={() => navigation.navigate('Login')}
-        >
+        <StatusBar barStyle="dark-content" backgroundColor="#F8F9FC" />
+        <View style={styles.guestContainer}>
           <LinearGradient
-            colors={['#f9c349', '#f5a623']}
-            style={styles.loginGradient}
+            colors={['#f9c34915', '#f5a62315']}
+            style={styles.guestIconContainer}
           >
-            <Text style={styles.loginButtonText}>Login</Text>
+            <Ionicons name="person" size={64} color="#f9c349" />
           </LinearGradient>
-        </TouchableOpacity>
+          <Text style={styles.emptyTitle}>Welcome Back!</Text>
+          <Text style={styles.emptySubtext}>Login to view your matches and connect with others</Text>
+          <TouchableOpacity
+            style={styles.loginButton}
+            onPress={() => navigation.navigate('Login')}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={['#f9c349', '#f5a623']}
+              style={styles.loginGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Ionicons name="log-in" size={20} color="#FFFFFF" />
+              <Text style={styles.loginButtonText}>Login</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor="#F8F9FC" />
+      
+      {/* Background Decorations */}
+      <View style={styles.bgDecorations}>
+        <Animated.View style={[styles.bgOrb, styles.bgOrb1, { transform: [{ rotate: spin }] }]} />
+        <Animated.View style={[styles.bgOrb, styles.bgOrb2, { transform: [{ translateY: floating }] }]} />
+      </View>
 
       {/* Header */}
       <Animated.View 
         style={[
           styles.headerContainer,
           {
-            transform: [{ translateY: headerAnim }]
+            opacity: headerAnim,
+            transform: [
+              {
+                translateY: headerAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-15, 0]
+                })
+              }
+            ]
           }
         ]}
       >
         <LinearGradient
-          colors={['#FFFFFF', '#FFFDF5']}
+          colors={['#FFFFFF', '#FFFDF7']}
           style={styles.headerGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
         >
           <View style={styles.header}>
             <TouchableOpacity 
@@ -429,35 +502,49 @@ export default function MyMatches({ navigation }) {
               onPress={() => navigation.goBack()}
               activeOpacity={0.7}
             >
-              <Ionicons name="chevron-back" size={24} color="#1C1C1E" />
+              <Ionicons name="chevron-back" size={22} color="#1C1C1E" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>My Chats</Text>
+            <Text style={styles.headerTitle}>Chats</Text>
             <TouchableOpacity 
               style={styles.headerActionButton}
               onPress={handleRefresh}
               activeOpacity={0.7}
             >
-              <Ionicons name="refresh-outline" size={22} color="#f9c349" />
+              <Ionicons name="refresh" size={20} color="#f9c349" />
             </TouchableOpacity>
           </View>
 
-          {/* Stats */}
+          {/* Stats Card */}
           <View style={styles.statsContainer}>
-            <View style={styles.statsCard}>
-              <LinearGradient
-                colors={['#f9c349', '#f5a623']}
-                style={styles.statsCardGradient}
-              >
-                <Text style={styles.statsNumber}>{counts.total}</Text>
-                <Text style={styles.statsLabel}>Active Matches</Text>
-              </LinearGradient>
-            </View>
+            <LinearGradient
+              colors={['#f9c349', '#f5a623']}
+              style={styles.statsCard}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.statsContent}>
+                <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+                  <MaterialCommunityIcons name="chat" size={24} color="#FFFFFF" />
+                </Animated.View>
+                <View style={styles.statsTextContainer}>
+                  <Text style={styles.statsNumber}>{counts.total}</Text>
+                  <Text style={styles.statsLabel}>Active Chats</Text>
+                </View>
+                <View style={styles.statsDivider} />
+                <View style={styles.statsTextContainer}>
+                  <Text style={[styles.statsNumber, { fontSize: 18 }]}>
+                    {matches.filter(m => m.status === 'active').length}
+                  </Text>
+                  <Text style={styles.statsLabel}>Active</Text>
+                </View>
+              </View>
+            </LinearGradient>
           </View>
 
           {/* Search Bar */}
           <View style={styles.searchContainer}>
             <View style={styles.searchBar}>
-              <Ionicons name="search-outline" size={20} color="#8E8E93" />
+              <Ionicons name="search" size={18} color="#8E8E93" />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Search matches..."
@@ -470,6 +557,7 @@ export default function MyMatches({ navigation }) {
                 <TouchableOpacity 
                   onPress={() => setSearchQuery('')}
                   style={styles.clearButton}
+                  activeOpacity={0.7}
                 >
                   <Ionicons name="close-circle" size={18} color="#8E8E93" />
                 </TouchableOpacity>
@@ -506,6 +594,7 @@ export default function MyMatches({ navigation }) {
               onRefresh={handleRefresh}
               tintColor="#f9c349"
               colors={["#f9c349"]}
+              progressBackgroundColor="#FFFFFF"
             />
           }
           ListEmptyComponent={
@@ -514,9 +603,11 @@ export default function MyMatches({ navigation }) {
                 colors={['#f9c34920', '#f5a62320']}
                 style={styles.emptyIconContainer}
               >
-                <MaterialCommunityIcons name="chat-outline" size={64} color="#f9c349" />
+                <MaterialCommunityIcons name="chat-plus" size={60} color="#f9c349" />
               </LinearGradient>
-              <Text style={styles.emptyTitle}>No Matches Yet</Text>
+              <Text style={styles.emptyTitle}>
+                {searchQuery.length > 0 ? 'No Results' : 'No Chats Yet'}
+              </Text>
               <Text style={styles.emptySubtext}>
                 {searchQuery.length > 0 
                   ? `No matches found for "${searchQuery}"`
@@ -527,11 +618,15 @@ export default function MyMatches({ navigation }) {
                 <TouchableOpacity
                   style={styles.emptyButton}
                   onPress={() => navigation.navigate('Dashboard')}
+                  activeOpacity={0.8}
                 >
                   <LinearGradient
                     colors={['#f9c349', '#f5a623']}
                     style={styles.emptyButtonGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
                   >
+                    <Ionicons name="compass" size={18} color="#FFFFFF" />
                     <Text style={styles.emptyButtonText}>Browse Listings</Text>
                   </LinearGradient>
                 </TouchableOpacity>
@@ -548,19 +643,57 @@ export default function MyMatches({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F8F9FC',
+  },
+  bgDecorations: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    overflow: 'hidden',
+  },
+  bgOrb: {
+    position: 'absolute',
+    borderRadius: 999,
+    opacity: 0.03,
+  },
+  bgOrb1: {
+    width: 200,
+    height: 200,
+    top: -80,
+    right: -80,
+    backgroundColor: '#f9c349',
+  },
+  bgOrb2: {
+    width: 150,
+    height: 150,
+    bottom: -50,
+    left: -50,
+    backgroundColor: '#34C759',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F8F9FC',
+  },
+  guestContainer: {
+    alignItems: 'center',
+  },
+  guestIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   headerContainer: {
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: 'rgba(0,0,0,0.03)',
     marginTop: Platform.OS === 'android' ? 34 : 0,
   },
   headerGradient: {
@@ -571,67 +704,69 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F8F9FA',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F8F9FC',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#F0F0F0',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: '#1C1C1E',
-    flex: 1,
-    textAlign: 'center',
+    letterSpacing: -0.3,
   },
   headerActionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#FFF8F0',
     justifyContent: 'center',
     alignItems: 'center',
   },
   statsContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   statsCard: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
+    borderRadius: 14,
+    padding: 14,
+    shadowColor: '#f9c349',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
   },
-  statsCardGradient: {
-    paddingVertical: 12,
+  statsContent: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-around',
+  },
+  statsTextContainer: {
+    alignItems: 'center',
   },
   statsNumber: {
     fontSize: 24,
     fontWeight: '800',
     color: '#FFFFFF',
+    letterSpacing: -0.5,
   },
   statsLabel: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '500',
     color: 'rgba(255,255,255,0.8)',
-    marginTop: 2,
+    marginTop: 1,
+  },
+  statsDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   searchContainer: {
     paddingHorizontal: 16,
@@ -640,19 +775,20 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F8F9FC',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderWidth: 1,
     borderColor: '#E5E5EA',
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     color: '#1C1C1E',
     marginLeft: 8,
     padding: 0,
+    height: 30,
   },
   clearButton: {
     padding: 4,
@@ -661,30 +797,35 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: 14,
+    paddingTop: 10,
     paddingBottom: 20,
   },
   matchCard: {
     borderRadius: 14,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
+    marginBottom: 10,
     overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
   },
   matchCardGradient: {
     borderRadius: 14,
+    position: 'relative',
+  },
+  glowEffect: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#f9c349',
+    borderRadius: 14,
+    opacity: 0,
   },
   matchCardContent: {
     flexDirection: 'row',
@@ -694,6 +835,9 @@ const styles = StyleSheet.create({
   avatarContainer: {
     position: 'relative',
     marginRight: 14,
+  },
+  avatarWrapper: {
+    position: 'relative',
   },
   avatar: {
     width: 52,
@@ -716,10 +860,21 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
   },
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#34C759',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
   unreadBadge: {
     position: 'absolute',
-    top: -2,
-    right: -2,
+    top: -4,
+    right: -4,
     backgroundColor: '#FF3B30',
     borderRadius: 10,
     minWidth: 20,
@@ -746,11 +901,12 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   userName: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#1C1C1E',
     flex: 1,
     marginRight: 8,
+    letterSpacing: -0.2,
   },
   typeBadge: {
     flexDirection: 'row',
@@ -758,21 +914,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
-    gap: 4,
   },
   typeBadgeText: {
     fontSize: 9,
     fontWeight: '600',
+    letterSpacing: 0.3,
   },
   listingTitle: {
     fontSize: 13,
     color: '#8E8E93',
     marginBottom: 4,
+    fontWeight: '500',
   },
   messagePreview: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  messageIconContainer: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#f9c34915',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   messageText: {
     fontSize: 13,
@@ -786,6 +951,7 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 11,
     color: '#C7C7CC',
+    fontWeight: '500',
   },
   arrowContainer: {
     width: 24,
@@ -799,7 +965,7 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
   emptyContainer: {
-    padding: 60,
+    padding: 50,
     alignItems: 'center',
   },
   emptyIconContainer: {
@@ -814,6 +980,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#1C1C1E',
+    letterSpacing: -0.3,
   },
   emptySubtext: {
     fontSize: 14,
@@ -821,6 +988,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
     marginBottom: 16,
+    lineHeight: 20,
   },
   emptyButton: {
     borderRadius: 14,
@@ -832,13 +1000,17 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   emptyButtonGradient: {
-    paddingHorizontal: 28,
+    paddingHorizontal: 24,
     paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   emptyButtonText: {
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 14,
+    letterSpacing: 0.3,
   },
   loginButton: {
     marginTop: 16,
@@ -851,12 +1023,16 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   loginGradient: {
-    paddingHorizontal: 32,
+    paddingHorizontal: 28,
     paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   loginButtonText: {
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 16,
+    letterSpacing: 0.3,
   },
 });
