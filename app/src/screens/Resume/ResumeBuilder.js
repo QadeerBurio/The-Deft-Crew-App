@@ -138,6 +138,8 @@ const ResumeBuilderScreen = () => {
   const { user } = useContext(AuthContext);
   const {
     currentResume,
+    resumes = [],
+    creationsUsed = 0,
     createResume,
     updateResume,
     uploadResume,
@@ -216,6 +218,8 @@ const ResumeBuilderScreen = () => {
 
   // AI & Preview Control
   const [aiProcessing, setAiProcessing] = useState(false);
+  const [savingStep1, setSavingStep1] = useState(false);
+  const [savingStep7, setSavingStep7] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewTemplateId, setPreviewTemplateId] = useState('modern_ats');
 
@@ -317,21 +321,40 @@ const ResumeBuilderScreen = () => {
     return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   };
 
+  // Track last synced resume ID & step so background updates don't overwrite user's active typing
+  const syncedResumeIdRef = useRef(null);
+  const syncedStepRef = useRef(null);
+
   // Sync inputs from currentResume
   useEffect(() => {
     if (currentResume) {
-      if (activeStep === 1) {
-        const info = currentResume.personalInfo || {};
-        setPName(`${info.firstName || ''} ${info.lastName || ''}`.trim());
-        setPTitle(info.title || '');
-        setPEmail(info.email || '');
-        setPPhone(info.phone || '');
-        setPLocation(info.location || '');
-        setPLinkedin(info.linkedin || '');
-        setPGithub(info.github || '');
-        setPPortfolio(info.portfolio || '');
-      } else if (activeStep === 7) {
-        setTargetSummary(currentResume.professionalSummary?.summary || '');
+      const isNewResume = syncedResumeIdRef.current !== currentResume._id;
+      const isNewStep = syncedStepRef.current !== activeStep;
+
+      if (isNewResume || isNewStep) {
+        syncedResumeIdRef.current = currentResume._id;
+        syncedStepRef.current = activeStep;
+
+        if (activeStep === 1) {
+          const info = currentResume.personalInfo || {};
+          const fullName = `${info.firstName || ''} ${info.lastName || ''}`.trim();
+          if (fullName) setPName(fullName);
+
+          const loadedTitle = info.title || currentResume.professionalSummary?.title || currentResume.targetJob?.jobTitle || '';
+          if (loadedTitle) setPTitle(loadedTitle);
+
+          if (info.email) setPEmail(info.email);
+          if (info.phone) setPPhone(info.phone);
+
+          const loadedLocation = info.location || (info.city ? `${info.city}${info.country ? ', ' + info.country : ''}` : '') || currentResume.targetJob?.location || '';
+          if (loadedLocation) setPLocation(loadedLocation);
+
+          if (info.linkedin) setPLinkedin(info.linkedin);
+          if (info.github) setPGithub(info.github);
+          if (info.portfolio) setPPortfolio(info.portfolio);
+        } else if (activeStep === 7) {
+          setTargetSummary(currentResume.professionalSummary?.summary || '');
+        }
       }
     }
   }, [currentResume, activeStep]);
@@ -343,12 +366,12 @@ const ResumeBuilderScreen = () => {
         await fetchResumes();
       } else {
         try {
-          // Reset all local input states to blank/defaults
-          setPName('');
-          setPTitle('');
-          setPEmail('');
-          setPPhone('');
-          setPLocation('');
+          // Reset all local input states to user profile defaults
+          setPName(user?.name || '');
+          setPTitle(user?.headline || 'Software Engineer');
+          setPEmail(user?.email || '');
+          setPPhone(user?.phone || '');
+          setPLocation(user?.location || 'Karachi, Pakistan');
           setPLinkedin('');
           setPGithub('');
           setPPortfolio('');
@@ -359,8 +382,9 @@ const ResumeBuilderScreen = () => {
               firstName: user?.name?.split(' ')[0] || '', 
               lastName: user?.name?.split(' ')[1] || '',
               email: user?.email || '',
-              phone: '',
-              location: '',
+              phone: user?.phone || '',
+              location: user?.location || 'Karachi, Pakistan',
+              title: user?.headline || 'Software Engineer',
               linkedin: '',
               github: '',
               portfolio: ''
@@ -420,6 +444,13 @@ const ResumeBuilderScreen = () => {
 
   // Upload and parse helper
   const handleAutoFillUpload = async () => {
+    if (creationsUsed >= 2) {
+      Alert.alert(
+        'Resume Creation Limit Reached ⚠️',
+        'You have used all 2 resume creations available for your account. Deleting a resume will not restore your creation limit.'
+      );
+      return;
+    }
     const file = await pickDocument();
     if (!file) return;
 
@@ -451,6 +482,7 @@ const ResumeBuilderScreen = () => {
       clearInterval(progressInterval);
 
       if (parsed) {
+        syncedResumeIdRef.current = null;
         setAiGeneratingStep('Structuring resume sections...');
         setAiGeneratingProgress(85);
         
@@ -493,7 +525,17 @@ const ResumeBuilderScreen = () => {
       github: pGithub,
       portfolio: pPortfolio
     };
-    await updateResume(currentResume._id, { personalInfo: updated });
+    await updateResume(currentResume._id, { 
+      personalInfo: updated,
+      professionalSummary: {
+        ...currentResume.professionalSummary,
+        title: pTitle || currentResume.professionalSummary?.title || ''
+      },
+      targetJob: {
+        ...currentResume.targetJob,
+        location: pLocation || currentResume.targetJob?.location || ''
+      }
+    });
   };
 
   const saveTargetSummary = async () => {
@@ -504,6 +546,62 @@ const ResumeBuilderScreen = () => {
         summary: targetSummary
       }
     });
+  };
+
+  // Explicit Save Step 1 with user feedback
+  const handleSaveStep1 = async () => {
+    if (!currentResume) return;
+    try {
+      setSavingStep1(true);
+      await savePersonalInfo();
+      Alert.alert('✅ Saved!', 'Personal Information saved successfully!');
+    } catch (err) {
+      console.error('Error saving personal info:', err);
+      Alert.alert('❌ Error', 'Failed to save Personal Information: ' + (err.message || 'Server error'));
+    } finally {
+      setSavingStep1(false);
+    }
+  };
+
+  const handleSaveStep7 = async () => {
+    if (!currentResume) return;
+    try {
+      setSavingStep7(true);
+      await saveTargetSummary();
+      Alert.alert('✅ Saved!', 'Target Job & Summary saved successfully!');
+    } catch (err) {
+      console.error('Error saving target summary:', err);
+      Alert.alert('❌ Error', 'Failed to save Target Summary: ' + (err.message || 'Server error'));
+    } finally {
+      setSavingStep7(false);
+    }
+  };
+
+  const handleStepChange = async (newStep) => {
+    if (activeStep === 1) {
+      await savePersonalInfo();
+    } else if (activeStep === 7) {
+      await saveTargetSummary();
+    }
+    setActiveStep(newStep);
+  };
+
+  const handlePrevStep = async () => {
+    if (activeStep === 1) {
+      await savePersonalInfo();
+    } else if (activeStep === 7) {
+      await saveTargetSummary();
+    }
+    setActiveStep(prev => Math.max(1, prev - 1));
+  };
+
+  const handleGoBack = async () => {
+    if (activeStep === 1) {
+      await savePersonalInfo();
+    } else if (activeStep === 7) {
+      await saveTargetSummary();
+    }
+    navigation.goBack();
   };
 
   // Next step trigger with auto sync
@@ -562,6 +660,7 @@ const ResumeBuilderScreen = () => {
               <Text style={styles.bannerUploadBtnText}>Upload & Auto-fill</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.bannerSkipBtn} onPress={() => {
+              savePersonalInfo();
               setPreviewTemplateId(currentResume?.template || 'modern_ats');
               setPreviewVisible(true);
             }}>
@@ -670,6 +769,18 @@ const ResumeBuilderScreen = () => {
             />
           </View>
         </View>
+
+        <TouchableOpacity 
+          style={[styles.yellowButton, { marginTop: 20 }]} 
+          onPress={handleSaveStep1}
+          disabled={savingStep1}
+        >
+          {savingStep1 ? (
+            <ActivityIndicator color="#000" size="small" />
+          ) : (
+            <Text style={styles.yellowButtonText}>💾 Save Personal Information</Text>
+          )}
+        </TouchableOpacity>
       </View>
     );
   };
@@ -1534,6 +1645,18 @@ const ResumeBuilderScreen = () => {
             <Text style={styles.yellowButtonText}>⚡ Generate with AI</Text>
           )}
         </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.yellowButton, { marginTop: 12, backgroundColor: '#2563EB' }]} 
+          onPress={handleSaveStep7}
+          disabled={savingStep7}
+        >
+          {savingStep7 ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Text style={[styles.yellowButtonText, { color: '#ffffff' }]}>💾 Save Target Job & Summary</Text>
+          )}
+        </TouchableOpacity>
       </ScrollView>
     );
   };
@@ -1639,10 +1762,36 @@ const ResumeBuilderScreen = () => {
     );
   };
 
-  // Compile responsive WebView HTML for pure preview modal
+  // Compile responsive WebView HTML for pure preview modal (combining live input state)
   const renderPreviewHTMLMobile = () => {
     if (!currentResume) return '';
-    return renderResumeHTML(currentResume, previewTemplateId, {
+
+    const parts = (pName || '').trim().split(' ');
+    const first = parts[0] || currentResume.personalInfo?.firstName || '';
+    const last = parts.slice(1).join(' ') || currentResume.personalInfo?.lastName || '';
+
+    const liveResume = {
+      ...currentResume,
+      personalInfo: {
+        ...currentResume.personalInfo,
+        firstName: first,
+        lastName: last,
+        title: pTitle || currentResume.personalInfo?.title || currentResume.professionalSummary?.title || '',
+        email: pEmail || currentResume.personalInfo?.email || '',
+        phone: pPhone || currentResume.personalInfo?.phone || '',
+        location: pLocation || currentResume.personalInfo?.location || '',
+        linkedin: pLinkedin || currentResume.personalInfo?.linkedin || '',
+        github: pGithub || currentResume.personalInfo?.github || '',
+        portfolio: pPortfolio || currentResume.personalInfo?.portfolio || '',
+      },
+      professionalSummary: {
+        ...currentResume.professionalSummary,
+        title: pTitle || currentResume.professionalSummary?.title || '',
+        summary: targetSummary || currentResume.professionalSummary?.summary || ''
+      }
+    };
+
+    return renderResumeHTML(liveResume, previewTemplateId, {
       font: selectedFont,
       accentColor: accentColor,
       headingColor: headingColor,
@@ -1657,11 +1806,12 @@ const ResumeBuilderScreen = () => {
       
       {/* Top Header */}
       <View style={styles.mainHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBackBtn}>
+        <TouchableOpacity onPress={handleGoBack} style={styles.headerBackBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.mainHeaderTitle}>TDC Resume Builder</Text>
-        <TouchableOpacity onPress={() => {
+        <TouchableOpacity onPress={async () => {
+          await savePersonalInfo();
           setPreviewTemplateId(currentResume?.template || 'modern_ats');
           setPreviewVisible(true);
         }} style={styles.previewFloatBtn}>
@@ -1680,7 +1830,7 @@ const ResumeBuilderScreen = () => {
                   activeStep === s.id && styles.stepCircleActive,
                   activeStep > s.id && styles.stepCircleCompleted
                 ]}
-                onPress={() => setActiveStep(s.id)}
+                onPress={() => handleStepChange(s.id)}
               >
                 <Ionicons 
                   name={activeStep > s.id ? 'checkmark' : s.icon} 
@@ -1724,7 +1874,7 @@ const ResumeBuilderScreen = () => {
           <TouchableOpacity 
             style={[styles.backButton, activeStep === 1 && { opacity: 0.5 }]}
             disabled={activeStep === 1}
-            onPress={() => setActiveStep(prev => Math.max(1, prev - 1))}
+            onPress={handlePrevStep}
           >
             <Ionicons name="arrow-back" size={16} color="#fff" />
             <Text style={styles.backButtonText}>Back</Text>

@@ -36,6 +36,7 @@ const ResumeDashboardScreen = ({ navigation }) => {
   const { user, isGuest } = useContext(AuthContext);
   const {
     resumes = [],
+    creationsUsed = 0,
     fetchResumes,
     loadResume,
     deleteResume,
@@ -50,6 +51,7 @@ const ResumeDashboardScreen = ({ navigation }) => {
   } = useContext(ResumeContext);
 
   const safeResumes = Array.isArray(resumes) ? resumes : [];
+  const totalCreationsUsed = creationsUsed !== undefined ? creationsUsed : safeResumes.length;
 
   const [recommendationsError, setRecommendationsError] = useState(null);
 
@@ -105,7 +107,7 @@ const ResumeDashboardScreen = ({ navigation }) => {
         if (safeResumes.length === 0) {
           setIsLoading(true);
         }
-        await fetchResumes();
+        await fetchResumes(true);
         setIsLoading(false);
       };
       loadData();
@@ -986,14 +988,17 @@ ${resume?.completionPercentage || 0}% Complete
             <Text style={styles.userName}>
               {isGuest ? 'Guest User' : user?.name || 'User'}
             </Text>
+            <Text style={{ fontSize: 12, color: '#f9c349', fontWeight: '700', marginTop: 2 }}>
+              Creations Used: {totalCreationsUsed}/2 Lifetime
+            </Text>
           </View>
           <TouchableOpacity
-            style={styles.newResumeButton}
+            style={[styles.newResumeButton, totalCreationsUsed >= 2 && { opacity: 0.5 }]}
             onPress={() => {
-              if (!isGuest && resumes && resumes.length >= 2) {
+              if (totalCreationsUsed >= 2) {
                 Alert.alert(
-                  'Limit Reached ⚠️',
-                  'Maximum 2 resumes allowed per user. Please delete an existing resume to create a new one.'
+                  'Resume Creation Limit Reached ⚠️',
+                  'You have used all 2 resume creations available for your account. Deleting a resume will not restore your creation limit.'
                 );
                 return;
               }
@@ -1206,8 +1211,17 @@ ${resume?.completionPercentage || 0}% Complete
                 Create your first resume to get started with your job search.
               </Text>
               <TouchableOpacity
-                style={styles.createButton}
-                onPress={() => navigation.navigate('ResumeBuilder')}
+                style={[styles.createButton, totalCreationsUsed >= 2 && { opacity: 0.5 }]}
+                onPress={() => {
+                  if (totalCreationsUsed >= 2) {
+                    Alert.alert(
+                      'Resume Creation Limit Reached ⚠️',
+                      'You have used all 2 resume creations available for your account. Deleting a resume will not restore your creation limit.'
+                    );
+                    return;
+                  }
+                  navigation.navigate('ResumeBuilder');
+                }}
               >
                 <LinearGradient
                   colors={['#000', '#f9c349']}

@@ -21,25 +21,25 @@ export default function ResumeProvider({ children }) {
   const { token, isGuest, user } = useContext(AuthContext);
   const [resumes, setResumes] = useState([]);
   const [currentResume, setCurrentResume] = useState(null);
+  const [creationsUsed, setCreationsUsed] = useState(0);
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
   const [initialized, setInitialized] = useState(false);
 
   // Fetch all resumes
-  const fetchResumes = async () => {
+  const fetchResumes = async (force = true) => {
     try {
       setLoading(true);
       setError(null);
 
       if (isGuest) {
         const storedResumes = await AsyncStorage.getItem('guestResumes');
-        if (storedResumes) {
-          const parsed = JSON.parse(storedResumes);
-          setResumes(Array.isArray(parsed) ? parsed : []);
-        } else {
-          setResumes([]);
-        }
+        const storedCreations = await AsyncStorage.getItem('guestCreationsUsed');
+        const parsedResumes = storedResumes ? JSON.parse(storedResumes) : [];
+        const usedCount = storedCreations ? parseInt(storedCreations, 10) : (Array.isArray(parsedResumes) ? parsedResumes.length : 0);
+        setResumes(Array.isArray(parsedResumes) ? parsedResumes : []);
+        setCreationsUsed(usedCount);
         setInitialized(true);
         setLoading(false);
         return;
@@ -47,14 +47,16 @@ export default function ResumeProvider({ children }) {
 
       if (!token) {
         setResumes([]);
+        setCreationsUsed(0);
         setInitialized(true);
         setLoading(false);
         return;
       }
 
-      const response = await resumeApi.getResumes();
+      const response = await resumeApi.getResumes(force);
       if (response?.success) {
         setResumes(Array.isArray(response.data) ? response.data : []);
+        setCreationsUsed(response.creationsUsed !== undefined ? response.creationsUsed : (response.data?.length || 0));
       } else {
         setResumes([]);
       }
@@ -69,46 +71,42 @@ export default function ResumeProvider({ children }) {
   };
 
   // Create new resume
-  const createResume = async (resumeData) => {
+  const createResume = async (resumeData = {}) => {
     try {
       setLoading(true);
       setError(null);
 
       if (isGuest) {
+        const storedResumes = await AsyncStorage.getItem('guestResumes');
+        const storedCreations = await AsyncStorage.getItem('guestCreationsUsed');
+        const parsed = storedResumes ? JSON.parse(storedResumes) : [];
+        const guestList = Array.isArray(parsed) ? parsed : [];
+        const usedCount = storedCreations ? parseInt(storedCreations, 10) : guestList.length;
+
+        if (usedCount >= 2) {
+          const limitMsg = 'You have used all 2 resume creations available for guest mode. Deleting a resume will not restore your creation limit.';
+          Alert.alert('Resume Creation Limit Reached ⚠️', limitMsg);
+          setLoading(false);
+          throw new Error(limitMsg);
+        }
+
         const newResume = {
           _id: `guest_${Date.now()}`,
-          ...resumeData,
-          settings: resumeData.settings || {
-            visibility: 'public',
-            allowDownload: true,
-            allowSharing: true,
-            showContactInfo: true,
-            showSocialLinks: true,
-            showSkills: true,
-            showExperience: true,
-            showEducation: true,
-            showCertifications: true,
-            showProjects: true,
-            showLanguages: true,
-            showInterests: true,
-            showReferences: true,
-            fontSize: 'medium',
-            colorScheme: 'blue',
-            language: 'en',
-            autoSave: true,
-            saveInterval: 30,
-            defaultTemplate: 'modern'
-          },
+          isGuest: true,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          completionPercentage: 0,
-          isComplete: false,
-          viewCount: 0,
-          downloadCount: 0,
-          shareCount: 0,
-          viewsHistory: [],
-          personalInfo: resumeData.personalInfo || {},
-          professionalSummary: resumeData.professionalSummary || {},
+          template: resumeData.template || 'modern_ats',
+          personalInfo: {
+            firstName: user?.name?.split(' ')[0] || '',
+            lastName: user?.name?.split(' ')[1] || '',
+            title: user?.headline || 'Software Engineer',
+            location: user?.location || 'Karachi, Pakistan',
+            ...(resumeData.personalInfo || {})
+          },
+          professionalSummary: {
+            title: resumeData.personalInfo?.title || user?.headline || 'Software Engineer',
+            ...(resumeData.professionalSummary || {})
+          },
           education: resumeData.education || [],
           skills: resumeData.skills || [],
           workExperience: resumeData.workExperience || [],
@@ -119,9 +117,12 @@ export default function ResumeProvider({ children }) {
           targetJob: resumeData.targetJob || {},
         };
 
-        const updatedResumes = [...resumes, newResume];
+        const updatedResumes = [...guestList, newResume];
+        const newUsedCount = usedCount + 1;
         setResumes(updatedResumes);
+        setCreationsUsed(newUsedCount);
         await AsyncStorage.setItem('guestResumes', JSON.stringify(updatedResumes));
+        await AsyncStorage.setItem('guestCreationsUsed', String(newUsedCount));
         setCurrentResume(newResume);
         setLoading(false);
         return newResume;
@@ -131,6 +132,7 @@ export default function ResumeProvider({ children }) {
       if (response?.success) {
         const newResume = response.data;
         setResumes([newResume, ...resumes]);
+        setCreationsUsed(prev => prev + 1);
         setCurrentResume(newResume);
         setLoading(false);
         return newResume;
@@ -139,10 +141,17 @@ export default function ResumeProvider({ children }) {
       return null;
     } catch (error) {
       console.error('Create resume error:', error);
-      const errMsg = getErrorMessage(error, 'Failed to create resume');
+      const isLimit = error?.response?.data?.code === 'RESUME_CREATION_LIMIT_REACHED' || 
+                      error?.response?.data?.code === 'RESUME_LIMIT_REACHED' || 
+                      error?.response?.data?.error?.includes('resume creations') ||
+                      error?.message?.includes('resume creations');
+      const title = isLimit ? 'Resume Creation Limit Reached ⚠️' : 'Error';
+      const errMsg = isLimit 
+        ? 'You have used all 2 resume creations available for your account. Deleting a resume will not restore your creation limit.' 
+        : getErrorMessage(error, 'Failed to create resume');
       setError(errMsg);
       setLoading(false);
-      Alert.alert('Error', errMsg);
+      Alert.alert(title, errMsg);
       throw new Error(errMsg);
     }
   };
@@ -703,6 +712,7 @@ export default function ResumeProvider({ children }) {
       value={{
         resumes,
         currentResume,
+        creationsUsed,
         loading,
         uploadProgress,
         error,

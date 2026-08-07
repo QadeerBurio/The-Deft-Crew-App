@@ -25,7 +25,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
-import { Camera, CameraView } from 'expo-camera';
 import api from '../api/api';
 import { AuthContext } from '../context/AuthContext';
 

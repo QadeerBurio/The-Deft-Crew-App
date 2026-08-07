@@ -17,7 +17,7 @@ export const resumeApi = {
 
       // Ensure all personalInfo fields exist
       const personalInfoFields = [
-        'firstName', 'lastName', 'email', 'phone', 'address',
+        'firstName', 'lastName', 'title', 'email', 'phone', 'location', 'address',
         'city', 'state', 'country', 'postalCode', 'linkedin',
         'github', 'portfolio'
       ];
@@ -89,11 +89,13 @@ export const resumeApi = {
   },
 
   // Get all resumes
-  getResumes: async () => {
+  getResumes: async (force = false) => {
     try {
       const cacheKey = 'resumes:all';
-      const cached = memoryCache.get(cacheKey);
-      if (cached) return cached;
+      if (!force) {
+        const cached = memoryCache.get(cacheKey);
+        if (cached) return cached;
+      }
 
       const response = await api.get('/resume');
       const data = response.data;
@@ -106,11 +108,13 @@ export const resumeApi = {
   },
 
   // Get single resume
-  getResume: async (resumeId) => {
+  getResume: async (resumeId, force = false) => {
     try {
       const cacheKey = `resume:${resumeId}`;
-      const cached = memoryCache.get(cacheKey);
-      if (cached) return cached;
+      if (!force) {
+        const cached = memoryCache.get(cacheKey);
+        if (cached) return cached;
+      }
 
       const response = await api.get(`/resume/${resumeId}`);
       const data = response.data;
@@ -126,9 +130,7 @@ export const resumeApi = {
   updateResume: async (resumeId, updates) => {
     try {
       const response = await api.put(`/resume/${resumeId}`, updates);
-      memoryCache.delete(`resume:${resumeId}`);
-      memoryCache.delete(`recommendations:${resumeId}`);
-      memoryCache.delete('resumes:all');
+      memoryCache.clear();
       return response.data;
     } catch (error) {
       console.error('Update resume error:', error);

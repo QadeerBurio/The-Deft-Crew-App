@@ -1,4 +1,22 @@
-// services/resumeTemplateService.js
+export const getDisplayLocation = (resume) => {
+  if (!resume) return '';
+  const pi = resume.personalInfo || {};
+  if (pi.location && typeof pi.location === 'string' && pi.location.trim()) {
+    return pi.location.trim();
+  }
+  if (pi.city) {
+    const parts = [pi.city, pi.state, pi.country].filter(Boolean);
+    if (parts.length > 0) return parts.join(', ');
+  }
+  if (resume.targetJob?.location && typeof resume.targetJob.location === 'string' && resume.targetJob.location.trim()) {
+    return resume.targetJob.location.trim();
+  }
+  if (Array.isArray(resume.workExperience) && resume.workExperience.length > 0) {
+    const workLoc = resume.workExperience.find(w => w.location && typeof w.location === 'string' && w.location.trim())?.location;
+    if (workLoc) return workLoc.trim();
+  }
+  return '';
+};
 
 export const renderResumeHTML = (resume, templateId, customStyles = {}, isPrinting = false) => {
   const templates = {
@@ -165,11 +183,11 @@ const renderModernATSTemplate = (resume, styles = {}) => {
     <body>
       <div class="header">
         <div class="name">${personalInfo?.firstName || ''} ${personalInfo?.lastName || ''}</div>
-        <div class="title">${personalInfo?.title || targetJob?.jobTitle || ''}</div>
+        <div class="title">${personalInfo?.title || targetJob?.jobTitle || professionalSummary?.title || ''}</div>
         <div class="contact">
           ${personalInfo?.email ? `<a href="mailto:${personalInfo.email}">✉ ${personalInfo.email}</a>` : ''}
           ${personalInfo?.phone ? `<a href="tel:${personalInfo.phone}">📞 ${personalInfo.phone}</a>` : ''}
-          ${personalInfo?.location ? `<span>📍 ${personalInfo.location}</span>` : ''}
+          ${getDisplayLocation(resume) ? `<span>📍 ${getDisplayLocation(resume)}</span>` : ''}
           ${personalInfo?.linkedin ? `<a href="https://linkedin.com/in/${personalInfo.linkedin.replace('https://', '').replace('linkedin.com/in/', '')}" target="_blank">in/ ${personalInfo.linkedin.replace('https://', '').replace('linkedin.com/in/', '')}</a>` : ''}
           ${personalInfo?.github ? `<a href="https://github.com/${personalInfo.github.replace('https://', '').replace('github.com/', '')}" target="_blank">github/ ${personalInfo.github.replace('https://', '').replace('github.com/', '')}</a>` : ''}
         </div>
@@ -271,7 +289,7 @@ const renderModernATSTemplate = (resume, styles = {}) => {
 };
 
 const renderStanfordTemplate = (resume, styles = {}) => {
-  const { personalInfo, professionalSummary, education, workExperience, skills, certifications, projects, languages } = resume;
+  const { personalInfo, professionalSummary, education, workExperience, skills, certifications, projects, languages, targetJob } = resume;
   const font = styles.font || 'Georgia';
   const accent = styles.accentColor || '#4B5563';
   const heading = styles.headingColor || '#111827';
@@ -299,8 +317,9 @@ const renderStanfordTemplate = (resume, styles = {}) => {
     </head>
     <body>
       <div class="name">${personalInfo?.firstName || ''} ${personalInfo?.lastName || ''}</div>
+      ${(personalInfo?.title || targetJob?.jobTitle || professionalSummary?.title) ? `<div style="text-align: center; font-size: 13px; font-weight: 600; font-style: italic; margin-bottom: 4px; color: ${accent};">${personalInfo?.title || targetJob?.jobTitle || professionalSummary?.title}</div>` : ''}
       <div class="contact">
-        ${personalInfo?.email || ''} | ${personalInfo?.phone || ''} | ${personalInfo?.location || ''}
+        ${personalInfo?.email || ''}${personalInfo?.email && personalInfo?.phone ? ' | ' : ''}${personalInfo?.phone || ''}${getDisplayLocation(resume) ? ' | ' + getDisplayLocation(resume) : ''}
         ${personalInfo?.linkedin ? ` | linkedin.com/in/${personalInfo.linkedin}` : ''}
         ${personalInfo?.github ? ` | github.com/${personalInfo.github}` : ''}
       </div>
@@ -402,7 +421,7 @@ const renderStanfordTemplate = (resume, styles = {}) => {
 };
 
 const renderFAANGTemplate = (resume, styles = {}) => {
-  const { personalInfo, professionalSummary, education, workExperience, skills, certifications, projects, languages } = resume;
+  const { personalInfo, professionalSummary, education, workExperience, skills, certifications, projects, languages, targetJob } = resume;
   const font = styles.font || 'Helvetica';
   const accent = styles.accentColor || '#111827';
   const heading = styles.headingColor || '#111827';
@@ -432,8 +451,9 @@ const renderFAANGTemplate = (resume, styles = {}) => {
     <body>
       <div class="header">
         <div class="name">${personalInfo?.firstName || ''} ${personalInfo?.lastName || ''}</div>
+        ${(personalInfo?.title || targetJob?.jobTitle || professionalSummary?.title) ? `<div style="text-align: center; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: ${accent};">${personalInfo?.title || targetJob?.jobTitle || professionalSummary?.title}</div>` : ''}
         <div class="contact">
-          ${personalInfo?.email || ''} | ${personalInfo?.phone || ''} | ${personalInfo?.location || ''}
+          ${personalInfo?.email || ''}${personalInfo?.email && personalInfo?.phone ? ' | ' : ''}${personalInfo?.phone || ''}${getDisplayLocation(resume) ? ' | ' + getDisplayLocation(resume) : ''}
           ${personalInfo?.linkedin ? ` | linkedin: ${personalInfo.linkedin}` : ''}
           ${personalInfo?.github ? ` | github: ${personalInfo.github}` : ''}
         </div>
@@ -538,7 +558,7 @@ const renderFAANGTemplate = (resume, styles = {}) => {
 };
 
 const renderJakesTemplate = (resume, styles = {}) => {
-  const { personalInfo, professionalSummary, education, workExperience, skills, certifications, projects, languages } = resume;
+  const { personalInfo, professionalSummary, education, workExperience, skills, certifications, projects, languages, targetJob } = resume;
   const font = styles.font || 'Garamond';
   const accent = styles.accentColor || '#000000';
   const heading = styles.headingColor || '#000000';
@@ -568,8 +588,9 @@ const renderJakesTemplate = (resume, styles = {}) => {
     <body>
       <div class="header">
         <div class="name">${personalInfo?.firstName || ''} ${personalInfo?.lastName || ''}</div>
+        ${(personalInfo?.title || targetJob?.jobTitle || professionalSummary?.title) ? `<div style="text-align: center; font-size: 13px; font-weight: 500; margin-bottom: 4px; color: ${accent};">${personalInfo?.title || targetJob?.jobTitle || professionalSummary?.title}</div>` : ''}
         <div class="contact">
-          	ext: ${personalInfo?.phone || ''} | ${personalInfo?.email || ''} | ${personalInfo?.location || ''}
+          ${personalInfo?.phone ? `phone: ${personalInfo.phone}` : ''}${personalInfo?.phone && personalInfo?.email ? ' | ' : ''}${personalInfo?.email || ''}${getDisplayLocation(resume) ? ' | ' + getDisplayLocation(resume) : ''}
           ${personalInfo?.linkedin ? ` | linkedin.com/in/${personalInfo.linkedin}` : ''}
           ${personalInfo?.github ? ` | github.com/${personalInfo.github}` : ''}
         </div>
@@ -673,7 +694,7 @@ const renderJakesTemplate = (resume, styles = {}) => {
 };
 
 const renderReziTemplate = (resume, styles = {}) => {
-  const { personalInfo, professionalSummary, education, workExperience, skills, certifications, projects, languages } = resume;
+  const { personalInfo, professionalSummary, education, workExperience, skills, certifications, projects, languages, targetJob } = resume;
   const font = styles.font || 'Roboto';
   const accent = styles.accentColor || '#111827';
   const heading = styles.headingColor || '#111827';
@@ -703,8 +724,9 @@ const renderReziTemplate = (resume, styles = {}) => {
     <body>
       <div class="header">
         <div class="name">${personalInfo?.firstName || ''} ${personalInfo?.lastName || ''}</div>
+        ${(personalInfo?.title || targetJob?.jobTitle || professionalSummary?.title) ? `<div style="text-align: center; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: ${accent};">${personalInfo?.title || targetJob?.jobTitle || professionalSummary?.title}</div>` : ''}
         <div class="contact">
-          ${personalInfo?.email || ''} | ${personalInfo?.phone || ''} | ${personalInfo?.location || ''}
+          ${personalInfo?.email || ''} | ${personalInfo?.phone || ''} | ${getDisplayLocation(resume)}
           ${personalInfo?.linkedin ? ` | linkedin.com/in/${personalInfo.linkedin}` : ''}
           ${personalInfo?.github ? ` | github.com/${personalInfo.github}` : ''}
         </div>
@@ -798,7 +820,7 @@ const renderReziTemplate = (resume, styles = {}) => {
 };
 
 const renderFlowCVTemplate = (resume, styles = {}) => {
-  const { personalInfo, professionalSummary, education, workExperience, skills, certifications, projects, languages } = resume;
+  const { personalInfo, professionalSummary, education, workExperience, skills, certifications, projects, languages, targetJob } = resume;
   const font = styles.font || 'Outfit';
   const accent = styles.accentColor || '#3B82F6';
   const bg = styles.bgColor || '#F8FAFC';
@@ -832,9 +854,9 @@ const renderFlowCVTemplate = (resume, styles = {}) => {
       <div class="card">
         <div class="header">
           <div class="name">${personalInfo?.firstName || ''} ${personalInfo?.lastName || ''}</div>
-          <div class="title">${personalInfo?.title || ''}</div>
+          <div class="title">${personalInfo?.title || targetJob?.jobTitle || professionalSummary?.title || ''}</div>
           <div class="contact">
-            ${personalInfo?.email || ''} | ${personalInfo?.phone || ''} | ${personalInfo?.location || ''}
+            ${personalInfo?.email || ''} | ${personalInfo?.phone || ''} | ${getDisplayLocation(resume)}
             ${personalInfo?.linkedin ? ` | in: ${personalInfo.linkedin}` : ''}
             ${personalInfo?.github ? ` | gh: ${personalInfo.github}` : ''}
           </div>
@@ -928,7 +950,7 @@ const renderFlowCVTemplate = (resume, styles = {}) => {
 };
 
 const renderReactiveTemplate = (resume, styles = {}) => {
-  const { personalInfo, professionalSummary, education, workExperience, skills, certifications, projects, languages } = resume;
+  const { personalInfo, professionalSummary, education, workExperience, skills, certifications, projects, languages, targetJob } = resume;
   const font = styles.font || 'Open Sans';
   const heading = styles.headingColor || '#334155';
   const text = styles.textColor || '#333333';
@@ -960,9 +982,9 @@ const renderReactiveTemplate = (resume, styles = {}) => {
     <body>
       <div class="banner">
         <div class="name">${personalInfo?.firstName || ''} ${personalInfo?.lastName || ''}</div>
-        <div class="title">${personalInfo?.title || ''}</div>
+        <div class="title">${personalInfo?.title || targetJob?.jobTitle || professionalSummary?.title || ''}</div>
         <div class="contact">
-          ${personalInfo?.email || ''} | ${personalInfo?.phone || ''} | ${personalInfo?.location || ''}
+          ${personalInfo?.email || ''} | ${personalInfo?.phone || ''} | ${getDisplayLocation(resume)}
           ${personalInfo?.linkedin ? ` | linkedin: ${personalInfo.linkedin}` : ''}
           ${personalInfo?.github ? ` | github: ${personalInfo.github}` : ''}
         </div>
@@ -1066,7 +1088,7 @@ const renderReactiveTemplate = (resume, styles = {}) => {
 };
 
 const renderCanvaTemplate = (resume, styles = {}) => {
-  const { personalInfo, professionalSummary, education, workExperience, skills, certifications, projects, languages } = resume;
+  const { personalInfo, professionalSummary, education, workExperience, skills, certifications, projects, languages, targetJob } = resume;
   const font = styles.font || 'Arial';
   const accent = styles.accentColor || '#1A365D';
   const heading = styles.headingColor || '#1A365D';
@@ -1101,7 +1123,7 @@ const renderCanvaTemplate = (resume, styles = {}) => {
         <h2>Contact</h2>
         <div class="contact-item">✉ ${personalInfo?.email || ''}</div>
         <div class="contact-item">📞 ${personalInfo?.phone || ''}</div>
-        <div class="contact-item">📍 ${personalInfo?.location || ''}</div>
+        ${getDisplayLocation(resume) ? `<div class="contact-item">📍 ${getDisplayLocation(resume)}</div>` : ''}
         ${personalInfo?.linkedin ? `<div class="contact-item">in: ${personalInfo.linkedin}</div>` : ''}
         ${personalInfo?.github ? `<div class="contact-item">gh: ${personalInfo.github}</div>` : ''}
 
@@ -1117,7 +1139,7 @@ const renderCanvaTemplate = (resume, styles = {}) => {
       </div>
       <div class="main-body">
         <h1 style="font-size: 26px; color: ${heading}; font-weight: bold; margin-bottom: 2px;">${personalInfo?.firstName || ''} ${personalInfo?.lastName || ''}</h1>
-        <div style="font-size: 13.5px; font-weight: bold; margin-bottom: 16px; color: ${accent}; text-transform: uppercase;">${personalInfo?.title || ''}</div>
+        <div style="font-size: 13.5px; font-weight: bold; margin-bottom: 16px; color: ${accent}; text-transform: uppercase;">${personalInfo?.title || targetJob?.jobTitle || professionalSummary?.title || ''}</div>
 
         ${professionalSummary?.summary ? `
         <div class="section">

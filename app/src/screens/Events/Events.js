@@ -31,6 +31,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
@@ -430,6 +431,60 @@ export default function EventsScreen() {
   const [showApplied, setShowApplied] = useState(false);
   const [appliedEventsData, setAppliedEventsData] = useState([]);
   const [userEventsCount, setUserEventsCount] = useState(0);
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const pickImage = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setSelectedImage(result.assets[0].uri);
+    }
+  };
+
+  const handlePostEvent = async () => {
+    if (!form.title || !form.university || !form.date) {
+      Alert.alert("Validation Error", "Please fill required fields (Title, University, Date).");
+      return;
+    }
+    try {
+      setSubmitting(true);
+      await axios.post(
+        `${API_BASE}/create`,
+        { ...form, image: selectedImage },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      Alert.alert("Success", "Event created successfully.");
+      setModalVisible(false);
+      setForm({
+        title: "",
+        university: "",
+        city: "",
+        type: "Hackathons",
+        prize: "",
+        deadline: "",
+        description: "",
+        location: "",
+        contact: "",
+        date: "",
+        teamSize: "",
+        registrationUrl: "",
+      });
+      setSelectedImage(null);
+      fetchEvents();
+    } catch (error) {
+      Alert.alert("Error", error.response?.data?.error || "Failed to post event.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   // ── Animations ──
   const headerOpacity = useRef(new Animated.Value(0)).current;
@@ -458,7 +513,6 @@ export default function EventsScreen() {
     whatsapp: "",
     studentId: "",
     email: "",
-  });
   });
 
   const handleRegister = (eventItem) => {
@@ -632,8 +686,6 @@ export default function EventsScreen() {
     }
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
   const onRefresh = async () => {
     setRefreshing(true);
     await Promise.all([fetchEvents(), fetchRegisteredEvents()]);
@@ -1084,7 +1136,6 @@ export default function EventsScreen() {
         </SafeAreaView>
       </Modal>
 
-<<<<<<< HEAD
       {/* Create Event Modal - Fixed for all phones */}
       <Modal
         visible={isModalVisible}
@@ -1353,7 +1404,7 @@ export default function EventsScreen() {
           </TouchableWithoutFeedback>
         </SafeAreaView>
       </Modal>
-=======
+
       {/* Registration Modal */}
       <GuestGuard
         title="View Your Discounts"
@@ -1473,7 +1524,7 @@ export default function EventsScreen() {
           </SafeAreaView>
         </Modal>
       </GuestGuard>
->>>>>>> origin/main
+
     </SafeAreaView>
   );
 }
@@ -1660,7 +1711,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#e8ecf1",
     borderRadius: 4,
     marginBottom: 8,
-  },
     marginTop: 4,
   },
   skeletonButton: {
@@ -2252,5 +2302,5 @@ const styles = StyleSheet.create({
   },
   formBottomSpacer: { 
     height: Platform.OS === "ios" ? 30 : 20 
-  },
+  }
 });

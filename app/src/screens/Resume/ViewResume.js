@@ -22,6 +22,7 @@ import { useContext } from 'react';
 import { ResumeContext } from '../../context/ResumeContext';
 import { AuthContext } from '../../context/AuthContext';
 import { renderResumeHTML } from '../../services/templateService';
+import resumeApi from '../../api/resumeApi';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -62,14 +63,28 @@ const ResumeViewScreen = () => {
   }, []);
 
   useEffect(() => {
-    if (resumeId) {
-      const found = loadResume(resumeId) || resumes.find(r => r._id === resumeId);
-      if (found) {
-        setResume(found);
+    let isMounted = true;
+    const fetchFresh = async () => {
+      if (resumeId) {
+        try {
+          const res = await resumeApi.getResume(resumeId, true);
+          if (isMounted && res?.success && res?.data) {
+            setResume(res.data);
+            return;
+          }
+        } catch (err) {
+          console.log('Error fetching fresh resume in ViewResume:', err);
+        }
+        const found = loadResume(resumeId) || (Array.isArray(resumes) ? resumes.find(r => r._id === resumeId) : null);
+        if (isMounted && found) {
+          setResume(found);
+        }
+      } else if (resumes && resumes.length > 0) {
+        setResume(resumes[0]);
       }
-    } else if (resumes.length > 0) {
-      setResume(resumes[0]);
-    }
+    };
+    fetchFresh();
+    return () => { isMounted = false; };
   }, [resumeId, resumes]);
 
   const generateHTML = (isPrinting = false) => {
