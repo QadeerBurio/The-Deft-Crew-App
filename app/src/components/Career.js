@@ -128,6 +128,7 @@ const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended
     item.applicationType === 'internal';
 
   const isExternal = item.isExternal === true || item.source === 'external' || item.applicationType === 'external';
+  const isExpired = item.isExpired || item.active === false || (item.applicationDeadline && new Date(item.applicationDeadline) < new Date());
 
   return (
     <AnimatedTouchable
@@ -137,14 +138,19 @@ const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended
       onPressIn={() => animatePress(0.97)}
       onPressOut={() => animatePress(1)}
     >
-      {hasApplied && (
+      {isExpired ? (
+        <View style={styles.expiredBanner}>
+          <Ionicons name="time-outline" size={12} color="#ef4444" />
+          <Text style={styles.expiredBannerText}>EXPIRED</Text>
+        </View>
+      ) : hasApplied ? (
         <View style={styles.appliedBanner}>
           <Ionicons name="checkmark-circle" size={14} color="#10b981" />
           <Text style={styles.appliedBannerText}>You've Applied</Text>
         </View>
-      )}
+      ) : null}
 
-      <View style={[styles.cardCompHeader, hasApplied && { paddingRight: 100 }]}>
+      <View style={[styles.cardCompHeader, (hasApplied || isExpired) && { paddingRight: 100 }]}>
         {item.companyName && (
           <View style={styles.companyNameRow}>
             <View style={styles.companyDot} />
@@ -244,7 +250,7 @@ const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended
         </View>
       )}
 
-      {isRecommended && isTDC && !isExternal && (
+      {isRecommended && isTDC && !isExternal && !isExpired && (
         <TouchableOpacity 
           style={styles.optimizeCardBtn}
           onPress={(e) => {
@@ -258,13 +264,13 @@ const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended
       )}
 
       <View style={styles.cardFooter}>
-        <Text style={styles.viewDetailsLabel}>
-          {hasApplied ? "✓ View Details" : isTDC && !isExternal ? "Apply Now" : "Apply on Company Site"}
+        <Text style={[styles.viewDetailsLabel, isExpired && { color: '#ef4444' }]}>
+          {isExpired ? "Opportunity Expired" : hasApplied ? "✓ View Details" : isTDC && !isExternal ? "Apply Now" : "Apply on Company Site"}
         </Text>
         <Ionicons 
-          name={hasApplied ? "eye-outline" : isTDC && !isExternal ? "arrow-forward-circle" : "open-outline"} 
+          name={isExpired ? "close-circle-outline" : hasApplied ? "eye-outline" : isTDC && !isExternal ? "arrow-forward-circle" : "open-outline"} 
           size={22} 
-          color={hasApplied ? "#10b981" : isTDC && !isExternal ? "#f9c349" : "#3b82f6"} 
+          color={isExpired ? "#ef4444" : hasApplied ? "#10b981" : isTDC && !isExternal ? "#f9c349" : "#3b82f6"} 
         />
       </View>
     </AnimatedTouchable>
@@ -1065,6 +1071,16 @@ const Career = ({ navigation }) => {
   // ============================================================
   const openApplyModal = (job) => {
     setSelectedJob(job);
+    
+    const isExpired = job.isExpired || job.active === false || (job.applicationDeadline && new Date(job.applicationDeadline) < new Date());
+    if (isExpired) {
+      Alert.alert(
+        'Opportunity Expired ⏰',
+        `The application deadline for "${job.title}" at ${job.companyName || 'this company'} has passed. Applications are no longer accepted for this opportunity.`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
     
     // Check if this is a TDC job (internal) by checking multiple criteria
     const isTDC = 
@@ -1918,6 +1934,26 @@ const styles = StyleSheet.create({
   shareBtnText: { fontWeight: '700', color: '#1a1a1a', fontSize: 13 },
   cancelBtn: { flex: 1, height: 44, borderRadius: 12, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#f0f0f0' },
   cancelBtnText: { fontWeight: '700', color: '#999', fontSize: 13 },
+  expiredBanner: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#ef4444',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    zIndex: 10,
+  },
+  expiredBannerText: {
+    color: '#ef4444',
+    fontSize: 10,
+    fontWeight: '800',
+  },
   scopeToggleRow: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
   scopeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 22, borderWidth: 1.5, borderColor: '#f0f0f0', backgroundColor: '#fafafa' },
   scopeBtnActive: { backgroundColor: '#1a1a1a', borderColor: '#1a1a1a' },
