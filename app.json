@@ -2,7 +2,7 @@
   "expo": {
     "name": "tdc",
     "slug": "Testting",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "orientation": "default",
     "icon": "./assets/tdcs.png",
     "scheme": "tdcapp",
