@@ -1,7 +1,6 @@
 import React from "react";
 import { View, StyleSheet, TouchableOpacity, Dimensions, Platform, StatusBar } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import Svg, { Path } from "react-native-svg";
 import { Octicons, MaterialCommunityIcons, MaterialIcons, Foundation } from "@expo/vector-icons";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -14,44 +13,8 @@ import ProfileScreen from "../screens/ProfileScreen";
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get("window");
 
-// Constants for the "Attractive Slim" look
-const TAB_HEIGHT = 55; 
-
-/**
- * TabBg: Handles the SVG curve and the bottom safe area background fill
- */
-const TabBg = ({ color = "#FFFFFF", bottomInset = 0 }) => (
-  <View style={[styles.svgContainer, { bottom: 0 }]}>
-    <Svg 
-      width={width} 
-      height={TAB_HEIGHT + bottomInset + 10} 
-      viewBox={`0 0 ${width} ${TAB_HEIGHT + bottomInset + 10}`} 
-      fill="none"
-    >
-      <Path
-        d={`M0 0 
-           C${width * 0.27} 0 ${width * 0.32} 8 ${width * 0.38} 18 
-           C${width * 0.43} 26 ${width * 0.46} 32 ${width * 0.5} 32 
-           C${width * 0.54} 32 ${width * 0.57} 26 ${width * 0.62} 18 
-           C${width * 0.68} 8 ${width * 0.73} 0 ${width} 0 
-           V${TAB_HEIGHT + bottomInset + 10} 
-           H0 
-           Z`}
-        fill={color}
-      />
-      <Path
-        d={`M0 0 
-           C${width * 0.27} 0 ${width * 0.32} 8 ${width * 0.38} 18 
-           C${width * 0.43} 26 ${width * 0.46} 32 ${width * 0.5} 32 
-           C${width * 0.54} 32 ${width * 0.57} 26 ${width * 0.62} 18 
-           C${width * 0.68} 8 ${width * 0.73} 0 ${width} 0`}
-        stroke="rgba(0,0,0,0.05)"
-        strokeWidth={1}
-        fill="none"
-      />
-    </Svg>
-  </View>
-);
+// Constants for the tab bar
+const TAB_HEIGHT = 55; // Increased height for better proportions
 
 /**
  * CustomTabBar: The main logic for handling Safe Area and button rendering
@@ -75,13 +38,11 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
   // Hide bottom tab bar on specific screens
   const hideTabBarScreens = ["ResumeView", "ResumeBuilder", "ResumeTemplate", "ResumeShare", "ResumeAnalytics", "ResumeSettings", "Brands"];
   
-  // Hide bar on Social screen or specific nested stack screens
   if (focusedRoute?.name === "Social" || (nestedRouteName && hideTabBarScreens.includes(nestedRouteName))) {
     return null;
   }
 
   const handleSocialPress = () => {
-    // Direct navigation to Social screen
     navigation.navigate("Social");
   };
 
@@ -93,8 +54,8 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
 
   return (
     <View style={[styles.tabBarWrapper, { height: TAB_HEIGHT + insets.bottom + 10 }]}>
-      {/* Background SVG extending into bottom inset */}
-      <TabBg bottomInset={insets.bottom} />
+      {/* Rectangular Background */}
+      <View style={[styles.tabBarBackground, { height: TAB_HEIGHT + insets.bottom + 10 }]} />
       
       {/* Container for the icons */}
       <View style={[styles.contentContainer, { paddingBottom: insets.bottom + 5 }]}>
@@ -109,12 +70,12 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
         >
           <Octicons 
             name="home" 
-            size={24} 
+            size={26} 
             color={state.index === homeIndex ? "#f9c349" : "#9AA0A6"} 
           />
         </TouchableOpacity>
         
-        {/* Explore/Traveling Button */}
+        {/* Explore Button */}
         <TouchableOpacity 
           style={styles.tabItem}
           onPress={() => navigation.navigate("Explore")}
@@ -122,7 +83,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
         >
           <MaterialIcons 
             name="explore" 
-            size={24} 
+            size={26} 
             color={state.index === exploreIndex ? "#f9c349" : "#9AA0A6"} 
           />
         </TouchableOpacity>
@@ -136,13 +97,13 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
           <View style={styles.centerButton}>
             <Foundation 
               name="social-skillshare" 
-              size={30} 
+              size={32} 
               color={"#f9c349"} 
             />
           </View>
         </TouchableOpacity>
         
-        {/* Campus/Tools Button */}
+        {/* Campus Button */}
         <TouchableOpacity 
           style={styles.tabItem}
           onPress={() => navigation.navigate("Campus")}
@@ -150,7 +111,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
         >
           <MaterialCommunityIcons 
             name="school-outline" 
-            size={24} 
+            size={26} 
             color={state.index === campusIndex ? "#f9c349" : "#9AA0A6"} 
           />
         </TouchableOpacity>
@@ -163,7 +124,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
         >
           <MaterialCommunityIcons 
             name="account-circle" 
-            size={24} 
+            size={26} 
             color={state.index === profileIndex ? "#f9c349" : "#9AA0A6"} 
           />
         </TouchableOpacity>
@@ -213,9 +174,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     zIndex: 1000,
   },
-  svgContainer: {
+  tabBarBackground: {
     position: 'absolute',
+    bottom: 0,
     width: width,
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.08)',
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.08,
@@ -227,7 +192,8 @@ const styles = StyleSheet.create({
     height: TAB_HEIGHT,
     backgroundColor: 'transparent',
     alignItems: 'center',
-    paddingHorizontal: 8,
+    justifyContent: 'space-around',
+    paddingHorizontal: 9,
   },
   tabItem: {
     flex: 1,
@@ -240,13 +206,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: TAB_HEIGHT,
+    marginTop: -5, // Adjust to center the button properly
   },
   centerButton: {
-    position: 'absolute',
-    top: -2,
-    width: 55,
-    height: 55,
-    borderRadius: 30,
+    width: 52,
+    height: 52,
+    borderRadius: 45,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
@@ -258,5 +223,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 6,
     zIndex: 10,
+    marginTop: -15, // Pull the button up to center it
   },
 });

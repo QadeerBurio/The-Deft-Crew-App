@@ -1,4 +1,4 @@
-// screens/MyDiscountScreen.js - Ultra-Optimized with Loading Overlay
+// screens/MyDiscountScreen.js - Fully Optimized with Proper Loading States
 import React, { useState, useEffect, useRef, useContext, useCallback, useMemo } from 'react';
 import {
   View,
@@ -25,6 +25,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
+import { Camera, CameraView } from 'expo-camera';
 import api from '../api/api';
 import { AuthContext } from '../context/AuthContext';
 
@@ -64,7 +65,7 @@ const getTheme = (percentage) => DISCOUNT_THEMES[percentage] || DISCOUNT_THEMES.
 // Global cache for faster loading
 let discountsCache = null;
 let cacheTimestamp = null;
-const CACHE_DURATION = 60 * 1000; // 1 minute cache
+const CACHE_DURATION = 60000; // 1 minute cache
 
 // Helper function to generate promo code
 const generatePromoCode = (item) => {
@@ -672,17 +673,36 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
   const [loading, setLoading] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
   const { user, token } = useContext(AuthContext);
+  const isMounted = useRef(true);
 
   useEffect(() => {
+    isMounted.current = true;
+    
     const getCameraPermissions = async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
+      if (visible) {
+        try {
+          const { status } = await Camera.requestCameraPermissionsAsync();
+          if (isMounted.current) {
+            setHasPermission(status === 'granted');
+          }
+        } catch (error) {
+          console.error('Camera permission error:', error);
+          if (isMounted.current) {
+            setHasPermission(false);
+          }
+        }
+      }
     };
+    
     if (visible) {
       getCameraPermissions();
       setScanned(false);
       setLoading(false);
     }
+    
+    return () => {
+      isMounted.current = false;
+    };
   }, [visible]);
 
   const handleBarCodeScanned = useCallback(async ({ type, data }) => {
@@ -829,6 +849,7 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
     setTorchOn(!torchOn);
   };
 
+  // Handle permission states
   if (hasPermission === null) {
     return (
       <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -880,6 +901,7 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
     );
   }
 
+  // Camera is ready - render the scanner
   return (
     <Modal
       visible={visible}
@@ -1175,7 +1197,7 @@ const LoadingOverlay = ({ visible, message }) => {
         }),
         Animated.timing(loadingProgress, {
           toValue: 1,
-          duration: 2000,
+          duration: 1500,
           useNativeDriver: false,
         }),
       ]).start();
@@ -1189,8 +1211,8 @@ const LoadingOverlay = ({ visible, message }) => {
   }, [visible]);
 
   const loadingScaleX = loadingProgress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 1],
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, 1, 1],
   });
 
   if (!visible) return null;
@@ -1206,14 +1228,7 @@ const LoadingOverlay = ({ visible, message }) => {
               styles.loadingProgressBar,
               { transform: [{ scaleX: loadingScaleX }] }
             ]}
-          >
-            <LinearGradient
-              colors={['#f9c349', '#f5a623']}
-              style={styles.progressGradientFill}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            />
-          </Animated.View>
+          />
         </View>
         <View style={styles.loadingDots}>
           {[0, 1, 2].map((i) => (
@@ -1303,6 +1318,7 @@ export default function MyDiscountScreen() {
   const { token, user } = useContext(AuthContext);
   const [claimedOffers, setClaimedOffers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [totalSaved, setTotalSaved] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
@@ -1311,9 +1327,9 @@ export default function MyDiscountScreen() {
   const [scanningOffer, setScanningOffer] = useState(null);
   const [promoModalVisible, setPromoModalVisible] = useState(false);
   const [promoOffer, setPromoOffer] = useState(null);
-  const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
   const headerAnim = useRef(new Animated.Value(0)).current;
   const isMounted = useRef(true);
+  const loadTimeoutRef = useRef(null);
 
   useEffect(() => {
     Animated.timing(headerAnim, {
@@ -1325,17 +1341,20 @@ export default function MyDiscountScreen() {
     
     return () => {
       isMounted.current = false;
+      if (loadTimeoutRef.current) {
+        clearTimeout(loadTimeoutRef.current);
+      }
     };
   }, []);
 
-  // Optimized load function with loading overlay
+  // Optimized load function with proper loading states
   const loadDiscounts = useCallback(async (isRefresh = false) => {
     if (!token || !user) {
       if (isMounted.current) {
         setLoading(false);
+        setInitialLoading(false);
         setClaimedOffers([]);
         setTotalSaved(0);
-        setShowLoadingOverlay(false);
       }
       return;
     }
@@ -1347,17 +1366,11 @@ export default function MyDiscountScreen() {
         setClaimedOffers(discountsCache.offers);
         setTotalSaved(discountsCache.totalSaved);
         setLoading(false);
-        setShowLoadingOverlay(false);
+        setInitialLoading(false);
       }
       return;
     }
 
-    // Show loading overlay only on initial load
-    if (!isRefresh) {
-      setShowLoadingOverlay(true);
-      setLoading(true);
-    }
-    
     try {
       const userId = user?._id || user?.id || user?.userId;
       
@@ -1365,7 +1378,7 @@ export default function MyDiscountScreen() {
       const [offersRes, savingsRes] = await Promise.all([
         api.get('/offers/claimed', { 
           headers: { Authorization: `Bearer ${token}` },
-          timeout: 8000
+          timeout: 10000
         }),
         api.get('/offers/my-total-savings', { 
           headers: { Authorization: `Bearer ${token}` },
@@ -1394,9 +1407,10 @@ export default function MyDiscountScreen() {
           totalSaved: saved
         };
         cacheTimestamp = Date.now();
+        
         setLoading(false);
+        setInitialLoading(false);
         setRefreshing(false);
-        setShowLoadingOverlay(false);
       }
       
     } catch (err) {
@@ -1411,29 +1425,60 @@ export default function MyDiscountScreen() {
           setTotalSaved(0);
         }
         setLoading(false);
+        setInitialLoading(false);
         setRefreshing(false);
-        setShowLoadingOverlay(false);
       }
     }
+  }, [token, user]);
+
+  // Initial load with a small delay to prevent flash
+  useEffect(() => {
+    let isSubscribed = true;
+    
+    const performInitialLoad = async () => {
+      if (token && user) {
+        // First check cache
+        if (discountsCache && (Date.now() - cacheTimestamp) < CACHE_DURATION) {
+          if (isSubscribed) {
+            setClaimedOffers(discountsCache.offers);
+            setTotalSaved(discountsCache.totalSaved);
+            setLoading(false);
+            setInitialLoading(false);
+          }
+          // Still refresh in background
+          loadDiscounts(true);
+        } else {
+          // No cache or expired, show loading
+          await loadDiscounts(false);
+        }
+      } else {
+        if (isSubscribed) {
+          setLoading(false);
+          setInitialLoading(false);
+        }
+      }
+    };
+
+    // Small delay to prevent flash of loading state
+    const timer = setTimeout(() => {
+      performInitialLoad();
+    }, 100);
+
+    return () => {
+      isSubscribed = false;
+      clearTimeout(timer);
+    };
   }, [token, user]);
 
   // Auto-refresh on focus with stale-while-revalidate strategy
   useFocusEffect(
     useCallback(() => {
-      if (token && user) {
-        // Show cached data first, then refresh in background
-        if (discountsCache) {
-          setClaimedOffers(discountsCache.offers);
-          setTotalSaved(discountsCache.totalSaved);
-          setLoading(false);
-          // Background refresh
-          loadDiscounts(true);
-        } else {
-          loadDiscounts(false);
-        }
+      if (token && user && !initialLoading) {
+        // Refresh in background, don't show loading overlay
+        loadDiscounts(true);
       }
       return () => {};
-    }, [token, user, loadDiscounts])
+    }, [token, user, initialLoading, loadDiscounts])
   );
 
   const handleUseNow = useCallback((item) => {
@@ -1471,6 +1516,11 @@ export default function MyDiscountScreen() {
       
       if (response.data.message) {
         Alert.alert('Removed', `${item.title} has been removed from your discounts.`);
+        // Update cache immediately
+        if (discountsCache) {
+          discountsCache.offers = discountsCache.offers.filter(o => o._id !== item._id);
+        }
+        setClaimedOffers(prev => prev.filter(o => o._id !== item._id));
         loadDiscounts(true);
       }
     } catch (err) {
@@ -1494,12 +1544,12 @@ export default function MyDiscountScreen() {
     return { activeCount };
   }, [claimedOffers]);
 
-  // If loading and no cache, show loading overlay
-  if (loading && !discountsCache) {
+  // Show loading only on initial load with no cache
+  if (initialLoading && !discountsCache) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-        <LoadingOverlay visible={true} message="Loading discounts..." />
+        <LoadingOverlay visible={true} message="Loading your discounts..." />
       </SafeAreaView>
     );
   }
@@ -1511,10 +1561,7 @@ export default function MyDiscountScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-
-      {/* Loading Overlay */}
-      <LoadingOverlay visible={showLoadingOverlay} message="Loading discounts..." />
+      <StatusBar barStyle="dark-content" backgroundColor='#ffffff08' />
 
       <Animated.View
         style={[
@@ -1551,13 +1598,13 @@ export default function MyDiscountScreen() {
             onGetCode={handleGetCode}
           />
         )}
-        keyExtractor={(item, index) => item._id?.toString() || `${index}`}
+        keyExtractor={(item, index) => item._id?.toString() || `discount-${index}`}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
         initialNumToRender={3}
         maxToRenderPerBatch={3}
         windowSize={5}
-        removeClippedSubviews
+        removeClippedSubviews={Platform.OS === 'android'}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -2610,12 +2657,24 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(223, 218, 218, 0.4)',
+    backgroundColor: 'rgba(255,255,255,0.95)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 999,
   },
- 
+  loadingCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 32,
+    alignItems: 'center',
+    width: '80%',
+    maxWidth: 320,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 30,
+    elevation: 10,
+  },
   loadingText: {
     color: '#1a1a1a',
     fontSize: 16,
@@ -2626,7 +2685,7 @@ const styles = StyleSheet.create({
   loadingProgressContainer: {
     width: '100%',
     height: 4,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: '#f0f0f0',
     borderRadius: 2,
     marginTop: 16,
     overflow: 'hidden',
@@ -2638,10 +2697,6 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#f9c349',
   },
-  progressGradientFill: {
-    width: '100%',
-    height: '100%',
-  },
   loadingDots: {
     flexDirection: 'row',
     marginTop: 12,
@@ -2651,7 +2706,7 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: '#f9c349',
-    marginHorizontal: 4,
+    marginHorizontal: 3,
     opacity: 0.5,
   },
 });

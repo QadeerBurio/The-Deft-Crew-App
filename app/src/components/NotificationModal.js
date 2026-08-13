@@ -12,7 +12,7 @@ import { AuthContext } from '../context/AuthContext';
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const NotificationModal = ({ visible, onClose }) => {
-  const { token, setUnreadCount, updateUnreadCount } = useContext(AuthContext);
+  const { token, user, setUnreadCount, updateUnreadCount } = useContext(AuthContext);
   const [filter, setFilter] = useState('All');
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -83,24 +83,67 @@ const NotificationModal = ({ visible, onClose }) => {
     return past.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
+  // ✅ FIX: Filter notifications by user ID and type
   const fetchNotifications = async () => {
-    if (!token) return;
+    if (!token || !user) return;
     setLoading(true);
     try {
-      const response = await axios.get('https://the-deft-crew-production.up.railway.app/api/notification/my-notifications', {
+      const response = await axios.get('https://the-deft-crew-production.up.railway.app/api/notification/my-notifications',{
         headers: { Authorization: `Bearer ${token}` }
       });
-      const data = response.data.map(n => ({ ...n, time: getTimeAgo(n.createdAt) }));
+      
+      // ✅ Filter notifications - only show current user's notifications
+      let data = response.data;
+      
+      // Filter out notifications that don't belong to the current user
+      data = data.filter(n => {
+        // Check if notification has recipient field and it matches current user
+        if (n.recipient && n.recipient._id) {
+          return n.recipient._id === user._id || n.recipient === user._id;
+        }
+        // If recipient is stored as string ID
+        if (typeof n.recipient === 'string') {
+          return n.recipient === user._id;
+        }
+        return true; // Keep if no recipient filtering needed
+      });
+
+      // ✅ Map notifications and add time
+      data = data.map(n => ({ 
+        ...n, 
+        time: getTimeAgo(n.createdAt),
+        // Ensure proper icon based on type
+        icon: getNotificationIcon(n.type)
+      }));
+
       setNotifications(data);
       
+      // Update unread count for current user
       const count = data.filter(n => !n.isRead).length;
       setUnreadCount(count);
+      
     } catch (error) {
       console.error("Fetch Error:", error.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
+  };
+
+  // ✅ Helper function to get correct icon based on notification type
+  const getNotificationIcon = (type) => {
+    const iconMap = {
+      'Offers': 'gift-outline',
+      'Offer': 'gift-outline',
+      'System': 'settings-outline',
+      'Job Application': 'briefcase-outline',
+      'Application Status': 'checkmark-circle-outline',
+      'Interview': 'calendar-outline',
+      'Job Posting': 'megaphone-outline',
+      'Welcome': 'happy-outline',
+      'Default': 'notifications-outline'
+    };
+    return iconMap[type] || iconMap['Default'];
   };
 
   const onRefresh = () => {
@@ -188,9 +231,13 @@ const NotificationModal = ({ visible, onClose }) => {
     if (!item.isRead) markAsReadOnServer(item._id);
   };
 
+  // ✅ Filter notifications based on selected filter
   const filteredData = notifications.filter(n => {
     if (filter === 'All') return true;
     if (filter === 'Unread') return !n.isRead;
+    // Map filter labels to notification types
+    if (filter === 'Offers') return n.type === 'Offers' || n.type === 'Offer';
+    if (filter === 'System') return n.type === 'System' || n.type === 'Application Status';
     return n.type === filter;
   });
 
@@ -272,11 +319,22 @@ const NotificationModal = ({ visible, onClose }) => {
       ]).start();
     }, []);
 
-    const getIcon = () => {
+    // ✅ Get correct icon based on notification type
+    const getIconName = () => {
       switch(item.type) {
-        case 'Offers': return 'tag-outline';
-        case 'System': return 'settings-outline';
-        default: return 'bell-outline';
+        case 'Offers':
+        case 'Offer':
+          return 'gift-outline';
+        case 'System':
+          return 'settings-outline';
+        case 'Application Status':
+          return 'checkmark-circle-outline';
+        case 'Job Application':
+          return 'briefcase-outline';
+        case 'Interview':
+          return 'calendar-outline';
+        default:
+          return 'notifications-outline';
       }
     };
 
@@ -298,7 +356,7 @@ const NotificationModal = ({ visible, onClose }) => {
             style={styles.iconBox}
           >
             <Ionicons 
-              name={getIcon()} 
+              name={getIconName()} 
               size={22} 
               color={!item.isRead ? '#f9c349' : '#999'} 
             />
@@ -349,11 +407,22 @@ const NotificationModal = ({ visible, onClose }) => {
       ]).start();
     }, []);
 
-    const getIcon = () => {
+    // ✅ Get correct icon for detail view
+    const getIconName = () => {
       switch(selectedNotification?.type) {
-        case 'Offers': return 'tag-outline';
-        case 'System': return 'settings-outline';
-        default: return 'bell-outline';
+        case 'Offers':
+        case 'Offer':
+          return 'gift-outline';
+        case 'System':
+          return 'settings-outline';
+        case 'Application Status':
+          return 'checkmark-circle-outline';
+        case 'Job Application':
+          return 'briefcase-outline';
+        case 'Interview':
+          return 'calendar-outline';
+        default:
+          return 'notifications-outline';
       }
     };
 
@@ -387,7 +456,7 @@ const NotificationModal = ({ visible, onClose }) => {
               colors={['#f9c34915', '#f9c34908']}
               style={styles.detailIconWrapper}
             >
-              <Ionicons name={getIcon()} size={32} color="#f9c349" />
+              <Ionicons name={getIconName()} size={32} color="#f9c349" />
             </LinearGradient>
             
             <Text style={styles.detailTitle}>{selectedNotification.title}</Text>

@@ -682,19 +682,7 @@ export default function Dashboard({ navigation }) {
 
               <View style={styles.menuDivider} />
 
-              {!isGuest && (
-                <TouchableOpacity 
-                  style={[styles.menuItem, styles.menuLogoutItem]}
-                  onPress={handleLogout}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.menuIconContainer, { backgroundColor: '#FF3B3015' }]}>
-                    <Ionicons name="log-out-outline" size={18} color="#FF3B30" />
-                  </View>
-                  <Text style={[styles.menuItemText, styles.menuLogoutText]}>Logout</Text>
-                  <Ionicons name="chevron-forward-outline" size={16} color="#ccc" style={styles.menuArrow} />
-                </TouchableOpacity>
-              )}
+              
             </View>
           </Animated.View>
         </Pressable>
@@ -847,7 +835,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 8 : 12,
+    paddingTop: Platform.OS === 'ios' ? 8 : 2,
     paddingBottom: 12,
   },
   headerLeft: {

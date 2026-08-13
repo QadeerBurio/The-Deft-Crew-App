@@ -297,110 +297,117 @@ export default function NotificationScreen({ navigation }) {
     }
   };
 
-  // screens/NotificationScreen.js - FIXED handleNotificationClick
-
-const handleNotificationClick = async (item) => {
-  // Mark as read if unread
-  if (item.isUnread) {
-    try {
-      await axios.put(`${API_URL}/notifications/read/${item._id}`, {}, config);
-      setNotifications(prev => prev.map(n => n._id === item._id ? { ...n, isUnread: false } : n));
-    } catch (e) { 
-      console.log("Mark read error", e); 
+  // ============ FIXED: handleNotificationClick with proper navigation ============
+  const handleNotificationClick = async (item) => {
+    // Mark as read if unread
+    if (item.isUnread) {
+      try {
+        await axios.put(`${API_URL}/notifications/read/${item._id}`, {}, config);
+        setNotifications(prev => prev.map(n => n._id === item._id ? { ...n, isUnread: false } : n));
+      } catch (e) { 
+        console.log("Mark read error", e); 
+      }
     }
-  }
 
-  // Handle navigation based on notification type
-  try {
-    switch(item.type) {
-      case 'request':
-        if (item.sender?._id) {
-          navigation.navigate("UserProfile", { userId: item.sender._id });
-        }
-        break;
+    // Handle navigation based on notification type
+    try {
+      switch(item.type) {
+        case 'request':
+          if (item.sender?._id) {
+            navigation.navigate("UserProfile", { userId: item.sender._id });
+          }
+          break;
 
-      case 'connection_accepted':
-      case 'request_declined':
-        if (item.sender?._id) {
-          navigation.navigate("UserProfile", { userId: item.sender._id });
-        } else {
-          Alert.alert("Notice", "User profile not available.");
-        }
-        break;
-
-      case 'like':
-      case 'comment':
-        // ========== FIXED: Properly extract postId ==========
-        let postId = null;
-        
-        // If postId is an object with _id property
-        if (item.postId) {
-          if (typeof item.postId === 'object' && item.postId._id) {
-            postId = item.postId._id;
-          } else if (typeof item.postId === 'string') {
-            postId = item.postId;
-          } else if (typeof item.postId === 'object' && item.postId.toString) {
-            // Try to convert to string
-            postId = item.postId.toString();
-          }
-        }
-        
-        // Also check if the post is stored in a different field
-        if (!postId && item.post) {
-          if (typeof item.post === 'object' && item.post._id) {
-            postId = item.post._id;
-          } else if (typeof item.post === 'string') {
-            postId = item.post;
-          }
-        }
-        
-        // Validate postId is a valid ObjectId format (24 hex chars)
-        const isValidObjectId = (id) => {
-          if (!id) return false;
-          const idStr = typeof id === 'string' ? id : String(id);
-          return /^[0-9a-fA-F]{24}$/.test(idStr);
-        };
-        
-        if (postId && isValidObjectId(postId)) {
-          try {
-            // First check if post exists
-            const postCheck = await axios.get(`${API_URL}/posts/${postId}`, config);
-            if (postCheck.data) {
-              navigation.navigate("PostDetailScreen", { postId: postId });
-            } else {
-              Alert.alert("Notice", "This post is no longer available.");
-            }
-          } catch (error) {
-            if (error.response?.status === 404) {
-              Alert.alert("Notice", "This post has been deleted.");
-            } else {
-              console.error("Post fetch error:", error);
-              Alert.alert("Error", "Could not load the post.");
-            }
-          }
-        } else {
-          // If no valid post ID, try to navigate to sender's profile
+        case 'connection_accepted':
+        case 'request_declined':
           if (item.sender?._id) {
             navigation.navigate("UserProfile", { userId: item.sender._id });
           } else {
-            Alert.alert("Notice", "This content is no longer available.");
+            Alert.alert("Notice", "User profile not available.");
           }
-        }
-        break;
+          break;
 
-      default:
-        if (item.sender?._id) {
-          navigation.navigate("UserProfile", { userId: item.sender._id });
-        }
-        break;
+        case 'like':
+        case 'comment':
+          // Extract postId from notification
+          let postId = null;
+          
+          // Check postId field
+          if (item.postId) {
+            if (typeof item.postId === 'object' && item.postId._id) {
+              postId = item.postId._id;
+            } else if (typeof item.postId === 'string') {
+              postId = item.postId;
+            } else if (typeof item.postId === 'object' && item.postId.toString) {
+              postId = item.postId.toString();
+            }
+          }
+          
+          // Check post field
+          if (!postId && item.post) {
+            if (typeof item.post === 'object' && item.post._id) {
+              postId = item.post._id;
+            } else if (typeof item.post === 'string') {
+              postId = item.post;
+            }
+          }
+          
+          // Check relatedId field
+          if (!postId && item.relatedId) {
+            if (typeof item.relatedId === 'object' && item.relatedId._id) {
+              postId = item.relatedId._id;
+            } else if (typeof item.relatedId === 'string') {
+              postId = item.relatedId;
+            }
+          }
+
+          // Validate postId
+          const isValidObjectId = (id) => {
+            if (!id) return false;
+            const idStr = typeof id === 'string' ? id : String(id);
+            return /^[0-9a-fA-F]{24}$/.test(idStr);
+          };
+          
+          if (postId && isValidObjectId(postId)) {
+            try {
+              // First check if post exists
+              const postCheck = await axios.get(`${API_URL}/posts/${postId}`, config);
+              if (postCheck.data) {
+                navigation.navigate("PostDetailScreen", { postId: postId });
+              } else {
+                Alert.alert("Notice", "This post is no longer available.");
+              }
+            } catch (error) {
+              if (error.response?.status === 404) {
+                Alert.alert("Notice", "This post has been deleted.");
+              } else {
+                console.error("Post fetch error:", error);
+                Alert.alert("Error", "Could not load the post.");
+              }
+            }
+          } else {
+            // If no valid post ID, try to navigate to sender's profile
+            if (item.sender?._id) {
+              navigation.navigate("UserProfile", { userId: item.sender._id });
+            } else {
+              Alert.alert("Notice", "This content is no longer available.");
+            }
+          }
+          break;
+
+        default:
+          if (item.sender?._id) {
+            navigation.navigate("UserProfile", { userId: item.sender._id });
+          }
+          break;
+      }
+    } catch (error) {
+      console.error('Navigation error:', error);
+      Alert.alert("Error", "Could not navigate to the requested content.");
     }
-  } catch (error) {
-    console.error('Navigation error:', error);
-    Alert.alert("Error", "Could not navigate to the requested content.");
-  }
-};
+  };
 
-  // Handle Accept - Updates currentUser context
+  // ============ FIXED: Handle Accept with proper user context update ============
   const handleAccept = async (notificationId) => {
     if (processingIds[notificationId]) return;
     
@@ -450,7 +457,7 @@ const handleNotificationClick = async (item) => {
     }
   };
 
-  // Handle Decline - Updates currentUser context
+  // ============ FIXED: Handle Decline with proper user context update ============
   const handleDecline = async (notificationId) => {
     if (processingIds[notificationId]) return;
     

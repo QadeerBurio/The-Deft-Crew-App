@@ -1,3 +1,4 @@
+// SignIn.js - Updated with Session Expiry Handler
 import React, { useState, useContext, useRef, useEffect } from "react";
 import {
   View,
@@ -17,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import api from "../api/api";
+import api, { injectSessionErrorHandler } from "../api/api";
 import { AuthContext } from "../context/AuthContext";
 
 const { width, height } = Dimensions.get("window");
@@ -121,10 +122,17 @@ export default function SignIn({ navigation }) {
   // Run animation only on initial mount
   useEffect(() => {
     startAnimations();
+    
+    // NEW: Inject session error handler
+    injectSessionErrorHandler((title, message) => {
+      showNotification(title, message, "error");
+    });
+    
+    return () => {
+      // Cleanup: inject null handler when component unmounts
+      injectSessionErrorHandler(null);
+    };
   }, []);
-
-  // Don't use useFocusEffect to prevent re-animation on focus
-  // This prevents the double animation issue
 
   const showNotification = (title, message, type = "success") => {
     setNotification({ title, message, type });

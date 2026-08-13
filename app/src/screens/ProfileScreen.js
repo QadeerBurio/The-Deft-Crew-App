@@ -33,23 +33,21 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
-import { BlurView } from "expo-blur";
 
 const { width, height } = Dimensions.get("window");
 
-// Modern Menu Item Component with glass morphism
+// Modern Menu Item Component - Compact
 const MenuItem = ({ item, index, isLast }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const itemFade = useRef(new Animated.Value(0)).current;
-  const itemSlide = useRef(new Animated.Value(40)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
+  const itemSlide = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(itemFade, {
         toValue: 1,
-        duration: 600,
-        delay: index * 60,
+        duration: 500,
+        delay: index * 50,
         useNativeDriver: true,
         easing: Easing.out(Easing.cubic),
       }),
@@ -57,34 +55,15 @@ const MenuItem = ({ item, index, isLast }) => {
         toValue: 0,
         friction: 8,
         tension: 40,
-        delay: index * 60,
+        delay: index * 50,
         useNativeDriver: true,
       }),
     ]).start();
   }, [index]);
 
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, {
-          toValue: 1,
-          duration: 2000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(glowAnim, {
-          toValue: 0,
-          duration: 2000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
-
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
-      toValue: 0.96,
+      toValue: 0.97,
       friction: 5,
       tension: 40,
       useNativeDriver: true,
@@ -100,11 +79,6 @@ const MenuItem = ({ item, index, isLast }) => {
       useNativeDriver: true,
     }).start();
   };
-
-  const glowOpacity = glowAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 0.6],
-  });
 
   return (
     <Animated.View
@@ -122,33 +96,14 @@ const MenuItem = ({ item, index, isLast }) => {
         onPress={item.onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        activeOpacity={0.7}
+        activeOpacity={0.6}
       >
-        <Animated.View
-          style={[
-            styles.menuGlow,
-            {
-              opacity: glowOpacity,
-              backgroundColor: item.color + "20",
-            },
-          ]}
-        />
         <View style={styles.menuLeft}>
-          <LinearGradient
-            colors={[item.color + "25", item.color + "08"]}
-            style={styles.menuIconBox}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Icon name={item.icon} size={22} color={item.color} />
-          </LinearGradient>
+          <View style={[styles.menuIconBox, { backgroundColor: item.color + '15' }]}>
+            <Icon name={item.icon} size={20} color={item.color} />
+          </View>
           <View style={styles.menuTextContainer}>
-            <Text
-              style={[
-                styles.menuItemTitle,
-                item.danger && { color: "#FF4757" },
-              ]}
-            >
+            <Text style={[styles.menuItemTitle, item.danger && { color: "#FF4757" }]}>
               {item.name}
             </Text>
             {item.subtitle && (
@@ -162,8 +117,6 @@ const MenuItem = ({ item, index, isLast }) => {
               <LinearGradient
                 colors={["#f9c349", "#f9c349"]}
                 style={styles.menuBadgeGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
               >
                 <Text style={styles.menuBadgeText}>
                   {typeof item.rightText === 'number' && item.rightText > 99 
@@ -173,13 +126,7 @@ const MenuItem = ({ item, index, isLast }) => {
               </LinearGradient>
             </View>
           ) : (
-            <View style={styles.chevronContainer}>
-              <Icon
-                name="chevron-forward"
-                size={14}
-                color="#C0C0C0"
-              />
-            </View>
+            <Icon name="chevron-forward" size={16} color="#C5C7CC" />
           )}
         </View>
       </TouchableOpacity>
@@ -209,48 +156,25 @@ export default function ProfileScreen() {
 
   // Animation References
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideUpAnim = useRef(new Animated.Value(40)).current;
+  const slideUpAnim = useRef(new Animated.Value(30)).current;
   const headerFade = useRef(new Animated.Value(0)).current;
-  const avatarScale = useRef(new Animated.Value(0.6)).current;
-  const statsScale = useRef(new Animated.Value(0.8)).current;
+  const avatarScale = useRef(new Animated.Value(0.7)).current;
   const menuFade = useRef(new Animated.Value(0)).current;
-  const shimmerAnim = useRef(new Animated.Value(0)).current;
-  const headerTranslate = useRef(new Animated.Value(-20)).current;
 
   // Delete Modal Animations
-  const modalScale = useRef(new Animated.Value(0.8)).current;
+  const modalScale = useRef(new Animated.Value(0.9)).current;
   const modalOpacity = useRef(new Animated.Value(0)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
   // Sign Out Modal Animations
-  const signOutModalScale = useRef(new Animated.Value(0.8)).current;
+  const signOutModalScale = useRef(new Animated.Value(0.9)).current;
   const signOutModalOpacity = useRef(new Animated.Value(0)).current;
-
-  // Shimmer Animation
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmerAnim, {
-          toValue: 1,
-          duration: 1500,
-          easing: Easing.linear,
-          useNativeDriver: true,
-        }),
-        Animated.timing(shimmerAnim, {
-          toValue: 0,
-          duration: 1500,
-          easing: Easing.linear,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
 
   const startEntranceAnimations = useCallback(() => {
     Animated.parallel([
       Animated.timing(headerFade, {
         toValue: 1,
-        duration: 700,
+        duration: 600,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
@@ -262,7 +186,7 @@ export default function ProfileScreen() {
       }),
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 600,
+        duration: 500,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
@@ -272,23 +196,11 @@ export default function ProfileScreen() {
         tension: 40,
         useNativeDriver: true,
       }),
-      Animated.spring(statsScale, {
-        toValue: 1,
-        friction: 6,
-        tension: 50,
-        useNativeDriver: true,
-      }),
       Animated.timing(menuFade, {
         toValue: 1,
-        duration: 600,
+        duration: 500,
         delay: 100,
         easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.spring(headerTranslate, {
-        toValue: 0,
-        friction: 8,
-        tension: 40,
         useNativeDriver: true,
       }),
     ]).start();
@@ -423,7 +335,7 @@ export default function ProfileScreen() {
   const closeSignOutModal = () => {
     Animated.parallel([
       Animated.timing(signOutModalScale, {
-        toValue: 0.8,
+        toValue: 0.9,
         duration: 200,
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
@@ -471,7 +383,7 @@ export default function ProfileScreen() {
   const closeDeleteModal = () => {
     Animated.parallel([
       Animated.timing(modalScale, {
-        toValue: 0.8,
+        toValue: 0.9,
         duration: 200,
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
@@ -492,22 +404,22 @@ export default function ProfileScreen() {
   const handleShake = () => {
     Animated.sequence([
       Animated.timing(shakeAnim, {
-        toValue: 10,
+        toValue: 8,
         duration: 50,
         useNativeDriver: true,
       }),
       Animated.timing(shakeAnim, {
-        toValue: -10,
+        toValue: -8,
         duration: 50,
         useNativeDriver: true,
       }),
       Animated.timing(shakeAnim, {
-        toValue: 5,
+        toValue: 4,
         duration: 50,
         useNativeDriver: true,
       }),
       Animated.timing(shakeAnim, {
-        toValue: -5,
+        toValue: -4,
         duration: 50,
         useNativeDriver: true,
       }),
@@ -529,6 +441,7 @@ export default function ProfileScreen() {
     if (confirmText.toLowerCase() !== "delete my account") {
       handleShake();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert("Error", 'Please type "delete my account" to confirm.');
       return;
     }
 
@@ -590,7 +503,7 @@ export default function ProfileScreen() {
           subtitle: "Your earned rewards balance",
           icon: "gift-outline",
           color: "#FF6B6B",
-          rightText: "250 pts",
+          rightText: "250",
           onPress: () =>
             Alert.alert("Coming Soon!", "We're building our rewards shop!"),
         },
@@ -610,6 +523,16 @@ export default function ProfileScreen() {
           },
         },
         {
+          name: "Settings",
+          subtitle: "App preferences and options",
+          icon: "settings-outline",
+          color: "#3B82F6",
+          onPress: () => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            navigation.navigate("SettingsScreen");
+          },
+        },
+        {
           name: "Sign Out",
           subtitle: "Log out of your account",
           icon: "log-out-outline",
@@ -617,16 +540,9 @@ export default function ProfileScreen() {
           onPress: openSignOutModal,
           danger: true,
         },
-        
       ],
     },
   ];
-
-  const formatSavedAmount = (amount) => {
-    if (amount === 0) return "0";
-    if (amount >= 1000) return (amount / 1000).toFixed(1) + "k";
-    return amount.toFixed(0);
-  };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -636,112 +552,102 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Modern Profile Header with Glass Effect */}
+        {/* Profile Header */}
         <Animated.View
           style={[
             styles.profileHeader,
             {
               opacity: headerFade,
-              transform: [{ translateY: headerTranslate }],
             },
           ]}
         >
-          <LinearGradient
-            colors={["#FFFFFF", "#F8FAFC"]}
-            style={styles.profileHeaderGradient}
-          >
-            <View style={styles.profileHeaderContent}>
-              <Animated.View
-                style={[
-                  styles.avatarContainer,
-                  { transform: [{ scale: avatarScale }] },
-                ]}
-              >
-                <TouchableOpacity onPress={pickImage} activeOpacity={0.8}>
+          <View style={styles.profileHeaderContent}>
+            <Animated.View
+              style={[
+                styles.avatarContainer,
+                { transform: [{ scale: avatarScale }] },
+              ]}
+            >
+              <TouchableOpacity onPress={pickImage} activeOpacity={0.8}>
+                <LinearGradient
+                  colors={["#f9c349", "#e6b800"]}
+                  style={styles.avatarRing}
+                >
+                  {selectedImage ? (
+                    <Image
+                      source={{ uri: selectedImage }}
+                      style={styles.avatarImage}
+                    />
+                  ) : user?.profileImage ? (
+                    <Image
+                      source={{
+                        uri: `${user.profileImage}?t=${Date.now()}`,
+                      }}
+                      style={styles.avatarImage}
+                    />
+                  ) : (
+                    <View style={styles.avatarPlaceholder}>
+                      <Text style={styles.avatarText}>
+                        {user?.name?.charAt(0)?.toUpperCase() || "?"}
+                      </Text>
+                    </View>
+                  )}
+                </LinearGradient>
+                <View style={styles.cameraBadge}>
                   <LinearGradient
-                    colors={["#f9c349", "#f9c349"]}
-                    style={styles.avatarRing}
+                    colors={["#f9c349", "#e6b800"]}
+                    style={styles.cameraBadgeGradient}
                   >
-                    {selectedImage ? (
-                      <Image
-                        source={{ uri: selectedImage }}
-                        style={styles.avatarImage}
-                      />
-                    ) : user?.profileImage ? (
-                      <Image
-                        source={{
-                          uri: `${user.profileImage}?t=${Date.now()}`,
-                        }}
-                        style={styles.avatarImage}
-                      />
+                    <Icon name="camera" size={12} color="#1A1A1A" />
+                  </LinearGradient>
+                </View>
+              </TouchableOpacity>
+            </Animated.View>
+
+            <View style={styles.userInfo}>
+              <Text style={styles.userName}>{user?.name || "Student"}</Text>
+              <View style={styles.emailRow}>
+                <Icon name="mail-outline" size={13} color="#94A3B8" />
+                <Text style={styles.userEmail}>{user?.email || ""}</Text>
+              </View>
+              {selectedImage && (
+                <TouchableOpacity
+                  style={styles.saveBtn}
+                  onPress={handleSaveProfile}
+                  disabled={isSaving}
+                >
+                  <LinearGradient
+                    colors={["#4ECDC4", "#44B39D"]}
+                    style={styles.saveBtnGradient}
+                  >
+                    {isSaving ? (
+                      <ActivityIndicator size="small" color="#FFF" />
                     ) : (
-                      <View style={styles.avatarPlaceholder}>
-                        <Text style={styles.avatarText}>
-                          {user?.name?.charAt(0)?.toUpperCase() || "?"}
-                        </Text>
-                      </View>
+                      <>
+                        <Icon name="checkmark-outline" size={14} color="#FFF" />
+                        <Text style={styles.saveBtnText}>Save</Text>
+                      </>
                     )}
                   </LinearGradient>
-                  <View style={styles.cameraBadge}>
-                    <LinearGradient
-                      colors={["#f9c349", "#f9c349"]}
-                      style={styles.cameraBadgeGradient}
-                    >
-                      <Icon name="camera" size={12} color="#1A1A1A" />
-                    </LinearGradient>
-                  </View>
                 </TouchableOpacity>
-              </Animated.View>
-
-              <View style={styles.userInfo}>
-                <Text style={styles.userName}>{user?.name || "Student"}</Text>
-                <View style={styles.emailRow}>
-                  <Icon name="mail-outline" size={13} color="#94A3B8" />
-                  <Text style={styles.userEmail}>{user?.email || ""}</Text>
-                </View>
-                {selectedImage && (
-                  <TouchableOpacity
-                    style={styles.saveBtn}
-                    onPress={handleSaveProfile}
-                    disabled={isSaving}
-                  >
-                    <LinearGradient
-                      colors={["#4ECDC4", "#44B39D"]}
-                      style={styles.saveBtnGradient}
-                    >
-                      {isSaving ? (
-                        <ActivityIndicator size="small" color="#FFF" />
-                      ) : (
-                        <>
-                          <Icon
-                            name="cloud-upload-outline"
-                            size={14}
-                            color="#FFF"
-                          />
-                          <Text style={styles.saveBtnText}>Save</Text>
-                        </>
-                      )}
-                    </LinearGradient>
-                  </TouchableOpacity>
-                )}
-              </View>
+              )}
             </View>
-          </LinearGradient>
+          </View>
         </Animated.View>
 
-        {/* Modern Stats Card with Glass Effect */}
+        {/* Stats Row - Compact & Smart */}
         <Animated.View
           style={[
-            styles.statsCard,
+            styles.statsRow,
             {
               opacity: fadeAnim,
-              transform: [{ scale: statsScale }],
+              transform: [{ translateY: slideUpAnim }],
             },
           ]}
         >
           <View style={styles.statItem}>
             <View style={[styles.statIconBox, { backgroundColor: "#FFD93D20" }]}>
-              <Icon name="gift-outline" size={20} color="#f9c349" />
+              <Icon name="gift-outline" size={16} color="#f9c349" />
             </View>
             <Text style={styles.statLabel}>Used</Text>
             <Text style={[styles.statValue, { color: "#f9c349" }]}>
@@ -751,7 +657,7 @@ export default function ProfileScreen() {
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <View style={[styles.statIconBox, { backgroundColor: "#A855F720" }]}>
-              <Icon name="card-outline" size={20} color="#A855F7" />
+              <Icon name="card-outline" size={16} color="#A855F7" />
             </View>
             <Text style={styles.statLabel}>Discounts</Text>
             <Text style={[styles.statValue, { color: "#A855F7" }]}>
@@ -760,11 +666,10 @@ export default function ProfileScreen() {
           </View>
         </Animated.View>
 
-        {/* Modern Menu Section */}
+        {/* Menu Section */}
         <Animated.View
           style={{
             opacity: menuFade,
-            transform: [{ translateY: slideUpAnim }],
           }}
         >
           <View style={styles.menuContainer}>
@@ -781,11 +686,10 @@ export default function ProfileScreen() {
           </View>
         </Animated.View>
 
-        {/* Version Footer */}
-        <Text style={styles.versionText}>Version 2.0.0</Text>
+        <Text style={styles.versionText}>Version 2.0.1</Text>
       </ScrollView>
 
-      {/* Membership Card Modal with Modern Design */}
+      {/* Membership Card Modal */}
       <Modal
         visible={ecardModalVisible}
         animationType="fade"
@@ -801,42 +705,26 @@ export default function ProfileScreen() {
             onPress={(e) => e.stopPropagation()}
           >
             <LinearGradient
-              colors={["#fff", "#f9c349", "#000"]}
+              colors={["#1A1A1A", "#f9c349", "#1A1A1A"]}
               style={styles.membershipGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <View style={styles.cardSparkles}>
-                {[...Array(8)].map((_, i) => (
-                  <Icon
-                    key={i}
-                    name="sparkles"
-                    size={16}
-                    color="rgba(255,255,255,0.08)"
-                    style={{
-                      position: "absolute",
-                      top: `${10 + i * 12}%`,
-                      left: `${8 + (i % 4) * 25}%`,
-                    }}
-                  />
-                ))}
-              </View>
               <Text style={styles.cardTitle}>
                 tdc<Text style={{ color: "#f9c349" }}>.</Text> PREMIUM
               </Text>
               <View style={styles.cardBody}>
                 <View style={styles.diamondBox}>
                   <LinearGradient
-                    colors={["#f9c349", "#f9c349"]}
+                    colors={["#f9c349", "#e6b800"]}
                     style={styles.diamondGradient}
                   >
-                    <Icon name="diamond" size={50} color="#1A1A1A" />
+                    <Icon name="diamond" size={44} color="#1A1A1A" />
                   </LinearGradient>
                 </View>
                 <Text style={styles.cardPromoTitle}>Unlock Full Access</Text>
                 <Text style={styles.cardPromoDesc}>
-                  Get exclusive student discounts at all partner brands for
-                  just{" "}
+                  Get exclusive student discounts for just{" "}
                   <Text style={styles.priceHighlight}>750-Rs / year</Text>
                 </Text>
               </View>
@@ -850,15 +738,13 @@ export default function ProfileScreen() {
                 activeOpacity={0.8}
               >
                 <LinearGradient
-                  colors={["#f9c349", "#f9c349"]}
+                  colors={["#f9c349", "#e6b800"]}
                   style={styles.cardBtnGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
                 >
                   <Text style={styles.cardBtnText}>GET MEMBERSHIP</Text>
                   <Icon
-                    name="arrow-forward-circle"
-                    size={22}
+                    name="arrow-forward"
+                    size={18}
                     color="#1A1A1A"
                     style={{ marginLeft: 8 }}
                   />
@@ -866,7 +752,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setEcardModalVisible(false)}
-                style={{ marginTop: 18 }}
+                style={{ marginTop: 16 }}
               >
                 <Text style={styles.maybeLater}>Maybe Later</Text>
               </TouchableOpacity>
@@ -875,67 +761,59 @@ export default function ProfileScreen() {
         </Pressable>
       </Modal>
 
-      {/* Modern Sign Out Modal */}
+      {/* Sign Out Modal */}
       <Modal
         visible={showSignOutModal}
         transparent
         animationType="none"
         onRequestClose={closeSignOutModal}
       >
-        <View style={styles.deleteModalOverlay}>
+        <View style={styles.modalOverlay}>
           <Animated.View
             style={[
-              styles.deleteModalContent,
+              styles.modalContent,
               {
                 opacity: signOutModalOpacity,
                 transform: [{ scale: signOutModalScale }],
               },
             ]}
           >
-            <View style={styles.deleteModalHeader}>
-              <View style={[styles.deleteModalIcon, { backgroundColor: "#FFD93D20" }]}>
-                <MaterialCommunityIcons
-                  name="logout"
-                  size={40}
-                  color="#f9c349"
-                />
-              </View>
-              <Text style={styles.deleteModalTitle}>Sign Out?</Text>
-              <Text style={styles.deleteModalDesc}>
-                Are you sure you want to sign out of your account?
-              </Text>
+            <View style={styles.modalIconContainer}>
+              <MaterialCommunityIcons name="logout" size={32} color="#f9c349" />
             </View>
-            <View style={styles.deleteModalBtns}>
+            <Text style={styles.modalTitle}>Sign Out?</Text>
+            <Text style={styles.modalDesc}>
+              Are you sure you want to sign out?
+            </Text>
+            <View style={styles.modalBtns}>
               <TouchableOpacity
-                style={styles.cancelBtn}
+                style={styles.modalCancelBtn}
                 onPress={closeSignOutModal}
               >
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.continueBtn, { backgroundColor: "#f9c349" }]}
+                style={styles.modalConfirmBtn}
                 onPress={handleSignOut}
               >
-                <Text style={[styles.continueBtnText, { color: "#1A1A1A" }]}>
-                  Sign Out
-                </Text>
+                <Text style={styles.modalConfirmText}>Sign Out</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
         </View>
       </Modal>
 
-      {/* Modern Delete Account Modal */}
+      {/* Delete Account Modal */}
       <Modal
         visible={showDeleteModal}
         transparent
         animationType="none"
         onRequestClose={closeDeleteModal}
       >
-        <View style={styles.deleteModalOverlay}>
+        <View style={styles.modalOverlay}>
           <Animated.View
             style={[
-              styles.deleteModalContent,
+              styles.modalContent,
               {
                 opacity: modalOpacity,
                 transform: [
@@ -947,160 +825,76 @@ export default function ProfileScreen() {
           >
             {deleteStep === 1 && (
               <>
-                <View style={styles.deleteModalHeader}>
-                  <View style={[styles.deleteModalIcon, { backgroundColor: "#FF475720" }]}>
-                    <MaterialCommunityIcons
-                      name="alert-circle"
-                      size={40}
-                      color="#FF4757"
-                    />
+                <View style={styles.modalHeader}>
+                  <View style={[styles.modalIconBox, { backgroundColor: "#FF475720" }]}>
+                    <MaterialCommunityIcons name="alert-circle" size={36} color="#FF4757" />
                   </View>
-                  <Text style={styles.deleteModalTitle}>
-                    Delete Account?
-                  </Text>
-                  <Text style={styles.deleteModalDesc}>
-                    This action cannot be undone. All your data will be
-                    permanently deleted.
+                  <Text style={styles.modalTitle}>Delete Account?</Text>
+                  <Text style={styles.modalDesc}>
+                    This action cannot be undone. All your data will be permanently deleted.
                   </Text>
                 </View>
                 <View style={styles.warningList}>
                   <View style={styles.warningItem}>
-                    <Icon
-                      name="close-circle"
-                      size={18}
-                      color="#FF4757"
-                    />
-                    <Text style={styles.warningText}>
-                      Your profile will be removed
-                    </Text>
+                    <Icon name="close-circle" size={16} color="#FF4757" />
+                    <Text style={styles.warningText}>Profile removed</Text>
                   </View>
                   <View style={styles.warningItem}>
-                    <Icon
-                      name="close-circle"
-                      size={18}
-                      color="#FF4757"
-                    />
-                    <Text style={styles.warningText}>
-                      All connections will be lost
-                    </Text>
+                    <Icon name="close-circle" size={16} color="#FF4757" />
+                    <Text style={styles.warningText}>All connections lost</Text>
                   </View>
                   <View style={styles.warningItem}>
-                    <Icon
-                      name="close-circle"
-                      size={18}
-                      color="#FF4757"
-                    />
-                    <Text style={styles.warningText}>
-                      Referral history will be deleted
-                    </Text>
+                    <Icon name="close-circle" size={16} color="#FF4757" />
+                    <Text style={styles.warningText}>History deleted</Text>
                   </View>
                 </View>
-                <View style={styles.deleteModalBtns}>
-                  <TouchableOpacity
-                    style={styles.cancelBtn}
-                    onPress={closeDeleteModal}
-                  >
-                    <Text style={styles.cancelBtnText}>Cancel</Text>
+                <View style={styles.modalBtns}>
+                  <TouchableOpacity style={styles.modalCancelBtn} onPress={closeDeleteModal}>
+                    <Text style={styles.modalCancelText}>Cancel</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.continueBtn}
-                    onPress={handleNextStep}
-                  >
-                    <Text style={styles.continueBtnText}>Continue</Text>
+                  <TouchableOpacity style={styles.modalDangerBtn} onPress={handleNextStep}>
+                    <Text style={styles.modalDangerText}>Continue</Text>
                   </TouchableOpacity>
                 </View>
               </>
             )}
             {deleteStep === 2 && (
               <>
-                <View style={styles.deleteModalHeader}>
-                  <View
-                    style={[
-                      styles.deleteModalIcon,
-                      { backgroundColor: "#FFD93D20" },
-                    ]}
-                  >
-                    <MaterialCommunityIcons
-                      name="pause-circle"
-                      size={40}
-                      color="#f9c349"
-                    />
+                <View style={styles.modalHeader}>
+                  <View style={[styles.modalIconBox, { backgroundColor: "#FFD93D20" }]}>
+                    <MaterialCommunityIcons name="pause-circle" size={36} color="#f9c349" />
                   </View>
-                  <Text style={styles.deleteModalTitle}>
-                    Wait! Before You Go
-                  </Text>
-                  <Text style={styles.deleteModalDesc}>
-                    Consider these options instead:
-                  </Text>
+                  <Text style={styles.modalTitle}>Wait! Before You Go</Text>
+                  <Text style={styles.modalDesc}>Consider these options instead:</Text>
                 </View>
                 <View style={styles.alternativeList}>
-                  <TouchableOpacity
-                    style={styles.alternativeItem}
-                    onPress={closeDeleteModal}
-                  >
-                    <Icon name="create-outline" size={20} color="#f9c349" />
-                    <Text style={styles.alternativeText}>
-                      Update your profile
-                    </Text>
+                  <TouchableOpacity style={styles.alternativeItem} onPress={closeDeleteModal}>
+                    <Icon name="create-outline" size={18} color="#f9c349" />
+                    <Text style={styles.alternativeText}>Update your profile</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.alternativeItem}
-                    onPress={closeDeleteModal}
-                  >
-                    <Icon
-                      name="help-circle-outline"
-                      size={20}
-                      color="#f9c349"
-                    />
-                    <Text style={styles.alternativeText}>
-                      Contact support
-                    </Text>
+                  <TouchableOpacity style={styles.alternativeItem} onPress={closeDeleteModal}>
+                    <Icon name="help-circle-outline" size={18} color="#f9c349" />
+                    <Text style={styles.alternativeText}>Contact support</Text>
                   </TouchableOpacity>
                 </View>
-                <View style={styles.deleteModalBtns}>
-                  <TouchableOpacity
-                    style={styles.cancelBtn}
-                    onPress={closeDeleteModal}
-                  >
-                    <Text style={styles.cancelBtnText}>Keep Account</Text>
+                <View style={styles.modalBtns}>
+                  <TouchableOpacity style={styles.modalCancelBtn} onPress={closeDeleteModal}>
+                    <Text style={styles.modalCancelText}>Keep Account</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.continueBtn, { backgroundColor: "#f9c349" }]}
-                    onPress={handleNextStep}
-                  >
-                    <Text style={[styles.continueBtnText, { color: "#1A1A1A" }]}>
-                      Still Delete
-                    </Text>
+                  <TouchableOpacity style={[styles.modalConfirmBtn, { backgroundColor: "#f9c349" }]} onPress={handleNextStep}>
+                    <Text style={[styles.modalConfirmText, { color: "#1A1A1A" }]}>Still Delete</Text>
                   </TouchableOpacity>
                 </View>
               </>
             )}
             {deleteStep === 3 && (
               <>
-                <View style={styles.deleteModalHeader}>
-                  <View
-                    style={[
-                      styles.deleteModalIcon,
-                      { backgroundColor: "#FF475720" },
-                    ]}
-                  >
-                    <MaterialCommunityIcons
-                      name="delete-forever"
-                      size={40}
-                      color="#FF4757"
-                    />
+                <View style={styles.modalHeader}>
+                  <View style={[styles.modalIconBox, { backgroundColor: "#FF475720" }]}>
+                    <MaterialCommunityIcons name="delete-forever" size={36} color="#FF4757" />
                   </View>
-                  <Text
-                    style={[
-                      styles.deleteModalTitle,
-                      { color: "#FF4757" },
-                    ]}
-                  >
-                    Final Confirmation
-                  </Text>
-                  <Text style={styles.deleteModalDesc}>
-                    Type "delete my account" to confirm.
-                  </Text>
+                  <Text style={[styles.modalTitle, { color: "#FF4757" }]}>Final Confirmation</Text>
+                  <Text style={styles.modalDesc}>Type "delete my account" to confirm.</Text>
                 </View>
                 <TextInput
                   style={styles.confirmInput}
@@ -1111,19 +905,14 @@ export default function ProfileScreen() {
                   autoCapitalize="none"
                   editable={!deleting}
                 />
-                <View style={styles.deleteModalBtns}>
-                  <TouchableOpacity
-                    style={styles.cancelBtn}
-                    onPress={closeDeleteModal}
-                    disabled={deleting}
-                  >
-                    <Text style={styles.cancelBtnText}>Cancel</Text>
+                <View style={styles.modalBtns}>
+                  <TouchableOpacity style={styles.modalCancelBtn} onPress={closeDeleteModal} disabled={deleting}>
+                    <Text style={styles.modalCancelText}>Cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
-                      styles.deleteFinalBtn,
-                      confirmText.toLowerCase() === "delete my account" &&
-                        styles.deleteFinalBtnActive,
+                      styles.modalDangerBtn,
+                      confirmText.toLowerCase() === "delete my account" && styles.modalDangerActive,
                     ]}
                     onPress={handleDeleteAccount}
                     disabled={deleting}
@@ -1131,9 +920,7 @@ export default function ProfileScreen() {
                     {deleting ? (
                       <ActivityIndicator color="#FFF" size="small" />
                     ) : (
-                      <Text style={styles.deleteFinalBtnText}>
-                        Delete Permanently
-                      </Text>
+                      <Text style={styles.modalDangerText}>Delete Permanently</Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -1152,26 +939,23 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
   scrollContent: { 
-    paddingBottom: 60,
+    paddingBottom: 40,
   },
   
-  // Modern Profile Header
+  // Profile Header
   profileHeader: {
     marginHorizontal: 16,
     marginTop: 12,
-    borderRadius: 24,
-    overflow: "hidden",
     backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.06,
-    shadowRadius: 24,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 3,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.5)",
-  },
-  profileHeaderGradient: { 
-    padding: 20,
   },
   profileHeaderContent: { 
     flexDirection: "row", 
@@ -1179,32 +963,28 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {},
   avatarRing: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    padding: 3,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#f9c349",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-  },
-  avatarImage: { 
-    width: 72, 
-    height: 72, 
-    borderRadius: 36,
-  },
-  avatarPlaceholder: {
     width: 72,
     height: 72,
     borderRadius: 36,
+    padding: 3,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarImage: { 
+    width: 64, 
+    height: 64, 
+    borderRadius: 32,
+  },
+  avatarPlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: "#1A1A1A",
     justifyContent: "center",
     alignItems: "center",
   },
   avatarText: { 
-    fontSize: 32, 
+    fontSize: 28, 
     fontWeight: "800", 
     color: "#f9c349",
   },
@@ -1214,25 +994,25 @@ const styles = StyleSheet.create({
     right: 0,
     borderRadius: 50,
     overflow: "hidden",
-    borderWidth: 3,
+    borderWidth: 2.5,
     borderColor: "#FFFFFF",
   },
   cameraBadgeGradient: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     justifyContent: "center",
     alignItems: "center",
   },
   userInfo: { 
-    marginLeft: 16, 
+    marginLeft: 14, 
     flex: 1,
   },
   userName: { 
-    fontSize: 20, 
+    fontSize: 18, 
     fontWeight: "700", 
     color: "#1A1A1A", 
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
     marginBottom: 2,
   },
   emailRow: { 
@@ -1242,42 +1022,42 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   userEmail: { 
-    fontSize: 13, 
+    fontSize: 12, 
     color: "#94A3B8", 
     fontWeight: "500",
   },
   saveBtn: {
     marginTop: 8,
-    borderRadius: 12,
+    borderRadius: 10,
     overflow: "hidden",
     alignSelf: "flex-start",
   },
   saveBtnGradient: {
-    paddingHorizontal: 16,
-    paddingVertical: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 12,
-    gap: 6,
+    borderRadius: 10,
+    gap: 4,
   },
   saveBtnText: { 
     color: "#FFFFFF", 
-    fontSize: 12, 
+    fontSize: 11, 
     fontWeight: "700",
   },
   
-  // Modern Stats Card
-  statsCard: {
+  // Stats Row - Compact
+  statsRow: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
     marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 20,
-    padding: 18,
+    marginTop: 12,
+    borderRadius: 16,
+    padding: 14,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
-    shadowRadius: 16,
+    shadowRadius: 12,
     elevation: 3,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.5)",
@@ -1285,46 +1065,46 @@ const styles = StyleSheet.create({
   statItem: { 
     flex: 1, 
     alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
   },
   statIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 6,
+    marginRight: 8,
   },
   statDivider: {
     width: 1,
     backgroundColor: "rgba(0,0,0,0.06)",
-    marginHorizontal: 12,
   },
   statLabel: {
     fontSize: 11,
     color: "#94A3B8",
     fontWeight: "600",
-    letterSpacing: 0.5,
-    marginBottom: 2,
+    marginRight: 4,
   },
   statValue: { 
-    fontSize: 20, 
+    fontSize: 16, 
     fontWeight: "700", 
     color: "#1A1A1A",
   },
   
-  // Modern Menu Styles
+  // Menu
   menuContainer: { 
     paddingHorizontal: 16, 
-    marginTop: 16,
+    marginTop: 12,
   },
   menuCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
-    shadowRadius: 16,
+    shadowRadius: 12,
     elevation: 3,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.5)",
@@ -1333,24 +1113,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 18,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.04)",
-    position: "relative",
-    overflow: "hidden",
   },
   menuItemDanger: {
     borderBottomColor: "rgba(255, 71, 87, 0.06)",
-  },
-  menuGlow: {
-    position: "absolute",
-    top: -20,
-    right: -20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    opacity: 0,
   },
   menuLeft: { 
     flexDirection: "row", 
@@ -1358,146 +1127,274 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   menuIconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 16,
+    marginRight: 12,
   },
   menuTextContainer: { 
     flex: 1,
   },
   menuItemTitle: { 
-    fontSize: 15, 
+    fontSize: 14, 
     fontWeight: "600", 
     color: "#1A1A1A",
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
   menuItemSubtitle: {
     fontSize: 11,
     color: "#94A3B8",
-    marginTop: 2,
+    marginTop: 1,
     fontWeight: "500",
   },
   menuRight: { 
     marginLeft: 8,
   },
   menuBadge: { 
-    borderRadius: 12, 
+    borderRadius: 10, 
     overflow: "hidden",
   },
   menuBadgeGradient: { 
-    paddingHorizontal: 12, 
-    paddingVertical: 4,
+    paddingHorizontal: 10, 
+    paddingVertical: 3,
   },
   menuBadgeText: { 
-    fontSize: 11, 
+    fontSize: 10, 
     fontWeight: "700", 
     color: "#1A1A1A",
   },
-  chevronContainer: {
-    width: 24,
-    height: 24,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   
-  // Version Text
   versionText: {
     textAlign: "center",
-    fontSize: 12,
+    fontSize: 11,
     color: "#CBD5E1",
-    marginTop: 24,
+    marginTop: 20,
     fontWeight: "500",
-    letterSpacing: 0.5,
   },
   
-  // Modern Modal Styles
+  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
-    backdropFilter: "blur(10px)",
   },
-  membershipCard: {
-    width: width * 0.92,
-    borderRadius: 32,
-    overflow: "hidden",
-    elevation: 24,
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 24,
+    width: "100%",
+    maxWidth: 400,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.3,
-    shadowRadius: 32,
+    shadowOpacity: 0.15,
+    shadowRadius: 28,
+    elevation: 12,
+  },
+  modalHeader: { 
+    alignItems: "center", 
+    marginBottom: 16,
+  },
+  modalIconBox: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  modalIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#FFD93D20",
+    justifyContent: "center",
+    alignItems: "center",
+    alignSelf: "center",
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1A1A1A",
+    marginBottom: 4,
+    letterSpacing: -0.3,
+  },
+  modalDesc: {
+    fontSize: 13,
+    color: "#64748B",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  modalBtns: { 
+    flexDirection: "row", 
+    gap: 10,
+    marginTop: 4,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 14,
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+  },
+  modalCancelText: { 
+    fontSize: 13, 
+    fontWeight: "600", 
+    color: "#64748B",
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 14,
+    backgroundColor: "#f9c349",
+    alignItems: "center",
+  },
+  modalConfirmText: { 
+    fontSize: 13, 
+    fontWeight: "600", 
+    color: "#FFFFFF",
+  },
+  modalDangerBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 14,
+    backgroundColor: "#FF4757",
+    alignItems: "center",
+  },
+  modalDangerActive: { 
+    backgroundColor: "#FF4757",
+  },
+  modalDangerText: { 
+    fontSize: 13, 
+    fontWeight: "600", 
+    color: "#FFFFFF",
+  },
+  
+  // Warning List
+  warningList: { 
+    marginBottom: 16,
+  },
+  warningItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+  },
+  warningText: {
+    fontSize: 12,
+    color: "#64748B",
+    marginLeft: 8,
+    fontWeight: "500",
+  },
+  
+  // Alternative List
+  alternativeList: { 
+    marginBottom: 16,
+  },
+  alternativeItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.04)",
+  },
+  alternativeText: {
+    fontSize: 12,
+    color: "#1A1A1A",
+    marginLeft: 10,
+    fontWeight: "500",
+  },
+  
+  // Confirm Input
+  confirmInput: {
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    borderRadius: 14,
+    padding: 12,
+    fontSize: 13,
+    color: "#1A1A1A",
+    marginBottom: 16,
+    fontWeight: "500",
+    backgroundColor: "#F8FAFC",
+  },
+  
+  // Membership Card
+  membershipCard: {
+    width: width * 0.9,
+    borderRadius: 28,
+    overflow: "hidden",
+    elevation: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.25,
+    shadowRadius: 28,
   },
   membershipGradient: {
-    padding: 32,
+    padding: 28,
     alignItems: "center",
-    borderRadius: 32,
-  },
-  cardSparkles: { 
-    position: "absolute", 
-    top: 0, 
-    left: 0, 
-    right: 0, 
-    bottom: 0,
+    borderRadius: 28,
   },
   cardTitle: {
     color: "rgba(255,255,255,0.8)",
     fontWeight: "800",
-    letterSpacing: 4,
-    fontSize: 14,
-    marginBottom: 28,
+    letterSpacing: 3,
+    fontSize: 13,
+    marginBottom: 24,
     textTransform: "uppercase",
   },
   cardBody: { 
     alignItems: "center", 
-    marginBottom: 30,
+    marginBottom: 24,
   },
   diamondBox: { 
-    marginBottom: 20,
+    marginBottom: 16,
   },
   diamondGradient: {
-    width: 88,
-    height: 88,
-    borderRadius: 24,
+    width: 72,
+    height: 72,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
     transform: [{ rotate: "45deg" }],
   },
   cardPromoTitle: {
     color: "#FFFFFF",
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "800",
-    marginBottom: 8,
+    marginBottom: 6,
     letterSpacing: -0.5,
   },
   cardPromoDesc: {
     color: "rgba(255,255,255,0.85)",
     textAlign: "center",
     lineHeight: 22,
-    fontSize: 14,
-    paddingHorizontal: 12,
+    fontSize: 13,
+    paddingHorizontal: 8,
   },
   priceHighlight: { 
     color: "#f9c349", 
     fontWeight: "800",
   },
   cardBtn: { 
-    borderRadius: 16, 
+    borderRadius: 14, 
     overflow: "hidden", 
     width: "100%", 
-    elevation: 6,
+    elevation: 4,
     shadowColor: "#f9c349",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 12,
+    shadowRadius: 10,
   },
   cardBtnGradient: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
@@ -1505,145 +1402,12 @@ const styles = StyleSheet.create({
   cardBtnText: { 
     color: "#1A1A1A", 
     fontWeight: "800", 
-    fontSize: 15,
+    fontSize: 14,
     letterSpacing: 0.5,
   },
   maybeLater: {
-    color: "rgba(255,255,255,0.4)",
-    fontSize: 13,
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 12,
     fontWeight: "500",
-  },
-  
-  // Modern Delete Modal Styles
-  deleteModalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  deleteModalContent: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 28,
-    padding: 24,
-    width: "100%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.15,
-    shadowRadius: 32,
-    elevation: 12,
-  },
-  deleteModalHeader: { 
-    alignItems: "center", 
-    marginBottom: 20,
-  },
-  deleteModalIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  deleteModalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1A1A1A",
-    marginBottom: 6,
-    letterSpacing: -0.5,
-  },
-  deleteModalDesc: {
-    fontSize: 13,
-    color: "#64748B",
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  warningList: { 
-    marginBottom: 20,
-  },
-  warningItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 8,
-  },
-  warningText: {
-    fontSize: 13,
-    color: "#64748B",
-    marginLeft: 10,
-    fontWeight: "500",
-  },
-  alternativeList: { 
-    marginBottom: 20,
-  },
-  alternativeItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    backgroundColor: "#F8FAFC",
-    borderRadius: 14,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.04)",
-  },
-  alternativeText: {
-    fontSize: 13,
-    color: "#1A1A1A",
-    marginLeft: 12,
-    fontWeight: "500",
-  },
-  deleteModalBtns: { 
-    flexDirection: "row", 
-    gap: 12,
-  },
-  cancelBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 16,
-    backgroundColor: "#F1F5F9",
-    alignItems: "center",
-  },
-  cancelBtnText: { 
-    fontSize: 14, 
-    fontWeight: "600", 
-    color: "#64748B",
-  },
-  continueBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 16,
-    backgroundColor: "#FF4757",
-    alignItems: "center",
-  },
-  continueBtnText: { 
-    fontSize: 14, 
-    fontWeight: "600", 
-    color: "#FFFFFF",
-  },
-  confirmInput: {
-    borderWidth: 2,
-    borderColor: "#E2E8F0",
-    borderRadius: 16,
-    padding: 14,
-    fontSize: 14,
-    color: "#1A1A1A",
-    marginBottom: 20,
-    fontWeight: "500",
-    backgroundColor: "#F8FAFC",
-  },
-  deleteFinalBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 16,
-    backgroundColor: "#CBD5E1",
-    alignItems: "center",
-  },
-  deleteFinalBtnActive: { 
-    backgroundColor: "#FF4757",
-  },
-  deleteFinalBtnText: { 
-    fontSize: 14, 
-    fontWeight: "600", 
-    color: "#FFFFFF",
   },
 });

@@ -1,4 +1,4 @@
-// screens/PrivacyScreen.js
+// screens/TermsScreen.js
 import React, { useRef, useEffect } from 'react';
 import {
   View,
@@ -14,7 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-export default function PrivacyScreen({ navigation }) {
+export default function TermsScreen({ navigation }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
@@ -41,22 +41,21 @@ export default function PrivacyScreen({ navigation }) {
     ]).start();
   }, []);
 
-  const privacyData = [
-    { num: '01', title: 'Information We Collect', text: '• Name, email, phone number\n• Profile information & preferences\n• Content you create or share\n• Device & usage data' },
-    { num: '02', title: 'How We Use Data', text: '• Provide & improve services\n• Personalize experience\n• Send updates & promotions\n• Prevent fraud' },
-    { num: '03', title: 'Information Sharing', text: '• No selling of data\n• Shared with service providers\n• When required by law\n• With your consent' },
-    { num: '04', title: 'Data Security', text: 'We implement strong security measures to protect your data. However, no method is 100% secure.' },
-    { num: '05', title: 'Your Rights', text: '• Access & update data\n• Request deletion\n• Opt-out of marketing\n• Withdraw consent' },
-    { num: '06', title: 'Cookies', text: 'We use cookies to enhance experience, analyze usage, and deliver personalized content.' },
-    { num: '07', title: 'Data Retention', text: 'We retain data as long as necessary for services, legal obligations, and dispute resolution.' },
-    { num: '08', title: "Children's Privacy", text: 'Services not for under 13. We do not knowingly collect data from children.' },
-    { num: '09', title: 'Policy Changes', text: 'We may update this policy. Changes will be posted here with updated date.' },
-    { num: '10', title: 'Contact Us', text: 'privacy@thedeftcrew.com\nKarachi, Pakistan' },
+  const termsData = [
+    { num: '01', title: 'Acceptance of Terms', text: 'By using The Deft Crew (TDC) application, you agree to comply with and be bound by these Terms and Conditions. If you do not agree, please do not use our services.' },
+    { num: '02', title: 'User Account', text: '• Must be 13+ years old\n• Maintain account confidentiality\n• Provide accurate information\n• Responsible for all account activity' },
+    { num: '03', title: 'User-Generated Content', text: '• You retain ownership of content\n• Grant TDC license to use content\n• No content violating guidelines\n• TDC may remove violating content' },
+    { num: '04', title: 'Intellectual Property', text: '• Content protected by copyright\n• No reproduction without permission\n• TDC trademarks are property of The Deft Crew' },
+    { num: '05', title: 'Limitation of Liability', text: 'TDC is provided "as is" without warranties. We are not liable for any damages arising from use of our services.' },
+    { num: '06', title: 'Termination', text: 'We reserve the right to terminate or suspend your account for violations of these terms or Community Guidelines.' },
+    { num: '07', title: 'Changes to Terms', text: 'TDC may update these terms at any time. You will be notified of significant changes.' },
+    { num: '08', title: 'Contact', text: 'support@thedeftcrew.com\nKarachi, Pakistan' },
+    { num: '09', title: 'Governing Law', text: 'These terms are governed by the laws of Pakistan. Disputes resolved in Karachi, Pakistan.' },
   ];
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor="#dbd1d118" />
+      <StatusBar barStyle="light-content" backgroundColor="#d6cfcf4e" />
       
       {/* Header */}
       <LinearGradient colors={['#fff', '#fff']} style={styles.headerGradient}>
@@ -66,11 +65,11 @@ export default function PrivacyScreen({ navigation }) {
             onPress={() => navigation.goBack()}
             activeOpacity={0.7}
           >
-            <Ionicons name="chevron-back" size={28} color="#050505" />
+            <Ionicons name="chevron-back" size={28} color="#040404" />
           </TouchableOpacity>
           
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Privacy Policy</Text>
+            <Text style={styles.headerTitle}>Terms & Conditions</Text>
             <View style={styles.headerHandle} />
           </View>
           
@@ -93,13 +92,13 @@ export default function PrivacyScreen({ navigation }) {
             }
           ]}
         >
-          <Text style={styles.heroTitle}>Privacy Policy</Text>
-          <Text style={styles.heroSubtitle}>Your data is safe with us</Text>
+          <Text style={styles.heroTitle}>Terms & Conditions</Text>
+          <Text style={styles.heroSubtitle}>Please review before continuing</Text>
           <View style={styles.heroDivider} />
         </Animated.View>
 
         <View style={styles.contentContainer}>
-          {privacyData.map((item, index) => (
+          {termsData.map((item, index) => (
             <Animated.View 
               key={index} 
               style={[
@@ -139,9 +138,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   headerGradient: {
-    
+   
     borderBottomWidth: 0,
-    
+   
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,

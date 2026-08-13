@@ -77,8 +77,8 @@ const ProfileSkeleton = () => {
       </View>
 
       <View style={styles.skeletonContent}>
-        <SkeletonItem style={[styles.skeletonCard, { height: 100 }]} />
-        <SkeletonItem style={[styles.skeletonCard, { height: 350 }]} />
+        <SkeletonItem style={[styles.skeletonCard, { height: 80 }]} />
+        <SkeletonItem style={[styles.skeletonCard, { height: 300 }]} />
       </View>
     </View>
   );
@@ -235,9 +235,9 @@ export default function ProfileDetailsScreen({ navigation }) {
 
   const getStatusColor = (status) => {
     switch(status) {
-      case 'Verified': return '#4CAF50';
-      case 'Pending': return '#f9c349';
-      default: return '#F44336';
+      case 'Verified': return '#10B981';
+      case 'Pending': return '#F59E0B';
+      default: return '#EF4444';
     }
   };
 
@@ -264,7 +264,7 @@ export default function ProfileDetailsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -292,17 +292,17 @@ export default function ProfileDetailsScreen({ navigation }) {
                 }}
                 activeOpacity={0.7}
               >
-                <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+                <Ionicons name="arrow-back" size={22} color="#1E293B" />
               </TouchableOpacity>
 
-              <Text style={styles.headerTitle}>My Profile</Text>
+              <Text style={styles.headerTitle}>Profile</Text>
 
               <TouchableOpacity
                 style={styles.iconButton}
                 onPress={handleShareReferral}
                 activeOpacity={0.7}
               >
-                <Feather name="share-2" size={20} color="#1a1a1a" />
+                <Feather name="share-2" size={18} color="#1E293B" />
               </TouchableOpacity>
             </View>
 
@@ -324,7 +324,7 @@ export default function ProfileDetailsScreen({ navigation }) {
                       )}
                       {profile.isVip && (
                         <View style={styles.vipBadge}>
-                          <MaterialCommunityIcons name="crown" size={14} color="#1a1a1a" />
+                          <MaterialCommunityIcons name="crown" size={12} color="#1E293B" />
                         </View>
                       )}
                     </View>
@@ -335,34 +335,46 @@ export default function ProfileDetailsScreen({ navigation }) {
               <View style={styles.headerInfo}>
                 <Text style={styles.userName}>{profile.name}</Text>
                 
-                
+                {profile.headline && (
+                  <View style={styles.headlineContainer}>
+                    <Ionicons name="sparkles" size={12} color="#F59E0B" />
+                    <Text style={styles.headlineText} numberOfLines={1}>{profile.headline}</Text>
+                  </View>
+                )}
 
                 <View style={styles.universityRow}>
-                  <FontAwesome5 name="university" size={13} color="#666" />
-                  <Text style={styles.universityText} numberOfLines={2}>
+                  <FontAwesome5 name="university" size={11} color="#94A3B8" />
+                  <Text style={styles.universityText} numberOfLines={1}>
                     {profile.university}
                   </Text>
                 </View>
 
                 <View style={styles.badgesContainer}>
-                  
-                  
                   <View style={[styles.badge, { backgroundColor: `${getStatusColor(profile.status)}15` }]}>
-                    <Ionicons name={getStatusIcon(profile.status)} size={12} color={getStatusColor(profile.status)} />
-                    <Text style={[styles.badgeText, { color: getStatusColor(profile.status), marginLeft: 4 }]}>
+                    <Ionicons name={getStatusIcon(profile.status)} size={10} color={getStatusColor(profile.status)} />
+                    <Text style={[styles.badgeText, { color: getStatusColor(profile.status), marginLeft: 3 }]}>
                       {profile.status}
                     </Text>
                   </View>
 
                   {profile.isVip && (
                     <View style={[styles.badge, styles.vipBadgeStyle]}>
-                      <MaterialCommunityIcons name="crown" size={12} color="#f9c349" />
-                      <Text style={[styles.badgeText, { color: '#f9c349', marginLeft: 4 }]}>VIP</Text>
+                      <MaterialCommunityIcons name="crown" size={10} color="#F59E0B" />
+                      <Text style={[styles.badgeText, { color: '#F59E0B', marginLeft: 3 }]}>VIP</Text>
                     </View>
                   )}
-                </View>
 
-               
+                  {profile.referralCode && (
+                    <TouchableOpacity 
+                      style={styles.referralChip}
+                      onPress={handleShareReferral}
+                      activeOpacity={0.7}
+                    >
+                      <Feather name="share-2" size={10} color="#F59E0B" />
+                      <Text style={styles.referralChipText}>Refer</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             </View>
           </View>
@@ -381,7 +393,7 @@ export default function ProfileDetailsScreen({ navigation }) {
           >
             <View style={styles.statItem}>
               <View style={styles.statIconWrapper}>
-                <Ionicons name="card-outline" size={22} color="#f9c349" />
+                <Ionicons name="card-outline" size={18} color="#F59E0B" />
               </View>
               <Text style={styles.statLabel}>Roll No.</Text>
               <Text style={styles.statValue} numberOfLines={1}>{profile.rollNo || "N/A"}</Text>
@@ -391,19 +403,19 @@ export default function ProfileDetailsScreen({ navigation }) {
               <View style={styles.statIconWrapper}>
                 <MaterialCommunityIcons
                   name={profile.isAlumni ? "school" : "school-outline"}
-                  size={22}
-                  color="#f9c349"
+                  size={18}
+                  color="#F59E0B"
                 />
               </View>
               <Text style={styles.statLabel}>Status</Text>
-              <Text style={[styles.statValue, { color: profile.isAlumni ? "#f9c349" : "#1a1a1a" }]}>
+              <Text style={[styles.statValue, { color: profile.isAlumni ? "#F59E0B" : "#1E293B" }]}>
                 {profile.isAlumni ? "Alumni" : "Student"}
               </Text>
             </View>
 
             <View style={[styles.statItem, styles.statDivider]}>
               <View style={styles.statIconWrapper}>
-                <Ionicons name="people-outline" size={22} color="#f9c349" />
+                <Ionicons name="people-outline" size={18} color="#F59E0B" />
               </View>
               <Text style={styles.statLabel}>Referrals</Text>
               <Text style={styles.statValue}>{profile.referralCount || 0}</Text>
@@ -422,7 +434,7 @@ export default function ProfileDetailsScreen({ navigation }) {
           >
             <View style={styles.cardHeader}>
               <View style={styles.cardHeaderIcon}>
-                <Ionicons name="person-circle-outline" size={24} color="#f9c349" />
+                <Ionicons name="person-circle-outline" size={20} color="#F59E0B" />
               </View>
               <Text style={styles.cardTitle}>Personal Information</Text>
             </View>
@@ -430,12 +442,12 @@ export default function ProfileDetailsScreen({ navigation }) {
             <View style={styles.infoList}>
               <InfoItem
                 icon="mail-outline"
-                label="Email Address"
+                label="Email"
                 value={profile.email}
               />
               <InfoItem
                 icon="call-outline"
-                label="Phone Number"
+                label="Phone"
                 value={profile.phone || "Not Provided"}
               />
               <InfoItem
@@ -463,7 +475,7 @@ export default function ProfileDetailsScreen({ navigation }) {
                   icon="crown-outline"
                   label="VIP Membership"
                   value={`Expires ${formatDate(profile.vipExpiry)}`}
-                  valueColor="#f9c349"
+                  valueColor="#F59E0B"
                 />
               )}
             </View>
@@ -472,27 +484,14 @@ export default function ProfileDetailsScreen({ navigation }) {
             {profile.bio && (
               <View style={styles.bioSection}>
                 <View style={styles.sectionHeader}>
-                  <Ionicons name="chatbox-ellipses-outline" size={16} color="#f9c349" />
-                  <Text style={styles.sectionTitle}>About Me</Text>
+                  <Ionicons name="chatbox-ellipses-outline" size={14} color="#F59E0B" />
+                  <Text style={styles.sectionTitle}>About</Text>
                 </View>
                 <View style={styles.bioCard}>
                   <Text style={styles.bioText}>{profile.bio}</Text>
                 </View>
               </View>
             )}
-            {/* Bio Section */}
-            {profile.headline && (
-              <View style={styles.bioSection}>
-                <View style={styles.sectionHeader}>
-                  <Ionicons name="sparkles-outline" size={14} color="#f9c349" />
-                  <Text style={styles.sectionTitle}>Headline</Text>
-                </View>
-                <View style={styles.bioCard}>
-                  <Text style={styles.headlineText}>{profile.headline}</Text>
-                </View>
-              </View>
-            )}
-           
 
             {/* Edit Profile Button */}
             <TouchableOpacity
@@ -504,12 +503,12 @@ export default function ProfileDetailsScreen({ navigation }) {
               }}
             >
               <LinearGradient
-                colors={['#f9c349', '#e6b800']}
+                colors={['#000', '#000']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.editButtonGradient}
               >
-                <Ionicons name="create-outline" size={22} color="#1a1a1a" />
+                <Ionicons name="create-outline" size={18} color="#ffffff" />
                 <Text style={styles.editButtonText}>Edit Profile</Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -554,7 +553,7 @@ const InfoItem = ({ icon, label, value, valueColor }) => {
       ]}
     >
       <View style={styles.infoIcon}>
-        <Ionicons name={icon} size={20} color="#f9c349" />
+        <Ionicons name={icon} size={16} color="#F59E0B" />
       </View>
       <View style={styles.infoContent}>
         <Text style={styles.infoLabel}>{label}</Text>
@@ -572,7 +571,7 @@ const InfoItem = ({ icon, label, value, valueColor }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa"
+    backgroundColor: "#F8FAFC"
   },
   scrollContent: {
     paddingBottom: Platform.OS === 'ios' ? 40 : 30,
@@ -581,14 +580,14 @@ const styles = StyleSheet.create({
   // Skeleton Styles
   skeletonContainer: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#F8FAFC",
   },
   skeletonHeader: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFFFF',
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
     padding: 16,
-    paddingBottom: 24,
+    paddingBottom: 20,
   },
   skeletonTopBar: {
     flexDirection: 'row',
@@ -597,114 +596,103 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   skeletonIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#e0e0e0',
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#E2E8F0',
   },
   skeletonText: {
-    height: 16,
+    height: 14,
     borderRadius: 4,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#E2E8F0',
   },
   skeletonProfileRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   skeletonAvatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#e0e0e0',
-    marginRight: 16,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#E2E8F0',
+    marginRight: 14,
   },
   skeletonInfo: {
     flex: 1,
   },
   skeletonBadge: {
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#e0e0e0',
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#E2E8F0',
   },
   skeletonContent: {
     padding: 16,
   },
   skeletonCard: {
-    backgroundColor: '#e0e0e0',
-    borderRadius: 16,
-    marginBottom: 16,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 14,
+    marginBottom: 14,
   },
 
   // Header
   headerContainer: {
-    backgroundColor: '#ffffff',
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    backgroundColor: '#FFFFFF',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 4,
   },
   headerGradient: {
     paddingTop: 8,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
   },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   iconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#f8f8f8',
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    letterSpacing: -0.3,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    letterSpacing: -0.2,
   },
 
   // Profile Header
   profileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
   },
   avatarWrapper: {
-    marginRight: 16,
+    marginRight: 14,
   },
   avatarBorder: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    padding: 3,
-    backgroundColor: '#e0e0e0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    padding: 2,
+    backgroundColor: '#E2E8F0',
   },
   avatarBorderVip: {
-    backgroundColor: '#f9c349',
+    backgroundColor: '#F59E0B',
   },
   avatarInner: {
     flex: 1,
-    borderRadius: 42,
-    backgroundColor: '#ffffff',
+    borderRadius: 37,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -716,145 +704,114 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   avatarInitial: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: '#1E293B',
   },
   vipBadge: {
     position: 'absolute',
-    bottom: -2,
-    right: -2,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 14,
-    width: 26,
-    height: 26,
+    bottom: -1,
+    right: -1,
+    backgroundColor: '#1E293B',
+    borderRadius: 12,
+    width: 22,
+    height: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2.5,
-    borderColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   headerInfo: {
     flex: 1,
   },
   userName: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#1a1a1a',
-    marginBottom: 4,
-    letterSpacing: -0.5,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 2,
+    letterSpacing: -0.3,
   },
   headlineContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
+    gap: 4,
+    marginBottom: 2,
   },
   headlineText: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: 12,
+    color: '#64748B',
     fontWeight: '500',
     flex: 1,
   },
   universityRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   universityText: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 6,
+    fontSize: 11,
+    color: '#94A3B8',
+    marginLeft: 5,
     fontWeight: '500',
     flex: 1,
   },
   badgesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 6,
+    gap: 4,
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.04)',
   },
-  badgeDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    marginRight: 4,
-  },
   badgeText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '600',
   },
-  studentBadge: {
-    backgroundColor: '#e8f5e9',
-  },
-  studentDot: {
-    backgroundColor: '#4CAF50',
-  },
-  studentText: {
-    color: '#4CAF50',
-  },
-  alumniBadge: {
-    backgroundColor: '#fef9f0',
-  },
-  alumniDot: {
-    backgroundColor: '#f9c349',
-  },
-  alumniText: {
-    color: '#f9c349',
-  },
   vipBadgeStyle: {
-    backgroundColor: '#fef9f0',
-    borderColor: '#f9c34930',
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B30',
   },
   referralChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fef9f0',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#f9c34930',
-    alignSelf: 'flex-start',
-    gap: 6,
+    borderColor: '#F59E0B30',
+    gap: 3,
   },
   referralChipText: {
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '600',
-    color: '#f9c349',
+    color: '#F59E0B',
   },
 
   // Content
   content: {
     paddingHorizontal: 16,
-    marginTop: -8,
+    marginTop: -4,
   },
 
   // Stats Row
   statsRow: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    paddingVertical: 18,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 4,
-    marginBottom: 16,
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 3,
+    marginBottom: 14,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.5)',
   },
@@ -864,160 +821,160 @@ const styles = StyleSheet.create({
   },
   statDivider: {
     borderLeftWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    borderColor: 'rgba(0,0,0,0.04)',
   },
   statIconWrapper: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#fef9f0',
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#FEF3C7',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   statLabel: {
-    fontSize: 10,
-    color: '#999',
+    fontSize: 9,
+    color: '#94A3B8',
     textTransform: 'uppercase',
     fontWeight: '600',
-    letterSpacing: 0.5,
-    marginBottom: 2,
+    letterSpacing: 0.3,
+    marginBottom: 1,
   },
   statValue: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: '#1E293B',
   },
 
   // Details Card
   detailsCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 3,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.5)',
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 16,
+    marginBottom: 16,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.04)',
   },
   cardHeaderIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#fef9f0',
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#FEF3C7',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    letterSpacing: -0.3,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    letterSpacing: -0.2,
   },
 
   // Info Items
   infoList: {
-    marginBottom: 4,
+    marginBottom: 2,
   },
   infoItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.03)',
   },
   infoIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#fef9f0',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#FEF3C7',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
   infoContent: {
     flex: 1,
   },
   infoLabel: {
-    fontSize: 11,
-    color: '#999',
+    fontSize: 10,
+    color: '#94A3B8',
     fontWeight: '500',
-    letterSpacing: 0.3,
-    marginBottom: 2,
+    letterSpacing: 0.2,
+    marginBottom: 1,
     textTransform: 'uppercase',
   },
   infoValue: {
-    fontSize: 15,
-    color: '#1a1a1a',
+    fontSize: 13,
+    color: '#1E293B',
     fontWeight: '500',
   },
 
   // Bio Section
   bioSection: {
-    marginTop: 8,
-    paddingTop: 16,
+    marginTop: 6,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0,0,0,0.04)',
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   sectionTitle: {
-    fontSize: 13,
-    color: '#999',
+    fontSize: 11,
+    color: '#94A3B8',
     fontWeight: '600',
-    letterSpacing: 0.3,
-    marginLeft: 8,
+    letterSpacing: 0.2,
+    marginLeft: 6,
     textTransform: 'uppercase',
   },
   bioCard: {
-    backgroundColor: '#f8f9fa',
-    padding: 16,
-    borderRadius: 14,
+    backgroundColor: '#F8FAFC',
+    padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.02)',
   },
   bioText: {
-    fontSize: 14,
-    color: '#1a1a1a',
-    lineHeight: 22,
+    fontSize: 13,
+    color: '#1E293B',
+    lineHeight: 20,
   },
 
   // Edit Button
   editButton: {
-    borderRadius: 16,
+    borderRadius: 12,
     overflow: 'hidden',
-    marginTop: 20,
-    shadowColor: '#f9c349',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 6,
+    marginTop: 16,
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
   },
   editButtonGradient: {
-    height: 56,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   editButtonText: {
-    color: '#1a1a1a',
-    fontSize: 17,
-    fontWeight: '700',
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
     letterSpacing: -0.2,
   },
 });

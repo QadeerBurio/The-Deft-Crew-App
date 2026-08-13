@@ -1,4 +1,4 @@
-// PostCard.js - Complete Fixed Version with proper status updates
+// PostCard.js - Complete Fixed Version with proper status updates, three-dot menu, Report Modal, and Block functionality
 
 import React, { useState, useContext, useRef, useEffect } from "react";
 import {
@@ -12,6 +12,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import axios from "axios";
 import { useNavigation } from "@react-navigation/native";
 import { AuthContext } from "../../context/AuthContext";
+import ReportModal from "./ReportModal";
 
 const { width, height } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
@@ -42,11 +43,9 @@ export const PostCardSkeleton = () => {
           <Animated.View style={[styles.skeletonLine, { width: 80, height: 10, marginTop: 6, opacity: shimmerOpacity }]} />
         </View>
       </View>
-      <View style={styles.skeletonContent}>
-        <Animated.View style={[styles.skeletonLine, { width: '90%', height: 12, marginBottom: 8, opacity: shimmerOpacity }]} />
-        <Animated.View style={[styles.skeletonLine, { width: '70%', height: 12, marginBottom: 8, opacity: shimmerOpacity }]} />
-        <Animated.View style={[styles.skeletonImage, { opacity: shimmerOpacity }]} />
-      </View>
+      <Animated.View style={[styles.skeletonLine, { width: '90%', height: 14, marginTop: 12, opacity: shimmerOpacity }]} />
+      <Animated.View style={[styles.skeletonLine, { width: '70%', height: 14, marginTop: 8, opacity: shimmerOpacity }]} />
+      <Animated.View style={[styles.skeletonLine, { width: '60%', height: 14, marginTop: 8, opacity: shimmerOpacity }]} />
       <View style={styles.skeletonFooter}>
         <Animated.View style={[styles.skeletonAction, { opacity: shimmerOpacity }]} />
         <Animated.View style={[styles.skeletonAction, { opacity: shimmerOpacity }]} />
@@ -55,7 +54,7 @@ export const PostCardSkeleton = () => {
   );
 };
 
-export default function PostCard({ post }) {
+export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
   const { user, token, setUser } = useContext(AuthContext);
   const navigation = useNavigation();
   const inputRef = useRef(null);
@@ -80,6 +79,7 @@ export default function PostCard({ post }) {
   const [commentText, setCommentText] = useState("");
   const [showComments, setShowComments] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
@@ -90,33 +90,29 @@ export default function PostCard({ post }) {
   const [textLines, setTextLines] = useState(0);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [expandedReplies, setExpandedReplies] = useState({});
+  const [isBlocked, setIsBlocked] = useState(false);
   
-  // FIXED: Comprehensive connection status handling
+  // Connection status handling
   const [connectionStatus, setConnectionStatus] = useState(() => {
     const userId = user?._id;
     const authorId = post.author?._id;
     
-    // Check if this is the current user's own post
     if (userId && authorId && userId === authorId) {
       return 'self';
     }
     
-    // Check from post.author fields first
     if (post.author?.connectionStatus) {
       return post.author.connectionStatus;
     }
     
-    // Check from user context for sent requests
     if (userId && user?.sentRequests?.includes(authorId)) {
       return 'pending';
     }
     
-    // Check from user context for received requests
     if (userId && user?.receivedRequests?.includes(authorId)) {
       return 'received';
     }
     
-    // Check from post.author flags
     if (post.author?.isConnected) return 'connected';
     if (post.author?.isPending) return 'pending';
     if (post.author?.isReceived) return 'received';
@@ -149,11 +145,15 @@ export default function PostCard({ post }) {
         Keyboard.dismiss();
         return true; 
       }
+      if (showReportModal) {
+        setShowReportModal(false);
+        return true;
+      }
       return false;
     };
     const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
     return () => backHandler.remove();
-  }, [showComments]);
+  }, [showComments, showReportModal]);
 
   useEffect(() => {
     if (showComments) {
@@ -199,19 +199,16 @@ export default function PostCard({ post }) {
       return;
     }
     
-    // Check from user context for sent requests
     if (user?.sentRequests?.includes(authorId)) {
       setConnectionStatus('pending');
       return;
     }
     
-    // Check from user context for received requests
     if (user?.receivedRequests?.includes(authorId)) {
       setConnectionStatus('received');
       return;
     }
     
-    // Check from post.author
     if (post.author?.connectionStatus) {
       setConnectionStatus(post.author.connectionStatus);
     } else if (post.author?.isConnected) {
@@ -265,7 +262,6 @@ export default function PostCard({ post }) {
   const isSaved = isLoggedIn && Array.isArray(favorites) && favorites.some(id => id?.toString() === userId?.toString());
   const isOwnPost = isLoggedIn && post.author?._id === userId;
   
-  // FIXED: Show connect button logic with all statuses
   const showConnectButton = isLoggedIn && 
     !isOwnPost && 
     connectionStatus !== 'connected' && 
@@ -273,7 +269,6 @@ export default function PostCard({ post }) {
     connectionStatus !== 'received' && 
     connectionStatus !== 'self';
 
-  // FIXED: Get status display text
   const getStatusDisplay = () => {
     if (isOwnPost) return null;
     if (connectionStatus === 'connected') return { text: 'Connected', color: '#f9c349' };
@@ -354,35 +349,106 @@ export default function PostCard({ post }) {
     } catch (err) {}
   };
 
+  // ============ BLOCK USER HANDLER - FIXED ============
+  const handleBlockUser = () => {
+    setShowMenu(false);
+    
+    if (isOwnPost) {
+      Alert.alert("Info", "You cannot block yourself");
+      return;
+    }
+    
+    Alert.alert(
+      "Block User",
+      `Are you sure you want to block ${post.author?.name || 'this user'}? They won't be able to interact with you.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Block", 
+          style: "destructive",
+          onPress: performBlock
+        }
+      ]
+    );
+  };
+
+  const performBlock = async () => {
+    try {
+      const res = await axios.post(`${API_URL}/user/block/${post.author._id}`, {}, config);
+      if (res.data.success) {
+        setIsBlocked(true);
+        Alert.alert(
+          "Blocked", 
+          `You have blocked ${post.author?.name || 'this user'}. Their content will be hidden from your feed.`,
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                // Call parent callback if provided
+                if (onBlock) onBlock(post.author._id);
+                // Navigate back or refresh feed
+                navigation.goBack();
+              }
+            }
+          ]
+        );
+      }
+    } catch (err) {
+      console.error("Block error:", err);
+      Alert.alert("Error", err.response?.data?.error || "Could not block user. Please try again.");
+    }
+  };
+
+  // ============ REPORT POST HANDLER ============
+  const handleReportPost = () => {
+    setShowMenu(false);
+    if (isOwnPost) {
+      Alert.alert("Info", "You cannot report your own post");
+      return;
+    }
+    setShowReportModal(true);
+  };
+
+  // ============ COMMENT HANDLERS - FIXED ============
   const handleComment = async () => {
     if (!isLoggedIn) {
       Alert.alert("Sign In", "Please sign in to comment");
       return;
     }
     
-    if (!commentText.trim()) return;
+    if (!commentText.trim()) {
+      Alert.alert("Info", "Please write a comment");
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
-      const payload = { 
-        text: commentText,
-        parentCommentId: replyingToComment?._id || null
-      };
-      const res = await axios.post(`${API_URL}/posts/comment/${post._id}`, payload, config);
+      const res = await axios.post(
+        `${API_URL}/posts/comment/${post._id}`, 
+        { text: commentText.trim() }, 
+        config
+      );
+      
       if (res.data.success && res.data.comments) {
         setCommentsList(res.data.comments);
         setCommentText("");
         setReplyTo(null);
         setReplyingToComment(null);
         Keyboard.dismiss();
+        
+        // Notify parent of update
+        if (onPostUpdate) onPostUpdate();
+        
         setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 200);
       }
     } catch (err) { 
-      Alert.alert("Error", err.response?.data?.message || "Comment failed to post."); 
+      console.error("Comment error:", err);
+      Alert.alert("Error", err.response?.data?.error || "Comment failed to post."); 
     }
     finally { setIsSubmitting(false); }
   };
 
-  // FIXED: Handle Connect with proper status update
+  // ============ CONNECTION HANDLERS - FIXED ============
   const handleConnect = async () => {
     if (!isLoggedIn) {
       Alert.alert("Sign In", "Please sign in to connect");
@@ -395,10 +461,8 @@ export default function PostCard({ post }) {
     try {
       const res = await axios.post(`${API_URL}/user/connect/${post.author._id}`, {}, config);
       if (res.data.success) {
-        // Update local state immediately
         setConnectionStatus('pending');
         
-        // Update user context with new sent request
         if (setUser && user) {
           const updatedSentRequests = [...(user.sentRequests || []), post.author._id];
           setUser({ 
@@ -410,7 +474,6 @@ export default function PostCard({ post }) {
         Alert.alert("Success", "Connection request sent!");
       }
     } catch (err) { 
-      // Check for different error scenarios
       if (err.response?.data?.error) {
         const errorMsg = err.response.data.error;
         if (errorMsg === "Already connected" || errorMsg.includes("already connected")) {
@@ -432,7 +495,6 @@ export default function PostCard({ post }) {
     finally { setIsConnecting(false); }
   };
 
-  // FIXED: Handle Accept Connection Request
   const handleAcceptRequest = async () => {
     if (!isLoggedIn) return;
     setIsConnecting(true);
@@ -442,9 +504,7 @@ export default function PostCard({ post }) {
       if (res.data.success) {
         setConnectionStatus('connected');
         
-        // Update user context
         if (setUser && user) {
-          // Remove from received requests and add to connections
           const updatedReceivedRequests = (user.receivedRequests || []).filter(id => id !== post.author._id);
           const updatedConnections = [...(user.connections || []), post.author._id];
           setUser({
@@ -456,6 +516,7 @@ export default function PostCard({ post }) {
         Alert.alert("Success", "Connected successfully!");
       }
     } catch (err) {
+      console.error("Accept error:", err);
       Alert.alert("Error", err.response?.data?.error || "Could not accept request");
     }
     finally { setIsConnecting(false); }
@@ -498,6 +559,7 @@ export default function PostCard({ post }) {
     return comment.replies || [];
   };
 
+  // ============ RENDER COMMENT ============
   const renderComment = ({ item }) => {
     const replies = getReplies(item);
     const isExpandedReplies = expandedReplies[item._id] || false;
@@ -576,6 +638,11 @@ export default function PostCard({ post }) {
     );
   };
 
+  // If post is blocked, don't render
+  if (isBlocked) {
+    return null;
+  }
+
   return (
     <Animated.View style={[styles.card, { opacity: cardFade }]}>
       {/* Header */}
@@ -589,7 +656,6 @@ export default function PostCard({ post }) {
                 <Text style={styles.avatarText}>{post.author?.name?.charAt(0)?.toUpperCase()}</Text>
               </LinearGradient>
             )}
-            {/* FIXED: Show appropriate badge based on status */}
             {isLoggedIn && !isOwnPost && connectionStatus === 'received' && (
               <TouchableOpacity 
                 style={[styles.plusBadge, styles.acceptBadge]} 
@@ -616,7 +682,6 @@ export default function PostCard({ post }) {
           <View style={styles.userMeta}>
             <View style={styles.userNameRow}>
               <Text style={styles.userName}>{post.author?.name || "TDC User"}</Text>
-              {/* FIXED: Show status badge with correct text */}
               {statusDisplay && (
                 <View style={[styles.statusBadge, { backgroundColor: statusDisplay.color + '20' }]}>
                   <Text style={[styles.statusText, { color: statusDisplay.color }]}>
@@ -632,7 +697,7 @@ export default function PostCard({ post }) {
         </TouchableOpacity>
         {isLoggedIn && (
           <TouchableOpacity onPress={() => setShowMenu(true)} style={styles.menuBtn}>
-            <Ionicons name="ellipsis-horizontal" size={20} color="#999" />
+            <Ionicons name="ellipsis-vertical" size={20} color="#666" />
           </TouchableOpacity>
         )}
       </View>
@@ -834,27 +899,54 @@ export default function PostCard({ post }) {
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* Menu Modal */}
+      {/* Three-Dot Menu Modal */}
       <Modal visible={showMenu} transparent animationType="fade" onRequestClose={() => setShowMenu(false)}>
         <TouchableWithoutFeedback onPress={() => setShowMenu(false)}>
           <View style={styles.modalOverlay}>
             <Animated.View style={[styles.menuBox, { transform: [{ translateY: menuSlide }] }]}>
               <View style={styles.menuHeader}>
-                <Text style={styles.menuHeaderText}>Options</Text>
+                <Text style={styles.menuHeaderText}>Post Options</Text>
               </View>
+              
+              {/* Save Post */}
               <TouchableOpacity style={styles.menuItem} onPress={handleSave}>
                 <View style={styles.menuIconCircle}>
                   <Ionicons name={isSaved ? "bookmark" : "bookmark-outline"} size={20} color={isSaved ? "#f9c349" : "#1a1a1a"} />
                 </View>
                 <Text style={styles.menuText}>{isSaved ? "Remove from Saved" : "Save Post"}</Text>
               </TouchableOpacity>
+              
+              {/* Share Post */}
               <TouchableOpacity style={styles.menuItem} onPress={handleShare}>
                 <View style={styles.menuIconCircle}>
                   <Ionicons name="share-social-outline" size={20} color="#1a1a1a" />
                 </View>
                 <Text style={styles.menuText}>Share Post</Text>
               </TouchableOpacity>
+              
+              {/* Report Post - Only show if not own post */}
+              {!isOwnPost && (
+                <TouchableOpacity style={styles.menuItem} onPress={handleReportPost}>
+                  <View style={[styles.menuIconCircle, styles.menuReportCircle]}>
+                    <Ionicons name="flag-outline" size={20} color="#e74c3c" />
+                  </View>
+                  <Text style={[styles.menuText, styles.menuBlockText]}>Report Post</Text>
+                </TouchableOpacity>
+              )}
+              
+              {/* Block User - Only show if not own post */}
+              {!isOwnPost && (
+                <TouchableOpacity style={styles.menuItem} onPress={handleBlockUser}>
+                  <View style={[styles.menuIconCircle, styles.menuBlockCircle]}>
+                    <Ionicons name="ban-outline" size={20} color="#e74c3c" />
+                  </View>
+                  <Text style={[styles.menuText, styles.menuBlockText]}>Block User</Text>
+                </TouchableOpacity>
+              )}
+              
               <View style={styles.menuDivider} />
+              
+              {/* Cancel */}
               <TouchableOpacity style={styles.menuItem} onPress={() => setShowMenu(false)}>
                 <View style={[styles.menuIconCircle, styles.menuCancelCircle]}>
                   <Ionicons name="close-outline" size={20} color="#999" />
@@ -865,11 +957,24 @@ export default function PostCard({ post }) {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+
+      {/* Report Modal */}
+      <ReportModal
+        visible={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        contentType="Post"
+        contentId={post._id}
+        reportedUserId={post.author?._id}
+        onSuccess={() => {
+          Alert.alert("Report Submitted", "Thank you for your report. We'll review it shortly.");
+          if (onReport) onReport(post._id);
+        }}
+      />
     </Animated.View>
   );
 }
 
-// Styles remain the same
+// Styles remain the same as your original...
 const styles = StyleSheet.create({
   card: {
     backgroundColor: "#fff",
@@ -919,7 +1024,15 @@ const styles = StyleSheet.create({
   statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   statusText: { fontSize: 10, fontWeight: "600" },
   subText: { fontSize: 11, color: "#999", marginTop: 2, fontWeight: '500' },
-  menuBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center' },
+  menuBtn: { 
+    width: 34, 
+    height: 34, 
+    borderRadius: 10, 
+    backgroundColor: '#f8f8f8', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    marginLeft: 4
+  },
   contentContainer: { paddingHorizontal: 16, marginTop: 10 },
   postText: { fontSize: 15, color: "#1a1a1a", lineHeight: 22, fontWeight: '400' },
   showMoreText: { fontSize: 14, color: '#f9c349', fontWeight: '700', marginTop: 4, paddingVertical: 4 },
@@ -991,13 +1104,71 @@ const styles = StyleSheet.create({
   postBtn: { borderRadius: 20, overflow: 'hidden' },
   postBtnGradient: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   postBtnDisabled: { opacity: 0.5 },
-  menuBox: { backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: Platform.OS === 'ios' ? 34 : 20 },
-  menuHeader: { borderBottomWidth: 1, borderBottomColor: '#f0f0f0', paddingBottom: 12, marginBottom: 8 },
-  menuHeaderText: { fontSize: 13, color: '#999', fontWeight: '600', textAlign: 'center' },
-  menuItem: { flexDirection: "row", alignItems: "center", paddingVertical: 14 },
-  menuIconCircle: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  menuCancelCircle: { backgroundColor: '#f8f8f8' },
-  menuText: { fontSize: 15, color: "#1a1a1a", fontWeight: '500' },
-  menuCancelText: { color: '#999' },
-  menuDivider: { height: 1, backgroundColor: '#f0f0f0', marginVertical: 4 },
+  menuBox: { 
+    backgroundColor: "#fff", 
+    borderTopLeftRadius: 24, 
+    borderTopRightRadius: 24, 
+    padding: 20, 
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  menuHeader: { 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#f0f0f0', 
+    paddingBottom: 12, 
+    marginBottom: 4,
+  },
+  menuHeaderText: { 
+    fontSize: 13, 
+    color: '#999', 
+    fontWeight: '600', 
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  menuItem: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+  },
+  menuIconCircle: { 
+    width: 40, 
+    height: 40, 
+    borderRadius: 12, 
+    backgroundColor: '#f8f8f8', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginRight: 12,
+  },
+  menuBlockCircle: {
+    backgroundColor: '#fef0f0',
+  },
+  menuReportCircle: {
+    backgroundColor: '#fef0f0',
+  },
+  menuCancelCircle: { 
+    backgroundColor: '#f8f8f8' 
+  },
+  menuText: { 
+    fontSize: 15, 
+    color: "#1a1a1a", 
+    fontWeight: '500',
+    flex: 1,
+  },
+  menuBlockText: {
+    color: '#e74c3c',
+  },
+  menuCancelText: { 
+    color: '#999',
+    fontWeight: '400',
+  },
+  menuDivider: { 
+    height: 1, 
+    backgroundColor: '#f0f0f0', 
+    marginVertical: 4,
+  },
 });

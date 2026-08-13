@@ -1,3 +1,5 @@
+// MessagesScreen.js - Complete with Block Filtering
+
 import React, { useState, useEffect, useContext, useCallback, useRef } from "react";
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity, Image,
@@ -39,6 +41,8 @@ const COLORS = {
   textSecondary: '#71767b',
   textLight: '#8899a6',
   shadow: 'rgba(0,0,0,0.05)',
+  blocked: '#e74c3c',
+  blockedBg: '#fef0f0',
 };
 
 // Format date properly
@@ -92,8 +96,8 @@ const MessagesSkeleton = () => {
   );
 };
 
-// Chat Item Component
-const ChatItem = React.memo(({ item, currentUser, navigation, index, onLongPress, markAsRead }) => {
+// Chat Item Component with Block Check
+const ChatItem = React.memo(({ item, currentUser, navigation, index, onLongPress, markAsRead, isBlocked }) => {
   const itemFade = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.92)).current;
   const slideAnim = useRef(new Animated.Value(25)).current;
@@ -131,7 +135,7 @@ const ChatItem = React.memo(({ item, currentUser, navigation, index, onLongPress
       })
     ]).start();
 
-    if (unreadCount > 0) {
+    if (unreadCount > 0 && !isBlocked) {
       Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
@@ -151,9 +155,17 @@ const ChatItem = React.memo(({ item, currentUser, navigation, index, onLongPress
     return () => {
       pulseAnim.stopAnimation();
     };
-  }, [unreadCount]);
+  }, [unreadCount, isBlocked]);
 
   const handlePress = () => {
+    if (isBlocked) {
+      Alert.alert(
+        "User Blocked",
+        "You have blocked this user. Unblock them to continue messaging."
+      );
+      return;
+    }
+    
     if (!item?._id || !otherUser?._id) {
       console.warn('Invalid chat data, skipping navigation');
       return;
@@ -176,6 +188,7 @@ const ChatItem = React.memo(({ item, currentUser, navigation, index, onLongPress
 
   const getMessagePreview = (text) => {
     if (!text) return "Start a conversation...";
+    if (isBlocked) return "🔒 User blocked - messages hidden";
     if (text.length > 35) return text.substring(0, 35) + '...';
     return text;
   };
@@ -189,27 +202,42 @@ const ChatItem = React.memo(({ item, currentUser, navigation, index, onLongPress
       ]
     }}>
       <TouchableOpacity
-        style={[styles.chatCard, unreadCount > 0 && styles.chatCardUnread]}
+        style={[
+          styles.chatCard, 
+          unreadCount > 0 && !isBlocked && styles.chatCardUnread,
+          isBlocked && styles.chatCardBlocked
+        ]}
         onPress={handlePress}
-        onLongPress={() => onLongPress && onLongPress(item._id)}
+        onLongPress={() => !isBlocked && onLongPress && onLongPress(item._id)}
         activeOpacity={0.6}
         delayLongPress={400}
         onPressIn={() => setIsPressed(true)}
         onPressOut={() => setIsPressed(false)}
+        disabled={isBlocked}
       >
         <View style={styles.avatarWrapper}>
           <View style={styles.avatarContainer}>
             {otherUser?.profileImage ? (
-              <Image source={{ uri: otherUser.profileImage }} style={styles.profileImg} />
+              <Image 
+                source={{ uri: otherUser.profileImage }} 
+                style={[styles.profileImg, isBlocked && { opacity: 0.5 }]} 
+              />
             ) : (
               <LinearGradient
-                colors={[COLORS.primary, COLORS.primaryDark]}
+                colors={isBlocked ? ['#ccc', '#bbb'] : [COLORS.primary, COLORS.primaryDark]}
                 style={styles.avatarPlaceholder}
               >
-                <Text style={styles.avatarInitial}>{recipientName.charAt(0).toUpperCase()}</Text>
+                <Text style={[styles.avatarInitial, isBlocked && { color: '#999' }]}>
+                  {recipientName.charAt(0).toUpperCase()}
+                </Text>
               </LinearGradient>
             )}
-            {isOnline && (
+            {isBlocked && (
+              <View style={styles.blockedBadge}>
+                <Ionicons name="ban" size={12} color="#fff" />
+              </View>
+            )}
+            {isOnline && !isBlocked && (
               <Animated.View style={[
                 styles.onlineDot,
                 {
@@ -227,23 +255,25 @@ const ChatItem = React.memo(({ item, currentUser, navigation, index, onLongPress
 
         <View style={styles.chatContent}>
           <View style={styles.chatRow}>
-            <Text style={[styles.chatName, unreadCount > 0 && styles.chatNameUnread]} numberOfLines={1}>
+            <Text style={[styles.chatName, unreadCount > 0 && !isBlocked && styles.chatNameUnread, isBlocked && styles.blockedText]} numberOfLines={1}>
               {recipientName}
+              {isBlocked && " 🔒"}
             </Text>
             <View style={styles.timeContainer}>
-              <Text style={styles.chatTime}>
-                {formatMessageDate(updatedAt)}
+              <Text style={[styles.chatTime, isBlocked && styles.blockedText]}>
+                {isBlocked ? "Blocked" : formatMessageDate(updatedAt)}
               </Text>
             </View>
           </View>
           <View style={styles.lastMsgRow}>
             <Text style={[
               styles.chatMessage,
-              unreadCount > 0 && styles.chatMessageUnread
+              unreadCount > 0 && !isBlocked && styles.chatMessageUnread,
+              isBlocked && styles.blockedText
             ]} numberOfLines={1}>
               {getMessagePreview(lastMessage)}
             </Text>
-            {unreadCount > 0 && (
+            {unreadCount > 0 && !isBlocked && (
               <Animated.View style={[styles.unreadBadge, { transform: [{ scale: pulseAnim }] }]}>
                 <Text style={styles.unreadText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
               </Animated.View>
@@ -252,7 +282,11 @@ const ChatItem = React.memo(({ item, currentUser, navigation, index, onLongPress
         </View>
 
         <View style={styles.chatChevron}>
-          <Ionicons name="chevron-forward" size={16} color="#ddd" />
+          <Ionicons 
+            name={isBlocked ? "ban-outline" : "chevron-forward"} 
+            size={16} 
+            color={isBlocked ? COLORS.danger : "#ddd"} 
+          />
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -260,7 +294,7 @@ const ChatItem = React.memo(({ item, currentUser, navigation, index, onLongPress
 });
 
 // Action Modal
-const ActionModal = ({ visible, onClose, onAction, recipientName, recipientId, navigation }) => {
+const ActionModal = ({ visible, onClose, onAction, recipientName, recipientId, navigation, isBlocked }) => {
   const slideAnim = useRef(new Animated.Value(400)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
 
@@ -315,10 +349,18 @@ const ActionModal = ({ visible, onClose, onAction, recipientName, recipientId, n
 
             <View style={styles.modalHeader}>
               <View style={styles.modalHeaderLeft}>
-                <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.modalAvatar}>
-                  <Text style={styles.modalAvatarText}>{recipientName?.charAt(0)?.toUpperCase() || '?'}</Text>
+                <LinearGradient 
+                  colors={isBlocked ? ['#ccc', '#bbb'] : [COLORS.primary, COLORS.primaryDark]} 
+                  style={styles.modalAvatar}
+                >
+                  <Text style={[styles.modalAvatarText, isBlocked && { color: '#999' }]}>
+                    {recipientName?.charAt(0)?.toUpperCase() || '?'}
+                  </Text>
                 </LinearGradient>
-                <Text style={styles.modalTitle}>{recipientName || 'User'}</Text>
+                <Text style={[styles.modalTitle, isBlocked && styles.blockedText]}>
+                  {recipientName || 'User'}
+                  {isBlocked && " (Blocked)"}
+                </Text>
               </View>
               <TouchableOpacity onPress={handleClose} style={styles.modalClose}>
                 <Ionicons name="close" size={24} color={COLORS.black} />
@@ -343,25 +385,41 @@ const ActionModal = ({ visible, onClose, onAction, recipientName, recipientId, n
               <Ionicons name="chevron-forward" size={18} color={COLORS.textLight} />
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.modalOption}
-              onPress={() => {
-                handleClose();
-                setTimeout(() => onAction('mute'), 300);
-              }}
-            >
-              <View style={[styles.modalOptionIcon, { backgroundColor: '#fef9f0' }]}>
-                <Ionicons name="notifications-off-outline" size={22} color={COLORS.primary} />
-              </View>
-              <Text style={styles.modalOptionText}>Mute Notifications</Text>
-              <Ionicons name="chevron-forward" size={18} color={COLORS.textLight} />
-            </TouchableOpacity>
+            {!isBlocked && (
+              <TouchableOpacity
+                style={styles.modalOption}
+                onPress={() => {
+                  handleClose();
+                  setTimeout(() => onAction('mute'), 300);
+                }}
+              >
+                <View style={[styles.modalOptionIcon, { backgroundColor: '#fef9f0' }]}>
+                  <Ionicons name="notifications-off-outline" size={22} color={COLORS.primary} />
+                </View>
+                <Text style={styles.modalOptionText}>Mute Notifications</Text>
+                <Ionicons name="chevron-forward" size={18} color={COLORS.textLight} />
+              </TouchableOpacity>
+            )}
+
+            {isBlocked && (
+              <TouchableOpacity
+                style={styles.modalOption}
+                onPress={() => {
+                  handleClose();
+                  setTimeout(() => onAction('unblock'), 300);
+                }}
+              >
+                <View style={[styles.modalOptionIcon, { backgroundColor: '#f0faf0' }]}>
+                  <Ionicons name="person-add" size={22} color={COLORS.success} />
+                </View>
+                <Text style={[styles.modalOptionText, { color: COLORS.success }]}>Unblock User</Text>
+                <Ionicons name="chevron-forward" size={18} color={COLORS.textLight} />
+              </TouchableOpacity>
+            )}
 
             
 
-            <View style={styles.modalDivider} />
-
-            {/* <TouchableOpacity
+            <TouchableOpacity
               style={[styles.modalOption, styles.modalOptionDanger]}
               onPress={() => {
                 handleClose();
@@ -373,82 +431,13 @@ const ActionModal = ({ visible, onClose, onAction, recipientName, recipientId, n
               </View>
               <Text style={[styles.modalOptionText, styles.modalOptionDangerText]}>Delete Conversation</Text>
               <Ionicons name="chevron-forward" size={18} color={COLORS.textLight} />
-            </TouchableOpacity> */}
+            </TouchableOpacity>
           </Animated.View>
         </Pressable>
       </Animated.View>
     </Modal>
   );
 };
-
-// Delete Modal
-// const DeleteModal = ({ visible, onClose, onConfirm, count = 1 }) => {
-//   const scaleAnim = useRef(new Animated.Value(0.7)).current;
-//   const fadeAnim = useRef(new Animated.Value(0)).current;
-
-//   useEffect(() => {
-//     if (visible) {
-//       Animated.parallel([
-//         Animated.spring(scaleAnim, {
-//           toValue: 1,
-//           friction: 8,
-//           tension: 40,
-//           useNativeDriver: true,
-//         }),
-//         Animated.timing(fadeAnim, {
-//           toValue: 1,
-//           duration: 200,
-//           useNativeDriver: true,
-//         })
-//       ]).start();
-//     } else {
-//       scaleAnim.setValue(0.7);
-//       fadeAnim.setValue(0);
-//     }
-//   }, [visible]);
-
-//   return (
-//     <Modal
-//       transparent
-//       visible={visible}
-//       animationType="fade"
-//       onRequestClose={onClose}
-//     >
-//       <Pressable style={styles.modalOverlay} onPress={onClose}>
-//         <Animated.View style={[
-//           styles.deleteModalContent,
-//           {
-//             opacity: fadeAnim,
-//             transform: [{ scale: scaleAnim }]
-//           }
-//         ]}>
-//           <View style={styles.deleteModalIcon}>
-//             <LinearGradient colors={['#fff5f5', '#fff']} style={styles.deleteModalIconGradient}>
-//               <Ionicons name="trash-outline" size={36} color={COLORS.danger} />
-//             </LinearGradient>
-//           </View>
-//           <Text style={styles.deleteModalTitle}>Delete {count > 1 ? 'Conversations' : 'Conversation'}?</Text>
-//           <Text style={styles.deleteModalSub}>
-//             {count > 1
-//               ? `Are you sure you want to delete ${count} conversations? This action cannot be undone.`
-//               : 'Are you sure you want to delete this conversation? This action cannot be undone.'
-//             }
-//           </Text>
-//           <View style={styles.deleteModalButtons}>
-//             <TouchableOpacity style={[styles.deleteModalBtn, styles.deleteModalCancel]} onPress={onClose}>
-//               <Text style={styles.deleteModalCancelText}>Cancel</Text>
-//             </TouchableOpacity>
-//             <TouchableOpacity style={[styles.deleteModalBtn, styles.deleteModalConfirm]} onPress={onConfirm}>
-//               <LinearGradient colors={[COLORS.danger, '#c0392b']} style={styles.deleteModalConfirmGradient}>
-//                 <Text style={styles.deleteModalConfirmText}>Delete</Text>
-//               </LinearGradient>
-//             </TouchableOpacity>
-//           </View>
-//         </Animated.View>
-//       </Pressable>
-//     </Modal>
-//   );
-// };
 
 export default function MessagesScreen() {
   const navigation = useNavigation();
@@ -459,7 +448,6 @@ export default function MessagesScreen() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [actionModalVisible, setActionModalVisible] = useState(false);
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [selectedChat, setSelectedChat] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
@@ -467,6 +455,8 @@ export default function MessagesScreen() {
   const [totalUnread, setTotalUnread] = useState(0);
   const [isNavigating, setIsNavigating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [blockedUserIds, setBlockedUserIds] = useState([]);
+  const [isBlocked, setIsBlocked] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerSlide = useRef(new Animated.Value(-30)).current;
@@ -508,6 +498,18 @@ export default function MessagesScreen() {
     }
   }, []);
 
+  // Load blocked users
+  const loadBlockedUsers = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await axios.get(`${API_URL}/user/blocked`, config);
+      const blocked = res.data.blockedUsers || [];
+      setBlockedUserIds(blocked.map(b => b._id));
+    } catch (err) {
+      console.error("Error loading blocked users:", err);
+    }
+  }, [token]);
+
   // Handle hardware back button
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -516,11 +518,14 @@ export default function MessagesScreen() {
         if (navigation.canGoBack()) {
           navigation.goBack();
         } else {
-          // Navigate to HomeTabs instead of Home
-          navigation.canGoBack();
-          
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [{ name: 'HomeTabs' }],
+            })
+          );
         }
-       
+        setTimeout(() => setIsNavigating(false), 500);
         return true;
       }
       return false;
@@ -533,6 +538,7 @@ export default function MessagesScreen() {
   useFocusEffect(
     useCallback(() => {
       if (isFocused) {
+        loadBlockedUsers();
         fetchInbox();
       }
       return () => {};
@@ -571,9 +577,7 @@ export default function MessagesScreen() {
       }
     };
 
-    // Handle conversation deleted
     const handleConversationDeleted = ({ conversationId }) => {
-      console.log('Conversation deleted via socket:', conversationId);
       if (isFocused) {
         setConversations(prev => {
           const updated = prev.filter(conv => conv._id !== conversationId);
@@ -582,7 +586,6 @@ export default function MessagesScreen() {
           return updated;
         });
         
-        setDeleteModalVisible(false);
         setActionModalVisible(false);
         setSelectedChat(null);
       }
@@ -608,7 +611,18 @@ export default function MessagesScreen() {
       console.log('Fetching inbox...');
       const res = await axios.get(`${API_URL}/inbox`, config);
       console.log('Inbox response:', res.data);
-      const sorted = res.data.sort((a, b) => {
+      
+      // Filter out conversations with blocked users
+      let filteredConversations = res.data;
+      if (blockedUserIds.length > 0) {
+        filteredConversations = res.data.filter(conv => {
+          const otherUser = conv.participants?.find(p => p._id !== currentUser?._id);
+          if (!otherUser) return true;
+          return !blockedUserIds.includes(otherUser._id);
+        });
+      }
+      
+      const sorted = filteredConversations.sort((a, b) => {
         const dateA = new Date(a.lastMessageTime || a.updatedAt || a.createdAt);
         const dateB = new Date(b.lastMessageTime || b.updatedAt || b.createdAt);
         return dateB - dateA;
@@ -624,6 +638,14 @@ export default function MessagesScreen() {
       setRefreshing(false);
     }
   };
+
+  // Check if a conversation is blocked
+  const isConversationBlocked = useCallback((conversation) => {
+    if (!conversation || !conversation.participants) return false;
+    const otherUser = conversation.participants.find(p => p._id !== currentUser?._id);
+    if (!otherUser) return false;
+    return blockedUserIds.includes(otherUser._id);
+  }, [blockedUserIds, currentUser]);
 
   // Mark messages as read when clicking on chat
   const markMessagesAsRead = async (conversationId) => {
@@ -661,6 +683,8 @@ export default function MessagesScreen() {
   const handleLongPress = (id) => {
     const chat = conversations.find(c => c._id === id);
     if (chat) {
+      const blocked = isConversationBlocked(chat);
+      setIsBlocked(blocked);
       setSelectedChat(chat);
       setActionModalVisible(true);
     }
@@ -670,12 +694,57 @@ export default function MessagesScreen() {
     if (!selectedChat) return;
 
     if (action === 'delete') {
-      setDeleteModalVisible(true);
+      Alert.alert(
+        "Delete Conversation",
+        "Are you sure you want to delete this conversation? This action cannot be undone.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { 
+            text: "Delete", 
+            style: "destructive", 
+            onPress: () => handleDeleteSingle(selectedChat._id)
+          }
+        ]
+      );
     } else if (action === 'mute') {
       handleMuteSingle(selectedChat._id);
-    } else if (action === 'archive') {
-      handleArchiveSingle(selectedChat._id);
+    } else if (action === 'unblock') {
+      handleUnblockUser(selectedChat);
     }
+  };
+
+  const handleUnblockUser = async (chat) => {
+    const otherUser = chat.participants?.find(p => p._id !== currentUser?._id);
+    if (!otherUser) return;
+
+    Alert.alert(
+      "Unblock User",
+      `Are you sure you want to unblock ${otherUser.name}? They will be able to message you again.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Unblock",
+          onPress: async () => {
+            try {
+              await axios.post(`${API_URL}/user/unblock/${otherUser._id}`, {}, config);
+              Alert.alert("Success", `${otherUser.name} has been unblocked`);
+              
+              // Remove from blocked list
+              setBlockedUserIds(prev => prev.filter(id => id !== otherUser._id));
+              
+              // Refresh conversations
+              await fetchInbox();
+              
+              setActionModalVisible(false);
+              setSelectedChat(null);
+            } catch (err) {
+              console.error("Unblock error:", err);
+              Alert.alert("Error", "Failed to unblock user. Please try again.");
+            }
+          }
+        }
+      ]
+    );
   };
 
   const handleMuteSingle = async (id) => {
@@ -686,17 +755,6 @@ export default function MessagesScreen() {
     } catch (err) {
       console.error('Mute error:', err);
       Alert.alert('Error', 'Failed to mute conversation');
-    }
-  };
-
-  const handleArchiveSingle = async (id) => {
-    try {
-      await axios.post(`${API_URL}/conversations/${id}/archive`, {}, config);
-      fetchInbox();
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    } catch (err) {
-      console.error('Archive error:', err);
-      Alert.alert('Error', 'Failed to archive conversation');
     }
   };
 
@@ -719,7 +777,6 @@ export default function MessagesScreen() {
           return updated;
         });
         
-        setDeleteModalVisible(false);
         setActionModalVisible(false);
         setSelectedChat(null);
         
@@ -743,6 +800,7 @@ export default function MessagesScreen() {
 
   const handleRefresh = () => {
     setRefreshing(true);
+    loadBlockedUsers();
     fetchInbox();
   };
 
@@ -752,7 +810,6 @@ export default function MessagesScreen() {
       if (navigation.canGoBack()) {
         navigation.goBack();
       } else {
-        // Navigate to HomeTabs instead of Home
         navigation.dispatch(
           CommonActions.reset({
             index: 0,
@@ -764,17 +821,19 @@ export default function MessagesScreen() {
     }
   };
 
-  // Navigate to Social screen instead of Search (since Search doesn't exist)
   const navigateToSocial = () => {
     navigation.navigate('Search');
   };
 
+  // Filter conversations by search and block status
   const filteredConversations = conversations.filter(c => {
     if (!c || !c.participants) return false;
-    const matchesSearch = c.participants.some(p =>
-      p._id !== currentUser?._id &&
-      p.name?.toLowerCase().includes(search.toLowerCase())
-    );
+    // Already filtered blocked conversations, but double-check
+    const otherUser = c.participants.find(p => p._id !== currentUser?._id);
+    if (!otherUser) return false;
+    if (blockedUserIds.includes(otherUser._id)) return false;
+    
+    const matchesSearch = otherUser.name?.toLowerCase().includes(search.toLowerCase());
     return matchesSearch;
   });
 
@@ -877,6 +936,7 @@ export default function MessagesScreen() {
                 index={index}
                 onLongPress={handleLongPress}
                 markAsRead={markMessagesAsRead}
+                isBlocked={isConversationBlocked(item)}
               />
             )}
             contentContainerStyle={styles.listContent}
@@ -900,20 +960,14 @@ export default function MessagesScreen() {
         onClose={() => {
           setActionModalVisible(false);
           setSelectedChat(null);
+          setIsBlocked(false);
         }}
         onAction={handleAction}
         recipientName={selectedChat?.participants?.find(p => p._id !== currentUser?._id)?.name || ''}
         recipientId={selectedChat?.participants?.find(p => p._id !== currentUser?._id)?._id}
         navigation={navigation}
+        isBlocked={isBlocked}
       />
-
-      {/* Delete Modal */}
-      {/* <DeleteModal
-        visible={deleteModalVisible}
-        onClose={() => setDeleteModalVisible(false)}
-        onConfirm={() => selectedChat && handleDeleteSingle(selectedChat._id)}
-        count={1}
-      /> */}
     </SafeAreaView>
   );
 }
@@ -1074,6 +1128,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 4,
   },
+  chatCardBlocked: {
+    backgroundColor: COLORS.blockedBg,
+    opacity: 0.8,
+    borderRadius: 12,
+    paddingHorizontal: 4,
+  },
   avatarWrapper: {
     marginRight: 14,
   },
@@ -1119,6 +1179,19 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  blockedBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: COLORS.danger,
+    borderRadius: 10,
+    width: 22,
+    height: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.white,
+  },
   chatContent: {
     flex: 1,
     marginLeft: 2,
@@ -1137,6 +1210,9 @@ const styles = StyleSheet.create({
   },
   chatNameUnread: {
     fontWeight: '700',
+  },
+  blockedText: {
+    color: COLORS.gray,
   },
   timeContainer: {
     marginLeft: 8,
@@ -1275,78 +1351,6 @@ const styles = StyleSheet.create({
   },
   modalOptionDangerText: {
     color: COLORS.danger,
-  },
-  deleteModalContent: {
-    backgroundColor: COLORS.white,
-    borderRadius: 20,
-    padding: 24,
-    marginHorizontal: 30,
-    alignItems: 'center',
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 12,
-  },
-  deleteModalIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    marginBottom: 16,
-    overflow: 'hidden',
-  },
-  deleteModalIconGradient: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteModalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.black,
-    marginBottom: 8,
-  },
-  deleteModalSub: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  deleteModalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  deleteModalBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
-  deleteModalCancel: {
-    backgroundColor: COLORS.lightGray,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteModalCancelText: {
-    color: COLORS.black,
-    fontWeight: '600',
-    fontSize: 15,
-  },
-  deleteModalConfirm: {
-    overflow: 'hidden',
-  },
-  deleteModalConfirmGradient: {
-    paddingVertical: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteModalConfirmText: {
-    color: COLORS.white,
-    fontWeight: '600',
-    fontSize: 15,
   },
   emptyContainer: {
     alignItems: 'center',

@@ -105,6 +105,9 @@ import FounderCircleScreen from '../components/FounderCircleScreen';
 import CreatePostScreen from '../screens/Social/CreatePostScreen';
 import ChangePassword from '../screens/Social/ChangePassword';
 import FeedScreen from '../screens/Social/FeedScreen';
+import BlockedUsersScreen from '../screens/Social/BlockedUserScreen';
+import Terrms from '../screens/Social/Terrms';
+import Guideline from '../screens/Social/Guideline';
 
 const { width, height } = Dimensions.get('window');
 const Drawer = createDrawerNavigator();
@@ -636,7 +639,7 @@ function CustomHeader({ navigation }) {
 
   return (
     <SafeAreaView edges={['top']} style={styles.headerSafe}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff21" />
 
       <Animated.View 
         style={[
@@ -911,11 +914,8 @@ export default function DrawerNavigator() {
           component={DashboardStackNavigator}
           options={{ headerShown: false }}
         />
-        <Drawer.Screen 
-          name="CreatePostScreen" 
-          component={CreatePostScreen}
-          options={{ headerShown: false }}
-        />
+        
+        
         <Drawer.Screen 
           name="ChangePassword" 
           component={ChangePassword}
@@ -971,6 +971,10 @@ export default function DrawerNavigator() {
           { name: 'DeftPro', comp: DeftProScreen },
           { name: 'DeftGoat', comp: DeftGoatScreen },
           { name: 'FounderCircle', comp: FounderCircleScreen },
+          { name: 'BlockedUsers', comp: BlockedUsersScreen },
+          { name: 'Terrms', comp: Terrms },
+          { name: 'Guideline', comp: Guideline },
+           { name: 'CreatePostScreen', comp: CreatePostScreen },
         ].map((item) => (
           <Drawer.Screen
             key={item.name}
@@ -1009,8 +1013,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderBottomRightRadius: 25,
     overflow: 'hidden',
-    marginHorizontal: 12,
-    marginTop: 8,
+    marginHorizontal: 0,
+    marginTop: 0,
   },
   drawerHeaderGradient: {
     paddingVertical: 22,

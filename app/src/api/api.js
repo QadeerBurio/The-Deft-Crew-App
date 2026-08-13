@@ -1,9 +1,8 @@
-// api/api.js - Fixed for Guest Mode
+// api/api.js - Fixed for Guest Mode with Session Expiry Handling
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, Platform } from 'react-native';
 import Constants from 'expo-constants';
-
 
 const getBaseURL = () => {
   if (__DEV__) {
@@ -95,7 +94,7 @@ let isGuestMode = false;
 // FIXED: Export function to set guest mode
 export const setGuestMode = (guestMode) => {
   isGuestMode = guestMode;
-  console.log('Guest mode set to:', guestMode);
+  console.log('Guest mode set to:', isGuestMode);
 };
 
 // Request interceptor - FIXED
@@ -108,7 +107,6 @@ api.interceptors.request.use(
       
       if (guestFlag === 'true' || isGuestMode) {
         // Don't attach any token for guest users
-        // Remove Authorization header if it exists
         delete config.headers.Authorization;
         console.log('Guest mode: No token attached');
       } else {
@@ -131,10 +129,16 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor
+// Response interceptor - FIXED
 let logoutHandler = () => {};
+let sessionErrorHandler = null;
+
 export const injectLogout = (handler) => {
   logoutHandler = handler;
+};
+
+export const injectSessionErrorHandler = (handler) => {
+  sessionErrorHandler = handler;
 };
 
 let isLoggingOut = false;
@@ -161,22 +165,29 @@ api.interceptors.response.use(
       
       if (!isLoggingOut) {
         isLoggingOut = true;
-        await AsyncStorage.multiRemove(['token', 'user']);
+        
+        // FIXED: Clear all auth data properly
+        await AsyncStorage.multiRemove(['token', 'user', 'isGuest']);
         memoryCache.clear();
         
-        Alert.alert(
-          "Session Expired",
-          "Please log in again.",
-          [
-            {
-              text: "OK",
-              onPress: () => {
-                isLoggingOut = false;
-                logoutHandler?.();
-              }
-            }
-          ]
-        );
+        // Reset guest mode flag
+        isGuestMode = false;
+        
+        // REMOVED: Alert popup - now using notification system
+        // Just call the session error handler if available
+        if (sessionErrorHandler) {
+          sessionErrorHandler('Session Expired', 'Your session has expired. Please log in again.');
+        }
+        
+        // Call logout handler to update UI state
+        if (logoutHandler) {
+          logoutHandler();
+        }
+        
+        // Reset logging out flag after a delay
+        setTimeout(() => {
+          isLoggingOut = false;
+        }, 1000);
       }
     }
     

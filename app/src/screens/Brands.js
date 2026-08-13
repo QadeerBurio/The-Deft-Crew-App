@@ -1029,7 +1029,7 @@ export default function BrandsScreen({ limit = null }) {
   // ==========================================
   return (
     <SafeAreaView style={styles.mainSafeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor="#9a979708" />
       
       {/* Loading Overlay - Min 2 seconds */}
       <LoadingOverlay 
@@ -1590,7 +1590,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff", 
     borderRadius: 22, 
     width: "100%", 
-    padding: 15, 
+    padding: 7, 
     alignItems: "center", 
     borderWidth: 1, 
     borderColor: "#F0F0F0", 
@@ -1615,8 +1615,8 @@ const styles = StyleSheet.create({
   // Category Grid Styles
   categoryGridContainer: {
     paddingHorizontal: 20,
-    marginBottom: 15,
-    marginTop: 5,
+    marginBottom: 10,
+    marginTop: 2,
   },
   categoryGridScroll: {
     paddingVertical: 5,

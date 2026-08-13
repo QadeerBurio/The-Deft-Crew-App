@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+// SignupScreen.js - Updated with auto-login after signup
+import React, { useEffect, useMemo, useRef, useState, useContext } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -20,6 +21,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute } from "@react-navigation/native";
 import api from "../api/api";
+import { AuthContext } from "../context/AuthContext";
 
 const { width, height } = Dimensions.get("window");
 const isTablet = Math.min(width, height) >= 768;
@@ -153,6 +155,8 @@ const UNIVERSITIES = [
 
 export default function SignupScreen({ navigation }) {
   const route = useRoute();
+  const { setUser, setToken } = useContext(AuthContext); // Add auth context
+  
   const [loading, setLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState(null);
   const [showUniversityModal, setShowUniversityModal] = useState(false);
@@ -366,6 +370,7 @@ export default function SignupScreen({ navigation }) {
     ]).start();
   };
 
+  // Updated handleSignup with auto-login
   const handleSignup = async () => {
     Animated.sequence([
       Animated.timing(buttonScale, {
@@ -432,16 +437,82 @@ export default function SignupScreen({ navigation }) {
         isAlumni,
       };
 
-      await api.post("/auth/signup", body);
+      // Signup request
+      const signupResponse = await api.post("/auth/signup", body);
+      
+      console.log("Signup successful:", signupResponse.data);
 
+      // AUTO-LOGIN AFTER SIGNUP
+      try {
+        // Use the same credentials to login
+        const loginResponse = await api.post("/auth/login", {
+          email: email.trim().toLowerCase(),
+          password: password
+        });
+
+        const { token, user } = loginResponse.data;
+
+        if (token && user) {
+          // Set auth token in API headers
+          api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+          
+          // Update auth context
+          setToken(token);
+          setUser(user);
+          
+          hideLoadingOverlay();
+          setLoading(false);
+          
+          showNotification(
+            "Welcome to the Crew! 🎉",
+            `Account created and signed in successfully!`,
+            "success"
+          );
+
+          // Navigate directly to Home (Drawer)
+          setTimeout(() => {
+            hideNotification();
+            // Reset navigation to go directly to Drawer (main app)
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Drawer' }],
+            });
+          }, 1500);
+          
+          return; // Exit after successful auto-login
+        }
+      } catch (loginError) {
+        console.log("Auto-login failed, redirecting to login screen:", loginError);
+        // If auto-login fails, redirect to login screen with success message
+        hideLoadingOverlay();
+        setLoading(false);
+        showNotification(
+          "Account Created! 🎉",
+          "Please sign in with your credentials.",
+          "success"
+        );
+        
+        setTimeout(() => {
+          hideNotification();
+          navigation.replace("Login");
+        }, 2000);
+        return;
+      }
+
+      // Fallback if login response was invalid
       hideLoadingOverlay();
       setLoading(false);
-      showNotification("Welcome to the Crew!", "Account created successfully. Redirecting to login...", "success");
-
+      showNotification(
+        "Account Created! 🎉",
+        "Please sign in with your credentials.",
+        "success"
+      );
+      
       setTimeout(() => {
         hideNotification();
         navigation.replace("Login");
-      }, 2500);
+      }, 2000);
+
     } catch (err) {
       hideLoadingOverlay();
       setLoading(false);
@@ -1156,6 +1227,7 @@ export default function SignupScreen({ navigation }) {
   );
 }
 
+// Keep your existing styles here...
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

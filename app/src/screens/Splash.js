@@ -96,7 +96,7 @@ const ONBOARDING_DATA = [
   },
 ];
 
-export default function TDCFlow({ navigation }) {
+export default function Splash({ navigation }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -149,7 +149,7 @@ export default function TDCFlow({ navigation }) {
       ])
     ).start();
 
-    checkFirstLaunch();
+    checkOnboardingStatus();
   }, []);
 
   useEffect(() => {
@@ -172,18 +172,27 @@ export default function TDCFlow({ navigation }) {
     ]).start();
   }, [currentIndex]);
 
-  const checkFirstLaunch = async () => {
+  const checkOnboardingStatus = async () => {
     try {
-      const hasLaunched = await AsyncStorage.getItem("alreadyLaunched");
+      // Check if onboarding is already completed
+      const onboardingComplete = await AsyncStorage.getItem("onboardingComplete");
+      
+      // Also check the old flag for backward compatibility
+      const alreadyLaunched = await AsyncStorage.getItem("alreadyLaunched");
+      
       setTimeout(() => {
-        if (hasLaunched === null) {
-          setLoading(false);
+        // If onboarding is complete OR already launched, go directly to Terms & Conditions
+        if (onboardingComplete === "true" || alreadyLaunched === "true") {
+          // Navigate to Terms screen
+          navigation.replace("Privacy");
         } else {
-          navigation.replace("Login");
+          // First time launch - show splash/onboarding
+          setLoading(false);
         }
       }, 2800);
     } catch (e) {
-      navigation.replace("Login");
+      // On error, go to Terms
+      navigation.replace("Privacy");
     }
   };
 
@@ -196,8 +205,16 @@ export default function TDCFlow({ navigation }) {
   };
 
   const completeOnboarding = async () => {
-    await AsyncStorage.setItem("alreadyLaunched", "true");
-    navigation.replace("Login");
+    try {
+      // Mark onboarding as complete
+      await AsyncStorage.setItem("alreadyLaunched", "true");
+      await AsyncStorage.setItem("onboardingComplete", "true");
+      
+      // Navigate to Terms & Conditions
+      navigation.replace("Privacy");
+    } catch (e) {
+      navigation.replace("Privacy");
+    }
   };
 
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
@@ -297,14 +314,10 @@ export default function TDCFlow({ navigation }) {
           },
         ]}
       >
-        {/* Card Background */}
         <View style={styles.card}>
-          {/* Gold accent border */}
           <View style={styles.cardBorder} />
           
-          {/* Content */}
           <View style={styles.cardContent}>
-            {/* Top Section */}
             <View style={styles.cardTop}>
               <View style={styles.iconCircle}>
                 <Ionicons name={item.icon} size={28} color="#f9c349" />
@@ -314,7 +327,6 @@ export default function TDCFlow({ navigation }) {
               </View>
             </View>
 
-            {/* Middle Section */}
             <View style={styles.cardMiddle}>
               <Text style={styles.offerText}>{item.offer}</Text>
               <View style={styles.taglineContainer}>
@@ -322,7 +334,6 @@ export default function TDCFlow({ navigation }) {
               </View>
             </View>
 
-            {/* Bottom Section */}
             <View style={styles.cardBottom}>
               <View style={styles.memberInfo}>
                 <Text style={styles.memberLabel}>CATEGORY</Text>
@@ -335,7 +346,6 @@ export default function TDCFlow({ navigation }) {
             </View>
           </View>
 
-          {/* Gold corner accents */}
           <View style={[styles.cornerAccent, styles.topLeftAccent]} />
           <View style={[styles.cornerAccent, styles.bottomRightAccent]} />
         </View>
@@ -349,7 +359,6 @@ export default function TDCFlow({ navigation }) {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Skip Button */}
       {currentIndex < ONBOARDING_DATA.length - 1 && (
         <TouchableOpacity 
           style={styles.skipButton}
@@ -375,7 +384,6 @@ export default function TDCFlow({ navigation }) {
         keyExtractor={(item) => item.id}
         renderItem={({ item, index }) => (
           <View style={styles.page}>
-            {/* Card with entry animation */}
             <Animated.View
               style={{
                 opacity: cardEntry,
@@ -385,7 +393,6 @@ export default function TDCFlow({ navigation }) {
               <LuxuryCard item={item} index={index} />
             </Animated.View>
 
-            {/* Text Content with slide animation */}
             <Animated.View
               style={[
                 styles.textContainer,
@@ -407,9 +414,7 @@ export default function TDCFlow({ navigation }) {
         )}
       />
 
-      {/* Footer Navigation */}
       <View style={styles.footer}>
-        {/* Progress Indicators */}
         <View style={styles.progressContainer}>
           {ONBOARDING_DATA.map((_, i) => {
             const dotWidth = scrollX.interpolate({
@@ -435,7 +440,6 @@ export default function TDCFlow({ navigation }) {
           })}
         </View>
 
-        {/* Action Button with pulse */}
         <Animated.View style={{ transform: [{ scale: buttonPulse }] }}>
           <TouchableOpacity
             style={styles.button}
@@ -460,7 +464,6 @@ export default function TDCFlow({ navigation }) {
           </TouchableOpacity>
         </Animated.View>
 
-        {/* Page counter */}
         <Text style={styles.counter}>
           {currentIndex + 1} / {ONBOARDING_DATA.length}
         </Text>
@@ -477,7 +480,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
   },
 
-  // Splash Screen
   splashContainer: {
     flex: 1,
     justifyContent: "center",
@@ -563,7 +565,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
 
-  // Skip Button
   skipButton: {
     position: "absolute",
     top: 60,
@@ -580,7 +581,6 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
 
-  // Page Layout
   page: {
     width,
     alignItems: "center",
@@ -588,7 +588,6 @@ const styles = StyleSheet.create({
     paddingTop: height * 0.01,
   },
 
-  // Card Styles
   cardOuter: {
     width: width * 0.82,
     height: 260,
@@ -758,7 +757,6 @@ const styles = StyleSheet.create({
     borderRightWidth: 2,
   },
 
-  // Text Content
   textContainer: {
     paddingHorizontal: 45,
     paddingTop: 20,
@@ -810,7 +808,6 @@ const styles = StyleSheet.create({
     lineHeight: 25,
   },
 
-  // Footer
   footer: {
     position: "absolute",
     bottom: 50,

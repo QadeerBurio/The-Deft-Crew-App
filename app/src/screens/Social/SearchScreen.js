@@ -1,4 +1,5 @@
-// SearchScreen.js - Modern Design with Enhanced Animations
+// SearchScreen.js - Modern Design with Enhanced Animations & Student-Only Search
+
 import React, { useState, useEffect, useRef, useContext, useCallback } from "react";
 import {
   View,
@@ -45,12 +46,14 @@ const COLORS = {
   danger: '#ff4757',
   success: '#2ed573',
   shadow: 'rgba(0,0,0,0.08)',
+  blocked: '#e74c3c',
+  student: '#4a90d9',
 };
 
 const RECENT_SEARCHES_KEY = '@recent_people';
 
-// Animated User Result Item
-const UserResultItem = React.memo(({ item, isGuest, onPress, index }) => {
+// Animated User Result Item with Block Status & Student Badge
+const UserResultItem = React.memo(({ item, isGuest, onPress, index, isBlocked }) => {
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(20)).current;
@@ -81,12 +84,83 @@ const UserResultItem = React.memo(({ item, isGuest, onPress, index }) => {
   }, [index]);
 
   const handlePress = () => {
+    if (isBlocked) {
+      Alert.alert(
+        "User Blocked",
+        "You have blocked this user. Unblock them to view their profile."
+      );
+      return;
+    }
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     onPress(item._id);
   };
 
+  // If user is blocked, show blocked state
+  if (isBlocked) {
+    return (
+      <Animated.View 
+        style={[
+          styles.userResultWrapper,
+          {
+            opacity: opacityAnim,
+            transform: [
+              { scale: scaleAnim },
+              { translateY: translateY }
+            ]
+          }
+        ]}
+      >
+        <View style={[styles.userResultItem, styles.blockedItem]}>
+          <LinearGradient
+            colors={['#fef0f0', '#fdf0f0']}
+            style={styles.userResultGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            {/* Avatar with Blocked Indicator */}
+            <View style={styles.avatarContainer}>
+              <View style={[styles.avatarRing, styles.blockedAvatarRing]}>
+                {item.profileImage ? (
+                  <Image source={{ uri: item.profileImage }} style={[styles.avatarImg, { opacity: 0.5 }]} />
+                ) : (
+                  <LinearGradient
+                    colors={['#ccc', '#bbb']}
+                    style={styles.avatarPlaceholder}
+                  >
+                    <Text style={[styles.avatarText, { color: '#999' }]}>{item.name?.charAt(0)?.toUpperCase()}</Text>
+                  </LinearGradient>
+                )}
+              </View>
+              <View style={styles.blockedBadge}>
+                <Ionicons name="ban" size={12} color="#fff" />
+              </View>
+            </View>
+
+            <View style={styles.userInfo}>
+              <View style={styles.userNameRow}>
+                <Text style={[styles.userName, styles.blockedText]} numberOfLines={1}>
+                  {item.name}
+                </Text>
+              </View>
+              <Text style={[styles.userSubtitle, styles.blockedText]} numberOfLines={1}>
+                Blocked User
+              </Text>
+            </View>
+
+            <View style={styles.userAction}>
+              <View style={[styles.actionButton, styles.blockedActionButton]}>
+                <Ionicons name="ban-outline" size={18} color="#e74c3c" />
+              </View>
+            </View>
+          </LinearGradient>
+        </View>
+      </Animated.View>
+    );
+  }
+
+  // Normal user item with student badge
   return (
     <Animated.View 
       style={[
@@ -135,6 +209,13 @@ const UserResultItem = React.memo(({ item, isGuest, onPress, index }) => {
               <Text style={styles.userName} numberOfLines={1}>
                 {item.name}
               </Text>
+              {/* Student Badge */}
+              {item.role === 'student' && (
+                <View style={styles.studentBadge}>
+                  <Ionicons name="school-outline" size={12} color={COLORS.student} />
+                  <Text style={styles.studentBadgeText}>Student</Text>
+                </View>
+              )}
               {item.verified && (
                 <View style={styles.verifiedBadge}>
                   <Ionicons name="checkmark-circle" size={14} color={COLORS.primary} />
@@ -179,7 +260,7 @@ const UserResultItem = React.memo(({ item, isGuest, onPress, index }) => {
 });
 
 // Recent People Item with Swipe Animation
-const RecentPeopleItem = React.memo(({ item, onPress, onRemove }) => {
+const RecentPeopleItem = React.memo(({ item, onPress, onRemove, isBlocked }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
@@ -200,6 +281,10 @@ const RecentPeopleItem = React.memo(({ item, onPress, onRemove }) => {
   }, []);
 
   const handlePress = () => {
+    if (isBlocked) {
+      Alert.alert("User Blocked", "You have blocked this user.");
+      return;
+    }
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
@@ -217,38 +302,50 @@ const RecentPeopleItem = React.memo(({ item, onPress, onRemove }) => {
       ]}
     >
       <TouchableOpacity 
-        style={styles.recentUserItem}
+        style={[styles.recentUserItem, isBlocked && styles.recentBlockedItem]}
         onPress={handlePress}
         activeOpacity={0.7}
       >
         <View style={styles.recentAvatarContainer}>
           {item.profileImage ? (
-            <Image source={{ uri: item.profileImage }} style={styles.recentUserAvatar} />
+            <Image 
+              source={{ uri: item.profileImage }} 
+              style={[styles.recentUserAvatar, isBlocked && { opacity: 0.5 }]} 
+            />
           ) : (
             <LinearGradient
-              colors={COLORS.primaryGradient}
+              colors={isBlocked ? ['#ccc', '#bbb'] : COLORS.primaryGradient}
               style={styles.recentUserAvatarPlaceholder}
             >
-              <Text style={styles.recentUserAvatarText}>{item.name?.charAt(0)?.toUpperCase()}</Text>
+              <Text style={[styles.recentUserAvatarText, isBlocked && { color: '#999' }]}>
+                {item.name?.charAt(0)?.toUpperCase()}
+              </Text>
             </LinearGradient>
+          )}
+          {isBlocked && (
+            <View style={styles.recentBlockedBadge}>
+              <Ionicons name="ban" size={10} color="#fff" />
+            </View>
           )}
         </View>
 
         <View style={styles.recentUserInfo}>
-          <Text style={styles.recentUserName} numberOfLines={1}>
+          <Text style={[styles.recentUserName, isBlocked && styles.blockedText]} numberOfLines={1}>
             {item.name}
           </Text>
-          <Text style={styles.recentUserSubtitle} numberOfLines={1}>
-            {item.headline || item.university?.name || "TDC Member"}
+          <Text style={[styles.recentUserSubtitle, isBlocked && styles.blockedText]} numberOfLines={1}>
+            {isBlocked ? "Blocked User" : (item.headline || item.university?.name || "TDC Member")}
           </Text>
         </View>
 
-        <TouchableOpacity 
-          style={styles.recentActionButton}
-          onPress={() => onRemove?.(item.userId)}
-        >
-          <Ionicons name="chevron-forward" size={16} color={COLORS.grayLight} />
-        </TouchableOpacity>
+        {!isBlocked && (
+          <TouchableOpacity 
+            style={styles.recentActionButton}
+            onPress={() => onRemove?.(item.userId)}
+          >
+            <Ionicons name="chevron-forward" size={16} color={COLORS.grayLight} />
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
     </Animated.View>
   );
@@ -271,6 +368,9 @@ export default function SearchScreen({ navigation }) {
   const [isNavigating, setIsNavigating] = useState(false);
   const [searchTimeout, setSearchTimeout] = useState(null);
   const [searchHistory, setSearchHistory] = useState([]);
+  const [blockedUsers, setBlockedUsers] = useState([]);
+  const [blockedUserIds, setBlockedUserIds] = useState([]);
+  const [totalSearchResults, setTotalSearchResults] = useState(0);
   
   // Refs
   const searchInputRef = useRef(null);
@@ -280,8 +380,9 @@ export default function SearchScreen({ navigation }) {
   const searchBarWidth = useRef(new Animated.Value(width)).current;
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
-  // Load recent people on mount
+  // Load blocked users on mount
   useEffect(() => {
+    loadBlockedUsers();
     loadRecentPeople();
     loadSearchHistory();
   }, []);
@@ -308,12 +409,10 @@ export default function SearchScreen({ navigation }) {
       }),
     ]).start();
     
-    // Auto-focus after animation
     setTimeout(() => {
       searchInputRef.current?.focus();
     }, 400);
 
-    // Shimmer animation for loading states
     Animated.loop(
       Animated.sequence([
         Animated.timing(shimmerAnim, {
@@ -343,14 +442,35 @@ export default function SearchScreen({ navigation }) {
     return () => backHandler.remove();
   }, [isNavigating]);
 
-  // Save state on focus/unfocus
   useFocusEffect(
     useCallback(() => {
-      return () => {
-        // Cleanup
-      };
-    }, [])
+      // Refresh blocked users when screen is focused
+      if (!isGuest) {
+        loadBlockedUsers();
+      }
+      return () => {};
+    }, [isGuest])
   );
+
+  // ============ LOAD BLOCKED USERS ============
+  const loadBlockedUsers = async () => {
+    if (isGuest || !token) return;
+    
+    try {
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const res = await axios.get(`${API_URL}/user/blocked`, config);
+      const blocked = res.data.blockedUsers || [];
+      setBlockedUsers(blocked);
+      setBlockedUserIds(blocked.map(b => b._id));
+    } catch (err) {
+      console.error("Error loading blocked users:", err);
+    }
+  };
+
+  // ============ CHECK IF USER IS BLOCKED ============
+  const isUserBlocked = useCallback((userId) => {
+    return blockedUserIds.includes(userId);
+  }, [blockedUserIds]);
 
   // Handle back press with enhanced UX
   const handleBackPress = () => {
@@ -363,7 +483,6 @@ export default function SearchScreen({ navigation }) {
     }
     
     if (searchQuery.length > 0) {
-      // Animate clear
       Animated.spring(searchBarWidth, {
         toValue: width,
         friction: 8,
@@ -398,7 +517,9 @@ export default function SearchScreen({ navigation }) {
       const saved = await AsyncStorage.getItem(RECENT_SEARCHES_KEY);
       if (saved) {
         const data = JSON.parse(saved);
-        setRecentPeople(data || []);
+        // Filter out blocked users
+        const filtered = data.filter(item => !blockedUserIds.includes(item.userId));
+        setRecentPeople(filtered || []);
       }
     } catch (error) {
       console.error("Error loading recent people:", error);
@@ -438,7 +559,7 @@ export default function SearchScreen({ navigation }) {
   const showGuestAlert = (action) => {
     Alert.alert(
       '✨ Join TDC Community',
-      `Sign up to ${action} and connect with amazing people!`,
+      `Sign up to ${action} and connect with amazing students!`,
       [
         { text: 'Maybe Later', style: 'cancel' },
         { 
@@ -450,7 +571,7 @@ export default function SearchScreen({ navigation }) {
     );
   };
 
-  // Search users with enhanced error handling
+  // Search users - STUDENTS ONLY
   const searchUsers = async (query, page = 1, loadMore = false) => {
     if (!query.trim() || query.trim().length < 2) {
       setSearchResults([]);
@@ -470,16 +591,32 @@ export default function SearchScreen({ navigation }) {
         { headers }
       );
       
-      const newUsers = res.data.users || res.data;
-      const moreAvailable = res.data.hasMore !== undefined ? res.data.hasMore : newUsers.length === 20;
+      // Handle the response - backend now returns students only
+      let newUsers = res.data.users || [];
+      const moreAvailable = res.data.hasMore || false;
+      const total = res.data.total || 0;
+      
+      setTotalSearchResults(total);
+      
+      // Filter out blocked users (already handled by backend, but double-check)
+      if (!isGuest && blockedUserIds.length > 0) {
+        newUsers = newUsers.filter(user => !blockedUserIds.includes(user._id));
+      }
+      
+      // Mark blocked users in the results
+      const usersWithBlockStatus = newUsers.map(user => ({
+        ...user,
+        isBlocked: isUserBlocked(user._id),
+        role: user.role || 'student' // Ensure role is set
+      }));
       
       if (loadMore) {
-        setSearchResults(prev => [...prev, ...newUsers]);
+        setSearchResults(prev => [...prev, ...usersWithBlockStatus]);
         setHasMoreSearch(moreAvailable);
       } else {
-        setSearchResults(newUsers);
+        setSearchResults(usersWithBlockStatus);
         setHasMoreSearch(moreAvailable);
-        if (newUsers.length > 0) {
+        if (usersWithBlockStatus.length > 0) {
           saveSearchHistory(query);
         }
       }
@@ -494,9 +631,9 @@ export default function SearchScreen({ navigation }) {
     }
   };
 
-  // Add to recent people with deduplication
+  // Add to recent people with deduplication (skip blocked users)
   const addToRecentPeople = (userData) => {
-    if (isGuest) return;
+    if (isGuest || isUserBlocked(userData._id)) return;
     
     setRecentPeople(prev => {
       const filtered = prev.filter(item => item.userId !== userData._id);
@@ -537,6 +674,7 @@ export default function SearchScreen({ navigation }) {
       setHasMoreSearch(true);
       setShowRecentPeople(true);
       setIsSearching(false);
+      setTotalSearchResults(0);
     }
   };
 
@@ -566,7 +704,11 @@ export default function SearchScreen({ navigation }) {
   // User press handler with haptic feedback
   const handleUserPress = (userId) => {
     if (isGuest) {
-      showGuestAlert('view user profiles');
+      showGuestAlert('view student profiles');
+      return;
+    }
+    if (isUserBlocked(userId)) {
+      Alert.alert("User Blocked", "You have blocked this user. Unblock them to view their profile.");
       return;
     }
     if (isNavigating) return;
@@ -587,7 +729,11 @@ export default function SearchScreen({ navigation }) {
 
   const handleRecentPersonPress = (userId) => {
     if (isGuest) {
-      showGuestAlert('view user profiles');
+      showGuestAlert('view student profiles');
+      return;
+    }
+    if (isUserBlocked(userId)) {
+      Alert.alert("User Blocked", "You have blocked this user.");
       return;
     }
     if (isNavigating) return;
@@ -642,6 +788,7 @@ export default function SearchScreen({ navigation }) {
     setHasMoreSearch(true);
     setShowRecentPeople(true);
     setIsSearching(false);
+    setTotalSearchResults(0);
     Keyboard.dismiss();
     
     if (Platform.OS !== 'web') {
@@ -654,7 +801,7 @@ export default function SearchScreen({ navigation }) {
       return (
         <View style={styles.searchFooterLoader}>
           <ActivityIndicator size="small" color={COLORS.primary} />
-          <Text style={styles.searchFooterText}>Loading more...</Text>
+          <Text style={styles.searchFooterText}>Loading more students...</Text>
         </View>
       );
     }
@@ -662,7 +809,7 @@ export default function SearchScreen({ navigation }) {
       return (
         <View style={styles.searchFooterEnd}>
           <View style={styles.footerDivider} />
-          <Text style={styles.searchFooterEndText}>✨ All users loaded</Text>
+          <Text style={styles.searchFooterEndText}>✨ All students loaded</Text>
           <View style={styles.footerDivider} />
         </View>
       );
@@ -680,9 +827,9 @@ export default function SearchScreen({ navigation }) {
           <MaterialCommunityIcons name="account-search-outline" size={60} color={COLORS.primary} />
         </LinearGradient>
       </View>
-      <Text style={styles.searchEmptyText}>No users found</Text>
+      <Text style={styles.searchEmptyText}>No students found</Text>
       <Text style={styles.searchEmptySubText}>Try a different search term</Text>
-      {searchHistory.length > 0 && (
+      {searchHistory.length > 0 && !isGuest && (
         <View style={styles.searchHistoryContainer}>
           <Text style={styles.searchHistoryTitle}>Recent Searches</Text>
           <View style={styles.searchHistoryChips}>
@@ -706,56 +853,62 @@ export default function SearchScreen({ navigation }) {
     </Animated.View>
   );
 
-  const renderRecentPeople = () => (
-    <Animated.View style={[styles.recentContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-      <View style={styles.recentHeader}>
-        <View style={styles.recentHeaderLeft}>
-          <View style={styles.recentHeaderIcon}>
-            <Ionicons name="time-outline" size={16} color={COLORS.primary} />
-          </View>
-          <Text style={styles.recentTitle}>Recent People</Text>
-          {recentPeople.length > 0 && (
-            <View style={styles.recentCountBadge}>
-              <Text style={styles.recentCountText}>{recentPeople.length}</Text>
+  const renderRecentPeople = () => {
+    // Filter out blocked users from recent people
+    const filteredRecent = recentPeople.filter(item => !blockedUserIds.includes(item.userId));
+    
+    return (
+      <Animated.View style={[styles.recentContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <View style={styles.recentHeader}>
+          <View style={styles.recentHeaderLeft}>
+            <View style={styles.recentHeaderIcon}>
+              <Ionicons name="time-outline" size={16} color={COLORS.primary} />
             </View>
+            <Text style={styles.recentTitle}>Recent Students</Text>
+            {filteredRecent.length > 0 && (
+              <View style={styles.recentCountBadge}>
+                <Text style={styles.recentCountText}>{filteredRecent.length}</Text>
+              </View>
+            )}
+          </View>
+          {filteredRecent.length > 0 && (
+            <TouchableOpacity onPress={clearRecentPeople} activeOpacity={0.7}>
+              <Text style={styles.clearText}>Clear All</Text>
+            </TouchableOpacity>
           )}
         </View>
-        {recentPeople.length > 0 && (
-          <TouchableOpacity onPress={clearRecentPeople} activeOpacity={0.7}>
-            <Text style={styles.clearText}>Clear All</Text>
-          </TouchableOpacity>
-        )}
-      </View>
 
-      {recentPeople.length > 0 && (
-        <View style={styles.recentPeopleSection}>
-          {recentPeople.map((item, index) => (
-            <RecentPeopleItem 
-              key={item.userId || index}
-              item={item}
-              onPress={handleRecentPersonPress}
-              onRemove={removeRecentPerson}
-            />
-          ))}
-        </View>
-      )}
-
-      {recentPeople.length === 0 && (
-        <View style={styles.emptyRecentContainer}>
-          <View style={styles.emptyRecentIconWrapper}>
-            <LinearGradient
-              colors={['rgba(249,195,73,0.1)', 'rgba(249,195,73,0.05)']}
-              style={styles.emptyRecentIconGradient}
-            >
-              <Ionicons name="people-outline" size={40} color={COLORS.primary} />
-            </LinearGradient>
+        {filteredRecent.length > 0 && (
+          <View style={styles.recentPeopleSection}>
+            {filteredRecent.map((item, index) => (
+              <RecentPeopleItem 
+                key={item.userId || index}
+                item={item}
+                onPress={handleRecentPersonPress}
+                onRemove={removeRecentPerson}
+                isBlocked={isUserBlocked(item.userId)}
+              />
+            ))}
           </View>
-          <Text style={styles.emptyRecentText}>No recent people</Text>
-          <Text style={styles.emptyRecentSubText}>People you view will appear here</Text>
-        </View>
-      )}
-    </Animated.View>
-  );
+        )}
+
+        {filteredRecent.length === 0 && (
+          <View style={styles.emptyRecentContainer}>
+            <View style={styles.emptyRecentIconWrapper}>
+              <LinearGradient
+                colors={['rgba(249,195,73,0.1)', 'rgba(249,195,73,0.05)']}
+                style={styles.emptyRecentIconGradient}
+              >
+                <Ionicons name="people-outline" size={40} color={COLORS.primary} />
+              </LinearGradient>
+            </View>
+            <Text style={styles.emptyRecentText}>No recent students</Text>
+            <Text style={styles.emptyRecentSubText}>Students you view will appear here</Text>
+          </View>
+        )}
+      </Animated.View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -776,7 +929,7 @@ export default function SearchScreen({ navigation }) {
           <TextInput
             ref={searchInputRef}
             style={styles.searchInput}
-            placeholder="Search people..."
+            placeholder="Search students..."
             placeholderTextColor={COLORS.grayLight}
             value={searchQuery}
             onChangeText={handleSearchTextChange}
@@ -807,13 +960,13 @@ export default function SearchScreen({ navigation }) {
               colors={COLORS.primaryGradient}
               style={styles.resultsHeaderIcon}
             >
-              <Ionicons name="people" size={14} color={COLORS.white} />
+              <Ionicons name="school" size={14} color={COLORS.white} />
             </LinearGradient>
-            <Text style={styles.resultsTitle}>Search Results</Text>
+            <Text style={styles.resultsTitle}>Student Results</Text>
           </View>
           <View style={styles.resultsBadge}>
             <Text style={styles.resultsBadgeText}>
-              {searchResults.length}
+              {totalSearchResults > 0 ? totalSearchResults : searchResults.length}
             </Text>
           </View>
         </Animated.View>
@@ -825,18 +978,19 @@ export default function SearchScreen({ navigation }) {
       ) : isSearching && searchResults.length === 0 ? (
         <View style={styles.searchLoadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.searchLoadingText}>Searching users...</Text>
+          <Text style={styles.searchLoadingText}>Searching students...</Text>
         </View>
       ) : (
         <FlatList
           data={searchResults}
-          keyExtractor={(item) => item._id}
+          keyExtractor={(item) => item._id || item.userId || Math.random().toString()}
           renderItem={({ item, index }) => (
             <UserResultItem 
               item={item} 
               isGuest={isGuest} 
               onPress={handleUserPress}
               index={index}
+              isBlocked={isUserBlocked(item._id)}
             />
           )}
           ListEmptyComponent={renderSearchEmpty}
@@ -888,7 +1042,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
     gap: 10,
-    transition: 'all 0.3s ease',
   },
   searchInputFocused: {
     borderColor: COLORS.primary,
@@ -1012,6 +1165,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
+  recentBlockedItem: {
+    opacity: 0.6,
+  },
   recentAvatarContainer: {
     position: 'relative',
   },
@@ -1031,6 +1187,19 @@ const styles = StyleSheet.create({
     color: COLORS.black,
     fontWeight: '700',
     fontSize: 18,
+  },
+  recentBlockedBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: COLORS.danger,
+    borderRadius: 8,
+    width: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.white,
   },
   recentUserInfo: {
     flex: 1,
@@ -1095,6 +1264,9 @@ const styles = StyleSheet.create({
   userResultItem: {
     marginBottom: 4,
   },
+  blockedItem: {
+    opacity: 0.7,
+  },
   userResultGradient: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1120,6 +1292,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
     overflow: 'hidden',
+  },
+  blockedAvatarRing: {
+    borderColor: COLORS.danger,
   },
   avatarImg: {
     width: 52,
@@ -1149,6 +1324,19 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: COLORS.white,
   },
+  blockedBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: COLORS.danger,
+    borderRadius: 10,
+    width: 22,
+    height: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.white,
+  },
   userInfo: {
     flex: 1,
     marginLeft: 14,
@@ -1157,14 +1345,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flexWrap: 'wrap',
   },
   userName: {
     fontSize: 16,
     fontWeight: '700',
     color: COLORS.black,
   },
+  blockedText: {
+    color: COLORS.gray,
+  },
   verifiedBadge: {
     marginLeft: 2,
+  },
+  studentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(74, 144, 217, 0.12)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 3,
+    marginLeft: 4,
+  },
+  studentBadgeText: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: COLORS.student,
   },
   userSubtitle: {
     fontSize: 12,
@@ -1197,6 +1404,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  blockedActionButton: {
+    backgroundColor: '#fef0f0',
+    borderWidth: 1,
+    borderColor: '#e74c3c',
   },
   
   // Search List

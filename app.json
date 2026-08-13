@@ -2,7 +2,7 @@
   "expo": {
     "name": "tdc",
     "slug": "Testting",
-    "version": "1.0.8",
+    "version": "1.0.7",
     "orientation": "default",
     "icon": "./assets/tdcs.png",
     "scheme": "tdcapp",
@@ -17,30 +17,32 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.aqkhan110.tdc",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "This app needs access to the microphone to record voice messages.",
-        "NSLocationWhenInUseUsageDescription": "This app needs access to your location to share it in chat.",
+        "NSMicrophoneUsageDescription": "tdc app needs access to the microphone to record voice messages.",
+        "NSLocationWhenInUseUsageDescription": "tdc app needs access to your location to share it in chat.",
+        "NSPhotoLibraryUsageDescription": "tdc uses your photo library so you can select photos to upload to your profile and share with other users.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.aqkhan110.tdc",
       "permissions": [
-        "INTERNET",
-        "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
-      ],
-      "blockedPermissions": [
-        "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_MEDIA_VIDEO",
-        "android.permission.READ_MEDIA_AUDIO",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.ACCESS_MEDIA_LOCATION"
-      ],
+    "INTERNET",
+    "FOREGROUND_SERVICE",
+    "FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+    "android.permission.RECORD_AUDIO",
+    "android.permission.MODIFY_AUDIO_SETTINGS",
+    "android.permission.ACCESS_COARSE_LOCATION",
+    "android.permission.ACCESS_FINE_LOCATION"
+  ],
+
+  "blockedPermissions": [
+    "android.permission.READ_MEDIA_IMAGES",
+    "android.permission.READ_MEDIA_VIDEO",
+    "android.permission.READ_MEDIA_AUDIO",
+    "android.permission.READ_EXTERNAL_STORAGE",
+    "android.permission.WRITE_EXTERNAL_STORAGE",
+    "android.permission.ACCESS_MEDIA_LOCATION"
+  ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/tdcs.png",
         "backgroundColor": "#000000"

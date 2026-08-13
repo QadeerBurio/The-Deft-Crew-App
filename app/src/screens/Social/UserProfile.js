@@ -1,11 +1,11 @@
-// UserProfile.js - COMPLETE FIXED VERSION (All Connection States with Accept/Decline)
+// UserProfile.js - COMPLETE FIXED VERSION with Block/Report Status and Like Fix
 
 import React, { useState, useEffect, useContext, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, Image, TouchableOpacity,
   FlatList, Dimensions, Platform, StatusBar,
   ActivityIndicator, Alert, Share, BackHandler, RefreshControl,
-  Modal, Animated
+  Modal, Animated, Linking
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
 import { AuthContext } from "../../context/AuthContext";
+import { TouchableWithoutFeedback } from 'react-native';
 
 const { width } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
@@ -20,14 +21,16 @@ const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 // Skeleton Component
 const ProfileSkeleton = () => {
   const shimmerAnim = useRef(new Animated.Value(0)).current;
+  
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(shimmerAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-        Animated.timing(shimmerAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
+        Animated.timing(shimmerAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(shimmerAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
       ])
     ).start();
   }, []);
+  
   const opacity = shimmerAnim.interpolate({ inputRange: [0, 1], outputRange: [0.2, 0.6] });
 
   return (
@@ -61,7 +64,6 @@ const ProfileSkeleton = () => {
           </View>
           <Animated.View style={[styles.skeletonLine, { width: '90%', height: 12, marginTop: 8, opacity }]} />
           <Animated.View style={[styles.skeletonLine, { width: '70%', height: 12, marginTop: 6, opacity }]} />
-          <Animated.View style={[styles.skeletonImage, { opacity }]} />
         </View>
       ))}
     </SafeAreaView>
@@ -81,26 +83,39 @@ export default function UserProfile({ route, navigation }) {
   const [isConnected, setIsConnected] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [isReceived, setIsReceived] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [isBlockedByUser, setIsBlockedByUser] = useState(false);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [showConnectionsModal, setShowConnectionsModal] = useState(false);
   const [connectionsList, setConnectionsList] = useState([]);
   const [likingItems, setLikingItems] = useState({});
   const [showFullText, setShowFullText] = useState({});
+  const [showMenu, setShowMenu] = useState(false);
+  const [blockStatus, setBlockStatus] = useState('none');
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideUpAnim = useRef(new Animated.Value(30)).current;
   const likeScale = useRef(new Animated.Value(1)).current;
+  const menuSlide = useRef(new Animated.Value(200)).current;
 
   const isOwnProfile = !userId || userId === currentUser?._id;
   const targetId = userId || currentUser?._id;
   const config = { headers: { Authorization: `Bearer ${token}` } };
 
+  // ============ EFFECTS ============
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
       Animated.spring(slideUpAnim, { toValue: 0, friction: 6, tension: 40, useNativeDriver: true }),
     ]).start();
   }, []);
+
+  useEffect(() => {
+    if (showMenu) {
+      menuSlide.setValue(200);
+      Animated.spring(menuSlide, { toValue: 0, friction: 7, tension: 40, useNativeDriver: true }).start();
+    }
+  }, [showMenu]);
 
   useFocusEffect(
     useCallback(() => {
@@ -113,7 +128,85 @@ export default function UserProfile({ route, navigation }) {
     }, [targetId])
   );
 
-  // Check all connection states
+  // ============ CHECK BLOCK STATUS ============
+  const checkBlockStatus = useCallback(async () => {
+    try {
+      const blockedRes = await axios.get(`${API_URL}/user/blocked`, config);
+      const blockedUsers = blockedRes.data.blockedUsers || [];
+      const isBlocked = blockedUsers.some(b => b._id === targetId);
+      setIsBlocked(isBlocked);
+      if (isBlocked) {
+        setBlockStatus('blocked');
+      }
+      return isBlocked;
+    } catch (err) {
+      console.error("Check block status error:", err);
+      return false;
+    }
+  }, [targetId, config]);
+
+  // ============ FETCH PROFILE ============
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      
+      const isBlockedByCurrentUser = await checkBlockStatus();
+      
+      if (isBlockedByCurrentUser) {
+        setLoading(false);
+        return;
+      }
+      
+      const res = await axios.get(`${API_URL}/profile/${targetId}`, config);
+      
+      if (res.data.isBlockedByUser) {
+        setIsBlockedByUser(true);
+        setBlockStatus('blocked_by_user');
+        setLoading(false);
+        return;
+      }
+      
+      setProfileData(res.data.profile);
+      
+      // FIX: Ensure posts have proper likes array
+      const posts = (res.data.posts || []).map(post => ({
+        ...post,
+        likes: Array.isArray(post.likes) ? post.likes : [],
+        comments: Array.isArray(post.comments) ? post.comments : [],
+        likeCount: Array.isArray(post.likes) ? post.likes.length : 0
+      }));
+      
+      setUserPosts(posts);
+      setConnections(res.data.connections || []);
+
+      const states = checkConnectionStates(targetId);
+      setIsConnected(states.isConnected);
+      setIsPending(states.isPending);
+      setIsReceived(states.isReceived);
+      setIsBlocked(false);
+      setBlockStatus('none');
+      
+    } catch (err) { 
+      console.error("Fetch profile error:", err);
+      
+      if (err.response?.data?.isBlocked) {
+        setIsBlocked(true);
+        setBlockStatus('blocked');
+        Alert.alert("Blocked", "You have blocked this user");
+      } else if (err.response?.data?.error?.includes('blocked')) {
+        setIsBlockedByUser(true);
+        setBlockStatus('blocked_by_user');
+        Alert.alert("Blocked", "You have been blocked by this user");
+      } else {
+        Alert.alert("Error", "Failed to load profile");
+      }
+    }
+    finally { setLoading(false); setRefreshing(false); }
+  };
+
+  const onRefresh = () => { setRefreshing(true); fetchProfile(); };
+
+  // ============ CHECK CONNECTION STATES ============
   const checkConnectionStates = useCallback((targetUserId) => {
     if (!currentUser) return { isConnected: false, isPending: false, isReceived: false };
     if (targetUserId === currentUser._id) return { isConnected: true, isPending: false, isReceived: false };
@@ -125,37 +218,11 @@ export default function UserProfile({ route, navigation }) {
     return { isConnected, isPending, isReceived };
   }, [currentUser]);
 
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get(`${API_URL}/profile/${targetId}`, config);
-      setProfileData(res.data.profile);
-      setUserPosts(res.data.posts || []);
-      setConnections(res.data.connections || []);
-
-      // Check all connection states
-      const states = checkConnectionStates(targetId);
-      setIsConnected(states.isConnected);
-      setIsPending(states.isPending);
-      setIsReceived(states.isReceived);
-      
-    } catch (err) { 
-      console.error("Fetch profile error:", err);
-      Alert.alert("Error", "Failed to load profile");
-    }
-    finally { setLoading(false); setRefreshing(false); }
-  };
-
-  const onRefresh = () => { setRefreshing(true); fetchProfile(); };
-
-  // ==================== CONNECTION HANDLERS ====================
-
-  // 1. ACCEPT CONNECTION REQUEST - FIXED to use correct endpoint
+  // ============ CONNECTION HANDLERS ============
   const handleAcceptRequest = async () => {
     if (isActionLoading) return;
     setIsActionLoading(true);
     try {
-      // First, get the notification ID for this request
       const notificationsRes = await axios.get(`${API_URL}/notifications`, config);
       const pendingRequest = notificationsRes.data.find(
         n => n.sender?._id === targetId && 
@@ -170,7 +237,6 @@ export default function UserProfile({ route, navigation }) {
         return;
       }
 
-      // Accept the request using the notification endpoint
       const response = await axios.post(`${API_URL}/notifications/respond`, {
         notificationId: pendingRequest._id,
         action: 'accepted'
@@ -196,7 +262,6 @@ export default function UserProfile({ route, navigation }) {
     } catch (err) {
       console.error("Accept request error:", err);
       
-      // Try direct accept endpoint as fallback
       try {
         const directResponse = await axios.post(`${API_URL}/user/accept/${targetId}`, {}, config);
         if (directResponse.data.success) {
@@ -226,7 +291,6 @@ export default function UserProfile({ route, navigation }) {
     finally { setIsActionLoading(false); }
   };
 
-  // 2. REJECT/DECLINE CONNECTION REQUEST - FIXED
   const handleRejectRequest = async () => {
     Alert.alert("Decline Request", "Are you sure you want to decline this connection request?", [
       { text: "Cancel", style: "cancel" },
@@ -237,7 +301,6 @@ export default function UserProfile({ route, navigation }) {
           if (isActionLoading) return;
           setIsActionLoading(true);
           try {
-            // First, get the notification ID for this request
             const notificationsRes = await axios.get(`${API_URL}/notifications`, config);
             const pendingRequest = notificationsRes.data.find(
               n => n.sender?._id === targetId && 
@@ -247,13 +310,11 @@ export default function UserProfile({ route, navigation }) {
             );
 
             if (pendingRequest) {
-              // Decline using notification endpoint
               await axios.post(`${API_URL}/notifications/respond`, {
                 notificationId: pendingRequest._id,
                 action: 'declined'
               }, config);
             } else {
-              // Direct decline fallback
               await axios.post(`${API_URL}/user/reject/${targetId}`, {}, config);
             }
             
@@ -278,7 +339,6 @@ export default function UserProfile({ route, navigation }) {
     ]);
   };
 
-  // 3. CANCEL SENT REQUEST - FIXED
   const handleCancelRequest = async () => {
     Alert.alert("Cancel Request", "Are you sure you want to cancel your connection request?", [
       { text: "No", style: "cancel" },
@@ -311,7 +371,6 @@ export default function UserProfile({ route, navigation }) {
     ]);
   };
 
-  // 4. CONNECT - FIXED
   const handleConnect = async () => {
     if (isActionLoading) return;
     setIsActionLoading(true);
@@ -363,7 +422,6 @@ export default function UserProfile({ route, navigation }) {
     finally { setIsActionLoading(false); }
   };
 
-  // 5. DISCONNECT - FIXED
   const handleDisconnect = async () => {
     Alert.alert("Remove Connection", `Remove ${profileData?.name} from your connections?`, [
       { text: "Cancel", style: "cancel" },
@@ -398,13 +456,163 @@ export default function UserProfile({ route, navigation }) {
     ]);
   };
 
-  const handleShare = async () => {
-    try { 
-      await Share.share({ message: `Check out ${profileData?.name}'s profile on TDC!` }); 
-    } catch (error) { }
+  // ============ BLOCK USER HANDLER ============
+  const handleBlockUser = () => {
+    setShowMenu(false);
+    if (isOwnProfile) {
+      Alert.alert("Info", "You cannot block yourself");
+      return;
+    }
+    
+    if (isBlocked) {
+      Alert.alert(
+        "Unblock User",
+        `Do you want to unblock ${profileData?.name || 'this user'}? They will be able to interact with you again.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { 
+            text: "Unblock", 
+            onPress: handleUnblockUser
+          }
+        ]
+      );
+      return;
+    }
+    
+    Alert.alert(
+      "Block User",
+      `Are you sure you want to block ${profileData?.name || 'this user'}? They won't be able to interact with you.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Block", 
+          style: "destructive",
+          onPress: performBlock
+        }
+      ]
+    );
   };
 
+  const performBlock = async () => {
+    try {
+      const res = await axios.post(`${API_URL}/user/block/${targetId}`, {}, config);
+      if (res.data.success) {
+        setIsBlocked(true);
+        setBlockStatus('blocked');
+        Alert.alert(
+          "Blocked", 
+          `You have blocked ${profileData?.name || 'this user'}. Their content will be hidden.`,
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                navigation.goBack();
+              }
+            }
+          ]
+        );
+      }
+    } catch (err) {
+      console.error("Block error:", err);
+      Alert.alert("Error", err.response?.data?.error || "Could not block user. Please try again.");
+    }
+  };
+
+  const handleUnblockUser = async () => {
+    try {
+      const res = await axios.post(`${API_URL}/user/unblock/${targetId}`, {}, config);
+      if (res.data.success) {
+        setIsBlocked(false);
+        setBlockStatus('none');
+        Alert.alert("Unblocked", `You have unblocked ${profileData?.name || 'this user'}`);
+        await fetchProfile();
+      }
+    } catch (err) {
+      console.error("Unblock error:", err);
+      Alert.alert("Error", "Could not unblock user. Please try again.");
+    }
+  };
+
+  // ============ REPORT USER HANDLER ============
+  const handleReportUser = () => {
+    setShowMenu(false);
+    if (isOwnProfile) {
+      Alert.alert("Info", "You cannot report yourself");
+      return;
+    }
+    
+    if (isBlocked) {
+      Alert.alert("Info", "You have blocked this user. Unblock them first to report.");
+      return;
+    }
+    
+    Alert.alert(
+      "Report Account",
+      `Why do you want to report ${profileData?.name || 'this user'}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Spam",
+          onPress: () => submitReport("Spam")
+        },
+        {
+          text: "Harassment",
+          onPress: () => submitReport("Harassment")
+        },
+        {
+          text: "Hate Speech",
+          onPress: () => submitReport("Hate Speech")
+        },
+        {
+          text: "Inappropriate Content",
+          onPress: () => submitReport("Inappropriate Content")
+        },
+        {
+          text: "Fake Account",
+          onPress: () => submitReport("Fake Account")
+        },
+        {
+          text: "Other",
+          onPress: () => submitReport("Other")
+        }
+      ]
+    );
+  };
+
+  const submitReport = async (reason) => {
+    try {
+      const res = await axios.post(`${API_URL}/user/report/${targetId}`, { reason }, config);
+      if (res.data.success) {
+        Alert.alert(
+          "Report Submitted", 
+          "Thank you for your report. Our moderation team will review it within 24 hours."
+        );
+      }
+    } catch (err) {
+      console.error("Report error:", err);
+      Alert.alert("Error", err.response?.data?.error || "Could not submit report. Please try again.");
+    }
+  };
+
+  // ============ SHARE PROFILE ============
+  const handleShareProfile = async () => {
+    setShowMenu(false);
+    try {
+      await Share.share({ 
+        message: `Check out ${profileData?.name}'s profile on TDC!\n\nJoin TDC app to connect with us!` 
+      });
+    } catch (error) { 
+      console.error("Share error:", error);
+    }
+  };
+
+  // ============ MESSAGE HANDLER ============
   const handleMessagePress = async () => {
+    if (isBlocked) {
+      Alert.alert("Blocked", "You have blocked this user. Unblock to send a message.");
+      return;
+    }
+    
     if (!isConnected && !isOwnProfile) { 
       Alert.alert("Not Connected", "You need to be connected to send a message."); 
       return; 
@@ -426,7 +634,10 @@ export default function UserProfile({ route, navigation }) {
     finally { setIsActionLoading(false); }
   };
 
+  // ============ VIEW CONNECTIONS ============
   const handleViewConnections = async () => {
+    if (isBlocked) return;
+    
     if (isActionLoading) return;
     setIsActionLoading(true);
     try {
@@ -440,27 +651,63 @@ export default function UserProfile({ route, navigation }) {
     finally { setIsActionLoading(false); }
   };
 
+  // ============ POST HANDLERS - FIXED ============
   const handleLikePost = async (postId, index) => {
+    if (isBlocked) return;
     if (likingItems[postId]) return;
+    
     setLikingItems(prev => ({ ...prev, [postId]: true }));
-    const wasLiked = userPosts[index]?.likes?.some(like => (like._id || like) === currentUser._id);
+    
+    const currentPost = userPosts[index];
+    if (!currentPost) return;
+    
+    // Ensure likes is an array
+    const currentLikes = Array.isArray(currentPost.likes) ? currentPost.likes : [];
+    const wasLiked = currentLikes.some(like => {
+      const likeId = like._id || like;
+      return likeId === currentUser._id;
+    });
+    
+    // Update local state optimistically
     const updatedPosts = [...userPosts];
     if (wasLiked) {
-      updatedPosts[index] = { ...updatedPosts[index], likes: updatedPosts[index].likes.filter(l => (l._id || l) !== currentUser._id) };
+      updatedPosts[index] = {
+        ...updatedPosts[index],
+        likes: currentLikes.filter(l => {
+          const likeId = l._id || l;
+          return likeId !== currentUser._id;
+        }),
+        likeCount: Math.max(0, (updatedPosts[index].likeCount || currentLikes.length) - 1)
+      };
     } else {
-      updatedPosts[index] = { ...updatedPosts[index], likes: [...(updatedPosts[index].likes || []), currentUser._id] };
+      updatedPosts[index] = {
+        ...updatedPosts[index],
+        likes: [...currentLikes, currentUser._id],
+        likeCount: (updatedPosts[index].likeCount || currentLikes.length) + 1
+      };
     }
     setUserPosts(updatedPosts);
+
     try {
       const response = await axios.put(`${API_URL}/posts/like/${postId}`, {}, config);
-      const finalPosts = [...userPosts];
-      finalPosts[index] = { ...finalPosts[index], likes: response.data.likes };
-      setUserPosts(finalPosts);
+      if (response.data.success) {
+        const serverLikes = Array.isArray(response.data.likes) ? response.data.likes : [];
+        const finalPosts = [...userPosts];
+        finalPosts[index] = {
+          ...finalPosts[index],
+          likes: serverLikes,
+          likeCount: serverLikes.length
+        };
+        setUserPosts(finalPosts);
+      }
     } catch (error) { 
       console.error("Like post error:", error);
-      fetchProfile(); 
+      // Revert on error
+      fetchProfile();
     }
-    finally { setLikingItems(prev => ({ ...prev, [postId]: false })); }
+    finally { 
+      setLikingItems(prev => ({ ...prev, [postId]: false })); 
+    }
   };
 
   const handleDeletePost = async (postId) => {
@@ -498,8 +745,21 @@ export default function UserProfile({ route, navigation }) {
     return `Joined ${monthNames[date.getMonth()]} ${date.getFullYear()}`;
   };
 
-  // ==================== RENDER BUTTON - All connection states ====================
+  // ==================== RENDER BUTTON ====================
   const renderButton = () => {
+    if (isBlocked) {
+      return (
+        <View style={styles.btnRow}>
+          <TouchableOpacity style={styles.blockedBtn} onPress={handleBlockUser}>
+            <LinearGradient colors={['#e74c3c', '#c0392b']} style={styles.btnGradient}>
+              <Ionicons name="ban-outline" size={16} color="#fff" />
+              <Text style={styles.blockedBtnText}>Blocked</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
     if (isActionLoading) {
       return (
         <View style={styles.btnRow}>
@@ -519,14 +779,10 @@ export default function UserProfile({ route, navigation }) {
               <Text style={styles.editBtnText}>Edit Profile</Text>
             </LinearGradient>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
-            <Ionicons name="share-outline" size={20} color="#1a1a1a" />
-          </TouchableOpacity>
         </View>
       );
     }
     
-    // State 1: Connected
     if (isConnected) {
       return (
         <View style={styles.btnRow}>
@@ -544,7 +800,6 @@ export default function UserProfile({ route, navigation }) {
       );
     }
     
-    // State 2: Request Received (someone sent you a request)
     if (isReceived) {
       return (
         <View style={styles.btnRow}>
@@ -562,7 +817,6 @@ export default function UserProfile({ route, navigation }) {
       );
     }
     
-    // State 3: Request Sent (you sent a request)
     if (isPending) {
       return (
         <View style={styles.btnRow}>
@@ -580,7 +834,6 @@ export default function UserProfile({ route, navigation }) {
       );
     }
     
-    // State 4: No connection (default)
     return (
       <View style={styles.btnRow}>
         <TouchableOpacity style={styles.connectBtn} onPress={handleConnect}>
@@ -597,8 +850,24 @@ export default function UserProfile({ route, navigation }) {
     );
   };
 
+  // ============ ABOUT TAB ============
   const renderAboutTab = () => {
     const connectionsCount = getConnectionCount();
+
+    if (isBlocked) {
+      return (
+        <View style={styles.blockedContainer}>
+          <Ionicons name="ban-outline" size={60} color="#e74c3c" />
+          <Text style={styles.blockedTitle}>User Blocked</Text>
+          <Text style={styles.blockedSubtext}>
+            You have blocked this user. Their content is not visible.
+          </Text>
+          <TouchableOpacity style={styles.unblockBtn} onPress={handleBlockUser}>
+            <Text style={styles.unblockBtnText}>Unblock User</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
 
     return (
       <View style={styles.tabContentContainer}>
@@ -708,9 +977,18 @@ export default function UserProfile({ route, navigation }) {
     );
   };
 
+  // ============ RENDER POST - FIXED ============
   const renderPost = ({ item, index }) => {
-    const isLiked = item.likes?.some(like => (like._id || like) === currentUser._id);
-    const likeCount = Array.isArray(item.likes) ? item.likes.length : (typeof item.likes === 'number' ? item.likes : 0);
+    if (isBlocked) return null;
+    
+    // FIX: Ensure likes is always an array
+    const likesArray = Array.isArray(item.likes) ? item.likes : [];
+    const isLiked = likesArray.some(like => {
+      const likeId = like._id || like;
+      return likeId === currentUser._id;
+    });
+    const likeCount = item.likeCount || likesArray.length || 0;
+    
     const textContent = item.content || '';
     const isExpanded = showFullText[item._id] || false;
     const truncatedText = textContent.length > 100 ? textContent.slice(0, 100) + '...' : textContent;
@@ -727,7 +1005,6 @@ export default function UserProfile({ route, navigation }) {
           )}
           <View style={styles.postInfo}>
             <Text style={styles.postName}>{profileData?.name}</Text>
-            <Text style={styles.postHandle}>@{profileData?.username || 'user'}</Text>
           </View>
           <Text style={styles.postDate}>{new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
           {isOwnProfile && (
@@ -760,7 +1037,7 @@ export default function UserProfile({ route, navigation }) {
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn}>
             <Ionicons name="chatbubble-outline" size={18} color="#71767b" />
-            <Text style={styles.actionText}>{item.comments?.length || 0}</Text>
+            <Text style={styles.actionText}>{Array.isArray(item.comments) ? item.comments.length : 0}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn}>
             <Ionicons name="repeat-outline" size={18} color="#71767b" />
@@ -773,10 +1050,67 @@ export default function UserProfile({ route, navigation }) {
     );
   };
 
+  // ============ LOADING STATE ============
   if (loading) return <ProfileSkeleton />;
+
+  // ============ BLOCKED STATE ============
+  if (isBlocked) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <View style={styles.topNav}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+          </TouchableOpacity>
+          <Text style={styles.navTitle}>Blocked User</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.blockedFullContainer}>
+          <View style={styles.blockedIconContainer}>
+            <Ionicons name="ban-outline" size={80} color="#e74c3c" />
+          </View>
+          <Text style={styles.blockedFullTitle}>User Blocked</Text>
+          <Text style={styles.blockedFullSubtext}>
+            You have blocked this user. They cannot interact with you.
+          </Text>
+          <TouchableOpacity style={styles.unblockFullBtn} onPress={handleUnblockUser}>
+            <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.unblockFullGradient}>
+              <Ionicons name="person-add" size={20} color="#1a1a1a" />
+              <Text style={styles.unblockFullBtnText}>Unblock User</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isBlockedByUser) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <View style={styles.topNav}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+          </TouchableOpacity>
+          <Text style={styles.navTitle}>Blocked</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.blockedFullContainer}>
+          <View style={styles.blockedIconContainer}>
+            <Ionicons name="ban-outline" size={80} color="#e74c3c" />
+          </View>
+          <Text style={styles.blockedFullTitle}>Account Blocked</Text>
+          <Text style={styles.blockedFullSubtext}>
+            You have been blocked by this user. You cannot view their profile.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const connectionCount = getConnectionCount();
 
+  // ============ MAIN RENDER ============
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
@@ -803,7 +1137,9 @@ export default function UserProfile({ route, navigation }) {
                   <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
                 </TouchableOpacity>
                 <Text style={styles.navTitle}>{profileData?.name}</Text>
-                <View style={{ width: 40 }} />
+                <TouchableOpacity onPress={() => setShowMenu(true)} style={styles.menuBtn}>
+                  <Ionicons name="ellipsis-vertical" size={22} color="#1a1a1a" />
+                </TouchableOpacity>
               </View>
 
               <View style={styles.profileContent}>
@@ -817,27 +1153,11 @@ export default function UserProfile({ route, navigation }) {
                       </LinearGradient>
                     )}
                   </View>
-                  <View style={styles.headerActions}>
-                    {!isOwnProfile && (
-                      <TouchableOpacity onPress={handleShare} style={styles.iconBtn}>
-                        <Ionicons name="share-outline" size={20} color="#1a1a1a" />
-                      </TouchableOpacity>
-                    )}
-                  </View>
                 </View>
 
                 <Text style={styles.fullName}>{profileData?.name}</Text>
-                <Text style={styles.handle}>@{profileData?.username || 'user'}</Text>
+                
                 {profileData?.bio && <Text style={styles.bio}>{profileData.bio}</Text>}
-
-                <View style={styles.locationJoin}>
-                  {profileData?.location && (
-                    <View style={styles.locationItem}>
-                      <Ionicons name="location-outline" size={16} color="#71767b" />
-                      <Text style={styles.locationJoinText}>{profileData.location}</Text>
-                    </View>
-                  )}
-                </View>
 
                 <TouchableOpacity onPress={handleViewConnections} style={styles.connectionTouchable}>
                   <Text style={styles.connectionCount}>
@@ -867,6 +1187,62 @@ export default function UserProfile({ route, navigation }) {
         contentContainerStyle={{ paddingBottom: 40 }}
       />
 
+      {/* Three-Dot Menu Modal */}
+      <Modal visible={showMenu} transparent animationType="fade" onRequestClose={() => setShowMenu(false)}>
+        <TouchableWithoutFeedback onPress={() => setShowMenu(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <Animated.View style={[styles.menuBox, { transform: [{ translateY: menuSlide }] }]}>
+                <View style={styles.menuHeader}>
+                  <Text style={styles.menuHeaderText}>Profile Options</Text>
+                </View>
+                
+                <TouchableOpacity style={styles.menuItem} onPress={handleShareProfile}>
+                  <View style={styles.menuIconCircle}>
+                    <Ionicons name="share-social-outline" size={20} color="#1a1a1a" />
+                  </View>
+                  <Text style={styles.menuText}>Share Profile</Text>
+                </TouchableOpacity>
+                
+                {!isOwnProfile && (
+                  <TouchableOpacity style={styles.menuItem} onPress={handleBlockUser}>
+                    <View style={[styles.menuIconCircle, isBlocked ? styles.menuUnblockCircle : styles.menuBlockCircle]}>
+                      <Ionicons 
+                        name={isBlocked ? "person-add" : "ban-outline"} 
+                        size={20} 
+                        color={isBlocked ? "#f9c349" : "#e74c3c"} 
+                      />
+                    </View>
+                    <Text style={[styles.menuText, isBlocked ? styles.menuUnblockText : styles.menuBlockText]}>
+                      {isBlocked ? "Unblock User" : "Block User"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                
+                {!isOwnProfile && !isBlocked && (
+                  <TouchableOpacity style={styles.menuItem} onPress={handleReportUser}>
+                    <View style={[styles.menuIconCircle, styles.menuReportCircle]}>
+                      <Ionicons name="flag-outline" size={20} color="#e74c3c" />
+                    </View>
+                    <Text style={[styles.menuText, styles.menuBlockText]}>Report Account</Text>
+                  </TouchableOpacity>
+                )}
+                
+                <View style={styles.menuDivider} />
+                
+                <TouchableOpacity style={styles.menuItem} onPress={() => setShowMenu(false)}>
+                  <View style={[styles.menuIconCircle, styles.menuCancelCircle]}>
+                    <Ionicons name="close-outline" size={20} color="#999" />
+                  </View>
+                  <Text style={[styles.menuText, styles.menuCancelText]}>Cancel</Text>
+                </TouchableOpacity>
+              </Animated.View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Connections Modal */}
       <Modal visible={showConnectionsModal} transparent animationType="slide" onRequestClose={() => setShowConnectionsModal(false)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowConnectionsModal(false)}>
           <View style={styles.modalContent}>
@@ -917,6 +1293,7 @@ export default function UserProfile({ route, navigation }) {
   );
 }
 
+// ============ STYLES ============
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#ffffff' },
   skeletonContainer: { flex: 1, backgroundColor: '#ffffff' },
@@ -940,21 +1317,17 @@ const styles = StyleSheet.create({
   profileHeader: { backgroundColor: '#fff' },
   topNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, paddingBottom: 20 },
   backBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  navTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a' },
+  navTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a', flex: 1, textAlign: 'center' },
+  menuBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   profileContent: { paddingHorizontal: 16, paddingBottom: 12 },
   avatarRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   avatarContainer: { marginTop: -30 },
   avatar: { width: 72, height: 72, borderRadius: 36, borderWidth: 4, borderColor: '#fff' },
   avatarPlaceholder: { width: 72, height: 72, borderRadius: 36, borderWidth: 4, borderColor: '#fff', justifyContent: 'center', alignItems: 'center' },
   avatarText: { fontSize: 32, fontWeight: '700', color: '#1a1a1a' },
-  headerActions: { flexDirection: 'row', gap: 8 },
-  iconBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#eff3f4', justifyContent: 'center', alignItems: 'center' },
   fullName: { fontSize: 20, fontWeight: '700', color: '#1a1a1a', marginTop: 8 },
   handle: { fontSize: 15, color: '#71767b', marginTop: 2 },
   bio: { fontSize: 15, color: '#1a1a1a', marginTop: 10, lineHeight: 20 },
-  locationJoin: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 8, gap: 12 },
-  locationItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  locationJoinText: { fontSize: 14, color: '#71767b' },
   connectionTouchable: { marginTop: 10 },
   connectionCount: { fontSize: 15, color: '#71767b' },
   connectionNum: { fontSize: 15, fontWeight: '700', color: '#1a1a1a' },
@@ -962,7 +1335,6 @@ const styles = StyleSheet.create({
   editBtn: { flex: 1, borderRadius: 20, overflow: 'hidden' },
   editGradient: { flexDirection: 'row', height: 40, justifyContent: 'center', alignItems: 'center', gap: 8, borderRadius: 20 },
   editBtnText: { color: '#f9c349', fontWeight: '700', fontSize: 14 },
-  shareBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#eff3f4', justifyContent: 'center', alignItems: 'center' },
   connectBtn: { flex: 1, borderRadius: 20, overflow: 'hidden' },
   connectedBtn: { flex: 1, borderRadius: 20, overflow: 'hidden' },
   btnGradient: { flexDirection: 'row', height: 40, justifyContent: 'center', alignItems: 'center', gap: 8, borderRadius: 20 },
@@ -977,6 +1349,8 @@ const styles = StyleSheet.create({
   pendingBtnText: { color: '#666', fontWeight: '700', fontSize: 14 },
   msgBtnDisabled: { flex: 1, flexDirection: 'row', height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', gap: 8, backgroundColor: '#f5f5f5' },
   msgBtnDisabledText: { color: '#ccc', fontWeight: '700', fontSize: 14 },
+  blockedBtn: { flex: 1, borderRadius: 20, overflow: 'hidden' },
+  blockedBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   tabBar: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#eff3f4' },
   tabItem: { flex: 1, alignItems: 'center', paddingVertical: 14, position: 'relative' },
   activeTab: { position: 'relative' },
@@ -1032,4 +1406,87 @@ const styles = StyleSheet.create({
   connectionHeadline: { fontSize: 13, color: '#71767b', marginTop: 1 },
   emptyConnectionsContainer: { alignItems: 'center', paddingVertical: 40 },
   emptyConnections: { textAlign: 'center', color: '#71767b', padding: 40 },
+  blockedContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
+  blockedFullContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
+  blockedIconContainer: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#fef0f0', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  blockedFullTitle: { fontSize: 24, fontWeight: '700', color: '#1a1a1a', marginTop: 16 },
+  blockedFullSubtext: { fontSize: 15, color: '#666', textAlign: 'center', marginTop: 8, lineHeight: 22 },
+  unblockFullBtn: { marginTop: 24, borderRadius: 12, overflow: 'hidden' },
+  unblockFullGradient: { flexDirection: 'row', paddingHorizontal: 32, paddingVertical: 14, alignItems: 'center', gap: 10 },
+  unblockFullBtnText: { fontSize: 16, fontWeight: '700', color: '#1a1a1a' },
+  unblockBtn: { marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#f9c349', borderRadius: 10 },
+  unblockBtnText: { fontSize: 16, fontWeight: '700', color: '#1a1a1a' },
+  menuBox: { 
+    backgroundColor: "#fff", 
+    borderTopLeftRadius: 24, 
+    borderTopRightRadius: 24, 
+    padding: 20, 
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  menuHeader: { 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#f0f0f0', 
+    paddingBottom: 12, 
+    marginBottom: 4,
+  },
+  menuHeaderText: { 
+    fontSize: 13, 
+    color: '#999', 
+    fontWeight: '600', 
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  menuItem: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+  },
+  menuIconCircle: { 
+    width: 40, 
+    height: 40, 
+    borderRadius: 12, 
+    backgroundColor: '#f8f8f8', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginRight: 12,
+  },
+  menuBlockCircle: {
+    backgroundColor: '#fef0f0',
+  },
+  menuUnblockCircle: {
+    backgroundColor: '#f0faf0',
+  },
+  menuReportCircle: {
+    backgroundColor: '#fef0f0',
+  },
+  menuCancelCircle: { 
+    backgroundColor: '#f8f8f8' 
+  },
+  menuText: { 
+    fontSize: 15, 
+    color: "#1a1a1a", 
+    fontWeight: '500',
+    flex: 1,
+  },
+  menuBlockText: {
+    color: '#e74c3c',
+  },
+  menuUnblockText: {
+    color: '#2ecc71',
+  },
+  menuCancelText: { 
+    color: '#999',
+    fontWeight: '400',
+  },
+  menuDivider: { 
+    height: 1, 
+    backgroundColor: '#f0f0f0', 
+    marginVertical: 4,
+  },
 });

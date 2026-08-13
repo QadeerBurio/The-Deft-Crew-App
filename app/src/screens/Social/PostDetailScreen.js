@@ -1,3 +1,5 @@
+// PostDetailScreen.js - Complete Modern Design (No Delete Option)
+
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import {
   View,
@@ -44,10 +46,10 @@ const COLORS = {
 };
 
 // Modern Comment Item
-const CommentItem = React.memo(({ item, currentUserId, onDelete, index }) => {
+const CommentItem = React.memo(({ item, currentUserId, index }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
-  const isOwnComment = item.user?._id === currentUserId;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -63,15 +65,26 @@ const CommentItem = React.memo(({ item, currentUserId, onDelete, index }) => {
         useNativeDriver: true,
         tension: 50,
       }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        delay: index * 50,
+        useNativeDriver: true,
+        tension: 50,
+      }),
     ]).start();
   }, []);
+
+  const isOwnComment = item.user?._id === currentUserId;
 
   return (
     <Animated.View style={[
       styles.commentItem,
       { 
         opacity: fadeAnim,
-        transform: [{ translateX: slideAnim }]
+        transform: [
+          { translateX: slideAnim },
+          { scale: scaleAnim }
+        ]
       }
     ]}>
       <Image
@@ -100,15 +113,6 @@ const CommentItem = React.memo(({ item, currentUserId, onDelete, index }) => {
         </View>
         <Text style={styles.commentText}>{item.text}</Text>
       </View>
-      {isOwnComment && (
-        <TouchableOpacity
-          onPress={() => onDelete(item._id)}
-          style={styles.deleteCommentBtn}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
-        </TouchableOpacity>
-      )}
     </Animated.View>
   );
 });
@@ -124,6 +128,7 @@ export default function PostDetailScreen({ route, navigation }) {
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [isLiking, setIsLiking] = useState(false);
+  const [commenting, setCommenting] = useState(false);
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -132,6 +137,7 @@ export default function PostDetailScreen({ route, navigation }) {
   const headerFade = useRef(new Animated.Value(0)).current;
   const heartPulse = useRef(new Animated.Value(1)).current;
   const inputSlide = useRef(new Animated.Value(50)).current;
+  const commentBounce = useRef(new Animated.Value(0)).current;
 
   const config = { headers: { Authorization: `Bearer ${token}` } };
 
@@ -246,6 +252,21 @@ export default function PostDetailScreen({ route, navigation }) {
       return;
     }
 
+    setCommenting(true);
+    // Animate comment bounce
+    Animated.sequence([
+      Animated.spring(commentBounce, {
+        toValue: -10,
+        friction: 2,
+        useNativeDriver: true,
+      }),
+      Animated.spring(commentBounce, {
+        toValue: 0,
+        friction: 2,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
     try {
       setSubmitting(true);
       const response = await axios.post(
@@ -260,82 +281,33 @@ export default function PostDetailScreen({ route, navigation }) {
           comments: response.data.comments
         }));
         setCommentText('');
+        // Show success feedback
+        Alert.alert("Success", "Comment added!");
       }
     } catch (error) {
       console.error("Comment error:", error);
       Alert.alert("Error", "Failed to add comment");
     } finally {
       setSubmitting(false);
+      setCommenting(false);
     }
   };
 
-  const handleDeleteComment = async (commentId) => {
-    Alert.alert(
-      "Delete Comment",
-      "Are you sure you want to delete this comment?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await axios.delete(
-                `${API_URL}/posts/comment/${postId}/${commentId}`,
-                config
-              );
-              fetchPostDetails();
-            } catch (error) {
-              console.error("Delete comment error:", error);
-              Alert.alert("Error", "Failed to delete comment");
-            }
-          }
-        }
-      ]
-    );
+  const navigateToProfile = (userId) => {
+    if (userId) {
+      navigation.navigate('UserProfile', { userId });
+    }
   };
-
-  const handleDeletePost = async () => {
-    Alert.alert(
-      "Delete Post",
-      "Are you sure you want to delete this post?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await axios.delete(`${API_URL}/posts/${postId}`, config);
-              Alert.alert("Success", "Post deleted successfully");
-              navigation.goBack();
-              if (onGoBack) onGoBack();
-            } catch (error) {
-              console.error("Delete post error:", error);
-              Alert.alert("Error", "Failed to delete post");
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const renderComment = ({ item, index }) => (
-    <CommentItem 
-      item={item} 
-      currentUserId={user._id} 
-      onDelete={handleDeleteComment}
-      index={index}
-    />
-  );
 
   if (loading) {
     return (
       <SafeAreaView style={styles.centered}>
         <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
         <Animated.View style={{ opacity: fadeAnim }}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading post...</Text>
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={styles.loadingText}>Loading post...</Text>
+          </View>
         </Animated.View>
       </SafeAreaView>
     );
@@ -366,8 +338,6 @@ export default function PostDetailScreen({ route, navigation }) {
     );
   }
 
-  const isAuthor = post.author?._id === user._id;
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
@@ -387,16 +357,7 @@ export default function PostDetailScreen({ route, navigation }) {
             <Ionicons name="arrow-back" size={24} color={COLORS.black} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Post</Text>
-          {isAuthor && (
-            <TouchableOpacity 
-              onPress={handleDeletePost}
-              style={styles.headerDeleteBtn}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="trash-outline" size={22} color={COLORS.danger} />
-            </TouchableOpacity>
-          )}
-          {!isAuthor && <View style={styles.headerPlaceholder} />}
+          <View style={styles.headerPlaceholder} />
         </Animated.View>
 
         <ScrollView 
@@ -412,7 +373,8 @@ export default function PostDetailScreen({ route, navigation }) {
             <View style={styles.authorSection}>
               <TouchableOpacity 
                 style={styles.authorAvatarWrapper}
-                onPress={() => navigation.navigate('UserProfile', { userId: post.author?._id })}
+                onPress={() => navigateToProfile(post.author?._id)}
+                activeOpacity={0.7}
               >
                 <Image
                   source={{ 
@@ -427,7 +389,10 @@ export default function PostDetailScreen({ route, navigation }) {
                 />
               </TouchableOpacity>
               <View style={styles.authorInfo}>
-                <TouchableOpacity onPress={() => navigation.navigate('UserProfile', { userId: post.author?._id })}>
+                <TouchableOpacity 
+                  onPress={() => navigateToProfile(post.author?._id)}
+                  activeOpacity={0.7}
+                >
                   <Text style={styles.authorName}>{post.author?.name || "Unknown"}</Text>
                 </TouchableOpacity>
                 <View style={styles.authorMeta}>
@@ -460,10 +425,6 @@ export default function PostDetailScreen({ route, navigation }) {
               <TouchableOpacity 
                 style={styles.imageWrapper}
                 activeOpacity={0.9}
-                onPress={() => {
-                  // Could open fullscreen image viewer
-                  Alert.alert("Image", "Fullscreen view coming soon");
-                }}
               >
                 <Image
                   source={{ uri: post.image }}
@@ -487,11 +448,16 @@ export default function PostDetailScreen({ route, navigation }) {
               >
                 <Animated.View style={{ transform: [{ scale: likeScale }] }}>
                   <Animated.View style={{ transform: [{ scale: heartPulse }] }}>
-                    <Ionicons 
-                      name={liked ? "heart" : "heart-outline"} 
-                      size={26} 
-                      color={liked ? COLORS.danger : COLORS.textSecondary} 
-                    />
+                    <LinearGradient
+                      colors={liked ? ['#ff4757', '#ff6b81'] : ['transparent', 'transparent']}
+                      style={[styles.likeIconWrapper, liked && styles.likeIconActive]}
+                    >
+                      <Ionicons 
+                        name={liked ? "heart" : "heart-outline"} 
+                        size={24} 
+                        color={liked ? COLORS.white : COLORS.textSecondary} 
+                      />
+                    </LinearGradient>
                   </Animated.View>
                 </Animated.View>
                 <Text style={[styles.likeCount, liked && styles.likedText]}>
@@ -502,7 +468,9 @@ export default function PostDetailScreen({ route, navigation }) {
               <View style={styles.divider} />
               
               <View style={styles.commentStat}>
-                <Ionicons name="chatbubble-outline" size={20} color={COLORS.textSecondary} />
+                <View style={styles.commentIconWrapper}>
+                  <Ionicons name="chatbubble-outline" size={20} color={COLORS.textSecondary} />
+                </View>
                 <Text style={styles.commentStatText}>
                   {post.comments?.length || 0} Comments
                 </Text>
@@ -513,7 +481,12 @@ export default function PostDetailScreen({ route, navigation }) {
             <View style={styles.commentsSection}>
               <View style={styles.commentsHeader}>
                 <View style={styles.commentsHeaderLeft}>
-                  <Ionicons name="chatbubbles-outline" size={20} color={COLORS.primary} />
+                  <LinearGradient
+                    colors={[COLORS.primary, COLORS.primaryDark]}
+                    style={styles.commentsIconWrapper}
+                  >
+                    <Ionicons name="chatbubbles-outline" size={18} color={COLORS.black} />
+                  </LinearGradient>
                   <Text style={styles.commentsTitle}>Comments</Text>
                 </View>
                 <View style={styles.commentsCount}>
@@ -527,7 +500,13 @@ export default function PostDetailScreen({ route, navigation }) {
                 <FlatList
                   data={post.comments}
                   keyExtractor={(item) => item._id}
-                  renderItem={renderComment}
+                  renderItem={({ item, index }) => (
+                    <CommentItem 
+                      item={item} 
+                      currentUserId={user._id} 
+                      index={index}
+                    />
+                  )}
                   scrollEnabled={false}
                   showsVerticalScrollIndicator={false}
                 />
@@ -552,7 +531,10 @@ export default function PostDetailScreen({ route, navigation }) {
           styles.commentInputContainer,
           { transform: [{ translateY: inputSlide }] }
         ]}>
-          <View style={styles.commentInputWrapper}>
+          <Animated.View style={[
+            styles.commentInputWrapper,
+            { transform: [{ translateY: commentBounce }] }
+          ]}>
             <Image
               source={{ 
                 uri: user?.profileImage || 
@@ -572,7 +554,7 @@ export default function PostDetailScreen({ route, navigation }) {
             {commentText.length > 0 && (
               <Text style={styles.charCount}>{commentText.length}/500</Text>
             )}
-          </View>
+          </Animated.View>
           <TouchableOpacity
             onPress={handleComment}
             disabled={submitting || !commentText.trim()}
@@ -586,11 +568,15 @@ export default function PostDetailScreen({ route, navigation }) {
               colors={commentText.trim() && !submitting ? [COLORS.primary, COLORS.primaryDark] : ['#e0e0e0', '#e0e0e0']} 
               style={styles.sendButtonGradient}
             >
-              <Ionicons 
-                name="send" 
-                size={18} 
-                color={commentText.trim() && !submitting ? COLORS.black : COLORS.textLight} 
-              />
+              {submitting ? (
+                <ActivityIndicator size="small" color={COLORS.black} />
+              ) : (
+                <Ionicons 
+                  name="send" 
+                  size={18} 
+                  color={commentText.trim() && !submitting ? COLORS.black : COLORS.textLight} 
+                />
+              )}
             </LinearGradient>
           </TouchableOpacity>
         </Animated.View>
@@ -612,6 +598,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.white
+  },
+  loaderContainer: {
+    alignItems: 'center',
   },
   loadingText: {
     marginTop: 12,
@@ -687,14 +676,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.black,
     letterSpacing: 0.3,
-  },
-  headerDeleteBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#fff5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   headerPlaceholder: {
     width: 40,
@@ -817,13 +798,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  likeIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  likeIconActive: {
+    backgroundColor: '#ff4757',
+    shadowColor: '#ff4757',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
   likeCount: {
     fontSize: 14,
     color: COLORS.textSecondary,
     fontWeight: '600',
   },
   likedText: {
-    color: COLORS.danger,
+    color: '#ff4757',
   },
   divider: {
     width: 1,
@@ -835,6 +831,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  commentIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.lightGray,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   commentStatText: {
     fontSize: 14,
@@ -854,6 +858,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  commentsIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   commentsTitle: {
     fontSize: 17,
@@ -931,12 +942,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: '400',
   },
-  deleteCommentBtn: {
-    padding: 6,
-    marginLeft: 6,
-    backgroundColor: '#fff5f5',
-    borderRadius: 8,
-  },
   emptyComments: {
     alignItems: 'center',
     paddingVertical: 40,
@@ -974,6 +979,11 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.border,
     backgroundColor: COLORS.white,
     gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 4,
   },
   commentInputWrapper: {
     flex: 1,
