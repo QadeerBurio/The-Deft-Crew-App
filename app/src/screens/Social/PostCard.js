@@ -836,7 +836,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
 
                 <KeyboardAvoidingView 
                   behavior={Platform.OS === "ios" ? "padding" : undefined}
-                  keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+                  keyboardVerticalOffset={Platform.OS === "ios" ? 20 : 20}
                   style={styles.keyboardAvoidingView}
                 >
                   <View style={[
@@ -1059,7 +1059,7 @@ const styles = StyleSheet.create({
   },
   commentSheetContent: { flex: 1 },
   keyboardAvoidingView: { flexShrink: 0 },
-  commentInputWrapper: { flexShrink: 0, backgroundColor: '#fff' },
+  commentInputWrapper: { flexShrink: 0, backgroundColor: '#fff', marginBottom:10 },
   dragHandle: { width: 40, height: 4, backgroundColor: '#e0e0e0', borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", padding: 16, paddingTop: 8, borderBottomWidth: 1, borderBottomColor: "#f0f0f0", alignItems: "center" },
   modalHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },

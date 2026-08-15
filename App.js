@@ -8,8 +8,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { StatusBar, View, Text, TouchableOpacity } from "react-native";
 import ResumeProvider from "./app/src/context/ResumeContext";
-import PermissionScreen from "./app/src/components/PermissionScreen";
-import { PermissionProvider } from "./app/src/context/PermissionContext";
+// import PermissionScreen from "./app/src/components/PermissionScreen";
+// import { PermissionProvider } from "./app/src/context/PermissionContext";
 
 // Keep splash screen visible
 SplashScreen.preventAutoHideAsync();
@@ -56,21 +56,12 @@ export default function App() {
     return null; // Splash screen is still visible
   }
 
-  // Show permission screen first
-  if (showPermissionScreen) {
-    return (
-      <PermissionScreen 
-        onPermissionsGranted={handlePermissionsGranted}
-        onSkip={handleSkipPermissions}
-      />
-    );
-  }
+
 
   // Main app
   return (
     <QueryClientProvider client={queryClient}>
       <KeyboardProvider>
-        <PermissionProvider>
           <AuthProvider>
             <ResumeProvider>
               <ChatProvider>
@@ -81,7 +72,6 @@ export default function App() {
               </ChatProvider>
             </ResumeProvider>
           </AuthProvider>
-        </PermissionProvider>
       </KeyboardProvider>
     </QueryClientProvider>
   );

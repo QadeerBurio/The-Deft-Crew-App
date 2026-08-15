@@ -1606,6 +1606,7 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.border,
     backgroundColor: COLORS.white,
     gap: 8,
+    marginBottom:10
   },
   plusBtn: {
     borderRadius: 14,

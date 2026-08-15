@@ -1151,10 +1151,12 @@ const styles = StyleSheet.create({
   keyboardAvoidingView: { 
     flexShrink: 0,
     backgroundColor: '#fff',
+    marginBottom:10
   },
   commentInputWrapper: { 
     flexShrink: 0, 
     backgroundColor: '#fff',
+    marginBottom:10
   },
   commentHeader: { 
     flexDirection: "row", 

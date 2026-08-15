@@ -17,11 +17,12 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.aqkhan110.tdc",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "tdc app needs access to the microphone to record voice messages.",
-        "NSLocationWhenInUseUsageDescription": "tdc app needs access to your location to share it in chat.",
-        "NSPhotoLibraryUsageDescription": "tdc uses your photo library so you can select photos to upload to your profile and share with other users.",
-        "ITSAppUsesNonExemptEncryption": false
-      }
+       "NSMicrophoneUsageDescription": "TDC uses the microphone to record and send voice messages in chats.",
+  "NSLocationWhenInUseUsageDescription": "TDC uses your location to share your current location in chats and provide location-based features.",
+  "NSPhotoLibraryUsageDescription": "TDC uses your photo library so you can select photos to upload to your profile and share with other users.",
+  "ITSAppUsesNonExemptEncryption": false
+}
+      
     },
     "android": {
       "package": "com.aqkhan110.tdc",
@@ -88,13 +89,13 @@
       [
         "expo-av",
         {
-          "microphonePermission": "Allow TDC App to access your microphone."
+          "microphonePermission": "TDC uses the microphone to record and send voice messages in chats."
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow TDC App to use your location."
+          "locationWhenInUsePermission": "TDC uses your location to share your current location in chats and provide location-based features."
         }
       ],
       "expo-navigation-bar",
