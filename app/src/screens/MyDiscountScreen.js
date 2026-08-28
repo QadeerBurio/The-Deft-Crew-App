@@ -18,6 +18,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -66,6 +67,7 @@ const getTheme = (percentage) => DISCOUNT_THEMES[percentage] || DISCOUNT_THEMES.
 // Global cache for faster loading
 let discountsCache = null;
 let cacheTimestamp = null;
+let cachedUserId = null;
 const CACHE_DURATION = 60000; // 1 minute cache
 
 // ==================== HELPER FUNCTIONS ====================
@@ -99,7 +101,7 @@ const StatCard = React.memo(({ title, value, icon, gradientColors, delay, isCurr
     ]).start();
   }, [delay]);
 
-  const formattedValue = isCurrency 
+  const formattedValue = isCurrency
     ? `Rs. ${typeof value === 'number' ? value.toFixed(0) : '0'}`
     : typeof value === 'number' ? value.toLocaleString() : value || '0';
 
@@ -143,11 +145,11 @@ const StatCard = React.memo(({ title, value, icon, gradientColors, delay, isCurr
 });
 
 // ==================== PROMO CODE MODAL ====================
-const PromoCodeModal = React.memo(({ 
-  visible, 
-  onClose, 
-  item, 
-  promoDetails, 
+const PromoCodeModal = React.memo(({
+  visible,
+  onClose,
+  item,
+  promoDetails,
   onCopy,
   onUseCode,
   generating,
@@ -186,7 +188,7 @@ const PromoCodeModal = React.memo(({
   }, [promoDetails]);
 
   const isFromBackend = useMemo(() => {
-    return !!(promoDetails?.code && promoDetails?.expiresAt);
+    return !!(promoDetails?.code && promoDetails?.expiresAt) || promoDetails?.status === 'used' || promoDetails?.status === 'expired';
   }, [promoDetails]);
 
   useEffect(() => {
@@ -320,7 +322,7 @@ const PromoCodeModal = React.memo(({
                 {isFromBackend ? 'Your Promo Code' : 'Get Your Promo Code'}
               </Text>
               <Text style={styles.promoModalSubtitle}>
-                {isFromBackend 
+                {isFromBackend
                   ? `Use this code at ${brandName} checkout to get ${discountPercentage}% OFF`
                   : `Generate a unique promo code for ${offerTitle}`
                 }
@@ -331,6 +333,26 @@ const PromoCodeModal = React.memo(({
               <View style={styles.generatingContainer}>
                 <ActivityIndicator size="large" color={COLORS.primary} />
                 <Text style={styles.generatingText}>Generating your promo code...</Text>
+              </View>
+            ) : promoDetails?.status === 'used' ? (
+              <View style={[styles.promoCodeDisplay, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }]}>
+                <Text style={[styles.promoCodeDisplayText, { color: '#166534', letterSpacing: 1 }]}>CODE USED</Text>
+                <View style={styles.promoCodeCopyButton}>
+                  <LinearGradient colors={['rgba(16,185,129,0.9)', 'rgba(5,150,105,0.9)']} style={styles.promoCodeCopyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                    <Ionicons name="checkmark-done-circle" size={20} color="#fff" />
+                    <Text style={styles.promoCodeCopyText}>Used</Text>
+                  </LinearGradient>
+                </View>
+              </View>
+            ) : promoDetails?.status === 'expired' ? (
+              <View style={[styles.promoCodeDisplay, { backgroundColor: '#f3f4f6', borderColor: '#e5e7eb' }]}>
+                <Text style={[styles.promoCodeDisplayText, { color: '#4b5563', letterSpacing: 1 }]}>EXPIRED</Text>
+                <View style={styles.promoCodeCopyButton}>
+                  <LinearGradient colors={['rgba(156,163,175,0.9)', 'rgba(107,114,128,0.9)']} style={styles.promoCodeCopyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                    <Ionicons name="time" size={20} color="#fff" />
+                    <Text style={styles.promoCodeCopyText}>Expired</Text>
+                  </LinearGradient>
+                </View>
               </View>
             ) : (
               <>
@@ -424,7 +446,7 @@ const PromoCodeModal = React.memo(({
               </View>
             </View>
 
-            {isFromBackend && (
+            {isFromBackend && promoDetails?.status === 'active' && (
               <TouchableOpacity
                 style={styles.useCodeButton}
                 onPress={handleUseCode}
@@ -475,12 +497,12 @@ const PromoCodeModal = React.memo(({
 });
 
 // ==================== DISCOUNT CARD ====================
-const DiscountCard = React.memo(({ 
-  item, 
-  index, 
-  onUseNow, 
-  onScan, 
-  onUnclaim, 
+const DiscountCard = React.memo(({
+  item,
+  index,
+  onUseNow,
+  onScan,
+  onUnclaim,
   onGetCode,
 }) => {
   const entry = useRef(new Animated.Value(0)).current;
@@ -573,8 +595,8 @@ const DiscountCard = React.memo(({
       `Are you sure you want to remove "${item?.title}" from your discounts?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Remove', 
+        {
+          text: 'Remove',
           style: 'destructive',
           onPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -587,7 +609,7 @@ const DiscountCard = React.memo(({
 
   const getDiscountDescription = () => {
     if (item?.isOnline) {
-      return hasActivePromo 
+      return hasActivePromo
         ? '✅ Promo code ready! Tap "Get Code" to view'
         : `Use code at ${item?.brand?.name || 'brand'} checkout`;
     }
@@ -646,7 +668,7 @@ const DiscountCard = React.memo(({
                 colors={['transparent', COLORS.darkOverlay]}
                 style={styles.cardImageOverlay}
               />
-              
+
               <LinearGradient
                 colors={theme.gradient}
                 style={styles.cardPercentBadge}
@@ -674,34 +696,32 @@ const DiscountCard = React.memo(({
                     <Text style={styles.scanQrButtonText}>Scan QR</Text>
                   </LinearGradient>
                 </TouchableOpacity>
-              )}
-
-              {/* GET CODE - Only for Online offers */}
+              )}              {/* GET CODE - Only for Online offers */}
               {item?.isOnline && canRedeem && (
                 <TouchableOpacity
                   style={[
                     styles.scanQrButton,
-                    hasActivePromo && styles.promoReadyButton
+                    item.promoStatus === 'active' && styles.promoReadyButton
                   ]}
                   onPress={handleGetCodePress}
                   activeOpacity={0.85}
                 >
                   <LinearGradient
-                    colors={hasActivePromo 
-                      ? ['rgba(16,185,129,0.92)', 'rgba(5,150,105,0.92)'] 
+                    colors={item.promoStatus === 'active'
+                      ? ['rgba(16,185,129,0.92)', 'rgba(5,150,105,0.92)']
                       : ['rgba(249,195,73,0.92)', 'rgba(245,166,35,0.92)']
                     }
                     style={styles.scanQrButtonGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                   >
-                    <Ionicons 
-                      name={hasActivePromo ? "checkmark-circle" : "code-outline"} 
-                      size={20} 
-                      color="#fff" 
+                    <Ionicons
+                      name={item.promoStatus === 'active' ? "checkmark-circle" : "code-outline"}
+                      size={20}
+                      color="#fff"
                     />
                     <Text style={styles.scanQrButtonText}>
-                      {hasActivePromo ? 'View Code' : 'Get Code'}
+                      {item.promoStatus === 'active' ? 'View Code' : 'Get Code'}
                     </Text>
                   </LinearGradient>
                 </TouchableOpacity>
@@ -776,7 +796,7 @@ const DiscountCard = React.memo(({
               <Text style={styles.cardBackDescription}>
                 {canRedeem ? 'Choose your redemption method' : 'Limit reached for today'}
               </Text>
-              
+
               <View style={styles.cardBackActions}>
                 <TouchableOpacity
                   style={[styles.cardBackButton, !canRedeem && styles.cardBackButtonDisabled]}
@@ -803,7 +823,7 @@ const DiscountCard = React.memo(({
                     {canRedeem && <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />}
                   </LinearGradient>
                 </TouchableOpacity>
-                
+
                 {/* SCAN QR - Only for In-Store offers */}
                 {item?.isInStore && canRedeem && (
                   <TouchableOpacity
@@ -824,14 +844,12 @@ const DiscountCard = React.memo(({
                       <Text style={styles.cardBackScanText}>Scan QR</Text>
                     </LinearGradient>
                   </TouchableOpacity>
-                )}
-                
-                {/* GET CODE - Only for Online offers */}
+                )}                {/* GET CODE - Only for Online offers */}
                 {item?.isOnline && canRedeem && (
                   <TouchableOpacity
                     style={[
                       styles.cardBackPromoButton,
-                      hasActivePromo && styles.promoReadyCardButton
+                      item.promoStatus === 'active' && styles.promoReadyCardButton
                     ]}
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -840,21 +858,21 @@ const DiscountCard = React.memo(({
                     activeOpacity={0.8}
                   >
                     <LinearGradient
-                      colors={hasActivePromo 
-                        ? ['rgba(16,185,129,0.3)', 'rgba(5,150,105,0.2)'] 
+                      colors={item.promoStatus === 'active'
+                        ? ['rgba(16,185,129,0.3)', 'rgba(5,150,105,0.2)']
                         : ['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.05)']
                       }
                       style={styles.cardBackPromoGradient}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                     >
-                      <Ionicons 
-                        name={hasActivePromo ? "checkmark-circle" : "code-outline"} 
-                        size={18} 
-                        color="#fff" 
+                      <Ionicons
+                        name={item.promoStatus === 'active' ? "checkmark-circle" : "code-outline"}
+                        size={18}
+                        color="#fff"
                       />
                       <Text style={styles.cardBackPromoText}>
-                        {hasActivePromo ? 'View Code' : 'Get Code'}
+                        {item.promoStatus === 'active' ? 'View Code' : 'Get Code'}
                       </Text>
                     </LinearGradient>
                   </TouchableOpacity>
@@ -887,10 +905,11 @@ const DiscountCard = React.memo(({
     </Animated.View>
   );
 }, (prevProps, nextProps) => {
-  return prevProps.item._id === nextProps.item._id && 
-         prevProps.item.redemptionsToday === nextProps.item.redemptionsToday &&
-         prevProps.item.hasActivePromo === nextProps.item.hasActivePromo &&
-         prevProps.item.isClaimed === nextProps.item.isClaimed;
+  return prevProps.item._id === nextProps.item._id &&
+    prevProps.item.redemptionsToday === nextProps.item.redemptionsToday &&
+    prevProps.item.hasActivePromo === nextProps.item.hasActivePromo &&
+    prevProps.item.promoStatus === nextProps.item.promoStatus &&
+    prevProps.item.isClaimed === nextProps.item.isClaimed;
 });
 
 // ==================== QR SCANNER MODAL ====================
@@ -904,7 +923,7 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
 
   useEffect(() => {
     isMounted.current = true;
-    
+
     const getCameraPermissions = async () => {
       if (visible) {
         try {
@@ -920,13 +939,13 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
         }
       }
     };
-    
+
     if (visible) {
       getCameraPermissions();
       setScanned(false);
       setLoading(false);
     }
-    
+
     return () => {
       isMounted.current = false;
     };
@@ -934,21 +953,21 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
 
   const handleBarCodeScanned = useCallback(async ({ type, data }) => {
     if (scanned || loading) return;
-    
+
     setScanned(true);
     setLoading(true);
-    
+
     try {
       const parsedData = JSON.parse(data);
-      
+
       if (parsedData.offerId === offer?._id) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        
+
         try {
           const canScanRes = await api.get(`/offers/can-scan/${offer._id}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
-          
+
           if (!canScanRes.data.canScan) {
             Alert.alert(
               'Limit Reached',
@@ -964,7 +983,7 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
           setScanned(false);
           return;
         }
-        
+
         const studentData = {
           studentId: user?._id,
           name: user?.name,
@@ -1140,10 +1159,10 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
             <Text style={styles.scannerHeaderTitle}>Scan QR Code</Text>
             <View style={styles.scannerHeaderActions}>
               <TouchableOpacity onPress={toggleTorch} style={styles.scannerTorchBtn}>
-                <Ionicons 
-                  name={torchOn ? "flashlight" : "flashlight-outline"} 
-                  size={22} 
-                  color="#fff" 
+                <Ionicons
+                  name={torchOn ? "flashlight" : "flashlight-outline"}
+                  size={22}
+                  color="#fff"
                 />
               </TouchableOpacity>
               <TouchableOpacity onPress={onClose} style={styles.scannerCloseBtn}>
@@ -1151,7 +1170,7 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
               </TouchableOpacity>
             </View>
           </View>
-          
+
           {offer && (
             <View style={styles.scannerOfferInfo}>
               <Text style={styles.scannerOfferTitle}>{offer.title}</Text>
@@ -1159,7 +1178,7 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
               <Text style={styles.scannerOfferHint}>Scan the QR code displayed at the brand store</Text>
             </View>
           )}
-          
+
           <View style={styles.scannerWrapper}>
             <CameraView
               style={styles.scannerCamera}
@@ -1178,13 +1197,13 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
                   <View style={styles.scannerCornerBR} />
                 </View>
               </View>
-              
+
               <View style={styles.scannerInstructionContainer}>
                 <Text style={styles.scannerInstruction}>
                   Place QR code in the frame
                 </Text>
               </View>
-              
+
               <View style={styles.scannerBottomContent}>
                 {loading && (
                   <ActivityIndicator size="large" color={COLORS.primary} />
@@ -1200,7 +1219,7 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
               </View>
             </CameraView>
           </View>
-          
+
           <View style={styles.scannerFooter}>
             <Text style={styles.scannerFooterText}>
               Make sure the QR code is well lit and centered
@@ -1430,7 +1449,7 @@ const LoadingOverlay = ({ visible, message }) => {
         <ActivityIndicator size="large" color="#f9c349" />
         <Text style={styles.loadingText}>{message || "Loading discounts..."}</Text>
         <View style={styles.loadingProgressContainer}>
-          <Animated.View 
+          <Animated.View
             style={[
               styles.loadingProgressBar,
               { transform: [{ scaleX: loadingScaleX }] }
@@ -1548,7 +1567,7 @@ export default function MyDiscountScreen() {
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
-    
+
     return () => {
       isMounted.current = false;
       if (loadTimeoutRef.current) {
@@ -1569,8 +1588,9 @@ export default function MyDiscountScreen() {
       return;
     }
 
-    if (!isRefresh && discountsCache && cacheTimestamp && 
-        (Date.now() - cacheTimestamp) < CACHE_DURATION) {
+    if (!isRefresh && discountsCache && cacheTimestamp &&
+      (Date.now() - cacheTimestamp) < CACHE_DURATION &&
+      cachedUserId === user?._id) {
       if (isMounted.current) {
         setClaimedOffers(discountsCache.offers);
         setTotalSaved(discountsCache.totalSaved);
@@ -1582,17 +1602,18 @@ export default function MyDiscountScreen() {
 
     try {
       const [offersRes, savingsRes] = await Promise.all([
-        api.get('/offers/claimed', { 
+        api.get('/offers/claimed', {
           headers: { Authorization: `Bearer ${token}` },
           timeout: 10000
         }),
-        api.get('/offers/my-total-savings', { 
+        api.get('/offers/my-total-savings', {
           headers: { Authorization: `Bearer ${token}` },
           timeout: 5000
         }).catch(() => ({ data: { totalSaved: 0 } }))
       ]);
-      
+
       let promoCodes = [];
+      let promoCodesFailed = false;
       try {
         const promoRes = await api.get('/promo-codes/my-codes', {
           headers: { Authorization: `Bearer ${token}` }
@@ -1600,13 +1621,21 @@ export default function MyDiscountScreen() {
         promoCodes = promoRes.data.promoCodes || [];
       } catch (err) {
         console.log('Error fetching promo codes:', err?.message);
+        promoCodesFailed = true;
       }
 
       const offersWithImages = offersRes.data.map((offer) => {
-        const activePromo = promoCodes.find(
-          p => p.offer?._id?.toString() === offer._id?.toString() && p.status === 'active'
-        );
+        let offerPromo;
         
+        if (promoCodesFailed && discountsCache?.offers) {
+          const prevOffer = discountsCache.offers.find(o => o._id?.toString() === offer._id?.toString());
+          offerPromo = prevOffer?.activePromoDetails;
+        } else {
+          offerPromo = promoCodes.find(
+            p => p.offer?._id?.toString() === offer._id?.toString()
+          );
+        }
+
         return {
           ...offer,
           displayImage: offer.image
@@ -1615,29 +1644,54 @@ export default function MyDiscountScreen() {
               : `https://the-deft-crew-production.up.railway.app/${offer.image}`
             : null,
           redemptionsToday: offer.redemptionsToday || 0,
-          hasActivePromo: !!activePromo,
-          activePromoCode: activePromo?.code || null,
-          activePromoDetails: activePromo || null,
+          hasActivePromo: offerPromo?.status === 'active',
+          promoStatus: offerPromo?.status || null,
+          activePromoCode: offerPromo?.code || null,
+          activePromoDetails: offerPromo || null,
           isClaimed: true
         };
       });
-      
+
       if (isMounted.current) {
         setClaimedOffers(offersWithImages);
         const saved = savingsRes.data?.totalSaved || 0;
         setTotalSaved(saved);
-        
+
+        setPromoModalVisible((prevVisible) => {
+          setPromoOffer((prevOffer) => {
+            if (prevVisible && prevOffer) {
+               const updatedOffer = offersWithImages.find(o => o._id === prevOffer._id);
+               if (updatedOffer) {
+                 setPromoDetails(prevDetails => {
+                   if (updatedOffer.promoStatus !== prevDetails?.status) {
+                     return {
+                       ...prevDetails,
+                       status: updatedOffer.promoStatus,
+                       code: updatedOffer.activePromoCode,
+                       expiresAt: updatedOffer.activePromoDetails?.expiresAt
+                     };
+                   }
+                   return prevDetails;
+                 });
+               }
+            }
+            return prevOffer;
+          });
+          return prevVisible;
+        });
+
         discountsCache = {
           offers: offersWithImages,
           totalSaved: saved
         };
         cacheTimestamp = Date.now();
-        
+        cachedUserId = user?._id;
+
         setLoading(false);
         setInitialLoading(false);
         setRefreshing(false);
       }
-      
+
     } catch (err) {
       if (isMounted.current) {
         console.log('Error loading discounts:', err?.message || err);
@@ -1658,10 +1712,10 @@ export default function MyDiscountScreen() {
   // Initial load
   useEffect(() => {
     let isSubscribed = true;
-    
+
     const performInitialLoad = async () => {
       if (token && user) {
-        if (discountsCache && (Date.now() - cacheTimestamp) < CACHE_DURATION) {
+        if (discountsCache && (Date.now() - cacheTimestamp) < CACHE_DURATION && cachedUserId === user?._id) {
           if (isSubscribed) {
             setClaimedOffers(discountsCache.offers);
             setTotalSaved(discountsCache.totalSaved);
@@ -1695,26 +1749,27 @@ export default function MyDiscountScreen() {
       if (token && user && !initialLoading) {
         loadDiscounts(true);
       }
-      return () => {};
+      return () => { };
     }, [token, user, initialLoading, loadDiscounts])
   );
 
   // ==================== PROMO CODE FUNCTIONS ====================
 
   const generatePromoCodeForOffer = useCallback(async (offerId) => {
+    console.log('🔴 GENERATE PROMO CALLED', offerId);
     if (!token) {
       Alert.alert('Error', 'Please login to generate a promo code');
       return null;
     }
-    
+
     setGeneratingPromo(true);
-    
+
     try {
-      const response = await api.post(`/promo-codes/generate`, 
+      const response = await api.post(`/promo-codes/generate`,
         { offerId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+
       if (response.data.success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         return response.data.promoCode;
@@ -1723,7 +1778,7 @@ export default function MyDiscountScreen() {
       }
     } catch (err) {
       console.error('Error generating promo code:', err);
-      
+
       // Check if error is about claiming
       if (err.response?.status === 403) {
         Alert.alert(
@@ -1731,8 +1786,8 @@ export default function MyDiscountScreen() {
           'You need to claim this discount first. Would you like to claim it now?',
           [
             { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'Claim & Generate', 
+            {
+              text: 'Claim & Generate',
               onPress: async () => {
                 try {
                   await api.post(`/offers/claim/${offerId}`, {}, {
@@ -1752,7 +1807,7 @@ export default function MyDiscountScreen() {
         );
         return null;
       }
-      
+
       const errorMsg = err.response?.data?.message || err.message || 'Failed to generate promo code. Please try again.';
       Alert.alert('Error', errorMsg);
       return null;
@@ -1772,15 +1827,30 @@ export default function MyDiscountScreen() {
   }, []);
 
   const usePromoCode = useCallback((code) => {
-    Alert.alert(
-      'Use Promo Code',
-      `Use code "${code}" at checkout to get your discount!`,
-      [
-        { text: 'Copy Code', onPress: () => copyPromoCode(code) },
-        { text: 'OK', style: 'default' }
-      ]
-    );
-  }, [copyPromoCode]);
+    const websiteUrl = promoOffer?.brand?.websiteUrl;
+    
+    const fallbackAlert = () => {
+      Alert.alert(
+        'Use Promo Code',
+        `Use code "${code}" at checkout to get your discount!`,
+        [
+          { text: 'Copy Code', onPress: () => copyPromoCode(code) },
+          { text: 'OK', style: 'default' }
+        ]
+      );
+    };
+
+    if (websiteUrl) {
+      const formattedUrl = websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`;
+      const urlWithCoupon = `${formattedUrl}?coupon=${code}`;
+      
+      Linking.openURL(urlWithCoupon).catch((err) => {
+        fallbackAlert();
+      });
+    } else {
+      fallbackAlert();
+    }
+  }, [copyPromoCode, promoOffer]);
 
   const cancelPromoCode = useCallback(async (code) => {
     Alert.alert(
@@ -1788,15 +1858,15 @@ export default function MyDiscountScreen() {
       'Are you sure you want to cancel this promo code? This action cannot be undone.',
       [
         { text: 'Keep', style: 'cancel' },
-        { 
-          text: 'Cancel Code', 
+        {
+          text: 'Cancel Code',
           style: 'destructive',
           onPress: async () => {
             try {
               const promoCodeDoc = await api.get(`/promo-codes/${code}`, {
                 headers: { Authorization: `Bearer ${token}` }
               });
-              
+
               if (promoCodeDoc.data.success) {
                 const codeId = promoCodeDoc.data.promoCode.id;
                 await api.post(`/promo-codes/cancel/${codeId}`, {}, {
@@ -1832,33 +1902,34 @@ export default function MyDiscountScreen() {
   const handleGetCode = useCallback(async (item) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setPromoOffer(item);
-    
+
     // Check if offer is online
     if (!item.isOnline) {
       Alert.alert('Not Available', 'This offer is not available online. Please visit the store to redeem.');
       return;
     }
-    
+
     // Check if offer already has an active promo code
-    if (item.hasActivePromo && item.activePromoDetails) {
+    if (item.promoStatus === 'active') {
       setPromoDetails({
         code: item.activePromoCode,
         discountPercentage: item.discountPercentage,
         brandName: item.brand?.name,
         offerTitle: item.title,
-        expiresAt: item.activePromoDetails.expiresAt,
+        expiresAt: item.activePromoDetails?.expiresAt,
+        status: item.promoStatus,
         isExisting: true
       });
       setPromoModalVisible(true);
       return;
     }
-    
+
     // Generate new promo code
     setPromoDetails(null);
     setPromoModalVisible(true);
-    
+
     const newPromo = await generatePromoCodeForOffer(item._id);
-    
+
     if (newPromo) {
       setPromoDetails({
         code: newPromo.code,
@@ -1888,7 +1959,7 @@ export default function MyDiscountScreen() {
       const response = await api.post(`/offers/unclaim/${item._id}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       if (response.data.message) {
         Alert.alert('Removed', `${item.title} has been removed from your discounts.`);
         if (discountsCache) {
@@ -1965,9 +2036,9 @@ export default function MyDiscountScreen() {
       <FlatList
         data={claimedOffers}
         renderItem={({ item, index }) => (
-          <DiscountCard 
-            item={item} 
-            index={index} 
+          <DiscountCard
+            item={item}
+            index={index}
             onUseNow={handleUseNow}
             onScan={handleScan}
             onUnclaim={handleUnclaim}
@@ -2052,6 +2123,7 @@ export default function MyDiscountScreen() {
         onUseCode={usePromoCode}
         generating={generatingPromo}
         onGenerate={() => {
+          Alert.alert('promoOffer check', JSON.stringify(promoOffer));
           if (promoOffer) {
             generatePromoCodeForOffer(promoOffer._id).then((newPromo) => {
               if (newPromo) {

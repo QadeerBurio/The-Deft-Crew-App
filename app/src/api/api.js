@@ -9,9 +9,11 @@ const getBaseURL = () => {
     const manifest = Constants.expoConfig || Constants.manifest || {};
     const hostUri = manifest.hostUri;
     const devIp = hostUri ? hostUri.split(':')[0] : '192.168.18.93';
-    return `https://the-deft-crew-production.up.railway.app/api`;
+    //return `https://the-deft-crew-production.up.railway.app/api`;
+    return `http://192.168.100.27:5000/api`;
   }
-  return 'https://the-deft-crew-production.up.railway.app/api';
+  //return 'https://the-deft-crew-production.up.railway.app/api';
+  return 'http://192.168.100.27:5000/api'; //ibrar laptop local testing ip 
 };
 
 // Create axios instance with optimized config
@@ -35,15 +37,15 @@ class MemoryCache {
   get(key) {
     const item = this.cache.get(key);
     if (!item) return null;
-    
+
     if (Date.now() > item.expiry) {
       this.delete(key);
       return null;
     }
-    
+
     this.accessOrder = this.accessOrder.filter(k => k !== key);
     this.accessOrder.push(key);
-    
+
     return item.data;
   }
 
@@ -52,12 +54,12 @@ class MemoryCache {
       const oldest = this.accessOrder.shift();
       if (oldest) this.cache.delete(oldest);
     }
-    
+
     this.cache.set(key, {
       data,
       expiry: Date.now() + ttlMs,
     });
-    
+
     this.accessOrder = this.accessOrder.filter(k => k !== key);
     this.accessOrder.push(key);
   }
@@ -104,7 +106,7 @@ api.interceptors.request.use(
       // FIXED: Check guest mode flag AND AsyncStorage
       // Only attach token if NOT in guest mode
       const guestFlag = await AsyncStorage.getItem('isGuest');
-      
+
       if (guestFlag === 'true' || isGuestMode) {
         // Don't attach any token for guest users
         delete config.headers.Authorization;
@@ -116,10 +118,10 @@ api.interceptors.request.use(
           config.headers.Authorization = `Bearer ${token}`;
         }
       }
-      
+
       config.headers['Cache-Control'] = 'no-cache';
       config.headers['Pragma'] = 'no-cache';
-      
+
       return config;
     } catch (error) {
       console.log('Request interceptor error:', error);
@@ -130,7 +132,7 @@ api.interceptors.request.use(
 );
 
 // Response interceptor - FIXED
-let logoutHandler = () => {};
+let logoutHandler = () => { };
 let sessionErrorHandler = null;
 
 export const injectLogout = (handler) => {
@@ -147,50 +149,50 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    
+
     if (!error.response) {
       return Promise.reject(error);
     }
-    
+
     // FIXED: Don't auto-logout for guest users
     if (error.response.status === 401 && !originalRequest._retry) {
       const guestFlag = await AsyncStorage.getItem('isGuest');
-      
+
       // If guest mode, just reject without logout alert
       if (guestFlag === 'true' || isGuestMode) {
         return Promise.reject(error);
       }
-      
+
       originalRequest._retry = true;
-      
+
       if (!isLoggingOut) {
         isLoggingOut = true;
-        
+
         // FIXED: Clear all auth data properly
         await AsyncStorage.multiRemove(['token', 'user', 'isGuest']);
         memoryCache.clear();
-        
+
         // Reset guest mode flag
         isGuestMode = false;
-        
+
         // REMOVED: Alert popup - now using notification system
         // Just call the session error handler if available
         if (sessionErrorHandler) {
           sessionErrorHandler('Session Expired', 'Your session has expired. Please log in again.');
         }
-        
+
         // Call logout handler to update UI state
         if (logoutHandler) {
           logoutHandler();
         }
-        
+
         // Reset logging out flag after a delay
         setTimeout(() => {
           isLoggingOut = false;
         }, 1000);
       }
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -199,11 +201,11 @@ api.interceptors.response.use(
 async function deduplicatedRequest(key, requestFn, ttlMs = 6000) {
   const cached = memoryCache.get(key);
   if (cached) return cached;
-  
+
   if (pendingRequests.has(key)) {
     return pendingRequests.get(key);
   }
-  
+
   const promise = requestFn()
     .then(data => {
       memoryCache.set(key, data, ttlMs);
@@ -214,7 +216,7 @@ async function deduplicatedRequest(key, requestFn, ttlMs = 6000) {
       pendingRequests.delete(key);
       throw error;
     });
-  
+
   pendingRequests.set(key, promise);
   return promise;
 }
@@ -225,42 +227,42 @@ export const optimizedAPI = {
   getBrandsFast: async (token, userId, options = {}) => {
     const { forceRefresh = false, limit = 100 } = options;
     const cacheKey = `brands:${userId || 'all'}:${limit}`;
-    
+
     if (!forceRefresh) {
       const cached = memoryCache.get(cacheKey);
       if (cached) return cached;
     }
-    
+
     return deduplicatedRequest(cacheKey, async () => {
       // Parallel fetch: brands + offers summary
       const [brandsRes, summaryRes] = await Promise.all([
-        api.get('/brands', { 
+        api.get('/brands', {
           params: { limit, sort: 'name' },
-          timeout: 8000 
+          timeout: 8000
         }).catch(() => ({ data: [] })),
         api.get('/offers/summary', { timeout: 8000 })
           .catch(() => ({ data: {} }))
       ]);
-      
-      const brands = Array.isArray(brandsRes.data) ? brandsRes.data : 
-                    (brandsRes.data?.data || brandsRes.data?.brands || []);
+
+      const brands = Array.isArray(brandsRes.data) ? brandsRes.data :
+        (brandsRes.data?.data || brandsRes.data?.brands || []);
       const offersSummary = summaryRes.data || {};
-      
+
       const baseUrl = 'https://the-deft-crew-production.up.railway.app';
-      
+
       // Fast mapping
       const brandsWithOffers = brands.map(brand => {
         const brandOffers = offersSummary[brand._id] || [];
         const firstOffer = brandOffers[0];
-        
+
         const formatImage = (path, type = 'offer') => {
           if (!path) return null;
           if (path.startsWith('http')) return path;
-          return type === 'brand' 
+          return type === 'brand'
             ? `${baseUrl}/uploads/brands/${path}`
             : `${baseUrl}/${path}`;
         };
-        
+
         return {
           ...brand,
           logo: formatImage(brand.logo, 'brand'),
@@ -271,8 +273,8 @@ export const optimizedAPI = {
             isClaimed: offer.claimedBy?.includes(userId) || false,
             discountPercentage: offer.discountPercentage || 0,
           })),
-          displayImage: firstOffer?.image 
-            ? formatImage(firstOffer.image) 
+          displayImage: firstOffer?.image
+            ? formatImage(firstOffer.image)
             : formatImage(brand.logo, 'brand') || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
           hasOffer: brandOffers.length > 0,
           discount: firstOffer?.discountPercentage || 0,
@@ -281,34 +283,34 @@ export const optimizedAPI = {
           isInStore: firstOffer?.isInStore || false,
         };
       });
-      
+
       return brandsWithOffers;
     }, 90000); // 1.5 minute cache
   },
-  
+
   // Home data with parallel fetching
   getHomeData: async (forceRefresh = false) => {
     const cacheKey = 'home:data';
-    
+
     if (!forceRefresh) {
       const cached = memoryCache.get(cacheKey);
       if (cached) return cached;
     }
-    
+
     return deduplicatedRequest(cacheKey, async () => {
       const [slidersRes, brandsRes] = await Promise.all([
         api.get('/sliders', { timeout: 5000 }).catch(() => ({ data: [] })),
         api.get('/brands', { params: { limit: 20 }, timeout: 5000 })
           .catch(() => ({ data: [] }))
       ]);
-      
+
       return {
         sliders: slidersRes.data || [],
         brands: brandsRes.data || [],
       };
     }, 60000);
   },
-  
+
   // Clear caches
   clearBrandCache: () => {
     for (const key of memoryCache.cache.keys()) {
@@ -441,7 +443,7 @@ export const publicAPI = {
     const response = await api.get('/admin/exchange/all');
     return response.data;
   }
-  
+
 };
 
 
@@ -455,9 +457,9 @@ export const getListings = async ({ type, page, limit }) => {
   if (type && type !== 'All') params.type = type.toLowerCase();
   if (page) params.page = page;
   if (limit) params.limit = limit;
-  
+
   const response = await api.get('/listings', { params });
-  
+
   // The backend now populates ownerId with user data
   // Just return the data as-is
   return response.data;
@@ -474,7 +476,7 @@ export const createListing = async (payload) => {
     // Get the current user from AsyncStorage to include owner details
     const userStr = await AsyncStorage.getItem('user');
     let ownerData = null;
-    
+
     if (userStr) {
       try {
         ownerData = JSON.parse(userStr);
@@ -482,7 +484,7 @@ export const createListing = async (payload) => {
         console.log('Error parsing user data:', e);
       }
     }
-    
+
     // If we have user data, include it in the payload
     if (ownerData) {
       payload.owner = {
@@ -491,7 +493,7 @@ export const createListing = async (payload) => {
         profileImage: ownerData.profileImage || ''
       };
     }
-    
+
     const response = await api.post('/listings', payload);
     return response.data;
   } catch (error) {
@@ -591,7 +593,7 @@ export const updateOfferStatus = async (offerId, status) => {
     if (!['accepted', 'rejected'].includes(status)) {
       throw new Error('Invalid status. Must be "accepted" or "rejected"');
     }
-    
+
     const response = await api.patch(`/skill-offers/${offerId}/status`, { status });
     return response.data;
   } catch (error) {
