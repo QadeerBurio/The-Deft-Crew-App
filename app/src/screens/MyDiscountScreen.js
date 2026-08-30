@@ -1827,7 +1827,8 @@ export default function MyDiscountScreen() {
   }, []);
 
   const usePromoCode = useCallback((code) => {
-    const websiteUrl = promoOffer?.brand?.websiteUrl;
+    const websiteUrl = promoOffer?.brand?.websiteUrl || promoOffer?.brand?.shopifyStoreUrl;
+    const platform = promoOffer?.brand?.platform;
     
     const fallbackAlert = () => {
       Alert.alert(
@@ -1842,7 +1843,10 @@ export default function MyDiscountScreen() {
 
     if (websiteUrl) {
       const formattedUrl = websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`;
-      const urlWithCoupon = `${formattedUrl}?coupon=${code}`;
+      const isShopify = platform === 'shopify' || formattedUrl.includes('myshopify.com');
+      const urlWithCoupon = isShopify
+        ? `${formattedUrl.replace(/\/$/, '')}/discount/${code}`
+        : `${formattedUrl}?coupon=${code}`;
       
       Linking.openURL(urlWithCoupon).catch((err) => {
         fallbackAlert();
