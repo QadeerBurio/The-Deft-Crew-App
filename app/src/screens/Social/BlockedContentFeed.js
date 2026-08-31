@@ -11,8 +11,8 @@ import {
   ActivityIndicator
 } from 'react-native';
 import axios from 'axios';
-import { AuthContext } from '../context/AuthContext';
-import PostCard from '../components/PostCard';
+import { AuthContext } from '../../context/AuthContext';
+import PostCard from './PostCard';
 
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 

@@ -1,4 +1,7 @@
 // screens/SkillProfileScreen.js
+
+
+//to be deleted if not used in other files
 import React, { useState, useEffect, useContext, useCallback, useRef } from 'react';
 import {
   View,

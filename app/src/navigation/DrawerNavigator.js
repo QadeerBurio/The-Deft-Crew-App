@@ -1,3 +1,7 @@
+//The-Deft-Crew-App/app/src/navigation/DrawerNavigator.js
+
+
+
 import React, { useState, useRef, useContext, useEffect, useCallback } from 'react';
 import {
   View,
@@ -108,6 +112,18 @@ import FeedScreen from '../screens/Social/FeedScreen';
 import BlockedUsersScreen from '../screens/Social/BlockedUserScreen';
 import Terrms from '../screens/Social/Terrms';
 import Guideline from '../screens/Social/Guideline';
+
+
+
+import ProfileWelcomeScreen from '../screens/skillshare/profile/ProfileWelcomeScreen';
+import ProfileSetupScreen from '../screens/skillshare/profile/ProfileSetupScreen';
+import ProfileSuccessScreen from '../screens/skillshare/profile/ProfileSuccessScreen';
+import ProfessionalProfileScreen from '../screens/skillshare/profile/ProfessionalProfileScreen';
+import { ActivityIndicator } from 'react-native';
+import { getMyProfessionalProfile } from '../api/profileApi';
+import SkillShareExplore from '../screens/skillshare/Explore';
+import MyPostsByType from '../screens/skillshare/MyPostByType';
+
 
 const { width, height } = Dimensions.get('window');
 const Drawer = createDrawerNavigator();
@@ -797,17 +813,49 @@ const AnimatedScreen = ({ component: Component, ...props }) => {
     </Animated.View>
   );
 };
+// ===== SKILLSHARE ENTRY GATE =====
+function SkillShareGate({ navigation }) {
+  const { isGuest } = useContext(AuthContext);
 
+  useEffect(() => {
+    if (isGuest) {
+      navigation.replace('DashboardMain'); // let guests browse; Profile tab will prompt login
+      return;
+    }
+    (async () => {
+      try {
+        const { profile, hasProfile } = await getMyProfessionalProfile();
+        const isComplete = hasProfile && profile?.isComplete;
+        navigation.replace(isComplete ? 'DashboardMain' : 'ProfileWelcome');
+      } catch (err) {
+        navigation.replace('ProfileWelcome');
+      }
+    })();
+  }, [isGuest]);
+
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FDF9F0' }}>
+      <ActivityIndicator size="large" color="#f9c349" />
+    </View>
+  );
+}
 // ===== DASHBOARD STACK NAVIGATOR =====
 function DashboardStackNavigator() {
   return (
-    <Stack.Navigator 
-      screenOptions={{ 
+    <Stack.Navigator
+      initialRouteName="SkillShareGate"
+      screenOptions={{
         headerShown: false,
         cardStyle: { backgroundColor: '#fff' }
       }}
     >
+      <Stack.Screen name="SkillShareGate" component={SkillShareGate} />
+      <Stack.Screen name="ProfileWelcome" component={ProfileWelcomeScreen} />
+      <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
+      <Stack.Screen name="ProfileSuccess" component={ProfileSuccessScreen} />
+      <Stack.Screen name="ProfessionalProfile" component={ProfessionalProfileScreen} />
       <Stack.Screen name="DashboardMain" component={Dashboard} />
+     <Stack.Screen name="BrowseListings" component={SkillShareExplore} />
       <Stack.Screen name="CreateListing" component={CreateListingScreen} />
       <Stack.Screen name="ListingDetail" component={ListingDetailScreen} />
       <Stack.Screen name="SelectListingTypeScreen" component={SelectListingTypeScreen} />
@@ -817,15 +865,14 @@ function DashboardStackNavigator() {
       <Stack.Screen name="MyListings" component={MyListingsScreen} />
       <Stack.Screen name="MatchChat" component={MatchChatScreen} />
       <Stack.Screen name="InquiryChat" component={InquiryChatScreen} />
-      <Stack.Screen name="SkillProfile" component={SkillProfile} />
-      <Stack.Screen name="Activity" component={ActivityScreen} />
+    <Stack.Screen name="SkillProfile" component={ProfessionalProfileScreen} />
+<Stack.Screen name="MyPostsByType" component={MyPostsByType} />
       <Stack.Screen name="MyInquiries" component={MyInquiriesScreen} />
       <Stack.Screen name="MyMatches" component={MyMatches} />
       <Stack.Screen name="ChatMatch" component={ChatMatch} />
     </Stack.Navigator>
   );
 }
-
 export default function DrawerNavigator() {
   const routeAnim = useRef(new Animated.Value(0)).current;
 
@@ -838,9 +885,9 @@ export default function DrawerNavigator() {
           sceneContainerStyle: { backgroundColor: '#fff' },
           header: () => {
             const routeName = getFocusedRouteNameFromRoute(route) ?? 'Home';
-            const hiddenRoutes = [
-              'Traveling',
-              'Social',
+           const hiddenRoutes = [
+             'Traveling',
+             'Social',
               'Travelling',
               'ChatDetailScreen',
               'MessagesScreen',
@@ -857,8 +904,12 @@ export default function DrawerNavigator() {
               'SkillProfile',
               'Activity',
               'MyInquiries',
-            ];
-
+              'SkillShareGate',        // add
+              'ProfileWelcome',        // add
+              'ProfileSetup',          // add
+              'ProfileSuccess',        // add
+              'ProfessionalProfile',   // add
+];
             if (hiddenRoutes.includes(routeName)) {
               return null;
             }

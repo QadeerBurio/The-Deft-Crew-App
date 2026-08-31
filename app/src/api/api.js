@@ -9,16 +9,22 @@ const getBaseURL = () => {
     const manifest = Constants.expoConfig || Constants.manifest || {};
     const hostUri = manifest.hostUri;
     const devIp = hostUri ? hostUri.split(':')[0] : '192.168.18.93';
+<<<<<<< Updated upstream
     //return `https://the-deft-crew-production.up.railway.app/api`;
     return `http://192.168.100.27:5000/api`;
+=======
+   return `http://${devIp}:5000/api`; // change back to production url when done testing
+>>>>>>> Stashed changes
   }
   //return 'https://the-deft-crew-production.up.railway.app/api';
   return 'http://192.168.100.27:5000/api'; //ibrar laptop local testing ip 
 };
 
+export const BASE_URL = getBaseURL(); // <-- add this export
+
 // Create axios instance with optimized config
 const api = axios.create({
-  baseURL: getBaseURL(),
+  baseURL: BASE_URL,
   timeout: 12000,
   headers: {
     'Content-Type': 'application/json',
@@ -452,16 +458,22 @@ export const publicAPI = {
 
 // Listings
 // api/api.js - Update getListings
-export const getListings = async ({ type, page, limit }) => {
+export const getListings = async ({ type, page, limit, search }) => {
   const params = {};
   if (type && type !== 'All') params.type = type.toLowerCase();
   if (page) params.page = page;
   if (limit) params.limit = limit;
+<<<<<<< Updated upstream
 
   const response = await api.get('/listings', { params });
 
   // The backend now populates ownerId with user data
   // Just return the data as-is
+=======
+  if (search) params.search = search;
+
+  const response = await api.get('/listings', { params });
+>>>>>>> Stashed changes
   return response.data;
 };
 
@@ -518,6 +530,44 @@ export const getMyListings = async () => {
     throw error;
   }
 };
+
+
+export const getMyProfessionalProfile = async () => {
+  const res = await api.get('/professional-profile/me');
+  return res.data; // { profile, hasProfile }
+};
+
+// Add this function to api/api.js, near the other listing functions
+// (e.g. right after createListing / before getMyListings).
+
+/**
+ * Upload a single image/video for a paid listing.
+ * Uploads immediately after the user picks it — NOT at final submit —
+ * so only a real hosted URL ever ends up in the listing payload.
+ *
+ * @param {string} fileUri - local device uri from expo-image-picker (asset.uri)
+ * @param {string} mimeType - e.g. 'image/jpeg', 'video/mp4'
+ * @param {string} fileName - e.g. 'photo.jpg'
+ * @returns {Promise<{ url: string, type: 'image' | 'video' }>}
+ */
+export const uploadListingAttachment = async (fileUri, mimeType, fileName) => {
+  const formData = new FormData();
+  formData.append('file', {
+    uri: fileUri,
+    type: mimeType || 'image/jpeg',
+    name: fileName || `upload_${Date.now()}.jpg`,
+  });
+
+  // Note: React Native's networking layer sets its own multipart boundary
+  // when the body is FormData, regardless of what Content-Type is passed here.
+  const response = await api.post('/listings/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 30000, // uploads need more headroom than the 12s instance default
+  });
+
+  return response.data; // { url, type }
+};
+
 
 export const closeListing = async (listingId, ownerId) => {
   const response = await api.patch(`/listings/${listingId}/close`, { ownerId });
@@ -741,6 +791,15 @@ export const getInquiryForListing = async (listingId, userId) => {
   } catch (error) {
     throw error;
   }
+};
+
+export const uploadChatFile = async (uri, mimeType, fileName) => {
+  const formData = new FormData();
+  formData.append('file', { uri, type: mimeType, name: fileName });
+  const response = await api.post('/chat/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data; // { mediaUrl, messageType, mediaMetadata }
 };
 
 

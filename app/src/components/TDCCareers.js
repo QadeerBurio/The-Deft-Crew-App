@@ -28,14 +28,15 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import GuestGuard from "./GuestGuard";
+import { BASE_URL } from "../api/api";
 
 const { width, height } = Dimensions.get("window");
 
-const getBaseURL = () => {
-  if (__DEV__) return "https://the-deft-crew-production.up.railway.app/api";
-  return "https://the-deft-crew-production.up.railway.app/api";
-};
-const API_URL = `${getBaseURL()}/jobs`;
+// const getBaseURL = () => {
+//   if (__DEV__) return "https://the-deft-crew-production.up.railway.app/api";
+//   return "https://the-deft-crew-production.up.railway.app/api";
+// };
+const API_URL = `${BASE_URL}/jobs`;
 
 const COLORS = {
   page: "#0d0d0d",

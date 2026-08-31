@@ -34,18 +34,11 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { renderResumeHTML } from '../services/templateService';
 import { ResumeContext } from '../context/ResumeContext';
+import { BASE_URL } from '../api/api';
 
 const { width, height } = Dimensions.get("window");
-const getBaseURL = () => {
-  if (__DEV__) {
-    const manifest = Constants.expoConfig || Constants.manifest || {};
-    const hostUri = manifest.hostUri;
-    const devIp = hostUri ? hostUri.split(':')[0] : '192.168.18.128';
-    return `https://the-deft-crew-production.up.railway.app/api`;
-  }
-  return 'https://the-deft-crew-production.up.railway.app/api';
-};
-const API_URL = `${getBaseURL()}/jobs`;
+
+const API_URL = `${BASE_URL}/jobs`;
 
 const COLORS = {
   page: "#ffffff",
