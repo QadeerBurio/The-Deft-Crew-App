@@ -186,7 +186,7 @@ export default function MyMatches({ navigation }) {
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.header}>
-       <TouchableOpacity onPress={() => navigation.getParent()?.navigate('HomeTabs')}>
+       <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={22} color={INK} />
         </TouchableOpacity>
         {searchVisible ? (

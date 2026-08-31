@@ -9,12 +9,9 @@ const getBaseURL = () => {
     const manifest = Constants.expoConfig || Constants.manifest || {};
     const hostUri = manifest.hostUri;
     const devIp = hostUri ? hostUri.split(':')[0] : '192.168.18.93';
-<<<<<<< Updated upstream
     //return `https://the-deft-crew-production.up.railway.app/api`;
-    return `http://192.168.100.27:5000/api`;
-=======
+    return `http://192.168.18.93:5000/api`;
    return `http://${devIp}:5000/api`; // change back to production url when done testing
->>>>>>> Stashed changes
   }
   //return 'https://the-deft-crew-production.up.railway.app/api';
   return 'http://192.168.100.27:5000/api'; //ibrar laptop local testing ip 
@@ -463,17 +460,14 @@ export const getListings = async ({ type, page, limit, search }) => {
   if (type && type !== 'All') params.type = type.toLowerCase();
   if (page) params.page = page;
   if (limit) params.limit = limit;
-<<<<<<< Updated upstream
 
-  const response = await api.get('/listings', { params });
+  // const response = await api.get('/listings', { params });
 
   // The backend now populates ownerId with user data
   // Just return the data as-is
-=======
   if (search) params.search = search;
 
   const response = await api.get('/listings', { params });
->>>>>>> Stashed changes
   return response.data;
 };
 
