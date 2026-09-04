@@ -9,8 +9,8 @@ const getBaseURL = () => {
     const manifest = Constants.expoConfig || Constants.manifest || {};
     const hostUri = manifest.hostUri;
     const devIp = hostUri ? hostUri.split(':')[0] : '192.168.18.93';
-    //return `https://the-deft-crew-production.up.railway.app/api`;
-    return `http://192.168.18.93:5000/api`;
+    return `https://the-deft-crew-production.up.railway.app/api`;
+    // return `http://192.168.18.93:5000/api`;
    return `http://${devIp}:5000/api`; // change back to production url when done testing
   }
   //return 'https://the-deft-crew-production.up.railway.app/api';
@@ -22,7 +22,7 @@ export const BASE_URL = getBaseURL(); // <-- add this export
 // Create axios instance with optimized config
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 12000,
+  timeout: 8000,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -224,26 +224,35 @@ async function deduplicatedRequest(key, requestFn, ttlMs = 6000) {
   return promise;
 }
 
-// Optimized API methods
+// Add this to api/api.js - getBrandsFast method for ultra-fast loading
+
 export const optimizedAPI = {
-  // Ultra-fast brands fetch with offers summary
+  // Ultra-fast brands fetch with offers summary - PARALLEL FETCHING
   getBrandsFast: async (token, userId, options = {}) => {
-    const { forceRefresh = false, limit = 100 } = options;
+    const { forceRefresh = false, limit = 200 } = options;
     const cacheKey = `brands:${userId || 'all'}:${limit}`;
 
+    // Check memory cache first
     if (!forceRefresh) {
       const cached = memoryCache.get(cacheKey);
-      if (cached) return cached;
+      if (cached) {
+        console.log('✅ Using memory cache for brands');
+        return cached;
+      }
     }
 
+    // Use deduplication to prevent multiple parallel requests
     return deduplicatedRequest(cacheKey, async () => {
+      console.log('🔄 Fetching fresh brands data...');
+      
       // Parallel fetch: brands + offers summary
       const [brandsRes, summaryRes] = await Promise.all([
         api.get('/brands', {
-          params: { limit, sort: 'name' },
+          params: { limit },
           timeout: 8000
         }).catch(() => ({ data: [] })),
-        api.get('/offers/summary', { timeout: 8000 })
+        // Try to get summary, but don't fail if it's not available
+        api.get('/offers/summary', { timeout: 5000 })
           .catch(() => ({ data: {} }))
       ]);
 
@@ -253,7 +262,7 @@ export const optimizedAPI = {
 
       const baseUrl = 'https://the-deft-crew-production.up.railway.app';
 
-      // Fast mapping
+      // Fast mapping - one pass
       const brandsWithOffers = brands.map(brand => {
         const brandOffers = offersSummary[brand._id] || [];
         const firstOffer = brandOffers[0];
@@ -261,14 +270,18 @@ export const optimizedAPI = {
         const formatImage = (path, type = 'offer') => {
           if (!path) return null;
           if (path.startsWith('http')) return path;
+          const cleanPath = path.replace(/^\/+/, '');
           return type === 'brand'
-            ? `${baseUrl}/uploads/brands/${path}`
-            : `${baseUrl}/${path}`;
+            ? `${baseUrl}/uploads/brands/${cleanPath}`
+            : `${baseUrl}/${cleanPath}`;
         };
+
+        const logoUrl = formatImage(brand.logo, 'brand');
+        const defaultImage = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
 
         return {
           ...brand,
-          logo: formatImage(brand.logo, 'brand'),
+          logo: logoUrl,
           offers: brandOffers.map(offer => ({
             ...offer,
             image: formatImage(offer.image),
@@ -276,52 +289,33 @@ export const optimizedAPI = {
             isClaimed: offer.claimedBy?.includes(userId) || false,
             discountPercentage: offer.discountPercentage || 0,
           })),
-          displayImage: firstOffer?.image
-            ? formatImage(firstOffer.image)
-            : formatImage(brand.logo, 'brand') || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+          displayImage: firstOffer?.image 
+            ? formatImage(firstOffer.image) 
+            : (logoUrl || defaultImage),
           hasOffer: brandOffers.length > 0,
           discount: firstOffer?.discountPercentage || 0,
           category: firstOffer?.category || brand.category || 'General',
-          isOnline: firstOffer?.isOnline || false,
-          isInStore: firstOffer?.isInStore || false,
+          isOnline: firstOffer?.isOnline || brand.isOnline || false,
+          isInStore: firstOffer?.isInStore || brand.isInStore || false,
+          createdAt: brand.createdAt || new Date().toISOString(),
         };
       });
 
-      return brandsWithOffers;
-    }, 90000); // 1.5 minute cache
+      // Sort by newest first
+      const sorted = brandsWithOffers.sort((a, b) => {
+        const dateA = new Date(a.createdAt || a._id).getTime();
+        const dateB = new Date(b.createdAt || b._id).getTime();
+        return dateB - dateA;
+      });
+
+      console.log(`✅ Loaded ${sorted.length} brands in parallel`);
+      
+      // Cache for 5 minutes
+      memoryCache.set(cacheKey, sorted, 300000);
+      
+      return sorted;
+    }, 300000); // 5 minutes TTL
   },
-
-  // Home data with parallel fetching
-  getHomeData: async (forceRefresh = false) => {
-    const cacheKey = 'home:data';
-
-    if (!forceRefresh) {
-      const cached = memoryCache.get(cacheKey);
-      if (cached) return cached;
-    }
-
-    return deduplicatedRequest(cacheKey, async () => {
-      const [slidersRes, brandsRes] = await Promise.all([
-        api.get('/sliders', { timeout: 5000 }).catch(() => ({ data: [] })),
-        api.get('/brands', { params: { limit: 20 }, timeout: 5000 })
-          .catch(() => ({ data: [] }))
-      ]);
-
-      return {
-        sliders: slidersRes.data || [],
-        brands: brandsRes.data || [],
-      };
-    }, 60000);
-  },
-
-  // Clear caches
-  clearBrandCache: () => {
-    for (const key of memoryCache.cache.keys()) {
-      if (key.startsWith('brands:') || key.startsWith('brand:')) {
-        memoryCache.delete(key);
-      }
-    }
-  }
 };
 
 

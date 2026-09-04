@@ -37,7 +37,7 @@ const FEATURES = [
   { id: "traveling", title: "Travelling", icon: "airplane", desc: "Flights & hotels", screen: "Travelling", gradient: ["#4FC3F7", "#29B6F6"] },
   { id: "dashboard", title: "SkillsShare", icon: "people-circle", desc: "Skill Share", screen: "Dashboard", gradient: ["#81C784", "#4CAF50"] },
   { id: "events", title: "Events", icon: "calendar", desc: "Local events", screen: "Events", gradient: ["#CE93D8", "#AB47BC"] },
-  { id: "resume", title: "Resume", icon: "document-text-outline", desc: "Build your CV", screen: "Resume", gradient: ["#FFA726", "#FF9800"] },
+  { id: "resume", title: "Resume", icon: "document-text-outline", desc: "Build your Resume", screen: "Resume", gradient: ["#FFA726", "#FF9800"] },
   { id: "jobs", title: "Jobs", icon: "briefcase", desc: "Dream careers", screen: "Career", gradient: ["#EF5350", "#D32F2F"] },
   { id: "scholar", title: "Scholarships", icon: "school-outline", desc: "Education funds", screen: "Exchange", gradient: ["#42A5F5", "#1A237E"] },
   { id: "social", title: "Social Activity", icon: "globe", desc: "Post & share", screen: "Social", gradient: ["#EC407A", "#AD1457"] },

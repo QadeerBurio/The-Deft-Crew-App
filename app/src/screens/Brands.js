@@ -1,4 +1,4 @@
-// screens/Brands.js - ULTRA OPTIMIZED VERSION WITH 2-SEC LOADER
+// screens/Brands.js - ULTRA FAST WITH PROPER MODAL DATA
 import React, {
   useEffect,
   useState,
@@ -26,11 +26,10 @@ import {
   Platform,
   Animated,
   Easing,
-  InteractionManager,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import api from "../api/api";
+import api, { memoryCache } from "../api/api";
 import { AuthContext } from "../context/AuthContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -38,6 +37,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get("window");
 const NUM_COLUMNS = 2;
@@ -75,18 +75,16 @@ const DISCOUNT_OPTIONS = [0, 10, 15, 20, 25, 30, 35, 40, 45, 50];
 
 // CACHE CONFIGURATION
 const BASE_URL = 'https://the-deft-crew-production.up.railway.app';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
-const API_TIMEOUT = 5000;
-const LOADER_MIN_DURATION = 2000; // 2 seconds minimum loader
+const CACHE_KEY = '@brands_cache';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const PAGE_SIZE = 10;
 
 // Global cache with pre-loaded data
 let brandsCache = null;
 let cacheTimestamp = null;
 let pendingFetchPromise = null;
 let preloadedImages = new Set();
-
-// Image preloading queue
-const imagePreloadQueue = new Set();
+let imagePreloadQueue = new Set();
 const MAX_PRELOAD = 12;
 
 // ==========================================
@@ -127,12 +125,9 @@ const CategoryGridItem = memo(({ category, isSelected, onPress }) => (
 // ==========================================
 // OPTIMIZED BRAND CARD
 // ==========================================
-const BrandCard = memo(({ item, index, onPress, preloadImage }) => {
+const BrandCard = memo(({ item, index, onPress }) => {
   const firstOffer = item.offers?.[0];
   const displayImage = item.displayImage;
-  
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
   
   const categoryColor = useMemo(() => {
     const cat = CATEGORIES.find(c => c.name === item.category);
@@ -147,15 +142,7 @@ const BrandCard = memo(({ item, index, onPress, preloadImage }) => {
   }, [displayImage]);
   
   return (
-    <Animated.View
-      style={[
-        styles.cardWrapper,
-        {
-          opacity: fadeAnim,
-          transform: [{ scale: scaleAnim }],
-        },
-      ]}
-    >
+    <View style={styles.cardWrapper}>
       <TouchableOpacity
         style={styles.card}
         activeOpacity={0.8}
@@ -205,7 +192,7 @@ const BrandCard = memo(({ item, index, onPress, preloadImage }) => {
           </Text>
         </View>
       </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
 }, (prevProps, nextProps) => {
   return prevProps.item._id === nextProps.item._id && 
@@ -313,7 +300,7 @@ const ClaimSuccessModal = ({ visible, onClose, brandName, discount }) => {
 // ==========================================
 // LOADING OVERLAY WITH MIN 2 SECONDS
 // ==========================================
-const LoadingOverlay = ({ visible, message, minimumDuration = LOADER_MIN_DURATION }) => {
+const LoadingOverlay = ({ visible, message, minimumDuration = 2000 }) => {
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const [shouldShow, setShouldShow] = useState(false);
   const startTimeRef = useRef(null);
@@ -330,7 +317,6 @@ const LoadingOverlay = ({ visible, message, minimumDuration = LOADER_MIN_DURATIO
         useNativeDriver: true,
       }).start();
     } else {
-      // Ensure minimum duration
       const elapsed = Date.now() - (startTimeRef.current || 0);
       const remaining = Math.max(0, minimumDuration - elapsed);
       
@@ -362,7 +348,7 @@ const LoadingOverlay = ({ visible, message, minimumDuration = LOADER_MIN_DURATIO
     <Animated.View style={[styles.loadingOverlay, { opacity: overlayOpacity }]}>
       <View style={styles.loadingCard}>
         <ActivityIndicator size="large" color="#f9c349" />
-        <Text style={styles.loadingText}>{message || "Loading brands..."}</Text>
+        <Text style={styles.loadingText}>{message || "Loading brands....."}</Text>
         <View style={styles.loadingDots}>
           {[0, 1, 2].map((i) => (
             <View key={i} style={styles.loadingDot} />
@@ -379,10 +365,16 @@ const LoadingOverlay = ({ visible, message, minimumDuration = LOADER_MIN_DURATIO
 export default function BrandsScreen({ limit = null }) {
   const navigation = useNavigation();
   const { token, user, isGuest } = useContext(AuthContext);
-  const [brands, setBrands] = useState([]);
+  
+  // State
+  const [allBrands, setAllBrands] = useState([]);
+  const [displayedBrands, setDisplayedBrands] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -393,17 +385,12 @@ export default function BrandsScreen({ limit = null }) {
   const [claimedDiscount, setClaimedDiscount] = useState(0);
 
   const [activeTab, setActiveTab] = useState("gift");
-  const [currentPage, setCurrentPage] = useState(1);
-
   const [searchQuery, setSearchQuery] = useState("");
   const [minDiscount, setMinDiscount] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [showOnlyOnline, setShowOnlyOnline] = useState(false);
-  const [showAllBrands, setShowAllBrands] = useState(false);
 
   // Animations
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
   const modalSlideAnim = useRef(new Animated.Value(height)).current;
   const filterSlideAnim = useRef(new Animated.Value(height)).current;
 
@@ -413,8 +400,6 @@ export default function BrandsScreen({ limit = null }) {
   const abortControllerRef = useRef(null);
   const fetchTimeoutRef = useRef(null);
   const initialLoadDone = useRef(false);
-
-  // Loading overlay visibility
   const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
 
   const userId = useMemo(() => {
@@ -461,7 +446,48 @@ export default function BrandsScreen({ limit = null }) {
   }, []);
 
   // ==========================================
-  // ULTRA FAST FETCH BRANDS WITH LOADER
+  // LOAD CACHE FROM ASYNC STORAGE
+  // ==========================================
+  const loadCache = useCallback(async () => {
+    try {
+      const cached = await AsyncStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        if (data && data.length > 0 && (Date.now() - timestamp) < CACHE_DURATION) {
+          const sorted = [...data].sort((a, b) => {
+            const dateA = new Date(a.createdAt || a._id).getTime();
+            const dateB = new Date(b.createdAt || b._id).getTime();
+            return dateB - dateA;
+          });
+          setAllBrands(sorted);
+          setDisplayedBrands(sorted.slice(0, PAGE_SIZE));
+          setHasMore(sorted.length > PAGE_SIZE);
+          setLoading(false);
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }, []);
+
+  // ==========================================
+  // SAVE CACHE
+  // ==========================================
+  const saveCache = useCallback(async (data) => {
+    try {
+      await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({
+        data,
+        timestamp: Date.now()
+      }));
+    } catch (e) {
+      // Ignore cache save errors
+    }
+  }, []);
+
+  // ==========================================
+  // FETCH BRANDS - ULTRA FAST
   // ==========================================
   const fetchBrands = useCallback(async (forceRefresh = false) => {
     if (fetchTimeoutRef.current) {
@@ -469,34 +495,58 @@ export default function BrandsScreen({ limit = null }) {
       fetchTimeoutRef.current = null;
     }
 
-    // Check cache first - IMMEDIATE RETURN
+    // Check memory cache first - IMMEDIATE RETURN
     if (!forceRefresh && brandsCache && cacheTimestamp && 
         (Date.now() - cacheTimestamp) < CACHE_DURATION && brandsCache.length > 0) {
       if (isMounted.current) {
-        setBrands(brandsCache);
+        const sorted = [...brandsCache].sort((a, b) => {
+          const dateA = new Date(a.createdAt || a._id).getTime();
+          const dateB = new Date(b.createdAt || b._id).getTime();
+          return dateB - dateA;
+        });
+        setAllBrands(sorted);
+        setDisplayedBrands(sorted.slice(0, PAGE_SIZE));
+        setHasMore(sorted.length > PAGE_SIZE);
         setLoading(false);
         setError(null);
         setShowLoadingOverlay(false);
-        // Preload images in background
         requestAnimationFrame(() => {
-          brandsCache.slice(0, MAX_PRELOAD).forEach(brand => {
+          sorted.slice(0, MAX_PRELOAD).forEach(brand => {
             if (brand.displayImage) preloadImage(brand.displayImage);
           });
         });
       }
-      return brandsCache;
+      return;
+    }
+
+    // Check AsyncStorage cache
+    if (!forceRefresh) {
+      const cached = await loadCache();
+      if (cached) {
+        setShowLoadingOverlay(false);
+        // Refresh in background
+        fetchBrands(true);
+        return;
+      }
     }
 
     if (pendingFetchPromise) {
       try {
         const result = await pendingFetchPromise;
         if (isMounted.current && result) {
-          setBrands(result);
+          const sorted = [...result].sort((a, b) => {
+            const dateA = new Date(a.createdAt || a._id).getTime();
+            const dateB = new Date(b.createdAt || b._id).getTime();
+            return dateB - dateA;
+          });
+          setAllBrands(sorted);
+          setDisplayedBrands(sorted.slice(0, PAGE_SIZE));
+          setHasMore(sorted.length > PAGE_SIZE);
           setLoading(false);
           setError(null);
           setShowLoadingOverlay(false);
         }
-        return result;
+        return;
       } catch (err) {
         pendingFetchPromise = null;
       }
@@ -508,10 +558,9 @@ export default function BrandsScreen({ limit = null }) {
         setError('Please login to view brands');
         setShowLoadingOverlay(false);
       }
-      return [];
+      return;
     }
 
-    // Show loading overlay for initial load or when no cache
     if (!initialLoadDone.current || !brandsCache) {
       setShowLoadingOverlay(true);
       setLoading(true);
@@ -532,14 +581,14 @@ export default function BrandsScreen({ limit = null }) {
         const fetchPromise = api.get("/brands", {
           headers: headers,
           signal: abortControllerRef.current.signal,
-          params: { limit: 100 },
-          timeout: API_TIMEOUT
+          params: { limit: 200 },
+          timeout: 8000
         });
 
         const timeoutPromise = new Promise((_, reject) => {
           fetchTimeoutRef.current = setTimeout(() => {
             reject(new Error('Request timeout'));
-          }, API_TIMEOUT);
+          }, 8000);
         });
 
         const brandsRes = await Promise.race([fetchPromise, timeoutPromise]);
@@ -553,7 +602,9 @@ export default function BrandsScreen({ limit = null }) {
         
         if (!brandsData || brandsData.length === 0) {
           if (isMounted.current) {
-            setBrands([]);
+            setAllBrands([]);
+            setDisplayedBrands([]);
+            setHasMore(false);
             brandsCache = [];
             cacheTimestamp = Date.now();
             setLoading(false);
@@ -579,27 +630,37 @@ export default function BrandsScreen({ limit = null }) {
               category: brand.category || "General",
               isOnline: brand.isOnline || false,
               isInStore: brand.isInStore || false,
+              createdAt: brand.createdAt || new Date().toISOString(),
             };
           });
 
+          const sorted = [...basicBrandsData].sort((a, b) => {
+            const dateA = new Date(a.createdAt || a._id).getTime();
+            const dateB = new Date(b.createdAt || b._id).getTime();
+            return dateB - dateA;
+          });
+
           if (isMounted.current) {
-            setBrands(basicBrandsData);
-            brandsCache = basicBrandsData;
+            setAllBrands(sorted);
+            setDisplayedBrands(sorted.slice(0, PAGE_SIZE));
+            setHasMore(sorted.length > PAGE_SIZE);
+            brandsCache = sorted;
             cacheTimestamp = Date.now();
             setLoading(false);
             setError(null);
             setShowLoadingOverlay(false);
             initialLoadDone.current = true;
+            saveCache(sorted);
             
             requestAnimationFrame(() => {
-              basicBrandsData.slice(0, MAX_PRELOAD).forEach(brand => {
+              sorted.slice(0, MAX_PRELOAD).forEach(brand => {
                 if (brand.displayImage) preloadImage(brand.displayImage);
               });
             });
           }
           
           pendingFetchPromise = null;
-          return basicBrandsData;
+          return sorted;
         }
         
         // Logged-in user: fetch offers in parallel
@@ -607,7 +668,7 @@ export default function BrandsScreen({ limit = null }) {
           api.get(`/offers/brand/${brand._id}`, {
             headers: { Authorization: `Bearer ${token}` },
             signal: abortControllerRef.current.signal,
-            timeout: 2500
+            timeout: 3000
           }).then(res => ({ brandId: brand._id, offers: res.data }))
             .catch(() => ({ brandId: brand._id, offers: [] }))
         );
@@ -648,27 +709,38 @@ export default function BrandsScreen({ limit = null }) {
             isOnline: firstOffer?.isOnline || brand.isOnline || false,
             isInStore: firstOffer?.isInStore || brand.isInStore || false,
             brandApprovalStatus: brand.brandApprovalStatus || 'approved',
+            createdAt: brand.createdAt || new Date().toISOString(),
           };
         });
 
+        // Sort by newest first
+        const sorted = [...brandsWithOffers].sort((a, b) => {
+          const dateA = new Date(a.createdAt || a._id).getTime();
+          const dateB = new Date(b.createdAt || b._id).getTime();
+          return dateB - dateA;
+        });
+
         if (isMounted.current) {
-          setBrands(brandsWithOffers);
-          brandsCache = brandsWithOffers;
+          setAllBrands(sorted);
+          setDisplayedBrands(sorted.slice(0, PAGE_SIZE));
+          setHasMore(sorted.length > PAGE_SIZE);
+          brandsCache = sorted;
           cacheTimestamp = Date.now();
           setLoading(false);
           setError(null);
           setShowLoadingOverlay(false);
           initialLoadDone.current = true;
+          saveCache(sorted);
           
           requestAnimationFrame(() => {
-            brandsWithOffers.slice(0, MAX_PRELOAD).forEach(brand => {
+            sorted.slice(0, MAX_PRELOAD).forEach(brand => {
               if (brand.displayImage) preloadImage(brand.displayImage);
             });
           });
         }
         
         pendingFetchPromise = null;
-        return brandsWithOffers;
+        return sorted;
       } catch (err) {
         if (fetchTimeoutRef.current) {
           clearTimeout(fetchTimeoutRef.current);
@@ -685,12 +757,19 @@ export default function BrandsScreen({ limit = null }) {
           if (isMounted.current) {
             setError('Request timed out. Please try again.');
             if (brandsCache && brandsCache.length > 0) {
-              setBrands(brandsCache);
+              const sorted = [...brandsCache].sort((a, b) => {
+                const dateA = new Date(a.createdAt || a._id).getTime();
+                const dateB = new Date(b.createdAt || b._id).getTime();
+                return dateB - dateA;
+              });
+              setAllBrands(sorted);
+              setDisplayedBrands(sorted.slice(0, PAGE_SIZE));
+              setHasMore(sorted.length > PAGE_SIZE);
               setLoading(false);
               setShowLoadingOverlay(false);
               initialLoadDone.current = true;
               pendingFetchPromise = null;
-              return brandsCache;
+              return sorted;
             }
           }
           pendingFetchPromise = null;
@@ -701,12 +780,19 @@ export default function BrandsScreen({ limit = null }) {
         if (isMounted.current) {
           setError('Failed to load brands. Please try again.');
           if (brandsCache && brandsCache.length > 0) {
-            setBrands(brandsCache);
+            const sorted = [...brandsCache].sort((a, b) => {
+              const dateA = new Date(a.createdAt || a._id).getTime();
+              const dateB = new Date(b.createdAt || b._id).getTime();
+              return dateB - dateA;
+            });
+            setAllBrands(sorted);
+            setDisplayedBrands(sorted.slice(0, PAGE_SIZE));
+            setHasMore(sorted.length > PAGE_SIZE);
             setLoading(false);
             setShowLoadingOverlay(false);
             initialLoadDone.current = true;
             pendingFetchPromise = null;
-            return brandsCache;
+            return sorted;
           }
           setLoading(false);
           setShowLoadingOverlay(false);
@@ -717,44 +803,94 @@ export default function BrandsScreen({ limit = null }) {
     })();
 
     return pendingFetchPromise;
-  }, [token, isGuest, userId, formatImageUrl, preloadImage]);
+  }, [token, isGuest, userId, formatImageUrl, preloadImage, loadCache, saveCache]);
 
+  // ==========================================
+  // LOAD MORE
+  // ==========================================
+  const loadMoreBrands = useCallback(() => {
+    if (loadingMore || !hasMore || loading) return;
+    
+    setLoadingMore(true);
+    const currentCount = displayedBrands.length;
+    const nextBatch = allBrands.slice(currentCount, currentCount + PAGE_SIZE);
+    
+    if (nextBatch.length > 0) {
+      setDisplayedBrands(prev => [...prev, ...nextBatch]);
+      setHasMore(allBrands.length > currentCount + PAGE_SIZE);
+    } else {
+      setHasMore(false);
+    }
+    setLoadingMore(false);
+  }, [loadingMore, hasMore, loading, displayedBrands.length, allBrands]);
+
+  // ==========================================
+  // FOCUS EFFECT - INSTANT LOAD
+  // ==========================================
   useFocusEffect(
     useCallback(() => {
-      // Immediate render from cache
-      if (brandsCache && brandsCache.length > 0) {
-        setBrands(brandsCache);
-        setLoading(false);
-        setError(null);
-        setShowLoadingOverlay(false);
-      } else {
-        // No cache - show loader
-        setShowLoadingOverlay(true);
-      }
-      
-      // Then fetch in background
-      const timeout = setTimeout(() => {
-        fetchBrands(true);
-      }, 50);
-      
+      fetchBrands(false);
       if (query) {
         setSearchQuery(query);
       }
-      
-      return () => clearTimeout(timeout);
+      return () => {};
     }, [fetchBrands, query]),
   );
 
+  // ==========================================
+  // FILTERED DATA
+  // ==========================================
+  const filteredData = useMemo(() => {
+    let results = allBrands;
+    
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      results = results.filter((brand) =>
+        brand.name.toLowerCase().includes(q)
+      );
+    }
+    
+    if (minDiscount > 0) {
+      results = results.filter((brand) => brand.discount >= minDiscount);
+    }
+    
+    if (selectedCategory !== "all") {
+      const categoryName = CATEGORIES.find(c => c.id === selectedCategory)?.name;
+      if (categoryName) {
+        results = results.filter((brand) => brand.category === categoryName);
+      }
+    }
+    
+    if (showOnlyOnline) {
+      results = results.filter((brand) => brand.isOnline);
+    }
+    
+    return results.sort((a, b) => {
+      const dateA = new Date(a.createdAt || a._id).getTime();
+      const dateB = new Date(b.createdAt || b._id).getTime();
+      return dateB - dateA;
+    });
+  }, [allBrands, searchQuery, minDiscount, selectedCategory, showOnlyOnline]);
+
+  // Update displayed when filters change
   useEffect(() => {
-    setCurrentPage(1);
-    setShowAllBrands(false);
-  }, [searchQuery, selectedCategory, minDiscount, showOnlyOnline]);
+    if (filteredData.length > 0) {
+      setDisplayedBrands(filteredData.slice(0, PAGE_SIZE));
+      setHasMore(filteredData.length > PAGE_SIZE);
+    } else {
+      setDisplayedBrands([]);
+      setHasMore(false);
+    }
+    setPage(1);
+  }, [filteredData]);
 
   // ==========================================
   // HANDLERS
   // ==========================================
   const openModal = useCallback((brand) => {
-    setSelectedBrand(brand);
+    // Find the full brand data from allBrands to ensure complete data
+    const fullBrand = allBrands.find(b => b._id === brand._id) || brand;
+    setSelectedBrand(fullBrand);
     setActiveTab("gift");
     setModalVisible(true);
     modalSlideAnim.setValue(height);
@@ -764,7 +900,7 @@ export default function BrandsScreen({ limit = null }) {
       tension: 40,
       useNativeDriver: true,
     }).start();
-  }, [height, modalSlideAnim]);
+  }, [height, modalSlideAnim, allBrands]);
 
   const closeModal = useCallback(() => {
     Animated.timing(modalSlideAnim, {
@@ -876,7 +1012,7 @@ export default function BrandsScreen({ limit = null }) {
       setClaimSuccessVisible(true);
       setShowLoadingOverlay(false);
 
-      const updatedBrands = brands.map((brand) => ({
+      const updatedBrands = allBrands.map((brand) => ({
         ...brand,
         offers: brand.offers.map((offer) =>
           offer._id === offerId ? { ...offer, isClaimed: true } : offer
@@ -884,8 +1020,9 @@ export default function BrandsScreen({ limit = null }) {
       }));
       
       if (isMounted.current) {
-        setBrands(updatedBrands);
+        setAllBrands(updatedBrands);
         brandsCache = updatedBrands;
+        saveCache(updatedBrands);
         
         if (selectedBrand) {
           setSelectedBrand((prev) => ({
@@ -911,47 +1048,7 @@ export default function BrandsScreen({ limit = null }) {
         Alert.alert("Notice", err.response?.data?.message || "Error claiming offer");
       }
     }
-  }, [isGuest, token, brands, selectedBrand, closeModal, navigation]);
-
-  // ==========================================
-  // FILTERS & DATA
-  // ==========================================
-  const filteredData = useMemo(() => {
-    let results = brands;
-    
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      results = results.filter((brand) =>
-        brand.name.toLowerCase().includes(query)
-      );
-    }
-    
-    if (minDiscount > 0) {
-      results = results.filter((brand) => brand.discount >= minDiscount);
-    }
-    
-    if (selectedCategory !== "all") {
-      const categoryName = CATEGORIES.find(c => c.id === selectedCategory)?.name;
-      if (categoryName) {
-        results = results.filter((brand) => brand.category === categoryName);
-      }
-    }
-    
-    if (showOnlyOnline) {
-      results = results.filter((brand) => brand.isOnline);
-    }
-    
-    return results;
-  }, [brands, searchQuery, minDiscount, selectedCategory, showOnlyOnline]);
-
-  const displayedBrands = useMemo(() => {
-    if (showAllBrands) {
-      return filteredData;
-    }
-    return filteredData.slice(0, 20);
-  }, [filteredData, showAllBrands]);
-
-  const currentOffer = selectedBrand?.offers?.[0];
+  }, [isGuest, token, allBrands, selectedBrand, closeModal, navigation, saveCache]);
 
   // ==========================================
   // RENDER FUNCTIONS
@@ -961,14 +1058,22 @@ export default function BrandsScreen({ limit = null }) {
       item={item}
       index={index}
       onPress={openModal}
-      preloadImage={preloadImage}
     />
-  ), [openModal, preloadImage]);
+  ), [openModal]);
 
   const keyExtractor = useCallback((item) => item._id, []);
 
   const renderFooter = useCallback(() => {
-    if (filteredData.length === 0 && !loading) {
+    if (loadingMore) {
+      return (
+        <View style={styles.footerLoader}>
+          <ActivityIndicator size="small" color="#f9c349" />
+          <Text style={styles.footerLoaderText}>Loading more...</Text>
+        </View>
+      );
+    }
+
+    if (displayedBrands.length === 0 && !loading) {
       return (
         <View style={styles.noResultsContainer}>
           <MaterialCommunityIcons name="ticket-off-outline" size={60} color="#ccc" />
@@ -989,11 +1094,11 @@ export default function BrandsScreen({ limit = null }) {
       );
     }
 
-    if (showAllBrands || filteredData.length <= 20 || filteredData.length === 0) {
+    if (!hasMore && displayedBrands.length > 0) {
       return (
         <View style={styles.footerContainer}>
           <Text style={styles.totalBrandsText}>
-            Showing All {filteredData.length === 1 ? 'brand' : 'brands'}
+            Showing all {filteredData.length} brands
           </Text>
         </View>
       );
@@ -1001,28 +1106,38 @@ export default function BrandsScreen({ limit = null }) {
 
     return (
       <View style={styles.footerContainer}>
-        <TouchableOpacity
-          style={styles.showAllButton}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setShowAllBrands(true);
-          }}
-          activeOpacity={0.8}
-        >
-          <LinearGradient
-            colors={['#f9c349', '#f5a623']}
-            style={styles.showAllGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          >
-            <MaterialCommunityIcons name="apps" size={18} color="#fff" />
-            <Text style={styles.showAllText}>Show All brands</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-        <Text style={styles.showingText}>Showing brands</Text>
+        <Text style={styles.showingText}>
+          Showing {displayedBrands.length} of {filteredData.length} brands
+        </Text>
       </View>
     );
-  }, [filteredData.length, showAllBrands, loading]);
+  }, [loadingMore, displayedBrands.length, loading, filteredData.length, hasMore]);
+
+  const renderHeader = useCallback(() => (
+    <View>
+      <View style={styles.categoryGridContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryGridScroll}
+        >
+          {CATEGORIES.map((category) => (
+            <CategoryGridItem
+              key={category.id}
+              category={category}
+              isSelected={selectedCategory === category.id}
+              onPress={(id) => {
+                setSelectedCategory(id);
+                setPage(1);
+              }}
+            />
+          ))}
+        </ScrollView>
+      </View>
+    </View>
+  ), [selectedCategory]);
+
+  const currentOffer = selectedBrand?.offers?.[0];
 
   // ==========================================
   // MAIN RENDER
@@ -1031,22 +1146,12 @@ export default function BrandsScreen({ limit = null }) {
     <SafeAreaView style={styles.mainSafeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#9a979708" />
       
-      {/* Loading Overlay - Min 2 seconds */}
-      <LoadingOverlay 
+      {/* <LoadingOverlay 
         visible={showLoadingOverlay} 
         message={loading ? "Loading brands..." : "Processing..."}
-        minimumDuration={LOADER_MIN_DURATION}
-      />
+      /> */}
       
-      <Animated.View
-        style={[
-          styles.fadeContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }],
-          },
-        ]}
-      >
+      <View style={styles.fadeContainer}>
         {/* Header */}
         <View style={styles.customHeader}>
           <TouchableOpacity
@@ -1076,7 +1181,7 @@ export default function BrandsScreen({ limit = null }) {
           </View>
         </View>
         
-        {/* Welcome Container */}
+        {/* Welcome */}
         <View style={styles.welcomeContainer}>
           <View style={styles.welcomeRow}>
             <View style={styles.welcomeLeftContent}>
@@ -1122,7 +1227,6 @@ export default function BrandsScreen({ limit = null }) {
           </View>
         )}
 
-        {/* Error Message */}
         {error && !loading && !showLoadingOverlay && (
           <View style={styles.errorContainer}>
             <MaterialCommunityIcons name="alert-circle" size={24} color="#ef4444" />
@@ -1133,47 +1237,34 @@ export default function BrandsScreen({ limit = null }) {
           </View>
         )}
 
-        <FlatList
-          data={displayedBrands}
-          keyExtractor={keyExtractor}
-          removeClippedSubviews={true}
-          renderItem={renderBrand}
-          windowSize={3}
-          maxToRenderPerBatch={8}
-          initialNumToRender={8}
-          updateCellsBatchingPeriod={20}
-          numColumns={NUM_COLUMNS}
-          columnWrapperStyle={styles.columnWrapper}
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          ListHeaderComponent={
-            <View style={styles.categoryGridContainer}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.categoryGridScroll}
-              >
-                {CATEGORIES.map((category) => (
-                  <CategoryGridItem
-                    key={category.id}
-                    category={category}
-                    isSelected={selectedCategory === category.id}
-                    onPress={(id) => {
-                      setSelectedCategory(id);
-                      setCurrentPage(1);
-                      setShowAllBrands(false);
-                    }}
-                  />
-                ))}
-              </ScrollView>
-            </View>
-          }
-          ListFooterComponent={renderFooter}
-          contentContainerStyle={styles.listContent}
-          scrollEnabled={true}
-          showsVerticalScrollIndicator={false}
-        />
-      </Animated.View>
+        {loading && displayedBrands.length === 0 ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#f9c349" />
+            <Text style={styles.loadingText}>Loading brands...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={displayedBrands}
+            keyExtractor={keyExtractor}
+            removeClippedSubviews={true}
+            renderItem={renderBrand}
+            windowSize={5}
+            maxToRenderPerBatch={6}
+            initialNumToRender={6}
+            updateCellsBatchingPeriod={30}
+            numColumns={NUM_COLUMNS}
+            columnWrapperStyle={styles.columnWrapper}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            ListHeaderComponent={renderHeader}
+            ListFooterComponent={renderFooter}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            onEndReached={loadMoreBrands}
+            onEndReachedThreshold={0.3}
+          />
+        )}
+      </View>
 
       {/* FILTER MODAL */}
       <Modal
@@ -1183,10 +1274,7 @@ export default function BrandsScreen({ limit = null }) {
         onRequestClose={closeFilterModal}
         animationType="none"
       >
-        <Pressable 
-          style={styles.modalOverlay} 
-          onPress={closeFilterModal}
-        >
+        <Pressable style={styles.modalOverlay} onPress={closeFilterModal}>
           <Animated.View
             style={[
               styles.filterModalContainer,
@@ -1254,8 +1342,7 @@ export default function BrandsScreen({ limit = null }) {
                   style={styles.applyBtn}
                   onPress={() => {
                     closeFilterModal();
-                    setCurrentPage(1);
-                    setShowAllBrands(false);
+                    setPage(1);
                   }}
                 >
                   <Text style={styles.applyBtnText}>Apply Filters</Text>
@@ -1266,7 +1353,7 @@ export default function BrandsScreen({ limit = null }) {
         </Pressable>
       </Modal>
 
-      {/* BRAND DETAIL MODAL */}
+      {/* BRAND DETAIL MODAL - FIXED WITH PROPER DATA */}
       {selectedBrand && (
         <Modal 
           visible={modalVisible} 
@@ -1274,10 +1361,7 @@ export default function BrandsScreen({ limit = null }) {
           onRequestClose={closeModal}
           animationType="none"
         >
-          <Pressable 
-            style={styles.modalOverlay} 
-            onPress={closeModal}
-          >
+          <Pressable style={styles.modalOverlay} onPress={closeModal}>
             <Animated.View 
               style={[
                 styles.modalContainerFixed,
@@ -1296,16 +1380,16 @@ export default function BrandsScreen({ limit = null }) {
                   <View style={styles.brandDetailHeader}>
                     <View style={styles.modalLogoCircle}>
                       <Image
-                        source={{ uri: currentOffer?.image || selectedBrand.displayImage }}
+                        source={{ uri: currentOffer?.image || selectedBrand.displayImage || selectedBrand.logo }}
                         style={styles.modalImage}
                         resizeMode="contain"
                       />
                     </View>
-                    <Text style={styles.modalTitle}>{selectedBrand.name}</Text>
+                    <Text style={styles.modalTitle}>{selectedBrand.name || selectedBrand.brandName}</Text>
                     <View style={styles.modalCategoryBadge}>
                       <MaterialIcons name="category" size={14} color="black" />
                       <Text style={styles.modalCategoryText}>
-                        {selectedBrand.category}
+                        {selectedBrand.category || "General"}
                       </Text>
                     </View>
                   </View>
@@ -1328,8 +1412,17 @@ export default function BrandsScreen({ limit = null }) {
                     <View style={styles.tabContentWrapper}>
                       <Text style={styles.tabContentTitle}>Offer Details</Text>
                       <Text style={styles.tabContentText}>
-                        {currentOffer?.description || "Explore this iconic destination. Get exclusive student discounts on your favorite products and services."}
+                        {currentOffer?.description || selectedBrand.description || "Explore this iconic destination. Get exclusive student discounts on your favorite products and services."}
                       </Text>
+                      
+                      {currentOffer?.discountPercentage > 0 && (
+                        <View style={styles.discountInfoRow}>
+                          <MaterialCommunityIcons name="percent" size={20} color="#f9c349" />
+                          <Text style={styles.discountInfoText}>
+                            {currentOffer.discountPercentage}% OFF for students
+                          </Text>
+                        </View>
+                      )}
                       
                       {isGuest && (
                         <TouchableOpacity 
@@ -1358,8 +1451,23 @@ export default function BrandsScreen({ limit = null }) {
                       </View>
                       <Text style={styles.tabContentText}>
                         {currentOffer?.redeemInstructions ||
+                          selectedBrand.redeemInstructions ||
                           "1. Show your valid student ID at the counter\n2. Mention you're a Crew Privilege member\n3. Enjoy your discount!"}
                       </Text>
+                      
+                      {currentOffer?.isOnline && (
+                        <View style={styles.redeemOnlineBadge}>
+                          <MaterialCommunityIcons name="earth" size={16} color="#f9c349" />
+                          <Text style={styles.redeemOnlineText}>Available Online</Text>
+                        </View>
+                      )}
+                      
+                      {currentOffer?.isInStore && (
+                        <View style={styles.redeemStoreBadge}>
+                          <MaterialCommunityIcons name="storefront" size={16} color="#f9c349" />
+                          <Text style={styles.redeemStoreText}>Available In-Store</Text>
+                        </View>
+                      )}
                     </View>
                   )}
 
@@ -1368,13 +1476,13 @@ export default function BrandsScreen({ limit = null }) {
                       <View style={styles.locationInfoRow}>
                         <MaterialCommunityIcons name="map-marker-radius" size={24} color="#000000" />
                         <Text style={styles.locationAddressText}>
-                          {currentOffer?.location || "Address not specified"}
+                          {currentOffer?.location || selectedBrand.address || "Address not specified"}
                         </Text>
                       </View>
 
                       <TouchableOpacity
                         style={styles.mapButton}
-                        onPress={() => openMap(currentOffer?.location || selectedBrand.name)}
+                        onPress={() => openMap(currentOffer?.location || selectedBrand.address || selectedBrand.name)}
                       >
                         <MaterialCommunityIcons name="directions" size={18} color="#fff" />
                         <Text style={styles.mapButtonText}>Open in Maps</Text>
@@ -1383,7 +1491,6 @@ export default function BrandsScreen({ limit = null }) {
                   )}
                 </ScrollView>
 
-                {/* Modal Action Row */}
                 <View style={styles.modalActionRow}>
                   <TouchableOpacity style={styles.closeBtn} onPress={closeModal}>
                     <Text style={styles.closeBtnText}>Close</Text>
@@ -1410,7 +1517,7 @@ export default function BrandsScreen({ limit = null }) {
                           style={styles.claimIcon}
                         />
                         <Text style={styles.buyBtnText}>
-                          {currentOffer.isClaimed ? "✓ Claimed" : "Claim Discount"}
+                          {currentOffer.isClaimed ? "✓ Claimed" : `Claim ${currentOffer.discountPercentage || selectedBrand.discount || 0}% OFF`}
                         </Text>
                       </LinearGradient>
                     </TouchableOpacity>
@@ -1431,7 +1538,6 @@ export default function BrandsScreen({ limit = null }) {
         </Modal>
       )}
 
-      {/* CLAIM SUCCESS MODAL */}
       <ClaimSuccessModal
         visible={claimSuccessVisible}
         onClose={() => setClaimSuccessVisible(false)}
@@ -1449,17 +1555,29 @@ const styles = StyleSheet.create({
   mainSafeArea: { flex: 1, backgroundColor: "#fff" },
   fadeContainer: { flex: 1 },
   
-  // Loading Overlay
   loadingOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.66)',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 999,
+  },
+  
+  loadingCard: {
+    backgroundColor: '#fff',
+    padding: 30,
+    borderRadius: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 8,
+    minWidth: 200,
   },
   
   loadingText: {
@@ -1479,6 +1597,13 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#f9c349',
     marginHorizontal: 4,
+  },
+  
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
   },
   
   customHeader: {
@@ -1612,7 +1737,6 @@ const styles = StyleSheet.create({
   categoryBadgeCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#f1f5f9", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginTop: 4, borderWidth: 0.5 },
   categoryCardText: { fontSize: 9, color: "#000000", fontWeight: "600", textTransform: "uppercase", paddingLeft: 2 },
   
-  // Category Grid Styles
   categoryGridContainer: {
     paddingHorizontal: 20,
     marginBottom: 10,
@@ -1663,39 +1787,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   
-  // Footer Styles
   footerContainer: {
     paddingHorizontal: 20,
+    paddingVertical: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerLoader: {
     paddingVertical: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  showAllButton: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    width: '100%',
-    elevation: 3,
-    shadowColor: '#f9c349',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  showAllGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    gap: 10,
-  },
-  showAllText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+  footerLoaderText: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 8,
   },
   showingText: {
     fontSize: 12,
     color: '#999',
-    marginTop: 10,
   },
   totalBrandsText: {
     fontSize: 13,
@@ -1703,7 +1813,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   
-  // No Results
   noResultsContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -1735,7 +1844,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   
-  // Error Container
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1766,7 +1874,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   
-  // Modal Styles
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
   modalContainerFixed: { 
     height: "88%", 
@@ -1868,7 +1975,6 @@ const styles = StyleSheet.create({
     fontSize: 14 
   },
   
-  // Filter
   filterLabel: { fontSize: 16, fontWeight: "700", color: "#333", marginTop: 15, marginBottom: 10 },
   filterChipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: "#F5F7F6", borderWidth: 1, borderColor: "#F0F0F0" },
@@ -1883,7 +1989,6 @@ const styles = StyleSheet.create({
   applyBtn: { backgroundColor: "#000000", paddingVertical: 16, borderRadius: 14, alignItems: "center" },
   applyBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
   
-  // Guest
   guestBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1947,7 +2052,52 @@ const styles = StyleSheet.create({
     color: '#666' 
   },
   
-  // Claim Success Modal
+  discountInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9c34915',
+    padding: 12,
+    borderRadius: 10,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#f9c34930',
+  },
+  discountInfoText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#f9c349',
+    marginLeft: 10,
+  },
+  
+  redeemOnlineBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e8f5e9',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  redeemOnlineText: {
+    fontSize: 13,
+    color: '#2e7d32',
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  redeemStoreBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e3f2fd',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  redeemStoreText: {
+    fontSize: 13,
+    color: '#1565c0',
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  
   successOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',

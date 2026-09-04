@@ -346,6 +346,7 @@ export default function ChatDetailScreen() {
   const [isCurrentlyPlaying, setIsCurrentlyPlaying] = useState(false);
   const [typingUser, setTypingUser] = useState(null);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const flatListRef = useRef();
   const soundRef = useRef(null);
@@ -405,6 +406,31 @@ export default function ChatDetailScreen() {
 
     return () => backHandler.remove();
   }, [handleGoBack, isNavigating]);
+
+  // Keyboard listeners for height
+  useEffect(() => {
+    const keyboardWillShowListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (event) => {
+        const height = event.endCoordinates.height;
+        setKeyboardHeight(height);
+        // Scroll to end when keyboard shows
+        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 300);
+      }
+    );
+
+    const keyboardWillHideListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+      }
+    );
+
+    return () => {
+      keyboardWillShowListener.remove();
+      keyboardWillHideListener.remove();
+    };
+  }, []);
 
   // Lifecycle
   useEffect(() => {
@@ -478,13 +504,6 @@ export default function ChatDetailScreen() {
     socket.on("message_deleted", handleMessageDeleted);
     socket.on("user_typing", handleUserTyping);
 
-    const keyboardWillShow = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => {
-        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 150);
-      }
-    );
-
     return () => {
       socket.off("new_message", handleNewMessage); 
       socket.off("user_status_update", handleStatusUpdate);
@@ -500,7 +519,6 @@ export default function ChatDetailScreen() {
       }
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      keyboardWillShow.remove();
     };
   }, [conversationId]);
 
@@ -869,38 +887,33 @@ export default function ChatDetailScreen() {
     }
   };
 
- // In ChatDetailScreen.js - Fix the handleDeleteMessage function
-
-const handleDeleteMessage = async () => {
-  if (!selectedMessage) return;
-  
-  try {
-    console.log('Deleting message:', selectedMessage._id);
-    // Call API to delete message
-    const response = await axios.delete(`${API_URL}/messages/${selectedMessage._id}`, config);
-    console.log('Delete message response:', response.data);
+  const handleDeleteMessage = async () => {
+    if (!selectedMessage) return;
     
-    if (response.data.success) {
-      // Emit socket event
-      socket.emit("delete_message", { 
-        messageId: selectedMessage._id, 
-        conversationId 
-      });
+    try {
+      console.log('Deleting message:', selectedMessage._id);
+      const response = await axios.delete(`${API_URL}/messages/${selectedMessage._id}`, config);
+      console.log('Delete message response:', response.data);
       
-      // Remove message from local state
-      setMessages(prev => prev.filter(m => m._id !== selectedMessage._id));
-      setShowDeleteModal(false); 
-      setSelectedMessage(null);
-      
-      Alert.alert('Success', 'Message deleted successfully');
-    } else {
-      Alert.alert('Error', response.data?.error || 'Failed to delete message');
+      if (response.data.success) {
+        socket.emit("delete_message", { 
+          messageId: selectedMessage._id, 
+          conversationId 
+        });
+        
+        setMessages(prev => prev.filter(m => m._id !== selectedMessage._id));
+        setShowDeleteModal(false); 
+        setSelectedMessage(null);
+        
+        Alert.alert('Success', 'Message deleted successfully');
+      } else {
+        Alert.alert('Error', response.data?.error || 'Failed to delete message');
+      }
+    } catch (err) {
+      console.error('Delete message error:', err);
+      Alert.alert('Error', 'Failed to delete message. Please try again.');
     }
-  } catch (err) {
-    console.error('Delete message error:', err);
-    Alert.alert('Error', 'Failed to delete message. Please try again.');
-  }
-};
+  };
 
   const clearChat = () => {
     Alert.alert("Clear Chat", "Delete all messages?", [
@@ -1031,79 +1044,83 @@ const handleDeleteMessage = async () => {
         </TouchableOpacity>
       </Animated.View>
 
-      {/* Messages Container */}
-      <KeyboardAvoidingView 
-        style={styles.keyboardContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      >
-        <View style={styles.messagesContainer}>
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={COLORS.primary} />
-              <Text style={styles.loadingText}>Loading messages...</Text>
-            </View>
-          ) : (
-            <FlatList
-              ref={flatListRef}
-              data={messages}
-              renderItem={renderMessage}
-              keyExtractor={(item, index) => item._id || `msg-${index}-${Date.now()}`}
-              contentContainerStyle={styles.listContent}
-              onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-              onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
-              scrollEnabled={true}
-              nestedScrollEnabled={true}
-              keyboardDismissMode="interactive"
-              keyboardShouldPersistTaps="handled"
-              ListFooterComponent={
-                typingUser && (
+      {/* Messages Container - Fixed KeyboardAvoidingView */}
+      <View style={styles.messagesContainer}>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={styles.loadingText}>Loading messages...</Text>
+          </View>
+        ) : (
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            renderItem={renderMessage}
+            keyExtractor={(item, index) => item._id || `msg-${index}-${Date.now()}`}
+            contentContainerStyle={[styles.listContent, { paddingBottom: 20 }]}
+            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+            onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
+            scrollEnabled={true}
+            nestedScrollEnabled={true}
+            keyboardDismissMode="interactive"
+            keyboardShouldPersistTaps="handled"
+            ListFooterComponent={
+              <>
+                {typingUser && (
                   <View style={styles.typingIndicator}>
                     <Text style={styles.typingText}>{typingUser} is typing...</Text>
                   </View>
-                )
-              }
-              ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.emptyIcon}>
-                    <Ionicons name="chatbubble-ellipses" size={40} color={COLORS.black} />
-                  </LinearGradient>
-                  <Text style={styles.emptyTitle}>Start a conversation</Text>
-                  <Text style={styles.emptySubtitle}>Send a message to begin chatting!</Text>
-                </View>
-              }
-            />
-          )}
-
-          {/* Upload Progress */}
-          {uploading && (
-            <View style={styles.uploadBar}>
-              <ActivityIndicator size="small" color={COLORS.primary} />
-              <Text style={styles.uploadText}>{uploadProgress}</Text>
-            </View>
-          )}
-          
-          {/* Recording UI */}
-          {isRecording && (
-            <View style={styles.recordingBar}>
-              <Animated.View style={[styles.recordingDot, { transform: [{ scale: recordingAnim }] }]} />
-              <Text style={styles.recordingTime}>{formatDuration(recordingDuration)}</Text>
-              <Text style={styles.recordingLabel}>Recording...</Text>
-              <View style={styles.recordingActions}>
-                <TouchableOpacity onPress={cancelRecording} style={styles.cancelRecordBtn}>
-                  <Ionicons name="close" size={20} color={COLORS.textSecondary} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={stopRecording} style={styles.sendRecordBtn}>
-                  <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.sendRecordGradient}>
-                    <Ionicons name="send" size={18} color={COLORS.black} />
-                  </LinearGradient>
-                </TouchableOpacity>
+                )}
+                {/* Add extra space at bottom to ensure last message is visible */}
+                <View style={{ height: 10 }} />
+              </>
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.emptyIcon}>
+                  <Ionicons name="chatbubble-ellipses" size={40} color={COLORS.black} />
+                </LinearGradient>
+                <Text style={styles.emptyTitle}>Start a conversation</Text>
+                <Text style={styles.emptySubtitle}>Send a message to begin chatting!</Text>
               </View>
-            </View>
-          )}
-        </View>
+            }
+          />
+        )}
 
-        {/* Input Area */}
+        {/* Upload Progress */}
+        {uploading && (
+          <View style={styles.uploadBar}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+            <Text style={styles.uploadText}>{uploadProgress}</Text>
+          </View>
+        )}
+        
+        {/* Recording UI */}
+        {isRecording && (
+          <View style={styles.recordingBar}>
+            <Animated.View style={[styles.recordingDot, { transform: [{ scale: recordingAnim }] }]} />
+            <Text style={styles.recordingTime}>{formatDuration(recordingDuration)}</Text>
+            <Text style={styles.recordingLabel}>Recording...</Text>
+            <View style={styles.recordingActions}>
+              <TouchableOpacity onPress={cancelRecording} style={styles.cancelRecordBtn}>
+                <Ionicons name="close" size={20} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={stopRecording} style={styles.sendRecordBtn}>
+                <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.sendRecordGradient}>
+                  <Ionicons name="send" size={18} color={COLORS.black} />
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </View>
+
+      {/* Input Area - Fixed positioning */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        style={styles.keyboardAvoidingView}
+      >
         <Animated.View style={[styles.inputArea, { transform: [{ translateY: inputSlide }] }]}>
           <TouchableOpacity onPress={() => setShowImagePicker(true)} style={styles.plusBtn}>
             <LinearGradient colors={[COLORS.dark, COLORS.dark]} style={styles.plusGradient}>
@@ -1339,8 +1356,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  keyboardContainer: {
-    flex: 1,
+  keyboardAvoidingView: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: COLORS.white,
   },
   messagesContainer: {
     flex: 1,
@@ -1606,7 +1627,6 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.border,
     backgroundColor: COLORS.white,
     gap: 8,
-    marginBottom:10
   },
   plusBtn: {
     borderRadius: 14,

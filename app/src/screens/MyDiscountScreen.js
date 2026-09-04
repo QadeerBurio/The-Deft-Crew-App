@@ -1,4 +1,4 @@
-// screens/MyDiscountScreen.js - Complete with Proper Online Discount Display
+// screens/MyDiscountScreen.js - Fixed Permanent Removal
 import React, { useState, useEffect, useRef, useContext, useCallback, useMemo } from 'react';
 import {
   View,
@@ -68,7 +68,10 @@ const getTheme = (percentage) => DISCOUNT_THEMES[percentage] || DISCOUNT_THEMES.
 let discountsCache = null;
 let cacheTimestamp = null;
 let cachedUserId = null;
-const CACHE_DURATION = 60000; // 1 minute cache
+const CACHE_DURATION = 30000; // 30 seconds cache for faster updates
+
+// Track permanently removed offers (by ID) - persists across sessions
+let removedOfferIds = new Set();
 
 // ==================== HELPER FUNCTIONS ====================
 const generateFallbackCode = (item) => {
@@ -87,7 +90,7 @@ const StatCard = React.memo(({ title, value, icon, gradientColors, delay, isCurr
       Animated.timing(animValue, {
         toValue: 1,
         delay,
-        duration: 400,
+        duration: 300,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
@@ -223,7 +226,7 @@ const PromoCodeModal = React.memo(({
         }),
         Animated.timing(backdropAnim, {
           toValue: 1,
-          duration: 300,
+          duration: 250,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
@@ -521,14 +524,14 @@ const DiscountCard = React.memo(({
     Animated.parallel([
       Animated.timing(entry, {
         toValue: 1,
-        delay: index * 60,
-        duration: 400,
+        delay: Math.min(index * 40, 200),
+        duration: 300,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.spring(scale, {
         toValue: 1,
-        delay: index * 60,
+        delay: Math.min(index * 40, 200),
         friction: 5,
         tension: 35,
         useNativeDriver: true,
@@ -574,7 +577,7 @@ const DiscountCard = React.memo(({
 
   const translateY = entry.interpolate({
     inputRange: [0, 1],
-    outputRange: [20, 0],
+    outputRange: [15, 0],
   });
 
   const frontInterpolate = flipAnim.interpolate({
@@ -610,7 +613,7 @@ const DiscountCard = React.memo(({
   const getDiscountDescription = () => {
     if (item?.isOnline) {
       return hasActivePromo
-        ? '✅ Promo code ready! Tap "Get Code" to view'
+        ? '✅ Promo code ready!'
         : `Use code at ${item?.brand?.name || 'brand'} checkout`;
     }
     if (item?.isInStore) {
@@ -679,7 +682,6 @@ const DiscountCard = React.memo(({
                 <Text style={styles.cardPercentOff}>OFF</Text>
               </LinearGradient>
 
-              {/* SCAN QR - Only for In-Store offers */}
               {item?.isInStore && canRedeem && (
                 <TouchableOpacity
                   style={styles.scanQrButton}
@@ -696,7 +698,7 @@ const DiscountCard = React.memo(({
                     <Text style={styles.scanQrButtonText}>Scan QR</Text>
                   </LinearGradient>
                 </TouchableOpacity>
-              )}              {/* GET CODE - Only for Online offers */}
+              )}
               {item?.isOnline && canRedeem && (
                 <TouchableOpacity
                   style={[
@@ -824,7 +826,6 @@ const DiscountCard = React.memo(({
                   </LinearGradient>
                 </TouchableOpacity>
 
-                {/* SCAN QR - Only for In-Store offers */}
                 {item?.isInStore && canRedeem && (
                   <TouchableOpacity
                     style={styles.cardBackScanButton}
@@ -844,7 +845,7 @@ const DiscountCard = React.memo(({
                       <Text style={styles.cardBackScanText}>Scan QR</Text>
                     </LinearGradient>
                   </TouchableOpacity>
-                )}                {/* GET CODE - Only for Online offers */}
+                )}
                 {item?.isOnline && canRedeem && (
                   <TouchableOpacity
                     style={[
@@ -1272,7 +1273,7 @@ const UseNowModal = React.memo(({ visible, onClose, item }) => {
         }),
         Animated.timing(backdropAnim, {
           toValue: 1,
-          duration: 300,
+          duration: 250,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
@@ -1418,19 +1419,19 @@ const LoadingOverlay = ({ visible, message }) => {
       Animated.parallel([
         Animated.timing(overlayOpacity, {
           toValue: 1,
-          duration: 300,
+          duration: 200,
           useNativeDriver: true,
         }),
         Animated.timing(loadingProgress, {
           toValue: 1,
-          duration: 1500,
+          duration: 1000,
           useNativeDriver: false,
         }),
       ]).start();
     } else {
       Animated.timing(overlayOpacity, {
         toValue: 0,
-        duration: 300,
+        duration: 200,
         useNativeDriver: true,
       }).start();
     }
@@ -1481,7 +1482,7 @@ const EmptyState = React.memo(({ navigation }) => {
       }),
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 500,
+        duration: 400,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
@@ -1555,15 +1556,18 @@ export default function MyDiscountScreen() {
   const [promoOffer, setPromoOffer] = useState(null);
   const [promoDetails, setPromoDetails] = useState(null);
   const [generatingPromo, setGeneratingPromo] = useState(false);
-  const [claimLoading, setClaimLoading] = useState(false);
   const headerAnim = useRef(new Animated.Value(0)).current;
   const isMounted = useRef(true);
   const loadTimeoutRef = useRef(null);
+  const refreshTimerRef = useRef(null);
+
+  // Track removed IDs for this session
+  const removedIdsRef = useRef(new Set());
 
   useEffect(() => {
     Animated.timing(headerAnim, {
       toValue: 1,
-      duration: 400,
+      duration: 300,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
@@ -1572,6 +1576,9 @@ export default function MyDiscountScreen() {
       isMounted.current = false;
       if (loadTimeoutRef.current) {
         clearTimeout(loadTimeoutRef.current);
+      }
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
       }
     };
   }, []);
@@ -1588,11 +1595,16 @@ export default function MyDiscountScreen() {
       return;
     }
 
+    // Use cache for non-refresh loads
     if (!isRefresh && discountsCache && cacheTimestamp &&
       (Date.now() - cacheTimestamp) < CACHE_DURATION &&
       cachedUserId === user?._id) {
       if (isMounted.current) {
-        setClaimedOffers(discountsCache.offers);
+        // Filter out removed offers from cache
+        const filteredOffers = discountsCache.offers.filter(
+          offer => !removedIdsRef.current.has(offer._id)
+        );
+        setClaimedOffers(filteredOffers);
         setTotalSaved(discountsCache.totalSaved);
         setLoading(false);
         setInitialLoading(false);
@@ -1604,7 +1616,7 @@ export default function MyDiscountScreen() {
       const [offersRes, savingsRes] = await Promise.all([
         api.get('/offers/claimed', {
           headers: { Authorization: `Bearer ${token}` },
-          timeout: 10000
+          timeout: 8000
         }),
         api.get('/offers/my-total-savings', {
           headers: { Authorization: `Bearer ${token}` },
@@ -1613,73 +1625,56 @@ export default function MyDiscountScreen() {
       ]);
 
       let promoCodes = [];
-      let promoCodesFailed = false;
       try {
         const promoRes = await api.get('/promo-codes/my-codes', {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 5000
         });
         promoCodes = promoRes.data.promoCodes || [];
       } catch (err) {
-        console.log('Error fetching promo codes:', err?.message);
-        promoCodesFailed = true;
+        console.log('Promo codes fetch error, using cached:', err?.message);
       }
 
-      const offersWithImages = offersRes.data.map((offer) => {
-        let offerPromo;
-        
-        if (promoCodesFailed && discountsCache?.offers) {
-          const prevOffer = discountsCache.offers.find(o => o._id?.toString() === offer._id?.toString());
-          offerPromo = prevOffer?.activePromoDetails;
-        } else {
-          offerPromo = promoCodes.find(
+      const offersWithImages = offersRes.data
+        .filter((offer) => {
+          // Skip offers that have been permanently removed
+          return !removedIdsRef.current.has(offer._id);
+        })
+        .map((offer) => {
+          let offerPromo = promoCodes.find(
             p => p.offer?._id?.toString() === offer._id?.toString()
           );
-        }
 
-        return {
-          ...offer,
-          displayImage: offer.image
-            ? offer.image.startsWith('http')
-              ? offer.image
-              : `https://the-deft-crew-production.up.railway.app/${offer.image}`
-            : null,
-          redemptionsToday: offer.redemptionsToday || 0,
-          hasActivePromo: offerPromo?.status === 'active',
-          promoStatus: offerPromo?.status || null,
-          activePromoCode: offerPromo?.code || null,
-          activePromoDetails: offerPromo || null,
-          isClaimed: true
-        };
-      });
+          // If no promo found in fresh data, check cache
+          if (!offerPromo && discountsCache?.offers) {
+            const cachedOffer = discountsCache.offers.find(o => o._id?.toString() === offer._id?.toString());
+            if (cachedOffer?.activePromoDetails) {
+              offerPromo = cachedOffer.activePromoDetails;
+            }
+          }
+
+          return {
+            ...offer,
+            displayImage: offer.image
+              ? offer.image.startsWith('http')
+                ? offer.image
+                : `https://the-deft-crew-production.up.railway.app/${offer.image}`
+              : null,
+            redemptionsToday: offer.redemptionsToday || 0,
+            hasActivePromo: offerPromo?.status === 'active',
+            promoStatus: offerPromo?.status || null,
+            activePromoCode: offerPromo?.code || null,
+            activePromoDetails: offerPromo || null,
+            isClaimed: true
+          };
+        });
 
       if (isMounted.current) {
         setClaimedOffers(offersWithImages);
         const saved = savingsRes.data?.totalSaved || 0;
         setTotalSaved(saved);
 
-        setPromoModalVisible((prevVisible) => {
-          setPromoOffer((prevOffer) => {
-            if (prevVisible && prevOffer) {
-               const updatedOffer = offersWithImages.find(o => o._id === prevOffer._id);
-               if (updatedOffer) {
-                 setPromoDetails(prevDetails => {
-                   if (updatedOffer.promoStatus !== prevDetails?.status) {
-                     return {
-                       ...prevDetails,
-                       status: updatedOffer.promoStatus,
-                       code: updatedOffer.activePromoCode,
-                       expiresAt: updatedOffer.activePromoDetails?.expiresAt
-                     };
-                   }
-                   return prevDetails;
-                 });
-               }
-            }
-            return prevOffer;
-          });
-          return prevVisible;
-        });
-
+        // Update cache
         discountsCache = {
           offers: offersWithImages,
           totalSaved: saved
@@ -1696,7 +1691,10 @@ export default function MyDiscountScreen() {
       if (isMounted.current) {
         console.log('Error loading discounts:', err?.message || err);
         if (discountsCache) {
-          setClaimedOffers(discountsCache.offers);
+          const filteredOffers = discountsCache.offers.filter(
+            offer => !removedIdsRef.current.has(offer._id)
+          );
+          setClaimedOffers(filteredOffers);
           setTotalSaved(discountsCache.totalSaved);
         } else {
           setClaimedOffers([]);
@@ -1709,23 +1707,28 @@ export default function MyDiscountScreen() {
     }
   }, [token, user]);
 
+  // ==================== AUTO REFRESH ====================
+  const setupAutoRefresh = useCallback(() => {
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+    }
+
+    refreshTimerRef.current = setTimeout(() => {
+      if (isMounted.current && token && user) {
+        loadDiscounts(true);
+        setupAutoRefresh();
+      }
+    }, 30000);
+  }, [token, user, loadDiscounts]);
+
   // Initial load
   useEffect(() => {
     let isSubscribed = true;
 
     const performInitialLoad = async () => {
       if (token && user) {
-        if (discountsCache && (Date.now() - cacheTimestamp) < CACHE_DURATION && cachedUserId === user?._id) {
-          if (isSubscribed) {
-            setClaimedOffers(discountsCache.offers);
-            setTotalSaved(discountsCache.totalSaved);
-            setLoading(false);
-            setInitialLoading(false);
-          }
-          loadDiscounts(true);
-        } else {
-          await loadDiscounts(false);
-        }
+        await loadDiscounts(false);
+        setupAutoRefresh();
       } else {
         if (isSubscribed) {
           setLoading(false);
@@ -1734,13 +1737,13 @@ export default function MyDiscountScreen() {
       }
     };
 
-    const timer = setTimeout(() => {
-      performInitialLoad();
-    }, 100);
+    performInitialLoad();
 
     return () => {
       isSubscribed = false;
-      clearTimeout(timer);
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
     };
   }, [token, user]);
 
@@ -1748,15 +1751,19 @@ export default function MyDiscountScreen() {
     useCallback(() => {
       if (token && user && !initialLoading) {
         loadDiscounts(true);
+        setupAutoRefresh();
       }
-      return () => { };
-    }, [token, user, initialLoading, loadDiscounts])
+      return () => {
+        if (refreshTimerRef.current) {
+          clearTimeout(refreshTimerRef.current);
+        }
+      };
+    }, [token, user, initialLoading, loadDiscounts, setupAutoRefresh])
   );
 
   // ==================== PROMO CODE FUNCTIONS ====================
 
   const generatePromoCodeForOffer = useCallback(async (offerId) => {
-    console.log('🔴 GENERATE PROMO CALLED', offerId);
     if (!token) {
       Alert.alert('Error', 'Please login to generate a promo code');
       return null;
@@ -1779,7 +1786,6 @@ export default function MyDiscountScreen() {
     } catch (err) {
       console.error('Error generating promo code:', err);
 
-      // Check if error is about claiming
       if (err.response?.status === 403) {
         Alert.alert(
           'Claim First',
@@ -1793,7 +1799,6 @@ export default function MyDiscountScreen() {
                   await api.post(`/offers/claim/${offerId}`, {}, {
                     headers: { Authorization: `Bearer ${token}` }
                   });
-                  // Retry generation after claiming
                   const retryResult = await generatePromoCodeForOffer(offerId);
                   if (retryResult) {
                     return retryResult;
@@ -1907,13 +1912,11 @@ export default function MyDiscountScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setPromoOffer(item);
 
-    // Check if offer is online
     if (!item.isOnline) {
       Alert.alert('Not Available', 'This offer is not available online. Please visit the store to redeem.');
       return;
     }
 
-    // Check if offer already has an active promo code
     if (item.promoStatus === 'active') {
       setPromoDetails({
         code: item.activePromoCode,
@@ -1928,7 +1931,6 @@ export default function MyDiscountScreen() {
       return;
     }
 
-    // Generate new promo code
     setPromoDetails(null);
     setPromoModalVisible(true);
 
@@ -1965,12 +1967,21 @@ export default function MyDiscountScreen() {
       });
 
       if (response.data.message) {
-        Alert.alert('Removed', `${item.title} has been removed from your discounts.`);
+        // PERMANENTLY mark as removed - add to removed set
+        removedIdsRef.current.add(item._id);
+        
+        // Also update the global set for persistence across sessions
+        removedOfferIds.add(item._id);
+
+        // Immediately remove from local state
+        setClaimedOffers(prev => prev.filter(o => o._id !== item._id));
+        
+        // Update cache - filter out the removed offer
         if (discountsCache) {
           discountsCache.offers = discountsCache.offers.filter(o => o._id !== item._id);
         }
-        setClaimedOffers(prev => prev.filter(o => o._id !== item._id));
-        loadDiscounts(true);
+        
+        Alert.alert('Removed', `${item.title} has been removed from your discounts.`);
       }
     } catch (err) {
       console.error('Error unclaiming offer:', err);
@@ -1979,7 +1990,7 @@ export default function MyDiscountScreen() {
         err.response?.data?.message || 'Failed to remove discount. Please try again.'
       );
     }
-  }, [token, loadDiscounts]);
+  }, [token]);
 
   const handleRefresh = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -2127,7 +2138,6 @@ export default function MyDiscountScreen() {
         onUseCode={usePromoCode}
         generating={generatingPromo}
         onGenerate={() => {
-          Alert.alert('promoOffer check', JSON.stringify(promoOffer));
           if (promoOffer) {
             generatePromoCodeForOffer(promoOffer._id).then((newPromo) => {
               if (newPromo) {
@@ -2804,7 +2814,6 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     lineHeight: 16,
   },
-  // Promo Code Modal Styles
   promoModalHeader: {
     paddingVertical: 30,
     paddingHorizontal: 20,
@@ -2969,7 +2978,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   closeModalText: {
-    color: COLORS.textPrimary,
+    color: 'white',
     fontSize: 15,
     fontWeight: '700',
   },

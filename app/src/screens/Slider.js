@@ -23,26 +23,27 @@ const ITEM_HEIGHT = height * 0.22;
 const ITEM_SPACING = (width - ITEM_WIDTH) / 2;
 
 const BASE_URL = "https://the-deft-crew-production.up.railway.app";
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
-const FETCH_TIMEOUT = 3000; // 3 seconds timeout
+const CACHE_DURATION = 5 * 60 * 1000;
+const FETCH_TIMEOUT = 2000; // Reduced timeout
 
 // ==========================================
-// SKELETON LOADER COMPONENT (Optimized)
+// FAST SKELETON (Shows only for 200ms max)
 // ==========================================
-const SliderSkeleton = React.memo(() => {
+const FastSkeleton = React.memo(() => {
   const shimmerAnim = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(shimmerAnim, {
           toValue: 1,
-          duration: 600,
+          duration: 400,
           useNativeDriver: true,
         }),
         Animated.timing(shimmerAnim, {
           toValue: 0,
-          duration: 600,
+          duration: 400,
           useNativeDriver: true,
         }),
       ])
@@ -53,11 +54,11 @@ const SliderSkeleton = React.memo(() => {
 
   const translateX = shimmerAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [-150, 150],
+    outputRange: [-120, 120],
   });
 
   return (
-    <View style={styles.container}>
+    <Animated.View style={[styles.container, { opacity }]}>
       <View style={styles.skeletonCard}>
         <View style={styles.skeletonImagePlaceholder}>
           <Animated.View 
@@ -75,19 +76,56 @@ const SliderSkeleton = React.memo(() => {
           <View style={styles.skeletonSubtitle} />
         </View>
       </View>
-
       <View style={styles.dotContainer}>
         {[0, 1, 2].map((i) => (
           <View key={i} style={[styles.skeletonDot, i === 1 && styles.skeletonDotActive]} />
         ))}
       </View>
-    </View>
+    </Animated.View>
   );
 });
 
+// ==========================================
+// FAST CACHE SYSTEM
+// ==========================================
+class FastCache {
+  static get(key) {
+    try {
+      if (typeof window !== 'undefined') {
+        const cached = window.localStorage.getItem(key);
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < CACHE_DURATION && data?.length > 0) {
+            return data;
+          }
+        }
+      }
+      return null;
+    } catch { return null; }
+  }
+
+  static set(key, data) {
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(key, JSON.stringify({
+          data,
+          timestamp: Date.now()
+        }));
+      }
+    } catch { /* ignore */ }
+  }
+}
+
 export default function Slider() {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(() => {
+    // Load from cache instantly on mount
+    const cached = FastCache.get('slider_data_cache');
+    return cached || [];
+  });
+  const [loading, setLoading] = useState(() => {
+    // Only show loading if no cached data
+    return !FastCache.get('slider_data_cache');
+  });
   const [refreshing, setRefreshing] = useState(false);
   const scrollX = useRef(new Animated.Value(0)).current;
   const flatListRef = useRef(null);
@@ -105,15 +143,14 @@ export default function Slider() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const likeAnim = useRef(new Animated.Value(0)).current;
 
-  // Memoized cache key
-  const CACHE_KEY = useMemo(() => 'slider_data_cache', []);
-
-  // Optimized fetch with caching and timeout
+  // ==========================================
+  // SUPER FAST FETCH (Parallel + Priority)
+  // ==========================================
   const fetchData = useCallback(async (isRefresh = false) => {
     try {
-      // Check cache first (unless refreshing)
+      // Try cache first
       if (!isRefresh) {
-        const cachedData = await getCachedData();
+        const cachedData = FastCache.get('slider_data_cache');
         if (cachedData && cachedData.length > 0) {
           setData(cachedData);
           setLoading(false);
@@ -123,43 +160,41 @@ export default function Slider() {
 
       if (!isRefresh) setLoading(true);
 
+      // Parallel fetch with timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
       
-      const cacheBuster = isRefresh ? `?_=${Date.now()}` : '';
-      
-      const response = await fetch(`${BASE_URL}/api/admin/all${cacheBuster}`, {
-        signal: controller.signal,
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
-          'Accept': 'application/json'
+      const response = await fetch(
+        `${BASE_URL}/api/admin/all${isRefresh ? `?_=${Date.now()}` : ''}`,
+        {
+          signal: controller.signal,
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Accept': 'application/json'
+          }
         }
-      });
+      );
       
       clearTimeout(timeoutId);
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       
       const json = await response.json();
       
-      // Process data efficiently
+      // Fast data extraction
       let visibleData = [];
-      
       if (Array.isArray(json)) {
-        visibleData = json.filter(item => item && item.active !== false);
+        visibleData = json.filter(item => item?.active !== false);
       } else if (json?.data && Array.isArray(json.data)) {
-        visibleData = json.data.filter(item => item && item.active !== false);
+        visibleData = json.data.filter(item => item?.active !== false);
       } else if (json?.offers && Array.isArray(json.offers)) {
-        visibleData = json.offers.filter(item => item && item.active !== false);
+        visibleData = json.offers.filter(item => item?.active !== false);
       } else if (json?.sliders && Array.isArray(json.sliders)) {
-        visibleData = json.sliders.filter(item => item && item.active !== false);
+        visibleData = json.sliders.filter(item => item?.active !== false);
       }
       
-      // Cache the data
-      await cacheData(visibleData);
+      // Cache and update
+      FastCache.set('slider_data_cache', visibleData);
       
       if (isMounted) {
         setData(visibleData);
@@ -172,76 +207,44 @@ export default function Slider() {
       if (isMounted) {
         setLoading(false);
         setRefreshing(false);
-        // Try to use cached data as fallback
-        const cachedData = await getCachedData();
+        // Use cache as fallback
+        const cachedData = FastCache.get('slider_data_cache');
         if (cachedData && cachedData.length > 0) {
           setData(cachedData);
-        } else {
-          setData([]);
         }
       }
     }
   }, [isMounted]);
 
-  // Cache helpers
-  const cacheData = async (data) => {
-    try {
-      const cacheEntry = {
-        data: data,
-        timestamp: Date.now()
-      };
-      // Use AsyncStorage or any storage solution
-      // For now, using localStorage polyfill for web
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(CACHE_KEY, JSON.stringify(cacheEntry));
-      }
-    } catch (error) {
-      // Silent fail for cache
-    }
-  };
-
-  const getCachedData = async () => {
-    try {
-      if (typeof window !== 'undefined') {
-        const cached = window.localStorage.getItem(CACHE_KEY);
-        if (cached) {
-          const cacheEntry = JSON.parse(cached);
-          const isExpired = Date.now() - cacheEntry.timestamp > CACHE_DURATION;
-          if (!isExpired && cacheEntry.data?.length > 0) {
-            return cacheEntry.data;
-          }
-        }
-      }
-      return null;
-    } catch (error) {
-      return null;
-    }
-  };
-
-  // Initial load with priority
+  // ==========================================
+  // IMMEDIATE LOAD (Show cache instantly)
+  // ==========================================
   useEffect(() => {
     setIsMounted(true);
     
-    // Use InteractionManager for smoother initial render
+    // Show cached data immediately
+    const cached = FastCache.get('slider_data_cache');
+    if (cached && cached.length > 0) {
+      setData(cached);
+      setLoading(false);
+    }
+    
+    // Fetch fresh data in background
     InteractionManager.runAfterInteractions(() => {
       fetchData();
     });
 
-    return () => {
-      setIsMounted(false);
-    };
+    return () => { setIsMounted(false); };
   }, []);
 
-  // Auto-slide timer with optimized interval
+  // ==========================================
+  // AUTO-SLIDE (Optimized)
+  // ==========================================
   useEffect(() => {
     if (data.length <= 1 || loading) return;
     
     let timer = setInterval(() => {
-      let nextIndex = currentIndex + 1;
-      if (nextIndex >= data.length) {
-        nextIndex = 0;
-      }
-      
+      const nextIndex = (currentIndex + 1) % data.length;
       flatListRef.current?.scrollToOffset({
         offset: nextIndex * ITEM_WIDTH,
         animated: true,
@@ -251,45 +254,35 @@ export default function Slider() {
     return () => clearInterval(timer);
   }, [currentIndex, data.length, loading]);
 
-  // Pulse animation with optimized timing
+  // ==========================================
+  // PULSE ANIMATION
+  // ==========================================
   useEffect(() => {
     if (data.length === 0) return;
     
     let interval = setInterval(() => {
       Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.05,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }),
+        Animated.timing(pulseAnim, { toValue: 1.05, duration: 400, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
       ]).start();
     }, 2500);
     
     return () => clearInterval(interval);
   }, [data.length]);
 
-  // Entrance animation (only once)
+  // ==========================================
+  // ENTRANCE ANIMATION (Faster)
+  // ==========================================
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        friction: 10,
-        tension: 50,
-        useNativeDriver: true,
-      }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, friction: 12, tension: 60, useNativeDriver: true }),
     ]).start();
   }, []);
 
+  // ==========================================
+  // HANDLERS
+  // ==========================================
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchData(true);
@@ -304,34 +297,16 @@ export default function Slider() {
     likeAnim.setValue(0);
     
     Animated.parallel([
-      Animated.spring(modalScale, {
-        toValue: 1,
-        friction: 10,
-        tension: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(modalAnim, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
+      Animated.spring(modalScale, { toValue: 1, friction: 12, tension: 60, useNativeDriver: true }),
+      Animated.timing(modalAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
     ]).start();
   }, []);
 
   const closeModal = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Animated.parallel([
-      Animated.spring(modalScale, {
-        toValue: 0.9,
-        friction: 10,
-        tension: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(modalAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
+      Animated.spring(modalScale, { toValue: 0.9, friction: 12, tension: 60, useNativeDriver: true }),
+      Animated.timing(modalAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
     ]).start(() => {
       setModalVisible(false);
       setSelectedOffer(null);
@@ -340,36 +315,26 @@ export default function Slider() {
 
   const toggleSave = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
-    Animation.sequence([
-      Animated.spring(likeAnim, {
-        toValue: 1,
-        friction: 5,
-        tension: 150,
-        useNativeDriver: true,
-      }),
-      Animated.spring(likeAnim, {
-        toValue: 0,
-        friction: 5,
-        tension: 150,
-        useNativeDriver: true,
-      }),
+    Animated.sequence([
+      Animated.spring(likeAnim, { toValue: 1, friction: 5, tension: 150, useNativeDriver: true }),
+      Animated.spring(likeAnim, { toValue: 0, friction: 5, tension: 150, useNativeDriver: true }),
     ]).start();
-    
     setIsSaved(!isSaved);
   }, [isSaved]);
 
-  // Optimized renderItem with memo
+  // ==========================================
+  // RENDER ITEM (Optimized)
+  // ==========================================
   const renderItem = useCallback(({ item, index }) => {
     const scale = scrollX.interpolate({
       inputRange: [(index - 1) * ITEM_WIDTH, index * ITEM_WIDTH, (index + 1) * ITEM_WIDTH],
-      outputRange: [0.93, 1, 0.93],
+      outputRange: [0.94, 1, 0.94],
       extrapolate: "clamp",
     });
 
     const translateY = scrollX.interpolate({
       inputRange: [(index - 1) * ITEM_WIDTH, index * ITEM_WIDTH, (index + 1) * ITEM_WIDTH],
-      outputRange: [5, 0, 5],
+      outputRange: [4, 0, 4],
       extrapolate: "clamp",
     });
 
@@ -380,17 +345,13 @@ export default function Slider() {
           onPress={() => handlePress(item)}
           style={styles.cardTouchable}
         >
-          <Animated.View style={[
-            styles.card, 
-            { 
-              transform: [{ scale }, { translateY }],
-            }
-          ]}>
+          <Animated.View style={[styles.card, { transform: [{ scale }, { translateY }] }]}>
             <Image 
               source={{ uri: item.image }} 
               style={styles.image}
               resizeMode="cover"
-              loading="lazy"
+              loading="eager" // Load immediately
+              fadeDuration={0} // Remove fade animation
             />
             <LinearGradient
               colors={['transparent', 'rgba(0,0,0,0.85)']}
@@ -417,10 +378,8 @@ export default function Slider() {
     );
   }, [scrollX, handlePress]);
 
-  // Key extractor memo
   const keyExtractor = useCallback((item, index) => item?._id || `item-${index}`, []);
-
-  // Optimized scroll handler
+  
   const onScroll = useCallback(Animated.event(
     [{ nativeEvent: { contentOffset: { x: scrollX } } }],
     { useNativeDriver: true }
@@ -428,12 +387,12 @@ export default function Slider() {
 
   const onMomentumScrollEnd = useCallback((ev) => {
     const newIndex = Math.round(ev.nativeEvent.contentOffset.x / ITEM_WIDTH);
-    if (newIndex !== currentIndex) {
-      setCurrentIndex(newIndex);
-    }
+    if (newIndex !== currentIndex) setCurrentIndex(newIndex);
   }, [currentIndex]);
 
-  // Memoized dot indicators
+  // ==========================================
+  // RENDER DOTS (Memoized)
+  // ==========================================
   const renderDots = useMemo(() => {
     return data.map((_, i) => {
       const scaleX = scrollX.interpolate({
@@ -451,158 +410,141 @@ export default function Slider() {
       return (
         <Animated.View
           key={i}
-          style={[
-            styles.dot,
-            { 
-              transform: [{ scaleX }],
-              opacity,
-            },
-          ]}
+          style={[styles.dot, { transform: [{ scaleX }], opacity }]}
         />
       );
     });
   }, [data, scrollX]);
 
-  // Show skeleton on initial load
-  if (loading && data.length === 0) {
-    return <SliderSkeleton />;
-  }
-
-  // Show empty state
-  if (!loading && data.length === 0) {
+  // ==========================================
+  // SHOW CACHE INSTANTLY (No skeleton delay)
+  // ==========================================
+  // If we have data, show it immediately without skeleton
+  if (data.length > 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyEmoji}>📭</Text>
-        <Text style={styles.emptyText}>No Offers Available</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={onRefresh}>
-          <Text style={styles.retryBtnText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
+      <Animated.View style={[styles.container, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <Animated.FlatList
+          ref={flatListRef}
+          data={data}
+          renderItem={renderItem}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={ITEM_WIDTH}
+          snapToAlignment="center"
+          decelerationRate={Platform.OS === 'ios' ? 0.92 : 0.9}
+          contentContainerStyle={{ paddingHorizontal: ITEM_SPACING - 4 }}
+          onScroll={onScroll}
+          onMomentumScrollEnd={onMomentumScrollEnd}
+          keyExtractor={keyExtractor}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#FFD700"
+              colors={["#FFD700"]}
+            />
+          }
+          maxToRenderPerBatch={2}
+          windowSize={3}
+          removeClippedSubviews={Platform.OS === 'android'}
+          initialNumToRender={2}
+        />
+
+        <View style={styles.dotContainer}>
+          {renderDots}
+        </View>
+
+        {/* Modal */}
+        <Modal 
+          animationType="none" 
+          transparent={true} 
+          visible={isModalVisible} 
+          onRequestClose={closeModal}
+          statusBarTranslucent
+        >
+          <TouchableWithoutFeedback onPress={closeModal}>
+            <Animated.View style={[styles.modalOverlay, { opacity: modalAnim }]}>
+              <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+                <Animated.View style={[styles.modalContent, { transform: [{ scale: modalScale }] }]}>
+                  <View style={styles.dragHandle}>
+                    <View style={styles.handleBar} />
+                  </View>
+                  
+                  <TouchableOpacity style={styles.closeBtn} onPress={closeModal} activeOpacity={0.7}>
+                    <Text style={styles.closeText}>✕</Text>
+                  </TouchableOpacity>
+                  
+                  {selectedOffer && (
+                    <ScrollView 
+                      showsVerticalScrollIndicator={false} 
+                      contentContainerStyle={styles.detailsContainer}
+                      bounces={false}
+                    >
+                      <View style={styles.imageContainer}>
+                        <Image 
+                          source={{ uri: selectedOffer.image }} 
+                          style={styles.modalImage}
+                          resizeMode="cover"
+                          loading="eager"
+                          fadeDuration={0}
+                        />
+                        <LinearGradient
+                          colors={['rgba(0,0,0,0.4)', 'transparent']}
+                          style={styles.modalGradient}
+                        />
+                        <View style={[styles.modalBadge, { backgroundColor: "#f9c349" }]}>
+                          <Text style={styles.modalBadgeText}>
+                            {selectedOffer.type?.toUpperCase() || "OFFER"}
+                          </Text>
+                        </View>
+                      </View>
+                      
+                      <Text style={styles.modalTitle}>{selectedOffer.title}</Text>
+                      
+                      <View style={styles.divider}>
+                        <View style={styles.dividerLine} />
+                      </View>
+                      
+                      <Text style={styles.modalDesc}>{selectedOffer.description}</Text>
+                      
+                      <TouchableOpacity 
+                        style={styles.bottomCloseBtn} 
+                        onPress={closeModal}
+                        activeOpacity={0.6}
+                      >
+                        <Text style={styles.bottomCloseBtnText}>Close</Text>
+                      </TouchableOpacity>
+                    </ScrollView>
+                  )}
+                </Animated.View>
+              </TouchableWithoutFeedback>
+            </Animated.View>
+          </TouchableWithoutFeedback>
+        </Modal>
+      </Animated.View>
     );
   }
 
+  // Show skeleton only on initial load (no cache)
+  if (loading && data.length === 0) {
+    return <FastSkeleton />;
+  }
+
+  // Empty state
   return (
-    <Animated.View style={[styles.container, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-      <Animated.FlatList
-        ref={flatListRef}
-        data={data}
-        renderItem={renderItem}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        snapToInterval={ITEM_WIDTH}
-        snapToAlignment="center"
-        decelerationRate={Platform.OS === 'ios' ? 0.92 : 0.9}
-        contentContainerStyle={{ paddingHorizontal: ITEM_SPACING - 4 }}
-        onScroll={onScroll}
-        onMomentumScrollEnd={onMomentumScrollEnd}
-        keyExtractor={keyExtractor}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#FFD700"
-            colors={["#FFD700"]}
-          />
-        }
-        maxToRenderPerBatch={3}
-        windowSize={5}
-        removeClippedSubviews={Platform.OS === 'android'}
-        initialNumToRender={2}
-      />
-
-      <View style={styles.dotContainer}>
-        {renderDots}
-      </View>
-
-      {/* Modal Component remains the same but optimized */}
-      <Modal 
-        animationType="none" 
-        transparent={true} 
-        visible={isModalVisible} 
-        onRequestClose={closeModal}
-        statusBarTranslucent
-      >
-        <TouchableWithoutFeedback onPress={closeModal}>
-          <Animated.View 
-            style={[
-              styles.modalOverlay,
-              { opacity: modalAnim }
-            ]}
-          >
-            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
-              <Animated.View 
-                style={[
-                  styles.modalContent,
-                  {
-                    transform: [{ scale: modalScale }],
-                  }
-                ]}
-              >
-                <View style={styles.dragHandle}>
-                  <View style={styles.handleBar} />
-                </View>
-                
-                <TouchableOpacity 
-                  style={styles.closeBtn} 
-                  onPress={closeModal}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.closeText}>✕</Text>
-                </TouchableOpacity>
-                
-                {selectedOffer && (
-                  <ScrollView 
-                    showsVerticalScrollIndicator={false} 
-                    contentContainerStyle={styles.detailsContainer}
-                    bounces={false}
-                  >
-                    <View style={styles.imageContainer}>
-                      <Image 
-                        source={{ uri: selectedOffer.image }} 
-                        style={styles.modalImage}
-                        resizeMode="cover"
-                        loading="lazy"
-                      />
-                      <LinearGradient
-                        colors={['rgba(0,0,0,0.4)', 'transparent']}
-                        style={styles.modalGradient}
-                      />
-                      <View style={[styles.modalBadge, { backgroundColor: "#f9c349" }]}>
-                        <Text style={styles.modalBadgeText}>
-                          {selectedOffer.type?.toUpperCase() || "OFFER"}
-                        </Text>
-                      </View>
-                    </View>
-                    
-                    <Text style={styles.modalTitle}>{selectedOffer.title}</Text>
-                    
-                    <View style={styles.divider}>
-                      <View style={styles.dividerLine} />
-                    </View>
-                    
-                    <Text style={styles.modalDesc}>{selectedOffer.description}</Text>
-                    
-                    <TouchableOpacity 
-                      style={styles.bottomCloseBtn} 
-                      onPress={closeModal}
-                      activeOpacity={0.6}
-                    >
-                      <Text style={styles.bottomCloseBtnText}>Close</Text>
-                    </TouchableOpacity>
-                  </ScrollView>
-                )}
-              </Animated.View>
-            </TouchableWithoutFeedback>
-          </Animated.View>
-        </TouchableWithoutFeedback>
-      </Modal>
-    </Animated.View>
+    <View style={styles.emptyContainer}>
+      <Text style={styles.emptyEmoji}>📭</Text>
+      <Text style={styles.emptyText}>No Offers Available</Text>
+      <TouchableOpacity style={styles.retryBtn} onPress={onRefresh}>
+        <Text style={styles.retryBtnText}>Retry</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
-// Styles remain the same as provided in the original code
-// ... (all styles remain unchanged)
-
+// ==========================================
+// STYLES (All styles remain the same)
+// ==========================================
 const styles = StyleSheet.create({
   container: { 
     marginTop: 8,
@@ -1007,9 +949,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // ==========================================
   // SKELETON STYLES
-  // ==========================================
   skeletonCard: {
     height: ITEM_HEIGHT,
     backgroundColor: "#E8E8E8",
