@@ -276,19 +276,11 @@ const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel }) 
                 colors={['#f9c349', '#f5a623']}
                 style={styles.orgAvatar}
               >
-                <Text style={styles.orgAvatarText}>
-                  {item.organizer?.charAt(0) || "O"}
-                </Text>
+                <Ionicons name="location" size={16} color="#fff" />
               </LinearGradient>
-              <View>
-                <Text style={styles.orgName} numberOfLines={1}>
-                  {item.organizer || "Organizer"}
-                </Text>
-                <View style={styles.locationRow}>
-                  <Ionicons name="location" size={10} color={COLORS.muted} />
-                  <Text style={styles.locationText}>{item.city || "City"}</Text>
-                </View>
-              </View>
+              <Text style={styles.locationText} numberOfLines={1}>
+                {item.city || "City"}
+              </Text>
             </View>
           </View>
 
@@ -301,14 +293,6 @@ const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel }) 
           </Text>
 
           <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Ionicons name="people" size={14} color={COLORS.accent} />
-              <Text style={styles.statText}>{item.teamSize || "1-4"} Team</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Ionicons name="trophy" size={14} color={COLORS.accent} />
-              <Text style={styles.statText}>{item.prize || "TBD"}</Text>
-            </View>
             <View style={styles.statItem}>
               <Ionicons name="calendar" size={14} color={COLORS.accent} />
               <Text style={styles.statText}>{item.date || "TBA"}</Text>
@@ -762,6 +746,58 @@ export default function EventsScreen() {
     );
   };
 
+  const normalizeCategoryStr = (str) => {
+    if (!str) return "";
+    let s = str.toString().trim().toLowerCase();
+    if (s.length > 3 && s.endsWith("s")) {
+      s = s.slice(0, -1);
+    }
+    return s;
+  };
+
+  const isCategoryMatch = (event, category) => {
+    if (!category || category === "All") return true;
+
+    const normTab = normalizeCategoryStr(category);
+
+    if (event.type) {
+      const normType = normalizeCategoryStr(event.type);
+      if (
+        normType === normTab ||
+        normType.includes(normTab) ||
+        normTab.includes(normType)
+      ) {
+        return true;
+      }
+    }
+
+    if (Array.isArray(event.categories)) {
+      const matchInArray = event.categories.some((cat) => {
+        const normCat = normalizeCategoryStr(cat);
+        return (
+          normCat === normTab ||
+          normCat.includes(normTab) ||
+          normTab.includes(normCat)
+        );
+      });
+      if (matchInArray) return true;
+    }
+
+    if (Array.isArray(event.tags)) {
+      const matchInTags = event.tags.some((tag) => {
+        const normTag = normalizeCategoryStr(tag);
+        return (
+          normTag === normTab ||
+          normTag.includes(normTab) ||
+          normTab.includes(normTag)
+        );
+      });
+      if (matchInTags) return true;
+    }
+
+    return false;
+  };
+
   const filteredEvents = useMemo(() => {
     if (showApplied) {
       return appliedEventsData.map(item => ({
@@ -770,11 +806,11 @@ export default function EventsScreen() {
       }));
     }
     
-    let filtered = events;
-    if (activeTab !== "All") {
-      filtered = events.filter((event) => event.type === activeTab);
+    if (!activeTab || activeTab === "All") {
+      return events;
     }
-    return filtered;
+
+    return events.filter((event) => isCategoryMatch(event, activeTab));
   }, [activeTab, events, showApplied, appliedEventsData]);
 
   const isEventRegistered = (eventId) => {
@@ -1038,39 +1074,20 @@ export default function EventsScreen() {
                         colors={[COLORS.gradientStart, COLORS.gradientEnd]}
                         style={styles.detailAvatarSmall}
                       >
-                        <Text style={styles.detailAvatarText}>
-                          {selectedEvent.organizer?.charAt(0) || "O"}
-                        </Text>
+                        <Ionicons name="location" size={16} color="#fff" />
                       </LinearGradient>
-                      <View>
-                        <Text style={styles.detailOrgName}>{selectedEvent.organizer || "Organizer"}</Text>
-                        <Text style={styles.detailOrgLocation}>
-                          <Ionicons name="location" size={12} color={COLORS.muted} /> {selectedEvent.city || "City"}
-                        </Text>
-                      </View>
+                      <Text style={styles.detailOrgLocationLarge}>
+                        {selectedEvent.city || "City"}
+                      </Text>
                     </View>
                     
                     <View style={styles.specRow}>
-                      <View style={styles.specCard}>
+                      <View style={[styles.specCard, styles.specCardLast]}>
                         <View style={styles.specIcon}>
-                          <Ionicons name="calendar" size={16} color={COLORS.accent} />
+                          <Ionicons name="calendar" size={18} color={COLORS.accent} />
                         </View>
                         <Text style={styles.specTitle}>Date</Text>
                         <Text style={styles.specText}>{selectedEvent.date || "TBA"}</Text>
-                      </View>
-                      <View style={[styles.specCard, styles.specCardLast]}>
-                        <View style={styles.specIcon}>
-                          <Ionicons name="people" size={16} color={COLORS.accent} />
-                        </View>
-                        <Text style={styles.specTitle}>Team</Text>
-                        <Text style={styles.specText}>{selectedEvent.teamSize || "1-4"}</Text>
-                      </View>
-                      <View style={[styles.specCard, styles.specCardLast]}>
-                        <View style={styles.specIcon}>
-                          <Ionicons name="trophy" size={16} color={COLORS.accent} />
-                        </View>
-                        <Text style={styles.specTitle}>Prize</Text>
-                        <Text style={styles.specText}>{selectedEvent.prize || "TBD"}</Text>
                       </View>
                     </View>
                     
@@ -1088,12 +1105,7 @@ export default function EventsScreen() {
                       </Text>
                     </View>
                     
-                    <View style={styles.sectionCard}>
-                      <Text style={styles.sectionCardTitle}>Contact</Text>
-                      <Text style={styles.sectionCardBody}>
-                        <Ionicons name="mail" size={14} color={COLORS.accent} /> {selectedEvent.contact || "Not provided"}
-                      </Text>
-                    </View>
+
                     
                     <View style={styles.detailBottomSpacer} />
                   </View>
@@ -1850,9 +1862,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   locationText: {
-    fontSize: 10,
-    color: COLORS.muted,
-    marginLeft: 2,
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.primary,
   },
   title: {
     fontSize: 16,
@@ -2090,6 +2102,11 @@ const styles = StyleSheet.create({
     color: COLORS.muted,
     marginTop: 1,
   },
+  detailOrgLocationLarge: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
   specRow: {
     flexDirection: "row",
     marginBottom: 12,
@@ -2104,17 +2121,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 6,
   },
-  specCardLast: { marginRight: 0 },
-  specIcon: { marginBottom: 2 },
+  specCardLast: { 
+    marginRight: 0,
+    paddingVertical: 12,
+  },
+  specIcon: { marginBottom: 4 },
   specTitle: { 
     color: COLORS.muted, 
-    fontSize: 9, 
+    fontSize: 10, 
     fontWeight: "700", 
-    marginBottom: 0 
+    marginBottom: 2 
   },
   specText: { 
     color: COLORS.primary, 
-    fontSize: 12, 
+    fontSize: 13, 
     fontWeight: "800", 
     textAlign: "center" 
   },
