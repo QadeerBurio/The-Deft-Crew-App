@@ -9,9 +9,9 @@ const getBaseURL = () => {
     const manifest = Constants.expoConfig || Constants.manifest || {};
     const hostUri = manifest.hostUri;
     const devIp = hostUri ? hostUri.split(':')[0] : '192.168.18.93';
-    return `https://the-deft-crew-production.up.railway.app/api`;
-    // return `http://192.168.18.93:5000/api`;
-   return `http://${devIp}:5000/api`; // change back to production url when done testing
+    // return `https://the-deft-crew-production.up.railway.app/api`;
+    return `http://192.168.100.27:5000/api`;
+    // return `http://${devIp}:5000/api`; // change back to production url when done testing
   }
   //return 'https://the-deft-crew-production.up.railway.app/api';
   return 'http://192.168.100.27:5000/api'; //ibrar laptop local testing ip 
@@ -244,7 +244,7 @@ export const optimizedAPI = {
     // Use deduplication to prevent multiple parallel requests
     return deduplicatedRequest(cacheKey, async () => {
       console.log('🔄 Fetching fresh brands data...');
-      
+
       // Parallel fetch: brands + offers summary
       const [brandsRes, summaryRes] = await Promise.all([
         api.get('/brands', {
@@ -289,8 +289,8 @@ export const optimizedAPI = {
             isClaimed: offer.claimedBy?.includes(userId) || false,
             discountPercentage: offer.discountPercentage || 0,
           })),
-          displayImage: firstOffer?.image 
-            ? formatImage(firstOffer.image) 
+          displayImage: firstOffer?.image
+            ? formatImage(firstOffer.image)
             : (logoUrl || defaultImage),
           hasOffer: brandOffers.length > 0,
           discount: firstOffer?.discountPercentage || 0,
@@ -309,10 +309,10 @@ export const optimizedAPI = {
       });
 
       console.log(`✅ Loaded ${sorted.length} brands in parallel`);
-      
+
       // Cache for 5 minutes
       memoryCache.set(cacheKey, sorted, 300000);
-      
+
       return sorted;
     }, 300000); // 5 minutes TTL
   },

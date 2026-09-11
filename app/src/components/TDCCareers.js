@@ -164,6 +164,82 @@ const TDCCareerCard = React.memo(({ item, index, onPress, hasApplied }) => {
   );
 });
 
+// ==================== FILTER MODAL ====================
+const FilterModal = React.memo(({ visible, filters, setFilters, onClose, onClear }) => (
+  <Modal 
+    visible={visible} 
+    animationType="slide" 
+    transparent 
+    onRequestClose={onClose}
+  >
+    <View style={styles.filterModalOverlay}>
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={StyleSheet.absoluteFill} />
+      </TouchableWithoutFeedback>
+      <View style={styles.filterModalContent}>
+        <View style={styles.modalDragHandle} />
+        <TouchableOpacity style={styles.closeXButton} onPress={onClose}>
+          <Ionicons name="close" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.filterModalTitle}>Filter Openings</Text>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <View style={styles.filterGroup}>
+            <Text style={styles.filterLabel}>Date Posted</Text>
+            <View style={styles.filterOptions}>
+              {[{ label: "Any Time", value: "all" }, { label: "Past 24 Hours", value: "24h" }, { label: "Past Week", value: "week" }, { label: "Past Month", value: "month" }].map(o => (
+                <TouchableOpacity 
+                  key={o.value} 
+                  style={[styles.filterChip, filters.datePosted === o.value && styles.filterChipActive]} 
+                  onPress={() => setFilters(p => ({ ...p, datePosted: o.value }))}
+                >
+                  <Text style={[styles.filterChipText, filters.datePosted === o.value && styles.filterChipTextActive]}>
+                    {o.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          <View style={styles.filterGroup}>
+            <Text style={styles.filterLabel}>Job Type</Text>
+            <View style={styles.filterOptions}>
+              {["Full-time", "Part-time", "Contract", "Internship"].map(t => (
+                <TouchableOpacity 
+                  key={t} 
+                  style={[styles.filterChip, filters.type === t && styles.filterChipActive]} 
+                  onPress={() => setFilters(p => ({ ...p, type: p.type === t ? "" : t }))}
+                >
+                  <Text style={[styles.filterChipText, filters.type === t && styles.filterChipTextActive]}>
+                    {t}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          <View style={styles.filterGroup}>
+            <Text style={styles.filterLabel}>Work Location</Text>
+            <View style={styles.filterOptions}>
+              {["Remote", "On-site", "Hybrid"].map(lt => (
+                <TouchableOpacity 
+                  key={lt} 
+                  style={[styles.filterChip, filters.locationType === lt && styles.filterChipActive]} 
+                  onPress={() => setFilters(p => ({ ...p, locationType: p.locationType === lt ? "" : lt }))}
+                >
+                  <Text style={[styles.filterChipText, filters.locationType === lt && styles.filterChipTextActive]}>
+                    {lt}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </ScrollView>
+        <TouchableOpacity style={styles.clearFiltersBtn} onPress={onClear}>
+          <Text style={styles.clearFiltersBtnText}>Clear All Filters</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </Modal>
+));
+
 // ==================== MAIN TDC CAREERS SCREEN ====================
 const TDCCareers = ({ navigation }) => {
   const [jobs, setJobs] = useState([]);
@@ -541,84 +617,7 @@ const TDCCareers = ({ navigation }) => {
     }
   };
 
-  // ==================== FILTER MODAL ====================
-  const FilterModal = () => (
-    <Modal 
-      visible={showFilters} 
-      animationType="slide" 
-      transparent 
-      onRequestClose={() => setShowFilters(false)}
-    >
-      <View style={styles.filterModalOverlay}>
-        <TouchableWithoutFeedback onPress={() => setShowFilters(false)}>
-          <View style={StyleSheet.absoluteFill} />
-        </TouchableWithoutFeedback>
-        <View style={styles.filterModalContent}>
-          <View style={styles.modalDragHandle} />
-          <TouchableOpacity style={styles.closeXButton} onPress={() => setShowFilters(false)}>
-            <Ionicons name="close" size={24} color="#fff" />
-          </TouchableOpacity>
-          <Text style={styles.filterModalTitle}>Filter Openings</Text>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <View style={styles.filterGroup}>
-              <Text style={styles.filterLabel}>Date Posted</Text>
-              <View style={styles.filterOptions}>
-                {[{ label: "Any Time", value: "all" }, { label: "Past 24 Hours", value: "24h" }, { label: "Past Week", value: "week" }, { label: "Past Month", value: "month" }].map(o => (
-                  <TouchableOpacity 
-                    key={o.value} 
-                    style={[styles.filterChip, filters.datePosted === o.value && styles.filterChipActive]} 
-                    onPress={() => setFilters(p => ({ ...p, datePosted: o.value }))}
-                  >
-                    <Text style={[styles.filterChipText, filters.datePosted === o.value && styles.filterChipTextActive]}>
-                      {o.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            <View style={styles.filterGroup}>
-              <Text style={styles.filterLabel}>Job Type</Text>
-              <View style={styles.filterOptions}>
-                {["Full-time", "Part-time", "Contract", "Internship"].map(t => (
-                  <TouchableOpacity 
-                    key={t} 
-                    style={[styles.filterChip, filters.type === t && styles.filterChipActive]} 
-                    onPress={() => setFilters(p => ({ ...p, type: p.type === t ? "" : t }))}
-                  >
-                    <Text style={[styles.filterChipText, filters.type === t && styles.filterChipTextActive]}>
-                      {t}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            <View style={styles.filterGroup}>
-              <Text style={styles.filterLabel}>Work Location</Text>
-              <View style={styles.filterOptions}>
-                {["Remote", "On-site", "Hybrid"].map(lt => (
-                  <TouchableOpacity 
-                    key={lt} 
-                    style={[styles.filterChip, filters.locationType === lt && styles.filterChipActive]} 
-                    onPress={() => setFilters(p => ({ ...p, locationType: p.locationType === lt ? "" : lt }))}
-                  >
-                    <Text style={[styles.filterChipText, filters.locationType === lt && styles.filterChipTextActive]}>
-                      {lt}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </ScrollView>
-          <TouchableOpacity style={styles.clearFiltersBtn} onPress={() => { 
-            setFilters({ type: "", locationType: "", experienceLevel: "", category: "", datePosted: "all" }); 
-            setShowFilters(false); 
-          }}>
-            <Text style={styles.clearFiltersBtnText}>Clear All Filters</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
+
 
   // ==================== JOB DETAIL MODAL (for applied jobs) ====================
   const DetailModal = () => {
@@ -1010,7 +1009,16 @@ const TDCCareers = ({ navigation }) => {
           />
         )}
 
-        <FilterModal />
+        <FilterModal 
+          visible={showFilters}
+          filters={filters}
+          setFilters={setFilters}
+          onClose={() => setShowFilters(false)}
+          onClear={() => {
+            setFilters({ type: "", locationType: "", experienceLevel: "", category: "", datePosted: "all" });
+            setShowFilters(false);
+          }}
+        />
         {showDetailModal && detailJob && <DetailModal />}
         <AppFormModal />
 

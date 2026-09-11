@@ -715,6 +715,70 @@ const ApplicationsModal = ({ visible, applications, onClose, onInterviewPress })
   );
 };
 
+// ==================== FILTER MODAL ====================
+const FilterModal = React.memo(({ visible, filters, setFilters, onClose, onApply, onClear }) => (
+  <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <View style={styles.filterModalOverlay}>
+      <TouchableWithoutFeedback onPress={onClose}><View style={StyleSheet.absoluteFill} /></TouchableWithoutFeedback>
+      <View style={styles.filterModalContent}>
+        <View style={styles.modalDragHandle} />
+        
+        <TouchableOpacity style={styles.closeXButton} onPress={onClose}>
+          <Ionicons name="close" size={24} color="#1a1a1a" />
+        </TouchableOpacity>
+        
+        <Text style={styles.filterModalTitle}>Filter Jobs</Text>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <View style={styles.filterGroup}>
+            <Text style={styles.filterLabel}>Date Posted</Text>
+            <View style={styles.filterOptions}>
+              {[{ label: "Any Time", value: "all" }, { label: "Past 24 Hours", value: "24h" }, { label: "Past Week", value: "week" }, { label: "Past Month", value: "month" }].map(o => (
+                <TouchableOpacity key={o.value} style={[styles.filterChip, filters.datePosted === o.value && styles.filterChipActive]} onPress={() => setFilters(p => ({ ...p, datePosted: o.value }))}>
+                  <Text style={[styles.filterChipText, filters.datePosted === o.value && styles.filterChipTextActive]}>{o.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          <View style={styles.filterGroup}>
+            <Text style={styles.filterLabel}>Job Type</Text>
+            <View style={styles.filterOptions}>
+              {["Full-time", "Part-time", "Contract", "Internship"].map(t => (
+                <TouchableOpacity key={t} style={[styles.filterChip, filters.type === t && styles.filterChipActive]} onPress={() => setFilters(p => ({ ...p, type: p.type === t ? "" : t }))}>
+                  <Text style={[styles.filterChipText, filters.type === t && styles.filterChipTextActive]}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          <View style={styles.filterGroup}>
+            <Text style={styles.filterLabel}>Location</Text>
+            <View style={styles.filterOptions}>
+              {["Remote", "On-site", "Hybrid"].map(t => (
+                <TouchableOpacity key={t} style={[styles.filterChip, filters.locationType === t && styles.filterChipActive]} onPress={() => setFilters(p => ({ ...p, locationType: p.locationType === t ? "" : t }))}>
+                  <Text style={[styles.filterChipText, filters.locationType === t && styles.filterChipTextActive]}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          <View style={styles.filterGroup}>
+            <Text style={styles.filterLabel}>Experience</Text>
+            <View style={styles.filterOptions}>
+              {["Entry Level", "Mid Level", "Senior Level", "Executive"].map(t => (
+                <TouchableOpacity key={t} style={[styles.filterChip, filters.experienceLevel === t && styles.filterChipActive]} onPress={() => setFilters(p => ({ ...p, experienceLevel: p.experienceLevel === t ? "" : t }))}>
+                  <Text style={[styles.filterChipText, filters.experienceLevel === t && styles.filterChipTextActive]}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </ScrollView>
+        <View style={styles.filterActions}>
+          <TouchableOpacity style={styles.clearFiltersBtn} onPress={onClear}><Text style={styles.clearFiltersText}>Clear All</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.applyFiltersBtn} onPress={onApply}><View style={styles.applyFiltersGradient}><Text style={styles.applyFiltersText}>Apply Filters</Text></View></TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  </Modal>
+));
+
 // ==================== MAIN CAREER SCREEN ====================
 const Career = ({ navigation }) => {
   const { resumes = [], optimizeResume, checkResumeFit } = useContext(ResumeContext);
@@ -1235,69 +1299,7 @@ const Career = ({ navigation }) => {
 
   const filteredData = jobs;
 
-  // ==================== FILTER MODAL ====================
-  const FilterModal = () => (
-    <Modal visible={showFilters} animationType="slide" transparent onRequestClose={() => setShowFilters(false)}>
-      <View style={styles.filterModalOverlay}>
-        <TouchableWithoutFeedback onPress={() => setShowFilters(false)}><View style={StyleSheet.absoluteFill} /></TouchableWithoutFeedback>
-        <View style={styles.filterModalContent}>
-          <View style={styles.modalDragHandle} />
-          
-          <TouchableOpacity style={styles.closeXButton} onPress={() => setShowFilters(false)}>
-            <Ionicons name="close" size={24} color="#1a1a1a" />
-          </TouchableOpacity>
-          
-          <Text style={styles.filterModalTitle}>Filter Jobs</Text>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <View style={styles.filterGroup}>
-              <Text style={styles.filterLabel}>Date Posted</Text>
-              <View style={styles.filterOptions}>
-                {[{ label: "Any Time", value: "all" }, { label: "Past 24 Hours", value: "24h" }, { label: "Past Week", value: "week" }, { label: "Past Month", value: "month" }].map(o => (
-                  <TouchableOpacity key={o.value} style={[styles.filterChip, filters.datePosted === o.value && styles.filterChipActive]} onPress={() => setFilters(p => ({ ...p, datePosted: o.value }))}>
-                    <Text style={[styles.filterChipText, filters.datePosted === o.value && styles.filterChipTextActive]}>{o.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            <View style={styles.filterGroup}>
-              <Text style={styles.filterLabel}>Job Type</Text>
-              <View style={styles.filterOptions}>
-                {["Full-time", "Part-time", "Contract", "Internship"].map(t => (
-                  <TouchableOpacity key={t} style={[styles.filterChip, filters.type === t && styles.filterChipActive]} onPress={() => setFilters(p => ({ ...p, type: p.type === t ? "" : t }))}>
-                    <Text style={[styles.filterChipText, filters.type === t && styles.filterChipTextActive]}>{t}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            <View style={styles.filterGroup}>
-              <Text style={styles.filterLabel}>Location</Text>
-              <View style={styles.filterOptions}>
-                {["Remote", "On-site", "Hybrid"].map(t => (
-                  <TouchableOpacity key={t} style={[styles.filterChip, filters.locationType === t && styles.filterChipActive]} onPress={() => setFilters(p => ({ ...p, locationType: p.locationType === t ? "" : t }))}>
-                    <Text style={[styles.filterChipText, filters.locationType === t && styles.filterChipTextActive]}>{t}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            <View style={styles.filterGroup}>
-              <Text style={styles.filterLabel}>Experience</Text>
-              <View style={styles.filterOptions}>
-                {["Entry Level", "Mid Level", "Senior Level", "Executive"].map(t => (
-                  <TouchableOpacity key={t} style={[styles.filterChip, filters.experienceLevel === t && styles.filterChipActive]} onPress={() => setFilters(p => ({ ...p, experienceLevel: p.experienceLevel === t ? "" : t }))}>
-                    <Text style={[styles.filterChipText, filters.experienceLevel === t && styles.filterChipTextActive]}>{t}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </ScrollView>
-          <View style={styles.filterActions}>
-            <TouchableOpacity style={styles.clearFiltersBtn} onPress={() => { clearAllFilters(); setShowFilters(false); }}><Text style={styles.clearFiltersText}>Clear All</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.applyFiltersBtn} onPress={() => { setShowFilters(false); fetchJobs(1, false); }}><View style={styles.applyFiltersGradient}><Text style={styles.applyFiltersText}>Apply Filters</Text></View></TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
+
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -1420,7 +1422,14 @@ const Career = ({ navigation }) => {
         </Animated.View>
       )}
 
-      <FilterModal />
+      <FilterModal 
+        visible={showFilters}
+        filters={filters}
+        setFilters={setFilters}
+        onClose={() => setShowFilters(false)}
+        onApply={() => { setShowFilters(false); fetchJobs(1, false); }}
+        onClear={() => { clearAllFilters(); setShowFilters(false); }}
+      />
       <ApplicationsModal 
         visible={showApplicationsModal} 
         applications={myApplications} 
