@@ -1,9 +1,11 @@
-// context/AuthContext.js
+// The-Deft-Crew-App/app/src/context/AuthContext.js
 import React, { createContext, useState, useEffect, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import api, { injectLogout, setGuestMode } from "../api/api";
 import { jwtDecode } from "jwt-decode";
+// In AuthContext.js, inside clearAllData or logout
+import { resetNotificationBaseline } from '../hooks/useNotifications'; // export a helper
 
 export const AuthContext = createContext();
 
@@ -20,6 +22,7 @@ export function AuthProvider({ children }) {
     setUnreadCount(0);
     setIsGuest(false);
     setGuestMode(false);
+    resetNotificationBaseline();
     await AsyncStorage.multiRemove(["user", "token", "isGuest"]);
   }, []);
 
@@ -86,6 +89,37 @@ export function AuthProvider({ children }) {
     }
   };
 
+
+//delete this function and use the one below it for railway server
+  const verifyToken = async (activeToken) => {
+  try {
+    await api.get('/auth/me', {
+      headers: { Authorization: `Bearer ${activeToken}` }
+    });
+  } catch (e) {
+    if (e.response && e.response.status === 401) {
+      await clearAllData();
+    }
+  }
+};
+
+const updateUnreadCount = async (authToken) => {
+  const activeToken = authToken || token;
+  if (!activeToken || isTokenExpired(activeToken) || isGuest) return;
+try {
+    const res = await api.get('/notification/my-notifications', {
+      headers: { Authorization: `Bearer ${activeToken}` }
+    });
+    const unread = res.data.filter(n => !n.isRead).length;
+    setUnreadCount(unread);
+    return unread;
+  } catch (e) {
+    console.log("Error updating unread count:", e);
+    return 0;
+  }
+};
+
+  /* uncomment when on railway server
   const verifyToken = async (activeToken) => {
     try {
       await axios.get('https://the-deft-crew-production.up.railway.app/api/auth/me', {
@@ -114,6 +148,7 @@ export function AuthProvider({ children }) {
       return 0;
     }
   };
+  */
 
   useEffect(() => {
     injectLogout(logout);

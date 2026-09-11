@@ -27,6 +27,7 @@ import { AuthContext } from '../../context/AuthContext';
 const { width, height } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
+
 const COLORS = {
   primary: '#f9c349',
   primaryDark: '#e6b800',

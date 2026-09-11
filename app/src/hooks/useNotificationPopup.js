@@ -27,7 +27,7 @@ export const useNotificationPopup = () => {
     }
 
     // Update unread count
-    if (token) {
+    if (token && updateUnreadCount) {
       updateUnreadCount(token);
     }
   }, [bannerVisible, token, updateUnreadCount]);

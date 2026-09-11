@@ -18,6 +18,7 @@ const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
+
 // Modern Tab Bar Button with enhanced animation
 const ModernTabBarButton = ({ children, onPress, focused }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;

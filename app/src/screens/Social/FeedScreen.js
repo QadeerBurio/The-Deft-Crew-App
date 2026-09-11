@@ -20,6 +20,7 @@ import ConfessionScreen from './ConfessionScreen';
 const { width, height } = Dimensions.get('window');
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
 
+
 // Skeleton Feed for loading state
 const FeedSkeleton = () => (
   <View style={styles.skeletonContainer}>

@@ -3,21 +3,29 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, Platform } from 'react-native';
 import Constants from 'expo-constants';
-
 const getBaseURL = () => {
+  console.log('__DEV__ is:', __DEV__);
+
   if (__DEV__) {
     const manifest = Constants.expoConfig || Constants.manifest || {};
     const hostUri = manifest.hostUri;
     const devIp = hostUri ? hostUri.split(':')[0] : '192.168.18.93';
-    // return `https://the-deft-crew-production.up.railway.app/api`;
+
     return `http://192.168.100.27:5000/api`;
-    // return `http://${devIp}:5000/api`; // change back to production url when done testing
+
+    // Alternative:
+    // return `http://${devIp}:5000/api`;
+
+    // Production:
+    // return 'https://the-deft-crew-production.up.railway.app/api';
   }
-  //return 'https://the-deft-crew-production.up.railway.app/api';
-  return 'http://192.168.100.27:5000/api'; //ibrar laptop local testing ip 
+
+  return 'http://192.168.100.4:5000/api';
 };
 
-export const BASE_URL = getBaseURL(); // <-- add this export
+export const BASE_URL = getBaseURL();
+
+console.log('[api.js] Resolved BASE_URL:', BASE_URL);
 
 // Create axios instance with optimized config
 const api = axios.create({

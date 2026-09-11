@@ -1,3 +1,7 @@
+//The-Deft-Crew-App/app/src/components/NotificationModal.js
+
+
+
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import {
   Modal, View, Text, TouchableOpacity, StyleSheet, FlatList,
@@ -8,6 +12,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
+import { BASE_URL } from '../api/api';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -84,51 +89,54 @@ const NotificationModal = ({ visible, onClose }) => {
   };
 
   // ✅ FIX: Filter notifications by user ID and type
-  const fetchNotifications = async () => {
-    if (!token || !user) return;
-    setLoading(true);
-    try {
-      const response = await axios.get('https://the-deft-crew-production.up.railway.app/api/notification/my-notifications',{
+  // Inside NotificationModal.js — replace fetchNotifications with:
+const fetchNotifications = async () => {
+  if (!token || !user) return;
+  setLoading(true);
+  try {
+    const [mainRes, socialRes] = await Promise.all([
+      axios.get(`${BASE_URL}/notification/my-notifications`, {
         headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      // ✅ Filter notifications - only show current user's notifications
-      let data = response.data;
-      
-      // Filter out notifications that don't belong to the current user
-      data = data.filter(n => {
-        // Check if notification has recipient field and it matches current user
-        if (n.recipient && n.recipient._id) {
-          return n.recipient._id === user._id || n.recipient === user._id;
-        }
-        // If recipient is stored as string ID
-        if (typeof n.recipient === 'string') {
-          return n.recipient === user._id;
-        }
-        return true; // Keep if no recipient filtering needed
-      });
+      }),
+      axios.get(`${BASE_URL}/social/notifications`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).catch(() => ({ data: [] }))
+    ]);
 
-      // ✅ Map notifications and add time
-      data = data.map(n => ({ 
-        ...n, 
+    const mainDocs = Array.isArray(mainRes.data) ? mainRes.data : [];
+    const socialDocs = Array.isArray(socialRes.data) ? socialRes.data : [];
+
+    const normalizedSocial = socialDocs.map(n => ({
+      _id: n._id,
+      title: n.type === 'like' ? '❤️ New Like' :
+             n.type === 'comment' ? '💬 New Comment' :
+             n.type === 'connection_accepted' ? '🎉 Connection Accepted' :
+             n.type === 'request_declined' ? 'Request Declined' :
+             n.type === 'request' ? '👤 Connection Request' : 'Notification',
+      description: n.text,
+      type: 'Social',
+      createdAt: n.createdAt,
+      isRead: (n.readBy || []).some(id => id.toString() === user._id),
+      link: n.postId ? `/post/${n.postId}` : ''
+    }));
+
+    let data = [...mainDocs, ...normalizedSocial]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .map(n => ({
+        ...n,
         time: getTimeAgo(n.createdAt),
-        // Ensure proper icon based on type
         icon: getNotificationIcon(n.type)
       }));
 
-      setNotifications(data);
-      
-      // Update unread count for current user
-      const count = data.filter(n => !n.isRead).length;
-      setUnreadCount(count);
-      
-    } catch (error) {
-      console.error("Fetch Error:", error.message);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+    setNotifications(data);
+    setUnreadCount(data.filter(n => !n.isRead).length);
+  } catch (error) {
+    console.error("Fetch Error:", error.message);
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+};
 
   // ✅ Helper function to get correct icon based on notification type
   const getNotificationIcon = (type) => {
@@ -153,7 +161,8 @@ const NotificationModal = ({ visible, onClose }) => {
 
   const markAsReadOnServer = async (id) => {
     try {
-      await axios.patch(`https://the-deft-crew-production.up.railway.app/api/notification/mark-read/${id}`, {}, {
+      //change back to railway production url
+      await axios.patch(`${BASE_URL}/notification/mark-read/${id}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
@@ -165,7 +174,8 @@ const NotificationModal = ({ visible, onClose }) => {
 
   const markAllRead = async () => {
     try {
-      await axios.put("https://the-deft-crew-production.up.railway.app/api/notification/mark-all-read", {}, {
+      //change back to railway production url
+      await axios.put(`${BASE_URL}/notification/mark-all-read`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
@@ -177,7 +187,8 @@ const NotificationModal = ({ visible, onClose }) => {
 
   const deleteNotification = async (id) => {
     try {
-      await axios.delete(`https://the-deft-crew-production.up.railway.app/api/notification/delete/${id}`, {
+      //change back to railway production url
+      await axios.delete(`${BASE_URL}/notification/delete/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -207,7 +218,8 @@ const NotificationModal = ({ visible, onClose }) => {
           style: "destructive", 
           onPress: async () => {
             try {
-              await axios.delete("https://the-deft-crew-production.up.railway.app/api/notification/clear-all", {
+              //change back to railway production url
+              await axios.delete(`${BASE_URL}/notification/clear-all`, {
                 headers: { Authorization: `Bearer ${token}` }
               });
               setNotifications([]);
@@ -236,7 +248,7 @@ const NotificationModal = ({ visible, onClose }) => {
     if (filter === 'All') return true;
     if (filter === 'Unread') return !n.isRead;
     // Map filter labels to notification types
-    if (filter === 'Offers') return n.type === 'Offers' || n.type === 'Offer';
+   if (filter === 'Offers') return n.type === 'Offers' || n.type === 'Offer' || n.type === 'Brand';
     if (filter === 'System') return n.type === 'System' || n.type === 'Application Status';
     return n.type === filter;
   });
@@ -280,7 +292,7 @@ const NotificationModal = ({ visible, onClose }) => {
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-        {['All', 'Unread', 'Offers', 'System'].map(label => (
+        {['All', 'Unread', 'Offers', 'System', 'Brand'].map(label => (
           <TouchableOpacity
             key={label}
             onPress={() => setFilter(label)}

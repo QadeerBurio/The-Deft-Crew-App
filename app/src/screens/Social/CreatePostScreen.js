@@ -156,7 +156,9 @@ export default function CreatePostScreen({ navigation }) {
         location: user?.location || "Karachi"
       };
 
-      const response = await fetch('https://the-deft-crew-production.up.railway.app/api/social/create-post', {
+      const response = await fetch('https://the-deft-crew-production.up.railway.app/api/social/create-post',
+       
+        {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

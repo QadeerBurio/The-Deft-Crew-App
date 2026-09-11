@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "683202144662",
+    "project_id": "the-deft-crew-app",
+    "storage_bucket": "the-deft-crew-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:683202144662:android:5f210a28371fb956fe55b7",
+        "android_client_info": {
+          "package_name": "com.aqkhan110.tdc"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCKWCh2KUp1cYawp1bAGs0lIzAm4AnLK0k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

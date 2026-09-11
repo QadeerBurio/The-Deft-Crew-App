@@ -1,0 +1,61 @@
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+
+# Local environment files
+.env
+.env*.local
+config/.env
+
+# TypeScript
+*.tsbuildinfo
+
+# Generated/example files
+app-example
+
+# IMPORTANT:
+# Do NOT ignore android because this project has a
+# manually configured native Android project.
+#
+# Do NOT ignore package.json.
+#
+# Do NOT ignore google-services.json because it is needed
+# by the Android build.
+
+# Explicitly make sure required project files are included
+!package.json
+!package-lock.json
+!eas.json
+!app.json
+!google-services.json
+!android/
+!android/**
+
+
+# Android generated build files
+**/build/
+.gradle/
+**/.gradle/
+
+# Signing/private key files
+*.jks
+*.p12
+*.key
+*.p8
+*.pem
+*.mobileprovision
+# Native generated C/C++ build files
+**/.cxx/

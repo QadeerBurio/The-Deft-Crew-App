@@ -72,12 +72,13 @@ const CATEGORIES = [
 ];
 
 const DISCOUNT_OPTIONS = [0, 10, 15, 20, 25, 30, 35, 40, 45, 50];
-
 // CACHE CONFIGURATION
-const BASE_URL = 'https://the-deft-crew-production.up.railway.app';
+const BASE_URL = 'http://localhost:5000';
 const CACHE_KEY = '@brands_cache';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 const PAGE_SIZE = 10;
+const API_TIMEOUT = 5000;
+const LOADER_MIN_DURATION = 2000; // 2 seconds minimum loader
 
 // Global cache with pre-loaded data
 let brandsCache = null;
@@ -86,7 +87,6 @@ let pendingFetchPromise = null;
 let preloadedImages = new Set();
 let imagePreloadQueue = new Set();
 const MAX_PRELOAD = 12;
-
 // ==========================================
 // OPTIMIZED CATEGORY GRID ITEM
 // ==========================================

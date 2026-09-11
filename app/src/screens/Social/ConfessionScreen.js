@@ -12,7 +12,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { AuthContext } from "../../context/AuthContext";
 
 const { height, width } = Dimensions.get('window');
-const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
+const API_URL = 'https://the-deft-crew-production.up.railway.app///api/social';
+
 
 // Modern Skeleton Component
 const ConfessionSkeleton = () => {

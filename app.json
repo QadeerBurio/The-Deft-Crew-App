@@ -26,6 +26,7 @@
     },
     "android": {
       "package": "com.aqkhan110.tdc",
+      "googleServicesFile": "./google-services.json",
       "permissions": [
     "INTERNET",
     "FOREGROUND_SERVICE",
@@ -90,6 +91,14 @@
         "expo-av",
         {
           "microphonePermission": "TDC uses the microphone to record and send voice messages in chats."
+        }
+      ],
+
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#f9c349"
         }
       ],
       [

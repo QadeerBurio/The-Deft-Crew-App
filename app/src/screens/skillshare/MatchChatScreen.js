@@ -31,13 +31,15 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadChatFile } from '../../api/api';
 
-import ImageView from 'react-native-image-viewing';
 import { Video, ResizeMode } from 'expo-av';
 import * as Linking from 'expo-linking';
+import ImagePreviewModal from '../../../../components/media/ImagePreviewModal';
 
 const BRAND = '#f9c349';
 const INK = '#1a1a1a';
 const MUTED = '#8E8E93';
+
+
 
 
 // Mirrors api.js's getBaseURL() exactly, so the socket connection and raw
@@ -47,7 +49,7 @@ const getSocketUrl = () => {
   if (__DEV__) {
     const manifest = Constants.expoConfig || Constants.manifest || {};
     const hostUri = manifest.hostUri;
-    const devIp = hostUri ? hostUri.split(':')[0] : '192.168.18.93';
+    const devIp = hostUri ? hostUri.split(':')[0] : ' 192.168.100.4';//fallback to a hardcoded dev IP if hostUri is not available
     return `http://${devIp}:5000`; //apply railway url when deploying this feature
   }
   return 'https://the-deft-crew-production.up.railway.app';
@@ -660,15 +662,11 @@ const pickDocument = async () => {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-            <ImageView
-        images={previewImages}
-        imageIndex={0}
-        visible={imageViewerVisible}
-        onRequestClose={() => setImageViewerVisible(false)}
-        swipeToCloseEnabled
-        doubleTapToZoomEnabled
-      />
-
+      <ImagePreviewModal
+  visible={imageViewerVisible}
+  images={previewImages}
+  onRequestClose={() => setImageViewerVisible(false)}
+/>
       <Modal
         visible={!!videoPreviewUrl}
         transparent

@@ -15,6 +15,7 @@ import { AuthContext } from "../../context/AuthContext";
 const { width, height } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
+
 // TDC Brand Colors
 const COLORS = {
   primary: '#f9c349',

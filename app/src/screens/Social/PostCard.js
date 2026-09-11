@@ -17,6 +17,7 @@ import ReportModal from "./ReportModal";
 const { width, height } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
+
 export const PostCardSkeleton = () => {
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
