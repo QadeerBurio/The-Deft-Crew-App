@@ -1,4 +1,4 @@
-// screens/Brands.js - ULTRA FAST WITH PROPER MODAL DATA
+// screens/Brands.js - ULTRA FAST + EXACT DISCOUNT FILTER + CLAIM SYNC + SMART AUTO-FETCH + AUTO-UPDATE STATS
 import React, {
   useEffect,
   useState,
@@ -20,24 +20,25 @@ import {
   Modal,
   Pressable,
   StatusBar,
-  Alert,
   ScrollView,
-  Linking,
   Platform,
   Animated,
-  Easing,
+  AppState,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import api, { memoryCache } from "../api/api";
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+} from "@react-navigation/native";
+import api, { optimizedAPI, onCacheEvent } from "../api/brandApi";
 import { AuthContext } from "../context/AuthContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useRoute } from "@react-navigation/native";
-import { LinearGradient } from "expo-linear-gradient";
-import * as Haptics from 'expo-haptics';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from "expo-haptics";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { onOfferClaimed } from "./OfferScreen";
 
 const { width, height } = Dimensions.get("window");
 const NUM_COLUMNS = 2;
@@ -45,7 +46,20 @@ const HORIZONTAL_PADDING = 20;
 const GAP = 15;
 const CARD_WIDTH = (width - HORIZONTAL_PADDING * 2 - GAP) / NUM_COLUMNS;
 
-// ENHANCED CATEGORIES
+const BASE_URL = "https://the-deft-crew-production.up.railway.app";
+const CACHE_KEY = "@brands_cache";
+const STATS_CACHE_KEY = "@brands_stats_cache";
+const CACHE_DURATION = 5 * 60 * 1000;
+const PAGE_SIZE = 10;
+const MAX_PRELOAD = 12;
+
+// ── Auto-fetch tuning ────────────────────────────────
+const POLL_INTERVAL = 20000;
+const BACKGROUND_POLL_INTERVAL = 60000;
+const STATS_POLL_INTERVAL = 15000;
+const MIN_FETCH_GAP = 4000;
+
+// ── Categories ─────────────────────────────────────────
 const CATEGORIES = [
   { id: "all", name: "All", icon: "apps", color: "#f9c349", bgColor: "#f9c34915" },
   { id: "restaurant", name: "Restaurant", icon: "silverware-fork-knife", color: "#FF6B6B", bgColor: "#FF6B6B15" },
@@ -71,50 +85,100 @@ const CATEGORIES = [
   { id: "others", name: "Others", icon: "dots-horizontal", color: "#95A5A6", bgColor: "#95A5A615" },
 ];
 
-const DISCOUNT_OPTIONS = [0, 10, 15, 20, 25, 30, 35, 40, 45, 50];
-// CACHE CONFIGURATION
-const BASE_URL = 'http://localhost:5000';
-const CACHE_KEY = '@brands_cache';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-const PAGE_SIZE = 10;
-const API_TIMEOUT = 5000;
-const LOADER_MIN_DURATION = 2000; // 2 seconds minimum loader
+const CATEGORY_BY_ID = new Map(CATEGORIES.map((c) => [c.id, c]));
+const CATEGORY_BY_NAME = new Map(CATEGORIES.map((c) => [c.name, c]));
 
-// Global cache with pre-loaded data
+const DISCOUNT_OPTIONS = [0, 10, 15, 20, 25, 30, 35, 40, 45, 50];
+
+// Global caches
 let brandsCache = null;
 let cacheTimestamp = null;
 let pendingFetchPromise = null;
-let preloadedImages = new Set();
-let imagePreloadQueue = new Set();
-const MAX_PRELOAD = 12;
+let statsCache = null;
+let statsCacheTimestamp = null;
+const preloadedImages = new Set();
+
+// ── Deep-diff helpers ──
+const offersEqual = (a, b) => {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    const y = b[i];
+    if (
+      x._id !== y._id ||
+      x.discountPercentage !== y.discountPercentage ||
+      x.isClaimed !== y.isClaimed ||
+      x.image !== y.image ||
+      x.isOnline !== y.isOnline ||
+      x.isInStore !== y.isInStore
+    ) {
+      return false;
+    }
+  }
+  return true;
+};
+
+const brandsEqual = (a, b) => {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    const y = b[i];
+    if (
+      x._id !== y._id ||
+      x.discount !== y.discount ||
+      x.displayImage !== y.displayImage ||
+      x.hasOffer !== y.hasOffer ||
+      x.isOnline !== y.isOnline ||
+      x.isInStore !== y.isInStore ||
+      x.category !== y.category ||
+      x.name !== y.name ||
+      !offersEqual(x.offers, y.offers)
+    ) {
+      return false;
+    }
+  }
+  return true;
+};
+
+const statsEqual = (a, b) => {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return (
+    a.totalBrands === b.totalBrands &&
+    a.totalOffers === b.totalOffers &&
+    a.claimedCount === b.claimedCount &&
+    a.onlineCount === b.onlineCount &&
+    a.inStoreCount === b.inStoreCount &&
+    a.maxDiscount === b.maxDiscount
+  );
+};
+
 // ==========================================
-// OPTIMIZED CATEGORY GRID ITEM
+// CATEGORY ITEM
 // ==========================================
 const CategoryGridItem = memo(({ category, isSelected, onPress }) => (
   <TouchableOpacity
-    style={[
-      styles.categoryGridItem,
-      isSelected && styles.categoryGridItemActive,
-    ]}
+    style={[styles.categoryGridItem, isSelected && styles.categoryGridItemActive]}
     onPress={() => onPress(category.id)}
     activeOpacity={0.7}
   >
-    <View style={[
-      styles.categoryIconWrapper,
-      isSelected && styles.categoryIconWrapperActive,
-      { backgroundColor: isSelected ? category.color : category.bgColor }
-    ]}>
-      <MaterialCommunityIcons 
-        name={category.icon} 
-        size={20} 
-        color={isSelected ? "#fff" : category.color} 
+    <View
+      style={[
+        styles.categoryIconWrapper,
+        isSelected && styles.categoryIconWrapperActive,
+        { backgroundColor: isSelected ? category.color : category.bgColor },
+      ]}
+    >
+      <MaterialCommunityIcons
+        name={category.icon}
+        size={20}
+        color={isSelected ? "#fff" : category.color}
       />
     </View>
-    <Text 
-      style={[
-        styles.categoryGridName,
-        isSelected && styles.categoryGridNameActive
-      ]}
+    <Text
+      style={[styles.categoryGridName, isSelected && styles.categoryGridNameActive]}
       numberOfLines={1}
     >
       {category.name}
@@ -123,700 +187,871 @@ const CategoryGridItem = memo(({ category, isSelected, onPress }) => (
 ));
 
 // ==========================================
-// OPTIMIZED BRAND CARD
+// STATS BAR
 // ==========================================
-const BrandCard = memo(({ item, index, onPress }) => {
-  const firstOffer = item.offers?.[0];
-  const displayImage = item.displayImage;
-  
-  const categoryColor = useMemo(() => {
-    const cat = CATEGORIES.find(c => c.name === item.category);
-    return cat?.color || "#000000";
-  }, [item.category]);
-  
-  useEffect(() => {
-    if (displayImage && !preloadedImages.has(displayImage)) {
-      preloadedImages.add(displayImage);
-      Image.prefetch(displayImage).catch(() => {});
-    }
-  }, [displayImage]);
-  
+const StatsBar = memo(({ stats, loading }) => {
+  if (loading && !stats) {
+    return (
+      <View style={styles.statsBarContainer}>
+        <View style={styles.statsBarSkeleton} />
+      </View>
+    );
+  }
+
+  if (!stats) return null;
+
   return (
-    <View style={styles.cardWrapper}>
-      <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.8}
-        onPress={() => onPress(item)}
-      >
-        <View style={styles.availabilityWrapper}>
-          {item.isOnline && (
-            <MaterialCommunityIcons name="earth" size={12} color="#f9c349" style={{ marginRight: 3 }} />
-          )}
-          {item.isInStore && (
-            <MaterialCommunityIcons name="storefront-outline" size={12} color="#f9c349" />
-          )}
-        </View>
-
-        {item.discount > 0 && (
-          <View style={styles.discountBadge}>
-            <Text style={styles.discountText}>-{item.discount}%</Text>
-          </View>
-        )}
-
-        <View style={styles.logoContainer}>
-          <Image
-            source={{ uri: displayImage }}
-            style={styles.logo}
-            resizeMode="contain"
-            onError={() => {}}
-          />
-        </View>
-
-        <View style={styles.infoContainer}>
-          <Text style={styles.name} numberOfLines={1}>
-            {item.name}
-          </Text>
-          <View style={[styles.categoryBadgeCard, { borderColor: categoryColor + '40' }]}>
-            <MaterialIcons name="category" size={8} color={categoryColor} />
-            <Text style={[styles.categoryCardText, { color: categoryColor }]}>
-              {item.category || "General"}
-            </Text>
-          </View>
-          <Text
-            style={[
-              styles.offerStatusText,
-              firstOffer?.isClaimed && styles.offerStatusClaimed,
-            ]}
-          >
-            {firstOffer?.isClaimed ? "✓ Claimed" : item.hasOffer ? "Student's Offer" : "No Offers"}
-          </Text>
-        </View>
-      </TouchableOpacity>
+    <View style={styles.statsBarContainer}>
+      <View style={styles.statItem}>
+        <Text style={styles.statValue}>{stats.totalBrands}</Text>
+        <Text style={styles.statLabel}>Brands</Text>
+      </View>
+      <View style={styles.statDivider} />
+      <View style={styles.statItem}>
+        <Text style={styles.statValue}>{stats.totalOffers}</Text>
+        <Text style={styles.statLabel}>Offers</Text>
+      </View>
+      <View style={styles.statDivider} />
+      <View style={styles.statItem}>
+        <Text style={[styles.statValue, { color: "#f9c349" }]}>
+          {stats.maxDiscount}%
+        </Text>
+        <Text style={styles.statLabel}>Max Off</Text>
+      </View>
+      <View style={styles.statDivider} />
+      <View style={styles.statItem}>
+        <View style={styles.liveDot} />
+        <Text style={styles.statLabel}>Live</Text>
+      </View>
     </View>
   );
-}, (prevProps, nextProps) => {
-  return prevProps.item._id === nextProps.item._id && 
-         prevProps.item.discount === nextProps.item.discount &&
-         prevProps.item.displayImage === nextProps.item.displayImage &&
-         prevProps.item.isOnline === nextProps.item.isOnline &&
-         prevProps.item.isInStore === nextProps.item.isInStore &&
-         prevProps.item.hasOffer === nextProps.item.hasOffer &&
-         prevProps.item.offers?.[0]?.isClaimed === nextProps.item.offers?.[0]?.isClaimed;
 });
 
 // ==========================================
-// CLAIM SUCCESS MODAL
+// BRAND CARD
 // ==========================================
-const ClaimSuccessModal = ({ visible, onClose, brandName, discount }) => {
-  const scaleAnim = useRef(new Animated.Value(0)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  
-  useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          friction: 6,
-          tension: 50,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start();
-      
-      const timer = setTimeout(() => {
-        handleClose();
-      }, 3000);
-      
-      return () => clearTimeout(timer);
-    } else {
-      scaleAnim.setValue(0);
-      fadeAnim.setValue(0);
-    }
-  }, [visible]);
-  
-  const handleClose = () => {
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => {
-      scaleAnim.setValue(0);
-      onClose();
-    });
-  };
-  
-  if (!visible) return null;
-  
-  return (
-    <Modal transparent visible={visible} animationType="none">
-      <Pressable style={styles.successOverlay} onPress={handleClose}>
-        <Animated.View 
-          style={[
-            styles.successCard,
-            {
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
-            }
-          ]}
+const BrandCard = memo(
+  ({ item, onPress }) => {
+    const firstOffer = item.offers?.[0];
+    const displayImage = item.displayImage;
+    const categoryColor = CATEGORY_BY_NAME.get(item.category)?.color || "#000000";
+    const isClaimed = !!firstOffer?.isClaimed;
+
+    useEffect(() => {
+      if (displayImage && !preloadedImages.has(displayImage)) {
+        preloadedImages.add(displayImage);
+        Image.prefetch(displayImage).catch(() => {});
+      }
+    }, [displayImage]);
+
+    return (
+      <View style={styles.cardWrapper}>
+        <TouchableOpacity
+          style={styles.card}
+          activeOpacity={0.8}
+          onPress={() => onPress(item)}
         >
-          <Pressable style={{ alignItems: 'center', width: '100%' }} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.successIconCircle}>
-              <LinearGradient
-                colors={['#f9c349', '#f5a623']}
-                style={styles.successIconGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <MaterialCommunityIcons name="check-decagram" size={50} color="#fff" />
-              </LinearGradient>
+          <View style={styles.availabilityWrapper}>
+            {item.isOnline && (
+              <MaterialCommunityIcons
+                name="earth"
+                size={12}
+                color="#f9c349"
+                style={{ marginRight: 3 }}
+              />
+            )}
+            {item.isInStore && (
+              <MaterialCommunityIcons
+                name="storefront-outline"
+                size={12}
+                color="#f9c349"
+              />
+            )}
+          </View>
+
+          {item.discount > 0 && (
+            <View style={styles.discountBadge}>
+              <Text style={styles.discountText}>-{item.discount}%</Text>
             </View>
-            
-            <Text style={styles.successTitle}>🎉 Offer Claimed!</Text>
-            
-            {brandName && (
-              <Text style={styles.successBrandName}>{brandName}</Text>
-            )}
-            
-            {discount > 0 && (
-              <View style={styles.successDiscountBadge}>
-                <Text style={styles.successDiscountText}>{discount}% OFF</Text>
-              </View>
-            )}
-            
-            <Text style={styles.successSubtext}>
-              Your student discount has been added to your wallet.
+          )}
+
+          <View style={styles.logoContainer}>
+            <Image
+              source={{ uri: displayImage }}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+
+          <View style={styles.infoContainer}>
+            <Text style={styles.name} numberOfLines={1}>
+              {item.name}
             </Text>
-          </Pressable>
-        </Animated.View>
-      </Pressable>
-    </Modal>
-  );
-};
-
-// ==========================================
-// LOADING OVERLAY WITH MIN 2 SECONDS
-// ==========================================
-const LoadingOverlay = ({ visible, message, minimumDuration = 2000 }) => {
-  const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const [shouldShow, setShouldShow] = useState(false);
-  const startTimeRef = useRef(null);
-  const timerRef = useRef(null);
-
-  useEffect(() => {
-    if (visible) {
-      startTimeRef.current = Date.now();
-      setShouldShow(true);
-      
-      Animated.timing(overlayOpacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      const elapsed = Date.now() - (startTimeRef.current || 0);
-      const remaining = Math.max(0, minimumDuration - elapsed);
-      
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-      
-      timerRef.current = setTimeout(() => {
-        Animated.timing(overlayOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }).start(() => {
-          setShouldShow(false);
-        });
-      }, remaining);
-    }
-    
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, [visible, minimumDuration]);
-
-  if (!shouldShow && !visible) return null;
-  
-  return (
-    <Animated.View style={[styles.loadingOverlay, { opacity: overlayOpacity }]}>
-      <View style={styles.loadingCard}>
-        <ActivityIndicator size="large" color="#f9c349" />
-        <Text style={styles.loadingText}>{message || "Loading brands....."}</Text>
-        <View style={styles.loadingDots}>
-          {[0, 1, 2].map((i) => (
-            <View key={i} style={styles.loadingDot} />
-          ))}
-        </View>
+            <View
+              style={[
+                styles.categoryBadgeCard,
+                { borderColor: categoryColor + "40" },
+              ]}
+            >
+              <MaterialIcons name="category" size={8} color={categoryColor} />
+              <Text style={[styles.categoryCardText, { color: categoryColor }]}>
+                {item.category || "General"}
+              </Text>
+            </View>
+            <Text
+              style={[
+                styles.offerStatusText,
+                isClaimed && styles.offerStatusClaimed,
+              ]}
+            >
+              {isClaimed
+                ? "✓ Claimed"
+                : item.hasOffer
+                ? "Student's Offer"
+                : "No Offers"}
+            </Text>
+          </View>
+        </TouchableOpacity>
       </View>
-    </Animated.View>
-  );
-};
+    );
+  },
+  (prev, next) => {
+    const prevClaimed = !!prev.item.offers?.[0]?.isClaimed;
+    const nextClaimed = !!next.item.offers?.[0]?.isClaimed;
+
+    return (
+      prev.item._id === next.item._id &&
+      prev.item.discount === next.item.discount &&
+      prev.item.displayImage === next.item.displayImage &&
+      prev.item.isOnline === next.item.isOnline &&
+      prev.item.isInStore === next.item.isInStore &&
+      prev.item.hasOffer === next.item.hasOffer &&
+      prevClaimed === nextClaimed
+    );
+  }
+);
 
 // ==========================================
-// MAIN BRANDS SCREEN
+// MAIN SCREEN
 // ==========================================
-export default function BrandsScreen({ limit = null }) {
+export default function BrandsScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
   const { token, user, isGuest } = useContext(AuthContext);
-  
-  // State
+  const { query } = route.params || {};
+
   const [allBrands, setAllBrands] = useState([]);
   const [displayedBrands, setDisplayedBrands] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
-  const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
-  const [selectedBrand, setSelectedBrand] = useState(null);
-  const [modalVisible, setModalVisible] = useState(false);
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
   const [filterModalVisible, setFilterModalVisible] = useState(false);
-  
-  const [claimSuccessVisible, setClaimSuccessVisible] = useState(false);
-  const [claimedBrandName, setClaimedBrandName] = useState('');
-  const [claimedDiscount, setClaimedDiscount] = useState(0);
-
-  const [activeTab, setActiveTab] = useState("gift");
   const [searchQuery, setSearchQuery] = useState("");
   const [minDiscount, setMinDiscount] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [showOnlyOnline, setShowOnlyOnline] = useState(false);
 
-  // Animations
-  const modalSlideAnim = useRef(new Animated.Value(height)).current;
   const filterSlideAnim = useRef(new Animated.Value(height)).current;
-
-  const route = useRoute();
-  const { query } = route.params || {};
   const isMounted = useRef(true);
+  const isScreenFocused = useRef(false);
   const abortControllerRef = useRef(null);
-  const fetchTimeoutRef = useRef(null);
   const initialLoadDone = useRef(false);
-  const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
+  const pollTimerRef = useRef(null);
+  const statsPollTimerRef = useRef(null);
+  const appStateRef = useRef(AppState.currentState);
+  const lastFetchAtRef = useRef(0);
+  const lastStatsFetchAtRef = useRef(0);
+  const isFetchingRef = useRef(false);
+  const isStatsFetchingRef = useRef(false);
 
   const userId = useMemo(() => {
     if (!token || isGuest) return null;
     try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      return payload.id;
+      return JSON.parse(atob(token.split(".")[1])).id;
     } catch {
       return null;
     }
   }, [token, isGuest]);
 
-  // ==========================================
-  // IMAGE URL FORMATTER
-  // ==========================================
-  const formatImageUrl = useCallback((imagePath, type = 'offer') => {
+  const formatImageUrl = useCallback((imagePath, type = "offer") => {
     if (!imagePath) return null;
-    
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    if (imagePath.startsWith("http://") || imagePath.startsWith("https://"))
       return imagePath;
+    const clean = imagePath.replace(/^\/+/, "");
+    if (type === "brand") {
+      return clean.startsWith("uploads/brands/")
+        ? `${BASE_URL}/${clean}`
+        : `${BASE_URL}/uploads/brands/${clean}`;
     }
-    
-    const cleanPath = imagePath.replace(/^\/+/, '');
-    
-    if (type === 'brand') {
-      if (cleanPath.startsWith('uploads/brands/')) {
-        return `${BASE_URL}/${cleanPath}`;
-      }
-      return `${BASE_URL}/uploads/brands/${cleanPath}`;
-    }
-    
-    if (cleanPath.startsWith('uploads/')) {
-      return `${BASE_URL}/${cleanPath}`;
-    }
-    return `${BASE_URL}/${cleanPath}`;
+    return `${BASE_URL}/${clean}`;
   }, []);
 
   const preloadImage = useCallback((url) => {
-    if (!url || preloadedImages.has(url) || imagePreloadQueue.size >= MAX_PRELOAD) return;
-    imagePreloadQueue.add(url);
-    Image.prefetch(url).then(() => {
-      preloadedImages.add(url);
-    }).catch(() => {});
+    if (!url || preloadedImages.has(url)) return;
+    preloadedImages.add(url);
+    Image.prefetch(url).catch(() => {});
   }, []);
 
-  // ==========================================
-  // LOAD CACHE FROM ASYNC STORAGE
-  // ==========================================
+  const computeStatsFromBrands = useCallback((brands) => {
+    if (!brands || !Array.isArray(brands)) {
+      return {
+        totalBrands: 0,
+        totalOffers: 0,
+        claimedCount: 0,
+        onlineCount: 0,
+        inStoreCount: 0,
+        maxDiscount: 0,
+      };
+    }
+
+    let totalOffers = 0;
+    let claimedCount = 0;
+    let onlineCount = 0;
+    let inStoreCount = 0;
+    let maxDiscount = 0;
+
+    for (const b of brands) {
+      if (b.hasOffer) totalOffers++;
+      if (b.offers?.[0]?.isClaimed) claimedCount++;
+      if (b.isOnline) onlineCount++;
+      if (b.isInStore) inStoreCount++;
+      if (b.discount > maxDiscount) maxDiscount = b.discount;
+    }
+
+    return {
+      totalBrands: brands.length,
+      totalOffers,
+      claimedCount,
+      onlineCount,
+      inStoreCount,
+      maxDiscount,
+    };
+  }, []);
+
+  const updateStatsFromLocal = useCallback((brands) => {
+    const computed = computeStatsFromBrands(brands);
+    setStats((prev) => (statsEqual(prev, computed) ? prev : computed));
+    setStatsLoading(false);
+
+    statsCache = computed;
+    statsCacheTimestamp = Date.now();
+    AsyncStorage.setItem(
+      STATS_CACHE_KEY,
+      JSON.stringify({ data: computed, timestamp: Date.now() })
+    ).catch(() => {});
+
+    return computed;
+  }, [computeStatsFromBrands]);
+
+  const fetchStatsOnly = useCallback(async () => {
+    if (isStatsFetchingRef.current) return;
+    if (!token && !isGuest) return;
+
+    const now = Date.now();
+    if (now - lastStatsFetchAtRef.current < 8000) return;
+
+    isStatsFetchingRef.current = true;
+    lastStatsFetchAtRef.current = now;
+
+    try {
+      const headers = token && !isGuest ? { Authorization: `Bearer ${token}` } : {};
+      
+      let remoteStats = null;
+      try {
+        const res = await api.get("/brands/stats", {
+          headers,
+          timeout: 5000,
+        });
+        if (res?.data) {
+          remoteStats = {
+            totalBrands: res.data.totalBrands || 0,
+            totalOffers: res.data.totalOffers || 0,
+            claimedCount: res.data.claimedCount || 0,
+            onlineCount: res.data.onlineCount || 0,
+            inStoreCount: res.data.inStoreCount || 0,
+            maxDiscount: res.data.maxDiscount || 0,
+          };
+        }
+      } catch {
+        // Fallback to local computation
+      }
+
+      if (remoteStats && isMounted.current) {
+        setStats((prev) => (statsEqual(prev, remoteStats) ? prev : remoteStats));
+        setStatsLoading(false);
+        statsCache = remoteStats;
+        statsCacheTimestamp = Date.now();
+      }
+    } catch (err) {
+      // Silent fail
+    } finally {
+      isStatsFetchingRef.current = false;
+    }
+  }, [token, isGuest]);
+
   const loadCache = useCallback(async () => {
     try {
       const cached = await AsyncStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (data && data.length > 0 && (Date.now() - timestamp) < CACHE_DURATION) {
-          const sorted = [...data].sort((a, b) => {
-            const dateA = new Date(a.createdAt || a._id).getTime();
-            const dateB = new Date(b.createdAt || b._id).getTime();
-            return dateB - dateA;
-          });
-          setAllBrands(sorted);
-          setDisplayedBrands(sorted.slice(0, PAGE_SIZE));
-          setHasMore(sorted.length > PAGE_SIZE);
-          setLoading(false);
-          return true;
-        }
-      }
-      return false;
-    } catch (e) {
-      return false;
-    }
-  }, []);
-
-  // ==========================================
-  // SAVE CACHE
-  // ==========================================
-  const saveCache = useCallback(async (data) => {
-    try {
-      await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({
-        data,
-        timestamp: Date.now()
-      }));
-    } catch (e) {
-      // Ignore cache save errors
-    }
-  }, []);
-
-  // ==========================================
-  // FETCH BRANDS - ULTRA FAST
-  // ==========================================
-  const fetchBrands = useCallback(async (forceRefresh = false) => {
-    if (fetchTimeoutRef.current) {
-      clearTimeout(fetchTimeoutRef.current);
-      fetchTimeoutRef.current = null;
-    }
-
-    // Check memory cache first - IMMEDIATE RETURN
-    if (!forceRefresh && brandsCache && cacheTimestamp && 
-        (Date.now() - cacheTimestamp) < CACHE_DURATION && brandsCache.length > 0) {
-      if (isMounted.current) {
-        const sorted = [...brandsCache].sort((a, b) => {
-          const dateA = new Date(a.createdAt || a._id).getTime();
-          const dateB = new Date(b.createdAt || b._id).getTime();
-          return dateB - dateA;
-        });
+      if (!cached) return false;
+      const { data, timestamp } = JSON.parse(cached);
+      if (data?.length > 0 && Date.now() - timestamp < CACHE_DURATION) {
+        const sorted = [...data].sort(
+          (a, b) =>
+            new Date(b.createdAt || b._id).getTime() -
+            new Date(a.createdAt || a._id).getTime()
+        );
         setAllBrands(sorted);
         setDisplayedBrands(sorted.slice(0, PAGE_SIZE));
         setHasMore(sorted.length > PAGE_SIZE);
         setLoading(false);
-        setError(null);
-        setShowLoadingOverlay(false);
-        requestAnimationFrame(() => {
-          sorted.slice(0, MAX_PRELOAD).forEach(brand => {
-            if (brand.displayImage) preloadImage(brand.displayImage);
-          });
-        });
+        updateStatsFromLocal(sorted);
+        return true;
       }
-      return;
+      return false;
+    } catch {
+      return false;
     }
+  }, [updateStatsFromLocal]);
 
-    // Check AsyncStorage cache
-    if (!forceRefresh) {
-      const cached = await loadCache();
-      if (cached) {
-        setShowLoadingOverlay(false);
-        // Refresh in background
-        fetchBrands(true);
+  const loadStatsCache = useCallback(async () => {
+    try {
+      const cached = await AsyncStorage.getItem(STATS_CACHE_KEY);
+      if (!cached) return false;
+      const { data, timestamp } = JSON.parse(cached);
+      if (data && Date.now() - timestamp < CACHE_DURATION) {
+        setStats(data);
+        setStatsLoading(false);
+        statsCache = data;
+        statsCacheTimestamp = timestamp;
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const saveCache = useCallback(async (data) => {
+    try {
+      await AsyncStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({ data, timestamp: Date.now() })
+      );
+    } catch {}
+  }, []);
+
+  const fetchBrands = useCallback(
+    async (forceRefresh = false, { silent = false } = {}) => {
+      const now = Date.now();
+
+      if (!forceRefresh && now - lastFetchAtRef.current < MIN_FETCH_GAP) {
         return;
       }
-    }
+      if (isFetchingRef.current) return;
 
-    if (pendingFetchPromise) {
-      try {
-        const result = await pendingFetchPromise;
-        if (isMounted.current && result) {
-          const sorted = [...result].sort((a, b) => {
-            const dateA = new Date(a.createdAt || a._id).getTime();
-            const dateB = new Date(b.createdAt || b._id).getTime();
-            return dateB - dateA;
+      if (
+        !forceRefresh &&
+        brandsCache &&
+        cacheTimestamp &&
+        Date.now() - cacheTimestamp < CACHE_DURATION
+      ) {
+        const sorted = [...brandsCache].sort(
+          (a, b) =>
+            new Date(b.createdAt || b._id).getTime() -
+            new Date(a.createdAt || a._id).getTime()
+        );
+        if (isMounted.current) {
+          setAllBrands((prev) => (brandsEqual(prev, sorted) ? prev : sorted));
+          setDisplayedBrands((prev) => {
+            const next = sorted.slice(0, Math.max(PAGE_SIZE, prev.length));
+            return brandsEqual(prev, next) ? prev : next;
           });
-          setAllBrands(sorted);
-          setDisplayedBrands(sorted.slice(0, PAGE_SIZE));
           setHasMore(sorted.length > PAGE_SIZE);
           setLoading(false);
           setError(null);
-          setShowLoadingOverlay(false);
+          updateStatsFromLocal(sorted);
+          
+          requestAnimationFrame(() => {
+            sorted.slice(0, MAX_PRELOAD).forEach((b) => preloadImage(b.displayImage));
+          });
         }
-        return;
-      } catch (err) {
-        pendingFetchPromise = null;
-      }
-    }
 
-    if (!token && !isGuest) {
-      if (isMounted.current) {
-        setLoading(false);
-        setError('Please login to view brands');
-        setShowLoadingOverlay(false);
-      }
-      return;
-    }
-
-    if (!initialLoadDone.current || !brandsCache) {
-      setShowLoadingOverlay(true);
-      setLoading(true);
-    } else {
-      setLoading(false);
-    }
-    setError(null);
-    
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
-
-    pendingFetchPromise = (async () => {
-      try {
-        const headers = token && !isGuest ? { Authorization: `Bearer ${token}` } : {};
-        
-        const fetchPromise = api.get("/brands", {
-          headers: headers,
-          signal: abortControllerRef.current.signal,
-          params: { limit: 200 },
-          timeout: 8000
-        });
-
-        const timeoutPromise = new Promise((_, reject) => {
-          fetchTimeoutRef.current = setTimeout(() => {
-            reject(new Error('Request timeout'));
-          }, 8000);
-        });
-
-        const brandsRes = await Promise.race([fetchPromise, timeoutPromise]);
-        
-        if (fetchTimeoutRef.current) {
-          clearTimeout(fetchTimeoutRef.current);
-          fetchTimeoutRef.current = null;
+        if (!silent) {
+          // Continue to network
+        } else {
+          return sorted;
         }
-        
-        let brandsData = brandsRes?.data || [];
-        
-        if (!brandsData || brandsData.length === 0) {
-          if (isMounted.current) {
-            setAllBrands([]);
-            setDisplayedBrands([]);
-            setHasMore(false);
-            brandsCache = [];
-            cacheTimestamp = Date.now();
+      }
+
+      if (!forceRefresh && !brandsCache) {
+        const cached = await loadCache();
+        if (cached) {
+          fetchBrands(true, { silent: true });
+          return;
+        }
+      }
+
+      if (pendingFetchPromise) {
+        try {
+          const result = await pendingFetchPromise;
+          if (isMounted.current && result) {
+            const sorted = [...result].sort(
+              (a, b) =>
+                new Date(b.createdAt || b._id).getTime() -
+                new Date(a.createdAt || a._id).getTime()
+            );
+            setAllBrands((prev) => (brandsEqual(prev, sorted) ? prev : sorted));
+            setDisplayedBrands((prev) => {
+              const next = sorted.slice(0, Math.max(PAGE_SIZE, prev.length));
+              return brandsEqual(prev, next) ? prev : next;
+            });
+            setHasMore(sorted.length > PAGE_SIZE);
             setLoading(false);
             setError(null);
-            setShowLoadingOverlay(false);
-            initialLoadDone.current = true;
+            updateStatsFromLocal(sorted);
           }
+        } catch {
           pendingFetchPromise = null;
-          return [];
         }
-        
-        // Guest flow
-        if (isGuest || !token) {
-          const basicBrandsData = brandsData.map((brand) => {
-            const logoUrl = formatImageUrl(brand.logo, 'brand');
-            return {
-              ...brand,
-              logo: logoUrl,
-              offers: [],
-              displayImage: logoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
-              hasOffer: false,
-              discount: 0,
-              category: brand.category || "General",
-              isOnline: brand.isOnline || false,
-              isInStore: brand.isInStore || false,
-              createdAt: brand.createdAt || new Date().toISOString(),
-            };
-          });
+        return;
+      }
 
-          const sorted = [...basicBrandsData].sort((a, b) => {
-            const dateA = new Date(a.createdAt || a._id).getTime();
-            const dateB = new Date(b.createdAt || b._id).getTime();
-            return dateB - dateA;
-          });
+      if (!token && !isGuest) {
+        if (isMounted.current) {
+          setLoading(false);
+          setError("Please login to view brands");
+          setStatsLoading(false);
+        }
+        return;
+      }
+
+      if (!initialLoadDone.current && !brandsCache) setLoading(true);
+      if (!silent) setError(null);
+
+      isFetchingRef.current = true;
+      lastFetchAtRef.current = now;
+
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+      abortControllerRef.current = new AbortController();
+
+      pendingFetchPromise = (async () => {
+        try {
+          let brandsData;
+
+          if (!isGuest && token && optimizedAPI?.getBrandsFast) {
+            try {
+              const fast = await optimizedAPI.getBrandsFast(token, userId, {
+                forceRefresh,
+                limit: 200,
+              });
+              if (fast?.length) {
+                brandsData = fast;
+              }
+            } catch (e) {
+              console.log("optimizedAPI failed, falling back:", e?.message);
+            }
+          }
+
+          if (!brandsData) {
+            const headers =
+              token && !isGuest ? { Authorization: `Bearer ${token}` } : {};
+
+            const brandsRes = await api.get("/brands", {
+              headers,
+              signal: abortControllerRef.current.signal,
+              params: { limit: 200 },
+              timeout: 8000,
+            });
+
+            let raw = brandsRes?.data || [];
+
+            if (isGuest || !token) {
+              brandsData = raw.map((brand) => {
+                const logoUrl = formatImageUrl(brand.logo, "brand");
+                return {
+                  ...brand,
+                  logo: logoUrl,
+                  offers: [],
+                  displayImage:
+                    logoUrl ||
+                    "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+                  hasOffer: false,
+                  discount: 0,
+                  category: brand.category || "General",
+                  isOnline: brand.isOnline || false,
+                  isInStore: brand.isInStore || false,
+                  createdAt: brand.createdAt || new Date().toISOString(),
+                };
+              });
+            } else {
+              const offersResults = await Promise.all(
+                raw.map((brand) =>
+                  api
+                    .get(`/offers/brand/${brand._id}`, {
+                      headers: { Authorization: `Bearer ${token}` },
+                      signal: abortControllerRef.current.signal,
+                      timeout: 3000,
+                    })
+                    .then((res) => ({ brandId: brand._id, offers: res.data }))
+                    .catch(() => ({ brandId: brand._id, offers: [] }))
+                )
+              );
+
+              const offersMap = new Map(
+                offersResults.map(({ brandId, offers }) => [
+                  brandId,
+                  offers.map((offer) => ({
+                    ...offer,
+                    image: formatImageUrl(offer.image, "offer"),
+                    displayImage: formatImageUrl(offer.image, "offer"),
+                    isClaimed: offer.claimedBy?.includes(userId) || false,
+                    discountPercentage: offer.discountPercentage || 0,
+                  })),
+                ])
+              );
+
+              brandsData = raw.map((brand) => {
+                const brandOffers = offersMap.get(brand._id) || [];
+                const firstOffer = brandOffers[0];
+                const displayImage = firstOffer?.image
+                  ? firstOffer.image
+                  : formatImageUrl(brand.logo, "brand") ||
+                    "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+
+                return {
+                  ...brand,
+                  logo: formatImageUrl(brand.logo, "brand"),
+                  offers: brandOffers,
+                  displayImage,
+                  hasOffer: brandOffers.length > 0,
+                  discount: firstOffer?.discountPercentage || 0,
+                  category: firstOffer?.category || brand.category || "General",
+                  isOnline: firstOffer?.isOnline || brand.isOnline || false,
+                  isInStore: firstOffer?.isInStore || brand.isInStore || false,
+                  createdAt: brand.createdAt || new Date().toISOString(),
+                };
+              });
+            }
+          }
+
+          const sorted = [...brandsData].sort(
+            (a, b) =>
+              new Date(b.createdAt || b._id).getTime() -
+              new Date(a.createdAt || a._id).getTime()
+          );
 
           if (isMounted.current) {
-            setAllBrands(sorted);
-            setDisplayedBrands(sorted.slice(0, PAGE_SIZE));
+            setAllBrands((prev) => {
+              if (brandsEqual(prev, sorted)) return prev;
+              return sorted;
+            });
+            setDisplayedBrands((prev) => {
+              const next = sorted.slice(0, Math.max(PAGE_SIZE, prev.length));
+              return brandsEqual(prev, next) ? prev : next;
+            });
             setHasMore(sorted.length > PAGE_SIZE);
+
             brandsCache = sorted;
             cacheTimestamp = Date.now();
             setLoading(false);
             setError(null);
-            setShowLoadingOverlay(false);
+            setLastUpdated(Date.now());
             initialLoadDone.current = true;
             saveCache(sorted);
+            updateStatsFromLocal(sorted);
             
             requestAnimationFrame(() => {
-              sorted.slice(0, MAX_PRELOAD).forEach(brand => {
-                if (brand.displayImage) preloadImage(brand.displayImage);
-              });
+              sorted.slice(0, MAX_PRELOAD).forEach((b) => preloadImage(b.displayImage));
             });
           }
-          
+
           pendingFetchPromise = null;
           return sorted;
-        }
-        
-        // Logged-in user: fetch offers in parallel
-        const offersPromises = brandsData.map(brand =>
-          api.get(`/offers/brand/${brand._id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-            signal: abortControllerRef.current.signal,
-            timeout: 3000
-          }).then(res => ({ brandId: brand._id, offers: res.data }))
-            .catch(() => ({ brandId: brand._id, offers: [] }))
-        );
-        
-        const allOffersResults = await Promise.all(offersPromises);
-        
-        const offersMap = new Map();
-        allOffersResults.forEach(({ brandId, offers }) => {
-          offersMap.set(brandId, offers.map(offer => ({
-            ...offer,
-            image: formatImageUrl(offer.image, 'offer'),
-            displayImage: formatImageUrl(offer.image, 'offer'),
-            isClaimed: offer.claimedBy?.includes(userId) || false,
-            discountPercentage: offer.discountPercentage || 0,
-          })));
-        });
-
-        const brandsWithOffers = brandsData.map((brand) => {
-          const brandOffers = offersMap.get(brand._id) || [];
-          const firstOffer = brandOffers[0];
-          
-          let displayImage;
-          if (firstOffer?.image) {
-            displayImage = firstOffer.image;
-          } else {
-            const logoUrl = formatImageUrl(brand.logo, 'brand');
-            displayImage = logoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+        } catch (err) {
+          if (err.name === "AbortError" || err.code === "ERR_CANCELED") {
+            pendingFetchPromise = null;
+            return brandsCache || [];
           }
-          
-          return {
-            ...brand,
-            logo: formatImageUrl(brand.logo, 'brand'),
-            offers: brandOffers,
-            displayImage: displayImage,
-            hasOffer: brandOffers.length > 0,
-            discount: firstOffer?.discountPercentage || 0,
-            category: firstOffer?.category || brand.category || "General",
-            isOnline: firstOffer?.isOnline || brand.isOnline || false,
-            isInStore: firstOffer?.isInStore || brand.isInStore || false,
-            brandApprovalStatus: brand.brandApprovalStatus || 'approved',
-            createdAt: brand.createdAt || new Date().toISOString(),
-          };
-        });
-
-        // Sort by newest first
-        const sorted = [...brandsWithOffers].sort((a, b) => {
-          const dateA = new Date(a.createdAt || a._id).getTime();
-          const dateB = new Date(b.createdAt || b._id).getTime();
-          return dateB - dateA;
-        });
-
-        if (isMounted.current) {
-          setAllBrands(sorted);
-          setDisplayedBrands(sorted.slice(0, PAGE_SIZE));
-          setHasMore(sorted.length > PAGE_SIZE);
-          brandsCache = sorted;
-          cacheTimestamp = Date.now();
-          setLoading(false);
-          setError(null);
-          setShowLoadingOverlay(false);
-          initialLoadDone.current = true;
-          saveCache(sorted);
-          
-          requestAnimationFrame(() => {
-            sorted.slice(0, MAX_PRELOAD).forEach(brand => {
-              if (brand.displayImage) preloadImage(brand.displayImage);
-            });
-          });
-        }
-        
-        pendingFetchPromise = null;
-        return sorted;
-      } catch (err) {
-        if (fetchTimeoutRef.current) {
-          clearTimeout(fetchTimeoutRef.current);
-          fetchTimeoutRef.current = null;
-        }
-
-        if (err.name === 'AbortError' || err.code === 'ERR_CANCELED') {
-          pendingFetchPromise = null;
-          setShowLoadingOverlay(false);
-          return brandsCache || [];
-        }
-
-        if (err.message === 'Request timeout') {
           if (isMounted.current) {
-            setError('Request timed out. Please try again.');
-            if (brandsCache && brandsCache.length > 0) {
-              const sorted = [...brandsCache].sort((a, b) => {
-                const dateA = new Date(a.createdAt || a._id).getTime();
-                const dateB = new Date(b.createdAt || b._id).getTime();
-                return dateB - dateA;
-              });
-              setAllBrands(sorted);
-              setDisplayedBrands(sorted.slice(0, PAGE_SIZE));
-              setHasMore(sorted.length > PAGE_SIZE);
+            if (!brandsCache?.length) {
+              setError("Failed to load brands. Please try again.");
               setLoading(false);
-              setShowLoadingOverlay(false);
-              initialLoadDone.current = true;
-              pendingFetchPromise = null;
-              return sorted;
+              setStatsLoading(false);
+            } else {
+              setAllBrands(brandsCache);
+              setDisplayedBrands(brandsCache.slice(0, PAGE_SIZE));
+              setHasMore(brandsCache.length > PAGE_SIZE);
+              updateStatsFromLocal(brandsCache);
             }
           }
           pendingFetchPromise = null;
-          setShowLoadingOverlay(false);
           return [];
+        } finally {
+          isFetchingRef.current = false;
         }
+      })();
 
-        if (isMounted.current) {
-          setError('Failed to load brands. Please try again.');
-          if (brandsCache && brandsCache.length > 0) {
-            const sorted = [...brandsCache].sort((a, b) => {
-              const dateA = new Date(a.createdAt || a._id).getTime();
-              const dateB = new Date(b.createdAt || b._id).getTime();
-              return dateB - dateA;
-            });
-            setAllBrands(sorted);
-            setDisplayedBrands(sorted.slice(0, PAGE_SIZE));
-            setHasMore(sorted.length > PAGE_SIZE);
-            setLoading(false);
-            setShowLoadingOverlay(false);
-            initialLoadDone.current = true;
-            pendingFetchPromise = null;
-            return sorted;
-          }
-          setLoading(false);
-          setShowLoadingOverlay(false);
+      return pendingFetchPromise;
+    },
+    [
+      token,
+      isGuest,
+      userId,
+      formatImageUrl,
+      preloadImage,
+      loadCache,
+      saveCache,
+      updateStatsFromLocal,
+    ]
+  );
+
+  // ─────────────────────────────────────────────
+  // ✅ CLAIM/UNCLAIM EVENT LISTENERS
+  // Handles BOTH local claim events AND global cache events
+  // ─────────────────────────────────────────────
+  useEffect(() => {
+    // ── Listener 1: Local claim event from OfferScreen ──
+    const unsubscribeClaim = onOfferClaimed((brandId, offerId) => {
+      const applyClaim = (b) => {
+        if (b._id !== brandId) return b;
+        const updatedOffers = (b.offers || []).map((o) =>
+          o._id === offerId ? { ...o, isClaimed: true } : o
+        );
+        const firstOffer = updatedOffers[0];
+        return {
+          ...b,
+          offers: updatedOffers,
+          hasOffer: updatedOffers.length > 0,
+          discount: firstOffer?.discountPercentage || 0,
+          displayImage: firstOffer?.image || b.displayImage,
+          isOnline: firstOffer?.isOnline || b.isOnline,
+          isInStore: firstOffer?.isInStore || b.isInStore,
+        };
+      };
+
+      if (brandsCache) brandsCache = brandsCache.map(applyClaim);
+
+      setAllBrands((prev) => {
+        const next = prev.map(applyClaim);
+        updateStatsFromLocal(next);
+        return next;
+      });
+      setDisplayedBrands((prev) => prev.map(applyClaim));
+
+      AsyncStorage.multiRemove([CACHE_KEY, STATS_CACHE_KEY]).catch(() => {});
+      cacheTimestamp = Date.now();
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    });
+
+    // ── Listener 2: Global cache event (from ANY screen via api.js) ──
+    const unsubscribeCacheEvent = onCacheEvent((event) => {
+      if (!event || event.type !== "cache:invalidated") return;
+
+      const { type, brandId, offerId } = event;
+
+      // ✅ CRITICAL: Clear ALL local module-level caches
+      brandsCache = null;
+      cacheTimestamp = null;
+      statsCache = null;
+      statsCacheTimestamp = null;
+      pendingFetchPromise = null;
+
+      AsyncStorage.multiRemove([CACHE_KEY, STATS_CACHE_KEY]).catch(() => {});
+
+      // ── UNCLAIM: Flip isClaimed → false ──
+      if (type === "offer:unclaimed" && brandId && offerId) {
+        const applyUnclaim = (b) => {
+          if (b._id !== brandId) return b;
+          const updatedOffers = (b.offers || []).map((o) =>
+            o._id === offerId ? { ...o, isClaimed: false } : o
+          );
+          const firstOffer = updatedOffers[0];
+          return {
+            ...b,
+            offers: updatedOffers,
+            hasOffer: updatedOffers.length > 0,
+            discount: firstOffer?.discountPercentage || 0,
+            displayImage: firstOffer?.image || b.displayImage,
+            isOnline: firstOffer?.isOnline || b.isOnline,
+            isInStore: firstOffer?.isInStore || b.isInStore,
+          };
+        };
+
+        setAllBrands((prev) => {
+          const next = prev.map(applyUnclaim);
+          updateStatsFromLocal(next);
+          return next;
+        });
+        setDisplayedBrands((prev) => prev.map(applyUnclaim));
+      }
+
+      // ── CLAIM: Flip isClaimed → true ──
+      if (type === "offer:claimed" && brandId && offerId) {
+        const applyClaim = (b) => {
+          if (b._id !== brandId) return b;
+          const updatedOffers = (b.offers || []).map((o) =>
+            o._id === offerId ? { ...o, isClaimed: true } : o
+          );
+          const firstOffer = updatedOffers[0];
+          return {
+            ...b,
+            offers: updatedOffers,
+            hasOffer: updatedOffers.length > 0,
+            discount: firstOffer?.discountPercentage || 0,
+            displayImage: firstOffer?.image || b.displayImage,
+            isOnline: firstOffer?.isOnline || b.isOnline,
+            isInStore: firstOffer?.isInStore || b.isInStore,
+          };
+        };
+
+        setAllBrands((prev) => {
+          const next = prev.map(applyClaim);
+          updateStatsFromLocal(next);
+          return next;
+        });
+        setDisplayedBrands((prev) => prev.map(applyClaim));
+      }
+
+      // ✅ Trigger fresh background fetch to sync with server
+      setTimeout(() => {
+        if (isMounted.current && (token || isGuest)) {
+          fetchBrands(true, { silent: true });
+          fetchStatsOnly();
         }
-        pendingFetchPromise = null;
-        return [];
+      }, 400);
+    });
+
+    return () => {
+      unsubscribeClaim?.();
+      unsubscribeCacheEvent?.();
+    };
+  }, [updateStatsFromLocal, fetchBrands, fetchStatsOnly, token, isGuest]);
+
+  // ── SMART POLLING ──
+  useEffect(() => {
+    const startPolling = (interval) => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+      if (interval > 0) {
+        pollTimerRef.current = setInterval(() => {
+          if (isScreenFocused.current && appStateRef.current === "active") {
+            fetchBrands(false, { silent: true });
+          }
+        }, interval);
+      }
+    };
+
+    startPolling(
+      isScreenFocused.current ? POLL_INTERVAL : BACKGROUND_POLL_INTERVAL
+    );
+
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
+  }, [fetchBrands]);
+
+  // ── STATS-ONLY POLLING ──
+  useEffect(() => {
+    if (statsPollTimerRef.current) clearInterval(statsPollTimerRef.current);
+
+    statsPollTimerRef.current = setInterval(() => {
+      if (isScreenFocused.current && appStateRef.current === "active") {
+        fetchStatsOnly();
+      }
+    }, STATS_POLL_INTERVAL);
+
+    return () => {
+      if (statsPollTimerRef.current) clearInterval(statsPollTimerRef.current);
+    };
+  }, [fetchStatsOnly]);
+
+  // ── Focus lifecycle ──
+  useFocusEffect(
+    useCallback(() => {
+      isScreenFocused.current = true;
+
+      fetchBrands(false, { silent: true });
+      fetchStatsOnly();
+
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+      pollTimerRef.current = setInterval(() => {
+        if (appStateRef.current === "active") {
+          fetchBrands(false, { silent: true });
+        }
+      }, POLL_INTERVAL);
+
+      if (query) setSearchQuery(query);
+
+      return () => {
+        isScreenFocused.current = false;
+        if (pollTimerRef.current) {
+          clearInterval(pollTimerRef.current);
+          pollTimerRef.current = null;
+        }
+      };
+    }, [fetchBrands, fetchStatsOnly, query])
+  );
+
+  // ── App foreground refresh ──
+  useEffect(() => {
+    isMounted.current = true;
+
+    const sub = AppState.addEventListener("change", (nextState) => {
+      const prev = appStateRef.current;
+      appStateRef.current = nextState;
+
+      if (prev.match(/inactive|background/) && nextState === "active") {
+        fetchBrands(false, { silent: true });
+        fetchStatsOnly();
+      }
+    });
+
+    return () => {
+      isMounted.current = false;
+      sub.remove();
+      abortControllerRef.current?.abort();
+      if (statsPollTimerRef.current) {
+        clearInterval(statsPollTimerRef.current);
+      }
+    };
+  }, [fetchBrands, fetchStatsOnly]);
+
+  // ── Load cached stats + brands on mount ──
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const statsLoaded = await loadStatsCache();
+      if (cancelled) return;
+
+      if (!statsLoaded) {
+        const brandsCached = await loadCache();
+        if (cancelled) return;
+        if (!brandsCached && !brandsCache) {
+          setStatsLoading(false);
+        }
       }
     })();
 
-    return pendingFetchPromise;
-  }, [token, isGuest, userId, formatImageUrl, preloadImage, loadCache, saveCache]);
+    return () => {
+      cancelled = true;
+    };
+  }, [loadCache, loadStatsCache]);
 
-  // ==========================================
-  // LOAD MORE
-  // ==========================================
   const loadMoreBrands = useCallback(() => {
     if (loadingMore || !hasMore || loading) return;
-    
     setLoadingMore(true);
     const currentCount = displayedBrands.length;
     const nextBatch = allBrands.slice(currentCount, currentCount + PAGE_SIZE);
-    
     if (nextBatch.length > 0) {
-      setDisplayedBrands(prev => [...prev, ...nextBatch]);
+      setDisplayedBrands((prev) => [...prev, ...nextBatch]);
       setHasMore(allBrands.length > currentCount + PAGE_SIZE);
     } else {
       setHasMore(false);
@@ -824,55 +1059,22 @@ export default function BrandsScreen({ limit = null }) {
     setLoadingMore(false);
   }, [loadingMore, hasMore, loading, displayedBrands.length, allBrands]);
 
-  // ==========================================
-  // FOCUS EFFECT - INSTANT LOAD
-  // ==========================================
-  useFocusEffect(
-    useCallback(() => {
-      fetchBrands(false);
-      if (query) {
-        setSearchQuery(query);
-      }
-      return () => {};
-    }, [fetchBrands, query]),
-  );
-
-  // ==========================================
-  // FILTERED DATA
-  // ==========================================
   const filteredData = useMemo(() => {
-    let results = allBrands;
-    
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      results = results.filter((brand) =>
-        brand.name.toLowerCase().includes(q)
-      );
-    }
-    
-    if (minDiscount > 0) {
-      results = results.filter((brand) => brand.discount >= minDiscount);
-    }
-    
-    if (selectedCategory !== "all") {
-      const categoryName = CATEGORIES.find(c => c.id === selectedCategory)?.name;
-      if (categoryName) {
-        results = results.filter((brand) => brand.category === categoryName);
-      }
-    }
-    
-    if (showOnlyOnline) {
-      results = results.filter((brand) => brand.isOnline);
-    }
-    
-    return results.sort((a, b) => {
-      const dateA = new Date(a.createdAt || a._id).getTime();
-      const dateB = new Date(b.createdAt || b._id).getTime();
-      return dateB - dateA;
+    const q = searchQuery.trim().toLowerCase();
+    const catName =
+      selectedCategory !== "all"
+        ? CATEGORY_BY_ID.get(selectedCategory)?.name
+        : null;
+
+    return allBrands.filter((b) => {
+      if (minDiscount > 0 && b.discount !== minDiscount) return false;
+      if (catName && b.category !== catName) return false;
+      if (showOnlyOnline && !b.isOnline) return false;
+      if (q && !b.name?.toLowerCase().includes(q)) return false;
+      return true;
     });
   }, [allBrands, searchQuery, minDiscount, selectedCategory, showOnlyOnline]);
 
-  // Update displayed when filters change
   useEffect(() => {
     if (filteredData.length > 0) {
       setDisplayedBrands(filteredData.slice(0, PAGE_SIZE));
@@ -881,41 +1083,16 @@ export default function BrandsScreen({ limit = null }) {
       setDisplayedBrands([]);
       setHasMore(false);
     }
-    setPage(1);
   }, [filteredData]);
 
-  // ==========================================
-  // HANDLERS
-  // ==========================================
-  const openModal = useCallback((brand) => {
-    // Find the full brand data from allBrands to ensure complete data
-    const fullBrand = allBrands.find(b => b._id === brand._id) || brand;
-    setSelectedBrand(fullBrand);
-    setActiveTab("gift");
-    setModalVisible(true);
-    modalSlideAnim.setValue(height);
-    Animated.spring(modalSlideAnim, {
-      toValue: 0,
-      friction: 8,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
-  }, [height, modalSlideAnim, allBrands]);
-
-  const closeModal = useCallback(() => {
-    Animated.timing(modalSlideAnim, {
-      toValue: height,
-      duration: 250,
-      useNativeDriver: true,
-      easing: Easing.in(Easing.cubic),
-    }).start(() => {
-      if (isMounted.current) {
-        setModalVisible(false);
-        setSelectedBrand(null);
-        modalSlideAnim.setValue(height);
-      }
-    });
-  }, [height, modalSlideAnim]);
+  const openOfferScreen = useCallback(
+    (brand) => {
+      const fullBrand = allBrands.find((b) => b._id === brand._id) || brand;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      navigation.navigate("OfferScreen", { brand: fullBrand });
+    },
+    [navigation, allBrands]
+  );
 
   const openFilterModal = useCallback(() => {
     setFilterModalVisible(true);
@@ -926,140 +1103,41 @@ export default function BrandsScreen({ limit = null }) {
       tension: 40,
       useNativeDriver: true,
     }).start();
-  }, [height, filterSlideAnim]);
+  }, [filterSlideAnim]);
 
   const closeFilterModal = useCallback(() => {
     Animated.timing(filterSlideAnim, {
       toValue: height,
-      duration: 250,
+      duration: 220,
       useNativeDriver: true,
-      easing: Easing.in(Easing.cubic),
-    }).start(() => {
-      if (isMounted.current) {
-        setFilterModalVisible(false);
-        filterSlideAnim.setValue(height);
-      }
-    });
-  }, [height, filterSlideAnim]);
-
-  const openMap = async (address) => {
-    if (!address) {
-      Alert.alert("Notice", "Address not available for this brand.");
-      return;
-    }
-
-    const destination = encodeURIComponent(address);
-    const url = Platform.select({
-      ios: `http://maps.apple.com/?q=${destination}`,
-      android: `geo:0,0?q=${destination}`,
-    });
-    const webUrl = `https://www.google.com/maps/search/?api=1&query=${destination}`;
-
-    try {
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-      } else {
-        await Linking.openURL(webUrl);
-      }
-    } catch (error) {
-      Linking.openURL(webUrl);
-    }
-  };
+    }).start(() => setFilterModalVisible(false));
+  }, [filterSlideAnim]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     cacheTimestamp = null;
     brandsCache = null;
+    statsCache = null;
+    statsCacheTimestamp = null;
     preloadedImages.clear();
-    await fetchBrands(true);
+    await Promise.all([
+      fetchBrands(true, { silent: true }),
+      fetchStatsOnly(),
+    ]);
     setRefreshing(false);
-  }, [fetchBrands]);
+  }, [fetchBrands, fetchStatsOnly]);
 
-  // ==========================================
-  // CLAIM OFFER
-  // ==========================================
-  const claimOffer = useCallback(async (offerId) => {
-    if (isGuest) {
-      Alert.alert(
-        "Sign In Required",
-        "Please sign in to claim this offer and get student discounts!",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Sign In", onPress: () => {
-            closeModal();
-            setTimeout(() => {
-              navigation.navigate('Login');
-            }, 300);
-          }}
-        ]
-      );
-      return;
-    }
+  const clearAllFilters = useCallback(() => {
+    setSelectedCategory("all");
+    setMinDiscount(0);
+    setShowOnlyOnline(false);
+    setSearchQuery("");
+  }, []);
 
-    try {
-      setShowLoadingOverlay(true);
-      
-      await api.post(
-        `/offers/claim/${offerId}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      const brand = selectedBrand;
-      setClaimedBrandName(brand?.name || '');
-      setClaimedDiscount(brand?.discount || 0);
-      setClaimSuccessVisible(true);
-      setShowLoadingOverlay(false);
-
-      const updatedBrands = allBrands.map((brand) => ({
-        ...brand,
-        offers: brand.offers.map((offer) =>
-          offer._id === offerId ? { ...offer, isClaimed: true } : offer
-        ),
-      }));
-      
-      if (isMounted.current) {
-        setAllBrands(updatedBrands);
-        brandsCache = updatedBrands;
-        saveCache(updatedBrands);
-        
-        if (selectedBrand) {
-          setSelectedBrand((prev) => ({
-            ...prev,
-            offers: prev.offers.map((offer) =>
-              offer._id === offerId ? { ...offer, isClaimed: true } : offer
-            ),
-          }));
-        }
-      }
-
-      setTimeout(() => {
-        setClaimSuccessVisible(false);
-        closeModal();
-        setTimeout(() => {
-          navigation.navigate('MyDiscountScreen');
-        }, 300);
-      }, 2500);
-
-    } catch (err) {
-      setShowLoadingOverlay(false);
-      if (isMounted.current) {
-        Alert.alert("Notice", err.response?.data?.message || "Error claiming offer");
-      }
-    }
-  }, [isGuest, token, allBrands, selectedBrand, closeModal, navigation, saveCache]);
-
-  // ==========================================
-  // RENDER FUNCTIONS
-  // ==========================================
-  const renderBrand = useCallback(({ item, index }) => (
-    <BrandCard
-      item={item}
-      index={index}
-      onPress={openModal}
-    />
-  ), [openModal]);
+  const renderBrand = useCallback(
+    ({ item }) => <BrandCard item={item} onPress={openOfferScreen} />,
+    [openOfferScreen]
+  );
 
   const keyExtractor = useCallback((item) => item._id, []);
 
@@ -1072,38 +1150,30 @@ export default function BrandsScreen({ limit = null }) {
         </View>
       );
     }
-
     if (displayedBrands.length === 0 && !loading) {
       return (
         <View style={styles.noResultsContainer}>
           <MaterialCommunityIcons name="ticket-off-outline" size={60} color="#ccc" />
           <Text style={styles.noResultsText}>No Brands Found</Text>
           <Text style={styles.noResultsSubText}>Try adjusting your filters</Text>
-          <TouchableOpacity 
-            style={styles.clearFiltersBtn}
-            onPress={() => {
-              setSelectedCategory("all");
-              setMinDiscount(0);
-              setShowOnlyOnline(false);
-              setSearchQuery("");
-            }}
-          >
+          <TouchableOpacity style={styles.clearFiltersBtn} onPress={clearAllFilters}>
             <Text style={styles.clearFiltersBtnText}>Clear All Filters</Text>
           </TouchableOpacity>
         </View>
       );
     }
-
     if (!hasMore && displayedBrands.length > 0) {
       return (
         <View style={styles.footerContainer}>
           <Text style={styles.totalBrandsText}>
             Showing all {filteredData.length} brands
           </Text>
+          {lastUpdated ? (
+            <Text style={styles.liveFooterText}>· live · auto-synced</Text>
+          ) : null}
         </View>
       );
     }
-
     return (
       <View style={styles.footerContainer}>
         <Text style={styles.showingText}>
@@ -1111,10 +1181,10 @@ export default function BrandsScreen({ limit = null }) {
         </Text>
       </View>
     );
-  }, [loadingMore, displayedBrands.length, loading, filteredData.length, hasMore]);
+  }, [loadingMore, displayedBrands.length, loading, filteredData.length, hasMore, clearAllFilters, lastUpdated]);
 
-  const renderHeader = useCallback(() => (
-    <View>
+  const renderHeader = useCallback(
+    () => (
       <View style={styles.categoryGridContainer}>
         <ScrollView
           horizontal
@@ -1126,31 +1196,24 @@ export default function BrandsScreen({ limit = null }) {
               key={category.id}
               category={category}
               isSelected={selectedCategory === category.id}
-              onPress={(id) => {
-                setSelectedCategory(id);
-                setPage(1);
-              }}
+              onPress={setSelectedCategory}
             />
           ))}
         </ScrollView>
       </View>
-    </View>
-  ), [selectedCategory]);
+    ),
+    [selectedCategory]
+  );
 
-  const currentOffer = selectedBrand?.offers?.[0];
+  const activeFilterCount =
+    (minDiscount > 0 ? 1 : 0) +
+    (selectedCategory !== "all" ? 1 : 0) +
+    (showOnlyOnline ? 1 : 0);
 
-  // ==========================================
-  // MAIN RENDER
-  // ==========================================
   return (
     <SafeAreaView style={styles.mainSafeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#9a979708" />
-      
-      {/* <LoadingOverlay 
-        visible={showLoadingOverlay} 
-        message={loading ? "Loading brands..." : "Processing..."}
-      /> */}
-      
+
       <View style={styles.fadeContainer}>
         {/* Header */}
         <View style={styles.customHeader}>
@@ -1159,7 +1222,11 @@ export default function BrandsScreen({ limit = null }) {
             onPress={() => navigation.goBack()}
             activeOpacity={0.7}
           >
-            <Ionicons name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'} size={24} color="#000" />
+            <Ionicons
+              name={Platform.OS === "ios" ? "chevron-back" : "arrow-back"}
+              size={24}
+              color="#000"
+            />
           </TouchableOpacity>
           <View style={styles.customHeaderCenter}>
             <Text style={styles.customHeaderTitle}>Brands</Text>
@@ -1169,7 +1236,7 @@ export default function BrandsScreen({ limit = null }) {
               style={styles.discountIconBtn}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                navigation.navigate('MyDiscountScreen');
+                navigation.navigate("MyDiscountScreen");
               }}
               activeOpacity={0.7}
             >
@@ -1180,13 +1247,16 @@ export default function BrandsScreen({ limit = null }) {
             </TouchableOpacity>
           </View>
         </View>
-        
+
+        {/* Stats Bar (commented out in original - keep as-is) */}
+        {/* <StatsBar stats={stats} loading={statsLoading} /> */}
+
         {/* Welcome */}
         <View style={styles.welcomeContainer}>
           <View style={styles.welcomeRow}>
             <View style={styles.welcomeLeftContent}>
               <Text style={styles.welcomeTextAbove}>
-                {isGuest ? "Guest User" : (user?.university?.name || "No University")}
+                {isGuest ? "Guest User" : user?.university?.name || "No University"}
               </Text>
               <Text style={styles.welcomeTitle}>Crew's Privilege Brands</Text>
             </View>
@@ -1196,11 +1266,15 @@ export default function BrandsScreen({ limit = null }) {
               activeOpacity={0.7}
             >
               <MaterialCommunityIcons name="tune-variant" size={15} color="#000000" />
+              {activeFilterCount > 0 && (
+                <View style={styles.filterBadge}>
+                  <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
         </View>
-        
-        {/* Guest Banner */}
+
         {isGuest && (
           <View style={styles.guestBanner}>
             <Ionicons name="information-circle" size={20} color="#1a1a1a" />
@@ -1216,22 +1290,28 @@ export default function BrandsScreen({ limit = null }) {
         {query && (
           <View style={styles.searchIndicatorRow}>
             <Text style={styles.searchIndicatorText}>
-              Showing results for: <Text style={{ fontWeight: 'bold', color: '#f9c349' }}>"{query}"</Text>
+              Showing results for:{" "}
+              <Text style={{ fontWeight: "bold", color: "#f9c349" }}>"{query}"</Text>
             </Text>
-            <TouchableOpacity onPress={() => {
-              setSearchQuery("");
-              navigation.setParams({ query: undefined });
-            }}>
+            <TouchableOpacity
+              onPress={() => {
+                setSearchQuery("");
+                navigation.setParams({ query: undefined });
+              }}
+            >
               <MaterialCommunityIcons name="close-circle" size={20} color="#999" />
             </TouchableOpacity>
           </View>
         )}
 
-        {error && !loading && !showLoadingOverlay && (
+        {error && !loading && (
           <View style={styles.errorContainer}>
             <MaterialCommunityIcons name="alert-circle" size={24} color="#ef4444" />
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity onPress={() => fetchBrands(true)} style={styles.retryButton}>
+            <TouchableOpacity
+              onPress={() => fetchBrands(true, { silent: false })}
+              style={styles.retryButton}
+            >
               <Text style={styles.retryButtonText}>Retry</Text>
             </TouchableOpacity>
           </View>
@@ -1246,7 +1326,7 @@ export default function BrandsScreen({ limit = null }) {
           <FlatList
             data={displayedBrands}
             keyExtractor={keyExtractor}
-            removeClippedSubviews={true}
+            removeClippedSubviews
             renderItem={renderBrand}
             windowSize={5}
             maxToRenderPerBatch={6}
@@ -1262,6 +1342,7 @@ export default function BrandsScreen({ limit = null }) {
             showsVerticalScrollIndicator={false}
             onEndReached={loadMoreBrands}
             onEndReachedThreshold={0.3}
+            extraData={displayedBrands}
           />
         )}
       </View>
@@ -1285,22 +1366,16 @@ export default function BrandsScreen({ limit = null }) {
               <View style={styles.modalIndicator} />
               <View style={styles.modalHeader}>
                 <Text style={styles.filterHeader}>Refine Search</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setSelectedCategory("all");
-                    setMinDiscount(0);
-                    setShowOnlyOnline(false);
-                  }}
-                >
+                <TouchableOpacity onPress={clearAllFilters}>
                   <Text style={styles.resetText}>Reset All</Text>
                 </TouchableOpacity>
               </View>
-              
+
               <ScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 20 }}
               >
-                <Text style={styles.filterLabel}>Minimum Discount</Text>
+                <Text style={styles.filterLabel}>Exact Discount</Text>
                 <View style={styles.filterChipRow}>
                   {DISCOUNT_OPTIONS.map((val) => (
                     <TouchableOpacity
@@ -1309,7 +1384,10 @@ export default function BrandsScreen({ limit = null }) {
                       onPress={() => setMinDiscount(val)}
                     >
                       <Text
-                        style={[styles.chipText, minDiscount === val && styles.activeChipText]}
+                        style={[
+                          styles.chipText,
+                          minDiscount === val && styles.activeChipText,
+                        ]}
                       >
                         {val === 0 ? "Any" : `${val}% Off`}
                       </Text>
@@ -1336,15 +1414,9 @@ export default function BrandsScreen({ limit = null }) {
                   />
                 </TouchableOpacity>
               </ScrollView>
-              
+
               <View style={styles.modalFooter}>
-                <TouchableOpacity
-                  style={styles.applyBtn}
-                  onPress={() => {
-                    closeFilterModal();
-                    setPage(1);
-                  }}
-                >
+                <TouchableOpacity style={styles.applyBtn} onPress={closeFilterModal}>
                   <Text style={styles.applyBtnText}>Apply Filters</Text>
                 </TouchableOpacity>
               </View>
@@ -1352,198 +1424,6 @@ export default function BrandsScreen({ limit = null }) {
           </Animated.View>
         </Pressable>
       </Modal>
-
-      {/* BRAND DETAIL MODAL - FIXED WITH PROPER DATA */}
-      {selectedBrand && (
-        <Modal 
-          visible={modalVisible} 
-          transparent
-          onRequestClose={closeModal}
-          animationType="none"
-        >
-          <Pressable style={styles.modalOverlay} onPress={closeModal}>
-            <Animated.View 
-              style={[
-                styles.modalContainerFixed,
-                { transform: [{ translateY: modalSlideAnim }] },
-              ]}
-            >
-              <Pressable style={styles.modalContentWrapper} onPress={(e) => e.stopPropagation()}>
-                <View style={styles.modalIndicator} />
-                
-                <ScrollView 
-                  style={styles.modalScrollView}
-                  contentContainerStyle={styles.modalScrollContent}
-                  showsVerticalScrollIndicator={true}
-                  bounces={true}
-                >
-                  <View style={styles.brandDetailHeader}>
-                    <View style={styles.modalLogoCircle}>
-                      <Image
-                        source={{ uri: currentOffer?.image || selectedBrand.displayImage || selectedBrand.logo }}
-                        style={styles.modalImage}
-                        resizeMode="contain"
-                      />
-                    </View>
-                    <Text style={styles.modalTitle}>{selectedBrand.name || selectedBrand.brandName}</Text>
-                    <View style={styles.modalCategoryBadge}>
-                      <MaterialIcons name="category" size={14} color="black" />
-                      <Text style={styles.modalCategoryText}>
-                        {selectedBrand.category || "General"}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.tabContainer}>
-                    {["gift", "redeem", "location"].map((tab) => (
-                      <Pressable
-                        key={tab}
-                        onPress={() => setActiveTab(tab)}
-                        style={[styles.tabItem, activeTab === tab && styles.activeTabCard]}
-                      >
-                        <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-                          {tab === "gift" ? "Details" : tab === "redeem" ? "Redeem" : "Locate"}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
-
-                  {activeTab === "gift" && (
-                    <View style={styles.tabContentWrapper}>
-                      <Text style={styles.tabContentTitle}>Offer Details</Text>
-                      <Text style={styles.tabContentText}>
-                        {currentOffer?.description || selectedBrand.description || "Explore this iconic destination. Get exclusive student discounts on your favorite products and services."}
-                      </Text>
-                      
-                      {currentOffer?.discountPercentage > 0 && (
-                        <View style={styles.discountInfoRow}>
-                          <MaterialCommunityIcons name="percent" size={20} color="#f9c349" />
-                          <Text style={styles.discountInfoText}>
-                            {currentOffer.discountPercentage}% OFF for students
-                          </Text>
-                        </View>
-                      )}
-                      
-                      {isGuest && (
-                        <TouchableOpacity 
-                          style={styles.guestPromptCard}
-                          onPress={() => {
-                            closeModal();
-                            setTimeout(() => navigation.navigate('Login'), 300);
-                          }}
-                        >
-                          <MaterialCommunityIcons name="account-plus" size={24} color="#f9c349" />
-                          <View style={{ flex: 1, marginLeft: 12 }}>
-                            <Text style={styles.guestPromptTitle}>Unlock Full Benefits</Text>
-                            <Text style={styles.guestPromptText}>Sign in to claim offers and get student discounts!</Text>
-                          </View>
-                          <Ionicons name="chevron-forward" size={20} color="#f9c349" />
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  )}
-
-                  {activeTab === "redeem" && (
-                    <View style={styles.tabContentWrapper}>
-                      <View style={styles.instructionHeader}>
-                        <MaterialCommunityIcons name="ticket-confirmation-outline" size={24} color="#000000" />
-                        <Text style={styles.instructionTitle}>How to Redeem</Text>
-                      </View>
-                      <Text style={styles.tabContentText}>
-                        {currentOffer?.redeemInstructions ||
-                          selectedBrand.redeemInstructions ||
-                          "1. Show your valid student ID at the counter\n2. Mention you're a Crew Privilege member\n3. Enjoy your discount!"}
-                      </Text>
-                      
-                      {currentOffer?.isOnline && (
-                        <View style={styles.redeemOnlineBadge}>
-                          <MaterialCommunityIcons name="earth" size={16} color="#f9c349" />
-                          <Text style={styles.redeemOnlineText}>Available Online</Text>
-                        </View>
-                      )}
-                      
-                      {currentOffer?.isInStore && (
-                        <View style={styles.redeemStoreBadge}>
-                          <MaterialCommunityIcons name="storefront" size={16} color="#f9c349" />
-                          <Text style={styles.redeemStoreText}>Available In-Store</Text>
-                        </View>
-                      )}
-                    </View>
-                  )}
-
-                  {activeTab === "location" && (
-                    <View style={styles.tabContentWrapper}>
-                      <View style={styles.locationInfoRow}>
-                        <MaterialCommunityIcons name="map-marker-radius" size={24} color="#000000" />
-                        <Text style={styles.locationAddressText}>
-                          {currentOffer?.location || selectedBrand.address || "Address not specified"}
-                        </Text>
-                      </View>
-
-                      <TouchableOpacity
-                        style={styles.mapButton}
-                        onPress={() => openMap(currentOffer?.location || selectedBrand.address || selectedBrand.name)}
-                      >
-                        <MaterialCommunityIcons name="directions" size={18} color="#fff" />
-                        <Text style={styles.mapButtonText}>Open in Maps</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </ScrollView>
-
-                <View style={styles.modalActionRow}>
-                  <TouchableOpacity style={styles.closeBtn} onPress={closeModal}>
-                    <Text style={styles.closeBtnText}>Close</Text>
-                  </TouchableOpacity>
-                  {currentOffer ? (
-                    <TouchableOpacity
-                      style={[
-                        styles.buyBtn,
-                        currentOffer.isClaimed && styles.claimedBtn,
-                      ]}
-                      disabled={currentOffer.isClaimed}
-                      onPress={() => claimOffer(currentOffer._id)}
-                    >
-                      <LinearGradient
-                        colors={currentOffer.isClaimed ? ['#ccc', '#bbb'] : ['#f9c349', '#f5a623']}
-                        style={styles.claimGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                      >
-                        <MaterialCommunityIcons 
-                          name={currentOffer.isClaimed ? "check-circle" : "gift"} 
-                          size={20} 
-                          color="#fff" 
-                          style={styles.claimIcon}
-                        />
-                        <Text style={styles.buyBtnText}>
-                          {currentOffer.isClaimed ? "✓ Claimed" : `Claim ${currentOffer.discountPercentage || selectedBrand.discount || 0}% OFF`}
-                        </Text>
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      style={[styles.buyBtn, styles.claimedBtn]}
-                      disabled={true}
-                    >
-                      <Text style={styles.buyBtnText}>
-                        No Offers Available
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </Pressable>
-            </Animated.View>
-          </Pressable>
-        </Modal>
-      )}
-
-      <ClaimSuccessModal
-        visible={claimSuccessVisible}
-        onClose={() => setClaimSuccessVisible(false)}
-        brandName={claimedBrandName}
-        discount={claimedDiscount}
-      />
     </SafeAreaView>
   );
 }
@@ -1554,102 +1434,92 @@ export default function BrandsScreen({ limit = null }) {
 const styles = StyleSheet.create({
   mainSafeArea: { flex: 1, backgroundColor: "#fff" },
   fadeContainer: { flex: 1 },
-  
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 999,
+
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", paddingVertical: 40 },
+  loadingText: { color: "#999", fontSize: 14, marginTop: 12 },
+
+  statsBarContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    backgroundColor: "#fff",
+    marginHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#f0f0f0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  
-  loadingCard: {
-    backgroundColor: '#fff',
-    padding: 30,
-    borderRadius: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 8,
-    minWidth: 200,
+  statsBarSkeleton: {
+    height: 28,
+    width: "80%",
+    backgroundColor: "#f5f5f5",
+    borderRadius: 8,
   },
-  
-  loadingText: {
-    color: '#1a1a1a',
-    fontSize: 16,
-    fontWeight: '700',
-    marginTop: 16,
-    letterSpacing: 0.5,
-  },
-  loadingDots: {
-    flexDirection: 'row',
-    marginTop: 12,
-  },
-  loadingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#f9c349',
-    marginHorizontal: 4,
-  },
-  
-  loadingContainer: {
+  statItem: {
+    alignItems: "center",
+    justifyContent: "center",
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
+    flexDirection: "row",
+    gap: 4,
   },
-  
+  statValue: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#000",
+    fontFamily: "Cardo",
+  },
+  statLabel: {
+    fontSize: 10,
+    color: "#999",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  statDivider: {
+    width: 1,
+    height: 18,
+    backgroundColor: "#f0f0f0",
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#22c55e",
+    marginRight: 2,
+  },
+
   customHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
   },
-  customHeaderCenter: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  customHeaderTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#000',
-    fontFamily: 'Cardo',
-  },
+  customHeaderCenter: { flex: 1, alignItems: "center", justifyContent: "center" },
+  customHeaderTitle: { fontSize: 18, fontWeight: "700", color: "#000", fontFamily: "Cardo" },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#f5f5f5",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  
-  welcomeContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  welcomeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  welcomeLeftContent: {
-    flex: 1,
-    flexDirection: 'column',
-  },
+
+  welcomeContainer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
+  welcomeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  welcomeLeftContent: { flex: 1 },
   welcomeTextAbove: {
     fontSize: 14,
     color: "#676363",
@@ -1657,327 +1527,211 @@ const styles = StyleSheet.create({
     fontFamily: "Cardo",
     marginBottom: 2,
   },
-  welcomeTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#000',
-    fontFamily: 'Cardo',
-  },
+  welcomeTitle: { fontSize: 16, fontWeight: "700", color: "#000", fontFamily: "Cardo" },
   welcomeFilterTrigger: {
     padding: 10,
     marginLeft: 12,
-    backgroundColor: '#F7F9F8',
+    backgroundColor: "#F7F9F8",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    alignSelf: 'center',
+    borderColor: "#E0E0E0",
+    alignSelf: "center",
+    position: "relative",
   },
-  
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 8,
+  filterBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 5,
+    borderRadius: 9,
+    backgroundColor: "#f9c349",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#fff",
   },
+  filterBadgeText: { fontSize: 10, fontWeight: "800", color: "#000" },
+
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   discountIconBtn: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 8,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
-    shadowColor: '#000',
+    borderColor: "#f0f0f0",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
-  discountIconWrapper: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  discountIconWrapper: { position: "relative", alignItems: "center", justifyContent: "center" },
   discountBadgeDot: {
-    position: 'absolute',
+    position: "absolute",
     top: -2,
     right: -2,
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#f9c349',
+    backgroundColor: "#f9c349",
     borderWidth: 1.5,
-    borderColor: '#fff',
+    borderColor: "#fff",
   },
-  
+
   listContent: { paddingBottom: 20 },
   columnWrapper: { justifyContent: "space-between", paddingHorizontal: 20, marginBottom: 15 },
   cardWrapper: { width: CARD_WIDTH },
-  card: { 
-    backgroundColor: "#fff", 
-    borderRadius: 22, 
-    width: "100%", 
-    padding: 7, 
-    alignItems: "center", 
-    borderWidth: 1, 
-    borderColor: "#F0F0F0", 
-    elevation: 3, 
-    shadowColor: "#000", 
-    shadowOffset: { width: 0, height: 2 }, 
-    shadowOpacity: 0.05, 
-    shadowRadius: 8 
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 22,
+    width: "100%",
+    padding: 7,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#F0F0F0",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
   },
   availabilityWrapper: { position: "absolute", top: 12, left: 12, flexDirection: "row", zIndex: 1 },
-  discountBadge: { position: "absolute", top: 12, right: 12, backgroundColor: "#ffffff", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, zIndex: 1 },
+  discountBadge: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    zIndex: 1,
+  },
   discountText: { fontSize: 12, fontWeight: "900", color: "#f9c349", fontFamily: "Cardo" },
-  logoContainer: { width: "100%", height: 100, marginTop: 24, marginBottom: 10, justifyContent: "center", alignItems: "center" },
-  logo: { width: "100%", height: "100%", resizeMode: "contain", borderRadius: 20 },
+  logoContainer: {
+    width: "100%",
+    height: 100,
+    marginTop: 24,
+    marginBottom: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  logo: { width: "100%", height: "100%", borderRadius: 20 },
   infoContainer: { alignItems: "center", width: "100%" },
   name: { fontSize: 14, fontWeight: "800", color: "#000000", fontFamily: "Cardo", textAlign: "center" },
   offerStatusText: { fontSize: 10, color: "#bbb", marginTop: 4 },
   offerStatusClaimed: { color: "#f9c349", fontWeight: "bold" },
-  categoryBadgeCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#f1f5f9", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginTop: 4, borderWidth: 0.5 },
-  categoryCardText: { fontSize: 9, color: "#000000", fontWeight: "600", textTransform: "uppercase", paddingLeft: 2 },
-  
-  categoryGridContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 10,
-    marginTop: 2,
+  categoryBadgeCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: 4,
+    borderWidth: 0.5,
   },
-  categoryGridScroll: {
-    paddingVertical: 5,
-    gap: 6,
+  categoryCardText: {
+    fontSize: 9,
+    color: "#000000",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    paddingLeft: 2,
   },
+
+  categoryGridContainer: { paddingHorizontal: 20, marginBottom: 10, marginTop: 2 },
+  categoryGridScroll: { paddingVertical: 5, gap: 6 },
   categoryGridItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 4,
     paddingVertical: 4,
     borderRadius: 14,
     minWidth: 44,
     marginRight: 4,
   },
-  categoryGridItemActive: {
-    borderColor: '#000000',
-    borderWidth: 1.5,
-  },
+  categoryGridItemActive: { borderColor: "#000000", borderWidth: 1.5 },
   categoryIconWrapper: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 1,
   },
-  categoryIconWrapperActive: {
-    backgroundColor: '#000000',
+  categoryIconWrapperActive: { backgroundColor: "#000000" },
+  categoryGridName: { fontSize: 9, fontWeight: "600", color: "#555", textAlign: "center", maxWidth: 52 },
+  categoryGridNameActive: { color: "#000000", fontWeight: "700" },
+
+  footerContainer: { paddingHorizontal: 20, paddingVertical: 15, alignItems: "center" },
+  footerLoader: { paddingVertical: 20, alignItems: "center" },
+  footerLoaderText: { fontSize: 12, color: "#999", marginTop: 8 },
+  showingText: { fontSize: 12, color: "#999" },
+  totalBrandsText: { fontSize: 13, color: "#666", fontWeight: "500" },
+  liveFooterText: {
+    fontSize: 10,
+    color: "#22c55e",
+    fontWeight: "700",
+    marginTop: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-  categoryGridName: {
-    fontSize: 9,
-    fontWeight: '600',
-    color: '#555',
-    textAlign: 'center',
-    maxWidth: 52,
-  },
-  categoryGridNameActive: {
-    color: '#000000',
-    fontWeight: '700',
-  },
-  
-  footerContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  footerLoader: {
-    paddingVertical: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  footerLoaderText: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 8,
-  },
-  showingText: {
-    fontSize: 12,
-    color: '#999',
-  },
-  totalBrandsText: {
-    fontSize: 13,
-    color: '#666',
-    fontWeight: '500',
-  },
-  
-  noResultsContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-  },
-  noResultsText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#333',
-    marginTop: 16,
-  },
-  noResultsSubText: {
-    fontSize: 14,
-    color: '#999',
-    marginTop: 6,
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  clearFiltersBtn: {
-    backgroundColor: '#f9c349',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  clearFiltersBtnText: {
-    color: '#000',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  
+
+  noResultsContainer: { alignItems: "center", justifyContent: "center", paddingVertical: 40, paddingHorizontal: 20 },
+  noResultsText: { fontSize: 18, fontWeight: "700", color: "#333", marginTop: 16 },
+  noResultsSubText: { fontSize: 14, color: "#999", marginTop: 6, marginBottom: 20 },
+  clearFiltersBtn: { backgroundColor: "#f9c349", paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
+  clearFiltersBtnText: { color: "#000", fontWeight: "700", fontSize: 14 },
+
   errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fef2f2',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fef2f2",
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginHorizontal: 20,
     marginBottom: 15,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: "#fecaca",
   },
-  errorText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#991b1b',
-    marginLeft: 8,
-  },
-  retryButton: {
-    backgroundColor: '#ef4444',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  
+  errorText: { flex: 1, fontSize: 13, color: "#991b1b", marginLeft: 8 },
+  retryButton: { backgroundColor: "#ef4444", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  retryButtonText: { color: "#fff", fontSize: 12, fontWeight: "600" },
+
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
-  modalContainerFixed: { 
-    height: "88%", 
-    backgroundColor: "#fff", 
-    borderTopLeftRadius: 35, 
+  modalContentWrapper: { flex: 1, padding: 25 },
+  filterModalContainer: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 35,
     borderTopRightRadius: 35,
-  },
-  modalContentWrapper: { 
-    flex: 1,
     padding: 25,
-  },
-  modalScrollView: {
-    flex: 1,
-  },
-  modalScrollContent: {
-    paddingBottom: 20,
-  },
-  tabContentWrapper: {
-    marginTop: 15,
-    paddingHorizontal: 5,
-  },
-  filterModalContainer: { 
-    backgroundColor: "#fff", 
-    borderTopLeftRadius: 35, 
-    borderTopRightRadius: 35, 
-    padding: 25, 
     maxHeight: "85%",
     minHeight: "50%",
   },
-  modalIndicator: { width: 45, height: 5, backgroundColor: "#E0E0E0", borderRadius: 10, alignSelf: "center", marginBottom: 25 },
+  modalIndicator: {
+    width: 45,
+    height: 5,
+    backgroundColor: "#E0E0E0",
+    borderRadius: 10,
+    alignSelf: "center",
+    marginBottom: 25,
+  },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
   filterHeader: { fontSize: 22, fontWeight: "900", color: "#000000", fontFamily: "Cardo" },
   resetText: { color: "#000000", fontWeight: "600", fontSize: 14 },
-  brandDetailHeader: { alignItems: "center", marginBottom: 10 },
-  modalLogoCircle: { width: "100%", height: 150, borderRadius: 20, backgroundColor: "#F7F9F8", overflow: "hidden", justifyContent: "center", alignItems: "center" },
-  modalImage: { width: "80%", height: "80%", resizeMode: "contain" },
-  modalTitle: { fontSize: 24, fontWeight: "900", color: "#000000", marginTop: 15, textAlign: "center" },
-  modalCategoryBadge: { flexDirection: "row", alignItems: "center", backgroundColor: "#f5f5f5", paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, marginTop: 8 },
-  modalCategoryText: { fontSize: 10, color: "#000000", fontWeight: "700", textTransform: "uppercase", letterSpacing: 1.2, marginLeft: 6 },
-  tabContainer: { flexDirection: "row", backgroundColor: "#F0F2F1", borderRadius: 18, padding: 6, marginBottom: 10, marginTop: 10 },
-  tabItem: { flex: 1, paddingVertical: 12, alignItems: "center", borderRadius: 14 },
-  activeTabCard: { backgroundColor: "#fff", elevation: 3, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
-  tabText: { fontSize: 13, color: "#999", fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5 },
-  activeTabText: { color: "#000000" },
-  tabContentTitle: { fontSize: 18, fontWeight: "bold", color: "#000000", marginBottom: 10 },
-  tabContentText: { fontSize: 14, color: "#666", lineHeight: 20 },
-  instructionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 10 },
-  instructionTitle: { fontSize: 18, fontWeight: "bold", color: "#000000" },
-  locationInfoRow: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
-  locationAddressText: { fontSize: 15, color: "#333", marginLeft: 10, flexShrink: 1 },
-  mapButton: { flexDirection: "row", backgroundColor: "#000000", paddingVertical: 12, paddingHorizontal: 20, borderRadius: 15, alignItems: "center", justifyContent: "center", alignSelf: "flex-start" },
-  mapButtonText: { color: "#fff", fontWeight: "700", marginLeft: 8, fontSize: 14 },
-  
-  modalActionRow: { 
-    flexDirection: "row", 
-    justifyContent: "space-between", 
-    marginTop: 20, 
-    gap: 15, 
-    paddingBottom: 10 
-  },
-  closeBtn: { 
-    flex: 0.4, 
-    paddingVertical: 16, 
-    borderRadius: 20, 
-    backgroundColor: "#F2F2F2", 
-    alignItems: "center" 
-  },
-  closeBtnText: { color: "#777", fontWeight: "700" },
-  
-  buyBtn: { 
-    flex: 0.6, 
-    borderRadius: 20, 
-    overflow: 'hidden',
-    elevation: 4,
-    shadowColor: '#f9c349',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  claimGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    gap: 8,
-  },
-  claimIcon: {
-    marginRight: 4,
-  },
-  claimedBtn: { 
-    backgroundColor: "#ccc",
-    elevation: 0,
-    shadowOpacity: 0,
-  },
-  buyBtnText: { 
-    color: "#fff", 
-    fontWeight: "800", 
-    fontSize: 14 
-  },
-  
+
   filterLabel: { fontSize: 16, fontWeight: "700", color: "#333", marginTop: 15, marginBottom: 10 },
   filterChipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: "#F5F7F6", borderWidth: 1, borderColor: "#F0F0F0" },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: "#F5F7F6",
+    borderWidth: 1,
+    borderColor: "#F0F0F0",
+  },
   activeChip: { backgroundColor: "#010101", borderColor: "#000000" },
   chipText: { color: "#555", fontSize: 12, fontWeight: "600" },
   activeChipText: { color: "#fff" },
@@ -1988,179 +1742,32 @@ const styles = StyleSheet.create({
   modalFooter: { borderTopWidth: 1, borderTopColor: "#F0F0F0", paddingTop: 20, marginTop: 10 },
   applyBtn: { backgroundColor: "#000000", paddingVertical: 16, borderRadius: 14, alignItems: "center" },
   applyBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
-  
+
   guestBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF9E6',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF9E6",
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginHorizontal: 20,
     borderRadius: 12,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: '#f9c34930'
+    borderColor: "#f9c34930",
   },
-  guestBannerText: {
-    flex: 1,
-    fontSize: 12,
-    color: '#1a1a1a',
-    marginLeft: 8,
-    fontWeight: '500'
-  },
-  signInLink: {
-    color: '#f9c349',
-    fontWeight: '700',
-    fontSize: 12,
-    marginLeft: 8
-  },
-  guestPromptCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fafafa',
-    padding: 16,
-    borderRadius: 16,
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: '#f0f0f0'
-  },
-  guestPromptTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 2
-  },
-  guestPromptText: {
-    fontSize: 12,
-    color: '#666',
-    lineHeight: 16
-  },
-  
-  searchIndicatorRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    backgroundColor: '#f0f0f0', 
-    paddingHorizontal: 15, 
-    paddingVertical: 10, 
-    borderRadius: 10, 
-    marginBottom: 10, 
-    marginHorizontal: 20 
-  },
-  searchIndicatorText: { 
-    fontSize: 14, 
-    color: '#666' 
-  },
-  
-  discountInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f9c34915',
-    padding: 12,
+  guestBannerText: { flex: 1, fontSize: 12, color: "#1a1a1a", marginLeft: 8, fontWeight: "500" },
+  signInLink: { color: "#f9c349", fontWeight: "700", fontSize: 12, marginLeft: 8 },
+
+  searchIndicatorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#f0f0f0",
+    paddingHorizontal: 15,
+    paddingVertical: 10,
     borderRadius: 10,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: '#f9c34930',
+    marginBottom: 10,
+    marginHorizontal: 20,
   },
-  discountInfoText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#f9c349',
-    marginLeft: 10,
-  },
-  
-  redeemOnlineBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#e8f5e9',
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 10,
-  },
-  redeemOnlineText: {
-    fontSize: 13,
-    color: '#2e7d32',
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  redeemStoreBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#e3f2fd',
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  redeemStoreText: {
-    fontSize: 13,
-    color: '#1565c0',
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  
-  successOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  successCard: {
-    width: width * 0.85,
-    backgroundColor: '#fff',
-    borderRadius: 30,
-    padding: 30,
-    alignItems: 'center',
-    elevation: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-  },
-  successIconCircle: {
-    marginBottom: 20,
-    shadowColor: '#f9c349',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-  },
-  successIconGradient: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  successTitle: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#000',
-    marginBottom: 8,
-  },
-  successBrandName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
-  },
-  successDiscountBadge: {
-    backgroundColor: '#f9c34920',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#f9c34940',
-  },
-  successDiscountText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#f9c349',
-  },
-  successSubtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20,
-  },
+  searchIndicatorText: { fontSize: 14, color: "#666" },
 });

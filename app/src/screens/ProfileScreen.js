@@ -135,7 +135,7 @@ const MenuItem = ({ item, index, isLast }) => {
 };
 
 export default function ProfileScreen() {
-  const { user, setUser, token, setToken } = useContext(AuthContext);
+  const { user, setUser, token, setToken, logout } = useContext(AuthContext);
   const [selectedImage, setSelectedImage] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const navigation = useNavigation();
@@ -351,10 +351,11 @@ export default function ProfileScreen() {
     });
   };
 
-  const handleSignOut = () => {
+  const handleSignOut =async  () => {
     setUser(null);
     setToken(null);
     closeSignOutModal();
+    await logout();
   };
 
   // Delete Account Functions

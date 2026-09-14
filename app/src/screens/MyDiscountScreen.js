@@ -1,4 +1,4 @@
-// screens/MyDiscountScreen.js - Fixed Permanent Removal
+// screens/MyDiscountScreen.js - Fixed Permanent Removal + Auto-Fetch Stats + Proper Cache + Unclaim Sync
 import React, { useState, useEffect, useRef, useContext, useCallback, useMemo } from 'react';
 import {
   View,
@@ -19,6 +19,7 @@ import {
   Alert,
   ActivityIndicator,
   Linking,
+  AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -27,7 +28,12 @@ import * as Haptics from 'expo-haptics';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import { Camera, CameraView } from 'expo-camera';
-import api from '../api/api';
+import api, {
+  notifyOfferUnclaimed,
+  notifyOfferClaimed,
+  onCacheEvent,
+} from '../api/brandApi';
+
 import { AuthContext } from '../context/AuthContext';
 
 const { width, height } = Dimensions.get('window');
@@ -68,7 +74,7 @@ const getTheme = (percentage) => DISCOUNT_THEMES[percentage] || DISCOUNT_THEMES.
 let discountsCache = null;
 let cacheTimestamp = null;
 let cachedUserId = null;
-const CACHE_DURATION = 30000; // 30 seconds cache for faster updates
+const CACHE_DURATION = 10000; // 10 seconds for faster updates
 
 // Track permanently removed offers (by ID) - persists across sessions
 let removedOfferIds = new Set();
@@ -1560,6 +1566,8 @@ export default function MyDiscountScreen() {
   const isMounted = useRef(true);
   const loadTimeoutRef = useRef(null);
   const refreshTimerRef = useRef(null);
+  const focusRefreshTimerRef = useRef(null);
+  const appStateRef = useRef(AppState.currentState);
 
   // Track removed IDs for this session
   const removedIdsRef = useRef(new Set());
@@ -1580,11 +1588,14 @@ export default function MyDiscountScreen() {
       if (refreshTimerRef.current) {
         clearTimeout(refreshTimerRef.current);
       }
+      if (focusRefreshTimerRef.current) {
+        clearTimeout(focusRefreshTimerRef.current);
+      }
     };
   }, []);
 
   // ==================== LOAD DISCOUNTS ====================
-  const loadDiscounts = useCallback(async (isRefresh = false) => {
+  const loadDiscounts = useCallback(async (isRefresh = false, useCache = true) => {
     if (!token || !user) {
       if (isMounted.current) {
         setLoading(false);
@@ -1595,12 +1606,11 @@ export default function MyDiscountScreen() {
       return;
     }
 
-    // Use cache for non-refresh loads
-    if (!isRefresh && discountsCache && cacheTimestamp &&
+    // Use cache for non-refresh loads when allowed
+    if (useCache && !isRefresh && discountsCache && cacheTimestamp &&
       (Date.now() - cacheTimestamp) < CACHE_DURATION &&
       cachedUserId === user?._id) {
       if (isMounted.current) {
-        // Filter out removed offers from cache
         const filteredOffers = discountsCache.offers.filter(
           offer => !removedIdsRef.current.has(offer._id)
         );
@@ -1637,7 +1647,6 @@ export default function MyDiscountScreen() {
 
       const offersWithImages = offersRes.data
         .filter((offer) => {
-          // Skip offers that have been permanently removed
           return !removedIdsRef.current.has(offer._id);
         })
         .map((offer) => {
@@ -1645,7 +1654,6 @@ export default function MyDiscountScreen() {
             p => p.offer?._id?.toString() === offer._id?.toString()
           );
 
-          // If no promo found in fresh data, check cache
           if (!offerPromo && discountsCache?.offers) {
             const cachedOffer = discountsCache.offers.find(o => o._id?.toString() === offer._id?.toString());
             if (cachedOffer?.activePromoDetails) {
@@ -1658,7 +1666,7 @@ export default function MyDiscountScreen() {
             displayImage: offer.image
               ? offer.image.startsWith('http')
                 ? offer.image
-                : `https://the-deft-crew-production.up.railway.app/${offer.image}`
+                : `https://the-deft-crew-production.up.railway.app/api/${offer.image}`
               : null,
             redemptionsToday: offer.redemptionsToday || 0,
             hasActivePromo: offerPromo?.status === 'active',
@@ -1707,16 +1715,43 @@ export default function MyDiscountScreen() {
     }
   }, [token, user]);
 
+  // ==================== STATS-ONLY REFRESH (No full reload) ====================
+  const refreshStatsOnly = useCallback(async () => {
+    if (!token || !user || !isMounted.current) return;
+
+    try {
+      const savingsRes = await api.get('/offers/my-total-savings', {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 5000
+      }).catch(() => ({ data: { totalSaved: 0 } }));
+
+      if (isMounted.current) {
+        const saved = savingsRes.data?.totalSaved || 0;
+        setTotalSaved(saved);
+
+        if (discountsCache) {
+          discountsCache.totalSaved = saved;
+        }
+      }
+    } catch (err) {
+      console.log('Stats refresh error:', err?.message);
+    }
+  }, [token, user]);
+
   // ==================== AUTO REFRESH ====================
   const setupAutoRefresh = useCallback(() => {
     if (refreshTimerRef.current) {
       clearTimeout(refreshTimerRef.current);
     }
 
-    refreshTimerRef.current = setTimeout(() => {
+    refreshTimerRef.current = setTimeout(async () => {
       if (isMounted.current && token && user) {
-        loadDiscounts(true);
-        setupAutoRefresh();
+        // Full refresh every 30s to get fresh data (bypass cache)
+        await loadDiscounts(true, false);
+        // Schedule next refresh after completion
+        if (isMounted.current && token && user) {
+          setupAutoRefresh();
+        }
       }
     }, 30000);
   }, [token, user, loadDiscounts]);
@@ -1727,8 +1762,10 @@ export default function MyDiscountScreen() {
 
     const performInitialLoad = async () => {
       if (token && user) {
-        await loadDiscounts(false);
-        setupAutoRefresh();
+        await loadDiscounts(false, true);
+        if (isSubscribed) {
+          setupAutoRefresh();
+        }
       } else {
         if (isSubscribed) {
           setLoading(false);
@@ -1745,21 +1782,104 @@ export default function MyDiscountScreen() {
         clearTimeout(refreshTimerRef.current);
       }
     };
-  }, [token, user]);
+  }, [token, user, loadDiscounts, setupAutoRefresh]);
 
+  // Focus effect - refresh on screen focus
   useFocusEffect(
     useCallback(() => {
-      if (token && user && !initialLoading) {
-        loadDiscounts(true);
-        setupAutoRefresh();
-      }
+      let isActive = true;
+
+      const doFocusRefresh = async () => {
+        if (token && user && isActive) {
+          // Fresh load on focus (bypass cache)
+          await loadDiscounts(true, false);
+          if (isActive) {
+            setupAutoRefresh();
+          }
+        }
+      };
+
+      // Small delay to let navigation settle
+      focusRefreshTimerRef.current = setTimeout(doFocusRefresh, 150);
+
       return () => {
+        isActive = false;
+        if (focusRefreshTimerRef.current) {
+          clearTimeout(focusRefreshTimerRef.current);
+        }
         if (refreshTimerRef.current) {
           clearTimeout(refreshTimerRef.current);
         }
       };
-    }, [token, user, initialLoading, loadDiscounts, setupAutoRefresh])
+    }, [token, user, loadDiscounts, setupAutoRefresh])
   );
+
+  // ==================== APP STATE LISTENER ====================
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      const prevState = appStateRef.current;
+      appStateRef.current = nextAppState;
+
+      if (prevState.match(/inactive|background/) && nextAppState === 'active') {
+        // App came to foreground - refresh data
+        if (token && user && isMounted.current) {
+          loadDiscounts(true, false);
+          setupAutoRefresh();
+        }
+      } else if (nextAppState === 'background') {
+        // App went to background - stop auto refresh
+        if (refreshTimerRef.current) {
+          clearTimeout(refreshTimerRef.current);
+        }
+      }
+    });
+
+    return () => {
+      subscription?.remove();
+    };
+  }, [token, user, loadDiscounts, setupAutoRefresh]);
+
+  // ==================== GLOBAL CACHE EVENT LISTENER (cross-screen claim/unclaim) ====================
+  useEffect(() => {
+    const unsub = onCacheEvent((event) => {
+      if (!event || event.type !== 'cache:invalidated') return;
+      if (!isMounted.current) return;
+
+      // ✅ CLAIM from other screens (OfferScreen or Brands) → add to MyDiscounts
+      if (event.type === 'offer:claimed' && event.offerId) {
+        // Clear cache so next fetch is fresh
+        discountsCache = null;
+        cacheTimestamp = null;
+        // Background refresh to pull the new claimed offer
+        setTimeout(() => {
+          if (isMounted.current && token && user) {
+            loadDiscounts(true, false);
+          }
+        }, 300);
+      }
+
+      // ✅ UNCLAIM from other screens → remove from MyDiscounts
+      if (event.type === 'offer:unclaimed' && event.offerId) {
+        // Add to removed IDs so it stays removed
+        removedIdsRef.current.add(event.offerId);
+        removedOfferIds.add(event.offerId);
+
+        // Optimistic remove from state
+        setClaimedOffers((prev) => prev.filter((o) => o._id !== event.offerId));
+
+        // Update cache
+        if (discountsCache) {
+          discountsCache.offers = discountsCache.offers.filter(
+            (o) => o._id !== event.offerId
+          );
+        }
+
+        // Refresh stats in background
+        refreshStatsOnly();
+      }
+    });
+    return unsub;
+  }, [loadDiscounts, refreshStatsOnly, token, user]);
 
   // ==================== PROMO CODE FUNCTIONS ====================
 
@@ -1882,7 +2002,7 @@ export default function MyDiscountScreen() {
                   headers: { Authorization: `Bearer ${token}` }
                 });
                 Alert.alert('Cancelled', 'Promo code has been cancelled successfully.');
-                loadDiscounts(true);
+                loadDiscounts(true, false);
                 setPromoModalVisible(false);
               }
             } catch (err) {
@@ -1945,7 +2065,8 @@ export default function MyDiscountScreen() {
         expiresAt: newPromo.expiresAt,
         isExisting: false
       });
-      loadDiscounts(true);
+      // Refresh data in background
+      loadDiscounts(true, false);
     } else {
       setPromoModalVisible(false);
     }
@@ -1957,9 +2078,25 @@ export default function MyDiscountScreen() {
       `You've successfully verified the discount at ${data.brandName || scanningOffer?.title}. Your discount has been applied!`,
       [{ text: 'Great!', style: 'default' }]
     );
-    loadDiscounts(true);
+    
+    // Optimistically update the specific offer's redemption count
+    if (scanningOffer) {
+      setClaimedOffers(prev => prev.map(offer => {
+        if (offer._id === scanningOffer._id) {
+          return {
+            ...offer,
+            redemptionsToday: (offer.redemptionsToday || 0) + 1
+          };
+        }
+        return offer;
+      }));
+    }
+    
+    // Refresh in background for accurate data
+    loadDiscounts(true, false);
   }, [scanningOffer, loadDiscounts]);
 
+  // ==================== HANDLE UNCLAIM (with proper cache + notify) ====================
   const handleUnclaim = useCallback(async (item) => {
     try {
       const response = await api.post(`/offers/unclaim/${item._id}`, {}, {
@@ -1967,21 +2104,40 @@ export default function MyDiscountScreen() {
       });
 
       if (response.data.message) {
-        // PERMANENTLY mark as removed - add to removed set
+        // PERMANENTLY mark as removed
         removedIdsRef.current.add(item._id);
-        
-        // Also update the global set for persistence across sessions
         removedOfferIds.add(item._id);
 
-        // Immediately remove from local state
+        // Optimistic update - remove from state immediately
         setClaimedOffers(prev => prev.filter(o => o._id !== item._id));
-        
-        // Update cache - filter out the removed offer
+
+        // ✅ Clear local discountsCache
         if (discountsCache) {
           discountsCache.offers = discountsCache.offers.filter(o => o._id !== item._id);
         }
-        
+        // ✅ Force cache refresh so next load is fresh
+        cacheTimestamp = null;
+
+        // ✅ CRITICAL FIX: Notify ALL screens (Brands, OfferScreen, api.js cache)
+        // This clears their caches and flips the brand card status back to "Student's Offer"
+        const brandId =
+          item?.brand?._id ||
+          item?.brand?.id ||
+          item?.brand ||
+          item?.brandId;
+
+        if (brandId) {
+          try {
+            notifyOfferUnclaimed(brandId, item._id, user?._id);
+          } catch (e) {
+            console.log('notifyOfferUnclaimed error:', e);
+          }
+        }
+
         Alert.alert('Removed', `${item.title} has been removed from your discounts.`);
+
+        // Refresh stats in background without full reload
+        refreshStatsOnly();
       }
     } catch (err) {
       console.error('Error unclaiming offer:', err);
@@ -1990,15 +2146,15 @@ export default function MyDiscountScreen() {
         err.response?.data?.message || 'Failed to remove discount. Please try again.'
       );
     }
-  }, [token]);
+  }, [token, refreshStatsOnly, user]);
 
   const handleRefresh = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRefreshing(true);
-    loadDiscounts(true);
+    loadDiscounts(true, false);
   }, [loadDiscounts]);
 
-  // Memoized stats
+  // Memoized stats - auto-updates when claimedOffers changes
   const stats = useMemo(() => {
     const activeCount = claimedOffers.filter(o => o.isActive !== false).length;
     const onlineCount = claimedOffers.filter(o => o.isOnline).length;
@@ -2042,10 +2198,21 @@ export default function MyDiscountScreen() {
           <Ionicons name="chevron-back" size={20} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Discounts</Text>
-        <View style={styles.headerBadge}>
-          <Text style={styles.headerBadgeText}>{stats.activeCount}</Text>
-          <Text style={styles.headerBadgeLabel}>active</Text>
-        </View>
+        <TouchableOpacity
+          onPress={handleRefresh}
+          style={styles.headerBadge}
+          activeOpacity={0.7}
+          disabled={refreshing}
+        >
+          {refreshing ? (
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          ) : (
+            <>
+              <Text style={styles.headerBadgeText}>{stats.activeCount}</Text>
+              <Text style={styles.headerBadgeLabel}>active</Text>
+            </>
+          )}
+        </TouchableOpacity>
       </Animated.View>
 
       <FlatList
@@ -2149,7 +2316,7 @@ export default function MyDiscountScreen() {
                   expiresAt: newPromo.expiresAt,
                   isExisting: false
                 });
-                loadDiscounts(true);
+                loadDiscounts(true, false);
               }
             });
           }
@@ -2201,6 +2368,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 20,
     gap: 4,
+    minWidth: 60,
+    justifyContent: 'center',
   },
   headerBadgeText: {
     fontSize: 13,

@@ -10,12 +10,12 @@ import {
   Image,
   Alert,
   ActivityIndicator,
-  SafeAreaView,
   RefreshControl,
   StatusBar,
   Platform,
-  Animated
+  Animated,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
@@ -28,7 +28,7 @@ const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 // Skeleton Loader for Blocked Users
 const BlockedUsersSkeleton = () => {
   const shimmerAnim = useRef(new Animated.Value(0)).current;
-  
+
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
@@ -90,16 +90,13 @@ const BlockedUserItem = React.memo(({ item, index, onUnblock, onNavigate, unbloc
   const isUnblocking = unblockingId === item._id;
 
   return (
-    <Animated.View 
+    <Animated.View
       style={[
         styles.userItemWrapper,
         {
           opacity: opacityAnim,
-          transform: [
-            { scale: scaleAnim },
-            { translateX: slideAnim }
-          ]
-        }
+          transform: [{ scale: scaleAnim }, { translateX: slideAnim }],
+        },
       ]}
     >
       <TouchableOpacity
@@ -130,10 +127,10 @@ const BlockedUserItem = React.memo(({ item, index, onUnblock, onNavigate, unbloc
             <View style={styles.blockedDateContainer}>
               <Ionicons name="time-outline" size={12} color="#999" />
               <Text style={styles.blockedDate}>
-                Blocked on {new Date(item.blockedAt).toLocaleDateString('en-US', { 
-                  month: 'short', 
+                Blocked on {new Date(item.blockedAt).toLocaleDateString('en-US', {
+                  month: 'short',
                   day: 'numeric',
-                  year: 'numeric' 
+                  year: 'numeric',
                 })}
               </Text>
             </View>
@@ -156,6 +153,7 @@ const BlockedUserItem = React.memo(({ item, index, onUnblock, onNavigate, unbloc
 });
 
 export default function BlockedUsersScreen() {
+  const insets = useSafeAreaInsets();
   const { token } = useContext(AuthContext);
   const navigation = useNavigation();
   const [blockedUsers, setBlockedUsers] = useState([]);
@@ -166,7 +164,6 @@ export default function BlockedUsersScreen() {
   const [slideAnim] = useState(new Animated.Value(30));
 
   useEffect(() => {
-    // Entrance animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -182,7 +179,6 @@ export default function BlockedUsersScreen() {
     ]).start();
   }, []);
 
-  // Fetch blocked users when screen is focused
   useFocusEffect(
     useCallback(() => {
       fetchBlockedUsers();
@@ -209,7 +205,7 @@ export default function BlockedUsersScreen() {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    
+
     Alert.alert(
       'Unblock User',
       `Are you sure you want to unblock ${userName}? They will be able to interact with you again.`,
@@ -218,8 +214,8 @@ export default function BlockedUsersScreen() {
         {
           text: 'Unblock',
           onPress: () => unblockUser(userId),
-          style: 'default'
-        }
+          style: 'default',
+        },
       ]
     );
   };
@@ -229,18 +225,17 @@ export default function BlockedUsersScreen() {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    
+
     try {
       const config = { headers: { Authorization: `Bearer ${token}` } };
       await axios.post(`${API_URL}/user/unblock/${userId}`, {}, config);
-      
-      // IMPORTANT: Remove from list immediately
-      setBlockedUsers(prev => prev.filter(user => user._id !== userId));
-      
+
+      setBlockedUsers((prev) => prev.filter((user) => user._id !== userId));
+
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-      
+
       Alert.alert('Success', 'User unblocked successfully');
     } catch (err) {
       console.error('Unblock error:', err);
@@ -267,91 +262,83 @@ export default function BlockedUsersScreen() {
 
   const handleClearAll = () => {
     if (blockedUsers.length === 0) return;
-    
-    Alert.alert(
-      'Clear All',
-      'Are you sure you want to unblock all users?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Unblock All',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const config = { headers: { Authorization: `Bearer ${token}` } };
-              // Create a copy of current blocked users
-              const usersToUnblock = [...blockedUsers];
-              
-              // Unblock each user
-              for (const user of usersToUnblock) {
-                await axios.post(`${API_URL}/user/unblock/${user._id}`, {}, config);
-              }
-              
-              // Clear all from state
-              setBlockedUsers([]);
-              Alert.alert('Success', 'All users unblocked successfully');
-            } catch (err) {
-              console.error('Clear all error:', err);
-              Alert.alert('Error', 'Failed to unblock all users. Please try again.');
+
+    Alert.alert('Clear All', 'Are you sure you want to unblock all users?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Unblock All',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const config = { headers: { Authorization: `Bearer ${token}` } };
+            const usersToUnblock = [...blockedUsers];
+
+            for (const user of usersToUnblock) {
+              await axios.post(`${API_URL}/user/unblock/${user._id}`, {}, config);
             }
+
+            setBlockedUsers([]);
+            Alert.alert('Success', 'All users unblocked successfully');
+          } catch (err) {
+            console.error('Clear all error:', err);
+            Alert.alert('Error', 'Failed to unblock all users. Please try again.');
           }
-        }
-      ]
-    );
+        },
+      },
+    ]);
   };
 
-  // Render Clear All button in header
   const renderClearAllButton = () => {
     if (blockedUsers.length === 0) return null;
-    
+
     return (
-      <TouchableOpacity 
-        onPress={handleClearAll}
-        style={styles.headerAction}
-      >
+      <TouchableOpacity onPress={handleClearAll} style={styles.headerAction}>
         <Text style={styles.headerActionText}>Clear All</Text>
       </TouchableOpacity>
     );
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Blocked Users</Text>
-          <View style={{ width: 40 }} />
-        </View>
-        <BlockedUsersSkeleton />
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff22" />
-      
-      {/* Header */}
+  // Shared header component
+  const Header = () => (
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeHeader}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Blocked Users</Text>
-        {renderClearAllButton()}
+        {renderClearAllButton() ?? <View style={{ width: 40 }} />}
       </View>
+    </SafeAreaView>
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={false} />
+        <Header />
+        <BlockedUsersSkeleton />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={false} />
+
+      <Header />
 
       {/* Content */}
       {blockedUsers.length === 0 ? (
-        <Animated.View style={[
-          styles.emptyContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }
-        ]}>
+        <Animated.View
+          style={[
+            styles.emptyContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+              paddingBottom: Math.max(insets.bottom, 20),
+            },
+          ]}
+        >
           <View style={styles.emptyIconWrapper}>
             <LinearGradient
               colors={['rgba(249,195,73,0.1)', 'rgba(249,195,73,0.05)']}
@@ -379,14 +366,20 @@ export default function BlockedUsersScreen() {
             />
           )}
           refreshControl={
-            <RefreshControl 
-              refreshing={refreshing} 
+            <RefreshControl
+              refreshing={refreshing}
               onRefresh={onRefresh}
               tintColor="#f9c349"
-              colors={["#f9c349"]}
+              colors={['#f9c349']}
             />
           }
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            {
+              // Ensure last item clears the home indicator / gesture bar
+              paddingBottom: Math.max(insets.bottom, 20) + 20,
+            },
+          ]}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
             <View style={styles.listHeader}>
@@ -400,7 +393,7 @@ export default function BlockedUsersScreen() {
           }
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -409,7 +402,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fc',
   },
-  
+
+  // Safe Header
+  safeHeader: {
+    backgroundColor: '#ffffff',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+
   // Header
   header: {
     flexDirection: 'row',
@@ -489,7 +498,7 @@ const styles = StyleSheet.create({
   // List
   listContent: {
     paddingTop: 4,
-    paddingBottom: 20,
+    // paddingBottom set dynamically via insets
   },
   listHeader: {
     flexDirection: 'row',

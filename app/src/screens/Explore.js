@@ -620,7 +620,7 @@ const Explore = () => {
 
           {/* Welcome Message */}
           <Animated.View style={[styles.welcomeContainer, { opacity: sectionFade }]}>
-            <Text style={styles.welcomeTitle}>Welcome to Your Hub! 🚀</Text>
+            {/* <Text style={styles.welcomeTitle}>Welcome to Your Hub! 🚀</Text> */}
             <Text style={styles.welcomeSub}>Explore exclusive features designed just for you</Text>
           </Animated.View>
 

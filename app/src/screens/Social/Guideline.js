@@ -7,17 +7,18 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  SafeAreaView,
   Animated,
   Platform,
   Dimensions,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
 export default function CommunityGuidelinesScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
@@ -108,40 +109,48 @@ export default function CommunityGuidelinesScreen({ navigation }) {
   ];
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor="#ccbfbf14" />
-      
-      {/* Header */}
-      <LinearGradient colors={['#fff', '#fff']} style={styles.headerGradient}>
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="chevron-back" size={26} color="#000000" />
-          </TouchableOpacity>
-          
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Guidelines</Text>
-            <View style={styles.headerHandle} />
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={false} />
+
+      {/* Header wrapped in SafeAreaView (top only) */}
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeHeader}>
+        <LinearGradient colors={['#fff', '#fff']} style={styles.headerGradient}>
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="chevron-back" size={26} color="#000000" />
+            </TouchableOpacity>
+
+            <View style={styles.headerCenter}>
+              <Text style={styles.headerTitle}>Guidelines</Text>
+              <View style={styles.headerHandle} />
+            </View>
+
+            <View style={styles.headerRight} />
           </View>
-          
-          <View style={styles.headerRight} />
-        </View>
-      </LinearGradient>
+        </LinearGradient>
+      </SafeAreaView>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            // Ensure bottom content clears home indicator / gesture bar
+            paddingBottom: Math.max(insets.bottom, 20) + 30,
+          },
+        ]}
       >
-        <Animated.View 
+        <Animated.View
           style={[
             styles.heroSection,
             {
               opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }]
-            }
+              transform: [{ scale: scaleAnim }],
+            },
           ]}
         >
           <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.heroIcon}>
@@ -152,13 +161,13 @@ export default function CommunityGuidelinesScreen({ navigation }) {
         </Animated.View>
 
         {/* Intro */}
-        <Animated.View 
+        <Animated.View
           style={[
             styles.introCard,
             {
               opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }
+              transform: [{ translateY: slideAnim }],
+            },
           ]}
         >
           <Text style={styles.introText}>
@@ -170,7 +179,7 @@ export default function CommunityGuidelinesScreen({ navigation }) {
         <Text style={styles.sectionLabel}>Our Guidelines</Text>
         <View style={styles.card}>
           {guidelines.map((item, index) => (
-            <Animated.View 
+            <Animated.View
               key={index}
               style={[
                 styles.guidelineItem,
@@ -178,14 +187,14 @@ export default function CommunityGuidelinesScreen({ navigation }) {
                 {
                   opacity: fadeAnim,
                   transform: [
-                    { 
+                    {
                       translateY: slideAnim.interpolate({
                         inputRange: [0, 20],
                         outputRange: [0, 10 * (index + 1) * 0.03],
-                      })
-                    }
-                  ]
-                }
+                      }),
+                    },
+                  ],
+                },
               ]}
             >
               <View style={[styles.guidelineIcon, { backgroundColor: item.color + '15' }]}>
@@ -218,7 +227,7 @@ export default function CommunityGuidelinesScreen({ navigation }) {
           <View style={styles.moderationItem}>
             <Ionicons name="flag-outline" size={16} color="#f9c349" />
             <Text style={styles.moderationText}>
-              <Text style={styles.moderationStrong}>Report</Text> content or 
+              <Text style={styles.moderationStrong}>Report</Text> content or
               <Text style={styles.moderationStrong}> block</Text> users
             </Text>
           </View>
@@ -236,7 +245,7 @@ export default function CommunityGuidelinesScreen({ navigation }) {
           v1.0 • {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
         </Text>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -245,10 +254,26 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
-  
+
+  // Safe Header
+  safeHeader: {
+    backgroundColor: '#fff',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+
   // Header
   headerGradient: {
-   
+    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -263,7 +288,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 10,
-    backgroundColor: '#fff',
+    backgroundColor: '#F1F5F9',
   },
   headerCenter: {
     flex: 1,
@@ -285,11 +310,11 @@ const styles = StyleSheet.create({
   headerRight: {
     width: 36,
   },
-  
+
   scrollContent: {
-    paddingBottom: 30,
+    // paddingBottom set dynamically via insets
   },
-  
+
   // Hero
   heroSection: {
     alignItems: 'center',
@@ -326,7 +351,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontWeight: '500',
   },
-  
+
   // Intro
   introCard: {
     backgroundColor: '#FFFFFF',
@@ -349,7 +374,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
   },
-  
+
   // Section Label
   sectionLabel: {
     fontSize: 11,
@@ -361,7 +386,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 6,
   },
-  
+
   // Card
   card: {
     backgroundColor: '#FFFFFF',
@@ -376,7 +401,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  
+
   // Guideline Item
   guidelineItem: {
     flexDirection: 'row',
@@ -410,7 +435,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     lineHeight: 15,
   },
-  
+
   // Prohibited
   prohibitedGrid: {
     paddingVertical: 2,
@@ -435,7 +460,7 @@ const styles = StyleSheet.create({
     color: '#444',
     fontWeight: '500',
   },
-  
+
   // Moderation
   moderationItem: {
     flexDirection: 'row',
@@ -456,7 +481,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1A1A1A',
   },
-  
+
   // Version
   version: {
     textAlign: 'center',

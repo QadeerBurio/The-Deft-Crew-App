@@ -1,7 +1,5 @@
 //The-Deft-Crew-App/app/src/navigation/DrawerNavigator.js
 
-
-
 import React, { useState, useRef, useContext, useEffect, useCallback } from 'react';
 import {
   View,
@@ -17,6 +15,7 @@ import {
   StatusBar,
   ScrollView,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import {
   createDrawerNavigator,
@@ -31,13 +30,18 @@ import {
   FontAwesome5,
   FontAwesome,
 } from '@expo/vector-icons';
-import { getFocusedRouteNameFromRoute, useNavigation, CommonActions } from '@react-navigation/native';
+import {
+  getFocusedRouteNameFromRoute,
+  useNavigation,
+  CommonActions,
+} from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { AuthContext } from '../context/AuthContext';
 import TabNavigator from './TabNavigator';
 
+// ---------- SCREENS ----------
 import BrandOffersScreen from '../screens/BrandOffersScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import University from '../screens/University';
@@ -113,23 +117,22 @@ import BlockedUsersScreen from '../screens/Social/BlockedUserScreen';
 import Terrms from '../screens/Social/Terrms';
 import Guideline from '../screens/Social/Guideline';
 
-
-
 import ProfileWelcomeScreen from '../screens/skillshare/profile/ProfileWelcomeScreen';
 import ProfileSetupScreen from '../screens/skillshare/profile/ProfileSetupScreen';
 import ProfileSuccessScreen from '../screens/skillshare/profile/ProfileSuccessScreen';
 import ProfessionalProfileScreen from '../screens/skillshare/profile/ProfessionalProfileScreen';
-import { ActivityIndicator } from 'react-native';
 import { getMyProfessionalProfile } from '../api/profileApi';
 import SkillShareExplore from '../screens/skillshare/Explore';
 import MyPostsByType from '../screens/skillshare/MyPostByType';
-
+import OfferScreen from '../screens/OfferScreen';
 
 const { width, height } = Dimensions.get('window');
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
 
-// DRAWER_ITEMS - NO "Messages" route here
+// ============================================================
+// DRAWER ITEMS
+// ============================================================
 const DRAWER_ITEMS = [
   {
     label: 'Home',
@@ -137,7 +140,6 @@ const DRAWER_ITEMS = [
     route: 'HomeTabs',
     resetNavigation: true,
   },
-  
   {
     label: 'Privilege Benefits',
     icon: (size, color) => (
@@ -196,7 +198,9 @@ const DRAWER_ITEMS = [
   },
 ];
 
-// Modern Animated Drawer Item
+// ============================================================
+// ANIMATED DRAWER ITEM
+// ============================================================
 const AnimatedDrawerItem = ({ label, icon, onPress, delay = 0, isActive = false }) => {
   const translateX = useRef(new Animated.Value(-30)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -256,7 +260,9 @@ const AnimatedDrawerItem = ({ label, icon, onPress, delay = 0, isActive = false 
   );
 };
 
-// Enhanced Drawer Header
+// ============================================================
+// DRAWER HEADER
+// ============================================================
 const DrawerHeader = ({ isGuest }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(-30)).current;
@@ -310,7 +316,9 @@ const DrawerHeader = ({ isGuest }) => {
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <Text style={styles.avatarText}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
+                <Text style={styles.avatarText}>
+                  tdc<Text style={{ color: '#f9c349' }}>.</Text>
+                </Text>
               </LinearGradient>
             </View>
             <View style={styles.avatarGlow} />
@@ -337,6 +345,9 @@ const DrawerHeader = ({ isGuest }) => {
   );
 };
 
+// ============================================================
+// CUSTOM DRAWER CONTENT
+// ============================================================
 function CustomDrawerContent(props) {
   const { logout, isGuest, setIsGuest } = useContext(AuthContext);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -390,7 +401,6 @@ function CustomDrawerContent(props) {
     );
   };
 
-  // FIXED: Safe navigation - NO RESET to "Messages"
   const handleNavigation = (route, resetNavigation = false) => {
     setActiveRoute(route);
     props.navigation.closeDrawer();
@@ -398,27 +408,18 @@ function CustomDrawerContent(props) {
 
     setTimeout(() => {
       try {
-        if (resetNavigation) {
-          // Only reset to routes that exist in the drawer navigator
-          // "HomeTabs" is the only one that should use reset
-          if (route === 'HomeTabs') {
-            props.navigation.dispatch(
-              CommonActions.reset({
-                index: 0,
-                routes: [{ name: 'HomeTabs' }],
-              })
-            );
-          } else {
-            // For other routes, just navigate normally
-            props.navigation.navigate(route);
-          }
+        if (resetNavigation && route === 'HomeTabs') {
+          props.navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [{ name: 'HomeTabs' }],
+            })
+          );
         } else {
-          // Normal navigation
           props.navigation.navigate(route);
         }
       } catch (error) {
         console.error('Navigation error:', error);
-        // Fallback to HomeTabs
         props.navigation.dispatch(
           CommonActions.reset({
             index: 0,
@@ -519,6 +520,9 @@ function CustomDrawerContent(props) {
   );
 }
 
+// ============================================================
+// CUSTOM HEADER (TDC Header)
+// ============================================================
 function CustomHeader({ navigation }) {
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -533,13 +537,13 @@ function CustomHeader({ navigation }) {
   useEffect(() => {
     if (token && !isGuest) {
       updateUnreadCount(token);
-      
+
       const interval = setInterval(() => {
         if (token && !isGuest) {
           updateUnreadCount(token);
         }
       }, 30000);
-      
+
       return () => clearInterval(interval);
     }
   }, [token, isGuest, updateUnreadCount]);
@@ -639,7 +643,7 @@ function CustomHeader({ navigation }) {
         updateUnreadCount(token);
       }
     });
-    
+
     return unsubscribe;
   }, [navigation, token, isGuest, updateUnreadCount]);
 
@@ -648,22 +652,22 @@ function CustomHeader({ navigation }) {
       navigation.getParent()?.navigate('Login');
       return;
     }
-    
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setNotifVisible(true);
   };
 
   return (
     <SafeAreaView edges={['top']} style={styles.headerSafe}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff21" />
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      <Animated.View 
+      <Animated.View
         style={[
-          styles.headerMain, 
-          { 
+          styles.headerMain,
+          {
             opacity: headerOpacity,
-            transform: [{ translateY: headerTranslateY }]
-          }
+            transform: [{ translateY: headerTranslateY }],
+          },
         ]}
       >
         <TouchableOpacity
@@ -678,13 +682,13 @@ function CustomHeader({ navigation }) {
 
         <View style={styles.headerCenter}>
           {searchVisible ? (
-            <Animated.View 
+            <Animated.View
               style={[
-                styles.headerSearchWrap, 
-                { 
+                styles.headerSearchWrap,
+                {
                   width: searchWidth,
-                  transform: [{ scale: searchScale }]
-                }
+                  transform: [{ scale: searchScale }],
+                },
               ]}
             >
               <Ionicons name="search-outline" size={20} color="#f9c349" style={styles.searchIcon} />
@@ -718,7 +722,9 @@ function CustomHeader({ navigation }) {
               <Ionicons name="notifications-outline" size={22} color="#000" />
               {!isGuest && unreadCount > 0 && (
                 <Animated.View style={[styles.badges, { transform: [{ scale: pulseAnim }] }]}>
-                  <Text style={[styles.badgeTexts, { fontSize: 10 }]}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                  <Text style={[styles.badgeTexts, { fontSize: 10 }]}>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Text>
                 </Animated.View>
               )}
               {isGuest && (
@@ -736,7 +742,9 @@ function CustomHeader({ navigation }) {
   );
 }
 
-// Animated Screen Wrapper Component
+// ============================================================
+// ANIMATION WRAPPERS
+// ============================================================
 const AnimatedScreenWrapper = ({ children }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.96)).current;
@@ -766,13 +774,18 @@ const AnimatedScreenWrapper = ({ children }) => {
   }, [fadeAnim, scaleAnim, slideAnim]);
 
   return (
-    <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ scale: scaleAnim }, { translateY: slideAnim }] }}>
+    <Animated.View
+      style={{
+        flex: 1,
+        opacity: fadeAnim,
+        transform: [{ scale: scaleAnim }, { translateY: slideAnim }],
+      }}
+    >
       {children}
     </Animated.View>
   );
 };
 
-// Animated Screen Component
 const AnimatedScreen = ({ component: Component, ...props }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(40)).current;
@@ -802,24 +815,44 @@ const AnimatedScreen = ({ component: Component, ...props }) => {
   }, [fadeAnim, slideAnim, scaleAnim]);
 
   return (
-    <Animated.View 
-      style={{ 
-        flex: 1, 
-        opacity: fadeAnim, 
-        transform: [{ translateY: slideAnim }, { scale: scaleAnim }] 
+    <Animated.View
+      style={{
+        flex: 1,
+        opacity: fadeAnim,
+        transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
       }}
     >
       <Component {...props} />
     </Animated.View>
   );
 };
-// ===== SKILLSHARE ENTRY GATE =====
+
+// ============================================================
+// HOME TABS WRAPPER — hides header when Social tab active
+// ============================================================
+const HomeTabsScreen = (props) => {
+  const [activeTab, setActiveTab] = useState('Home');
+  const hideHeader = activeTab === 'Social';
+
+  return (
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+      {!hideHeader && <CustomHeader navigation={props.navigation} />}
+      <AnimatedScreenWrapper>
+        <TabNavigator {...props} onTabChange={(tabName) => setActiveTab(tabName)} />
+      </AnimatedScreenWrapper>
+    </View>
+  );
+};
+
+// ============================================================
+// SKILLSHARE GATE
+// ============================================================
 function SkillShareGate({ navigation }) {
   const { isGuest } = useContext(AuthContext);
 
   useEffect(() => {
     if (isGuest) {
-      navigation.replace('DashboardMain'); // let guests browse; Profile tab will prompt login
+      navigation.replace('DashboardMain');
       return;
     }
     (async () => {
@@ -834,19 +867,29 @@ function SkillShareGate({ navigation }) {
   }, [isGuest]);
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FDF9F0' }}>
+    <View
+      style={{
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#FDF9F0',
+      }}
+    >
       <ActivityIndicator size="large" color="#f9c349" />
     </View>
   );
 }
-// ===== DASHBOARD STACK NAVIGATOR =====
+
+// ============================================================
+// DASHBOARD STACK (SkillShare) — fully fullscreen, no TDC header
+// ============================================================
 function DashboardStackNavigator() {
   return (
     <Stack.Navigator
       initialRouteName="SkillShareGate"
       screenOptions={{
         headerShown: false,
-        cardStyle: { backgroundColor: '#fff' }
+        cardStyle: { backgroundColor: '#fff' },
       }}
     >
       <Stack.Screen name="SkillShareGate" component={SkillShareGate} />
@@ -855,7 +898,7 @@ function DashboardStackNavigator() {
       <Stack.Screen name="ProfileSuccess" component={ProfileSuccessScreen} />
       <Stack.Screen name="ProfessionalProfile" component={ProfessionalProfileScreen} />
       <Stack.Screen name="DashboardMain" component={Dashboard} />
-     <Stack.Screen name="BrowseListings" component={SkillShareExplore} />
+      <Stack.Screen name="BrowseListings" component={SkillShareExplore} />
       <Stack.Screen name="CreateListing" component={CreateListingScreen} />
       <Stack.Screen name="ListingDetail" component={ListingDetailScreen} />
       <Stack.Screen name="SelectListingTypeScreen" component={SelectListingTypeScreen} />
@@ -865,14 +908,163 @@ function DashboardStackNavigator() {
       <Stack.Screen name="MyListings" component={MyListingsScreen} />
       <Stack.Screen name="MatchChat" component={MatchChatScreen} />
       <Stack.Screen name="InquiryChat" component={InquiryChatScreen} />
-    <Stack.Screen name="SkillProfile" component={ProfessionalProfileScreen} />
-<Stack.Screen name="MyPostsByType" component={MyPostsByType} />
+      <Stack.Screen name="SkillProfile" component={ProfessionalProfileScreen} />
+      <Stack.Screen name="MyPostsByType" component={MyPostsByType} />
       <Stack.Screen name="MyInquiries" component={MyInquiriesScreen} />
       <Stack.Screen name="MyMatches" component={MyMatches} />
       <Stack.Screen name="ChatMatch" component={ChatMatch} />
+      <Stack.Screen name="Activity" component={ActivityScreen} />
+      <Stack.Screen name="SkillProfileEdit" component={SkillProfile} />
     </Stack.Navigator>
   );
 }
+
+// ============================================================
+// SOCIAL STACK — fully fullscreen, NO TDC header
+// ============================================================
+function SocialStackNavigator() {
+  return (
+    <Stack.Navigator
+      initialRouteName="Social"
+      screenOptions={{
+        headerShown: false,
+        cardStyle: { backgroundColor: '#fff' },
+      }}
+    >
+      <Stack.Screen name="Social" component={Social} />
+      <Stack.Screen name="Messages" component={Social} />
+      <Stack.Screen name="MessagesScreen" component={MessagesScreen} />
+      <Stack.Screen name="ChatDetailScreen" component={ChatDetailScreen} />
+      <Stack.Screen name="UserProfile" component={UserProfile} />
+      <Stack.Screen name="FloatingMenu" component={FloatingMenu} />
+      <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} />
+      <Stack.Screen name="CreatePostScreen" component={CreatePostScreen} />
+      <Stack.Screen name="FeedScreen" component={FeedScreen} />
+      <Stack.Screen name="Notifications" component={NotificationScreen} />
+      <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
+      <Stack.Screen name="YourAccount" component={YourAccount} />
+      <Stack.Screen name="SecurityAndAccess" component={SecurityAndAccess} />
+      <Stack.Screen name="PrivacyAndSafety" component={PrivacyAndSafety} />
+      <Stack.Screen name="AccessibilityDisplay" component={AccessibilityDisplay} />
+      <Stack.Screen name="HelpCenter" component={HelpCenter} />
+      <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
+      <Stack.Screen name="ChangePassword" component={ChangePassword} />
+      <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} />
+      <Stack.Screen name="Terrms" component={Terrms} />
+      <Stack.Screen name="Guideline" component={Guideline} />
+    </Stack.Navigator>
+  );
+}
+
+// ============================================================
+// HOME STACK
+// ============================================================
+function HomeStackNavigator() {
+  return (
+    <Stack.Navigator
+      initialRouteName="HomeTabs"
+      screenOptions={{
+        headerShown: false,
+        cardStyle: { backgroundColor: '#fff' },
+        cardStyleInterpolator: ({ current: { progress } }) => ({
+          cardStyle: { opacity: progress },
+        }),
+      }}
+    >
+      {/* ============================================= */}
+      {/* HOME — the ONLY screen with the TDC Header    */}
+      {/* Header hides automatically when Social tab    */}
+      {/* is active inside TabNavigator                 */}
+      {/* ============================================= */}
+      <Stack.Screen name="HomeTabs" component={HomeTabsScreen} />
+
+      {/* ---------- ALL OTHER SCREENS — NO TDC HEADER ---------- */}
+      <Stack.Screen name="University" component={University} />
+      <Stack.Screen name="ContactUs" component={ContactUs} />
+      <Stack.Screen name="Home" component={Home} />
+      <Stack.Screen name="BrandOffers" component={BrandOffersScreen} />
+      <Stack.Screen name="Points" component={PointsScreen} />
+      <Stack.Screen name="WhyPoints" component={WhyPointsScreen} />
+      <Stack.Screen name="How It Works" component={HowItWorksScreen} />
+      <Stack.Screen name="Why EduBoost" component={WhyEduBoostScreen} />
+      <Stack.Screen name="About" component={AboutScreen} />
+      <Stack.Screen name="Terms & Conditions" component={TermsScreen} />
+      <Stack.Screen name="Privacy Policy" component={PrivacyScreen} />
+      <Stack.Screen name="Disclaimer" component={DisclaimerScreen} />
+      <Stack.Screen name="FAQ" component={FAQScreen} />
+      <Stack.Screen name="Career" component={Career} />
+      <Stack.Screen name="TDCCareers" component={TDCCareers} />
+      <Stack.Screen name="Booking" component={BookingScreen} />
+      <Stack.Screen name="Exchange" component={ExchangeScreen} />
+      <Stack.Screen name="ApplicationForm" component={ApplicationForm} />
+      <Stack.Screen name="Payment" component={PaymentScreen} />
+      <Stack.Screen name="StudentDashboard" component={StudentDashboard} />
+      <Stack.Screen name="EnhancedCareer" component={EnhancedCareerScreen} />
+
+      {/* Misc reward / badge screens */}
+      <Stack.Screen name="Card" component={Card} />
+      <Stack.Screen name="DigitalBadge" component={DigitalBadgeScreen} />
+      <Stack.Screen name="MainCharacter" component={MainCharacterScreen} />
+      <Stack.Screen name="DeftPro" component={DeftProScreen} />
+      <Stack.Screen name="DeftGoat" component={DeftGoatScreen} />
+      <Stack.Screen name="FounderCircle" component={FounderCircleScreen} />
+
+      {/* Social / messaging */}
+      <Stack.Screen name="SocialStack" component={SocialStackNavigator} />
+      <Stack.Screen name="Social" component={Social} />
+      <Stack.Screen name="Messages" component={Social} />
+      <Stack.Screen name="MessagesScreen" component={MessagesScreen} />
+      <Stack.Screen name="ChatDetailScreen" component={ChatDetailScreen} />
+      <Stack.Screen name="UserProfile" component={UserProfile} />
+      <Stack.Screen name="FloatingMenu" component={FloatingMenu} />
+      <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} />
+      <Stack.Screen name="CreatePostScreen" component={CreatePostScreen} />
+      <Stack.Screen name="FeedScreen" component={FeedScreen} />
+
+      {/* Social settings */}
+      <Stack.Screen name="Notifications" component={NotificationScreen} />
+      <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
+      <Stack.Screen name="YourAccount" component={YourAccount} />
+      <Stack.Screen name="SecurityAndAccess" component={SecurityAndAccess} />
+      <Stack.Screen name="PrivacyAndSafety" component={PrivacyAndSafety} />
+      <Stack.Screen name="AccessibilityDisplay" component={AccessibilityDisplay} />
+      <Stack.Screen name="HelpCenter" component={HelpCenter} />
+      <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
+      <Stack.Screen name="ChangePassword" component={ChangePassword} />
+      <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} />
+      <Stack.Screen name="Terrms" component={Terrms} />
+      <Stack.Screen name="Guideline" component={Guideline} />
+
+      {/* Events */}
+      <Stack.Screen name="Events" component={Events} />
+      <Stack.Screen name="EventNotification" component={EventNotification} />
+
+      {/* Profile */}
+      <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
+      <Stack.Screen name="ProfileDetails" component={ProfileDetails} />
+
+      {/* Discount */}
+      <Stack.Screen name="MyDiscountScreen" component={MyDiscountScreen} />
+
+      {/* Explore / Brands / Offer */}
+      <Stack.Screen name="Explore" component={Explore} />
+      <Stack.Screen name="Brands" component={Brands} />
+      <Stack.Screen
+        name="OfferScreen"
+        component={OfferScreen}
+        options={{ animation: 'slide_from_right' }}
+        getId={({ params }) => params?.brand?._id}
+      />
+
+      {/* Splash-like */}
+      <Stack.Screen name="TDCFlow" component={TDCFlow} />
+    </Stack.Navigator>
+  );
+}
+
+// ============================================================
+// ROOT DRAWER NAVIGATOR
+// ============================================================
 export default function DrawerNavigator() {
   const routeAnim = useRef(new Animated.Value(0)).current;
 
@@ -884,33 +1076,16 @@ export default function DrawerNavigator() {
           drawerStyle: styles.drawerStyle,
           sceneContainerStyle: { backgroundColor: '#fff' },
           header: () => {
-            const routeName = getFocusedRouteNameFromRoute(route) ?? 'Home';
-           const hiddenRoutes = [
-             'Traveling',
-             'Social',
+            // Only show drawer-level header on standalone drawer items.
+            const noDrawerHeaderRoutes = [
+              'HomeTabs',
+              'Profile',
               'Travelling',
-              'ChatDetailScreen',
-              'MessagesScreen',
-              'DashboardMain',
-              'CreateListing',
-              'ListingDetail',
-              'SelectListingTypeScreen',
-              'CreateOffer',
-              'ManageOffers',
-              'MyOffers',
-              'MyListings',
-              'MatchChat',
-              'InquiryChat',
-              'SkillProfile',
-              'Activity',
-              'MyInquiries',
-              'SkillShareGate',        // add
-              'ProfileWelcome',        // add
-              'ProfileSetup',          // add
-              'ProfileSuccess',        // add
-              'ProfessionalProfile',   // add
-];
-            if (hiddenRoutes.includes(routeName)) {
+              'Dashboard',
+              'SocialStack',
+            ];
+
+            if (noDrawerHeaderRoutes.includes(route.name)) {
               return null;
             }
 
@@ -918,128 +1093,89 @@ export default function DrawerNavigator() {
           },
           headerShown: true,
           cardStyleInterpolator: ({ current: { progress } }) => ({
-            cardStyle: {
-              opacity: progress,
-            },
+            cardStyle: { opacity: progress },
           }),
         })}
       >
-        <Drawer.Screen 
-          name="HomeTabs" 
-          options={{
-            unmountOnBlur: false,
-          }}
-        >
-          {(props) => (
-            <AnimatedScreenWrapper>
-              <TabNavigator {...props} />
-            </AnimatedScreenWrapper>
-          )}
-        </Drawer.Screen>
-        
+        {/* -------- HOME STACK -------- */}
+        <Drawer.Screen
+          name="HomeTabs"
+          component={HomeStackNavigator}
+          options={{ unmountOnBlur: false, headerShown: false }}
+        />
+
+        {/* -------- PROFILE STACK -------- */}
         <Drawer.Screen
           name="Profile"
           component={ProfileStack}
           options={{ headerShown: false }}
         />
-        
+
+        {/* -------- TRAVELLING -------- */}
         <Drawer.Screen
           name="Travelling"
           component={TravelingScreen}
           options={{ headerShown: false }}
         />
-        
-        <Drawer.Screen 
-          name="Brands" 
-          component={Brands}
-          options={{ headerShown: false }}
-        />
-        
-        <Drawer.Screen 
-          name="Explore" 
-          component={Explore}
-        />
 
-        <Drawer.Screen 
-          name="Dashboard" 
+        {/* -------- SKILLSHARE / DASHBOARD STACK -------- */}
+        <Drawer.Screen
+          name="Dashboard"
           component={DashboardStackNavigator}
           options={{ headerShown: false }}
         />
-        
-        
-        <Drawer.Screen 
-          name="ChangePassword" 
-          component={ChangePassword}
+
+        {/* -------- SOCIAL STACK (fullscreen) -------- */}
+        <Drawer.Screen
+          name="SocialStack"
+          component={SocialStackNavigator}
           options={{ headerShown: false }}
         />
 
-        {[
-          { name: 'University', comp: University },
-          { name: 'ContactUs', comp: ContactUs },
-          { name: 'Home', comp: Home },
-          { name: 'BrandOffers', comp: BrandOffersScreen },
-          { name: 'Points', comp: PointsScreen },
-          { name: 'WhyPoints', comp: WhyPointsScreen },
-          { name: 'How It Works', comp: HowItWorksScreen },
-          { name: 'Why EduBoost', comp: WhyEduBoostScreen },
-          { name: 'About', comp: AboutScreen },
-          { name: 'Terms & Conditions', comp: TermsScreen },
-          { name: 'Privacy Policy', comp: PrivacyScreen },
-          { name: 'Disclaimer', comp: DisclaimerScreen },
-          { name: 'FAQ', comp: FAQScreen },
-          { name: 'Career', comp: Career },
-          { name: 'TDCCareers', comp: TDCCareers },
-          { name: 'Booking', comp: BookingScreen },
-          { name: 'Exchange', comp: ExchangeScreen },
-          { name: 'ApplicationForm', comp: ApplicationForm },
-          { name: 'Payment', comp: PaymentScreen },
-          { name: 'StudentDashboard', comp: StudentDashboard },
-          { name: 'EnhancedCareer', comp: EnhancedCareerScreen },
-          { name: 'Social', comp: Social },
-          { name: 'MessagesScreen', comp: MessagesScreen },
-          { name: 'ChatDetailScreen', comp: ChatDetailScreen },
-          { name: 'Notifications', comp: NotificationScreen },
-          { name: 'UserProfile', comp: UserProfile },
-          { name: 'SettingsScreen', comp: SettingsScreen },
-          { name: 'YourAccount', comp: YourAccount },
-          { name: 'SecurityAndAccess', comp: SecurityAndAccess },
-          { name: 'PrivacyAndSafety', comp: PrivacyAndSafety },
-          { name: 'AccessibilityDisplay', comp: AccessibilityDisplay },
-          { name: 'HelpCenter', comp: HelpCenter },
-          { name: 'FloatingMenu', comp: FloatingMenu },
-          { name: 'EditProfileScreen', comp: EditProfileScreen },
-          { name: 'Events', comp: Events },
-          { name: 'Messages', comp: Social },
-          { name: 'EventNotification', comp: EventNotification },
-          { name: 'PostDetailScreen', comp: PostDetailScreen },
-          { name: 'TDCFlow', comp: TDCFlow },
-          { name: 'ProfileScreen', comp: ProfileScreen },
-          { name: 'ProfileDetails', comp: ProfileDetails },
-          { name: 'Card', comp: Card },
-          { name: 'MyDiscountScreen', comp: MyDiscountScreen },
-          { name: 'DigitalBadge', comp: DigitalBadgeScreen },
-          { name: 'MainCharacter', comp: MainCharacterScreen },
-          { name: 'DeftPro', comp: DeftProScreen },
-          { name: 'DeftGoat', comp: DeftGoatScreen },
-          { name: 'FounderCircle', comp: FounderCircleScreen },
-          { name: 'BlockedUsers', comp: BlockedUsersScreen },
-          { name: 'Terrms', comp: Terrms },
-          { name: 'Guideline', comp: Guideline },
-           { name: 'CreatePostScreen', comp: CreatePostScreen },
-        ].map((item) => (
-          <Drawer.Screen
-            key={item.name}
-            name={item.name}
-            options={{ headerShown: false }}
-          >
-            {(props) => <AnimatedScreen component={item.comp} {...props} />}
-          </Drawer.Screen>
-        ))}
+        {/* -------- STANDALONE DRAWER ITEMS -------- */}
+        <Drawer.Screen
+          name="Points"
+          component={PointsScreen}
+          options={{ headerShown: false }}
+        />
+        <Drawer.Screen
+          name="WhyPoints"
+          component={WhyPointsScreen}
+          options={{ headerShown: false }}
+        />
+        <Drawer.Screen
+          name="How It Works"
+          component={HowItWorksScreen}
+          options={{ headerShown: false }}
+        />
+        <Drawer.Screen
+          name="About"
+          component={AboutScreen}
+          options={{ headerShown: false }}
+        />
+        <Drawer.Screen
+          name="Terms & Conditions"
+          component={TermsScreen}
+          options={{ headerShown: false }}
+        />
+        <Drawer.Screen
+          name="Privacy Policy"
+          component={PrivacyScreen}
+          options={{ headerShown: false }}
+        />
+        <Drawer.Screen
+          name="Disclaimer"
+          component={DisclaimerScreen}
+          options={{ headerShown: false }}
+        />
       </Drawer.Navigator>
     </SafeAreaView>
   );
 }
 
+// ============================================================
+// STYLES
+// ============================================================
 const styles = StyleSheet.create({
   screen: {
     flex: 1,

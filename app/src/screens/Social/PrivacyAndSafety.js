@@ -7,14 +7,15 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  SafeAreaView,
   Animated,
   Platform,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function PrivacyScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
@@ -55,42 +56,50 @@ export default function PrivacyScreen({ navigation }) {
   ];
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor="#dbd1d118" />
-      
-      {/* Header */}
-      <LinearGradient colors={['#fff', '#fff']} style={styles.headerGradient}>
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="chevron-back" size={28} color="#050505" />
-          </TouchableOpacity>
-          
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Privacy Policy</Text>
-            <View style={styles.headerHandle} />
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={false} />
+
+      {/* Header wrapped in SafeAreaView (top only) */}
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeHeader}>
+        <LinearGradient colors={['#fff', '#fff']} style={styles.headerGradient}>
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="chevron-back" size={28} color="#050505" />
+            </TouchableOpacity>
+
+            <View style={styles.headerCenter}>
+              <Text style={styles.headerTitle}>Privacy Policy</Text>
+              <View style={styles.headerHandle} />
+            </View>
+
+            <View style={styles.headerRight} />
           </View>
-          
-          <View style={styles.headerRight} />
-        </View>
-      </LinearGradient>
+        </LinearGradient>
+      </SafeAreaView>
 
       {/* Content */}
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            // Ensure bottom content clears home indicator / gesture bar
+            paddingBottom: Math.max(insets.bottom, 20) + 30,
+          },
+        ]}
       >
-        <Animated.View 
+        <Animated.View
           style={[
             styles.heroSection,
             {
               opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }]
-            }
+              transform: [{ scale: scaleAnim }],
+            },
           ]}
         >
           <Text style={styles.heroTitle}>Privacy Policy</Text>
@@ -100,21 +109,21 @@ export default function PrivacyScreen({ navigation }) {
 
         <View style={styles.contentContainer}>
           {privacyData.map((item, index) => (
-            <Animated.View 
-              key={index} 
+            <Animated.View
+              key={index}
               style={[
                 styles.section,
                 {
                   opacity: fadeAnim,
                   transform: [
-                    { 
+                    {
                       translateY: slideAnim.interpolate({
                         inputRange: [0, 30],
                         outputRange: [0, 30 * (index + 1) * 0.05],
-                      })
-                    }
-                  ]
-                }
+                      }),
+                    },
+                  ],
+                },
               ]}
             >
               <View style={styles.sectionHeader}>
@@ -127,9 +136,12 @@ export default function PrivacyScreen({ navigation }) {
           ))}
         </View>
 
-        <Text style={styles.version}>v2.0 • Updated {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</Text>
+        <Text style={styles.version}>
+          v2.0 • Updated{' '}
+          {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+        </Text>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -138,14 +150,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  safeHeader: {
+    backgroundColor: '#fff',
+    // Shadow stays on the header container so it's visible over content
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
   headerGradient: {
-    
-    borderBottomWidth: 0,
-    
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -187,7 +208,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 30,
+    // paddingBottom is set dynamically using insets
   },
   heroSection: {
     alignItems: 'center',

@@ -191,7 +191,6 @@ const AnimatedGridCard = ({ item, index, navigation }) => {
       }),
     ]).start();
 
-    // Glow pulse for large cards
     if (item.size === 'large') {
       Animated.loop(
         Animated.sequence([
@@ -251,7 +250,6 @@ const AnimatedGridCard = ({ item, index, navigation }) => {
     outputRange: [0, 0.15],
   });
 
-  // Calculate card height based on size
   const cardHeight = item.size === 'large' ? 230 : 180;
 
   return (
@@ -285,7 +283,6 @@ const AnimatedGridCard = ({ item, index, navigation }) => {
         }}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-
       >
         <LinearGradient
           colors={['#FFFFFF', '#F8FAFC']}
@@ -323,7 +320,6 @@ const AnimatedGridCard = ({ item, index, navigation }) => {
             </LinearGradient>
           </View>
 
-          {/* Decorative gradient line */}
           <View style={styles.cardDecorLine}>
             <LinearGradient
               colors={item.colors}
@@ -458,7 +454,7 @@ const StudentDashboard = () => {
       icon: 'file-document-edit',
       sub: 'Builder & Templates',
       colors: ['#06b6d4', '#3b82f6'],
-      size: 'large', // Large - Top Left
+      size: 'large',
     },
     {
       id: 2,
@@ -468,7 +464,7 @@ const StudentDashboard = () => {
       icon: 'brain',
       sub: 'tdc. Mastery',
       colors: ['#6366f1', '#a855f7'],
-      size: 'small', // Small - Bottom Left
+      size: 'small',
     },
     {
       id: 3,
@@ -478,7 +474,7 @@ const StudentDashboard = () => {
       icon: 'briefcase-variant',
       sub: 'Careers & Hiring',
       colors: ['#f9c349', '#f59e0b'],
-      size: 'small', // Small - Top Right
+      size: 'small',
     },
     {
       id: 4,
@@ -488,7 +484,7 @@ const StudentDashboard = () => {
       icon: 'calendar-star',
       sub: 'Meetups & Conferences',
       colors: ['#f43f5e', '#fb923c'],
-      size: 'large', // Large - Bottom Right
+      size: 'large',
     },
   ];
 
@@ -535,7 +531,6 @@ const StudentDashboard = () => {
 
           {/* Welcome Message */}
           <Animated.View style={[styles.welcomeContainer, { opacity: sectionFade }]}>
-            <Text style={styles.welcomeTitle}>Welcome Back, Student! 👋</Text>
             <Text style={styles.welcomeSub}>Discover your academic journey with tdc.</Text>
           </Animated.View>
 
@@ -627,7 +622,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
   particle: { position: 'absolute', borderRadius: 50 },
 
-  // Glow effects
   glowTop: {
     position: 'absolute',
     top: -150,
@@ -647,7 +641,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9c349',
   },
 
-  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -678,17 +671,10 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
 
-  // Welcome
   welcomeContainer: {
     paddingHorizontal: 24,
     marginBottom: 20,
     marginTop: 4,
-  },
-  welcomeTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#0F172A',
-    letterSpacing: -0.5,
   },
   welcomeSub: {
     fontSize: 13,
@@ -697,7 +683,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Section
   sectionLabelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -713,7 +698,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 15,
   },
 
-  // Grid
   gridContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
@@ -757,7 +741,6 @@ const styles = StyleSheet.create({
   },
   decorLineInner: { width: '100%', height: '100%' },
 
-  // Card Content
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -827,7 +810,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // Stats Footer
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',

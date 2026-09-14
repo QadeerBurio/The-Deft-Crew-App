@@ -21,13 +21,13 @@ import {
   Linking,
   Animated,
 } from "react-native";
+import { WebView } from "react-native-webview";
 import * as Clipboard from "expo-clipboard";
 import * as DocumentPicker from "expo-document-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import GuestGuard from "./GuestGuard";
 import Constants from 'expo-constants';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -37,7 +37,6 @@ import { ResumeContext } from '../context/ResumeContext';
 import { BASE_URL } from '../api/api';
 
 const { width, height } = Dimensions.get("window");
-
 const API_URL = `${BASE_URL}/jobs`;
 
 const COLORS = {
@@ -58,32 +57,31 @@ const COLORS = {
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-// ==================== HELPER FUNCTION ====================
+// ==================== URL HELPERS ====================
 const formatUrl = (url) => {
   if (!url) return null;
-  const trimmed = url.trim();
+  const trimmed = String(url).trim();
   if (!trimmed) return null;
-  
-  // If it's already a valid URL with protocol, return it
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-    return trimmed;
-  }
-  
-  // If it starts with www., add https://
-  if (trimmed.startsWith('www.')) {
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+  if (trimmed.startsWith('www.')) return 'https://' + trimmed;
+  if (!trimmed.includes('://') && !trimmed.startsWith('mailto:') && !trimmed.startsWith('tel:')) {
     return 'https://' + trimmed;
   }
-  
-  // If it's a relative URL or just a domain, add https://
-  if (!trimmed.includes('://') && !trimmed.startsWith('mailto:')) {
-    return 'https://' + trimmed;
-  }
-  
   return trimmed;
 };
 
+// Build a Google Maps search URL for a given location string
+const buildLocationUrl = (locationString) => {
+  if (!locationString) return null;
+  const clean = String(locationString).trim();
+  if (!clean) return null;
+  const encoded = encodeURIComponent(clean);
+  // Universal Google Maps link — opens native app if installed, falls back to web
+  return `https://www.google.com/maps/search/?api=1&query=${encoded}`;
+};
+
 // ==================== ENHANCED CAREER CARD ====================
-const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended, onOptimizePress }) => {
+const CareerCard = React.memo(({ item, index, onPress, onLocationPress, hasApplied, isRecommended, onOptimizePress }) => {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(18)).current;
   const scale = useRef(new Animated.Value(1)).current;
@@ -100,23 +98,17 @@ const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended
     Animated.spring(scale, { toValue, friction: 8, tension: 90, useNativeDriver: true }).start();
   };
 
-  // Check if this is a TDC job (internal) - Updated detection
-  const isTDC = 
-    // Check company name for TDC branding
-    (item.companyName || '').toLowerCase().includes('deft crew') || 
-    (item.companyName || '').toLowerCase().includes('tdc') || 
-    (item.company || '').toLowerCase().includes('deft crew') || 
+  const isTDC =
+    (item.companyName || '').toLowerCase().includes('deft crew') ||
+    (item.companyName || '').toLowerCase().includes('tdc') ||
+    (item.company || '').toLowerCase().includes('deft crew') ||
     (item.company || '').toLowerCase().includes('tdc') ||
-    // Check if it's marked as internal
     item.isExternal === false ||
-    // Check if it has an internal application URL
     (item.applyUrl && item.applyUrl.includes('/apply/')) ||
-    // Check if it was created by TDC
     item.createdBy === 'tdc' ||
     item.createdBy === 'admin' ||
     item.source === 'tdc' ||
     item.source === 'internal' ||
-    // Check if it has TDC application form fields
     item.applicationType === 'tdc' ||
     item.applicationType === 'internal';
 
@@ -185,11 +177,23 @@ const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended
         )}
       </View>
 
+      {/* Location row — tappable to open exact location in Google Maps */}
       <View style={styles.infoRow}>
-        <View style={styles.metaItem}>
+        <TouchableOpacity
+          style={styles.metaItem}
+          onPress={(e) => {
+            e.stopPropagation?.();
+            onLocationPress?.(item);
+          }}
+          activeOpacity={0.6}
+          hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+        >
           <Ionicons name="location-sharp" size={14} color="#f9c349" />
-          <Text style={styles.metaText} numberOfLines={1}>{item.location}</Text>
-        </View>
+          <Text style={[styles.metaText, styles.metaTextLink]} numberOfLines={1}>
+            {item.location}
+          </Text>
+          <Ionicons name="open-outline" size={11} color="#f9c349" />
+        </TouchableOpacity>
         <View style={styles.metaItem}>
           <Ionicons name="cash-outline" size={14} color="#1a1a1a" />
           <Text style={styles.metaText} numberOfLines={1}>{item.salary || "Competitive"}</Text>
@@ -244,7 +248,7 @@ const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended
       )}
 
       {isRecommended && isTDC && !isExternal && !isExpired && (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.optimizeCardBtn}
           onPress={(e) => {
             e.stopPropagation();
@@ -260,15 +264,193 @@ const CareerCard = React.memo(({ item, index, onPress, hasApplied, isRecommended
         <Text style={[styles.viewDetailsLabel, isExpired && { color: '#ef4444' }]}>
           {isExpired ? "Opportunity Expired" : hasApplied ? "✓ View Details" : isTDC && !isExternal ? "Apply Now" : "Apply on Company Site"}
         </Text>
-        <Ionicons 
-          name={isExpired ? "close-circle-outline" : hasApplied ? "eye-outline" : isTDC && !isExternal ? "arrow-forward-circle" : "open-outline"} 
-          size={22} 
-          color={isExpired ? "#ef4444" : hasApplied ? "#10b981" : isTDC && !isExternal ? "#f9c349" : "#3b82f6"} 
+        <Ionicons
+          name={isExpired ? "close-circle-outline" : hasApplied ? "eye-outline" : isTDC && !isExternal ? "arrow-forward-circle" : "open-outline"}
+          size={22}
+          color={isExpired ? "#ef4444" : hasApplied ? "#10b981" : isTDC && !isExternal ? "#f9c349" : "#3b82f6"}
         />
       </View>
     </AnimatedTouchable>
   );
 });
+
+// ==================== WEBVIEW MODAL ====================
+const WebViewModal = ({ visible, url, title, onClose }) => {
+  const [loading, setLoading] = useState(true);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState(null);
+  const [canGoBack, setCanGoBack] = useState(false);
+  const webViewRef = useRef(null);
+
+  useEffect(() => {
+    if (visible) {
+      setLoading(true);
+      setProgress(0);
+      setError(null);
+      setCanGoBack(false);
+    }
+  }, [visible, url]);
+
+  const handleShouldStartLoad = (request) => {
+    const { url: reqUrl } = request;
+    // Let the WebView handle http(s) — block only non-web protocols
+    if (reqUrl.startsWith('http://') || reqUrl.startsWith('https://') || reqUrl.startsWith('about:')) {
+      return true;
+    }
+    // mailto:, tel:, intent://, whatsapp:// etc → open externally
+    Linking.canOpenURL(reqUrl).then((supported) => {
+      if (supported) Linking.openURL(reqUrl);
+    });
+    return false;
+  };
+
+  const handleOpenInBrowser = async () => {
+    if (!url) return;
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Cannot Open', 'This link cannot be opened in your browser.');
+      }
+    } catch (e) {
+      Alert.alert('Error', 'Could not open link.');
+    }
+  };
+
+  const handleRetry = () => {
+    setError(null);
+    setLoading(true);
+    setProgress(0);
+    webViewRef.current?.reload();
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      onRequestClose={onClose}
+      presentationStyle="pageSheet"
+    >
+      <SafeAreaView style={webViewStyles.container} edges={['top', 'bottom']}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+
+        {/* Header */}
+        <View style={webViewStyles.header}>
+          <TouchableOpacity onPress={onClose} style={webViewStyles.headerBtn}>
+            <Ionicons name="close" size={22} color="#1a1a1a" />
+          </TouchableOpacity>
+
+          <View style={webViewStyles.headerCenter}>
+            <Text style={webViewStyles.headerTitle} numberOfLines={1}>
+              {title || 'Application'}
+            </Text>
+            <Text style={webViewStyles.headerUrl} numberOfLines={1}>
+              {url ? url.replace(/^https?:\/\//, '').split('/')[0] : ''}
+            </Text>
+          </View>
+
+          <View style={webViewStyles.headerActions}>
+            {canGoBack && (
+              <TouchableOpacity
+                onPress={() => webViewRef.current?.goBack()}
+                style={webViewStyles.headerBtn}
+              >
+                <Ionicons name="arrow-back" size={20} color="#1a1a1a" />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={handleOpenInBrowser}
+              style={webViewStyles.headerBtn}
+            >
+              <Ionicons name="open-outline" size={20} color="#1a1a1a" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Progress bar */}
+        {loading && !error && (
+          <View style={webViewStyles.progressTrack}>
+            <View style={[webViewStyles.progressFill, { width: `${Math.max(progress * 100, 5)}%` }]} />
+          </View>
+        )}
+
+        {/* Error state */}
+        {error ? (
+          <View style={webViewStyles.errorContainer}>
+            <View style={webViewStyles.errorIconCircle}>
+              <MaterialCommunityIcons name="wifi-off" size={48} color="#f9c349" />
+            </View>
+            <Text style={webViewStyles.errorTitle}>Couldn't load page</Text>
+            <Text style={webViewStyles.errorSubtitle}>
+              {error.message || "Please check your internet connection and try again."}
+            </Text>
+            <View style={webViewStyles.errorActions}>
+              <TouchableOpacity style={webViewStyles.retryBtn} onPress={handleRetry}>
+                <Ionicons name="refresh" size={16} color="#1a1a1a" />
+                <Text style={webViewStyles.retryText}>Retry</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={webViewStyles.openBrowserBtn} onPress={handleOpenInBrowser}>
+                <Ionicons name="open-outline" size={16} color="#fff" />
+                <Text style={webViewStyles.openBrowserText}>Open in Browser</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <WebView
+            ref={webViewRef}
+            source={{ uri: url }}
+            style={webViewStyles.webview}
+            onLoadStart={() => {
+              setLoading(true);
+              setError(null);
+            }}
+            onLoadEnd={() => setLoading(false)}
+            onLoadProgress={({ nativeEvent }) => setProgress(nativeEvent.progress)}
+            onError={(syntheticEvent) => {
+              const { nativeEvent } = syntheticEvent;
+              setLoading(false);
+              setError({
+                message: nativeEvent.description || 'Failed to load page',
+                code: nativeEvent.code,
+              });
+            }}
+            onHttpError={(syntheticEvent) => {
+              const { nativeEvent } = syntheticEvent;
+              // Only surface hard failures — 4xx on form pages might still render
+              if (nativeEvent.statusCode >= 500) {
+                setLoading(false);
+                setError({ message: `Server error (${nativeEvent.statusCode})` });
+              }
+            }}
+            onNavigationStateChange={(navState) => {
+              setCanGoBack(navState.canGoBack);
+            }}
+            onShouldStartLoadWithRequest={handleShouldStartLoad}
+            startInLoadingState
+            javaScriptEnabled
+            domStorageEnabled
+            allowsBackForwardNavigationGestures
+            sharedCookiesEnabled
+            thirdPartyCookiesEnabled
+            setSupportMultipleWindows={false}
+            userAgent={
+              Platform.OS === 'android'
+                ? 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
+                : undefined
+            }
+            renderLoading={() => (
+              <View style={webViewStyles.loadingOverlay}>
+                <ActivityIndicator size="large" color="#f9c349" />
+                <Text style={webViewStyles.loadingText}>Loading application...</Text>
+              </View>
+            )}
+          />
+        )}
+      </SafeAreaView>
+    </Modal>
+  );
+};
 
 // ==================== JOB DETAILS MODAL (For Applied Jobs) ====================
 const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
@@ -313,17 +495,22 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
     }
   };
 
+  const openLocation = () => {
+    const url = buildLocationUrl(job.location);
+    if (url) Linking.openURL(url);
+  };
+
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.applyModalOverlay}>
         <TouchableWithoutFeedback onPress={onClose}><View style={StyleSheet.absoluteFill} /></TouchableWithoutFeedback>
         <Animated.View style={[styles.applyModalContent, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
           <View style={styles.modalDragHandle} />
-          
+
           <TouchableOpacity style={styles.closeXButton} onPress={onClose}>
             <Ionicons name="close" size={24} color="#1a1a1a" />
           </TouchableOpacity>
-          
+
           {myApplication && (
             <View style={[styles.statusBanner, { backgroundColor: getStatusColor(myApplication.status) + "15" }]}>
               <View style={[styles.statusDot, { backgroundColor: getStatusColor(myApplication.status) }]} />
@@ -342,7 +529,7 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
           )}
 
           {myApplication?.interviewDate && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.interviewBanner}
               onPress={onClose}
             >
@@ -370,7 +557,14 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
               {job?.companyName && <Text style={styles.applyModalCompany}>{job.companyName}</Text>}
               <Text style={styles.applyModalJobTitle}>{job?.title}</Text>
               <Text style={styles.applyModalJobMeta}>{job?.department} • {job?.location}</Text>
-              
+
+              {/* Tappable location chip */}
+              <TouchableOpacity style={styles.locationChip} onPress={openLocation} activeOpacity={0.7}>
+                <Ionicons name="location-sharp" size={14} color="#f9c349" />
+                <Text style={styles.locationChipText} numberOfLines={1}>{job?.location || 'View on Map'}</Text>
+                <Ionicons name="open-outline" size={12} color="#f9c349" />
+              </TouchableOpacity>
+
               <View style={styles.applyModalMetaRow}>
                 <View style={styles.applyModalMetaBadge}>
                   <Ionicons name="briefcase-outline" size={12} color="#f9c349" />
@@ -481,7 +675,7 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
                 <Text style={styles.sectionHeading}>🏢 Company Info</Text>
                 {job.companyName && <Text style={styles.companyInfoText}>{job.companyName}</Text>}
                 {job.companyWebsite && (
-                  <TouchableOpacity onPress={() => Linking.openURL(job.companyWebsite)}>
+                  <TouchableOpacity onPress={() => Linking.openURL(formatUrl(job.companyWebsite))}>
                     <Text style={styles.companyLink}>🌐 {job.companyWebsite}</Text>
                   </TouchableOpacity>
                 )}
@@ -567,11 +761,11 @@ const InterviewDetailsModal = ({ visible, interview, onClose }) => {
         <TouchableWithoutFeedback onPress={onClose}><View style={styles.interviewModalBackdrop} /></TouchableWithoutFeedback>
         <Animated.View style={[styles.interviewModalContent, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
           <View style={styles.interviewModalHandle} />
-          
+
           <TouchableOpacity style={styles.closeXButton} onPress={onClose}>
             <Ionicons name="close" size={24} color="#1a1a1a" />
           </TouchableOpacity>
-          
+
           <View style={styles.interviewModalHeader}>
             <View style={styles.interviewModalIcon}>
               <MaterialCommunityIcons name="calendar-clock" size={28} color="#f9c349" />
@@ -666,11 +860,11 @@ const ApplicationsModal = ({ visible, applications, onClose, onInterviewPress })
         <TouchableWithoutFeedback onPress={onClose}><View style={StyleSheet.absoluteFill} /></TouchableWithoutFeedback>
         <View style={styles.applicationsModalContent}>
           <View style={styles.modalDragHandle} />
-          
+
           <TouchableOpacity style={styles.closeXButton} onPress={onClose}>
             <Ionicons name="close" size={24} color="#1a1a1a" />
           </TouchableOpacity>
-          
+
           <Text style={styles.applicationsModalTitle}>My Applications</Text>
           <Text style={styles.applicationsModalCount}>{applications.length} applications</Text>
           {applications.length === 0 ? (
@@ -722,11 +916,11 @@ const FilterModal = React.memo(({ visible, filters, setFilters, onClose, onApply
       <TouchableWithoutFeedback onPress={onClose}><View style={StyleSheet.absoluteFill} /></TouchableWithoutFeedback>
       <View style={styles.filterModalContent}>
         <View style={styles.modalDragHandle} />
-        
+
         <TouchableOpacity style={styles.closeXButton} onPress={onClose}>
           <Ionicons name="close" size={24} color="#1a1a1a" />
         </TouchableOpacity>
-        
+
         <Text style={styles.filterModalTitle}>Filter Jobs</Text>
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.filterGroup}>
@@ -811,10 +1005,15 @@ const Career = ({ navigation }) => {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [totalJobsCount, setTotalJobsCount] = useState(0);
-  
+
   const [showJobDetailsModal, setShowJobDetailsModal] = useState(false);
   const [selectedAppliedJob, setSelectedAppliedJob] = useState(null);
   const [selectedMyApplication, setSelectedMyApplication] = useState(null);
+
+  // ✅ NEW: WebView state
+  const [webViewVisible, setWebViewVisible] = useState(false);
+  const [webViewUrl, setWebViewUrl] = useState(null);
+  const [webViewTitle, setWebViewTitle] = useState('');
 
   const entranceOpacity = useRef(new Animated.Value(0)).current;
   const entranceTranslate = useRef(new Animated.Value(20)).current;
@@ -869,15 +1068,11 @@ const Career = ({ navigation }) => {
       setLoadingMore(true);
     }
     setError(false);
-    
-    console.log(`📡 [Career.js] Requested page: ${cleanPage}, shouldAppend: ${cleanAppend}, search: "${search}"`);
-    
+
     try {
       let queryString = `page=${cleanPage}&limit=30&scope=${scope}`;
       if (search) queryString += `&search=${encodeURIComponent(search)}`;
-      if (filters.isTdc) {
-        queryString += `&isExternal=false`;
-      }
+      if (filters.isTdc) queryString += `&isExternal=false`;
       Object.entries(filters).forEach(([key, value]) => {
         if (value && key !== "datePosted" && key !== "isTdc" && (key !== "type" || value !== "All")) {
           queryString += `&${key}=${encodeURIComponent(value)}`;
@@ -885,15 +1080,12 @@ const Career = ({ navigation }) => {
       });
 
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const requestUrl = filters.isTdc 
-        ? `${API_URL}/public/tdc?${queryString}` 
+      const requestUrl = filters.isTdc
+        ? `${API_URL}/public/tdc?${queryString}`
         : `${API_URL}/public/all?${queryString}`;
       const response = await axios.get(requestUrl, { headers, timeout: 10000 });
       let jobsData = Array.isArray(response.data.jobs) ? response.data.jobs : [];
       const total = response.data.total || 0;
-      const respPage = response.data.page || cleanPage;
-      
-      console.log(`✅ [Career.js] Received page: ${respPage}, Total: ${total}, jobsData length: ${jobsData.length}`);
 
       if (filters.datePosted && filters.datePosted !== "all") {
         const now = new Date();
@@ -918,28 +1110,20 @@ const Career = ({ navigation }) => {
           seen.add(j._id);
           return true;
         });
-
-        const duplicateCount = combined.length - unique.length;
-        if (duplicateCount > 0) {
-          console.log(`⚠️ [Career.js] Filtered out ${duplicateCount} duplicate jobs`);
-        }
-
         setHasMore(unique.length < total);
-        console.log(`📊 [Career.js] Current jobs list length: ${unique.length}, hasMore: ${unique.length < total}`);
         return unique;
       });
 
       setPage(cleanPage);
       setTotalJobsCount(total);
       runEntranceAnimation();
-    } catch (err) { 
-      setError(true); 
-      console.error(`❌ [Career.js] Fetch error:`, err.message);
-      if (!cleanAppend) setJobs([]); 
-    } finally { 
-      setLoading(false); 
+    } catch (err) {
+      setError(true);
+      if (!cleanAppend) setJobs([]);
+    } finally {
+      setLoading(false);
       setLoadingMore(false);
-      setRefreshing(false); 
+      setRefreshing(false);
     }
   }, [filters, search, runEntranceAnimation, token]);
 
@@ -957,11 +1141,9 @@ const Career = ({ navigation }) => {
     setPage(1);
     setJobs([]);
     setHasMore(true);
-
     const delayDebounceFn = setTimeout(() => {
       fetchJobs(1, false);
     }, 450);
-
     return () => clearTimeout(delayDebounceFn);
   }, [search, filters, fetchJobs]);
 
@@ -983,13 +1165,9 @@ const Career = ({ navigation }) => {
   const validateForm = () => {
     const errors = {};
     Object.entries(requiredFields).forEach(([field, label]) => {
-      if (!applicationForm[field]?.trim()) {
-        errors[field] = `${label} is required`;
-      }
+      if (!applicationForm[field]?.trim()) errors[field] = `${label} is required`;
     });
-    if (!selectedResume) {
-      errors.resume = "Resume is required";
-    }
+    if (!selectedResume) errors.resume = "Resume is required";
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -997,34 +1175,23 @@ const Career = ({ navigation }) => {
   const pickResume = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'], copyToCacheDirectory: true });
-      
+
       let file = null;
-      if (result.assets && result.assets.length > 0) {
-        file = result.assets[0];
-      } else if (result.type === 'success') {
-        file = result;
-      }
+      if (result.assets && result.assets.length > 0) file = result.assets[0];
+      else if (result.type === 'success') file = result;
 
       if (file) {
         const allowedExtensions = ['pdf', 'doc', 'docx'];
         const fileExt = file.name?.split('.').pop()?.toLowerCase();
 
         if (!allowedExtensions.includes(fileExt)) {
-          Alert.alert(
-            'Unsupported Format ⚠️',
-            'Only PDF (.pdf), Word (.doc), and Word OpenXML (.docx) formats are supported.'
-          );
+          Alert.alert('Unsupported Format ⚠️', 'Only PDF (.pdf), Word (.doc), and Word OpenXML (.docx) formats are supported.');
           return;
         }
-
         if (file.size && file.size > 10 * 1024 * 1024) {
-          Alert.alert(
-            'File Too Large ⚠️',
-            'The selected file exceeds the 10MB limit. Please upload a smaller document.'
-          );
+          Alert.alert('File Too Large ⚠️', 'The selected file exceeds the 10MB limit. Please upload a smaller document.');
           return;
         }
-
         setSelectedResume({ uri: file.uri, name: file.name, mimeType: file.mimeType || file.type, size: file.size });
         if (validationErrors.resume) {
           setValidationErrors(prev => { const u = { ...prev }; delete u.resume; return u; });
@@ -1034,45 +1201,32 @@ const Career = ({ navigation }) => {
   };
 
   const checkAlreadyApplied = (jobId) => appliedJobIds.has(jobId);
-  
-  const findMyApplication = (jobId) => {
-    return myApplications.find(app => app.jobId?._id === jobId);
-  };
+  const findMyApplication = (jobId) => myApplications.find(app => app.jobId?._id === jobId);
 
-  // ==================== FIXED: openInterviewDetails function ====================
   const openInterviewDetails = (application) => {
-    if (application.interviewDate) { 
-      setSelectedInterview(application); 
-      setShowInterviewModal(true); 
+    if (application.interviewDate) {
+      setSelectedInterview(application);
+      setShowInterviewModal(true);
     }
   };
-  // ======================================================================
 
   const handleOptimizeResumeFlow = async (job) => {
     if (!token) {
-      Alert.alert(
-        "Login Required",
-        "Please login to optimize your resume.",
-        [
-          { text: "Cancel" },
-          { text: "Login", onPress: () => navigation.navigate("Login") }
-        ]
-      );
+      Alert.alert("Login Required", "Please login to optimize your resume.", [
+        { text: "Cancel" },
+        { text: "Login", onPress: () => navigation.navigate("Login") }
+      ]);
       return;
     }
 
     const resumeToOptimize = resumes.find(r => r.isPrimary) || resumes[0];
     if (!resumeToOptimize) {
-      Alert.alert(
-        "No Resume Found",
-        "Please create or upload a resume first in the Resume Dashboard."
-      );
+      Alert.alert("No Resume Found", "Please create or upload a resume first in the Resume Dashboard.");
       return;
     }
 
     try {
       setOptimizing(true);
-
       const fitResult = await checkResumeFit(resumeToOptimize._id, job._id);
 
       if (!fitResult.meetsRequirements) {
@@ -1091,9 +1245,7 @@ const Career = ({ navigation }) => {
         jobDescription: job.description || `Target role: ${job.title}`
       });
 
-      if (!tailored) {
-        throw new Error('AI tailoring returned empty results.');
-      }
+      if (!tailored) throw new Error('AI tailoring returned empty results.');
 
       const html = renderResumeHTML(tailored, tailored.template || 'modern_ats', tailored.customStyles || {}, true);
       const { uri } = await Print.printToFileAsync({ html, base64: false });
@@ -1123,125 +1275,93 @@ const Career = ({ navigation }) => {
     }
   };
 
+  // ✅ NEW: Open external URL in WebView modal
+  const openInWebView = (url, title) => {
+    const formatted = formatUrl(url);
+    if (!formatted) {
+      Alert.alert('Invalid Link', 'This job does not have a valid application URL.');
+      return;
+    }
+    setWebViewUrl(formatted);
+    setWebViewTitle(title || 'Application');
+    setWebViewVisible(true);
+  };
+
+  // ✅ NEW: Location tap → open exact map location
+  const handleLocationPress = (job) => {
+    const mapUrl = buildLocationUrl(job.location);
+    if (!mapUrl) {
+      Alert.alert('No Location', 'This job does not have a location set.');
+      return;
+    }
+    Linking.canOpenURL(mapUrl)
+      .then((supported) => {
+        if (supported) {
+          Linking.openURL(mapUrl);
+        } else {
+          // Fallback: open in in-app WebView
+          openInWebView(mapUrl, job.location);
+        }
+      })
+      .catch(() => openInWebView(mapUrl, job.location));
+  };
+
   // ============================================================
-  // FIXED: openApplyModal function - properly handles all job types
+  // FIXED: openApplyModal — external jobs now open in WebView
   // ============================================================
   const openApplyModal = (job) => {
     setSelectedJob(job);
-    
+
     const isExpired = job.isExpired || job.active === false || (job.applicationDeadline && new Date(job.applicationDeadline) < new Date());
     if (isExpired) {
-      Alert.alert(
-        'Opportunity Expired ⏰',
+      Alert.alert('Opportunity Expired ⏰',
         `The application deadline for "${job.title}" at ${job.companyName || 'this company'} has passed. Applications are no longer accepted for this opportunity.`,
-        [{ text: 'OK' }]
-      );
+        [{ text: 'OK' }]);
       return;
     }
-    
-    // Check if this is a TDC job (internal) by checking multiple criteria
-    const isTDC = 
-      // Check company name for TDC branding
-      (job.companyName || '').toLowerCase().includes('deft crew') || 
-      (job.companyName || '').toLowerCase().includes('tdc') || 
-      (job.company || '').toLowerCase().includes('deft crew') || 
+
+    const isTDC =
+      (job.companyName || '').toLowerCase().includes('deft crew') ||
+      (job.companyName || '').toLowerCase().includes('tdc') ||
+      (job.company || '').toLowerCase().includes('deft crew') ||
       (job.company || '').toLowerCase().includes('tdc') ||
-      // Check if it's marked as internal
       job.isExternal === false ||
-      // Check if it has an internal application URL
       (job.applyUrl && job.applyUrl.includes('/apply/')) ||
-      // Check if it was created by TDC
       job.createdBy === 'tdc' ||
       job.createdBy === 'admin' ||
       job.source === 'tdc' ||
       job.source === 'internal' ||
-      // Check if it has TDC application form fields
       job.applicationType === 'tdc' ||
       job.applicationType === 'internal';
 
-    // For EXTERNAL jobs (clearly marked as external or from external source)
+    // ============ EXTERNAL JOB → OPEN IN WEBVIEW ============
     if (job.isExternal === true || job.source === 'external' || job.applicationType === 'external') {
-      // Try to find a valid URL for external application
-      const applyUrl = job.externalUrl || job.companyWebsite || job.applyUrl || job.url || job.applicationLink;
-      
-      if (applyUrl) {
-        const formattedUrl = formatUrl(applyUrl);
-        
-        if (formattedUrl) {
-          Linking.canOpenURL(formattedUrl)
-            .then(supported => {
-              if (supported) {
-                Linking.openURL(formattedUrl);
-              } else {
-                Alert.alert(
-                  'Cannot Open Link',
-                  `Unable to open the application link. Please visit ${job.companyName || 'the company'} website directly to apply.`,
-                  [
-                    { text: 'OK' },
-                    { 
-                      text: 'Search Company', 
-                      onPress: () => {
-                        const searchQuery = encodeURIComponent(`${job.companyName || job.title} careers`);
-                        Linking.openURL(`https://www.google.com/search?q=${searchQuery}`);
-                      }
-                    }
-                  ]
-                );
-              }
-            })
-            .catch(() => {
-              Alert.alert(
-                'Cannot Open Link',
-                `Unable to open the application link. Please visit ${job.companyName || 'the company'} website directly to apply.`,
-                [
-                  { text: 'OK' },
-                  { 
-                    text: 'Search Company', 
-                    onPress: () => {
-                      const searchQuery = encodeURIComponent(`${job.companyName || job.title} careers`);
-                      Linking.openURL(`https://www.google.com/search?q=${searchQuery}`);
-                    }
-                  }
-                ]
-              );
-            });
-        } else {
-          Alert.alert(
-            'Apply on Company Website',
-            `Please visit ${job.companyName || 'the company'} website to apply for this position.`,
-            [
-              { text: 'OK' },
-              { 
-                text: 'Search', 
-                onPress: () => {
-                  const searchQuery = encodeURIComponent(`${job.companyName || job.title} careers`);
-                  Linking.openURL(`https://www.google.com/search?q=${searchQuery}`);
-                }
-              }
-            ]
-          );
-        }
-      } else {
-        // No URL available
+      const applyUrl = job.externalUrl || job.applyUrl || job.applicationLink || job.url || job.companyWebsite;
+
+      if (!applyUrl) {
         Alert.alert(
           'External Application',
-          `Please visit ${job.companyName || 'the company'} website to apply for this position.`,
+          `${job.companyName || 'This company'} hosts applications on their own website. Please search for "${job.title}" on their careers page.`,
           [
-            { text: 'OK' },
-            { 
-              text: 'Search', 
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Search',
               onPress: () => {
-                const searchQuery = encodeURIComponent(`${job.companyName || job.title} careers`);
-                Linking.openURL(`https://www.google.com/search?q=${searchQuery}`);
+                const q = encodeURIComponent(`${job.companyName || job.title} careers`);
+                openInWebView(`https://www.google.com/search?q=${q}`, 'Search');
               }
             }
           ]
         );
+        return;
       }
+
+      // Open in the beautiful in-app WebView
+      openInWebView(applyUrl, job.companyName || job.title);
       return;
     }
 
-    // For TDC INTERNAL jobs (including manual posts) - check if already applied
+    // ============ TDC INTERNAL JOB ============
     if (checkAlreadyApplied(job._id)) {
       const myApp = findMyApplication(job._id);
       setSelectedAppliedJob(job);
@@ -1250,7 +1370,6 @@ const Career = ({ navigation }) => {
       return;
     }
 
-    // Show application form for TDC internal jobs
     setApplicationForm(prev => ({ ...prev, fullName: user?.name || "", email: user?.email || "" }));
     setValidationErrors({});
     setModalVisible(true);
@@ -1259,9 +1378,9 @@ const Career = ({ navigation }) => {
 
   const handleApply = async () => {
     if (!token) { Alert.alert("Login Required", "Please login to apply", [{ text: "Cancel" }, { text: "Login", onPress: () => navigation.navigate("Login") }]); return; }
-    if (!validateForm()) { 
+    if (!validateForm()) {
       Alert.alert("Missing Information", "Please fill all required fields marked with *");
-      return; 
+      return;
     }
 
     setSubmitting(true); setUploadProgress(0);
@@ -1298,8 +1417,6 @@ const Career = ({ navigation }) => {
   };
 
   const filteredData = jobs;
-
-
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -1371,11 +1488,12 @@ const Career = ({ navigation }) => {
           <FlatList
             data={filteredData}
             renderItem={({ item, index }) => (
-              <CareerCard 
-                item={item} 
-                index={index} 
-                onPress={() => openApplyModal(item)} 
-                hasApplied={checkAlreadyApplied(item._id)} 
+              <CareerCard
+                item={item}
+                index={index}
+                onPress={() => openApplyModal(item)}
+                onLocationPress={handleLocationPress}
+                hasApplied={checkAlreadyApplied(item._id)}
                 isRecommended={item.isRecommended || item.matchPercentage >= 50}
                 onOptimizePress={() => handleOptimizeResumeFlow(item)}
               />
@@ -1422,7 +1540,7 @@ const Career = ({ navigation }) => {
         </Animated.View>
       )}
 
-      <FilterModal 
+      <FilterModal
         visible={showFilters}
         filters={filters}
         setFilters={setFilters}
@@ -1430,18 +1548,30 @@ const Career = ({ navigation }) => {
         onApply={() => { setShowFilters(false); fetchJobs(1, false); }}
         onClear={() => { clearAllFilters(); setShowFilters(false); }}
       />
-      <ApplicationsModal 
-        visible={showApplicationsModal} 
-        applications={myApplications} 
-        onClose={() => setShowApplicationsModal(false)} 
-        onInterviewPress={openInterviewDetails} 
+      <ApplicationsModal
+        visible={showApplicationsModal}
+        applications={myApplications}
+        onClose={() => setShowApplicationsModal(false)}
+        onInterviewPress={openInterviewDetails}
       />
-      <InterviewDetailsModal 
-        visible={showInterviewModal} 
-        interview={selectedInterview} 
-        onClose={() => setShowInterviewModal(false)} 
+      <InterviewDetailsModal
+        visible={showInterviewModal}
+        interview={selectedInterview}
+        onClose={() => setShowInterviewModal(false)}
       />
-      
+
+      {/* ✅ NEW: In-app WebView for external job applications */}
+      <WebViewModal
+        visible={webViewVisible}
+        url={webViewUrl}
+        title={webViewTitle}
+        onClose={() => {
+          setWebViewVisible(false);
+          setWebViewUrl(null);
+          setWebViewTitle('');
+        }}
+      />
+
       {/* Optimizing Overlay Modal */}
       <Modal visible={optimizing} transparent animationType="fade">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
@@ -1467,7 +1597,7 @@ const Career = ({ navigation }) => {
                 <Text style={{ fontWeight: '800', color: '#1a1a1a' }}>{skillGapData.missingSkills.join(', ') || 'key required skills'}</Text>
                 {' '}and then your chances of selection could increase
               </Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={{ backgroundColor: '#f9c349', paddingVertical: 12, borderRadius: 12, alignItems: 'center', marginTop: 8 }}
                 onPress={() => setSkillGapVisible(false)}
               >
@@ -1477,9 +1607,9 @@ const Career = ({ navigation }) => {
           </View>
         </View>
       </Modal>
-      
+
       {/* Job Details Modal for Applied Jobs */}
-      <JobDetailsModal 
+      <JobDetailsModal
         visible={showJobDetailsModal}
         job={selectedAppliedJob}
         myApplication={selectedMyApplication}
@@ -1492,18 +1622,25 @@ const Career = ({ navigation }) => {
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}><View style={StyleSheet.absoluteFill} /></TouchableWithoutFeedback>
           <View style={styles.applyModalContent}>
             <View style={styles.modalDragHandle} />
-            
+
             <TouchableOpacity style={styles.closeXButton} onPress={() => setModalVisible(false)}>
               <Ionicons name="close" size={24} color="#1a1a1a" />
             </TouchableOpacity>
-            
+
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 30 }}>
-              
+
               <View style={styles.applyModalHeader}>
                 {selectedJob?.companyName && <Text style={styles.applyModalCompany}>{selectedJob.companyName}</Text>}
                 <Text style={styles.applyModalJobTitle}>{selectedJob?.title}</Text>
                 <Text style={styles.applyModalJobMeta}>{selectedJob?.department} • {selectedJob?.location}</Text>
-                
+
+                {/* Tappable location */}
+                <TouchableOpacity style={styles.locationChip} onPress={() => handleLocationPress(selectedJob)} activeOpacity={0.7}>
+                  <Ionicons name="location-sharp" size={14} color="#f9c349" />
+                  <Text style={styles.locationChipText} numberOfLines={1}>{selectedJob?.location || 'View on Map'}</Text>
+                  <Ionicons name="open-outline" size={12} color="#f9c349" />
+                </TouchableOpacity>
+
                 <View style={styles.applyModalMetaRow}>
                   <View style={styles.applyModalMetaBadge}>
                     <Ionicons name="briefcase-outline" size={12} color="#f9c349" />
@@ -1595,7 +1732,7 @@ const Career = ({ navigation }) => {
                   <Text style={styles.sectionHeading}>🏢 Company Info</Text>
                   {selectedJob.companyName && <Text style={styles.companyInfoText}>{selectedJob.companyName}</Text>}
                   {selectedJob.companyWebsite && (
-                    <TouchableOpacity onPress={() => Linking.openURL(selectedJob.companyWebsite)}>
+                    <TouchableOpacity onPress={() => openInWebView(selectedJob.companyWebsite, selectedJob.companyName)}>
                       <Text style={styles.companyLink}>🌐 {selectedJob.companyWebsite}</Text>
                     </TouchableOpacity>
                   )}
@@ -1608,35 +1745,35 @@ const Career = ({ navigation }) => {
                 <Text style={styles.formRequiredNote}>* Required fields</Text>
 
                 <Text style={styles.formLabel}>Full Name *</Text>
-                <TextInput 
-                  style={[styles.formInput, validationErrors.fullName && styles.formInputError]} 
-                  placeholder="Enter your full name" 
+                <TextInput
+                  style={[styles.formInput, validationErrors.fullName && styles.formInputError]}
+                  placeholder="Enter your full name"
                   placeholderTextColor="#999"
-                  value={applicationForm.fullName} 
-                  onChangeText={t => handleInputChange("fullName", t)} 
+                  value={applicationForm.fullName}
+                  onChangeText={t => handleInputChange("fullName", t)}
                 />
                 {validationErrors.fullName && <Text style={styles.errorText}>{validationErrors.fullName}</Text>}
 
                 <Text style={styles.formLabel}>Email Address *</Text>
-                <TextInput 
-                  style={[styles.formInput, validationErrors.email && styles.formInputError]} 
-                  placeholder="Enter your email" 
+                <TextInput
+                  style={[styles.formInput, validationErrors.email && styles.formInputError]}
+                  placeholder="Enter your email"
                   placeholderTextColor="#999"
-                  keyboardType="email-address" 
-                  autoCapitalize="none" 
-                  value={applicationForm.email} 
-                  onChangeText={t => handleInputChange("email", t)} 
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={applicationForm.email}
+                  onChangeText={t => handleInputChange("email", t)}
                 />
                 {validationErrors.email && <Text style={styles.errorText}>{validationErrors.email}</Text>}
 
                 <Text style={styles.formLabel}>Phone Number *</Text>
-                <TextInput 
-                  style={[styles.formInput, validationErrors.phone && styles.formInputError]} 
-                  placeholder="Enter your phone number" 
+                <TextInput
+                  style={[styles.formInput, validationErrors.phone && styles.formInputError]}
+                  placeholder="Enter your phone number"
                   placeholderTextColor="#999"
-                  keyboardType="phone-pad" 
-                  value={applicationForm.phone} 
-                  onChangeText={t => handleInputChange("phone", t)} 
+                  keyboardType="phone-pad"
+                  value={applicationForm.phone}
+                  onChangeText={t => handleInputChange("phone", t)}
                 />
                 {validationErrors.phone && <Text style={styles.errorText}>{validationErrors.phone}</Text>}
 
@@ -1670,14 +1807,14 @@ const Career = ({ navigation }) => {
                 <TextInput style={styles.formInput} placeholder="e.g., 2 weeks" placeholderTextColor="#999" value={applicationForm.noticePeriod} onChangeText={t => handleInputChange("noticePeriod", t)} />
 
                 <Text style={styles.formLabel}>Cover Letter *</Text>
-                <TextInput 
-                  style={[styles.formInput, styles.formTextArea, validationErrors.coverLetter && styles.formInputError]} 
-                  placeholder="Why are you a good fit for this role?" 
+                <TextInput
+                  style={[styles.formInput, styles.formTextArea, validationErrors.coverLetter && styles.formInputError]}
+                  placeholder="Why are you a good fit for this role?"
                   placeholderTextColor="#999"
-                  multiline 
-                  numberOfLines={5} 
-                  value={applicationForm.coverLetter} 
-                  onChangeText={t => handleInputChange("coverLetter", t)} 
+                  multiline
+                  numberOfLines={5}
+                  value={applicationForm.coverLetter}
+                  onChangeText={t => handleInputChange("coverLetter", t)}
                 />
                 {validationErrors.coverLetter && <Text style={styles.errorText}>{validationErrors.coverLetter}</Text>}
 
@@ -1685,8 +1822,8 @@ const Career = ({ navigation }) => {
                 <TextInput style={styles.formInput} placeholder="https://linkedin.com/in/yourprofile" placeholderTextColor="#999" autoCapitalize="none" value={applicationForm.linkedInUrl} onChangeText={t => handleInputChange("linkedInUrl", t)} />
 
                 <Text style={styles.formLabel}>Resume *</Text>
-                <TouchableOpacity 
-                  style={[styles.resumeBtn, validationErrors.resume && styles.resumeBtnError]} 
+                <TouchableOpacity
+                  style={[styles.resumeBtn, validationErrors.resume && styles.resumeBtnError]}
                   onPress={pickResume}
                 >
                   <Ionicons name="document-attach-outline" size={20} color={validationErrors.resume ? "#ef4444" : "#f9c349"} />
@@ -1742,6 +1879,93 @@ const Career = ({ navigation }) => {
   );
 };
 
+// ==================== WEBVIEW STYLES ====================
+const webViewStyles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#ffffff' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    backgroundColor: '#ffffff',
+    gap: 6,
+  },
+  headerBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#f8f8f8',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerCenter: { flex: 1, alignItems: 'center', paddingHorizontal: 4 },
+  headerTitle: { fontSize: 14, fontWeight: '800', color: '#1a1a1a' },
+  headerUrl: { fontSize: 10, color: '#999', fontWeight: '500', marginTop: 1 },
+  headerActions: { flexDirection: 'row', gap: 4 },
+  progressTrack: {
+    height: 3,
+    backgroundColor: '#f0f0f0',
+    width: '100%',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#f9c349',
+  },
+  webview: { flex: 1, backgroundColor: '#ffffff' },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  loadingText: { marginTop: 12, fontSize: 13, color: '#999', fontWeight: '500' },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    backgroundColor: '#ffffff',
+  },
+  errorIconCircle: {
+    width: 90,
+    height: 90,
+    borderRadius: 24,
+    backgroundColor: '#fff8e7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#fdebd0',
+  },
+  errorTitle: { fontSize: 20, fontWeight: '800', color: '#1a1a1a', marginBottom: 6 },
+  errorSubtitle: { fontSize: 13, color: '#999', textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  errorActions: { flexDirection: 'row', gap: 10 },
+  retryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    borderRadius: 12,
+    backgroundColor: '#f8f8f8',
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  retryText: { fontWeight: '700', color: '#1a1a1a', fontSize: 13 },
+  openBrowserBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    borderRadius: 12,
+    backgroundColor: '#1a1a1a',
+  },
+  openBrowserText: { fontWeight: '700', color: '#fff', fontSize: 13 },
+});
+
 // ==================== COMPLETE STYLES ====================
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#ffffff" },
@@ -1786,6 +2010,7 @@ const styles = StyleSheet.create({
   infoRow: { flexDirection: 'row', marginBottom: 6, flexWrap: 'wrap', gap: 14 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1 },
   metaText: { fontSize: 12, color: '#666', fontWeight: '500', flexShrink: 1 },
+  metaTextLink: { color: '#f9c349', fontWeight: '700', textDecorationLine: 'underline' },
   skillsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8, marginBottom: 8 },
   skillBadge: { backgroundColor: '#f8f8f8', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#f0f0f0' },
   skillText: { fontSize: 10, color: '#666', fontWeight: '600' },
@@ -1881,6 +2106,25 @@ const styles = StyleSheet.create({
   applyModalExp: { fontSize: 13, color: '#666', fontWeight: '600', marginTop: 6, marginLeft: 12 },
   locTypeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
   locTypeText: { fontSize: 12, color: '#f9c349', fontWeight: '600' },
+  locationChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#fff8e7',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#f9c34940',
+    marginTop: 10,
+    maxWidth: '100%',
+  },
+  locationChipText: {
+    fontSize: 12,
+    color: '#1a1a1a',
+    fontWeight: '700',
+    flexShrink: 1,
+  },
   statusBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 14, marginBottom: 12, marginHorizontal: 20, borderWidth: 1, borderColor: '#f0f0f0' },
   statusDot: { width: 10, height: 10, borderRadius: 5 },
   statusBannerTitle: { fontSize: 11, color: '#999', fontWeight: '600' },
@@ -1916,11 +2160,6 @@ const styles = StyleSheet.create({
   formRow: { flexDirection: 'row', gap: 10 },
   formHalf: { flex: 1 },
   errorText: { fontSize: 10, color: '#ef4444', fontWeight: '600', marginBottom: 6, marginLeft: 4 },
-  workAuthRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
-  workAuthChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, borderWidth: 1, borderColor: '#f0f0f0', backgroundColor: '#fafafa' },
-  workAuthChipActive: { backgroundColor: '#f9c349', borderColor: '#f9c349' },
-  workAuthChipText: { fontSize: 11, color: '#666', fontWeight: '500' },
-  workAuthChipTextActive: { color: '#1a1a1a', fontWeight: '700' },
   resumeBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1.5, borderColor: '#f0f0f0', borderStyle: 'dashed', marginBottom: 4, backgroundColor: '#fafafa' },
   resumeBtnError: { borderColor: '#ef4444', backgroundColor: '#fef2f2' },
   resumeBtnText: { fontSize: 13, color: '#666', fontWeight: '500', flex: 1 },
@@ -1951,17 +2190,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     zIndex: 10,
   },
-  expiredBannerText: {
-    color: '#ef4444',
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  scopeToggleRow: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
-  scopeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 22, borderWidth: 1.5, borderColor: '#f0f0f0', backgroundColor: '#fafafa' },
-  scopeBtnActive: { backgroundColor: '#1a1a1a', borderColor: '#1a1a1a' },
-  scopeFlag: { fontSize: 14 },
-  scopeBtnText: { fontSize: 13, fontWeight: '700', color: '#999' },
-  scopeBtnTextActive: { color: '#f9c349' },
+  expiredBannerText: { color: '#ef4444', fontSize: 10, fontWeight: '800' },
   optimizeCardBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1975,12 +2204,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     marginHorizontal: 4,
   },
-  optimizeCardBtnText: {
-    color: '#1a1a1a',
-    fontSize: 12,
-    fontWeight: '700',
-    marginLeft: 6,
-  },
+  optimizeCardBtnText: { color: '#1a1a1a', fontSize: 12, fontWeight: '700', marginLeft: 6 },
   topTabsWrapper: {
     paddingVertical: 6,
     backgroundColor: '#ffffff',
@@ -2005,27 +2229,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#eee',
   },
-  topTabChipActive: {
-    backgroundColor: '#f9c349',
-    borderColor: '#f9c349',
-  },
-  topTabChipTdcActive: {
-    backgroundColor: '#f9c349',
-    borderColor: '#1a1a1a',
-  },
-  topTabChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-  },
-  topTabChipTextActive: {
-    color: '#1a1a1a',
-    fontWeight: '800',
-  },
-  topTabChipTdcTextActive: {
-    color: '#1a1a1a',
-    fontWeight: '900',
-  },
+  topTabChipActive: { backgroundColor: '#f9c349', borderColor: '#f9c349' },
+  topTabChipTdcActive: { backgroundColor: '#f9c349', borderColor: '#1a1a1a' },
+  topTabChipText: { fontSize: 12, fontWeight: '600', color: '#666' },
+  topTabChipTextActive: { color: '#1a1a1a', fontWeight: '800' },
+  topTabChipTdcTextActive: { color: '#1a1a1a', fontWeight: '900' },
   showMoreButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2044,12 +2252,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  showMoreButtonText: {
-    color: '#1a1a1a',
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
+  showMoreButtonText: { color: '#1a1a1a', fontSize: 14, fontWeight: '800', letterSpacing: 0.3 },
 });
 
 export default Career;

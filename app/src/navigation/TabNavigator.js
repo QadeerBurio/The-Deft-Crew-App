@@ -1,29 +1,34 @@
-import React from "react";
-import { View, StyleSheet, TouchableOpacity, Dimensions, Platform, StatusBar } from "react-native";
+import React, { useContext, useEffect } from "react";
+import { View, StyleSheet, TouchableOpacity, Dimensions, StatusBar } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Octicons, MaterialCommunityIcons, MaterialIcons, Foundation } from "@expo/vector-icons";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import HomeStack from "./HomeStack";
-import Social from "../screens/Social/Social"; 
+import Social from "../screens/Social/Social";
 import CampusToolsScreen from "../screens/StudentDashboard";
 import Explore from "../screens/Explore";
 import ProfileScreen from "../screens/ProfileScreen";
 
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get("window");
+const TAB_HEIGHT = 55;
 
-// Constants for the tab bar
-const TAB_HEIGHT = 55; // Increased height for better proportions
+// 👇 Notifies the parent when the active tab changes
+const TabChangeReporter = ({ navigation, route, onTabChange }) => {
+  useEffect(() => {
+    if (typeof onTabChange === "function") {
+      onTabChange(route.name);
+    }
+  }, [route.name, onTabChange]);
 
-/**
- * CustomTabBar: The main logic for handling Safe Area and button rendering
- */
+  return null;
+};
+
 const CustomTabBar = ({ state, descriptors, navigation }) => {
   const insets = useSafeAreaInsets();
   const focusedRoute = state.routes[state.index];
-  
-  // Helper to resolve nested route state recursively
+
   const getNestedRouteName = (route) => {
     if (!route.state) return null;
     const activeRoute = route.state.routes[route.state.index];
@@ -34,11 +39,21 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
   };
 
   const nestedRouteName = getNestedRouteName(focusedRoute);
-  
-  // Hide bottom tab bar on specific screens
-  const hideTabBarScreens = ["ResumeView", "ResumeBuilder", "ResumeTemplate", "ResumeShare", "ResumeAnalytics", "ResumeSettings", "Brands"];
-  
-  if (focusedRoute?.name === "Social" || (nestedRouteName && hideTabBarScreens.includes(nestedRouteName))) {
+
+  const hideTabBarScreens = [
+    "ResumeView",
+    "ResumeBuilder",
+    "ResumeTemplate",
+    "ResumeShare",
+    "ResumeAnalytics",
+    "ResumeSettings",
+    "Brands",
+  ];
+
+  if (
+    focusedRoute?.name === "Social" ||
+    (nestedRouteName && hideTabBarScreens.includes(nestedRouteName))
+  ) {
     return null;
   }
 
@@ -46,116 +61,96 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
     navigation.navigate("Social");
   };
 
-  // Get the current index for each tab
-  const homeIndex = state.routes.findIndex(route => route.name === "Home");
-  const exploreIndex = state.routes.findIndex(route => route.name === "Explore");
-  const campusIndex = state.routes.findIndex(route => route.name === "Campus");
-  const profileIndex = state.routes.findIndex(route => route.name === "Profile");
+  const homeIndex = state.routes.findIndex((route) => route.name === "Home");
+  const exploreIndex = state.routes.findIndex((route) => route.name === "Explore");
+  const campusIndex = state.routes.findIndex((route) => route.name === "Campus");
+  const profileIndex = state.routes.findIndex((route) => route.name === "Profile");
 
   return (
     <View style={[styles.tabBarWrapper, { height: TAB_HEIGHT + insets.bottom + 10 }]}>
-      {/* Rectangular Background */}
       <View style={[styles.tabBarBackground, { height: TAB_HEIGHT + insets.bottom + 10 }]} />
-      
-      {/* Container for the icons */}
       <View style={[styles.contentContainer, { paddingBottom: insets.bottom + 5 }]}>
-        
-        {/* Home Button */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.tabItem}
-          onPress={() => {
-            navigation.navigate("Home", { screen: "HomeStackMain" });
-          }}
+          onPress={() => navigation.navigate("Home", { screen: "HomeStackMain" })}
           activeOpacity={0.7}
         >
-          <Octicons 
-            name="home" 
-            size={26} 
-            color={state.index === homeIndex ? "#f9c349" : "#9AA0A6"} 
-          />
+          <Octicons name="home" size={26} color={state.index === homeIndex ? "#f9c349" : "#9AA0A6"} />
         </TouchableOpacity>
-        
-        {/* Explore Button */}
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={styles.tabItem}
           onPress={() => navigation.navigate("Explore")}
           activeOpacity={0.7}
         >
-          <MaterialIcons 
-            name="explore" 
-            size={26} 
-            color={state.index === exploreIndex ? "#f9c349" : "#9AA0A6"} 
-          />
+          <MaterialIcons name="explore" size={26} color={state.index === exploreIndex ? "#f9c349" : "#9AA0A6"} />
         </TouchableOpacity>
-        
-        {/* Center Social Button */}
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={styles.centerButtonContainer}
           onPress={handleSocialPress}
           activeOpacity={0.9}
         >
           <View style={styles.centerButton}>
-            <Foundation 
-              name="social-skillshare" 
-              size={32} 
-              color={"#f9c349"} 
-            />
+            <Foundation name="social-skillshare" size={32} color={"#f9c349"} />
           </View>
         </TouchableOpacity>
-        
-        {/* Campus Button */}
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={styles.tabItem}
           onPress={() => navigation.navigate("Campus")}
           activeOpacity={0.7}
         >
-          <MaterialCommunityIcons 
-            name="school-outline" 
-            size={26} 
-            color={state.index === campusIndex ? "#f9c349" : "#9AA0A6"} 
+          <MaterialCommunityIcons
+            name="school-outline"
+            size={26}
+            color={state.index === campusIndex ? "#f9c349" : "#9AA0A6"}
           />
         </TouchableOpacity>
-        
-        {/* Profile Button */}
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={styles.tabItem}
           onPress={() => navigation.navigate("Profile")}
           activeOpacity={0.7}
         >
-          <MaterialCommunityIcons 
-            name="account-circle" 
-            size={26} 
-            color={state.index === profileIndex ? "#f9c349" : "#9AA0A6"} 
+          <MaterialCommunityIcons
+            name="account-circle"
+            size={26}
+            color={state.index === profileIndex ? "#f9c349" : "#9AA0A6"}
           />
         </TouchableOpacity>
-        
       </View>
     </View>
   );
 };
 
-export default function TabNavigator() {
+export default function TabNavigator({ onTabChange }) {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="dark-content" backgroundColor="white" />
-      
+
       <Tab.Navigator
         tabBar={(props) => <CustomTabBar {...props} />}
-        screenOptions={{ 
-          headerShown: false, 
+        screenOptions={{
+          headerShown: false,
           tabBarShowLabel: false,
-          contentStyle: { backgroundColor: '#FFFFFF' },
+          contentStyle: { backgroundColor: "#FFFFFF" },
           lazy: false,
         }}
         initialRouteName="Home"
         backBehavior="history"
+        screenListeners={({ navigation, route }) => ({
+          focus: () => {
+            if (typeof onTabChange === "function") {
+              onTabChange(route.name);
+            }
+          },
+        })}
       >
-        <Tab.Screen 
-          name="Home" 
+        <Tab.Screen
+          name="Home"
           component={HomeStack}
-          options={{
-            unmountOnBlur: false,
-          }}
+          options={{ unmountOnBlur: false }}
         />
         <Tab.Screen name="Explore" component={Explore} />
         <Tab.Screen name="Social" component={Social} />
@@ -206,7 +201,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: TAB_HEIGHT,
-    marginTop: -5, // Adjust to center the button properly
+    marginTop: -5,
   },
   centerButton: {
     width: 52,
@@ -223,6 +218,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 6,
     zIndex: 10,
-    marginTop: -15, // Pull the button up to center it
+    marginTop: -15,
   },
 });

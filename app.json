@@ -2,14 +2,14 @@
   "expo": {
     "name": "tdc",
     "slug": "Testting",
-    "version": "1.0.7",
+    "version": "1.0.9",
     "orientation": "default",
     "icon": "./assets/tdc.png",
     "scheme": "tdcapp",
     "backgroundColor": "#f9c349",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/tdci.jpeg",
+      "image": "./assets/tdc.png",
       "resizeMode": "cover",
       "backgroundColor": "#f9c349"
     },
@@ -26,7 +26,6 @@
     },
     "android": {
       "package": "com.aqkhan110.tdc",
-      "googleServicesFile": "./google-services.json",
       "permissions": [
     "INTERNET",
     "FOREGROUND_SERVICE",
@@ -46,8 +45,8 @@
     "android.permission.ACCESS_MEDIA_LOCATION"
   ],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/tdci.jpeg",
-        "backgroundColor": "#000000"
+        "foregroundImage": "./assets/tdc.png",
+        "backgroundColor": "#f9c349"
       },
       "intentFilters": [
         {
@@ -77,10 +76,10 @@
         {
           "android": {
             "hermesEnabled": true,
-            "compileSdkVersion": 35,
-            "targetSdkVersion": 35,
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
             "minSdkVersion": 24,
-            "buildToolsVersion": "35.0.0"
+            "buildToolsVersion": "36.0.0"
           },
           "ios": {
             "hermesEnabled": true
@@ -91,14 +90,6 @@
         "expo-av",
         {
           "microphonePermission": "TDC uses the microphone to record and send voice messages in chats."
-        }
-      ],
-
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/notification-icon.png",
-          "color": "#f9c349"
         }
       ],
       [

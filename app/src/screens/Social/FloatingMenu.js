@@ -12,7 +12,6 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   interpolate,
-  withTiming,
 } from 'react-native-reanimated';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 
@@ -40,9 +39,9 @@ const COLORS = {
 const FloatingMenu = ({ navigation }) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Position
-  const translateX = useSharedValue(SCREEN_WIDTH - 80);
-  const translateY = useSharedValue(SCREEN_HEIGHT - 160);
+  // ✅ Position: LEFT side of screen
+  const translateX = useSharedValue(15);
+  const translateY = useSharedValue(SCREEN_HEIGHT - 250);
   const context = useSharedValue({ x: 0, y: 0 });
 
   // Animation progress
@@ -58,7 +57,7 @@ const FloatingMenu = ({ navigation }) => {
       translateY.value = event.translationY + context.value.y;
     })
     .onEnd(() => {
-      // Magnetic snap with spring
+      // ✅ Magnetic snap with spring — snap to LEFT side
       const snapX = translateX.value > SCREEN_WIDTH / 2
         ? SCREEN_WIDTH - 75
         : 15;
@@ -89,8 +88,7 @@ const FloatingMenu = ({ navigation }) => {
       const progress = menuProgress.value;
       // Stagger effect
       const delayedProgress = Math.max(0, Math.min(1, (progress - delay) / (1 - delay)));
-      
-      // Calculate values directly
+
       const tx = delayedProgress * xDist;
       const ty = delayedProgress * yDist;
       const scale = delayedProgress * 0.8 + 0.2;
@@ -169,6 +167,8 @@ const FloatingMenu = ({ navigation }) => {
     };
   });
 
+  // ✅ REVERSED sub-menu directions for LEFT-side placement
+  // When on the LEFT, items should fan out to the RIGHT
   const renderMiniBtn = (IconComponent, iconName, label, target, x, y, delay = 0) => {
     const btnStyle = makeSubBtnStyle(x, y, delay);
 
@@ -201,7 +201,7 @@ const FloatingMenu = ({ navigation }) => {
         {/* Ripple Effect */}
         <Animated.View style={[styles.ripple, rippleStyle]} />
 
-        {/* Sub Menu Items with stagger effect */}
+        {/* Sub Menu Items with stagger effect — SAME radial layout */}
         {/* TOP */}
         {renderMiniBtn(Ionicons, 'home', 'Home', 'Home', 0, -75, 0)}
         {/* BOTTOM */}
@@ -260,8 +260,10 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.2)',
-    right:-10,
-    marginTop:10
+    // ✅ Flipped: since it's on the LEFT now, we remove the negative right offset
+    // Keep it as 0 so it aligns cleanly inside the container
+    right: 0,
+    marginBottom:280
   },
   ripple: {
     position: 'absolute',
@@ -307,7 +309,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.labelBg,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-    backdropFilter: 'blur(10px)',
   },
   subBtnLabel: {
     fontSize: 10,

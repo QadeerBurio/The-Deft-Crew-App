@@ -1,25 +1,26 @@
-// FeedScreen.js - Complete with Block Functionality
+// FeedScreen.js - Complete with FloatingMenu on center-right side
 
-import React, { useState, useEffect, useRef, useCallback, useContext } from "react";
+import React, { useState, useEffect, useRef, useCallback, useContext, useMemo } from "react";
 import { 
   View, Text, StyleSheet, StatusBar, 
   FlatList, TouchableOpacity, Platform, TextInput,
   LayoutAnimation, ActivityIndicator, RefreshControl, Keyboard,
-  Image, Animated, Dimensions, Alert
+  Image, Animated, Dimensions, Alert, AppState
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 import PostCard, { PostCardSkeleton } from "./PostCard";
-import StoriesSection from './StoriesSection';
 import FloatingMenu from "./FloatingMenu";
 import ConfessionScreen from './ConfessionScreen';
 
 const { width, height } = Dimensions.get('window');
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
 
+const FEED_POLL_INTERVAL = 15000;
 
 // Skeleton Feed for loading state
 const FeedSkeleton = () => (
@@ -30,10 +31,29 @@ const FeedSkeleton = () => (
   </View>
 );
 
+// ============ HELPER: Check if two post arrays differ ============
+const postsChanged = (oldPosts, newPosts) => {
+  if (!Array.isArray(oldPosts) || !Array.isArray(newPosts)) return true;
+  if (oldPosts.length !== newPosts.length) return true;
+  for (let i = 0; i < newPosts.length; i++) {
+    const a = oldPosts[i];
+    const b = newPosts[i];
+    if (!a || !b) return true;
+    if (a._id !== b._id) return true;
+    const aLikes = Array.isArray(a.likes) ? a.likes.length : 0;
+    const bLikes = Array.isArray(b.likes) ? b.likes.length : 0;
+    if (aLikes !== bLikes) return true;
+    const aComments = Array.isArray(a.comments) ? a.comments.length : 0;
+    const bComments = Array.isArray(b.comments) ? b.comments.length : 0;
+    if (aComments !== bComments) return true;
+    if (a.content !== b.content) return true;
+  }
+  return false;
+};
+
 export default function FeedScreen({ navigation }) {
   const { user, isGuest, unreadCount, updateUnreadCount, token } = useContext(AuthContext);
   
-  // Tab state
   const [activeTab, setActiveTab] = useState("Feed");
   
   const [posts, setPosts] = useState([]);
@@ -51,7 +71,6 @@ export default function FeedScreen({ navigation }) {
   const [hasMoreSearch, setHasMoreSearch] = useState(true);
   const [searchLoadingMore, setSearchLoadingMore] = useState(false);
 
-  // State for blocked posts tracking
   const [blockedPostIds, setBlockedPostIds] = useState([]);
 
   const searchInputRef = useRef(null);
@@ -59,33 +78,22 @@ export default function FeedScreen({ navigation }) {
   const headerScale = useRef(new Animated.Value(1)).current;
   const searchFadeAnim = useRef(new Animated.Value(0)).current;
   const searchSlideAnim = useRef(new Animated.Value(-20)).current;
-  const fabScale = useRef(new Animated.Value(1)).current;
-  const fabTranslateY = useRef(new Animated.Value(0)).current;
 
-  // Animate FAB based on active tab
-  useEffect(() => {
-    Animated.spring(fabTranslateY, {
-      toValue: activeTab === "Feed" ? 0 : 100,
-      friction: 6,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
-  }, [activeTab]);
+  // Polling refs
+  const pollIntervalRef = useRef(null);
+  const appStateRef = useRef(AppState.currentState);
+  const isMountedRef = useRef(true);
+  const isScreenFocusedRef = useRef(true);
+  const lastFeedFetchRef = useRef(0);
+
+  const config = useMemo(() => ({ headers: { Authorization: `Bearer ${token}` } }), [token]);
 
   // Animate search overlay
   useEffect(() => {
     if (isSearching && searchQuery.length > 0) {
       Animated.parallel([
-        Animated.timing(searchFadeAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(searchSlideAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
+        Animated.timing(searchFadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.timing(searchSlideAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
       ]).start();
     } else {
       searchFadeAnim.setValue(0);
@@ -93,7 +101,6 @@ export default function FeedScreen({ navigation }) {
     }
   }, [isSearching, searchQuery]);
 
-  // FIX: Show guest alert for actions
   const showGuestAlert = (action) => {
     Alert.alert(
       'Create an Account',
@@ -110,20 +117,23 @@ export default function FeedScreen({ navigation }) {
 
   const markPostAsViewed = useCallback(async (postId) => {
     if (isGuest || !token) return;
-    
     try {
-      await axios.post(`${API_URL}/posts/view/${postId}`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.post(`${API_URL}/posts/view/${postId}`, {}, config);
     } catch (err) {}
-  }, [token, isGuest]);
+  }, [token, isGuest, config]);
 
-  // ============ FETCH POSTS WITH BLOCK FILTER ============
-  const fetchPosts = useCallback(async (category = "All", search = "", loadMore = false) => {
+  // ============ FETCH POSTS ============
+  const fetchPosts = useCallback(async (category = "All", search = "", loadMore = false, silent = false) => {
+    if (!isMountedRef.current) return;
+
+    const now = Date.now();
+    if (silent && now - lastFeedFetchRef.current < 3000) return;
+    if (silent) lastFeedFetchRef.current = now;
+
     try {
       if (loadMore) {
         setIsLoadingMore(true);
-      } else if (!refreshing) {
+      } else if (!refreshing && !silent) {
         setLoading(true);
       }
       
@@ -134,25 +144,12 @@ export default function FeedScreen({ navigation }) {
       
       const headers = (!isGuest && token) ? { Authorization: `Bearer ${token}` } : {};
       const res = await axios.get(url, { headers });
+
+      if (!isMountedRef.current) return;
       
       let newPosts = res.data.posts || res.data;
       const moreAvailable = res.data.hasMore !== undefined ? res.data.hasMore : newPosts.length === 10;
       
-      // Filter out posts from blocked users (additional client-side filter)
-      // The backend already filters, but this is extra safety
-      if (!isGuest && user) {
-        // Get blocked users from local state or context
-        // The backend already filters, so this is just a backup
-        newPosts = newPosts.filter(post => {
-          // Check if post author is in blocked list
-          const authorId = post.author?._id;
-          if (!authorId) return true;
-          // The backend already filters, so keep all posts
-          return true;
-        });
-      }
-      
-      // Remove any posts that were blocked via PostCard callback
       if (blockedPostIds.length > 0) {
         newPosts = newPosts.filter(post => !blockedPostIds.includes(post._id));
       }
@@ -164,37 +161,46 @@ export default function FeedScreen({ navigation }) {
         const filteredPosts = isGuest 
           ? newPosts 
           : newPosts.filter(post => post.author?._id !== user?._id);
-        setPosts(filteredPosts);
+
+        setPosts(prev => {
+          if (silent && !postsChanged(prev, filteredPosts)) {
+            return prev;
+          }
+          return filteredPosts;
+        });
+
         setHasMore(moreAvailable);
       }
       
-      if (newPosts.length > 0) {
+      if (newPosts.length > 0 && loadMore) {
+        lastPostRef.current = newPosts[newPosts.length - 1].createdAt;
+      } else if (newPosts.length > 0 && !loadMore) {
         lastPostRef.current = newPosts[newPosts.length - 1].createdAt;
       }
       
-      if (!isGuest) {
+      if (!isGuest && !silent) {
         updateUnreadCount();
       }
     } catch (err) {
-      console.error("Fetch Feed Error:", err);
-      // If error is due to being blocked, handle gracefully
-      if (err.response?.status === 403 && err.response?.data?.isBlocked) {
-        Alert.alert("Info", "Some content is not available");
+      if (!silent) {
+        console.error("Fetch Feed Error:", err);
+        if (err.response?.status === 403 && err.response?.data?.isBlocked) {
+          Alert.alert("Info", "Some content is not available");
+        }
       }
     } finally {
-      setLoading(false);
-      setRefreshing(false);
-      setIsLoadingMore(false);
+      if (isMountedRef.current && !silent) {
+        setLoading(false);
+        setRefreshing(false);
+        setIsLoadingMore(false);
+      }
     }
-  }, [token, user, isGuest, updateUnreadCount, blockedPostIds]);
+  }, [token, user, isGuest, updateUnreadCount, blockedPostIds, refreshing]);
 
-  // ============ HANDLE BLOCK FROM POSTCARD ============
   const handleBlock = useCallback((blockedUserId) => {
-    // Remove all posts from the blocked user
     setPosts(prevPosts => 
       prevPosts.filter(post => post.author?._id !== blockedUserId)
     );
-    // Add blocked post IDs to local list
     const blockedPostIdsToRemove = posts
       .filter(post => post.author?._id === blockedUserId)
       .map(post => post._id);
@@ -206,35 +212,29 @@ export default function FeedScreen({ navigation }) {
     );
   }, [posts]);
 
-  // ============ HANDLE REPORT FROM POSTCARD ============
   const handleReport = useCallback((reportedPostId) => {
-    // Optionally remove the reported post from feed
-    // or keep it until admin action
     console.log('Post reported:', reportedPostId);
-    // Could optionally remove from feed:
-    // setPosts(prevPosts => prevPosts.filter(post => post._id !== reportedPostId));
   }, []);
 
   const loadMorePosts = () => {
-    if (!hasMore || isLoadingMore || loading) return;
-    fetchPosts(selectedCategory, searchQuery, true);
+    if (!hasMore || isLoadingMore || loading || isSearching) return;
+    fetchPosts(selectedCategory, searchQuery, true, false);
   };
 
   useEffect(() => {
     if (activeTab === "Feed") {
-      fetchPosts(selectedCategory, searchQuery);
+      fetchPosts(selectedCategory, searchQuery, false, false);
     }
   }, [selectedCategory, activeTab]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     lastPostRef.current = null;
-    // Reset blocked post IDs on refresh to fetch fresh data
     setBlockedPostIds([]);
     if (activeTab === "Feed") {
-      fetchPosts(selectedCategory, searchQuery);
+      fetchPosts(selectedCategory, searchQuery, false, false);
     }
-  }, [selectedCategory, searchQuery, activeTab]);
+  }, [selectedCategory, searchQuery, activeTab, fetchPosts]);
 
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
     viewableItems.forEach(item => {
@@ -249,13 +249,10 @@ export default function FeedScreen({ navigation }) {
     minimumViewTime: 500,
   });
 
-  // Enhanced search function with pagination
   const searchUsers = async (query, page = 1, loadMore = false) => {
     if (!query.trim() || query.trim().length < 2) return;
     
-    if (isGuest && !loadMore) {
-      setIsSearchingUsers(true);
-    } else if (!loadMore) {
+    if (!loadMore) {
       setIsSearchingUsers(true);
     } else {
       setSearchLoadingMore(true);
@@ -294,13 +291,6 @@ export default function FeedScreen({ navigation }) {
     }
   };
 
-  const loadMoreSearchResults = () => {
-    if (!hasMoreSearch || searchLoadingMore || isSearchingUsers) return;
-    const nextPage = searchPage + 1;
-    setSearchPage(nextPage);
-    searchUsers(searchQuery, nextPage, true);
-  };
-
   const toggleSearch = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setIsSearching(!isSearching);
@@ -309,7 +299,7 @@ export default function FeedScreen({ navigation }) {
     setHasMoreSearch(true);
     setSearchPage(1);
     if (isSearching) {
-      fetchPosts(selectedCategory, "");
+      fetchPosts(selectedCategory, "", false, false);
       Keyboard.dismiss();
     }
   };
@@ -333,29 +323,90 @@ export default function FeedScreen({ navigation }) {
 
   const handleTabSwitch = (tab) => {
     setActiveTab(tab);
-    // Reset states when switching tabs
     if (tab === "Feed") {
       setBlockedPostIds([]);
-      fetchPosts(selectedCategory, searchQuery);
+      fetchPosts(selectedCategory, searchQuery, false, false);
     }
   };
 
-  // Handle FAB press with animation
-  const handleFabPress = () => {
-    // Animate button press
-    Animated.sequence([
-      Animated.timing(fabScale, { toValue: 0.8, duration: 100, useNativeDriver: true }),
-      Animated.spring(fabScale, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }),
-    ]).start();
+  // ============ FEED POLLING ============
+  useEffect(() => {
+    const shouldPoll = activeTab === "Feed" && !isSearching && !isGuest && token;
 
-    if (isGuest) {
-      showGuestAlert('create a post');
+    if (!shouldPoll) {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
       return;
     }
-    navigation.navigate('CreatePostScreen');
-  };
 
-  const renderUserSearchResult = ({ item, index }) => (
+    pollIntervalRef.current = setInterval(() => {
+      if (
+        appStateRef.current === 'active' &&
+        isScreenFocusedRef.current &&
+        !isLoadingMore &&
+        !refreshing
+      ) {
+        fetchPosts(selectedCategory, searchQuery, false, true);
+      }
+    }, FEED_POLL_INTERVAL);
+
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
+  }, [activeTab, isSearching, isGuest, token, selectedCategory, searchQuery, isLoadingMore, refreshing, fetchPosts]);
+
+  // App state listener
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      const prevState = appStateRef.current;
+      appStateRef.current = nextAppState;
+
+      if (
+        prevState.match(/inactive|background/) &&
+        nextAppState === 'active' &&
+        activeTab === "Feed" &&
+        !isSearching
+      ) {
+        fetchPosts(selectedCategory, searchQuery, false, true);
+      }
+    });
+
+    return () => subscription.remove();
+  }, [activeTab, isSearching, selectedCategory, searchQuery, fetchPosts]);
+
+  // Screen focus
+  useFocusEffect(
+    useCallback(() => {
+      isScreenFocusedRef.current = true;
+      isMountedRef.current = true;
+
+      if (activeTab === "Feed" && !isSearching) {
+        fetchPosts(selectedCategory, searchQuery, false, true);
+      }
+
+      return () => {
+        isScreenFocusedRef.current = false;
+      };
+    }, [activeTab, isSearching, selectedCategory, searchQuery, fetchPosts])
+  );
+
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
+  }, []);
+
+  const renderUserSearchResult = ({ item }) => (
     <TouchableOpacity 
       style={styles.userResultItem}
       onPress={() => handleUserPress(item._id)}
@@ -378,32 +429,6 @@ export default function FeedScreen({ navigation }) {
         <Ionicons name={isGuest ? "lock-closed" : "chevron-forward"} size={16} color="#f9c349" />
       </View>
     </TouchableOpacity>
-  );
-
-  const renderSearchFooter = () => {
-    if (searchLoadingMore) {
-      return (
-        <View style={styles.searchFooterLoader}>
-          <ActivityIndicator size="small" color="#f9c349" />
-        </View>
-      );
-    }
-    if (!hasMoreSearch && searchResults.length > 0) {
-      return (
-        <View style={styles.searchFooterEnd}>
-          <Text style={styles.searchFooterEndText}>— All users loaded —</Text>
-        </View>
-      );
-    }
-    return null;
-  };
-
-  const renderSearchEmpty = () => (
-    <View style={styles.searchEmptyContainer}>
-      <MaterialCommunityIcons name="account-search-outline" size={50} color="#ccc" />
-      <Text style={styles.searchEmptyText}>No users found</Text>
-      <Text style={styles.searchEmptySubText}>Try a different search term</Text>
-    </View>
   );
 
   const renderFooter = () => {
@@ -432,7 +457,6 @@ export default function FeedScreen({ navigation }) {
     </View>
   );
 
-  // Render Feed content
   const renderFeed = () => (
     <>
       {loading && !refreshing ? (
@@ -467,6 +491,10 @@ export default function FeedScreen({ navigation }) {
           contentContainerStyle={{ paddingBottom: 100 }}
           ListEmptyComponent={!loading ? renderEmpty : null}
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={8}
+          windowSize={10}
+          initialNumToRender={6}
         />
       )}
     </>
@@ -523,7 +551,7 @@ export default function FeedScreen({ navigation }) {
                   onChangeText={handleSearchTextChange}
                   onSubmitEditing={() => { 
                     setIsSearching(false); 
-                    fetchPosts(selectedCategory, searchQuery); 
+                    fetchPosts(selectedCategory, searchQuery, false, false); 
                   }}
                 />
                 {searchQuery.length > 0 && (
@@ -568,45 +596,20 @@ export default function FeedScreen({ navigation }) {
         </View>
       </View>
 
-      {/* Content based on active tab - FIXED: Proper isolation */}
+      {/* Content based on active tab */}
       <View style={styles.contentContainer}>
         {activeTab === "Feed" ? (
-          renderFeed()
+          <View style={{ flex: 1 }}>
+            {renderFeed()}
+            {/* ✅ FloatingMenu only renders on Feed tab */}
+            {!isGuest && <FloatingMenu navigation={navigation} />}
+          </View>
         ) : (
-          // ConfessionScreen as a separate component with its own container
           <View style={{ flex: 1 }}>
             <ConfessionScreen navigation={navigation} />
           </View>
         )}
       </View>
-      
-      {/* FAB Button - Only visible on Feed screen */}
-      {activeTab === "Feed" && (
-        <Animated.View 
-          style={[
-            styles.fabContainer, 
-            { 
-              transform: [{ scale: fabScale }],
-              opacity: fabTranslateY.interpolate({
-                inputRange: [0, 100],
-                outputRange: [1, 0],
-              })
-            }
-          ]}
-        >
-          <TouchableOpacity style={styles.fab} onPress={handleFabPress} activeOpacity={0.8}>
-            <LinearGradient 
-              colors={['#1a1a1a', '#2d2d2d']} 
-              style={styles.fabGradient}
-            >
-              <Ionicons name="add" size={28} color="#f9c349" />
-            </LinearGradient>
-          </TouchableOpacity>
-        </Animated.View>
-      )}
-      
-      {/* FloatingMenu for other actions */}
-      {!isGuest && <FloatingMenu navigation={navigation} />}
     </SafeAreaView>
   );
 }
@@ -614,13 +617,11 @@ export default function FeedScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#ffffff" },
   
-  // Content Container - FIXED: Proper isolation for tabs
   contentContainer: {
     flex: 1,
     backgroundColor: "#f8f9fa",
   },
   
-  // Guest Banner
   guestBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -649,10 +650,8 @@ const styles = StyleSheet.create({
     fontSize: 11
   },
   
-  // Skeleton
   skeletonContainer: { paddingTop: 8 },
   
-  // Header
   header: {
     backgroundColor: "#ffffff",
     borderBottomWidth: 1,
@@ -670,124 +669,44 @@ const styles = StyleSheet.create({
   logoText: { fontSize: 28, fontWeight: '900', color: '#1a1a1a', letterSpacing: -1 },
   topIcons: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   iconBtn: { 
-    width: 38, 
-    height: 38, 
-    borderRadius: 12, 
-    backgroundColor: '#f8f8f8', 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    marginLeft: 8,
+    width: 38, height: 38, borderRadius: 12, backgroundColor: '#f8f8f8', 
+    justifyContent: 'center', alignItems: 'center', marginLeft: 8,
   },
   
-  // Search
   searchContainer: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   searchInputWrapper: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8f8f8',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 40,
-    borderWidth: 2,
-    borderColor: '#f0f0f0',
+    flex: 1, flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#f8f8f8', borderRadius: 12, paddingHorizontal: 12,
+    height: 40, borderWidth: 2, borderColor: '#f0f0f0',
   },
   searchInput: { flex: 1, fontSize: 14, color: '#1a1a1a', fontWeight: '500' },
   cancelBtn: { marginLeft: 12 },
   cancelText: { color: '#f9c349', fontSize: 15, fontWeight: '700' },
   
-  // User Result Item
   userResultItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f5',
+    flexDirection: 'row', alignItems: 'center', padding: 14, paddingHorizontal: 20,
+    borderBottomWidth: 1, borderBottomColor: '#f5f5f5',
   },
-  avatarImg: { 
-    width: 48, 
-    height: 48, 
-    borderRadius: 14,
-  },
+  avatarImg: { width: 48, height: 48, borderRadius: 14 },
   avatarPlaceholder: { 
-    width: 48, 
-    height: 48, 
-    borderRadius: 14, 
-    justifyContent: 'center', 
-    alignItems: 'center',
+    width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center',
     backgroundColor: '#f9c349',
   },
-  avatarText: { 
-    color: '#1a1a1a', 
-    fontWeight: '900', 
-    fontSize: 20,
-  },
-  userInfo: { 
-    flex: 1, 
-    marginLeft: 12,
-  },
-  userName: { 
-    fontSize: 15, 
-    fontWeight: '700', 
-    color: '#1a1a1a',
-  },
-  userSubtitle: { 
-    fontSize: 12, 
-    color: '#999', 
-    marginTop: 2, 
-    fontWeight: '500',
-  },
+  avatarText: { color: '#1a1a1a', fontWeight: '900', fontSize: 20 },
+  userInfo: { flex: 1, marginLeft: 12 },
+  userName: { fontSize: 15, fontWeight: '700', color: '#1a1a1a' },
+  userSubtitle: { fontSize: 12, color: '#999', marginTop: 2, fontWeight: '500' },
   userArrow: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
-    backgroundColor: '#f8f8f8',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 30, height: 30, borderRadius: 10, backgroundColor: '#f8f8f8',
+    justifyContent: 'center', alignItems: 'center',
   },
   
-  // Search Empty
-  searchEmptyContainer: {
-    alignItems: 'center',
-    paddingTop: 60,
-  },
-  searchEmptyText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginTop: 12,
-  },
-  searchEmptySubText: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-    fontWeight: '500',
-  },
-  
-  // Search Footer
-  searchFooterLoader: {
-    paddingVertical: 20,
-    alignItems: 'center',
-  },
-  searchFooterEnd: {
-    paddingVertical: 20,
-    alignItems: 'center',
-  },
-  searchFooterEndText: {
-    color: '#ccc',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  
-  // Badge
   badgeContainer: { position: 'relative' },
   redBadge: {
     position: 'absolute', top: 2, right: 2, width: 8, height: 8, borderRadius: 4,
     backgroundColor: '#f9c349', borderWidth: 1.5, borderColor: '#fff',
   },
   
-  // Empty
   emptyContainer: { alignItems: 'center', marginTop: 80, paddingHorizontal: 40 },
   emptyIconCircle: {
     width: 80, height: 80, borderRadius: 20,
@@ -800,67 +719,23 @@ const styles = StyleSheet.create({
   retryGradient: { flexDirection: 'row', paddingHorizontal: 20, paddingVertical: 12, alignItems: 'center', gap: 8 },
   retryText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   
-  // Footer
   footerLoader: { paddingVertical: 20, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   loadingText: { color: '#999', fontSize: 13, fontWeight: '500' },
   footerEnd: { paddingVertical: 24, alignItems: 'center' },
   footerEndText: { color: '#ccc', fontSize: 12, fontWeight: '500' },
 
-  // Tabs
   tabsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8,
+    backgroundColor: '#ffffff', borderTopWidth: 1, borderTopColor: '#f0f0f0',
   },
   tab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    position: 'relative',
+    flex: 1, paddingVertical: 10, alignItems: 'center', position: 'relative',
   },
   activeTab: {},
-  tabText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#999',
-  },
-  activeTabText: {
-    color: '#1a1a1a',
-    fontWeight: '700',
-  },
+  tabText: { fontSize: 15, fontWeight: '600', color: '#999' },
+  activeTabText: { color: '#1a1a1a', fontWeight: '700' },
   activeTabIndicator: {
-    position: 'absolute',
-    bottom: -1,
-    left: '30%',
-    right: '30%',
-    height: 3,
-    backgroundColor: '#f9c349',
-    borderRadius: 2,
-  },
-
-  // FAB - Only shown on Feed
-  fabContainer: {
-    position: 'absolute', 
-    bottom: 160, 
-    right: 17, 
-    elevation: 8,
-    shadowColor: "#1a1a1a",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-  },
-  fab: {
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  fabGradient: { 
-    width: 47, 
-    height: 47, 
-    borderRadius: 47, 
-    justifyContent: 'center', 
-    alignItems: 'center',
+    position: 'absolute', bottom: -1, left: '30%', right: '30%',
+    height: 3, backgroundColor: '#f9c349', borderRadius: 2,
   },
 });

@@ -14,6 +14,7 @@ import EditProfileScreen from "../screens/Social/EditProfileScreen";
 import ChatHistoryScreen from "../screens/ChatHistoryScreen";
 import ResumeStack from "./ResumeNavigator";
 import Social from "../screens/Social/Social";
+import OfferScreen from "../screens/OfferScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -34,6 +35,14 @@ export default function HomeStack() {
       <Stack.Screen name="ContactUs" component={ContactUs} />
      <Stack.Screen name="Resume" component={ResumeStack} />
       <Stack.Screen name="BrandOffers" component={BrandOffersScreen} />
+      <Stack.Screen
+  name="OfferScreen"
+  component={OfferScreen}
+  options={{
+    headerShown: false,
+    animation: "slide_from_right", // or 'slide_from_bottom'
+  }}
+/>
       <Stack.Screen name="University" component={UniversityScreen} />
       <Stack.Screen name="Slider" component={Slider} />
       <Stack.Screen name="Card" component={Card} />

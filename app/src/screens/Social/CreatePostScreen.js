@@ -1,3 +1,4 @@
+// CreatePostScreen.js - Optimized skeleton + fast animations
 import React, { useState, useContext, useEffect, useRef } from "react";
 import {
   View,
@@ -23,15 +24,26 @@ import { AuthContext } from "../../context/AuthContext";
 
 const { width, height } = Dimensions.get('window');
 
-// Skeleton Loading Component
+// ✅ Same API URL as FeedScreen/PostCard
+const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
+
+// Skeleton Loading Component — optimized & lightweight
 const CreatePostSkeleton = () => {
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
-        Animated.timing(shimmerAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
-        Animated.timing(shimmerAnim, { toValue: 0, duration: 1000, useNativeDriver: true }),
+        Animated.timing(shimmerAnim, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmerAnim, {
+          toValue: 0,
+          duration: 700,
+          useNativeDriver: true,
+        }),
       ])
     );
     animation.start();
@@ -40,7 +52,7 @@ const CreatePostSkeleton = () => {
 
   const shimmerOpacity = shimmerAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.3, 0.7]
+    outputRange: [0.35, 0.75],
   });
 
   return (
@@ -61,8 +73,6 @@ const CreatePostSkeleton = () => {
         <Animated.View style={[styles.skeletonLine, { width: '100%', height: 16, marginTop: 24, opacity: shimmerOpacity }]} />
         <Animated.View style={[styles.skeletonLine, { width: '85%', height: 16, marginTop: 12, opacity: shimmerOpacity }]} />
         <Animated.View style={[styles.skeletonLine, { width: '60%', height: 16, marginTop: 12, opacity: shimmerOpacity }]} />
-        <Animated.View style={[styles.skeletonLine, { width: '90%', height: 16, marginTop: 12, opacity: shimmerOpacity }]} />
-        <Animated.View style={[styles.skeletonLine, { width: '70%', height: 16, marginTop: 12, opacity: shimmerOpacity }]} />
       </View>
     </SafeAreaView>
   );
@@ -78,49 +88,63 @@ export default function CreatePostScreen({ navigation }) {
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideUpAnim = useRef(new Animated.Value(30)).current;
-  const headerAnim = useRef(new Animated.Value(-80)).current;
+  const slideUpAnim = useRef(new Animated.Value(20)).current;
+  const headerAnim = useRef(new Animated.Value(-60)).current;
   const charCountAnim = useRef(new Animated.Value(0)).current;
   const publishBtnScale = useRef(new Animated.Value(1)).current;
   const borderAnim = useRef(new Animated.Value(0)).current;
 
+  const mountedRef = useRef(true);
+
   useEffect(() => {
-    // Entrance animations
+    mountedRef.current = true;
+
+    // ✅ Faster entrance animations (300ms)
     Animated.parallel([
       Animated.spring(headerAnim, {
         toValue: 0,
         friction: 8,
-        tension: 40,
+        tension: 60,
         useNativeDriver: true,
       }),
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 500,
+        duration: 300,
         useNativeDriver: true,
       }),
       Animated.spring(slideUpAnim, {
         toValue: 0,
         friction: 8,
-        tension: 40,
+        tension: 60,
         useNativeDriver: true,
       }),
-    ]).start(() => setIsReady(true));
+    ]).start();
+
+    // ✅ Max skeleton time = 600ms. Never longer.
+    const skeletonTimer = setTimeout(() => {
+      if (mountedRef.current) setIsReady(true);
+    }, 600);
+
+    return () => {
+      mountedRef.current = false;
+      clearTimeout(skeletonTimer);
+    };
   }, []);
 
   useEffect(() => {
     const words = text.trim() ? text.trim().split(/\s+/).length : 0;
     setWordCount(words);
-    
+
     Animated.spring(charCountAnim, {
       toValue: text.length > 0 ? 1 : 0,
       friction: 6,
-      tension: 40,
+      tension: 60,
       useNativeDriver: true,
     }).start();
 
     Animated.timing(borderAnim, {
       toValue: isFocused ? 1 : 0,
-      duration: 200,
+      duration: 150,
       useNativeDriver: false,
     }).start();
   }, [text, isFocused]);
@@ -130,12 +154,12 @@ export default function CreatePostScreen({ navigation }) {
 
     if (!text.trim()) {
       Animated.sequence([
-        Animated.timing(slideUpAnim, { toValue: -8, duration: 80, useNativeDriver: true }),
-        Animated.timing(slideUpAnim, { toValue: 8, duration: 80, useNativeDriver: true }),
-        Animated.timing(slideUpAnim, { toValue: -8, duration: 80, useNativeDriver: true }),
-        Animated.timing(slideUpAnim, { toValue: 0, duration: 80, useNativeDriver: true }),
+        Animated.timing(slideUpAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
+        Animated.timing(slideUpAnim, { toValue: 8, duration: 60, useNativeDriver: true }),
+        Animated.timing(slideUpAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
+        Animated.timing(slideUpAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
       ]).start();
-      
+
       return Alert.alert(
         "💭 Empty Post",
         "Share your thoughts with the community. Every voice matters!",
@@ -144,7 +168,7 @@ export default function CreatePostScreen({ navigation }) {
     }
 
     Animated.sequence([
-      Animated.timing(publishBtnScale, { toValue: 0.95, duration: 100, useNativeDriver: true }),
+      Animated.timing(publishBtnScale, { toValue: 0.95, duration: 80, useNativeDriver: true }),
       Animated.spring(publishBtnScale, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }),
     ]).start();
 
@@ -153,26 +177,24 @@ export default function CreatePostScreen({ navigation }) {
     try {
       const payload = {
         content: text.trim(),
-        location: user?.location || "Karachi"
+        location: user?.location || "Karachi",
       };
 
-      const response = await fetch('https://the-deft-crew-production.up.railway.app/api/social/create-post',
-       
-        {
+      const response = await fetch(`${API_URL}/create-post`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();
 
       if (response.ok) {
         Animated.sequence([
-          Animated.timing(fadeAnim, { toValue: 0.6, duration: 150, useNativeDriver: true }),
-          Animated.timing(fadeAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
+          Animated.timing(fadeAnim, { toValue: 0.6, duration: 120, useNativeDriver: true }),
+          Animated.timing(fadeAnim, { toValue: 1, duration: 120, useNativeDriver: true }),
         ]).start();
 
         setText("");
@@ -181,7 +203,15 @@ export default function CreatePostScreen({ navigation }) {
         Alert.alert(
           "✨ Posted!",
           "Your thoughts have been shared with the community.",
-          [{ text: "View Feed", onPress: () => navigation.goBack() }]
+          [
+            {
+              text: "View Feed",
+              onPress: () => {
+                // ✅ Tell FeedScreen to refresh immediately
+                navigation.navigate('Feed', { refreshFeed: Date.now() });
+              },
+            },
+          ]
         );
       } else {
         Alert.alert("❌ Failed", result.error || "Something went wrong. Please try again.");
@@ -199,15 +229,16 @@ export default function CreatePostScreen({ navigation }) {
 
   const borderColor = borderAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['#E5E5E5', '#f9c349']
+    outputRange: ['#E5E5E5', '#f9c349'],
   });
 
+  // ✅ Only show skeleton until isReady (max 600ms)
   if (!isReady) return <CreatePostSkeleton />;
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      
+
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
@@ -223,12 +254,12 @@ export default function CreatePostScreen({ navigation }) {
             >
               <Ionicons name="arrow-back" size={24} color="#000000" />
             </TouchableOpacity>
-            
+
             <View style={styles.headerCenter}>
               <Text style={styles.headerTitle}>New Post</Text>
               <View style={styles.headerDot} />
             </View>
-            
+
             <TouchableOpacity
               style={[styles.publishButton, (!text.trim() || loading) && styles.publishButtonDisabled]}
               onPress={handlePost}
@@ -261,7 +292,7 @@ export default function CreatePostScreen({ navigation }) {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Animated User Card */}
+          {/* User Card */}
           <Animated.View style={[styles.userCard, { opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }]}>
             <View style={styles.userCardContent}>
               <View style={styles.userRow}>
@@ -283,7 +314,7 @@ export default function CreatePostScreen({ navigation }) {
                     )}
                   </LinearGradient>
                 </View>
-                
+
                 <View style={styles.userInfo}>
                   <Text style={styles.userName}>{user?.name || "Community Member"}</Text>
                   <View style={styles.userBadge}>
@@ -298,7 +329,7 @@ export default function CreatePostScreen({ navigation }) {
             </View>
           </Animated.View>
 
-          {/* Animated Text Input */}
+          {/* Text Input */}
           <Animated.View style={[styles.inputSection, { opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }]}>
             <Animated.View style={[styles.inputWrapper, { borderColor }]}>
               <TextInput
@@ -313,16 +344,20 @@ export default function CreatePostScreen({ navigation }) {
                 onBlur={() => setIsFocused(false)}
                 autoFocus={true}
               />
-              
-              <Animated.View style={[styles.inputAccent, { 
-                opacity: borderAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.3, 1]
-                })
-              }]} />
+
+              <Animated.View
+                style={[
+                  styles.inputAccent,
+                  {
+                    opacity: borderAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.3, 1],
+                    }),
+                  },
+                ]}
+              />
             </Animated.View>
 
-            {/* Character & Word Count */}
             <Animated.View style={[styles.statsContainer, { opacity: charCountAnim }]}>
               <View style={styles.statsLeft}>
                 <View style={styles.statItem}>
@@ -337,10 +372,15 @@ export default function CreatePostScreen({ navigation }) {
               </View>
               <View style={styles.charLimitContainer}>
                 <View style={styles.charProgress}>
-                  <View style={[styles.charProgressBar, { 
-                    width: `${(text.length / 2000) * 100}%`,
-                    backgroundColor: text.length > 1800 ? '#EF4444' : '#f9c349'
-                  }]} />
+                  <View
+                    style={[
+                      styles.charProgressBar,
+                      {
+                        width: `${(text.length / 2000) * 100}%`,
+                        backgroundColor: text.length > 1800 ? '#EF4444' : '#f9c349',
+                      },
+                    ]}
+                  />
                 </View>
                 <Text style={[styles.charLimit, text.length > 1800 && styles.charLimitWarning]}>
                   {text.length}/2000
@@ -349,7 +389,7 @@ export default function CreatePostScreen({ navigation }) {
             </Animated.View>
           </Animated.View>
 
-          {/* Empty State Tips */}
+          {/* Tips */}
           {!text.trim() && (
             <Animated.View style={[styles.tipsContainer, { opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }]}>
               <View style={styles.tipsGradient}>
@@ -409,12 +449,9 @@ export default function CreatePostScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
+  container: { flex: 1, backgroundColor: "#FFFFFF" },
 
-  // Skeleton Styles
+  // Skeleton
   skeletonHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -423,33 +460,16 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F5F5F5',
     gap: 12,
   },
-  skeletonCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F5F5F5',
-  },
-  skeletonContent: {
-    padding: 20,
-  },
-  skeletonUserRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+  skeletonCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F5F5F5' },
+  skeletonContent: { padding: 20 },
+  skeletonUserRow: { flexDirection: 'row', alignItems: 'center' },
   skeletonAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#F5F5F5',
-    marginRight: 14,
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: '#F5F5F5', marginRight: 14,
   },
-  skeletonLine: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 6,
-    height: 14,
-  },
+  skeletonLine: { backgroundColor: '#F5F5F5', borderRadius: 6, height: 14 },
 
-  // Header Styles
+  // Header
   header: {
     borderBottomWidth: 1,
     borderBottomColor: '#F5F5F5',
@@ -464,30 +484,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center',
   },
-  headerCenter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#000000',
-    letterSpacing: -0.3,
-  },
-  headerDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#f9c349',
-  },
+  headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: '#000000', letterSpacing: -0.3 },
+  headerDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#f9c349' },
 
   publishButton: {
     borderRadius: 20,
@@ -498,30 +501,13 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  publishButtonDisabled: {
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  publishGradient: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  publishContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  publishText: {
-    color: '#000000',
-    fontWeight: '600',
-    fontSize: 14,
-  },
+  publishButtonDisabled: { shadowOpacity: 0, elevation: 0 },
+  publishGradient: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
+  publishContent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  publishText: { color: '#000000', fontWeight: '600', fontSize: 14 },
 
-  // User Card Styles
-  userCard: {
-    marginBottom: 24,
-  },
+  // User Card
+  userCard: { marginBottom: 24 },
   userCardContent: {
     borderRadius: 16,
     padding: 16,
@@ -534,70 +520,28 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  userRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarContainer: {
-    marginRight: 14,
-  },
+  userRow: { flexDirection: 'row', alignItems: 'center' },
+  avatarContainer: { marginRight: 14 },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    overflow: 'hidden',
+    width: 56, height: 56, borderRadius: 28, overflow: 'hidden',
     shadowColor: '#f9c349',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
   },
-  avatarPlaceholder: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarImg: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarText: {
-    color: '#000000',
-    fontWeight: '700',
-    fontSize: 20,
-  },
-  userInfo: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 4,
-  },
-  userBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
+  avatarPlaceholder: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
+  avatarImg: { width: '100%', height: '100%' },
+  avatarText: { color: '#000000', fontWeight: '700', fontSize: 20 },
+  userInfo: { flex: 1 },
+  userName: { fontSize: 16, fontWeight: '600', color: '#000000', marginBottom: 4 },
+  userBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   userBadgeDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#22C55E',
-    marginRight: 4,
+    width: 4, height: 4, borderRadius: 2,
+    backgroundColor: '#22C55E', marginRight: 4,
   },
-  userLocation: {
-    fontSize: 12,
-    color: '#666666',
-    fontWeight: '500',
-  },
+  userLocation: { fontSize: 12, color: '#666666', fontWeight: '500' },
 
-  // Input Section Styles
-  inputSection: {
-    marginBottom: 20,
-  },
+  // Input
+  inputSection: { marginBottom: 20 },
   inputWrapper: {
     position: 'relative',
     backgroundColor: '#FAFAFA',
@@ -617,10 +561,7 @@ const styles = StyleSheet.create({
   },
   inputAccent: {
     position: 'absolute',
-    bottom: -2,
-    left: 0,
-    right: 0,
-    height: 3,
+    bottom: -2, left: 0, right: 0, height: 3,
     backgroundColor: '#f9c349',
     borderRadius: 2,
   },
@@ -632,55 +573,21 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingHorizontal: 4,
   },
-  statsLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  statDivider: {
-    width: 1,
-    height: 14,
-    backgroundColor: '#E5E5E5',
-  },
-  statText: {
-    fontSize: 11,
-    color: '#666666',
-    fontWeight: '500',
-  },
-  charLimitContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
+  statsLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  statItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  statDivider: { width: 1, height: 14, backgroundColor: '#E5E5E5' },
+  statText: { fontSize: 11, color: '#666666', fontWeight: '500' },
+  charLimitContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   charProgress: {
-    width: 40,
-    height: 3,
-    backgroundColor: '#E5E5E5',
-    borderRadius: 2,
-    overflow: 'hidden',
+    width: 40, height: 3, backgroundColor: '#E5E5E5',
+    borderRadius: 2, overflow: 'hidden',
   },
-  charProgressBar: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  charLimit: {
-    fontSize: 11,
-    color: '#666666',
-    fontWeight: '500',
-  },
-  charLimitWarning: {
-    color: '#EF4444',
-  },
+  charProgressBar: { height: '100%', borderRadius: 2 },
+  charLimit: { fontSize: 11, color: '#666666', fontWeight: '500' },
+  charLimitWarning: { color: '#EF4444' },
 
-  // Tips Section Styles
-  tipsContainer: {
-    marginTop: 8,
-  },
+  // Tips
+  tipsContainer: { marginTop: 8 },
   tipsGradient: {
     borderRadius: 16,
     padding: 20,
@@ -688,53 +595,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F0F0F0',
   },
-  tipsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
-  },
+  tipsHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   tipsIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: '#FFF8E1',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center',
   },
-  tipsHeaderText: {
-    flex: 1,
-  },
-  tipsTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 2,
-  },
-  tipsSubtitle: {
-    fontSize: 12,
-    color: '#666666',
-    fontWeight: '400',
-  },
-  tipsList: {
-    gap: 12,
-  },
-  tipItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  tipDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  tipText: {
-    fontSize: 13,
-    color: '#444444',
-    lineHeight: 20,
-    fontWeight: '400',
-  },
+  tipsHeaderText: { flex: 1 },
+  tipsTitle: { fontSize: 15, fontWeight: '600', color: '#000000', marginBottom: 2 },
+  tipsSubtitle: { fontSize: 12, color: '#666666', fontWeight: '400' },
+  tipsList: { gap: 12 },
+  tipItem: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  tipDot: { width: 6, height: 6, borderRadius: 3 },
+  tipText: { fontSize: 13, color: '#444444', lineHeight: 20, fontWeight: '400' },
 
   // Quick Actions
   quickActions: {
@@ -749,26 +622,12 @@ const styles = StyleSheet.create({
     borderColor: '#F0F0F0',
   },
   quickActionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 20,
-    paddingVertical: 6,
+    flexDirection: 'row', alignItems: 'center',
+    gap: 6, paddingHorizontal: 20, paddingVertical: 6,
   },
-  quickActionText: {
-    fontSize: 13,
-    color: '#666666',
-    fontWeight: '500',
-  },
-  quickActionDivider: {
-    width: 1,
-    height: 20,
-    backgroundColor: '#E5E5E5',
-  },
+  quickActionText: { fontSize: 13, color: '#666666', fontWeight: '500' },
+  quickActionDivider: { width: 1, height: 20, backgroundColor: '#E5E5E5' },
 
-  // Scroll Content
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
+  // Scroll
+  scrollContent: { padding: 20, paddingBottom: 40 },
 });

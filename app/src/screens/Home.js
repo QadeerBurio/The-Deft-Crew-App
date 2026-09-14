@@ -475,35 +475,6 @@ export default function Home({ navigation }) {
             <Slider data={homeData?.sliders} />
           </Animated.View>
 
-{/* TEMPORARY: Test Local Notification */}
-<TouchableOpacity
-  onPress={async () => {
-    try {
-      const result = await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "Test Banner 🔔",
-          body: "If you see and hear this, local notifications work.",
-          sound: true,
-        },
-        trigger: null,
-      });
-
-      console.log("Scheduled test notification:", result);
-    } catch (error) {
-      console.error("Failed to schedule test notification:", error);
-    }
-  }}
-  style={{
-    padding: 16,
-    backgroundColor: "#f9c349",
-    borderRadius: 12,
-    margin: 20,
-  }}
->
-  <Text style={{ fontWeight: "700", textAlign: "center" }}>
-    Test Local Notification
-  </Text>
-</TouchableOpacity>
        
           <View style={styles.content}>
             {/* Features - Static content, no skeleton needed */}

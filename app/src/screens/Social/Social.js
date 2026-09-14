@@ -1,8 +1,8 @@
-// Social.js (Tab Navigator)
+// Social.js (Tab Navigator) - WITH CENTER CREATE BUTTON
 import React, { useRef, useEffect, useState, useContext } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Platform, View, StyleSheet, Animated, TouchableOpacity, Dimensions, Text, StatusBar } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Platform, View, StyleSheet, Animated, TouchableOpacity, Dimensions, Text, StatusBar, Alert } from "react-native";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { AuthContext } from "../../context/AuthContext";
@@ -12,14 +12,12 @@ import FeedScreen from "./FeedScreen";
 import SearchScreen from "./SearchScreen";
 import MessagesScreen from "./MessageScreen";
 import ProfileScreen from "./ProfileScreen";
-import GuestGuard from "../../components/GuestGuard";
 
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
-
-// Modern Tab Bar Button with enhanced animation
+// ============ MODERN TAB BAR BUTTON ============
 const ModernTabBarButton = ({ children, onPress, focused }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const translateY = useRef(new Animated.Value(0)).current;
@@ -124,7 +122,7 @@ const ModernTabBarButton = ({ children, onPress, focused }) => {
   );
 };
 
-// Modern Tab Icon Component
+// ============ TAB ICON ============
 const TabIcon = ({ name, focused, badge }) => {
   const iconNames = {
     home: focused ? "home" : "home-outline",
@@ -153,7 +151,7 @@ const TabIcon = ({ name, focused, badge }) => {
   );
 };
 
-// Profile Icon with Instagram-style border
+// ============ PROFILE ICON ============
 const ProfileIcon = ({ focused }) => {
   return (
     <View style={styles.profileIconWrapper}>
@@ -171,68 +169,187 @@ const ProfileIcon = ({ focused }) => {
   );
 };
 
-// Custom Tab Bar Component with SafeAreaView
+// ============ CENTER CREATE BUTTON ============
+const CreateButton = ({ onPress, navigation, isGuest }) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+
+  const handlePressIn = () => {
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: 0.85,
+        friction: 5,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      friction: 5,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePress = () => {
+    // Animate rotation on press
+    Animated.sequence([
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(rotateAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    if (isGuest) {
+      Alert.alert(
+        'Create an Account',
+        'Sign up to create a post!',
+        [
+          { text: 'Not Now', style: 'cancel' },
+          { 
+            text: 'Sign Up', 
+            onPress: () => navigation.navigate('Login')
+          }
+        ]
+      );
+      return;
+    }
+    
+    navigation.navigate('CreatePostScreen');
+  };
+
+  const rotation = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '90deg'],
+  });
+
+  return (
+    <View style={styles.createButtonWrapper}>
+      <TouchableOpacity
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={0.9}
+        style={styles.createButtonTouchable}
+      >
+        <Animated.View style={[
+          styles.createButtonContainer,
+          { transform: [{ scale: scaleAnim }] }
+        ]}>
+          <LinearGradient
+            colors={['#f9c349', '#e6b800']}
+            style={styles.createButtonGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Animated.View style={{ transform: [{ rotate: rotation }] }}>
+              <Ionicons name="add" size={32} color="#1a1a1a" />
+            </Animated.View>
+          </LinearGradient>
+        </Animated.View>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+// ============ CUSTOM TAB BAR ============
 function CustomTabBar({ state, descriptors, navigation }) {
   const insets = useSafeAreaInsets();
+  const { isGuest } = useContext(AuthContext);
   
+  // Define the order of tabs with the create button in the middle
+  // Order: Feed (0), Search (1), CREATE (center), Messages (2), Profile (3)
+  const tabOrder = ['Feed', 'Search', 'CREATE', 'Messages', 'Profile'];
+  
+  const renderTabButton = (routeName) => {
+    const route = state.routes.find(r => r.name === routeName);
+    if (!route) return null;
+    
+    const { options } = descriptors[route.key];
+    const isFocused = state.index === state.routes.findIndex(r => r.name === routeName);
+
+    const onPress = () => {
+      const event = navigation.emit({
+        type: 'tabPress',
+        target: route.key,
+        canPreventDefault: true,
+      });
+
+      if (!isFocused && !event.defaultPrevented) {
+        navigation.navigate(route.name);
+      }
+    };
+
+    const onLongPress = () => {
+      navigation.emit({
+        type: 'tabLongPress',
+        target: route.key,
+      });
+    };
+
+    return (
+      <ModernTabBarButton
+        key={route.key}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        focused={isFocused}
+      >
+        {options.tabBarIcon ? options.tabBarIcon({ focused: isFocused }) : null}
+        {options.tabBarLabel && (
+          <Text style={[
+            styles.tabBarLabel,
+            { color: isFocused ? '#f9c349' : '#8e8e8e' }
+          ]}>
+            {typeof options.tabBarLabel === 'function' 
+              ? options.tabBarLabel({ focused: isFocused }) 
+              : options.tabBarLabel}
+          </Text>
+        )}
+      </ModernTabBarButton>
+    );
+  };
+
   return (
     <View style={[
       styles.tabBarContainer,
       { 
         paddingBottom: Platform.OS === 'ios' ? insets.bottom || 8 : 8,
-        height: Platform.OS === 'ios' ? 60 + (insets.bottom || 0) : 55,
+        height: Platform.OS === 'ios' ? 65 + (insets.bottom || 0) : 62,
       }
     ]}>
       <View style={styles.tabBarInner}>
-        {state.routes.map((route, index) => {
-          const { options } = descriptors[route.key];
-          const isFocused = state.index === index;
-
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
-
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
-            }
-          };
-
-          const onLongPress = () => {
-            navigation.emit({
-              type: 'tabLongPress',
-              target: route.key,
-            });
-          };
-
-          return (
-            <ModernTabBarButton
-              key={route.key}
-              onPress={onPress}
-              onLongPress={onLongPress}
-              focused={isFocused}
-            >
-              {options.tabBarIcon ? options.tabBarIcon({ focused: isFocused }) : null}
-              {options.tabBarLabel && (
-                <Text style={[
-                  styles.tabBarLabel,
-                  { color: isFocused ? '#f9c349' : '#8e8e8e' }
-                ]}>
-                  {typeof options.tabBarLabel === 'function' 
-                    ? options.tabBarLabel({ focused: isFocused }) 
-                    : options.tabBarLabel}
-                </Text>
-              )}
-            </ModernTabBarButton>
-          );
-        })}
+        {/* Feed */}
+        {renderTabButton('Feed')}
+        
+        {/* Search */}
+        {renderTabButton('Search')}
+        
+        {/* Center Create Button */}
+        <CreateButton 
+          navigation={navigation} 
+          isGuest={isGuest}
+        />
+        
+        {/* Messages */}
+        {renderTabButton('Messages')}
+        
+        {/* Profile */}
+        {renderTabButton('Profile')}
       </View>
     </View>
   );
 }
 
+// ============ MAIN SOCIAL COMPONENT ============
 export default function Social() {
   const { token, user } = useContext(AuthContext);
   const [totalUnread, setTotalUnread] = useState(0);
@@ -253,13 +370,12 @@ export default function Social() {
 
   useEffect(() => {
     fetchUnreadCount();
-    // Refresh every 30 seconds
     const interval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <View style={styles.container} >
+    <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <View style={styles.content}>
         <Tab.Navigator
@@ -332,7 +448,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
 
-  // Tab Bar Container - Reduced Height
+  // Tab Bar Container
   tabBarContainer: {
     backgroundColor: '#ffffff',
     borderTopWidth: 1,
@@ -353,7 +469,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
   },
 
   // Modern Tab Button
@@ -385,7 +501,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9c349',
   },
   
-  // Icon Container
   iconWrapper: {
     position: 'relative',
     alignItems: 'center',
@@ -462,5 +577,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
+  },
+
+  // ============ CENTER CREATE BUTTON STYLES ============
+  createButtonWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100%',
+    paddingVertical: 4,
+  },
+
+  createButtonTouchable: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  createButtonContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    overflow: 'hidden',
+    // Elevation for the button to pop out
+    shadowColor: '#f9c349',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+    // Lift it above the tab bar
+    marginTop: -20,
+    borderWidth: 3,
+    borderColor: '#ffffff',
+  },
+
+  createButtonGradient: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
