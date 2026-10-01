@@ -12,7 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { AuthContext } from "../../context/AuthContext";
-
+// 🆕 engagement
+import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus';
 const { height, width } = Dimensions.get('window');
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
 
@@ -551,6 +552,13 @@ export default function ConfessionScreen({ navigation }) {
 
       if (res.ok) {
         const updated = await res.json();
+         // 🆕 engagement: queue any popups the backend returned
+        if (updated?.engagement?.popups?.length) {
+          engagementBus.emit(
+            ENGAGEMENT_EVENTS.POPUPS_QUEUED,
+            updated.engagement.popups
+          );
+        }
         setSelectedPost(prev => ({ ...prev, comments: updated.comments || [] }));
         setConfessions(prev => prev.map(c => 
           c._id === updated._id ? { ...c, comments: updated.comments || [] } : c
@@ -627,11 +635,26 @@ export default function ConfessionScreen({ navigation }) {
       let imageUrl = "";
       if (selectedImage) imageUrl = await uploadToCloudinary(selectedImage);
 
-      const response = await fetch(`${API_URL}/confessions/create`, {
+            const response = await fetch(`${API_URL}/confessions/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ text: newConfession.trim(), image: imageUrl })
       });
+
+      if (response.ok) {
+        const result = await response.json();
+
+        // 🆕 engagement: queue any popups the backend returned
+        if (result?.engagement?.popups?.length) {
+          engagementBus.emit(
+            ENGAGEMENT_EVENTS.POPUPS_QUEUED,
+            result.engagement.popups
+          );
+        }
+
+        resetForm();
+        fetchConfessions(false);
+      }
 
       if (response.ok) {
         resetForm();

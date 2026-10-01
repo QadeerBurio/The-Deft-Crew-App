@@ -1,6 +1,7 @@
 // api/api.js - Fixed for Guest Mode with Session Expiry Handling
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { engagementBus, ENGAGEMENT_EVENTS } from '../engagement/engagementBus';
 import { Alert, Platform } from 'react-native';
 import Constants from 'expo-constants';
 const getBaseURL = () => {
@@ -797,7 +798,24 @@ export const uploadChatFile = async (uri, mimeType, fileName) => {
   });
   return response.data; // { mediaUrl, messageType, mediaMetadata }
 };
-
+api.interceptors.response.use(
+  (response) => {
+    try {
+      const eng = response?.data?.engagement;
+      if (eng?.popups?.length) {
+        engagementBus.emit(ENGAGEMENT_EVENTS.POPUPS_QUEUED, eng.popups);
+      }
+      if (eng) {
+        // Tell React Query to refresh engagement state
+        engagementBus.emit(ENGAGEMENT_EVENTS.PROFILE_REFRESH);
+      }
+    } catch (e) {
+      // never block
+    }
+    return response;
+  },
+  (error) => Promise.reject(error)
+);
 
 
 export default api;

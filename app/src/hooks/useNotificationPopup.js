@@ -1,5 +1,5 @@
 // hooks/useNotificationPopup.js
-import { useState, useCallback, useEffect, useContext } from 'react';
+import { useState, useCallback, useContext } from 'react';
 import { Vibration, Platform } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 
@@ -8,77 +8,89 @@ export const useNotificationPopup = () => {
   const [bannerVisible, setBannerVisible] = useState(false);
   const [currentNotification, setCurrentNotification] = useState(null);
   const [pendingNotifications, setPendingNotifications] = useState([]);
-  const [isProcessing, setIsProcessing] = useState(false);
 
-  // Show a notification banner
-  const showNotificationBanner = useCallback((notification) => {
-    // Add to pending queue if already showing
-    if (bannerVisible) {
-      setPendingNotifications(prev => [...prev, notification]);
-      return;
-    }
+  const showNotificationBanner = useCallback(
+    (notification) => {
+      if (bannerVisible) {
+        setPendingNotifications((prev) => [...prev, notification]);
+        return;
+      }
 
-    setCurrentNotification(notification);
-    setBannerVisible(true);
+      setCurrentNotification(notification);
+      setBannerVisible(true);
 
-    // Vibrate on notification
-    if (Platform.OS === 'android' || Platform.OS === 'ios') {
-      Vibration.vibrate(Platform.OS === 'android' ? [0, 200, 100, 200] : 200);
-    }
+      if (Platform.OS === 'android' || Platform.OS === 'ios') {
+        Vibration.vibrate(
+          Platform.OS === 'android' ? [0, 200, 100, 200] : 200
+        );
+      }
 
-    // Update unread count
-    if (token && updateUnreadCount) {
-      updateUnreadCount(token);
-    }
-  }, [bannerVisible, token, updateUnreadCount]);
+      if (token && updateUnreadCount) {
+        updateUnreadCount(token);
+      }
+    },
+    [bannerVisible, token, updateUnreadCount]
+  );
 
-  // Dismiss the current banner
   const dismissBanner = useCallback(() => {
     setBannerVisible(false);
     setCurrentNotification(null);
-    
-    // Process next notification in queue
+
     if (pendingNotifications.length > 0) {
       setTimeout(() => {
         const next = pendingNotifications[0];
-        setPendingNotifications(prev => prev.slice(1));
+        setPendingNotifications((prev) => prev.slice(1));
         showNotificationBanner(next);
-      }, 300);
+      }, 400);
     }
   }, [pendingNotifications, showNotificationBanner]);
 
-  // Handle banner press (navigate to notification)
-  const handleBannerPress = useCallback((notification) => {
-    // Navigate to notification detail or relevant screen
-    if (notification?.link) {
-      // Navigate to the link
-      console.log('Navigate to:', notification.link);
-    }
-    
-    // Mark as read if possible
-    if (notification?._id && token) {
-      // Mark as read logic here
-    }
-    
-    dismissBanner();
-  }, [token, dismissBanner]);
+  const handleBannerPress = useCallback(
+    (notification) => {
+      console.log('[useNotificationPopup] pressed:', notification?.title);
+      dismissBanner();
+    },
+    [dismissBanner]
+  );
 
-  // Add notification to queue
-  const addNotification = useCallback((notification) => {
-    // Format notification
-    const formattedNotif = {
-      _id: notification._id || Date.now().toString(),
-      title: notification.title || 'New Notification',
-      description: notification.description || notification.body || '',
-      type: notification.type || 'System',
-      time: notification.time || 'Just now',
-      link: notification.link || null,
-      createdAt: notification.createdAt || new Date().toISOString(),
-      isRead: false,
-    };
-    
-    showNotificationBanner(formattedNotif);
-  }, [showNotificationBanner]);
+  // ✅ Normalize push + poll notifications identically
+  const addNotification = useCallback(
+    (notification) => {
+      const data = notification.data || {};
+
+      const formattedNotif = {
+        _id: notification._id || `local-${Date.now()}`,
+        title: notification.title || 'New Notification',
+        description: notification.description || notification.body || '',
+        type: notification.type || 'System',
+        mood:
+          notification.mood ||
+          data.mood ||
+          notification.request?.content?.data?.mood ||
+          'sorted',
+        iconUrl:
+          notification.iconUrl ||
+          data.iconUrl ||
+          notification.request?.content?.data?.iconUrl ||
+          null,
+        time: notification.time || 'Just now',
+        link: notification.link || data.link || null,
+        conversationId:
+          notification.conversationId || data.conversationId || null,
+        screenToOpen:
+          notification.screenToOpen ||
+          data.screen ||
+          data.route ||
+          null,
+        metadata: notification.metadata || data,
+        createdAt: notification.createdAt || new Date().toISOString(),
+        isRead: false,
+      };
+
+      showNotificationBanner(formattedNotif);
+    },
+    [showNotificationBanner]
+  );
 
   return {
     bannerVisible,

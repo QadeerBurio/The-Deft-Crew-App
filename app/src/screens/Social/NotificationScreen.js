@@ -1,4 +1,5 @@
-// screens/NotificationScreen.js - COMPLETE with reply & mention support + AUTO REFRESH
+// screens/NotificationScreen.js - COMPLETE with reply & mention & message support + AUTO REFRESH
+// FIXED: PostDetailScreen navigation for like/comment/reply/mention notifications
 
 import React, { useState, useEffect, useContext, useRef, useCallback } from "react";
 import { 
@@ -29,6 +30,56 @@ const COLORS = {
   danger: '#ff4757',
   success: '#2ecc71',
   mention: '#1877f2',
+};
+
+// ============================================
+// HELPER: Extract Post ID from notification
+// ============================================
+const extractPostId = (item) => {
+  if (!item) return null;
+
+  // Possible fields that might contain the post reference
+  const candidates = [
+    item.postId,
+    item.post,
+    item.relatedId,
+    item.targetId,
+    item.entityId,
+    item.contentId,
+    item.referenceId,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+
+    // If it's a string that looks like an ObjectId
+    if (typeof candidate === 'string' && /^[0-9a-fA-F]{24}$/.test(candidate)) {
+      return candidate;
+    }
+
+    // If it's an object with _id
+    if (typeof candidate === 'object' && candidate._id) {
+      const id = String(candidate._id);
+      if (/^[0-9a-fA-F]{24}$/.test(id)) return id;
+    }
+
+    // If it's an object that can be stringified to an ObjectId
+    if (typeof candidate === 'object' && candidate.toString) {
+      const id = candidate.toString();
+      if (/^[0-9a-fA-F]{24}$/.test(id)) return id;
+    }
+  }
+
+  return null;
+};
+
+// ============================================
+// HELPER: Validate ObjectId
+// ============================================
+const isValidObjectId = (id) => {
+  if (!id) return false;
+  const idStr = typeof id === 'string' ? id : String(id);
+  return /^[0-9a-fA-F]{24}$/.test(idStr);
 };
 
 // Skeleton Component
@@ -77,6 +128,8 @@ const NotificationItem = React.memo(({ item, index, onPress, onAccept, onDecline
         return { name: 'return-down-forward', color: COLORS.primary, bg: '#fef9f0' };
       case 'mention':
         return { name: 'at', color: COLORS.mention, bg: '#e7f3ff' };
+      case 'message':
+        return { name: 'paper-plane', color: COLORS.primary, bg: '#fef9f0' };
       case 'request': 
         return { name: 'person-add', color: COLORS.primary, bg: '#fef9f0' };
       case 'connection_accepted': 
@@ -110,6 +163,7 @@ const NotificationItem = React.memo(({ item, index, onPress, onAccept, onDecline
       case 'comment': return 'commented on your post';
       case 'reply': return 'replied to your comment';
       case 'mention': return 'mentioned you in a comment';
+      case 'message': return 'sent you a message';
       case 'connection_accepted': return 'accepted your connection request 🎉';
       case 'request_declined': return 'declined your connection request';
       case 'request': return 'sent you a connection request';
@@ -130,6 +184,7 @@ const NotificationItem = React.memo(({ item, index, onPress, onAccept, onDecline
                             item.status !== 'pending';
 
   const isMention = item.type === 'mention';
+  const isMessage = item.type === 'message';
 
   return (
     <Animated.View style={{ 
@@ -175,7 +230,7 @@ const NotificationItem = React.memo(({ item, index, onPress, onAccept, onDecline
             </View>
             <Text style={styles.timeText}>{getTimeAgo(item.createdAt)}</Text>
             
-            {(item.type === 'comment' || item.type === 'reply' || item.type === 'mention') && 
+            {(item.type === 'comment' || item.type === 'reply' || item.type === 'mention' || item.type === 'message') && 
              item.text && (
               <View style={styles.previewBox}>
                 <Text style={styles.previewText} numberOfLines={2}>
@@ -264,7 +319,6 @@ export default function NotificationScreen({ navigation }) {
   const headerFade = useRef(new Animated.Value(0)).current;
   const menuSlide = useRef(new Animated.Value(200)).current;
   
-  // Refs for polling
   const pollIntervalRef = useRef(null);
   const appStateRef = useRef(AppState.currentState);
   const isMountedRef = useRef(true);
@@ -291,11 +345,9 @@ export default function NotificationScreen({ navigation }) {
     }
   }, [showMenuModal]);
 
-  // ============ CORE FETCH (silent mode for polling) ============
   const fetchNotifications = useCallback(async (silent = false) => {
     if (!token || !isMountedRef.current) return;
     
-    // Prevent duplicate fetches within 2 seconds
     const now = Date.now();
     if (silent && now - lastFetchRef.current < 2000) return;
     lastFetchRef.current = now;
@@ -316,12 +368,9 @@ export default function NotificationScreen({ navigation }) {
         type: n.type || 'notification'
       }));
       
-      // ✅ SMART UPDATE: Only update state if data actually changed
       setNotifications(prev => {
-        // Quick check: if length differs, update
         if (prev.length !== formattedData.length) return formattedData;
         
-        // Deep check: compare IDs and isUnread/status
         const hasChanges = formattedData.some((newNotif, idx) => {
           const oldNotif = prev[idx];
           if (!oldNotif) return true;
@@ -339,7 +388,6 @@ export default function NotificationScreen({ navigation }) {
       if (!silent) {
         console.error("Fetch notifications error:", err);
       }
-      // Don't clear notifications on silent poll errors — just keep old data
       if (!silent && err.response?.status === 401) {
         setNotifications([]); 
       }
@@ -351,7 +399,6 @@ export default function NotificationScreen({ navigation }) {
     }
   }, [token, currentUser?._id]);
 
-  // ============ INITIAL FETCH ============
   useEffect(() => {
     if (token) {
       setLoading(true);
@@ -359,17 +406,14 @@ export default function NotificationScreen({ navigation }) {
     }
   }, [token, fetchNotifications]);
 
-  // ============ AUTO REFRESH POLLING ============
-  // Poll every POLL_INTERVAL ms, but pause when app is in background
   useEffect(() => {
     if (!token) return;
 
     const startPolling = () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       pollIntervalRef.current = setInterval(() => {
-        // Only poll when app is active
         if (appStateRef.current === 'active') {
-          fetchNotifications(true); // silent mode
+          fetchNotifications(true);
         }
       }, POLL_INTERVAL);
     };
@@ -384,14 +428,11 @@ export default function NotificationScreen({ navigation }) {
     };
   }, [token, fetchNotifications]);
 
-  // ============ APP STATE LISTENER ============
-  // When user returns to app → refresh immediately
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       const prevState = appStateRef.current;
       appStateRef.current = nextAppState;
       
-      // Refresh when app comes back to foreground
       if (prevState.match(/inactive|background/) && nextAppState === 'active') {
         fetchNotifications(true);
       }
@@ -400,13 +441,11 @@ export default function NotificationScreen({ navigation }) {
     return () => subscription.remove();
   }, [fetchNotifications]);
 
-  // ============ SCREEN FOCUS LISTENER ============
-  // When user navigates to this screen → refresh
   useFocusEffect(
     useCallback(() => {
       isMountedRef.current = true;
       if (token) {
-        fetchNotifications(true); // silent refresh on focus
+        fetchNotifications(true);
       }
       
       return () => {
@@ -415,7 +454,6 @@ export default function NotificationScreen({ navigation }) {
     }, [token, fetchNotifications])
   );
 
-  // ============ CLEANUP ON UNMOUNT ============
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
@@ -428,7 +466,6 @@ export default function NotificationScreen({ navigation }) {
 
   const markAllRead = async () => {
     try {
-      // Optimistic update
       setNotifications(prev => prev.map(n => ({ ...n, isUnread: false })));
       setShowMenuModal(false);
       
@@ -436,14 +473,12 @@ export default function NotificationScreen({ navigation }) {
     } catch (err) {
       console.log("Mark all read error", err);
       Alert.alert("Error", "Could not mark all as read");
-      // Rollback
       fetchNotifications(false);
     }
   };
 
   const clearAllNotifications = async () => {
     try {
-      // Optimistic update
       setNotifications([]);
       setShowClearModal(false);
       setShowMenuModal(false);
@@ -452,13 +487,15 @@ export default function NotificationScreen({ navigation }) {
     } catch (err) {
       console.error("Clear all error:", err);
       Alert.alert("Error", "Could not clear notifications");
-      // Rollback
       fetchNotifications(false);
     }
   };
 
+  // ============================================
+  // FIXED: handleNotificationClick with proper PostDetailScreen navigation
+  // ============================================
   const handleNotificationClick = async (item) => {
-    // Optimistic mark read
+    // Mark as read optimistically
     if (item.isUnread) {
       setNotifications(prev => 
         prev.map(n => n._id === item._id ? { ...n, isUnread: false } : n)
@@ -470,15 +507,28 @@ export default function NotificationScreen({ navigation }) {
       }
     }
 
-    // Navigation
     try {
       switch(item.type) {
+        // ========== MESSAGE ==========
+        case 'message':
+          if (item.conversationId) {
+            navigation.navigate("ChatDetailScreen", {
+              conversationId: item.conversationId,
+              recipient: item.sender,
+            });
+          } else if (item.sender?._id) {
+            navigation.navigate("UserProfile", { userId: item.sender._id });
+          }
+          break;
+
+        // ========== CONNECTION REQUEST ==========
         case 'request':
           if (item.sender?._id) {
             navigation.navigate("UserProfile", { userId: item.sender._id });
           }
           break;
 
+        // ========== CONNECTION RESULT ==========
         case 'connection_accepted':
         case 'request_declined':
           if (item.sender?._id) {
@@ -488,68 +538,38 @@ export default function NotificationScreen({ navigation }) {
           }
           break;
 
+        // ========== POST-RELATED (like, comment, reply, mention) ==========
         case 'like':
         case 'comment':
         case 'reply':
-        case 'mention':
-          let postId = null;
-          
-          if (item.postId) {
-            if (typeof item.postId === 'object' && item.postId._id) {
-              postId = item.postId._id;
-            } else if (typeof item.postId === 'string') {
-              postId = item.postId;
-            } else if (typeof item.postId === 'object' && item.postId.toString) {
-              postId = item.postId.toString();
-            }
-          }
-          
-          if (!postId && item.post) {
-            if (typeof item.post === 'object' && item.post._id) {
-              postId = item.post._id;
-            } else if (typeof item.post === 'string') {
-              postId = item.post;
-            }
-          }
-          
-          if (!postId && item.relatedId) {
-            if (typeof item.relatedId === 'object' && item.relatedId._id) {
-              postId = item.relatedId._id;
-            } else if (typeof item.relatedId === 'string') {
-              postId = item.relatedId;
-            }
-          }
+        case 'mention': {
+          // Extract post ID using robust helper
+          const postId = extractPostId(item);
 
-          const isValidObjectId = (id) => {
-            if (!id) return false;
-            const idStr = typeof id === 'string' ? id : String(id);
-            return /^[0-9a-fA-F]{24}$/.test(idStr);
-          };
-          
           if (postId && isValidObjectId(postId)) {
-            try {
-              const postCheck = await axios.get(`${API_URL}/posts/${postId}`, config);
-              if (postCheck.data) {
-                navigation.navigate("PostDetailScreen", { postId: postId });
-              } else {
-                Alert.alert("Notice", "This post is no longer available.");
-              }
-            } catch (error) {
-              if (error.response?.status === 404) {
-                Alert.alert("Notice", "This post has been deleted.");
-              } else {
-                Alert.alert("Error", "Could not load the post.");
-              }
-            }
+            // Navigate directly to PostDetailScreen - no pre-check needed
+            // The PostDetailScreen will handle loading/error states itself
+            navigation.navigate("PostDetailScreen", { 
+              postId: postId,
+              // Pass the notification item for extra context if needed
+              notification: item,
+            });
           } else {
+            // No valid post ID - try to navigate to sender profile as fallback
             if (item.sender?._id) {
               navigation.navigate("UserProfile", { userId: item.sender._id });
             } else {
-              Alert.alert("Notice", "This content is no longer available.");
+              Alert.alert(
+                "Notice", 
+                "This post is no longer available or has been removed.",
+                [{ text: "OK" }]
+              );
             }
           }
           break;
+        }
 
+        // ========== DEFAULT ==========
         default:
           if (item.sender?._id) {
             navigation.navigate("UserProfile", { userId: item.sender._id });

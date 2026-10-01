@@ -127,14 +127,14 @@ export default function TermsScreen({ navigation }) {
   const TermsContent = () => (
     <>
       {[
-        { num: '01', title: 'Acceptance of Terms', text: 'By using The Deft Crew (TDC) application, you agree to comply with and be bound by these Terms and Conditions. If you do not agree, please do not use our services.' },
+        { num: '01', title: 'Acceptance of Terms', text: 'By using  tdc application, you agree to comply with and be bound by these Terms and Conditions. If you do not agree, please do not use our services.' },
         { num: '02', title: 'User Account', text: '• Must be 13+ years old\n• Maintain account confidentiality\n• Provide accurate information\n• Responsible for all account activity' },
-        { num: '03', title: 'User-Generated Content', text: '• You retain ownership of content\n• Grant TDC license to use content\n• No content violating guidelines\n• TDC may remove violating content' },
-        { num: '04', title: 'Intellectual Property', text: '• Content protected by copyright\n• No reproduction without permission\n• TDC trademarks are property of The Deft Crew' },
-        { num: '05', title: 'Limitation of Liability', text: 'TDC is provided "as is" without warranties. We are not liable for any damages arising from use of our services.' },
+        { num: '03', title: 'User-Generated Content', text: '• You retain ownership of content\n• Grant tdc license to use content\n• No content violating guidelines\n• TDC may remove violating content' },
+        { num: '04', title: 'Intellectual Property', text: '• Content protected by copyright\n• No reproduction without permission\n• tdc trademarks are property of The Deft Crew' },
+        { num: '05', title: 'Limitation of Liability', text: 'tdc is provided "as is" without warranties. We are not liable for any damages arising from use of our services.' },
         { num: '06', title: 'Termination', text: 'We reserve the right to terminate or suspend your account for violations of these terms or Community Guidelines.' },
-        { num: '07', title: 'Changes to Terms', text: 'TDC may update these terms at any time. You will be notified of significant changes.' },
-        { num: '08', title: 'Contact', text: 'support@thedeftcrew.com\nKarachi, Pakistan' },
+        { num: '07', title: 'Changes to Terms', text: 'tdc may update these terms at any time. You will be notified of significant changes.' },
+        { num: '08', title: 'Contact', text: 'support@gettdc.pk\ Pakistan' },
         { num: '09', title: 'Governing Law', text: 'These terms are governed by the laws of Pakistan. Disputes resolved in Karachi, Pakistan.' },
       ].map((item, index) => (
         <Animated.View 

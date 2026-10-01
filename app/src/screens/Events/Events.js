@@ -1,15 +1,17 @@
-// EventsScreen.js - Complete Modern Redesign
+// EventsScreen.js — Manual events (internal form) + Imported events (external link) — both award points
 import React, {
   useContext,
   useEffect,
   useMemo,
   useRef,
   useState,
+  useCallback,
 } from "react";
 import {
   ActivityIndicator,
   Alert,
   Animated,
+  AppState,
   Dimensions,
   Easing,
   FlatList,
@@ -18,6 +20,7 @@ import {
   Linking,
   Modal,
   Platform,
+  Pressable,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -28,7 +31,7 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
@@ -36,17 +39,32 @@ import axios from "axios";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
 import GuestGuard from "../../components/GuestGuard";
 import io from "socket.io-client";
+import { engagementBus, ENGAGEMENT_EVENTS } from "../../engagement/engagementBus";
 
 const { height, width } = Dimensions.get("window");
+const SHEET_HEIGHT = Math.round(height * 0.85);
+
 const API_BASE = "https://the-deft-crew-production.up.railway.app/api/events";
 const SOCKET_URL = "https://the-deft-crew-production.up.railway.app";
 
-// ─── Category Configuration ──────────────────────────────────────────────
-const CATEGORY_CONFIG = {
-  All: { icon: "apps-outline", color: "#1a1a2e", bg: "#f0f2f6" },
+// ─── Event source detection ─────────────────────────────────────────────
+const isImportedEvent = (event) => {
+  if (!event) return false;
+  if (event.isImported === true) return true;
+  if (typeof event.source === "string" && event.source !== "manual") return true;
+  const hasLink = !!(event.registrationUrl || event.externalUrl);
+  const hasCreator = !!(event.creator || event.creatorEmail);
+  if (hasLink && !hasCreator) return true;
+  return false;
+};
+
+// CATEGORY_THEME is only a *visual theme* map, not the source of truth for
+// which categories exist. The list of categories is derived from events
+// (like cities) plus the backend /categories endpoint. Unknown categories
+// get a deterministic fallback theme derived from their name.
+const CATEGORY_THEME = {
   Hackathons: { icon: "code-outline", color: "#2563eb", bg: "#dbeafe" },
   Workshops: { icon: "construct-outline", color: "#7c3aed", bg: "#ede9fe" },
   Conferences: { icon: "people-outline", color: "#dc2626", bg: "#fef2f2" },
@@ -54,9 +72,55 @@ const CATEGORY_CONFIG = {
   "Career Fairs": { icon: "briefcase-outline", color: "#059669", bg: "#ecfdf5" },
   Concerts: { icon: "musical-notes-outline", color: "#ec4899", bg: "#fce7f3" },
   Poetry: { icon: "book-outline", color: "#8b5cf6", bg: "#f3e8ff" },
+  Classes: { icon: "school-outline", color: "#0891b2", bg: "#cffafe" },
+  "Classes & Workshops": { icon: "school-outline", color: "#0891b2", bg: "#cffafe" },
+  Theatre: { icon: "film-outline", color: "#7c2d12", bg: "#ffedd5" },
+  "Theatre, Arts & Culture": { icon: "film-outline", color: "#7c2d12", bg: "#ffedd5" },
+  "Arts & Crafts": { icon: "color-palette-outline", color: "#db2777", bg: "#fce7f3" },
+  "Festivals & Markets": { icon: "balloon-outline", color: "#ea580c", bg: "#ffedd5" },
+  "Fashion & Lifestyle": { icon: "shirt-outline", color: "#9333ea", bg: "#f3e8ff" },
+  "Food & Culinary": { icon: "restaurant-outline", color: "#dc2626", bg: "#fee2e2" },
+  "Adventure & Tours": { icon: "trail-sign-outline", color: "#16a34a", bg: "#dcfce7" },
+  "Education & Business": { icon: "business-outline", color: "#0f766e", bg: "#ccfbf1" },
+  "Health,Wellness & Beauty": { icon: "heart-outline", color: "#e11d48", bg: "#ffe4e6" },
+  "Sports & Screenings": { icon: "football-outline", color: "#0284c7", bg: "#e0f2fe" },
+  "Movie Night": { icon: "videocam-outline", color: "#4338ca", bg: "#e0e7ff" },
+  Comedy: { icon: "happy-outline", color: "#ca8a04", bg: "#fef9c3" },
+  Automotive: { icon: "car-sport-outline", color: "#334155", bg: "#e2e8f0" },
+  "Concerts & Live Music": { icon: "musical-notes-outline", color: "#ec4899", bg: "#fce7f3" },
 };
 
-const CATEGORIES = Object.keys(CATEGORY_CONFIG);
+// Deterministic fallback palette for categories we haven't themed yet
+const FALLBACK_PALETTE = [
+  { color: "#2563eb", bg: "#dbeafe", icon: "sparkles-outline" },
+  { color: "#7c3aed", bg: "#ede9fe", icon: "sparkles-outline" },
+  { color: "#dc2626", bg: "#fee2e2", icon: "sparkles-outline" },
+  { color: "#d97706", bg: "#fffbeb", icon: "sparkles-outline" },
+  { color: "#059669", bg: "#ecfdf5", icon: "sparkles-outline" },
+  { color: "#ec4899", bg: "#fce7f3", icon: "sparkles-outline" },
+  { color: "#0891b2", bg: "#cffafe", icon: "sparkles-outline" },
+  { color: "#7c2d12", bg: "#ffedd5", icon: "sparkles-outline" },
+];
+
+const hashString = (s) => {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+};
+
+const getCategoryTheme = (cat) => {
+  if (!cat) return { icon: "sparkles-outline", color: "#1a1a2e", bg: "#f0f2f6" };
+  if (CATEGORY_THEME[cat]) return CATEGORY_THEME[cat];
+
+  const lower = String(cat).toLowerCase();
+  const key = Object.keys(CATEGORY_THEME).find(
+    (k) => k.toLowerCase() === lower
+  );
+  if (key) return CATEGORY_THEME[key];
+
+  return FALLBACK_PALETTE[hashString(String(cat)) % FALLBACK_PALETTE.length];
+};
+
 const FALLBACK_BANNER =
   "https://images.unsplash.com/photo-1523240715632-d984bb4b970e?w=1200";
 
@@ -145,50 +209,19 @@ const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel }) 
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 600,
-        delay: index * 80,
-        useNativeDriver: true,
-      }),
-      Animated.spring(translateY, {
-        toValue: 0,
-        friction: 8,
-        tension: 50,
-        delay: index * 80,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scale, {
-        toValue: 1,
-        friction: 7,
-        tension: 55,
-        delay: index * 80,
-        useNativeDriver: true,
-      }),
-      Animated.timing(glowAnim, {
-        toValue: 1,
-        duration: 800,
-        delay: index * 80 + 200,
-        useNativeDriver: true,
-      }),
+      Animated.timing(opacity, { toValue: 1, duration: 600, delay: index * 80, useNativeDriver: true }),
+      Animated.spring(translateY, { toValue: 0, friction: 8, tension: 50, delay: index * 80, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, friction: 7, tension: 55, delay: index * 80, useNativeDriver: true }),
+      Animated.timing(glowAnim, { toValue: 1, duration: 800, delay: index * 80 + 200, useNativeDriver: true }),
     ]).start();
   }, [index]);
 
   const animatePressIn = () => {
-    Animated.spring(cardScale, {
-      toValue: 0.97,
-      friction: 5,
-      useNativeDriver: true,
-    }).start();
+    Animated.spring(cardScale, { toValue: 0.97, friction: 5, useNativeDriver: true }).start();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
-
   const animatePressOut = () => {
-    Animated.spring(cardScale, {
-      toValue: 1,
-      friction: 5,
-      useNativeDriver: true,
-    }).start();
+    Animated.spring(cardScale, { toValue: 1, friction: 5, useNativeDriver: true }).start();
   };
 
   const glowOpacity = glowAnim.interpolate({
@@ -196,13 +229,8 @@ const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel }) 
     outputRange: [0, 0.15, 0],
   });
 
-  const getCategoryColor = () => {
-    return CATEGORY_CONFIG[item.type]?.color || COLORS.primary;
-  };
-
-  const getCategoryBg = () => {
-    return CATEGORY_CONFIG[item.type]?.bg || COLORS.goldSoft;
-  };
+  const theme = getCategoryTheme(item.type);
+  const imported = isImportedEvent(item);
 
   return (
     <AnimatedTouchable
@@ -210,43 +238,38 @@ const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel }) 
       onPress={() => onOpen(item)}
       onPressIn={animatePressIn}
       onPressOut={animatePressOut}
-      style={[
-        styles.card,
-        {
-          opacity,
-          transform: [{ translateY }, { scale: cardScale }],
-        },
-      ]}
+      style={[styles.card, { opacity, transform: [{ translateY }, { scale: cardScale }] }]}
     >
       <LinearGradient
-        colors={['#FFFFFF', '#FAFBFF']}
+        colors={["#FFFFFF", "#FAFBFF"]}
         style={styles.cardGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
         <Animated.View style={[styles.glowEffect, { opacity: glowOpacity }]} />
-        
-        {/* Image Section with Overlay */}
+
         <View style={styles.imageWrapper}>
           <Image source={{ uri: item.image || FALLBACK_BANNER }} style={styles.cardImage} />
-          <LinearGradient
-            colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.6)"]}
-            style={styles.imageOverlay}
-          />
-          
-          {/* Category Badge */}
-          <View style={[styles.categoryBadge, { backgroundColor: getCategoryBg() }]}>
-            <Ionicons name={CATEGORY_CONFIG[item.type]?.icon || "sparkles"} size={10} color={getCategoryColor()} />
-            <Text style={[styles.categoryBadgeText, { color: getCategoryColor() }]}>
+          <LinearGradient colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.6)"]} style={styles.imageOverlay} />
+
+          <View style={[styles.categoryBadge, { backgroundColor: theme.bg }]}>
+            <Ionicons name={theme.icon} size={10} color={theme.color} />
+            <Text style={[styles.categoryBadgeText, { color: theme.color }]} numberOfLines={1}>
               {item.type || "Event"}
             </Text>
           </View>
-          
-          {/* Registered Badge */}
+
+          {imported && (
+            <View style={styles.importedPill}>
+              <Ionicons name="open-outline" size={10} color="#fff" />
+              <Text style={styles.importedPillText}>External</Text>
+            </View>
+          )}
+
           {isRegistered && (
             <View style={styles.registeredBadge}>
               <LinearGradient
-                colors={['#10b981', '#059669']}
+                colors={["#10b981", "#059669"]}
                 style={styles.registeredBadgeGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -256,26 +279,18 @@ const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel }) 
               </LinearGradient>
             </View>
           )}
-          
-          {/* Date Badge */}
+
           <View style={styles.dateBadge}>
-            <LinearGradient
-              colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.5)']}
-              style={styles.dateBadgeGradient}
-            >
+            <LinearGradient colors={["rgba(0,0,0,0.7)", "rgba(0,0,0,0.5)"]} style={styles.dateBadgeGradient}>
               <Text style={styles.dateBadgeText}>{item.date || "TBA"}</Text>
             </LinearGradient>
           </View>
         </View>
 
-        {/* Content Section */}
         <View style={styles.contentWrapper}>
           <View style={styles.headerRow}>
             <View style={styles.orgContainer}>
-              <LinearGradient
-                colors={['#f9c349', '#f5a623']}
-                style={styles.orgAvatar}
-              >
+              <LinearGradient colors={["#f9c349", "#f5a623"]} style={styles.orgAvatar}>
                 <Ionicons name="location" size={16} color="#fff" />
               </LinearGradient>
               <Text style={styles.locationText} numberOfLines={1}>
@@ -284,10 +299,7 @@ const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel }) 
             </View>
           </View>
 
-          <Text style={styles.title} numberOfLines={2}>
-            {item.title}
-          </Text>
-
+          <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
           <Text style={styles.description} numberOfLines={2}>
             {item.description || "Join this exciting event and connect with fellow students."}
           </Text>
@@ -316,22 +328,20 @@ const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel }) 
                 activeOpacity={0.7}
               >
                 <LinearGradient
-                  colors={['#f9c349', '#f5a623']}
+                  colors={imported ? ["#6366f1", "#4f46e5"] : ["#f9c349", "#f5a623"]}
                   style={styles.registerGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 >
-                  <Ionicons name="add" size={16} color="#fff" />
-                  <Text style={styles.registerActionText}>Register</Text>
+                  <Ionicons name={imported ? "open-outline" : "add"} size={16} color="#fff" />
+                  <Text style={styles.registerActionText}>
+                    {imported ? "Open Link" : "Register"}
+                  </Text>
                 </LinearGradient>
               </TouchableOpacity>
             )}
-            
-            <TouchableOpacity
-              style={styles.detailsActionButton}
-              onPress={() => onOpen(item)}
-              activeOpacity={0.7}
-            >
+
+            <TouchableOpacity style={styles.detailsActionButton} onPress={() => onOpen(item)} activeOpacity={0.7}>
               <Text style={styles.detailsActionText}>View Details</Text>
               <Ionicons name="chevron-forward" size={14} color={COLORS.accent} />
             </TouchableOpacity>
@@ -342,7 +352,7 @@ const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel }) 
   );
 };
 
-// ─── Modern Header with Logo ──────────────────────────────────────────────
+// ─── Modern Header ────────────────────────────────────────────────────────
 const ModernHeader = ({ onBack, onMenuPress, showApplied, appliedCount }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(-20)).current;
@@ -360,7 +370,7 @@ const ModernHeader = ({ onBack, onMenuPress, showApplied, appliedCount }) => {
         <TouchableOpacity onPress={onBack} style={styles.headerBtn} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={22} color={COLORS.primary} />
         </TouchableOpacity>
-        
+
         <View style={styles.logoContainer}>
           <LinearGradient
             colors={[COLORS.accent, "#f7d44a"]}
@@ -380,16 +390,16 @@ const ModernHeader = ({ onBack, onMenuPress, showApplied, appliedCount }) => {
           </View>
         </View>
       </View>
-      
-      <TouchableOpacity 
-        onPress={onMenuPress} 
-        style={[styles.headerBtn, showApplied && styles.headerBtnActive]} 
+
+      <TouchableOpacity
+        onPress={onMenuPress}
+        style={[styles.headerBtn, showApplied && styles.headerBtnActive]}
         activeOpacity={0.7}
       >
-        <Ionicons 
-          name={showApplied ? "checkmark-circle" : "apps"} 
-          size={22} 
-          color={showApplied ? COLORS.success : COLORS.primary} 
+        <Ionicons
+          name={showApplied ? "checkmark-circle" : "apps"}
+          size={22}
+          color={showApplied ? COLORS.success : COLORS.primary}
         />
         {appliedCount > 0 && !showApplied && (
           <View style={styles.headerBadge}>
@@ -405,11 +415,14 @@ const ModernHeader = ({ onBack, onMenuPress, showApplied, appliedCount }) => {
 export default function EventsScreen() {
   const { token, user } = useContext(AuthContext);
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [activeTab, setActiveTab] = useState("All");
+  const [activeCity, setActiveCity] = useState("All");
   const [registerEvent, setRegisterEvent] = useState(null);
   const [registeredEventIds, setRegisteredEventIds] = useState([]);
   const [showApplied, setShowApplied] = useState(false);
@@ -419,6 +432,77 @@ export default function EventsScreen() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Dynamic categories fetched from backend
+  const [categories, setCategories] = useState([]);
+
+  const headerOpacity = useRef(new Animated.Value(0)).current;
+  const headerTranslate = useRef(new Animated.Value(-20)).current;
+  const filterOpacity = useRef(new Animated.Value(0)).current;
+  const filterTranslate = useRef(new Animated.Value(20)).current;
+  const listOpacity = useRef(new Animated.Value(0)).current;
+
+  const [form, setForm] = useState({
+    title: "",
+    university: "",
+    city: "",
+    type: "Hackathons",
+    prize: "",
+    deadline: "",
+    description: "",
+    location: "",
+    contact: "",
+    date: "",
+    teamSize: "",
+    registrationUrl: "",
+  });
+
+  const [regForm, setRegForm] = useState({
+    studentName: "",
+    whatsapp: "",
+    studentId: "",
+    email: "",
+  });
+
+  const availableCities = useMemo(() => {
+    if (!events || events.length === 0) return [];
+    const set = new Set();
+    events.forEach((ev) => {
+      const c = (ev.city || "").toString().trim();
+      if (c) set.add(c);
+    });
+    return ["All", ...Array.from(set).sort()];
+  }, [events]);
+
+  // Derive categories from the loaded events (like cities), merging with the
+  // backend-provided list so nothing gets lost during a partial fetch.
+  const availableCategories = useMemo(() => {
+    const set = new Set();
+
+    events.forEach((ev) => {
+      const push = (v) => {
+        if (!v) return;
+        const s = String(v).trim();
+        if (!s) return;
+        if (s.toLowerCase() === "general") return;
+        set.add(s);
+      };
+      push(ev.type);
+      if (Array.isArray(ev.categories)) ev.categories.forEach(push);
+      if (Array.isArray(ev.tags)) ev.tags.forEach(push);
+    });
+
+    (categories || []).forEach((c) => {
+      const s = String(c || "").trim();
+      if (!s) return;
+      if (s.toLowerCase() === "general") return;
+      set.add(s);
+    });
+
+    return ["All", ...Array.from(set).sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: "base" })
+    )];
+  }, [events, categories]);
+
   const pickImage = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -427,7 +511,6 @@ export default function EventsScreen() {
       aspect: [16, 9],
       quality: 0.8,
     });
-
     if (!result.canceled) {
       setSelectedImage(result.assets[0].uri);
     }
@@ -463,6 +546,7 @@ export default function EventsScreen() {
       });
       setSelectedImage(null);
       fetchEvents();
+      fetchCategories();
     } catch (error) {
       Alert.alert("Error", error.response?.data?.error || "Failed to post event.");
     } finally {
@@ -470,89 +554,88 @@ export default function EventsScreen() {
     }
   };
 
-  // ── Animations ──
-  const headerOpacity = useRef(new Animated.Value(0)).current;
-  const headerTranslate = useRef(new Animated.Value(-20)).current;
-  const filterOpacity = useRef(new Animated.Value(0)).current;
-  const filterTranslate = useRef(new Animated.Value(20)).current;
-  const listOpacity = useRef(new Animated.Value(0)).current;
-
-  const [form, setForm] = useState({
-    title: "",
-    university: "",
-    city: "",
-    type: "Hackathons",
-    prize: "",
-    deadline: "",
-    description: "",
-    location: "",
-    contact: "",
-    date: "",
-    teamSize: "",
-    registrationUrl: "",
-  });
-
-  const [regForm, setRegForm] = useState({
-    studentName: "",
-    whatsapp: "",
-    studentId: "",
-    email: "",
-  });
-
   const handleRegister = (eventItem) => {
     if (!eventItem) return;
 
-    let targetUrl =
-      eventItem.registrationUrl ||
-      eventItem.externalUrl ||
-      eventItem.organizerWebsite;
+    if (isEventRegistered(eventItem._id)) {
+      const targetUrl =
+        eventItem.registrationUrl ||
+        eventItem.externalUrl ||
+        eventItem.organizerWebsite;
 
-    if (
-      !targetUrl &&
-      eventItem.contact &&
-      (eventItem.contact.startsWith("http://") ||
-        eventItem.contact.startsWith("https://") ||
-        eventItem.contact.startsWith("www."))
-    ) {
-      targetUrl = eventItem.contact;
-    }
-
-    if (targetUrl) {
-      let formattedUrl = targetUrl.trim();
-      if (
-        !formattedUrl.startsWith("http://") &&
-        !formattedUrl.startsWith("https://")
-      ) {
-        formattedUrl = `https://${formattedUrl}`;
-      }
-      Linking.openURL(formattedUrl).catch(() => {
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(
-          (eventItem.title || "") +
-            " " +
-            (eventItem.organizer || "") +
-            " event registration"
-        )}`;
-        Linking.openURL(searchUrl).catch(() => {
+      if (targetUrl) {
+        let formattedUrl = targetUrl.trim();
+        if (!/^https?:\/\//i.test(formattedUrl)) {
+          formattedUrl = `https://${formattedUrl}`;
+        }
+        Linking.openURL(formattedUrl).catch(() => {
           Alert.alert("Notice", "Unable to open registration link.");
         });
-      });
-    } else {
-      const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(
-        (eventItem.title || "") +
-          " " +
-          (eventItem.organizer || "") +
-          " event registration"
-      )}`;
-      Linking.openURL(searchUrl).catch(() => {
-        Alert.alert("Notice", "No registration link available for this event.");
-      });
+      } else {
+        Alert.alert("Already Registered", "You're already registered for this event.");
+      }
+      return;
     }
+
+    if (isImportedEvent(eventItem)) {
+      (async () => {
+        try {
+          const res = await axios.post(
+            `${API_BASE}/track-external/${eventItem._id}`,
+            {},
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+
+          if (res?.data?.engagement?.popups?.length) {
+            engagementBus.emit(
+              ENGAGEMENT_EVENTS.POPUPS_QUEUED,
+              res.data.engagement.popups
+            );
+          }
+
+          engagementBus.emit(ENGAGEMENT_EVENTS.PROFILE_REFRESH);
+          await fetchRegisteredEvents();
+        } catch (e) {
+          console.log("[track-external] failed:", e?.response?.data || e?.message);
+        }
+      })();
+
+      const targetUrl =
+        eventItem.registrationUrl ||
+        eventItem.externalUrl ||
+        eventItem.organizerWebsite;
+
+      if (targetUrl) {
+        let formattedUrl = targetUrl.trim();
+        if (!/^https?:\/\//i.test(formattedUrl)) {
+          formattedUrl = `https://${formattedUrl}`;
+        }
+        Linking.openURL(formattedUrl).catch(() => {
+          Alert.alert("Notice", "Unable to open registration link.");
+        });
+      } else {
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(
+          (eventItem.title || "") + " " + (eventItem.organizer || "") + " event registration"
+        )}`;
+        Linking.openURL(searchUrl).catch(() => {
+          Alert.alert("Notice", "No registration link available for this event.");
+        });
+      }
+      return;
+    }
+
+    setRegForm({
+      studentName: user?.name || "",
+      email: user?.email || "",
+      whatsapp: "",
+      studentId: "",
+    });
+    setRegisterEvent(eventItem);
   };
 
   useEffect(() => {
     bootstrap();
 
-    // ── Real-Time Socket.io Connection ──
     const socket = io(SOCKET_URL, { transports: ["websocket"] });
     socket.emit("subscribe_events");
 
@@ -566,6 +649,7 @@ export default function EventsScreen() {
       } else {
         fetchEvents();
       }
+      fetchCategories();
     });
 
     socket.on("events:expired", () => {
@@ -577,11 +661,23 @@ export default function EventsScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") {
+        fetchRegisteredEvents();
+      }
+    });
+    return () => sub.remove();
+  }, [token]);
+
   const bootstrap = async () => {
     setLoading(true);
     try {
-      await fetchEvents(true);
-      await fetchRegisteredEvents();
+      await Promise.all([
+        fetchEvents(true),
+        fetchCategories(),
+        fetchRegisteredEvents(),
+      ]);
       runEntranceAnimations();
     } finally {
       setLoading(false);
@@ -596,41 +692,19 @@ export default function EventsScreen() {
     listOpacity.setValue(0);
 
     Animated.parallel([
-      Animated.timing(headerOpacity, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }),
-      Animated.spring(headerTranslate, {
-        toValue: 0,
-        friction: 8,
-        tension: 60,
-        useNativeDriver: true,
-      }),
+      Animated.timing(headerOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.spring(headerTranslate, { toValue: 0, friction: 8, tension: 60, useNativeDriver: true }),
     ]).start();
 
     setTimeout(() => {
       Animated.parallel([
-        Animated.timing(filterOpacity, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        Animated.spring(filterTranslate, {
-          toValue: 0,
-          friction: 8,
-          tension: 60,
-          useNativeDriver: true,
-        }),
+        Animated.timing(filterOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.spring(filterTranslate, { toValue: 0, friction: 8, tension: 60, useNativeDriver: true }),
       ]).start();
     }, 200);
 
     setTimeout(() => {
-      Animated.timing(listOpacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      Animated.timing(listOpacity, { toValue: 1, duration: 300, useNativeDriver: true }).start();
     }, 400);
   };
 
@@ -638,12 +712,28 @@ export default function EventsScreen() {
     try {
       if (!isInitial) setRefreshing(true);
       const res = await axios.get(`${API_BASE}/feed`);
-      const fetchedEvents = Array.isArray(res.data) ? res.data : (res.data?.events || []);
+      const fetchedEvents = Array.isArray(res.data) ? res.data : res.data?.events || [];
       setEvents(fetchedEvents);
     } catch (error) {
       Alert.alert("Error", "Failed to fetch events");
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  // Fetch the distinct category list from the backend.
+  // Fails silently — the derived `availableCategories` still covers the UI.
+  const fetchCategories = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/categories`);
+      const list = Array.isArray(res.data)
+        ? res.data
+        : Array.isArray(res.data?.categories)
+        ? res.data.categories
+        : [];
+      setCategories(list);
+    } catch (error) {
+      console.log("fetchCategories failed:", error?.message);
     }
   };
 
@@ -654,15 +744,30 @@ export default function EventsScreen() {
       return;
     }
     try {
-      const idsRes = await axios.get(`${API_BASE}/my-registrations`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await axios.get(`${API_BASE}/my-registrations`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      setRegisteredEventIds(idsRes.data || []);
-      
-      const detailsRes = await axios.get(`${API_BASE}/my-registrations/details`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setAppliedEventsData(detailsRes.data || []);
+
+      const rawList = Array.isArray(res.data) ? res.data : [];
+
+      const ids = rawList
+        .map((r) => {
+          if (!r) return null;
+          if (typeof r === "string") return r;
+          if (r.eventId && typeof r.eventId === "object") {
+            return r.eventId._id || r.eventId.id || null;
+          }
+          return r.eventId || null;
+        })
+        .filter(Boolean)
+        .map(String);
+
+      setRegisteredEventIds(ids);
+
+      const appliedList = rawList
+        .filter((r) => r && r.eventId && typeof r.eventId === "object")
+        .map((r) => ({ event: r.eventId, registration: r }));
+      setAppliedEventsData(appliedList);
     } catch (error) {
       console.log("Error fetching registrations:", error);
       setRegisteredEventIds([]);
@@ -672,7 +777,7 @@ export default function EventsScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([fetchEvents(), fetchRegisteredEvents()]);
+    await Promise.all([fetchEvents(), fetchCategories(), fetchRegisteredEvents()]);
   };
 
   const handleRegistrationSubmit = async () => {
@@ -684,8 +789,13 @@ export default function EventsScreen() {
       Alert.alert("Authentication Error", "Please login to register.");
       return;
     }
+    if (!registerEvent?._id) {
+      Alert.alert("Error", "No event selected.");
+      return;
+    }
+
     try {
-      await axios.post(
+      const res = await axios.post(
         `${API_BASE}/register`,
         {
           eventId: registerEvent._id,
@@ -696,6 +806,16 @@ export default function EventsScreen() {
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
+      if (res?.data?.engagement?.popups?.length) {
+        engagementBus.emit(
+          ENGAGEMENT_EVENTS.POPUPS_QUEUED,
+          res.data.engagement.popups
+        );
+      }
+
+      engagementBus.emit(ENGAGEMENT_EVENTS.PROFILE_REFRESH);
+
       Alert.alert("Success", "Registration successful.");
       setRegisterEvent(null);
       setRegForm({
@@ -706,7 +826,16 @@ export default function EventsScreen() {
       });
       await fetchRegisteredEvents();
     } catch (error) {
-      Alert.alert("Error", error.response?.data?.error || "Registration failed");
+      if (error?.response?.data?.alreadyRegistered) {
+        Alert.alert("Notice", "You're already registered for this event.");
+        setRegisterEvent(null);
+        await fetchRegisteredEvents();
+        return;
+      }
+      Alert.alert(
+        "Error",
+        error.response?.data?.error || "Registration failed"
+      );
     }
   };
 
@@ -715,7 +844,7 @@ export default function EventsScreen() {
       Alert.alert("Authentication Error", "Please login to cancel registration.");
       return;
     }
-    
+
     Alert.alert(
       "Cancel Registration",
       `Are you sure you want to cancel your registration for "${event.title}"?`,
@@ -727,21 +856,18 @@ export default function EventsScreen() {
           onPress: async () => {
             try {
               await axios.delete(`${API_BASE}/register/${event._id}`, {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${token}` },
               });
               Alert.alert("Success", "Registration cancelled successfully.");
               await fetchRegisteredEvents();
-              if (showApplied) {
-                const detailsRes = await axios.get(`${API_BASE}/my-registrations/details`, {
-                  headers: { Authorization: `Bearer ${token}` }
-                });
-                setAppliedEventsData(detailsRes.data || []);
-              }
             } catch (error) {
-              Alert.alert("Error", error.response?.data?.error || "Failed to cancel registration");
+              Alert.alert(
+                "Error",
+                error.response?.data?.error || "Failed to cancel registration"
+              );
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
@@ -749,151 +875,167 @@ export default function EventsScreen() {
   const normalizeCategoryStr = (str) => {
     if (!str) return "";
     let s = str.toString().trim().toLowerCase();
-    if (s.length > 3 && s.endsWith("s")) {
-      s = s.slice(0, -1);
-    }
+    if (s.length > 3 && s.endsWith("s")) s = s.slice(0, -1);
     return s;
   };
 
   const isCategoryMatch = (event, category) => {
     if (!category || category === "All") return true;
-
     const normTab = normalizeCategoryStr(category);
 
     if (event.type) {
       const normType = normalizeCategoryStr(event.type);
-      if (
-        normType === normTab ||
-        normType.includes(normTab) ||
-        normTab.includes(normType)
-      ) {
+      if (normType === normTab || normType.includes(normTab) || normTab.includes(normType)) {
         return true;
       }
     }
-
     if (Array.isArray(event.categories)) {
-      const matchInArray = event.categories.some((cat) => {
-        const normCat = normalizeCategoryStr(cat);
-        return (
-          normCat === normTab ||
-          normCat.includes(normTab) ||
-          normTab.includes(normCat)
-        );
-      });
-      if (matchInArray) return true;
+      if (event.categories.some((cat) => {
+        const n = normalizeCategoryStr(cat);
+        return n === normTab || n.includes(normTab) || normTab.includes(n);
+      })) return true;
     }
-
     if (Array.isArray(event.tags)) {
-      const matchInTags = event.tags.some((tag) => {
-        const normTag = normalizeCategoryStr(tag);
-        return (
-          normTag === normTab ||
-          normTag.includes(normTab) ||
-          normTab.includes(normTag)
-        );
-      });
-      if (matchInTags) return true;
+      if (event.tags.some((tag) => {
+        const n = normalizeCategoryStr(tag);
+        return n === normTab || n.includes(normTab) || normTab.includes(n);
+      })) return true;
     }
-
     return false;
+  };
+
+  const isCityMatch = (event, city) => {
+    if (!city || city === "All") return true;
+    return (event.city || "").toString().trim().toLowerCase() ===
+           city.toString().trim().toLowerCase();
   };
 
   const filteredEvents = useMemo(() => {
     if (showApplied) {
-      return appliedEventsData.map(item => ({
-        ...item.event,
-        registration: item.registration
-      }));
-    }
-    
-    if (!activeTab || activeTab === "All") {
-      return events;
+      return appliedEventsData
+        .map((item) => ({ ...item.event, registration: item.registration }))
+        .filter((ev) => isCityMatch(ev, activeCity));
     }
 
-    return events.filter((event) => isCategoryMatch(event, activeTab));
-  }, [activeTab, events, showApplied, appliedEventsData]);
+    let list = events;
+    if (activeTab && activeTab !== "All") list = list.filter((e) => isCategoryMatch(e, activeTab));
+    if (activeCity && activeCity !== "All") list = list.filter((e) => isCityMatch(e, activeCity));
+    return list;
+  }, [activeTab, activeCity, events, showApplied, appliedEventsData]);
 
-  const isEventRegistered = (eventId) => {
-    return registeredEventIds.includes(eventId);
-  };
-
+  const isEventRegistered = (eventId) => registeredEventIds.includes(eventId);
   const appliedCount = registeredEventIds.length;
 
-  // ─── Horizontal Category Scroll ──────────────────────────────────────────
-  const CategoryScroll = () => {
-    const scrollX = useRef(new Animated.Value(0)).current;
+  // ✅ FIX: iterate dynamic `availableCategories`. Fixed-width chips, 2-line
+  // labels, and auto-shrink so long names never look like "one big + one small".
+  const CategoryScroll = () => (
+    <Animated.View
+      style={[
+        styles.categoryScrollContainer,
+        { opacity: filterOpacity, transform: [{ translateY: filterTranslate }] },
+      ]}
+    >
+      {!showApplied && availableCategories.length > 1 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryScrollContent}
+        >
+          {availableCategories.map((cat) => {
+            const active = activeTab === cat;
+            const theme = getCategoryTheme(cat);
+            const isAll = cat === "All";
+            const bg = active
+              ? isAll
+                ? COLORS.primary
+                : theme.color
+              : isAll
+              ? COLORS.pageAlt
+              : theme.bg;
+            const fg = active ? "#fff" : isAll ? COLORS.primary : theme.color;
+
+            return (
+              <TouchableOpacity
+                key={cat}
+                style={[
+                  styles.categoryScrollItem,
+                  active && styles.categoryScrollItemActive,
+                  { backgroundColor: bg },
+                ]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setActiveTab(cat);
+                  setShowApplied(false);
+                }}
+              >
+                <View
+                  style={[
+                    styles.categoryScrollIcon,
+                    active && { backgroundColor: "rgba(255,255,255,0.2)" },
+                  ]}
+                >
+                  <Ionicons
+                    name={isAll ? "apps-outline" : theme.icon}
+                    size={16}
+                    color={fg}
+                  />
+                </View>
+
+                <Text
+                  style={[styles.categoryScrollLabel, { color: fg }]}
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.72}
+                  allowFontScaling={false}
+                >
+                  {formatCategoryLabel(cat)}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+    </Animated.View>
+  );
+
+  const CityFilterScroll = () => {
+    if (availableCities.length <= 1) return null;
 
     return (
-      <Animated.View
-        style={[
-          styles.categoryScrollContainer,
-          {
-            opacity: filterOpacity,
-            transform: [{ translateY: filterTranslate }],
-          },
-        ]}
-      >
-        {!showApplied && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoryScrollContent}
-            scrollEventThrottle={16}
-            onScroll={Animated.event(
-              [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-              { useNativeDriver: false }
-            )}
-          >
-            {CATEGORIES.map((cat, index) => {
-              const active = activeTab === cat;
-              const config = CATEGORY_CONFIG[cat];
-              const inputRange = [
-                (index - 1) * 60,
-                index * 60,
-                (index + 1) * 60,
-              ];
-              const scale = scrollX.interpolate({
-                inputRange,
-                outputRange: [0.9, 1, 0.9],
-                extrapolate: "clamp",
-              });
-
-              return (
-                <AnimatedTouchable
-                  key={cat}
-                  style={[
-                    styles.categoryScrollItem,
-                    active && styles.categoryScrollItemActive,
-                    { backgroundColor: active ? config.color : config.bg },
-                    { transform: [{ scale }] },
-                  ]}
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setActiveTab(cat);
-                    setShowApplied(false);
-                  }}
-                >
-                  <View style={[styles.categoryScrollIcon, active && { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                    <Ionicons
-                      name={config.icon}
-                      size={16}
-                      color={active ? "#fff" : config.color}
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.categoryScrollLabel,
-                      active && { color: "#fff" },
-                    ]}
-                  >
-                    {formatCategoryLabel(cat)}
-                  </Text>
-                </AnimatedTouchable>
-              );
-            })}
-          </ScrollView>
-        )}
+      <Animated.View style={[styles.cityScrollContainer, { opacity: filterOpacity }]}>
+        <View style={styles.cityScrollHeader}>
+          <Ionicons name="location-outline" size={13} color={COLORS.muted} />
+          <Text style={styles.cityScrollHeaderText}>Filter by city</Text>
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.cityScrollContent}
+        >
+          {availableCities.map((city) => {
+            const active = activeCity === city;
+            return (
+              <TouchableOpacity
+                key={city}
+                style={[styles.cityChip, active && styles.cityChipActive]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setActiveCity(city);
+                }}
+              >
+                {active && (
+                  <Ionicons name="checkmark-circle" size={12} color="#000" style={{ marginRight: 4 }} />
+                )}
+                <Text style={[styles.cityChipText, active && styles.cityChipTextActive]}>
+                  {city}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </Animated.View>
     );
   };
@@ -903,16 +1045,32 @@ export default function EventsScreen() {
     setShowApplied(!showApplied);
     if (!showApplied) {
       setActiveTab("All");
+      setActiveCity("All");
     }
   };
 
-  // ─── Loading State ──────────────────────────────────────────────────────
+  const handleBackPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (selectedEvent) {
+      setSelectedEvent(null);
+      return;
+    }
+    if (navigation.canGoBack && navigation.canGoBack()) {
+      navigation.goBack();
+    }
+  };
+
+  const closeDetail = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedEvent(null);
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <StatusBar barStyle="dark-content" backgroundColor={COLORS.page} />
-        <ModernHeader 
-          onBack={() => navigation.goBack()} 
+        <ModernHeader
+          onBack={handleBackPress}
           onMenuPress={handleMenuPress}
           showApplied={showApplied}
           appliedCount={appliedCount}
@@ -922,26 +1080,21 @@ export default function EventsScreen() {
     );
   }
 
-  // ─── Main Render ──────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.page} />
 
       <ModernHeader
-        onBack={() => navigation.goBack()}
+        onBack={handleBackPress}
         onMenuPress={handleMenuPress}
         showApplied={showApplied}
         appliedCount={appliedCount}
       />
 
       <CategoryScroll />
+      <CityFilterScroll />
 
-      <Animated.View
-        style={[
-          styles.feedContainer,
-          { opacity: listOpacity },
-        ]}
-      >
+      <Animated.View style={[styles.feedContainer, { opacity: listOpacity }]}>
         <FlatList
           data={filteredEvents}
           keyExtractor={(item) => item._id}
@@ -961,25 +1114,22 @@ export default function EventsScreen() {
           onRefresh={onRefresh}
           ListEmptyComponent={
             !refreshing && (
-              <Animated.View
-                style={[
-                  styles.emptyState,
-                  { opacity: listOpacity },
-                ]}
-              >
+              <Animated.View style={[styles.emptyState, { opacity: listOpacity }]}>
                 <View style={styles.emptyIconContainer}>
-                  <Ionicons 
-                    name={showApplied ? "checkmark-circle" : "calendar"} 
-                    size={48} 
-                    color={COLORS.accent} 
+                  <Ionicons
+                    name={showApplied ? "checkmark-circle" : "calendar"}
+                    size={48}
+                    color={COLORS.accent}
                   />
                 </View>
                 <Text style={styles.emptyTitle}>
                   {showApplied ? "No registered events" : "No events found"}
                 </Text>
                 <Text style={styles.emptyText}>
-                  {showApplied 
-                    ? "You haven't registered for any events yet. Explore and register!" 
+                  {showApplied
+                    ? "You haven't registered for any events yet. Explore and register!"
+                    : activeCity !== "All"
+                    ? `No events in ${activeCity}. Try another city.`
                     : "Check back later for upcoming events in your area."}
                 </Text>
                 {showApplied && (
@@ -987,11 +1137,18 @@ export default function EventsScreen() {
                     style={styles.exploreButton}
                     onPress={() => setShowApplied(false)}
                   >
-                    <LinearGradient
-                      colors={['#f9c349', '#f5a623']}
-                      style={styles.exploreGradient}
-                    >
+                    <LinearGradient colors={["#f9c349", "#f5a623"]} style={styles.exploreGradient}>
                       <Text style={styles.exploreButtonText}>Explore Events</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                )}
+                {!showApplied && activeCity !== "All" && (
+                  <TouchableOpacity
+                    style={styles.exploreButton}
+                    onPress={() => setActiveCity("All")}
+                  >
+                    <LinearGradient colors={["#f9c349", "#f5a623"]} style={styles.exploreGradient}>
+                      <Text style={styles.exploreButtonText}>Clear City Filter</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 )}
@@ -1001,74 +1158,111 @@ export default function EventsScreen() {
         />
       </Animated.View>
 
-      {/* Event Detail Modal - Same as before but with modern styling */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* EVENT DETAIL — BOTTOM SHEET */}
+      {/* ═══════════════════════════════════════════════════════════ */}
       <Modal
         visible={!!selectedEvent}
         animationType="slide"
-        presentationStyle="fullScreen"
-        onRequestClose={() => setSelectedEvent(null)}
+        transparent={true}
+        onRequestClose={closeDetail}
         statusBarTranslucent={true}
       >
-        <SafeAreaView style={styles.detailScreen} edges={["top"]}>
-          {selectedEvent && (
-            <>
-              <View style={styles.detailContainer}>
-                <ScrollView 
-                  showsVerticalScrollIndicator={false} 
-                  bounces={false}
-                  contentContainerStyle={styles.detailScrollContent}
+        <Pressable style={styles.sheetBackdrop} onPress={closeDetail}>
+          <Pressable
+            style={[styles.sheetContainer, { height: SHEET_HEIGHT }]}
+            onPress={(e) => e.stopPropagation?.()}
+          >
+            {selectedEvent && (
+              <>
+                <View style={styles.sheetHeader}>
+                  <View style={styles.sheetGrabber} />
+                  <View style={styles.sheetHeaderRow}>
+                    <TouchableOpacity
+                      onPress={closeDetail}
+                      activeOpacity={0.7}
+                      style={styles.sheetHeaderBtn}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Ionicons name="arrow-back" size={20} color={COLORS.primary} />
+                    </TouchableOpacity>
+
+                    <Text style={styles.sheetHeaderTitle} numberOfLines={1}>
+                      Event Details
+                    </Text>
+
+                    <TouchableOpacity
+                      onPress={closeDetail}
+                      activeOpacity={0.7}
+                      style={styles.sheetHeaderBtn}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Ionicons name="close" size={20} color={COLORS.primary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <ScrollView
+                  style={styles.sheetScroll}
+                  contentContainerStyle={styles.sheetScrollContent}
+                  showsVerticalScrollIndicator={true}
+                  keyboardShouldPersistTaps="handled"
+                  bounces={true}
+                  nestedScrollEnabled={true}
                 >
-                  <View style={styles.detailImageWrapper}>
+                  <View style={styles.sheetImageWrapper}>
                     <Image
                       source={{ uri: selectedEvent.image || FALLBACK_BANNER }}
-                      style={styles.detailBanner}
+                      style={styles.sheetBanner}
                       resizeMode="cover"
                     />
                     <LinearGradient
-                      colors={["rgba(0,0,0,0.1)", "rgba(0,0,0,0.85)"]}
-                      style={styles.detailBannerOverlay}
+                      colors={["rgba(0,0,0,0.05)", "rgba(0,0,0,0.55)"]}
+                      style={styles.sheetBannerOverlay}
                     />
-                    <TouchableOpacity
-                      onPress={() => setSelectedEvent(null)}
-                      activeOpacity={0.86}
-                      style={styles.backButtonWrap}
-                    >
-                      <View style={styles.roundGlass}>
-                        <Ionicons name="arrow-back" size={20} color="#fff" />
-                      </View>
-                    </TouchableOpacity>
-                    {selectedEvent.registration && (
-                      <View style={styles.detailRegisteredBadge}>
-                        <View style={styles.detailRegisteredBlur}>
-                          <Ionicons name="checkmark-circle" size={14} color={COLORS.success} />
-                          <Text style={styles.detailRegisteredText}>Registered</Text>
-                        </View>
+                    {isEventRegistered(selectedEvent._id) && (
+                      <View style={styles.sheetRegisteredBadge}>
+                        <Ionicons name="checkmark-circle" size={12} color={COLORS.success} />
+                        <Text style={styles.sheetRegisteredText}>Registered</Text>
                       </View>
                     )}
                   </View>
-                  
-                  <View style={styles.detailBody}>
+
+                  <View style={styles.sheetBody}>
                     <View style={styles.detailTopRow}>
-                      <View style={[styles.detailTag, { backgroundColor: CATEGORY_CONFIG[selectedEvent.type]?.bg || COLORS.goldSoft }]}>
+                      <View
+                        style={[
+                          styles.detailTag,
+                          { backgroundColor: getCategoryTheme(selectedEvent.type).bg },
+                        ]}
+                      >
                         <Ionicons
-                          name={CATEGORY_CONFIG[selectedEvent.type]?.icon || "sparkles"}
+                          name={getCategoryTheme(selectedEvent.type).icon}
                           size={12}
-                          color={CATEGORY_CONFIG[selectedEvent.type]?.color || COLORS.primary}
+                          color={getCategoryTheme(selectedEvent.type).color}
                         />
-                        <Text style={[styles.detailTagText, { color: CATEGORY_CONFIG[selectedEvent.type]?.color || COLORS.primary }]}>
+                        <Text
+                          style={[
+                            styles.detailTagText,
+                            { color: getCategoryTheme(selectedEvent.type).color },
+                          ]}
+                          numberOfLines={1}
+                        >
                           {selectedEvent.type}
                         </Text>
                       </View>
                       {isEventRegistered(selectedEvent._id) && (
                         <View style={[styles.detailTag, { backgroundColor: "#d1fae5" }]}>
                           <Ionicons name="checkmark-circle" size={12} color={COLORS.success} />
-                          <Text style={[styles.detailTagText, { color: COLORS.success }]}>Registered</Text>
+                          <Text style={[styles.detailTagText, { color: COLORS.success }]}>
+                            Registered
+                          </Text>
                         </View>
                       )}
                     </View>
-                    
+
                     <Text style={styles.detailTitle}>{selectedEvent.title}</Text>
-                    
+
                     <View style={styles.detailOrgRow}>
                       <LinearGradient
                         colors={[COLORS.gradientStart, COLORS.gradientEnd]}
@@ -1080,45 +1274,94 @@ export default function EventsScreen() {
                         {selectedEvent.city || "City"}
                       </Text>
                     </View>
-                    
+
                     <View style={styles.specRow}>
-                      <View style={[styles.specCard, styles.specCardLast]}>
+                      <View style={styles.specCard}>
                         <View style={styles.specIcon}>
                           <Ionicons name="calendar" size={18} color={COLORS.accent} />
                         </View>
                         <Text style={styles.specTitle}>Date</Text>
                         <Text style={styles.specText}>{selectedEvent.date || "TBA"}</Text>
                       </View>
+
+                      <View style={styles.specCard}>
+                        <View style={styles.specIcon}>
+                          <Ionicons name="hourglass" size={18} color={COLORS.accent} />
+                        </View>
+                        <Text style={styles.specTitle}>Deadline</Text>
+                        <Text style={styles.specText}>{selectedEvent.deadline || "Open"}</Text>
+                      </View>
+
+                      <View style={[styles.specCard, styles.specCardLast]}>
+                        <View style={styles.specIcon}>
+                          <Ionicons name="people" size={18} color={COLORS.accent} />
+                        </View>
+                        <Text style={styles.specTitle}>Team</Text>
+                        <Text style={styles.specText}>{selectedEvent.teamSize || "Any"}</Text>
+                      </View>
                     </View>
-                    
+
                     <View style={styles.sectionCard}>
                       <Text style={styles.sectionCardTitle}>Description</Text>
                       <Text style={styles.sectionCardBody}>
                         {selectedEvent.description || "No description provided."}
                       </Text>
                     </View>
-                    
+
                     <View style={styles.sectionCard}>
                       <Text style={styles.sectionCardTitle}>Location</Text>
                       <Text style={styles.sectionCardBody}>
-                        <Ionicons name="location" size={14} color={COLORS.accent} /> {selectedEvent.location || "Online event"}
+                        <Ionicons name="location" size={14} color={COLORS.accent} />{" "}
+                        {selectedEvent.location || "Online event"}
                       </Text>
                     </View>
-                    
 
-                    
-                    <View style={styles.detailBottomSpacer} />
+                    {selectedEvent.university ? (
+                      <View style={styles.sectionCard}>
+                        <Text style={styles.sectionCardTitle}>University</Text>
+                        <Text style={styles.sectionCardBody}>
+                          <Ionicons name="school" size={14} color={COLORS.accent} />{" "}
+                          {selectedEvent.university}
+                        </Text>
+                      </View>
+                    ) : null}
+
+                    {selectedEvent.prize ? (
+                      <View style={styles.sectionCard}>
+                        <Text style={styles.sectionCardTitle}>Prize Pool</Text>
+                        <Text style={styles.sectionCardBody}>
+                          <Ionicons name="trophy" size={14} color={COLORS.accent} />{" "}
+                          {selectedEvent.prize}
+                        </Text>
+                      </View>
+                    ) : null}
+
+                    {selectedEvent.contact ? (
+                      <View style={styles.sectionCard}>
+                        <Text style={styles.sectionCardTitle}>Contact</Text>
+                        <Text style={styles.sectionCardBody}>
+                          <Ionicons name="call" size={14} color={COLORS.accent} />{" "}
+                          {selectedEvent.contact}
+                        </Text>
+                      </View>
+                    ) : null}
+
+                    <View style={{ height: 24 }} />
                   </View>
                 </ScrollView>
-              </View>
-              
-              {/* Sticky Footer */}
-              <View style={styles.stickyFooter}>
-                <BlurView intensity={92} style={styles.stickyBlur}>
-                  <View style={styles.stickyContent}>
-                    <View>
-                      <Text style={styles.stickyLabel}>Register before</Text>
-                      <Text style={styles.stickyValue}>
+
+                <View
+                  style={[
+                    styles.sheetStickyFooter,
+                    { paddingBottom: (insets.bottom || 0) + 12 },
+                  ]}
+                >
+                  <View style={styles.sheetStickyContent}>
+                    <View style={{ flex: 1, marginRight: 8 }}>
+                      <Text style={styles.stickyLabel}>
+                        {isImportedEvent(selectedEvent) ? "External event" : "Register before"}
+                      </Text>
+                      <Text style={styles.stickyValue} numberOfLines={1}>
                         {selectedEvent.deadline || "Limited Spots"}
                       </Text>
                     </View>
@@ -1131,37 +1374,50 @@ export default function EventsScreen() {
                       }}
                     >
                       <LinearGradient
-                        colors={[COLORS.primary, COLORS.gradientEnd]}
+                        colors={
+                          isImportedEvent(selectedEvent)
+                            ? ["#6366f1", "#4f46e5"]
+                            : [COLORS.primary, COLORS.gradientEnd]
+                        }
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={styles.stickyButton}
                       >
-                        <Text style={styles.stickyButtonText}>Register Now</Text>
-                        <Ionicons name="open-outline" size={18} color={COLORS.accent} />
+                        <Text style={styles.stickyButtonText}>
+                          {isImportedEvent(selectedEvent) ? "Open Link" : "Register Now"}
+                        </Text>
+                        <Ionicons
+                          name={isImportedEvent(selectedEvent) ? "open-outline" : "arrow-forward"}
+                          size={16}
+                          color={COLORS.accent}
+                        />
                       </LinearGradient>
                     </TouchableOpacity>
                   </View>
-                </BlurView>
-              </View>
-            </>
-          )}
-        </SafeAreaView>
+                </View>
+              </>
+            )}
+          </Pressable>
+        </Pressable>
       </Modal>
 
-      {/* Create Event Modal - Fixed for all phones */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* CREATE EVENT MODAL */}
+      {/* ═══════════════════════════════════════════════════════════ */}
       <Modal
         visible={isModalVisible}
         animationType="slide"
-        presentationStyle="fullScreen"
+        presentationStyle="pageSheet"
         onRequestClose={() => setModalVisible(false)}
         statusBarTranslucent={true}
       >
-        <SafeAreaView style={styles.modalScreen} edges={["top", "bottom"]}>
+        <View style={styles.modalScreen}>
+          <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <View style={styles.modalContainer}>
               <LinearGradient
                 colors={[COLORS.gradientStart, COLORS.gradientEnd]}
-                style={styles.modalHero}
+                style={[styles.modalHero, { paddingTop: (insets.top || 0) + 12 }]}
               >
                 <View style={styles.modalHeroTop}>
                   <View style={styles.modalHeroTitleRow}>
@@ -1180,16 +1436,19 @@ export default function EventsScreen() {
                   Publish an event and connect with your campus community
                 </Text>
               </LinearGradient>
-              
+
               <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={styles.keyboardAvoidView}
-                keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
               >
-                <ScrollView 
+                <ScrollView
                   style={styles.formScrollView}
                   showsVerticalScrollIndicator={false}
-                  contentContainerStyle={styles.formScrollContent}
+                  contentContainerStyle={[
+                    styles.formScrollContent,
+                    { paddingBottom: (insets.bottom || 12) + 24 },
+                  ]}
                   keyboardShouldPersistTaps="handled"
                 >
                   <View style={styles.inputGroup}>
@@ -1202,7 +1461,7 @@ export default function EventsScreen() {
                       onChangeText={(text) => setForm({ ...form, title: text })}
                     />
                   </View>
-                  
+
                   <View style={styles.row}>
                     <View style={styles.colLeft}>
                       <View style={styles.inputGroup}>
@@ -1229,45 +1488,58 @@ export default function EventsScreen() {
                       </View>
                     </View>
                   </View>
-                  
+
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>Category *</Text>
+                    {/* ✅ FIX: long labels shrink and stay on one line inside the pill */}
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                      {CATEGORIES.filter((item) => item !== "All").map((cat) => {
-                        const selected = form.type === cat;
-                        const config = CATEGORY_CONFIG[cat];
-                        return (
-                          <TouchableOpacity
-                            key={cat}
-                            activeOpacity={0.86}
-                            onPress={() => setForm({ ...form, type: cat })}
-                            style={[
-                              styles.optionPill,
-                              selected && styles.optionPillActive,
-                              { borderColor: selected ? config.color : COLORS.line }
-                            ]}
-                          >
-                            {selected && (
-                              <LinearGradient
-                                colors={[config.color, config.color + "80"]}
-                                style={StyleSheet.absoluteFillObject}
+                      {availableCategories
+                        .filter((item) => item !== "All")
+                        .map((cat) => {
+                          const selected = form.type === cat;
+                          const theme = getCategoryTheme(cat);
+                          return (
+                            <TouchableOpacity
+                              key={cat}
+                              activeOpacity={0.86}
+                              onPress={() => setForm({ ...form, type: cat })}
+                              style={[
+                                styles.optionPill,
+                                selected && styles.optionPillActive,
+                                { borderColor: selected ? theme.color : COLORS.line },
+                              ]}
+                            >
+                              {selected && (
+                                <LinearGradient
+                                  colors={[theme.color, theme.color + "80"]}
+                                  style={StyleSheet.absoluteFillObject}
+                                />
+                              )}
+                              <Ionicons
+                                name={theme.icon}
+                                size={14}
+                                color={selected ? "#fff" : theme.color}
+                                style={{ marginRight: 4 }}
                               />
-                            )}
-                            <Ionicons
-                              name={config.icon}
-                              size={14}
-                              color={selected ? "#fff" : config.color}
-                              style={{ marginRight: 4 }}
-                            />
-                            <Text style={[styles.optionPillText, selected && styles.optionPillTextActive]}>
-                              {cat}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
+                              <Text
+                                style={[
+                                  styles.optionPillText,
+                                  selected && styles.optionPillTextActive,
+                                ]}
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                                adjustsFontSizeToFit
+                                minimumFontScale={0.7}
+                                allowFontScaling={false}
+                              >
+                                {cat}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
                     </ScrollView>
                   </View>
-                  
+
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>Description</Text>
                     <TextInput
@@ -1279,7 +1551,7 @@ export default function EventsScreen() {
                       onChangeText={(text) => setForm({ ...form, description: text })}
                     />
                   </View>
-                  
+
                   <View style={styles.row}>
                     <View style={styles.colLeft}>
                       <View style={styles.inputGroup}>
@@ -1306,7 +1578,7 @@ export default function EventsScreen() {
                       </View>
                     </View>
                   </View>
-                  
+
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>Location / Venue</Text>
                     <TextInput
@@ -1317,7 +1589,7 @@ export default function EventsScreen() {
                       onChangeText={(text) => setForm({ ...form, location: text })}
                     />
                   </View>
-                  
+
                   <View style={styles.row}>
                     <View style={styles.colLeft}>
                       <View style={styles.inputGroup}>
@@ -1344,7 +1616,7 @@ export default function EventsScreen() {
                       </View>
                     </View>
                   </View>
-                  
+
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>Contact Info</Text>
                     <TextInput
@@ -1355,7 +1627,7 @@ export default function EventsScreen() {
                       onChangeText={(text) => setForm({ ...form, contact: text })}
                     />
                   </View>
-                  
+
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>Original Event / Registration Link</Text>
                     <TextInput
@@ -1368,10 +1640,14 @@ export default function EventsScreen() {
                       keyboardType="url"
                     />
                   </View>
-                  
+
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>Event Banner</Text>
-                    <TouchableOpacity style={styles.uploadCard} activeOpacity={0.88} onPress={pickImage}>
+                    <TouchableOpacity
+                      style={styles.uploadCard}
+                      activeOpacity={0.88}
+                      onPress={pickImage}
+                    >
                       {selectedImage ? (
                         <Image source={{ uri: selectedImage }} style={styles.uploadPreview} />
                       ) : (
@@ -1385,7 +1661,7 @@ export default function EventsScreen() {
                       )}
                     </TouchableOpacity>
                   </View>
-                  
+
                   <TouchableOpacity
                     style={styles.primaryFormButton}
                     activeOpacity={0.88}
@@ -1408,16 +1684,18 @@ export default function EventsScreen() {
                       )}
                     </LinearGradient>
                   </TouchableOpacity>
-                  
+
                   <View style={styles.formBottomSpacer} />
                 </ScrollView>
               </KeyboardAvoidingView>
             </View>
           </TouchableWithoutFeedback>
-        </SafeAreaView>
+        </View>
       </Modal>
 
-      {/* Registration Modal */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* REGISTRATION MODAL — only for manual/admin events */}
+      {/* ═══════════════════════════════════════════════════════════ */}
       <GuestGuard
         title="View Your Discounts"
         message="Sign in to see your claimed offers and discounts."
@@ -1425,17 +1703,18 @@ export default function EventsScreen() {
         <Modal
           visible={!!registerEvent}
           animationType="slide"
-          presentationStyle="fullScreen"
+          presentationStyle="pageSheet"
           onRequestClose={() => setRegisterEvent(null)}
           statusBarTranslucent={true}
         >
-          <SafeAreaView style={styles.modalScreen} edges={["top", "bottom"]}>
+          <View style={styles.modalScreen}>
+            <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
             {registerEvent && (
               <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                 <View style={styles.modalContainer}>
                   <LinearGradient
                     colors={[COLORS.gradientStart, COLORS.gradientEnd]}
-                    style={styles.modalHero}
+                    style={[styles.modalHero, { paddingTop: (insets.top || 0) + 12 }]}
                   >
                     <View style={styles.modalHeroTop}>
                       <View style={styles.modalHeroTitleRow}>
@@ -1450,18 +1729,23 @@ export default function EventsScreen() {
                         <Ionicons name="close" size={22} color={COLORS.accent} />
                       </TouchableOpacity>
                     </View>
-                    <Text style={styles.modalHeroSubtitle}>{registerEvent.title}</Text>
+                    <Text style={styles.modalHeroSubtitle} numberOfLines={2}>
+                      {registerEvent.title}
+                    </Text>
                   </LinearGradient>
-                  
+
                   <KeyboardAvoidingView
                     behavior={Platform.OS === "ios" ? "padding" : "height"}
                     style={styles.keyboardAvoidView}
-                    keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+                    keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
                   >
-                    <ScrollView 
+                    <ScrollView
                       style={styles.formScrollView}
                       showsVerticalScrollIndicator={false}
-                      contentContainerStyle={styles.formScrollContent}
+                      contentContainerStyle={[
+                        styles.formScrollContent,
+                        { paddingBottom: (insets.bottom || 12) + 24 },
+                      ]}
                       keyboardShouldPersistTaps="handled"
                     >
                       <View style={styles.inputGroup}>
@@ -1471,10 +1755,12 @@ export default function EventsScreen() {
                           placeholder="Enter your full name"
                           placeholderTextColor="#8a8a8a"
                           value={regForm.studentName}
-                          onChangeText={(text) => setRegForm({ ...regForm, studentName: text })}
+                          onChangeText={(text) =>
+                            setRegForm({ ...regForm, studentName: text })
+                          }
                         />
                       </View>
-                      
+
                       <View style={styles.inputGroup}>
                         <Text style={styles.inputLabel}>University Email *</Text>
                         <TextInput
@@ -1487,7 +1773,7 @@ export default function EventsScreen() {
                           onChangeText={(text) => setRegForm({ ...regForm, email: text })}
                         />
                       </View>
-                      
+
                       <View style={styles.inputGroup}>
                         <Text style={styles.inputLabel}>WhatsApp Number *</Text>
                         <TextInput
@@ -1499,7 +1785,7 @@ export default function EventsScreen() {
                           onChangeText={(text) => setRegForm({ ...regForm, whatsapp: text })}
                         />
                       </View>
-                      
+
                       <View style={styles.inputGroup}>
                         <Text style={styles.inputLabel}>Student ID / CNIC</Text>
                         <TextInput
@@ -1510,14 +1796,14 @@ export default function EventsScreen() {
                           onChangeText={(text) => setRegForm({ ...regForm, studentId: text })}
                         />
                       </View>
-                      
+
                       <TouchableOpacity
                         style={styles.primaryFormButton}
                         activeOpacity={0.88}
                         onPress={handleRegistrationSubmit}
                       >
                         <LinearGradient
-                          colors={['#f9c349', '#f5a623']}
+                          colors={["#f9c349", "#f5a623"]}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 0 }}
                           style={styles.primaryFormGradient}
@@ -1526,29 +1812,24 @@ export default function EventsScreen() {
                           <Ionicons name="checkmark-circle" size={20} color="#fff" />
                         </LinearGradient>
                       </TouchableOpacity>
-                      
+
                       <View style={styles.formBottomSpacer} />
                     </ScrollView>
                   </KeyboardAvoidingView>
                 </View>
               </TouchableWithoutFeedback>
             )}
-          </SafeAreaView>
+          </View>
         </Modal>
       </GuestGuard>
-
     </SafeAreaView>
   );
 }
 
-// ─── Modern Styles ───────────────────────────────────────────────────────────────────
+// ─── Styles ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: COLORS.page 
-  },
+  container: { flex: 1, backgroundColor: COLORS.page },
 
-  // Modern Header
   modernHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -1559,79 +1840,43 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.line,
   },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
+  headerLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
   headerBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 34, height: 34, borderRadius: 10,
     backgroundColor: COLORS.surface,
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
+    justifyContent: "center", alignItems: "center", position: "relative",
   },
   headerBtnActive: {
-    backgroundColor: "#d1fae5",
-    borderWidth: 1,
-    borderColor: COLORS.success,
+    backgroundColor: "#d1fae5", borderWidth: 1, borderColor: COLORS.success,
   },
   headerBadge: {
-    position: "absolute",
-    top: -3,
-    right: -3,
-    minWidth: 16,
-    height: 16,
-    paddingHorizontal: 3,
-    borderRadius: 8,
-    backgroundColor: COLORS.danger,
-    justifyContent: "center",
-    alignItems: "center",
+    position: "absolute", top: -3, right: -3, minWidth: 16, height: 16,
+    paddingHorizontal: 3, borderRadius: 8, backgroundColor: COLORS.danger,
+    justifyContent: "center", alignItems: "center",
   },
-  headerBadgeText: {
-    color: "#fff",
-    fontSize: 9,
-    fontWeight: "800",
-  },
-  logoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginLeft: 10,
-  },
+  headerBadgeText: { color: "#fff", fontSize: 9, fontWeight: "800" },
+  logoContainer: { flexDirection: "row", alignItems: "center", marginLeft: 10 },
   logoBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
+    width: 32, height: 32, borderRadius: 8,
+    justifyContent: "center", alignItems: "center",
     shadowColor: COLORS.accent,
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOpacity: 0.3, shadowRadius: 6, elevation: 4,
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: COLORS.primary,
-    letterSpacing: 0.3,
-    marginLeft: 8,
+    fontSize: 16, fontWeight: "800", color: COLORS.primary,
+    letterSpacing: 0.3, marginLeft: 8,
   },
   headerSubtitle: {
-    fontSize: 9,
-    color: COLORS.muted,
-    fontWeight: "600",
-    marginLeft: 8,
-    letterSpacing: 0.5,
+    fontSize: 9, color: COLORS.muted, fontWeight: "600",
+    marginLeft: 8, letterSpacing: 0.5,
   },
 
-  // Category Scroll
+  // ─── Category chips (FIXED: uniform width, 2-line label, auto-shrink) ─
   categoryScrollContainer: {
     paddingHorizontal: 10,
     paddingTop: 10,
-    paddingBottom: 8,
+    paddingBottom: 6,
   },
   categoryScrollContent: {
     paddingHorizontal: 4,
@@ -1639,15 +1884,16 @@ const styles = StyleSheet.create({
   },
   categoryScrollItem: {
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
     paddingHorizontal: 6,
-    paddingVertical: 8,
+    paddingTop: 8,
+    paddingBottom: 6,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: COLORS.line,
-    marginRight: 2,
-    minWidth: 42,
-    height: 52,
+    marginRight: 6,
+    width: 86,
+    minHeight: 68,
     position: "relative",
     overflow: "hidden",
   },
@@ -1655,672 +1901,406 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   categoryScrollIcon: {
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
     borderRadius: 6,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 0,
+    marginBottom: 2,
   },
   categoryScrollLabel: {
-    fontSize: 9,
+    fontSize: 8.5,
+    lineHeight: 10.5,
     fontWeight: "700",
     color: COLORS.body,
     textAlign: "center",
     marginTop: 1,
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
 
-  feedContainer: {
-    flex: 1,
+  cityScrollContainer: {
+    paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: COLORS.line,
+    backgroundColor: COLORS.page,
   },
+  cityScrollHeader: {
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 16, paddingBottom: 6,
+  },
+  cityScrollHeaderText: {
+    fontSize: 10, fontWeight: "700", color: COLORS.muted,
+    letterSpacing: 0.4, marginLeft: 4, textTransform: "uppercase",
+  },
+  cityScrollContent: { paddingHorizontal: 14, paddingVertical: 2 },
+  cityChip: {
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+    borderWidth: 1, borderColor: COLORS.line,
+    backgroundColor: COLORS.card, marginRight: 8,
+  },
+  cityChipActive: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
+  cityChipText: { fontSize: 12, fontWeight: "600", color: COLORS.body },
+  cityChipTextActive: { color: "#000", fontWeight: "800" },
 
-  // Skeleton
+  feedContainer: { flex: 1 },
+
   skeletonCard: {
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    overflow: "hidden",
-    marginBottom: 12,
-    shadowColor: "#000",
+    backgroundColor: "#fff", borderRadius: 14, overflow: "hidden",
+    marginBottom: 12, shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: COLORS.line,
+    shadowOpacity: 0.06, shadowRadius: 12, elevation: 4,
+    borderWidth: 1, borderColor: COLORS.line,
   },
-  skeletonImage: {
-    width: "100%",
-    height: 140,
-    backgroundColor: "#e8ecf1",
-    overflow: "hidden",
-  },
+  skeletonImage: { width: "100%", height: 140, backgroundColor: "#e8ecf1", overflow: "hidden" },
   shimmerOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: "rgba(255,255,255,0.4)",
   },
   skeletonContent: { padding: 12 },
   skeletonTitle: {
-    height: 18,
-    width: "75%",
-    backgroundColor: "#e8ecf1",
-    borderRadius: 6,
-    marginBottom: 6,
+    height: 18, width: "75%", backgroundColor: "#e8ecf1",
+    borderRadius: 6, marginBottom: 6,
   },
   skeletonText: {
-    height: 11,
-    width: "90%",
-    backgroundColor: "#e8ecf1",
-    borderRadius: 4,
-    marginBottom: 4,
+    height: 11, width: "90%", backgroundColor: "#e8ecf1",
+    borderRadius: 4, marginBottom: 4,
   },
   skeletonTextShort: {
-    height: 11,
-    width: "55%",
-    backgroundColor: "#e8ecf1",
-    borderRadius: 4,
-    marginBottom: 8,
-    marginTop: 4,
+    height: 11, width: "55%", backgroundColor: "#e8ecf1",
+    borderRadius: 4, marginBottom: 8, marginTop: 4,
   },
   skeletonButton: {
-    width: 80,
-    height: 32,
-    backgroundColor: "#e8ecf1",
-    borderRadius: 10,
+    width: 80, height: 32, backgroundColor: "#e8ecf1", borderRadius: 10,
   },
+  skeletonFooter: { flexDirection: "row" },
 
-  // Modern Card
-  listContent: {
-    paddingHorizontal: 14,
-    paddingTop: 4,
-    paddingBottom: 30,
-  },
+  listContent: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 30 },
   card: {
-    borderRadius: 16,
-    overflow: "hidden",
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.04)",
+    borderRadius: 16, overflow: "hidden", marginBottom: 12,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06, shadowRadius: 16, elevation: 4,
+    borderWidth: 1, borderColor: "rgba(0,0,0,0.04)",
   },
-  cardGradient: {
-    position: "relative",
-    overflow: "hidden",
-  },
+  cardGradient: { position: "relative", overflow: "hidden" },
   glowEffect: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: COLORS.accent,
-    borderRadius: 16,
+    position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: COLORS.accent, borderRadius: 16,
   },
-  imageWrapper: {
-    position: "relative",
-    width: "100%",
-    height: 170,
-  },
-  cardImage: {
-    width: "100%",
-    height: "100%",
-  },
-  imageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
+  imageWrapper: { position: "relative", width: "100%", height: 170 },
+  cardImage: { width: "100%", height: "100%" },
+  imageOverlay: { ...StyleSheet.absoluteFillObject },
   categoryBadge: {
-    position: "absolute",
-    bottom: 10,
-    left: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    position: "absolute", bottom: 10, left: 10,
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+    maxWidth: "65%",
   },
-  categoryBadgeText: {
-    fontSize: 9,
-    fontWeight: "700",
-    marginLeft: 3,
+  categoryBadgeText: { fontSize: 9, fontWeight: "700", marginLeft: 3, flexShrink: 1 },
+  importedPill: {
+    position: "absolute", top: 10, left: 10,
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+    backgroundColor: "rgba(99,102,241,0.85)",
+  },
+  importedPillText: {
+    fontSize: 9, fontWeight: "700", color: "#fff", marginLeft: 3,
   },
   registeredBadge: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    borderRadius: 8,
-    overflow: "hidden",
+    position: "absolute", top: 10, right: 10,
+    borderRadius: 8, overflow: "hidden",
   },
   registeredBadgeGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 8, paddingVertical: 4,
   },
   registeredBadgeText: {
-    fontSize: 9,
-    fontWeight: "700",
-    color: "#fff",
-    marginLeft: 2,
+    fontSize: 9, fontWeight: "700", color: "#fff", marginLeft: 2,
   },
   dateBadge: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    borderRadius: 8,
-    overflow: "hidden",
+    position: "absolute", bottom: 10, right: 10,
+    borderRadius: 8, overflow: "hidden",
   },
-  dateBadgeGradient: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  dateBadgeText: {
-    fontSize: 9,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  contentWrapper: {
-    padding: 14,
-  },
+  dateBadgeGradient: { paddingHorizontal: 8, paddingVertical: 4 },
+  dateBadgeText: { fontSize: 9, fontWeight: "700", color: "#fff" },
+  contentWrapper: { padding: 14 },
   headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 6,
+    flexDirection: "row", justifyContent: "space-between",
+    alignItems: "center", marginBottom: 6,
   },
-  orgContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
+  orgContainer: { flexDirection: "row", alignItems: "center", flex: 1 },
   orgAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 8,
+    width: 32, height: 32, borderRadius: 16,
+    justifyContent: "center", alignItems: "center", marginRight: 8,
   },
-  orgAvatarText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  orgName: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: COLORS.primary,
-  },
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  locationText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.primary,
-  },
+  locationText: { fontSize: 14, fontWeight: "600", color: COLORS.primary },
   title: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: COLORS.primary,
-    marginBottom: 4,
-    lineHeight: 20,
+    fontSize: 16, fontWeight: "700", color: COLORS.primary,
+    marginBottom: 4, lineHeight: 20,
   },
   description: {
-    fontSize: 12,
-    color: COLORS.body,
-    lineHeight: 16,
-    marginBottom: 8,
+    fontSize: 12, color: COLORS.body, lineHeight: 16, marginBottom: 8,
   },
-  statsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  statItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  statText: {
-    fontSize: 10,
-    color: COLORS.muted,
-    marginLeft: 3,
-    fontWeight: "500",
-  },
+  statsRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
+  statItem: { flexDirection: "row", alignItems: "center", marginRight: 12 },
+  statText: { fontSize: 10, color: COLORS.muted, marginLeft: 3, fontWeight: "500" },
   actionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
   },
-  registerActionButton: {
-    borderRadius: 10,
-    overflow: "hidden",
-  },
+  registerActionButton: { borderRadius: 10, overflow: "hidden" },
   registerGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 14, paddingVertical: 6,
   },
   registerActionText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#fff",
-    marginLeft: 3,
+    fontSize: 12, fontWeight: "700", color: "#fff", marginLeft: 3,
   },
   cancelActionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 10,
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10,
     backgroundColor: "#fee2e2",
   },
   cancelActionText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#FF3B30",
-    marginLeft: 3,
+    fontSize: 12, fontWeight: "700", color: "#FF3B30", marginLeft: 3,
   },
-  detailsActionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
+  detailsActionButton: { flexDirection: "row", alignItems: "center" },
   detailsActionText: {
-    fontSize: 11,
-    color: COLORS.accent,
-    fontWeight: "600",
-    marginRight: 2,
+    fontSize: 11, color: COLORS.accent, fontWeight: "600", marginRight: 2,
   },
 
-  // Empty State
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 40,
-    paddingBottom: 20,
-  },
+  emptyState: { alignItems: "center", justifyContent: "center", paddingTop: 40, paddingBottom: 20 },
   emptyIconContainer: {
-    width: 76,
-    height: 76,
-    borderRadius: 20,
+    width: 76, height: 76, borderRadius: 20,
     backgroundColor: COLORS.goldSoft,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: COLORS.line,
+    justifyContent: "center", alignItems: "center",
+    marginBottom: 12, borderWidth: 1, borderColor: COLORS.line,
   },
-  emptyTitle: {
-    color: COLORS.primary,
-    fontSize: 18,
-    fontWeight: "800",
-  },
+  emptyTitle: { color: COLORS.primary, fontSize: 18, fontWeight: "800" },
   emptyText: {
-    marginTop: 4,
-    color: COLORS.body,
-    fontSize: 12,
-    lineHeight: 17,
-    textAlign: "center",
-    maxWidth: 240,
+    marginTop: 4, color: COLORS.body, fontSize: 12,
+    lineHeight: 17, textAlign: "center", maxWidth: 240,
   },
-  exploreButton: {
-    marginTop: 12,
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  exploreGradient: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-  },
-  exploreButtonText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "700",
-  },
+  exploreButton: { marginTop: 12, borderRadius: 12, overflow: "hidden" },
+  exploreGradient: { paddingHorizontal: 20, paddingVertical: 8 },
+  exploreButtonText: { color: "#fff", fontSize: 13, fontWeight: "700" },
 
-  // Detail Modal
-  detailScreen: { 
-    flex: 1, 
-    backgroundColor: "#fff" 
-  },
-  detailContainer: { 
-    flex: 1 
-  },
-  detailScrollContent: {
-    paddingBottom: 80,
-  },
-  detailImageWrapper: {
-    position: "relative",
-    width: "100%",
-    height: height * 0.28,
-  },
-  detailBanner: { 
-    width: "100%", 
-    height: "100%" 
-  },
-  detailBannerOverlay: { 
-    ...StyleSheet.absoluteFillObject 
-  },
-  backButtonWrap: { 
-    position: "absolute", 
-    top: Platform.OS === "ios" ? 10 : 14, 
-    left: 14 
-  },
-  roundGlass: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.3)",
-  },
-  detailRegisteredBadge: {
-    position: "absolute",
-    top: Platform.OS === "ios" ? 10 : 14,
-    right: 14,
-  },
-  detailRegisteredBlur: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.9)",
-  },
-  detailRegisteredText: {
-    color: COLORS.success,
-    fontSize: 11,
-    fontWeight: "700",
-    marginLeft: 3,
-  },
-  detailBody: {
-    marginTop: -20,
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 16,
-  },
-  detailTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  detailTag: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  detailTagText: { 
-    fontSize: 11, 
-    fontWeight: "700", 
-    marginLeft: 3 
-  },
-  detailTitle: {
-    color: COLORS.primary,
-    fontSize: 22,
-    fontWeight: "900",
-    lineHeight: 28,
-    marginBottom: 8,
-  },
-  detailOrgRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  detailAvatarSmall: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 8,
-  },
-  detailAvatarText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  detailOrgName: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: COLORS.primary,
-  },
-  detailOrgLocation: {
-    fontSize: 11,
-    color: COLORS.muted,
-    marginTop: 1,
-  },
-  detailOrgLocationLarge: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: COLORS.primary,
-  },
-  specRow: {
-    flexDirection: "row",
-    marginBottom: 12,
-  },
-  specCard: {
+  sheetBackdrop: {
     flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  sheetContainer: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 20,
+    flexDirection: "column",
+  },
+  sheetHeader: {
+    paddingTop: 8,
+    paddingBottom: 8,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.line,
+    flexShrink: 0,
+  },
+  sheetGrabber: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: "#d0d5dd", alignSelf: "center", marginBottom: 8,
+  },
+  sheetHeaderRow: {
+    flexDirection: "row", alignItems: "center",
+    justifyContent: "space-between", paddingHorizontal: 14,
+  },
+  sheetHeaderBtn: {
+    width: 36, height: 36, borderRadius: 18,
     backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: COLORS.line,
-    alignItems: "center",
-    marginRight: 6,
+    alignItems: "center", justifyContent: "center",
   },
-  specCardLast: { 
-    marginRight: 0,
-    paddingVertical: 12,
+  sheetHeaderTitle: {
+    flex: 1, textAlign: "center", fontSize: 15,
+    fontWeight: "800", color: COLORS.primary, marginHorizontal: 8,
   },
-  specIcon: { marginBottom: 4 },
-  specTitle: { 
-    color: COLORS.muted, 
-    fontSize: 10, 
-    fontWeight: "700", 
-    marginBottom: 2 
+  sheetScroll: {
+    flex: 1,
+    minHeight: 0,
   },
-  specText: { 
-    color: COLORS.primary, 
-    fontSize: 13, 
-    fontWeight: "800", 
-    textAlign: "center" 
+  sheetScrollContent: {
+    paddingBottom: 90,
   },
-  sectionCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: COLORS.line,
+  sheetImageWrapper: {
+    position: "relative", width: "100%", height: 200,
   },
-  sectionCardTitle: { 
-    color: COLORS.primary, 
-    fontSize: 14, 
-    fontWeight: "700", 
-    marginBottom: 4 
-  },
-  sectionCardBody: { 
-    color: COLORS.body, 
-    fontSize: 12, 
-    lineHeight: 18 
-  },
-  detailBottomSpacer: { 
-    height: 120 
-  },
-  stickyFooter: { 
-    position: "absolute", 
-    bottom: 0, 
-    width: "100%",
+  sheetBanner: { width: "100%", height: "100%" },
+  sheetBannerOverlay: { ...StyleSheet.absoluteFillObject },
+  sheetRegisteredBadge: {
+    position: "absolute", bottom: 12, right: 12,
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
+    flexDirection: "row", alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.95)",
   },
-  stickyBlur: { 
-    overflow: "hidden",
-    backgroundColor: "rgba(255,255,255,0.92)",
+  sheetRegisteredText: {
+    color: COLORS.success, fontSize: 11, fontWeight: "700", marginLeft: 3,
   },
-  stickyContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: Platform.OS === "android" ? 54 : 34,
-    backgroundColor: "transparent",
-    borderTopWidth: 1,
-    borderTopColor: COLORS.line,
+  sheetBody: { padding: 16, paddingBottom: 8 },
+
+  sheetStickyFooter: {
+    borderTopWidth: 1, borderTopColor: COLORS.line,
+    backgroundColor: "#fff", paddingTop: 10,
+    flexShrink: 0,
   },
-  stickyLabel: { 
-    color: COLORS.danger, 
-    fontSize: 9, 
-    fontWeight: "700", 
-    marginBottom: 0 
-  },
-  stickyValue: { 
-    color: COLORS.primary, 
-    fontSize: 13, 
-    fontWeight: "800" 
-  },
-  stickyButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 12,
-  },
-  stickyButtonText: { 
-    color: "#fff", 
-    fontSize: 12, 
-    fontWeight: "700", 
-    marginRight: 3 
-  },
-  cancelButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 12,
-    backgroundColor: "#fee2e2",
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-  },
-  cancelButtonText: {
-    color: COLORS.danger,
-    fontSize: 12,
-    fontWeight: "700",
-    marginLeft: 3,
+  sheetStickyContent: {
+    flexDirection: "row", justifyContent: "space-between",
+    alignItems: "center", paddingHorizontal: 16,
   },
 
-  // Modals
-  modalScreen: { 
-    flex: 1, 
-    backgroundColor: COLORS.page 
+  detailTopRow: {
+    flexDirection: "row", justifyContent: "space-between",
+    alignItems: "center", marginBottom: 10,
   },
-  modalContainer: { 
-    flex: 1 
+  detailTag: {
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
+    maxWidth: "70%",
   },
-  keyboardAvoidView: { 
-    flex: 1 
+  detailTagText: { fontSize: 11, fontWeight: "700", marginLeft: 3, flexShrink: 1 },
+  detailTitle: {
+    color: COLORS.primary, fontSize: 20, fontWeight: "900",
+    lineHeight: 26, marginBottom: 8,
   },
+  detailOrgRow: {
+    flexDirection: "row", alignItems: "center", marginBottom: 12,
+  },
+  detailAvatarSmall: {
+    width: 34, height: 34, borderRadius: 17,
+    justifyContent: "center", alignItems: "center", marginRight: 8,
+  },
+  detailOrgLocationLarge: {
+    fontSize: 14, fontWeight: "700", color: COLORS.primary,
+  },
+  specRow: { flexDirection: "row", marginBottom: 12 },
+  specCard: {
+    flex: 1, backgroundColor: COLORS.surface,
+    borderRadius: 12, padding: 10,
+    borderWidth: 1, borderColor: COLORS.line,
+    alignItems: "center", marginRight: 6,
+  },
+  specCardLast: { marginRight: 0 },
+  specIcon: { marginBottom: 4 },
+  specTitle: {
+    color: COLORS.muted, fontSize: 10, fontWeight: "700", marginBottom: 2,
+  },
+  specText: {
+    color: COLORS.primary, fontSize: 12, fontWeight: "800", textAlign: "center",
+  },
+  sectionCard: {
+    backgroundColor: COLORS.surface, borderRadius: 12,
+    padding: 12, marginBottom: 8,
+    borderWidth: 1, borderColor: COLORS.line,
+  },
+  sectionCardTitle: {
+    color: COLORS.primary, fontSize: 13, fontWeight: "700", marginBottom: 4,
+  },
+  sectionCardBody: {
+    color: COLORS.body, fontSize: 12, lineHeight: 18,
+  },
+  stickyLabel: { color: COLORS.danger, fontSize: 9, fontWeight: "700", marginBottom: 0 },
+  stickyValue: { color: COLORS.primary, fontSize: 13, fontWeight: "800" },
+  stickyButton: {
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 16, paddingVertical: 9, borderRadius: 12,
+  },
+  stickyButtonText: {
+    color: "#fff", fontSize: 12, fontWeight: "700", marginRight: 3,
+  },
+
+  modalScreen: { flex: 1, backgroundColor: COLORS.page },
+  modalContainer: { flex: 1 },
+  keyboardAvoidView: { flex: 1 },
   modalHero: {
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === "ios" ? 12 : 16,
-    paddingBottom: 14,
-    borderBottomLeftRadius: 22,
-    borderBottomRightRadius: 22,
+    paddingHorizontal: 16, paddingBottom: 14,
+    borderBottomLeftRadius: 22, borderBottomRightRadius: 22,
   },
-  modalHeroTop: { 
-    flexDirection: "row", 
-    justifyContent: "space-between", 
-    alignItems: "center" 
+  modalHeroTop: {
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
   },
-  modalHeroTitleRow: { 
-    flexDirection: "row", 
-    alignItems: "center" 
-  },
-  modalHeroTitle: { 
-    color: "#fff", 
-    fontSize: 18, 
-    fontWeight: "800", 
-    marginLeft: 6 
+  modalHeroTitleRow: { flexDirection: "row", alignItems: "center" },
+  modalHeroTitle: {
+    color: "#fff", fontSize: 18, fontWeight: "800", marginLeft: 6,
   },
   modalClose: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    justifyContent: "center",
-    alignItems: "center",
+    width: 30, height: 30, borderRadius: 15,
+    justifyContent: "center", alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.1)",
   },
   modalHeroSubtitle: {
-    marginTop: 4,
-    color: "rgba(255,255,255,0.85)",
-    fontSize: 12,
-    fontWeight: "600",
+    marginTop: 4, color: "rgba(255,255,255,0.85)",
+    fontSize: 12, fontWeight: "600",
   },
-  formScrollView: { 
-    flex: 1,
-    paddingHorizontal: 14,
-  },
-  formScrollContent: {
-    paddingTop: 10,
-    paddingBottom: 16,
-  },
-  inputGroup: { 
-    marginBottom: 0 
-  },
-  inputLabel: { 
-    color: COLORS.primary, 
-    fontSize: 11, 
-    fontWeight: "700", 
-    marginBottom: 3 
+  formScrollView: { flex: 1, paddingHorizontal: 14 },
+  formScrollContent: { paddingTop: 10 },
+  inputGroup: { marginBottom: 0 },
+  inputLabel: {
+    color: COLORS.primary, fontSize: 11, fontWeight: "700", marginBottom: 3,
   },
   textInput: {
-    backgroundColor: "#fff",
-    borderWidth: 1.5,
-    borderColor: COLORS.line,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    marginBottom: 10,
-    color: COLORS.primary,
-    fontSize: 12,
+    backgroundColor: "#fff", borderWidth: 1.5, borderColor: COLORS.line,
+    borderRadius: 12, paddingHorizontal: 10, paddingVertical: 10,
+    marginBottom: 10, color: COLORS.primary, fontSize: 12,
   },
-  primaryFormButton: {
-    borderRadius: 12,
+  row: { flexDirection: "row" },
+  colLeft: { flex: 1, marginRight: 4 },
+  colRight: { flex: 1, marginLeft: 4 },
+  multiLineInput: { minHeight: 80, textAlignVertical: "top" },
+  optionPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    marginRight: 6,
+    backgroundColor: "#fff",
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 4,
-    marginTop: 4,
+    maxWidth: 220,
+  },
+  optionPillActive: { borderWidth: 1.5 },
+  optionPillText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.body,
+    flexShrink: 1,
+  },
+  optionPillTextActive: { color: "#fff" },
+  uploadCard: {
+    borderRadius: 12, overflow: "hidden",
+    borderWidth: 1.5, borderColor: COLORS.line, borderStyle: "dashed",
+    backgroundColor: "#fff", minHeight: 110,
+    justifyContent: "center", alignItems: "center",
+  },
+  uploadPlaceholder: { alignItems: "center", paddingVertical: 20 },
+  uploadIconCircle: {
+    width: 48, height: 48, borderRadius: 24, backgroundColor: COLORS.surface,
+    justifyContent: "center", alignItems: "center", marginBottom: 8,
+  },
+  uploadTitle: { fontSize: 13, fontWeight: "700", color: COLORS.primary },
+  uploadSubtitle: { fontSize: 11, color: COLORS.muted, marginTop: 2 },
+  uploadPreview: { width: "100%", height: 160, resizeMode: "cover" },
+  primaryFormButton: {
+    borderRadius: 12, overflow: "hidden",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12, shadowRadius: 10, elevation: 4, marginTop: 14,
   },
   primaryFormGradient: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 11,
-    paddingHorizontal: 14,
+    flexDirection: "row", justifyContent: "center", alignItems: "center",
+    paddingVertical: 12, paddingHorizontal: 14,
   },
-  primaryFormText: { 
-    color: "#fff", 
-    fontSize: 14, 
-    fontWeight: "700", 
-    marginRight: 4 
+  primaryFormText: {
+    color: "#fff", fontSize: 14, fontWeight: "700", marginRight: 4,
   },
-  formBottomSpacer: { 
-    height: Platform.OS === "ios" ? 30 : 20 
-  }
+  formBottomSpacer: { height: Platform.OS === "ios" ? 30 : 20 },
 });

@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
-    marginTop: Platform.OS === 'android' ? 34 : 0,
+    marginTop: Platform.OS === 'android' ? 3 : 0,
   },
   backButton: {
     width: 40,

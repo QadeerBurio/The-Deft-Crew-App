@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
-    marginTop: Platform.OS === 'android' ? 34 : 0,
+    marginTop: Platform.OS === 'android' ? 0 : 0,
   },
   headerBtn: { width: 32, alignItems: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: INK, flex: 1, textAlign: 'center' },

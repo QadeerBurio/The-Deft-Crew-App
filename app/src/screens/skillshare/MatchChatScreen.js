@@ -712,7 +712,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
-    marginTop: Platform.OS === 'android' ? 34 : 0,
+    marginTop: Platform.OS === 'android' ? 3 : 0,
   },
   headerBtn: { width: 36, alignItems: 'center' },
   headerInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: 4 },

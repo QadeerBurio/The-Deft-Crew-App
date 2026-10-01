@@ -2,51 +2,60 @@
   "expo": {
     "name": "tdc",
     "slug": "Testting",
-    "version": "1.0.9",
+    "version": "1.0.11",
     "orientation": "default",
     "icon": "./assets/tdc.png",
     "scheme": "tdcapp",
-    "backgroundColor": "#f9c349",
+    "backgroundColor": "#000000",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/tdc.png",
+      "image": "./assets/tdci.png",
       "resizeMode": "cover",
-      "backgroundColor": "#f9c349"
+      "backgroundColor": "#000000"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aqkhan110.tdc",
       "infoPlist": {
-       "NSMicrophoneUsageDescription": "TDC uses the microphone to record and send voice messages in chats.",
-  "NSLocationWhenInUseUsageDescription": "TDC uses your location to share your current location in chats and provide location-based features.",
-  "NSPhotoLibraryUsageDescription": "TDC uses your photo library so you can select photos to upload to your profile and share with other users.",
-  "ITSAppUsesNonExemptEncryption": false
-}
-      
+        "NSMicrophoneUsageDescription": "TDC uses the microphone to record and send voice messages in chats.",
+        "NSLocationWhenInUseUsageDescription": "TDC uses your location to share your current location in chats and provide location-based features.",
+        "NSPhotoLibraryUsageDescription": "TDC uses your photo library so you can select photos to upload to your profile and share with other users.",
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": ["remote-notification"]
+      }
     },
     "android": {
       "package": "com.aqkhan110.tdc",
+      "versionCode": 82,
+      "googleServicesFile": "./google-services.json",
       "permissions": [
-    "INTERNET",
-    "FOREGROUND_SERVICE",
-    "FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-    "android.permission.RECORD_AUDIO",
-    "android.permission.MODIFY_AUDIO_SETTINGS",
-    "android.permission.ACCESS_COARSE_LOCATION",
-    "android.permission.ACCESS_FINE_LOCATION"
-  ],
-
-  "blockedPermissions": [
-    "android.permission.READ_MEDIA_IMAGES",
-    "android.permission.READ_MEDIA_VIDEO",
-    "android.permission.READ_MEDIA_AUDIO",
-    "android.permission.READ_EXTERNAL_STORAGE",
-    "android.permission.WRITE_EXTERNAL_STORAGE",
-    "android.permission.ACCESS_MEDIA_LOCATION"
-  ],
+        "INTERNET",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.VIBRATE",
+        "android.permission.WAKE_LOCK",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.USE_FULL_SCREEN_INTENT",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        
+    "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_MEDIA_LOCATION"
+      ],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/tdc.png",
-        "backgroundColor": "#f9c349"
+        "foregroundImage": "./assets/tdci.png",
+        "backgroundColor": "#000000"
       },
       "intentFilters": [
         {
@@ -69,8 +78,18 @@
       "output": "static"
     },
     "plugins": [
-      "expo-router",
       "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#f9c349",
+          "defaultChannel": "engagement",
+          "sounds": [],
+          "androidMode": "default",
+          "androidCollapsedTitle": "New notification from TDC"
+        }
+      ],
       [
         "expo-build-properties",
         {
@@ -79,7 +98,8 @@
             "compileSdkVersion": 36,
             "targetSdkVersion": 36,
             "minSdkVersion": 24,
-            "buildToolsVersion": "36.0.0"
+            "buildToolsVersion": "36.0.0",
+            "enableProguardInReleaseBuilds": false
           },
           "ios": {
             "hermesEnabled": true
@@ -100,13 +120,10 @@
       ],
       "expo-navigation-bar",
       "expo-web-browser",
-      "expo-font"
+      "expo-font",
+      "expo-task-manager"
     ],
-    "experiments": {
-      "typedRoutes": true
-    },
     "extra": {
-      "router": {},
       "eas": {
         "projectId": "112506b0-7553-4a1b-afeb-6a37019cc15f"
       }

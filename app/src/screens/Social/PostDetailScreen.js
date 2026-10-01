@@ -1,5 +1,6 @@
 // PostDetailScreen.js - Complete with proper keyboard handling & auto-fetch
 // ✅ Like color matched to PostCard (#f9c349)
+// ✅ FIXED: API URL corrected (removed duplicate /api)
 
 import React, { useState, useEffect, useContext, useRef, useCallback, useMemo } from 'react';
 import {
@@ -28,11 +29,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
-
+import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus';
 const { width, height } = Dimensions.get('window');
 
-// ✅ Same API URL as PostCard / FeedScreen
-const API_URL = "https://the-deft-crew-production.up.railway.app/api/api/social";
+// ✅ FIXED: Correct API URL (no duplicate /api)
+const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
 const COMMENTS_POLL_INTERVAL = 6000;
 
@@ -808,7 +809,6 @@ export default function PostDetailScreen({ route, navigation }) {
                     <Text style={styles.postTime}>
                       {formatPostTime(post.createdAt)}
                     </Text>
-                    
                   </View>
                 </View>
               </View>
@@ -841,7 +841,7 @@ export default function PostDetailScreen({ route, navigation }) {
                       <LinearGradient
                         colors={
                           liked
-                            ? [COLORS.primary, COLORS.primaryDark]   // ✅ brand yellow gradient
+                            ? [COLORS.primary, COLORS.primaryDark]
                             : ['transparent', 'transparent']
                         }
                         style={[styles.likeIconWrapper, liked && styles.likeIconActive]}
@@ -1133,7 +1133,6 @@ const styles = StyleSheet.create({
     width: 36, height: 36, borderRadius: 18,
     justifyContent: 'center', alignItems: 'center',
   },
-  // ✅ Active like uses brand yellow shadow (matches PostCard)
   likeIconActive: {
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
@@ -1142,7 +1141,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   likeCount: { fontSize: 14, color: COLORS.textSecondary, fontWeight: '600' },
-  likedText: { color: COLORS.primary },   // ✅ yellow instead of red
+  likedText: { color: COLORS.primary },
   divider: { width: 1, height: 24, backgroundColor: COLORS.border, marginHorizontal: 16 },
   commentStat: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   commentIconWrapper: {

@@ -110,26 +110,26 @@ export default function DisclaimerScreen() {
   const disclaimers = [
     {
       icon: "store-remove-outline",
-      title: "Offer & Discount Accuracy",
-      content: "tdc acts as a bridge between brands and students. We are not liable for the availability, quality, or fulfillment of discounts.",
+      title: "Offer & Discount",
+      content: "tdc connects students and brands. Brands are responsible for their offers, availability and quality.",
       color: "#f9c349"
     },
     {
       icon: "briefcase-variant-outline",
-      title: "Career Hub & Internships",
-      content: "tdc does not guarantee employment or the accuracy of job descriptions provided by external recruiters.",
+      title: "Jobs & Internships",
+      content: "We don't guarantee jobs or the accuracy of listings posted by recruiters.",
       color: "#4ecdc4"
     },
     {
       icon: "airplane-off",
-      title: "Travel & Global Programs",
-      content: "tdc is not responsible for visa rejections, travel delays, or changes in university exchange policies.",
+      title: "AI Travel & Global Programs",
+      content: "Travel plans are AI suggestions only. tdc doesn't book travel and isn't responsible for visa rejections, delays or changes to exchange policies.",
       color: "#6c5ce7"
     },
     {
       icon: "clipboard-check-outline",
       title: "Status Verification",
-      content: "Users are responsible for maintaining valid student credentials. tdc reserves the right to modify access.",
+      content: "Keep your student credentials valid. tdc may change your access if they aren't.",
       color: "#fd79a8"
     },
     {
@@ -241,9 +241,9 @@ export default function DisclaimerScreen() {
               <View style={styles.heroBadge}>
                 <Text style={styles.heroBadgeText}>LEGAL NOTICE</Text>
               </View>
-              <Text style={styles.heroTitle}>Important Disclaimer</Text>
+              <Text style={styles.heroTitle}>Before You Use tdc</Text>
               <Text style={styles.heroSubtitle}>
-                Please read the following legal exclusions regarding the tdc Student Ecosystem.
+                What tdc is and isn't responsible for.
               </Text>
               
               <View style={styles.decorLine}>
@@ -319,7 +319,7 @@ export default function DisclaimerScreen() {
                 <Ionicons name="warning-outline" size={18} color="#1a1a1a" />
               </View>
               <Text style={styles.warningText}>
-                The following outlines the limitations and exclusions of tdc services.
+                Here's what tdc covers and what it doesn't.
               </Text>
             </LinearGradient>
           </Animated.View>

@@ -1,3 +1,4 @@
+// app/src/screens/ProfileScreen.js
 import React, {
   useContext,
   useEffect,
@@ -23,6 +24,7 @@ import {
   Pressable,
   Platform,
   TextInput,
+  Share,
 } from "react-native";
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/api";
@@ -34,9 +36,16 @@ import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 
+// 🆕 engagement
+import { useEngagement } from '../engagement/hooks/useEngagement';
+import SavingsCounter from '../engagement/components/SavingsCounter';
+import BadgeShelf from '../engagement/components/BadgeShelf';
+import StreakChip from '../engagement/components/StreakChip';
+import StreakSheet from '../engagement/components/StreakSheet';
+
 const { width, height } = Dimensions.get("window");
 
-// Modern Menu Item Component - Compact
+// ─── Modern Menu Item ────────────────────────────────────────────────────────
 const MenuItem = ({ item, index, isLast }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const itemFade = useRef(new Animated.Value(0)).current;
@@ -119,8 +128,8 @@ const MenuItem = ({ item, index, isLast }) => {
                 style={styles.menuBadgeGradient}
               >
                 <Text style={styles.menuBadgeText}>
-                  {typeof item.rightText === 'number' && item.rightText > 99 
-                    ? '99+' 
+                  {typeof item.rightText === 'number' && item.rightText > 99
+                    ? '99+'
                     : item.rightText}
                 </Text>
               </LinearGradient>
@@ -134,6 +143,7 @@ const MenuItem = ({ item, index, isLast }) => {
   );
 };
 
+// ─── Main Screen ─────────────────────────────────────────────────────────────
 export default function ProfileScreen() {
   const { user, setUser, token, setToken, logout } = useContext(AuthContext);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -144,6 +154,10 @@ export default function ProfileScreen() {
   const [ecardModalVisible, setEcardModalVisible] = useState(false);
   const [totalSaved, setTotalSaved] = useState(0);
   const [redemptionCount, setRedemptionCount] = useState(0);
+
+  // 🆕 engagement state
+  const { me, refresh } = useEngagement();
+  const [streakSheetVisible, setStreakSheetVisible] = useState(false);
 
   // Delete Account States
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -170,6 +184,7 @@ export default function ProfileScreen() {
   const signOutModalScale = useRef(new Animated.Value(0.9)).current;
   const signOutModalOpacity = useRef(new Animated.Value(0)).current;
 
+  // ─── Entrance animations ───────────────────────────────────────────────
   const startEntranceAnimations = useCallback(() => {
     Animated.parallel([
       Animated.timing(headerFade, {
@@ -206,6 +221,7 @@ export default function ProfileScreen() {
     ]).start();
   }, []);
 
+  // ─── Fetch discount data ───────────────────────────────────────────────
   const fetchProfileData = useCallback(async () => {
     try {
       const [offersRes, savingsRes] = await Promise.all([
@@ -226,27 +242,29 @@ export default function ProfileScreen() {
     }
   }, [token]);
 
+  // ─── Focus effect — refresh data on screen focus ───────────────────────
   useFocusEffect(
     useCallback(() => {
       fetchProfileData();
       startEntranceAnimations();
-    }, [fetchProfileData, startEntranceAnimations])
+      if (refresh) refresh();
+    }, [fetchProfileData, startEntranceAnimations, refresh])
   );
 
+  // ─── Sync totalSaved from engagement data ─────────────────────────────
+  useEffect(() => {
+    if (me?.stats?.totalSaved !== undefined) {
+      setTotalSaved(me.stats.totalSaved);
+    }
+  }, [me?.stats?.totalSaved]);
+
+  // ─── Android back handler ─────────────────────────────────────────────
   useEffect(() => {
     const backAction = () => {
-      if (ecardModalVisible) {
-        setEcardModalVisible(false);
-        return true;
-      }
-      if (showDeleteModal) {
-        closeDeleteModal();
-        return true;
-      }
-      if (showSignOutModal) {
-        closeSignOutModal();
-        return true;
-      }
+      if (ecardModalVisible) return (setEcardModalVisible(false), true);
+      if (showDeleteModal) return (closeDeleteModal(), true);
+      if (showSignOutModal) return (closeSignOutModal(), true);
+      if (streakSheetVisible) return (setStreakSheetVisible(false), true);
       return false;
     };
     const backHandler = BackHandler.addEventListener(
@@ -254,8 +272,9 @@ export default function ProfileScreen() {
       backAction
     );
     return () => backHandler.remove();
-  }, [ecardModalVisible, showDeleteModal, showSignOutModal]);
+  }, [ecardModalVisible, showDeleteModal, showSignOutModal, streakSheetVisible]);
 
+  // ─── Image picker ──────────────────────────────────────────────────────
   const pickImage = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -270,6 +289,7 @@ export default function ProfileScreen() {
     }
   };
 
+  // ─── Save profile image ────────────────────────────────────────────────
   const handleSaveProfile = async () => {
     if (!selectedImage) return;
     try {
@@ -311,11 +331,10 @@ export default function ProfileScreen() {
     }
   };
 
-  // Sign Out Functions
+  // ─── Sign Out ──────────────────────────────────────────────────────────
   const openSignOutModal = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setShowSignOutModal(true);
-    
     Animated.parallel([
       Animated.spring(signOutModalScale, {
         toValue: 1,
@@ -346,25 +365,22 @@ export default function ProfileScreen() {
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),
-    ]).start(() => {
-      setShowSignOutModal(false);
-    });
+    ]).start(() => setShowSignOutModal(false));
   };
 
-  const handleSignOut =async  () => {
+  const handleSignOut = async () => {
     setUser(null);
     setToken(null);
     closeSignOutModal();
     await logout();
   };
 
-  // Delete Account Functions
+  // ─── Delete Account ────────────────────────────────────────────────────
   const openDeleteModal = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setDeleteStep(1);
     setConfirmText("");
     setShowDeleteModal(true);
-
     Animated.parallel([
       Animated.spring(modalScale, {
         toValue: 1,
@@ -404,31 +420,11 @@ export default function ProfileScreen() {
 
   const handleShake = () => {
     Animated.sequence([
-      Animated.timing(shakeAnim, {
-        toValue: 8,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnim, {
-        toValue: -8,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnim, {
-        toValue: 4,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnim, {
-        toValue: -4,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnim, {
-        toValue: 0,
-        duration: 50,
-        useNativeDriver: true,
-      }),
+      Animated.timing(shakeAnim, { toValue: 8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 4, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -4, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
     ]).start();
   };
 
@@ -449,33 +445,32 @@ export default function ProfileScreen() {
     try {
       setDeleting(true);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-
       await api.delete("/auth/delete-account", {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       closeDeleteModal();
       setDeleting(false);
-
-      Alert.alert(
-        "Account Deleted",
-        "Your account has been permanently deleted.",
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              setUser(null);
-              setToken(null);
-            },
-          },
-        ]
-      );
+      Alert.alert("Account Deleted", "Your account has been permanently deleted.", [
+        { text: "OK", onPress: () => { setUser(null); setToken(null); } },
+      ]);
     } catch (error) {
       setDeleting(false);
       Alert.alert("Error", "Failed to delete account. Please try again.");
     }
   };
 
+  // ─── Share savings ─────────────────────────────────────────────────────
+  const handleShareSavings = async () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const message = `I've saved Rs. ${totalSaved.toLocaleString()} using TDC! 🎉 Join me and start saving on student discounts today.`;
+      await Share.share({ message, title: 'My TDC Savings' });
+    } catch (error) {
+      console.log('Error sharing:', error);
+    }
+  };
+
+  // ─── Menu items ────────────────────────────────────────────────────────
   const menuGroups = [
     {
       items: [
@@ -504,9 +499,22 @@ export default function ProfileScreen() {
           subtitle: "Your earned rewards balance",
           icon: "gift-outline",
           color: "#FF6B6B",
-          rightText: "250",
-          onPress: () =>
-            Alert.alert("Coming Soon!", "We're building our rewards shop!"),
+          rightText: (me?.points?.balance || 0).toLocaleString(),
+          onPress: () => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            navigation.navigate('Rewards');
+          },
+        },
+        {
+          name: "Badges",
+          subtitle: "Your achievement collection",
+          icon: "ribbon-outline",
+          color: "#A855F7",
+          rightText: `${me?.badges?.earned || 0}/${me?.badges?.total || 17}`,
+          onPress: () => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            navigation.navigate('Badges');
+          },
         },
         {
           name: "My Discounts",
@@ -545,6 +553,7 @@ export default function ProfileScreen() {
     },
   ];
 
+  // ─── Render ────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
@@ -553,13 +562,11 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Profile Header */}
+        {/* ── Profile Header ─────────────────────────────────────────── */}
         <Animated.View
           style={[
             styles.profileHeader,
-            {
-              opacity: headerFade,
-            },
+            { opacity: headerFade },
           ]}
         >
           <View style={styles.profileHeaderContent}>
@@ -575,15 +582,10 @@ export default function ProfileScreen() {
                   style={styles.avatarRing}
                 >
                   {selectedImage ? (
-                    <Image
-                      source={{ uri: selectedImage }}
-                      style={styles.avatarImage}
-                    />
+                    <Image source={{ uri: selectedImage }} style={styles.avatarImage} />
                   ) : user?.profileImage ? (
                     <Image
-                      source={{
-                        uri: `${user.profileImage}?t=${Date.now()}`,
-                      }}
+                      source={{ uri: `${user.profileImage}?t=${Date.now()}` }}
                       style={styles.avatarImage}
                     />
                   ) : (
@@ -611,6 +613,21 @@ export default function ProfileScreen() {
                 <Icon name="mail-outline" size={13} color="#94A3B8" />
                 <Text style={styles.userEmail}>{user?.email || ""}</Text>
               </View>
+
+              {/* 🆕 Streak chip */}
+              <View style={{ marginTop: 8, alignItems: 'flex-start' }}>
+                <StreakChip onPress={() => setStreakSheetVisible(true)} />
+              </View>
+
+              {/* 🆕 Badge shelf */}
+              <View style={{ marginTop: 8 }}>
+                <BadgeShelf
+                  max={4}
+                  compact
+                  onSeeAll={() => navigation.navigate('Badges')}
+                />
+              </View>
+
               {selectedImage && (
                 <TouchableOpacity
                   style={styles.saveBtn}
@@ -636,7 +653,10 @@ export default function ProfileScreen() {
           </View>
         </Animated.View>
 
-        {/* Stats Row - Compact & Smart */}
+        {/* 🆕 Savings counter */}
+        <SavingsCounter onShare={handleShareSavings} />
+
+        {/* ── Stats Row ──────────────────────────────────────────────── */}
         <Animated.View
           style={[
             styles.statsRow,
@@ -665,14 +685,20 @@ export default function ProfileScreen() {
               {claimedOffers.length || 0}
             </Text>
           </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <View style={[styles.statIconBox, { backgroundColor: "#10B98120" }]}>
+              <Icon name="checkmark-done-outline" size={16} color="#10B981" />
+            </View>
+            <Text style={styles.statLabel}>Sorted</Text>
+            <Text style={[styles.statValue, { color: "#10B981" }]}>
+              {me?.missions?.sortedCount || 0}/8
+            </Text>
+          </View>
         </Animated.View>
 
-        {/* Menu Section */}
-        <Animated.View
-          style={{
-            opacity: menuFade,
-          }}
-        >
+        {/* ── Menu Section ───────────────────────────────────────────── */}
+        <Animated.View style={{ opacity: menuFade }}>
           <View style={styles.menuContainer}>
             <View style={styles.menuCard}>
               {menuGroups[0].items.map((item, iIdx) => (
@@ -690,7 +716,7 @@ export default function ProfileScreen() {
         <Text style={styles.versionText}>Version 2.0.1</Text>
       </ScrollView>
 
-      {/* Membership Card Modal */}
+      {/* ── Membership Card Modal ──────────────────────────────────────── */}
       <Modal
         visible={ecardModalVisible}
         animationType="fade"
@@ -762,7 +788,7 @@ export default function ProfileScreen() {
         </Pressable>
       </Modal>
 
-      {/* Sign Out Modal */}
+      {/* ── Sign Out Modal ────────────────────────────────────────────── */}
       <Modal
         visible={showSignOutModal}
         transparent
@@ -804,7 +830,7 @@ export default function ProfileScreen() {
         </View>
       </Modal>
 
-      {/* Delete Account Modal */}
+      {/* ── Delete Account Modal ──────────────────────────────────────── */}
       <Modal
         visible={showDeleteModal}
         transparent
@@ -817,10 +843,7 @@ export default function ProfileScreen() {
               styles.modalContent,
               {
                 opacity: modalOpacity,
-                transform: [
-                  { scale: modalScale },
-                  { translateX: shakeAnim },
-                ],
+                transform: [{ scale: modalScale }, { translateX: shakeAnim }],
               },
             ]}
           >
@@ -882,8 +905,13 @@ export default function ProfileScreen() {
                   <TouchableOpacity style={styles.modalCancelBtn} onPress={closeDeleteModal}>
                     <Text style={styles.modalCancelText}>Keep Account</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.modalConfirmBtn, { backgroundColor: "#f9c349" }]} onPress={handleNextStep}>
-                    <Text style={[styles.modalConfirmText, { color: "#1A1A1A" }]}>Still Delete</Text>
+                  <TouchableOpacity
+                    style={[styles.modalConfirmBtn, { backgroundColor: "#f9c349" }]}
+                    onPress={handleNextStep}
+                  >
+                    <Text style={[styles.modalConfirmText, { color: "#1A1A1A" }]}>
+                      Still Delete
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -894,8 +922,12 @@ export default function ProfileScreen() {
                   <View style={[styles.modalIconBox, { backgroundColor: "#FF475720" }]}>
                     <MaterialCommunityIcons name="delete-forever" size={36} color="#FF4757" />
                   </View>
-                  <Text style={[styles.modalTitle, { color: "#FF4757" }]}>Final Confirmation</Text>
-                  <Text style={styles.modalDesc}>Type "delete my account" to confirm.</Text>
+                  <Text style={[styles.modalTitle, { color: "#FF4757" }]}>
+                    Final Confirmation
+                  </Text>
+                  <Text style={styles.modalDesc}>
+                    Type "delete my account" to confirm.
+                  </Text>
                 </View>
                 <TextInput
                   style={styles.confirmInput}
@@ -907,13 +939,18 @@ export default function ProfileScreen() {
                   editable={!deleting}
                 />
                 <View style={styles.modalBtns}>
-                  <TouchableOpacity style={styles.modalCancelBtn} onPress={closeDeleteModal} disabled={deleting}>
+                  <TouchableOpacity
+                    style={styles.modalCancelBtn}
+                    onPress={closeDeleteModal}
+                    disabled={deleting}
+                  >
                     <Text style={styles.modalCancelText}>Cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
                       styles.modalDangerBtn,
-                      confirmText.toLowerCase() === "delete my account" && styles.modalDangerActive,
+                      confirmText.toLowerCase() === "delete my account" &&
+                        styles.modalDangerActive,
                     ]}
                     onPress={handleDeleteAccount}
                     disabled={deleting}
@@ -930,19 +967,21 @@ export default function ProfileScreen() {
           </Animated.View>
         </View>
       </Modal>
+
+      {/* 🆕 Streak Sheet */}
+      <StreakSheet
+        visible={streakSheetVisible}
+        onClose={() => setStreakSheetVisible(false)}
+      />
     </SafeAreaView>
   );
 }
 
+// ─── Styles ──────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: "#F8FAFC",
-  },
-  scrollContent: { 
-    paddingBottom: 40,
-  },
-  
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  scrollContent: { paddingBottom: 40 },
+
   // Profile Header
   profileHeader: {
     marginHorizontal: 16,
@@ -958,10 +997,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.5)",
   },
-  profileHeaderContent: { 
-    flexDirection: "row", 
-    alignItems: "center",
-  },
+  profileHeaderContent: { flexDirection: "row", alignItems: "flex-start" },
   avatarContainer: {},
   avatarRing: {
     width: 72,
@@ -971,11 +1007,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  avatarImage: { 
-    width: 64, 
-    height: 64, 
-    borderRadius: 32,
-  },
+  avatarImage: { width: 64, height: 64, borderRadius: 32 },
   avatarPlaceholder: {
     width: 64,
     height: 64,
@@ -984,11 +1016,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  avatarText: { 
-    fontSize: 28, 
-    fontWeight: "800", 
-    color: "#f9c349",
-  },
+  avatarText: { fontSize: 28, fontWeight: "800", color: "#f9c349" },
   cameraBadge: {
     position: "absolute",
     bottom: 0,
@@ -1005,28 +1033,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  userInfo: { 
-    marginLeft: 14, 
-    flex: 1,
-  },
-  userName: { 
-    fontSize: 18, 
-    fontWeight: "700", 
-    color: "#1A1A1A", 
+  userInfo: { marginLeft: 14, flex: 1 },
+  userName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1A1A1A",
     letterSpacing: -0.3,
     marginBottom: 2,
   },
-  emailRow: { 
-    flexDirection: "row", 
-    alignItems: "center", 
-    marginTop: 2, 
+  emailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 2,
     gap: 6,
   },
-  userEmail: { 
-    fontSize: 12, 
-    color: "#94A3B8", 
-    fontWeight: "500",
-  },
+  userEmail: { fontSize: 12, color: "#94A3B8", fontWeight: "500" },
   saveBtn: {
     marginTop: 8,
     borderRadius: 10,
@@ -1041,13 +1062,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     gap: 4,
   },
-  saveBtnText: { 
-    color: "#FFFFFF", 
-    fontSize: 11, 
-    fontWeight: "700",
-  },
-  
-  // Stats Row - Compact
+  saveBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "700" },
+
+  // Stats Row
   statsRow: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
@@ -1063,8 +1080,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.5)",
   },
-  statItem: { 
-    flex: 1, 
+  statItem: {
+    flex: 1,
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
@@ -1077,27 +1094,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 8,
   },
-  statDivider: {
-    width: 1,
-    backgroundColor: "rgba(0,0,0,0.06)",
-  },
+  statDivider: { width: 1, backgroundColor: "rgba(0,0,0,0.06)" },
   statLabel: {
     fontSize: 11,
     color: "#94A3B8",
     fontWeight: "600",
     marginRight: 4,
   },
-  statValue: { 
-    fontSize: 16, 
-    fontWeight: "700", 
-    color: "#1A1A1A",
-  },
-  
+  statValue: { fontSize: 16, fontWeight: "700", color: "#1A1A1A" },
+
   // Menu
-  menuContainer: { 
-    paddingHorizontal: 16, 
-    marginTop: 12,
-  },
+  menuContainer: { paddingHorizontal: 16, marginTop: 12 },
   menuCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
@@ -1119,14 +1126,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.04)",
   },
-  menuItemDanger: {
-    borderBottomColor: "rgba(255, 71, 87, 0.06)",
-  },
-  menuLeft: { 
-    flexDirection: "row", 
-    alignItems: "center", 
-    flex: 1,
-  },
+  menuItemDanger: { borderBottomColor: "rgba(255, 71, 87, 0.06)" },
+  menuLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
   menuIconBox: {
     width: 36,
     height: 36,
@@ -1135,12 +1136,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
-  menuTextContainer: { 
-    flex: 1,
-  },
-  menuItemTitle: { 
-    fontSize: 14, 
-    fontWeight: "600", 
+  menuTextContainer: { flex: 1 },
+  menuItemTitle: {
+    fontSize: 14,
+    fontWeight: "600",
     color: "#1A1A1A",
     letterSpacing: -0.2,
   },
@@ -1150,23 +1149,11 @@ const styles = StyleSheet.create({
     marginTop: 1,
     fontWeight: "500",
   },
-  menuRight: { 
-    marginLeft: 8,
-  },
-  menuBadge: { 
-    borderRadius: 10, 
-    overflow: "hidden",
-  },
-  menuBadgeGradient: { 
-    paddingHorizontal: 10, 
-    paddingVertical: 3,
-  },
-  menuBadgeText: { 
-    fontSize: 10, 
-    fontWeight: "700", 
-    color: "#1A1A1A",
-  },
-  
+  menuRight: { marginLeft: 8 },
+  menuBadge: { borderRadius: 10, overflow: "hidden" },
+  menuBadgeGradient: { paddingHorizontal: 10, paddingVertical: 3 },
+  menuBadgeText: { fontSize: 10, fontWeight: "700", color: "#1A1A1A" },
+
   versionText: {
     textAlign: "center",
     fontSize: 11,
@@ -1174,8 +1161,8 @@ const styles = StyleSheet.create({
     marginTop: 20,
     fontWeight: "500",
   },
-  
-  // Modal Styles
+
+  // Modals
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -1195,10 +1182,7 @@ const styles = StyleSheet.create({
     shadowRadius: 28,
     elevation: 12,
   },
-  modalHeader: { 
-    alignItems: "center", 
-    marginBottom: 16,
-  },
+  modalHeader: { alignItems: "center", marginBottom: 16 },
   modalIconBox: {
     width: 64,
     height: 64,
@@ -1230,11 +1214,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
   },
-  modalBtns: { 
-    flexDirection: "row", 
-    gap: 10,
-    marginTop: 4,
-  },
+  modalBtns: { flexDirection: "row", gap: 10, marginTop: 4 },
   modalCancelBtn: {
     flex: 1,
     paddingVertical: 13,
@@ -1242,11 +1222,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F1F5F9",
     alignItems: "center",
   },
-  modalCancelText: { 
-    fontSize: 13, 
-    fontWeight: "600", 
-    color: "#64748B",
-  },
+  modalCancelText: { fontSize: 13, fontWeight: "600", color: "#64748B" },
   modalConfirmBtn: {
     flex: 1,
     paddingVertical: 13,
@@ -1254,11 +1230,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9c349",
     alignItems: "center",
   },
-  modalConfirmText: { 
-    fontSize: 13, 
-    fontWeight: "600", 
-    color: "#FFFFFF",
-  },
+  modalConfirmText: { fontSize: 13, fontWeight: "600", color: "#FFFFFF" },
   modalDangerBtn: {
     flex: 1,
     paddingVertical: 13,
@@ -1266,35 +1238,19 @@ const styles = StyleSheet.create({
     backgroundColor: "#FF4757",
     alignItems: "center",
   },
-  modalDangerActive: { 
-    backgroundColor: "#FF4757",
-  },
-  modalDangerText: { 
-    fontSize: 13, 
-    fontWeight: "600", 
-    color: "#FFFFFF",
-  },
-  
-  // Warning List
-  warningList: { 
-    marginBottom: 16,
-  },
-  warningItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 6,
-  },
+  modalDangerActive: { backgroundColor: "#FF4757" },
+  modalDangerText: { fontSize: 13, fontWeight: "600", color: "#FFFFFF" },
+
+  // Warning / Alternative Lists
+  warningList: { marginBottom: 16 },
+  warningItem: { flexDirection: "row", alignItems: "center", paddingVertical: 6 },
   warningText: {
     fontSize: 12,
     color: "#64748B",
     marginLeft: 8,
     fontWeight: "500",
   },
-  
-  // Alternative List
-  alternativeList: { 
-    marginBottom: 16,
-  },
+  alternativeList: { marginBottom: 16 },
   alternativeItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -1312,8 +1268,6 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontWeight: "500",
   },
-  
-  // Confirm Input
   confirmInput: {
     borderWidth: 1.5,
     borderColor: "#E2E8F0",
@@ -1325,7 +1279,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     backgroundColor: "#F8FAFC",
   },
-  
+
   // Membership Card
   membershipCard: {
     width: width * 0.9,
@@ -1350,13 +1304,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     textTransform: "uppercase",
   },
-  cardBody: { 
-    alignItems: "center", 
-    marginBottom: 24,
-  },
-  diamondBox: { 
-    marginBottom: 16,
-  },
+  cardBody: { alignItems: "center", marginBottom: 24 },
+  diamondBox: { marginBottom: 16 },
   diamondGradient: {
     width: 72,
     height: 72,
@@ -1379,14 +1328,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     paddingHorizontal: 8,
   },
-  priceHighlight: { 
-    color: "#f9c349", 
-    fontWeight: "800",
-  },
-  cardBtn: { 
-    borderRadius: 14, 
-    overflow: "hidden", 
-    width: "100%", 
+  priceHighlight: { color: "#f9c349", fontWeight: "800" },
+  cardBtn: {
+    borderRadius: 14,
+    overflow: "hidden",
+    width: "100%",
     elevation: 4,
     shadowColor: "#f9c349",
     shadowOffset: { width: 0, height: 4 },
@@ -1400,9 +1346,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  cardBtnText: { 
-    color: "#1A1A1A", 
-    fontWeight: "800", 
+  cardBtnText: {
+    color: "#1A1A1A",
+    fontWeight: "800",
     fontSize: 14,
     letterSpacing: 0.5,
   },

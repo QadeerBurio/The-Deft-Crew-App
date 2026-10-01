@@ -117,7 +117,7 @@ export default function Explore({ navigation }) {
         <Text style={styles.topHeaderTitle}>
           Skill<Text style={{ color: BRAND }}>Share</Text>
         </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
+        <TouchableOpacity onPress={() => navigation.navigate('NotificationSkillshare')}>
           <Ionicons name="notifications-outline" size={22} color={INK} />
         </TouchableOpacity>
       </View>

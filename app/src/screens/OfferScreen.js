@@ -37,7 +37,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// ✅ FIXED: Single source of truth for API + cache events
 import api, {
   notifyOfferClaimed,
   notifyOfferUnclaimed,
@@ -49,19 +48,94 @@ import { AuthContext } from "../context/AuthContext";
 const { width } = Dimensions.get("window");
 const BASE_URL = "https://the-deft-crew-production.up.railway.app";
 
-// ── Cache keys ──
 const OFFER_STATS_CACHE_PREFIX = "@offer_stats_cache:";
 const CACHE_DURATION = 5 * 60 * 1000;
 
-// ── Auto-refresh tuning ──
 const POLL_INTERVAL = 15000;
 const BACKGROUND_POLL_INTERVAL = 45000;
 const MIN_FETCH_GAP = 3000;
 const STATS_POLL_INTERVAL = 12000;
 
-// ==========================================
+// ============================================================
+// ✅ PERSISTENT CLAIMED IDS REGISTRY
+// Survives app reloads via AsyncStorage
+// ============================================================
+const CLAIMED_IDS_STORAGE_KEY = "@tdc_claimed_offer_ids";
+
+const claimedIdsRegistry = new Set();
+let registryHydrated = false;
+
+// Persist to storage (debounced)
+let persistTimer = null;
+const persistRegistry = () => {
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = setTimeout(async () => {
+    try {
+      const arr = Array.from(claimedIdsRegistry);
+      await AsyncStorage.setItem(CLAIMED_IDS_STORAGE_KEY, JSON.stringify(arr));
+    } catch (e) {
+      console.log("persistRegistry error:", e);
+    }
+  }, 200);
+};
+
+// Hydrate from storage — call once on app boot
+export const hydrateClaimedRegistry = async () => {
+  if (registryHydrated) return;
+  registryHydrated = true;
+  try {
+    const raw = await AsyncStorage.getItem(CLAIMED_IDS_STORAGE_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        arr.forEach((id) => {
+          if (id) claimedIdsRegistry.add(String(id));
+        });
+        console.log(`[Registry] Hydrated ${arr.length} claimed offer IDs`);
+      }
+    }
+  } catch (e) {
+    console.log("hydrateClaimedRegistry error:", e);
+  }
+};
+
+export const registerLocalClaim = (offerId) => {
+  if (!offerId) return;
+  claimedIdsRegistry.add(String(offerId));
+  persistRegistry();
+};
+
+export const unregisterLocalClaim = (offerId) => {
+  if (!offerId) return;
+  claimedIdsRegistry.delete(String(offerId));
+  persistRegistry();
+};
+
+export const isLocallyClaimed = (offerId) => {
+  if (!offerId) return false;
+  return claimedIdsRegistry.has(String(offerId));
+};
+
+export const getAllLocallyClaimed = () => Array.from(claimedIdsRegistry);
+
+// ✅ Merge server claim status with local registry
+export const reconcileClaimedIds = (serverIds) => {
+  if (!Array.isArray(serverIds)) return;
+  const serverSet = new Set(serverIds.map(String));
+  // Only ADD — never remove from registry based on server (server can be stale)
+  let changed = false;
+  serverSet.forEach((id) => {
+    if (!claimedIdsRegistry.has(id)) {
+      claimedIdsRegistry.add(id);
+      changed = true;
+    }
+  });
+  if (changed) persistRegistry();
+};
+
+// ============================================================
 // GLOBAL CLAIM EVENT BUS
-// ==========================================
+// ============================================================
 const claimListeners = new Set();
 const statsListeners = new Set();
 
@@ -95,9 +169,9 @@ const emitStatsChanged = (stats, brandId) => {
   });
 };
 
-// ==========================================
+// ============================================================
 // HELPERS
-// ==========================================
+// ============================================================
 const userIdFromToken = (tk) => {
   if (!tk) return null;
   try {
@@ -108,8 +182,15 @@ const userIdFromToken = (tk) => {
   }
 };
 
+// ✅ Handles: string IDs, populated objects, ObjectIds
 const isOfferClaimedByUser = (offer, currentUserId) => {
-  if (!offer?.claimedBy || !currentUserId) return false;
+  if (!offer) return false;
+  if (!currentUserId) {
+    // If we can't determine user, fall back to "any claimedBy entries"
+    return Array.isArray(offer.claimedBy) && offer.claimedBy.length > 0;
+  }
+  if (!offer.claimedBy || !Array.isArray(offer.claimedBy)) return false;
+
   const me = String(currentUserId);
   return offer.claimedBy.some((entry) => {
     if (!entry) return false;
@@ -121,6 +202,20 @@ const isOfferClaimedByUser = (offer, currentUserId) => {
       entry.toString?.();
     return id === me;
   });
+};
+
+// ✅ Extract claimed IDs from a server offer response
+const extractClaimedIdsFromOffers = (offers, currentUserId) => {
+  if (!Array.isArray(offers) || !currentUserId) return [];
+  const me = String(currentUserId);
+  const ids = [];
+  for (const offer of offers) {
+    if (!offer) continue;
+    if (isOfferClaimedByUser(offer, me)) {
+      ids.push(offer._id?.toString?.() || offer._id);
+    }
+  }
+  return ids;
 };
 
 const branchesEqual = (a, b) => {
@@ -136,26 +231,6 @@ const branchesEqual = (a, b) => {
       x.isOnline !== y.isOnline ||
       x.isInStore !== y.isInStore ||
       x.city !== y.city
-    ) {
-      return false;
-    }
-  }
-  return true;
-};
-
-const offersEqual = (a, b) => {
-  if (a === b) return true;
-  if (!a || !b || a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    const x = a[i];
-    const y = b[i];
-    if (
-      x._id !== y._id ||
-      x.discountPercentage !== y.discountPercentage ||
-      x.isClaimed !== y.isClaimed ||
-      x.image !== y.image ||
-      x.isOnline !== y.isOnline ||
-      x.isInStore !== y.isInStore
     ) {
       return false;
     }
@@ -205,46 +280,39 @@ const statsEqual = (a, b) => {
   );
 };
 
-// ==========================================
-// ✅ HELPER: Build composite active data
-// Merges branch + offer + brand with proper fallback chain
-// ==========================================
+// ============================================================
+// BUILD ACTIVE DATA
+// ============================================================
 const buildActiveData = (brand, currentOffer, selectedBranch) => {
   const hasBranch = !!selectedBranch;
   const branch = selectedBranch || {};
   const offer = currentOffer || {};
   const brandData = brand || {};
 
-  // ✅ Discount — branch wins, then offer, then brand
   const discount = hasBranch
     ? Number(branch.discountPercentage || offer.discountPercentage || brandData.discount || 0)
     : Number(offer.discountPercentage || brandData.discount || 0);
 
-  // ✅ Title — branch name wins, else offer title, else brand name
   const title = hasBranch
     ? branch.name || offer.title || brandData.name || "Offer Details"
     : offer.title || brandData.name || "Offer Details";
 
-  // ✅ Description — cascade through all sources with proper fallbacks
   const description =
     (hasBranch && branch.description) ||
     offer.description ||
     brandData.description ||
     "Explore this iconic destination. Get exclusive student discounts.";
 
-  // ✅ Redeem instructions — cascade through all sources
   const redeemInstructions =
     (hasBranch && branch.redeemInstructions) ||
     offer.redeemInstructions ||
     brandData.redeemInstructions ||
     "1. Show your valid student ID at the counter\n2. Mention you're a Crew Privilege member\n3. Enjoy your discount!";
 
-  // ✅ Location — try multiple field names with proper fallbacks
   const location = hasBranch
     ? (branch.location || branch.address || branch.city || "")
     : (offer.location || offer.address || brandData.location || brandData.address || "");
 
-  // ✅ Availability
   const isOnline = hasBranch
     ? !!branch.isOnline
     : !!(offer.isOnline || brandData.isOnline);
@@ -253,7 +321,6 @@ const buildActiveData = (brand, currentOffer, selectedBranch) => {
     ? !!branch.isInStore
     : !!(offer.isInStore || brandData.isInStore);
 
-  // ✅ Image — branch image wins, then offer image, then brand logo
   const image =
     (hasBranch && branch.image) ||
     offer.image ||
@@ -262,7 +329,6 @@ const buildActiveData = (brand, currentOffer, selectedBranch) => {
     brandData.logo ||
     "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
 
-  // ✅ Category
   const category =
     (hasBranch && branch.category) ||
     offer.category ||
@@ -283,9 +349,9 @@ const buildActiveData = (brand, currentOffer, selectedBranch) => {
   };
 };
 
-// ==========================================
+// ============================================================
 // CLAIM SUCCESS MODAL
-// ==========================================
+// ============================================================
 const ClaimSuccessModal = ({ visible, onClose, brandName, discount }) => {
   if (!visible) return null;
   return (
@@ -322,51 +388,9 @@ const ClaimSuccessModal = ({ visible, onClose, brandName, discount }) => {
   );
 };
 
-// ==========================================
-// LIVE STATS STRIP
-// ==========================================
-const LiveStatsStrip = ({ stats, loading }) => {
-  if (loading && !stats) {
-    return (
-      <View style={styles.liveStatsContainer}>
-        <View style={styles.liveStatsSkeleton} />
-      </View>
-    );
-  }
-  if (!stats) return null;
-
-  return (
-    <View style={styles.liveStatsContainer}>
-      <View style={styles.liveStatItem}>
-        <Text style={styles.liveStatValue}>{stats.totalOffers}</Text>
-        <Text style={styles.liveStatLabel}>Offers</Text>
-      </View>
-      <View style={styles.liveStatDivider} />
-      <View style={styles.liveStatItem}>
-        <Text style={[styles.liveStatValue, { color: "#f9c349" }]}>
-          {stats.maxDiscount}%
-        </Text>
-        <Text style={styles.liveStatLabel}>Max Off</Text>
-      </View>
-      <View style={styles.liveStatDivider} />
-      <View style={styles.liveStatItem}>
-        <Text style={[styles.liveStatValue, { color: "#22c55e" }]}>
-          {stats.claimedCount}
-        </Text>
-        <Text style={styles.liveStatLabel}>Claimed</Text>
-      </View>
-      <View style={styles.liveStatDivider} />
-      <View style={styles.liveStatItem}>
-        <View style={styles.liveDot} />
-        <Text style={styles.liveStatLabel}>Live</Text>
-      </View>
-    </View>
-  );
-};
-
-// ==========================================
-// BRANCH DROPDOWN COMPONENT
-// ==========================================
+// ============================================================
+// BRANCH DROPDOWN
+// ============================================================
 const BranchDropdown = ({
   branches,
   selectedBranch,
@@ -531,9 +555,9 @@ const BranchDropdown = ({
   );
 };
 
-// ==========================================
+// ============================================================
 // OFFER SCREEN
-// ==========================================
+// ============================================================
 export default function OfferScreen() {
   const navigation = useNavigation();
   const route = useRoute();
@@ -555,20 +579,18 @@ export default function OfferScreen() {
   const [stats, setStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(true);
 
-  const [locallyClaimedIds, setLocallyClaimedIds] = useState(() => new Set());
+  // ✅ Bump on registry change to force re-render
+  const [claimVersion, setClaimVersion] = useState(0);
 
   const isMountedRef = useRef(true);
   const isScreenFocusedRef = useRef(false);
   const pollTimerRef = useRef(null);
   const statsPollTimerRef = useRef(null);
   const appStateRef = useRef(AppState.currentState);
-  const justClaimedRef = useRef(false);
   const lastFetchAtRef = useRef(0);
   const lastStatsFetchAtRef = useRef(0);
   const isFetchingRef = useRef(false);
   const isStatsFetchingRef = useRef(false);
-  const locallyClaimedIdsRef = useRef(locallyClaimedIds);
-  const statsCacheRef = useRef(null);
 
   const statsCacheKey = useMemo(() => {
     return initialBrand?._id
@@ -576,15 +598,6 @@ export default function OfferScreen() {
       : null;
   }, [initialBrand?._id]);
 
-  useEffect(() => {
-    locallyClaimedIdsRef.current = locallyClaimedIds;
-  }, [locallyClaimedIds]);
-
-  useEffect(() => {
-    statsCacheRef.current = stats;
-  }, [stats]);
-
-  // ── Format image URL ──
   const formatImageUrl = useCallback((imagePath) => {
     if (!imagePath) return null;
     if (imagePath.startsWith("http://") || imagePath.startsWith("https://"))
@@ -593,7 +606,6 @@ export default function OfferScreen() {
     return `${BASE_URL}/${cleanPath}`;
   }, []);
 
-  // ── Stats cache helpers ──
   const saveStatsCache = useCallback(
     async (computedStats) => {
       if (!statsCacheKey || !computedStats) return;
@@ -602,9 +614,7 @@ export default function OfferScreen() {
           statsCacheKey,
           JSON.stringify({ data: computedStats, timestamp: Date.now() })
         );
-      } catch (e) {
-        // Silent
-      }
+      } catch (e) {}
     },
     [statsCacheKey]
   );
@@ -624,26 +634,21 @@ export default function OfferScreen() {
     }
   }, [statsCacheKey]);
 
-  // ── Update stats from offers ──
   const updateStatsFromOffers = useCallback(
     (offers) => {
       const computed = computeStatsFromOffers(offers);
       setStats((prev) => (statsEqual(prev, computed) ? prev : computed));
       setStatsLoading(false);
-      statsCacheRef.current = computed;
-
       saveStatsCache(computed);
 
       if (initialBrand?._id) {
         emitStatsChanged(computed, initialBrand._id);
       }
-
       return computed;
     },
     [saveStatsCache, initialBrand?._id]
   );
 
-  // ── Stats-only fetch ──
   const fetchStatsOnly = useCallback(async () => {
     if (!initialBrand?._id) return;
     if (isStatsFetchingRef.current) return;
@@ -664,10 +669,7 @@ export default function OfferScreen() {
       try {
         const res = await api.get(
           `/offers/brand/${initialBrand._id}/stats`,
-          {
-            headers,
-            timeout: 4000,
-          }
+          { headers, timeout: 4000 }
         );
         if (res?.data) {
           remoteStats = {
@@ -678,29 +680,25 @@ export default function OfferScreen() {
             maxDiscount: res.data.maxDiscount || 0,
           };
         }
-      } catch {
-        // Silent fallback
-      }
+      } catch {}
 
       if (remoteStats && isMountedRef.current) {
         setStats((prev) =>
           statsEqual(prev, remoteStats) ? prev : remoteStats
         );
         setStatsLoading(false);
-        statsCacheRef.current = remoteStats;
         saveStatsCache(remoteStats);
         emitStatsChanged(remoteStats, initialBrand._id);
       }
     } catch (err) {
-      // Silent fail
     } finally {
       isStatsFetchingRef.current = false;
     }
   }, [initialBrand?._id, token, isGuest, saveStatsCache]);
 
-  // ==========================================
-  // ✅ MAIN FETCH — Fetches brand + offers + branches with proper merge
-  // ==========================================
+  // ============================================================
+  // MAIN FETCH
+  // ============================================================
   const fetchAll = useCallback(
     async ({ silent = true, forceFresh = false } = {}) => {
       if (!initialBrand?._id) return;
@@ -727,17 +725,13 @@ export default function OfferScreen() {
           ? `/offers/brand/${initialBrand._id}?fresh=1&t=${Date.now()}`
           : `/offers/brand/${initialBrand._id}`;
 
-        // ✅ Fetch all 3 in parallel
         const [brandRes, offersRes, branchesRes] = await Promise.all([
-          // 1. Brand details
           api
             .get(`/brands/${initialBrand._id}`, headers ? { headers } : undefined)
             .catch(() => ({ data: initialBrand })),
-          // 2. Offers for this brand
           api
             .get(offersUrl, headers ? { headers } : undefined)
             .catch(() => ({ data: initialBrand.offers || [] })),
-          // 3. Branches for this brand
           api
             .get(
               `/branches/brand/${initialBrand._id}`,
@@ -749,19 +743,30 @@ export default function OfferScreen() {
         if (!isMountedRef.current) return;
 
         const meId = userIdFromToken(token);
-        const claimedSet = locallyClaimedIdsRef.current;
 
-        // ── Process offers ──
-        const freshOffers = (offersRes.data || []).map((offer) => ({
-          ...offer,
-          image: formatImageUrl(offer.image),
-          displayImage: formatImageUrl(offer.image),
-          isClaimed:
-            isOfferClaimedByUser(offer, meId) || claimedSet.has(offer._id),
-          discountPercentage: offer.discountPercentage || 0,
-        }));
+        // ✅ First, reconcile server claims into registry (ADD-ONLY)
+        const rawOffers = offersRes.data || [];
+        if (meId) {
+          const serverClaimedIds = extractClaimedIdsFromOffers(rawOffers, meId);
+          reconcileClaimedIds(serverClaimedIds);
+        }
 
-        // ── Process branches ──
+        // ✅ Build fresh offers — registry is authoritative
+        const freshOffers = rawOffers.map((offer) => {
+          const serverSaysClaimed = isOfferClaimedByUser(offer, meId);
+          const registrySaysClaimed = isLocallyClaimed(offer._id);
+          // ✅ Union: claimed if EITHER server OR registry says so
+          const finalClaimed = serverSaysClaimed || registrySaysClaimed;
+
+          return {
+            ...offer,
+            image: formatImageUrl(offer.image),
+            displayImage: formatImageUrl(offer.image),
+            isClaimed: finalClaimed,
+            discountPercentage: offer.discountPercentage || 0,
+          };
+        });
+
         const branchList =
           branchesRes.data?.branches ||
           branchesRes.data?.data?.branches ||
@@ -769,7 +774,6 @@ export default function OfferScreen() {
           [];
         const safeBranchList = Array.isArray(branchList) ? branchList : [];
 
-        // Format branch images too
         const formattedBranches = safeBranchList.map((b) => ({
           ...b,
           image: formatImageUrl(b.image),
@@ -780,7 +784,6 @@ export default function OfferScreen() {
           branchesEqual(prev, formattedBranches) ? prev : formattedBranches
         );
 
-        // Preserve selected branch across refetches
         setSelectedBranch((prev) => {
           if (!prev) return null;
           const stillExists = formattedBranches.find((b) => b._id === prev._id);
@@ -789,37 +792,28 @@ export default function OfferScreen() {
           return stillExists;
         });
 
-        // ── Merge brand + offers with FULL data ──
         const brandData = brandRes.data || {};
-        
-        // ✅ Extract ALL brand fields with proper fallbacks
+
         const mergedBrandData = {
           ...initialBrand,
           ...brandData,
-          // Ensure name is available
           name: brandData.name || brandData.brandName || initialBrand?.name || "Brand",
           brandName: brandData.brandName || brandData.name || initialBrand?.brandName || "Brand",
-          // Ensure description
           description: brandData.description || initialBrand?.description || "",
-          // Ensure redeemInstructions
           redeemInstructions: brandData.redeemInstructions || initialBrand?.redeemInstructions || "",
-          // Ensure location
           location: brandData.location || brandData.address || initialBrand?.location || "",
           address: brandData.address || brandData.location || initialBrand?.address || "",
-          // Ensure category
           category: brandData.category || initialBrand?.category || "General",
-          // Ensure image
           logo: formatImageUrl(brandData.logo) || initialBrand?.logo || null,
           displayImage: formatImageUrl(brandData.logo) || initialBrand?.displayImage || null,
-          // Availability
           isOnline: brandData.isOnline ?? initialBrand?.isOnline ?? false,
           isInStore: brandData.isInStore ?? initialBrand?.isInStore ?? false,
-          // Offers
           offers: freshOffers.length > 0 ? freshOffers : (initialBrand?.offers || []),
         };
 
         setBrand(mergedBrandData);
         updateStatsFromOffers(freshOffers);
+        setClaimVersion((v) => v + 1);
 
         setLastUpdated(Date.now());
         setLoading(false);
@@ -834,29 +828,24 @@ export default function OfferScreen() {
         isFetchingRef.current = false;
       }
     },
-    [
-      initialBrand,
-      token,
-      isGuest,
-      formatImageUrl,
-      updateStatsFromOffers,
-    ]
+    [initialBrand, token, isGuest, formatImageUrl, updateStatsFromOffers]
   );
 
-  // ── Mount: hydrate stats cache + fetch ──
+  // ── Mount: hydrate registry, then fetch ──
   useEffect(() => {
     isMountedRef.current = true;
 
     (async () => {
-      // 1. Load cached stats instantly
+      // ✅ CRITICAL: Hydrate registry from storage first
+      await hydrateClaimedRegistry();
+
       const cachedStats = await loadStatsCache();
       if (cachedStats && isMountedRef.current) {
         setStats(cachedStats);
         setStatsLoading(false);
-        statsCacheRef.current = cachedStats;
       }
 
-      // 2. Fetch fresh data
+      setClaimVersion((v) => v + 1);
       fetchAll({ silent: false, forceFresh: false });
     })();
 
@@ -865,7 +854,7 @@ export default function OfferScreen() {
     };
   }, [fetchAll, loadStatsCache]);
 
-  // ── Polling ──
+  // Polling
   useEffect(() => {
     const startPolling = (interval) => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
@@ -891,7 +880,6 @@ export default function OfferScreen() {
 
   useEffect(() => {
     if (statsPollTimerRef.current) clearInterval(statsPollTimerRef.current);
-
     statsPollTimerRef.current = setInterval(() => {
       if (isScreenFocusedRef.current && appStateRef.current === "active") {
         fetchStatsOnly();
@@ -899,12 +887,10 @@ export default function OfferScreen() {
     }, STATS_POLL_INTERVAL);
 
     return () => {
-      if (statsPollTimerRef.current)
-        clearInterval(statsPollTimerRef.current);
+      if (statsPollTimerRef.current) clearInterval(statsPollTimerRef.current);
     };
   }, [fetchStatsOnly]);
 
-  // ── Listen to global stats events ──
   useEffect(() => {
     const unsub = onStatsChanged((newStats, brandId) => {
       if (!isMountedRef.current || !newStats) return;
@@ -914,7 +900,6 @@ export default function OfferScreen() {
     return unsub;
   }, [initialBrand?._id]);
 
-  // ── Listen to cache events (claim/unclaim from other screens) ──
   useEffect(() => {
     const unsub = onCacheEvent((event) => {
       if (!event || event.type !== "cache:invalidated") return;
@@ -922,6 +907,7 @@ export default function OfferScreen() {
       if (event.brandId && event.brandId !== initialBrand?._id) return;
 
       if (event.type === "offer:unclaimed" && event.offerId) {
+        unregisterLocalClaim(event.offerId);
         setBrand((prev) => {
           if (!prev) return prev;
           const updatedOffers = (prev.offers || []).map((o) =>
@@ -930,15 +916,11 @@ export default function OfferScreen() {
           updateStatsFromOffers(updatedOffers);
           return { ...prev, offers: updatedOffers };
         });
-
-        setLocallyClaimedIds((prev) => {
-          const next = new Set(prev);
-          next.delete(event.offerId);
-          return next;
-        });
+        setClaimVersion((v) => v + 1);
       }
 
       if (event.type === "offer:claimed" && event.offerId) {
+        registerLocalClaim(event.offerId);
         setBrand((prev) => {
           if (!prev) return prev;
           const updatedOffers = (prev.offers || []).map((o) =>
@@ -947,20 +929,17 @@ export default function OfferScreen() {
           updateStatsFromOffers(updatedOffers);
           return { ...prev, offers: updatedOffers };
         });
+        setClaimVersion((v) => v + 1);
       }
     });
     return unsub;
   }, [initialBrand?._id, updateStatsFromOffers]);
 
-  // ── Focus lifecycle ──
   useFocusEffect(
     useCallback(() => {
       isScreenFocusedRef.current = true;
 
-      const forceFresh = justClaimedRef.current;
-      justClaimedRef.current = false;
-
-      fetchAll({ silent: true, forceFresh });
+      fetchAll({ silent: true, forceFresh: false });
       fetchStatsOnly();
 
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
@@ -980,12 +959,10 @@ export default function OfferScreen() {
     }, [fetchAll, fetchStatsOnly])
   );
 
-  // ── App foreground refresh ──
   useEffect(() => {
     const sub = AppState.addEventListener("change", (nextState) => {
       const prev = appStateRef.current;
       appStateRef.current = nextState;
-
       if (prev.match(/inactive|background/) && nextState === "active") {
         fetchAll({ silent: true, forceFresh: false });
         fetchStatsOnly();
@@ -994,20 +971,21 @@ export default function OfferScreen() {
     return () => sub.remove();
   }, [fetchAll, fetchStatsOnly]);
 
-  // ==========================================
-  // ✅ Derived data — using composite builder
-  // ==========================================
+  // ============================================================
+  // DERIVED
+  // ============================================================
   const currentOfferRaw = brand?.offers?.[0];
-  const currentOffer = currentOfferRaw
-    ? {
-        ...currentOfferRaw,
-        isClaimed:
-          currentOfferRaw.isClaimed ||
-          locallyClaimedIds.has(currentOfferRaw._id),
-      }
-    : null;
+  const currentOffer = useMemo(() => {
+    if (!currentOfferRaw) return null;
+    return {
+      ...currentOfferRaw,
+      isClaimed:
+        currentOfferRaw.isClaimed ||
+        isLocallyClaimed(currentOfferRaw._id),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentOfferRaw, claimVersion]);
 
-  // ✅ Build active data with proper fallback chain
   const activeData = useMemo(
     () => buildActiveData(brand, currentOffer, selectedBranch),
     [brand, currentOffer, selectedBranch]
@@ -1028,7 +1006,6 @@ export default function OfferScreen() {
 
   const hasSelectedBranch = !!selectedBranch;
 
-  // ── Open maps ──
   const openMap = useCallback(async (address) => {
     if (!address) {
       Alert.alert("Notice", "Address not available.");
@@ -1049,9 +1026,9 @@ export default function OfferScreen() {
     }
   }, []);
 
-  // ==========================================
+  // ============================================================
   // CLAIM OFFER
-  // ==========================================
+  // ============================================================
   const claimOffer = useCallback(
     async (offerId) => {
       if (isGuest) {
@@ -1060,48 +1037,21 @@ export default function OfferScreen() {
           "Please sign in to claim this offer and get student discounts!",
           [
             { text: "Cancel", style: "cancel" },
-            {
-              text: "Sign In",
-              onPress: () => navigation.navigate("Login"),
-            },
+            { text: "Sign In", onPress: () => navigation.navigate("Login") },
           ]
         );
         return;
       }
 
-      if (locallyClaimedIds.has(offerId)) return;
+      if (isLocallyClaimed(offerId)) return;
 
       try {
         setClaiming(true);
-        Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success
-        );
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-        await api.post(
-          `/offers/claim/${offerId}`,
-          {},
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        setLocallyClaimedIds((prev) => {
-          const next = new Set(prev);
-          next.add(offerId);
-          return next;
-        });
-
-        emitOfferClaimed(initialBrand._id, offerId);
-
-        try {
-          notifyOfferClaimed(
-            initialBrand._id,
-            offerId,
-            userIdFromToken(token)
-          );
-        } catch (e) {
-          console.log("notifyOfferClaimed error:", e);
-        }
-
-        justClaimedRef.current = true;
+        // ✅ Register synchronously BEFORE API call
+        registerLocalClaim(offerId);
+        setClaimVersion((v) => v + 1);
 
         setBrand((prev) => {
           const updatedOffers = (prev?.offers || []).map((o) =>
@@ -1111,25 +1061,31 @@ export default function OfferScreen() {
           return { ...prev, offers: updatedOffers };
         });
 
-        const updatedStats = computeStatsFromOffers(
-          (brand?.offers || []).map((o) =>
-            o._id === offerId ? { ...o, isClaimed: true } : o
-          )
+        emitOfferClaimed(initialBrand._id, offerId);
+        try {
+          notifyOfferClaimed(initialBrand._id, offerId, userIdFromToken(token));
+        } catch (e) {
+          console.log("notifyOfferClaimed error:", e);
+        }
+
+        await api.post(
+          `/offers/claim/${offerId}`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
         );
-        emitStatsChanged(updatedStats, initialBrand._id);
 
         setClaimedBrandName(
           hasSelectedBranch
-            ? `${brand?.name || brand?.brandName || ""} · ${
-                selectedBranch.name
-              }`
+            ? `${brand?.name || brand?.brandName || ""} · ${selectedBranch.name}`
             : brand?.name || brand?.brandName || ""
         );
         setClaimedDiscount(activeDiscount);
         setClaimSuccessVisible(true);
         setClaiming(false);
 
-        fetchAll({ silent: true, forceFresh: true });
+        setTimeout(() => {
+          fetchAll({ silent: true, forceFresh: true });
+        }, 800);
 
         setTimeout(() => {
           setClaimSuccessVisible(false);
@@ -1137,27 +1093,28 @@ export default function OfferScreen() {
         }, 2200);
       } catch (err) {
         setClaiming(false);
-        const msg =
-          err.response?.data?.message || "Error claiming offer";
-        if (err.response?.data?.alreadyClaimed) {
-          setLocallyClaimedIds((prev) => {
-            const next = new Set(prev);
-            next.add(offerId);
-            return next;
-          });
+        const msg = err.response?.data?.message || "Error claiming offer";
 
+        if (err.response?.data?.alreadyClaimed) {
+          registerLocalClaim(offerId);
+          setClaimVersion((v) => v + 1);
           emitOfferClaimed(initialBrand._id, offerId);
           try {
-            notifyOfferClaimed(
-              initialBrand._id,
-              offerId,
-              userIdFromToken(token)
-            );
-          } catch (e) {
-            console.log("notifyOfferClaimed error:", e);
-          }
+            notifyOfferClaimed(initialBrand._id, offerId, userIdFromToken(token));
+          } catch (e) {}
           return;
         }
+
+        unregisterLocalClaim(offerId);
+        setClaimVersion((v) => v + 1);
+        setBrand((prev) => {
+          const updatedOffers = (prev?.offers || []).map((o) =>
+            o._id === offerId ? { ...o, isClaimed: false } : o
+          );
+          updateStatsFromOffers(updatedOffers);
+          return { ...prev, offers: updatedOffers };
+        });
+
         Alert.alert("Notice", msg);
       }
     },
@@ -1170,13 +1127,11 @@ export default function OfferScreen() {
       hasSelectedBranch,
       selectedBranch,
       fetchAll,
-      locallyClaimedIds,
       initialBrand?._id,
       updateStatsFromOffers,
     ]
   );
 
-  // ── Loading ──
   if (loading || !brand) {
     return (
       <SafeAreaView style={styles.mainSafeArea}>
@@ -1195,7 +1150,6 @@ export default function OfferScreen() {
     <SafeAreaView style={styles.mainSafeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.headerBtn}
@@ -1221,23 +1175,16 @@ export default function OfferScreen() {
           {refreshing ? (
             <ActivityIndicator size="small" color="#f9c349" />
           ) : (
-            <MaterialCommunityIcons
-              name="refresh"
-              size={22}
-              color="#000"
-            />
+            <MaterialCommunityIcons name="refresh" size={22} color="#000" />
           )}
         </TouchableOpacity>
       </View>
-
-     
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Brand Header */}
         <View style={styles.brandDetailHeader}>
           <View style={styles.logoCircle}>
             <Image
@@ -1255,20 +1202,13 @@ export default function OfferScreen() {
           </Text>
           <View style={styles.categoryBadge}>
             <MaterialIcons name="category" size={14} color="black" />
-            <Text style={styles.categoryText}>
-              {activeCategory}
-            </Text>
+            <Text style={styles.categoryText}>{activeCategory}</Text>
           </View>
 
-          {/* Availability pills */}
           <View style={styles.availabilityRow}>
             {activeIsOnline && (
               <View style={styles.availabilityPill}>
-                <MaterialCommunityIcons
-                  name="earth"
-                  size={14}
-                  color="#f9c349"
-                />
+                <MaterialCommunityIcons name="earth" size={14} color="#f9c349" />
                 <Text style={styles.availabilityText}>Online</Text>
               </View>
             )}
@@ -1285,7 +1225,6 @@ export default function OfferScreen() {
           </View>
         </View>
 
-        {/* Branch dropdown */}
         <BranchDropdown
           branches={branches}
           selectedBranch={selectedBranch}
@@ -1296,7 +1235,6 @@ export default function OfferScreen() {
           onClearSelection={() => setSelectedBranch(null)}
         />
 
-        {/* Tabs */}
         <View style={styles.tabContainer}>
           {["gift", "redeem", "location"].map((tab) => (
             <Pressable
@@ -1305,10 +1243,7 @@ export default function OfferScreen() {
                 Haptics.selectionAsync();
                 setActiveTab(tab);
               }}
-              style={[
-                styles.tabItem,
-                activeTab === tab && styles.activeTabCard,
-              ]}
+              style={[styles.tabItem, activeTab === tab && styles.activeTabCard]}
             >
               <Text
                 style={[
@@ -1326,7 +1261,6 @@ export default function OfferScreen() {
           ))}
         </View>
 
-        {/* ── Details Tab ── */}
         {activeTab === "gift" && (
           <View style={styles.tabContentWrapper}>
             <Text style={styles.tabContentTitle}>{activeTitle}</Text>
@@ -1334,18 +1268,13 @@ export default function OfferScreen() {
 
             {activeDiscount > 0 && (
               <View style={styles.discountInfoRow}>
-                <MaterialCommunityIcons
-                  name="percent"
-                  size={20}
-                  color="#f9c349"
-                />
+                <MaterialCommunityIcons name="percent" size={20} color="#f9c349" />
                 <Text style={styles.discountInfoText}>
                   {activeDiscount}% OFF for students
                 </Text>
               </View>
             )}
 
-            {/* Show branch info if selected */}
             {hasSelectedBranch && (
               <View style={styles.branchInfoCard}>
                 <MaterialCommunityIcons
@@ -1354,9 +1283,7 @@ export default function OfferScreen() {
                   color="#f9c349"
                 />
                 <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={styles.branchInfoTitle}>
-                    {activeBranchName}
-                  </Text>
+                  <Text style={styles.branchInfoTitle}>{activeBranchName}</Text>
                   {selectedBranch.city ? (
                     <Text style={styles.branchInfoText}>
                       {selectedBranch.city}
@@ -1389,17 +1316,12 @@ export default function OfferScreen() {
                     Sign in to claim offers and get student discounts!
                   </Text>
                 </View>
-                <Ionicons
-                  name="chevron-forward"
-                  size={20}
-                  color="#f9c349"
-                />
+                <Ionicons name="chevron-forward" size={20} color="#f9c349" />
               </TouchableOpacity>
             )}
           </View>
         )}
 
-        {/* ── Redeem Tab ── */}
         {activeTab === "redeem" && (
           <View style={styles.tabContentWrapper}>
             <View style={styles.instructionHeader}>
@@ -1416,14 +1338,8 @@ export default function OfferScreen() {
 
             {activeIsOnline && (
               <View style={styles.redeemOnlineBadge}>
-                <MaterialCommunityIcons
-                  name="earth"
-                  size={16}
-                  color="#3b82f6"
-                />
-                <Text style={styles.redeemOnlineText}>
-                  Available Online
-                </Text>
+                <MaterialCommunityIcons name="earth" size={16} color="#3b82f6" />
+                <Text style={styles.redeemOnlineText}>Available Online</Text>
               </View>
             )}
             {activeIsInStore && (
@@ -1433,15 +1349,12 @@ export default function OfferScreen() {
                   size={16}
                   color="#ec4899"
                 />
-                <Text style={styles.redeemStoreText}>
-                  Available In-Store
-                </Text>
+                <Text style={styles.redeemStoreText}>Available In-Store</Text>
               </View>
             )}
           </View>
         )}
 
-        {/* ── Location Tab ── */}
         {activeTab === "location" && (
           <View style={styles.tabContentWrapper}>
             <View style={styles.locationInfoRow}>
@@ -1455,31 +1368,31 @@ export default function OfferScreen() {
               </Text>
             </View>
 
-            {/* Show branch info in location tab too */}
-            {hasSelectedBranch && (selectedBranch.city || selectedBranch.address) && (
-              <View style={styles.branchLocationCard}>
-                <MaterialCommunityIcons
-                  name="storefront"
-                  size={18}
-                  color="#f9c349"
-                />
-                <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={styles.branchLocationTitle}>
-                    {activeBranchName}
-                  </Text>
-                  {selectedBranch.city ? (
-                    <Text style={styles.branchLocationText}>
-                      📍 {selectedBranch.city}
+            {hasSelectedBranch &&
+              (selectedBranch.city || selectedBranch.address) && (
+                <View style={styles.branchLocationCard}>
+                  <MaterialCommunityIcons
+                    name="storefront"
+                    size={18}
+                    color="#f9c349"
+                  />
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={styles.branchLocationTitle}>
+                      {activeBranchName}
                     </Text>
-                  ) : null}
-                  {selectedBranch.address ? (
-                    <Text style={styles.branchLocationText}>
-                      {selectedBranch.address}
-                    </Text>
-                  ) : null}
+                    {selectedBranch.city ? (
+                      <Text style={styles.branchLocationText}>
+                        📍 {selectedBranch.city}
+                      </Text>
+                    ) : null}
+                    {selectedBranch.address ? (
+                      <Text style={styles.branchLocationText}>
+                        {selectedBranch.address}
+                      </Text>
+                    ) : null}
+                  </View>
                 </View>
-              </View>
-            )}
+              )}
 
             <TouchableOpacity
               style={[
@@ -1491,18 +1404,13 @@ export default function OfferScreen() {
               }
               disabled={!activeLocation && !activeBranchName && !brand.name}
             >
-              <MaterialCommunityIcons
-                name="directions"
-                size={18}
-                color="#fff"
-              />
+              <MaterialCommunityIcons name="directions" size={18} color="#fff" />
               <Text style={styles.mapButtonText}>Open in Maps</Text>
             </TouchableOpacity>
           </View>
         )}
       </ScrollView>
 
-      {/* Bottom Action Bar */}
       <View style={styles.bottomBar}>
         <TouchableOpacity
           style={styles.closeBtn}
@@ -1520,9 +1428,7 @@ export default function OfferScreen() {
             activeOpacity={0.8}
           >
             <LinearGradient
-              colors={
-                isClaimed ? ["#ccc", "#bbb"] : ["#f9c349", "#f5a623"]
-              }
+              colors={isClaimed ? ["#ccc", "#bbb"] : ["#f9c349", "#f5a623"]}
               style={styles.claimGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -1537,9 +1443,7 @@ export default function OfferScreen() {
                     color="#fff"
                   />
                   <Text style={styles.claimBtnText} numberOfLines={1}>
-                    {isClaimed
-                      ? "✓ Claimed"
-                      : `Claim ${activeDiscount}% OFF`}
+                    {isClaimed ? "✓ Claimed" : `Claim ${activeDiscount}% OFF`}
                   </Text>
                 </>
               )}
@@ -1562,16 +1466,12 @@ export default function OfferScreen() {
   );
 }
 
-// ==========================================
-// STYLES
-// ==========================================
+// ============================================================
+// STYLES (unchanged — same as before)
+// ============================================================
 const styles = StyleSheet.create({
   mainSafeArea: { flex: 1, backgroundColor: "#fff" },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   loadingText: { marginTop: 12, color: "#999", fontSize: 14 },
 
   header: {
@@ -1597,84 +1497,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#000",
     fontFamily: "Cardo",
-  },
-
-  liveStatsContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
-    backgroundColor: "#fff",
-    marginHorizontal: 16,
-    marginTop: 10,
-    marginBottom: 2,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#f0f0f0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  liveStatsSkeleton: {
-    height: 26,
-    width: "80%",
-    backgroundColor: "#f5f5f5",
-    borderRadius: 8,
-  },
-  liveStatItem: {
-    alignItems: "center",
-    justifyContent: "center",
-    flex: 1,
-    flexDirection: "row",
-    gap: 4,
-  },
-  liveStatValue: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#000",
-    fontFamily: "Cardo",
-  },
-  liveStatLabel: {
-    fontSize: 10,
-    color: "#999",
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
-  },
-  liveStatDivider: {
-    width: 1,
-    height: 16,
-    backgroundColor: "#f0f0f0",
-  },
-
-  liveBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "center",
-    marginTop: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: "#f9c34915",
-    borderWidth: 1,
-    borderColor: "#f9c34930",
-  },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#22c55e",
-    marginRight: 6,
-  },
-  liveText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#f9c349",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
   },
 
   scrollView: { flex: 1 },
@@ -1734,11 +1556,7 @@ const styles = StyleSheet.create({
     borderColor: "#f9c34940",
     gap: 4,
   },
-  availabilityText: {
-    fontSize: 12,
-    color: "#f9c349",
-    fontWeight: "700",
-  },
+  availabilityText: { fontSize: 12, color: "#f9c349", fontWeight: "700" },
 
   branchDropdownWrap: {
     marginTop: 20,
@@ -1788,37 +1606,18 @@ const styles = StyleSheet.create({
     color: "#1a1a1a",
     marginTop: 2,
   },
-  branchDropdownList: {
-    backgroundColor: "#fff",
-  },
+  branchDropdownList: { backgroundColor: "#fff" },
   branchDropdownItem: {
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#f5f5f5",
   },
-  branchDropdownItemActive: {
-    backgroundColor: "#fffdf5",
-  },
-  branchDropdownItemRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  branchDropdownItemName: {
-    fontSize: 13.5,
-    fontWeight: "600",
-    color: "#333",
-  },
-  branchDropdownItemNameActive: {
-    color: "#000",
-    fontWeight: "800",
-  },
-  branchDropdownItemCity: {
-    fontSize: 11,
-    color: "#999",
-    marginTop: 2,
-  },
+  branchDropdownItemActive: { backgroundColor: "#fffdf5" },
+  branchDropdownItemRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  branchDropdownItemName: { fontSize: 13.5, fontWeight: "600", color: "#333" },
+  branchDropdownItemNameActive: { color: "#000", fontWeight: "800" },
+  branchDropdownItemCity: { fontSize: 11, color: "#999", marginTop: 2 },
   branchDropdownPill: {
     backgroundColor: "#f0f0f0",
     paddingHorizontal: 8,
@@ -1826,19 +1625,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 4,
   },
-  branchDropdownPillActive: {
-    backgroundColor: "#f9c349",
-  },
-  branchDropdownPillText: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: "#666",
-  },
-  branchDropdownPillTextActive: {
-    color: "#fff",
-  },
+  branchDropdownPillActive: { backgroundColor: "#f9c349" },
+  branchDropdownPillText: { fontSize: 11, fontWeight: "800", color: "#666" },
+  branchDropdownPillTextActive: { color: "#fff" },
 
-  // ✅ Branch info cards
   branchInfoCard: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -1855,11 +1645,7 @@ const styles = StyleSheet.create({
     color: "#1a1a1a",
     marginBottom: 4,
   },
-  branchInfoText: {
-    fontSize: 12,
-    color: "#666",
-    lineHeight: 18,
-  },
+  branchInfoText: { fontSize: 12, color: "#666", lineHeight: 18 },
   branchLocationCard: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -1876,12 +1662,7 @@ const styles = StyleSheet.create({
     color: "#1a1a1a",
     marginBottom: 4,
   },
-  branchLocationText: {
-    fontSize: 12,
-    color: "#666",
-    lineHeight: 18,
-    marginTop: 2,
-  },
+  branchLocationText: { fontSize: 12, color: "#666", lineHeight: 18, marginTop: 2 },
 
   tabContainer: {
     flexDirection: "row",
@@ -2004,10 +1785,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignSelf: "flex-start",
   },
-  mapButtonDisabled: {
-    backgroundColor: "#ccc",
-    opacity: 0.6,
-  },
+  mapButtonDisabled: { backgroundColor: "#ccc", opacity: 0.6 },
   mapButtonText: {
     color: "#fff",
     fontWeight: "700",

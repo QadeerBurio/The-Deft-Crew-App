@@ -155,7 +155,7 @@ const ResumeBuilderScreen = () => {
   const route = useRoute();
   const { resumeId } = route.params || {};
 
-  // Step state: 1 to 8 mapping to tabs
+  // Step state: 1 to 7
   const [activeStep, setActiveStep] = useState(1);
   const [aiGeneratingVisible, setAiGeneratingVisible] = useState(false);
   const [aiGeneratingStep, setAiGeneratingStep] = useState('');
@@ -200,10 +200,7 @@ const ResumeBuilderScreen = () => {
   const [projDesc, setProjDesc] = useState('');
   const [editingProjIndex, setEditingProjIndex] = useState(null);
 
-  // Step 5: Skills Tag Input
-  const [skillInput, setSkillInput] = useState('');
-
-  // Step 6: Certifications Inline Form
+  // Step 5: Certifications Inline Form
   const [certName, setCertName] = useState('');
   const [certIssuer, setCertIssuer] = useState('');
   const [certIssueDate, setCertIssueDate] = useState('');
@@ -211,19 +208,22 @@ const ResumeBuilderScreen = () => {
   const [certExpiryDate, setCertExpiryDate] = useState('');
   const [editingCertIndex, setEditingCertIndex] = useState(null);
 
-  // Step 7: Target Job Inline
+  // Step 6: Target Job Inline
   const [roleSearchQuery, setRoleSearchQuery] = useState('');
   const [expandedIndustry, setExpandedIndustry] = useState('Technology');
   const [targetSummary, setTargetSummary] = useState('');
 
+  // Step 7: Skills Tag Input
+  const [skillInput, setSkillInput] = useState('');
+
   // AI & Preview Control
   const [aiProcessing, setAiProcessing] = useState(false);
   const [savingStep1, setSavingStep1] = useState(false);
-  const [savingStep7, setSavingStep7] = useState(false);
+  const [savingStep6, setSavingStep6] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewTemplateId, setPreviewTemplateId] = useState('modern_ats');
 
-  // Customize options (Kept separate on Step 8)
+  // Customize options
   const [selectedFont, setSelectedFont] = useState('Inter');
   const [selectedColor, setSelectedColor] = useState('#1E3A8A');
   const [accentColor, setAccentColor] = useState('#1E3A8A');
@@ -302,26 +302,34 @@ const ResumeBuilderScreen = () => {
     saveCustomStyles({ bgColor: nextVal });
   };
 
-  // Stepper titles (7 steps — Templates removed)
+  // ============================================================
+  // STEPPER TITLES — NEW ORDER
+  // 1. Personal
+  // 2. Education
+  // 3. Work
+  // 4. Projects
+  // 5. Certifications
+  // 6. Target Job
+  // 7. Skills
+  // ============================================================
   const steps = [
     { id: 1, name: 'Personal', icon: 'person-outline', title: 'Personal Info', desc: 'Your contact details and basic information' },
     { id: 2, name: 'Education', icon: 'school-outline', title: 'Education', desc: 'Academic background and qualifications' },
     { id: 3, name: 'Work', icon: 'briefcase-outline', title: 'Work Experience', desc: 'Work history with AI-enhanced bullet points' },
     { id: 4, name: 'Projects', icon: 'folder-outline', title: 'Projects', desc: 'Portfolio projects with AI-optimized descriptions' },
-    { id: 5, name: 'Skills', icon: 'hammer-outline', title: 'Skills', desc: 'Skills with AI suggestions — for any field' },
-    { id: 6, name: 'Certifications', icon: 'ribbon-outline', title: 'Certifications', desc: 'Professional certifications and credentials' },
-    { id: 7, name: 'Target', icon: 'locate-outline', title: 'Target Job', desc: 'Role (any industry) and AI-generated summary' },
+    { id: 5, name: 'Certifications', icon: 'ribbon-outline', title: 'Certifications', desc: 'Professional certifications and credentials' },
+    { id: 6, name: 'Target', icon: 'locate-outline', title: 'Target Job', desc: 'Role (any industry) and AI-generated summary' },
+    { id: 7, name: 'Skills', icon: 'hammer-outline', title: 'Skills', desc: 'Skills with AI suggestions — for any field' },
   ];
 
-  // Date format helper — converts ISO dates to "Mon YYYY" for form inputs
+  // Date format helper
   const formatDateForInput = (dateStr) => {
     if (!dateStr) return '';
     const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr; // already a plain string like "Jan 2022"
+    if (isNaN(d.getTime())) return dateStr;
     return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   };
 
-  // Track last synced resume ID & step so background updates don't overwrite user's active typing
   const syncedResumeIdRef = useRef(null);
   const syncedStepRef = useRef(null);
 
@@ -352,7 +360,7 @@ const ResumeBuilderScreen = () => {
           if (info.linkedin) setPLinkedin(info.linkedin);
           if (info.github) setPGithub(info.github);
           if (info.portfolio) setPPortfolio(info.portfolio);
-        } else if (activeStep === 7) {
+        } else if (activeStep === 6) {
           setTargetSummary(currentResume.professionalSummary?.summary || '');
         }
       }
@@ -366,7 +374,6 @@ const ResumeBuilderScreen = () => {
         await fetchResumes();
       } else {
         try {
-          // Reset all local input states to user profile defaults
           setPName(user?.name || '');
           setPTitle(user?.headline || 'Software Engineer');
           setPEmail(user?.email || '');
@@ -400,8 +407,6 @@ const ResumeBuilderScreen = () => {
     initResume();
   }, [resumeId]);
 
-
-
   // Pick Document Helper
   const pickDocument = async () => {
     try {
@@ -412,7 +417,6 @@ const ResumeBuilderScreen = () => {
       if (!res.canceled && res.assets && res.assets.length > 0) {
         const pickedFile = res.assets[0];
         
-        // Client-side validation: check file format and size
         const allowedExtensions = ['pdf', 'doc', 'docx'];
         const fileExt = pickedFile.name?.split('.').pop()?.toLowerCase();
         
@@ -424,7 +428,6 @@ const ResumeBuilderScreen = () => {
           return null;
         }
 
-        // Limit size to 10MB to avoid backend out-of-memory or timeout issues
         if (pickedFile.size && pickedFile.size > 10 * 1024 * 1024) {
           Alert.alert(
             'File Too Large ⚠️', 
@@ -446,8 +449,8 @@ const ResumeBuilderScreen = () => {
   const handleAutoFillUpload = async () => {
     if (creationsUsed >= 2) {
       Alert.alert(
-        'Resume Creation Limit Reached ⚠️',
-        'You have used all 2 resume creations available for your account. Deleting a resume will not restore your creation limit.'
+        'Resume Limit Reached ⚠️',
+        'You already have 2 resumes. Please delete an existing resume to create a new one.'
       );
       return;
     }
@@ -459,7 +462,6 @@ const ResumeBuilderScreen = () => {
     setAiGeneratingProgress(15);
 
     try {
-      // Simulate progress updates for a smoother visual experience while uploading
       const progressInterval = setInterval(() => {
         setAiGeneratingProgress(prev => {
           if (prev < 50) return prev + 5;
@@ -496,7 +498,6 @@ const ResumeBuilderScreen = () => {
 
         await fetchResumes();
 
-        // Navigate directly to the ResumeView document format screen!
         navigation.navigate('ResumeView', { resumeId: parsed._id });
       } else {
         setAiGeneratingVisible(false);
@@ -548,7 +549,6 @@ const ResumeBuilderScreen = () => {
     });
   };
 
-  // Explicit Save Step 1 with user feedback
   const handleSaveStep1 = async () => {
     if (!currentResume) return;
     try {
@@ -563,24 +563,25 @@ const ResumeBuilderScreen = () => {
     }
   };
 
-  const handleSaveStep7 = async () => {
+  // Save handler for Target Job (now Step 6)
+  const handleSaveStep6 = async () => {
     if (!currentResume) return;
     try {
-      setSavingStep7(true);
+      setSavingStep6(true);
       await saveTargetSummary();
       Alert.alert('✅ Saved!', 'Target Job & Summary saved successfully!');
     } catch (err) {
       console.error('Error saving target summary:', err);
       Alert.alert('❌ Error', 'Failed to save Target Summary: ' + (err.message || 'Server error'));
     } finally {
-      setSavingStep7(false);
+      setSavingStep6(false);
     }
   };
 
   const handleStepChange = async (newStep) => {
     if (activeStep === 1) {
       await savePersonalInfo();
-    } else if (activeStep === 7) {
+    } else if (activeStep === 6) {
       await saveTargetSummary();
     }
     setActiveStep(newStep);
@@ -589,7 +590,7 @@ const ResumeBuilderScreen = () => {
   const handlePrevStep = async () => {
     if (activeStep === 1) {
       await savePersonalInfo();
-    } else if (activeStep === 7) {
+    } else if (activeStep === 6) {
       await saveTargetSummary();
     }
     setActiveStep(prev => Math.max(1, prev - 1));
@@ -598,15 +599,13 @@ const ResumeBuilderScreen = () => {
   const handleGoBack = async () => {
     if (activeStep === 1) {
       await savePersonalInfo();
-    } else if (activeStep === 7) {
+    } else if (activeStep === 6) {
       await saveTargetSummary();
     }
     navigation.goBack();
   };
 
-  // Next step trigger with auto sync
   const handleNextStep = async () => {
-    // Check for unsaved education details
     if (activeStep === 2 && (eduInstitution.trim() || eduDegree.trim())) {
       Alert.alert(
         'Unsaved Education details 🎓',
@@ -614,7 +613,6 @@ const ResumeBuilderScreen = () => {
       );
       return;
     }
-    // Check for unsaved experience details
     if (activeStep === 3 && (workCompany.trim() || workPosition.trim())) {
       Alert.alert(
         'Unsaved Experience details 💼',
@@ -622,7 +620,6 @@ const ResumeBuilderScreen = () => {
       );
       return;
     }
-    // Check for unsaved projects details
     if (activeStep === 4 && (projName.trim() || projDesc.trim())) {
       Alert.alert(
         'Unsaved Project details 📂',
@@ -630,26 +627,33 @@ const ResumeBuilderScreen = () => {
       );
       return;
     }
+    if (activeStep === 5 && (certName.trim() || certIssuer.trim())) {
+      Alert.alert(
+        'Unsaved Certification details 🏅',
+        'You have typed certification details but haven\'t clicked "Add Certification" yet. Please click the yellow "Add Certification" button to save them or clear the text fields to continue.'
+      );
+      return;
+    }
 
     if (activeStep === 1) {
       await savePersonalInfo();
-    } else if (activeStep === 7) {
+    } else if (activeStep === 6) {
       await saveTargetSummary();
     }
     setActiveStep(prev => Math.min(7, prev + 1));
   };
 
-  // Helper to extract fallback target role
   const getTargetRoleFallback = () => {
     const roles = currentResume?.targetJobs || [];
     return roles.map(r => r.jobTitle).join(', ') || currentResume?.targetJob?.jobTitle || 'Software Engineer';
   };
 
-  // Step 1: Personal Info Card
+  // ============================================================
+  // STEP 1: PERSONAL INFO
+  // ============================================================
   const renderStep1 = () => {
     return (
       <View style={styles.formContainer}>
-        {/* Upload banner */}
         <View style={styles.bannerCard}>
           <Text style={styles.bannerTitle}>Already have a resume?</Text>
           <Text style={styles.bannerText}>
@@ -785,7 +789,9 @@ const ResumeBuilderScreen = () => {
     );
   };
 
-  // Step 2: Education Inline Form & List
+  // ============================================================
+  // STEP 2: EDUCATION
+  // ============================================================
   const renderStep2 = () => {
     const items = currentResume?.education || [];
 
@@ -815,7 +821,6 @@ const ResumeBuilderScreen = () => {
 
       await updateResume(currentResume._id, { education: updated });
       
-      // Reset
       setEduDegree('');
       setEduField('');
       setEduInstitution('');
@@ -955,7 +960,9 @@ const ResumeBuilderScreen = () => {
     );
   };
 
-  // Step 3: Work Experience Inline Form & List
+  // ============================================================
+  // STEP 3: WORK EXPERIENCE
+  // ============================================================
   const renderStep3 = () => {
     const items = currentResume?.workExperience || [];
 
@@ -984,7 +991,6 @@ const ResumeBuilderScreen = () => {
 
       await updateResume(currentResume._id, { workExperience: updated });
       
-      // Reset
       setWorkCompany('');
       setWorkPosition('');
       setWorkLocation('');
@@ -1135,7 +1141,9 @@ const ResumeBuilderScreen = () => {
     );
   };
 
-  // Step 4: Projects Inline Form & List
+  // ============================================================
+  // STEP 4: PROJECTS
+  // ============================================================
   const renderStep4 = () => {
     const items = currentResume?.projects || [];
 
@@ -1162,7 +1170,6 @@ const ResumeBuilderScreen = () => {
 
       await updateResume(currentResume._id, { projects: updated });
       
-      // Reset
       setProjName('');
       setProjTech('');
       setProjGithub('');
@@ -1288,96 +1295,10 @@ const ResumeBuilderScreen = () => {
     );
   };
 
-  // Step 5: Skills Tag Input
+  // ============================================================
+  // STEP 5: CERTIFICATIONS (NEW POSITION)
+  // ============================================================
   const renderStep5 = () => {
-    const items = currentResume?.skills || [];
-
-    const handleAddSkill = async () => {
-      if (!skillInput.trim()) return;
-      const exist = items.some(s => s.name.toLowerCase() === skillInput.trim().toLowerCase());
-      if (exist) {
-        setSkillInput('');
-        return;
-      }
-      const updated = [...items, { name: skillInput.trim(), level: 'Advanced' }];
-      await updateResume(currentResume._id, { skills: updated });
-      setSkillInput('');
-    };
-
-    return (
-      <View style={styles.formContainer}>
-        <View style={styles.skillInputWrapper}>
-          <TextInput
-            style={styles.skillTextInput}
-            placeholder="Type a skill and press Enter or comma..."
-            placeholderTextColor="#94A3B8"
-            value={skillInput}
-            onChangeText={setSkillInput}
-            onSubmitEditing={handleAddSkill}
-          />
-          <TouchableOpacity style={styles.skillAddBtn} onPress={handleAddSkill}>
-            <Ionicons name="add" size={22} color="#000" />
-          </TouchableOpacity>
-        </View>
-
-        {items.length === 0 ? (
-          <View style={styles.emptyCardBody}>
-            <Text style={styles.emptyCardText}>No skills added yet — type above or use AI Suggestions</Text>
-          </View>
-        ) : (
-          <View style={styles.skillsTagRow}>
-            {items.map((skill, index) => (
-              <View key={index} style={styles.skillTag}>
-                <Text style={styles.skillTagText}>{skill.name}</Text>
-                <TouchableOpacity onPress={async () => {
-                  const updated = items.filter((_, i) => i !== index);
-                  await updateResume(currentResume._id, { skills: updated });
-                }}>
-                  <Ionicons name="close" size={14} color="#64748B" style={{ marginLeft: 4 }} />
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
-        )}
-
-        <TouchableOpacity 
-          style={[styles.yellowButton, { marginTop: 24 }]}
-          onPress={async () => {
-            try {
-              const items = currentResume?.skills || [];
-              const targetRole = getTargetRoleFallback();
-              const result = await resumeApi.suggestSkills(
-                items.map(s => s.name),
-                targetRole
-              );
-              if (result?.suggestions && result.suggestions.length > 0) {
-                const existingNames = new Set(items.map(s => s.name.toLowerCase()));
-                const newSkills = result.suggestions
-                  .filter(s => !existingNames.has(s.toLowerCase()))
-                  .map(s => ({ name: s, level: 'Intermediate' }));
-                if (newSkills.length > 0) {
-                  await updateResume(currentResume._id, { skills: [...items, ...newSkills] });
-                  Alert.alert('Skills Added ✨', `${newSkills.length} new skills added based on your target role.`);
-                } else {
-                  Alert.alert('All Caught Up ✓', 'No new skills to suggest — you already have them!');
-                }
-              } else {
-                Alert.alert('No Suggestions', 'Could not generate suggestions. Try adding a target role in Step 7.');
-              }
-            } catch (err) {
-              Alert.alert('AI Failed', err.message || 'Suggestions timed out. Please try again.');
-            }
-          }}
-        >
-          <Text style={styles.yellowButtonText}>✨ AI Skill Suggestions</Text>
-        </TouchableOpacity>
-        <Text style={styles.skillTipText}>💡 Press Enter or , to add a skill quickly</Text>
-      </View>
-    );
-  };
-
-  // Step 6: Certifications Inline Form & List
-  const renderStep6 = () => {
     const items = currentResume?.certifications || [];
 
     const handleAddCertification = async () => {
@@ -1403,7 +1324,6 @@ const ResumeBuilderScreen = () => {
 
       await updateResume(currentResume._id, { certifications: updated });
       
-      // Clear
       setCertName('');
       setCertIssuer('');
       setCertIssueDate('');
@@ -1413,7 +1333,7 @@ const ResumeBuilderScreen = () => {
     };
 
     return (
-      <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
+      <View style={styles.formContainer}>
         {items.map((item, index) => (
           <View key={index} style={styles.itemRowBadge}>
             <View style={{ flex: 1 }}>
@@ -1496,12 +1416,14 @@ const ResumeBuilderScreen = () => {
             {editingCertIndex !== null ? 'Update Certification' : 'Add Certification'}
           </Text>
         </TouchableOpacity>
-      </ScrollView>
+      </View>
     );
   };
 
-  // Step 7: Target Job with multi role selection
-  const renderStep7 = () => {
+  // ============================================================
+  // STEP 6: TARGET JOB (NEW POSITION)
+  // ============================================================
+  const renderStep6 = () => {
     const selectedRoles = currentResume?.targetJobs || [];
 
     const handleSelectRole = async (role) => {
@@ -1555,7 +1477,7 @@ const ResumeBuilderScreen = () => {
     };
 
     return (
-      <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
+      <View style={styles.formContainer}>
         <Text style={styles.inputLabel}>Search roles or type a custom role & press Enter...</Text>
         <TextInput
           style={styles.textInput}
@@ -1648,121 +1570,110 @@ const ResumeBuilderScreen = () => {
 
         <TouchableOpacity 
           style={[styles.yellowButton, { marginTop: 12, backgroundColor: '#2563EB' }]} 
-          onPress={handleSaveStep7}
-          disabled={savingStep7}
+          onPress={handleSaveStep6}
+          disabled={savingStep6}
         >
-          {savingStep7 ? (
+          {savingStep6 ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
             <Text style={[styles.yellowButtonText, { color: '#ffffff' }]}>💾 Save Target Job & Summary</Text>
           )}
         </TouchableOpacity>
-      </ScrollView>
+      </View>
     );
   };
 
-  // Step 8: Templates & Styles Customize Panel
-  const renderStep8 = () => {
+  // ============================================================
+  // STEP 7: SKILLS (NEW POSITION - LAST)
+  // ============================================================
+  const renderStep7 = () => {
+    const items = currentResume?.skills || [];
+
+    const handleAddSkill = async () => {
+      if (!skillInput.trim()) return;
+      const exist = items.some(s => s.name.toLowerCase() === skillInput.trim().toLowerCase());
+      if (exist) {
+        setSkillInput('');
+        return;
+      }
+      const updated = [...items, { name: skillInput.trim(), level: 'Advanced' }];
+      await updateResume(currentResume._id, { skills: updated });
+      setSkillInput('');
+    };
+
     return (
-      <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
-        {/* Templates Catalog */}
-        <Text style={styles.inputLabel}>Choose Resume Template Style</Text>
-        <View style={styles.templatesCatalogRow}>
-          {SYSTEM_TEMPLATES.map(t => {
-            const isActive = currentResume?.template === t.id;
-            return (
-              <View key={t.id} style={[styles.catalogCard, isActive && styles.catalogCardActive]}>
-                <Text style={styles.catalogCardTitle}>{t.name}</Text>
-                <Text style={styles.catalogCardDesc}>{t.desc}</Text>
-                <View style={styles.catalogCardActions}>
-                  <TouchableOpacity 
-                    style={styles.catalogPreviewBtn} 
-                    onPress={() => {
-                      setPreviewTemplateId(t.id);
-                      setPreviewVisible(true);
-                    }}
-                  >
-                    <Ionicons name="eye-outline" size={14} color="#64748B" />
-                    <Text style={styles.catalogPreviewBtnText}>Preview</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.catalogApplyBtn, isActive && styles.catalogApplyBtnActive]} 
-                    onPress={async () => {
-                      await updateResume(currentResume._id, { template: t.id });
-                    }}
-                  >
-                    <Text style={[styles.catalogApplyBtnText, isActive && styles.catalogApplyBtnTextActive]}>
-                      {isActive ? 'Applied' : 'Apply'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+      <View style={styles.formContainer}>
+        <View style={styles.skillInputWrapper}>
+          <TextInput
+            style={styles.skillTextInput}
+            placeholder="Type a skill and press Enter or comma..."
+            placeholderTextColor="#94A3B8"
+            value={skillInput}
+            onChangeText={setSkillInput}
+            onSubmitEditing={handleAddSkill}
+          />
+          <TouchableOpacity style={styles.skillAddBtn} onPress={handleAddSkill}>
+            <Ionicons name="add" size={22} color="#000" />
+          </TouchableOpacity>
+        </View>
+
+        {items.length === 0 ? (
+          <View style={styles.emptyCardBody}>
+            <Text style={styles.emptyCardText}>No skills added yet — type above or use AI Suggestions</Text>
+          </View>
+        ) : (
+          <View style={styles.skillsTagRow}>
+            {items.map((skill, index) => (
+              <View key={index} style={styles.skillTag}>
+                <Text style={styles.skillTagText}>{skill.name}</Text>
+                <TouchableOpacity onPress={async () => {
+                  const updated = items.filter((_, i) => i !== index);
+                  await updateResume(currentResume._id, { skills: updated });
+                }}>
+                  <Ionicons name="close" size={14} color="#64748B" style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
               </View>
-            );
-          })}
-        </View>
-
-        {/* Custom Styles */}
-        <Text style={styles.sectionHeading}>Custom Style Options</Text>
-
-        <Text style={styles.inputLabel}>Font Family</Text>
-        <View style={styles.fontGrid}>
-          {FONTS.map(f => (
-            <TouchableOpacity 
-              key={f}
-              style={[styles.fontBtn, selectedFont === f && styles.fontBtnActive]}
-              onPress={() => {
-                setSelectedFont(f);
-                saveCustomStyles({ font: f });
-              }}
-            >
-              <Text style={styles.fontBtnText}>{f}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <Text style={styles.inputLabel}>Color Preset</Text>
-        <View style={styles.presetGrid}>
-          {PRESETS.map(p => (
-            <TouchableOpacity 
-              key={p.name} 
-              style={[styles.presetCircle, { backgroundColor: p.color }, selectedColor === p.color && { borderWidth: 3, borderColor: '#000' }]}
-              onPress={() => {
-                setSelectedColor(p.color);
-                setAccentColor(p.color);
-                setHeadingColor(p.color);
-                saveCustomStyles({ accentColor: p.color, headingColor: p.color });
-              }}
-            />
-          ))}
-        </View>
-
-        <Text style={styles.inputLabel}>Custom Palette Details (Tap to Cycle Colors)</Text>
-        <View style={styles.customPaletteRow}>
-          <TouchableOpacity style={[styles.paletteCircle, { backgroundColor: accentColor }]} onPress={cycleAccentColor}>
-            <Text style={[styles.palText, { color: accentColor === '#111827' || accentColor === '#1E3A8A' ? '#fff' : '#000' }]}>Accent</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.paletteCircle, { backgroundColor: headingColor }]} onPress={cycleHeadingColor}>
-            <Text style={[styles.palText, { color: headingColor === '#111827' || headingColor === '#0F172A' ? '#fff' : '#000' }]}>Headings</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.paletteCircle, { backgroundColor: '#E2E8F0', borderLeftColor: textColor, borderLeftWidth: 8 }]} onPress={cycleTextColor}>
-            <Text style={styles.palText}>Text</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.paletteCircle, { backgroundColor: bgColor, borderColor: '#CBD5E1', borderWidth: 1 }]} onPress={cycleBgColor}>
-            <Text style={[styles.palText, { color: '#000' }]}>Bg</Text>
-          </TouchableOpacity>
-        </View>
+            ))}
+          </View>
+        )}
 
         <TouchableOpacity 
           style={[styles.yellowButton, { marginTop: 24 }]}
-          onPress={() => navigation.navigate('ViewResume', { resumeId: currentResume?._id })}
+          onPress={async () => {
+            try {
+              const items = currentResume?.skills || [];
+              const targetRole = getTargetRoleFallback();
+              const result = await resumeApi.suggestSkills(
+                items.map(s => s.name),
+                targetRole
+              );
+              if (result?.suggestions && result.suggestions.length > 0) {
+                const existingNames = new Set(items.map(s => s.name.toLowerCase()));
+                const newSkills = result.suggestions
+                  .filter(s => !existingNames.has(s.toLowerCase()))
+                  .map(s => ({ name: s, level: 'Intermediate' }));
+                if (newSkills.length > 0) {
+                  await updateResume(currentResume._id, { skills: [...items, ...newSkills] });
+                  Alert.alert('Skills Added ✨', `${newSkills.length} new skills added based on your target role.`);
+                } else {
+                  Alert.alert('All Caught Up ✓', 'No new skills to suggest — you already have them!');
+                }
+              } else {
+                Alert.alert('No Suggestions', 'Could not generate suggestions. Try adding a target role in the Target step.');
+              }
+            } catch (err) {
+              Alert.alert('AI Failed', err.message || 'Suggestions timed out. Please try again.');
+            }
+          }}
         >
-          <Text style={styles.yellowButtonText}>Save & Download Resume 🚀</Text>
+          <Text style={styles.yellowButtonText}>✨ AI Skill Suggestions</Text>
         </TouchableOpacity>
-      </ScrollView>
+        <Text style={styles.skillTipText}>💡 Press Enter or , to add a skill quickly</Text>
+      </View>
     );
   };
 
-  // Compile responsive WebView HTML for pure preview modal (combining live input state)
+  // Compile responsive WebView HTML for pure preview modal
   const renderPreviewHTMLMobile = () => {
     if (!currentResume) return '';
 
@@ -1857,9 +1768,7 @@ const ResumeBuilderScreen = () => {
           </View>
           <Text style={styles.cardSubtitle}>{steps[activeStep - 1].desc}</Text>
 
-
-
-          {/* Form Switcher */}
+          {/* Form Switcher — NEW ORDER */}
           {activeStep === 1 && renderStep1()}
           {activeStep === 2 && renderStep2()}
           {activeStep === 3 && renderStep3()}
@@ -1869,7 +1778,7 @@ const ResumeBuilderScreen = () => {
           {activeStep === 7 && renderStep7()}
         </View>
 
-        {/* Persistent Bottom Stepper Navigation buttons */}
+        {/* Bottom Stepper Navigation buttons */}
         <View style={styles.footerContainer}>
           <TouchableOpacity 
             style={[styles.backButton, activeStep === 1 && { opacity: 0.5 }]}
@@ -1881,16 +1790,21 @@ const ResumeBuilderScreen = () => {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.continueButton, activeStep === 7 && { backgroundColor: '#2ECC71' }]}
-            onPress={async () => {
-              if (activeStep === 7) {
-                await saveTargetSummary();
-                navigation.navigate('ResumeView', { resumeId: currentResume?._id });
-              } else {
-                await handleNextStep();
-              }
-            }}
-          >
+  style={[styles.continueButton, activeStep === 7 && { backgroundColor: '#2ECC71' }]}
+  onPress={async () => {
+    if (activeStep === 7) {
+      // ✅ Skills step — nothing pending to save. Skills are already persisted
+      //    on every "Add Skill" tap. Just navigate to the view screen.
+      if (!currentResume?._id) {
+        Alert.alert('Error', 'No resume to finish.');
+        return;
+      }
+      navigation.navigate('ResumeView', { resumeId: currentResume._id });
+    } else {
+      await handleNextStep();
+    }
+  }}
+>
             <Text style={[styles.continueButtonText, activeStep === 7 && { color: '#ffffff' }]}>
               {activeStep === 7 ? 'Finish & Preview 🚀' : 'Continue'}
             </Text>
@@ -1915,7 +1829,7 @@ const ResumeBuilderScreen = () => {
         </View>
       </ScrollView>
 
-      {/* CLEAN MODAL PREVIEW (Shows ONLY the WebView - No custom style tools inside modal) */}
+      {/* CLEAN MODAL PREVIEW */}
       <Modal visible={previewVisible} transparent animationType="slide" onRequestClose={() => setPreviewVisible(false)}>
         <SafeAreaView style={styles.previewOverlay}>
           <View style={styles.previewHeader}>
@@ -2271,11 +2185,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#64748B',
   },
-  emptyCardSub: {
-    fontSize: 12,
-    color: '#94A3B8',
-    marginTop: 4,
-  },
   itemRowBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2351,37 +2260,6 @@ const styles = StyleSheet.create({
   summaryTextarea: {
     height: 100,
     textAlignVertical: 'top',
-  },
-  layoutBtnGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  layoutChoiceBtn: {
-    width: '48%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  layoutChoiceBtnActive: {
-    borderColor: '#f9c349',
-    backgroundColor: 'rgba(249,195,73,0.03)',
-  },
-  layoutChoiceText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#475569',
-    marginLeft: 8,
-  },
-  layoutChoiceTextActive: {
-    color: '#f9c349',
-    fontWeight: '700',
   },
   footerContainer: {
     flexDirection: 'row',
@@ -2462,131 +2340,6 @@ const styles = StyleSheet.create({
   previewEmptyText: {
     color: '#666',
   },
-  templatesCatalogRow: {
-    marginTop: 10,
-  },
-  catalogCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 16,
-    marginBottom: 12,
-  },
-  catalogCardActive: {
-    borderColor: '#f9c349',
-    backgroundColor: 'rgba(249,195,73,0.02)',
-  },
-  catalogCardTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 4,
-  },
-  catalogCardDesc: {
-    fontSize: 11,
-    color: '#64748B',
-    lineHeight: 15,
-    marginBottom: 12,
-  },
-  catalogCardActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  catalogPreviewBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#ffffff',
-  },
-  catalogPreviewBtnText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#475569',
-    marginLeft: 4,
-  },
-  catalogApplyBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: '#f9c349',
-  },
-  catalogApplyBtnActive: {
-    backgroundColor: '#2ECC71',
-  },
-  catalogApplyBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#000',
-  },
-  catalogApplyBtnTextActive: {
-    color: '#fff',
-  },
-  sectionHeading: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginTop: 24,
-    marginBottom: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: '#F1F5F9',
-    paddingBottom: 4,
-  },
-  fontGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 6,
-    marginBottom: 12,
-  },
-  fontBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 8,
-    marginRight: 6,
-    marginBottom: 6,
-  },
-  fontBtnActive: {
-    backgroundColor: '#f9c349',
-  },
-  fontBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#334155',
-  },
-  presetGrid: {
-    flexDirection: 'row',
-    marginTop: 6,
-    marginBottom: 12,
-  },
-  presetCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    marginRight: 10,
-  },
-  customPaletteRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 6,
-    marginBottom: 12,
-  },
-  paletteCircle: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#F1F5F9',
-  },
-  palText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#475569',
-  },
   aiModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.85)',
@@ -2636,27 +2389,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#f9c349',
-  },
-  helpTipCard: {
-    flexDirection: 'row',
-    backgroundColor: '#1E293B',
-    borderLeftWidth: 3,
-    borderLeftColor: '#f9c349',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 10,
-    marginBottom: 16,
-  },
-  helpTipTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#ffffff',
-    marginBottom: 2,
-  },
-  helpTipText: {
-    fontSize: 11.5,
-    color: '#94A3B8',
-    lineHeight: 16,
   },
 });
 

@@ -1,4 +1,4 @@
-// FeedScreen.js - Complete with FloatingMenu on center-right side
+// FeedScreen.js - Complete with back icon on header left, tdc logo centered
 
 import React, { useState, useEffect, useRef, useCallback, useContext, useMemo } from "react";
 import { 
@@ -14,7 +14,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 import PostCard, { PostCardSkeleton } from "./PostCard";
-import FloatingMenu from "./FloatingMenu";
 import ConfessionScreen from './ConfessionScreen';
 
 const { width, height } = Dimensions.get('window');
@@ -329,6 +328,10 @@ export default function FeedScreen({ navigation }) {
     }
   };
 
+  const handleBackPress = () => {
+    navigation.goBack();
+  };
+
   // ============ FEED POLLING ============
   useEffect(() => {
     const shouldPoll = activeTab === "Feed" && !isSearching && !isGuest && token;
@@ -525,9 +528,27 @@ export default function FeedScreen({ navigation }) {
         <View style={styles.topBar}>
           {!isSearching ? (
             <>
-              <Animated.View style={{ transform: [{ scale: headerScale }] }}>
-                <Text style={styles.logoText}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
-              </Animated.View>
+              {/* Back Icon - Left Side */}
+              <TouchableOpacity 
+                style={styles.backButton} 
+                onPress={handleBackPress}
+                activeOpacity={0.7}
+              >
+                <Ionicons 
+                  name={Platform.OS === 'ios' ? 'chevron-back' : 'chevron-back'} 
+                  size={24} 
+                  color="#1a1a1a" 
+                />
+              </TouchableOpacity>
+
+              {/* TDC Logo - Center */}
+              <View style={styles.centerLogoContainer}>
+                <Animated.View style={{ transform: [{ scale: headerScale }] }}>
+                  <Text style={styles.logoText}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
+                </Animated.View>
+              </View>
+
+              {/* Notification Icon - Right Side */}
               <View style={styles.topIcons}>
                 <TouchableOpacity style={styles.iconBtn} onPress={handleNotifications} activeOpacity={0.7}>
                   <View style={styles.badgeContainer}>
@@ -601,8 +622,6 @@ export default function FeedScreen({ navigation }) {
         {activeTab === "Feed" ? (
           <View style={{ flex: 1 }}>
             {renderFeed()}
-            {/* ✅ FloatingMenu only renders on Feed tab */}
-            {!isGuest && <FloatingMenu navigation={navigation} />}
           </View>
         ) : (
           <View style={{ flex: 1 }}>
@@ -666,11 +685,30 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     height: 52,
   },
+  
+  backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#f8f8f8',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  centerLogoContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: 'none',
+  },
+  
   logoText: { fontSize: 28, fontWeight: '900', color: '#1a1a1a', letterSpacing: -1 },
   topIcons: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   iconBtn: { 
     width: 38, height: 38, borderRadius: 12, backgroundColor: '#f8f8f8', 
-    justifyContent: 'center', alignItems: 'center', marginLeft: 8,
+    justifyContent: 'center', alignItems: 'center',
   },
   
   searchContainer: { flex: 1, flexDirection: 'row', alignItems: 'center' },

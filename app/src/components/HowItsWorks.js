@@ -1,14 +1,14 @@
 import React, { useRef, useEffect } from "react";
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  ScrollView, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
   StatusBar,
   Animated,
   Dimensions,
-  Platform
+  Platform,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -17,27 +17,100 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width, height } = Dimensions.get("window");
 
+const STEPS = [
+  {
+    number: "01",
+    icon: "account-check-outline",
+    title: "Verify You're a Student",
+    desc: "Sign up with your university details to unlock student-only deals.",
+    color: "#f9c349",
+    tag: "Start",
+  },
+  {
+    number: "02",
+    icon: "ticket-percent-outline",
+    title: "Save on Brands",
+    desc: "Scan with your tdc app at 100+ brands and save on the spot.",
+    color: "#4ecdc4",
+    tag: "Discounts",
+  },
+  {
+    number: "03",
+    icon: "account-group-outline",
+    title: "Skills Share",
+    desc: "Team up with other students, share what you know, build projects.",
+    color: "#a29bfe",
+    tag: "Collaborate",
+  },
+  {
+    number: "04",
+    icon: "calendar-star-outline",
+    title: "Events",
+    desc: "Get into workshops, seminars and networking events.",
+    color: "#fd79a8",
+    tag: "Events",
+  },
+  {
+    number: "05",
+    icon: "file-document-outline",
+    title: "Resume Builder",
+    desc: "Build an ATS-friendly resume with AI suggestions.",
+    color: "#00b894",
+    tag: "Career",
+  },
+  {
+    number: "06",
+    icon: "briefcase-search-outline",
+    title: "Career Growth",
+    desc: "Get early access to internships, jobs and exchange programs.",
+    color: "#6c5ce7",
+    tag: "Growth",
+  },
+  {
+    number: "07",
+    icon: "airplane-takeoff",
+    title: "Travel AI Assistant",
+    desc: "Plan trips with AI, plus rewards as you level up in tdc Privilege",
+    color: "#ff6b6b",
+    tag: "Rewards",
+  },
+  {
+    number: "08",
+    icon: "account-multiple-outline",
+    title: "Social Media Hub",
+    desc: "Post, Confess, Connect and grow your network across tdc social feeds.",
+    color: "#0984e3",
+    tag: "Social",
+  },
+];
+
+const STEP_COUNT = STEPS.length;
+
 export default function HowItWorks() {
   const navigation = useNavigation();
-  
+
   // Animation refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerFade = useRef(new Animated.Value(0)).current;
   const heroScale = useRef(new Animated.Value(0.9)).current;
   const slideUpAnim = useRef(new Animated.Value(30)).current;
   const heroRotate = useRef(new Animated.Value(0)).current;
-  const stepAnims = useRef([...Array(7)].map(() => new Animated.Value(0))).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
 
-  // Create particle animations
+  // Step animations — exactly STEP_COUNT entries
+  const stepAnims = useRef(
+    Array.from({ length: STEP_COUNT }, () => new Animated.Value(0))
+  ).current;
+
+  // Particle animations
   const particleAnims = useRef(
-    [...Array(6)].map(() => new Animated.Value(0))
+    Array.from({ length: 6 }, () => new Animated.Value(0))
   ).current;
 
   useEffect(() => {
-    // Hero rotation animation
+    // Hero rotation
     const rotateHero = Animated.loop(
       Animated.sequence([
         Animated.timing(heroRotate, {
@@ -54,7 +127,7 @@ export default function HowItWorks() {
     );
     rotateHero.start();
 
-    // Glow pulse animation
+    // Glow pulse
     const glowPulse = Animated.loop(
       Animated.sequence([
         Animated.timing(glowAnim, {
@@ -71,7 +144,7 @@ export default function HowItWorks() {
     );
     glowPulse.start();
 
-    // Pulse animation
+    // Pulse
     const pulse = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -88,8 +161,8 @@ export default function HowItWorks() {
     );
     pulse.start();
 
-    // Particle animations
-    particleAnims.forEach((anim, i) => {
+    // Particles
+    particleAnims.forEach((anim) => {
       Animated.loop(
         Animated.sequence([
           Animated.timing(anim, {
@@ -106,14 +179,14 @@ export default function HowItWorks() {
       ).start();
     });
 
-    // Progress animation
+    // Progress bar
     Animated.timing(progressAnim, {
       toValue: 1,
       duration: 2000,
-      useNativeDriver: false,
+      useNativeDriver: false, // width % is not supported by native driver
     }).start();
 
-    // Main entrance animations
+    // Entrance animations
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -149,70 +222,28 @@ export default function HowItWorks() {
         ])
       ),
     ]).start();
-  }, []);
 
-  const steps = [
-    {
-      number: "01",
-      icon: "account-check-outline",
-      title: "Verify Your Identity",
-      desc: "Sign up with your university credentials. Unlock student-only discounts.",
-      color: "#f9c349",
-      tag: "Start"
-    },
-    {
-      number: "02",
-      icon: "ticket-percent-outline",
-      title: "Save on Brands",
-      desc: "Browse 200+ brands. Use your tdc ID for instant discounts.",
-      color: "#4ecdc4",
-      tag: "Discounts"
-    },
-    {
-      number: "03",
-      icon: "account-group-outline",
-      title: "Skills Share",
-      desc: "Connect with students. Share expertise & collaborate on projects.",
-      color: "#a29bfe",
-      tag: "Collaborate"
-    },
-    {
-      number: "04",
-      icon: "calendar-star-outline",
-      title: "Premium Events",
-      desc: "VIP access to workshops, seminars & networking events.",
-      color: "#fd79a8",
-      tag: "Events"
-    },
-    {
-      number: "05",
-      icon: "file-document-outline",
-      title: "Resume Builder",
-      desc: "Create ATS-optimized resumes with AI-powered suggestions.",
-      color: "#00b894",
-      tag: "Career"
-    },
-    {
-      number: "06",
-      icon: "briefcase-search-outline",
-      title: "Career Growth",
-      desc: "Exclusive internships, jobs & international exchange programs.",
-      color: "#6c5ce7",
-      tag: "Growth"
-    },
-    {
-      number: "07",
-      icon: "airplane-takeoff",
-      title: "Travel & Rewards",
-      desc: "Student travel packages & tdc Privilege tier rewards.",
-      color: "#ff6b6b",
-      tag: "Rewards"
-    },
-  ];
+    return () => {
+      rotateHero.stop();
+      glowPulse.stop();
+      pulse.stop();
+    };
+  }, [
+    fadeAnim,
+    headerFade,
+    heroScale,
+    slideUpAnim,
+    heroRotate,
+    glowAnim,
+    pulseAnim,
+    progressAnim,
+    stepAnims,
+    particleAnims,
+  ]);
 
   const spin = heroRotate.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
+    outputRange: ["0deg", "360deg"],
   });
 
   const glowOpacity = glowAnim.interpolate({
@@ -222,18 +253,29 @@ export default function HowItWorks() {
 
   const progressWidth = progressAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
+    outputRange: ["0%", "100%"],
   });
 
+  // ----- Step -----
   const Step = ({ number, title, desc, icon, color, index, isLast, tag }) => {
-    const translateX = stepAnims[index].interpolate({
+    const anim = stepAnims[index];
+
+    // Guard: if animation is somehow undefined, render with a static value
+    const safeAnim = anim || new Animated.Value(1);
+
+    const translateX = safeAnim.interpolate({
       inputRange: [0, 1],
       outputRange: [index % 2 === 0 ? -30 : 30, 0],
     });
 
-    const scale = stepAnims[index].interpolate({
+    const scale = safeAnim.interpolate({
       inputRange: [0, 0.5, 1],
       outputRange: [0.85, 1.02, 1],
+    });
+
+    const lineHeight = progressAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: ["0%", "100%"],
     });
 
     return (
@@ -241,63 +283,55 @@ export default function HowItWorks() {
         style={[
           styles.stepWrapper,
           {
-            opacity: stepAnims[index],
+            opacity: safeAnim,
             transform: [{ translateX }, { scale }],
           },
         ]}
       >
         <View style={styles.stepContainer}>
           <View style={styles.leftColumn}>
-            <Animated.View 
+            <Animated.View
               style={[
                 styles.iconCircle,
-                { transform: [{ scale: pulseAnim }] }
+                { transform: [{ scale: pulseAnim }] },
               ]}
             >
-              <LinearGradient
-                colors={[color, color]}
-                style={styles.iconGradient}
-              >
+              <LinearGradient colors={[color, color]} style={styles.iconGradient}>
                 <MaterialCommunityIcons name={icon} size={20} color="#fff" />
               </LinearGradient>
               <View style={[styles.numberBadge, { backgroundColor: color }]}>
                 <Text style={styles.numberText}>{number}</Text>
               </View>
             </Animated.View>
+
             {!isLast && (
-              <Animated.View 
+              <Animated.View
                 style={[
                   styles.verticalLine,
                   {
-                    height: progressAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['0%', '100%'],
-                    }),
+                    height: lineHeight,
                     backgroundColor: color,
-                  }
-                ]} 
+                  },
+                ]}
               />
             )}
           </View>
-          
+
           <View style={styles.rightColumn}>
             <View style={styles.stepHeader}>
               <Text style={styles.stepTitle}>{title}</Text>
-              <View style={[styles.stepTag, { backgroundColor: color + '15' }]}>
+              <View style={[styles.stepTag, { backgroundColor: color + "15" }]}>
                 <Text style={[styles.stepTagText, { color }]}>{tag}</Text>
               </View>
             </View>
             <Text style={styles.stepDesc}>{desc}</Text>
             <View style={styles.stepProgress}>
               <View style={styles.progressBar}>
-                <Animated.View 
+                <Animated.View
                   style={[
                     styles.progressFill,
-                    { 
-                      width: progressWidth,
-                      backgroundColor: color,
-                    }
-                  ]} 
+                    { width: progressWidth, backgroundColor: color },
+                  ]}
                 />
               </View>
             </View>
@@ -307,17 +341,28 @@ export default function HowItWorks() {
     );
   };
 
-  // Particle component
+  // ----- Particle -----
   const Particle = ({ index }) => {
-    const particleColors = ['#f9c349', '#4ecdc4', '#6c5ce7', '#ff6b6b', '#a29bfe', '#fd79a8'];
+    const particleColors = [
+      "#f9c349",
+      "#4ecdc4",
+      "#6c5ce7",
+      "#ff6b6b",
+      "#a29bfe",
+      "#fd79a8",
+    ];
     const color = particleColors[index % particleColors.length];
-    
-    const translateY = particleAnims[index].interpolate({
+    const anim = particleAnims[index];
+
+    // Guard against undefined
+    const safeAnim = anim || new Animated.Value(0);
+
+    const translateY = safeAnim.interpolate({
       inputRange: [0, 1],
-      outputRange: [0, -10 - Math.random() * 15],
+      outputRange: [0, -10 - (index + 1) * 3],
     });
 
-    const opacity = particleAnims[index].interpolate({
+    const opacity = safeAnim.interpolate({
       inputRange: [0, 0.5, 1],
       outputRange: [0.15, 0.5, 0.15],
     });
@@ -327,8 +372,8 @@ export default function HowItWorks() {
         style={[
           styles.particle,
           {
-            top: 10 + Math.random() * 80,
-            left: 10 + Math.random() * 80,
+            top: 10 + ((index * 13) % 80),
+            left: 10 + ((index * 17) % 80),
             backgroundColor: color,
             transform: [{ translateY }],
             opacity,
@@ -339,13 +384,13 @@ export default function HowItWorks() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa00" />
-      
-      {/* Header - Compact */}
+
+      {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerFade }]}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()} 
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
           style={styles.headerBtn}
           activeOpacity={0.7}
         >
@@ -355,87 +400,83 @@ export default function HowItWorks() {
         <View style={{ width: 34 }} />
       </Animated.View>
 
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
+      <ScrollView
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         <Animated.View style={{ opacity: fadeAnim }}>
-          
-          {/* Hero Section - Compact */}
-          <Animated.View 
+          {/* Hero */}
+          <Animated.View
             style={[
               styles.heroWrapper,
-              { 
-                transform: [
-                  { scale: heroScale },
-                  { translateY: slideUpAnim },
-                ] 
-              }
+              {
+                transform: [{ scale: heroScale }, { translateY: slideUpAnim }],
+              },
             ]}
           >
             <LinearGradient
-              colors={['#1a1a1a', '#2d2d2d']}
+              colors={["#1a1a1a", "#2d2d2d"]}
               style={styles.heroCard}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
+              <Animated.View style={[styles.heroGlow, { opacity: glowOpacity }]} />
+
               <Animated.View
-                style={[
-                  styles.heroGlow,
-                  { opacity: glowOpacity },
-                ]}
-              />
-              
-              <Animated.View style={[styles.heroIconCircle, { transform: [{ rotate: spin }] }]}>
+                style={[styles.heroIconCircle, { transform: [{ rotate: spin }] }]}
+              >
                 <LinearGradient
-                  colors={['#f9c349', '#e6b800']}
+                  colors={["#f9c349", "#e6b800"]}
                   style={styles.heroIconGradient}
                 >
-                  <MaterialCommunityIcons name="lightbulb-on-outline" size={28} color="#1a1a1a" />
+                  <MaterialCommunityIcons
+                    name="lightbulb-on-outline"
+                    size={28}
+                    color="#1a1a1a"
+                  />
                 </LinearGradient>
               </Animated.View>
-              
-              <Text style={styles.heroLabel}>TDC ECOSYSTEM</Text>
-              <Text style={styles.heroTitle}>Your Journey Starts Here</Text>
+
+              <Text style={styles.heroLabel}>tdc ecosystem</Text>
+              <Text style={styles.heroTitle}>Start Here</Text>
               <Text style={styles.heroSubtitle}>
-                Follow these 7 steps to unlock the complete tdc experience
+                {STEP_COUNT} steps to get the most out of tdc.
               </Text>
-              
+
               <View style={styles.decorLine}>
                 <View style={styles.decorSegment} />
                 <View style={styles.decorDiamond} />
                 <View style={styles.decorSegment} />
               </View>
 
-              {/* Floating particles */}
               <View style={styles.particlesContainer}>
-                {[...Array(6)].map((_, i) => (
+                {Array.from({ length: 6 }).map((_, i) => (
                   <Particle key={i} index={i} />
                 ))}
               </View>
             </LinearGradient>
           </Animated.View>
 
-          {/* Timeline Steps - Compact */}
+          {/* Timeline */}
           <View style={styles.timelineContainer}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionDot} />
               <Text style={styles.sectionTitle}>Your Journey</Text>
               <View style={styles.sectionLine} />
             </View>
-            
-            {steps.map((step, index) => (
-              <Step 
+
+            {STEPS.map((step, index) => (
+              <Step
                 key={index}
                 {...step}
                 index={index}
-                isLast={index === steps.length - 1}
+                isLast={index === STEPS.length - 1}
               />
             ))}
           </View>
 
-          {/* Call to Action - Compact */}
-          <Animated.View 
+          {/* CTA */}
+          <Animated.View
             style={[
               styles.ctaWrapper,
               {
@@ -444,28 +485,39 @@ export default function HowItWorks() {
               },
             ]}
           >
-            <TouchableOpacity 
-              style={styles.ctaButton} 
-              activeOpacity={0.8} 
-              onPress={() => navigation.navigate("Brands")}
+            <TouchableOpacity
+              style={styles.ctaButton}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate("HomeTabs")}
             >
               <LinearGradient
-                colors={['#f9c349', '#e6b800']}
+                colors={["#f9c349", "#e6b800"]}
                 style={styles.ctaGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
               >
                 <Text style={styles.ctaText}>Get Started</Text>
-                <Ionicons name="arrow-forward" size={18} color="#1a1a1a" style={{marginLeft: 8}} />
+                <Ionicons
+                  name="arrow-forward"
+                  size={18}
+                  color="#1a1a1a"
+                  style={{ marginLeft: 8 }}
+                />
               </LinearGradient>
             </TouchableOpacity>
           </Animated.View>
 
-          {/* Footer - Compact */}
+          {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerLogo}>tdc</Text>
-            <Text style={styles.footerText}>Building a Stronger Student Economy.</Text>
-            <Text style={styles.footerSubText}>© 2026 tdc Privilege Program</Text>
+            <Text style={styles.footerLogo}>
+              tdc<Text style={{ color: "#f9c349" }}>.</Text>
+            </Text>
+            <Text style={styles.footerText}>
+              Building a Stronger Student Economy.
+            </Text>
+            <Text style={styles.footerSubText}>
+              © 2026 tdc Privilege Program
+            </Text>
           </View>
         </Animated.View>
       </ScrollView>
@@ -474,12 +526,11 @@ export default function HowItWorks() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
     backgroundColor: "#f8f9fa",
   },
-  
-  // Header - Compact
+
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -488,17 +539,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: "#ffffff",
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.04)',
+    borderBottomColor: "rgba(0,0,0,0.04)",
   },
   headerBtn: {
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: '#f8f9fa',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#f8f9fa",
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
+    borderColor: "rgba(0,0,0,0.04)",
   },
   headerTitle: {
     fontSize: 16,
@@ -510,14 +561,13 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
     paddingTop: 4,
   },
-  
-  // Hero Section - Compact
+
   heroWrapper: {
     marginHorizontal: 16,
     marginTop: 8,
     borderRadius: 18,
-    overflow: 'hidden',
-    shadowColor: '#000',
+    overflow: "hidden",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -525,30 +575,30 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     padding: 20,
-    alignItems: 'center',
-    position: 'relative',
-    overflow: 'hidden',
+    alignItems: "center",
+    position: "relative",
+    overflow: "hidden",
     minHeight: 190,
   },
   heroGlow: {
-    position: 'absolute',
+    position: "absolute",
     top: -40,
     right: -40,
     width: 150,
     height: 150,
     borderRadius: 75,
-    backgroundColor: '#f9c349',
+    backgroundColor: "#f9c349",
     opacity: 0.3,
   },
   particlesContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
   },
   particle: {
-    position: 'absolute',
+    position: "absolute",
     width: 5,
     height: 5,
     borderRadius: 2.5,
@@ -556,15 +606,15 @@ const styles = StyleSheet.create({
   heroIconCircle: {
     marginBottom: 10,
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   heroIconGradient: {
     width: 56,
     height: 56,
     borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#f9c349',
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#f9c349",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -581,46 +631,45 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontSize: 18,
     fontWeight: "800",
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 6,
     letterSpacing: 0.3,
   },
   heroSubtitle: {
     color: "rgba(255,255,255,0.7)",
     fontSize: 12,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 18,
-    fontWeight: '400',
+    fontWeight: "400",
     paddingHorizontal: 4,
   },
   decorLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: 10,
     opacity: 0.4,
   },
   decorSegment: {
     width: 20,
     height: 1.5,
-    backgroundColor: '#f9c349',
+    backgroundColor: "#f9c349",
     borderRadius: 1,
   },
   decorDiamond: {
     width: 5,
     height: 5,
-    backgroundColor: '#f9c349',
-    transform: [{ rotate: '45deg' }],
+    backgroundColor: "#f9c349",
+    transform: [{ rotate: "45deg" }],
     marginHorizontal: 8,
   },
-  
-  // Timeline - Compact
+
   timelineContainer: {
     paddingHorizontal: 16,
     paddingTop: 12,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
     paddingHorizontal: 2,
   },
@@ -628,31 +677,31 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: "#f9c349",
     marginRight: 8,
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontWeight: "700",
+    color: "#1a1a1a",
     letterSpacing: 0.3,
   },
   sectionLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(0,0,0,0.06)',
+    backgroundColor: "rgba(0,0,0,0.06)",
     marginLeft: 10,
   },
-  
+
   stepWrapper: {
     marginBottom: 4,
   },
   stepContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 2,
   },
   leftColumn: {
-    alignItems: 'center',
+    alignItems: "center",
     marginRight: 12,
     width: 48,
   },
@@ -662,7 +711,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
@@ -672,11 +721,11 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   numberBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: -4,
     right: -4,
     width: 20,
@@ -706,9 +755,9 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   stepHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 2,
   },
   stepTitle: {
@@ -726,37 +775,36 @@ const styles = StyleSheet.create({
   },
   stepTagText: {
     fontSize: 8,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.3,
   },
   stepDesc: {
     fontSize: 11,
     color: "#94A3B8",
     lineHeight: 16,
-    fontWeight: '400',
+    fontWeight: "400",
     marginBottom: 4,
   },
   stepProgress: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   progressBar: {
     flex: 1,
     height: 2.5,
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    backgroundColor: "rgba(0,0,0,0.05)",
     borderRadius: 2,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   progressFill: {
-    height: '100%',
+    height: "100%",
     borderRadius: 2,
   },
-  
-  // CTA - Compact
+
   ctaWrapper: {
     marginHorizontal: 16,
     marginTop: 8,
-    shadowColor: '#f9c349',
+    shadowColor: "#f9c349",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 10,
@@ -764,13 +812,13 @@ const styles = StyleSheet.create({
   },
   ctaButton: {
     borderRadius: 14,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   ctaGradient: {
     paddingVertical: 14,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
   },
   ctaText: {
     color: "#1a1a1a",
@@ -779,32 +827,31 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: "uppercase",
   },
-  
-  // Footer - Compact
+
   footer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 20,
     paddingBottom: 4,
   },
   footerLogo: {
     fontSize: 16,
-    fontWeight: '800',
-    color: '#1a1a1a',
+    fontWeight: "800",
+    color: "#1a1a1a",
     letterSpacing: 0.5,
   },
   footerText: {
     fontSize: 10,
-    color: 'rgba(0, 0, 0, 0.4)',
+    color: "rgba(0, 0, 0, 0.4)",
     marginTop: 4,
-    fontWeight: '400',
+    fontWeight: "400",
     letterSpacing: 0.3,
-    textAlign: 'center',
+    textAlign: "center",
   },
   footerSubText: {
     fontSize: 9,
-    color: 'rgba(0, 0, 0, 0.2)',
+    color: "rgba(0, 0, 0, 0.2)",
     marginTop: 4,
-    fontWeight: '400',
+    fontWeight: "400",
     letterSpacing: 0.3,
   },
 });

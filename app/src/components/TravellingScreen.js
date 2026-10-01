@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StatusBar,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,23 +18,38 @@ const TravelingScreen = () => {
   const navigation = useNavigation();
 
   const handleBackPress = useCallback(() => {
-    navigation.goBack();
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      // Fallback: navigate to a safe screen if there's nothing to go back to
+      navigation.navigate('Home');
+    }
   }, [navigation]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
+        <TouchableOpacity
+          onPress={handleBackPress}
+          style={styles.backButton}
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons
+            name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'}
+            size={24}
+            color="#000"
+          />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Travel Assistant</Text>
         <View style={styles.headerRight} />
       </View>
 
       {/* Main Content */}
-      <ScrollView 
+      <ScrollView
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
@@ -93,7 +109,7 @@ const TravelingScreen = () => {
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
-              <Ionicons name="shield-check" size={22} color="#f9c349" />
+              <Ionicons name="shield-checkmark" size={22} color="#f9c349" />
               <View style={styles.infoTextContainer}>
                 <Text style={styles.infoLabel}>Secure & Private</Text>
                 <Text style={styles.infoValue}>Your conversations are encrypted and safe</Text>
@@ -105,7 +121,7 @@ const TravelingScreen = () => {
         {/* Features List */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>What I Can Do</Text>
-          
+
           <View style={styles.featureItem}>
             <View style={styles.featureDot} />
             <View style={styles.featureContent}>
@@ -150,7 +166,7 @@ const TravelingScreen = () => {
         {/* How to Use */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>How to Use</Text>
-          
+
           <View style={styles.stepContainer}>
             <View style={styles.stepNumber}>
               <Text style={styles.stepNumberText}>1</Text>
@@ -187,8 +203,6 @@ const TravelingScreen = () => {
             </View>
           </View>
         </View>
-
-        
       </ScrollView>
 
       {/* Chatbot */}
@@ -200,7 +214,7 @@ const TravelingScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F5F6FA', // Yellow background
+    backgroundColor: '#F5F6FA',
   },
 
   // Header
@@ -211,17 +225,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   backButton: {
-    padding: 4,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#00000',
+    color: '#000',
   },
   headerRight: {
-    width: 32,
+    width: 40,
   },
 
   // Container
@@ -230,10 +251,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F6FA',
   },
   contentContainer: {
-    paddingBottom: 0,
+    paddingBottom: 80,
   },
 
-  // Hero Section - Compact
+  // Hero Section
   heroSection: {
     marginHorizontal: 16,
     marginTop: 16,

@@ -1,3 +1,4 @@
+// app/src/screens/ExchangeScreen.js
 import React, { useState, useEffect, useMemo, useContext, useRef } from 'react';
 import {
   View,
@@ -16,7 +17,7 @@ import {
   Animated,
   Dimensions,
   Platform,
-  SafeAreaView as RNSafeAreaView
+  AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
@@ -24,8 +25,71 @@ import { AuthContext } from '../context/AuthContext';
 import api, { publicAPI } from "../api/api";
 import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
+import { engagementBus, ENGAGEMENT_EVENTS } from '../engagement/engagementBus';
 
 const { width, height } = Dimensions.get('window');
+
+// ─── DATE FORMATTER ───────────────────────────────────────────────────
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const formatDate = (value) => {
+  if (value === null || value === undefined || value === '') return 'TBD';
+
+  // If it's already a formatted string (contains letters), return as-is
+  if (typeof value === 'string' && /[a-zA-Z]/.test(value)) {
+    return value;
+  }
+
+  const numValue = typeof value === 'number' ? value : parseFloat(value);
+  if (!isNaN(numValue) && isFinite(numValue)) {
+    // 1️⃣ Unix timestamp in MILLISECONDS (e.g. 1767225600000 for 2026)
+    //    Range: ~2001 to ~2286
+    if (numValue > 1000000000000 && numValue < 10000000000000) {
+      const d = new Date(numValue);
+      if (!isNaN(d.getTime())) {
+        return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+      }
+    }
+    // 2️⃣ Unix timestamp in SECONDS (e.g. 1767225600 for 2026)
+    //    Range: ~2001 to ~2286
+    if (numValue > 1000000000 && numValue < 10000000000) {
+      const d = new Date(numValue * 1000);
+      if (!isNaN(d.getTime())) {
+        return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+      }
+    }
+    // 3️⃣ Excel serial date — ONLY if in the valid Excel range (1 to 2958465)
+    //    Excel epoch: 30 Dec 1899
+    //    2958465 = 31 Dec 9999
+    if (numValue >= 1 && numValue <= 2958465) {
+      const excelEpoch = Date.UTC(1899, 11, 30);
+      const msPerDay = 24 * 60 * 60 * 1000;
+      const dateObj = new Date(excelEpoch + Math.floor(numValue) * msPerDay);
+      if (!isNaN(dateObj.getTime())) {
+        const day = dateObj.getUTCDate();
+        const month = MONTHS_SHORT[dateObj.getUTCMonth()];
+        const year = dateObj.getUTCFullYear();
+        return `${day} ${month} ${year}`;
+      }
+    }
+    // 4️⃣ Year-only value (e.g. 2026)
+    if (numValue >= 1900 && numValue <= 2100 && Number.isInteger(numValue)) {
+      return `${numValue}`;
+    }
+  }
+
+  // 5️⃣ Try native Date parsing for strings like "2026-01-15"
+  if (typeof value === 'string') {
+    const d = new Date(value);
+    if (!isNaN(d.getTime())) {
+      return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+    }
+    if (value.length <= 20) return value;
+  }
+
+  return 'TBD';
+};
 
 const ExchangeScreen = ({ navigation }) => {
   const { token, isGuest, logout, user } = useContext(AuthContext);
@@ -68,16 +132,8 @@ const ExchangeScreen = ({ navigation }) => {
   // Entrance animation
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: true,
-      })
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true })
     ]).start();
   }, []);
 
@@ -103,29 +159,12 @@ const ExchangeScreen = ({ navigation }) => {
   useEffect(() => {
     if (webViewVisible) {
       Animated.parallel([
-        Animated.timing(webViewFade, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.spring(webViewSlide, {
-          toValue: 0,
-          tension: 70,
-          friction: 12,
-          useNativeDriver: true,
-        })
+        Animated.timing(webViewFade, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.spring(webViewSlide, { toValue: 0, tension: 70, friction: 12, useNativeDriver: true })
       ]).start();
     } else {
-      Animated.timing(webViewFade, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }).start();
-      Animated.timing(webViewSlide, {
-        toValue: height,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      Animated.timing(webViewFade, { toValue: 0, duration: 250, useNativeDriver: true }).start();
+      Animated.timing(webViewSlide, { toValue: height, duration: 300, useNativeDriver: true }).start();
     }
   }, [webViewVisible]);
 
@@ -140,16 +179,23 @@ const ExchangeScreen = ({ navigation }) => {
     }
   }, [webViewProgress]);
 
+  // App foreground refresh — flips the Home Scholarships card if points were awarded elsewhere
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active' && !isGuest) {
+        engagementBus.emit(ENGAGEMENT_EVENTS.PROFILE_REFRESH);
+      }
+    });
+    return () => sub.remove();
+  }, [isGuest]);
+
   const showGuestAlert = (action) => {
     Alert.alert(
       'Create an Account',
       `Sign up to ${action} and explore study abroad opportunities!`,
       [
         { text: 'Not Now', style: 'cancel' },
-        {
-          text: 'Sign Up',
-          onPress: () => navigation.navigate('Login')
-        }
+        { text: 'Sign Up', onPress: () => navigation.navigate('Login') }
       ]
     );
   };
@@ -157,19 +203,15 @@ const ExchangeScreen = ({ navigation }) => {
   const fetchPrograms = async () => {
     try {
       setError(null);
-      
       const response = await publicAPI.getExchangePrograms();
-      
       const programsData = Array.isArray(response) ? response : [];
       const activePrograms = programsData.filter(p => p.active !== false);
       setPrograms(activePrograms);
-      
       if (activePrograms.length === 0) {
         console.log('No active programs found');
       }
     } catch (err) {
       console.error('Error fetching programs:', err);
-      
       if (err.response?.status === 401 && !isGuest) {
         Alert.alert("Session Expired", "Please login again to continue.");
         logout();
@@ -177,11 +219,9 @@ const ExchangeScreen = ({ navigation }) => {
         setError('Programs endpoint not found. Please try again later.');
         setPrograms([]);
       } else if (!isGuest) {
-        Alert.alert(
-          'Network Error',
-          'Unable to load exchange programs. Please check your connection.',
-          [{ text: 'Retry', onPress: fetchPrograms }]
-        );
+        Alert.alert('Network Error', 'Unable to load exchange programs. Please check your connection.', [
+          { text: 'Retry', onPress: fetchPrograms }
+        ]);
         setPrograms([]);
       } else {
         setPrograms([]);
@@ -203,11 +243,10 @@ const ExchangeScreen = ({ navigation }) => {
 
   const filteredPrograms = useMemo(() => {
     if (!Array.isArray(programs)) return [];
-    
     return programs.filter(p => {
       const matchesDegree = p.degree === selectedDegree;
       const query = searchQuery.toLowerCase();
-      const matchesSearch = 
+      const matchesSearch =
         (p.title || '').toLowerCase().includes(query) ||
         (p.university || '').toLowerCase().includes(query) ||
         (p.location || '').toLowerCase().includes(query);
@@ -220,33 +259,59 @@ const ExchangeScreen = ({ navigation }) => {
     setDetailsVisible(true);
   };
 
-  // Updated handleApplyNow to open university website inside WebView
+  // ✅ Updated: awards +50 pts (scholarship_applied) AND opens the university website
   const handleApplyNow = (program) => {
     if (isGuest) {
       showGuestAlert('apply for programs');
       return;
     }
 
-    // Check if program has a link
-    if (program?.link) {
-      // Validate URL format
-      let url = program.link;
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        url = 'https://' + url;
-      }
-
-      // Open in WebView instead of external browser
-      setWebViewUrl(url);
-      setWebViewVisible(true);
-      setWebViewLoading(true);
-      setWebViewProgress(0);
-    } else {
+    if (!program?.link) {
       Alert.alert(
         'No Website Available',
         'This program does not have a website link available.',
         [{ text: 'OK' }]
       );
+      return;
     }
+
+    let url = program.link;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+
+    // 🔥 1. Fire the points award (async, non-blocking)
+    (async () => {
+      try {
+        const res = await api.post(
+          '/auth/exchange/track-external',
+          { programId: program._id },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        // 🎯 Celebration popups
+        if (res?.data?.engagement?.popups?.length) {
+          engagementBus.emit(
+            ENGAGEMENT_EVENTS.POPUPS_QUEUED,
+            res.data.engagement.popups
+          );
+        }
+
+        // 🎯 Flip Home's Scholarships card to "sorted"
+        engagementBus.emit(ENGAGEMENT_EVENTS.PROFILE_REFRESH);
+      } catch (e) {
+        console.log(
+          '[track-external scholarship] failed:',
+          e?.response?.data || e?.message
+        );
+      }
+    })();
+
+    // 🔥 2. Open the WebView immediately
+    setWebViewUrl(url);
+    setWebViewVisible(true);
+    setWebViewLoading(true);
+    setWebViewProgress(0);
   };
 
   const handleProfile = () => {
@@ -257,14 +322,12 @@ const ExchangeScreen = ({ navigation }) => {
     navigation.navigate('Profile');
   };
 
-  // Close WebView
   const closeWebView = () => {
     setWebViewVisible(false);
     setWebViewUrl('');
     setWebViewLoading(true);
   };
 
-  // Open in external browser
   const openInBrowser = () => {
     if (webViewUrl) {
       Linking.openURL(webViewUrl).catch((err) => {
@@ -284,6 +347,9 @@ const ExchangeScreen = ({ navigation }) => {
     const { color, bg } = getDegreeStyle(item.degree || 'Bachelors');
     const scaleAnim = useRef(new Animated.Value(0.95)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
+
+    const formattedAppStart = formatDate(item.appStart);
+    const formattedDeadline = formatDate(item.deadline);
 
     useEffect(() => {
       Animated.parallel([
@@ -305,18 +371,9 @@ const ExchangeScreen = ({ navigation }) => {
 
     return (
       <Animated.View
-        style={[
-          styles.cardWrapper,
-          {
-            opacity: opacityAnim,
-            transform: [{ scale: scaleAnim }]
-          }
-        ]}
+        style={[styles.cardWrapper, { opacity: opacityAnim, transform: [{ scale: scaleAnim }] }]}
       >
-        <TouchableOpacity
-          activeOpacity={0.9}
-          onPress={() => handleViewDetails(item)}
-        >
+        <TouchableOpacity activeOpacity={0.9} onPress={() => handleViewDetails(item)}>
           <View style={styles.card}>
             <View style={[styles.cardGradient, { backgroundColor: color }]} />
 
@@ -350,14 +407,14 @@ const ExchangeScreen = ({ navigation }) => {
                   <Text style={styles.dateLabel}>
                     <FontAwesome5 name="calendar-alt" size={10} color="#9CA3AF" /> OPENS
                   </Text>
-                  <Text style={styles.dateValue}>{item.appStart || 'TBD'}</Text>
+                  <Text style={styles.dateValue}>{formattedAppStart}</Text>
                 </View>
                 <View style={styles.dateDivider} />
                 <View style={styles.dateBox}>
                   <Text style={[styles.dateLabel, { color: '#EF4444' }]}>
                     <FontAwesome5 name="clock" size={10} color="#EF4444" /> DEADLINE
                   </Text>
-                  <Text style={[styles.dateValue, { color: '#EF4444' }]}>{item.deadline || 'TBD'}</Text>
+                  <Text style={[styles.dateValue, { color: '#EF4444' }]}>{formattedDeadline}</Text>
                 </View>
               </View>
 
@@ -380,7 +437,6 @@ const ExchangeScreen = ({ navigation }) => {
     return <CardItem item={item} index={index} />;
   };
 
-  // Render error state
   if (error) {
     return (
       <SafeAreaView style={styles.container}>
@@ -402,13 +458,7 @@ const ExchangeScreen = ({ navigation }) => {
 
       {/* Modern Header */}
       <Animated.View
-        style={[
-          styles.header,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }
-        ]}
+        style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
       >
         <View style={styles.headerTop}>
           <TouchableOpacity
@@ -418,12 +468,12 @@ const ExchangeScreen = ({ navigation }) => {
           >
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          
+
           <View style={styles.headerCenter}>
             <Text style={styles.headerSubtitle}>🌍 Global Education</Text>
             <Text style={styles.headerTitle}>Study Abroad</Text>
           </View>
-          
+
           <TouchableOpacity
             style={styles.avatarCircle}
             onPress={handleProfile}
@@ -453,13 +503,7 @@ const ExchangeScreen = ({ navigation }) => {
       {/* Guest Banner */}
       {isGuest && (
         <Animated.View
-          style={[
-            styles.guestBanner,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }
-          ]}
+          style={[styles.guestBanner, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
         >
           <View style={styles.guestBannerContent}>
             <Ionicons name="information-circle" size={20} color="#D97706" />
@@ -472,13 +516,7 @@ const ExchangeScreen = ({ navigation }) => {
 
       <View style={styles.content}>
         <Animated.View
-          style={[
-            styles.filterWrapper,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }
-          ]}
+          style={[styles.filterWrapper, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
         >
           <View style={styles.filterHeader}>
             <Text style={styles.filterLabel}>🎯 Degree Level</Text>
@@ -491,7 +529,7 @@ const ExchangeScreen = ({ navigation }) => {
           >
             {degrees.map((degree) => {
               const isActive = selectedDegree === degree;
-              const { color, bg } = getDegreeStyle(degree);
+              const { color } = getDegreeStyle(degree);
               return (
                 <TouchableOpacity
                   key={degree}
@@ -503,10 +541,7 @@ const ExchangeScreen = ({ navigation }) => {
                   activeOpacity={0.7}
                 >
                   <Text
-                    style={[
-                      styles.chipText,
-                      isActive ? { color: '#FFF' } : { color: '#4B5563' }
-                    ]}
+                    style={[styles.chipText, isActive ? { color: '#FFF' } : { color: '#4B5563' }]}
                   >
                     {degree}
                   </Text>
@@ -527,12 +562,7 @@ const ExchangeScreen = ({ navigation }) => {
             keyExtractor={item => item._id || Math.random().toString()}
             renderItem={renderItem}
             refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                tintColor="#1B1B1B"
-                colors={['#1B1B1B']}
-              />
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1B1B1B" colors={['#1B1B1B']} />
             }
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
@@ -575,12 +605,8 @@ const ExchangeScreen = ({ navigation }) => {
             onPress={() => setDetailsVisible(false)}
           />
           <Animated.View
-            style={[
-              styles.modalContent,
-              { transform: [{ translateY: modalAnim }] }
-            ]}
+            style={[styles.modalContent, { transform: [{ translateY: modalAnim }] }]}
           >
-            {/* Modal Handle */}
             <View style={styles.modalHandle} />
 
             <View style={styles.modalHeader}>
@@ -603,10 +629,7 @@ const ExchangeScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.modalBody}
-            >
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalBody}>
               {selectedProgram && (
                 <>
                   <View style={styles.modalProgramInfo}>
@@ -662,27 +685,29 @@ const ExchangeScreen = ({ navigation }) => {
                       ))}
                     </View>
                   ) : (
-                    <Text style={styles.emptyTextSmall}>
-                      No specific requirements listed.
-                    </Text>
+                    <Text style={styles.emptyTextSmall}>No specific requirements listed.</Text>
                   )}
 
                   <View style={styles.modalDateInfo}>
                     <View style={styles.modalDateBox}>
                       <Text style={styles.modalDateLabel}>Application Opens</Text>
-                      <Text style={styles.modalDateValue}>{selectedProgram.appStart || 'TBD'}</Text>
+                      <Text style={styles.modalDateValue}>
+                        {formatDate(selectedProgram.appStart)}
+                      </Text>
                     </View>
                     <View style={styles.modalDateDivider} />
                     <View style={styles.modalDateBox}>
                       <Text style={[styles.modalDateLabel, { color: '#EF4444' }]}>Deadline</Text>
-                      <Text style={[styles.modalDateValue, { color: '#EF4444' }]}>{selectedProgram.deadline || 'TBD'}</Text>
+                      <Text style={[styles.modalDateValue, { color: '#EF4444' }]}>
+                        {formatDate(selectedProgram.deadline)}
+                      </Text>
                     </View>
                   </View>
                 </>
               )}
             </ScrollView>
 
-            {/* Apply Button in Modal */}
+            {/* Apply Button in Modal — triggers handleApplyNow (+50 pts) */}
             <TouchableOpacity
               style={styles.applyModalBtn}
               onPress={() => {
@@ -694,7 +719,7 @@ const ExchangeScreen = ({ navigation }) => {
               activeOpacity={0.8}
             >
               <Text style={styles.applyModalBtnText}>
-                {isGuest ? 'Sign Up to Apply' : 'Apply Now'}
+                {isGuest ? 'Sign Up to Apply' : 'Apply Now (+50 pts)'}
               </Text>
               <Ionicons
                 name={isGuest ? 'person-add-outline' : 'arrow-forward'}
@@ -706,7 +731,7 @@ const ExchangeScreen = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* WebView Modal - FULL SCREEN like HelpCenter */}
+      {/* WebView Modal - FULL SCREEN */}
       <Modal
         animationType="none"
         transparent={true}
@@ -718,10 +743,7 @@ const ExchangeScreen = ({ navigation }) => {
           <Animated.View
             style={[
               styles.webViewContainer,
-              {
-                opacity: webViewFade,
-                transform: [{ translateY: webViewSlide }]
-              }
+              { opacity: webViewFade, transform: [{ translateY: webViewSlide }] }
             ]}
           >
             {/* WebView Header */}
@@ -729,7 +751,7 @@ const ExchangeScreen = ({ navigation }) => {
               <TouchableOpacity onPress={closeWebView} style={styles.webViewHeaderBtn} activeOpacity={0.7}>
                 <Ionicons name="close" size={24} color="#1a1a1a" />
               </TouchableOpacity>
-              
+
               <View style={styles.webViewHeaderCenter}>
                 <Text style={styles.webViewHeaderTitle}>University Website</Text>
                 <Text style={styles.webViewHeaderSubtitle} numberOfLines={1}>
@@ -753,8 +775,8 @@ const ExchangeScreen = ({ navigation }) => {
 
             {/* WebView */}
             <View style={styles.webViewWrapper}>
-              <WebView 
-                source={{ uri: webViewUrl }} 
+              <WebView
+                source={{ uri: webViewUrl }}
                 onLoadStart={() => setWebViewLoading(true)}
                 onLoadEnd={() => setWebViewLoading(false)}
                 onLoadProgress={({ nativeEvent }) => setWebViewProgress(nativeEvent.progress * 100)}
@@ -767,7 +789,7 @@ const ExchangeScreen = ({ navigation }) => {
                 showsVerticalScrollIndicator={true}
                 showsHorizontalScrollIndicator={true}
               />
-              
+
               {/* Loading Overlay */}
               {webViewLoading && (
                 <Animated.View style={[styles.webViewLoaderContainer, { opacity: webViewFade }]}>
@@ -785,13 +807,13 @@ const ExchangeScreen = ({ navigation }) => {
                 <TouchableOpacity style={styles.webViewToolbarBtn} onPress={closeWebView} activeOpacity={0.7}>
                   <Ionicons name="close-circle" size={24} color="#666" />
                 </TouchableOpacity>
-                
+
                 <View style={{ flex: 1 }} />
-                
+
                 <TouchableOpacity style={styles.webViewToolbarBtn} onPress={openInBrowser} activeOpacity={0.7}>
                   <Ionicons name="compass-outline" size={22} color="#f9c349" />
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity style={styles.webViewToolbarBtn} onPress={() => {
                   if (webViewUrl) {
                     Alert.alert(
@@ -799,10 +821,7 @@ const ExchangeScreen = ({ navigation }) => {
                       `Share this university website link: ${webViewUrl}`,
                       [
                         { text: 'Cancel', style: 'cancel' },
-                        { text: 'Copy Link', onPress: () => {
-                          // You can add clipboard functionality here
-                          Alert.alert('Copied!', 'Link copied to clipboard');
-                        }}
+                        { text: 'Copy Link', onPress: () => Alert.alert('Copied!', 'Link copied to clipboard') }
                       ]
                     );
                   }
@@ -819,11 +838,7 @@ const ExchangeScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  // Header
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
   header: {
     backgroundColor: '#000000',
     paddingHorizontal: 20,
@@ -832,15 +847,8 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
     ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 8,
-      },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12 },
+      android: { elevation: 8 },
     }),
   },
   headerTop: {
@@ -850,671 +858,204 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
   },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#FFF',
-    letterSpacing: 0.5,
-    textAlign: 'center',
-  },
-  headerSubtitle: {
-    fontSize: 10,
-    color: '#94A3B8',
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    marginBottom: 2,
-    textAlign: 'center',
-  },
+  headerCenter: { flex: 1, alignItems: 'center' },
+  headerTitle: { fontSize: 22, fontWeight: '800', color: '#FFF', letterSpacing: 0.5, textAlign: 'center' },
+  headerSubtitle: { fontSize: 10, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 2, textAlign: 'center' },
   avatarCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)',
   },
   searchBarContainer: {
     flexDirection: 'row',
     backgroundColor: '#FFF',
     borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    alignItems: 'center',
-    gap: 12,
+    paddingHorizontal: 16, paddingVertical: 12,
+    alignItems: 'center', gap: 12,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: '#1A1C1E',
-    padding: 0,
-  },
-  // Guest Banner
+  searchInput: { flex: 1, fontSize: 15, color: '#1A1C1E', padding: 0 },
   guestBanner: {
-    marginHorizontal: 20,
-    marginTop: 16,
-    backgroundColor: '#FEF3C7',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#F59E0B20',
+    marginHorizontal: 20, marginTop: 16,
+    backgroundColor: '#FEF3C7', borderRadius: 12,
+    paddingHorizontal: 16, paddingVertical: 12,
+    borderWidth: 1, borderColor: '#F59E0B20',
   },
-  guestBannerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    justifyContent: 'center',
-  },
-  guestBannerText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#92400E',
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  guestBannerLink: {
-    fontWeight: '700',
-    textDecorationLine: 'underline',
-  },
-  // Content
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  filterWrapper: {
-    paddingTop: 20,
-    paddingBottom: 8,
-  },
-  filterHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  filterLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1F2937',
-  },
-  filterCount: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  chipContainer: {
-    paddingVertical: 4,
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 24,
-    borderWidth: 1.5,
-    marginRight: 10,
-  },
-  chipText: {
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  // Cards
-  cardWrapper: {
-    marginBottom: 16,
-  },
+  guestBannerContent: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center' },
+  guestBannerText: { flex: 1, fontSize: 13, color: '#92400E', fontWeight: '500', textAlign: 'center' },
+  guestBannerLink: { fontWeight: '700', textDecorationLine: 'underline' },
+  content: { flex: 1, paddingHorizontal: 20 },
+  filterWrapper: { paddingTop: 20, paddingBottom: 8 },
+  filterHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  filterLabel: { fontSize: 14, fontWeight: '700', color: '#1F2937' },
+  filterCount: { fontSize: 12, color: '#6B7280', fontWeight: '500' },
+  chipContainer: { paddingVertical: 4, gap: 8 },
+  chip: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 24, borderWidth: 1.5, marginRight: 10 },
+  chipText: { fontWeight: '600', fontSize: 14 },
+  cardWrapper: { marginBottom: 16 },
   card: {
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    overflow: 'hidden',
+    backgroundColor: '#FFF', borderRadius: 20, overflow: 'hidden',
     ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 4,
-      },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
+      android: { elevation: 4 },
     }),
   },
-  cardGradient: {
-    height: 4,
-    width: '100%',
-  },
-  cardBody: {
-    padding: 20,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  titleArea: {
-    flex: 1,
-    marginRight: 12,
-  },
-  programTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1A1C1E',
-    letterSpacing: -0.3,
-  },
-  universityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
-  },
-  universityName: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-    gap: 6,
-  },
-  locationText: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  dotSeparator: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: '#D1D5DB',
-  },
-  degreeBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  degreeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
+  cardGradient: { height: 4, width: '100%' },
+  cardBody: { padding: 20 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  titleArea: { flex: 1, marginRight: 12 },
+  programTitle: { fontSize: 17, fontWeight: '700', color: '#1A1C1E', letterSpacing: -0.3 },
+  universityRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  universityName: { fontSize: 14, color: '#6B7280', fontWeight: '500' },
+  locationRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 6 },
+  locationText: { fontSize: 12, color: '#6B7280', fontWeight: '500' },
+  dotSeparator: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#D1D5DB' },
+  degreeBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
+  degreeText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
   dateContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 14,
-    padding: 14,
-    marginTop: 14,
-    marginBottom: 14,
+    flexDirection: 'row', backgroundColor: '#F8FAFC',
+    borderRadius: 14, padding: 14, marginTop: 14, marginBottom: 14,
   },
-  dateBox: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  dateDivider: {
-    width: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  dateLabel: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: '#9CA3AF',
-    marginBottom: 4,
-    letterSpacing: 0.5,
-  },
-  dateValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1F2937',
-  },
+  dateBox: { flex: 1, alignItems: 'center' },
+  dateDivider: { width: 1, backgroundColor: '#E5E7EB' },
+  dateLabel: { fontSize: 9, fontWeight: '700', color: '#9CA3AF', marginBottom: 4, letterSpacing: 0.5 },
+  dateValue: { fontSize: 13, fontWeight: '700', color: '#1F2937' },
   detailsBtn: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: '#F1F5F9',
-    gap: 8,
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+    paddingVertical: 14, borderRadius: 14, backgroundColor: '#F1F5F9', gap: 8,
   },
-  detailsBtnText: {
-    color: '#4B5563',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  listContent: {
-    paddingBottom: 30,
-  },
-  // Empty State
-  emptyContainer: {
-    alignItems: 'center',
-    marginTop: 60,
-    paddingHorizontal: 40,
-  },
+  detailsBtnText: { color: '#4B5563', fontWeight: '700', fontSize: 14 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  loadingText: { fontSize: 14, color: '#6B7280', fontWeight: '500' },
+  listContent: { paddingBottom: 30 },
+  emptyContainer: { alignItems: 'center', marginTop: 60, paddingHorizontal: 40 },
   emptyIconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
+    width: 100, height: 100, borderRadius: 50,
+    backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center', marginBottom: 24,
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 8,
-  },
-  emptyText: {
-    textAlign: 'center',
-    color: '#6B7280',
-    fontSize: 14,
-    marginBottom: 24,
-  },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#1F2937', marginBottom: 8 },
+  emptyText: { textAlign: 'center', color: '#6B7280', fontSize: 14, marginBottom: 24 },
   signUpButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#000000',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 14,
-    gap: 10,
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#000000', paddingHorizontal: 24, paddingVertical: 14,
+    borderRadius: 14, gap: 10,
   },
-  signUpButtonText: {
-    color: '#FFF',
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  modalBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
+  signUpButtonText: { color: '#FFF', fontWeight: '700', fontSize: 15 },
+  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
+  modalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)' },
   modalContent: {
     backgroundColor: '#FFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingHorizontal: 24,
-    paddingTop: 8,
+    borderTopLeftRadius: 32, borderTopRightRadius: 32,
+    paddingHorizontal: 24, paddingTop: 8,
     paddingBottom: Platform.OS === 'ios' ? 34 : 24,
     maxHeight: '85%',
   },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalHeaderLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#1F2937',
-  },
-  modalDegreeBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  modalDegreeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
+  modalHandle: { width: 40, height: 4, backgroundColor: '#E5E7EB', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalHeaderLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  modalTitle: { fontSize: 20, fontWeight: '800', color: '#1F2937' },
+  modalDegreeBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
+  modalDegreeText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
   modalCloseBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center',
   },
-  modalBody: {
-    paddingBottom: 20,
-  },
-  modalProgramInfo: {
-    marginBottom: 20,
-  },
-  modalProgramTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#1F2937',
-    marginBottom: 6,
-  },
-  modalUniversityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  modalUniversity: {
-    fontSize: 15,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  modalLocationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 2,
-  },
-  modalLocation: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  modalDuration: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  modalDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#D1D5DB',
-  },
-  modalDivider: {
-    height: 1,
-    backgroundColor: '#E5E7EB',
-    marginVertical: 16,
-  },
-  detailHeading: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#4B5563',
-    marginBottom: 10,
-    gap: 6,
-  },
+  modalBody: { paddingBottom: 20 },
+  modalProgramInfo: { marginBottom: 20 },
+  modalProgramTitle: { fontSize: 22, fontWeight: '800', color: '#1F2937', marginBottom: 6 },
+  modalUniversityRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  modalUniversity: { fontSize: 15, color: '#6B7280', fontWeight: '500' },
+  modalLocationRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
+  modalLocation: { fontSize: 14, color: '#6B7280' },
+  modalDuration: { fontSize: 14, color: '#6B7280' },
+  modalDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB' },
+  modalDivider: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 16 },
+  detailHeading: { fontSize: 13, fontWeight: '700', color: '#4B5563', marginBottom: 10, gap: 6 },
   linkContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    padding: 12,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    padding: 12, backgroundColor: '#F8FAFC', borderRadius: 12,
+    borderWidth: 1, borderColor: '#E5E7EB',
   },
-  linkText: {
-    flex: 1,
-    color: '#2563EB',
-    fontSize: 14,
-    fontWeight: '600',
-    textDecorationLine: 'underline',
-  },
-  requirementsList: {
-    gap: 8,
-  },
+  linkText: { flex: 1, color: '#2563EB', fontSize: 14, fontWeight: '600', textDecorationLine: 'underline' },
+  requirementsList: { gap: 8 },
   reqItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 8, paddingHorizontal: 12,
+    backgroundColor: '#F8FAFC', borderRadius: 10,
   },
   reqIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#D1FAE5',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: '#D1FAE5', justifyContent: 'center', alignItems: 'center',
   },
-  reqText: {
-    fontSize: 14,
-    color: '#1F2937',
-    fontWeight: '500',
-    flex: 1,
-  },
-  emptyTextSmall: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    paddingVertical: 12,
-  },
-  modalDateInfo: {
-    flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 14,
-    padding: 16,
-    marginTop: 20,
-  },
-  modalDateBox: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  modalDateDivider: {
-    width: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  modalDateLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#9CA3AF',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  modalDateValue: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1F2937',
-  },
+  reqText: { fontSize: 14, color: '#1F2937', fontWeight: '500', flex: 1 },
+  emptyTextSmall: { fontSize: 14, color: '#9CA3AF', paddingVertical: 12 },
+  modalDateInfo: { flexDirection: 'row', backgroundColor: '#F8FAFC', borderRadius: 14, padding: 16, marginTop: 20 },
+  modalDateBox: { flex: 1, alignItems: 'center' },
+  modalDateDivider: { width: 1, backgroundColor: '#E5E7EB' },
+  modalDateLabel: { fontSize: 10, fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+  modalDateValue: { fontSize: 15, fontWeight: '700', color: '#1F2937' },
   applyModalBtn: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000000',
-    padding: 16,
-    borderRadius: 16,
-    gap: 10,
-    marginTop: 20,
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: '#000000', padding: 16, borderRadius: 16, gap: 10, marginTop: 20,
   },
-  applyModalBtnText: {
-    color: '#FFF',
-    fontWeight: '800',
-    fontSize: 16,
-  },
-  // Error State
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  errorTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  errorText: {
-    textAlign: 'center',
-    color: '#6B7280',
-    fontSize: 14,
-    marginBottom: 24,
-  },
-  retryButton: {
-    backgroundColor: '#000000',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 14,
-  },
-  retryButtonText: {
-    color: '#FFF',
-    fontWeight: '700',
-    fontSize: 16,
-  },
+  applyModalBtnText: { color: '#FFF', fontWeight: '800', fontSize: 16 },
+  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
+  errorTitle: { fontSize: 20, fontWeight: '700', color: '#1F2937', marginTop: 16, marginBottom: 8 },
+  errorText: { textAlign: 'center', color: '#6B7280', fontSize: 14, marginBottom: 24 },
+  retryButton: { backgroundColor: '#000000', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 14 },
+  retryButtonText: { color: '#FFF', fontWeight: '700', fontSize: 16 },
 
   // WebView Styles - FULL SCREEN
-  webViewFullScreen: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
+  webViewFullScreen: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
   webViewContainer: {
-    flex: 1,
-    backgroundColor: '#FFF',
-    position: 'absolute',
-    top: 37,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1, backgroundColor: '#FFF',
+    position: 'absolute', top: 37, left: 0, right: 0, bottom: 0,
   },
   webViewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'ios' ? 50 : 12,
     paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fff',
-    zIndex: 10,
+    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    backgroundColor: '#fff', zIndex: 10,
   },
   webViewHeaderBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#f8f8f8',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center',
   },
-  webViewHeaderCenter: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: 8,
-  },
-  webViewHeaderTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1a1a1a',
-    letterSpacing: 0.3,
-  },
-  webViewHeaderSubtitle: {
-    fontSize: 11,
-    color: '#999',
-    fontWeight: '500',
-    marginTop: 2,
-    maxWidth: width * 0.6,
-  },
-  webViewProgressContainer: {
-    height: 3,
-    backgroundColor: '#f0f0f0',
-    overflow: 'hidden',
-    zIndex: 10,
-  },
-  webViewProgressBar: {
-    height: '100%',
-  },
-  webViewProgressGradient: {
-    width: '100%',
-    height: '100%',
-  },
-  webViewWrapper: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  webView: {
-    flex: 1,
-  },
+  webViewHeaderCenter: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
+  webViewHeaderTitle: { fontSize: 16, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.3 },
+  webViewHeaderSubtitle: { fontSize: 11, color: '#999', fontWeight: '500', marginTop: 2, maxWidth: width * 0.6 },
+  webViewProgressContainer: { height: 3, backgroundColor: '#f0f0f0', overflow: 'hidden', zIndex: 10 },
+  webViewProgressBar: { height: '100%' },
+  webViewProgressGradient: { width: '100%', height: '100%' },
+  webViewWrapper: { flex: 1, backgroundColor: '#fff' },
+  webView: { flex: 1 },
   webViewLoaderContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    zIndex: 5,
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    justifyContent: 'center', alignItems: 'center',
+    backgroundColor: '#fff', zIndex: 5,
   },
   webViewLoaderIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
+    width: 80, height: 80, borderRadius: 20,
+    justifyContent: 'center', alignItems: 'center', marginBottom: 16,
   },
-  webViewLoadingTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#1a1a1a',
-  },
-  webViewLoadingSubtitle: {
-    fontSize: 13,
-    color: '#999',
-    marginTop: 6,
-    fontWeight: '500',
-  },
+  webViewLoadingTitle: { fontSize: 18, fontWeight: '800', color: '#1a1a1a' },
+  webViewLoadingSubtitle: { fontSize: 13, color: '#999', marginTop: 6, fontWeight: '500' },
   webViewBottomBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingVertical: 8,
+    borderTopWidth: 1, borderTopColor: '#f0f0f0',
     backgroundColor: '#fff',
     paddingBottom: Platform.OS === 'ios' ? 30 : 8,
     zIndex: 10,
   },
-  webViewToolbarBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  webViewToolbarBtn: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
 });
 
 export default ExchangeScreen;

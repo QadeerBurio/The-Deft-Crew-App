@@ -57,10 +57,10 @@ export default function ReportModal({
 
   // Log for debugging
   useEffect(() => {
-    console.log('ReportModal - visible prop:', visible);
-    console.log('ReportModal - modalVisible state:', modalVisible);
-    console.log('ReportModal - contentId:', contentId);
-    console.log('ReportModal - contentType:', contentType);
+    // console.log('ReportModal - visible prop:', visible);
+    // console.log('ReportModal - modalVisible state:', modalVisible);
+    // console.log('ReportModal - contentId:', contentId);
+    // console.log('ReportModal - contentType:', contentType);
   }, [visible, modalVisible, contentId, contentType]);
 
   const handleSubmit = async () => {

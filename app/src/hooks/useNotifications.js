@@ -1,465 +1,291 @@
-// The-Deft-Crew-App/app/src/hooks/useNotifications.js
+// app/src/hooks/useNotifications.js
+// FIXED: Better baseline reset for catching missed notifications
 
-import {
-  useState,
-  useEffect,
-  useContext,
-  useCallback,
-  useRef,
-} from 'react';
-
+import { useState, useEffect, useContext, useCallback, useRef } from 'react';
 import { AppState } from 'react-native';
-import * as Notifications from 'expo-notifications';
 import axios from 'axios';
 
 import { AuthContext } from '../context/AuthContext';
 import { BASE_URL } from '../api/api';
 
-const POLL_INTERVAL_MS = 10000; // 10 seconds while debugging
+const POLL_INTERVAL_MS = 10000;
+const activeResetters = new Set();
+
+// ✅ Export function to reset all active pollers
+export const resetNotificationBaseline = () => {
+  console.log('[useNotifications] Resetting baseline for', activeResetters.size, 'pollers');
+  activeResetters.forEach((reset) => {
+    try { 
+      reset(); 
+    } catch (e) { 
+      console.warn('[useNotifications] Reset failed:', e.message);
+    }
+  });
+};
 
 export const useNotifications = (onNewNotification) => {
-  // --------------------------------------------------
-  // React Hooks MUST be inside the custom hook
-  // --------------------------------------------------
-
   const { token, isGuest, user } = useContext(AuthContext);
 
   const [unreadCount, setUnreadCount] = useState(0);
 
   const pollIntervalRef = useRef(null);
-
-  // Track the latest notification we have already seen.
   const lastSeenIdRef = useRef(null);
-
-  // Prevent the first poll from triggering a notification.
   const isFirstPollRef = useRef(true);
+  const lastNotifiedMessageTimeRef = useRef(null);
 
-  // --------------------------------------------------
-  // Fetch unread count
-  // --------------------------------------------------
+  // ✅ Reset baseline - call this when app foregrounds
+  const resetBaseline = useCallback(() => {
+    console.log('[useNotifications] Baseline reset called');
+    lastSeenIdRef.current = null;
+    isFirstPollRef.current = true;
+    lastNotifiedMessageTimeRef.current = null;
+  }, []);
 
+  // Register this resetter
+  useEffect(() => {
+    activeResetters.add(resetBaseline);
+    return () => { 
+      activeResetters.delete(resetBaseline); 
+    };
+  }, [resetBaseline]);
+
+  // ── Fetch unread count ──
   const fetchUnreadCount = useCallback(async () => {
     if (!token) return 0;
-
     try {
       const response = await axios.get(
         `${BASE_URL}/notification/unread-count`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       const count = response.data.count || 0;
-
       setUnreadCount(count);
-
       return count;
     } catch (error) {
-      console.log(
-        '[useNotifications] unread-count error:',
-        error.message
-      );
-
       return 0;
     }
   }, [token]);
 
-  // --------------------------------------------------
-  // Fire local notification
-  // --------------------------------------------------
-
-  const fireLocalAlert = useCallback(async (notification) => {
+  // ── Poll chat messages ──
+  const pollForNewMessages = useCallback(async () => {
+    if (!token || isGuest) return;
     try {
-      console.log(
-        '[useNotifications] Firing local alert for:',
-        notification.title
-      );
-
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: notification.title || 'New Notification',
-          body: notification.description || '',
-          sound: true,
-          data: {
-            notificationId: notification._id,
-            link: notification.link || null,
-          },
-        },
-
-        trigger: null,
+      const res = await axios.get(`${BASE_URL}/social/inbox`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-    } catch (err) {
-      console.log(
-        '[useNotifications] fireLocalAlert error:',
-        err.message
-      );
-    }
-  }, []);
+      const conversations = Array.isArray(res.data) ? res.data : [];
+      if (conversations.length === 0) return;
 
-  // --------------------------------------------------
-  // Poll for new notifications
-  // --------------------------------------------------
+      let latestTime = 0;
+      let latestConv = null;
 
+      conversations.forEach((conv) => {
+        if (!conv.lastMessageTime) return;
+        const senderId =
+          conv.lastMessageSender?._id?.toString?.() ||
+          conv.lastMessageSender?.toString?.() ||
+          (typeof conv.lastMessageSender === 'string' ? conv.lastMessageSender : null);
+        const myId = user?._id?.toString?.() || '';
+        if (senderId && senderId === myId) return;
+        if (!conv.lastMessage || conv.lastMessage === 'Start a conversation...') return;
+        const t = new Date(conv.lastMessageTime).getTime();
+        if (t > latestTime) { latestTime = t; latestConv = conv; }
+      });
+
+      if (!latestConv || latestTime === 0) return;
+
+      // First poll - just set baseline
+      if (lastNotifiedMessageTimeRef.current === null) {
+        lastNotifiedMessageTimeRef.current = latestTime;
+        return;
+      }
+
+      // New message detected
+      if (latestTime > lastNotifiedMessageTimeRef.current) {
+        lastNotifiedMessageTimeRef.current = latestTime;
+
+        const otherUser = (latestConv.participants || []).find(
+          (p) => p._id && p._id.toString() !== user?._id?.toString()
+        );
+        const senderName = otherUser?.name || 'Someone';
+
+        let preview = latestConv.lastMessage || 'New message';
+        if (latestConv.lastMessageType === 'image') preview = '📷 Photo';
+        else if (latestConv.lastMessageType === 'audio') preview = '🎤 Voice message';
+        else if (preview.length > 60) preview = preview.slice(0, 60) + '...';
+
+        const notif = {
+          _id: `msg-${latestConv._id}-${latestTime}`,
+          title: `💬 ${senderName}`,
+          description: preview,
+          conversationId: latestConv._id,
+          type: 'Message',
+          mood: 'cheeky',
+        };
+
+        await fetchUnreadCount();
+        if (onNewNotification) onNewNotification(notif);
+      }
+    } catch (error) { /* noop */ }
+  }, [token, isGuest, user, onNewNotification, fetchUnreadCount]);
+
+  // ── Poll notifications (main + social) ──
   const pollForNewNotifications = useCallback(async () => {
-    if (!token || isGuest) {
-      return;
-    }
+    if (!token || isGuest) return;
 
     try {
       const [mainRes, socialRes] = await Promise.all([
-        axios.get(
-          `${BASE_URL}/notification/my-notifications`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        ),
-
-        axios
-          .get(
-            `${BASE_URL}/social/notifications`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          )
-          .catch(() => ({
-            data: [],
-          })),
+        axios.get(`${BASE_URL}/notification/my-notifications`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${BASE_URL}/social/notifications`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => ({ data: [] })),
       ]);
 
-      // --------------------------------------------------
-      // Main notifications
-      // --------------------------------------------------
-
-      const mainDocs = Array.isArray(mainRes.data)
-        ? mainRes.data
-        : [];
-
-      // --------------------------------------------------
-      // Social notifications
-      // --------------------------------------------------
-
-      const socialDocs = Array.isArray(socialRes.data)
-        ? socialRes.data
-        : [];
+      const mainDocs = Array.isArray(mainRes.data) ? mainRes.data : [];
+      const socialDocs = Array.isArray(socialRes.data) ? socialRes.data : [];
 
       const userId = user?._id?.toString() || '';
 
-      const normalizedSocial = socialDocs.map((n) => ({
-        _id: n._id,
+      const TITLE_MAP = {
+        like: '❤️ New Like',
+        comment: '💬 New Comment',
+        follow: '🌟 New Follower',
+        request: '👤 Connection Request',
+        connection_accepted: '🎉 Connection Accepted',
+        request_declined: 'Request Declined',
+        new_offer: '💼 New Offer',
+        offer_accepted: '🎉 Offer Accepted',
+        offer_rejected: 'Offer Declined',
+        match_created: '🤝 Match Created',
+        message: '💬 New Message',
+      };
+      const MOOD_MAP = {
+        like: 'excited', comment: 'cheeky', follow: 'excited',
+        request: 'sus', connection_accepted: 'hype', request_declined: 'sleepy',
+        new_offer: 'shook', offer_accepted: 'hype', offer_rejected: 'sleepy',
+        match_created: 'hype', message: 'cheeky',
+      };
 
-        title:
-          n.type === 'like'
-            ? '❤️ New Like'
-            : n.type === 'comment'
-            ? '💬 New Comment'
-            : n.type === 'connection_accepted'
-            ? '🎉 Connection Accepted'
-            : n.type === 'request_declined'
-            ? 'Request Declined'
-            : n.type === 'request'
-            ? '👤 Connection Request'
-            : 'Notification',
+      const normalizedSocial = socialDocs
+        .filter((n) => n.type !== 'message')
+        .map((n) => ({
+          _id: n._id,
+          title: TITLE_MAP[n.type] || 'Notification',
+          description: n.text,
+          type: n.type,
+          category: 'Social',
+          mood: n.mood || MOOD_MAP[n.type] || 'sorted',
+          iconUrl: n.iconUrl || null,
+          createdAt: n.createdAt,
+          isRead: userId
+            ? (n.readBy || []).some((id) => id.toString() === userId)
+            : false,
+          link: n.postId ? `/post/${n.postId}` : (n.link || ''),
+          metadata: n.metadata || {},
+          screenToOpen: n.screenToOpen || n.metadata?.screen || null,
+          conversationId: n.conversationId || null,
+        }));
 
-        description: n.text,
-
-        type: 'Social',
-
-        createdAt: n.createdAt,
-
-        isRead: userId
-          ? (n.readBy || []).some(
-              (id) => id.toString() === userId
-            )
-          : false,
-
-        link: n.postId
-          ? `/post/${n.postId}`
-          : '',
-      }));
-
-      // --------------------------------------------------
-      // Merge + sort notifications
-      // --------------------------------------------------
-
-      const merged = [
-        ...mainDocs,
-        ...normalizedSocial,
-      ].sort(
-        (a, b) =>
-          new Date(b.createdAt) -
-          new Date(a.createdAt)
+      const merged = [...mainDocs, ...normalizedSocial].sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
       );
 
-      if (merged.length === 0) {
-        return;
-      }
+      if (merged.length === 0) return;
 
       const latest = merged[0];
 
-      console.log(
-        '[useNotifications] latest:',
-        latest._id,
-        '| lastSeen:',
-        lastSeenIdRef.current,
-        '| firstPoll:',
-        isFirstPollRef.current
-      );
-
-      // --------------------------------------------------
-      // First poll
-      // --------------------------------------------------
-
-      // IMPORTANT:
-      // The first poll should establish the baseline.
-      // Otherwise the newest existing notification would
-      // immediately trigger a notification when the app starts.
+      // First poll after reset - just set baseline, don't notify
       if (isFirstPollRef.current) {
+        console.log('[useNotifications] First poll - setting baseline:', latest._id);
         lastSeenIdRef.current = latest._id;
-
         isFirstPollRef.current = false;
-
-        console.log(
-          '[useNotifications] First poll — baseline established:',
-          latest._id
-        );
-
         return;
       }
 
-      // --------------------------------------------------
-      // Detect new notification
-      // --------------------------------------------------
-
-      if (
-        latest._id &&
-        latest._id !== lastSeenIdRef.current
-      ) {
-        console.log(
-          '[useNotifications] NEW notification detected:',
-          latest.title
-        );
-
-        // Update the last seen ID FIRST.
-        // This prevents duplicate alerts from the next poll.
+      // New notification detected
+      if (latest._id && latest._id !== lastSeenIdRef.current) {
+        console.log('[useNotifications] New notification detected:', latest._id);
         lastSeenIdRef.current = latest._id;
-
-        // Update unread count.
         await fetchUnreadCount();
-
-        // Fire local notification.
-        await fireLocalAlert(latest);
-
-        // Notify UI / GlobalNotificationLayer if callback exists.
-        if (onNewNotification) {
-          onNewNotification(latest);
-        }
+        if (onNewNotification) onNewNotification(latest);
       }
-    } catch (error) {
-      console.log(
-        '[useNotifications] poll error:',
-        error.message
+    } catch (error) { /* noop */ }
+  }, [token, isGuest, user, onNewNotification, fetchUnreadCount]);
+
+  // ── Mark as read ──
+  const markAsRead = useCallback(async (notificationId) => {
+    if (!token) return false;
+    try {
+      await axios.patch(
+        `${BASE_URL}/notification/mark-read/${notificationId}`,
+        {}, { headers: { Authorization: `Bearer ${token}` } }
       );
-    }
-  }, [
-    token,
-    isGuest,
-    user,
-    onNewNotification,
-    fetchUnreadCount,
-    fireLocalAlert,
-  ]);
+      await fetchUnreadCount();
+      return true;
+    } catch (e) { return false; }
+  }, [token, fetchUnreadCount]);
 
-  // --------------------------------------------------
-  // Mark one notification as read
-  // --------------------------------------------------
-
-  const markAsRead = useCallback(
-    async (notificationId) => {
-      if (!token) return false;
-
-      try {
-        await axios.patch(
-          `${BASE_URL}/notification/mark-read/${notificationId}`,
-          {},
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        await fetchUnreadCount();
-
-        return true;
-      } catch (error) {
-        console.log(
-          '[useNotifications] markAsRead error:',
-          error.message
-        );
-
-        return false;
-      }
-    },
-    [token, fetchUnreadCount]
-  );
-
-  // --------------------------------------------------
-  // Mark all notifications as read
-  // --------------------------------------------------
-
+  // ── Mark all as read ──
   const markAllAsRead = useCallback(async () => {
     if (!token) return false;
-
     try {
       await axios.put(
         `${BASE_URL}/notification/mark-all-read`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        {}, { headers: { Authorization: `Bearer ${token}` } }
       );
-
       setUnreadCount(0);
-
       return true;
-    } catch (error) {
-      console.log(
-        '[useNotifications] markAllAsRead error:',
-        error.message
-      );
-
-      return false;
-    }
+    } catch (e) { return false; }
   }, [token]);
 
-  // --------------------------------------------------
-  // Start / stop polling
-  // --------------------------------------------------
-
+  // ── Polling setup ──
   useEffect(() => {
-    if (!token || isGuest) {
-      console.log(
-        '[useNotifications] polling disabled — token:',
-        !!token,
-        'isGuest:',
-        isGuest
-      );
+    if (!token || isGuest) return;
 
-      return;
-    }
+    // Initial poll after short delay
+    const initialDelay = setTimeout(() => {
+      pollForNewNotifications();
+      pollForNewMessages();
+    }, 1500);
 
-    console.log(
-      '[useNotifications] polling STARTED'
-    );
-
-    // Poll immediately.
-    pollForNewNotifications();
-
-    // Then poll every 10 seconds.
-    pollIntervalRef.current = setInterval(
-      pollForNewNotifications,
-      POLL_INTERVAL_MS
-    );
+    // Regular polling
+    pollIntervalRef.current = setInterval(() => {
+      pollForNewNotifications();
+      pollForNewMessages();
+    }, POLL_INTERVAL_MS);
 
     return () => {
-      console.log(
-        '[useNotifications] polling STOPPED'
-      );
-
+      clearTimeout(initialDelay);
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
-
         pollIntervalRef.current = null;
       }
     };
-  }, [
-    token,
-    isGuest,
-    pollForNewNotifications,
-  ]);
+  }, [token, isGuest, pollForNewNotifications, pollForNewMessages]);
 
-  // --------------------------------------------------
-  // When app comes back to foreground
-  // --------------------------------------------------
-
+  // ── AppState listener ──
   useEffect(() => {
-    const subscription =
-      AppState.addEventListener(
-        'change',
-        (nextAppState) => {
-          if (
-            nextAppState === 'active' &&
-            token &&
-            !isGuest
-          ) {
-            console.log(
-              '[useNotifications] App became active'
-            );
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active' && token && !isGuest) {
+        console.log('[useNotifications] App active - refreshing');
+        fetchUnreadCount();
+        pollForNewNotifications();
+        pollForNewMessages();
+      }
+    });
+    return () => subscription.remove();
+  }, [token, isGuest, fetchUnreadCount, pollForNewNotifications, pollForNewMessages]);
 
-            fetchUnreadCount();
-
-            pollForNewNotifications();
-          }
-        }
-      );
-
-    return () => {
-      subscription.remove();
-    };
-  }, [
-    token,
-    isGuest,
-    fetchUnreadCount,
-    pollForNewNotifications,
-  ]);
-
-  // --------------------------------------------------
-  // Initial unread count
-  // --------------------------------------------------
-
+  // ── Initial fetch ──
   useEffect(() => {
-    if (token && !isGuest) {
-      fetchUnreadCount();
-    }
-  }, [
-    token,
-    isGuest,
-    fetchUnreadCount,
-  ]);
+    if (token && !isGuest) fetchUnreadCount();
+  }, [token, isGuest, fetchUnreadCount]);
 
-  // --------------------------------------------------
-  // Reset notification tracking when user logs out
-  // --------------------------------------------------
-
+  // ── Reset when logged out ──
   useEffect(() => {
-    if (!token || isGuest) {
-      lastSeenIdRef.current = null;
-      isFirstPollRef.current = true;
-    }
-  }, [token, isGuest]);
+    if (!token || isGuest) resetBaseline();
+  }, [token, isGuest, resetBaseline]);
 
-  // --------------------------------------------------
-  // Return hook API
-  // --------------------------------------------------
-
-  return {
-    unreadCount,
-    fetchUnreadCount,
-    markAsRead,
-    markAllAsRead,
-  };
-};
-
-
-export const resetNotificationBaseline = () => {
-  globalLastSeenId = null;
-  globalIsFirstPoll = true;
+  return { unreadCount, fetchUnreadCount, markAsRead, markAllAsRead };
 };

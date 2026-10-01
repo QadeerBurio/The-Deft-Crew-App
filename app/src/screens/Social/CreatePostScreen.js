@@ -21,7 +21,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from "../../context/AuthContext";
-
+// 🆕 engagement
+import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus';
 const { width, height } = Dimensions.get('window');
 
 // ✅ Same API URL as FeedScreen/PostCard
@@ -196,7 +197,13 @@ export default function CreatePostScreen({ navigation }) {
           Animated.timing(fadeAnim, { toValue: 0.6, duration: 120, useNativeDriver: true }),
           Animated.timing(fadeAnim, { toValue: 1, duration: 120, useNativeDriver: true }),
         ]).start();
-
+// 🆕 engagement: queue any popups the backend returned
+        if (result?.engagement?.popups?.length) {
+          engagementBus.emit(
+            ENGAGEMENT_EVENTS.POPUPS_QUEUED,
+            result.engagement.popups
+          );
+        }
         setText("");
         setWordCount(0);
 

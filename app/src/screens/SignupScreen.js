@@ -1,4 +1,4 @@
-// SignupScreen.js - Updated with auto-login after signup
+// SignupScreen.js - Updated: hide Academic Level when Alumni is selected
 import React, { useEffect, useMemo, useRef, useState, useContext } from "react";
 import {
   ActivityIndicator,
@@ -153,14 +153,70 @@ const UNIVERSITIES = [
   "Ziauddin University Sukkur"
 ];
 
+const GENDER_OPTIONS = ["Male", "Female"];
+
+const ACADEMIC_LEVELS = [
+  "Metric / O-levels",
+  "Intermediate / A-levels",
+  "1st year",
+  "2nd year",
+  "3rd year",
+  "4th year",
+  "5th year",
+];
+
+const CITIES = [
+  "Karachi",
+  "Lahore",
+  "Islamabad",
+  "Rawalpindi",
+  "Faisalabad",
+  "Multan",
+  "Peshawar",
+  "Quetta",
+  "Hyderabad",
+  "Gujranwala",
+  "Sialkot",
+  "Sukkur",
+  "Larkana",
+  "Nawabshah",
+  "Bahawalpur",
+  "Sargodha",
+  "Mirpur Khas",
+  "Abbottabad",
+  "Mardan",
+  "Gujrat",
+  "Kasur",
+  "Rahim Yar Khan",
+  "Sahiwal",
+  "Okara",
+  "Wah Cantt",
+  "Dera Ghazi Khan",
+  "Mingora",
+  "Chiniot",
+  "Kamoke",
+  "Sheikhupura",
+  "Jhang",
+  "Dera Ismail Khan",
+  "Kohat",
+  "Muzaffarabad",
+  "Gilgit",
+  "Skardu",
+];
+
 export default function SignupScreen({ navigation }) {
   const route = useRoute();
-  const { setUser, setToken } = useContext(AuthContext); // Add auth context
-  
+  const { setUser, setToken } = useContext(AuthContext);
+
   const [loading, setLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState(null);
   const [showUniversityModal, setShowUniversityModal] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [showGenderModal, setShowGenderModal] = useState(false);
+  const [showAcademicLevelModal, setShowAcademicLevelModal] = useState(false);
+  const [showCityModal, setShowCityModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [citySearchQuery, setCitySearchQuery] = useState("");
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -169,8 +225,11 @@ export default function SignupScreen({ navigation }) {
   const [rollNo, setRollNo] = useState("");
   const [phone, setPhone] = useState("");
   const [university, setUniversity] = useState("");
+  const [city, setCity] = useState("");
   const [referralCode, setReferralCode] = useState("");
   const [isAlumni, setIsAlumni] = useState(false);
+  const [gender, setGender] = useState("");
+  const [academicLevel, setAcademicLevel] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -182,6 +241,9 @@ export default function SignupScreen({ navigation }) {
     password: false,
     confirmPassword: false,
     university: false,
+    gender: false,
+    academicLevel: false,
+    city: false,
   });
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -197,7 +259,7 @@ export default function SignupScreen({ navigation }) {
   const loadingProgress = useRef(new Animated.Value(0)).current;
 
   const inputAnims = useRef(
-    Array.from({ length: 9 }, () => new Animated.Value(0))
+    Array.from({ length: 13 }, () => new Animated.Value(0))
   ).current;
 
   const logoSpin = logoRotate.interpolate({
@@ -219,10 +281,19 @@ export default function SignupScreen({ navigation }) {
   const filteredUniversities = useMemo(() => {
     if (!searchQuery.trim()) return UNIVERSITIES;
     const query = searchQuery.toLowerCase().trim();
-    return UNIVERSITIES.filter(uni => 
+    return UNIVERSITIES.filter(uni =>
       uni.toLowerCase().includes(query)
     );
   }, [searchQuery]);
+
+  // Filter cities based on search query
+  const filteredCities = useMemo(() => {
+    if (!citySearchQuery.trim()) return CITIES;
+    const query = citySearchQuery.toLowerCase().trim();
+    return CITIES.filter(c =>
+      c.toLowerCase().includes(query)
+    );
+  }, [citySearchQuery]);
 
   useEffect(() => {
     if (route.params?.ref) {
@@ -255,7 +326,7 @@ export default function SignupScreen({ navigation }) {
       }),
       ...inputAnims.map((anim, index) =>
         Animated.sequence([
-          Animated.delay(300 + index * 80),
+          Animated.delay(300 + index * 60),
           Animated.spring(anim, {
             toValue: 1,
             friction: 6,
@@ -370,7 +441,6 @@ export default function SignupScreen({ navigation }) {
     ]).start();
   };
 
-  // Updated handleSignup with auto-login
   const handleSignup = async () => {
     Animated.sequence([
       Animated.timing(buttonScale, {
@@ -386,12 +456,16 @@ export default function SignupScreen({ navigation }) {
       }),
     ]).start();
 
+    // Academic Level is only required for Students (not Alumni)
     const newErrors = {
       name: !name.trim(),
       email: !email.trim(),
       password: !password.trim(),
       confirmPassword: !confirmPassword.trim(),
       university: !university,
+      gender: !gender,
+      academicLevel: !isAlumni && !academicLevel, // only required for students
+      city: !city,
     };
 
     setErrors(newErrors);
@@ -435,16 +509,18 @@ export default function SignupScreen({ navigation }) {
         universityName: university,
         referralCodeInput: referralCode.trim() || undefined,
         isAlumni,
+        gender,
+        // only send academicLevel for students
+        academicLevel: isAlumni ? undefined : academicLevel,
+        city: city || undefined,
       };
 
-      // Signup request
       const signupResponse = await api.post("/auth/signup", body);
-      
+
       console.log("Signup successful:", signupResponse.data);
 
       // AUTO-LOGIN AFTER SIGNUP
       try {
-        // Use the same credentials to login
         const loginResponse = await api.post("/auth/login", {
           email: email.trim().toLowerCase(),
           password: password
@@ -453,37 +529,32 @@ export default function SignupScreen({ navigation }) {
         const { token, user } = loginResponse.data;
 
         if (token && user) {
-          // Set auth token in API headers
           api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-          
-          // Update auth context
+
           setToken(token);
           setUser(user);
-          
+
           hideLoadingOverlay();
           setLoading(false);
-          
+
           showNotification(
             "Welcome to the Crew! 🎉",
             `Account created and signed in successfully!`,
             "success"
           );
 
-          // Navigate directly to Home (Drawer)
           setTimeout(() => {
             hideNotification();
-            // Reset navigation to go directly to Drawer (main app)
             navigation.reset({
               index: 0,
               routes: [{ name: 'Drawer' }],
             });
           }, 1500);
-          
-          return; // Exit after successful auto-login
+
+          return;
         }
       } catch (loginError) {
         console.log("Auto-login failed, redirecting to login screen:", loginError);
-        // If auto-login fails, redirect to login screen with success message
         hideLoadingOverlay();
         setLoading(false);
         showNotification(
@@ -491,7 +562,7 @@ export default function SignupScreen({ navigation }) {
           "Please sign in with your credentials.",
           "success"
         );
-        
+
         setTimeout(() => {
           hideNotification();
           navigation.replace("Login");
@@ -499,7 +570,6 @@ export default function SignupScreen({ navigation }) {
         return;
       }
 
-      // Fallback if login response was invalid
       hideLoadingOverlay();
       setLoading(false);
       showNotification(
@@ -507,7 +577,7 @@ export default function SignupScreen({ navigation }) {
         "Please sign in with your credentials.",
         "success"
       );
-      
+
       setTimeout(() => {
         hideNotification();
         navigation.replace("Login");
@@ -541,6 +611,79 @@ export default function SignupScreen({ navigation }) {
     setUniversity(uni);
     clearError("university");
     closeUniversityModal();
+  };
+
+  const openRoleModal = () => {
+    setFocusedInput("role");
+    setShowRoleModal(true);
+  };
+
+  const closeRoleModal = () => {
+    setShowRoleModal(false);
+    setFocusedInput(null);
+  };
+
+  // ─────────────────────────────────────────────
+  // ROLE SELECT — clears academic level when Alumni
+  // ─────────────────────────────────────────────
+  const selectRole = (alumni) => {
+    setIsAlumni(alumni);
+    if (alumni) {
+      // Alumni → academic level is not needed
+      setAcademicLevel("");
+      setErrors((prev) => ({ ...prev, academicLevel: false }));
+    }
+    closeRoleModal();
+  };
+
+  const openGenderModal = () => {
+    setFocusedInput("gender");
+    setShowGenderModal(true);
+  };
+
+  const closeGenderModal = () => {
+    setShowGenderModal(false);
+    setFocusedInput(null);
+  };
+
+  const selectGender = (value) => {
+    setGender(value);
+    clearError("gender");
+    closeGenderModal();
+  };
+
+  const openAcademicLevelModal = () => {
+    setFocusedInput("academicLevel");
+    setShowAcademicLevelModal(true);
+  };
+
+  const closeAcademicLevelModal = () => {
+    setShowAcademicLevelModal(false);
+    setFocusedInput(null);
+  };
+
+  const selectAcademicLevel = (value) => {
+    setAcademicLevel(value);
+    clearError("academicLevel");
+    closeAcademicLevelModal();
+  };
+
+  const openCityModal = () => {
+    setCitySearchQuery("");
+    setFocusedInput("city");
+    setShowCityModal(true);
+  };
+
+  const closeCityModal = () => {
+    setShowCityModal(false);
+    setFocusedInput(null);
+    setCitySearchQuery("");
+  };
+
+  const selectCity = (value) => {
+    setCity(value);
+    clearError("city");
+    closeCityModal();
   };
 
   const inputFields = [
@@ -601,6 +744,39 @@ export default function SignupScreen({ navigation }) {
     if (focusedInput === fieldKey) return "#fff";
     return "#f8f8f8";
   };
+
+  // Generic selector row component
+  const renderSelector = (options) => (
+    options.map((option) => (
+      <TouchableOpacity
+        key={option.value}
+        style={[styles.modalOption, option.selected && styles.modalOptionActive]}
+        onPress={option.onPress}
+        activeOpacity={0.7}
+      >
+        <View style={styles.modalOptionContent}>
+          <Ionicons
+            name={option.selected ? "checkmark-circle" : option.icon || "ellipse-outline"}
+            size={18}
+            color={option.selected ? "#f9c349" : "#999"}
+            style={styles.modalOptionIcon}
+          />
+          <Text
+            style={[
+              styles.modalOptionText,
+              option.selected && styles.modalOptionTextActive
+            ]}
+            numberOfLines={1}
+          >
+            {option.label}
+          </Text>
+        </View>
+        {option.selected && (
+          <Ionicons name="checkmark" size={18} color="#f9c349" />
+        )}
+      </TouchableOpacity>
+    ))
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -681,21 +857,13 @@ export default function SignupScreen({ navigation }) {
           </Animated.View>
         )}
 
-        <ScrollView
-          contentContainerStyle={[
-            styles.scrollContainer,
-            isTablet && styles.scrollContainerTablet,
-          ]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentInsetAdjustmentBehavior="always"
-        >
+        <View style={styles.mainContainer}>
+          {/* Fixed Header */}
           <Animated.View
             style={[
-              styles.card,
-              isTablet && styles.cardTablet,
+              styles.fixedHeader,
+              isTablet && styles.fixedHeaderTablet,
               {
-                width: cardWidth,
                 opacity: fadeAnim,
                 transform: [{ translateY: slideUpAnim }],
               },
@@ -717,8 +885,8 @@ export default function SignupScreen({ navigation }) {
                 </LinearGradient>
               </Animated.View>
 
-              <Text style={styles.title}>Join The Crew</Text>
-              <Text style={styles.subtitle}>Unlock exclusive student & alumni deals</Text>
+              <Text style={styles.title}>The Deft Crew</Text>
+              <Text style={styles.subtitle}>Create Your Account</Text>
 
               <View style={styles.decorativeLine}>
                 <View style={styles.lineSegment} />
@@ -726,60 +894,51 @@ export default function SignupScreen({ navigation }) {
                 <View style={styles.lineSegment} />
               </View>
             </View>
+          </Animated.View>
 
-            {/* Modern Toggle Container */}
+          {/* Scrollable Fields */}
+          <ScrollView
+            style={styles.fieldsScrollView}
+            contentContainerStyle={styles.fieldsScrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            bounces={true}
+            scrollEventThrottle={16}
+            decelerationRate="normal"
+          >
+            {/* Role Dropdown (Student/Alumni) */}
             <Animated.View
               style={[
-                styles.toggleContainer,
-                isTablet && styles.toggleContainerTablet,
+                styles.inputWrapper,
+                isTablet && styles.inputWrapperTablet,
                 {
                   opacity: inputAnims[0],
-                  transform: [
-                    {
-                      translateX: inputAnims[0].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [-60, 0],
-                      }),
-                    },
-                    {
-                      scale: inputAnims[0].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.9, 1],
-                      }),
-                    },
-                  ],
+                  backgroundColor: focusedInput === "role" ? "#fff" : "#f8f8f8",
+                  borderColor: focusedInput === "role" ? "#f9c349" : "transparent",
+                  borderWidth: focusedInput === "role" ? 1.5 : 0,
                 },
               ]}
             >
-              <TouchableOpacity
-                style={[styles.toggleButton, !isAlumni && styles.toggleActive]}
-                onPress={() => setIsAlumni(false)}
-                activeOpacity={0.7}
-              >
-                <Ionicons 
-                  name={!isAlumni ? "school" : "school-outline"} 
-                  size={16} 
-                  color={!isAlumni ? "#f9c349" : "#999"} 
-                  style={styles.toggleIcon}
+              <View style={styles.inputIconContainer}>
+                <Ionicons
+                  name={isAlumni ? "ribbon-outline" : "school-outline"}
+                  size={18}
+                  color={focusedInput === "role" ? "#f9c349" : "#999"}
                 />
-                <Text style={[styles.toggleLabel, !isAlumni && styles.toggleLabelActive]}>
-                  Student
-                </Text>
-              </TouchableOpacity>
+              </View>
               <TouchableOpacity
-                style={[styles.toggleButton, isAlumni && styles.toggleActive]}
-                onPress={() => setIsAlumni(true)}
-                activeOpacity={0.7}
+                style={styles.selectorButton}
+                activeOpacity={0.8}
+                onPress={openRoleModal}
               >
-                <Ionicons 
-                  name={isAlumni ? "ribbon" : "ribbon-outline"} 
-                  size={16} 
-                  color={isAlumni ? "#f9c349" : "#999"} 
-                  style={styles.toggleIcon}
-                />
-                <Text style={[styles.toggleLabel, isAlumni && styles.toggleLabelActive]}>
-                  Alumni
+                <Text style={styles.selectorText}>
+                  {isAlumni ? "Alumni" : "Student"}
                 </Text>
+                <Ionicons
+                  name={showRoleModal ? "chevron-up" : "chevron-down"}
+                  size={16}
+                  color="#999"
+                />
               </TouchableOpacity>
             </Animated.View>
 
@@ -803,22 +962,6 @@ export default function SignupScreen({ navigation }) {
                         ? "#f9c349"
                         : "transparent",
                     borderWidth: focusedInput === field.key || (field.errorKey && errors[field.errorKey]) ? 1.5 : 0,
-                  },
-                  {
-                    transform: [
-                      {
-                        translateX: inputAnims[index + 1].interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [index % 2 === 0 ? -60 : 60, 0],
-                        }),
-                      },
-                      {
-                        scale: inputAnims[index + 1].interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [0.9, 1],
-                        }),
-                      },
-                    ],
                   },
                 ]}
               >
@@ -872,6 +1015,94 @@ export default function SignupScreen({ navigation }) {
               </Animated.View>
             ))}
 
+            {/* Gender Dropdown */}
+            <Animated.View
+              style={[
+                styles.inputWrapper,
+                isTablet && styles.inputWrapperTablet,
+                {
+                  opacity: inputAnims[5],
+                  backgroundColor: errors.gender ? "#fff5f5" : focusedInput === "gender" ? "#fff" : "#f8f8f8",
+                  borderColor: errors.gender ? "#ff4444" : focusedInput === "gender" ? "#f9c349" : "transparent",
+                  borderWidth: focusedInput === "gender" || errors.gender ? 1.5 : 0,
+                },
+              ]}
+            >
+              <View style={styles.inputIconContainer}>
+                <Ionicons
+                  name="person-outline"
+                  size={18}
+                  color={errors.gender ? "#ff4444" : focusedInput === "gender" ? "#f9c349" : "#999"}
+                />
+              </View>
+              <TouchableOpacity
+                style={styles.selectorButton}
+                activeOpacity={0.8}
+                onPress={openGenderModal}
+              >
+                <Text
+                  style={[
+                    styles.selectorText,
+                    !gender && styles.selectorPlaceholder,
+                    errors.gender && styles.selectorError,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {gender || "Select Gender"}
+                </Text>
+                <Ionicons
+                  name={showGenderModal ? "chevron-up" : "chevron-down"}
+                  size={16}
+                  color={errors.gender ? "#ff4444" : "#999"}
+                />
+              </TouchableOpacity>
+            </Animated.View>
+
+            {/* Academic Level Dropdown — HIDDEN FOR ALUMNI */}
+            {!isAlumni && (
+              <Animated.View
+                style={[
+                  styles.inputWrapper,
+                  isTablet && styles.inputWrapperTablet,
+                  {
+                    opacity: inputAnims[6],
+                    backgroundColor: errors.academicLevel ? "#fff5f5" : focusedInput === "academicLevel" ? "#fff" : "#f8f8f8",
+                    borderColor: errors.academicLevel ? "#ff4444" : focusedInput === "academicLevel" ? "#f9c349" : "transparent",
+                    borderWidth: focusedInput === "academicLevel" || errors.academicLevel ? 1.5 : 0,
+                  },
+                ]}
+              >
+                <View style={styles.inputIconContainer}>
+                  <Ionicons
+                    name="school-outline"
+                    size={18}
+                    color={errors.academicLevel ? "#ff4444" : focusedInput === "academicLevel" ? "#f9c349" : "#999"}
+                  />
+                </View>
+                <TouchableOpacity
+                  style={styles.selectorButton}
+                  activeOpacity={0.8}
+                  onPress={openAcademicLevelModal}
+                >
+                  <Text
+                    style={[
+                      styles.selectorText,
+                      !academicLevel && styles.selectorPlaceholder,
+                      errors.academicLevel && styles.selectorError,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {academicLevel || "Select Academic Level"}
+                  </Text>
+                  <Ionicons
+                    name={showAcademicLevelModal ? "chevron-up" : "chevron-down"}
+                    size={16}
+                    color={errors.academicLevel ? "#ff4444" : "#999"}
+                  />
+                </TouchableOpacity>
+              </Animated.View>
+            )}
+
             {/* University Dropdown */}
             <Animated.View
               style={[
@@ -879,24 +1110,10 @@ export default function SignupScreen({ navigation }) {
                 styles.universityWrapper,
                 isTablet && styles.inputWrapperTablet,
                 {
-                  opacity: inputAnims[5],
+                  opacity: inputAnims[7],
                   backgroundColor: errors.university ? "#fff5f5" : focusedInput === "uni" ? "#fff" : "#f8f8f8",
                   borderColor: errors.university ? "#ff4444" : focusedInput === "uni" ? "#f9c349" : "transparent",
                   borderWidth: focusedInput === "uni" || errors.university ? 1.5 : 0,
-                  transform: [
-                    {
-                      translateX: inputAnims[5].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [60, 0],
-                      }),
-                    },
-                    {
-                      scale: inputAnims[5].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.9, 1],
-                      }),
-                    },
-                  ],
                 },
               ]}
             >
@@ -923,10 +1140,53 @@ export default function SignupScreen({ navigation }) {
                 >
                   {university || "Select University"}
                 </Text>
-                <Ionicons 
-                  name={showUniversityModal ? "chevron-up" : "chevron-down"} 
-                  size={16} 
-                  color={errors.university ? "#ff4444" : "#999"} 
+                <Ionicons
+                  name={showUniversityModal ? "chevron-up" : "chevron-down"}
+                  size={16}
+                  color={errors.university ? "#ff4444" : "#999"}
+                />
+              </TouchableOpacity>
+            </Animated.View>
+
+            {/* City Dropdown */}
+            <Animated.View
+              style={[
+                styles.inputWrapper,
+                isTablet && styles.inputWrapperTablet,
+                {
+                  opacity: inputAnims[8],
+                  backgroundColor: errors.city ? "#fff5f5" : focusedInput === "city" ? "#fff" : "#f8f8f8",
+                  borderColor: errors.city ? "#ff4444" : focusedInput === "city" ? "#f9c349" : "transparent",
+                  borderWidth: focusedInput === "city" || errors.city ? 1.5 : 0,
+                },
+              ]}
+            >
+              <View style={styles.inputIconContainer}>
+                <Ionicons
+                  name="location-outline"
+                  size={18}
+                  color={errors.city ? "#ff4444" : focusedInput === "city" ? "#f9c349" : "#999"}
+                />
+              </View>
+              <TouchableOpacity
+                style={styles.selectorButton}
+                activeOpacity={0.8}
+                onPress={openCityModal}
+              >
+                <Text
+                  style={[
+                    styles.selectorText,
+                    !city && styles.selectorPlaceholder,
+                    errors.city && styles.selectorError,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {city || "Select City"}
+                </Text>
+                <Ionicons
+                  name={showCityModal ? "chevron-up" : "chevron-down"}
+                  size={16}
+                  color={errors.city ? "#ff4444" : "#999"}
                 />
               </TouchableOpacity>
             </Animated.View>
@@ -937,24 +1197,10 @@ export default function SignupScreen({ navigation }) {
                 styles.inputWrapper,
                 isTablet && styles.inputWrapperTablet,
                 {
-                  opacity: inputAnims[6],
+                  opacity: inputAnims[9],
                   backgroundColor: errors.password ? "#fff5f5" : focusedInput === "pass" ? "#fff" : "#f8f8f8",
                   borderColor: errors.password ? "#ff4444" : focusedInput === "pass" ? "#f9c349" : "transparent",
                   borderWidth: focusedInput === "pass" || errors.password ? 1.5 : 0,
-                  transform: [
-                    {
-                      translateX: inputAnims[6].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [-60, 0],
-                      }),
-                    },
-                    {
-                      scale: inputAnims[6].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.9, 1],
-                      }),
-                    },
-                  ],
                 },
               ]}
             >
@@ -1000,24 +1246,10 @@ export default function SignupScreen({ navigation }) {
                 styles.inputWrapper,
                 isTablet && styles.inputWrapperTablet,
                 {
-                  opacity: inputAnims[7],
+                  opacity: inputAnims[10],
                   backgroundColor: errors.confirmPassword ? "#fff5f5" : focusedInput === "confirm" ? "#fff" : "#f8f8f8",
                   borderColor: errors.confirmPassword ? "#ff4444" : focusedInput === "confirm" ? "#f9c349" : "transparent",
                   borderWidth: focusedInput === "confirm" || errors.confirmPassword ? 1.5 : 0,
-                  transform: [
-                    {
-                      translateX: inputAnims[7].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [60, 0],
-                      }),
-                    },
-                    {
-                      scale: inputAnims[7].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.9, 1],
-                      }),
-                    },
-                  ],
                 },
               ]}
             >
@@ -1064,22 +1296,8 @@ export default function SignupScreen({ navigation }) {
                 styles.referralWrapper,
                 isTablet && styles.inputWrapperTablet,
                 {
-                  opacity: inputAnims[8],
+                  opacity: inputAnims[11],
                   borderWidth: focusedInput === "ref" ? 1.5 : 0,
-                  transform: [
-                    {
-                      translateX: inputAnims[8].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [-60, 0],
-                      }),
-                    },
-                    {
-                      scale: inputAnims[8].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.9, 1],
-                      }),
-                    },
-                  ],
                 },
               ]}
             >
@@ -1099,6 +1317,20 @@ export default function SignupScreen({ navigation }) {
               />
             </Animated.View>
 
+            {/* Spacer for bottom padding */}
+            <View style={styles.scrollBottomSpacer} />
+          </ScrollView>
+
+          {/* Fixed Footer */}
+          <Animated.View
+            style={[
+              styles.fixedFooter,
+              isTablet && styles.fixedFooterTablet,
+              {
+                opacity: fadeAnim,
+              },
+            ]}
+          >
             <Animated.View style={{ transform: [{ translateX: shakeAnim }, { scale: buttonScale }] }}>
               <TouchableOpacity style={styles.button} onPress={handleSignup} disabled={loading} activeOpacity={0.9}>
                 <LinearGradient colors={["#1a1a1a", "#1a1a1a"]} style={styles.buttonGradient}>
@@ -1120,16 +1352,17 @@ export default function SignupScreen({ navigation }) {
                 <Text style={styles.signupLink}>Login</Text>
               </TouchableOpacity>
             </View>
-          </Animated.View>
 
-          <Animated.View style={[styles.brandingFooter, { opacity: fadeAnim }]}>
-            <Text style={styles.brandingText}>
-              <Text style={{ fontSize: 14 }}>tdc</Text>
-              <Text style={{ color: "#f9c349", fontSize: 20 }}>.</Text> KARACHI • 2026
-            </Text>
+            <View style={styles.brandingFooter}>
+              <Text style={styles.brandingText}>
+                <Text style={{ fontSize: 14 }}>tdc</Text>
+                <Text style={{ color: "#f9c349", fontSize: 20 }}>.</Text> PAKISTAN
+              </Text>
+            </View>
           </Animated.View>
-        </ScrollView>
+        </View>
 
+        {/* University Modal */}
         <Modal
           visible={showUniversityModal}
           transparent
@@ -1176,7 +1409,7 @@ export default function SignupScreen({ navigation }) {
                 {filteredUniversities.length} {filteredUniversities.length === 1 ? 'university' : 'universities'} found
               </Text>
 
-              <ScrollView 
+              <ScrollView
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
                 style={styles.modalScrollView}
@@ -1190,15 +1423,15 @@ export default function SignupScreen({ navigation }) {
                       activeOpacity={0.7}
                     >
                       <View style={styles.modalOptionContent}>
-                        <Ionicons 
-                          name={university === uni ? "checkmark-circle" : "school-outline"} 
-                          size={18} 
-                          color={university === uni ? "#f9c349" : "#999"} 
+                        <Ionicons
+                          name={university === uni ? "checkmark-circle" : "school-outline"}
+                          size={18}
+                          color={university === uni ? "#f9c349" : "#999"}
                           style={styles.modalOptionIcon}
                         />
-                        <Text 
+                        <Text
                           style={[
-                            styles.modalOptionText, 
+                            styles.modalOptionText,
                             university === uni && styles.modalOptionTextActive
                           ]}
                           numberOfLines={1}
@@ -1222,12 +1455,226 @@ export default function SignupScreen({ navigation }) {
             </Pressable>
           </Pressable>
         </Modal>
+
+        {/* Role Modal */}
+        <Modal
+          visible={showRoleModal}
+          transparent
+          animationType="fade"
+          onRequestClose={closeRoleModal}
+        >
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={closeRoleModal}
+          >
+            <Pressable style={[styles.modalCard, isTablet && styles.modalCardTablet]}>
+              <View style={styles.modalHeader}>
+                <View style={styles.modalHeaderLeft}>
+                  <Ionicons name="people-outline" size={22} color="#1a1a1a" />
+                  <Text style={styles.modalTitle}>Select Role</Text>
+                </View>
+                <TouchableOpacity onPress={closeRoleModal} style={styles.modalCloseButton}>
+                  <Ionicons name="close" size={20} color="#666" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                style={styles.modalScrollView}
+              >
+                {renderSelector([
+                  {
+                    value: "student",
+                    label: "Student",
+                    selected: !isAlumni,
+                    icon: "school-outline",
+                    onPress: () => selectRole(false),
+                  },
+                  {
+                    value: "alumni",
+                    label: "Alumni",
+                    selected: isAlumni,
+                    icon: "ribbon-outline",
+                    onPress: () => selectRole(true),
+                  },
+                ])}
+              </ScrollView>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
+        {/* Gender Modal */}
+        <Modal
+          visible={showGenderModal}
+          transparent
+          animationType="fade"
+          onRequestClose={closeGenderModal}
+        >
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={closeGenderModal}
+          >
+            <Pressable style={[styles.modalCard, isTablet && styles.modalCardTablet]}>
+              <View style={styles.modalHeader}>
+                <View style={styles.modalHeaderLeft}>
+                  <Ionicons name="person-outline" size={22} color="#1a1a1a" />
+                  <Text style={styles.modalTitle}>Select Gender</Text>
+                </View>
+                <TouchableOpacity onPress={closeGenderModal} style={styles.modalCloseButton}>
+                  <Ionicons name="close" size={20} color="#666" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                style={styles.modalScrollView}
+              >
+                {renderSelector(GENDER_OPTIONS.map((option) => ({
+                  value: option,
+                  label: option,
+                  selected: gender === option,
+                  onPress: () => selectGender(option),
+                })))}
+              </ScrollView>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
+        {/* Academic Level Modal */}
+        <Modal
+          visible={showAcademicLevelModal}
+          transparent
+          animationType="fade"
+          onRequestClose={closeAcademicLevelModal}
+        >
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={closeAcademicLevelModal}
+          >
+            <Pressable style={[styles.modalCard, isTablet && styles.modalCardTablet]}>
+              <View style={styles.modalHeader}>
+                <View style={styles.modalHeaderLeft}>
+                  <Ionicons name="school-outline" size={22} color="#1a1a1a" />
+                  <Text style={styles.modalTitle}>Select Academic Level</Text>
+                </View>
+                <TouchableOpacity onPress={closeAcademicLevelModal} style={styles.modalCloseButton}>
+                  <Ionicons name="close" size={20} color="#666" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                style={styles.modalScrollView}
+              >
+                {renderSelector(ACADEMIC_LEVELS.map((option) => ({
+                  value: option,
+                  label: option,
+                  selected: academicLevel === option,
+                  onPress: () => selectAcademicLevel(option),
+                })))}
+              </ScrollView>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
+        {/* City Modal */}
+        <Modal
+          visible={showCityModal}
+          transparent
+          animationType="fade"
+          onRequestClose={closeCityModal}
+        >
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={closeCityModal}
+          >
+            <Pressable style={[styles.modalCard, isTablet && styles.modalCardTablet]}>
+              <View style={styles.modalHeader}>
+                <View style={styles.modalHeaderLeft}>
+                  <Ionicons name="location-outline" size={22} color="#1a1a1a" />
+                  <Text style={styles.modalTitle}>Select City</Text>
+                </View>
+                <TouchableOpacity onPress={closeCityModal} style={styles.modalCloseButton}>
+                  <Ionicons name="close" size={20} color="#666" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.searchContainer}>
+                <View style={styles.searchInputWrapper}>
+                  <Ionicons name="search-outline" size={18} color="#999" style={styles.searchIcon} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search cities..."
+                    placeholderTextColor="#999"
+                    value={citySearchQuery}
+                    onChangeText={setCitySearchQuery}
+                    autoFocus={true}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                  />
+                  {citySearchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setCitySearchQuery("")} style={styles.clearSearchButton}>
+                      <Ionicons name="close-circle" size={18} color="#999" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+
+              <Text style={styles.resultsCount}>
+                {filteredCities.length} {filteredCities.length === 1 ? 'city' : 'cities'} found
+              </Text>
+
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                style={styles.modalScrollView}
+              >
+                {filteredCities.length > 0 ? (
+                  filteredCities.map((cityName) => (
+                    <TouchableOpacity
+                      key={cityName}
+                      style={[styles.modalOption, city === cityName && styles.modalOptionActive]}
+                      onPress={() => selectCity(cityName)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.modalOptionContent}>
+                        <Ionicons
+                          name={city === cityName ? "checkmark-circle" : "location-outline"}
+                          size={18}
+                          color={city === cityName ? "#f9c349" : "#999"}
+                          style={styles.modalOptionIcon}
+                        />
+                        <Text
+                          style={[
+                            styles.modalOptionText,
+                            city === cityName && styles.modalOptionTextActive
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {cityName}
+                        </Text>
+                      </View>
+                      {city === cityName && (
+                        <Ionicons name="checkmark" size={18} color="#f9c349" />
+                      )}
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <View style={styles.noResultsContainer}>
+                    <Ionicons name="location-outline" size={48} color="#ddd" />
+                    <Text style={styles.noResultsText}>No cities found</Text>
+                    <Text style={styles.noResultsSubtext}>Try adjusting your search</Text>
+                  </View>
+                )}
+              </ScrollView>
+            </Pressable>
+          </Pressable>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-// Keep your existing styles here...
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -1236,32 +1683,100 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: "center",
-    paddingVertical: 12,
-  },
-  scrollContainerTablet: {
-    paddingHorizontal: 24,
-    paddingVertical: 28,
-  },
-  card: {
+  mainContainer: {
+    flex: 1,
     backgroundColor: "#fff",
-    borderRadius: 0,
-    paddingHorizontal: 24,
-    paddingVertical: 24,
-    width: "100%",
-    alignSelf: "center",
   },
-  cardTablet: {
-    borderRadius: 28,
+  fixedHeader: {
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 4,
+    backgroundColor: "#fff",
+    zIndex: 10,
+  },
+  fixedHeaderTablet: {
     paddingHorizontal: 36,
-    paddingVertical: 40,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 4,
+    paddingTop: 12,
+  },
+  fieldsScrollView: {
+    flex: 1,
+  },
+  fieldsScrollContent: {
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  scrollBottomSpacer: {
+    height: 8,
+  },
+  fixedFooter: {
+    paddingHorizontal: 24,
+    paddingBottom: 8,
+    backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
+    zIndex: 10,
+  },
+  fixedFooterTablet: {
+    paddingHorizontal: 36,
+  },
+  header: {
+    alignItems: "center",
+    marginBottom: 8,
+    marginTop: 2,
+  },
+  logoBadge: {
+    marginBottom: 12,
+    borderRadius: 50,
+    overflow: "hidden",
+    elevation: 10,
+    shadowColor: "#f9c349",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+  },
+  logoGradient: {
+    width: 56,
+    height: 56,
+    borderRadius: 50,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  logoText: {
+    fontSize: 24,
+    color: "#fff",
+    fontWeight: "900",
+    letterSpacing: -1,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: "#1a1a1a",
+    letterSpacing: 1,
+  },
+  subtitle: {
+    color: "#666",
+    marginTop: 2,
+    fontSize: 12,
+    letterSpacing: 0.5,
+  },
+  decorativeLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  lineSegment: {
+    width: 20,
+    height: 2,
+    backgroundColor: "#f9c349",
+    borderRadius: 1,
+  },
+  diamond: {
+    width: 6,
+    height: 6,
+    backgroundColor: "#1a1a1a",
+    transform: [{ rotate: "45deg" }],
+    marginHorizontal: 8,
   },
   notificationContainer: {
     position: "absolute",
@@ -1376,106 +1891,6 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  header: {
-    alignItems: "center",
-    marginBottom: 20,
-    marginTop: 2,
-  },
-  logoBadge: {
-    marginBottom: 16,
-    borderRadius: 50,
-    overflow: "hidden",
-    elevation: 10,
-    shadowColor: "#f9c349",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-  },
-  logoGradient: {
-    width: 64,
-    height: 64,
-    borderRadius: 50,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  logoText: {
-    fontSize: 28,
-    color: "#fff",
-    fontWeight: "900",
-    letterSpacing: -1,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "900",
-    color: "#1a1a1a",
-    letterSpacing: 1,
-  },
-  subtitle: {
-    color: "#666",
-    marginTop: 4,
-    fontSize: 13,
-    letterSpacing: 0.5,
-  },
-  decorativeLine: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 12,
-  },
-  lineSegment: {
-    width: 20,
-    height: 2,
-    backgroundColor: "#f9c349",
-    borderRadius: 1,
-  },
-  diamond: {
-    width: 6,
-    height: 6,
-    backgroundColor: "#1a1a1a",
-    transform: [{ rotate: "45deg" }],
-    marginHorizontal: 8,
-  },
-  toggleContainer: {
-    flexDirection: "row",
-    backgroundColor: "#f5f5f5",
-    borderRadius: 12,
-    padding: 3,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#eee",
-  },
-  toggleContainerTablet: {
-    marginBottom: 16,
-  },
-  toggleButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    gap: 6,
-  },
-  toggleActive: {
-    backgroundColor: "#1a1a1a",
-    elevation: 4,
-    shadowColor: "#1a1a1a",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-  },
-  toggleIcon: {
-    marginRight: 4,
-  },
-  toggleLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#999",
-    letterSpacing: 0.5,
-  },
-  toggleLabelActive: {
-    color: "#f9c349",
-  },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
@@ -1557,14 +1972,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: 8,
+    marginBottom: 6,
   },
   buttonGradient: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    padding: 15,
+    padding: 14,
   },
   buttonText: {
     color: "#f9c349",
@@ -1576,8 +1991,8 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: 16,
-    marginBottom: 16,
+    marginTop: 8,
+    marginBottom: 8,
   },
   footerText: {
     color: "#999",
@@ -1591,8 +2006,7 @@ const styles = StyleSheet.create({
   },
   brandingFooter: {
     alignItems: "center",
-    marginTop: 30,
-    marginBottom: 16,
+    marginBottom: 4,
   },
   brandingText: {
     color: "#ccc",

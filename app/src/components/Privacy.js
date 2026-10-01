@@ -114,31 +114,31 @@ export default function PrivacyScreen() {
     {
       icon: "database-lock-outline",
       title: "Data Collection",
-      content: "We collect essential info like University ID to verify your student status.",
+      content: "Only what we need, like your university ID, to verify you're a student.",
       color: "#f9c349"
     },
     {
       icon: "eye-off-outline",
-      title: "Zero Third-Party Sharing",
-      content: "tdc never sells your personal data. Your details stay private.",
+      title: "We don't sell your data",
+      content: "Your personal details stay with us.",
       color: "#4ecdc4"
     },
     {
       icon: "shield-key-outline",
       title: "End-to-End Encryption",
-      content: "All sensitive info is encrypted. Your student profile is protected.",
+      content: "Your sensitive info and student profile are protected.",
       color: "#6c5ce7"
     },
     {
       icon: "bell-ring-outline",
-      title: "Career & Deal Alerts",
-      content: "We only notify you about internships, exchange programs, and discounts.",
+      title: "Notifications",
+      content: "We only message you about internships, exchange programs and deals.",
       color: "#fd79a8"
     },
     {
       icon: "account-cancel-outline",
-      title: "Right to be Forgotten",
-      content: "You can delete your account and all associated data instantly.",
+      title: "Delete Any Time",
+      content: "Delete your account and all your data whenever you want.",
       color: "#ffa502"
     },
   ];
@@ -246,7 +246,7 @@ export default function PrivacyScreen() {
               </View>
               <Text style={styles.heroTitle}>Your Privacy Matters</Text>
               <Text style={styles.heroSubtitle}>
-                Bank-grade encryption ensures your student data remains private.
+                Your data is encrypted and stays private.
               </Text>
               
               <View style={styles.decorLine}>
@@ -343,7 +343,7 @@ export default function PrivacyScreen() {
               </View>
               <View style={styles.contactContent}>
                 <Text style={styles.contactTitle}>Have Questions?</Text>
-                <Text style={styles.contactText}>info@thedeftcrew.com</Text>
+                <Text style={styles.contactText}>info@gettdc.pk</Text>
               </View>
               <TouchableOpacity 
                 style={styles.contactArrow}

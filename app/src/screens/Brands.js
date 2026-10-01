@@ -38,7 +38,15 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { onOfferClaimed } from "./OfferScreen";
+
+// ✅ IMPORT the claimed-ids registry + hydrator from OfferScreen
+import {
+  onOfferClaimed,
+  registerLocalClaim,
+  unregisterLocalClaim,
+  isLocallyClaimed,
+  hydrateClaimedRegistry,
+} from "./OfferScreen";
 
 const { width, height } = Dimensions.get("window");
 const NUM_COLUMNS = 2;
@@ -156,6 +164,37 @@ const statsEqual = (a, b) => {
 };
 
 // ==========================================
+// ✅ HELPER: Re-apply local claim registry to a brand object
+// ==========================================
+const applyLocalClaimRegistry = (brand) => {
+  if (!brand || !brand.offers || brand.offers.length === 0) return brand;
+
+  let changed = false;
+  const updatedOffers = brand.offers.map((offer) => {
+    const registryClaimed = isLocallyClaimed(offer._id);
+    const finalClaimed = offer.isClaimed || registryClaimed;
+    if (finalClaimed !== offer.isClaimed) {
+      changed = true;
+      return { ...offer, isClaimed: finalClaimed };
+    }
+    return offer;
+  });
+
+  if (!changed) return brand;
+
+  const firstOffer = updatedOffers[0];
+  return {
+    ...brand,
+    offers: updatedOffers,
+    hasOffer: updatedOffers.length > 0,
+    discount: firstOffer?.discountPercentage || 0,
+    displayImage: firstOffer?.image || brand.displayImage,
+    isOnline: firstOffer?.isOnline || brand.isOnline,
+    isInStore: firstOffer?.isInStore || brand.isInStore,
+  };
+};
+
+// ==========================================
 // CATEGORY ITEM
 // ==========================================
 const CategoryGridItem = memo(({ category, isSelected, onPress }) => (
@@ -235,7 +274,11 @@ const BrandCard = memo(
     const firstOffer = item.offers?.[0];
     const displayImage = item.displayImage;
     const categoryColor = CATEGORY_BY_NAME.get(item.category)?.color || "#000000";
-    const isClaimed = !!firstOffer?.isClaimed;
+
+    // ✅ Consult BOTH server flag AND local registry
+    const isClaimed =
+      !!firstOffer?.isClaimed ||
+      (firstOffer?._id && isLocallyClaimed(firstOffer._id));
 
     useEffect(() => {
       if (displayImage && !preloadedImages.has(displayImage)) {
@@ -307,7 +350,7 @@ const BrandCard = memo(
               {isClaimed
                 ? "✓ Claimed"
                 : item.hasOffer
-                ? "Student's Offer"
+                ? "Student's Deal"
                 : "No Offers"}
             </Text>
           </View>
@@ -316,8 +359,15 @@ const BrandCard = memo(
     );
   },
   (prev, next) => {
-    const prevClaimed = !!prev.item.offers?.[0]?.isClaimed;
-    const nextClaimed = !!next.item.offers?.[0]?.isClaimed;
+    const prevFirst = prev.item.offers?.[0];
+    const nextFirst = next.item.offers?.[0];
+
+    const prevClaimed =
+      !!prevFirst?.isClaimed ||
+      (prevFirst?._id && isLocallyClaimed(prevFirst._id));
+    const nextClaimed =
+      !!nextFirst?.isClaimed ||
+      (nextFirst?._id && isLocallyClaimed(nextFirst._id));
 
     return (
       prev.item._id === next.item._id &&
@@ -357,6 +407,9 @@ export default function BrandsScreen() {
   const [minDiscount, setMinDiscount] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [showOnlyOnline, setShowOnlyOnline] = useState(false);
+
+  // ✅ Forces re-render when local claim registry changes
+  const [claimVersion, setClaimVersion] = useState(0);
 
   const filterSlideAnim = useRef(new Animated.Value(height)).current;
   const isMounted = useRef(true);
@@ -419,7 +472,10 @@ export default function BrandsScreen() {
 
     for (const b of brands) {
       if (b.hasOffer) totalOffers++;
-      if (b.offers?.[0]?.isClaimed) claimedCount++;
+      const first = b.offers?.[0];
+      const claimed =
+        !!first?.isClaimed || (first?._id && isLocallyClaimed(first._id));
+      if (claimed) claimedCount++;
       if (b.isOnline) onlineCount++;
       if (b.isInStore) inStoreCount++;
       if (b.discount > maxDiscount) maxDiscount = b.discount;
@@ -462,7 +518,7 @@ export default function BrandsScreen() {
 
     try {
       const headers = token && !isGuest ? { Authorization: `Bearer ${token}` } : {};
-      
+
       let remoteStats = null;
       try {
         const res = await api.get("/brands/stats", {
@@ -502,7 +558,9 @@ export default function BrandsScreen() {
       if (!cached) return false;
       const { data, timestamp } = JSON.parse(cached);
       if (data?.length > 0 && Date.now() - timestamp < CACHE_DURATION) {
-        const sorted = [...data].sort(
+        // ✅ Apply local claim registry to cached data
+        const withClaims = data.map(applyLocalClaimRegistry);
+        const sorted = [...withClaims].sort(
           (a, b) =>
             new Date(b.createdAt || b._id).getTime() -
             new Date(a.createdAt || a._id).getTime()
@@ -562,7 +620,9 @@ export default function BrandsScreen() {
         cacheTimestamp &&
         Date.now() - cacheTimestamp < CACHE_DURATION
       ) {
-        const sorted = [...brandsCache].sort(
+        // ✅ Apply registry before setting state
+        const withClaims = brandsCache.map(applyLocalClaimRegistry);
+        const sorted = [...withClaims].sort(
           (a, b) =>
             new Date(b.createdAt || b._id).getTime() -
             new Date(a.createdAt || a._id).getTime()
@@ -577,7 +637,7 @@ export default function BrandsScreen() {
           setLoading(false);
           setError(null);
           updateStatsFromLocal(sorted);
-          
+
           requestAnimationFrame(() => {
             sorted.slice(0, MAX_PRELOAD).forEach((b) => preloadImage(b.displayImage));
           });
@@ -602,7 +662,8 @@ export default function BrandsScreen() {
         try {
           const result = await pendingFetchPromise;
           if (isMounted.current && result) {
-            const sorted = [...result].sort(
+            const withClaims = result.map(applyLocalClaimRegistry);
+            const sorted = [...withClaims].sort(
               (a, b) =>
                 new Date(b.createdAt || b._id).getTime() -
                 new Date(a.createdAt || a._id).getTime()
@@ -704,16 +765,21 @@ export default function BrandsScreen() {
                 )
               );
 
+              // ✅ Consult local claim registry when mapping offers
               const offersMap = new Map(
                 offersResults.map(({ brandId, offers }) => [
                   brandId,
-                  offers.map((offer) => ({
-                    ...offer,
-                    image: formatImageUrl(offer.image, "offer"),
-                    displayImage: formatImageUrl(offer.image, "offer"),
-                    isClaimed: offer.claimedBy?.includes(userId) || false,
-                    discountPercentage: offer.discountPercentage || 0,
-                  })),
+                  offers.map((offer) => {
+                    const serverClaimed = offer.claimedBy?.includes(userId) || false;
+                    const registryClaimed = isLocallyClaimed(offer._id);
+                    return {
+                      ...offer,
+                      image: formatImageUrl(offer.image, "offer"),
+                      displayImage: formatImageUrl(offer.image, "offer"),
+                      isClaimed: serverClaimed || registryClaimed,
+                      discountPercentage: offer.discountPercentage || 0,
+                    };
+                  }),
                 ])
               );
 
@@ -741,7 +807,10 @@ export default function BrandsScreen() {
             }
           }
 
-          const sorted = [...brandsData].sort(
+          // ✅ Apply registry one final time before storing
+          const withClaims = brandsData.map(applyLocalClaimRegistry);
+
+          const sorted = [...withClaims].sort(
             (a, b) =>
               new Date(b.createdAt || b._id).getTime() -
               new Date(a.createdAt || a._id).getTime()
@@ -766,7 +835,7 @@ export default function BrandsScreen() {
             initialLoadDone.current = true;
             saveCache(sorted);
             updateStatsFromLocal(sorted);
-            
+
             requestAnimationFrame(() => {
               sorted.slice(0, MAX_PRELOAD).forEach((b) => preloadImage(b.displayImage));
             });
@@ -785,10 +854,11 @@ export default function BrandsScreen() {
               setLoading(false);
               setStatsLoading(false);
             } else {
-              setAllBrands(brandsCache);
-              setDisplayedBrands(brandsCache.slice(0, PAGE_SIZE));
-              setHasMore(brandsCache.length > PAGE_SIZE);
-              updateStatsFromLocal(brandsCache);
+              const fallback = brandsCache.map(applyLocalClaimRegistry);
+              setAllBrands(fallback);
+              setDisplayedBrands(fallback.slice(0, PAGE_SIZE));
+              setHasMore(fallback.length > PAGE_SIZE);
+              updateStatsFromLocal(fallback);
             }
           }
           pendingFetchPromise = null;
@@ -814,11 +884,12 @@ export default function BrandsScreen() {
 
   // ─────────────────────────────────────────────
   // ✅ CLAIM/UNCLAIM EVENT LISTENERS
-  // Handles BOTH local claim events AND global cache events
   // ─────────────────────────────────────────────
   useEffect(() => {
     // ── Listener 1: Local claim event from OfferScreen ──
     const unsubscribeClaim = onOfferClaimed((brandId, offerId) => {
+      registerLocalClaim(offerId);
+
       const applyClaim = (b) => {
         if (b._id !== brandId) return b;
         const updatedOffers = (b.offers || []).map((o) =>
@@ -844,8 +915,8 @@ export default function BrandsScreen() {
         return next;
       });
       setDisplayedBrands((prev) => prev.map(applyClaim));
+      setClaimVersion((v) => v + 1);
 
-      AsyncStorage.multiRemove([CACHE_KEY, STATS_CACHE_KEY]).catch(() => {});
       cacheTimestamp = Date.now();
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -857,7 +928,6 @@ export default function BrandsScreen() {
 
       const { type, brandId, offerId } = event;
 
-      // ✅ CRITICAL: Clear ALL local module-level caches
       brandsCache = null;
       cacheTimestamp = null;
       statsCache = null;
@@ -866,8 +936,10 @@ export default function BrandsScreen() {
 
       AsyncStorage.multiRemove([CACHE_KEY, STATS_CACHE_KEY]).catch(() => {});
 
-      // ── UNCLAIM: Flip isClaimed → false ──
+      // ── UNCLAIM ──
       if (type === "offer:unclaimed" && brandId && offerId) {
+        unregisterLocalClaim(offerId);
+
         const applyUnclaim = (b) => {
           if (b._id !== brandId) return b;
           const updatedOffers = (b.offers || []).map((o) =>
@@ -891,10 +963,13 @@ export default function BrandsScreen() {
           return next;
         });
         setDisplayedBrands((prev) => prev.map(applyUnclaim));
+        setClaimVersion((v) => v + 1);
       }
 
-      // ── CLAIM: Flip isClaimed → true ──
+      // ── CLAIM ──
       if (type === "offer:claimed" && brandId && offerId) {
+        registerLocalClaim(offerId);
+
         const applyClaim = (b) => {
           if (b._id !== brandId) return b;
           const updatedOffers = (b.offers || []).map((o) =>
@@ -918,9 +993,9 @@ export default function BrandsScreen() {
           return next;
         });
         setDisplayedBrands((prev) => prev.map(applyClaim));
+        setClaimVersion((v) => v + 1);
       }
 
-      // ✅ Trigger fresh background fetch to sync with server
       setTimeout(() => {
         if (isMounted.current && (token || isGuest)) {
           fetchBrands(true, { silent: true });
@@ -1023,20 +1098,42 @@ export default function BrandsScreen() {
     };
   }, [fetchBrands, fetchStatsOnly]);
 
-  // ── Load cached stats + brands on mount ──
+  // ─────────────────────────────────────────────
+  // ✅ Load cached stats + brands on mount
+  // CRITICAL: Hydrate the persisted claim registry FIRST,
+  // then apply it to all cached data before rendering.
+  // ─────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
+      // ✅ Step 1: Hydrate the persisted claim registry from AsyncStorage
+      try {
+        await hydrateClaimedRegistry();
+      } catch (e) {
+        console.log("hydrateClaimedRegistry failed:", e);
+      }
+      if (cancelled) return;
+
+      // ✅ Step 2: Force a re-render so any UI already showing uses the hydrated registry
+      setClaimVersion((v) => v + 1);
+
+      // ✅ Step 3: Re-apply registry to in-memory cache
+      if (brandsCache) {
+        brandsCache = brandsCache.map(applyLocalClaimRegistry);
+      }
+
+      // ✅ Step 4: Load cached stats
       const statsLoaded = await loadStatsCache();
       if (cancelled) return;
 
-      if (!statsLoaded) {
-        const brandsCached = await loadCache();
-        if (cancelled) return;
-        if (!brandsCached && !brandsCache) {
-          setStatsLoading(false);
-        }
+      // ✅ Step 5: Always load cached brands (so registry is applied)
+      const brandsCached = await loadCache();
+      if (cancelled) return;
+
+      // If nothing loaded, stop the stats spinner
+      if (!statsLoaded && !brandsCached && !brandsCache) {
+        setStatsLoading(false);
       }
     })();
 
@@ -1073,7 +1170,8 @@ export default function BrandsScreen() {
       if (q && !b.name?.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [allBrands, searchQuery, minDiscount, selectedCategory, showOnlyOnline]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allBrands, searchQuery, minDiscount, selectedCategory, showOnlyOnline, claimVersion]);
 
   useEffect(() => {
     if (filteredData.length > 0) {
@@ -1248,9 +1346,6 @@ export default function BrandsScreen() {
           </View>
         </View>
 
-        {/* Stats Bar (commented out in original - keep as-is) */}
-        {/* <StatsBar stats={stats} loading={statsLoading} /> */}
-
         {/* Welcome */}
         <View style={styles.welcomeContainer}>
           <View style={styles.welcomeRow}>
@@ -1342,7 +1437,7 @@ export default function BrandsScreen() {
             showsVerticalScrollIndicator={false}
             onEndReached={loadMoreBrands}
             onEndReachedThreshold={0.3}
-            extraData={displayedBrands}
+            extraData={claimVersion}
           />
         )}
       </View>

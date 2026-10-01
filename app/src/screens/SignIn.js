@@ -48,12 +48,12 @@ export default function SignIn({ navigation }) {
   const shakeAnim = useRef(new Animated.Value(0)).current;
   const inputAnim1 = useRef(new Animated.Value(0)).current;
   const inputAnim2 = useRef(new Animated.Value(0)).current;
-  
+
   // Top Notification Animation
   const notificationSlide = useRef(new Animated.Value(-200)).current;
   const notificationOpacity = useRef(new Animated.Value(0)).current;
   const notificationScale = useRef(new Animated.Value(0.9)).current;
-  
+
   // Loading Overlay Animation
   const overlayOpacity = useRef(new Animated.Value(0)).current;
 
@@ -61,16 +61,21 @@ export default function SignIn({ navigation }) {
   const [notification, setNotification] = useState(null);
   const [showLoading, setShowLoading] = useState(false);
 
+  // Timer ref for auto-hide success notification
+  const successTimerRef = useRef(null);
+  // Track if the component is still mounted (to skip state updates after unmount)
+  const isMountedRef = useRef(true);
+
   const logoSpin = logoRotate.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
 
-  // Function to start animations - ONLY ONCE
+  // Function to start animations - ALWAYS runs on mount
   const startAnimations = () => {
-    // Reset animation values
+    // Reset animation values so the animation always plays from the start
     fadeAnim.setValue(0);
-    slideUpAnim.setValue(0.5);
+    slideUpAnim.setValue(50);
     logoScale.setValue(0.5);
     logoRotate.setValue(0);
     inputAnim1.setValue(0);
@@ -119,28 +124,68 @@ export default function SignIn({ navigation }) {
     ]).start();
   };
 
-  // Run animation only on initial mount
+  // --------------------------------------------------
+  // Mount: run animations + inject session handler
+  // --------------------------------------------------
   useEffect(() => {
+    isMountedRef.current = true;
+
+    // Always play the entrance animation on mount
     startAnimations();
-    
-    // NEW: Inject session error handler
+
+    // Inject the session-expired handler
     injectSessionErrorHandler((title, message) => {
+      if (!isMountedRef.current) return;
       showNotification(title, message, "error");
     });
-    
+
     return () => {
-      // Cleanup: inject null handler when component unmounts
+      isMountedRef.current = false;
+
+      // Clear any pending success auto-hide timer so it can't
+      // fire after the screen is gone (which was causing the
+      // "auto reload" — a late setState on an unmounted screen).
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+        successTimerRef.current = null;
+      }
+
+      // Remove the session handler on real unmount
       injectSessionErrorHandler(null);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // --------------------------------------------------
+  // Re-inject session handler whenever the screen regains focus
+  // (e.g. after Signup → back to SignIn)
+  // --------------------------------------------------
+  useFocusEffect(
+    React.useCallback(() => {
+      injectSessionErrorHandler((title, message) => {
+        if (!isMountedRef.current) return;
+        showNotification(title, message, "error");
+      });
+
+      return () => {
+        // Intentionally do NOT null the handler here — the mount
+        // effect's cleanup will handle the real unmount. Nulling
+        // it on blur causes a brief window where session errors
+        // are silently dropped and then re-injected, which triggers
+        // an extra render that looks like a reload.
+      };
+    }, [])
+  );
+
   const showNotification = (title, message, type = "success") => {
+    if (!isMountedRef.current) return;
+
     setNotification({ title, message, type });
-    
+
     notificationSlide.setValue(-200);
     notificationOpacity.setValue(0);
     notificationScale.setValue(0.9);
-    
+
     Animated.parallel([
       Animated.spring(notificationSlide, {
         toValue: 0,
@@ -162,13 +207,22 @@ export default function SignIn({ navigation }) {
     ]).start();
 
     if (type === "success") {
-      setTimeout(() => {
-        hideNotification();
+      // Clear any previous timer before starting a new one
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+      }
+      successTimerRef.current = setTimeout(() => {
+        successTimerRef.current = null;
+        if (isMountedRef.current) {
+          hideNotification();
+        }
       }, 3000);
     }
   };
 
   const hideNotification = () => {
+    if (!isMountedRef.current) return;
+
     Animated.parallel([
       Animated.timing(notificationSlide, {
         toValue: -200,
@@ -186,11 +240,14 @@ export default function SignIn({ navigation }) {
         useNativeDriver: true,
       }),
     ]).start(() => {
-      setNotification(null);
+      if (isMountedRef.current) {
+        setNotification(null);
+      }
     });
   };
 
   const showLoadingOverlay = () => {
+    if (!isMountedRef.current) return;
     setShowLoading(true);
     Animated.timing(overlayOpacity, {
       toValue: 1,
@@ -205,7 +262,9 @@ export default function SignIn({ navigation }) {
       duration: 300,
       useNativeDriver: true,
     }).start(() => {
-      setShowLoading(false);
+      if (isMountedRef.current) {
+        setShowLoading(false);
+      }
     });
   };
 
@@ -262,7 +321,6 @@ export default function SignIn({ navigation }) {
 
     let hasError = false;
 
-    // Check each required field
     if (!email.trim()) {
       newErrors.email = true;
       hasError = true;
@@ -278,7 +336,7 @@ export default function SignIn({ navigation }) {
       handleShake();
       return showNotification("Missing Information", "Please fill in all fields to continue.", "error");
     }
-    
+
     if (!validateEmail(email)) {
       handleShake();
       return showNotification("Invalid Email", "Please enter a valid email address.", "error");
@@ -287,14 +345,14 @@ export default function SignIn({ navigation }) {
     try {
       showLoadingOverlay();
       setLoading(true);
-      
+
       console.log("Attempting login with:", { email: email.trim() });
-      
-      const res = await api.post("/auth/login", { 
-        email: email.trim(), 
-        password: password 
+
+      const res = await api.post("/auth/login", {
+        email: email.trim(),
+        password: password
       });
-      
+
       const { token, user } = res.data;
 
       if (!token || !user) {
@@ -310,11 +368,17 @@ export default function SignIn({ navigation }) {
       }
 
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-      
+
       hideLoadingOverlay();
       showNotification("Welcome Back! 🎉", `Great to see you, ${user.fullName || 'Student'}.`, "success");
-      
-      setTimeout(() => {
+
+      // Store the timer so we can clear it on unmount
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+      }
+      successTimerRef.current = setTimeout(() => {
+        successTimerRef.current = null;
+        if (!isMountedRef.current) return;
         hideNotification();
         setToken(token);
         setUser(user);
@@ -322,12 +386,12 @@ export default function SignIn({ navigation }) {
 
     } catch (err) {
       hideLoadingOverlay();
-      setLoading(false);
-      
+      if (isMountedRef.current) setLoading(false);
+
       console.log("Login error:", err.response?.status, err.response?.data);
-      
+
       let errorMessage = "Invalid credentials. Please try again.";
-      
+
       if (err.response) {
         switch (err.response.status) {
           case 400:
@@ -351,25 +415,25 @@ export default function SignIn({ navigation }) {
       } else if (err.request) {
         errorMessage = "Network error. Please check your internet connection.";
       }
-      
+
       handleShake();
       showNotification("Login Failed", errorMessage, "error");
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) setLoading(false);
     }
   };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === "ios" ? "padding" : "height"} 
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
       >
         <StatusBar barStyle="dark-content" />
-        
+
         {/* Top Notification Bar */}
         {notification && (
-          <Animated.View 
+          <Animated.View
             style={[
               styles.notificationContainer,
               {
@@ -382,8 +446,8 @@ export default function SignIn({ navigation }) {
             ]}
           >
             <LinearGradient
-              colors={notification.type === 'success' 
-                ? ['#fff', '#fff'] 
+              colors={notification.type === 'success'
+                ? ['#fff', '#fff']
                 : ['#a09c9c', '#b5b0b0']
               }
               start={{ x: 0, y: 0 }}
@@ -403,10 +467,10 @@ export default function SignIn({ navigation }) {
                       }]
                     }
                   ]}>
-                    <Ionicons 
-                      name={notification.type === 'success' ? "checkmark-circle" : "alert-circle"} 
-                      size={24} 
-                      color={notification.type === 'success' ? "#1a1a1a" : "#f9c349"} 
+                    <Ionicons
+                      name={notification.type === 'success' ? "checkmark-circle" : "alert-circle"}
+                      size={24}
+                      color={notification.type === 'success' ? "#1a1a1a" : "#f9c349"}
                     />
                   </Animated.View>
                   <View style={styles.notificationTextContainer}>
@@ -421,9 +485,9 @@ export default function SignIn({ navigation }) {
                     </Text>
                   </View>
                 </View>
-                
+
                 {notification.type === 'error' && (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={hideNotification}
                     style={styles.notificationClose}
                   >
@@ -431,10 +495,10 @@ export default function SignIn({ navigation }) {
                   </TouchableOpacity>
                 )}
               </View>
-              
+
               {notification.type === 'success' && (
                 <View style={styles.notificationProgressBar}>
-                  <Animated.View 
+                  <Animated.View
                     style={[
                       styles.notificationProgress,
                       {
@@ -466,12 +530,12 @@ export default function SignIn({ navigation }) {
           </Animated.View>
         )}
 
-        <ScrollView 
-          contentContainerStyle={styles.scrollContainer} 
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View 
+          <Animated.View
             style={[
               styles.card,
               {
@@ -482,14 +546,14 @@ export default function SignIn({ navigation }) {
           >
             {/* Header with Logo */}
             <View style={styles.header}>
-              <Animated.View 
+              <Animated.View
                 style={[
                   styles.logoBadge,
-                  { 
+                  {
                     transform: [
                       { scale: logoScale },
                       { rotate: logoSpin },
-                    ] 
+                    ]
                   }
                 ]}
               >
@@ -502,10 +566,10 @@ export default function SignIn({ navigation }) {
                   <Text style={styles.logoText}>tdc<Text style={{color:"#f9c349"}}>.</Text></Text>
                 </LinearGradient>
               </Animated.View>
-              
+
               <Text style={styles.title}>The Deft Crew</Text>
               <Text style={styles.subtitle}>Sign in to manage your Account</Text>
-              
+
               <View style={styles.decorativeLine}>
                 <View style={styles.lineSegment} />
                 <View style={styles.diamond} />
@@ -514,15 +578,15 @@ export default function SignIn({ navigation }) {
             </View>
 
             {/* Email Input */}
-            <Animated.View 
+            <Animated.View
               style={[
-                styles.inputWrapper, 
+                styles.inputWrapper,
                 focusedInput === 'email' && !errors.email && styles.inputFocused,
                 errors.email && styles.inputError,
                 {
                   opacity: inputAnim1,
                   transform: [
-                    { 
+                    {
                       translateX: inputAnim1.interpolate({
                         inputRange: [0, 1],
                         outputRange: [-60, 0],
@@ -542,10 +606,10 @@ export default function SignIn({ navigation }) {
                 styles.inputIconContainer,
                 errors.email && styles.inputIconError
               ]}>
-                <Ionicons 
-                  name="mail-outline" 
-                  size={18} 
-                  color={errors.email ? "#ff4444" : (focusedInput === 'email' ? "#f9c349" : "#999")} 
+                <Ionicons
+                  name="mail-outline"
+                  size={18}
+                  color={errors.email ? "#ff4444" : (focusedInput === 'email' ? "#f9c349" : "#999")}
                 />
               </View>
               <TextInput
@@ -581,15 +645,15 @@ export default function SignIn({ navigation }) {
             </Animated.View>
 
             {/* Password Input */}
-            <Animated.View 
+            <Animated.View
               style={[
-                styles.inputWrapper, 
+                styles.inputWrapper,
                 focusedInput === 'password' && !errors.password && styles.inputFocused,
                 errors.password && styles.inputError,
                 {
                   opacity: inputAnim2,
                   transform: [
-                    { 
+                    {
                       translateX: inputAnim2.interpolate({
                         inputRange: [0, 1],
                         outputRange: [60, 0],
@@ -609,10 +673,10 @@ export default function SignIn({ navigation }) {
                 styles.inputIconContainer,
                 errors.password && styles.inputIconError
               ]}>
-                <Ionicons 
-                  name="lock-closed-outline" 
-                  size={18} 
-                  color={errors.password ? "#ff4444" : (focusedInput === 'password' ? "#f9c349" : "#999")} 
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={18}
+                  color={errors.password ? "#ff4444" : (focusedInput === 'password' ? "#f9c349" : "#999")}
                 />
               </View>
               <TextInput
@@ -634,23 +698,23 @@ export default function SignIn({ navigation }) {
                 ]}
                 secureTextEntry={!showPassword}
               />
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
                 style={styles.eyeButton}
                 activeOpacity={0.7}
               >
-                <Ionicons 
-                  name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                  size={18} 
-                  color={errors.password ? "#ff4444" : "#999"} 
+                <Ionicons
+                  name={showPassword ? "eye-off-outline" : "eye-outline"}
+                  size={18}
+                  color={errors.password ? "#ff4444" : "#999"}
                 />
               </TouchableOpacity>
             </Animated.View>
 
             {/* Forgot Password */}
             <Animated.View style={{ opacity: fadeAnim }}>
-              <TouchableOpacity 
-                style={styles.forgotBtn} 
+              <TouchableOpacity
+                style={styles.forgotBtn}
                 onPress={() => navigation.navigate("ForgotPassword")}
                 activeOpacity={0.7}
               >
@@ -660,19 +724,19 @@ export default function SignIn({ navigation }) {
             </Animated.View>
 
             {/* Login Button with Shake Animation */}
-            <Animated.View 
+            <Animated.View
               style={[
-                { 
+                {
                   transform: [
-                    { translateX: shakeAnim }, 
+                    { translateX: shakeAnim },
                     { scale: buttonScale },
-                  ] 
+                  ]
                 }
               ]}
             >
-              <TouchableOpacity 
-                style={styles.button} 
-                onPress={handleLogin} 
+              <TouchableOpacity
+                style={styles.button}
+                onPress={handleLogin}
                 disabled={loading}
                 activeOpacity={0.9}
               >
@@ -693,10 +757,10 @@ export default function SignIn({ navigation }) {
                 </LinearGradient>
               </TouchableOpacity>
             </Animated.View>
-            
-            {/* Guest Browse Button  */}
-             <Animated.View style={{ opacity: fadeAnim }}>
-              <TouchableOpacity 
+
+            {/* Guest Browse Button */} 
+              <Animated.View style={{ opacity: fadeAnim }}>
+              <TouchableOpacity
                 style={styles.guestButton}
                 onPress={handleGuestBrowse}
                 activeOpacity={0.7}
@@ -719,7 +783,7 @@ export default function SignIn({ navigation }) {
           <Animated.View style={[styles.brandingFooter, { opacity: fadeAnim }]}>
             <Text style={styles.brandingText}>
               <Text style={{fontSize:14}}>tdc</Text>
-              <Text style={{color:'#f9c349', fontSize:20}}>.</Text> KARACHI • 2026
+              <Text style={{color:'#f9c349', fontSize:20}}>.</Text> PAKISTAN
             </Text>
           </Animated.View>
         </ScrollView>
@@ -736,9 +800,9 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
-  scrollContainer: { 
-    flexGrow: 1, 
-    justifyContent: "center", 
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: "center",
   },
   notificationContainer: {
     position: 'absolute',
@@ -853,11 +917,11 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     width: '100%',
   },
-  header: { 
-    alignItems: "center", 
+  header: {
+    alignItems: "center",
     marginBottom: 30,
   },
-  logoBadge: { 
+  logoBadge: {
     marginBottom: 20,
     borderRadius: 50,
     overflow: 'hidden',
@@ -874,20 +938,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  logoText: { 
-    fontSize: 32, 
-    color: "#fff", 
+  logoText: {
+    fontSize: 32,
+    color: "#fff",
     fontWeight: "900",
     letterSpacing: -1,
   },
-  title: { 
-    fontSize: 28, 
-    fontWeight: "900", 
+  title: {
+    fontSize: 28,
+    fontWeight: "900",
     color: "#1a1a1a",
     letterSpacing: 1,
   },
-  subtitle: { 
-    color: "#666", 
+  subtitle: {
+    color: "#666",
     marginTop: 6,
     fontSize: 14,
     letterSpacing: 0.5,
@@ -922,8 +986,8 @@ const styles = StyleSheet.create({
     height: 56,
     width: '100%',
   },
-  inputFocused: { 
-    borderColor: "#f9c349", 
+  inputFocused: {
+    borderColor: "#f9c349",
     backgroundColor: "#fff",
     shadowColor: "#f9c349",
     shadowOffset: { width: 0, height: 0 },
@@ -952,10 +1016,10 @@ const styles = StyleSheet.create({
   inputIconError: {
     backgroundColor: '#ffebee',
   },
-  input: { 
-    flex: 1, 
-    paddingVertical: 8, 
-    fontSize: 15, 
+  input: {
+    flex: 1,
+    paddingVertical: 8,
+    fontSize: 15,
     color: "#1a1a1a",
     fontWeight: '500',
   },
@@ -969,15 +1033,15 @@ const styles = StyleSheet.create({
   checkmarkContainer: {
     marginLeft: 4,
   },
-  forgotBtn: { 
-    alignSelf: "flex-end", 
+  forgotBtn: {
+    alignSelf: "flex-end",
     marginBottom: 25,
     marginTop: 5,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  forgotText: { 
-    color: "#f9c349", 
+  forgotText: {
+    color: "#f9c349",
     fontWeight: "700",
     fontSize: 13,
     letterSpacing: 0.5,
@@ -1000,25 +1064,25 @@ const styles = StyleSheet.create({
     padding: 17,
     width: '100%',
   },
-  buttonText: { 
-    color: "#f9c349", 
-    fontSize: 16, 
+  buttonText: {
+    color: "#f9c349",
+    fontSize: 16,
     fontWeight: "800",
     letterSpacing: 2,
     marginRight: 8,
   },
-  footer: { 
-    flexDirection: "row", 
-    justifyContent: "center", 
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
     marginTop: 20,
     marginBottom: 20,
   },
-  footerText: { 
+  footerText: {
     color: "#999",
     fontSize: 14,
   },
-  signupLink: { 
-    color: "#1a1a1a", 
+  signupLink: {
+    color: "#1a1a1a",
     fontWeight: "800",
     fontSize: 14,
     textDecorationLine: 'underline',

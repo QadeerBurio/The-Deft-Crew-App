@@ -1,6 +1,12 @@
-//The-Deft-Crew-App/app/src/navigation/DrawerNavigator.js
+// The-Deft-Crew-App/app/src/navigation/DrawerNavigator.js
 
-import React, { useState, useRef, useContext, useEffect, useCallback } from 'react';
+import React, {
+  useState,
+  useRef,
+  useContext,
+  useEffect,
+  useCallback,
+} from 'react';
 import {
   View,
   Text,
@@ -10,34 +16,29 @@ import {
   TextInput,
   Animated,
   Easing,
-  Linking,
   Dimensions,
   StatusBar,
-  ScrollView,
-  Image,
   ActivityIndicator,
+  BackHandler,
+  Platform,
 } from 'react-native';
 import {
   createDrawerNavigator,
   DrawerContentScrollView,
-  DrawerItem,
 } from '@react-navigation/drawer';
 import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
-  Ionicons,
-  MaterialCommunityIcons,
-  FontAwesome5,
-  FontAwesome,
-} from '@expo/vector-icons';
-import {
-  getFocusedRouteNameFromRoute,
-  useNavigation,
   CommonActions,
+  useNavigation,
+  useFocusEffect,
+  useNavigationState,
 } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 
+// ---------- CONTEXT ----------
 import { AuthContext } from '../context/AuthContext';
 import TabNavigator from './TabNavigator';
 
@@ -75,7 +76,6 @@ import SettingsScreen from '../screens/Social/SettingItem';
 import EditProfileScreen from '../screens/Social/EditProfileScreen';
 import Events from '../screens/Events/Events';
 import EventNotification from '../screens/Events/EventNotification';
-
 import YourAccount from '../screens/Social/YourAccount';
 import SecurityAndAccess from '../screens/Social/SecurityAnd Access';
 import PrivacyAndSafety from '../screens/Social/PrivacyAndSafety';
@@ -116,7 +116,6 @@ import FeedScreen from '../screens/Social/FeedScreen';
 import BlockedUsersScreen from '../screens/Social/BlockedUserScreen';
 import Terrms from '../screens/Social/Terrms';
 import Guideline from '../screens/Social/Guideline';
-
 import ProfileWelcomeScreen from '../screens/skillshare/profile/ProfileWelcomeScreen';
 import ProfileSetupScreen from '../screens/skillshare/profile/ProfileSetupScreen';
 import ProfileSuccessScreen from '../screens/skillshare/profile/ProfileSuccessScreen';
@@ -126,9 +125,69 @@ import SkillShareExplore from '../screens/skillshare/Explore';
 import MyPostsByType from '../screens/skillshare/MyPostByType';
 import OfferScreen from '../screens/OfferScreen';
 
-const { width, height } = Dimensions.get('window');
+// ---------- ENGAGEMENT ----------
+import StreakChip from '../engagement/components/StreakChip';
+import StreakSheet from '../engagement/components/StreakSheet';
+import RewardsScreen from '../engagement/screens/RewardsScreen';
+import NotificationSettingsScreen from '../engagement/screens/NotificationSettingsScreen';
+import BadgesScreen from '../engagement/screens/BadgesScreen';
+import CityScreen from '../screens/CityScreen';
+import NotificationSkillshare from '../components/NotificationSkillshare';
+
+const { width } = Dimensions.get('window');
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
+
+// ============================================================
+// MODULE-LEVEL CACHE — SkillShare gate runs once per session
+// ============================================================
+let SKILLSHARE_GATE_RESOLVED = false;
+let SKILLSHARE_GATE_TARGET = null;
+
+// ============================================================
+// RECURSIVE HELPER — finds the deepest active route name
+// ============================================================
+const getDeepestRouteName = (route) => {
+  if (!route) return null;
+  if (route.state && route.state.routes && route.state.routes.length > 0) {
+    const index = route.state.index ?? route.state.routes.length - 1;
+    const activeChild = route.state.routes[index];
+    const deepest = getDeepestRouteName(activeChild);
+    return deepest || activeChild?.name || route.name;
+  }
+  return route.name;
+};
+
+// ============================================================
+// FULLSCREEN SCREENS (hide drawer/header/tab)
+// ============================================================
+const FULLSCREEN_SCREENS = [
+  'Resume',
+  'ResumeDashboard',
+  'ResumeBuilder',
+  'ResumeTemplate',
+  'ResumeShare',
+  'ResumeAnalytics',
+  'ResumeSettings',
+  'ResumeView',
+  'Social',
+  'SocialStack',
+  'Messages',
+  'MessagesScreen',
+  'ChatDetailScreen',
+  'PostDetailScreen',
+  'CreatePostScreen',
+  'FeedScreen',
+  'UserProfile',
+  'Brands',
+  'OfferScreen',
+  'BrandOffers',
+  'ChatHistory',
+  'Booking',
+  'Payment',
+];
+
+const SKILLSHARE_CHAT_SCREENS = ['MatchChat', 'InquiryChat', 'ChatMatch'];
 
 // ============================================================
 // DRAWER ITEMS
@@ -149,7 +208,23 @@ const DRAWER_ITEMS = [
     resetNavigation: false,
   },
   {
-    label: 'Refer & Earn',
+    label: 'Rewards',
+    icon: (size, color) => (
+      <MaterialCommunityIcons name="gift-outline" size={size} color={color} />
+    ),
+    route: 'Rewards',
+    resetNavigation: false,
+  },
+  // {
+  //   label: 'SkillShare',
+  //   icon: (size, color) => (
+  //     <MaterialCommunityIcons name="swap-horizontal" size={size} color={color} />
+  //   ),
+  //   route: 'Dashboard',
+  //   resetNavigation: false,
+  // },
+  {
+    label: 'the crew',
     icon: (size, color) => (
       <MaterialCommunityIcons
         name="account-multiple-plus-outline"
@@ -161,7 +236,7 @@ const DRAWER_ITEMS = [
     resetNavigation: false,
   },
   {
-    label: 'About TDC',
+    label: 'About tdc',
     icon: (size, color) => (
       <Ionicons name="information-circle-outline" color={color} size={size} />
     ),
@@ -192,7 +267,9 @@ const DRAWER_ITEMS = [
   },
   {
     label: 'Disclaimer',
-    icon: (size, color) => <Ionicons name="alert-circle-outline" color={color} size={size} />,
+    icon: (size, color) => (
+      <Ionicons name="alert-circle-outline" color={color} size={size} />
+    ),
     route: 'Disclaimer',
     resetNavigation: false,
   },
@@ -354,6 +431,19 @@ function CustomDrawerContent(props) {
   const [activeRoute, setActiveRoute] = useState('HomeTabs');
 
   useEffect(() => {
+    const unsubscribe = props.navigation.addListener('state', (e) => {
+      const state = e.data.state;
+      if (state) {
+        const currentRoute = state.routes[state.index]?.name;
+        if (currentRoute) {
+          setActiveRoute(currentRoute);
+        }
+      }
+    });
+    return unsubscribe;
+  }, [props.navigation]);
+
+  useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 500,
@@ -389,11 +479,15 @@ function CustomDrawerContent(props) {
         {
           text: 'Logout',
           style: 'destructive',
-          onPress: () => {
-            logout();
-            setTimeout(() => {
-              props.navigation.getParent()?.navigate('Login');
-            }, 350);
+          onPress: async () => {
+            props.navigation.closeDrawer();
+            SKILLSHARE_GATE_RESOLVED = false;
+            SKILLSHARE_GATE_TARGET = null;
+            try {
+              await logout();
+            } catch (e) {
+              console.error('Logout failed:', e);
+            }
           },
         },
       ],
@@ -408,6 +502,7 @@ function CustomDrawerContent(props) {
 
     setTimeout(() => {
       try {
+        // Home: hard reset
         if (resetNavigation && route === 'HomeTabs') {
           props.navigation.dispatch(
             CommonActions.reset({
@@ -415,9 +510,18 @@ function CustomDrawerContent(props) {
               routes: [{ name: 'HomeTabs' }],
             })
           );
-        } else {
-          props.navigation.navigate(route);
+          return;
         }
+
+        // SkillShare: just navigate — React Navigation resumes the
+        // existing Dashboard stack (including whatever screen is on top).
+        if (route === 'Dashboard') {
+          props.navigation.navigate('Dashboard');
+          return;
+        }
+
+        // Everything else
+        props.navigation.navigate(route);
       } catch (error) {
         console.error('Navigation error:', error);
         props.navigation.dispatch(
@@ -452,7 +556,9 @@ function CustomDrawerContent(props) {
                 icon={item.icon}
                 delay={delay}
                 isActive={isActive}
-                onPress={() => handleNavigation(item.route, item.resetNavigation || false)}
+                onPress={() =>
+                  handleNavigation(item.route, item.resetNavigation || false)
+                }
               />
             );
           })}
@@ -521,7 +627,7 @@ function CustomDrawerContent(props) {
 }
 
 // ============================================================
-// CUSTOM HEADER (TDC Header)
+// CUSTOM HEADER
 // ============================================================
 function CustomHeader({ navigation }) {
   const [searchVisible, setSearchVisible] = useState(false);
@@ -531,28 +637,23 @@ function CustomHeader({ navigation }) {
   const headerTranslateY = useRef(new Animated.Value(-20)).current;
   const { unreadCount, updateUnreadCount, token, isGuest } = useContext(AuthContext);
   const [notifVisible, setNotifVisible] = useState(false);
+  const [streakSheetVisible, setStreakSheetVisible] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const searchScale = useRef(new Animated.Value(0.8)).current;
 
   useEffect(() => {
     if (token && !isGuest) {
       updateUnreadCount(token);
-
       const interval = setInterval(() => {
         if (token && !isGuest) {
           updateUnreadCount(token);
         }
       }, 30000);
-
       return () => clearInterval(interval);
     }
   }, [token, isGuest, updateUnreadCount]);
 
   useEffect(() => {
-    if (token && !isGuest) {
-      updateUnreadCount();
-    }
-
     Animated.parallel([
       Animated.timing(headerOpacity, {
         toValue: 1,
@@ -582,7 +683,7 @@ function CustomHeader({ navigation }) {
         }),
       ])
     ).start();
-  }, [headerOpacity, headerTranslateY, pulseAnim, token, isGuest, updateUnreadCount]);
+  }, [headerOpacity, headerTranslateY, pulseAnim]);
 
   const toggleSearch = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -643,7 +744,6 @@ function CustomHeader({ navigation }) {
         updateUnreadCount(token);
       }
     });
-
     return unsubscribe;
   }, [navigation, token, isGuest, updateUnreadCount]);
 
@@ -652,7 +752,6 @@ function CustomHeader({ navigation }) {
       navigation.getParent()?.navigate('Login');
       return;
     }
-
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setNotifVisible(true);
   };
@@ -715,35 +814,44 @@ function CustomHeader({ navigation }) {
 
         <View style={styles.headerRight}>
           {!searchVisible && (
-            <TouchableOpacity
-              onPress={handleNotificationPress}
-              style={[styles.headerCircleBtn, { marginLeft: 10 }]}
-            >
-              <Ionicons name="notifications-outline" size={22} color="#000" />
-              {!isGuest && unreadCount > 0 && (
-                <Animated.View style={[styles.badges, { transform: [{ scale: pulseAnim }] }]}>
-                  <Text style={[styles.badgeTexts, { fontSize: 10 }]}>
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </Text>
-                </Animated.View>
+            <>
+              {!isGuest && (
+                <StreakChip onPress={() => setStreakSheetVisible(true)} />
               )}
-              {isGuest && (
-                <View style={styles.guestLockBadge}>
-                  <Ionicons name="lock-closed" size={8} color="#FFF" />
-                </View>
-              )}
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleNotificationPress}
+                style={[styles.headerCircleBtn, { marginLeft: 10 }]}
+              >
+                <Ionicons name="notifications-outline" size={22} color="#000" />
+                {!isGuest && unreadCount > 0 && (
+                  <Animated.View style={[styles.badges, { transform: [{ scale: pulseAnim }] }]}>
+                    <Text style={[styles.badgeTexts, { fontSize: 10 }]}>
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </Text>
+                  </Animated.View>
+                )}
+                {isGuest && (
+                  <View style={styles.guestLockBadge}>
+                    <Ionicons name="lock-closed" size={8} color="#FFF" />
+                  </View>
+                )}
+              </TouchableOpacity>
+            </>
           )}
         </View>
       </Animated.View>
 
       <NotificationModal visible={notifVisible} onClose={() => setNotifVisible(false)} />
+      <StreakSheet
+        visible={streakSheetVisible}
+        onClose={() => setStreakSheetVisible(false)}
+      />
     </SafeAreaView>
   );
 }
 
 // ============================================================
-// ANIMATION WRAPPERS
+// ANIMATION WRAPPER
 // ============================================================
 const AnimatedScreenWrapper = ({ children }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -786,59 +894,26 @@ const AnimatedScreenWrapper = ({ children }) => {
   );
 };
 
-const AnimatedScreen = ({ component: Component, ...props }) => {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(40)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 500,
-        easing: Easing.bezier(0.22, 1, 0.36, 1),
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 500,
-        easing: Easing.bezier(0.22, 1, 0.36, 1),
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 500,
-        easing: Easing.bezier(0.22, 1, 0.36, 1),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [fadeAnim, slideAnim, scaleAnim]);
-
-  return (
-    <Animated.View
-      style={{
-        flex: 1,
-        opacity: fadeAnim,
-        transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
-      }}
-    >
-      <Component {...props} />
-    </Animated.View>
-  );
-};
-
 // ============================================================
-// HOME TABS WRAPPER — hides header when Social tab active
+// HOME TABS WRAPPER
 // ============================================================
 const HomeTabsScreen = (props) => {
   const [activeTab, setActiveTab] = useState('Home');
-  const hideHeader = activeTab === 'Social';
+  const [deepestRoute, setDeepestRoute] = useState('Home');
+
+  const hideHeader =
+    activeTab === 'Social' ||
+    (deepestRoute && FULLSCREEN_SCREENS.includes(deepestRoute));
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       {!hideHeader && <CustomHeader navigation={props.navigation} />}
       <AnimatedScreenWrapper>
-        <TabNavigator {...props} onTabChange={(tabName) => setActiveTab(tabName)} />
+        <TabNavigator
+          {...props}
+          onTabChange={(tabName) => setActiveTab(tabName)}
+          onRouteChange={(routeName) => setDeepestRoute(routeName)}
+        />
       </AnimatedScreenWrapper>
     </View>
   );
@@ -849,22 +924,47 @@ const HomeTabsScreen = (props) => {
 // ============================================================
 function SkillShareGate({ navigation }) {
   const { isGuest } = useContext(AuthContext);
+  const resolvedRef = useRef(SKILLSHARE_GATE_RESOLVED);
 
   useEffect(() => {
+    if (resolvedRef.current) {
+      const target = SKILLSHARE_GATE_TARGET || 'DashboardMain';
+      navigation.replace(target);
+      return;
+    }
+
     if (isGuest) {
+      SKILLSHARE_GATE_RESOLVED = true;
+      SKILLSHARE_GATE_TARGET = 'DashboardMain';
+      resolvedRef.current = true;
       navigation.replace('DashboardMain');
       return;
     }
+
+    let cancelled = false;
     (async () => {
       try {
         const { profile, hasProfile } = await getMyProfessionalProfile();
+        if (cancelled) return;
         const isComplete = hasProfile && profile?.isComplete;
-        navigation.replace(isComplete ? 'DashboardMain' : 'ProfileWelcome');
+        const target = isComplete ? 'DashboardMain' : 'ProfileWelcome';
+        SKILLSHARE_GATE_RESOLVED = true;
+        SKILLSHARE_GATE_TARGET = target;
+        resolvedRef.current = true;
+        navigation.replace(target);
       } catch (err) {
+        if (cancelled) return;
+        SKILLSHARE_GATE_RESOLVED = true;
+        SKILLSHARE_GATE_TARGET = 'ProfileWelcome';
+        resolvedRef.current = true;
         navigation.replace('ProfileWelcome');
       }
     })();
-  }, [isGuest]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isGuest, navigation]);
 
   return (
     <View
@@ -881,46 +981,121 @@ function SkillShareGate({ navigation }) {
 }
 
 // ============================================================
-// DASHBOARD STACK (SkillShare) — fully fullscreen, no TDC header
+// SKILLSHARE BACK HANDLER
+// A single, universal handler that:
+//   - If the stack can go back → goBack()
+//   - Else → navigate to HomeTabs
+// It's attached ONCE at the stack wrapper level, so it covers
+// EVERY screen in the SkillShare stack (DashboardMain, MyMatches,
+// MatchChat, ListingDetail, MyOffers, etc.).
+// ============================================================
+function SkillShareStackWrapper({ children }) {
+  const navigation = useNavigation();
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        // Let the stack's internal handler deal with it if it can go back
+        if (navigation.canGoBack()) {
+          return false;
+        }
+
+        // At the root → go to HomeTabs (Home)
+        const drawerNav = navigation.getParent();
+        if (drawerNav) {
+          drawerNav.navigate('HomeTabs');
+          return true;
+        }
+        return false;
+      };
+
+      const sub = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress
+      );
+      return () => sub.remove();
+    }, [navigation])
+  );
+
+  return children;
+}
+
+// ============================================================
+// DASHBOARD STACK (SkillShare)
 // ============================================================
 function DashboardStackNavigator() {
   return (
-    <Stack.Navigator
-      initialRouteName="SkillShareGate"
-      screenOptions={{
-        headerShown: false,
-        cardStyle: { backgroundColor: '#fff' },
-      }}
-    >
-      <Stack.Screen name="SkillShareGate" component={SkillShareGate} />
-      <Stack.Screen name="ProfileWelcome" component={ProfileWelcomeScreen} />
-      <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
-      <Stack.Screen name="ProfileSuccess" component={ProfileSuccessScreen} />
-      <Stack.Screen name="ProfessionalProfile" component={ProfessionalProfileScreen} />
-      <Stack.Screen name="DashboardMain" component={Dashboard} />
-      <Stack.Screen name="BrowseListings" component={SkillShareExplore} />
-      <Stack.Screen name="CreateListing" component={CreateListingScreen} />
-      <Stack.Screen name="ListingDetail" component={ListingDetailScreen} />
-      <Stack.Screen name="SelectListingTypeScreen" component={SelectListingTypeScreen} />
-      <Stack.Screen name="CreateOffer" component={CreateOfferScreen} />
-      <Stack.Screen name="ManageOffers" component={ManageOffersScreen} />
-      <Stack.Screen name="MyOffers" component={MyOffersScreen} />
-      <Stack.Screen name="MyListings" component={MyListingsScreen} />
-      <Stack.Screen name="MatchChat" component={MatchChatScreen} />
-      <Stack.Screen name="InquiryChat" component={InquiryChatScreen} />
-      <Stack.Screen name="SkillProfile" component={ProfessionalProfileScreen} />
-      <Stack.Screen name="MyPostsByType" component={MyPostsByType} />
-      <Stack.Screen name="MyInquiries" component={MyInquiriesScreen} />
-      <Stack.Screen name="MyMatches" component={MyMatches} />
-      <Stack.Screen name="ChatMatch" component={ChatMatch} />
-      <Stack.Screen name="Activity" component={ActivityScreen} />
-      <Stack.Screen name="SkillProfileEdit" component={SkillProfile} />
-    </Stack.Navigator>
+    <SkillShareStackWrapper>
+      <Stack.Navigator
+        initialRouteName="SkillShareGate"
+        screenOptions={{
+          headerShown: false,
+          cardStyle: { backgroundColor: '#fff' },
+          // Keep previous screens mounted so state survives
+          detachPreviousScreen: false,
+          // Enable iOS swipe-back
+          gestureEnabled: true,
+          gestureDirection: 'horizontal',
+        }}
+      >
+        <Stack.Screen name="SkillShareGate" component={SkillShareGate} />
+        <Stack.Screen name="ProfileWelcome" component={ProfileWelcomeScreen} />
+        <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
+        <Stack.Screen name="ProfileSuccess" component={ProfileSuccessScreen} />
+        <Stack.Screen
+          name="ProfessionalProfile"
+          component={ProfessionalProfileScreen}
+        />
+        <Stack.Screen name="DashboardMain" component={Dashboard} />
+        <Stack.Screen name="BrowseListings" component={SkillShareExplore} />
+        <Stack.Screen name="CreateListing" component={CreateListingScreen} />
+        <Stack.Screen name="ListingDetail" component={ListingDetailScreen} />
+        <Stack.Screen name="NotificationSkillshare" component={NotificationSkillshare} />
+        <Stack.Screen
+          name="SelectListingTypeScreen"
+          component={SelectListingTypeScreen}
+        />
+        <Stack.Screen name="CreateOffer" component={CreateOfferScreen} />
+        <Stack.Screen name="ManageOffers" component={ManageOffersScreen} />
+        <Stack.Screen name="MyOffers" component={MyOffersScreen} />
+        <Stack.Screen name="MyListings" component={MyListingsScreen} />
+
+        {/* Chat screens — unique identity per thread */}
+        <Stack.Screen
+          name="MatchChat"
+          component={MatchChatScreen}
+          getId={({ params }) =>
+            `matchchat-${params?.matchId ?? params?.id ?? 'default'}`
+          }
+        />
+        <Stack.Screen
+          name="InquiryChat"
+          component={InquiryChatScreen}
+          getId={({ params }) =>
+            `inquirychat-${params?.inquiryId ?? params?.id ?? 'default'}`
+          }
+        />
+        <Stack.Screen
+          name="ChatMatch"
+          component={ChatMatch}
+          getId={({ params }) =>
+            `chatmatch-${params?.matchId ?? params?.id ?? 'default'}`
+          }
+        />
+
+        <Stack.Screen name="SkillProfile" component={ProfessionalProfileScreen} />
+        <Stack.Screen name="MyPostsByType" component={MyPostsByType} />
+        <Stack.Screen name="MyInquiries" component={MyInquiriesScreen} />
+        <Stack.Screen name="MyMatches" component={MyMatches} />
+        <Stack.Screen name="Activity" component={ActivityScreen} />
+        <Stack.Screen name="SkillProfileEdit" component={SkillProfile} />
+      </Stack.Navigator>
+    </SkillShareStackWrapper>
   );
 }
 
 // ============================================================
-// SOCIAL STACK — fully fullscreen, NO TDC header
+// SOCIAL STACK
 // ============================================================
 function SocialStackNavigator() {
   return (
@@ -929,12 +1104,20 @@ function SocialStackNavigator() {
       screenOptions={{
         headerShown: false,
         cardStyle: { backgroundColor: '#fff' },
+        detachPreviousScreen: false,
+        gestureEnabled: true,
       }}
     >
       <Stack.Screen name="Social" component={Social} />
       <Stack.Screen name="Messages" component={Social} />
       <Stack.Screen name="MessagesScreen" component={MessagesScreen} />
-      <Stack.Screen name="ChatDetailScreen" component={ChatDetailScreen} />
+      <Stack.Screen
+        name="ChatDetailScreen"
+        component={ChatDetailScreen}
+        getId={({ params }) =>
+          `socialchat-${params?.chatId ?? params?.id ?? 'default'}`
+        }
+      />
       <Stack.Screen name="UserProfile" component={UserProfile} />
       <Stack.Screen name="FloatingMenu" component={FloatingMenu} />
       <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} />
@@ -971,14 +1154,7 @@ function HomeStackNavigator() {
         }),
       }}
     >
-      {/* ============================================= */}
-      {/* HOME — the ONLY screen with the TDC Header    */}
-      {/* Header hides automatically when Social tab    */}
-      {/* is active inside TabNavigator                 */}
-      {/* ============================================= */}
       <Stack.Screen name="HomeTabs" component={HomeTabsScreen} />
-
-      {/* ---------- ALL OTHER SCREENS — NO TDC HEADER ---------- */}
       <Stack.Screen name="University" component={University} />
       <Stack.Screen name="ContactUs" component={ContactUs} />
       <Stack.Screen name="Home" component={Home} />
@@ -1000,16 +1176,12 @@ function HomeStackNavigator() {
       <Stack.Screen name="Payment" component={PaymentScreen} />
       <Stack.Screen name="StudentDashboard" component={StudentDashboard} />
       <Stack.Screen name="EnhancedCareer" component={EnhancedCareerScreen} />
-
-      {/* Misc reward / badge screens */}
       <Stack.Screen name="Card" component={Card} />
       <Stack.Screen name="DigitalBadge" component={DigitalBadgeScreen} />
       <Stack.Screen name="MainCharacter" component={MainCharacterScreen} />
       <Stack.Screen name="DeftPro" component={DeftProScreen} />
       <Stack.Screen name="DeftGoat" component={DeftGoatScreen} />
       <Stack.Screen name="FounderCircle" component={FounderCircleScreen} />
-
-      {/* Social / messaging */}
       <Stack.Screen name="SocialStack" component={SocialStackNavigator} />
       <Stack.Screen name="Social" component={Social} />
       <Stack.Screen name="Messages" component={Social} />
@@ -1020,8 +1192,6 @@ function HomeStackNavigator() {
       <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} />
       <Stack.Screen name="CreatePostScreen" component={CreatePostScreen} />
       <Stack.Screen name="FeedScreen" component={FeedScreen} />
-
-      {/* Social settings */}
       <Stack.Screen name="Notifications" component={NotificationScreen} />
       <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
       <Stack.Screen name="YourAccount" component={YourAccount} />
@@ -1034,29 +1204,21 @@ function HomeStackNavigator() {
       <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} />
       <Stack.Screen name="Terrms" component={Terrms} />
       <Stack.Screen name="Guideline" component={Guideline} />
-
-      {/* Events */}
       <Stack.Screen name="Events" component={Events} />
       <Stack.Screen name="EventNotification" component={EventNotification} />
-
-      {/* Profile */}
       <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
       <Stack.Screen name="ProfileDetails" component={ProfileDetails} />
-
-      {/* Discount */}
       <Stack.Screen name="MyDiscountScreen" component={MyDiscountScreen} />
-
-      {/* Explore / Brands / Offer */}
       <Stack.Screen name="Explore" component={Explore} />
       <Stack.Screen name="Brands" component={Brands} />
+      <Stack.Screen name="Badges" component={BadgesScreen} />
+      <Stack.Screen name="CityScreen" component={CityScreen} />
       <Stack.Screen
         name="OfferScreen"
         component={OfferScreen}
         options={{ animation: 'slide_from_right' }}
         getId={({ params }) => params?.brand?._id}
       />
-
-      {/* Splash-like */}
       <Stack.Screen name="TDCFlow" component={TDCFlow} />
     </Stack.Navigator>
   );
@@ -1066,103 +1228,115 @@ function HomeStackNavigator() {
 // ROOT DRAWER NAVIGATOR
 // ============================================================
 export default function DrawerNavigator() {
-  const routeAnim = useRef(new Animated.Value(0)).current;
-
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
       <Drawer.Navigator
         drawerContent={(props) => <CustomDrawerContent {...props} />}
-        screenOptions={({ route, navigation }) => ({
-          drawerStyle: styles.drawerStyle,
-          sceneContainerStyle: { backgroundColor: '#fff' },
-          header: () => {
-            // Only show drawer-level header on standalone drawer items.
-            const noDrawerHeaderRoutes = [
-              'HomeTabs',
-              'Profile',
-              'Travelling',
-              'Dashboard',
-              'SocialStack',
-            ];
+        screenOptions={({ route }) => {
+          const deepestRouteName = getDeepestRouteName(route);
+          const shouldDisableDrawer =
+            deepestRouteName && FULLSCREEN_SCREENS.includes(deepestRouteName);
 
-            if (noDrawerHeaderRoutes.includes(route.name)) {
-              return null;
-            }
-
-            return <CustomHeader navigation={navigation} />;
-          },
-          headerShown: true,
-          cardStyleInterpolator: ({ current: { progress } }) => ({
-            cardStyle: { opacity: progress },
-          }),
-        })}
+          return {
+            drawerStyle: styles.drawerStyle,
+            sceneContainerStyle: { backgroundColor: '#fff' },
+            swipeEnabled: !shouldDisableDrawer,
+            swipeEdgeWidth: shouldDisableDrawer ? 0 : 50,
+            headerShown: false,
+            cardStyleInterpolator: ({ current: { progress } }) => ({
+              cardStyle: { opacity: progress },
+            }),
+          };
+        }}
       >
-        {/* -------- HOME STACK -------- */}
         <Drawer.Screen
           name="HomeTabs"
           component={HomeStackNavigator}
-          options={{ unmountOnBlur: false, headerShown: false }}
+          options={({ route }) => {
+            const deepestRouteName = getDeepestRouteName(route);
+            const shouldDisableDrawer =
+              deepestRouteName && FULLSCREEN_SCREENS.includes(deepestRouteName);
+
+            return {
+              unmountOnBlur: false,
+              headerShown: false,
+              swipeEnabled: !shouldDisableDrawer,
+            };
+          }}
         />
 
-        {/* -------- PROFILE STACK -------- */}
         <Drawer.Screen
           name="Profile"
           component={ProfileStack}
           options={{ headerShown: false }}
         />
 
-        {/* -------- TRAVELLING -------- */}
         <Drawer.Screen
           name="Travelling"
           component={TravelingScreen}
           options={{ headerShown: false }}
         />
 
-        {/* -------- SKILLSHARE / DASHBOARD STACK -------- */}
         <Drawer.Screen
           name="Dashboard"
           component={DashboardStackNavigator}
-          options={{ headerShown: false }}
+          options={{ headerShown: false, unmountOnBlur: false }}
         />
 
-        {/* -------- SOCIAL STACK (fullscreen) -------- */}
         <Drawer.Screen
           name="SocialStack"
           component={SocialStackNavigator}
+          options={{ headerShown: false, swipeEnabled: false, unmountOnBlur: false }}
+        />
+
+        <Drawer.Screen
+          name="Rewards"
+          component={RewardsScreen}
           options={{ headerShown: false }}
         />
 
-        {/* -------- STANDALONE DRAWER ITEMS -------- */}
+        <Drawer.Screen
+          name="NotificationSettings"
+          component={NotificationSettingsScreen}
+          options={{ headerShown: false }}
+        />
+
         <Drawer.Screen
           name="Points"
           component={PointsScreen}
           options={{ headerShown: false }}
         />
+
         <Drawer.Screen
           name="WhyPoints"
           component={WhyPointsScreen}
           options={{ headerShown: false }}
         />
+
         <Drawer.Screen
           name="How It Works"
           component={HowItWorksScreen}
           options={{ headerShown: false }}
         />
+
         <Drawer.Screen
           name="About"
           component={AboutScreen}
           options={{ headerShown: false }}
         />
+
         <Drawer.Screen
           name="Terms & Conditions"
           component={TermsScreen}
           options={{ headerShown: false }}
         />
+
         <Drawer.Screen
           name="Privacy Policy"
           component={PrivacyScreen}
           options={{ headerShown: false }}
         />
+
         <Drawer.Screen
           name="Disclaimer"
           component={DisclaimerScreen}
@@ -1426,6 +1600,7 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 40,
   },
   headerAppTitle: {
     fontSize: 21,

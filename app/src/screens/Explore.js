@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+// app/src/screens/Explore.js — with engagement sorted indicators
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -17,6 +18,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons, Ionicons, FontAwesome5, Feather, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
+
+// 🆕 engagement
+import FeatureDot from '../engagement/components/FeatureDot';
+import { useMissions } from '../engagement/hooks/useMissions';
 
 const { width } = Dimensions.get('window');
 const COLUMN_WIDTH = (width - 60) / 2;
@@ -160,7 +165,8 @@ const DashboardSkeleton = () => {
 };
 
 // ─── Animated Grid Card ──────────────────────────────────────────────
-const AnimatedGridCard = ({ item, index, navigation }) => {
+// 🆕 Accepts `missionKey` + `sorted` so we render the mood-face dot
+const AnimatedGridCard = ({ item, index, navigation, missionKey, sorted }) => {
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(24)).current;
@@ -269,13 +275,10 @@ const AnimatedGridCard = ({ item, index, navigation }) => {
 
   const cardHeight = item.size === 'large' ? 230 : 180;
 
-  // Render icon function
   const renderIcon = () => {
-    // If iconComponent is provided as React element
     if (item.iconComponent) {
       return item.iconComponent;
     }
-    // Fallback to MaterialCommunityIcons
     return <MaterialCommunityIcons name={item.icon || 'star'} size={24} color="#FFF" />;
   };
 
@@ -335,14 +338,22 @@ const AnimatedGridCard = ({ item, index, navigation }) => {
           )}
 
           <View style={styles.cardHeader}>
-            <LinearGradient
-              colors={item.colors}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[styles.iconCircle, item.iconCircleStyle]}
-            >
-              {renderIcon()}
-            </LinearGradient>
+            {/* 🆕 icon circle with optional mood-face dot on top-right */}
+            <View style={styles.iconCircleWrap}>
+              <LinearGradient
+                colors={item.colors}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.iconCircle, item.iconCircleStyle]}
+              >
+                {renderIcon()}
+              </LinearGradient>
+
+              {missionKey && (
+                <FeatureDot missionKey={missionKey} sorted={sorted} />
+              )}
+            </View>
+
             <View style={[styles.cardNumberBadge, item.badgeStyle]}>
               <Text style={[styles.cardNumberText, item.badgeTextStyle]}>{item.number}</Text>
             </View>
@@ -378,12 +389,34 @@ const AnimatedGridCard = ({ item, index, navigation }) => {
   );
 };
 
-// ─── StudentDashboard ──────────────────────────────────────────────────
+// ─── Explore ──────────────────────────────────────────────────────────
 const Explore = () => {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(true);
   const [showSkeleton, setShowSkeleton] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // 🆕 engagement: read missions + sorted state
+  const { missions } = useMissions();
+
+  // 🆕 Map of sorted feature keys → boolean
+  const sortedFeatureIds = useMemo(() => {
+    if (!missions?.cards) return new Set();
+    const s = new Set();
+    for (const c of missions.cards) {
+      if (c.sorted) s.add(c.feature);
+    }
+    return s;
+  }, [missions?.cards]);
+
+  // 🆕 Feature mapping — all 4 Explore cards
+  const getMissionKey = (routeName) => {
+    if (routeName === 'Brands') return 'discounts';
+    if (routeName === 'Events') return 'events';
+    if (routeName === 'Travelling') return 'traveling';
+    if (routeName === 'Social') return 'social';
+    return null;
+  };
 
   const headerSlide = useRef(new Animated.Value(-20)).current;
   const headerOpacity = useRef(new Animated.Value(0)).current;
@@ -620,7 +653,6 @@ const Explore = () => {
 
           {/* Welcome Message */}
           <Animated.View style={[styles.welcomeContainer, { opacity: sectionFade }]}>
-            {/* <Text style={styles.welcomeTitle}>Welcome to Your Hub! 🚀</Text> */}
             <Text style={styles.welcomeSub}>Explore exclusive features designed just for you</Text>
           </Animated.View>
 
@@ -638,26 +670,38 @@ const Explore = () => {
             <View style={styles.gridColumn}>
               {menuItems
                 .filter((_, i) => i % 2 === 0)
-                .map((item, index) => (
-                  <AnimatedGridCard
-                    key={item.id}
-                    item={item}
-                    index={index * 2}
-                    navigation={navigation}
-                  />
-                ))}
+                .map((item, index) => {
+                  const missionKey = getMissionKey(item.routeName);
+                  const sorted = missionKey && sortedFeatureIds.has(missionKey);
+                  return (
+                    <AnimatedGridCard
+                      key={item.id}
+                      item={item}
+                      index={index * 2}
+                      navigation={navigation}
+                      missionKey={missionKey}
+                      sorted={sorted}
+                    />
+                  );
+                })}
             </View>
             <View style={[styles.gridColumn, { marginTop: 25 }]}>
               {menuItems
                 .filter((_, i) => i % 2 !== 0)
-                .map((item, index) => (
-                  <AnimatedGridCard
-                    key={item.id}
-                    item={item}
-                    index={index * 2 + 1}
-                    navigation={navigation}
-                  />
-                ))}
+                .map((item, index) => {
+                  const missionKey = getMissionKey(item.routeName);
+                  const sorted = missionKey && sortedFeatureIds.has(missionKey);
+                  return (
+                    <AnimatedGridCard
+                      key={item.id}
+                      item={item}
+                      index={index * 2 + 1}
+                      navigation={navigation}
+                      missionKey={missionKey}
+                      sorted={sorted}
+                    />
+                  );
+                })}
             </View>
           </View>
 
@@ -689,8 +733,6 @@ const Explore = () => {
               <Text style={styles.statNumber}>25+</Text>
               <Text style={styles.statLabel}>Events</Text>
             </View>
-           
-            
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <LinearGradient
@@ -714,7 +756,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
   particle: { position: 'absolute', borderRadius: 50 },
 
-  // Glow effects
   glowTop: {
     position: 'absolute',
     top: -150,
@@ -734,7 +775,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9c349',
   },
 
-  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -783,7 +823,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Welcome
   welcomeContainer: {
     paddingHorizontal: 24,
     marginBottom: 20,
@@ -802,7 +841,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Section
   sectionLabelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -818,7 +856,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 15,
   },
 
-  // Grid
   gridContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
@@ -863,12 +900,16 @@ const styles = StyleSheet.create({
   },
   decorLineInner: { width: '100%', height: '100%' },
 
-  // Card Content
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 20,
+  },
+  // 🆕 wrapper so the mood dot can absolutely position on the icon's top-right
+  iconCircleWrap: {
+    position: 'relative',
+    overflow: 'visible',
   },
   iconCircle: {
     width: 52,
@@ -933,7 +974,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // Stats Footer
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',

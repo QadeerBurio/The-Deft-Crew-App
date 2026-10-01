@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
 
   topHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 34 : 8, paddingBottom: 10,
+    paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 3 : 3, paddingBottom: 10,
     backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee',
   },
   topHeaderTitle: { fontSize: 20, fontWeight: '700', color: INK },

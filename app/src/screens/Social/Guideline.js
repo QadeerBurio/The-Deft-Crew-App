@@ -171,7 +171,7 @@ export default function CommunityGuidelinesScreen({ navigation }) {
           ]}
         >
           <Text style={styles.introText}>
-            We're committed to creating a safe, inclusive community where everyone feels welcome.
+            tdc<Text style={{color:'#f9c349', fontSize:20}}>.</Text> is for everyone. Treat people with respect. Harmful behaviour isn't allowed here.
           </Text>
         </Animated.View>
 

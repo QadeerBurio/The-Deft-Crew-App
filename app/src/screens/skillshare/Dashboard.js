@@ -102,7 +102,7 @@ export default function Dashboard({ navigation }) {
 
   const goTo = (route) => {
   if (route === 'DashboardMain') return;
-  navigation.replace(route);
+  navigation.navigate(route);
 };
 
   return (
@@ -118,7 +118,7 @@ export default function Dashboard({ navigation }) {
     Skill<Text style={{ color: BRAND }}>Share</Text>
   </Text>
 
-  <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
+  <TouchableOpacity onPress={() => navigation.navigate('NotificationSkillshare')}>
     <Ionicons name="notifications-outline" size={22} color={INK} />
   </TouchableOpacity>
 </View>

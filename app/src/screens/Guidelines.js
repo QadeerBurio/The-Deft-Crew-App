@@ -204,7 +204,7 @@ export default function CommunityGuidelinesScreen({ navigation }) {
           ]}
         >
           <Text style={styles.introText}>
-            The Deft Crew is committed to creating a safe, inclusive, and respectful 
+            tdc is committed to creating a safe, inclusive, and respectful 
             environment for all users. We do not tolerate any form of harmful behavior.
           </Text>
         </Animated.View>

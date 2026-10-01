@@ -1,5 +1,4 @@
-// UserProfile.js - Complete Optimized with tree comments & fast skeleton
-
+// UserProfile.js - Complete Fixed Version
 import React, { useState, useEffect, useContext, useCallback, useRef, useMemo, memo } from 'react';
 import {
   View, Text, StyleSheet, Image, TouchableOpacity,
@@ -18,7 +17,6 @@ import { TouchableWithoutFeedback } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
-
 const COMMENTS_POLL_INTERVAL = 6000;
 
 // ============ HELPERS ============
@@ -63,15 +61,9 @@ const commentsChanged = (oldComments, newComments) => {
   return false;
 };
 
-// ============ FAST SKELETON (Optimized) ============
+// ============ SKELETON ============
 const SkeletonLine = memo(({ width: w, height: h, opacity, style }) => (
-  <Animated.View
-    style={[
-      styles.skeletonLine,
-      { width: w, height: h, opacity },
-      style,
-    ]}
-  />
+  <Animated.View style={[styles.skeletonLine, { width: w, height: h, opacity }, style]} />
 ));
 
 const ProfileSkeleton = memo(() => {
@@ -80,12 +72,8 @@ const ProfileSkeleton = memo(() => {
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
-        Animated.timing(shimmerAnim, {
-          toValue: 1, duration: 600, useNativeDriver: true,
-        }),
-        Animated.timing(shimmerAnim, {
-          toValue: 0, duration: 600, useNativeDriver: true,
-        }),
+        Animated.timing(shimmerAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(shimmerAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
       ])
     );
     animation.start();
@@ -99,14 +87,11 @@ const ProfileSkeleton = memo(() => {
 
   return (
     <SafeAreaView style={styles.skeletonContainer} edges={['top']}>
-      {/* Top Nav */}
       <View style={styles.skeletonTopNav}>
         <Animated.View style={[styles.skeletonNavBtn, { opacity }]} />
         <Animated.View style={[styles.skeletonNavTitle, { opacity }]} />
         <Animated.View style={[styles.skeletonNavBtn, { opacity }]} />
       </View>
-
-      {/* Header */}
       <View style={styles.skeletonHeader}>
         <View style={styles.skeletonHeaderRow}>
           <Animated.View style={[styles.skeletonAvatar, { opacity }]} />
@@ -123,8 +108,6 @@ const ProfileSkeleton = memo(() => {
           <Animated.View style={[styles.skeletonTab, { opacity }]} />
         </View>
       </View>
-
-      {/* Cards */}
       {[1, 2].map((i) => (
         <View key={i} style={styles.skeletonCard}>
           <View style={styles.skeletonCardHeader}>
@@ -238,7 +221,7 @@ export default function UserProfile({ route, navigation }) {
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
 
-  // Back handler for comment modal
+  // Back handler
   useEffect(() => {
     const backAction = () => {
       if (showComments) {
@@ -252,54 +235,45 @@ export default function UserProfile({ route, navigation }) {
     return () => backHandler.remove();
   }, [showComments]);
 
-  useFocusEffect(
-    useCallback(() => {
-      isScreenFocusedRef.current = true;
-      isMountedRef.current = true;
-      fetchProfile();
-      return () => {
-        isScreenFocusedRef.current = false;
-        Keyboard.dismiss();
-      };
-    }, [targetId])
-  );
+  // ============ CHECK CONNECTION STATES (null-safe) ============
+  const checkConnectionStates = useCallback((targetUserId) => {
+    if (!currentUser || !targetUserId) {
+      return { isConnected: false, isPending: false, isReceived: false };
+    }
 
-  // Cleanup
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-      if (mentionSearchTimeout.current) clearTimeout(mentionSearchTimeout.current);
-    };
-  }, []);
+    const targetStr = targetUserId.toString();
+    const currentIdStr = currentUser._id?.toString();
 
-  // ============ ORGANIZE COMMENTS INTO TREE ============
-  const organizedComments = useMemo(() => {
-    if (!Array.isArray(commentsList)) return [];
+    if (targetStr === currentIdStr) {
+      return { isConnected: true, isPending: false, isReceived: false };
+    }
 
-    const parents = [];
-    const repliesMap = {};
+    const isConnected = (currentUser.connections || []).some(
+      id => id?.toString() === targetStr
+    );
+    const isPending = (currentUser.sentRequests || []).some(
+      id => id?.toString() === targetStr
+    );
+    const isReceived = (currentUser.receivedRequests || []).some(
+      id => id?.toString() === targetStr
+    );
 
-    commentsList.forEach(comment => {
-      const parentId = comment.parentComment;
-      if (!parentId) {
-        parents.push(comment);
-      } else {
-        const pid = parentId.toString();
-        if (!repliesMap[pid]) repliesMap[pid] = [];
-        repliesMap[pid].push(comment);
+    return { isConnected, isPending, isReceived };
+  }, [currentUser]);
+
+  // ============ REFRESH CURRENT USER FROM BACKEND ============
+  const refreshCurrentUser = useCallback(async () => {
+    try {
+      const meRes = await axios.get(`${API_URL}/user/me`, config);
+      if (meRes.data?.user && setUser) {
+        setUser(meRes.data.user);
+        return meRes.data.user;
       }
-    });
-
-    parents.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-
-    return parents.map(parent => ({
-      ...parent,
-      replies: (repliesMap[parent._id.toString()] || []).sort(
-        (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
-      ),
-    }));
-  }, [commentsList]);
+    } catch (err) {
+      console.warn("Refresh current user failed:", err.message);
+    }
+    return null;
+  }, [config, setUser]);
 
   // ============ CHECK BLOCK STATUS ============
   const checkBlockStatus = useCallback(async () => {
@@ -316,10 +290,13 @@ export default function UserProfile({ route, navigation }) {
     }
   }, [targetId, config]);
 
-  // ============ FETCH PROFILE ============
-  const fetchProfile = async () => {
+  // ============ FETCH PROFILE (FIXED) ============
+  const fetchProfile = useCallback(async () => {
     try {
       setLoading(true);
+
+      // ✅ STEP 1: Refresh current user FIRST so connection arrays are fresh
+      await refreshCurrentUser();
 
       const isBlockedByCurrentUser = await checkBlockStatus();
       if (isBlockedByCurrentUser) {
@@ -351,7 +328,14 @@ export default function UserProfile({ route, navigation }) {
       setUserPosts(posts);
       setConnections(res.data.connections || []);
 
-      if (!isActionLoading) {
+      // ✅ STEP 2: Use backend-computed connectionStatus directly
+      const status = res.data.profile?.connectionStatus || res.data.connectionStatus;
+
+      if (status && !isActionLoading) {
+        setIsConnected(status === 'connected' || status === 'self');
+        setIsPending(status === 'pending');
+        setIsReceived(status === 'received');
+      } else if (!isActionLoading) {
         const states = checkConnectionStates(targetId);
         setIsConnected(states.isConnected);
         setIsPending(states.isPending);
@@ -377,12 +361,101 @@ export default function UserProfile({ route, navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [targetId, config, checkBlockStatus, checkConnectionStates, refreshCurrentUser, isActionLoading]);
 
-  // ============ FETCH POST COMMENTS (silent) ============
+  useFocusEffect(
+    useCallback(() => {
+      isScreenFocusedRef.current = true;
+      isMountedRef.current = true;
+      fetchProfile();
+      return () => {
+        isScreenFocusedRef.current = false;
+        Keyboard.dismiss();
+      };
+    }, [fetchProfile])
+  );
+
+  // ============ SOCKET LISTENER FOR REAL-TIME ACCEPT ============
+  useEffect(() => {
+    const socket = global.socket;
+    if (!socket) return;
+
+    const handleConnectionAccepted = (data) => {
+      if (!data?.userId) return;
+      if (data.userId.toString() === targetId?.toString()) {
+        setIsPending(false);
+        setIsConnected(true);
+        setIsReceived(false);
+        setIsActionLoading(false);
+        // Refresh from backend to keep state consistent
+        refreshCurrentUser();
+      }
+    };
+
+    const handleConnectionDeclined = (data) => {
+      if (!data?.userId) return;
+      if (data.userId.toString() === targetId?.toString()) {
+        setIsPending(false);
+        setIsConnected(false);
+        setIsReceived(false);
+      }
+    };
+
+    const handleConnectionUpdated = (data) => {
+      // Someone accepted us / our request accepted
+      refreshCurrentUser();
+    };
+
+    socket.on('connection_accepted', handleConnectionAccepted);
+    socket.on('connection_declined', handleConnectionDeclined);
+    socket.on('connection_updated', handleConnectionUpdated);
+
+    return () => {
+      socket.off('connection_accepted', handleConnectionAccepted);
+      socket.off('connection_declined', handleConnectionDeclined);
+      socket.off('connection_updated', handleConnectionUpdated);
+    };
+  }, [targetId, refreshCurrentUser]);
+
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (mentionSearchTimeout.current) clearTimeout(mentionSearchTimeout.current);
+    };
+  }, []);
+
+  // ============ ORGANIZE COMMENTS ============
+  const organizedComments = useMemo(() => {
+    if (!Array.isArray(commentsList)) return [];
+    const parents = [];
+    const repliesMap = {};
+
+    commentsList.forEach(comment => {
+      const parentId = comment.parentComment;
+      if (!parentId) {
+        parents.push(comment);
+      } else {
+        const pid = parentId.toString();
+        if (!repliesMap[pid]) repliesMap[pid] = [];
+        repliesMap[pid].push(comment);
+      }
+    });
+
+    parents.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+    return parents.map(parent => ({
+      ...parent,
+      replies: (repliesMap[parent._id.toString()] || []).sort(
+        (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+      ),
+    }));
+  }, [commentsList]);
+
+  // ============ FETCH POST COMMENTS ============
   const fetchPostComments = useCallback(async (postId, silent = false) => {
     if (!token || !postId || !isMountedRef.current) return;
-
     const now = Date.now();
     if (silent && now - lastCommentsFetchRef.current < 2000) return;
     if (silent) lastCommentsFetchRef.current = now;
@@ -398,7 +471,6 @@ export default function UserProfile({ route, navigation }) {
         return freshComments;
       });
 
-      // Also sync the post in userPosts
       setUserPosts(prev => prev.map(p => {
         if (p._id !== postId) return p;
         return {
@@ -413,7 +485,6 @@ export default function UserProfile({ route, navigation }) {
     }
   }, [token, config]);
 
-  // ============ COMMENTS POLLING (only while modal open) ============
   useEffect(() => {
     if (!showComments || !selectedPost?._id) {
       if (pollIntervalRef.current) {
@@ -439,35 +510,27 @@ export default function UserProfile({ route, navigation }) {
     };
   }, [showComments, selectedPost?._id, fetchPostComments]);
 
-  // AppState listener
+  // AppState listener — refreshes user on foreground
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', (nextAppState) => {
+    const subscription = AppState.addEventListener('change', async (nextAppState) => {
       const prevState = appStateRef.current;
       appStateRef.current = nextAppState;
+
       if (prevState.match(/inactive|background/) && nextAppState === 'active') {
+        // ✅ Refresh current user to catch server-side changes
+        await refreshCurrentUser();
+
         if (isScreenFocusedRef.current && showComments && selectedPost?._id) {
           fetchPostComments(selectedPost._id, true);
         }
       }
     });
     return () => subscription.remove();
-  }, [fetchPostComments, showComments, selectedPost?._id]);
+  }, [fetchPostComments, showComments, selectedPost?._id, refreshCurrentUser]);
 
   const onRefresh = () => { setRefreshing(true); fetchProfile(); };
 
-  // ============ CHECK CONNECTION STATES ============
-  const checkConnectionStates = useCallback((targetUserId) => {
-    if (!currentUser) return { isConnected: false, isPending: false, isReceived: false };
-    if (targetUserId === currentUser._id) return { isConnected: true, isPending: false, isReceived: false };
-
-    const isConnected = currentUser.connections?.some(id => id === targetUserId) || false;
-    const isPending = currentUser.sentRequests?.some(id => id === targetUserId) || false;
-    const isReceived = currentUser.receivedRequests?.some(id => id === targetUserId) || false;
-
-    return { isConnected, isPending, isReceived };
-  }, [currentUser]);
-
-  // ============ CONNECTION HANDLERS ============
+  // ============ ACCEPT REQUEST (FIXED) ============
   const handleAcceptRequest = async () => {
     if (isActionLoading) return;
     setIsActionLoading(true);
@@ -493,15 +556,8 @@ export default function UserProfile({ route, navigation }) {
         setIsConnected(true);
         setIsReceived(false);
         setIsPending(false);
-
-        if (currentUser && setUser) {
-          setUser({
-            ...currentUser,
-            connections: [...(currentUser.connections || []), targetId],
-            receivedRequests: (currentUser.receivedRequests || []).filter(id => id !== targetId),
-            sentRequests: (currentUser.sentRequests || []).filter(id => id !== targetId),
-          });
-        }
+        // ✅ Refresh current user from backend — the source of truth
+        await refreshCurrentUser();
       }
     } catch (err) {
       console.error("Accept request error:", err);
@@ -533,13 +589,7 @@ export default function UserProfile({ route, navigation }) {
             setIsReceived(false);
             setIsConnected(false);
             setIsPending(false);
-
-            if (currentUser && setUser) {
-              setUser({
-                ...currentUser,
-                receivedRequests: (currentUser.receivedRequests || []).filter(id => id !== targetId),
-              });
-            }
+            await refreshCurrentUser();
             Alert.alert("Request declined");
           } catch (err) {
             Alert.alert("Error", "Failed to decline request");
@@ -563,13 +613,7 @@ export default function UserProfile({ route, navigation }) {
             setIsPending(false);
             setIsConnected(false);
             setIsReceived(false);
-
-            if (currentUser && setUser) {
-              setUser({
-                ...currentUser,
-                sentRequests: (currentUser.sentRequests || []).filter(id => id !== targetId),
-              });
-            }
+            await refreshCurrentUser();
             Alert.alert("Request cancelled");
           } catch (err) {
             Alert.alert("Error", "Failed to cancel request");
@@ -591,13 +635,7 @@ export default function UserProfile({ route, navigation }) {
         setIsPending(true);
         setIsConnected(false);
         setIsReceived(false);
-
-        if (currentUser && setUser) {
-          setUser({
-            ...currentUser,
-            sentRequests: [...(currentUser.sentRequests || []), targetId],
-          });
-        }
+        await refreshCurrentUser();
       }
     } catch (err) {
       const errorMsg = err.response?.data?.error || "";
@@ -628,15 +666,7 @@ export default function UserProfile({ route, navigation }) {
             setIsConnected(false);
             setIsPending(false);
             setIsReceived(false);
-
-            if (currentUser && setUser) {
-              setUser({
-                ...currentUser,
-                connections: (currentUser.connections || []).filter(id => id !== targetId),
-                sentRequests: (currentUser.sentRequests || []).filter(id => id !== targetId),
-                receivedRequests: (currentUser.receivedRequests || []).filter(id => id !== targetId),
-              });
-            }
+            await refreshCurrentUser();
           } catch (err) {
             Alert.alert("Error", "Failed to remove connection");
           } finally {
@@ -675,6 +705,7 @@ export default function UserProfile({ route, navigation }) {
       if (res.data.success) {
         setIsBlocked(true);
         setBlockStatus('blocked');
+        await refreshCurrentUser();
         Alert.alert("Blocked", `You blocked ${profileData?.name}`,
           [{ text: "OK", onPress: () => navigation.goBack() }]
         );
@@ -698,7 +729,6 @@ export default function UserProfile({ route, navigation }) {
     }
   };
 
-  // ============ REPORT USER ============
   const handleReportUser = () => {
     setShowMenu(false);
     if (isOwnProfile || isBlocked) return;
@@ -724,7 +754,6 @@ export default function UserProfile({ route, navigation }) {
     }
   };
 
-  // ============ SHARE PROFILE ============
   const handleShareProfile = async () => {
     setShowMenu(false);
     try {
@@ -734,7 +763,6 @@ export default function UserProfile({ route, navigation }) {
     } catch (error) { }
   };
 
-  // ============ MESSAGE ============
   const handleMessagePress = async () => {
     if (isBlocked) return Alert.alert("Blocked", "Unblock to send a message.");
     if (!isConnected && !isOwnProfile) return Alert.alert("Not Connected", "You need to be connected.");
@@ -755,7 +783,6 @@ export default function UserProfile({ route, navigation }) {
     }
   };
 
-  // ============ VIEW CONNECTIONS ============
   const handleViewConnections = async () => {
     if (isBlocked || isActionLoading) return;
     setIsActionLoading(true);
@@ -795,10 +822,8 @@ export default function UserProfile({ route, navigation }) {
     Keyboard.dismiss();
   };
 
-  // ============ MENTION SEARCH ============
   const handleCommentTextChange = useCallback((text) => {
     setCommentText(text);
-
     const lastAtIndex = text.lastIndexOf('@');
     if (lastAtIndex === -1) {
       setShowMentionSuggestions(false);
@@ -806,17 +831,12 @@ export default function UserProfile({ route, navigation }) {
       return;
     }
     const afterAt = text.substring(lastAtIndex + 1);
-    if (
-      afterAt.includes(' ') || afterAt.includes('\n') ||
-      afterAt.includes('@') || afterAt.length === 0
-    ) {
+    if (afterAt.includes(' ') || afterAt.includes('\n') || afterAt.includes('@') || afterAt.length === 0) {
       setShowMentionSuggestions(false);
       setMentionResults([]);
       return;
     }
-
     setShowMentionSuggestions(true);
-
     if (mentionSearchTimeout.current) clearTimeout(mentionSearchTimeout.current);
     mentionSearchTimeout.current = setTimeout(async () => {
       try {
@@ -837,7 +857,6 @@ export default function UserProfile({ route, navigation }) {
     const firstName = u.name.split(' ')[0];
     const before = commentText.substring(0, lastAtIndex);
     setCommentText(`${before}@${firstName} `);
-
     setSelectedMentions(prev =>
       prev.some(m => m._id === u._id) ? prev : [...prev, { _id: u._id, name: u.name }]
     );
@@ -846,16 +865,15 @@ export default function UserProfile({ route, navigation }) {
     setTimeout(() => commentInputRef.current?.focus(), 100);
   }, [commentText]);
 
-  // ============ REPLY ============
   const onReplyPress = useCallback((comment, parentCommentId) => {
-    const targetId = parentCommentId || comment._id;
+    const targetId_ = parentCommentId || comment._id;
     const parentComment = commentsList.find(
-      c => c._id?.toString() === targetId?.toString()
+      c => c._id?.toString() === targetId_?.toString()
     );
     const mentionName = parentComment?.user?.name || comment.user?.name || "User";
 
     setReplyTo({
-      commentId: targetId?.toString(),
+      commentId: targetId_?.toString(),
       userName: mentionName,
       userId: parentComment?.user?._id || comment.user?._id,
     });
@@ -867,8 +885,7 @@ export default function UserProfile({ route, navigation }) {
         prev.some(m => m._id === mentionId) ? prev : [...prev, { _id: mentionId, name: mentionName }]
       );
     }
-
-    setCollapsedThreads(prev => ({ ...prev, [targetId]: false }));
+    setCollapsedThreads(prev => ({ ...prev, [targetId_]: false }));
     setTimeout(() => commentInputRef.current?.focus(), 150);
   }, [commentsList]);
 
@@ -876,7 +893,6 @@ export default function UserProfile({ route, navigation }) {
     setCollapsedThreads(prev => ({ ...prev, [commentId]: !prev[commentId] }));
   }, []);
 
-  // ============ SUBMIT COMMENT ============
   const handleSubmitComment = async () => {
     if (!commentText.trim() || !selectedPost) return;
     const text = commentText.trim();
@@ -899,25 +915,16 @@ export default function UserProfile({ route, navigation }) {
       if (res.data.success && res.data.comments) {
         const fresh = normalizeComments(res.data.comments);
         setCommentsList(fresh);
-
         setUserPosts(prev => prev.map(p => {
-          if (p._id === selectedPost._id) {
-            return { ...p, comments: fresh };
-          }
+          if (p._id === selectedPost._id) return { ...p, comments: fresh };
           return p;
         }));
-
-        setSelectedPost(prev => ({
-          ...prev,
-          comments: fresh,
-        }));
-
+        setSelectedPost(prev => ({ ...prev, comments: fresh }));
         setCommentText("");
         setReplyTo(null);
         setSelectedMentions([]);
         setShowMentionSuggestions(false);
         Keyboard.dismiss();
-
         setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 250);
       }
     } catch (err) {
@@ -927,43 +934,33 @@ export default function UserProfile({ route, navigation }) {
     }
   };
 
-  // ============ DELETE COMMENT ============
   const handleDeleteComment = (comment) => {
     const isMyComment = comment.user?._id?.toString() === currentUser?._id?.toString();
     if (!isMyComment) return;
 
-    Alert.alert(
-      "Delete Comment",
-      "Are you sure? All replies to this comment will also be deleted.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const res = await axios.delete(
-                `${API_URL}/posts/comment/${selectedPost._id}/${comment._id}`,
-                config
-              );
-
-              if (res.data.success && res.data.comments) {
-                const fresh = normalizeComments(res.data.comments);
-                setCommentsList(fresh);
-                setUserPosts(prev => prev.map(p => {
-                  if (p._id === selectedPost._id) {
-                    return { ...p, comments: fresh };
-                  }
-                  return p;
-                }));
-              }
-            } catch (err) {
-              Alert.alert("Error", err.response?.data?.error || "Could not delete comment");
+    Alert.alert("Delete Comment", "Are you sure? All replies to this comment will also be deleted.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete", style: "destructive", onPress: async () => {
+          try {
+            const res = await axios.delete(
+              `${API_URL}/posts/comment/${selectedPost._id}/${comment._id}`,
+              config
+            );
+            if (res.data.success && res.data.comments) {
+              const fresh = normalizeComments(res.data.comments);
+              setCommentsList(fresh);
+              setUserPosts(prev => prev.map(p => {
+                if (p._id === selectedPost._id) return { ...p, comments: fresh };
+                return p;
+              }));
             }
+          } catch (err) {
+            Alert.alert("Error", err.response?.data?.error || "Could not delete comment");
           }
         }
-      ]
-    );
+      }
+    ]);
   };
 
   const formatCommentTime = (dateString) => {
@@ -977,7 +974,7 @@ export default function UserProfile({ route, navigation }) {
     return `${Math.floor(diff / 86400)}d`;
   };
 
-  // ============ RENDER COMMENT (tree structure) ============
+  // ============ RENDER COMMENT ============
   const renderComment = ({ item }) => {
     const isCollapsed = collapsedThreads[item._id] === true;
     const replies = item.replies || [];
@@ -987,7 +984,6 @@ export default function UserProfile({ route, navigation }) {
 
     return (
       <View style={styles.threadContainer}>
-        {/* Parent Comment */}
         <View style={styles.parentRow}>
           <TouchableOpacity
             onPress={() => {
@@ -999,10 +995,7 @@ export default function UserProfile({ route, navigation }) {
             {item.user?.profileImage ? (
               <Image source={{ uri: item.user.profileImage }} style={styles.avatarLg} />
             ) : (
-              <LinearGradient
-                colors={['#f9c349', '#e6b800']}
-                style={styles.avatarLgPlaceholder}
-              >
+              <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.avatarLgPlaceholder}>
                 <Text style={styles.avatarLgText}>
                   {item.user?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </Text>
@@ -1041,11 +1034,9 @@ export default function UserProfile({ route, navigation }) {
           </View>
         </View>
 
-        {/* Replies with tree connectors */}
         {hasReplies && (
           <View style={styles.treeWrapper}>
             <View style={styles.verticalLine} />
-
             <TouchableOpacity
               style={styles.viewRepliesBtn}
               onPress={() => toggleThread(item._id)}
@@ -1073,11 +1064,7 @@ export default function UserProfile({ route, navigation }) {
 
               return (
                 <View key={reply._id} style={styles.treeBranch}>
-                  <View style={[
-                    styles.branchConnector,
-                    isLast && styles.branchConnectorLast,
-                  ]} />
-
+                  <View style={[styles.branchConnector, isLast && styles.branchConnectorLast]} />
                   <TouchableOpacity
                     onPress={() => {
                       closeComments();
@@ -1089,10 +1076,7 @@ export default function UserProfile({ route, navigation }) {
                     {reply.user?.profileImage ? (
                       <Image source={{ uri: reply.user.profileImage }} style={styles.avatarSm} />
                     ) : (
-                      <LinearGradient
-                        colors={['#f9c349', '#e6b800']}
-                        style={styles.avatarSmPlaceholder}
-                      >
+                      <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.avatarSmPlaceholder}>
                         <Text style={styles.avatarSmText}>
                           {replyAuthorName.charAt(0).toUpperCase()}
                         </Text>
@@ -1523,15 +1507,11 @@ export default function UserProfile({ route, navigation }) {
             <Text style={[styles.actionText, isLiked && { color: "#f9c349" }]}>{likeCount}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.actionBtn}
-            onPress={() => openComments(item)}
-          >
+          <TouchableOpacity style={styles.actionBtn} onPress={() => openComments(item)}>
             <Ionicons name="chatbubble-outline" size={18} color="#71767b" />
             <Text style={styles.actionText}>{commentsCount}</Text>
           </TouchableOpacity>
 
-         
           <TouchableOpacity style={styles.actionBtn}>
             <Ionicons name="paper-plane-outline" size={18} color="#71767b" />
           </TouchableOpacity>
@@ -1653,7 +1633,6 @@ export default function UserProfile({ route, navigation }) {
                 </View>
 
                 <Text style={styles.fullName}>{profileData?.name}</Text>
-
                 {profileData?.bio && <Text style={styles.bio}>{profileData.bio}</Text>}
 
                 <TouchableOpacity onPress={handleViewConnections} style={styles.connectionTouchable}>
@@ -1791,7 +1770,7 @@ export default function UserProfile({ route, navigation }) {
         </TouchableOpacity>
       </Modal>
 
-      {/* ============ COMMENT MODAL WITH TREE ============ */}
+      {/* Comment Modal */}
       <Modal
         visible={showComments}
         animationType="fade"
@@ -2089,7 +2068,6 @@ const styles = StyleSheet.create({
   menuCancelText: { color: '#999', fontWeight: '400' },
   menuDivider: { height: 1, backgroundColor: '#f0f0f0', marginVertical: 4 },
 
-  // ============ COMMENT MODAL ============
   commentModalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
   commentSheet: {
     backgroundColor: "#fff", height: height * 0.85,
@@ -2105,7 +2083,6 @@ const styles = StyleSheet.create({
   commentCountBadgeText: { fontSize: 12, fontWeight: "600", color: '#666' },
   commentListContent: { padding: 16, paddingBottom: 20, flexGrow: 1 },
 
-  // TREE CONNECTORS
   threadContainer: { marginBottom: 20 },
   parentRow: { flexDirection: 'row', alignItems: 'flex-start' },
   avatarLg: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#f8f8f8' },

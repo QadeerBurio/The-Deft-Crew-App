@@ -13,92 +13,96 @@ import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
+import { Video, ResizeMode } from "expo-av";
 
 const { width, height } = Dimensions.get("window");
 
 const ONBOARDING_DATA = [
   {
     id: "1",
-    title: "Global Reach",
-    tagline: "EXCHANGE PROGRAMS",
+    title: "Students Deals",
+    tagline: "Pay Students Prices",
     description:
-      "Connect with international universities and broaden your horizons through curated exchange opportunities.",
-    offer: "STUDY ABROAD",
-    icon: "globe-outline",
-    stat: "50+ Countries",
-    category: "Education"
+      "Discounts at favourite cafes, restaurants, salons and stores. Just.",
+    offer: "Discount",
+    icon: "pricetags-outline",
+    stat: "Upto 50% Off",
+    category: "Savings",
   },
   {
     id: "2",
-    title: "Career Growth",
-    tagline: "PROFESSIONAL PATHWAYS",
+    title: "Career",
+    tagline: "Internships & Jobs",
     description:
-      "Get exclusive access to internships, mentorship sessions, and career workshops designed for the elite.",
-    offer: "HIRED FAST",
+      "Find internships, mentorship and career workshops before everyone else does",
+    offer: "GET AHEAD",
     icon: "briefcase-outline",
-    stat: "1000+ Partners",
-    category: "Career"
+    stat: "Career Hub",
+    category: "CAREER HUB",
   },
   {
     id: "3",
-    title: "Skill Share",
-    tagline: "LEARN & GROW",
+    title: "SKILL UP",
+    tagline: "Learn From Peers",
     description:
-      "Access premium skill-sharing sessions from industry experts. Master new skills and stay ahead in your field.",
+      "Teach what you know, learn what you don't. Team up with students on real projects.",
     offer: "SKILL UP",
     icon: "school-outline",
-    stat: "200+ Courses",
-    category: "Learning"
+    stat: "LEARN, SHARE & EARN",
+    category: "Learning",
   },
   {
     id: "4",
     title: "Resume Builder",
-    tagline: "CAREER BOOST",
+    tagline: "ATS-FRIENDLY",
     description:
-      "Create professional, ATS-friendly resumes with our AI-powered builder. Get noticed by top employers.",
-    offer: "GET HIRED",
+      "Build a clean, ATS-friendly resume in minutes with AI suggestions.",
+    offer: "STAND OUT",
     icon: "document-text-outline",
-    stat: "95% Success Rate",
-    category: "Career"
+    stat: "AI-Powered",
+    category: "Career",
   },
   {
     id: "5",
-    title: "Premium Events",
+    title: "Events",
     tagline: "NETWORK & CONNECT",
     description:
-      "Gain exclusive access to premium networking events, industry conferences, and elite gatherings.",
-    offer: "VIP ACCESS",
+      "Workshops, seminars and networking events. Meet people who can open doors.",
+    offer: "GET IN",
     icon: "calendar-outline",
-    stat: "500+ Events",
-    category: "Events"
+    stat: "Near You",
+    category: "Events",
   },
   {
     id: "6",
-    title: "Wanderlust",
-    tagline: "TRAVEL & ADVENTURE",
+    title: "Travel With AI",
+    tagline: "TRAVEL ASSISTANT",
     description:
-      "Explore the world with TDC-exclusive travel packages and student-friendly transport discounts.",
-    offer: "EXPLORE MORE",
+      "Plan trips, routes and budgets in seconds with your AI travel assistant.",
+    offer: "PLAN SMART",
     icon: "airplane-outline",
-    stat: "30% Off Travel",
-    category: "Travel"
+    stat: "AI Planner",
+    category: "AI Assistant",
   },
   {
     id: "7",
-    title: "Unmatched Savings",
-    tagline: "LIFESTYLE DISCOUNTS",
+    title: "Global Reach",
+    tagline: "SCHOLARSHIPS PROGRAMS",
     description:
-      "Enjoy up to 50% off at your favorite Karachi hubs, from fine dining to essential tech.",
-    offer: "Exclusive Discount",
-    icon: "pricetags-outline",
-    stat: "Save 50%",
-    category: "Savings"
+      "Discover exchange programs and international university opportunities.",
+    offer: "STUDY ABROAD",
+    icon: "globe-outline",
+    stat: "Go Global",
+    category: "SCHOLARSHIPS",
   },
 ];
 
 export default function Splash({ navigation }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [videoFinished, setVideoFinished] = useState(false);
+
+  const videoRef = useRef(null);
 
   const scrollX = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -110,30 +114,11 @@ export default function Splash({ navigation }) {
 
   const flatListRef = useRef(null);
 
+  /* ------------------------------------------------------------
+   * 1. Startup: kick off pulse animation for onboarding button
+   *    (video handles the splash, so no splash logo animations here)
+   * ------------------------------------------------------------ */
   useEffect(() => {
-    // Splash screen animations
-    Animated.sequence([
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.spring(logoScale, {
-          toValue: 1,
-          friction: 4,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoRotate, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ]),
-    ]).start();
-
-    // Pulse animation for button
     Animated.loop(
       Animated.sequence([
         Animated.timing(buttonPulse, {
@@ -149,14 +134,65 @@ export default function Splash({ navigation }) {
       ])
     ).start();
 
-    checkOnboardingStatus();
+    // Safety fallback: if video never signals finish, force it after 10s
+    const fallback = setTimeout(() => {
+      setVideoFinished(true);
+    }, 10000);
+
+    return () => clearTimeout(fallback);
   }, []);
 
+  /* ------------------------------------------------------------
+   * 2. When video finishes → decide next route
+   * ------------------------------------------------------------ */
   useEffect(() => {
-    // Content entry animation on index change
+    if (videoFinished) {
+      proceedAfterSplash();
+    }
+  }, [videoFinished]);
+
+  const proceedAfterSplash = async () => {
+    try {
+      const onboardingComplete = await AsyncStorage.getItem("onboardingComplete");
+      const alreadyLaunched = await AsyncStorage.getItem("alreadyLaunched");
+
+      if (onboardingComplete === "true" || alreadyLaunched === "true") {
+        // Returning user → skip onboarding
+        navigation.replace("Privacy");
+      } else {
+        // First launch → show onboarding slides
+        setLoading(false);
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.spring(logoScale, {
+            toValue: 1,
+            friction: 4,
+            tension: 40,
+            useNativeDriver: true,
+          }),
+          Animated.timing(logoRotate, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    } catch (e) {
+      navigation.replace("Privacy");
+    }
+  };
+
+  /* ------------------------------------------------------------
+   * 3. Content entry animation on each slide change
+   * ------------------------------------------------------------ */
+  useEffect(() => {
     slideUp.setValue(50);
     cardEntry.setValue(0);
-    
+
     Animated.parallel([
       Animated.spring(slideUp, {
         toValue: 0,
@@ -172,30 +208,9 @@ export default function Splash({ navigation }) {
     ]).start();
   }, [currentIndex]);
 
-  const checkOnboardingStatus = async () => {
-    try {
-      // Check if onboarding is already completed
-      const onboardingComplete = await AsyncStorage.getItem("onboardingComplete");
-      
-      // Also check the old flag for backward compatibility
-      const alreadyLaunched = await AsyncStorage.getItem("alreadyLaunched");
-      
-      setTimeout(() => {
-        // If onboarding is complete OR already launched, go directly to Terms & Conditions
-        if (onboardingComplete === "true" || alreadyLaunched === "true") {
-          // Navigate to Terms screen
-          navigation.replace("Privacy");
-        } else {
-          // First time launch - show splash/onboarding
-          setLoading(false);
-        }
-      }, 2800);
-    } catch (e) {
-      // On error, go to Terms
-      navigation.replace("Privacy");
-    }
-  };
-
+  /* ------------------------------------------------------------
+   * 4. Handlers
+   * ------------------------------------------------------------ */
   const handleNext = () => {
     if (currentIndex < ONBOARDING_DATA.length - 1) {
       flatListRef.current.scrollToIndex({ index: currentIndex + 1 });
@@ -206,11 +221,8 @@ export default function Splash({ navigation }) {
 
   const completeOnboarding = async () => {
     try {
-      // Mark onboarding as complete
       await AsyncStorage.setItem("alreadyLaunched", "true");
       await AsyncStorage.setItem("onboardingComplete", "true");
-      
-      // Navigate to Terms & Conditions
       navigation.replace("Privacy");
     } catch (e) {
       navigation.replace("Privacy");
@@ -225,78 +237,56 @@ export default function Splash({ navigation }) {
 
   const spin = logoRotate.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
+    outputRange: ["0deg", "360deg"],
   });
 
-  // Splash Screen
-  const SplashScreen = () => (
+  /* ------------------------------------------------------------
+   * 5. VIDEO SPLASH SCREEN
+   * ------------------------------------------------------------ */
+  const VideoSplash = () => (
     <View style={styles.flex}>
       <StatusBar barStyle="light-content" />
       <View style={styles.splashContainer}>
-        <Animated.View
-          style={[
-            styles.logoWrapper,
-            {
-              opacity: fadeAnim,
-              transform: [
-                { scale: logoScale },
-                { rotate: spin },
-              ],
-            },
-          ]}
-        >
-          <View style={styles.logoOuterRing}>
-            <View style={styles.logoInnerCircle}>
-              <Text style={styles.logoText}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
-            </View>
-          </View>
-        </Animated.View>
-
-        <Animated.View style={{ opacity: fadeAnim, alignItems: 'center' }}>
-          <Text style={styles.brandName}>THE DEFT CREW</Text>
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <View style={styles.dividerDiamond} />
-            <View style={styles.dividerLine} />
-          </View>
-          <Text style={styles.tagline}>Elevate Your Experience</Text>
-        </Animated.View>
-
-        <Animated.View style={[styles.bottomInfo, { opacity: fadeAnim }]}>
-          <Text style={styles.estText}>EST. 2026 • KARACHI</Text>
-        </Animated.View>
+        <Video
+          ref={videoRef}
+          source={require("../../../assets/tdc.mp4")}
+          style={styles.video}
+          resizeMode={ResizeMode.COVER}
+          shouldPlay
+          isLooping={false}
+          isMuted={false}
+          onPlaybackStatusUpdate={(status) => {
+            if (status.isLoaded && status.didJustFinish) {
+              setVideoFinished(true);
+            }
+            if (status.error) {
+              console.warn("Video error:", status.error);
+              setVideoFinished(true);
+            }
+          }}
+        />
       </View>
     </View>
   );
 
-  // Luxury Card Design
+  /* ------------------------------------------------------------
+   * 6. LUXURY CARD (onboarding)
+   * ------------------------------------------------------------ */
   const LuxuryCard = ({ item, index }) => {
     const cardScale = scrollX.interpolate({
-      inputRange: [
-        (index - 1) * width,
-        index * width,
-        (index + 1) * width,
-      ],
+      inputRange: [(index - 1) * width, index * width, (index + 1) * width],
       outputRange: [0.88, 1, 0.88],
       extrapolate: "clamp",
     });
 
     const cardTranslateY = scrollX.interpolate({
-      inputRange: [
-        (index - 1) * width,
-        index * width,
-        (index + 1) * width,
-      ],
+      inputRange: [(index - 1) * width, index * width, (index + 1) * width],
       outputRange: [20, 0, 20],
       extrapolate: "clamp",
     });
 
     const cardOpacity = scrollX.interpolate({
-      inputRange: [
-        (index - 1) * width,
-        index * width,
-        (index + 1) * width,
-      ],
+      inputRange: [(index - 1) * width, index * width, (index + 1) * width],
       outputRange: [0.5, 1, 0.5],
       extrapolate: "clamp",
     });
@@ -307,16 +297,13 @@ export default function Splash({ navigation }) {
           styles.cardOuter,
           {
             opacity: cardOpacity,
-            transform: [
-              { scale: cardScale },
-              { translateY: cardTranslateY },
-            ],
+            transform: [{ scale: cardScale }, { translateY: cardTranslateY }],
           },
         ]}
       >
         <View style={styles.card}>
           <View style={styles.cardBorder} />
-          
+
           <View style={styles.cardContent}>
             <View style={styles.cardTop}>
               <View style={styles.iconCircle}>
@@ -353,14 +340,17 @@ export default function Splash({ navigation }) {
     );
   };
 
-  if (loading) return <SplashScreen />;
+  /* ------------------------------------------------------------
+   * 7. Render
+   * ------------------------------------------------------------ */
+  if (loading) return <VideoSplash />;
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
       {currentIndex < ONBOARDING_DATA.length - 1 && (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.skipButton}
           onPress={completeOnboarding}
           activeOpacity={0.7}
@@ -404,7 +394,9 @@ export default function Splash({ navigation }) {
             >
               <View style={styles.titleAccent}>
                 <View style={styles.accentDot} />
-                <Text style={styles.titlePrefix}><Text style={{color:'black'}}>tdc</Text>. PRIVILEGE</Text>
+                <Text style={styles.titlePrefix}>
+                  <Text style={{ color: "black" }}>tdc</Text>. PRIVILEGE
+                </Text>
               </View>
               <Text style={styles.title}>{item.title}</Text>
               <View style={styles.titleUnderline} />
@@ -423,7 +415,7 @@ export default function Splash({ navigation }) {
               extrapolate: "clamp",
             });
 
-            const dotColor = i === currentIndex ? '#f9c349' : '#e0e0e0';
+            const dotColor = i === currentIndex ? "#f9c349" : "#e0e0e0";
 
             return (
               <Animated.View
@@ -447,16 +439,22 @@ export default function Splash({ navigation }) {
             activeOpacity={0.9}
           >
             <LinearGradient
-              colors={['#000', '#000']}
+              colors={["#000", "#000"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.buttonGradient}
             >
               <Text style={styles.buttonText}>
-                {currentIndex === ONBOARDING_DATA.length - 1 ? "GET STARTED" : "NEXT"}
+                {currentIndex === ONBOARDING_DATA.length - 1
+                  ? "GET STARTED"
+                  : "NEXT"}
               </Text>
               <Ionicons
-                name={currentIndex === ONBOARDING_DATA.length - 1 ? "checkmark-circle" : "arrow-forward"}
+                name={
+                  currentIndex === ONBOARDING_DATA.length - 1
+                    ? "checkmark-circle"
+                    : "arrow-forward"
+                }
                 size={20}
                 color="#000"
               />
@@ -472,6 +470,9 @@ export default function Splash({ navigation }) {
   );
 }
 
+/* ------------------------------------------------------------
+ * STYLES
+ * ------------------------------------------------------------ */
 const styles = StyleSheet.create({
   flex: { flex: 1 },
 
@@ -487,16 +488,22 @@ const styles = StyleSheet.create({
     backgroundColor: "#000000",
   },
 
-  logoWrapper: {
-    marginBottom: 50,
+  video: {
+    width: width,
+    height: height,
+    position: "absolute",
+    top: 0,
+    left: 0,
   },
+
+  logoWrapper: { marginBottom: 50 },
 
   logoOuterRing: {
     width: 120,
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: '#fff',
+    borderColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
     padding: 5,
@@ -510,7 +517,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: "#fff",
   },
 
   logoText: {
@@ -529,22 +536,18 @@ const styles = StyleSheet.create({
   },
 
   dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 20,
   },
 
-  dividerLine: {
-    width: 40,
-    height: 2,
-    backgroundColor: '#f9c349',
-  },
+  dividerLine: { width: 40, height: 2, backgroundColor: "#f9c349" },
 
   dividerDiamond: {
     width: 8,
     height: 8,
-    backgroundColor: '#f9c349',
-    transform: [{ rotate: '45deg' }],
+    backgroundColor: "#f9c349",
+    transform: [{ rotate: "45deg" }],
     marginHorizontal: 10,
   },
 
@@ -552,18 +555,12 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.8)",
     fontSize: 16,
     letterSpacing: 3,
-    fontWeight: '300',
+    fontWeight: "300",
   },
 
-  bottomInfo: {
-    position: "absolute",
-    bottom: 60,
-  },
+  bottomInfo: { position: "absolute", bottom: 60 },
 
-  estText: {
-    color: "rgba(255,255,255,0.5)",
-    fontSize: 10,
-  },
+  estText: { color: "rgba(255,255,255,0.5)", fontSize: 10 },
 
   skipButton: {
     position: "absolute",
@@ -602,20 +599,20 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     borderRadius: 25,
-    backgroundColor: '#ffffff',
-    overflow: 'hidden',
+    backgroundColor: "#ffffff",
+    overflow: "hidden",
     borderWidth: 1,
-    borderColor: '#f0f0f0',
-    marginTop: -30
+    borderColor: "#f0f0f0",
+    marginTop: -30,
   },
 
   cardBorder: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     height: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: "#f9c349",
   },
 
   cardContent: {
@@ -638,7 +635,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: '#f9c349',
+    borderColor: "#f9c349",
   },
 
   statContainer: {
@@ -655,10 +652,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  cardMiddle: {
-    alignItems: "center",
-    paddingVertical: 4,
-  },
+  cardMiddle: { alignItems: "center", paddingVertical: 4 },
 
   offerText: {
     color: "#000",
@@ -670,7 +664,7 @@ const styles = StyleSheet.create({
   },
 
   taglineContainer: {
-    backgroundColor: '#f9c349',
+    backgroundColor: "#f9c349",
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 15,
@@ -692,7 +686,7 @@ const styles = StyleSheet.create({
   memberInfo: {
     flexDirection: "row",
     alignItems: "baseline",
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
@@ -706,11 +700,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
 
-  memberId: {
-    color: "#000",
-    fontSize: 16,
-    fontWeight: "900",
-  },
+  memberId: { color: "#000", fontSize: 16, fontWeight: "900" },
 
   activeBadge: {
     flexDirection: "row",
@@ -736,12 +726,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  cornerAccent: {
-    position: 'absolute',
-    width: 20,
-    height: 20,
-    borderColor: '#f9c349',
-  },
+  cornerAccent: { position: "absolute", width: 20, height: 20, borderColor: "#f9c349" },
 
   topLeftAccent: {
     top: 10,
@@ -764,8 +749,8 @@ const styles = StyleSheet.create({
   },
 
   titleAccent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
   },
 
@@ -773,7 +758,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: "#f9c349",
     marginRight: 8,
   },
 
@@ -796,7 +781,7 @@ const styles = StyleSheet.create({
   titleUnderline: {
     width: 40,
     height: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: "#f9c349",
     marginBottom: 20,
     borderRadius: 1.5,
   },
@@ -827,7 +812,7 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     marginHorizontal: 4,
-    marginTop: 45
+    marginTop: 45,
   },
 
   button: {
@@ -853,10 +838,10 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "800",
-    marginRight: 8,
+    marginRight: 2,
     letterSpacing: 1,
-    textAlign:'center',
-    justifyContent:'center'
+    textAlign: "center",
+    justifyContent: "center",
   },
 
   counter: {

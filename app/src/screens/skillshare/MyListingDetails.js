@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
 
   topHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 34 : 8, paddingBottom: 10,
+    paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 4 : 8, paddingBottom: 10,
     backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee',
   },
   headerBtn: {

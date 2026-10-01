@@ -14,7 +14,8 @@ import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AuthContext } from '../../context/AuthContext';
 import ReportModal from "./ReportModal";
-
+// At top of PostCard.js:
+import BadgePip from '../../engagement/components/BadgePip';
 const { width, height } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
@@ -947,6 +948,9 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
           <View style={styles.userMeta}>
             <View style={styles.userNameRow}>
               <Text style={styles.userName}>{post.author?.name || "TDC User"}</Text>
+              {post.author?.topBadge && (
+    <BadgePip mood={post.author.topBadge.mood || 'sorted'} />
+  )}
               {statusDisplay && (
                 <View style={[styles.statusBadge, { backgroundColor: statusDisplay.color + '20' }]}>
                   <Text style={[styles.statusText, { color: statusDisplay.color }]}>
@@ -1464,7 +1468,7 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 16, fontWeight: '700', color: '#999', marginTop: 4 },
   emptySubtext: { fontSize: 13, color: '#ccc', marginTop: 2 },
 
-  inputWrapper: { borderTopWidth: 1, borderTopColor: '#f0f0f0', backgroundColor: '#fff' },
+  inputWrapper: { borderTopWidth: 1, borderTopColor: '#f0f0f0', backgroundColor: '#fff', marginBottom:20 },
   replyNotifier: {
     flexDirection: 'row',
     justifyContent: 'space-between',

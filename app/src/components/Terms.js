@@ -111,37 +111,37 @@ export default function TermsScreen() {
     {
       icon: "account-check-outline",
       title: "Student Eligibility",
-      content: "Access is strictly for verified university students. You must provide valid academic credentials.",
+      content: "tdc is only for verified university students & alumni. You'll need valid student credentials.",
       color: "#f9c349"
     },
     {
       icon: "briefcase-search-outline",
       title: "Career & Internships",
-      content: "tdc facilitates connections with employers. We do not guarantee employment.",
+      content: "We connect you with employers. We can't guarantee you a job.",
       color: "#4ecdc4"
     },
     {
       icon: "airplane-takeoff",
-      title: "Travel & Exchange",
-      content: "Travel packages are subject to third-party provider terms and visa regulations.",
+      title: "AI Travel & Exchange",
+      content: "Travel suggestions are AI-generated. Check prices, bookings and visa rules before you go.",
       color: "#6c5ce7"
     },
     {
       icon: "tag-text-outline",
       title: "Brand Redemption",
-      content: "Discounts are subject to brand availability. tdc is not responsible for service quality.",
+      content: "Deals depend on the brand. tdc isn't responsible for their service.",
       color: "#fd79a8"
     },
     {
       icon: "shield-key-outline",
       title: "Account Integrity",
-      content: "Sharing credentials with non-students may lead to permanent suspension.",
+      content: "Sharing your account with non-verfied user can get it permanently banned.",
       color: "#ffa502"
     },
     {
       icon: "gavel",
       title: "Governing Law",
-      content: "These terms are governed by the laws of Pakistan. Disputes settled in Pakistani courts.",
+      content: "These terms follow Pakistani law. Disputes go to Pakistani courts",
       color: "#ff6b6b"
     },
   ];
@@ -248,9 +248,9 @@ export default function TermsScreen() {
               
               
              
-              <Text style={styles.heroTitle}>Legal Framework</Text>
+              <Text style={styles.heroTitle}>The Rules</Text>
               <Text style={styles.heroSubtitle}>
-                By joining the Crew, you agree to these terms. We connect students to opportunities.
+                By using tdc, you agree to these terms. Here's the short version.
               </Text>
               
               <View style={styles.decorLine}>

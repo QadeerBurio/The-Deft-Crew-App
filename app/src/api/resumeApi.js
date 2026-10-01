@@ -1,8 +1,52 @@
+// app/src/api/resumeApi.js
 import api from './api';
-import { memoryCache } from './api';
+
+// ✅ Safe memoryCache — use the real one if api.js exports it, else a no-op shim
+let memoryCache;
+try {
+  const apiModule = require('./api');
+  memoryCache = apiModule.memoryCache || apiModule.default?.memoryCache;
+} catch (e) {
+  memoryCache = null;
+}
+
+if (!memoryCache || typeof memoryCache.get !== 'function') {
+  // Fallback no-op cache (prevents crashes if api.js doesn't export memoryCache)
+  const _store = new Map();
+  memoryCache = {
+    get(key) {
+      const item = _store.get(key);
+      if (!item) return null;
+      if (Date.now() > item.expiry) {
+        _store.delete(key);
+        return null;
+      }
+      return item.data;
+    },
+    set(key, data, ttl = 30000) {
+      _store.set(key, { data, expiry: Date.now() + ttl });
+    },
+    delete(key) {
+      if (key.includes('*')) {
+        const prefix = key.replace('*', '');
+        for (const k of Array.from(_store.keys())) {
+          if (k.startsWith(prefix)) _store.delete(k);
+        }
+      } else {
+        _store.delete(key);
+      }
+    },
+    clear() {
+      _store.clear();
+    },
+  };
+  console.warn('[resumeApi] Using fallback memoryCache (api.js did not export one)');
+}
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import * as FileSystem from 'expo-file-system';
+import { engagementBus, ENGAGEMENT_EVENTS } from '../engagement/engagementBus';
 
 export const resumeApi = {
   // Create new resume
@@ -10,25 +54,17 @@ export const resumeApi = {
     try {
       const cleanData = { ...resumeData };
 
-      // Initialize empty objects if not present
-      if (!cleanData.personalInfo) {
-        cleanData.personalInfo = {};
-      }
+      if (!cleanData.personalInfo) cleanData.personalInfo = {};
 
-      // Ensure all personalInfo fields exist
       const personalInfoFields = [
         'firstName', 'lastName', 'title', 'email', 'phone', 'location', 'address',
         'city', 'state', 'country', 'postalCode', 'linkedin',
         'github', 'portfolio'
       ];
-
       personalInfoFields.forEach(field => {
-        if (!cleanData.personalInfo[field]) {
-          cleanData.personalInfo[field] = '';
-        }
+        if (!cleanData.personalInfo[field]) cleanData.personalInfo[field] = '';
       });
 
-      // Ensure professionalSummary has required fields
       if (!cleanData.professionalSummary) {
         cleanData.professionalSummary = {
           title: '',
@@ -37,7 +73,6 @@ export const resumeApi = {
         };
       }
 
-      // Ensure targetJob has required fields
       if (!cleanData.targetJob) {
         cleanData.targetJob = {
           jobTitle: '',
@@ -46,15 +81,11 @@ export const resumeApi = {
         };
       }
 
-      // Clean arrays
       const arrayFields = ['education', 'skills', 'workExperience', 'certifications', 'projects', 'languages', 'references', 'targetJobs'];
       arrayFields.forEach(field => {
-        if (!cleanData[field]) {
-          cleanData[field] = [];
-        }
+        if (!cleanData[field]) cleanData[field] = [];
       });
 
-      // Ensure settings
       if (!cleanData.settings) {
         cleanData.settings = {
           visibility: 'public',
@@ -88,7 +119,6 @@ export const resumeApi = {
     }
   },
 
-  // Get all resumes
   getResumes: async (force = false) => {
     try {
       const cacheKey = 'resumes:all';
@@ -96,7 +126,6 @@ export const resumeApi = {
         const cached = memoryCache.get(cacheKey);
         if (cached) return cached;
       }
-
       const response = await api.get('/resume');
       const data = response.data;
       memoryCache.set(cacheKey, data, 30000);
@@ -107,7 +136,6 @@ export const resumeApi = {
     }
   },
 
-  // Get single resume
   getResume: async (resumeId, force = false) => {
     try {
       const cacheKey = `resume:${resumeId}`;
@@ -115,7 +143,6 @@ export const resumeApi = {
         const cached = memoryCache.get(cacheKey);
         if (cached) return cached;
       }
-
       const response = await api.get(`/resume/${resumeId}`);
       const data = response.data;
       memoryCache.set(cacheKey, data, 30000);
@@ -126,11 +153,17 @@ export const resumeApi = {
     }
   },
 
-  // Update resume
   updateResume: async (resumeId, updates) => {
     try {
       const response = await api.put(`/resume/${resumeId}`, updates);
       memoryCache.clear();
+      // 🆕 engagement: queue any popups the backend returned
+      if (response?.data?.engagement?.popups?.length) {
+        engagementBus.emit(
+          ENGAGEMENT_EVENTS.POPUPS_QUEUED,
+          response.data.engagement.popups
+        );
+      }
       return response.data;
     } catch (error) {
       console.error('Update resume error:', error);
@@ -144,6 +177,13 @@ export const resumeApi = {
       memoryCache.delete(`resume:${resumeId}`);
       memoryCache.delete(`recommendations:${resumeId}`);
       memoryCache.delete('resumes:all');
+      // 🆕 engagement
+      if (response?.data?.engagement?.popups?.length) {
+        engagementBus.emit(
+          ENGAGEMENT_EVENTS.POPUPS_QUEUED,
+          response.data.engagement.popups
+        );
+      }
       return response.data;
     } catch (error) {
       console.error('Optimize resume error:', error);
@@ -151,7 +191,6 @@ export const resumeApi = {
     }
   },
 
-  // Delete resume
   deleteResume: async (resumeId) => {
     try {
       const response = await api.delete(`/resume/${resumeId}`);
@@ -165,16 +204,14 @@ export const resumeApi = {
     }
   },
 
-  // Upload resume file
   uploadResume: async (formData, onProgress) => {
     try {
-      // Clear all related cache before upload
       memoryCache.delete('resumes:all');
 
       const response = await api.post('/resume/upload', formData, {
         headers: {
           'Accept': 'application/json',
-          'Content-Type': null, // Suppress Axios default & fallback headers
+          'Content-Type': 'multipart/form-data',
         },
         onUploadProgress: (progressEvent) => {
           if (onProgress && progressEvent.total) {
@@ -185,7 +222,6 @@ export const resumeApi = {
         timeout: 60000,
       });
 
-      // Clear cache after successful upload
       memoryCache.delete('resumes:all');
       return response.data;
     } catch (error) {
@@ -201,7 +237,6 @@ export const resumeApi = {
     }
   },
 
-  // Save a job (write behavioral affinity signal to backend)
   saveJob: async (jobId) => {
     try {
       const response = await api.post(`/jobs/bookmarks/${jobId}`);
@@ -212,7 +247,6 @@ export const resumeApi = {
     }
   },
 
-  // Remove a saved job bookmark
   unsaveJob: async (jobId) => {
     try {
       const response = await api.delete(`/jobs/bookmarks/${jobId}`);
@@ -223,27 +257,22 @@ export const resumeApi = {
     }
   },
 
-  // Log a job interaction (view/ignore/dismiss) for behavioral personalization
   logJobInteraction: async (jobId, interactionType) => {
     try {
       const response = await api.post(`/jobs/interactions/${jobId}`, { interactionType });
       return response.data;
     } catch (error) {
-      // Non-critical — fail silently
       console.warn('Log interaction error (non-critical):', error?.message);
       return null;
     }
   },
 
-  // Get recommendations
-  // Get recommendations
   getRecommendations: async (resumeId) => {
     try {
       const isValidObjectId = (id) => id && /^[0-9a-fA-F]{24}$/.test(id);
       if (!isValidObjectId(resumeId)) {
         return { success: true, data: [] };
       }
-
       const cacheKey = `recommendations:${resumeId}`;
       const cached = memoryCache.get(cacheKey);
       if (cached) return cached;
@@ -257,7 +286,7 @@ export const resumeApi = {
       return { data: [] };
     }
   },
-  // Get job recommendations based on resume
+
   getJobRecommendations: async (resumeId = null, params = {}) => {
     try {
       const isValidObjectId = (id) => id && /^[0-9a-fA-F]{24}$/.test(id);
@@ -266,7 +295,6 @@ export const resumeApi = {
       }
 
       const { limit = 10, page = 1 } = params;
-      const cacheKey = resumeId ? `recommendations:${resumeId}` : 'recommendations:top';
 
       let url = '/jobs/recommendations';
       if (resumeId) {
@@ -284,7 +312,6 @@ export const resumeApi = {
     }
   },
 
-  // Get top job recommendations (simplified for dashboard)
   getTopJobRecommendations: async (limit = 5) => {
     try {
       const response = await api.get('/jobs/recommendations/top', {
@@ -297,7 +324,6 @@ export const resumeApi = {
     }
   },
 
-  // Apply to a job
   applyToJob: async (jobId, applicationData) => {
     try {
       const formData = new FormData();
@@ -315,13 +341,10 @@ export const resumeApi = {
       });
 
       const response = await api.post(`/jobs/apply/${jobId}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 60000,
       });
 
-      // Clear recommendations cache
       memoryCache.delete('recommendations:*');
       return response.data;
     } catch (error) {
@@ -330,7 +353,6 @@ export const resumeApi = {
     }
   },
 
-  // Get my applications
   getMyApplications: async () => {
     try {
       const response = await api.get('/jobs/my-applications');
@@ -340,7 +362,7 @@ export const resumeApi = {
       return [];
     }
   },
-  // Update template
+
   updateTemplate: async (resumeId, template) => {
     try {
       const response = await api.put(`/resume/${resumeId}/template`, { template });
@@ -352,7 +374,6 @@ export const resumeApi = {
     }
   },
 
-  // Get analytics
   getAnalytics: async (resumeId) => {
     try {
       const cacheKey = `analytics:${resumeId}`;
@@ -369,7 +390,6 @@ export const resumeApi = {
     }
   },
 
-  // Enhance text with AI (Work, Projects, Summary)
   enhanceText: async (text, context) => {
     try {
       const response = await api.post('/resume/enhance-text', { text, context }, { timeout: 60000 });
@@ -379,7 +399,6 @@ export const resumeApi = {
     }
   },
 
-  // Get AI skill suggestions
   suggestSkills: async (currentSkills, targetRole) => {
     try {
       const response = await api.post('/resume/suggest-skills', { currentSkills, targetRole }, { timeout: 60000 });
@@ -389,7 +408,6 @@ export const resumeApi = {
     }
   },
 
-  // Check resume fit against job
   checkResumeFit: async (resumeId, jobId) => {
     try {
       const response = await api.post(`/resume/${resumeId}/check-fit`, { jobId }, { timeout: 60000 });
@@ -399,7 +417,6 @@ export const resumeApi = {
     }
   },
 
-  // Debug resume upload
   debugResume: async (resumeId) => {
     try {
       const response = await api.get(`/resume/${resumeId}/debug`);
@@ -410,7 +427,6 @@ export const resumeApi = {
     }
   },
 
-  // Duplicate resume
   duplicateResume: async (resumeId) => {
     try {
       const response = await api.post(`/resume/${resumeId}/duplicate`);

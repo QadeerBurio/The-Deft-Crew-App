@@ -6,13 +6,13 @@ import UniversityScreen from "../screens/University";
 import Slider from "../screens/Slider";
 import Home from "../screens/Home";
 import ContactUs from "../components/ContactUs";
-import Card from "../components/Card"
+import Card from "../components/Card";
 import BookingScreen from "../components/BookingScreen";
 import PaymentScreen from "../components/PaymentScreen";
 import TravelingScreen from "../components/TravellingScreen";
 import EditProfileScreen from "../screens/Social/EditProfileScreen";
 import ChatHistoryScreen from "../screens/ChatHistoryScreen";
-import ResumeStack from "./ResumeNavigator";
+import ResumeStack from "./ResumeNavigator";  // 👈 FIXED: was "./ResumeNavigator"
 import Social from "../screens/Social/Social";
 import OfferScreen from "../screens/OfferScreen";
 
@@ -22,37 +22,44 @@ export default function HomeStack() {
   return (
     <Stack.Navigator 
       screenOptions={{ headerShown: false }}
-      // Add this to ensure proper navigation
       initialRouteName="HomeStackMain"
     >
       <Stack.Screen 
         name="HomeStackMain" 
         component={Home} 
-        // Add this to ensure the screen is always mounted
         options={{ freezeOnBlur: false }}
       />
       <Stack.Screen name="Brands" component={Brands} />
       <Stack.Screen name="ContactUs" component={ContactUs} />
-     <Stack.Screen name="Resume" component={ResumeStack} />
-      <Stack.Screen name="BrandOffers" component={BrandOffersScreen} />
+      
+      {/* Resume Stack — nested navigator */}
       <Stack.Screen
-  name="OfferScreen"
-  component={OfferScreen}
+  name="Resume"
+  component={ResumeStack}
   options={{
     headerShown: false,
-    animation: "slide_from_right", // or 'slide_from_bottom'
+    
   }}
 />
+      
+      <Stack.Screen name="BrandOffers" component={BrandOffersScreen} />
+      <Stack.Screen
+        name="OfferScreen"
+        component={OfferScreen}
+        options={{
+          headerShown: false,
+          animation: "slide_from_right",
+        }}
+      />
       <Stack.Screen name="University" component={UniversityScreen} />
       <Stack.Screen name="Slider" component={Slider} />
       <Stack.Screen name="Card" component={Card} />
       <Stack.Screen name="Booking" component={BookingScreen} />
       <Stack.Screen name="Payment" component={PaymentScreen} />
       <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
-      <Stack.Screen name="TravellingScreen" component={TravelingScreen} options={{ headerShown: false }}/>
+      <Stack.Screen name="TravellingScreen" component={TravelingScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ChatHistory" component={ChatHistoryScreen} />
       <Stack.Screen name="Social" component={Social} options={{ headerShown: false }} />
-
     </Stack.Navigator>
   );
 }

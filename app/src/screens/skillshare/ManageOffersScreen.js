@@ -188,7 +188,7 @@ export default function ManageOffersScreen({ route, navigation }) {
           <Ionicons name="arrow-back" size={22} color={INK} />
         </TouchableOpacity>
         <Text style={styles.topHeaderTitle}>Manage Offers</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
+        <TouchableOpacity onPress={() => navigation.navigate('NotificationSkillshare')}>
           <Ionicons name="notifications-outline" size={22} color={INK} />
         </TouchableOpacity>
       </View>
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
   centerFillScreen: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8f9fa' },
   topHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 34 : 8, paddingBottom: 10,
+    paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 3 : 8, paddingBottom: 10,
     backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee',
   },
   topHeaderTitle: { fontSize: 18, fontWeight: '800', color: INK },

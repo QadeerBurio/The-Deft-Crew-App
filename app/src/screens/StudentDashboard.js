@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+// app/src/screens/StudentDashboard.js — with engagement sorted indicators (all 4 cards)
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -17,6 +18,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
+
+// 🆕 engagement
+import FeatureDot from '../engagement/components/FeatureDot';
+import { useMissions } from '../engagement/hooks/useMissions';
 
 const { width } = Dimensions.get('window');
 const COLUMN_WIDTH = (width - 60) / 2;
@@ -160,7 +165,7 @@ const DashboardSkeleton = () => {
 };
 
 // ─── Animated Grid Card ──────────────────────────────────────────────
-const AnimatedGridCard = ({ item, index, navigation }) => {
+const AnimatedGridCard = ({ item, index, navigation, missionKey, sorted }) => {
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(24)).current;
@@ -291,14 +296,22 @@ const AnimatedGridCard = ({ item, index, navigation }) => {
           end={{ x: 1, y: 1 }}
         >
           <View style={styles.cardHeader}>
-            <LinearGradient
-              colors={item.colors}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.iconCircle}
-            >
-              <MaterialCommunityIcons name={item.icon} size={24} color="#FFF" />
-            </LinearGradient>
+            {/* 🆕 icon circle with mood-face dot on top-right */}
+            <View style={styles.iconCircleWrap}>
+              <LinearGradient
+                colors={item.colors}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.iconCircle}
+              >
+                <MaterialCommunityIcons name={item.icon} size={24} color="#FFF" />
+              </LinearGradient>
+
+              {missionKey && (
+                <FeatureDot missionKey={missionKey} sorted={sorted} />
+              )}
+            </View>
+
             <View style={styles.cardNumberBadge}>
               <Text style={styles.cardNumberText}>{item.number}</Text>
             </View>
@@ -340,6 +353,28 @@ const StudentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [showSkeleton, setShowSkeleton] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // 🆕 engagement: read missions + sorted state
+  const { missions } = useMissions();
+
+  // 🆕 Map of sorted feature keys → boolean
+  const sortedFeatureIds = useMemo(() => {
+    if (!missions?.cards) return new Set();
+    const s = new Set();
+    for (const c of missions.cards) {
+      if (c.sorted) s.add(c.feature);
+    }
+    return s;
+  }, [missions?.cards]);
+
+  // 🆕 Feature mapping — ALL 4 cards now show a dot
+  const getMissionKey = (routeName) => {
+    if (routeName === 'ResumeDashboard') return 'resume';
+    if (routeName === 'Dashboard') return 'skillshare';   // SkillsShare
+    if (routeName === 'Career') return 'jobs';
+    if (routeName === 'Exchange') return 'scholarship';   // Scholarship Events
+    return null;
+  };
 
   const headerSlide = useRef(new Animated.Value(-20)).current;
   const headerOpacity = useRef(new Animated.Value(0)).current;
@@ -548,26 +583,38 @@ const StudentDashboard = () => {
             <View style={styles.gridColumn}>
               {menuItems
                 .filter((_, i) => i % 2 === 0)
-                .map((item, index) => (
-                  <AnimatedGridCard
-                    key={item.id}
-                    item={item}
-                    index={index * 2}
-                    navigation={navigation}
-                  />
-                ))}
+                .map((item, index) => {
+                  const missionKey = getMissionKey(item.routeName);
+                  const sorted = missionKey && sortedFeatureIds.has(missionKey);
+                  return (
+                    <AnimatedGridCard
+                      key={item.id}
+                      item={item}
+                      index={index * 2}
+                      navigation={navigation}
+                      missionKey={missionKey}
+                      sorted={sorted}
+                    />
+                  );
+                })}
             </View>
             <View style={[styles.gridColumn, { marginTop: 25 }]}>
               {menuItems
                 .filter((_, i) => i % 2 !== 0)
-                .map((item, index) => (
-                  <AnimatedGridCard
-                    key={item.id}
-                    item={item}
-                    index={index * 2 + 1}
-                    navigation={navigation}
-                  />
-                ))}
+                .map((item, index) => {
+                  const missionKey = getMissionKey(item.routeName);
+                  const sorted = missionKey && sortedFeatureIds.has(missionKey);
+                  return (
+                    <AnimatedGridCard
+                      key={item.id}
+                      item={item}
+                      index={index * 2 + 1}
+                      navigation={navigation}
+                      missionKey={missionKey}
+                      sorted={sorted}
+                    />
+                  );
+                })}
             </View>
           </View>
 
@@ -746,6 +793,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 20,
+  },
+  iconCircleWrap: {
+    position: 'relative',
+    overflow: 'visible',
   },
   iconCircle: {
     width: 52,

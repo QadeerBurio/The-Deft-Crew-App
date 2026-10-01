@@ -99,64 +99,64 @@ export default function WhyPointsScreen() {
     { 
       icon: "briefcase-check-outline", 
       color: "#f9c349", 
-      title: "Elite Career Hub", 
-      desc: "First-look access to premium internships and direct referrals.",
+      title: "Career Hub", 
+      desc: "See top internships first and get direct referrals.",
       category: "Career"
     },
     { 
       icon: "earth-arrow-right", 
       color: "#4ecdc4", 
-      title: "Global Exchange", 
-      desc: "Priority applications for international exchange programs.",
+      title: "Global Scholarships", 
+      desc: "Your Scholarships applications go to the front of the line.",
       category: "Global"
     },
     { 
       icon: "airplane-settings", 
       color: "#6c5ce7", 
-      title: "Travel Tiers", 
-      desc: "Subsidized student travel packages and group tours.",
-      category: "Travel"
+      title: "AI Travel Planner", 
+      desc: "Plan trips, routes and budgets with your AI travel assistant.",
+      category: "Travel Assistant"
     },
     { 
       icon: "ticket-confirmation-outline", 
       color: "#ff6b6b", 
       title: "Boosted Discounts", 
-      desc: "Higher percentage discounts at premium partner brands.",
+      desc: "Bigger discounts at premium partner brands.",
       category: "Discounts"
     },
     { 
       icon: "shield-star-outline", 
       color: "#f9c349", 
       title: "Campus Leadership", 
-      desc: "Verified campus leader with networking opportunities.",
+      desc: "Get verified as a campus leader and grow your network.",
       category: "Leadership"
     },
     { 
       icon: "account-group-outline", 
       color: "#a29bfe", 
       title: "Skills Network", 
-      desc: "Connect with students to share expertise and collaborate.",
+      desc: "Find students with skills you need. Swap, learn, build together.",
       category: "Skills"
     },
     { 
       icon: "calendar-star-outline", 
       color: "#fd79a8", 
       title: "Premium Events", 
-      desc: "VIP access to exclusive workshops and networking events.",
+      desc: "VIP entry to workshops and networking events.",
       category: "Events"
     },
     { 
       icon: "file-document-outline", 
       color: "#00b894", 
       title: "Smart Resume", 
-      desc: "ATS-optimized resumes with AI-powered suggestions.",
+      desc: "Build a resume that passes ATS, with AI tips as you go.",
       category: "Career"
     },
     { 
       icon: "star-circle-outline", 
       color: "#fdcb6e", 
       title: "Job Recs", 
-      desc: "Personalized job recommendations from top companies.",
+      desc: "Jobs matched to you, from companies worth your time.",
       category: "Career"
     },
   ];
@@ -239,7 +239,7 @@ export default function WhyPointsScreen() {
         >
           <Ionicons name="arrow-back" size={22} color="#1a1a1a" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Privilege</Text>
+        <Text style={styles.headerTitle}>tdc Privilege</Text>
         <View style={{ width: 36 }} />
       </Animated.View>
 
@@ -278,7 +278,7 @@ export default function WhyPointsScreen() {
               
               <Text style={styles.heroTitle}>tdc Privilege</Text>
               <Text style={styles.heroSubtitle}>
-                Verified activity unlocks elite rewards, career growth, and global opportunities.
+                Stay active on tdc, get verified, unlock better perks.
               </Text>
               
               <View style={styles.decorLine}>
@@ -295,7 +295,7 @@ export default function WhyPointsScreen() {
           <View style={styles.benefitsSection}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionDot} />
-              <Text style={styles.sectionTitle}>Benefits</Text>
+              <Text style={styles.sectionTitle}>Priviledge</Text>
               <View style={styles.sectionLine} />
             </View>
             {benefits.map((item, i) => (

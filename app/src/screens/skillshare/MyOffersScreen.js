@@ -151,7 +151,7 @@ export default function MyOffersScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor="#f9c349" />
 
       <View style={styles.topHeader}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   centerFillScreen: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8f9fa', padding: 20 },
   topHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 34 : 8, paddingBottom: 10,
+    paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 4 : 8, paddingBottom: 10,
     backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee',
   },
   topHeaderTitle: { fontSize: 18, fontWeight: '800', color: BRAND },

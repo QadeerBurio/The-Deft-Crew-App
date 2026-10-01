@@ -117,14 +117,14 @@ export default function AboutScreen() {
   };
 
   const features = [
-    { title: "Student Deals", desc: "Exclusive discounts across 200+ brands", icon: "pricetag-outline", color: "#f9c349" },
-    { title: "Skills Share", desc: "Connect & learn from fellow students", icon: "people-outline", color: "#a29bfe" },
-    { title: "Premium Events", desc: "Workshops & networking events", icon: "calendar-outline", color: "#fd79a8" },
-    { title: "Resume Builder", desc: "AI-powered ATS-optimized resumes", icon: "document-text-outline", color: "#00b894" },
-    { title: "Scholarships", desc: "Internal grants & external funding", icon: "school-outline", color: "#ffa502" },
-    { title: "Student Travel", desc: "Budget-friendly travel packages", icon: "airplane-outline", color: "#6c5ce7" },
-    { title: "Career Mentorship", desc: "Guidance from industry experts", icon: "briefcase-outline", color: "#e17055" },
-    { title: "Community Forum", desc: "Discuss, share & grow together", icon: "chatbubbles-outline", color: "#00cec9" },
+    { title: "Student Deals", desc: "Discounts at 100+ brands", icon: "pricetag-outline", color: "#f9c349" },
+    { title: "Skills Share", desc: "Learn from other students", icon: "people-outline", color: "#a29bfe" },
+    { title: "Premium Events", desc: "Workshops and meetups", icon: "calendar-outline", color: "#fd79a8" },
+    { title: "Resume Builder", desc: "AI resumes that pass ATS", icon: "document-text-outline", color: "#00b894" },
+    { title: "Scholarships", desc: "Grants and funding in one place", icon: "school-outline", color: "#ffa502" },
+    { title: "AI Travel Planner", desc: "Plan trips on a student budget", icon: "airplane-outline", color: "#6c5ce7" },
+    { title: "Career Mentorship", desc: "Advice from people in the industry", icon: "briefcase-outline", color: "#e17055" },
+    { title: "Community Forum", desc: "Ask, confess, connect", icon: "chatbubbles-outline", color: "#00cec9" },
   ];
 
   const FeatureCard = ({ item, index }) => {
@@ -203,14 +203,14 @@ export default function AboutScreen() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <Text style={styles.heroBrandName}>The Deft Crew</Text>
+              <Text style={styles.heroBrandName}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
               <View style={styles.heroTaglineBadge}>
                 <Text style={styles.heroTaglineText}>STUDENT ECOSYSTEM</Text>
               </View>
               <Text style={styles.heroDesc}>
-                Pakistan's largest{' '}
-                <Text style={{ fontWeight: '700', color: '#f9c349' }}>student community</Text>
-                . From savings to career growth, tdc is your ultimate lifestyle partner.
+                Pakistan's {' '}
+                <Text style={{ fontWeight: '700', color: '#f9c349' }}>student & alumni community</Text>
+                . for savings, careers and everything in between.
               </Text>
 
               <View style={styles.decorLine}>
@@ -221,70 +221,7 @@ export default function AboutScreen() {
             </LinearGradient>
           </Animated.View>
 
-          {/* Video Section - Controllable */}
-          <Animated.View style={[styles.videoWrapper, { transform: [{ translateY: slideUpAnim }] }]}>
-            <View style={styles.videoContainer}>
-              <Video
-                ref={videoRef}
-                source={videoSource}
-                style={styles.video}
-                resizeMode={ResizeMode.COVER}
-                isLooping
-                shouldPlay={false}
-                isMuted={isMuted}
-                onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-                useNativeControls={false}
-                onLoad={() => setIsVideoReady(true)}
-                onError={(error) => console.log('Video error:', error)}
-              />
-
-              {/* Video Controls */}
-              <View style={styles.videoOverlay}>
-                <TouchableOpacity
-                  onPress={handlePlayPause}
-                  style={styles.playBtn}
-                  activeOpacity={0.8}
-                  disabled={!isVideoReady}
-                >
-                  <LinearGradient
-                    colors={['#f9c349', '#e6b800']}
-                    style={styles.playBtnGradient}
-                  >
-                    <Ionicons
-                      name={isPlaying ? "pause" : "play"}
-                      size={22}
-                      color="#1a1a1a"
-                      style={{ marginLeft: isPlaying ? 0 : 2 }}
-                    />
-                  </LinearGradient>
-                </TouchableOpacity>
-
-                {/* Bottom Controls */}
-                <View style={styles.videoBottomControls}>
-                  <View style={styles.progressSection}>
-                    <Text style={styles.timeLabel}>{formatTime(videoStatus.positionMillis)}</Text>
-                    <TouchableOpacity 
-                      style={styles.progressBarBase}
-                      onPress={() => {}} // Seek functionality can be added
-                    >
-                      <View style={[styles.progressBarFill, {
-                        width: videoStatus.durationMillis && videoStatus.durationMillis > 0
-                          ? `${(videoStatus.positionMillis / videoStatus.durationMillis) * 100}%`
-                          : '0%'
-                      }]} />
-                    </TouchableOpacity>
-                    <Text style={styles.timeLabel}>{formatTime(videoStatus.durationMillis)}</Text>
-                  </View>
-
-                  <View style={styles.videoActions}>
-                    <TouchableOpacity onPress={handleMute} style={styles.videoIconBtn} activeOpacity={0.7}>
-                      <Ionicons name={isMuted ? "volume-mute" : "volume-high"} size={16} color="#666" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </Animated.View>
+         
 
           {/* About tdc App */}
           <Animated.View style={[styles.aboutSection, { transform: [{ translateY: slideUpAnim }] }]}>
@@ -296,16 +233,16 @@ export default function AboutScreen() {
 
             <View style={styles.aboutCard}>
               <Text style={styles.aboutText}>
-                tdc (The Deft Crew) is Pakistan's premier student ecosystem app. We connect students with exclusive discounts, career opportunities, and a vibrant community.
+                tdc is the all-in-one student app. deals, careers, events, networking and your campus community, in one place.
               </Text>
               <View style={styles.aboutHighlights}>
                 <View style={styles.highlightItem}>
                   <Ionicons name="checkmark-circle" size={14} color="#f9c349" />
-                  <Text style={styles.highlightText}>200+ Partner Brands</Text>
+                  <Text style={styles.highlightText}>100+ Partner Brands</Text>
                 </View>
                 <View style={styles.highlightItem}>
                   <Ionicons name="checkmark-circle" size={14} color="#f9c349" />
-                  <Text style={styles.highlightText}>50+ Universities</Text>
+                  <Text style={styles.highlightText}>15+ Universities</Text>
                 </View>
                 <View style={styles.highlightItem}>
                   <Ionicons name="checkmark-circle" size={14} color="#f9c349" />
@@ -319,13 +256,17 @@ export default function AboutScreen() {
           <Animated.View style={[styles.aboutSection, { transform: [{ translateY: slideUpAnim }] }]}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionDot} />
-              <Text style={styles.sectionTitle}>About Company</Text>
+              <Text style={styles.sectionTitle}>Our Story</Text>
               <View style={styles.sectionLine} />
             </View>
 
             <View style={styles.aboutCard}>
               <Text style={styles.aboutText}>
-                The Deft Crew is a Karachi-based ed-tech startup founded in 2023. We're on a mission to empower students across Pakistan with tools, resources, and opportunities for academic and professional success.
+                While building The Deft Crew, MSB sat across from thousands of students and fresh grads. Talent was never the problem. Access was.
+Students were paying full price at places that would happily give them a discount. Internships and jobs went to whoever heard about
+them first. Events happened across city and nobody knew. Good people sat in the same city and never met.
+The idea for tdc came in 2025. By early 2026, it was live. Student discounts at 100+ brands, internships and jobs in one feed, events near you, and a community of students who actually help each other. One app. Everything a student needs.
+
               </Text>
               <View style={styles.companyInfo}>
                 <View style={styles.companyItem}>
@@ -334,15 +275,15 @@ export default function AboutScreen() {
                 </View>
                 <View style={styles.companyItem}>
                   <Ionicons name="calendar-outline" size={14} color="#94A3B8" />
-                  <Text style={styles.companyText}>Founded 2023</Text>
+                  <Text style={styles.companyText}>Founded 2026</Text>
                 </View>
                 <View style={styles.companyItem}>
                   <Ionicons name="people-outline" size={14} color="#94A3B8" />
-                  <Text style={styles.companyText}>Team of 15+</Text>
+                  <Text style={styles.companyText}>Team of 25+</Text>
                 </View>
                 <View style={styles.companyItem}>
                   <Ionicons name="globe-outline" size={14} color="#94A3B8" />
-                  <Text style={styles.companyText}>tdc.com.pk</Text>
+                  <Text style={styles.companyText}>gettdc.pk</Text>
                 </View>
               </View>
             </View>
@@ -364,8 +305,8 @@ export default function AboutScreen() {
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerLogo}>tdc</Text>
-            <Text style={styles.footerText}>Building a Stronger Student Economy.</Text>
+            <Text style={styles.footerLogo}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
+            <Text style={styles.footerText}>Making student life simpler and careers easier.</Text>
             <Text style={styles.footerSubText}>© 2026 The Deft Crew</Text>
           </View>
         </Animated.View>

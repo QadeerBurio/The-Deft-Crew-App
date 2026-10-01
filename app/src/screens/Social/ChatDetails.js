@@ -230,7 +230,6 @@ const AudioBubble = React.memo(({ item, isMe, onPlay, onLongPress, isCurrentlyPl
     });
   };
 
-  const displayDuration = duration > 0 ? formatDuration(duration) : '0:00';
   const displayCurrentTime = duration > 0 ? formatDuration(currentTime) : '0:00';
   const totalDuration = duration > 0 ? formatDuration(duration) : '0:00';
 
@@ -338,7 +337,6 @@ export default function ChatDetailScreen() {
   const [uploadProgress, setUploadProgress] = useState("");
   const [isRecipientOnline, setIsRecipientOnline] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [recording, setRecording] = useState(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [isImageFullscreen, setIsImageFullscreen] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState(null);
@@ -347,6 +345,8 @@ export default function ChatDetailScreen() {
   const [isCurrentlyPlaying, setIsCurrentlyPlaying] = useState(false);
   const [typingUser, setTypingUser] = useState(null);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const flatListRef = useRef();
   const soundRef = useRef(null);
@@ -354,12 +354,21 @@ export default function ChatDetailScreen() {
   const typingTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
 
+  // Refs for recording (avoid stale closure issues)
+  const recordingRef = useRef(null);
+  const recordingDurationRef = useRef(0);
+  const isRecordingRef = useRef(false);
+  const recordingStartTimeRef = useRef(null);
+  // LOCK: prevents overlapping createAsync calls
+  const isStartingRecordingRef = useRef(false);
+  // CHAIN: forces next start to wait for previous stop to fully unload
+  const recordingCleanupRef = useRef(Promise.resolve());
+
   const optionsSlide = useRef(new Animated.Value(400)).current;
   const deleteSlide = useRef(new Animated.Value(400)).current;
   const imagePickerSlide = useRef(new Animated.Value(400)).current;
   const headerFade = useRef(new Animated.Value(0)).current;
   const recordingAnim = useRef(new Animated.Value(1)).current;
-  const inputSlide = useRef(new Animated.Value(30)).current;
   const recordingTimerRef = useRef(null);
   const onlinePulse = useRef(new Animated.Value(1)).current;
 
@@ -404,15 +413,19 @@ export default function ChatDetailScreen() {
     return () => backHandler.remove();
   }, [handleGoBack, isNavigating]);
 
-  // Keyboard listeners — scroll to end when keyboard opens
+  // Keyboard listeners
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
-    const showSub = Keyboard.addListener(showEvent, () => {
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardVisible(true);
+      setKeyboardHeight(e.endCoordinates.height);
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 200);
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardVisible(false);
+      setKeyboardHeight(0);
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     });
 
@@ -428,15 +441,7 @@ export default function ChatDetailScreen() {
 
     fetchMessages();
 
-    Animated.parallel([
-      Animated.timing(headerFade, { toValue: 1, duration: 500, useNativeDriver: true }),
-      Animated.spring(inputSlide, {
-        toValue: 0,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true
-      }),
-    ]).start();
+    Animated.timing(headerFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
 
     if (recipient?.online !== undefined) {
       setIsRecipientOnline(recipient.online);
@@ -507,6 +512,20 @@ export default function ChatDetailScreen() {
       }
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+      // Cleanup any in-flight recording
+      if (recordingRef.current) {
+        const stale = recordingRef.current;
+        recordingRef.current = null;
+        isRecordingRef.current = false;
+        try {
+          stale.stopAndUnloadAsync();
+        } catch (e) {}
+      }
+
+      // Reset flags so next mount works cleanly
+      isStartingRecordingRef.current = false;
+      recordingCleanupRef.current = Promise.resolve();
     };
   }, [conversationId]);
 
@@ -532,11 +551,16 @@ export default function ChatDetailScreen() {
     }
   }, [showImagePicker]);
 
+  // Recording UI animation + duration timer
   useEffect(() => {
     if (isRecording) {
       recordingTimerRef.current = setInterval(() => {
-        setRecordingDuration(prev => prev + 1);
-      }, 1000);
+        if (recordingStartTimeRef.current) {
+          const elapsed = Math.floor((Date.now() - recordingStartTimeRef.current) / 1000);
+          recordingDurationRef.current = elapsed;
+          setRecordingDuration(elapsed);
+        }
+      }, 500);
 
       Animated.loop(
         Animated.sequence([
@@ -609,15 +633,32 @@ export default function ChatDetailScreen() {
     }
   };
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!inputText.trim()) return;
-    const messageData = {
+    const trimmedText = inputText.trim();
+
+    socket.emit("send_message", {
       conversationId,
       senderId: currentUser._id,
-      text: inputText.trim(),
-      messageType: "text"
-    };
-    socket.emit("send_message", messageData);
+      text: trimmedText,
+      messageType: "text",
+    });
+
+    try {
+      await axios.post(
+        `${API_URL}/notifications/create-message-notif`,
+        {
+          recipientId: recipient._id,
+          conversationId,
+          text: trimmedText,
+          messageType: 'text',
+        },
+        config
+      );
+    } catch (e) {
+      console.log('Message notif create failed (non-blocking):', e.message);
+    }
+
     setInputText("");
     inputRef.current?.focus();
   };
@@ -674,6 +715,20 @@ export default function ChatDetailScreen() {
                 mediaUrl: url,
                 messageType: "image"
               });
+              try {
+                await axios.post(
+                  `${API_URL}/notifications/create-message-notif`,
+                  {
+                    recipientId: recipient._id,
+                    conversationId,
+                    text: '',
+                    messageType: 'image',
+                  },
+                  config
+                );
+              } catch (e) {
+                console.log('Image notif failed:', e.message);
+              }
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             }
         }}
@@ -707,6 +762,20 @@ export default function ChatDetailScreen() {
                 mediaUrl: url,
                 messageType: "image"
               });
+              try {
+                await axios.post(
+                  `${API_URL}/notifications/create-message-notif`,
+                  {
+                    recipientId: recipient._id,
+                    conversationId,
+                    text: '',
+                    messageType: 'image',
+                  },
+                  config
+                );
+              } catch (e) {
+                console.log('Image notif failed:', e.message);
+              }
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             }
         }}
@@ -714,18 +783,45 @@ export default function ChatDetailScreen() {
     }
   };
 
+  // ============================================
+  // RECORDING
+  // ============================================
+
   const startRecording = async () => {
+    // Guard: already recording OR currently starting
+    if (isRecordingRef.current || isStartingRecordingRef.current) {
+      console.log('[Recording] blocked — already active or starting');
+      return;
+    }
+
+    isStartingRecordingRef.current = true;
+
     try {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Microphone permission is required to record voice messages.');
+      // CRITICAL: wait for any previous recording to fully unload
+      await recordingCleanupRef.current;
+
+      // Kill any stale recording object that survived
+      if (recordingRef.current) {
+        try {
+          await recordingRef.current.stopAndUnloadAsync();
+        } catch (e) {}
+        recordingRef.current = null;
+      }
+
+      const perm = await Audio.requestPermissionsAsync();
+      if (perm.status !== 'granted') {
+        Alert.alert(
+          'Permission needed',
+          'Microphone permission is required to record voice messages.'
+        );
+        isStartingRecordingRef.current = false;
         return;
       }
 
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
+        staysActiveInBackground: false,
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: false,
       });
@@ -734,75 +830,160 @@ export default function ChatDetailScreen() {
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
 
-      setRecording(newRecording);
+      recordingRef.current = newRecording;
+      isRecordingRef.current = true;
+      recordingStartTimeRef.current = Date.now();
+      recordingDurationRef.current = 0;
+
       setIsRecording(true);
       setRecordingDuration(0);
 
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       Vibration.vibrate([0, 50]);
 
+      console.log('[Recording] Started');
     } catch (err) {
-      console.error('Start recording error:', err);
-      Alert.alert('Error', 'Failed to start recording. Please try again.');
+      console.error('[Recording] start error:', err);
+
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        });
+      } catch (e) {}
+
+      isRecordingRef.current = false;
+      recordingRef.current = null;
+      recordingStartTimeRef.current = null;
+      setIsRecording(false);
+
+      Alert.alert(
+        'Recording unavailable',
+        'Could not start recording. Please wait a moment and try again.'
+      );
+    } finally {
+      isStartingRecordingRef.current = false;
     }
   };
 
-  const stopRecording = async () => {
-    if (!recording) {
-      setIsRecording(false);
+  const stopRecording = async (shouldSend = true) => {
+    if (!isRecordingRef.current && !recordingRef.current) {
+      console.log('[Recording] stop ignored — nothing active');
       return;
     }
+
+    if (isStartingRecordingRef.current && !recordingRef.current) {
+      console.log('[Recording] stop ignored — start still initializing');
+      return;
+    }
+
+    const activeRecording = recordingRef.current;
+    recordingRef.current = null;
+    isRecordingRef.current = false;
 
     setIsRecording(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    try {
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
+    const elapsedSec = recordingStartTimeRef.current
+      ? Math.max(1, Math.round((Date.now() - recordingStartTimeRef.current) / 1000))
+      : Math.max(1, recordingDurationRef.current);
 
-      if (!uri) {
-        Alert.alert('Error', 'Recording failed to save.');
-        setRecording(null);
-        setRecordingDuration(0);
-        return;
+    recordingStartTimeRef.current = null;
+
+    const cleanupPromise = (async () => {
+      try {
+        if (!activeRecording) return null;
+
+        await activeRecording.stopAndUnloadAsync();
+        const uri = activeRecording.getURI();
+
+        try {
+          await Audio.setAudioModeAsync({
+            allowsRecordingIOS: false,
+            playsInSilentModeIOS: true,
+            shouldDuckAndroid: true,
+            playThroughEarpieceAndroid: false,
+          });
+        } catch (e) {}
+
+        return uri;
+      } catch (error) {
+        console.error('[Recording] stop/unload error:', error);
+
+        try {
+          await Audio.setAudioModeAsync({
+            allowsRecordingIOS: false,
+            playsInSilentModeIOS: true,
+            shouldDuckAndroid: true,
+            playThroughEarpieceAndroid: false,
+          });
+        } catch (e) {}
+
+        return null;
       }
+    })();
 
+    recordingCleanupRef.current = cleanupPromise;
+
+    const uri = await cleanupPromise;
+
+    if (!shouldSend) {
+      console.log('[Recording] cancelled');
+      setRecordingDuration(0);
+      recordingDurationRef.current = 0;
+      return;
+    }
+
+    if (!uri) {
+      console.log('[Recording] no uri — aborting send');
+      setRecordingDuration(0);
+      recordingDurationRef.current = 0;
+      return;
+    }
+
+    console.log('[Recording] Stopped — duration:', elapsedSec, 's');
+
+    try {
       const url = await uploadFile(uri, 'audio');
       if (url) {
-        const durationInSeconds = recordingDuration;
         socket.emit('send_message', {
           conversationId,
           senderId: currentUser._id,
           mediaUrl: url,
           messageType: 'audio',
-          duration: durationInSeconds
+          duration: elapsedSec,
         });
+
+        try {
+          await axios.post(
+            `${API_URL}/notifications/create-message-notif`,
+            {
+              recipientId: recipient._id,
+              conversationId,
+              text: '',
+              messageType: 'audio',
+            },
+            config
+          );
+        } catch (e) {
+          console.log('[Recording] notif failed:', e.message);
+        }
+
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-
-    } catch (error) {
-      console.error('Stop recording error:', error);
-      Alert.alert('Error', 'Failed to process recording.');
+    } catch (uploadErr) {
+      console.error('[Recording] upload/send error:', uploadErr);
     }
 
-    setRecording(null);
     setRecordingDuration(0);
+    recordingDurationRef.current = 0;
   };
 
   const cancelRecording = async () => {
-    setIsRecording(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    if (recording) {
-      try {
-        await recording.stopAndUnloadAsync();
-      } catch (error) {
-        console.error('Cancel recording error:', error);
-      }
-    }
-
-    setRecording(null);
-    setRecordingDuration(0);
+    await stopRecording(false);
   };
 
   const playVoice = async (item, onProgressUpdate) => {
@@ -879,9 +1060,7 @@ export default function ChatDetailScreen() {
     if (!selectedMessage) return;
 
     try {
-      console.log('Deleting message:', selectedMessage._id);
       const response = await axios.delete(`${API_URL}/messages/${selectedMessage._id}`, config);
-      console.log('Delete message response:', response.data);
 
       if (response.data.success) {
         socket.emit("delete_message", {
@@ -994,7 +1173,6 @@ export default function ChatDetailScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} translucent={false} />
 
-      {/* SafeArea header only (top / left / right) */}
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeHeader}>
         <Animated.View style={[styles.header, { opacity: headerFade }]}>
           <TouchableOpacity
@@ -1033,11 +1211,11 @@ export default function ChatDetailScreen() {
         </Animated.View>
       </SafeAreaView>
 
-      {/* Messages + Input area wrapped in KeyboardAvoidingView */}
       <KeyboardAvoidingView
         style={styles.flex1}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+        keyboardVerticalOffset={0}
+        enabled={true}
       >
         <View style={styles.messagesContainer}>
           {loading ? (
@@ -1080,7 +1258,6 @@ export default function ChatDetailScreen() {
             />
           )}
 
-          {/* Upload Progress */}
           {uploading && (
             <View style={styles.uploadBar}>
               <ActivityIndicator size="small" color={COLORS.primary} />
@@ -1088,7 +1265,6 @@ export default function ChatDetailScreen() {
             </View>
           )}
 
-          {/* Recording UI */}
           {isRecording && (
             <View style={styles.recordingBar}>
               <Animated.View style={[styles.recordingDot, { transform: [{ scale: recordingAnim }] }]} />
@@ -1098,7 +1274,7 @@ export default function ChatDetailScreen() {
                 <TouchableOpacity onPress={cancelRecording} style={styles.cancelRecordBtn}>
                   <Ionicons name="close" size={20} color={COLORS.textSecondary} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={stopRecording} style={styles.sendRecordBtn}>
+                <TouchableOpacity onPress={() => stopRecording(true)} style={styles.sendRecordBtn}>
                   <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.sendRecordGradient}>
                     <Ionicons name="send" size={18} color={COLORS.black} />
                   </LinearGradient>
@@ -1108,14 +1284,11 @@ export default function ChatDetailScreen() {
           )}
         </View>
 
-        {/* Input area (inside KeyboardAvoidingView so it lifts properly) */}
-        <Animated.View
+        <View
           style={[
             styles.inputArea,
             {
-              transform: [{ translateY: inputSlide }],
-              // Bottom inset pads the input so it clears the home indicator when keyboard is closed
-              paddingBottom: Math.max(insets.bottom, 10),
+              paddingBottom: keyboardVisible ? 10 : Math.max(insets.bottom, 10),
             },
           ]}
         >
@@ -1146,9 +1319,17 @@ export default function ChatDetailScreen() {
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              onPressIn={startRecording}
-              onPressOut={stopRecording}
-              delayPressIn={200}
+              onPressIn={() => {
+                if (isStartingRecordingRef.current || isRecordingRef.current) {
+                  console.log('[Recording] onPressIn blocked');
+                  return;
+                }
+                startRecording();
+              }}
+              onPressOut={() => stopRecording(true)}
+              delayPressIn={100}
+              delayPressOut={0}
+              activeOpacity={0.7}
               style={styles.micBtn}
             >
               <LinearGradient colors={[COLORS.dark, COLORS.dark]} style={styles.micGradient}>
@@ -1156,7 +1337,7 @@ export default function ChatDetailScreen() {
               </LinearGradient>
             </TouchableOpacity>
           )}
-        </Animated.View>
+        </View>
       </KeyboardAvoidingView>
 
       {/* Image Picker Modal */}
@@ -1301,15 +1482,8 @@ export default function ChatDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fc',
-  },
-  flex1: {
-    flex: 1,
-  },
-
-  // Safe header
+  container: { flex: 1, backgroundColor: '#f8f9fc' },
+  flex1: { flex: 1 },
   safeHeader: {
     backgroundColor: COLORS.white,
     ...Platform.select({
@@ -1319,12 +1493,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.04,
         shadowRadius: 4,
       },
-      android: {
-        elevation: 2,
-      },
+      android: { elevation: 2 },
     }),
   },
-
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -1335,520 +1506,221 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 40, height: 40, borderRadius: 12,
     backgroundColor: COLORS.lightGray,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center',
   },
   headerInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    marginHorizontal: 10,
+    flexDirection: "row", alignItems: "center",
+    flex: 1, marginHorizontal: 10,
   },
-  avatarContainer: {
-    position: 'relative',
-    width: 44,
-    height: 44,
-  },
+  avatarContainer: { position: 'relative', width: 44, height: 44 },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: COLORS.lightGray,
-    borderWidth: 2.5,
-    borderColor: COLORS.primary,
+    borderWidth: 2.5, borderColor: COLORS.primary,
   },
   statusDot: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    position: 'absolute', bottom: 0, right: 0,
+    width: 14, height: 14, borderRadius: 7,
     backgroundColor: COLORS.success,
-    borderWidth: 2.5,
-    borderColor: COLORS.white,
+    borderWidth: 2.5, borderColor: COLORS.white,
     shadowColor: COLORS.success,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.5, shadowRadius: 4, elevation: 3,
   },
-  headerText: {
-    marginLeft: 10,
-    flex: 1,
-  },
-  userName: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: COLORS.black,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: "500",
-    marginTop: 1,
-  },
+  headerText: { marginLeft: 10, flex: 1 },
+  userName: { fontSize: 16, fontWeight: "700", color: COLORS.black },
+  statusText: { fontSize: 11, fontWeight: "500", marginTop: 1 },
   headerActionBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 40, height: 40, borderRadius: 12,
     backgroundColor: COLORS.lightGray,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center',
   },
-
-  messagesContainer: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
+  messagesContainer: { flex: 1 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    fontWeight: '500',
+    marginTop: 12, fontSize: 14,
+    color: COLORS.textSecondary, fontWeight: '500',
   },
-  listContent: {
-    padding: 14,
-    paddingBottom: 10,
-    flexGrow: 1
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 100,
-  },
+  listContent: { padding: 14, paddingBottom: 10, flexGrow: 1 },
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingTop: 100 },
   emptyIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 72, height: 72, borderRadius: 24,
+    justifyContent: 'center', alignItems: 'center',
     marginBottom: 16,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: COLORS.black,
-  },
-  emptySubtitle: {
-    fontSize: 13,
-    color: COLORS.textLight,
-    marginTop: 4,
-    fontWeight: '500',
-  },
+  emptyTitle: { fontSize: 18, fontWeight: '800', color: COLORS.black },
+  emptySubtitle: { fontSize: 13, color: COLORS.textLight, marginTop: 4, fontWeight: '500' },
   dateHeaderContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 16,
-    paddingHorizontal: 20,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    marginVertical: 16, paddingHorizontal: 20,
   },
-  dateHeaderLine: {
-    flex: 1,
-    height: 0.5,
-  },
-  dateHeaderContent: {
-    paddingHorizontal: 12,
-  },
+  dateHeaderLine: { flex: 1, height: 0.5 },
+  dateHeaderContent: { paddingHorizontal: 12 },
   dateHeaderText: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-    letterSpacing: 0.3,
+    fontSize: 12, color: COLORS.textSecondary,
+    fontWeight: '600', letterSpacing: 0.3,
   },
-  msgWrapper: {
-    marginBottom: 8,
-    maxWidth: "78%"
-  },
-  myMsg: {
-    alignSelf: "flex-end"
-  },
-  otherMsg: {
-    alignSelf: "flex-start"
-  },
-  bubble: {
-    padding: 12,
-    borderRadius: 18
-  },
-  mediaBubble: {
-    padding: 0,
-    overflow: "hidden"
-  },
-  audioBubble: {
-    padding: 8,
-    paddingHorizontal: 12,
-    minWidth: 200,
-  },
-  myAudioBubble: {
-    backgroundColor: COLORS.primary,
-    borderBottomRightRadius: 4,
-  },
-  otherAudioBubble: {
-    backgroundColor: '#2d2d2d',
-    borderBottomLeftRadius: 4,
-  },
-  myBubble: {
-    backgroundColor: COLORS.black,
-    borderBottomRightRadius: 4
-  },
-  otherBubble: {
-    backgroundColor: COLORS.lightGray,
-    borderBottomLeftRadius: 4,
-  },
-  msgText: {
-    fontSize: 15,
-    lineHeight: 21
-  },
-  myText: {
-    color: COLORS.white
-  },
-  otherText: {
-    color: COLORS.black
-  },
-  timeText: {
-    fontSize: 10,
-    color: COLORS.textLight,
-    marginTop: 3,
-    marginLeft: 4
-  },
-  timeRight: {
-    textAlign: 'right',
-    marginRight: 4
-  },
-  msgMedia: {
-    borderRadius: 14
-  },
-  audioContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 4,
-  },
-  audioPlayBtn: {
-    borderRadius: 24,
-    overflow: 'hidden',
-    flexShrink: 0,
-  },
+  msgWrapper: { marginBottom: 8, maxWidth: "78%" },
+  myMsg: { alignSelf: "flex-end" },
+  otherMsg: { alignSelf: "flex-start" },
+  bubble: { padding: 12, borderRadius: 18 },
+  mediaBubble: { padding: 0, overflow: "hidden" },
+  audioBubble: { padding: 8, paddingHorizontal: 12, minWidth: 200 },
+  myAudioBubble: { backgroundColor: COLORS.primary, borderBottomRightRadius: 4 },
+  otherAudioBubble: { backgroundColor: '#2d2d2d', borderBottomLeftRadius: 4 },
+  myBubble: { backgroundColor: COLORS.black, borderBottomRightRadius: 4 },
+  otherBubble: { backgroundColor: COLORS.lightGray, borderBottomLeftRadius: 4 },
+  msgText: { fontSize: 15, lineHeight: 21 },
+  myText: { color: COLORS.white },
+  otherText: { color: COLORS.black },
+  timeText: { fontSize: 10, color: COLORS.textLight, marginTop: 3, marginLeft: 4 },
+  timeRight: { textAlign: 'right', marginRight: 4 },
+  msgMedia: { borderRadius: 14 },
+  audioContainer: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
+  audioPlayBtn: { borderRadius: 24, overflow: 'hidden', flexShrink: 0 },
   audioPlayGradient: {
-    width: 44,
-    height: 44,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 44, height: 44, borderRadius: 24,
+    justifyContent: 'center', alignItems: 'center',
   },
-  audioProgressSection: {
-    flex: 1,
-    gap: 6,
-  },
+  audioProgressSection: { flex: 1, gap: 6 },
   audioProgressContainer: {
-    height: 4,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    borderRadius: 2,
-    overflow: 'hidden',
-    width: '100%',
+    height: 4, backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: 2, overflow: 'hidden', width: '100%',
   },
-  audioProgressBar: {
-    height: '100%',
-    backgroundColor: COLORS.primary,
-    borderRadius: 2,
-  },
-  audioTimeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  audioCurrentTime: {
-    fontSize: 11,
-    fontWeight: '500',
-    opacity: 0.9,
-  },
-  waveContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    height: 20,
-  },
-  waveBar: {
-    width: 3,
-    borderRadius: 1.5,
-  },
-  typingIndicator: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  typingText: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    fontStyle: 'italic',
-  },
+  audioProgressBar: { height: '100%', backgroundColor: COLORS.primary, borderRadius: 2 },
+  audioTimeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  audioCurrentTime: { fontSize: 11, fontWeight: '500', opacity: 0.9 },
+  waveContainer: { flexDirection: 'row', alignItems: 'center', gap: 2, height: 20 },
+  waveBar: { width: 3, borderRadius: 1.5 },
+  typingIndicator: { paddingHorizontal: 14, paddingVertical: 8 },
+  typingText: { fontSize: 13, color: COLORS.textSecondary, fontStyle: 'italic' },
   uploadBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 8,
-    backgroundColor: COLORS.lightGray,
-    gap: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    padding: 8, backgroundColor: COLORS.lightGray, gap: 8,
   },
-  uploadText: {
-    fontSize: 12,
-    color: COLORS.primary,
-    fontWeight: '500',
-  },
+  uploadText: { fontSize: 12, color: COLORS.primary, fontWeight: '500' },
   recordingBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    paddingHorizontal: 16,
+    flexDirection: 'row', alignItems: 'center',
+    padding: 10, paddingHorizontal: 16,
     backgroundColor: COLORS.primaryLight,
-    borderTopWidth: 0.5,
-    borderTopColor: COLORS.border,
-    gap: 10,
+    borderTopWidth: 0.5, borderTopColor: COLORS.border, gap: 10,
   },
-  recordingDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: COLORS.danger,
-  },
-  recordingTime: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.black,
-  },
-  recordingLabel: {
-    fontSize: 12,
-    color: COLORS.textLight,
-    flex: 1,
-  },
-  recordingActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
+  recordingDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: COLORS.danger },
+  recordingTime: { fontSize: 14, fontWeight: '700', color: COLORS.black },
+  recordingLabel: { fontSize: 12, color: COLORS.textLight, flex: 1 },
+  recordingActions: { flexDirection: 'row', gap: 8 },
   cancelRecordBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: 36, height: 36, borderRadius: 12,
     backgroundColor: COLORS.lightGray,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center',
   },
-  sendRecordBtn: {
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
+  sendRecordBtn: { borderRadius: 12, overflow: 'hidden' },
   sendRecordGradient: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 36, height: 36, borderRadius: 12,
+    justifyContent: 'center', alignItems: 'center',
   },
   inputArea: {
-    flexDirection: "row",
-    padding: 10,
-    paddingHorizontal: 12,
-    paddingTop: 10,
+    flexDirection: "row", padding: 10, paddingHorizontal: 12, paddingTop: 10,
     alignItems: "flex-end",
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    backgroundColor: COLORS.white,
-    gap: 8,
+    borderTopWidth: 1, borderTopColor: COLORS.border,
+    backgroundColor: COLORS.white, gap: 8,
   },
-  plusBtn: {
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
+  plusBtn: { borderRadius: 14, overflow: 'hidden' },
   plusGradient: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 40, height: 40, borderRadius: 14,
+    justifyContent: 'center', alignItems: 'center',
   },
   input: {
-    flex: 1,
-    backgroundColor: COLORS.lightGray,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    maxHeight: 100,
-    fontSize: 15,
-    color: COLORS.black,
+    flex: 1, backgroundColor: COLORS.lightGray,
+    borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10,
+    maxHeight: 100, fontSize: 15, color: COLORS.black,
   },
-  sendBtn: {
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
+  sendBtn: { borderRadius: 14, overflow: 'hidden' },
   sendGradient: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 40, height: 40, borderRadius: 14,
+    justifyContent: 'center', alignItems: 'center',
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.2, shadowRadius: 4, elevation: 3,
   },
-  micBtn: {
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
+  micBtn: { borderRadius: 14, overflow: 'hidden' },
   micGradient: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 40, height: 40, borderRadius: 14,
+    justifyContent: 'center', alignItems: 'center',
   },
   modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    flex: 1, backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "flex-end",
   },
   modalHandle: {
-    width: 36,
-    height: 4,
-    backgroundColor: COLORS.border,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
+    width: 36, height: 4, backgroundColor: COLORS.border,
+    borderRadius: 2, alignSelf: 'center', marginBottom: 16,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: COLORS.black,
-    marginBottom: 16,
-    textAlign: 'center',
+    fontSize: 18, fontWeight: '800', color: COLORS.black,
+    marginBottom: 16, textAlign: 'center',
   },
   imagePickerModal: {
     backgroundColor: COLORS.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    // paddingBottom set dynamically via insets
+    borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20,
   },
   imagePickerGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 20,
+    flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20,
   },
-  imagePickerItem: {
-    alignItems: 'center',
-    width: '40%',
-  },
+  imagePickerItem: { alignItems: 'center', width: '40%' },
   imagePickerIcon: {
-    width: 70,
-    height: 70,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 70, height: 70, borderRadius: 20,
+    justifyContent: 'center', alignItems: 'center',
     marginBottom: 10,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.1, shadowRadius: 4, elevation: 2,
   },
-  imagePickerLabel: {
-    fontSize: 14,
-    color: COLORS.black,
-    fontWeight: '600',
-  },
+  imagePickerLabel: { fontSize: 14, color: COLORS.black, fontWeight: '600' },
   cancelPickerBtn: {
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderTopWidth: 0.5,
-    borderTopColor: COLORS.border,
-    marginTop: 4,
+    paddingVertical: 12, alignItems: 'center',
+    borderTopWidth: 0.5, borderTopColor: COLORS.border, marginTop: 4,
   },
-  cancelPickerText: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-  },
+  cancelPickerText: { fontSize: 15, color: COLORS.textSecondary, fontWeight: '600' },
   optionsModal: {
     backgroundColor: COLORS.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    // paddingBottom set dynamically via insets
+    borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20,
   },
   optionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    gap: 12,
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 14, gap: 12,
   },
   optionIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 44, height: 44, borderRadius: 14,
+    justifyContent: 'center', alignItems: 'center',
   },
-  optionContent: {
-    flex: 1,
-  },
-  optionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.black,
-  },
-  optionSubtitle: {
-    fontSize: 12,
-    color: COLORS.textLight,
-    marginTop: 1,
-    fontWeight: '500',
-  },
+  optionContent: { flex: 1 },
+  optionTitle: { fontSize: 15, fontWeight: '700', color: COLORS.black },
+  optionSubtitle: { fontSize: 12, color: COLORS.textLight, marginTop: 1, fontWeight: '500' },
   deleteModal: {
     backgroundColor: COLORS.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    // paddingBottom set dynamically via insets
+    borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20,
   },
   fullscreenOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center', alignItems: 'center',
   },
   fullscreenTouchable: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: '100%', height: '100%',
+    justifyContent: 'center', alignItems: 'center',
   },
-  fullscreenImage: {
-    width: '100%',
-    height: '100%',
-  },
+  fullscreenImage: { width: '100%', height: '100%' },
   closeFullscreen: {
-    position: 'absolute',
-    right: 20,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    overflow: 'hidden',
+    position: 'absolute', right: 20,
+    width: 50, height: 50, borderRadius: 25, overflow: 'hidden',
   },
   closeFullscreenGradient: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: '100%', height: '100%',
+    justifyContent: 'center', alignItems: 'center',
   },
 });
