@@ -39,7 +39,7 @@ const LEVELS = [
   { id: 'deft main character', label: 'deft main character', min: 1000 },
   { id: 'deft pro',            label: 'deft pro',            min: 3000 },
   { id: 'deft goat',           label: 'deft goat',           min: 6000 },
-  { id: 'founder circle',      label: 'founder circle',      min: 10000 },
+  { id: 'founder circle',      label: 'founder circle',      min: 8000 },
 ];
 
 // ─── Reason → icon + label + detail ──────────────────────────────────
