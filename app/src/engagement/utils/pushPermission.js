@@ -5,17 +5,12 @@ import { Platform, Alert } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import api from '../../api/api';
-import { useContext } from 'react';
+import Constants from 'expo-constants';
+import { setupAndroidChannels } from '../../utils/pushNotifications';
 
+// Uses the shared channel setup so "engagement" keeps its MAX importance + sound
 export async function ensureChannel() {
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('engagement', {
-      name: 'engagement',
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#f9c349',
-    });
-  }
+  await setupAndroidChannels();
 }
 
 export async function registerForPushNotificationsAsync() {
@@ -39,7 +34,9 @@ export async function registerForPushNotificationsAsync() {
   }
 
   try {
-    const tokenData = await Notifications.getExpoPushTokenAsync();
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
+    const tokenData = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
     const token = tokenData?.data;
     if (!token) return null;
 

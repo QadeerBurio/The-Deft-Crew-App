@@ -9,6 +9,11 @@ import { useNotificationPopup } from '../hooks/useNotificationPopup';
 import NotificationBanner from './NotificationBanner';
 import { navigationRef } from '../navigation/navigationRef';
 import * as Notifications from 'expo-notifications';
+import {
+  claimNotificationResponse,
+  getRouteFromNotificationData,
+  navigateWhenReady,
+} from '../utils/pushNotifications';
 
 const DEDUPE_WINDOW_MS = 8000;
 
@@ -86,27 +91,28 @@ export default function GlobalNotificationLayer() {
         console.log('[GlobalNotificationLayer] Duplicate push - skipping');
         return;
       }
-// Play sound
-try {
-  const { playSoundForNotification } = require('../lib/tdcSounds');
-  playSoundForNotification(data.type, data.mood);
-} catch (e) {
-  console.log('[GlobalNotificationLayer] sound error:', e.message);
-}
 
-// Add to banner queue
-addNotification({
-  _id: id,
-  title: content.title || 'notification',
-  description: content.body || '',
-  type: data.type || 'System',
-  mood: data.mood || 'sorted',
-  iconUrl: data.iconUrl || null,
-  link: data.link || null,
-  screenToOpen: data.screen || data.route || null,
-  metadata: data,
-  createdAt: new Date().toISOString(),
-});
+      // Play sound
+      try {
+        const { playSoundForNotification } = require('../lib/tdcSounds');
+        playSoundForNotification(data.type, data.mood);
+      } catch (e) {
+        console.log('[GlobalNotificationLayer] sound error:', e.message);
+      }
+
+      // Add to banner queue
+      addNotification({
+        _id: id,
+        title: content.title || 'notification',
+        description: content.body || '',
+        type: data.type || 'System',
+        mood: data.mood || 'sorted',
+        iconUrl: data.iconUrl || null,
+        link: data.link || null,
+        screenToOpen: data.screen || data.route || null,
+        metadata: data,
+        createdAt: new Date().toISOString(),
+      });
     });
 
     return () => {
@@ -130,27 +136,10 @@ addNotification({
         data,
       });
 
-      // Build route params
-      const route = data.route || data.screen;
-      const params = {
-        ...(data.params || {}),
-        ...(data.offerId ? { offerId: data.offerId } : {}),
-        ...(data.listingId ? { listingId: data.listingId, id: data.listingId } : {}),
-        ...(data.matchId ? { matchId: data.matchId } : {}),
-        ...(data.conversationId ? { conversationId: data.conversationId } : {}),
-        ...(data.postId ? { postId: data.postId } : {}),
-      };
+      if (!claimNotificationResponse(response)) return;
 
-      if (route && navigationRef?.current?.isReady?.()) {
-        try {
-          navigationRef.current.navigate(route, params);
-          console.log('[GlobalNotificationLayer] Navigated to:', route, params);
-        } catch (e) {
-          console.warn('[GlobalNotificationLayer] Nav failed:', e.message);
-        }
-      } else {
-        console.log('[GlobalNotificationLayer] Nav not ready, route:', route);
-      }
+      const { route, params } = getRouteFromNotificationData(data);
+      navigateWhenReady(navigationRef, route, params);
     });
 
     return () => {

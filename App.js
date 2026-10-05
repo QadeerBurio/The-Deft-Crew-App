@@ -27,6 +27,10 @@ import {
   registerForPushNotificationsAsync,
   savePushTokenToServer,
   registerBackgroundNotificationTask,
+  setupAndroidChannels,
+  claimNotificationResponse,
+  getRouteFromNotificationData,
+  navigateWhenReady,
   NOTIFICATION_TASK,
 } from "./app/src/utils/pushNotifications";
 
@@ -46,14 +50,21 @@ import TourOverlay from "./app/src/engagement/tour/TourOverlay";
 //    (pushNotifications.js must NOT set its own handler.)
 // ═══════════════════════════════════════════════════════════════
 Notifications.setNotificationHandler({
+  // Runs ONLY while the app is open. GlobalNotificationLayer already shows
+  // the TDC in-app banner + sound, so the system popup is muted here to
+  // avoid a double popup. Background/killed pushes are shown by Android/iOS
+  // directly and are NOT affected by this handler.
   handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
+    shouldShowBanner: false,
     shouldShowList: true,
+    shouldPlaySound: false,
+    shouldSetBadge: true,
   }),
 });
+
+// Create Android channels at launch, before login, so pushes that arrive
+// while the app is killed always have a valid channel to show on.
+setupAndroidChannels();
 
 // ═══════════════════════════════════════════════════════════════
 // 2. BACKGROUND TASK — defined at module scope so it's ready
@@ -146,44 +157,15 @@ function ColdStartDeepLink() {
     Notifications.getLastNotificationResponseAsync()
       .then((response) => {
         if (!response) return;
+        if (!claimNotificationResponse(response)) return;
 
         const data = response?.notification?.request?.content?.data || {};
-        const route = data.route || data.screen;
-        const params = {
-          ...(data.params || {}),
-          ...(data.offerId ? { offerId: data.offerId } : {}),
-          ...(data.listingId
-            ? { listingId: data.listingId, id: data.listingId }
-            : {}),
-          ...(data.matchId ? { matchId: data.matchId } : {}),
-          ...(data.conversationId
-            ? { conversationId: data.conversationId }
-            : {}),
-          ...(data.postId ? { postId: data.postId } : {}),
-          ...(data.userId ? { userId: data.userId } : {}),
-        };
-
+        const { route, params } = getRouteFromNotificationData(data);
         if (!route) return;
 
         console.log("[ColdStart] navigating to:", route, params);
         handledRef.current = true;
-
-        const tryNavigate = (attempt = 0) => {
-          if (navigationRef?.isReady?.()) {
-            try {
-              navigationRef.navigate(route, params);
-              console.log("[ColdStart] navigated ✅");
-            } catch (e) {
-              console.warn("[ColdStart] nav failed:", e.message);
-            }
-          } else if (attempt < 30) {
-            setTimeout(() => tryNavigate(attempt + 1), 100);
-          } else {
-            console.warn("[ColdStart] nav never became ready");
-          }
-        };
-
-        setTimeout(() => tryNavigate(), 500);
+        setTimeout(() => navigateWhenReady(navigationRef, route, params), 500);
       })
       .catch(() => {});
   }, []);
@@ -308,9 +290,8 @@ export default function App() {
         // 2. Small delay so splash feels intentional
         await new Promise((resolve) => setTimeout(resolve, 1200));
 
-        // 3. Android channels are set up inside pushNotifications.js
-        //    via setupAndroidChannels() when registerForPushNotificationsAsync
-        //    runs — do NOT duplicate here.
+        // 3. Make sure Android channels finished creating
+        await setupAndroidChannels();
 
         await SplashScreen.hideAsync();
         setAppIsReady(true);
