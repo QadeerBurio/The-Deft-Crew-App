@@ -75,31 +75,33 @@ const NotificationBanner = ({
 
   // ✅ Navigate on press using metadata.screen + params
   const handleCardPress = () => {
-    const n = notification;
-    const data = n?.data || {};
-    const meta = n?.metadata || data;
+  const n = notification;
+  const data = n?.data || {};
+  const meta = n?.metadata || data;
 
-    const route =
-      n?.screenToOpen || meta?.screen || meta?.route || data?.screen || null;
+  const route =
+    n?.screenToOpen || meta?.screen || meta?.route || data?.screen || null;
 
-    const params = {
-      ...(meta?.params || data?.params || {}),
-      ...(meta?.offerId ? { offerId: meta.offerId } : {}),
-      ...(meta?.listingId ? { listingId: meta.listingId } : {}),
-      ...(meta?.matchId ? { matchId: meta.matchId } : {}),
-      ...(n?.conversationId ? { conversationId: n.conversationId } : {}),
-    };
-
-    if (route && navigationRef?.current?.isReady?.()) {
-      try {
-        navigationRef.current.navigate(route, params);
-      } catch (e) {
-        console.warn('[Banner] nav failed:', e.message);
-      }
-    }
-
-    onPress && onPress(n);
+  const params = {
+    ...(meta?.params || data?.params || {}),
+    ...(meta?.offerId ? { offerId: meta.offerId } : {}),
+    ...(meta?.listingId ? { listingId: meta.listingId } : {}),
+    ...(meta?.matchId ? { matchId: meta.matchId } : {}),
+    ...(meta?.conversationId ? { conversationId: meta.conversationId } : {}),
+    ...(n?.conversationId ? { conversationId: n.conversationId } : {}),
   };
+
+  if (route && navigationRef?.isReady?.()) {
+    try {
+      navigationRef.navigate(route, params);
+      console.log('[Banner] navigated →', route, params);
+    } catch (e) {
+      console.warn('[Banner] nav failed:', e.message);
+    }
+  }
+
+  onPress && onPress(n);
+};
 
   if (!visible || !notification) return null;
 

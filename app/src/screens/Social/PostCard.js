@@ -1,4 +1,4 @@
-// PostCard.js - Complete with auto-refresh + fixed mention search
+// PostCard.js - Complete with auto-refresh + fixed mention search + full sound kit
 
 import React, { useState, useContext, useRef, useEffect, useMemo, useCallback } from "react";
 import {
@@ -14,12 +14,30 @@ import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AuthContext } from '../../context/AuthContext';
 import ReportModal from "./ReportModal";
-// At top of PostCard.js:
+
+// ═══════════════════════════════════════════
+// TDC SOUND KIT
+// ═══════════════════════════════════════════
+import {
+  soundLike,
+  soundTap,
+  soundSend,
+  soundSheetUp,
+  soundSheetDown,
+  soundCopy,
+  soundSuccess,
+  soundError,
+  soundNope,
+  soundConfirm,
+  soundSwipe,
+} from "../../lib/tdcSounds";
+
 import BadgePip from '../../engagement/components/BadgePip';
+
 const { width, height } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
-const COMMENT_POLL_INTERVAL = 6000; // Poll comments every 6 seconds while open
+const COMMENT_POLL_INTERVAL = 6000;
 
 // ============ SKELETON ============
 export const PostCardSkeleton = () => {
@@ -61,7 +79,7 @@ export const PostCardSkeleton = () => {
   );
 };
 
-// ============ HELPER: Normalize likes ============
+// ============ HELPERS ============
 const normalizeLikes = (likesData) => {
   if (!likesData) return [];
   if (Array.isArray(likesData)) {
@@ -79,7 +97,6 @@ const normalizeLikes = (likesData) => {
   return [];
 };
 
-// ============ HELPER: Normalize comments ============
 const normalizeComments = (raw) => {
   if (!Array.isArray(raw)) return [];
   return raw.map(c => ({
@@ -90,7 +107,6 @@ const normalizeComments = (raw) => {
   }));
 };
 
-// ============ HELPER: Compare comments for changes ============
 const commentsChanged = (oldComments, newComments) => {
   if (!Array.isArray(oldComments) || !Array.isArray(newComments)) return true;
   if (oldComments.length !== newComments.length) return true;
@@ -133,13 +149,13 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
   const [isBlocked, setIsBlocked] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  // ============ MENTION STATE ============
+  // Mention state
   const [mentionResults, setMentionResults] = useState([]);
   const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
-  const [selectedMentions, setSelectedMentions] = useState([]); // [{_id, name}]
+  const [selectedMentions, setSelectedMentions] = useState([]);
   const mentionSearchTimeout = useRef(null);
 
-  // ============ POLLING REFS ============
+  // Polling refs
   const pollIntervalRef = useRef(null);
   const appStateRef = useRef(AppState.currentState);
   const isMountedRef = useRef(true);
@@ -166,7 +182,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
 
   const config = useMemo(() => ({ headers: { Authorization: `Bearer ${token}` } }), [token]);
 
-  // ============ ORGANIZE COMMENTS INTO TREE ============
+  // Organize comments into tree
   const organizedComments = useMemo(() => {
     if (!Array.isArray(commentsList)) return [];
 
@@ -196,11 +212,10 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
 
   const totalCommentsCount = useMemo(() => commentsList.length, [commentsList]);
 
-  // ============ FETCH COMMENTS (silent for polling) ============
+  // Fetch comments
   const fetchComments = useCallback(async (silent = false) => {
     if (!token || !post?._id || !isMountedRef.current) return;
 
-    // Prevent duplicate silent fetches within 2s
     const now = Date.now();
     if (silent && now - lastCommentsFetchRef.current < 2000) return;
     lastCommentsFetchRef.current = now;
@@ -212,13 +227,10 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
       const freshComments = normalizeComments(res.data?.comments || []);
 
       setCommentsList(prev => {
-        if (commentsChanged(prev, freshComments)) {
-          return freshComments;
-        }
+        if (commentsChanged(prev, freshComments)) return freshComments;
         return prev;
       });
 
-      // Also sync likes silently
       if (res.data?.likes) {
         const normalizedLikes = normalizeLikes(res.data.likes);
         setLikes(prev => {
@@ -228,13 +240,11 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
         });
       }
     } catch (err) {
-      if (!silent) {
-        console.error("Fetch comments error:", err);
-      }
+      if (!silent) console.error("Fetch comments error:", err);
     }
   }, [token, post?._id, config]);
 
-  // ============ EFFECTS ============
+  // Effects
   useEffect(() => {
     Animated.timing(cardFade, { toValue: 1, duration: 400, useNativeDriver: true }).start();
   }, []);
@@ -311,10 +321,9 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
     }
   }, [post.likes, post.likeCount, post.favorites, post.comments]);
 
-  // ============ COMMENT POLLING (only while comments are open) ============
+  // Comment polling
   useEffect(() => {
     if (!showComments || !token || !post?._id) {
-      // Stop polling when comments closed
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
         pollIntervalRef.current = null;
@@ -322,10 +331,8 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
       return;
     }
 
-    // Fetch immediately when opening
     fetchComments(true);
 
-    // Start polling
     pollIntervalRef.current = setInterval(() => {
       if (appStateRef.current === 'active') {
         fetchComments(true);
@@ -340,24 +347,21 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
     };
   }, [showComments, token, post?._id, fetchComments]);
 
-  // ============ APP STATE LISTENER ============
+  // AppState
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       const prevState = appStateRef.current;
       appStateRef.current = nextAppState;
 
-      // If app returns to foreground and comments are open → refresh
       if (prevState.match(/inactive|background/) && nextAppState === 'active') {
-        if (showComments) {
-          fetchComments(true);
-        }
+        if (showComments) fetchComments(true);
       }
     });
 
     return () => subscription.remove();
   }, [showComments, fetchComments]);
 
-  // ============ CLEANUP ON UNMOUNT ============
+  // Cleanup
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
@@ -371,7 +375,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
     };
   }, []);
 
-  // ============ HELPERS ============
+  // Helpers
   const formatPostTime = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -411,9 +415,23 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
   };
   const statusDisplay = getStatusDisplay();
 
-  // ============ LIKE ============
+  // ═══════════════════════════════════════════
+  // LIKE — with sound branching
+  // ═══════════════════════════════════════════
   const handleLike = async () => {
-    if (!isLoggedIn) { Alert.alert("Sign In", "Please sign in to like posts"); return; }
+    if (!isLoggedIn) {
+      soundNope();
+      Alert.alert("Sign In", "Please sign in to like posts");
+      return;
+    }
+
+    // 🔔 Sound: like vs unlike
+    if (isLiked) {
+      soundTap();          // subtle tap when unliking
+    } else {
+      soundLike();         // happy pop when liking
+    }
+
     const wasLiked = isLiked;
     const currentLikes = [...likes];
     const currentCount = likeCount;
@@ -440,14 +458,25 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
         if (onPostUpdate) onPostUpdate();
       }
     } catch (err) {
+      soundError();
       setLikes(currentLikes);
       setLikeCount(currentCount);
     }
   };
 
-  // ============ SAVE / SHARE ============
+  // ═══════════════════════════════════════════
+  // SAVE / SHARE — with sounds
+  // ═══════════════════════════════════════════
   const handleSave = async () => {
-    if (!isLoggedIn) { Alert.alert("Sign In", "Please sign in to save posts"); return; }
+    if (!isLoggedIn) {
+      soundNope();
+      Alert.alert("Sign In", "Please sign in to save posts");
+      return;
+    }
+
+    // 🔔 Sound
+    soundCopy();           // save = small "ding" copy-like
+
     Animated.sequence([
       Animated.timing(saveScale, { toValue: 1.3, duration: 100, useNativeDriver: true }),
       Animated.timing(saveScale, { toValue: 1, duration: 100, useNativeDriver: true }),
@@ -460,12 +489,17 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
         setShowMenu(false);
       }
     } catch (err) {
+      soundError();
       Alert.alert("Error", "Save action failed");
     }
   };
 
   const handleShare = async () => {
     setShowMenu(false);
+
+    // 🔔 Sound
+    soundTap();
+
     try {
       await Share.share({
         message: `${post.content || 'Check out this post on TDC!'}\n\nShared from TDC App`,
@@ -473,15 +507,22 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
     } catch (err) {}
   };
 
-  // ============ BLOCK / REPORT ============
+  // ═══════════════════════════════════════════
+  // BLOCK / REPORT
+  // ═══════════════════════════════════════════
   const handleBlockUser = () => {
     setShowMenu(false);
-    if (isOwnPost) { Alert.alert("Info", "You cannot block yourself"); return; }
+    if (isOwnPost) {
+      soundNope();
+      Alert.alert("Info", "You cannot block yourself");
+      return;
+    }
+    soundConfirm();
     Alert.alert(
       "Block User",
       `Are you sure you want to block ${post.author?.name || 'this user'}?`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "Cancel", style: "cancel", onPress: () => soundTap() },
         { text: "Block", style: "destructive", onPress: performBlock },
       ]
     );
@@ -492,23 +533,33 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
       const res = await axios.post(`${API_URL}/user/block/${post.author._id}`, {}, config);
       if (res.data.success) {
         setIsBlocked(true);
+        soundSwipe();      // "removed" sound
         Alert.alert("Blocked", `You have blocked ${post.author?.name || 'this user'}.`,
           [{ text: "OK", onPress: () => { if (onBlock) onBlock(post.author._id); navigation.goBack(); } }]
         );
       }
     } catch (err) {
+      soundError();
       Alert.alert("Error", err.response?.data?.error || "Could not block user.");
     }
   };
 
   const handleReportPost = () => {
     setShowMenu(false);
-    if (isOwnPost) { Alert.alert("Info", "You cannot report your own post"); return; }
+    if (isOwnPost) {
+      soundNope();
+      Alert.alert("Info", "You cannot report your own post");
+      return;
+    }
+    soundTap();
     setShowReportModal(true);
   };
 
-  // ============ COMMENTS ============
+  // ═══════════════════════════════════════════
+  // COMMENTS — sheet open/close sounds
+  // ═══════════════════════════════════════════
   const openComments = () => {
+    soundSheetUp();        // 🔔 bottom sheet opening sound
     setReplyTo(null);
     setCommentText("");
     setSelectedMentions([]);
@@ -517,6 +568,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
   };
 
   const closeComments = useCallback(() => {
+    soundSheetDown();      // 🔔 bottom sheet closing sound
     setShowComments(false);
     setReplyTo(null);
     setCommentText("");
@@ -525,11 +577,13 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
     Keyboard.dismiss();
   }, []);
 
-  // ============ MENTION SEARCH (FIXED) ============
+  // ═══════════════════════════════════════════
+  // MENTION SEARCH
+  // ═══════════════════════════════════════════
   const handleCommentTextChange = (text) => {
+    // ⚠️ No sound on keystrokes — only on send
     setCommentText(text);
 
-    // Find the last '@' in the text
     const lastAtIndex = text.lastIndexOf('@');
     if (lastAtIndex === -1) {
       setShowMentionSuggestions(false);
@@ -537,10 +591,8 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
       return;
     }
 
-    // Check what comes after @ — must not have space/newline/other @
     const afterAt = text.substring(lastAtIndex + 1);
 
-    // If there's a space, newline, or another @, mention is complete/invalid
     if (
       afterAt.includes(' ') ||
       afterAt.includes('\n') ||
@@ -552,7 +604,6 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
       return;
     }
 
-    // Show suggestions and search after short debounce
     setShowMentionSuggestions(true);
 
     if (mentionSearchTimeout.current) clearTimeout(mentionSearchTimeout.current);
@@ -572,6 +623,9 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
   };
 
   const handleMentionSelect = (user) => {
+    // 🔔 Sound for mention pick
+    soundTap();
+
     const lastAtIndex = commentText.lastIndexOf('@');
     if (lastAtIndex === -1) return;
 
@@ -580,7 +634,6 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
     const newText = `${before}@${firstName} `;
     setCommentText(newText);
 
-    // Track selected mention
     setSelectedMentions(prev => {
       if (prev.some(m => m._id === user._id)) return prev;
       return [...prev, { _id: user._id, name: user.name }];
@@ -592,14 +645,26 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
-  // ============ SUBMIT COMMENT ============
+  // ═══════════════════════════════════════════
+  // SUBMIT COMMENT — send sound
+  // ═══════════════════════════════════════════
   const handleComment = async () => {
-    if (!isLoggedIn) { Alert.alert("Sign In", "Please sign in to comment"); return; }
-    if (!commentText.trim()) { Alert.alert("Info", "Please write a comment"); return; }
+    if (!isLoggedIn) {
+      soundNope();
+      Alert.alert("Sign In", "Please sign in to comment");
+      return;
+    }
+    if (!commentText.trim()) {
+      soundNope();
+      Alert.alert("Info", "Please write a comment");
+      return;
+    }
+
+    // 🔔 Send sound plays FIRST (feels responsive)
+    soundSend();
 
     setIsSubmitting(true);
     try {
-      // Extract mentions actually present in the text
       const mentionIdsInText = selectedMentions
         .filter(m => {
           const firstName = m.name.split(' ')[0];
@@ -641,19 +706,23 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
         if (onPostUpdate) onPostUpdate();
       }
     } catch (err) {
+      soundError();
       Alert.alert("Error", err.response?.data?.error || "Comment failed to post.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // ============ DELETE COMMENT ============
+  // ═══════════════════════════════════════════
+  // DELETE COMMENT — swipe sound
+  // ═══════════════════════════════════════════
   const handleDeleteComment = (commentId) => {
+    soundConfirm();
     Alert.alert(
       "Delete Comment",
       "Are you sure? All replies to this comment will also be deleted.",
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "Cancel", style: "cancel", onPress: () => soundTap() },
         {
           text: "Delete",
           style: "destructive",
@@ -665,11 +734,13 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
               );
 
               if (res.data.success && res.data.comments) {
+                soundSwipe();      // removal sound
                 const normalized = normalizeComments(res.data.comments);
                 setCommentsList(normalized);
                 if (onPostUpdate) onPostUpdate();
               }
             } catch (err) {
+              soundError();
               Alert.alert("Error", err.response?.data?.error || "Could not delete comment");
             }
           }
@@ -679,6 +750,9 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
   };
 
   const onReplyPress = (comment, parentCommentId) => {
+    // 🔔 Small tap sound for reply selection
+    soundTap();
+
     const authorName = comment.user?.name || "User";
     const targetId = parentCommentId || comment._id;
 
@@ -704,20 +778,31 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
   };
 
   const toggleThread = (commentId) => {
+    soundTap();             // 🔔 small tap when expand/collapse
     setCollapsedThreads(prev => ({ ...prev, [commentId]: !prev[commentId] }));
   };
 
   const navigateToProfile = (id) => {
     if (!id) return;
+    soundTap();             // 🔔 tap when navigating
     closeComments();
     navigation.navigate("UserProfile", { userId: id });
   };
 
-  // ============ CONNECTION ============
+  // ═══════════════════════════════════════════
+  // CONNECTION
+  // ═══════════════════════════════════════════
   const handleConnect = async () => {
-    if (!isLoggedIn) { Alert.alert("Sign In", "Please sign in to connect"); return; }
+    if (!isLoggedIn) {
+      soundNope();
+      Alert.alert("Sign In", "Please sign in to connect");
+      return;
+    }
     if (isConnecting) return;
+
+    soundSend();            // 🔔 request sent = send sound
     setIsConnecting(true);
+
     try {
       const res = await axios.post(`${API_URL}/user/connect/${post.author._id}`, {}, config);
       if (res.data.success) {
@@ -725,14 +810,27 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
         if (setUser && user) {
           setUser({ ...user, sentRequests: [...(user.sentRequests || []), post.author._id] });
         }
+        soundSuccess();
         Alert.alert("Success", "Connection request sent!");
       }
     } catch (err) {
       const msg = err.response?.data?.error || "";
-      if (msg.includes("Already connected")) { setConnectionStatus('connected'); Alert.alert("Info", "Already connected"); }
-      else if (msg.includes("Request already sent")) { setConnectionStatus('pending'); Alert.alert("Info", "Request already sent"); }
-      else if (msg.includes("Request already received")) { setConnectionStatus('received'); Alert.alert("Info", "Pending request from user"); }
-      else Alert.alert("Error", msg || "Could not send request");
+      if (msg.includes("Already connected")) {
+        soundNope();
+        setConnectionStatus('connected');
+        Alert.alert("Info", "Already connected");
+      } else if (msg.includes("Request already sent")) {
+        soundNope();
+        setConnectionStatus('pending');
+        Alert.alert("Info", "Request already sent");
+      } else if (msg.includes("Request already received")) {
+        soundNope();
+        setConnectionStatus('received');
+        Alert.alert("Info", "Pending request from user");
+      } else {
+        soundError();
+        Alert.alert("Error", msg || "Could not send request");
+      }
     } finally {
       setIsConnecting(false);
     }
@@ -741,10 +839,12 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
   const handleAcceptRequest = async () => {
     if (!isLoggedIn) return;
     setIsConnecting(true);
+
     try {
       const res = await axios.post(`${API_URL}/user/accept/${post.author._id}`, {}, config);
       if (res.data.success) {
         setConnectionStatus('connected');
+        soundSuccess();
         if (setUser && user) {
           setUser({
             ...user,
@@ -755,6 +855,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
         Alert.alert("Success", "Connected!");
       }
     } catch (err) {
+      soundError();
       Alert.alert("Error", err.response?.data?.error || "Could not accept request");
     } finally {
       setIsConnecting(false);
@@ -949,8 +1050,8 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
             <View style={styles.userNameRow}>
               <Text style={styles.userName}>{post.author?.name || "TDC User"}</Text>
               {post.author?.topBadge && (
-    <BadgePip mood={post.author.topBadge.mood || 'sorted'} />
-  )}
+                <BadgePip mood={post.author.topBadge.mood || 'sorted'} />
+              )}
               {statusDisplay && (
                 <View style={[styles.statusBadge, { backgroundColor: statusDisplay.color + '20' }]}>
                   <Text style={[styles.statusText, { color: statusDisplay.color }]}>
@@ -965,7 +1066,10 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
           </View>
         </TouchableOpacity>
         {isLoggedIn && (
-          <TouchableOpacity onPress={() => setShowMenu(true)} style={styles.menuBtn}>
+          <TouchableOpacity
+            onPress={() => { soundTap(); setShowMenu(true); }}
+            style={styles.menuBtn}
+          >
             <Ionicons name="ellipsis-vertical" size={20} color="#666" />
           </TouchableOpacity>
         )}
@@ -1123,6 +1227,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                     </View>
                     <TouchableOpacity
                       onPress={() => {
+                        soundTap();
                         setReplyTo(null);
                         setCommentText("");
                         setSelectedMentions([]);
@@ -1133,7 +1238,6 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                   </View>
                 )}
 
-                {/* @MENTION SUGGESTIONS */}
                 {showMentionSuggestions && mentionResults.length > 0 && (
                   <View style={styles.mentionSuggestions}>
                     <FlatList
@@ -1252,7 +1356,10 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
 
               <View style={styles.menuDivider} />
 
-              <TouchableOpacity style={styles.menuItem} onPress={() => setShowMenu(false)}>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => { soundTap(); setShowMenu(false); }}
+              >
                 <View style={[styles.menuIconCircle, styles.menuCancelCircle]}>
                   <Ionicons name="close-outline" size={20} color="#999" />
                 </View>
@@ -1468,7 +1575,7 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 16, fontWeight: '700', color: '#999', marginTop: 4 },
   emptySubtext: { fontSize: 13, color: '#ccc', marginTop: 2 },
 
-  inputWrapper: { borderTopWidth: 1, borderTopColor: '#f0f0f0', backgroundColor: '#fff', marginBottom:20 },
+  inputWrapper: { borderTopWidth: 1, borderTopColor: '#f0f0f0', backgroundColor: '#fff', marginBottom: 20 },
   replyNotifier: {
     flexDirection: 'row',
     justifyContent: 'space-between',

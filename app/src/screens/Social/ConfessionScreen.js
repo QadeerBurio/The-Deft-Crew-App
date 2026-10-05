@@ -1,4 +1,4 @@
-// ConfessionScreen.js - Optimized with fast skeleton & auto-fetch
+// ConfessionScreen.js - Optimized with fast skeleton & auto-fetch + full sound kit
 
 import React, { useState, useContext, useEffect, useCallback, useRef, useMemo, memo } from "react";
 import { 
@@ -12,8 +12,28 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { AuthContext } from "../../context/AuthContext";
+
+// ═══════════════════════════════════════════
+// TDC SOUND KIT
+// ═══════════════════════════════════════════
+import {
+  soundLike,
+  soundTap,
+  soundSend,
+  soundSheetUp,
+  soundSheetDown,
+  soundSuccess,
+  soundError,
+  soundNope,
+  soundConfirm,
+  soundSwipe,
+  soundPopupOpen,
+  soundPopupClose,
+} from "../../lib/tdcSounds";
+
 // 🆕 engagement
 import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus';
+
 const { height, width } = Dimensions.get('window');
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
 
@@ -47,7 +67,6 @@ const commentsChanged = (oldComments, newComments) => {
 };
 
 // ============ FAST OPTIMIZED SKELETON ============
-// Uses ONE Animated.Value + memoized rows. Runs at 60fps with minimal overhead.
 const SkeletonRow = memo(({ opacity }) => (
   <View style={styles.skeletonCard}>
     <View style={styles.skeletonHeader}>
@@ -72,26 +91,16 @@ const ConfessionSkeleton = memo(() => {
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // 600ms cycle = snappy but smooth
     const animation = Animated.loop(
       Animated.sequence([
-        Animated.timing(shimmerAnim, { 
-          toValue: 1, 
-          duration: 600, 
-          useNativeDriver: true 
-        }),
-        Animated.timing(shimmerAnim, { 
-          toValue: 0, 
-          duration: 600, 
-          useNativeDriver: true 
-        }),
+        Animated.timing(shimmerAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(shimmerAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
       ])
     );
     animation.start();
     return () => animation.stop();
   }, [shimmerAnim]);
 
-  // ONE interpolated opacity reused by ALL skeleton rows
   const opacity = shimmerAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [0.35, 0.75],
@@ -155,7 +164,6 @@ export default function ConfessionScreen({ navigation }) {
   const isScreenFocusedRef = useRef(true);
   const lastConfessionsFetchRef = useRef(0);
   const lastCommentsFetchRef = useRef(0);
-  // Guard: only show skeleton on the VERY FIRST fetch
   const hasLoadedOnceRef = useRef(false);
 
   useEffect(() => {
@@ -178,6 +186,8 @@ export default function ConfessionScreen({ navigation }) {
   // Create modal animation
   useEffect(() => {
     if (modalVisible) {
+      // 🔔 popup open sound
+      soundPopupOpen();
       modalSlide.setValue(300);
       Animated.spring(modalSlide, { toValue: 0, friction: 7, tension: 40, useNativeDriver: true }).start();
       setTimeout(() => confessionInputRef.current?.focus(), 300);
@@ -189,6 +199,8 @@ export default function ConfessionScreen({ navigation }) {
   // Comments modal animation
   useEffect(() => {
     if (commentModalVisible) {
+      // 🔔 bottom sheet opening sound
+      soundSheetUp();
       commentSlide.setValue(height);
       Animated.spring(commentSlide, { toValue: 0, friction: 9, tension: 50, useNativeDriver: true }).start();
       setTimeout(() => commentInputRef.current?.focus(), 500);
@@ -247,13 +259,11 @@ export default function ConfessionScreen({ navigation }) {
         return freshData;
       });
       
-      // ✅ Mark as loaded once — from now on, NO skeleton
       hasLoadedOnceRef.current = true;
     } catch (err) {
       if (!silent) console.error("Fetch Error:", err);
     } finally {
       if (!silent && isMountedRef.current) {
-        // ✅ IMMEDIATELY hide loading so skeleton disappears fast
         setLoading(false);
         setRefreshing(false);
       }
@@ -296,7 +306,6 @@ export default function ConfessionScreen({ navigation }) {
   // Initial fetch
   useEffect(() => {
     if (token) { 
-      // Only set loading if we haven't loaded before
       if (!hasLoadedOnceRef.current) setLoading(true);
       fetchConfessions(false); 
     }
@@ -369,7 +378,7 @@ export default function ConfessionScreen({ navigation }) {
     useCallback(() => {
       isScreenFocusedRef.current = true;
       isMountedRef.current = true;
-      if (token) fetchConfessions(true); // SILENT
+      if (token) fetchConfessions(true);
       return () => { isScreenFocusedRef.current = false; };
     }, [token, fetchConfessions])
   );
@@ -399,6 +408,7 @@ export default function ConfessionScreen({ navigation }) {
   }, []);
 
   const toggleExpand = useCallback((postId) => {
+    soundTap();       // 🔔 small tap on expand/collapse
     setExpandedPosts(prev => ({ ...prev, [postId]: !prev[postId] }));
   }, []);
 
@@ -415,9 +425,25 @@ export default function ConfessionScreen({ navigation }) {
     }
   }, []);
 
-  // ============ LIKE ============
+  // ============ LIKE — with sound branching ============
   const handleLike = useCallback(async (id) => {
-    if (!token) return;
+    if (!token) {
+      soundNope();
+      return;
+    }
+
+    // Find the current confession to know if we're liking or unliking
+    const current = confessions.find(c => c._id === id);
+    const wasLiked = current?.likedByCurrentUser;
+
+    // 🔔 Sound: like vs unlike
+    if (wasLiked) {
+      soundTap();     // subtle tap for unlike
+    } else {
+      soundLike();    // happy pop for like
+    }
+
+    // Optimistic update
     setConfessions(prev => prev.map(c => 
       c._id === id 
         ? {
@@ -427,16 +453,20 @@ export default function ConfessionScreen({ navigation }) {
           }
         : c
     ));
+
     try {
       await fetch(`${API_URL}/confessions/like/${id}`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
     } catch (err) {
+      soundError();
       fetchConfessions(false);
     }
-  }, [token, fetchConfessions]);
+  }, [token, confessions, fetchConfessions]);
 
+  // ============ OPEN / CLOSE COMMENTS ============
+  // Note: sound is played in the useEffect watching commentModalVisible
   const openComments = useCallback((post) => {
     setSelectedPost(post);
     setCommentText("");
@@ -447,6 +477,8 @@ export default function ConfessionScreen({ navigation }) {
   }, []);
 
   const closeComments = useCallback(() => {
+    // 🔔 bottom sheet closing sound
+    soundSheetDown();
     Animated.timing(commentSlide, {
       toValue: height,
       duration: 200,
@@ -462,6 +494,7 @@ export default function ConfessionScreen({ navigation }) {
   }, [commentSlide]);
 
   // ============ MENTION SEARCH ============
+  // ⚠️ No sound on typing — only on select
   const handleCommentTextChange = useCallback((text) => {
     setCommentText(text);
 
@@ -496,6 +529,9 @@ export default function ConfessionScreen({ navigation }) {
   }, [token]);
 
   const handleMentionSelect = useCallback((u) => {
+    // 🔔 small tap on mention pick
+    soundTap();
+
     const lastAtIndex = commentText.lastIndexOf('@');
     if (lastAtIndex === -1) return;
     const firstName = u.name.split(' ')[0];
@@ -509,6 +545,9 @@ export default function ConfessionScreen({ navigation }) {
 
   // ============ REPLY ============
   const onReplyPress = useCallback((comment, parentCommentId) => {
+    // 🔔 small tap
+    soundTap();
+
     const targetId = parentCommentId || comment._id;
     const parentComment = selectedPost?.comments?.find(c => c._id?.toString() === targetId?.toString());
     const mentionName = parentComment?.user?.name || "User";
@@ -527,13 +566,22 @@ export default function ConfessionScreen({ navigation }) {
   }, [selectedPost]);
 
   const toggleThread = useCallback((commentId) => {
+    // 🔔 small tap for expand/collapse of replies
+    soundTap();
     setCollapsedThreads(prev => ({ ...prev, [commentId]: !prev[commentId] }));
   }, []);
 
-  // ============ POST COMMENT ============
+  // ============ POST COMMENT — send sound ============
   const handlePostComment = useCallback(async () => {
-    if (!commentText.trim() || !selectedPost) return;
+    if (!commentText.trim() || !selectedPost) {
+      soundNope();
+      return;
+    }
     const text = commentText.trim();
+
+    // 🔔 send sound fires immediately for responsiveness
+    soundSend();
+
     setCommentLoading(true);
 
     const mentionIdsInText = selectedMentions
@@ -552,7 +600,6 @@ export default function ConfessionScreen({ navigation }) {
 
       if (res.ok) {
         const updated = await res.json();
-         // 🆕 engagement: queue any popups the backend returned
         if (updated?.engagement?.popups?.length) {
           engagementBus.emit(
             ENGAGEMENT_EVENTS.POPUPS_QUEUED,
@@ -570,24 +617,27 @@ export default function ConfessionScreen({ navigation }) {
         Keyboard.dismiss();
         setTimeout(() => commentFlatListRef.current?.scrollToEnd({ animated: true }), 250);
       } else {
+        soundError();
         Alert.alert("Error", "Failed to post comment");
       }
     } catch (err) {
+      soundError();
       Alert.alert("Error", "Network error");
     } finally {
       setCommentLoading(false);
     }
   }, [commentText, selectedPost, selectedMentions, replyTo, token]);
 
-  // ============ DELETE COMMENT ============
+  // ============ DELETE COMMENT — swipe sound ============
   const handleDeleteComment = useCallback((comment) => {
     if (!comment.isMyComment) return;
 
+    soundConfirm();   // 🔔 confirm dialog sound
     Alert.alert(
       "Delete Comment",
       "Are you sure? All replies to this comment will also be deleted.",
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "Cancel", style: "cancel", onPress: () => soundTap() },
         {
           text: "Delete",
           style: "destructive",
@@ -598,15 +648,18 @@ export default function ConfessionScreen({ navigation }) {
                 { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }
               );
               if (res.ok) {
+                soundSwipe();   // 🔔 removal sound
                 const updated = await res.json();
                 setSelectedPost(prev => ({ ...prev, comments: updated.comments || [] }));
                 setConfessions(prev => prev.map(c => 
                   c._id === selectedPost._id ? { ...c, comments: updated.comments || [] } : c
                 ));
               } else {
+                soundError();
                 Alert.alert("Error", "Could not delete comment");
               }
             } catch (err) {
+              soundError();
               Alert.alert("Error", "Network error");
             }
           }
@@ -615,7 +668,7 @@ export default function ConfessionScreen({ navigation }) {
     );
   }, [selectedPost, token]);
 
-  // ============ POST CONFESSION ============
+  // ============ POST CONFESSION — send + success sounds ============
   const uploadToCloudinary = async (fileUri) => {
     const data = new FormData();
     data.append("file", { uri: fileUri, name: 'upload.jpg', type: 'image/jpeg' });
@@ -627,15 +680,20 @@ export default function ConfessionScreen({ navigation }) {
 
   const handlePost = useCallback(async () => {
     if (!newConfession.trim() && !selectedImage) {
+      soundNope();
       Alert.alert("Error", "Please add text or an image");
       return;
     }
+
+    // 🔔 send sound on submit
+    soundSend();
+
     setPosting(true);
     try {
       let imageUrl = "";
       if (selectedImage) imageUrl = await uploadToCloudinary(selectedImage);
 
-            const response = await fetch(`${API_URL}/confessions/create`, {
+      const response = await fetch(`${API_URL}/confessions/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ text: newConfession.trim(), image: imageUrl })
@@ -644,7 +702,9 @@ export default function ConfessionScreen({ navigation }) {
       if (response.ok) {
         const result = await response.json();
 
-        // 🆕 engagement: queue any popups the backend returned
+        // 🔔 success sound
+        soundSuccess();
+
         if (result?.engagement?.popups?.length) {
           engagementBus.emit(
             ENGAGEMENT_EVENTS.POPUPS_QUEUED,
@@ -654,13 +714,11 @@ export default function ConfessionScreen({ navigation }) {
 
         resetForm();
         fetchConfessions(false);
-      }
-
-      if (response.ok) {
-        resetForm();
-        fetchConfessions(false);
+      } else {
+        soundError();
       }
     } catch (err) {
+      soundError();
       Alert.alert("Error", "Check your connection");
     } finally {
       setPosting(false);
@@ -675,6 +733,9 @@ export default function ConfessionScreen({ navigation }) {
   }, []);
 
   const handleFabPress = useCallback(() => {
+    // 🔔 popup open sound (the useEffect also fires one — this is the initial)
+    soundPopupOpen();
+
     Animated.sequence([
       Animated.timing(fabScale, { toValue: 0.8, duration: 100, useNativeDriver: true }),
       Animated.timing(fabScale, { toValue: 1.1, duration: 100, useNativeDriver: true }),
@@ -685,7 +746,10 @@ export default function ConfessionScreen({ navigation }) {
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!status) return Alert.alert("Permission required", "Allow access to your photos.");
+    if (!status) {
+      soundNope();
+      return Alert.alert("Permission required", "Allow access to your photos.");
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true, quality: 0.7,
@@ -695,7 +759,10 @@ export default function ConfessionScreen({ navigation }) {
 
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (!status) return Alert.alert("Permission required", "Allow access to your camera.");
+    if (!status) {
+      soundNope();
+      return Alert.alert("Permission required", "Allow access to your camera.");
+    }
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true, quality: 0.7,
     });
@@ -703,14 +770,15 @@ export default function ConfessionScreen({ navigation }) {
   };
 
   const showImageOptions = useCallback(() => {
+    soundTap();
     Alert.alert("Add Image", "Choose an option", [
       { text: "Camera", onPress: takePhoto },
       { text: "Gallery", onPress: pickImage },
-      { text: "Cancel", style: "cancel" }
+      { text: "Cancel", style: "cancel", onPress: () => soundTap() }
     ]);
   }, []);
 
-  // ============ RENDER COMMENT (memoized-friendly) ============
+  // ============ RENDER COMMENT ============
   const renderComment = useCallback(({ item }) => {
     const isCollapsed = collapsedThreads[item._id] === true;
     const replies = item.replies || [];
@@ -884,9 +952,12 @@ export default function ConfessionScreen({ navigation }) {
 
           <TouchableOpacity
             style={styles.actionBtn}
-            onPress={() => Share.share({
-              message: `💭 Anonymous Confession: "${item.text}"\n\nShared via TDC`
-            })}
+            onPress={() => {
+              soundTap();   // 🔔 tap before share
+              Share.share({
+                message: `💭 Anonymous Confession: "${item.text}"\n\nShared via TDC`
+              });
+            }}
           >
             <Ionicons name="share-social-outline" size={18} color="#666" />
           </TouchableOpacity>
@@ -895,7 +966,6 @@ export default function ConfessionScreen({ navigation }) {
     );
   }, [expandedPosts, textLayouts, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments]);
 
-  // ✅ FAST SKELETON — only on first cold start, and disappears instantly when data arrives
   const showSkeleton = loading && !refreshing && !hasLoadedOnceRef.current;
 
   if (showSkeleton) {
@@ -910,7 +980,6 @@ export default function ConfessionScreen({ navigation }) {
         renderItem={renderConfession}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.listContent}
-        // ✅ Performance props
         removeClippedSubviews={true}
         initialNumToRender={5}
         maxToRenderPerBatch={8}
@@ -995,7 +1064,10 @@ export default function ConfessionScreen({ navigation }) {
                   {selectedImage && (
                     <View style={styles.previewContainer}>
                       <Image source={{ uri: selectedImage }} style={styles.previewImage} />
-                      <TouchableOpacity style={styles.removeImage} onPress={() => setSelectedImage(null)}>
+                      <TouchableOpacity
+                        style={styles.removeImage}
+                        onPress={() => { soundTap(); setSelectedImage(null); }}
+                      >
                         <View style={styles.removeImageBtn}>
                           <Ionicons name="close-circle" size={28} color="#fff" />
                         </View>
@@ -1086,7 +1158,12 @@ export default function ConfessionScreen({ navigation }) {
                             Replying to <Text style={styles.replyNotifierName}>{replyTo.userName}</Text>
                           </Text>
                         </View>
-                        <TouchableOpacity onPress={() => { setReplyTo(null); setCommentText(""); setSelectedMentions([]); }}>
+                        <TouchableOpacity onPress={() => {
+                          soundTap();
+                          setReplyTo(null);
+                          setCommentText("");
+                          setSelectedMentions([]);
+                        }}>
                           <Ionicons name="close-circle" size={18} color="#999" />
                         </TouchableOpacity>
                       </View>
@@ -1252,7 +1329,6 @@ const styles = StyleSheet.create({
   emptyCommentTitle: { fontSize: 16, fontWeight: '700', color: '#999', marginTop: 12 },
   emptyCommentSub: { fontSize: 13, color: '#ccc', marginTop: 4 },
 
-  // TREE CONNECTORS
   threadContainer: { marginBottom: 20 },
   parentRow: { flexDirection: 'row', alignItems: 'flex-start' },
   avatarLg: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#fef9f0', justifyContent: 'center', alignItems: 'center' },

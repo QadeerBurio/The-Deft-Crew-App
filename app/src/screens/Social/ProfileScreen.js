@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from "../../context/AuthContext";
-
+import { soundLike, soundTap } from "../../lib/tdcSounds";
 const { width } = Dimensions.get('window');
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
 
@@ -279,6 +279,7 @@ export default function ProfileScreen() {
 
   // ============ LIKE (optimistic) ============
   const handleLike = async (itemId, isCurrentlyLiked, type = 'post') => {
+    soundLike();   
     if (likingItems[itemId]) return;
     setLikingItems(prev => ({ ...prev, [itemId]: true }));
 

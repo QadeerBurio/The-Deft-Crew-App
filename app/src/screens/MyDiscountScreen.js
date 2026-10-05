@@ -1,4 +1,4 @@
-// screens/MyDiscountScreen.js - User-Scoped Cache (Same-Device Multi-User Safe)
+// screens/MyDiscountScreen.js - User-Scoped Cache (Same-Device Multi-User Safe) + TDC Sound Kit
 import React, { useState, useEffect, useRef, useContext, useCallback, useMemo } from 'react';
 import {
   View,
@@ -36,6 +36,27 @@ import api, {
 } from '../api/brandApi';
 
 import { AuthContext } from '../context/AuthContext';
+
+// ═══════════════════════════════════════════
+// TDC SOUND KIT
+// ═══════════════════════════════════════════
+import {
+  soundCopy,
+  soundDealClaimed,
+  soundSuccess,
+  soundError,
+  soundNope,
+  soundTap,
+  soundConfirm,
+  soundSwipe,
+  soundRefresh,
+  soundQrScanSuccess,
+  soundBadgeUnlock,
+  soundPopupOpen,
+  soundPopupClose,
+  soundSheetUp,
+  soundSheetDown,
+} from '../lib/tdcSounds';
 
 // ✅ IMPORT shared claim registry from OfferScreen
 import {
@@ -80,11 +101,9 @@ const DISCOUNT_THEMES = {
 const getTheme = (percentage) => DISCOUNT_THEMES[percentage] || DISCOUNT_THEMES.default;
 
 // ==================== ✅ USER-SCOPED CACHE ====================
-// Each user gets their own isolated cache entry — same-device multi-user safe.
-// Structure: Map<userId, { offers, totalSaved, timestamp, removedIds, inFlight }>
 const userCaches = new Map();
 
-const CACHE_DURATION = 15000; // 15s — fresh enough, avoids refetch storms
+const CACHE_DURATION = 15000;
 
 const getUserCache = (userId) => {
   if (!userId) return null;
@@ -94,7 +113,7 @@ const getUserCache = (userId) => {
       totalSaved: 0,
       timestamp: null,
       removedIds: new Set(),
-      inFlight: null, // Promise ref for dedup
+      inFlight: null,
     });
   }
   return userCaches.get(userId);
@@ -218,6 +237,8 @@ const PromoCodeModal = React.memo(({
 
   useEffect(() => {
     if (visible) {
+      // 🔔 popup open sound
+      soundPopupOpen();
       Animated.parallel([
         Animated.spring(slideAnim, { toValue: 0, friction: 7, tension: 50, useNativeDriver: true }),
         Animated.timing(backdropAnim, { toValue: 1, duration: 250, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
@@ -230,6 +251,8 @@ const PromoCodeModal = React.memo(({
   }, [visible]);
 
   const handleCopy = async () => {
+    // 🔔 copy sound
+    soundCopy();
     if (onCopy) onCopy(promoCode);
     else {
       await Clipboard.setStringAsync(promoCode);
@@ -238,9 +261,20 @@ const PromoCodeModal = React.memo(({
     }
   };
 
-  const handleUseCode = () => { if (onUseCode) onUseCode(promoCode); };
-  const handleGenerate = () => { if (onGenerate && !isFromBackend) onGenerate(); };
-  const handleCancel = () => { if (onCancel && isFromBackend) onCancel(promoCode); };
+  const handleUseCode = () => {
+    soundTap();
+    if (onUseCode) onUseCode(promoCode);
+  };
+
+  const handleGenerate = () => {
+    soundTap();
+    if (onGenerate && !isFromBackend) onGenerate();
+  };
+
+  const handleCancel = () => {
+    soundConfirm();
+    if (onCancel && isFromBackend) onCancel(promoCode);
+  };
 
   const formatDate = (date) => date.toLocaleDateString('en-US', {
     year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -413,6 +447,8 @@ const DiscountCard = React.memo(({
 
   const handleCardPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // 🔔 subtle tap on card flip
+    soundTap();
     setIsFlipped(!isFlipped);
     Animated.spring(flipAnim, {
       toValue: isFlipped ? 0 : 1, friction: 8, tension: 40, useNativeDriver: true,
@@ -422,6 +458,7 @@ const DiscountCard = React.memo(({
   const handleScanPress = (e) => {
     e?.stopPropagation?.();
     if (!canRedeem) {
+      soundNope();
       Alert.alert('Limit Reached', 'You have already used this discount 2 times today. Please try again tomorrow.');
       return;
     }
@@ -432,6 +469,7 @@ const DiscountCard = React.memo(({
   const handleGetCodePress = (e) => {
     e?.stopPropagation?.();
     if (!canRedeem) {
+      soundNope();
       Alert.alert('Limit Reached', 'You have already used this discount 2 times today. Please try again tomorrow.');
       return;
     }
@@ -446,11 +484,12 @@ const DiscountCard = React.memo(({
   const canRedeem = redemptionsToday < maxRedemptions;
 
   const handleUnclaim = () => {
+    soundConfirm();   // 🔔 confirm dialog sound
     Alert.alert(
       'Remove Discount',
       `Are you sure you want to remove "${item?.title}" from your discounts?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel', onPress: () => soundTap() },
         {
           text: 'Remove', style: 'destructive',
           onPress: () => {
@@ -566,6 +605,7 @@ const DiscountCard = React.memo(({
                   style={[styles.cardBackButton, !canRedeem && styles.cardBackButtonDisabled]}
                   onPress={() => {
                     if (!canRedeem) {
+                      soundNope();
                       Alert.alert('Limit Reached', 'You have already used this discount 2 times today. Please try again tomorrow.');
                       return;
                     }
@@ -674,12 +714,16 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
       const parsedData = JSON.parse(data);
 
       if (parsedData.offerId === offer?._id) {
+        // 🔔 QR scan detected — play immediate success chime
+        soundQrScanSuccess();
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
         try {
           const canScanRes = await api.get(`/offers/can-scan/${offer._id}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (!canScanRes.data.canScan) {
+            soundNope();
             Alert.alert(
               'Limit Reached',
               `You have already used this discount ${canScanRes.data.redemptionsUsed} times today. Maximum 2 times per day.`,
@@ -715,6 +759,8 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
           });
 
           if (response.data.success) {
+            // 🔔 final success sound
+            soundSuccess();
             Alert.alert('QR Verified! 🎉', `Student verified successfully. Please proceed with payment.`, [
               {
                 text: 'Continue',
@@ -727,6 +773,7 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
               }
             ]);
           } else {
+            soundError();
             Alert.alert('Verification Failed', response.data.message || 'Student verification failed. Please try again.', [
               { text: 'Try Again', onPress: () => { setScanned(false); setLoading(false); } }
             ]);
@@ -734,18 +781,21 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
           }
         } catch (apiError) {
           if (!isCanceledError(apiError)) console.error('API Error:', apiError);
+          soundError();
           Alert.alert('Error', apiError.response?.data?.message || 'Failed to verify student. Please try again.', [
             { text: 'Try Again', onPress: () => { setScanned(false); setLoading(false); } }
           ]);
           setLoading(false);
         }
       } else {
+        soundError();
         Alert.alert('Invalid QR Code', 'This QR code does not match the selected offer. Please scan the correct QR code.', [
           { text: 'Try Again', onPress: () => { setScanned(false); setLoading(false); } }
         ]);
         setLoading(false);
       }
     } catch (err) {
+      soundError();
       Alert.alert('Error', 'Invalid QR code format. Please scan a valid QR code.', [
         { text: 'Try Again', onPress: () => { setScanned(false); setLoading(false); } }
       ]);
@@ -753,7 +803,10 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
     }
   }, [scanned, loading, offer, user, token, onScanComplete, onClose]);
 
-  const toggleTorch = () => setTorchOn(!torchOn);
+  const toggleTorch = () => {
+    soundTap();
+    setTorchOn(!torchOn);
+  };
 
   if (hasPermission === null) {
     return (
@@ -851,7 +904,7 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
               <View style={styles.scannerBottomContent}>
                 {loading && <ActivityIndicator size="large" color={COLORS.primary} />}
                 {scanned && !loading && (
-                  <TouchableOpacity style={styles.scannerRetryBtn} onPress={() => setScanned(false)}>
+                  <TouchableOpacity style={styles.scannerRetryBtn} onPress={() => { soundTap(); setScanned(false); }}>
                     <Text style={styles.scannerRetryText}>Scan Again</Text>
                   </TouchableOpacity>
                 )}
@@ -888,6 +941,8 @@ const UseNowModal = React.memo(({ visible, onClose, item }) => {
 
   useEffect(() => {
     if (visible) {
+      // 🔔 popup open sound
+      soundPopupOpen();
       Animated.parallel([
         Animated.spring(slideAnim, { toValue: 0, friction: 7, tension: 50, useNativeDriver: true }),
         Animated.timing(backdropAnim, { toValue: 1, duration: 250, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
@@ -1035,7 +1090,7 @@ const EmptyState = React.memo(({ navigation }) => {
       </Text>
       <TouchableOpacity
         style={styles.exploreButton}
-        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); navigation.navigate('Brands'); }}
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); soundTap(); navigation.navigate('Brands'); }}
         activeOpacity={0.85}
       >
         <LinearGradient colors={['#1a1a1a', '#2d2d2d']} style={styles.exploreButtonGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
@@ -1053,7 +1108,6 @@ export default function MyDiscountScreen() {
   const { token, user } = useContext(AuthContext);
   const userId = user?._id;
 
-  // ✅ KEY FIX: initial state comes from CURRENT USER's cache only
   const initialCache = useMemo(() => getUserCache(userId), [userId]);
   const initialOffers = useMemo(() => {
     if (!initialCache?.offers) return [];
@@ -1080,20 +1134,11 @@ export default function MyDiscountScreen() {
   const focusRefreshTimerRef = useRef(null);
   const appStateRef = useRef(AppState.currentState);
 
-  // ✅ Tracks the currently-active user for this component instance.
-  // All async state writes must check this before applying.
   const currentUserIdRef = useRef(userId);
-
-  // ✅ Tracks whether we've hydrated the OfferScreen claim registry once.
   const hasHydratedRef = useRef(false);
 
   // ============================================================
   // ✅ CRITICAL FIX: USER CHANGE DETECTION
-  // When user changes (login/logout/switch on same device):
-  //   1. Clear the previous user's in-memory cache from the Map
-  //   2. Immediately swap to the new user's cache (or empty state)
-  //   3. Reset all local state synchronously so the previous user's
-  //      data NEVER bleeds into the new user's screen.
   // ============================================================
   useEffect(() => {
     const newUserId = userId;
@@ -1103,12 +1148,10 @@ export default function MyDiscountScreen() {
     const previousUserId = currentUserIdRef.current;
     currentUserIdRef.current = newUserId;
 
-    // Clear the previous user's cache entry entirely from memory
     if (previousUserId) {
       clearUserCache(previousUserId);
     }
 
-    // Swap state to the NEW user's cache (or clean slate)
     const newCache = getUserCache(newUserId);
     const newOffers = newCache?.offers
       ? newCache.offers.filter(o => !newCache.removedIds.has(o._id))
@@ -1120,7 +1163,6 @@ export default function MyDiscountScreen() {
     setInitialLoading(!newOffers.length);
     setRefreshing(false);
 
-    // Close any modals that might still be showing the old user's offer
     setModalVisible(false);
     setSelectedOffer(null);
     setScannerVisible(false);
@@ -1130,7 +1172,6 @@ export default function MyDiscountScreen() {
     setPromoDetails(null);
     setGeneratingPromo(false);
 
-    // Cancel any in-flight requests from the previous user
     if (refreshTimerRef.current) { clearTimeout(refreshTimerRef.current); refreshTimerRef.current = null; }
     if (focusRefreshTimerRef.current) { clearTimeout(focusRefreshTimerRef.current); focusRefreshTimerRef.current = null; }
   }, [userId]);
@@ -1152,7 +1193,6 @@ export default function MyDiscountScreen() {
   const loadDiscounts = useCallback(async (isRefresh = false, useCache = true) => {
     const activeUserId = userId;
 
-    // No user → clear local state
     if (!token || !activeUserId) {
       if (isMounted.current && currentUserIdRef.current === activeUserId) {
         setLoading(false);
@@ -1166,7 +1206,6 @@ export default function MyDiscountScreen() {
     const userCache = getUserCache(activeUserId);
     if (!userCache) return;
 
-    // ✅ Cache hit path
     if (useCache && !isRefresh && userCache.offers && userCache.timestamp &&
       (Date.now() - userCache.timestamp) < CACHE_DURATION) {
       if (isMounted.current && currentUserIdRef.current === activeUserId) {
@@ -1180,14 +1219,11 @@ export default function MyDiscountScreen() {
       return;
     }
 
-    // ✅ Dedupe: if a fetch is already in flight for this user, reuse it
     if (userCache.inFlight) {
       try { await userCache.inFlight; } catch (_) {}
       return;
     }
 
-    // ✅ Kick off new fetch (do NOT use AbortController here — we want
-    // results to land in the user's cache regardless of who's mounted).
     const fetchPromise = (async () => {
       const [offersRes, savingsRes] = await Promise.all([
         api.get('/offers/claimed', {
@@ -1211,7 +1247,6 @@ export default function MyDiscountScreen() {
         if (!isCanceledError(err)) console.log('Promo codes fetch error:', err?.message);
       }
 
-      // Re-read cache (it may have been cleared if user switched)
       const activeCache = getUserCache(activeUserId);
       if (!activeCache) return { offers: [], totalSaved: 0, promoCodes };
 
@@ -1249,7 +1284,6 @@ export default function MyDiscountScreen() {
 
       const saved = savingsRes.data?.totalSaved || 0;
 
-      // Write to the user's cache
       activeCache.offers = offersWithImages;
       activeCache.totalSaved = saved;
       activeCache.timestamp = Date.now();
@@ -1262,7 +1296,6 @@ export default function MyDiscountScreen() {
     try {
       const result = await fetchPromise;
 
-      // ✅ Only apply to local state if this user is still active
       if (isMounted.current && currentUserIdRef.current === activeUserId) {
         setClaimedOffers(result.offers);
         setTotalSaved(result.totalSaved);
@@ -1339,7 +1372,6 @@ export default function MyDiscountScreen() {
     const activeUserId = userId;
 
     const performInitialLoad = async () => {
-      // Hydrate claim registry once (shared across users)
       if (!hasHydratedRef.current) {
         hasHydratedRef.current = true;
         try { await hydrateClaimedRegistry(); } catch (e) { console.log('hydrate failed:', e); }
@@ -1445,7 +1477,11 @@ export default function MyDiscountScreen() {
 
   // ==================== PROMO CODE FUNCTIONS ====================
   const generatePromoCodeForOffer = useCallback(async (offerId) => {
-    if (!token) { Alert.alert('Error', 'Please login to generate a promo code'); return null; }
+    if (!token) {
+      soundNope();
+      Alert.alert('Error', 'Please login to generate a promo code');
+      return null;
+    }
 
     setGeneratingPromo(true);
     try {
@@ -1453,6 +1489,8 @@ export default function MyDiscountScreen() {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.data.success) {
+        // 🔔 success sound on generate
+        soundSuccess();
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         return response.data.promoCode;
       }
@@ -1462,24 +1500,30 @@ export default function MyDiscountScreen() {
       console.error('Error generating promo code:', err);
 
       if (err.response?.status === 403) {
+        soundNope();
         Alert.alert('Claim First', 'You need to claim this discount first. Would you like to claim it now?', [
-          { text: 'Cancel', style: 'cancel' },
+          { text: 'Cancel', style: 'cancel', onPress: () => soundTap() },
           {
             text: 'Claim & Generate',
             onPress: async () => {
               try {
+                soundDealClaimed();       // 🔔 claim sound
                 await api.post(`/offers/claim/${offerId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
                 try { registerLocalClaim(offerId); } catch (e) {}
                 const retryResult = await generatePromoCodeForOffer(offerId);
                 if (retryResult) return retryResult;
               } catch (claimErr) {
-                if (!isCanceledError(claimErr)) Alert.alert('Error', 'Failed to claim offer. Please try again.');
+                if (!isCanceledError(claimErr)) {
+                  soundError();
+                  Alert.alert('Error', 'Failed to claim offer. Please try again.');
+                }
               }
             }
           }
         ]);
         return null;
       }
+      soundError();
       Alert.alert('Error', err.response?.data?.message || err.message || 'Failed to generate promo code.');
       return null;
     } finally {
@@ -1489,10 +1533,15 @@ export default function MyDiscountScreen() {
 
   const copyPromoCode = useCallback(async (code) => {
     try {
+      // 🔔 copy sound fires immediately
+      soundCopy();
       await Clipboard.setStringAsync(code);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Copied!', 'Promo code copied to clipboard');
-    } catch (err) { Alert.alert('Error', 'Failed to copy promo code'); }
+    } catch (err) {
+      soundError();
+      Alert.alert('Error', 'Failed to copy promo code');
+    }
   }, []);
 
   const usePromoCode = useCallback((code) => {
@@ -1520,7 +1569,7 @@ export default function MyDiscountScreen() {
 
   const cancelPromoCode = useCallback(async (code) => {
     Alert.alert('Cancel Promo Code', 'Are you sure you want to cancel this promo code? This action cannot be undone.', [
-      { text: 'Keep', style: 'cancel' },
+      { text: 'Keep', style: 'cancel', onPress: () => soundTap() },
       {
         text: 'Cancel Code', style: 'destructive',
         onPress: async () => {
@@ -1529,12 +1578,17 @@ export default function MyDiscountScreen() {
             if (promoCodeDoc.data.success) {
               const codeId = promoCodeDoc.data.promoCode.id;
               await api.post(`/promo-codes/cancel/${codeId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+              // 🔔 removal sound
+              soundSwipe();
               Alert.alert('Cancelled', 'Promo code has been cancelled successfully.');
               loadDiscounts(true, false);
               setPromoModalVisible(false);
             }
           } catch (err) {
-            if (!isCanceledError(err)) Alert.alert('Error', 'Failed to cancel promo code. Please try again.');
+            if (!isCanceledError(err)) {
+              soundError();
+              Alert.alert('Error', 'Failed to cancel promo code. Please try again.');
+            }
           }
         }
       }
@@ -1559,6 +1613,7 @@ export default function MyDiscountScreen() {
     setPromoOffer(item);
 
     if (!item.isOnline) {
+      soundNope();
       Alert.alert('Not Available', 'This offer is not available online. Please visit the store to redeem.');
       return;
     }
@@ -1597,6 +1652,11 @@ export default function MyDiscountScreen() {
   }, [generatePromoCodeForOffer, loadDiscounts]);
 
   const handleScanComplete = useCallback((data) => {
+    // 🔔 success + badge unlock for completing redemption
+    soundSuccess();
+    soundBadgeUnlock();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
     Alert.alert(
       'QR Verified! 🎉',
       `You've successfully verified the discount at ${data.brandName || scanningOffer?.title}. Your discount has been applied!`,
@@ -1626,9 +1686,11 @@ export default function MyDiscountScreen() {
       });
 
       if (response.data.message) {
+        // 🔔 removal swipe sound
+        soundSwipe();
+
         try { unregisterLocalClaim(item._id); } catch (e) { console.log('unregister error:', e); }
 
-        // ✅ Write removal into the CURRENT user's cache only
         const c = getUserCache(activeUserId);
         if (c) {
           c.removedIds.add(item._id);
@@ -1651,17 +1713,18 @@ export default function MyDiscountScreen() {
     } catch (err) {
       if (isCanceledError(err)) return;
       console.error('Error unclaiming offer:', err);
+      soundError();
       Alert.alert('Error', err.response?.data?.message || 'Failed to remove discount. Please try again.');
     }
   }, [token, refreshStatsOnly, userId]);
 
   const handleRefresh = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    soundRefresh();       // 🔔 refresh whoosh
     setRefreshing(true);
     loadDiscounts(true, false);
   }, [loadDiscounts]);
 
-  // Memoized stats
   const stats = useMemo(() => {
     const activeCount = claimedOffers.filter(o => o.isActive !== false).length;
     const onlineCount = claimedOffers.filter(o => o.isOnline).length;
@@ -1688,7 +1751,11 @@ export default function MyDiscountScreen() {
       <StatusBar barStyle="dark-content" backgroundColor='#ffffff08' />
 
       <Animated.View style={[styles.header, { opacity: headerAnim, transform: [{ translateY: headerTranslateY }] }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={() => { soundTap(); navigation.goBack(); }}
+          style={styles.backBtn}
+          activeOpacity={0.7}
+        >
           <Ionicons name="chevron-back" size={20} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Discounts</Text>

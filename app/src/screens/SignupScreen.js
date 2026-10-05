@@ -441,7 +441,7 @@ export default function SignupScreen({ navigation }) {
     ]).start();
   };
 
-  const handleSignup = async () => {
+   const handleSignup = async () => {
     Animated.sequence([
       Animated.timing(buttonScale, {
         toValue: 0.92,
@@ -464,7 +464,7 @@ export default function SignupScreen({ navigation }) {
       confirmPassword: !confirmPassword.trim(),
       university: !university,
       gender: !gender,
-      academicLevel: !isAlumni && !academicLevel, // only required for students
+      academicLevel: !isAlumni && !academicLevel,
       city: !city,
     };
 
@@ -510,53 +510,68 @@ export default function SignupScreen({ navigation }) {
         referralCodeInput: referralCode.trim() || undefined,
         isAlumni,
         gender,
-        // only send academicLevel for students
         academicLevel: isAlumni ? undefined : academicLevel,
         city: city || undefined,
       };
 
+      // ═══════════════════════════════════════════════════════════
+      // STEP 1: SIGNUP — only this can throw "Connection error"
+      // ═══════════════════════════════════════════════════════════
       const signupResponse = await api.post("/auth/signup", body);
-
       console.log("Signup successful:", signupResponse.data);
 
-      // AUTO-LOGIN AFTER SIGNUP
+      // ═══════════════════════════════════════════════════════════
+      // STEP 2: AUTO-LOGIN — isolated try/catch, NEVER shows
+      // "Connection error" even if it fails
+      // ═══════════════════════════════════════════════════════════
+      let autoLoginSucceeded = false;
+
       try {
         const loginResponse = await api.post("/auth/login", {
           email: email.trim().toLowerCase(),
-          password: password
+          password: password,
         });
 
-        const { token, user } = loginResponse.data;
+        const { token: newToken, user: newUser } = loginResponse.data || {};
 
-        if (token && user) {
-          api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-
-          setToken(token);
-          setUser(user);
-
-          hideLoadingOverlay();
-          setLoading(false);
-
-          showNotification(
-            "Welcome to the Crew! 🎉",
-            `Account created and signed in successfully!`,
-            "success"
-          );
-
-          setTimeout(() => {
-            hideNotification();
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Drawer' }],
-            });
-          }, 1500);
-
-          return;
+        if (newToken && newUser) {
+          api.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
+          setToken(newToken);
+          setUser(newUser);
+          autoLoginSucceeded = true;
         }
       } catch (loginError) {
-        console.log("Auto-login failed, redirecting to login screen:", loginError);
-        hideLoadingOverlay();
-        setLoading(false);
+        // Swallow the error — signup already succeeded
+        console.log(
+          "Auto-login failed (non-fatal):",
+          loginError?.response?.data || loginError?.message
+        );
+        autoLoginSucceeded = false;
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // STEP 3: NAVIGATE — based on auto-login result
+      // ═══════════════════════════════════════════════════════════
+      hideLoadingOverlay();
+      setLoading(false);
+
+      if (autoLoginSucceeded) {
+        // Success path: user is signed in
+        showNotification(
+          "Welcome to the Crew! 🎉",
+          "Account created and signed in successfully!",
+          "success"
+        );
+
+        setTimeout(() => {
+          hideNotification();
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "Drawer" }],
+          });
+        }, 1500);
+      } else {
+        // Signup succeeded but auto-login failed — send to Login
         showNotification(
           "Account Created! 🎉",
           "Please sign in with your credentials.",
@@ -565,33 +580,37 @@ export default function SignupScreen({ navigation }) {
 
         setTimeout(() => {
           hideNotification();
-          navigation.replace("Login");
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "Login" }],
+          });
         }, 2000);
-        return;
       }
-
-      hideLoadingOverlay();
-      setLoading(false);
-      showNotification(
-        "Account Created! 🎉",
-        "Please sign in with your credentials.",
-        "success"
-      );
-
-      setTimeout(() => {
-        hideNotification();
-        navigation.replace("Login");
-      }, 2000);
-
     } catch (err) {
+      // ═══════════════════════════════════════════════════════════
+      // This catch ONLY runs if /auth/signup itself failed
+      // ═══════════════════════════════════════════════════════════
       hideLoadingOverlay();
       setLoading(false);
       handleShake();
-      showNotification(
-        "Signup Error",
-        err?.response?.data?.error || "Connection error. Please try again.",
-        "error"
-      );
+
+      const status = err?.response?.status;
+      const serverMsg =
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        err?.message;
+
+      let message;
+      if (serverMsg) {
+        message = serverMsg;
+      } else if (err?.request) {
+        message = "Cannot reach server. Check your internet connection.";
+      } else {
+        message = "Something went wrong. Please try again.";
+      }
+
+      console.log("Signup error:", status, message);
+      showNotification("Signup Error", message, "error");
     }
   };
 

@@ -484,16 +484,16 @@ export default function ProfileScreen() {
             navigation.navigate("ProfileDetails");
           },
         },
-        {
-          name: "Membership Card",
-          subtitle: "Access your digital TDC card",
-          icon: "card-outline",
-          color: "#A855F7",
-          onPress: () => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setEcardModalVisible(true);
-          },
-        },
+        // {
+        //   name: "Membership Card",
+        //   subtitle: "Access your digital TDC card",
+        //   icon: "card-outline",
+        //   color: "#A855F7",
+        //   onPress: () => {
+        //     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        //     setEcardModalVisible(true);
+        //   },
+        // },
         {
           name: "Loyalty Points",
           subtitle: "Your earned rewards balance",

@@ -1,10 +1,11 @@
 // The-Deft-Crew-App/App.js
-// FIXED: Proper push registration, cold-start handling, single listener owner
+// FIXED: Push registration, cold-start deep link, external deep link, in-app sounds
 
 import React, { useEffect, useState, useRef, useContext } from "react";
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import * as TaskManager from "expo-task-manager";
+import * as Linking from "expo-linking";
 
 import { NavigationContainer, DarkTheme } from "@react-navigation/native";
 import AuthProvider, { AuthContext } from "./app/src/context/AuthContext";
@@ -17,6 +18,11 @@ import ResumeProvider from "./app/src/context/ResumeContext";
 import api from "./app/src/api/api";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+// ─── Sound kit ───
+import { configureAudio, preloadSounds } from "./app/src/lib/soundManager";
+import { soundAppOpen } from "./app/src/lib/tdcSounds";
+
+// ─── Push utilities ───
 import {
   registerForPushNotificationsAsync,
   savePushTokenToServer,
@@ -28,15 +34,16 @@ import GlobalNotificationLayer from "./app/src/components/GlobalNotificationLaye
 import { navigationRef } from "./app/src/navigation/navigationRef";
 export { navigationRef };
 
+// ─── Engagement ───
 import EngagementProvider from "./app/src/engagement/EngagementProvider";
 import CelebrationHost from "./app/src/engagement/components/CelebrationHost";
 import TourProvider from "./app/src/engagement/tour/TourProvider";
 import TourOverlay from "./app/src/engagement/tour/TourOverlay";
 
 // ═══════════════════════════════════════════════════════════════
-// 1. NOTIFICATION HANDLER — MUST be set before any notification
-//    arrives. Setting it at module load (outside React) guarantees
-//    it's ready even during cold-start.
+// 1. NOTIFICATION HANDLER — set ONCE at module load.
+//    This file is the single source of truth for the handler.
+//    (pushNotifications.js must NOT set its own handler.)
 // ═══════════════════════════════════════════════════════════════
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -49,8 +56,8 @@ Notifications.setNotificationHandler({
 });
 
 // ═══════════════════════════════════════════════════════════════
-// 2. BACKGROUND TASK — define at module scope, before app renders.
-//    This is what lets a KILLED app receive & process notifications.
+// 2. BACKGROUND TASK — defined at module scope so it's ready
+//    even when the OS wakes the app in the background.
 // ═══════════════════════════════════════════════════════════════
 if (!TaskManager.isTaskDefined(NOTIFICATION_TASK)) {
   TaskManager.defineTask(NOTIFICATION_TASK, async ({ data, error }) => {
@@ -83,33 +90,25 @@ const MyTheme = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// 3. PUSH REGISTRATION — re-registers on every login, saves token.
+// 3. PUSH REGISTRATION
+//    Registers device token once per auth session.
 // ═══════════════════════════════════════════════════════════════
 function PushRegistration() {
   const { token: authToken, isGuest } = useContext(AuthContext);
-  const lastRegisteredTokenRef = useRef(null);
   const lastRegisteredUserRef = useRef(null);
 
   useEffect(() => {
-    // Skip guest / no auth
     if (!authToken || isGuest) {
-      lastRegisteredTokenRef.current = null;
       lastRegisteredUserRef.current = null;
       return;
     }
 
-    // Skip if we already registered for this exact auth token
-    if (lastRegisteredUserRef.current === authToken) {
-      return;
-    }
-
+    if (lastRegisteredUserRef.current === authToken) return;
     lastRegisteredUserRef.current = authToken;
 
     (async () => {
       try {
         console.log("[PushRegistration] registering device...");
-
-        // Register background task first (needed for killed-app delivery)
         await registerBackgroundNotificationTask();
 
         const expoPushToken = await registerForPushNotificationsAsync();
@@ -117,8 +116,6 @@ function PushRegistration() {
           console.log("[PushRegistration] no token returned");
           return;
         }
-
-        lastRegisteredTokenRef.current = expoPushToken;
 
         const result = await savePushTokenToServer(api, expoPushToken);
         if (result?.ok) {
@@ -136,8 +133,9 @@ function PushRegistration() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 4. COLD-START DEEP LINK — user tapped push while app was killed.
-//    Handles BOTH `route` and `screen` (backend sends `screen`).
+// 4. COLD-START DEEP LINK
+//    User tapped a push notification while app was killed.
+//    ✅ Uses FLAT navigationRef (NOT .current).
 // ═══════════════════════════════════════════════════════════════
 function ColdStartDeepLink() {
   const handledRef = useRef(false);
@@ -150,7 +148,6 @@ function ColdStartDeepLink() {
         if (!response) return;
 
         const data = response?.notification?.request?.content?.data || {};
-        // ✅ Backend sends BOTH route and screen — support both
         const route = data.route || data.screen;
         const params = {
           ...(data.params || {}),
@@ -163,6 +160,7 @@ function ColdStartDeepLink() {
             ? { conversationId: data.conversationId }
             : {}),
           ...(data.postId ? { postId: data.postId } : {}),
+          ...(data.userId ? { userId: data.userId } : {}),
         };
 
         if (!route) return;
@@ -170,11 +168,10 @@ function ColdStartDeepLink() {
         console.log("[ColdStart] navigating to:", route, params);
         handledRef.current = true;
 
-        // Wait for NavigationContainer to be ready
         const tryNavigate = (attempt = 0) => {
-          if (navigationRef?.current?.isReady?.()) {
+          if (navigationRef?.isReady?.()) {
             try {
-              navigationRef.current.navigate(route, params);
+              navigationRef.navigate(route, params);
               console.log("[ColdStart] navigated ✅");
             } catch (e) {
               console.warn("[ColdStart] nav failed:", e.message);
@@ -195,14 +192,68 @@ function ColdStartDeepLink() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 5. APP CONTENT — GlobalNotificationLayer inside NavigationContainer
-//    so it can both show banner AND use navigation.
+// 5. EXTERNAL DEEP LINK
+//    Handles tdcapp://... and https://... link opens.
+// ═══════════════════════════════════════════════════════════════
+function ExternalDeepLink() {
+  useEffect(() => {
+    const handleUrl = ({ url }) => {
+      if (!url) return;
+      try {
+        const parsed = Linking.parse(url);
+        const parts = (parsed.path || "").split("/").filter(Boolean);
+
+        if (!navigationRef?.isReady?.()) return;
+
+        console.log("[ExternalDeepLink] handling:", url, "parts:", parts);
+
+        if (parts[0] === "post" && parts[1]) {
+          navigationRef.navigate("PostDetailScreen", { postId: parts[1] });
+        } else if (parts[0] === "user" && parts[1]) {
+          navigationRef.navigate("UserProfile", { userId: parts[1] });
+        } else if (parts[0] === "offer" && parts[1]) {
+          navigationRef.navigate("OfferScreen", { offerId: parts[1] });
+        } else if (parts[0] === "chat" && parts[1]) {
+          navigationRef.navigate("ChatDetailScreen", { chatId: parts[1] });
+        } else if (parts[0] === "listing" && parts[1]) {
+          navigationRef.navigate("ListingDetail", { listingId: parts[1] });
+        } else if (parts[0] === "match" && parts[1]) {
+          navigationRef.navigate("MatchChat", { matchId: parts[1] });
+        } else if (parts[0] === "inquiry" && parts[1]) {
+          navigationRef.navigate("InquiryChat", { inquiryId: parts[1] });
+        }
+      } catch (e) {
+        console.warn("[ExternalDeepLink] parse error:", e.message);
+      }
+    };
+
+    // Cold start via URL
+    Linking.getInitialURL()
+      .then((url) => {
+        if (url) {
+          // Delay so NavigationContainer is mounted
+          setTimeout(() => handleUrl({ url }), 800);
+        }
+      })
+      .catch(() => {});
+
+    // While running
+    const sub = Linking.addEventListener("url", handleUrl);
+    return () => sub.remove();
+  }, []);
+
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 6. APP CONTENT
 // ═══════════════════════════════════════════════════════════════
 function AppContent() {
   return (
     <>
       <PushRegistration />
       <ColdStartDeepLink />
+      <ExternalDeepLink />
 
       <ResumeProvider>
         <ChatProvider>
@@ -212,7 +263,7 @@ function AppContent() {
               <AppNavigator />
             </NavigationContainer>
 
-            {/* ✅ Banner layer — mounted after NavigationContainer so
+            {/* Banner layer — mounted AFTER NavigationContainer so
                 navigationRef is always ready when a notification arrives */}
             <GlobalNotificationLayer />
 
@@ -226,7 +277,7 @@ function AppContent() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 6. ROOT APP
+// 7. ROOT APP
 // ═══════════════════════════════════════════════════════════════
 export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
@@ -234,36 +285,44 @@ export default function App() {
   useEffect(() => {
     async function prepare() {
       try {
-        // Small delay so splash looks intentional
+        // 1. Init audio mode + preload hot sounds BEFORE splash hides
+        await configureAudio();
+        await preloadSounds([
+          "tdc_tap",
+          "tdc_success",
+          "tdc_error",
+          "tdc_nope",
+          "tdc_like",
+          "tdc_send",
+          "tdc_popup_open",
+          "tdc_popup_close",
+          "tdc_notification_in_app",
+          "tdc_push_default",
+          "tdc_push_message",
+          "tdc_push_deal",
+          "tdc_push_confession",
+          "tdc_push_streak",
+          "tdc_push_level_up",
+        ]);
+
+        // 2. Small delay so splash feels intentional
         await new Promise((resolve) => setTimeout(resolve, 1200));
 
-        // ✅ Ensure Android channels exist BEFORE hiding splash,
-        //    so first notification lands on the right channel.
-        if (Platform.OS === "android") {
-          await Notifications.setNotificationChannelAsync("engagement", {
-            name: "engagement",
-            importance: Notifications.AndroidImportance.MAX,
-            vibrationPattern: [0, 250, 250, 250],
-            lightColor: "#f9c349",
-            sound: "default",
-            lockscreenVisibility:
-              Notifications.AndroidNotificationVisibility.PUBLIC,
-            bypassDnd: true,
-          });
-          await Notifications.setNotificationChannelAsync("default", {
-            name: "default",
-            importance: Notifications.AndroidImportance.MAX,
-            vibrationPattern: [0, 250, 250, 250],
-            lightColor: "#f9c349",
-            sound: "default",
-            lockscreenVisibility:
-              Notifications.AndroidNotificationVisibility.PUBLIC,
-            bypassDnd: true,
-          });
-        }
+        // 3. Android channels are set up inside pushNotifications.js
+        //    via setupAndroidChannels() when registerForPushNotificationsAsync
+        //    runs — do NOT duplicate here.
 
         await SplashScreen.hideAsync();
         setAppIsReady(true);
+
+        // 4. Play the sonic logo on cold start
+        setTimeout(() => {
+          try {
+            soundAppOpen();
+          } catch (e) {
+            console.log("[App] soundAppOpen error:", e?.message);
+          }
+        }, 300);
       } catch (e) {
         console.warn("[App] prepare error:", e);
         setAppIsReady(true);

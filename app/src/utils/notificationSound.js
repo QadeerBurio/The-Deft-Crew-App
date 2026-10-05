@@ -11,7 +11,7 @@ export const playNotificationSound = async () => {
     
     // Create a simple beep sound using Audio API
     const { sound } = await Audio.Sound.createAsync(
-      require('../assets/sounds/notification.wav'), // Add your sound file
+      require('./assets/sounds/notification.wav'), // Add your sound file
       { shouldPlay: true }
     );
     

@@ -24,7 +24,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import axios from "axios";
 import * as Haptics from "expo-haptics";
 import { useNavigation } from "@react-navigation/native";
-
+import { soundPopupOpen, soundPopupClose, playSoundForNotification } from "../lib/tdcSounds";
 import { AuthContext } from "../context/AuthContext";
 import { BASE_URL } from "../api/api";
 import { navigationRef } from "../navigation/navigationRef";
@@ -43,23 +43,34 @@ const MUTED = "#888";
 const DANGER = "#ef4444";
 const SUCCESS = "#10b981";
 
+// ─── Social notification types ───
+const SOCIAL_TYPES = [
+  "like", "comment", "follow", "request", "connection_accepted",
+  "request_declined", "message", "Social", "social", "mention", "tag",
+];
+
 // ════════════════════════════════════════════
 // DEEP LINK HELPER
 // ════════════════════════════════════════════
 const openDeepLink = (item, navigation) => {
   if (!item) return false;
 
-  const nav = item.screenToOpen || item.metadata?.screenToOpen;
+  const nav =
+    item.screenToOpen ||
+    item.metadata?.screenToOpen ||
+    item.metadata?.screen ||
+    item.metadata?.route;
   const params = item.metadata?.params || item.params || {};
 
   if (nav) {
     try {
       if (navigationRef.isReady()) {
         navigationRef.navigate(nav, params);
+        return true;
       } else if (navigation) {
         navigation.navigate(nav, params);
+        return true;
       }
-      return true;
     } catch (e) {
       console.log("[deepLink] structured nav failed:", e?.message);
     }
@@ -73,31 +84,37 @@ const openDeepLink = (item, navigation) => {
   return false;
 };
 
-const handleLinkPath = (path) => {
+const handleLinkPath = (path, navigation) => {
   try {
-    const postMatch = path.match(/\/post\/([a-zA-Z0-9]+)/);
-    if (postMatch && navigationRef.isReady()) {
-      navigationRef.navigate("PostDetailScreen", { postId: postMatch[1] });
-      return true;
-    }
+    const navigateTo = (screen, params) => {
+      if (navigationRef.isReady()) {
+        navigationRef.navigate(screen, params);
+        return true;
+      }
+      return false;
+    };
 
-    if (path.includes("/offers") || path.includes("/offer")) {
-      if (navigationRef.isReady()) navigationRef.navigate("Brands");
-      return true;
-    }
-    if (path.includes("/jobs") || path.includes("/career")) {
-      if (navigationRef.isReady()) navigationRef.navigate("Career");
-      return true;
-    }
-    if (path.includes("/event")) {
-      if (navigationRef.isReady()) navigationRef.navigate("Events");
-      return true;
+    const postMatch = path.match(/\/post\/([a-zA-Z0-9]+)/);
+    if (postMatch) {
+      return navigateTo("PostDetailScreen", { postId: postMatch[1] });
     }
 
     const profileMatch = path.match(/\/user\/([a-zA-Z0-9]+)/);
-    if (profileMatch && navigationRef.isReady()) {
-      navigationRef.navigate("UserProfile", { userId: profileMatch[1] });
-      return true;
+    if (profileMatch) {
+      return navigateTo("UserProfile", { userId: profileMatch[1] });
+    }
+
+    if (path.includes("/offers") || path.includes("/offer") || path.includes("/brand")) {
+      return navigateTo("Brands");
+    }
+    if (path.includes("/jobs") || path.includes("/career")) {
+      return navigateTo("Career");
+    }
+    if (path.includes("/event")) {
+      return navigateTo("Events");
+    }
+    if (path.includes("/message") || path.includes("/chat")) {
+      return navigateTo("Messages");
     }
 
     return false;
@@ -112,39 +129,46 @@ const handleLinkPath = (path) => {
 // ════════════════════════════════════════════
 const ICON_MAP = {
   // System
-  Offers: 'gift-outline',
-  Offer: 'gift-outline',
-  Brand: 'pricetag-outline',
-  System: 'settings-outline',
-  'Application Status': 'checkmark-circle-outline',
-  'Job Application': 'briefcase-outline',
-  Interview: 'calendar-outline',
-  'Job Posting': 'megaphone-outline',
-  Welcome: 'happy-outline',
+  Offers: "gift-outline",
+  Offer: "gift-outline",
+  Brand: "pricetag-outline",
+  System: "settings-outline",
+  system: "settings-outline",
+  "Application Status": "checkmark-circle-outline",
+  "Job Application": "briefcase-outline",
+  Interview: "calendar-outline",
+  "Job Posting": "megaphone-outline",
+  Welcome: "happy-outline",
 
   // Social
-  Social: 'people-outline',
-  like: 'heart-outline',
-  comment: 'chatbubble-outline',
-  follow: 'person-add-outline',
-  request: 'person-add-outline',
-  connection_accepted: 'checkmark-circle-outline',
-  request_declined: 'close-circle-outline',
+  Social: "people-outline",
+  social: "people-outline",
+  like: "heart-outline",
+  comment: "chatbubble-outline",
+  follow: "person-add-outline",
+  request: "person-add-outline",
+  connection_accepted: "checkmark-circle-outline",
+  request_declined: "close-circle-outline",
+  mention: "at-outline",
+  tag: "pricetag-outline",
 
   // SkillShare
-  new_offer: 'briefcase-outline',
-  offer_accepted: 'checkmark-done-outline',
-  offer_rejected: 'close-circle-outline',
-  match_created: 'handshake-outline',
+  new_offer: "briefcase-outline",
+  offer_accepted: "checkmark-done-outline",
+  offer_rejected: "close-circle-outline",
+  match_created: "handshake-outline",
 
   // Messages
-  Message: 'chatbubbles-outline',
-  message: 'chatbubbles-outline',
+  Message: "chatbubbles-outline",
+  message: "chatbubbles-outline",
 
-  Default: 'notifications-outline',
+  Default: "notifications-outline",
 };
 
-const getIconName = (type) => ICON_MAP[type] || ICON_MAP.Default;
+const getIconName = (type) => {
+  if (!type) return ICON_MAP.Default;
+  return ICON_MAP[type] || ICON_MAP[type.toLowerCase()] || ICON_MAP.Default;
+};
 
 // ════════════════════════════════════════════
 // MAIN COMPONENT
@@ -172,6 +196,7 @@ const NotificationModal = ({ visible, onClose }) => {
       backdropFade.setValue(0);
       headerFade.setValue(0);
       detailSlide.setValue(SCREEN_WIDTH);
+      soundPopupOpen();
 
       Animated.parallel([
         Animated.spring(sheetSlide, {
@@ -195,6 +220,7 @@ const NotificationModal = ({ visible, onClose }) => {
 
       if (token && user) fetchNotifications();
     } else {
+      soundPopupClose();
       Animated.parallel([
         Animated.timing(sheetSlide, {
           toValue: SCREEN_HEIGHT,
@@ -207,6 +233,7 @@ const NotificationModal = ({ visible, onClose }) => {
           useNativeDriver: true,
         }),
       ]).start();
+      
     }
   }, [visible]);
 
@@ -241,74 +268,208 @@ const NotificationModal = ({ visible, onClose }) => {
   };
 
   // ════════════════════════════════════════════
-  // FETCH
+  // FETCH NOTIFICATIONS
   // ════════════════════════════════════════════
-    const fetchNotifications = async () => {
+  const fetchNotifications = async () => {
     if (!token || !user) return;
     setLoading(true);
 
+    let mainDocs = [];
+    let socialDocs = [];
+
+    // ── Fetch main notifications (isolated try/catch) ──
     try {
-      const [mainRes, socialRes] = await Promise.all([
-        axios.get(`${BASE_URL}/notification/my-notifications`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        axios
-          .get(`${BASE_URL}/social/notifications`, {
-            headers: { Authorization: `Bearer ${token}` },
-          })
-          .catch(() => ({ data: [] })),
-      ]);
-
-      const mainDocs = Array.isArray(mainRes.data) ? mainRes.data : [];
-      const socialDocs = Array.isArray(socialRes.data) ? socialRes.data : [];
-
-      const TITLE_MAP = {
-        like: 'new like ❤️',
-        comment: 'new comment 💬',
-        follow: 'new follower 🌟',
-        request: 'connection request 👤',
-        connection_accepted: 'connection accepted 🎉',
-        request_declined: 'request declined',
-        new_offer: 'new offer 💼',
-        offer_accepted: 'offer accepted 🎉',
-        offer_rejected: 'offer declined',
-        match_created: 'match created 🤝',
-        message: 'new message 💬',
-      };
-
-      const normalizedSocial = socialDocs.map((n) => ({
-        _id: n._id,
-        title: TITLE_MAP[n.type] || 'notification',
-        description: n.text || '',
-        type: n.type || 'Social',
-        category: 'Social',
-        mood: n.mood || 'sorted',
-        iconUrl: n.iconUrl || null,
-        createdAt: n.createdAt,
-        isRead: (n.readBy || []).some(
-          (id) => id.toString() === user._id.toString()
-        ),
-        link: n.postId ? `/post/${n.postId}` : (n.link || ''),
-        metadata: n.metadata || {},
-        screenToOpen: n.screenToOpen || n.metadata?.screen || null,
-      }));
-
-      const merged = [...mainDocs, ...normalizedSocial]
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .map((n) => ({ ...n, time: getTimeAgo(n.createdAt) }));
-
-      setNotifications(merged);
-
-      const unreadTotal = merged.filter((n) => !n.isRead).length;
-      if (typeof setUnreadCount === 'function') {
-        setUnreadCount(unreadTotal);
-      }
-    } catch (error) {
-      console.error('[NotificationModal] fetch error:', error?.message);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      const mainRes = await axios.get(`${BASE_URL}/notification/my-notifications`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      mainDocs = Array.isArray(mainRes.data)
+        ? mainRes.data
+        : Array.isArray(mainRes.data?.notifications)
+        ? mainRes.data.notifications
+        : [];
+    } catch (err) {
+      console.log(
+        "[NotificationModal] main fetch error:",
+        err?.response?.status,
+        err?.message
+      );
     }
+
+    // ── Fetch social notifications (isolated try/catch) ──
+    try {
+      const socialRes = await axios.get(`${BASE_URL}/social/notifications`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      socialDocs = Array.isArray(socialRes.data)
+        ? socialRes.data
+        : Array.isArray(socialRes.data?.notifications)
+        ? socialRes.data.notifications
+        : [];
+    } catch (err) {
+      console.log(
+        "[NotificationModal] social fetch error:",
+        err?.response?.status,
+        err?.message
+      );
+    }
+
+    // ── Debug logs ──
+    console.log("[NotificationModal] main:", mainDocs.length, "social:", socialDocs.length);
+    if (socialDocs.length > 0) {
+      console.log(
+        "[NotificationModal] sample social:",
+        JSON.stringify(socialDocs[0], null, 2)
+      );
+    }
+
+    const myId = user?._id?.toString();
+
+    const TITLE_MAP = {
+      like: "new like ❤️",
+      comment: "new comment 💬",
+      follow: "new follower 🌟",
+      request: "connection request 👤",
+      connection_accepted: "connection accepted 🎉",
+      request_declined: "request declined",
+      new_offer: "new offer 💼",
+      offer_accepted: "offer accepted 🎉",
+      offer_rejected: "offer declined",
+      match_created: "match created 🤝",
+      message: "new message 💬",
+      mention: "mentioned you 📣",
+      tag: "tagged you 🏷️",
+    };
+
+    // ── Normalize social notifications (safe) ──
+    const normalizedSocial = socialDocs
+      .map((n, i) => {
+        try {
+          const type = n.type || "Social";
+
+          // Safely determine isRead
+          let isRead = false;
+          if (typeof n.isRead === "boolean") {
+            isRead = n.isRead;
+          } else if (Array.isArray(n.readBy) && myId) {
+            isRead = n.readBy.some((id) => id?.toString() === myId);
+          }
+
+          // Build description from multiple possible fields
+          const description =
+            n.text ||
+            n.description ||
+            n.message ||
+            n.body ||
+            n.content ||
+            (n.sender?.name ? `${n.sender.name} interacted with you` : "") ||
+            "";
+
+          // Build deep-link target
+          const postId = n.postId || n.post?._id || n.post;
+          const userId =
+            n.userId ||
+            n.fromUserId ||
+            n.sender?._id ||
+            n.senderId ||
+            n.actor?._id;
+
+          let screenToOpen = n.screenToOpen || n.metadata?.screenToOpen || null;
+          let params = n.metadata?.params || {};
+
+          if (!screenToOpen) {
+            if ((type === "like" || type === "comment") && postId) {
+              screenToOpen = "PostDetailScreen";
+              params = { postId: postId.toString() };
+            } else if (
+              ["follow", "request", "connection_accepted", "request_declined"].includes(
+                type
+              ) &&
+              userId
+            ) {
+              screenToOpen = "UserProfile";
+              params = { userId: userId.toString() };
+            } else if (type === "message") {
+              screenToOpen = "Messages";
+              params = {
+                conversationId: n.conversationId,
+                userId: userId?.toString(),
+              };
+            } else if (
+              ["new_offer", "offer_accepted", "offer_rejected", "match_created"].includes(
+                type
+              )
+            ) {
+              screenToOpen = "Brands";
+              params = {};
+            }
+          }
+
+          return {
+            _id: n._id?.toString() || `social-${i}`,
+            title: TITLE_MAP[type] || n.title || "notification",
+            description,
+            type,
+            category: "Social",
+            mood: n.mood || "sorted",
+            iconUrl: n.iconUrl || null,
+            createdAt: n.createdAt || new Date().toISOString(),
+            isRead,
+            link: postId ? `/post/${postId}` : n.link || "",
+            metadata: {
+              ...(n.metadata || {}),
+              screenToOpen,
+              params,
+            },
+            screenToOpen,
+          };
+        } catch (e) {
+          console.log(
+            "[NotificationModal] normalize social item failed:",
+            e?.message,
+            n
+          );
+          return null;
+        }
+      })
+      .filter(Boolean);
+
+    // ── Normalize main notifications (safe) ──
+    const normalizedMain = mainDocs
+      .map((n, i) => {
+        try {
+          let isRead = false;
+          if (typeof n.isRead === "boolean") {
+            isRead = n.isRead;
+          } else if (Array.isArray(n.readBy) && myId) {
+            isRead = n.readBy.some((id) => id?.toString() === myId);
+          }
+          return {
+            ...n,
+            _id: n._id?.toString() || `main-${i}`,
+            category: n.category || "System",
+            description: n.description || n.text || n.message || "",
+            isRead,
+            createdAt: n.createdAt || new Date().toISOString(),
+          };
+        } catch (e) {
+          return null;
+        }
+      })
+      .filter(Boolean);
+
+    const merged = [...normalizedMain, ...normalizedSocial]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .map((n) => ({ ...n, time: getTimeAgo(n.createdAt) }));
+
+    setNotifications(merged);
+
+    const unreadTotal = merged.filter((n) => !n.isRead).length;
+    if (typeof setUnreadCount === "function") {
+      setUnreadCount(unreadTotal);
+    }
+
+    setLoading(false);
+    setRefreshing(false);
   };
 
   const onRefresh = useCallback(() => {
@@ -319,53 +480,114 @@ const NotificationModal = ({ visible, onClose }) => {
   // ════════════════════════════════════════════
   // ACTIONS
   // ════════════════════════════════════════════
-  const markAsReadOnServer = async (id) => {
-    try {
-      await axios.patch(
-        `${BASE_URL}/notification/mark-read/${id}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setNotifications((prev) =>
-        prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch (err) {
-      console.log("[markAsRead] error:", err?.message);
+  const markAsReadOnServer = async (id, type) => {
+    const isSocial = SOCIAL_TYPES.includes(type);
+
+    const socialEndpoints = [
+      `${BASE_URL}/social/notifications/${id}/read`,
+      `${BASE_URL}/social/notifications/mark-read/${id}`,
+      `${BASE_URL}/social/notification/${id}/read`,
+    ];
+    const mainEndpoints = [
+      `${BASE_URL}/notification/mark-read/${id}`,
+      `${BASE_URL}/notification/${id}/read`,
+    ];
+
+    const endpoints = isSocial
+      ? [...socialEndpoints, ...mainEndpoints]
+      : mainEndpoints;
+
+    // Optimistic update
+    setNotifications((prev) =>
+      prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
+    );
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+
+    for (const url of endpoints) {
+      try {
+        await axios.patch(
+          url,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        return; // success
+      } catch (err) {
+        // try next endpoint
+      }
     }
+    console.log("[markAsRead] all endpoints failed for", id);
   };
 
   const markAllRead = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    try {
-      await axios.put(
-        `${BASE_URL}/notification/mark-all-read`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-      setUnreadCount(0);
-    } catch (err) {
-      console.log("[markAllRead] error:", err?.message);
-    }
+
+    const calls = [
+      axios
+        .put(
+          `${BASE_URL}/notification/mark-all-read`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        .catch(() => null),
+      axios
+        .put(
+          `${BASE_URL}/social/notifications/mark-all-read`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        .catch(() => null),
+      axios
+        .patch(
+          `${BASE_URL}/social/notifications/read-all`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        .catch(() => null),
+    ];
+
+    await Promise.allSettled(calls);
+
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    setUnreadCount(0);
   };
 
-  const deleteNotification = async (id) => {
-    try {
-      await axios.delete(`${BASE_URL}/notification/delete/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const deletedItem = notifications.find((n) => n._id === id);
-      setNotifications((prev) => prev.filter((n) => n._id !== id));
-      if (deletedItem && !deletedItem.isRead) {
-        setUnreadCount((prev) => Math.max(0, prev - 1));
-      }
-      if (selectedNotification?._id === id) {
-        setSelectedNotification(null);
-      }
-    } catch {
-      Alert.alert("error", "could not delete notification");
+  const deleteNotification = async (id, type) => {
+    const isSocial = SOCIAL_TYPES.includes(type);
+
+    const socialEndpoints = [
+      `${BASE_URL}/social/notifications/${id}`,
+      `${BASE_URL}/social/notification/${id}`,
+    ];
+    const mainEndpoints = [
+      `${BASE_URL}/notification/delete/${id}`,
+      `${BASE_URL}/notification/${id}`,
+    ];
+
+    const endpoints = isSocial
+      ? [...socialEndpoints, ...mainEndpoints]
+      : mainEndpoints;
+
+    // Optimistic remove
+    const deletedItem = notifications.find((n) => n._id === id);
+    setNotifications((prev) => prev.filter((n) => n._id !== id));
+    if (deletedItem && !deletedItem.isRead) {
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     }
+    if (selectedNotification?._id === id) {
+      setSelectedNotification(null);
+    }
+
+    for (const url of endpoints) {
+      try {
+        await axios.delete(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        return; // success
+      } catch (err) {
+        // try next
+      }
+    }
+    console.log("[delete] all endpoints failed for", id);
   };
 
   const clearAllNotifications = () => {
@@ -378,15 +600,22 @@ const NotificationModal = ({ visible, onClose }) => {
           text: "clear all",
           style: "destructive",
           onPress: async () => {
-            try {
-              await axios.delete(`${BASE_URL}/notification/clear-all`, {
-                headers: { Authorization: `Bearer ${token}` },
-              });
-              setNotifications([]);
-              setUnreadCount(0);
-            } catch (err) {
-              console.log("[clearAll] error:", err?.message);
-            }
+            const calls = [
+              axios
+                .delete(`${BASE_URL}/notification/clear-all`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                })
+                .catch(() => null),
+              axios
+                .delete(`${BASE_URL}/social/notifications/clear-all`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                })
+                .catch(() => null),
+            ];
+            await Promise.allSettled(calls);
+
+            setNotifications([]);
+            setUnreadCount(0);
           },
         },
       ]
@@ -400,10 +629,11 @@ const NotificationModal = ({ visible, onClose }) => {
   };
 
   const handleOpenNotification = (item) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSelectedNotification(item);
-    if (!item.isRead) markAsReadOnServer(item._id);
-  };
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  playSoundForNotification(item.type, item.mood);
+  setSelectedNotification(item);
+  if (!item.isRead) markAsReadOnServer(item._id, item.type);
+};
 
   const handleGoToContent = () => {
     if (!selectedNotification) return;
@@ -418,44 +648,50 @@ const NotificationModal = ({ visible, onClose }) => {
   // ════════════════════════════════════════════
   // FILTER
   // ════════════════════════════════════════════
-    const filteredData = notifications.filter((n) => {
-    if (filter === 'All') return true;
-    if (filter === 'Unread') return !n.isRead;
-    if (filter === 'Offers') {
+  const filteredData = notifications.filter((n) => {
+    if (filter === "All") return true;
+    if (filter === "Unread") return !n.isRead;
+
+    if (filter === "Offers") {
       return [
-        'new_offer',
-        'offer_accepted',
-        'offer_rejected',
-        'match_created',
-        'Offers',
-        'Offer',
-        'Brand',
+        "new_offer",
+        "offer_accepted",
+        "offer_rejected",
+        "match_created",
+        "Offers",
+        "Offer",
+        "Brand",
       ].includes(n.type);
     }
-    if (filter === 'System') {
-      return ['System', 'system', 'Application Status'].includes(n.type);
-    }
-    if (filter === 'Social') {
+
+    if (filter === "System") {
       return [
-        'like',
-        'comment',
-        'follow',
-        'request',
-        'connection_accepted',
-        'request_declined',
-        'Social',
+        "System",
+        "system",
+        "Application Status",
+        "Job Application",
+        "Interview",
+        "Job Posting",
+        "Welcome",
       ].includes(n.type);
     }
+
+    if (filter === "Social") {
+      if (n.category === "Social") return true;
+      return SOCIAL_TYPES.includes(n.type);
+    }
+
     return n.type === filter;
   });
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-    const canOpenContent = (item) =>
+  const canOpenContent = (item) =>
     !!(
       item.screenToOpen ||
       item.metadata?.screen ||
       item.metadata?.route ||
+      item.metadata?.screenToOpen ||
       item.link ||
       item.metadata?.link
     );
@@ -600,7 +836,6 @@ const NotificationModal = ({ visible, onClose }) => {
           onPressOut={onPressOut}
           activeOpacity={0.9}
         >
-          {/* Icon */}
           <LinearGradient
             colors={unread ? [GOLD + "25", GOLD + "08"] : [LIGHT, LIGHT]}
             style={styles.iconBox}
@@ -612,7 +847,6 @@ const NotificationModal = ({ visible, onClose }) => {
             />
           </LinearGradient>
 
-          {/* Content */}
           <View style={styles.cardContent}>
             <View style={styles.cardHeader}>
               <Text
@@ -624,7 +858,7 @@ const NotificationModal = ({ visible, onClose }) => {
               <Text style={styles.cardTime}>{item.time}</Text>
             </View>
             <Text style={styles.cardDesc} numberOfLines={2}>
-              {item.description}
+              {item.description || "no description"}
             </Text>
 
             {linkable && (
@@ -635,12 +869,11 @@ const NotificationModal = ({ visible, onClose }) => {
             )}
           </View>
 
-          {/* Right side */}
           <View style={styles.rightCol}>
             {unread && <View style={styles.unreadDot} />}
             <TouchableOpacity
               style={styles.deleteBtn}
-              onPress={() => deleteNotification(item._id)}
+              onPress={() => deleteNotification(item._id, item.type)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Ionicons name="close" size={16} color="#c5c5c5" />
@@ -652,7 +885,7 @@ const NotificationModal = ({ visible, onClose }) => {
   };
 
   // ════════════════════════════════════════════
-  // DETAIL VIEW — pushed from right
+  // DETAIL VIEW
   // ════════════════════════════════════════════
   const DetailView = () => {
     if (!selectedNotification) return null;
@@ -665,7 +898,6 @@ const NotificationModal = ({ visible, onClose }) => {
           { transform: [{ translateX: detailSlide }] },
         ]}
       >
-        {/* Detail header */}
         <View style={styles.detailHeader}>
           <TouchableOpacity
             style={styles.detailBackBtn}
@@ -682,7 +914,9 @@ const NotificationModal = ({ visible, onClose }) => {
 
           <TouchableOpacity
             style={styles.detailDeleteBtn}
-            onPress={() => deleteNotification(selectedNotification._id)}
+            onPress={() =>
+              deleteNotification(selectedNotification._id, selectedNotification.type)
+            }
             activeOpacity={0.7}
           >
             <Ionicons name="trash-outline" size={18} color={DANGER} />
@@ -693,13 +927,11 @@ const NotificationModal = ({ visible, onClose }) => {
           contentContainerStyle={styles.detailScroll}
           showsVerticalScrollIndicator={false}
         >
-          {/* Date badge */}
           <View style={styles.detailDateBadge}>
             <View style={styles.detailDateDot} />
             <Text style={styles.detailDateText}>{selectedNotification.time}</Text>
           </View>
 
-          {/* Hero card */}
           <View style={styles.detailCard}>
             <LinearGradient
               colors={[GOLD + "30", GOLD + "08"]}
@@ -712,14 +944,12 @@ const NotificationModal = ({ visible, onClose }) => {
               />
             </LinearGradient>
 
-            <Text style={styles.detailTitle}>
-              {selectedNotification.title}
-            </Text>
+            <Text style={styles.detailTitle}>{selectedNotification.title}</Text>
 
             <View style={styles.detailDivider} />
 
             <Text style={styles.detailBody}>
-              {selectedNotification.description}
+              {selectedNotification.description || "no description"}
             </Text>
 
             <View style={styles.detailFooter}>
@@ -774,22 +1004,22 @@ const NotificationModal = ({ visible, onClose }) => {
             </View>
           </View>
 
-          {/* Type card */}
           <View style={styles.detailTypeCard}>
             <View style={styles.detailTypeLeft}>
               <Text style={styles.detailTypeLabel}>category</Text>
               <Text style={styles.detailTypeValue}>
-                {selectedNotification.type || "system"}
+                {selectedNotification.category ||
+                  selectedNotification.type ||
+                  "system"}
               </Text>
             </View>
             <View style={styles.detailTypePill}>
               <Text style={styles.detailTypePillText}>
-                {selectedNotification.type?.toLowerCase() || "notification"}
+                {(selectedNotification.type || "notification").toLowerCase()}
               </Text>
             </View>
           </View>
 
-          {/* CTA */}
           {linkable && (
             <TouchableOpacity
               style={styles.openBtn}
@@ -830,7 +1060,6 @@ const NotificationModal = ({ visible, onClose }) => {
         <Animated.View
           style={[styles.sheet, { transform: [{ translateY: sheetSlide }] }]}
         >
-          {/* List view */}
           <View style={styles.listWrapper}>
             <Header />
             {loading && !refreshing ? (
@@ -878,7 +1107,6 @@ const NotificationModal = ({ visible, onClose }) => {
             )}
           </View>
 
-          {/* Detail view slides over */}
           <DetailView />
         </Animated.View>
       </View>

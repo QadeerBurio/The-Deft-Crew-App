@@ -14,7 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
 import { AuthContext } from "../../context/AuthContext";
 import { TouchableWithoutFeedback } from 'react-native';
-
+import { soundLike, soundTap } from "../../lib/tdcSounds";
 const { width, height } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 const COMMENTS_POLL_INTERVAL = 6000;
@@ -1127,6 +1127,7 @@ export default function UserProfile({ route, navigation }) {
 
   // ============ POST HANDLERS ============
   const handleLikePost = async (postId, index) => {
+    soundLike();   
     if (isBlocked || likingItems[postId]) return;
     setLikingItems(prev => ({ ...prev, [postId]: true }));
 

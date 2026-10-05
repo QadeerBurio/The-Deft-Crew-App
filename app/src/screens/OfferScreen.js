@@ -1,4 +1,4 @@
-// screens/OfferScreen.js - FULL SCREEN OFFER DETAIL WITH BRANCHES + SMART AUTO-REFRESH + CLAIM SYNC + AUTO-UPDATE STATS + PROPER DATA FETCH
+// screens/OfferScreen.js - FULL SCREEN OFFER DETAIL WITH BRANCHES + SMART AUTO-REFRESH + CLAIM SYNC + AUTO-UPDATE STATS + PROPER DATA FETCH + SOUND KIT
 import React, {
   useState,
   useCallback,
@@ -45,6 +45,20 @@ import api, {
 
 import { AuthContext } from "../context/AuthContext";
 
+// ═══════════════════════════════════════════
+// TDC SOUND KIT
+// ═══════════════════════════════════════════
+import {
+  soundDealClaimed,
+  soundSuccess,
+  soundError,
+  soundNope,
+  soundTap,
+  soundConfirm,
+  soundRefresh,
+  soundCopy,
+} from "../lib/tdcSounds";
+
 const { width } = Dimensions.get("window");
 const BASE_URL = "https://the-deft-crew-production.up.railway.app";
 
@@ -58,14 +72,12 @@ const STATS_POLL_INTERVAL = 12000;
 
 // ============================================================
 // ✅ PERSISTENT CLAIMED IDS REGISTRY
-// Survives app reloads via AsyncStorage
 // ============================================================
 const CLAIMED_IDS_STORAGE_KEY = "@tdc_claimed_offer_ids";
 
 const claimedIdsRegistry = new Set();
 let registryHydrated = false;
 
-// Persist to storage (debounced)
 let persistTimer = null;
 const persistRegistry = () => {
   if (persistTimer) clearTimeout(persistTimer);
@@ -79,7 +91,6 @@ const persistRegistry = () => {
   }, 200);
 };
 
-// Hydrate from storage — call once on app boot
 export const hydrateClaimedRegistry = async () => {
   if (registryHydrated) return;
   registryHydrated = true;
@@ -118,11 +129,9 @@ export const isLocallyClaimed = (offerId) => {
 
 export const getAllLocallyClaimed = () => Array.from(claimedIdsRegistry);
 
-// ✅ Merge server claim status with local registry
 export const reconcileClaimedIds = (serverIds) => {
   if (!Array.isArray(serverIds)) return;
   const serverSet = new Set(serverIds.map(String));
-  // Only ADD — never remove from registry based on server (server can be stale)
   let changed = false;
   serverSet.forEach((id) => {
     if (!claimedIdsRegistry.has(id)) {
@@ -182,11 +191,9 @@ const userIdFromToken = (tk) => {
   }
 };
 
-// ✅ Handles: string IDs, populated objects, ObjectIds
 const isOfferClaimedByUser = (offer, currentUserId) => {
   if (!offer) return false;
   if (!currentUserId) {
-    // If we can't determine user, fall back to "any claimedBy entries"
     return Array.isArray(offer.claimedBy) && offer.claimedBy.length > 0;
   }
   if (!offer.claimedBy || !Array.isArray(offer.claimedBy)) return false;
@@ -204,7 +211,6 @@ const isOfferClaimedByUser = (offer, currentUserId) => {
   });
 };
 
-// ✅ Extract claimed IDs from a server offer response
 const extractClaimedIdsFromOffers = (offers, currentUserId) => {
   if (!Array.isArray(offers) || !currentUserId) return [];
   const me = String(currentUserId);
@@ -419,6 +425,7 @@ const BranchDropdown = ({
         ]}
         onPress={() => {
           Haptics.selectionAsync();
+          soundTap();           // 🔔 tap on dropdown toggle
           setExpanded(!expanded);
         }}
         activeOpacity={0.85}
@@ -460,6 +467,7 @@ const BranchDropdown = ({
             ]}
             onPress={() => {
               Haptics.selectionAsync();
+              soundTap();       // 🔔 tap on Original Offer select
               onClearSelection();
               setExpanded(false);
             }}
@@ -579,7 +587,6 @@ export default function OfferScreen() {
   const [stats, setStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(true);
 
-  // ✅ Bump on registry change to force re-render
   const [claimVersion, setClaimVersion] = useState(0);
 
   const isMountedRef = useRef(true);
@@ -744,18 +751,15 @@ export default function OfferScreen() {
 
         const meId = userIdFromToken(token);
 
-        // ✅ First, reconcile server claims into registry (ADD-ONLY)
         const rawOffers = offersRes.data || [];
         if (meId) {
           const serverClaimedIds = extractClaimedIdsFromOffers(rawOffers, meId);
           reconcileClaimedIds(serverClaimedIds);
         }
 
-        // ✅ Build fresh offers — registry is authoritative
         const freshOffers = rawOffers.map((offer) => {
           const serverSaysClaimed = isOfferClaimedByUser(offer, meId);
           const registrySaysClaimed = isLocallyClaimed(offer._id);
-          // ✅ Union: claimed if EITHER server OR registry says so
           const finalClaimed = serverSaysClaimed || registrySaysClaimed;
 
           return {
@@ -831,12 +835,10 @@ export default function OfferScreen() {
     [initialBrand, token, isGuest, formatImageUrl, updateStatsFromOffers]
   );
 
-  // ── Mount: hydrate registry, then fetch ──
   useEffect(() => {
     isMountedRef.current = true;
 
     (async () => {
-      // ✅ CRITICAL: Hydrate registry from storage first
       await hydrateClaimedRegistry();
 
       const cachedStats = await loadStatsCache();
@@ -854,7 +856,6 @@ export default function OfferScreen() {
     };
   }, [fetchAll, loadStatsCache]);
 
-  // Polling
   useEffect(() => {
     const startPolling = (interval) => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
@@ -1008,9 +1009,13 @@ export default function OfferScreen() {
 
   const openMap = useCallback(async (address) => {
     if (!address) {
+      soundNope();
       Alert.alert("Notice", "Address not available.");
       return;
     }
+
+    soundTap();   // 🔔 tap when opening map
+
     const destination = encodeURIComponent(address);
     const url = Platform.select({
       ios: `http://maps.apple.com/?q=${destination}`,
@@ -1027,29 +1032,44 @@ export default function OfferScreen() {
   }, []);
 
   // ============================================================
-  // CLAIM OFFER
+  // CLAIM OFFER — with full sound triggers
   // ============================================================
   const claimOffer = useCallback(
     async (offerId) => {
       if (isGuest) {
+        // 🔔 nope sound for guest
+        soundNope();
         Alert.alert(
           "Sign In Required",
           "Please sign in to claim this offer and get student discounts!",
           [
             { text: "Cancel", style: "cancel" },
-            { text: "Sign In", onPress: () => navigation.navigate("Login") },
+            {
+              text: "Sign In",
+              onPress: () => {
+                soundTap();
+                navigation.navigate("Login");
+              },
+            },
           ]
         );
         return;
       }
 
-      if (isLocallyClaimed(offerId)) return;
+      if (isLocallyClaimed(offerId)) {
+        // Already claimed — small tap, no drama
+        soundTap();
+        return;
+      }
 
       try {
         setClaiming(true);
+
+        // 🔔 play the "deal claimed" sound immediately for instant feedback
+        soundDealClaimed();
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-        // ✅ Register synchronously BEFORE API call
+        // Optimistic registry update
         registerLocalClaim(offerId);
         setClaimVersion((v) => v + 1);
 
@@ -1074,6 +1094,9 @@ export default function OfferScreen() {
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
+        // 🔔 success sound + modal
+        soundSuccess();
+
         setClaimedBrandName(
           hasSelectedBranch
             ? `${brand?.name || brand?.brandName || ""} · ${selectedBranch.name}`
@@ -1096,6 +1119,8 @@ export default function OfferScreen() {
         const msg = err.response?.data?.message || "Error claiming offer";
 
         if (err.response?.data?.alreadyClaimed) {
+          // Server already had it — soft success, no error sound
+          soundTap();
           registerLocalClaim(offerId);
           setClaimVersion((v) => v + 1);
           emitOfferClaimed(initialBrand._id, offerId);
@@ -1104,6 +1129,9 @@ export default function OfferScreen() {
           } catch (e) {}
           return;
         }
+
+        // 🔔 error sound on failure
+        soundError();
 
         unregisterLocalClaim(offerId);
         setClaimVersion((v) => v + 1);
@@ -1153,7 +1181,10 @@ export default function OfferScreen() {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.headerBtn}
-          onPress={() => navigation.goBack()}
+          onPress={() => {
+            soundTap();
+            navigation.goBack();
+          }}
           activeOpacity={0.7}
         >
           <Ionicons
@@ -1167,6 +1198,7 @@ export default function OfferScreen() {
           style={styles.headerBtn}
           onPress={() => {
             Haptics.selectionAsync();
+            soundRefresh();   // 🔔 refresh whoosh
             fetchAll({ silent: true, forceFresh: true });
             fetchStatsOnly();
           }}
@@ -1241,6 +1273,7 @@ export default function OfferScreen() {
               key={tab}
               onPress={() => {
                 Haptics.selectionAsync();
+                soundTap();     // 🔔 tap when switching tabs
                 setActiveTab(tab);
               }}
               style={[styles.tabItem, activeTab === tab && styles.activeTabCard]}
@@ -1301,7 +1334,10 @@ export default function OfferScreen() {
             {isGuest && (
               <TouchableOpacity
                 style={styles.guestPromptCard}
-                onPress={() => navigation.navigate("Login")}
+                onPress={() => {
+                  soundTap();
+                  navigation.navigate("Login");
+                }}
               >
                 <MaterialCommunityIcons
                   name="account-plus"
@@ -1414,7 +1450,10 @@ export default function OfferScreen() {
       <View style={styles.bottomBar}>
         <TouchableOpacity
           style={styles.closeBtn}
-          onPress={() => navigation.goBack()}
+          onPress={() => {
+            soundTap();
+            navigation.goBack();
+          }}
           activeOpacity={0.8}
         >
           <Text style={styles.closeBtnText}>Close</Text>
@@ -1467,7 +1506,7 @@ export default function OfferScreen() {
 }
 
 // ============================================================
-// STYLES (unchanged — same as before)
+// STYLES (unchanged)
 // ============================================================
 const styles = StyleSheet.create({
   mainSafeArea: { flex: 1, backgroundColor: "#fff" },

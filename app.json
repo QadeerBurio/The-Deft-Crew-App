@@ -2,7 +2,7 @@
   "expo": {
     "name": "tdc",
     "slug": "Testting",
-    "version": "1.0.11",
+    "version": "1.1.13",
     "orientation": "default",
     "icon": "./assets/tdc.png",
     "scheme": "tdcapp",
@@ -58,71 +58,73 @@
         "backgroundColor": "#000000"
       },
       "intentFilters": [
-        {
-          "action": "VIEW",
-          "data": {
-            "scheme": "geo"
-          }
-        },
-        {
-          "action": "VIEW",
-          "data": {
-            "scheme": "https",
-            "host": "www.google.com",
-            "pathPrefix": "/maps"
-          }
-        }
-      ]
+    { "action": "VIEW", "data": { "scheme": "geo" } },
+    { "action": "VIEW", "data": { "scheme": "https", "host": "www.google.com", "pathPrefix": "/maps" } },
+    {
+      "action": "VIEW",
+      "autoVerify": true,
+      "data": [
+        { "scheme": "tdcapp" },
+        { "scheme": "https", "host": "the-deft-crew-production.up.railway.app" }
+      ],
+      "category": ["BROWSABLE", "DEFAULT"]
+    }
+  ]
+      
+      
     },
     "web": {
       "output": "static"
     },
     "plugins": [
-      "@react-native-community/datetimepicker",
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/notification-icon.png",
-          "color": "#f9c349",
-          "defaultChannel": "engagement",
-          "sounds": [],
-          "androidMode": "default",
-          "androidCollapsedTitle": "New notification from TDC"
-        }
+  "@react-native-community/datetimepicker",
+  [
+    "expo-notifications",
+    {
+      "icon": "./assets/notification-icon.png",
+      "color": "#f9c349",
+      "defaultChannel": "engagement",
+      "sounds": [
+        "./assets/sounds/push/tdc_push_default.wav",
+        "./assets/sounds/push/tdc_push_deal.wav",
+        "./assets/sounds/push/tdc_push_message.wav",
+        "./assets/sounds/push/tdc_push_internship.wav",
+        "./assets/sounds/push/tdc_push_reminder.wav",
+        "./assets/sounds/push/tdc_push_points.wav",
+        "./assets/sounds/push/tdc_push_streak.wav",
+        "./assets/sounds/push/tdc_push_confession.wav",
+        "./assets/sounds/push/tdc_push_event.wav",
+        "./assets/sounds/push/tdc_push_level_up.wav"
       ],
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "hermesEnabled": true,
-            "compileSdkVersion": 36,
-            "targetSdkVersion": 36,
-            "minSdkVersion": 24,
-            "buildToolsVersion": "36.0.0",
-            "enableProguardInReleaseBuilds": false
-          },
-          "ios": {
-            "hermesEnabled": true
-          }
-        }
-      ],
-      [
-        "expo-av",
-        {
-          "microphonePermission": "TDC uses the microphone to record and send voice messages in chats."
-        }
-      ],
-      [
-        "expo-location",
-        {
-          "locationWhenInUsePermission": "TDC uses your location to share your current location in chats and provide location-based features."
-        }
-      ],
-      "expo-navigation-bar",
-      "expo-web-browser",
-      "expo-font",
-      "expo-task-manager"
-    ],
+      "androidMode": "default",
+      "androidCollapsedTitle": "New notification from TDC"
+    }
+  ],
+  [
+    "expo-build-properties",
+    {
+      "android": {
+        "hermesEnabled": true,
+        "compileSdkVersion": 36,
+        "targetSdkVersion": 36,
+        "minSdkVersion": 24,
+        "buildToolsVersion": "36.0.0",
+        "enableProguardInReleaseBuilds": false
+      },
+      "ios": { "hermesEnabled": true }
+    }
+  ],
+  ["expo-av", {
+    "microphonePermission": "TDC uses the microphone to record and send voice messages in chats."
+  }],
+  ["expo-location", {
+    "locationWhenInUsePermission": "TDC uses your location to share your current location in chats and provide location-based features."
+  }],
+  "expo-navigation-bar",
+  "expo-web-browser",
+  "expo-font",
+  "expo-task-manager"
+],
     "extra": {
       "eas": {
         "projectId": "112506b0-7553-4a1b-afeb-6a37019cc15f"

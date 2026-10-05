@@ -86,20 +86,27 @@ export default function GlobalNotificationLayer() {
         console.log('[GlobalNotificationLayer] Duplicate push - skipping');
         return;
       }
+// Play sound
+try {
+  const { playSoundForNotification } = require('../lib/tdcSounds');
+  playSoundForNotification(data.type, data.mood);
+} catch (e) {
+  console.log('[GlobalNotificationLayer] sound error:', e.message);
+}
 
-      // Add to banner queue
-      addNotification({
-        _id: id,
-        title: content.title || 'notification',
-        description: content.body || '',
-        type: data.type || 'System',
-        mood: data.mood || 'sorted',
-        iconUrl: data.iconUrl || null,
-        link: data.link || null,
-        screenToOpen: data.screen || data.route || null,
-        metadata: data,
-        createdAt: new Date().toISOString(),
-      });
+// Add to banner queue
+addNotification({
+  _id: id,
+  title: content.title || 'notification',
+  description: content.body || '',
+  type: data.type || 'System',
+  mood: data.mood || 'sorted',
+  iconUrl: data.iconUrl || null,
+  link: data.link || null,
+  screenToOpen: data.screen || data.route || null,
+  metadata: data,
+  createdAt: new Date().toISOString(),
+});
     });
 
     return () => {
