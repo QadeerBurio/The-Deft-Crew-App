@@ -14,7 +14,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from "../../context/AuthContext";
 import { soundLike, soundTap } from "../../lib/tdcSounds";
 const { width } = Dimensions.get('window');
-const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
+const API_URL = 'http://192.168.18.93:5000/api/social';
 
 // ============ IN-MEMORY CACHE ============
 const profileCache = {
@@ -81,6 +81,12 @@ const PostItem = React.memo(({ item, index, isPublic, user, onLike, onComment, o
             <Text style={styles.cardHandle}>@{isPublic ? user?.username || 'user' : 'anonymous'}</Text>
             <Text style={styles.cardTime}>· {new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
           </View>
+          {!isPublic && item.visibility === 'campus' && (
+            <View style={styles.campusOnlyTag}>
+              <Ionicons name="lock-closed" size={9} color="#f9c349" />
+              <Text style={styles.campusOnlyTagText}>campus only</Text>
+            </View>
+          )}
         </View>
         <TouchableOpacity onPress={() => onOptions(item)} style={styles.menuBtn}>
           <Ionicons name="ellipsis-horizontal" size={20} color="#71767b" />
@@ -719,6 +725,18 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  campusOnlyTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 3,
+    backgroundColor: '#1a1a1a',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginTop: 3,
+  },
+  campusOnlyTagText: { color: '#f9c349', fontSize: 10, fontWeight: '700' },
   container: { flex: 1, backgroundColor: "#ffffff", paddingBottom: 20 },
 
   inlineLoader: {

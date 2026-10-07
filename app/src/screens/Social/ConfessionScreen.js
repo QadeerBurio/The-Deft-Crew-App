@@ -35,9 +35,13 @@ import {
 import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus';
 
 const { height, width } = Dimensions.get('window');
-const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
+const API_URL = 'http://192.168.18.93:5000/api/social';
 
 const CONFESSIONS_POLL_INTERVAL = 8000;
+
+// Last list per tab, kept for the whole app session, so switching tabs or
+// coming back to the screen shows posts instantly (no skeleton).
+const feedCache = { all: null, campus: null };
 const COMMENTS_POLL_INTERVAL = 6000;
 
 // ============ HELPERS ============
@@ -118,11 +122,20 @@ const ConfessionSkeleton = memo(() => {
 export default function ConfessionScreen({ navigation, focusPostId = null }) {
   const { token, user } = useContext(AuthContext);
   
-  const [confessions, setConfessions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [confessions, setConfessions] = useState(() => feedCache.all || []);
+  const [loading, setLoading] = useState(() => !feedCache.all);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedPosts, setExpandedPosts] = useState({});
   const [textLayouts, setTextLayouts] = useState({});
+
+  // Feed tab: 'all' (everyone) | 'campus' (my university)
+  const [scope, setScope] = useState('all');
+  const scopeRef = useRef('all');
+  useEffect(() => { scopeRef.current = scope; }, [scope]);
+
+  // Composer: who sees this post
+  const [postVisibility, setPostVisibility] = useState('public');
+  const myUniName = user?.university?.name || null;
 
   const [modalVisible, setModalVisible] = useState(false);
   const [newConfession, setNewConfession] = useState("");
@@ -131,6 +144,8 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
 
   const [commentModalVisible, setCommentModalVisible] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
+  const selectedPostRef = useRef(null);
+  useEffect(() => { selectedPostRef.current = selectedPost; }, [selectedPost]);
   const [commentText, setCommentText] = useState("");
   const [commentLoading, setCommentLoading] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
@@ -263,15 +278,20 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     if (silent && now - lastConfessionsFetchRef.current < 2000) return;
     if (silent) lastConfessionsFetchRef.current = now;
     
+    // Ref, not state: the 8s poll always uses the tab that is open now
+    const requestScope = scopeRef.current;
     try {
-      const response = await fetch(`${API_URL}/confessions/feed`, {
+      const response = await fetch(`${API_URL}/confessions/feed?scope=${requestScope}`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       if (!isMountedRef.current) return;
+      // Tab changed while this request was in flight → drop the old answer
+      if (requestScope !== scopeRef.current) return;
       
       const data = await response.json();
       const freshData = Array.isArray(data) ? data : [];
+      feedCache[requestScope] = freshData;
 
       setConfessions(prev => {
         if (silent && !confessionsChanged(prev, freshData)) return prev;
@@ -282,7 +302,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     } catch (err) {
       if (!silent) console.error("Fetch Error:", err);
     } finally {
-      if (!silent && isMountedRef.current) {
+      if (!silent && isMountedRef.current && requestScope === scopeRef.current) {
         setLoading(false);
         setRefreshing(false);
       }
@@ -296,7 +316,9 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     if (silent) lastCommentsFetchRef.current = now;
 
     try {
-      const res = await fetch(`${API_URL}/confessions/feed`, {
+      // Fetch the feed the post lives in, or a campus post would vanish
+      const postScope = selectedPostRef.current?.visibility === 'campus' ? 'campus' : 'all';
+      const res = await fetch(`${API_URL}/confessions/feed?scope=${postScope}`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -329,6 +351,40 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
       fetchConfessions(false); 
     }
   }, [token, fetchConfessions]);
+
+  // Tab switch → clear list, show skeleton, fetch that tab
+  const firstScopeRunRef = useRef(true);
+  useEffect(() => {
+    if (firstScopeRunRef.current) { firstScopeRunRef.current = false; return; }
+    const cached = feedCache[scope];
+    // Cached list shows instantly; first visit shows a small loader only
+    setConfessions(cached || []);
+    setLoading(!cached);
+    lastConfessionsFetchRef.current = 0; // allow an immediate refresh
+    fetchConfessions(!!cached); // first visit: loader is cleared when the fetch ends
+    flatListRef.current?.scrollToOffset?.({ offset: 0, animated: false });
+  }, [scope]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const switchScope = useCallback((next) => {
+    if (next === scopeRef.current) return;
+    soundTap();
+    setScope(next);
+  }, []);
+
+  // Deep link to a post that isn't in "everyone" (e.g. a mention on a campus
+  // post) → look in "my campus" once
+  const focusFallbackDoneRef = useRef(null);
+  useEffect(() => {
+    if (!focusPostId || loading || !hasLoadedOnceRef.current) return;
+    if (focusFallbackDoneRef.current === focusPostId) return;
+    const found = confessions.some((c) => String(c._id) === String(focusPostId));
+    if (!found && scopeRef.current === 'all' && myUniName) {
+      focusFallbackDoneRef.current = focusPostId;
+      setScope('campus');
+    } else if (found) {
+      focusFallbackDoneRef.current = focusPostId;
+    }
+  }, [focusPostId, confessions, loading, myUniName]);
 
   // Confessions polling
   useEffect(() => {
@@ -715,7 +771,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
       const response = await fetch(`${API_URL}/confessions/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ text: newConfession.trim(), image: imageUrl })
+        body: JSON.stringify({ text: newConfession.trim(), image: imageUrl, visibility: postVisibility })
       });
 
       if (response.ok) {
@@ -731,10 +787,19 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
           );
         }
 
+        const postedToCampus = postVisibility === 'campus';
         resetForm();
-        fetchConfessions(false);
+        if (postedToCampus && scopeRef.current !== 'campus') {
+          setScope('campus'); // the tab switch fetches and shows the new post
+        } else {
+          fetchConfessions(false);
+        }
       } else {
         soundError();
+        try {
+          const err = await response.json();
+          if (err?.error) Alert.alert("Couldn't post", err.error);
+        } catch (e) {}
       }
     } catch (err) {
       soundError();
@@ -742,11 +807,12 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     } finally {
       setPosting(false);
     }
-  }, [newConfession, selectedImage, token, fetchConfessions]);
+  }, [newConfession, selectedImage, token, fetchConfessions, postVisibility]);
 
   const resetForm = useCallback(() => {
     setNewConfession("");
     setSelectedImage(null);
+    setPostVisibility('public');
     setModalVisible(false);
     Keyboard.dismiss();
   }, []);
@@ -908,6 +974,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     const isExpanded = expandedPosts[item._id] || false;
     const lineCount = textLayouts[item._id] || 0;
     const shouldShowMore = lineCount > 7 || (item.text?.length || 0) > 250;
+    const isCampus = item.visibility === 'campus';
 
     return (
       <Animated.View style={[styles.card, highlightId === String(item._id) && styles.cardHighlight, { opacity: fadeAnim }]}>
@@ -916,14 +983,31 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
             <LinearGradient colors={['#1a1a1a', '#2d2d2d']} style={styles.avatarCircle}>
               <Ionicons name="person" size={18} color="#f9c349" />
             </LinearGradient>
-            <View>
-              <Text style={styles.anonymousName}>Anonymous</Text>
-              <Text style={styles.postTime}>{formatPostTime(item.createdAt)}</Text>
+            <View style={{ flexShrink: 1 }}>
+              <View style={styles.nameRow}>
+                <Text style={styles.anonymousName}>Anonymous</Text>
+                <Text style={styles.nameDot}>·</Text>
+                <Text style={[styles.postTime, { marginTop: 0 }]}>{formatPostTime(item.createdAt)}</Text>
+              </View>
+              {/* University name only in the "my campus" tab */}
+              {scope === 'campus' && !!item.campusName && (
+                <View style={styles.campusPill}>
+                  <Ionicons name="school" size={11} color="#8a6d1a" />
+                  <Text style={styles.campusPillText} numberOfLines={1}>
+                    {item.campusName}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
-          <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.confessionBadge}>
-            <Ionicons name="lock-closed" size={10} color="#fff" />
-            <Text style={styles.badgeText}>Confession</Text>
+          <LinearGradient
+            colors={isCampus ? ['#1a1a1a', '#2d2d2d'] : ['#f9c349', '#e6b800']}
+            style={styles.confessionBadge}
+          >
+            <Ionicons name="lock-closed" size={10} color={isCampus ? '#f9c349' : '#fff'} />
+            <Text style={[styles.badgeText, isCampus && { color: '#f9c349' }]}>
+              {isCampus ? 'Campus only' : 'Confession'}
+            </Text>
           </LinearGradient>
         </View>
 
@@ -969,34 +1053,35 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.actionBtn}
-            onPress={() => {
-              soundTap();   // 🔔 tap before share
-              Share.share({
-                message: `💭 Anonymous Confession: "${item.text}"\n\nShared via TDC`
-              });
-            }}
-          >
-            <Ionicons name="share-social-outline" size={18} color="#666" />
-          </TouchableOpacity>
+          {/* No share on campus posts: it would leak them outside the campus */}
+          {!isCampus && (
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => {
+                soundTap();   // 🔔 tap before share
+                Share.share({
+                  message: `💭 Anonymous Confession: "${item.text}"\n\nShared via TDC`
+                });
+              }}
+            >
+              <Ionicons name="share-social-outline" size={18} color="#666" />
+            </TouchableOpacity>
+          )}
         </View>
       </Animated.View>
     );
-  }, [expandedPosts, textLayouts, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, highlightId]);
+  }, [expandedPosts, textLayouts, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, highlightId, scope]);
 
-  const showSkeleton = loading && !refreshing && !hasLoadedOnceRef.current;
-
-  if (showSkeleton) {
-    return <ConfessionSkeleton />;
-  }
+  // No skeleton: tabs + list render right away, a small loader only while
+  // a tab is loading for the very first time.
+  const firstLoad = loading && confessions.length === 0;
 
   return (
     <View style={styles.container}>
       <FlatList
         ref={flatListRef}
         data={listData}
-        extraData={highlightId}
+        extraData={`${highlightId}-${scope}`}
         renderItem={renderConfession}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.listContent}
@@ -1007,6 +1092,29 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
         updateCellsBatchingPeriod={50}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={true}
+        ListHeaderComponent={
+          <View style={styles.scopeTabs}>
+            {[
+              { key: 'all', label: 'everyone', icon: 'earth-outline' },
+              { key: 'campus', label: 'my campus', icon: 'school-outline' },
+            ].map((t) => {
+              const active = scope === t.key;
+              return (
+                <TouchableOpacity
+                  key={t.key}
+                  style={[styles.scopeTab, active && styles.scopeTabActive]}
+                  onPress={() => switchScope(t.key)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name={t.icon} size={14} color={active ? '#f9c349' : '#666'} />
+                  <Text style={[styles.scopeTabText, active && styles.scopeTabTextActive]} numberOfLines={1}>
+                    {t.key === 'campus' && myUniName && active ? myUniName : t.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        }
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -1016,12 +1124,40 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
           />
         }
         ListEmptyComponent={
+          firstLoad ? (
+            <View style={styles.inlineLoader}>
+              <ActivityIndicator size="small" color="#f9c349" />
+            </View>
+          ) : scope === 'campus' && !myUniName ? (
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconCircle}>
+                <Ionicons name="school-outline" size={50} color="#f9c349" />
+              </View>
+              <Text style={styles.emptyTitle}>Add your university</Text>
+              <Text style={styles.emptySubtitle}>
+                add your university in your profile to see your campus
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyBtn}
+                onPress={() => { soundTap(); navigation?.navigate?.('EditProfileScreen'); }}
+              >
+                <LinearGradient colors={['#1a1a1a', '#2d2d2d']} style={styles.emptyBtnGradient}>
+                  <Text style={styles.emptyBtnText}>Edit Profile</Text>
+                  <Ionicons name="arrow-forward" size={18} color="#f9c349" />
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          ) : (
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconCircle}>
               <Ionicons name="chatbubble-ellipses-outline" size={50} color="#f9c349" />
             </View>
-            <Text style={styles.emptyTitle}>No Confessions Yet</Text>
-            <Text style={styles.emptySubtitle}>Share your thoughts anonymously</Text>
+            <Text style={styles.emptyTitle}>
+              {scope === 'campus' ? 'Nothing from your campus yet' : 'No Confessions Yet'}
+            </Text>
+            <Text style={styles.emptySubtitle}>
+              {scope === 'campus' ? `be the first from ${myUniName || 'your campus'}` : 'Share your thoughts anonymously'}
+            </Text>
             <TouchableOpacity style={styles.emptyBtn} onPress={handleFabPress}>
               <LinearGradient colors={['#1a1a1a', '#2d2d2d']} style={styles.emptyBtnGradient}>
                 <Text style={styles.emptyBtnText}>Create Confession</Text>
@@ -1029,6 +1165,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
               </LinearGradient>
             </TouchableOpacity>
           </View>
+          )
         }
       />
 
@@ -1068,6 +1205,41 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
                 <View style={styles.anonymityBadge}>
                   <Ionicons name="shield-checkmark" size={14} color="#f9c349" />
                   <Text style={styles.anonymityText}>Your identity is 100% anonymous</Text>
+                </View>
+                <View style={styles.visibilityRow}>
+                  <Text style={styles.visibilityLabel}>who sees this?</Text>
+                  <View style={styles.visibilityChips}>
+                    {[
+                      { key: 'public', label: 'everyone', icon: 'earth-outline' },
+                      { key: 'campus', label: 'my campus', icon: 'school-outline' },
+                    ].map((c) => {
+                      const active = postVisibility === c.key;
+                      const disabled = c.key === 'campus' && !myUniName;
+                      return (
+                        <TouchableOpacity
+                          key={c.key}
+                          disabled={disabled}
+                          onPress={() => { soundTap(); setPostVisibility(c.key); }}
+                          style={[
+                            styles.visibilityChip,
+                            active && styles.visibilityChipActive,
+                            disabled && styles.visibilityChipDisabled,
+                          ]}
+                          activeOpacity={0.8}
+                        >
+                          <Ionicons name={c.icon} size={13} color={active ? '#f9c349' : '#666'} />
+                          <Text style={[styles.visibilityChipText, active && styles.visibilityChipTextActive]}>
+                            {c.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  {!myUniName ? (
+                    <Text style={styles.visibilityHint}>add your university first to post to your campus</Text>
+                  ) : postVisibility === 'campus' ? (
+                    <Text style={styles.visibilityHint}>only {myUniName} students will see this</Text>
+                  ) : null}
                 </View>
                 <ScrollView style={styles.modalScrollView} keyboardShouldPersistTaps="handled">
                   <TextInput
@@ -1286,13 +1458,70 @@ const styles = StyleSheet.create({
   listContent: { padding: 12, paddingBottom: 100, paddingTop: 4 },
 
   card: { backgroundColor: '#fff', borderRadius: 16, marginBottom: 12, marginTop: 8, padding: 16, borderWidth: 1, borderColor: '#f0f0f0' },
+  inlineLoader: { paddingVertical: 40, alignItems: 'center' },
+  nameRow: { flexDirection: 'row', alignItems: 'center' },
+  nameDot: { marginHorizontal: 5, color: '#bbb', fontSize: 12 },
+  campusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    backgroundColor: '#fff8e6',
+    borderWidth: 1,
+    borderColor: '#f9c34955',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginTop: 4,
+    maxWidth: '100%',
+  },
+  campusPillText: { fontSize: 11, color: '#8a6d1a', fontWeight: '700', flexShrink: 1 },
+  scopeTabs: {
+    flexDirection: 'row',
+    backgroundColor: '#f2f2f2',
+    borderRadius: 14,
+    padding: 4,
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  scopeTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  scopeTabActive: { backgroundColor: '#1a1a1a' },
+  scopeTabText: { fontSize: 13, fontWeight: '700', color: '#666', flexShrink: 1 },
+  scopeTabTextActive: { color: '#f9c349' },
+  visibilityRow: { marginTop: 10, marginBottom: 4 },
+  visibilityLabel: { fontSize: 12, fontWeight: '700', color: '#1a1a1a', marginBottom: 6 },
+  visibilityChips: { flexDirection: 'row', gap: 8 },
+  visibilityChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    backgroundColor: '#fff',
+  },
+  visibilityChipActive: { backgroundColor: '#1a1a1a', borderColor: '#1a1a1a' },
+  visibilityChipDisabled: { opacity: 0.4 },
+  visibilityChipText: { fontSize: 12.5, fontWeight: '600', color: '#444' },
+  visibilityChipTextActive: { color: '#f9c349', fontWeight: '800' },
+  visibilityHint: { fontSize: 11.5, color: '#8a6d1a', marginTop: 6 },
   cardHighlight: { borderColor: '#f9c349', borderWidth: 2, backgroundColor: '#fffdf5' },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  headerLeft: { flexDirection: 'row', alignItems: 'center' },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 10 },
   avatarCircle: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   anonymousName: { fontWeight: '700', fontSize: 14, color: '#1a1a1a' },
   postTime: { fontSize: 11, color: '#999', marginTop: 2, fontWeight: '500' },
-  confessionBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  confessionBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, flexShrink: 0 },
   badgeText: { color: '#fff', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
   confessionText: { fontSize: 15, color: '#1a1a1a', lineHeight: 24 },
   showMoreBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 6 },
