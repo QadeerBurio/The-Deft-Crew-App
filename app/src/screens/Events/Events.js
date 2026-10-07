@@ -36,6 +36,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
+import { useOpenFromParams } from "../../engagement/hooks/useOpenFromParams";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -1064,6 +1065,17 @@ export default function EventsScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedEvent(null);
   };
+
+  // Daily Drop / push → navigate('Events', { openEventId }) opens that event
+  useOpenFromParams("openEventId", async (id) => {
+    let ev = events.find((e) => String(e._id) === String(id));
+    if (!ev) {
+      const res = await axios.get(`${API_BASE}/${id}`);
+      ev = res.data;
+    }
+    if (ev?._id) setSelectedEvent(ev);
+    return true;
+  }, !loading);
 
   if (loading) {
     return (

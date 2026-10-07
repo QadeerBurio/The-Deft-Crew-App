@@ -1,5 +1,6 @@
 // app/src/screens/ExchangeScreen.js
 import React, { useState, useEffect, useMemo, useContext, useRef } from 'react';
+import { useOpenFromParams } from '../engagement/hooks/useOpenFromParams';
 import {
   View,
   Text,
@@ -436,6 +437,14 @@ const ExchangeScreen = ({ navigation }) => {
   const renderItem = ({ item, index }) => {
     return <CardItem item={item} index={index} />;
   };
+
+  // Daily Drop / push → navigate('Exchange', { openProgramId }) opens that program
+  useOpenFromParams('openProgramId', (id) => {
+    const program = (programs || []).find((p) => String(p._id) === String(id));
+    if (!program) return !loading; // not loaded yet → retry; loaded but missing → give up
+    handleViewDetails(program);
+    return true;
+  }, !loading);
 
   if (error) {
     return (

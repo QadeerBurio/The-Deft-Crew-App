@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { useOpenFromParams } from '../../engagement/hooks/useOpenFromParams';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
@@ -503,6 +504,19 @@ export default function FeedScreen({ navigation }) {
     </>
   );
 
+  // Daily Drop / push → navigate('FeedScreen', { tab: 'Confession' })
+  useOpenFromParams('tab', (tab) => {
+    if (tab === 'Confession' || tab === 'Feed') setActiveTab(tab);
+    return true;
+  });
+  // Exact confession from the Daily Drop → open Confession tab and pin it
+  const [focusConfessionId, setFocusConfessionId] = useState(null);
+  useOpenFromParams('postId', (id) => {
+    setActiveTab('Confession');
+    setFocusConfessionId(String(id));
+    return true;
+  });
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
@@ -625,7 +639,7 @@ export default function FeedScreen({ navigation }) {
           </View>
         ) : (
           <View style={{ flex: 1 }}>
-            <ConfessionScreen navigation={navigation} />
+            <ConfessionScreen navigation={navigation} focusPostId={focusConfessionId} />
           </View>
         )}
       </View>

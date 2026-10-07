@@ -660,7 +660,8 @@ export default function OfferScreen() {
   const [brand, setBrand] = useState(initialBrand || null);
   const [branches, setBranches] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState(null);
-  const [loading, setLoading] = useState(!initialBrand);
+  // Opened from a Daily Drop / push with only { _id } → show loader until fetched
+  const [loading, setLoading] = useState(!initialBrand?.name);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("gift");
   const [claiming, setClaiming] = useState(false);
@@ -685,9 +686,7 @@ export default function OfferScreen() {
 
   const cityOptions = useMemo(() => {
     if (!branches.length) return [];
-    const opts = buildCityOptions(branches, branchCityOf).filter(
-      (o) => o.city === ALL_CITIES || o.count > 0
-    );
+    const opts = buildCityOptions(branches, branchCityOf);
     // Only worth showing when branches are in more than one city
     return opts.length > 2 ? opts : [];
   }, [branches, branchCityOf]);

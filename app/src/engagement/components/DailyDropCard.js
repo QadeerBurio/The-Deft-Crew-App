@@ -149,18 +149,27 @@ export default function DailyDropCard() {
     }
   };
 
+  // Opens the content this drop is about (job, offer, event, program,
+  // confessions, listing). Works before AND after voting.
   const handleOpenTarget = () => {
     if (!target?.route) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
 
+    const params = target.params || {};
     try {
       if (navigationRef.isReady()) {
-        navigationRef.navigate(target.route, target.params || {});
+        navigationRef.navigate(target.route, params);
       } else {
-        navigation.navigate(target.route, target.params || {});
+        navigation.navigate(target.route, params);
       }
     } catch (e) {
       console.log('[DailyDrop] open target error:', e?.message);
+      // Fallback: the list screen for this kind
+      const LIST = { job: 'Career', brand: 'Brands', event: 'Events', scholarship: 'Exchange' };
+      const fallback = LIST[target.kind];
+      if (fallback) {
+        try { navigation.navigate(fallback); } catch {}
+      }
     }
   };
 
@@ -220,14 +229,20 @@ export default function DailyDropCard() {
         </View>
       </View>
 
-      {/* Question */}
-      <Text style={styles.question}>{drop.title}</Text>
+      {/* Question (tap → open the drop's content) */}
+      <TouchableOpacity
+        activeOpacity={target?.route ? 0.7 : 1}
+        disabled={!target?.route}
+        onPress={handleOpenTarget}
+      >
+        <Text style={styles.question}>{drop.title}</Text>
 
-      {!!drop.body && (
-        <Text style={styles.bodyText} numberOfLines={2}>
-          {drop.body}
-        </Text>
-      )}
+        {!!drop.body && (
+          <Text style={styles.bodyText} numberOfLines={2}>
+            {drop.body}
+          </Text>
+        )}
+      </TouchableOpacity>
 
       {/* Options */}
       <View style={styles.optionsWrap}>
@@ -318,8 +333,8 @@ export default function DailyDropCard() {
         </View>
       )}
 
-      {/* CTA */}
-      {hasVoted && target?.route && ctaLabel && (
+      {/* CTA: always visible when the drop links to something */}
+      {target?.route && ctaLabel && (
         <Animated.View
           style={{
             opacity: ctaFade,

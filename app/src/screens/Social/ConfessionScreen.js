@@ -115,7 +115,7 @@ const ConfessionSkeleton = memo(() => {
   );
 });
 
-export default function ConfessionScreen({ navigation }) {
+export default function ConfessionScreen({ navigation, focusPostId = null }) {
   const { token, user } = useContext(AuthContext);
   
   const [confessions, setConfessions] = useState([]);
@@ -154,6 +154,25 @@ export default function ConfessionScreen({ navigation }) {
   const confessionInputRef = useRef(null);
   const commentInputRef = useRef(null);
   const flatListRef = useRef(null);
+
+  // Daily Drop / push → this confession is pinned on top and highlighted
+  const [pinnedId, setPinnedId] = useState(null);
+  const [highlightId, setHighlightId] = useState(null);
+  useEffect(() => {
+    if (!focusPostId) return;
+    setPinnedId(String(focusPostId));
+    setHighlightId(String(focusPostId));
+    requestAnimationFrame(() => flatListRef.current?.scrollToOffset?.({ offset: 0, animated: true }));
+    const t = setTimeout(() => setHighlightId(null), 5000);
+    return () => clearTimeout(t);
+  }, [focusPostId]);
+
+  const listData = useMemo(() => {
+    if (!pinnedId) return confessions;
+    const idx = confessions.findIndex((c) => String(c._id) === pinnedId);
+    if (idx <= 0) return confessions;
+    return [confessions[idx], ...confessions.slice(0, idx), ...confessions.slice(idx + 1)];
+  }, [confessions, pinnedId]);
   const commentFlatListRef = useRef(null);
 
   // Polling
@@ -891,7 +910,7 @@ export default function ConfessionScreen({ navigation }) {
     const shouldShowMore = lineCount > 7 || (item.text?.length || 0) > 250;
 
     return (
-      <Animated.View style={[styles.card, { opacity: fadeAnim }]}>
+      <Animated.View style={[styles.card, highlightId === String(item._id) && styles.cardHighlight, { opacity: fadeAnim }]}>
         <View style={styles.cardHeader}>
           <View style={styles.headerLeft}>
             <LinearGradient colors={['#1a1a1a', '#2d2d2d']} style={styles.avatarCircle}>
@@ -964,7 +983,7 @@ export default function ConfessionScreen({ navigation }) {
         </View>
       </Animated.View>
     );
-  }, [expandedPosts, textLayouts, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments]);
+  }, [expandedPosts, textLayouts, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, highlightId]);
 
   const showSkeleton = loading && !refreshing && !hasLoadedOnceRef.current;
 
@@ -976,7 +995,8 @@ export default function ConfessionScreen({ navigation }) {
     <View style={styles.container}>
       <FlatList
         ref={flatListRef}
-        data={confessions}
+        data={listData}
+        extraData={highlightId}
         renderItem={renderConfession}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.listContent}
@@ -1266,6 +1286,7 @@ const styles = StyleSheet.create({
   listContent: { padding: 12, paddingBottom: 100, paddingTop: 4 },
 
   card: { backgroundColor: '#fff', borderRadius: 16, marginBottom: 12, marginTop: 8, padding: 16, borderWidth: 1, borderColor: '#f0f0f0' },
+  cardHighlight: { borderColor: '#f9c349', borderWidth: 2, backgroundColor: '#fffdf5' },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   headerLeft: { flexDirection: 'row', alignItems: 'center' },
   avatarCircle: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 },

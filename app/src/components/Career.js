@@ -27,6 +27,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import axios from "axios";
+import { useOpenFromParams } from '../engagement/hooks/useOpenFromParams';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from 'expo-constants';
 import * as Print from 'expo-print';
@@ -1417,6 +1418,17 @@ const Career = ({ navigation }) => {
   };
 
   const filteredData = jobs;
+
+  // Daily Drop / push → navigate('Career', { openJobId }) opens that job
+  useOpenFromParams('openJobId', async (id) => {
+    let job = jobs.find((j) => String(j._id) === String(id));
+    if (!job) {
+      const res = await axios.get(`${API_URL}/public/job/${id}`);
+      job = res.data;
+    }
+    if (job?._id) openApplyModal(job);
+    return true;
+  }, !loading);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
