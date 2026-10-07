@@ -6,37 +6,12 @@
 
 import { getMoodEmoji } from './notificationIcon';
 
-// Mood sound wins first (same as backend MOOD_SOUND)
-const MOOD_SOUND = {
-  sorted: 'tdc_mood_sorted',
-  excited: 'tdc_mood_excited',
-  panic: 'tdc_mood_panic',
-  broke: 'tdc_mood_broke',
-  sleepy: 'tdc_mood_sleepy',
-  shook: 'tdc_mood_shook',
-  sus: 'tdc_mood_sus',
-  cheeky: 'tdc_mood_cheeky',
-  rs: 'tdc_mood_rs',
-};
+import { FEATURES, featureMood, featureSound } from './notificationFeatures';
 
-// Otherwise by type (same as backend TYPE_SOUND)
-const TYPE_SOUND = {
-  like: 'tdc_like', comment: 'tdc_like',
-  follow: 'tdc_push_message', request: 'tdc_push_message', connection_accepted: 'tdc_push_message',
-  message: 'tdc_push_message', Message: 'tdc_push_message',
-  new_offer: 'tdc_push_deal', offer_accepted: 'tdc_push_deal', match_created: 'tdc_push_deal',
-  offer_rejected: 'tdc_nope', request_declined: 'tdc_nope',
-  new_job: 'tdc_push_internship', internship: 'tdc_push_internship',
-  confession: 'tdc_push_confession',
-  event: 'tdc_push_event',
-  streak: 'tdc_push_streak',
-  points: 'tdc_push_points', rs: 'tdc_push_points',
-  level_up: 'tdc_push_level_up', badge: 'tdc_push_level_up',
-  reminder: 'tdc_push_reminder',
-};
-
+// Same rule as the backend (utils/pushNotification.js resolveSoundKey):
+// the feature decides the sound, mood sound only for generic types.
 export function resolveSoundKey(type, mood) {
-  return MOOD_SOUND[mood] || TYPE_SOUND[type] || 'tdc_push_default';
+  return featureSound(type, mood);
 }
 
 // Titles the backend uses for social pushes (utils/notificationHelper.js TYPE_TO_TITLE)
@@ -69,9 +44,12 @@ export function titleWithEmoji(title, mood) {
  */
 export function styleNotification(n = {}) {
   const meta = n.metadata || n.data || {};
-  const mood = n.mood || meta.mood || 'sorted';
-  const type = meta.pushType || n.pushType || n.type || meta.type || 'System';
-  const soundKey = n.soundKey || meta.soundKey || resolveSoundKey(type, mood);
+  // The push data carries the real feature in data.type / pushType
+  const type = meta.pushType || meta.type || n.pushType || n.type || 'System';
+  // Feature decides emoji + sound (new offer = 🤑 + deal sound), like the push.
+  // If the backend already sent mood/soundKey, those are the exact push values.
+  const mood = meta.mood && !FEATURES[type] ? meta.mood : featureMood(type, n.mood || meta.mood);
+  const soundKey = n.soundKey || meta.soundKey || featureSound(type, mood);
 
   return {
     ...n,

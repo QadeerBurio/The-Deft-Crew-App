@@ -50,15 +50,18 @@ const SOUND_CHANNELS = {
   tdc_nope:            'Declined',
 };
 
-export const channelForSound = (soundKey) => `snd_${soundKey}`;
+// v2 IDs: fresh channels so no old/broken channel keeps the wrong sound
+export const channelForSound = (soundKey) => `tdc2_${soundKey}`;
 
 // Sent with the push token so the backend knows this build has the snd_* channels
-export const CHANNEL_SET = 'snd_v1';
+export const CHANNEL_SET = 'snd_v2';
 
 // Old channel IDs from earlier builds. Removed so Settings stays clean.
 const LEGACY_CHANNELS = [
   'engagement', 'default', 'messages', 'deals', 'jobs', 'reminders',
   'points', 'streaks', 'confessions', 'events', 'levelup',
+  // v1 sound channels (may have been created before the sounds were bundled)
+  ...Object.keys(SOUND_CHANNELS).map((k) => `snd_${k}`),
 ];
 
 let channelsPromise = null;

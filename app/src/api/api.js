@@ -12,7 +12,7 @@ const getBaseURL = () => {
     const hostUri = manifest.hostUri;
     const devIp = hostUri ? hostUri.split(':')[0] : '192.168.18.93';
 
-    return `http://192.168.18.93:5000/api`;
+    return `https://the-deft-crew-production.up.railway.app/api`;
 
     // Alternative:
     // return `http://${devIp}:5000/api`;
@@ -21,7 +21,7 @@ const getBaseURL = () => {
     // return 'https://the-deft-crew-production.up.railway.app/api';
   }
 
-  return 'http://192.168.18.93:5000/api';
+  return 'https://the-deft-crew-production.up.railway.app/api';
 };
 
 export const BASE_URL = getBaseURL();

@@ -36,11 +36,13 @@ async function runPushTest(setTesting) {
       return;
     }
     await savePushTokenToServer(api, token);
-    Alert.alert('test sent', 'minimise the app now. a notification should drop in within ~10 seconds.');
+    Alert.alert('test sent', 'minimise the app now. 4 notifications arrive over ~15 seconds, each with its own emoji and sound: new offer, message, streak, like.');
     const { data } = await api.get('/notification/test-push', { timeout: 30000 });
     if (!data?.ok) {
       const r = data?.results?.find((x) => x.error) || {};
       Alert.alert('push failed', [data?.problem, r.error, r.fix].filter(Boolean).join('\n\n') || 'unknown error');
+    } else if (data?.legacyDevices) {
+      Alert.alert('old build on a device', data.note);
     }
   } catch (e) {
     Alert.alert('push test error', e?.response?.data?.error || e?.message || 'unknown');

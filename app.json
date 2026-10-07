@@ -102,7 +102,7 @@
         {
           "icon": "./assets/notification-icon.png",
           "color": "#f9c349",
-          "defaultChannel": "snd_tdc_push_default",
+          "defaultChannel": "tdc2_tdc_push_default",
           "sounds": [
             "./assets/sounds/push/tdc_push_default.wav",
             "./assets/sounds/push/tdc_push_deal.wav",
