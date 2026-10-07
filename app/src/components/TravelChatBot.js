@@ -1,5 +1,5 @@
 // app/src/screens/TravelChatBot.js
-import React, { useState, useRef, useEffect, useCallback, useContext } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useContext, forwardRef, useImperativeHandle } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
   FlatList, Modal, KeyboardAvoidingView, Platform,
@@ -197,10 +197,6 @@ const MessageBubble = React.memo(({ item, onCopy, onShare, isLast }) => {
                   <Feather name="share-2" size={12} color="#94A3B8" />
                   <Text style={msgStyles.actionText}>Share</Text>
                 </TouchableOpacity>
-                <View style={msgStyles.tagBadge}>
-                  <Ionicons name="shield-checkmark" size={10} color="#10B981" />
-                  <Text style={msgStyles.tagText}>Verified</Text>
-                </View>
               </View>
             )}
           </View>
@@ -255,7 +251,7 @@ const TypingIndicator = () => {
 };
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────
-const TravelChatBot = () => {
+const TravelChatBot = forwardRef((props, ref) => {
   const insets = useSafeAreaInsets();
   const { token, isGuest } = useContext(AuthContext);
   const [isOpen, setIsOpen] = useState(false);
@@ -615,6 +611,25 @@ const TravelChatBot = () => {
     }
   }, [inputText, isStreaming, messages, scrollToEnd, fireTravelPrompt]);
 
+  // Screen can open the chat, optionally sending a question right away
+  const pendingMessageRef = useRef(null);
+  useImperativeHandle(ref, () => ({
+    open: (message) => {
+      pendingMessageRef.current = message || null;
+      openChat();
+    },
+    close: () => closeChat(),
+    isOpen: () => isOpen,
+  }), [openChat, closeChat, isOpen]);
+
+  useEffect(() => {
+    if (isOpen && pendingMessageRef.current) {
+      const msg = pendingMessageRef.current;
+      pendingMessageRef.current = null;
+      setTimeout(() => sendMessage(msg), 250);
+    }
+  }, [isOpen, sendMessage]);
+
   // ─── RENDER ───────────────────────────────────────────────────────
   const renderItem = useCallback(({ item, index }) => {
     const isLast = index === messages.length - 1 && !isStreaming;
@@ -716,7 +731,13 @@ const TravelChatBot = () => {
       )}
 
       {/* ── CHAT MODAL ─────────────────────────────────────────────── */}
-      <Modal visible={isOpen} animationType="none" transparent statusBarTranslucent>
+      <Modal
+        visible={isOpen}
+        animationType="none"
+        transparent
+        statusBarTranslucent
+        onRequestClose={closeChat}
+      >
         <View style={styles.modalBackdrop}>
           <Animated.View style={[styles.modalContainer, { transform: [{ translateY: modalSlide }] }]}>
             <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
@@ -734,11 +755,7 @@ const TravelChatBot = () => {
                     activeOpacity={0.7}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
-                    <Ionicons
-                      name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'}
-                      size={24}
-                      color="#1A1A2E"
-                    />
+                    <Ionicons name="chevron-back" size={22} color="#1a1a1a" />
                   </TouchableOpacity>
 
                   <View style={styles.headerCenter}>
@@ -757,7 +774,7 @@ const TravelChatBot = () => {
                         )}
                       </LinearGradient>
                       <Text style={styles.headerTitle} numberOfLines={1}>
-                        TDC Travel Companion
+                        travel assist<Text style={{ color: '#f9c349' }}>.</Text>
                       </Text>
                     </View>
                     <View style={styles.statusRow}>
@@ -800,7 +817,7 @@ const TravelChatBot = () => {
                 )}
 
                 {/* Messages list */}
-                <LinearGradient colors={['#F8FAFC', '#F1F5F9', '#FFFFFF']} style={styles.flex}>
+                <LinearGradient colors={['#fafafa', '#fafafa', '#ffffff']} style={styles.flex}>
                   <FlatList
                     ref={flatListRef}
                     data={messages}
@@ -850,7 +867,7 @@ const TravelChatBot = () => {
                   <View style={styles.inputWrap}>
                     <TextInput
                       style={styles.textInput}
-                      placeholder="Ask about travel, flights, visa rules..."
+                      placeholder="ask about a trip, budget or visa..."
                       placeholderTextColor="#94A3B8"
                       value={inputText}
                       onChangeText={setInputText}
@@ -870,9 +887,9 @@ const TravelChatBot = () => {
                       activeOpacity={0.7}
                     >
                       {isStreaming ? (
-                        <ActivityIndicator size="small" color="#FFF" />
+                        <ActivityIndicator size="small" color="#f9c349" />
                       ) : (
-                        <Ionicons name="arrow-up" size={18} color="#FFF" />
+                        <Ionicons name="arrow-up" size={18} color="#f9c349" />
                       )}
                     </TouchableOpacity>
                   </View>
@@ -884,7 +901,7 @@ const TravelChatBot = () => {
       </Modal>
     </>
   );
-};
+});
 
 // ─── MESSAGE STYLES ──────────────────────────────────────────────────
 const msgStyles = StyleSheet.create({
@@ -922,8 +939,8 @@ const msgStyles = StyleSheet.create({
     elevation: 1,
   },
   bubbleUser: {
-    borderTopLeftRadius: 20, borderBottomLeftRadius: 20,
-    borderTopRightRadius: 20, borderBottomRightRadius: 6,
+    borderTopLeftRadius: 18, borderBottomLeftRadius: 18,
+    borderTopRightRadius: 18, borderBottomRightRadius: 6,
     shadowColor: '#f9c349', shadowOpacity: 0.2,
     shadowRadius: 6, elevation: 3,
   },
@@ -931,26 +948,26 @@ const msgStyles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 6, borderBottomLeftRadius: 20,
     borderTopRightRadius: 20, borderBottomRightRadius: 20,
-    borderWidth: 1, borderColor: '#E2E8F0',
+    borderWidth: 1, borderColor: '#eeeeee',
   },
-  userText: { color: '#1A1A2E', fontSize: 14, lineHeight: 20, fontWeight: '600' },
-  normal: { color: '#334155', fontSize: 13.8, lineHeight: 21 },
-  bold: { color: '#0F172A', fontSize: 13.8, lineHeight: 21, fontWeight: '700' },
+  userText: { color: '#1a1a1a', fontSize: 14, lineHeight: 20, fontWeight: '600' },
+  normal: { color: '#333', fontSize: 13.8, lineHeight: 21 },
+  bold: { color: '#111', fontSize: 13.8, lineHeight: 21, fontWeight: '700' },
   link: { color: '#2563EB', fontSize: 13.8, lineHeight: 21, textDecorationLine: 'underline', fontWeight: '600' },
-  h1: { color: '#1E293B', fontSize: 16, fontWeight: '700', marginTop: 6, marginBottom: 4 },
-  h2: { color: '#1E293B', fontSize: 14.5, fontWeight: '700', marginTop: 5, marginBottom: 3 },
-  h3: { color: '#1E293B', fontSize: 13.5, fontWeight: '700', marginTop: 4, marginBottom: 2 },
+  h1: { color: '#1a1a1a', fontSize: 16, fontWeight: '700', marginTop: 6, marginBottom: 4 },
+  h2: { color: '#1a1a1a', fontSize: 14.5, fontWeight: '700', marginTop: 5, marginBottom: 3 },
+  h3: { color: '#1a1a1a', fontSize: 13.5, fontWeight: '700', marginTop: 4, marginBottom: 2 },
   bulletRow: { flexDirection: 'row', marginTop: 3 },
-  bullet: { color: '#64748B', fontSize: 13, width: 14, fontWeight: '600' },
-  bulletText: { color: '#334155', fontSize: 13.8, lineHeight: 21, flex: 1 },
+  bullet: { color: '#777', fontSize: 13, width: 14, fontWeight: '600' },
+  bulletText: { color: '#333', fontSize: 13.8, lineHeight: 21, flex: 1 },
   actions: {
     flexDirection: 'row', marginTop: 10, gap: 14,
     alignItems: 'center',
-    borderTopWidth: 1, borderTopColor: '#F1F5F9',
+    borderTopWidth: 1, borderTopColor: '#f4f4f4',
     paddingTop: 8,
   },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  actionText: { fontSize: 11, color: '#94A3B8', fontWeight: '600' },
+  actionText: { fontSize: 11, color: '#999', fontWeight: '600' },
   tagBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
     marginLeft: 'auto',
@@ -965,7 +982,7 @@ const msgStyles = StyleSheet.create({
     borderTopLeftRadius: 6, borderBottomLeftRadius: 20,
     borderTopRightRadius: 20, borderBottomRightRadius: 20,
     paddingHorizontal: 16, paddingVertical: 14,
-    borderWidth: 1, borderColor: '#E2E8F0',
+    borderWidth: 1, borderColor: '#eeeeee',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1.5 },
     shadowOpacity: 0.04, shadowRadius: 2,
@@ -980,7 +997,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
 
   fabContainer: {
-    position: 'absolute', bottom: 30, right: 16,
+    position: 'absolute', bottom: 24, right: 12,
     zIndex: 9999, alignItems: 'center',
   },
   fabBareTouch: {
@@ -989,7 +1006,7 @@ const styles = StyleSheet.create({
   },
   fabBareMascotImage: { width: 95, height: 95 },
   fabLabelWrap: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1a1a1a',
     paddingHorizontal: 10, paddingVertical: 3,
     borderRadius: 10, marginTop: -6,
     shadowColor: '#000',
@@ -999,12 +1016,12 @@ const styles = StyleSheet.create({
   },
   fabLabel: {
     fontSize: 10, fontWeight: '800',
-    color: '#1A1A2E', letterSpacing: 0.2,
+    color: '#f9c349', letterSpacing: 0.2,
   },
 
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
-  modalContainer: { flex: 1, backgroundColor: '#F8FAFC' },
-  safeArea: { flex: 1, backgroundColor: '#F8FAFC' },
+  modalContainer: { flex: 1, backgroundColor: '#fafafa' },
+  safeArea: { flex: 1, backgroundColor: '#fafafa' },
 
   header: {
     flexDirection: 'row',
@@ -1013,11 +1030,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 8,
     minHeight: 56,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1, borderBottomColor: '#F1F5F9',
+    borderBottomWidth: 1, borderBottomColor: '#f4f4f4',
   },
   headerLeftBtn: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: '#F7F9F8',
+    borderWidth: 1, borderColor: '#E8E8E8',
     justifyContent: 'center', alignItems: 'center',
+    marginLeft: 8,
   },
   headerCenter: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
@@ -1031,14 +1051,14 @@ const styles = StyleSheet.create({
   },
   headerMascotImageSmall: { width: 22, height: 22 },
   headerTitle: {
-    color: '#1A1A2E', fontSize: 14, fontWeight: '700',
-    letterSpacing: 0.1,
+    color: '#1a1a1a', fontSize: 16, fontWeight: '900',
+    letterSpacing: -0.2,
   },
   statusRow: {
     flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2,
   },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { color: '#64748B', fontSize: 10, fontWeight: '600' },
+  statusText: { color: '#777', fontSize: 10, fontWeight: '600' },
   headerRight: {
     width: 80, alignItems: 'flex-end', justifyContent: 'center',
   },
@@ -1087,19 +1107,19 @@ const styles = StyleSheet.create({
 
   emptyTitle: {
     fontSize: 19, fontWeight: '800',
-    color: '#1E293B', marginBottom: 8,
+    color: '#1a1a1a', marginBottom: 8,
     letterSpacing: 0.1, zIndex: 1,
     textAlign: 'center', paddingHorizontal: 10,
   },
   emptySubtitle: {
-    fontSize: 12.5, color: '#64748B',
+    fontSize: 12.5, color: '#777',
     textAlign: 'center', lineHeight: 19,
     marginBottom: 10, paddingHorizontal: 15,
     zIndex: 1, fontWeight: '500',
   },
 
   quickPromptsRow: {
-    borderTopWidth: 1, borderTopColor: '#F1F5F9',
+    borderTopWidth: 1, borderTopColor: '#f4f4f4',
     backgroundColor: '#FFFFFF',
   },
   chipsScrollContainer: {
@@ -1108,38 +1128,38 @@ const styles = StyleSheet.create({
   pillChip: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1, borderColor: '#E2E8F0',
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 24,
-    shadowColor: '#94A3B8',
+    borderWidth: 1, borderColor: '#eeeeee',
+    paddingHorizontal: 13, paddingVertical: 8,
+    borderRadius: 14,
+    shadowColor: '#999',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06, shadowRadius: 4,
     elevation: 2, gap: 6, marginRight: 8,
   },
   pillChipIcon: { fontSize: 13.5 },
-  pillChipTitle: { fontSize: 12, fontWeight: '700', color: '#334155' },
+  pillChipTitle: { fontSize: 12, fontWeight: '700', color: '#333' },
 
   inputBar: {
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1, borderTopColor: '#F1F5F9',
+    borderTopWidth: 1, borderTopColor: '#f4f4f4',
     paddingHorizontal: 12, paddingTop: 10,
   },
   inputWrap: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 24,
-    borderWidth: 1, borderColor: '#E2E8F0',
-    paddingLeft: 12, paddingRight: 4,
+    backgroundColor: '#f6f6f6',
+    borderRadius: 18,
+    borderWidth: 1, borderColor: '#eeeeee',
+    paddingLeft: 6, paddingRight: 5, paddingVertical: 4,
   },
   textInput: {
-    flex: 1, fontSize: 14, color: '#334155',
+    flex: 1, fontSize: 14, color: '#333',
     maxHeight: 100,
     paddingLeft: 12, paddingRight: 8,
     paddingVertical: Platform.OS === 'ios' ? 10 : 8,
   },
   sendBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#f9c349',
+    width: 38, height: 38, borderRadius: 14,
+    backgroundColor: '#1a1a1a',
     justifyContent: 'center', alignItems: 'center',
     marginLeft: 4,
     shadowColor: '#f9c349',
@@ -1148,7 +1168,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   sendBtnDisabled: {
-    backgroundColor: '#CBD5E1', shadowOpacity: 0,
+    backgroundColor: '#d6d6d6', shadowOpacity: 0,
   },
 });
 

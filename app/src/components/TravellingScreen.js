@@ -1,4 +1,7 @@
-import React, { useCallback } from 'react';
+// app/src/components/TravellingScreen.js
+// Travel home: hero + quick trip ideas. Every card opens the travel chat
+// with that question already sent. Black / gold tdc style.
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,421 +9,305 @@ import {
   TouchableOpacity,
   StatusBar,
   ScrollView,
-  Platform,
+  Image,
+  BackHandler,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import TravelChatBot from './TravelChatBot';
+
+const GOLD = '#f9c349';
+const DARK = '#1a1a1a';
+const MUTED = '#777';
+const BORDER = '#efefef';
+const { width } = Dimensions.get('window');
+const CARD_W = (width - 16 * 2 - 10) / 2;
+
+const QUICK_TRIPS = [
+  { emoji: '🏔️', title: 'Hunza in 5 days', sub: 'itinerary + PKR budget', message: 'Plan a 5-day trip to Hunza Valley with budget breakdown in PKR' },
+  { emoji: '💰', title: 'Swat on a budget', sub: '4 days, student budget', message: 'Help me plan a budget in PKR for a 4-day trip to Swat for students' },
+  { emoji: '✈️', title: 'Turkey visa', sub: 'documents + timeline', message: 'What are the required documents and processing time for a Turkey tourist visa from Pakistan?' },
+  { emoji: '🏨', title: 'Hotels in Skardu', sub: 'safe, student friendly', message: 'Recommend good budget hotels in Skardu and Hunza for students' },
+  { emoji: '🍽️', title: 'Food in GB', sub: 'what to try', message: 'What are the local cuisines to try in Gilgit Baltistan?' },
+  { emoji: '🚌', title: 'Northern routes', sub: 'roads + safety', message: 'What are the best routes and safety tips for Pakistan Northern Areas?' },
+];
+
+const CAN_DO = [
+  { icon: 'map-outline', title: 'Day-by-day plans', sub: 'built around your budget and days' },
+  { icon: 'wallet-outline', title: 'Budget in PKR', sub: 'transport, stay, food, extras' },
+  { icon: 'document-text-outline', title: 'Visa help', sub: 'documents and processing time' },
+  { icon: 'shield-checkmark-outline', title: 'Safety tips', sub: 'routes, weather, local advice' },
+];
 
 const TravelingScreen = () => {
   const navigation = useNavigation();
+  const chatRef = useRef(null);
+  const fade = useRef(new Animated.Value(0)).current;
 
-  const handleBackPress = useCallback(() => {
+  useEffect(() => {
+    Animated.timing(fade, { toValue: 1, duration: 350, useNativeDriver: true }).start();
+  }, [fade]);
+
+  // Back: previous screen if there is one, otherwise Home (drawer root)
+  const goBack = useCallback(() => {
     if (navigation.canGoBack()) {
       navigation.goBack();
     } else {
-      // Fallback: navigate to a safe screen if there's nothing to go back to
-      navigation.navigate('Home');
+      navigation.navigate('HomeTabs');
     }
   }, [navigation]);
 
+  // Android hardware back: close the chat first, then leave the screen
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        if (chatRef.current?.isOpen?.()) {
+          chatRef.current.close();
+          return true;
+        }
+        goBack();
+        return true;
+      });
+      return () => sub.remove();
+    }, [goBack])
+  );
+
+  const ask = useCallback((message) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    chatRef.current?.open(message);
+  }, []);
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={handleBackPress}
+          onPress={goBack}
           style={styles.backButton}
           activeOpacity={0.7}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons
-            name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'}
-            size={24}
-            color="#000"
-          />
+          <Ionicons name="chevron-back" size={22} color={DARK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Travel Assistant</Text>
+        <Text style={styles.headerTitle}>
+          travel<Text style={{ color: GOLD }}>.</Text>
+        </Text>
         <View style={styles.headerRight} />
       </View>
 
-      {/* Main Content */}
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.contentContainer}
+      <Animated.ScrollView
+        style={[styles.container, { opacity: fade }]}
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Section - Compact */}
-        <View style={styles.heroSection}>
-          <LinearGradient
-            colors={['#1A1A2E', '#2D2D44']}
-            style={styles.heroGradient}
-          >
-            <View style={styles.heroContent}>
-              <View style={styles.iconContainer}>
-                <Ionicons name="chatbubbles" size={40} color="#f9c349" />
-              </View>
-              <View style={styles.heroTextContainer}>
-                <Text style={styles.heroTitle}>AI Travel Assistant</Text>
-                <Text style={styles.heroSubtitle}>
-                  Available 24/7 • Always ready to help
-                </Text>
-              </View>
+        {/* Hero */}
+        <LinearGradient colors={['#1a1a1a', '#2d2d2d']} style={styles.hero}>
+          <View style={{ flex: 1 }}>
+            <View style={styles.liveRow}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveText}>online 24/7</Text>
             </View>
-          </LinearGradient>
+            <Text style={styles.heroTitle}>where to next?</Text>
+            <Text style={styles.heroSub}>
+              plans, budgets in PKR and visa help, in one chat.
+            </Text>
+            <TouchableOpacity style={styles.heroBtn} onPress={() => ask(null)} activeOpacity={0.85}>
+              <Ionicons name="chatbubble-ellipses" size={16} color={DARK} />
+              <Text style={styles.heroBtnText}>start planning</Text>
+            </TouchableOpacity>
+          </View>
+          <Image
+            source={require('../../../assets/travel_mascot.png')}
+            style={styles.heroMascot}
+            resizeMode="contain"
+          />
+        </LinearGradient>
+
+        {/* Quick trips */}
+        <View style={styles.sectionHead}>
+          <View style={styles.accent} />
+          <Text style={styles.sectionTitle}>quick trip ideas</Text>
+        </View>
+        <View style={styles.grid}>
+          {QUICK_TRIPS.map((t) => (
+            <TouchableOpacity
+              key={t.title}
+              style={styles.tripCard}
+              onPress={() => ask(t.message)}
+              activeOpacity={0.85}
+            >
+              <View style={styles.tripEmojiWrap}>
+                <Text style={styles.tripEmoji}>{t.emoji}</Text>
+              </View>
+              <Text style={styles.tripTitle} numberOfLines={1}>{t.title}</Text>
+              <Text style={styles.tripSub} numberOfLines={1}>{t.sub}</Text>
+              <View style={styles.tripArrow}>
+                <Ionicons name="arrow-forward" size={13} color={DARK} />
+              </View>
+            </TouchableOpacity>
+          ))}
         </View>
 
-        {/* About Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About This Assistant</Text>
-          <View style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <Ionicons name="time" size={22} color="#f9c349" />
-              <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Available 24/7</Text>
-                <Text style={styles.infoValue}>Always ready to help you anytime</Text>
+        {/* What it does */}
+        <View style={styles.sectionHead}>
+          <View style={styles.accent} />
+          <Text style={styles.sectionTitle}>what it can do</Text>
+        </View>
+        <View style={styles.listCard}>
+          {CAN_DO.map((c, i) => (
+            <View key={c.title} style={[styles.listRow, i > 0 && styles.listRowBorder]}>
+              <View style={styles.listIcon}>
+                <Ionicons name={c.icon} size={18} color={GOLD} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.listTitle}>{c.title}</Text>
+                <Text style={styles.listSub}>{c.sub}</Text>
               </View>
             </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.infoRow}>
-              <Ionicons name="globe" size={22} color="#f9c349" />
-              <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Multi-language</Text>
-                <Text style={styles.infoValue}>Communicate in your preferred language</Text>
-              </View>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.infoRow}>
-              <Ionicons name="rocket" size={22} color="#f9c349" />
-              <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Instant Responses</Text>
-                <Text style={styles.infoValue}>Get answers to your queries in real-time</Text>
-              </View>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.infoRow}>
-              <Ionicons name="shield-checkmark" size={22} color="#f9c349" />
-              <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Secure & Private</Text>
-                <Text style={styles.infoValue}>Your conversations are encrypted and safe</Text>
-              </View>
-            </View>
-          </View>
+          ))}
         </View>
 
-        {/* Features List */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>What I Can Do</Text>
+        <Text style={styles.footNote}>
+          answers are AI-generated. double-check visa rules and prices before you book.
+        </Text>
+      </Animated.ScrollView>
 
-          <View style={styles.featureItem}>
-            <View style={styles.featureDot} />
-            <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>Plan Your Trips</Text>
-              <Text style={styles.featureDescription}>
-                Get personalized itineraries based on your preferences, budget, and duration
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.featureItem}>
-            <View style={styles.featureDot} />
-            <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>Find Best Places</Text>
-              <Text style={styles.featureDescription}>
-                Discover top-rated restaurants, attractions, and hidden gems at your destination
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.featureItem}>
-            <View style={styles.featureDot} />
-            <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>Travel Tips & Advice</Text>
-              <Text style={styles.featureDescription}>
-                Get expert recommendations on packing, safety, local customs, and more
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.featureItem}>
-            <View style={styles.featureDot} />
-            <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>Book Recommendations</Text>
-              <Text style={styles.featureDescription}>
-                Receive suggestions for accommodations, flights, and activities
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* How to Use */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>How to Use</Text>
-
-          <View style={styles.stepContainer}>
-            <View style={styles.stepNumber}>
-              <Text style={styles.stepNumberText}>1</Text>
-            </View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Tap the Chat Icon</Text>
-              <Text style={styles.stepDescription}>
-                Click on the chat bubble at the bottom right to start a conversation
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.stepContainer}>
-            <View style={styles.stepNumber}>
-              <Text style={styles.stepNumberText}>2</Text>
-            </View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Type Your Question</Text>
-              <Text style={styles.stepDescription}>
-                Ask anything about travel, destinations, planning, or recommendations
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.stepContainer}>
-            <View style={styles.stepNumber}>
-              <Text style={styles.stepNumberText}>3</Text>
-            </View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Get Instant Help</Text>
-              <Text style={styles.stepDescription}>
-                Receive helpful responses and guidance for your travel needs
-              </Text>
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* Chatbot */}
-      <TravelChatBot />
+      {/* Chat (floating button + full-screen chat) */}
+      <TravelChatBot ref={chatRef} />
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F5F6FA',
-  },
+const shadow = {
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.05,
+  shadowRadius: 8,
+  elevation: 2,
+};
 
-  // Header
+const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: '#fff' },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   backButton: {
     width: 40,
     height: 40,
+    borderRadius: 12,
+    backgroundColor: '#F7F9F8',
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: { fontSize: 20, fontWeight: '900', color: DARK, letterSpacing: -0.3 },
+  headerRight: { width: 40 },
+
+  container: { flex: 1, backgroundColor: '#fff' },
+  content: { paddingHorizontal: 16, paddingBottom: 140 },
+
+  hero: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: 20,
+    padding: 18,
+    marginTop: 6,
+    overflow: 'hidden',
+  },
+  liveRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#22c55e' },
+  liveText: { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '700' },
+  heroTitle: { color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: -0.4 },
+  heroSub: { color: 'rgba(255,255,255,0.75)', fontSize: 12.5, lineHeight: 18, marginTop: 4, marginRight: 6 },
+  heroBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    backgroundColor: GOLD,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12,
+    marginTop: 14,
+  },
+  heroBtnText: { color: DARK, fontSize: 13, fontWeight: '800' },
+  heroMascot: { width: 96, height: 96 },
+
+  sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24, marginBottom: 12 },
+  accent: { width: 3, height: 16, borderRadius: 2, backgroundColor: GOLD },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: DARK },
+
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
+  tripCard: {
+    width: CARD_W,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: BORDER,
+    padding: 14,
+    ...shadow,
+  },
+  tripEmojiWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#fff8e6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  tripEmoji: { fontSize: 19 },
+  tripTitle: { fontSize: 13.5, fontWeight: '800', color: DARK },
+  tripSub: { fontSize: 11.5, color: MUTED, marginTop: 2 },
+  tripArrow: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 8,
     backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#000',
-  },
-  headerRight: {
-    width: 40,
-  },
 
-  // Container
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F6FA',
-  },
-  contentContainer: {
-    paddingBottom: 80,
-  },
-
-  // Hero Section
-  heroSection: {
-    marginHorizontal: 16,
-    marginTop: 16,
+  listCard: {
+    backgroundColor: '#fff',
     borderRadius: 16,
-    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: BORDER,
+    paddingHorizontal: 14,
+    ...shadow,
   },
-  heroGradient: {
-    paddingVertical: 20,
-    paddingHorizontal: 24,
-  },
-  heroContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(249, 195, 73, 0.15)',
+  listRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13 },
+  listRowBorder: { borderTopWidth: 1, borderTopColor: '#f4f4f4' },
+  listIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    backgroundColor: DARK,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 12,
   },
-  heroTextContainer: {
-    flex: 1,
-  },
-  heroTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#FFF',
-    marginBottom: 2,
-  },
-  heroSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.8)',
-  },
+  listTitle: { fontSize: 14, fontWeight: '700', color: DARK },
+  listSub: { fontSize: 12, color: MUTED, marginTop: 2 },
 
-  // Section
-  section: {
-    marginTop: 24,
-    paddingHorizontal: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1A1A2E',
-    marginBottom: 12,
-  },
-
-  // Info Card
-  infoCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  infoTextContainer: {
-    marginLeft: 14,
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1A1A2E',
-  },
-  infoValue: {
-    fontSize: 13,
-    color: '#718096',
-    marginTop: 2,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#F0F0F0',
-    marginVertical: 4,
-  },
-
-  // Feature Items
-  featureItem: {
-    flexDirection: 'row',
-    backgroundColor: '#FFF',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  featureDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#f9c349',
-    marginTop: 6,
-    marginRight: 14,
-  },
-  featureContent: {
-    flex: 1,
-  },
-  featureTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1A1A2E',
-    marginBottom: 4,
-  },
-  featureDescription: {
-    fontSize: 13,
-    color: '#718096',
-    lineHeight: 20,
-  },
-
-  // Steps
-  stepContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#FFF',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  stepNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#1A1A2E',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 14,
-  },
-  stepNumberText: {
-    color: '#f9c349',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  stepContent: {
-    flex: 1,
-  },
-  stepTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1A1A2E',
-    marginBottom: 2,
-  },
-  stepDescription: {
-    fontSize: 13,
-    color: '#718096',
-    lineHeight: 20,
-  },
-
-  bottomSpacer: {
-    height: 20,
-  },
+  footNote: { fontSize: 11, color: '#aaa', textAlign: 'center', marginTop: 18, lineHeight: 16 },
 });
 
 export default TravelingScreen;

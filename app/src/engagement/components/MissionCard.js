@@ -26,14 +26,14 @@ const BORDER = '#f0f0f0';
 const MUTED = '#888';
 
 const FEATURE_META = {
-  discounts:   { icon: 'pricetag-outline',      color: '#FF6B6B' },
-  resume:      { icon: 'document-text-outline', color: '#FF9800' },
-  jobs:        { icon: 'briefcase-outline',     color: '#D32F2F' },
-  social:      { icon: 'globe-outline',         color: '#EC407A' },
-  events:      { icon: 'calendar-outline',      color: '#AB47BC' },
-  scholarship: { icon: 'school-outline',        color: '#42A5F5' },
-  skillshare:  { icon: 'people-circle-outline', color: '#4CAF50' },
-  traveling:   { icon: 'airplane-outline',      color: '#29B6F6' },
+  discounts:   { icon: 'pricetag-outline',      color: '#f9c349' },
+  resume:      { icon: 'document-text-outline', color: '#f9c349' },
+  jobs:        { icon: 'briefcase-outline',     color: '#f9c349' },
+  social:      { icon: 'globe-outline',         color: '#f9c349' },
+  events:      { icon: 'calendar-outline',      color: '#f9c349' },
+  scholarship: { icon: 'school-outline',        color: '#f9c349' },
+  skillshare:  { icon: 'people-circle-outline', color: '#f9c349' },
+  traveling:   { icon: 'airplane-outline',      color: '#f9c349' },
 };
 
 export default function MissionCard({
