@@ -15,6 +15,7 @@ import { useNavigation } from "@react-navigation/native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { colors as tdcColors } from "../theme";
 
 const { width, height } = Dimensions.get("window");
 
@@ -115,7 +116,7 @@ export default function PrivacyScreen() {
       icon: "database-lock-outline",
       title: "Data Collection",
       content: "Only what we need, like your university ID, to verify you're a student.",
-      color: "#f9c349"
+      color: tdcColors.yellow
     },
     {
       icon: "eye-off-outline",
@@ -290,7 +291,7 @@ export default function PrivacyScreen() {
                         {
                           top: 10 + Math.random() * 80,
                           left: 10 + Math.random() * 80,
-                          backgroundColor: ['#f9c349', '#4ecdc4', '#6c5ce7', '#ff6b6b', '#a29bfe', '#fd79a8'][i % 6],
+                          backgroundColor: [tdcColors.yellow, '#4ecdc4', '#6c5ce7', '#ff6b6b', '#a29bfe', '#fd79a8'][i % 6],
                           transform: [{ translateY: particleTranslateY }],
                           opacity: particleAnim.interpolate({
                             inputRange: [0, 0.5, 1],
@@ -335,7 +336,7 @@ export default function PrivacyScreen() {
             >
               <View style={styles.contactIconBox}>
                 <LinearGradient
-                  colors={['#f9c349', '#e6b800']}
+                  colors={[tdcColors.yellow, '#e6b800']}
                   style={styles.contactIconGradient}
                 >
                   <MaterialCommunityIcons name="email-outline" size={20} color="#1a1a1a" />
@@ -350,14 +351,14 @@ export default function PrivacyScreen() {
                 onPress={openEmail}
                 activeOpacity={0.7}
               >
-                <Ionicons name="arrow-forward" size={16} color="#f9c349" />
+                <Ionicons name="arrow-forward" size={16} color={tdcColors.yellow} />
               </TouchableOpacity>
             </LinearGradient>
           </Animated.View>
 
           {/* Footer - Compact */}
           <View style={styles.footer}>
-            <Text style={styles.footerLogo}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
+            <Text style={styles.footerLogo}>tdc<Text style={{color:tdcColors.yellow}}>.</Text></Text>
             <Text style={styles.footerText}>Building a Stronger Student Economy.</Text>
             <Text style={styles.footerSubText}>© 2026 tdc Privilege Program</Text>
           </View>
@@ -431,7 +432,7 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: 75,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     opacity: 0.3,
   },
   particlesContainer: {
@@ -458,7 +459,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -474,7 +475,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(249, 195, 73, 0.15)",
   },
   heroBadgeText: {
-    color: "#f9c349",
+    color: tdcColors.yellow,
     fontSize: 8,
     fontWeight: "800",
     letterSpacing: 1.5,
@@ -504,13 +505,13 @@ const styles = StyleSheet.create({
   decorSegment: {
     width: 20,
     height: 1.5,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     borderRadius: 1,
   },
   decorDiamond: {
     width: 5,
     height: 5,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     transform: [{ rotate: '45deg' }],
     marginHorizontal: 8,
   },
@@ -530,7 +531,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     marginRight: 8,
   },
   sectionTitle: {

@@ -22,6 +22,7 @@ import { useNavigation } from '@react-navigation/native';
 // 🆕 engagement
 import FeatureDot from '../engagement/components/FeatureDot';
 import { useMissions } from '../engagement/hooks/useMissions';
+import { colors as tdcColors } from '../theme';
 
 const { width } = Dimensions.get('window');
 const COLUMN_WIDTH = (width - 60) / 2;
@@ -36,7 +37,7 @@ const ParticleBackground = () => {
       opacity: new Animated.Value(0),
       duration: 4000 + Math.random() * 4000,
       delay: Math.random() * 3000,
-      color: ['#f9c349', '#6366f1', '#a855f7', '#f43f5e', '#10b981', '#06b6d4', '#fb923c', '#8b5cf6', '#ec4899'][
+      color: [tdcColors.yellow, '#6366f1', '#a855f7', '#f43f5e', '#10b981', '#06b6d4', '#fb923c', '#8b5cf6', '#ec4899'][
         Math.floor(Math.random() * 9)
       ],
     }))
@@ -529,12 +530,12 @@ const Explore = () => {
       name: 'Exclusive Discounts',
       routeName: 'Brands',
       sub: 'Student Offers & Deals',
-      colors: ['#f9c349', '#f59e0b'],
+      colors: [tdcColors.yellow, '#f59e0b'],
       gradientColors: ['#FFFBEB', '#FEF3C7'],
       size: 'large',
       hasShimmer: true,
       cardStyle: { borderColor: '#FDE68A' },
-      iconCircleStyle: { shadowColor: '#f9c349' },
+      iconCircleStyle: { shadowColor: tdcColors.yellow },
       badgeStyle: { borderColor: '#FDE68A', backgroundColor: '#FFFBEB' },
       badgeTextStyle: { color: '#D97706' },
       titleStyle: { color: '#92400E' },
@@ -622,8 +623,8 @@ const Explore = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              tintColor="#f9c349"
-              colors={['#f9c349']}
+              tintColor={tdcColors.yellow}
+              colors={[tdcColors.yellow]}
               progressViewOffset={20}
             />
           }
@@ -637,7 +638,7 @@ const Explore = () => {
           >
             <View>
               <View style={styles.brandRow}>
-                <Text style={styles.brandTitle}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
+                <Text style={styles.brandTitle}>tdc<Text style={{color:tdcColors.yellow}}>.</Text></Text>
               </View>
               <View style={styles.subBadge}>
                 <View style={styles.subBadgeDot} />
@@ -717,7 +718,7 @@ const Explore = () => {
                 colors={['rgba(249, 195, 73, 0.12)', 'rgba(245, 158, 11, 0.12)']}
                 style={styles.statIconBox}
               >
-                <FontAwesome5 name="tags" size={18} color="#f9c349" />
+                <FontAwesome5 name="tags" size={18} color={tdcColors.yellow} />
               </LinearGradient>
               <Text style={styles.statNumber}>100+</Text>
               <Text style={styles.statLabel}>Discounts</Text>
@@ -763,7 +764,7 @@ const styles = StyleSheet.create({
     width: 400,
     height: 350,
     borderRadius: 200,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
   },
   glowBottom: {
     position: 'absolute',
@@ -772,7 +773,7 @@ const styles = StyleSheet.create({
     width: 400,
     height: 370,
     borderRadius: 200,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
   },
 
   header: {
@@ -795,7 +796,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     marginRight: 8,
   },
   brandSubtitle: {

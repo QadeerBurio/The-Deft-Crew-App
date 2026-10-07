@@ -133,6 +133,7 @@ import NotificationSettingsScreen from '../engagement/screens/NotificationSettin
 import BadgesScreen from '../engagement/screens/BadgesScreen';
 import CityScreen from '../screens/CityScreen';
 import NotificationSkillshare from '../components/NotificationSkillshare';
+import { colors as tdcColors } from '../theme';
 
 const { width } = Dimensions.get('window');
 const Drawer = createDrawerNavigator();
@@ -326,7 +327,7 @@ const AnimatedDrawerItem = ({ label, icon, onPress, delay = 0, isActive = false 
         ]}
       >
         <View style={[styles.drawerItemIconWrapper, isActive && styles.drawerItemIconActive]}>
-          {icon(22, isActive ? '#f9c349' : '#666')}
+          {icon(22, isActive ? tdcColors.yellow : '#666')}
         </View>
         <Text style={[styles.drawerItemLabel, isActive && styles.drawerItemLabelActive]}>
           {label}
@@ -394,7 +395,7 @@ const DrawerHeader = ({ isGuest }) => {
                 end={{ x: 1, y: 1 }}
               >
                 <Text style={styles.avatarText}>
-                  tdc<Text style={{ color: '#f9c349' }}>.</Text>
+                  tdc<Text style={{ color: tdcColors.yellow }}>.</Text>
                 </Text>
               </LinearGradient>
             </View>
@@ -405,7 +406,7 @@ const DrawerHeader = ({ isGuest }) => {
             <Text style={styles.headerTitle}>The Deft Crew</Text>
             <View style={styles.badgeWrapper}>
               <LinearGradient
-                colors={['#f9c349', '#f9c349']}
+                colors={[tdcColors.yellow, tdcColors.yellow]}
                 style={styles.premiumBadge}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
@@ -590,7 +591,7 @@ function CustomDrawerContent(props) {
               activeOpacity={0.8}
             >
               <LinearGradient
-                colors={['#f9c349', '#f7971e']}
+                colors={[tdcColors.yellow, '#f7971e']}
                 style={styles.signInGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
@@ -604,7 +605,7 @@ function CustomDrawerContent(props) {
               onPress={handleGuestSignUp}
               activeOpacity={0.8}
             >
-              <Ionicons name="person-add-outline" size={20} color="#f9c349" />
+              <Ionicons name="person-add-outline" size={20} color={tdcColors.yellow} />
               <Text style={styles.createAccountDrawerText}>Create Account</Text>
             </TouchableOpacity>
             <Text style={styles.guestBenefitText}>
@@ -617,7 +618,7 @@ function CustomDrawerContent(props) {
             onPress={handleLogout}
             activeOpacity={0.8}
           >
-            <Ionicons name="log-out-outline" size={22} color="#f9c349" />
+            <Ionicons name="log-out-outline" size={22} color={tdcColors.yellow} />
             <Text style={styles.logoutText}>Log Out</Text>
           </TouchableOpacity>
         )}
@@ -790,7 +791,7 @@ function CustomHeader({ navigation }) {
                 },
               ]}
             >
-              <Ionicons name="search-outline" size={20} color="#f9c349" style={styles.searchIcon} />
+              <Ionicons name="search-outline" size={20} color={tdcColors.yellow} style={styles.searchIcon} />
               <TextInput
                 style={styles.headerInput}
                 placeholder="Search brands..."
@@ -806,7 +807,7 @@ function CustomHeader({ navigation }) {
             <View style={styles.logoContainer}>
               <Text style={[styles.headerAppTitle, { fontSize: 36 }]}>
                 <Text style={{ color: '#000' }}>tdc</Text>
-                <Text style={{ color: '#f9c349' }}>.</Text>
+                <Text style={{ color: tdcColors.yellow }}>.</Text>
               </Text>
             </View>
           )}
@@ -975,7 +976,7 @@ function SkillShareGate({ navigation }) {
         backgroundColor: '#FDF9F0',
       }}
     >
-      <ActivityIndicator size="large" color="#f9c349" />
+      <ActivityIndicator size="large" color={tdcColors.yellow} />
     </View>
   );
 }
@@ -1397,7 +1398,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: '#f9c349',
+    borderColor: tdcColors.yellow,
     overflow: 'hidden',
   },
   avatarGradient: {
@@ -1419,7 +1420,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     opacity: 0.6,
   },
   headerTextContainer: {
@@ -1482,14 +1483,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   drawerItemLabelActive: {
-    color: '#f9c349',
+    color: tdcColors.yellow,
     fontWeight: '700',
   },
   drawerItemActiveIndicator: {
     width: 4,
     height: 24,
     borderRadius: 2,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
   },
   footer: {
     paddingHorizontal: 18,
@@ -1507,7 +1508,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 14,
     borderWidth: 2,
-    borderColor: '#f9c349',
+    borderColor: tdcColors.yellow,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -1516,7 +1517,7 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     marginLeft: 12,
-    color: '#f9c349',
+    color: tdcColors.yellow,
     fontWeight: '700',
     fontSize: 16,
   },
@@ -1558,12 +1559,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#f9c349',
+    borderColor: tdcColors.yellow,
     width: '100%',
     marginBottom: 10,
   },
   createAccountDrawerText: {
-    color: '#f9c349',
+    color: tdcColors.yellow,
     fontWeight: '700',
     fontSize: 15,
     marginLeft: 10,
@@ -1641,7 +1642,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -3,
     right: -3,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     borderRadius: 11,
     minWidth: 20,
     height: 20,

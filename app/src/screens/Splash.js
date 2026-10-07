@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
+import { colors as tdcColors } from "../theme";
 
 const { width, height } = Dimensions.get("window");
 
@@ -307,7 +308,7 @@ export default function Splash({ navigation }) {
           <View style={styles.cardContent}>
             <View style={styles.cardTop}>
               <View style={styles.iconCircle}>
-                <Ionicons name={item.icon} size={28} color="#f9c349" />
+                <Ionicons name={item.icon} size={28} color={tdcColors.yellow} />
               </View>
               <View style={styles.statContainer}>
                 <Text style={styles.statValue}>{item.stat}</Text>
@@ -415,7 +416,7 @@ export default function Splash({ navigation }) {
               extrapolate: "clamp",
             });
 
-            const dotColor = i === currentIndex ? "#f9c349" : "#e0e0e0";
+            const dotColor = i === currentIndex ? tdcColors.yellow : "#e0e0e0";
 
             return (
               <Animated.View
@@ -541,12 +542,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 
-  dividerLine: { width: 40, height: 2, backgroundColor: "#f9c349" },
+  dividerLine: { width: 40, height: 2, backgroundColor: tdcColors.yellow },
 
   dividerDiamond: {
     width: 8,
     height: 8,
-    backgroundColor: "#f9c349",
+    backgroundColor: tdcColors.yellow,
     transform: [{ rotate: "45deg" }],
     marginHorizontal: 10,
   },
@@ -612,7 +613,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 3,
-    backgroundColor: "#f9c349",
+    backgroundColor: tdcColors.yellow,
   },
 
   cardContent: {
@@ -635,7 +636,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#f9c349",
+    borderColor: tdcColors.yellow,
   },
 
   statContainer: {
@@ -664,7 +665,7 @@ const styles = StyleSheet.create({
   },
 
   taglineContainer: {
-    backgroundColor: "#f9c349",
+    backgroundColor: tdcColors.yellow,
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 15,
@@ -726,7 +727,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  cornerAccent: { position: "absolute", width: 20, height: 20, borderColor: "#f9c349" },
+  cornerAccent: { position: "absolute", width: 20, height: 20, borderColor: tdcColors.yellow },
 
   topLeftAccent: {
     top: 10,
@@ -758,13 +759,13 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#f9c349",
+    backgroundColor: tdcColors.yellow,
     marginRight: 8,
   },
 
   titlePrefix: {
     fontSize: 12,
-    color: "#f9c349",
+    color: tdcColors.yellow,
     fontWeight: "800",
     letterSpacing: 3,
   },
@@ -781,7 +782,7 @@ const styles = StyleSheet.create({
   titleUnderline: {
     width: 40,
     height: 3,
-    backgroundColor: "#f9c349",
+    backgroundColor: tdcColors.yellow,
     marginBottom: 20,
     borderRadius: 1.5,
   },

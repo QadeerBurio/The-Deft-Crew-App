@@ -16,6 +16,7 @@ import { io } from "socket.io-client";
 import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from 'expo-haptics';
+import { colors as tdcColors } from "../../theme";
 
 const { width, height } = Dimensions.get('window');
 const socket = io("https://the-deft-crew-production.up.railway.app");
@@ -24,7 +25,7 @@ const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/decaxpera/auto/upload";
 const UPLOAD_PRESET = "tdc_profiles";
 
 const COLORS = {
-  primary: '#f9c349',
+  primary: tdcColors.yellow,
   primaryDark: '#e6b800',
   primaryLight: '#fef9f0',
   white: '#ffffff',

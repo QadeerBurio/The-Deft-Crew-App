@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import api, { injectSessionErrorHandler } from "../api/api";
 import { AuthContext } from "../context/AuthContext";
+import { colors as tdcColors } from "../theme";
 
 const { width, height } = Dimensions.get("window");
 
@@ -482,7 +483,7 @@ export default function SignIn({ navigation }) {
                     <Ionicons
                       name={notification.type === 'success' ? "checkmark-circle" : "alert-circle"}
                       size={24}
-                      color={notification.type === 'success' ? "#1a1a1a" : "#f9c349"}
+                      color={notification.type === 'success' ? "#1a1a1a" : tdcColors.yellow}
                     />
                   </Animated.View>
                   <View style={styles.notificationTextContainer}>
@@ -532,7 +533,7 @@ export default function SignIn({ navigation }) {
         {/* Loading Overlay */}
         {showLoading && (
           <Animated.View style={[styles.loadingOverlay, { opacity: overlayOpacity }]}>
-              <ActivityIndicator size="large" color="#f9c349" />
+              <ActivityIndicator size="large" color={tdcColors.yellow} />
               <Text style={styles.loadingText}>Signing In...</Text>
               <View style={styles.loadingDots}>
                 {[0, 1, 2].map((i) => (
@@ -575,7 +576,7 @@ export default function SignIn({ navigation }) {
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 >
-                  <Text style={styles.logoText}>tdc<Text style={{color:"#f9c349"}}>.</Text></Text>
+                  <Text style={styles.logoText}>tdc<Text style={{color:tdcColors.yellow}}>.</Text></Text>
                 </LinearGradient>
               </Animated.View>
 
@@ -621,7 +622,7 @@ export default function SignIn({ navigation }) {
                 <Ionicons
                   name="mail-outline"
                   size={18}
-                  color={errors.email ? "#ff4444" : (focusedInput === 'email' ? "#f9c349" : "#999")}
+                  color={errors.email ? "#ff4444" : (focusedInput === 'email' ? tdcColors.yellow : "#999")}
                 />
               </View>
               <TextInput
@@ -646,7 +647,7 @@ export default function SignIn({ navigation }) {
               />
               {email.length > 0 && validateEmail(email) && !errors.email && (
                 <Animated.View style={styles.checkmarkContainer}>
-                  <Ionicons name="checkmark-circle" size={20} color="#f9c349" />
+                  <Ionicons name="checkmark-circle" size={20} color={tdcColors.yellow} />
                 </Animated.View>
               )}
               {errors.email && (
@@ -688,7 +689,7 @@ export default function SignIn({ navigation }) {
                 <Ionicons
                   name="lock-closed-outline"
                   size={18}
-                  color={errors.password ? "#ff4444" : (focusedInput === 'password' ? "#f9c349" : "#999")}
+                  color={errors.password ? "#ff4444" : (focusedInput === 'password' ? tdcColors.yellow : "#999")}
                 />
               </View>
               <TextInput
@@ -731,7 +732,7 @@ export default function SignIn({ navigation }) {
                 activeOpacity={0.7}
               >
                 <Text style={styles.forgotText}>Forgot Password?</Text>
-                <Ionicons name="arrow-forward" size={14} color="#f9c349" style={{ marginLeft: 4 }} />
+                <Ionicons name="arrow-forward" size={14} color={tdcColors.yellow} style={{ marginLeft: 4 }} />
               </TouchableOpacity>
             </Animated.View>
 
@@ -759,11 +760,11 @@ export default function SignIn({ navigation }) {
                   style={styles.buttonGradient}
                 >
                   {loading ? (
-                    <ActivityIndicator color="#f9c349" size="small" />
+                    <ActivityIndicator color={tdcColors.yellow} size="small" />
                   ) : (
                     <>
                       <Text style={styles.buttonText}>SIGN IN</Text>
-                      <Ionicons name="log-in-outline" size={20} color="#f9c349" />
+                      <Ionicons name="log-in-outline" size={20} color={tdcColors.yellow} />
                     </>
                   )}
                 </LinearGradient>
@@ -795,7 +796,7 @@ export default function SignIn({ navigation }) {
           <Animated.View style={[styles.brandingFooter, { opacity: fadeAnim }]}>
             <Text style={styles.brandingText}>
               <Text style={{fontSize:14}}>tdc</Text>
-              <Text style={{color:'#f9c349', fontSize:20}}>.</Text> PAKISTAN
+              <Text style={{color:tdcColors.yellow, fontSize:20}}>.</Text> PAKISTAN
             </Text>
           </Animated.View>
         </ScrollView>
@@ -854,7 +855,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
     borderWidth: 2,
-    borderColor: '#f9c349',
+    borderColor: tdcColors.yellow,
   },
   notificationTextContainer: {
     flex: 1,
@@ -889,7 +890,7 @@ const styles = StyleSheet.create({
   },
   notificationProgress: {
     height: '100%',
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     transform: [{ scaleX: 1 }],
     flex: 1,
   },
@@ -905,7 +906,7 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   loadingText: {
-    color: '#f9c349',
+    color: tdcColors.yellow,
     fontSize: 18,
     fontWeight: '800',
     marginTop: 15,
@@ -919,7 +920,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     marginHorizontal: 4,
     opacity: 0.5,
   },
@@ -938,7 +939,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     overflow: 'hidden',
     elevation: 10,
-    shadowColor: "#f9c349",
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.3,
     shadowRadius: 15,
@@ -976,7 +977,7 @@ const styles = StyleSheet.create({
   lineSegment: {
     width: 25,
     height: 2,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     borderRadius: 1,
   },
   diamond: {
@@ -999,9 +1000,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   inputFocused: {
-    borderColor: "#f9c349",
+    borderColor: tdcColors.yellow,
     backgroundColor: "#fff",
-    shadowColor: "#f9c349",
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.2,
     shadowRadius: 10,
@@ -1053,7 +1054,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   forgotText: {
-    color: "#f9c349",
+    color: tdcColors.yellow,
     fontWeight: "700",
     fontSize: 13,
     letterSpacing: 0.5,
@@ -1077,7 +1078,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   buttonText: {
-    color: "#f9c349",
+    color: tdcColors.yellow,
     fontSize: 16,
     fontWeight: "800",
     letterSpacing: 2,

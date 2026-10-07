@@ -14,6 +14,7 @@ import axios from 'axios';
 import { useNavigation, useFocusEffect, useIsFocused, CommonActions } from '@react-navigation/native';
 import { AuthContext } from "../../context/AuthContext";
 import io from "socket.io-client";
+import { colors as tdcColors } from "../../theme";
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -27,7 +28,7 @@ const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 const { width, height } = Dimensions.get('window');
 
 const COLORS = {
-  primary: '#f9c349',
+  primary: tdcColors.yellow,
   primaryDark: '#e6b800',
   primaryLight: '#fef9f0',
   white: '#ffffff',

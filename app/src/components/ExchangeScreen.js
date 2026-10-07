@@ -27,6 +27,7 @@ import api, { publicAPI } from "../api/api";
 import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
 import { engagementBus, ENGAGEMENT_EVENTS } from '../engagement/engagementBus';
+import { colors as tdcColors } from '../theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -769,7 +770,7 @@ const ExchangeScreen = ({ navigation }) => {
               </View>
 
               <TouchableOpacity onPress={openInBrowser} style={styles.webViewHeaderBtn} activeOpacity={0.7}>
-                <Ionicons name="open-outline" size={22} color="#f9c349" />
+                <Ionicons name="open-outline" size={22} color={tdcColors.yellow} />
               </TouchableOpacity>
             </View>
 
@@ -777,7 +778,7 @@ const ExchangeScreen = ({ navigation }) => {
             {webViewLoading && (
               <View style={styles.webViewProgressContainer}>
                 <Animated.View style={[styles.webViewProgressBar, { width: progressWidthInterpolated }]}>
-                  <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.webViewProgressGradient} />
+                  <LinearGradient colors={[tdcColors.yellow, '#1a1a1a']} style={styles.webViewProgressGradient} />
                 </Animated.View>
               </View>
             )}
@@ -802,12 +803,12 @@ const ExchangeScreen = ({ navigation }) => {
               {/* Loading Overlay */}
               {webViewLoading && (
                 <Animated.View style={[styles.webViewLoaderContainer, { opacity: webViewFade }]}>
-                  <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.webViewLoaderIcon}>
+                  <LinearGradient colors={[tdcColors.yellow, '#1a1a1a']} style={styles.webViewLoaderIcon}>
                     <Ionicons name="school" size={40} color="#fff" />
                   </LinearGradient>
                   <Text style={styles.webViewLoadingTitle}>Loading University Website</Text>
                   <Text style={styles.webViewLoadingSubtitle}>Fetching program details...</Text>
-                  <ActivityIndicator size="small" color="#f9c349" style={{ marginTop: 16 }} />
+                  <ActivityIndicator size="small" color={tdcColors.yellow} style={{ marginTop: 16 }} />
                 </Animated.View>
               )}
 
@@ -820,7 +821,7 @@ const ExchangeScreen = ({ navigation }) => {
                 <View style={{ flex: 1 }} />
 
                 <TouchableOpacity style={styles.webViewToolbarBtn} onPress={openInBrowser} activeOpacity={0.7}>
-                  <Ionicons name="compass-outline" size={22} color="#f9c349" />
+                  <Ionicons name="compass-outline" size={22} color={tdcColors.yellow} />
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.webViewToolbarBtn} onPress={() => {
@@ -835,7 +836,7 @@ const ExchangeScreen = ({ navigation }) => {
                     );
                   }
                 }} activeOpacity={0.7}>
-                  <Ionicons name="share-outline" size={22} color="#f9c349" />
+                  <Ionicons name="share-outline" size={22} color={tdcColors.yellow} />
                 </TouchableOpacity>
               </Animated.View>
             </View>

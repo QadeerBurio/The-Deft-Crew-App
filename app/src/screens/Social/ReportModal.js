@@ -19,6 +19,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
+import { colors } from '../../theme';
 
 const { height, width } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
@@ -233,7 +234,7 @@ export default function ReportModal({
                       <Ionicons 
                         name={reason.icon} 
                         size={18} 
-                        color={selectedReason === reason.id ? '#f9c349' : '#666'} 
+                        color={selectedReason === reason.id ? colors.yellow : '#666'} 
                       />
                       <Text
                         style={[
@@ -245,7 +246,7 @@ export default function ReportModal({
                       </Text>
                     </View>
                     {selectedReason === reason.id && (
-                      <Ionicons name="checkmark-circle" size={20} color="#f9c349" />
+                      <Ionicons name="checkmark-circle" size={20} color={colors.yellow} />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -426,7 +427,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#f9c349',
+    backgroundColor: colors.yellow,
   },
   reasonText: {
     fontSize: 14,
@@ -460,7 +461,7 @@ const styles = StyleSheet.create({
     borderColor: '#e8e8e8',
   },
   submitButton: {
-    backgroundColor: '#f9c349',
+    backgroundColor: colors.yellow,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

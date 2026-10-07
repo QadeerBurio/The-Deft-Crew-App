@@ -24,6 +24,7 @@ import {
   registerForPushNotificationsAsync,
   savePushTokenToServer,
 } from '../../utils/pushNotifications';
+import { colors as tdcColors } from '../../theme';
 
 // Re-saves this device's push token, then asks the server to push to it.
 // Shows exactly what is wrong if the push can't be delivered.
@@ -49,7 +50,7 @@ async function runPushTest(setTesting) {
   }
 }
 
-const GOLD = '#f9c349';
+const GOLD = tdcColors.yellow;
 const DARK = '#1a1a1a';
 const MUTED = '#888';
 const LIGHT = '#fafafa';
@@ -69,7 +70,7 @@ const ROWS = [
     label: 'daily drop',
     sub: '7pm daily. one surprise.',
     mood: 'excited',
-    color: '#f9c349',
+    color: tdcColors.yellow,
   },
   {
     key: 'deals',

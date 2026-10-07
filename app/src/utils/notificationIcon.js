@@ -1,3 +1,4 @@
+import { colors } from "../theme";
 // app/src/utils/notificationIcon.js
 // Maps server `mood` keys → local PNG (if bundled) + emoji + color.
 // Used by NotificationBanner for in-app toast icons.
@@ -6,7 +7,7 @@
 const MOOD_META = {
   sorted:   { emoji: '😊', color: '#10b981' },
   panic:    { emoji: '😰', color: '#ef4444' },
-  excited:  { emoji: '🤩', color: '#f9c349' },
+  excited:  { emoji: '🤩', color: colors.yellow },
   broke:    { emoji: '😢', color: '#94a3b8' },
   sleepy:   { emoji: '😴', color: '#8b5cf6' },
   shook:    { emoji: '😮', color: '#a855f7' },
@@ -18,7 +19,7 @@ const MOOD_META = {
   urgent:   { emoji: '😨', color: '#ff6b6b' },
   money:    { emoji: '🤑', color: '#d4a373' },
   ghost:    { emoji: '😑', color: '#94a3b8' },
-  default:  { emoji: '✨', color: '#f9c349' },
+  default:  { emoji: '✨', color: colors.yellow },
 };
 
 // ─── Bundled PNGs (static requires — Metro-safe) ───

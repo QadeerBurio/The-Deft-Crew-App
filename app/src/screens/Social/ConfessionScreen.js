@@ -33,6 +33,7 @@ import {
 
 // 🆕 engagement
 import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus';
+import { colors as tdcColors } from "../../theme";
 
 const { height, width } = Dimensions.get('window');
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
@@ -808,7 +809,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
       <View style={styles.threadContainer}>
         <View style={styles.parentRow}>
           <View style={styles.avatarLg}>
-            <Ionicons name="person" size={16} color="#f9c349" />
+            <Ionicons name="person" size={16} color={tdcColors.yellow} />
           </View>
           <View style={styles.parentContent}>
             <View style={styles.bubbleLg}>
@@ -867,7 +868,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
                     isLast && styles.branchConnectorLast,
                   ]} />
                   <View style={styles.avatarSm}>
-                    <Ionicons name="person" size={12} color="#f9c349" />
+                    <Ionicons name="person" size={12} color={tdcColors.yellow} />
                   </View>
                   <View style={styles.replyContent}>
                     <View style={styles.bubbleSm}>
@@ -914,14 +915,14 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
         <View style={styles.cardHeader}>
           <View style={styles.headerLeft}>
             <LinearGradient colors={['#1a1a1a', '#2d2d2d']} style={styles.avatarCircle}>
-              <Ionicons name="person" size={18} color="#f9c349" />
+              <Ionicons name="person" size={18} color={tdcColors.yellow} />
             </LinearGradient>
             <View>
               <Text style={styles.anonymousName}>Anonymous</Text>
               <Text style={styles.postTime}>{formatPostTime(item.createdAt)}</Text>
             </View>
           </View>
-          <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.confessionBadge}>
+          <LinearGradient colors={[tdcColors.yellow, '#e6b800']} style={styles.confessionBadge}>
             <Ionicons name="lock-closed" size={10} color="#fff" />
             <Text style={styles.badgeText}>Confession</Text>
           </LinearGradient>
@@ -939,7 +940,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
             {shouldShowMore && (
               <TouchableOpacity onPress={() => toggleExpand(item._id)} style={styles.showMoreBtn}>
                 <Text style={styles.showMoreText}>{isExpanded ? 'Show less' : 'Show more'}</Text>
-                <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={16} color="#f9c349" />
+                <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={tdcColors.yellow} />
               </TouchableOpacity>
             )}
           </View>
@@ -956,8 +957,8 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
             style={[styles.actionBtn, isLiked && styles.actionBtnLiked]}
             onPress={() => handleLike(item._id)}
           >
-            <Ionicons name={isLiked ? "heart" : "heart-outline"} size={20} color={isLiked ? "#f9c349" : "#666"} />
-            <Text style={[styles.actionText, isLiked && { color: "#f9c349" }]}>
+            <Ionicons name={isLiked ? "heart" : "heart-outline"} size={20} color={isLiked ? tdcColors.yellow : "#666"} />
+            <Text style={[styles.actionText, isLiked && { color: tdcColors.yellow }]}>
               {item.likes > 0 ? item.likes : 'Like'}
             </Text>
           </TouchableOpacity>
@@ -1011,21 +1012,21 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => { setRefreshing(true); fetchConfessions(false); }}
-            tintColor="#f9c349"
-            colors={["#f9c349"]}
+            tintColor={tdcColors.yellow}
+            colors={[tdcColors.yellow]}
           />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconCircle}>
-              <Ionicons name="chatbubble-ellipses-outline" size={50} color="#f9c349" />
+              <Ionicons name="chatbubble-ellipses-outline" size={50} color={tdcColors.yellow} />
             </View>
             <Text style={styles.emptyTitle}>No Confessions Yet</Text>
             <Text style={styles.emptySubtitle}>Share your thoughts anonymously</Text>
             <TouchableOpacity style={styles.emptyBtn} onPress={handleFabPress}>
               <LinearGradient colors={['#1a1a1a', '#2d2d2d']} style={styles.emptyBtnGradient}>
                 <Text style={styles.emptyBtnText}>Create Confession</Text>
-                <Ionicons name="arrow-forward" size={18} color="#f9c349" />
+                <Ionicons name="arrow-forward" size={18} color={tdcColors.yellow} />
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -1036,7 +1037,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
       <Animated.View style={[styles.fabContainer, { transform: [{ scale: fabScale }] }]}>
         <TouchableOpacity style={styles.fab} onPress={handleFabPress}>
           <LinearGradient colors={['#1a1a1a', '#2d2d2d']} style={styles.fabGradient}>
-            <Ionicons name="add" size={28} color="#f9c349" />
+            <Ionicons name="add" size={28} color={tdcColors.yellow} />
           </LinearGradient>
         </TouchableOpacity>
       </Animated.View>
@@ -1066,7 +1067,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
                   </TouchableOpacity>
                 </View>
                 <View style={styles.anonymityBadge}>
-                  <Ionicons name="shield-checkmark" size={14} color="#f9c349" />
+                  <Ionicons name="shield-checkmark" size={14} color={tdcColors.yellow} />
                   <Text style={styles.anonymityText}>Your identity is 100% anonymous</Text>
                 </View>
                 <ScrollView style={styles.modalScrollView} keyboardShouldPersistTaps="handled">
@@ -1096,10 +1097,10 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
                   )}
                   <TouchableOpacity style={styles.submitBtn} onPress={handlePost} disabled={posting}>
                     <LinearGradient colors={['#1a1a1a', '#2d2d2d']} style={styles.submitGradient}>
-                      {posting ? <ActivityIndicator color="#f9c349" /> : (
+                      {posting ? <ActivityIndicator color={tdcColors.yellow} /> : (
                         <>
                           <Text style={styles.submitText}>Post Confession</Text>
-                          <Ionicons name="send" size={18} color="#f9c349" />
+                          <Ionicons name="send" size={18} color={tdcColors.yellow} />
                         </>
                       )}
                     </LinearGradient>
@@ -1133,7 +1134,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
                 <View style={styles.dragHandle} />
                 <View style={styles.commentHeader}>
                   <View style={styles.commentHeaderLeft}>
-                    <Ionicons name="chatbubbles" size={20} color="#f9c349" />
+                    <Ionicons name="chatbubbles" size={20} color={tdcColors.yellow} />
                     <Text style={styles.commentTitle}>Comments</Text>
                     <View style={styles.commentCountBadge}>
                       <Text style={styles.commentCountBadgeText}>{selectedPost?.comments?.length || 0}</Text>
@@ -1173,7 +1174,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
                     {replyTo && (
                       <View style={styles.replyNotifier}>
                         <View style={styles.replyNotifierLeft}>
-                          <Ionicons name="return-down-forward" size={14} color="#f9c349" />
+                          <Ionicons name="return-down-forward" size={14} color={tdcColors.yellow} />
                           <Text style={styles.replyNotifierText}>
                             Replying to <Text style={styles.replyNotifierName}>{replyTo.userName}</Text>
                           </Text>
@@ -1203,7 +1204,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
                               {item.profileImage ? (
                                 <Image source={{ uri: item.profileImage }} style={styles.mentionAvatar} />
                               ) : (
-                                <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.mentionAvatarPlaceholder}>
+                                <LinearGradient colors={[tdcColors.yellow, '#e6b800']} style={styles.mentionAvatarPlaceholder}>
                                   <Text style={styles.mentionAvatarText}>{item.name?.charAt(0)?.toUpperCase()}</Text>
                                 </LinearGradient>
                               )}
@@ -1235,7 +1236,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
                         style={[styles.postBtn, !commentText.trim() && styles.postBtnDisabled]}
                       >
                         <LinearGradient
-                          colors={commentText.trim() ? ['#f9c349', '#e6b800'] : ['#ccc', '#ddd']}
+                          colors={commentText.trim() ? [tdcColors.yellow, '#e6b800'] : ['#ccc', '#ddd']}
                           style={styles.postBtnGradient}
                         >
                           {commentLoading ? (
@@ -1286,7 +1287,7 @@ const styles = StyleSheet.create({
   listContent: { padding: 12, paddingBottom: 100, paddingTop: 4 },
 
   card: { backgroundColor: '#fff', borderRadius: 16, marginBottom: 12, marginTop: 8, padding: 16, borderWidth: 1, borderColor: '#f0f0f0' },
-  cardHighlight: { borderColor: '#f9c349', borderWidth: 2, backgroundColor: '#fffdf5' },
+  cardHighlight: { borderColor: tdcColors.yellow, borderWidth: 2, backgroundColor: '#fffdf5' },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   headerLeft: { flexDirection: 'row', alignItems: 'center' },
   avatarCircle: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
@@ -1296,7 +1297,7 @@ const styles = StyleSheet.create({
   badgeText: { color: '#fff', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
   confessionText: { fontSize: 15, color: '#1a1a1a', lineHeight: 24 },
   showMoreBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 6 },
-  showMoreText: { fontSize: 13, color: '#f9c349', fontWeight: '700' },
+  showMoreText: { fontSize: 13, color: tdcColors.yellow, fontWeight: '700' },
   imageContainer: { marginBottom: 12, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f8f8f8' },
   postImage: { width: '100%', height: 280, borderRadius: 12 },
   cardFooter: { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#f5f5f5', paddingTop: 12, gap: 8 },
@@ -1324,7 +1325,7 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 20, fontWeight: '800', color: '#1a1a1a' },
   closeBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center' },
   anonymityBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#fef9f0', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, marginBottom: 16 },
-  anonymityText: { fontSize: 12, color: '#f9c349', fontWeight: '600' },
+  anonymityText: { fontSize: 12, color: tdcColors.yellow, fontWeight: '600' },
   input: { fontSize: 15, minHeight: 120, maxHeight: 200, textAlignVertical: 'top', borderWidth: 2, borderColor: '#f0f0f0', borderRadius: 14, padding: 14, marginBottom: 6, color: '#1a1a1a', backgroundColor: '#fafafa' },
   charCount: { fontSize: 11, color: '#999', textAlign: 'right', marginBottom: 12 },
   previewContainer: { position: 'relative', marginBottom: 12, borderRadius: 12, overflow: 'hidden' },
@@ -1384,7 +1385,7 @@ const styles = StyleSheet.create({
   replyNotifier: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#fef9f0', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   replyNotifierLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   replyNotifierText: { fontSize: 12, color: '#666' },
-  replyNotifierName: { fontWeight: '700', color: '#f9c349' },
+  replyNotifierName: { fontWeight: '700', color: tdcColors.yellow },
 
   mentionSuggestions: { backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f0f0f0', maxHeight: 200 },
   mentionItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 10, borderBottomWidth: 1, borderBottomColor: '#f8f8f8' },

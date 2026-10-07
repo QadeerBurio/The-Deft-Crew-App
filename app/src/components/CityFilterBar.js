@@ -5,6 +5,7 @@ import { ScrollView, Text, TouchableOpacity, View, StyleSheet } from "react-nati
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { ALL_CITIES } from "../utils/cityFilter";
+import { colors } from "../theme";
 
 function CityFilterBar({ options, selected, onSelect, style }) {
   if (!options || options.length === 0) return null;
@@ -33,7 +34,7 @@ function CityFilterBar({ options, selected, onSelect, style }) {
               <MaterialCommunityIcons
                 name={city === ALL_CITIES ? "map-outline" : "map-marker"}
                 size={13}
-                color={active ? "#f9c349" : "#666"}
+                color={active ? colors.yellow : "#666"}
               />
               <Text style={[styles.chipText, active && styles.chipTextActive]}>
                 {city === ALL_CITIES ? "All Cities" : city}
@@ -81,7 +82,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  countActive: { backgroundColor: "#f9c349" },
+  countActive: { backgroundColor: colors.yellow },
   countText: { fontSize: 10, fontWeight: "700", color: "#777" },
   countTextActive: { color: "#000" },
 });

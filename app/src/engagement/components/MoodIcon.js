@@ -11,12 +11,13 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { colors as tdcColors } from '../../theme';
 
 // ─── The 14 moods (§5.1) ───
 export const MOODS = {
   sorted:   { emoji: '😌', color: '#10b981', label: 'sorted' },
   panic:    { emoji: '😰', color: '#ef4444', label: 'panic' },
-  excited:  { emoji: '🤩', color: '#f9c349', label: 'excited' },
+  excited:  { emoji: '🤩', color: tdcColors.yellow, label: 'excited' },
   broke:    { emoji: '😔', color: '#94a3b8', label: 'broke' },
   sleepy:   { emoji: '😴', color: '#8b5cf6', label: 'sleepy' },
   shook:    { emoji: '😳', color: '#a855f7', label: 'shook' },
@@ -28,7 +29,7 @@ export const MOODS = {
   urgent:   { emoji: '🚨', color: '#ff6b6b', label: 'urgent' },
   money:    { emoji: '🤑', color: '#d4a373', label: 'money' },
   ghost:    { emoji: '👻', color: '#94a3b8', label: 'ghost' },
-  default:  { emoji: '✨', color: '#f9c349', label: 'new' },
+  default:  { emoji: '✨', color: tdcColors.yellow, label: 'new' },
 };
 
 // ─── Optional local PNGs ───

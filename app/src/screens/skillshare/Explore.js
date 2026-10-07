@@ -8,8 +8,9 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import { getListings } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
 import ListingCard from '../../components/ListingCard';
+import { colors as tdcColors } from '../../theme';
 
-const BRAND = '#f9c349';
+const BRAND = tdcColors.yellow;
 const INK = '#1a1a1a';
 const MUTED = '#8E8E93';
 

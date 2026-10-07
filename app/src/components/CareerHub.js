@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import axios from 'axios';
+import { colors as tdcColors } from '../theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -35,7 +36,7 @@ const ParticleBackground = () => {
     opacity: new Animated.Value(0),
     duration: 2500 + Math.random() * 3500,
     delay: Math.random() * 3000,
-    color: ['#f9c349', '#1e3a8a', '#6366f1', '#10b981', '#f43f5e'][Math.floor(Math.random() * 5)],
+    color: [tdcColors.yellow, '#1e3a8a', '#6366f1', '#10b981', '#f43f5e'][Math.floor(Math.random() * 5)],
   }))).current;
 
   useEffect(() => {
@@ -307,7 +308,7 @@ const ErrorState = ({ error, onRetry }) => {
           activeOpacity={0.8}
         >
           <LinearGradient
-            colors={['#f9c349', '#f8c14a']}
+            colors={[tdcColors.yellow, '#f8c14a']}
             style={styles.retryGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
@@ -515,7 +516,7 @@ const CareerHub = ({ navigation }) => {
   // Helper function to get job type color
   const getJobTypeColor = (type) => {
     const typeLower = type?.toLowerCase() || '';
-    if (typeLower.includes('full') || typeLower.includes('full-time')) return '#f9c349';
+    if (typeLower.includes('full') || typeLower.includes('full-time')) return tdcColors.yellow;
     if (typeLower.includes('part') || typeLower.includes('part-time')) return '#3b82f6';
     if (typeLower.includes('contract')) return '#8b5cf6';
     if (typeLower.includes('intern')) return '#10b981';
@@ -573,8 +574,8 @@ const CareerHub = ({ navigation }) => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor="#f9c349"
-            colors={['#f9c349']}
+            tintColor={tdcColors.yellow}
+            colors={[tdcColors.yellow]}
             progressViewOffset={20}
           />
         }
@@ -591,7 +592,7 @@ const CareerHub = ({ navigation }) => {
             <View style={styles.headerTop}>
               <View style={styles.headerBadge}>
                 <LinearGradient
-                  colors={['#f9c349', '#f8c14a']}
+                  colors={[tdcColors.yellow, '#f8c14a']}
                   style={styles.headerBadgeGradient}
                 >
                   <Text style={styles.headerBadgeText}>tdc</Text>
@@ -628,7 +629,7 @@ const CareerHub = ({ navigation }) => {
                 <Text style={styles.cardTitle}>Find Jobs</Text>
                 <Text style={styles.cardSub}>Browse 50+ Roles</Text>
                 <View style={styles.cardAccent}>
-                  <Ionicons name="trending-up" size={14} color="#f9c349" />
+                  <Ionicons name="trending-up" size={14} color={tdcColors.yellow} />
                   <Text style={styles.cardAccentText}>Active Hiring</Text>
                 </View>
               </LinearGradient>
@@ -695,7 +696,7 @@ const CareerHub = ({ navigation }) => {
                   <View style={styles.bannerContent}>
                     <View style={styles.tag}>
                       <LinearGradient
-                        colors={['#f9c349', '#f8c14a']}
+                        colors={[tdcColors.yellow, '#f8c14a']}
                         style={styles.tagGradient}
                       >
                         <Ionicons name="earth" size={12} color="#000" style={{ marginRight: 4 }} />
@@ -723,7 +724,7 @@ const CareerHub = ({ navigation }) => {
           <Animated.View style={{ opacity: headerFade }}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
-                <View style={[styles.sectionDot, { backgroundColor: '#f9c349' }]} />
+                <View style={[styles.sectionDot, { backgroundColor: tdcColors.yellow }]} />
                 <Text style={styles.sectionTitle}>Recent Opportunities</Text>
               </View>
               <TouchableOpacity 
@@ -731,7 +732,7 @@ const CareerHub = ({ navigation }) => {
                 onPress={() => handleCardPress('Career')}
               >
                 <Text style={styles.seeAll}>See All</Text>
-                <Ionicons name="chevron-forward" size={16} color="#f9c349" />
+                <Ionicons name="chevron-forward" size={16} color={tdcColors.yellow} />
               </TouchableOpacity>
             </View>
 
@@ -905,7 +906,7 @@ const styles = StyleSheet.create({
     width: 350,
     height: 350,
     borderRadius: 175,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
   },
   glowBottom: {
     position: 'absolute',
@@ -981,7 +982,7 @@ const styles = StyleSheet.create({
     letterSpacing: -1,
   },
   titleAccent: {
-    color: '#f9c349',
+    color: tdcColors.yellow,
   },
   subtitle: {
     fontSize: 14,
@@ -1023,7 +1024,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   iconYellow: {
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
   },
   iconBlack: {
     backgroundColor: '#0F172A',
@@ -1084,7 +1085,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   sectionBadgeText: {
-    color: '#f9c349',
+    color: tdcColors.yellow,
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1,
@@ -1105,7 +1106,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     borderRadius: 24, 
     overflow: 'hidden',
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
     shadowRadius: 24,
@@ -1206,13 +1207,13 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     marginRight: 8,
   },
   companyNameText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#f9c349',
+    color: tdcColors.yellow,
     flex: 1,
   },
   jobTypeBadge: {
@@ -1394,7 +1395,7 @@ const styles = StyleSheet.create({
   retryButton: {
     borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,

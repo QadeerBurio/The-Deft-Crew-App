@@ -16,6 +16,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTour } from '../../engagement/tour/TourProvider';
 import StreakSheet from '../../engagement/components/StreakSheet';
 import { useStreak } from '../../engagement/hooks/useStreak';
+import { colors as tdcColors } from "../../theme";
 
 const { width } = Dimensions.get('window');
 
@@ -69,7 +70,7 @@ const ToggleItem = ({ icon, label, subLabel, color = "#1a1a1a", value, onToggle,
         {subLabel && <Text style={styles.settingSubLabel}>{subLabel}</Text>}
       </View>
       <Switch
-        trackColor={{ false: '#E8E9ED', true: '#f9c349' }}
+        trackColor={{ false: '#E8E9ED', true: tdcColors.yellow }}
         thumbColor="#FFFFFF"
         ios_backgroundColor="#E8E9ED"
         onValueChange={onToggle}
@@ -108,7 +109,7 @@ const PrivacyAndSafetyScreen = ({ navigation }) => {
             icon="lock-closed-outline"
             label="Private Account"
             subLabel="Only connections can see your posts"
-            color="#f9c349"
+            color={tdcColors.yellow}
             iconBg="#FFF8E1"
             value={isPrivate}
             onToggle={() => setIsPrivate(!isPrivate)}
@@ -117,7 +118,7 @@ const PrivacyAndSafetyScreen = ({ navigation }) => {
             icon="eye-outline"
             label="Show Online Status"
             subLabel="Let others see when you're online"
-            color="#f9c349"
+            color={tdcColors.yellow}
             iconBg="#FFF8E1"
             value={showOnlineStatus}
             onToggle={() => setShowOnlineStatus(!showOnlineStatus)}
@@ -126,7 +127,7 @@ const PrivacyAndSafetyScreen = ({ navigation }) => {
             icon="time-outline"
             label="Show Last Seen"
             subLabel="Show when you were last active"
-            color="#f9c349"
+            color={tdcColors.yellow}
             iconBg="#FFF8E1"
             value={showLastSeen}
             onToggle={() => setShowLastSeen(!showLastSeen)}
@@ -139,7 +140,7 @@ const PrivacyAndSafetyScreen = ({ navigation }) => {
             icon="ban-outline"
             label="Blocked Users"
             subLabel="Manage your blocked list"
-            color="#f9c349"
+            color={tdcColors.yellow}
             iconBg="#FFF8E1"
             onPress={() => navigation.navigate('BlockedUsers')}
           />
@@ -147,7 +148,7 @@ const PrivacyAndSafetyScreen = ({ navigation }) => {
             icon="flag-outline"
             label="Report History"
             subLabel="View your past reports"
-            color="#f9c349"
+            color={tdcColors.yellow}
             iconBg="#FFF8E1"
             onPress={() => Alert.alert("Report History", "Your reports will appear here")}
           />
@@ -159,7 +160,7 @@ const PrivacyAndSafetyScreen = ({ navigation }) => {
             icon="document-text-outline"
             label="Privacy Policy"
             subLabel="How we handle your data"
-            color="#f9c349"
+            color={tdcColors.yellow}
             iconBg="#FFF8E1"
             onPress={() => navigation.navigate('PrivacyPolicy')}
           />
@@ -167,7 +168,7 @@ const PrivacyAndSafetyScreen = ({ navigation }) => {
             icon="document-text-outline"
             label="Terms & Conditions"
             subLabel="Our terms and conditions"
-            color="#f9c349"
+            color={tdcColors.yellow}
             iconBg="#FFF8E1"
             onPress={() => navigation.navigate('TermsAndConditions')}
           />
@@ -175,7 +176,7 @@ const PrivacyAndSafetyScreen = ({ navigation }) => {
             icon="people-outline"
             label="Community Guidelines"
             subLabel="Our community standards"
-            color="#f9c349"
+            color={tdcColors.yellow}
             iconBg="#FFF8E1"
             onPress={() => navigation.navigate('CommunityGuidelines')}
           />
@@ -359,7 +360,7 @@ export default function SettingsScreen({ navigation }) {
                 flex: 1,
               }}
             >
-              <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.profileAvatarCompact}>
+              <LinearGradient colors={[tdcColors.yellow, '#e6b800']} style={styles.profileAvatarCompact}>
                 {user?.profileImage ? (
                   <Image source={{ uri: user.profileImage }} style={styles.profileAvatarImage} />
                 ) : (
@@ -381,14 +382,14 @@ export default function SettingsScreen({ navigation }) {
             <SettingItem
               icon="lock-closed-outline"
               label="Change Password"
-              color="#f9c349"
+              color={tdcColors.yellow}
               iconBg="#FFF8E1"
               onPress={() => navigation.navigate("ChangePassword")}
             />
             <SettingItem
               icon="shield-checkmark-outline"
               label="Privacy & Safety"
-              color="#f9c349"
+              color={tdcColors.yellow}
               iconBg="#FFF8E1"
               onPress={() => navigation.navigate('PrivacyAndSafety')}
             />
@@ -417,7 +418,7 @@ export default function SettingsScreen({ navigation }) {
                   ? `On until ${examModeUntil}`
                   : 'Your streak waits while you study'
               }
-              color="#f9c349"
+              color={tdcColors.yellow}
               iconBg="#FFF8E1"
               badge={examModeActive ? 'On' : 'Off'}
               onPress={handleExamModePress}
@@ -426,7 +427,7 @@ export default function SettingsScreen({ navigation }) {
             <SettingItem
               icon="help-circle-outline"
               label="Help Center"
-              color="#f9c349"
+              color={tdcColors.yellow}
               iconBg="#FFF8E1"
               onPress={() => navigation.navigate('HelpCenter')}
             />
@@ -434,28 +435,28 @@ export default function SettingsScreen({ navigation }) {
               icon="information-circle-outline"
               label="About TDC"
               subLabel="Version 2.0.1"
-              color="#f9c349"
+              color={tdcColors.yellow}
               iconBg="#FFF8E1"
               onPress={() => navigation.navigate('About')}
             />
             <SettingItem
               icon="document-text-outline"
               label="Terms & Conditions"
-              color="#f9c349"
+              color={tdcColors.yellow}
               iconBg="#FFF8E1"
               onPress={() => navigation.navigate('Terrms')}
             />
             <SettingItem
               icon="people-outline"
               label="Community Guidelines"
-              color="#f9c349"
+              color={tdcColors.yellow}
               iconBg="#FFF8E1"
               onPress={() => navigation.navigate('Guideline')}
             />
             <SettingItem
               icon="ban-outline"
               label="Blocked Users"
-              color="#f9c349"
+              color={tdcColors.yellow}
               iconBg="#FFF8E1"
               onPress={() => navigation.navigate('BlockedUsers')}
             />
@@ -571,18 +572,18 @@ export default function SettingsScreen({ navigation }) {
               <>
                 <View style={styles.deleteModalHeader}>
                   <View style={[styles.deleteModalIcon, { backgroundColor: '#FFD93D20' }]}>
-                    <MaterialCommunityIcons name="pause-circle" size={36} color="#f9c349" />
+                    <MaterialCommunityIcons name="pause-circle" size={36} color={tdcColors.yellow} />
                   </View>
                   <Text style={styles.deleteModalTitle}>Wait! Before You Go</Text>
                   <Text style={styles.deleteModalDesc}>Consider these options instead:</Text>
                 </View>
                 <View style={styles.alternativeList}>
                   <TouchableOpacity style={styles.alternativeItem} onPress={closeDeleteModal}>
-                    <Ionicons name="create-outline" size={18} color="#f9c349" />
+                    <Ionicons name="create-outline" size={18} color={tdcColors.yellow} />
                     <Text style={styles.alternativeText}>Update your profile</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.alternativeItem} onPress={closeDeleteModal}>
-                    <Ionicons name="help-circle-outline" size={18} color="#f9c349" />
+                    <Ionicons name="help-circle-outline" size={18} color={tdcColors.yellow} />
                     <Text style={styles.alternativeText}>Contact support</Text>
                   </TouchableOpacity>
                 </View>
@@ -591,7 +592,7 @@ export default function SettingsScreen({ navigation }) {
                     <Text style={styles.cancelBtnText}>Keep Account</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.continueBtn, { backgroundColor: "#f9c349" }]}
+                    style={[styles.continueBtn, { backgroundColor: tdcColors.yellow }]}
                     onPress={handleNextStep}
                   >
                     <Text style={[styles.continueBtnText, { color: "#1A1A1A" }]}>
@@ -789,7 +790,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   badgeContainer: {
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     paddingHorizontal: 7,
     paddingVertical: 1,
     borderRadius: 8,

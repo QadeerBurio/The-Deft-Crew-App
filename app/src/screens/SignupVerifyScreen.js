@@ -20,6 +20,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../api/api";
 import { AuthContext } from "../context/AuthContext";
+import { colors } from "../theme";
 
 const CODE_LENGTH = 6;
 const RESEND_SECONDS = 60;
@@ -143,7 +144,7 @@ export default function SignupVerifyScreen({ route, navigation }) {
 
         <View style={styles.container}>
           <View style={styles.iconCircle}>
-            <Ionicons name="mail-open-outline" size={34} color="#f9c349" />
+            <Ionicons name="mail-open-outline" size={34} color={colors.yellow} />
           </View>
 
           <Text style={styles.title}>Verify your email</Text>
@@ -209,7 +210,7 @@ export default function SignupVerifyScreen({ route, navigation }) {
             activeOpacity={0.9}
           >
             {verifying ? (
-              <ActivityIndicator color="#f9c349" />
+              <ActivityIndicator color={colors.yellow} />
             ) : (
               <Text style={styles.buttonText}>VERIFY & CONTINUE</Text>
             )}
@@ -272,7 +273,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
   },
   codeBoxFilled: { backgroundColor: "#fffbf0", borderColor: "#f9c34960" },
-  codeBoxActive: { borderColor: "#f9c349", backgroundColor: "#fff" },
+  codeBoxActive: { borderColor: colors.yellow, backgroundColor: "#fff" },
   codeBoxError: { borderColor: "#ff4444", backgroundColor: "#fff5f5" },
   codeDigit: { fontSize: 24, fontWeight: "800", color: "#1a1a1a" },
   hiddenInput: { position: "absolute", width: 1, height: 1, opacity: 0 },
@@ -298,7 +299,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: "#f9c349", fontWeight: "900", fontSize: 15, letterSpacing: 1 },
+  buttonText: { color: colors.yellow, fontWeight: "900", fontSize: 15, letterSpacing: 1 },
   resendRow: { flexDirection: "row", alignItems: "center", marginTop: 20, flexWrap: "wrap", justifyContent: "center" },
   resendText: { color: "#666", fontSize: 13 },
   resendLink: { color: "#1a1a1a", fontWeight: "800", fontSize: 13, textDecorationLine: "underline" },

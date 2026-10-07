@@ -37,6 +37,7 @@ import GuestGuard from './GuestGuard';
 import Dot from '../engagement/components/Dot';
 import { useEngagement } from '../engagement/hooks/useEngagement';
 import { useReferrals } from '../engagement/hooks/useReferrals';
+import { colors as tdcColors } from '../theme';
 
 const { width } = Dimensions.get('window');
 
@@ -264,7 +265,7 @@ const MembersCard = memo(({ referralCount, verifiedCount = 0, onShare }) => {
           </View>
           <TouchableOpacity style={styles.inviteBtn} onPress={onShare} activeOpacity={0.85}>
             <LinearGradient
-              colors={['#f9c349', '#f5a623']}
+              colors={[tdcColors.yellow, '#f5a623']}
               style={styles.inviteGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
@@ -307,7 +308,7 @@ const MembersCard = memo(({ referralCount, verifiedCount = 0, onShare }) => {
             </View>
             {pendingCount > 0 && (
               <View style={styles.membersStatusPill}>
-                <View style={[styles.statusDot, { backgroundColor: '#f9c349' }]} />
+                <View style={[styles.statusDot, { backgroundColor: tdcColors.yellow }]} />
                 <Text style={styles.membersStatusText}>
                   {pendingCount} pending sort
                 </Text>
@@ -328,7 +329,7 @@ const MembersCard = memo(({ referralCount, verifiedCount = 0, onShare }) => {
 
         <TouchableOpacity style={styles.inviteBtn} onPress={onShare} activeOpacity={0.85}>
           <LinearGradient
-            colors={['#f9c349', '#f5a623']}
+            colors={[tdcColors.yellow, '#f5a623']}
             style={styles.inviteGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
@@ -597,7 +598,7 @@ const DownloadCard = memo(({ referralCode }) => {
   return (
     <View style={styles.downloadCard}>
       <Text style={styles.downloadTitle}>
-        download tdc<Text style={{ color: '#f9c349' }}>.</Text>
+        download tdc<Text style={{ color: tdcColors.yellow }}>.</Text>
       </Text>
       <Text style={styles.downloadSub}>tell a friend. crew points come with them.</Text>
 
@@ -781,7 +782,7 @@ const PointsScreen = () => {
             <Ionicons name="chevron-back" size={24} color="#1a1a1a" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
-            the crew<Text style={{ color: '#f9c349' }}>.</Text>
+            the crew<Text style={{ color: tdcColors.yellow }}>.</Text>
           </Text>
           <View style={{ width: 38 }} />
         </Animated.View>
@@ -791,8 +792,8 @@ const PointsScreen = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#f9c349"
-              colors={['#f9c349']}
+              tintColor={tdcColors.yellow}
+              colors={[tdcColors.yellow]}
             />
           }
           contentContainerStyle={styles.scrollContent}
@@ -821,7 +822,7 @@ const PointsScreen = () => {
               <View style={styles.codeRow}>
                 <Text style={styles.codeText}>{referralCode || '—'}</Text>
                 <TouchableOpacity onPress={copyCode} style={styles.copyBtn} activeOpacity={0.7}>
-                  <Ionicons name="copy-outline" size={18} color="#f9c349" />
+                  <Ionicons name="copy-outline" size={18} color={tdcColors.yellow} />
                 </TouchableOpacity>
               </View>
               <Text style={styles.codeHint}>
@@ -831,7 +832,7 @@ const PointsScreen = () => {
               <Animated.View style={{ transform: [{ scale: shareScale }] }}>
                 <TouchableOpacity onPress={onShare} style={styles.shareBtn} activeOpacity={0.85}>
                   <LinearGradient
-                    colors={['#f9c349', '#f5a623']}
+                    colors={[tdcColors.yellow, '#f5a623']}
                     style={styles.shareGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
@@ -846,7 +847,7 @@ const PointsScreen = () => {
             {/* ── WAYS TO EARN ── */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>
-                ways to earn<Text style={{ color: '#f9c349' }}>.</Text>
+                ways to earn<Text style={{ color: tdcColors.yellow }}>.</Text>
               </Text>
               <Text style={styles.sectionSub}>only real use counts.</Text>
 
@@ -869,7 +870,7 @@ const PointsScreen = () => {
             {/* ── LEVELS ── */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>
-                levels<Text style={{ color: '#f9c349' }}>.</Text>
+                levels<Text style={{ color: tdcColors.yellow }}>.</Text>
               </Text>
               <Text style={styles.sectionSub}>
                 total points + real activity + verified referrals.
@@ -894,7 +895,7 @@ const PointsScreen = () => {
             <DownloadCard referralCode={referralCode} />
 
             <Text style={styles.footerNote}>
-              <Ionicons name="information-circle-outline" size={13} color="#f9c349" />{' '}
+              <Ionicons name="information-circle-outline" size={13} color={tdcColors.yellow} />{' '}
               crew points are earned by using the app. levels never drop, even when you spend.
             </Text>
           </Animated.View>
@@ -942,7 +943,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     overflow: 'hidden',
     elevation: 12,
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 16,
   },
@@ -965,7 +966,7 @@ const styles = StyleSheet.create({
     fontWeight: '800', letterSpacing: 1.6,
   },
   levelBadge: {
-    backgroundColor: '#f9c349', paddingHorizontal: 12,
+    backgroundColor: tdcColors.yellow, paddingHorizontal: 12,
     paddingVertical: 6, borderRadius: 20,
   },
   levelBadgeText: { color: '#1a1a1a', fontSize: 10, fontWeight: '900', letterSpacing: 0.6 },
@@ -1003,7 +1004,7 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: '#fff',
   },
   avatarExtras: { backgroundColor: '#1a1a1a' },
-  avatarExtrasText: { color: '#f9c349', fontSize: 11, fontWeight: '900' },
+  avatarExtrasText: { color: tdcColors.yellow, fontSize: 11, fontWeight: '900' },
   avatarStackLabel: { marginLeft: 12, fontSize: 12, color: '#666', fontWeight: '600' },
   emptyMembersBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -1047,7 +1048,7 @@ const styles = StyleSheet.create({
   },
   codeLabel: { fontSize: 11, color: '#888', fontWeight: '800', letterSpacing: 1.4, marginBottom: 8 },
   codeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  codeText: { flex: 1, fontSize: 26, fontWeight: '900', color: '#f9c349', letterSpacing: 2 },
+  codeText: { flex: 1, fontSize: 26, fontWeight: '900', color: tdcColors.yellow, letterSpacing: 2 },
   copyBtn: {
     width: 38, height: 38, borderRadius: 12,
     backgroundColor: '#FFF8E1', alignItems: 'center', justifyContent: 'center',
@@ -1090,11 +1091,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start', position: 'relative', overflow: 'hidden',
   },
   levelCardUnlocked: {
-    borderColor: '#f9c349', backgroundColor: '#FFFDF5',
-    shadowColor: '#f9c349', shadowOpacity: 0.08,
+    borderColor: tdcColors.yellow, backgroundColor: '#FFFDF5',
+    shadowColor: tdcColors.yellow, shadowOpacity: 0.08,
     shadowRadius: 10, elevation: 3,
   },
-  levelCardNext: { borderColor: '#f9c349', borderStyle: 'dashed' },
+  levelCardNext: { borderColor: tdcColors.yellow, borderStyle: 'dashed' },
   levelShimmer: {
     position: 'absolute', top: 0, left: 0,
     width: 120, height: '100%',
@@ -1114,7 +1115,7 @@ const styles = StyleSheet.create({
   levelName: { fontSize: 13, fontWeight: '900', color: '#1a1a1a', letterSpacing: 0.3 },
   unlockedBadge: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#f9c349', paddingHorizontal: 9,
+    backgroundColor: tdcColors.yellow, paddingHorizontal: 9,
     paddingVertical: 3, borderRadius: 12, gap: 4,
   },
   unlockedText: { color: '#1a1a1a', fontSize: 8, fontWeight: '900', letterSpacing: 0.5 },

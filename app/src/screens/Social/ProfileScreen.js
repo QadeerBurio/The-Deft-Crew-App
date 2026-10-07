@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from "../../context/AuthContext";
 import { soundLike, soundTap } from "../../lib/tdcSounds";
+import { colors as tdcColors } from "../../theme";
 const { width } = Dimensions.get('window');
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
 
@@ -106,9 +107,9 @@ const PostItem = React.memo(({ item, index, isPublic, user, onLike, onComment, o
       <View style={styles.cardFooter}>
         <TouchableOpacity style={styles.actionBtn} onPress={handleLocalLike} activeOpacity={0.6}>
           <Animated.View style={{ transform: [{ scale: likeScale }] }}>
-            <Ionicons name={isLiked ? "heart" : "heart-outline"} size={18} color={isLiked ? "#f9c349" : "#71767b"} />
+            <Ionicons name={isLiked ? "heart" : "heart-outline"} size={18} color={isLiked ? tdcColors.yellow : "#71767b"} />
           </Animated.View>
-          <Text style={[styles.actionText, isLiked && { color: "#f9c349" }]}>{likeCount}</Text>
+          <Text style={[styles.actionText, isLiked && { color: tdcColors.yellow }]}>{likeCount}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn} onPress={() => onComment(item, isPublic ? 'post' : 'confession')} activeOpacity={0.6}>
           <Ionicons name="chatbubble-outline" size={18} color="#71767b" />
@@ -125,7 +126,7 @@ const PostItem = React.memo(({ item, index, isPublic, user, onLike, onComment, o
 // ============ Inline Loader ============
 const InlineLoader = () => (
   <View style={styles.inlineLoader}>
-    <ActivityIndicator size="small" color="#f9c349" />
+    <ActivityIndicator size="small" color={tdcColors.yellow} />
   </View>
 );
 
@@ -427,7 +428,7 @@ export default function ProfileScreen() {
       data={userPosts}
       keyExtractor={(item) => item._id}
       renderItem={renderPostItem}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f9c349" colors={["#f9c349"]} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={tdcColors.yellow} colors={[tdcColors.yellow]} />}
       ListEmptyComponent={
         loading ? <InlineLoader /> : (
           <View style={styles.emptyContainer}>
@@ -451,7 +452,7 @@ export default function ProfileScreen() {
       data={userConfessions}
       keyExtractor={(item) => item._id}
       renderItem={renderConfessionItem}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f9c349" colors={["#f9c349"]} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={tdcColors.yellow} colors={[tdcColors.yellow]} />}
       ListEmptyComponent={
         loading ? <InlineLoader /> : (
           <View style={styles.emptyContainer}>
@@ -520,7 +521,7 @@ export default function ProfileScreen() {
 
             <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate("EditProfileScreen")} activeOpacity={0.8}>
               <LinearGradient colors={['#0f1419', '#1a1a1a']} style={styles.gradientBtn}>
-                <Ionicons name="create-outline" size={16} color="#f9c349" />
+                <Ionicons name="create-outline" size={16} color={tdcColors.yellow} />
                 <Text style={styles.editBtnText}>Edit Profile</Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -630,7 +631,7 @@ export default function ProfileScreen() {
             <View style={styles.dragHandle} />
             <View style={styles.modalHeader}>
               <View style={styles.modalHeaderLeft}>
-                <Ionicons name="people-outline" size={20} color="#f9c349" />
+                <Ionicons name="people-outline" size={20} color={tdcColors.yellow} />
                 <Text style={styles.modalTitle}>{connectionsList.length} Connections</Text>
               </View>
               <TouchableOpacity onPress={() => setShowConnectionsModal(false)} style={styles.modalCloseBtn}>
@@ -653,7 +654,7 @@ export default function ProfileScreen() {
                     {item.profileImage ? (
                       <Image source={{ uri: item.profileImage }} style={styles.connectionModalAvatarImg} />
                     ) : (
-                      <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.connectionModalAvatarPlaceholder}>
+                      <LinearGradient colors={[tdcColors.yellow, '#e6b800']} style={styles.connectionModalAvatarPlaceholder}>
                         <Text style={styles.connectionModalAvatarText}>
                           {item.name?.charAt(0)?.toUpperCase()}
                         </Text>
@@ -767,7 +768,7 @@ const styles = StyleSheet.create({
   // Edit Button
   editBtn: { marginTop: 12, alignSelf: 'flex-start' },
   gradientBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20 },
-  editBtnText: { color: '#f9c349', fontWeight: '700', fontSize: 14 },
+  editBtnText: { color: tdcColors.yellow, fontWeight: '700', fontSize: 14 },
 
   // Tabs
   tabWrapper: {
@@ -790,7 +791,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
   },
 
   tabContent: { flex: 1 },
@@ -815,7 +816,7 @@ const styles = StyleSheet.create({
   cardBody: { marginTop: 4 },
   postTextContent: { fontSize: 15, color: '#0f1419', lineHeight: 22 },
   showMoreBtn: { marginTop: 4 },
-  showMoreText: { color: '#f9c349', fontWeight: '400', fontSize: 14 },
+  showMoreText: { color: tdcColors.yellow, fontWeight: '400', fontSize: 14 },
   imageWrapper: { marginTop: 12, borderRadius: 16, overflow: 'hidden' },
   postImage: { width: '100%', height: 220, backgroundColor: '#eff3f4' },
   cardFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 24 },
@@ -889,7 +890,7 @@ const styles = StyleSheet.create({
   commentTime: { fontSize: 10, color: '#71767b', marginTop: 4, marginLeft: 4 },
   commentInputContainer: { flexDirection: 'row', padding: 12, borderTopWidth: 1, borderTopColor: '#eff3f4', alignItems: 'center', gap: 8 },
   commentInput: { flex: 1, backgroundColor: '#f0f2f5', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, color: '#0f1419', maxHeight: 80 },
-  sendCommentBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#f9c349', justifyContent: 'center', alignItems: 'center' },
+  sendCommentBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: tdcColors.yellow, justifyContent: 'center', alignItems: 'center' },
   sendDisabled: { backgroundColor: '#cfd9de' },
   noDataText: { textAlign: 'center', color: '#71767b', padding: 30, fontWeight: '500' },
 

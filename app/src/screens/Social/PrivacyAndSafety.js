@@ -13,6 +13,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { colors as tdcColors } from '../../theme';
 
 export default function PrivacyScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -198,7 +199,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     marginTop: 4,
   },
   headerRight: {
@@ -234,7 +235,7 @@ const styles = StyleSheet.create({
   heroDivider: {
     width: 32,
     height: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     borderRadius: 2,
     marginTop: 10,
   },
@@ -261,7 +262,7 @@ const styles = StyleSheet.create({
   sectionNumber: {
     fontSize: 11,
     fontWeight: '900',
-    color: '#f9c349',
+    color: tdcColors.yellow,
     letterSpacing: 0.5,
     marginRight: 8,
   },

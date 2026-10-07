@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthContext } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { colors as tdcColors } from '../../theme';
 
 const { width } = Dimensions.get('window');
 
@@ -78,7 +79,7 @@ export default function YourAccount({ navigation }) {
   }, []);
 
   const isVerified = user?.status === 'Verified';
-  const statusColor = isVerified ? '#4CAF50' : '#f9c349';
+  const statusColor = isVerified ? '#4CAF50' : tdcColors.yellow;
   const statusIcon = isVerified ? "checkmark-circle" : "time-outline";
 
   // Get user initials
@@ -103,7 +104,7 @@ export default function YourAccount({ navigation }) {
           style={styles.headerEditBtn}
           onPress={() => navigation.navigate('EditProfileScreen')}
         >
-          <Ionicons name="create-outline" size={22} color="#f9c349" />
+          <Ionicons name="create-outline" size={22} color={tdcColors.yellow} />
         </TouchableOpacity>
       </Animated.View>
 
@@ -121,7 +122,7 @@ export default function YourAccount({ navigation }) {
             <View style={styles.profileRow}>
               <Animated.View style={[styles.avatarWrapper, { transform: [{ scale: avatarScale }] }]}>
                 <LinearGradient 
-                  colors={['#f9c349', '#e6b800']} 
+                  colors={[tdcColors.yellow, '#e6b800']} 
                   style={styles.avatarRing}
                 >
                   {user?.profileImage ? (
@@ -244,7 +245,7 @@ export default function YourAccount({ navigation }) {
 
             {/* Security Note - Modern */}
             <View style={styles.securityNote}>
-              <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.securityIcon}>
+              <LinearGradient colors={[tdcColors.yellow, '#e6b800']} style={styles.securityIcon}>
                 <Ionicons name="shield-checkmark" size={20} color="#1a1a1a" />
               </LinearGradient>
               <View style={styles.securityContent}>
@@ -262,7 +263,7 @@ export default function YourAccount({ navigation }) {
               activeOpacity={0.8}
             >
               <LinearGradient 
-                colors={['#f9c349', '#e6b800']} 
+                colors={[tdcColors.yellow, '#e6b800']} 
                 style={styles.editProfileGradient}
               >
                 <Ionicons name="create-outline" size={20} color="#1a1a1a" />
@@ -366,7 +367,7 @@ const styles = StyleSheet.create({
   avatarText: { 
     fontSize: 28, 
     fontWeight: '900', 
-    color: '#f9c349' 
+    color: tdcColors.yellow 
   },
   
   profileInfo: {
@@ -384,7 +385,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   roleBadge: {
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     paddingHorizontal: 10,
     paddingVertical: 2,
     borderRadius: 4,
@@ -582,7 +583,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     borderRadius: 14,
     overflow: 'hidden',
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,

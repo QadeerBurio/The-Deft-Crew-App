@@ -21,6 +21,7 @@ import { ResumeContext } from '../../context/ResumeContext';
 import { AuthContext } from '../../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { LineChart, PieChart } from 'react-native-chart-kit';
+import { colors as tdcColors } from '../../theme';
 
 const { width } = Dimensions.get('window');
 
@@ -115,7 +116,7 @@ const ResumeAnalyticsScreen = () => {
     propsForDots: {
       r: '6',
       strokeWidth: '2',
-      stroke: '#f9c349',
+      stroke: tdcColors.yellow,
     },
     propsForLabels: {
       fontSize: 10,
@@ -170,7 +171,7 @@ const ResumeAnalyticsScreen = () => {
       {
         name: 'Views',
         population: analytics.views || 1,
-        color: '#f9c349',
+        color: tdcColors.yellow,
         legendFontColor: '#333',
         legendFontSize: 12,
       },
@@ -243,7 +244,7 @@ const ResumeAnalyticsScreen = () => {
       styles.improvementCard,
       { 
         borderLeftColor: improvement.priority === 'high' ? '#E74C3C' : 
-                         improvement.priority === 'medium' ? '#f9c349' : '#4A90D9' 
+                         improvement.priority === 'medium' ? tdcColors.yellow : '#4A90D9' 
       }
     ]}>
       <View style={styles.improvementHeader}>
@@ -252,7 +253,7 @@ const ResumeAnalyticsScreen = () => {
           styles.priorityBadge,
           { 
             backgroundColor: improvement.priority === 'high' ? '#E74C3C' : 
-                             improvement.priority === 'medium' ? '#f9c349' : '#4A90D9' 
+                             improvement.priority === 'medium' ? tdcColors.yellow : '#4A90D9' 
           }
         ]}>
           <Text style={styles.priorityText}>{improvement.priority}</Text>
@@ -302,7 +303,7 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="dark-content" backgroundColor="#f5f7fa" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#f9c349" />
+          <ActivityIndicator size="large" color={tdcColors.yellow} />
           <Text style={styles.loadingText}>Loading analytics...</Text>
         </View>
       </SafeAreaView>
@@ -333,14 +334,14 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Analytics</Text>
             <TouchableOpacity onPress={handleExportReport} style={styles.shareButton}>
-              <Ionicons name="share-outline" size={22} color="#f9c349" />
+              <Ionicons name="share-outline" size={22} color={tdcColors.yellow} />
             </TouchableOpacity>
           </View>
 
           {/* Resume Info */}
           <View style={styles.resumeInfoCard}>
             <LinearGradient
-              colors={['#000', '#1a1a1a', '#f9c349']}
+              colors={['#000', '#1a1a1a', tdcColors.yellow]}
               style={styles.resumeInfoGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -353,7 +354,7 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
               </Text>
               <View style={styles.resumeInfoBadges}>
                 <View style={styles.resumeInfoBadge}>
-                  <Ionicons name="calendar-outline" size={12} color="#f9c349" />
+                  <Ionicons name="calendar-outline" size={12} color={tdcColors.yellow} />
                   <Text style={styles.resumeInfoBadgeText}>
                     Last 30 days
                   </Text>
@@ -420,7 +421,7 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
               icon="eye-outline"
               title="Views"
               value={analytics.views || 0}
-              color="#f9c349"
+              color={tdcColors.yellow}
               subtitle="Total views"
             />
             <StatCard
@@ -450,7 +451,7 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
           <View style={styles.chartContainer}>
             <View style={styles.chartHeader}>
               <View style={styles.chartTitleContainer}>
-                <Ionicons name="trending-up-outline" size={18} color="#f9c349" />
+                <Ionicons name="trending-up-outline" size={18} color={tdcColors.yellow} />
                 <Text style={styles.chartTitle}>Views Over Time</Text>
               </View>
               <View style={styles.periodSelector}>
@@ -481,7 +482,7 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
           {/* Distribution Chart */}
           <View style={styles.pieChartContainer}>
             <View style={styles.pieChartHeader}>
-              <Ionicons name="pie-chart-outline" size={18} color="#f9c349" />
+              <Ionicons name="pie-chart-outline" size={18} color={tdcColors.yellow} />
               <Text style={styles.chartTitle}>Engagement Distribution</Text>
             </View>
             <View style={styles.pieChartWrapper}>
@@ -493,7 +494,7 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
           <View style={styles.improvementsContainer}>
             <View style={styles.improvementsHeader}>
               <View style={styles.improvementsTitleContainer}>
-                <Ionicons name="bulb-outline" size={18} color="#f9c349" />
+                <Ionicons name="bulb-outline" size={18} color={tdcColors.yellow} />
                 <Text style={styles.improvementsTitle}>Suggested Improvements</Text>
               </View>
               <View style={styles.improvementsCountBadge}>
@@ -509,7 +510,7 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
             ) : (
               <View style={styles.noImprovements}>
                 <LinearGradient
-                  colors={['#f9c349', '#2ECC71']}
+                  colors={[tdcColors.yellow, '#2ECC71']}
                   style={styles.noImprovementsIcon}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -624,7 +625,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   resumeInfoBadgeGold: {
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
   },
   resumeInfoBadgeText: {
     fontSize: 11,
@@ -656,7 +657,7 @@ const styles = StyleSheet.create({
   quickStatValue: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#f9c349',
+    color: tdcColors.yellow,
   },
   quickStatLabel: {
     fontSize: 12,
@@ -673,7 +674,7 @@ const styles = StyleSheet.create({
   },
   quickStatBarFill: {
     height: '100%',
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     borderRadius: 2,
   },
   quickStatDivider: {
@@ -768,7 +769,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   periodButtonActive: {
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
   },
   periodButtonText: {
     fontSize: 11,

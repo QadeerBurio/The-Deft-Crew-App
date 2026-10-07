@@ -16,6 +16,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
+import { colors as tdcColors } from "../theme";
 
 const { width, height } = Dimensions.get("window");
 
@@ -154,12 +155,12 @@ const BrandDetailModal = ({
                         setTimeout(() => navigation.navigate('Login'), 300);
                       }}
                     >
-                      <MaterialCommunityIcons name="account-plus" size={24} color="#f9c349" />
+                      <MaterialCommunityIcons name="account-plus" size={24} color={tdcColors.yellow} />
                       <View style={{ flex: 1, marginLeft: 12 }}>
                         <Text style={styles.guestPromptTitle}>Unlock Full Benefits</Text>
                         <Text style={styles.guestPromptText}>Sign in to claim offers and get student discounts!</Text>
                       </View>
-                      <MaterialCommunityIcons name="chevron-forward" size={20} color="#f9c349" />
+                      <MaterialCommunityIcons name="chevron-forward" size={20} color={tdcColors.yellow} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -214,7 +215,7 @@ const BrandDetailModal = ({
                   onPress={() => onClaim(currentOffer._id)}
                 >
                   <LinearGradient
-                    colors={currentOffer.isClaimed ? ['#ccc', '#bbb'] : ['#f9c349', '#f5a623']}
+                    colors={currentOffer.isClaimed ? ['#ccc', '#bbb'] : [tdcColors.yellow, '#f5a623']}
                     style={styles.claimGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
@@ -268,7 +269,7 @@ const BrandDetailModal = ({
                   activeOpacity={0.7}
                   style={styles.myDiscountTouchable}
                 >
-                  <MaterialCommunityIcons name="ticket-percent" size={20} color="#f9c349" />
+                  <MaterialCommunityIcons name="ticket-percent" size={20} color={tdcColors.yellow} />
                   <Text style={styles.myDiscountIndicatorText}>My Discounts</Text>
                 </TouchableOpacity>
               </Animated.View>
@@ -460,7 +461,7 @@ const styles = StyleSheet.create({
     borderRadius: 20, 
     overflow: 'hidden',
     elevation: 4,
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -529,7 +530,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(249, 195, 73, 0.3)',
     zIndex: 10,
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -544,7 +545,7 @@ const styles = StyleSheet.create({
   myDiscountIndicatorText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#f9c349',
+    color: tdcColors.yellow,
     marginLeft: 4,
   },
 });

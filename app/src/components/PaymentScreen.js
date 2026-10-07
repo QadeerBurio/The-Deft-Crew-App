@@ -23,6 +23,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as Clipboard from "expo-clipboard";
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/api";
+import { colors as tdcColors } from "../theme";
 
 const { width, height } = Dimensions.get("window");
 
@@ -252,7 +253,7 @@ export default function PaymentScreen({ navigation }) {
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Activate Card</Text>
                 <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
-                  <MaterialCommunityIcons name="crown" size={24} color="#f9c349" />
+                  <MaterialCommunityIcons name="crown" size={24} color={tdcColors.yellow} />
                 </Animated.View>
               </View>
             </View>
@@ -265,7 +266,7 @@ export default function PaymentScreen({ navigation }) {
               ]}
             >
               <LinearGradient
-                colors={["#f9c349", "#f5a623"]}
+                colors={[tdcColors.yellow, "#f5a623"]}
                 style={styles.priceGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -292,7 +293,7 @@ export default function PaymentScreen({ navigation }) {
               <View style={styles.bankCard}>
                 <View style={styles.bankHeader}>
                   <View style={styles.bankIconContainer}>
-                    <MaterialCommunityIcons name="bank" size={28} color="#f9c349" />
+                    <MaterialCommunityIcons name="bank" size={28} color={tdcColors.yellow} />
                   </View>
                   <Text style={styles.bankName}>{BANK_NAME}</Text>
                 </View>
@@ -307,7 +308,7 @@ export default function PaymentScreen({ navigation }) {
                         onPress={() => copyToClipboard(ACCOUNT_TITLE, "Account Title")}
                         style={styles.copySmallBtn}
                       >
-                        <Ionicons name="copy-outline" size={16} color="#f9c349" />
+                        <Ionicons name="copy-outline" size={16} color={tdcColors.yellow} />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -331,7 +332,7 @@ export default function PaymentScreen({ navigation }) {
                         onPress={() => copyToClipboard(ACCOUNT_NUMBER, "Account Number")}
                         style={styles.copySmallBtn}
                       >
-                      <Ionicons name="copy-outline" size={16} color="#f9c349" />
+                      <Ionicons name="copy-outline" size={16} color={tdcColors.yellow} />
                           
                         
                       </TouchableOpacity>
@@ -346,7 +347,7 @@ export default function PaymentScreen({ navigation }) {
                   activeOpacity={0.7}
                 >
                   <LinearGradient
-                    colors={["#f9c349", "#f5a623"]}
+                    colors={[tdcColors.yellow, "#f5a623"]}
                     style={styles.quickCopyGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
@@ -388,7 +389,7 @@ export default function PaymentScreen({ navigation }) {
                   </View>
                 ) : (
                   <View style={styles.uploadPlaceholder}>
-                    <Ionicons name="cloud-upload-outline" size={40} color="#f9c349" />
+                    <Ionicons name="cloud-upload-outline" size={40} color={tdcColors.yellow} />
                     <Text style={styles.uploadTitle}>Upload Payment Receipt</Text>
                     <Text style={styles.uploadSubtext}>Tap to select from gallery</Text>
                   </View>
@@ -397,7 +398,7 @@ export default function PaymentScreen({ navigation }) {
 
               {/* Input Fields */}
               <View style={styles.inputGroup}>
-                <Ionicons name="location-outline" size={20} color="#f9c349" />
+                <Ionicons name="location-outline" size={20} color={tdcColors.yellow} />
                 <TextInput
                   style={styles.input}
                   placeholder="Complete Delivery Address"
@@ -408,7 +409,7 @@ export default function PaymentScreen({ navigation }) {
               </View>
 
               <View style={styles.inputGroup}>
-                <Ionicons name="business-outline" size={20} color="#f9c349" />
+                <Ionicons name="business-outline" size={20} color={tdcColors.yellow} />
                 <TextInput
                   style={styles.input}
                   placeholder="City Name"
@@ -419,7 +420,7 @@ export default function PaymentScreen({ navigation }) {
               </View>
 
               <View style={styles.inputGroup}>
-                <Ionicons name="call-outline" size={20} color="#f9c349" />
+                <Ionicons name="call-outline" size={20} color={tdcColors.yellow} />
                 <TextInput
                   style={styles.input}
                   placeholder="Phone Number"
@@ -438,7 +439,7 @@ export default function PaymentScreen({ navigation }) {
                 activeOpacity={0.8}
               >
                 <LinearGradient
-                  colors={["#f9c349", "#f5a623"]}
+                  colors={[tdcColors.yellow, "#f5a623"]}
                   style={styles.gradientBtn}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
@@ -533,7 +534,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     borderRadius: 20,
     overflow: "hidden",
-    shadowColor: "#f9c349",
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
     shadowRadius: 16,
@@ -847,7 +848,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: "hidden",
     marginTop: 8,
-    shadowColor: "#f9c349",
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 10,

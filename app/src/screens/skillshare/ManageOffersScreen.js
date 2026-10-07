@@ -7,8 +7,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { getOffersForListing, updateOfferStatus } from '../../api/api';
 import { timeAgo } from '../../utils/time';
+import { colors as tdcColors } from '../../theme';
 
-const BRAND = '#f9c349';
+const BRAND = tdcColors.yellow;
 const INK = '#1a1a1a';
 const MUTED = '#8E8E93';
 const BORDER = '#e5e5e5';

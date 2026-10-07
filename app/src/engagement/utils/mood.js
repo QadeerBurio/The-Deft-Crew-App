@@ -1,3 +1,4 @@
+import { colors } from "../../theme";
 // app/src/engagement/utils/moods.js
 // Closed set of moods shared with the backend.
 
@@ -13,7 +14,7 @@ export const MOODS = [
 ];
 
 export const MOOD_COLORS = {
-  excited: '#F9C349',
+  excited: colors.yellow,
   broke: '#F97316',
   panic: '#EF4444',
   sus: '#8B5CF6',

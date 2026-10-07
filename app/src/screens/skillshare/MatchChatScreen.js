@@ -34,8 +34,9 @@ import { uploadChatFile } from '../../api/api';
 import { Video, ResizeMode } from 'expo-av';
 import * as Linking from 'expo-linking';
 import ImagePreviewModal from '../../../../components/media/ImagePreviewModal';
+import { colors } from '../../theme';
 
-const BRAND = '#f9c349';
+const BRAND = colors.yellow;
 const INK = '#1a1a1a';
 const MUTED = '#8E8E93';
 

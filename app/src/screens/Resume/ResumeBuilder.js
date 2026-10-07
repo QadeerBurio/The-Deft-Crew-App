@@ -24,6 +24,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { WebView } from 'react-native-webview';
 import { renderResumeHTML } from '../../services/templateService';
 import resumeApi from '../../api/resumeApi';
+import { colors as tdcColors } from '../../theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -933,7 +934,7 @@ const ResumeBuilderScreen = () => {
           <Switch
             value={eduCurrent}
             onValueChange={setEduCurrent}
-            trackColor={{ false: '#767577', true: '#f9c349' }}
+            trackColor={{ false: '#767577', true: tdcColors.yellow }}
             thumbColor={eduCurrent ? '#fff' : '#f4f3f4'}
           />
         </View>
@@ -1098,7 +1099,7 @@ const ResumeBuilderScreen = () => {
           <Switch
             value={workCurrent}
             onValueChange={setWorkCurrent}
-            trackColor={{ false: '#767577', true: '#f9c349' }}
+            trackColor={{ false: '#767577', true: tdcColors.yellow }}
             thumbColor={workCurrent ? '#fff' : '#f4f3f4'}
           />
         </View>
@@ -1726,7 +1727,7 @@ const ResumeBuilderScreen = () => {
           setPreviewTemplateId(currentResume?.template || 'modern_ats');
           setPreviewVisible(true);
         }} style={styles.previewFloatBtn}>
-          <Ionicons name="eye-outline" size={22} color="#f9c349" />
+          <Ionicons name="eye-outline" size={22} color={tdcColors.yellow} />
         </TouchableOpacity>
       </View>
 
@@ -1863,7 +1864,7 @@ const ResumeBuilderScreen = () => {
       <Modal visible={aiGeneratingVisible} transparent={true} animationType="fade">
         <View style={styles.aiModalOverlay}>
           <View style={styles.aiModalContent}>
-            <ActivityIndicator size="large" color="#f9c349" style={{ marginBottom: 16 }} />
+            <ActivityIndicator size="large" color={tdcColors.yellow} style={{ marginBottom: 16 }} />
             <Text style={styles.aiModalTitle}>AI Resume Parser 🤖</Text>
             <Text style={styles.aiModalStep}>{aiGeneratingStep}</Text>
             <View style={styles.aiProgressTrack}>
@@ -1932,8 +1933,8 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   stepCircleActive: {
-    backgroundColor: '#f9c349',
-    borderColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
+    borderColor: tdcColors.yellow,
   },
   stepCircleCompleted: {
     backgroundColor: '#2ECC71',
@@ -2024,7 +2025,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bannerUploadBtn: {
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -2069,7 +2070,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   yellowButton: {
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     borderRadius: 10,
     height: 48,
     alignItems: 'center',
@@ -2100,7 +2101,7 @@ const styles = StyleSheet.create({
   aiEnhanceMiniBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -2128,7 +2129,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   skillAddBtn: {
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     width: 44,
     height: 44,
     borderRadius: 10,
@@ -2246,8 +2247,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   roleSelectBtnActive: {
-    backgroundColor: '#f9c349',
-    borderColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
+    borderColor: tdcColors.yellow,
   },
   roleSelectText: {
     fontSize: 12,
@@ -2285,7 +2286,7 @@ const styles = StyleSheet.create({
   continueButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 10,
@@ -2308,7 +2309,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   bottomLabelTextActive: {
-    color: '#f9c349',
+    color: tdcColors.yellow,
     fontWeight: '700',
   },
   previewOverlay: {
@@ -2382,13 +2383,13 @@ const styles = StyleSheet.create({
   },
   aiProgressBar: {
     height: '100%',
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     borderRadius: 3,
   },
   aiModalPercent: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#f9c349',
+    color: tdcColors.yellow,
   },
 });
 

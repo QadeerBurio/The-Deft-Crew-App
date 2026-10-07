@@ -16,8 +16,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import Dot from './Dot';
 import { pop } from '../utils/haptics';
+import { colors as tdcColors } from '../../theme';
 
-const GOLD = '#f9c349';
+const GOLD = tdcColors.yellow;
 const GOLD_DARK = '#e0a82e';
 const DARK = '#1a1a1a';
 const WHITE = '#ffffff';

@@ -7,8 +7,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { getMySkillOffers, withdrawSkillOffer } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
+import { colors as tdcColors } from '../../theme';
 
-const BRAND = '#f9c349';
+const BRAND = tdcColors.yellow;
 const INK = '#1a1a1a';
 const MUTED = '#8E8E93';
 const BORDER = '#e5e5e5';
@@ -151,7 +152,7 @@ export default function MyOffersScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f9c349" />
+      <StatusBar barStyle="dark-content" backgroundColor={tdcColors.yellow} />
 
       <View style={styles.topHeader}>
         <TouchableOpacity onPress={() => navigation.goBack()}>

@@ -13,6 +13,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import { colors } from '../theme';
 
 // ═══════════════════════════════════════════════════════════════
 // ANDROID CHANNELS: one per sound
@@ -77,7 +78,7 @@ export function setupAndroidChannels() {
           sound: `${soundKey}.wav`,                         // from res/raw (app.json sounds)
           vibrationPattern: [0, 250, 250, 250],
           enableVibrate: true,
-          lightColor: '#f9c349',
+          lightColor: colors.yellow,
           lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
           showBadge: true,
         });

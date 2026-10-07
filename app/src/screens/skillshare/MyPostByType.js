@@ -3,8 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Flat
 import { Ionicons } from '@expo/vector-icons';
 import { getMyListings } from '../../api/api';
 import ListingCard from '../../components/ListingCard';
+import { colors } from '../../theme';
 
-const BRAND = '#f9c349';
+const BRAND = colors.yellow;
 const INK = '#1a1a1a';
 const MUTED = '#8E8E93';
 

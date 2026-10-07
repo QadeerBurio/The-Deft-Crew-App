@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
+import { colors as tdcColors } from '../../theme';
 
 const { width } = Dimensions.get('window');
 
@@ -157,7 +158,7 @@ export default function ChangePassword({ navigation }) {
           error && styles.inputError
         ]}>
           <View style={styles.inputIconWrapper}>
-            <Ionicons name={icon} size={20} color={isFocused ? '#f9c349' : '#999'} />
+            <Ionicons name={icon} size={20} color={isFocused ? tdcColors.yellow : '#999'} />
           </View>
           <TextInput
             style={styles.input}
@@ -175,7 +176,7 @@ export default function ChangePassword({ navigation }) {
               <Ionicons
                 name={showPassword ? "eye-off-outline" : "eye-outline"}
                 size={20}
-                color={isFocused ? '#f9c349' : '#999'}
+                color={isFocused ? tdcColors.yellow : '#999'}
               />
             </TouchableOpacity>
           )}
@@ -241,7 +242,7 @@ export default function ChangePassword({ navigation }) {
             {/* Header Icon */}
             <Animated.View style={[styles.iconContainer, { transform: [{ scale: scaleAnim }] }]}>
               <LinearGradient 
-                colors={['#f9c349', '#e6b800']} 
+                colors={[tdcColors.yellow, '#e6b800']} 
                 style={styles.iconGradient}
               >
                 <Ionicons name="key-outline" size={44} color="#1a1a1a" />
@@ -287,7 +288,7 @@ export default function ChangePassword({ navigation }) {
                   errors.newPassword && styles.inputError
                 ]}>
                   <View style={styles.inputIconWrapper}>
-                    <Ionicons name="key-outline" size={20} color={focusedInput === 'new' ? '#f9c349' : '#999'} />
+                    <Ionicons name="key-outline" size={20} color={focusedInput === 'new' ? tdcColors.yellow : '#999'} />
                   </View>
                   <TextInput
                     style={styles.input}
@@ -304,7 +305,7 @@ export default function ChangePassword({ navigation }) {
                     <Ionicons
                       name={showNewPassword ? "eye-off-outline" : "eye-outline"}
                       size={20}
-                      color={focusedInput === 'new' ? '#f9c349' : '#999'}
+                      color={focusedInput === 'new' ? tdcColors.yellow : '#999'}
                     />
                   </TouchableOpacity>
                 </View>
@@ -349,7 +350,7 @@ export default function ChangePassword({ navigation }) {
             {/* Password Requirements */}
             <View style={styles.requirementsCard}>
               <Text style={styles.requirementsTitle}>
-                <Ionicons name="list-outline" size={16} color="#f9c349" /> Password Requirements:
+                <Ionicons name="list-outline" size={16} color={tdcColors.yellow} /> Password Requirements:
               </Text>
               <View style={styles.requirementsGrid}>
                 <View style={styles.requirementItem}>
@@ -403,7 +404,7 @@ export default function ChangePassword({ navigation }) {
               activeOpacity={0.8}
             >
               <LinearGradient 
-                colors={['#f9c349', '#e6b800']} 
+                colors={[tdcColors.yellow, '#e6b800']} 
                 style={styles.updateGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
@@ -422,7 +423,7 @@ export default function ChangePassword({ navigation }) {
             {/* Security Note */}
             <View style={styles.securityNote}>
               <View style={styles.securityIconWrapper}>
-                <Ionicons name="shield-checkmark" size={16} color="#f9c349" />
+                <Ionicons name="shield-checkmark" size={16} color={tdcColors.yellow} />
               </View>
               <Text style={styles.securityText}>
                 Your password is encrypted and stored securely
@@ -489,7 +490,7 @@ const styles = StyleSheet.create({
     borderRadius: 42,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -554,8 +555,8 @@ const styles = StyleSheet.create({
     height: 47,
   },
   inputFocused: {
-    borderColor: '#f9c349',
-    shadowColor: '#f9c349',
+    borderColor: tdcColors.yellow,
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -666,7 +667,7 @@ const styles = StyleSheet.create({
   updateBtn: {
     borderRadius: 14,
     overflow: 'hidden',
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,

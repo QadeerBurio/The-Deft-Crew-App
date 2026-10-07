@@ -12,8 +12,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { colors as tdcColors } from '../../../theme';
 
-const BRAND = '#f9c349';
+const BRAND = tdcColors.yellow;
 const BRAND_DARK = '#efa52e';
 
 // Local hero illustration — replace with your own asset at this path.

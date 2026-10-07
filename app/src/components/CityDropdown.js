@@ -13,6 +13,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { ALL_CITIES } from "../utils/cityFilter";
+import { colors } from "../theme";
 
 const label = (city) => (city === ALL_CITIES ? "All Cities" : city);
 
@@ -48,7 +49,7 @@ function CityDropdown({ options, selected, onSelect, style, title = "Select City
         <MaterialCommunityIcons
           name="map-marker"
           size={14}
-          color={selected !== ALL_CITIES ? "#f9c349" : "#000"}
+          color={selected !== ALL_CITIES ? colors.yellow : "#000"}
         />
         <Text
           style={[
@@ -63,7 +64,7 @@ function CityDropdown({ options, selected, onSelect, style, title = "Select City
         <MaterialCommunityIcons
           name="chevron-down"
           size={16}
-          color={selected !== ALL_CITIES ? "#f9c349" : "#000"}
+          color={selected !== ALL_CITIES ? colors.yellow : "#000"}
         />
       </TouchableOpacity>
 
@@ -91,7 +92,7 @@ function CityDropdown({ options, selected, onSelect, style, title = "Select City
                     <MaterialCommunityIcons
                       name={city === ALL_CITIES ? "map-outline" : "map-marker-outline"}
                       size={18}
-                      color={active ? "#f9c349" : "#666"}
+                      color={active ? colors.yellow : "#666"}
                     />
                     <Text style={[styles.rowText, active && styles.rowTextActive]}>
                       {label(city)}
@@ -105,7 +106,7 @@ function CityDropdown({ options, selected, onSelect, style, title = "Select City
                       <MaterialCommunityIcons
                         name="check"
                         size={18}
-                        color="#f9c349"
+                        color={colors.yellow}
                         style={{ marginLeft: 8 }}
                       />
                     )}
@@ -185,7 +186,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  countActive: { backgroundColor: "#f9c349" },
+  countActive: { backgroundColor: colors.yellow },
   countText: { fontSize: 11.5, fontWeight: "700", color: "#666" },
   countTextActive: { color: "#000" },
 });

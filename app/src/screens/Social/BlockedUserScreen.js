@@ -22,6 +22,7 @@ import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
+import { colors as tdcColors } from '../../theme';
 
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
@@ -109,7 +110,7 @@ const BlockedUserItem = React.memo(({ item, index, onUnblock, onNavigate, unbloc
             <Image source={{ uri: item.profileImage }} style={styles.avatar} />
           ) : (
             <LinearGradient
-              colors={['#f9c349', '#e6b800']}
+              colors={[tdcColors.yellow, '#e6b800']}
               style={styles.avatarPlaceholder}
             >
               <Text style={styles.avatarText}>{item.name?.charAt(0)?.toUpperCase()}</Text>
@@ -142,7 +143,7 @@ const BlockedUserItem = React.memo(({ item, index, onUnblock, onNavigate, unbloc
           disabled={isUnblocking}
         >
           {isUnblocking ? (
-            <ActivityIndicator size="small" color="#f9c349" />
+            <ActivityIndicator size="small" color={tdcColors.yellow} />
           ) : (
             <Text style={styles.unblockButtonText}>Unblock</Text>
           )}
@@ -344,7 +345,7 @@ export default function BlockedUsersScreen() {
               colors={['rgba(249,195,73,0.1)', 'rgba(249,195,73,0.05)']}
               style={styles.emptyIcon}
             >
-              <Ionicons name="ban-outline" size={60} color="#f9c349" />
+              <Ionicons name="ban-outline" size={60} color={tdcColors.yellow} />
             </LinearGradient>
           </View>
           <Text style={styles.emptyTitle}>No Blocked Users</Text>
@@ -369,8 +370,8 @@ export default function BlockedUsersScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#f9c349"
-              colors={['#f9c349']}
+              tintColor={tdcColors.yellow}
+              colors={[tdcColors.yellow]}
             />
           }
           contentContainerStyle={[
@@ -451,12 +452,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#fef9f0',
     borderWidth: 1,
-    borderColor: '#f9c349',
+    borderColor: tdcColors.yellow,
   },
   headerActionText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#f9c349',
+    color: tdcColors.yellow,
   },
   headerActionTextDisabled: {
     color: '#ccc',
@@ -586,7 +587,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: '#f9c349',
+    borderColor: tdcColors.yellow,
     backgroundColor: '#fff',
   },
   unblockButtonLoading: {
@@ -595,7 +596,7 @@ const styles = StyleSheet.create({
   unblockButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#f9c349',
+    color: tdcColors.yellow,
   },
 
   // Empty State

@@ -10,11 +10,12 @@ import { getListingById, startInquiry, getInquiryForListing, getMyMatches } from
 import { timeAgo } from '../../utils/time';
 import { AuthContext } from '../../context/AuthContext';
 import useMyProfessionalProfile from '../../hooks/useMyProfessionalProfile';
+import { colors as tdcColors } from '../../theme';
 
 const { width, height } = Dimensions.get('window');
 const HERO_WIDTH = width - 40; // matches the ScrollView's 20px content padding on each side
 
-const BRAND = '#f9c349';
+const BRAND = tdcColors.yellow;
 const INK = '#1a1a1a';
 const MUTED = '#8E8E93';
 const BORDER = '#e5e5e5';

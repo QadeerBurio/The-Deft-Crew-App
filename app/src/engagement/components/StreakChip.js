@@ -8,10 +8,11 @@ import Dot from './Dot';
 import { useStreak } from '../hooks/useStreak';
 import { STREAK_HEALTH_TO_MOOD } from '../utils/mood';
 import { pop } from '../utils/haptics';
+import { colors } from '../../theme';
 
 const DARK = '#1a1a1a';
 const WHITE = '#ffffff';
-const GOLD = '#f9c349';
+const GOLD = colors.yellow;
 
 export default function StreakChip({ onPress }) {
   const { count, health, enabled } = useStreak();

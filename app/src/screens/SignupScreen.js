@@ -22,6 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute } from "@react-navigation/native";
 import api from "../api/api";
 import { AuthContext } from "../context/AuthContext";
+import { colors as tdcColors } from "../theme";
 
 const { width, height } = Dimensions.get("window");
 const isTablet = Math.min(width, height) >= 768;
@@ -766,7 +767,7 @@ export default function SignupScreen({ navigation }) {
 
   const getBorderColor = (errorKey, fieldKey) => {
     if (errorKey && errors[errorKey]) return "#ff4444";
-    if (focusedInput === fieldKey) return "#f9c349";
+    if (focusedInput === fieldKey) return tdcColors.yellow;
     return "transparent";
   };
 
@@ -789,7 +790,7 @@ export default function SignupScreen({ navigation }) {
           <Ionicons
             name={option.selected ? "checkmark-circle" : option.icon || "ellipse-outline"}
             size={18}
-            color={option.selected ? "#f9c349" : "#999"}
+            color={option.selected ? tdcColors.yellow : "#999"}
             style={styles.modalOptionIcon}
           />
           <Text
@@ -803,7 +804,7 @@ export default function SignupScreen({ navigation }) {
           </Text>
         </View>
         {option.selected && (
-          <Ionicons name="checkmark" size={18} color="#f9c349" />
+          <Ionicons name="checkmark" size={18} color={tdcColors.yellow} />
         )}
       </TouchableOpacity>
     ))
@@ -840,7 +841,7 @@ export default function SignupScreen({ navigation }) {
                     <Ionicons
                       name={notification.type === "success" ? "checkmark-circle" : "alert-circle"}
                       size={24}
-                      color="#f9c349"
+                      color={tdcColors.yellow}
                     />
                   </View>
                   <View style={styles.notificationTextContainer}>
@@ -864,7 +865,7 @@ export default function SignupScreen({ navigation }) {
         {showLoading && (
           <Animated.View style={[styles.loadingOverlay, { opacity: overlayOpacity }]}>
             <View style={styles.loadingContent}>
-              <ActivityIndicator size="large" color="#f9c349" />
+              <ActivityIndicator size="large" color={tdcColors.yellow} />
               <Text style={styles.loadingText}>Creating Account</Text>
               <View style={styles.loadingProgressContainer}>
                 <Animated.View
@@ -876,7 +877,7 @@ export default function SignupScreen({ navigation }) {
                   ]}
                 >
                   <LinearGradient
-                    colors={["#f9c349", "#f7b733"]}
+                    colors={[tdcColors.yellow, "#f7b733"]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.progressGradient}
@@ -911,7 +912,7 @@ export default function SignupScreen({ navigation }) {
               >
                 <LinearGradient colors={["#1a1a1a", "#1a1a1a"]} style={styles.logoGradient}>
                   <Text style={styles.logoText}>
-                    tdc<Text style={{ color: "#f9c349" }}>.</Text>
+                    tdc<Text style={{ color: tdcColors.yellow }}>.</Text>
                   </Text>
                 </LinearGradient>
               </Animated.View>
@@ -945,7 +946,7 @@ export default function SignupScreen({ navigation }) {
                 {
                   opacity: inputAnims[0],
                   backgroundColor: focusedInput === "role" ? "#fff" : "#f8f8f8",
-                  borderColor: focusedInput === "role" ? "#f9c349" : "transparent",
+                  borderColor: focusedInput === "role" ? tdcColors.yellow : "transparent",
                   borderWidth: focusedInput === "role" ? 1.5 : 0,
                 },
               ]}
@@ -954,7 +955,7 @@ export default function SignupScreen({ navigation }) {
                 <Ionicons
                   name={isAlumni ? "ribbon-outline" : "school-outline"}
                   size={18}
-                  color={focusedInput === "role" ? "#f9c349" : "#999"}
+                  color={focusedInput === "role" ? tdcColors.yellow : "#999"}
                 />
               </View>
               <TouchableOpacity
@@ -990,7 +991,7 @@ export default function SignupScreen({ navigation }) {
                     borderColor: field.errorKey
                       ? getBorderColor(field.errorKey, field.key)
                       : focusedInput === field.key
-                        ? "#f9c349"
+                        ? tdcColors.yellow
                         : "transparent",
                     borderWidth: focusedInput === field.key || (field.errorKey && errors[field.errorKey]) ? 1.5 : 0,
                   },
@@ -1004,7 +1005,7 @@ export default function SignupScreen({ navigation }) {
                       field.errorKey && errors[field.errorKey]
                         ? "#ff4444"
                         : focusedInput === field.key
-                          ? "#f9c349"
+                          ? tdcColors.yellow
                           : "#999"
                     }
                   />
@@ -1034,7 +1035,7 @@ export default function SignupScreen({ navigation }) {
 
                 {field.key === "email" && field.value.length > 0 && validateEmail(field.value) && !errors.email && (
                   <View style={styles.checkmarkContainer}>
-                    <Ionicons name="checkmark-circle" size={18} color="#f9c349" />
+                    <Ionicons name="checkmark-circle" size={18} color={tdcColors.yellow} />
                   </View>
                 )}
 
@@ -1054,7 +1055,7 @@ export default function SignupScreen({ navigation }) {
                 {
                   opacity: inputAnims[5],
                   backgroundColor: errors.gender ? "#fff5f5" : focusedInput === "gender" ? "#fff" : "#f8f8f8",
-                  borderColor: errors.gender ? "#ff4444" : focusedInput === "gender" ? "#f9c349" : "transparent",
+                  borderColor: errors.gender ? "#ff4444" : focusedInput === "gender" ? tdcColors.yellow : "transparent",
                   borderWidth: focusedInput === "gender" || errors.gender ? 1.5 : 0,
                 },
               ]}
@@ -1063,7 +1064,7 @@ export default function SignupScreen({ navigation }) {
                 <Ionicons
                   name="person-outline"
                   size={18}
-                  color={errors.gender ? "#ff4444" : focusedInput === "gender" ? "#f9c349" : "#999"}
+                  color={errors.gender ? "#ff4444" : focusedInput === "gender" ? tdcColors.yellow : "#999"}
                 />
               </View>
               <TouchableOpacity
@@ -1098,7 +1099,7 @@ export default function SignupScreen({ navigation }) {
                   {
                     opacity: inputAnims[6],
                     backgroundColor: errors.academicLevel ? "#fff5f5" : focusedInput === "academicLevel" ? "#fff" : "#f8f8f8",
-                    borderColor: errors.academicLevel ? "#ff4444" : focusedInput === "academicLevel" ? "#f9c349" : "transparent",
+                    borderColor: errors.academicLevel ? "#ff4444" : focusedInput === "academicLevel" ? tdcColors.yellow : "transparent",
                     borderWidth: focusedInput === "academicLevel" || errors.academicLevel ? 1.5 : 0,
                   },
                 ]}
@@ -1107,7 +1108,7 @@ export default function SignupScreen({ navigation }) {
                   <Ionicons
                     name="school-outline"
                     size={18}
-                    color={errors.academicLevel ? "#ff4444" : focusedInput === "academicLevel" ? "#f9c349" : "#999"}
+                    color={errors.academicLevel ? "#ff4444" : focusedInput === "academicLevel" ? tdcColors.yellow : "#999"}
                   />
                 </View>
                 <TouchableOpacity
@@ -1143,7 +1144,7 @@ export default function SignupScreen({ navigation }) {
                 {
                   opacity: inputAnims[7],
                   backgroundColor: errors.university ? "#fff5f5" : focusedInput === "uni" ? "#fff" : "#f8f8f8",
-                  borderColor: errors.university ? "#ff4444" : focusedInput === "uni" ? "#f9c349" : "transparent",
+                  borderColor: errors.university ? "#ff4444" : focusedInput === "uni" ? tdcColors.yellow : "transparent",
                   borderWidth: focusedInput === "uni" || errors.university ? 1.5 : 0,
                 },
               ]}
@@ -1152,7 +1153,7 @@ export default function SignupScreen({ navigation }) {
                 <Ionicons
                   name="school-outline"
                   size={18}
-                  color={errors.university ? "#ff4444" : focusedInput === "uni" ? "#f9c349" : "#999"}
+                  color={errors.university ? "#ff4444" : focusedInput === "uni" ? tdcColors.yellow : "#999"}
                 />
               </View>
 
@@ -1187,7 +1188,7 @@ export default function SignupScreen({ navigation }) {
                 {
                   opacity: inputAnims[8],
                   backgroundColor: errors.city ? "#fff5f5" : focusedInput === "city" ? "#fff" : "#f8f8f8",
-                  borderColor: errors.city ? "#ff4444" : focusedInput === "city" ? "#f9c349" : "transparent",
+                  borderColor: errors.city ? "#ff4444" : focusedInput === "city" ? tdcColors.yellow : "transparent",
                   borderWidth: focusedInput === "city" || errors.city ? 1.5 : 0,
                 },
               ]}
@@ -1196,7 +1197,7 @@ export default function SignupScreen({ navigation }) {
                 <Ionicons
                   name="location-outline"
                   size={18}
-                  color={errors.city ? "#ff4444" : focusedInput === "city" ? "#f9c349" : "#999"}
+                  color={errors.city ? "#ff4444" : focusedInput === "city" ? tdcColors.yellow : "#999"}
                 />
               </View>
               <TouchableOpacity
@@ -1230,7 +1231,7 @@ export default function SignupScreen({ navigation }) {
                 {
                   opacity: inputAnims[9],
                   backgroundColor: errors.password ? "#fff5f5" : focusedInput === "pass" ? "#fff" : "#f8f8f8",
-                  borderColor: errors.password ? "#ff4444" : focusedInput === "pass" ? "#f9c349" : "transparent",
+                  borderColor: errors.password ? "#ff4444" : focusedInput === "pass" ? tdcColors.yellow : "transparent",
                   borderWidth: focusedInput === "pass" || errors.password ? 1.5 : 0,
                 },
               ]}
@@ -1239,7 +1240,7 @@ export default function SignupScreen({ navigation }) {
                 <Ionicons
                   name="lock-closed-outline"
                   size={18}
-                  color={errors.password ? "#ff4444" : focusedInput === "pass" ? "#f9c349" : "#999"}
+                  color={errors.password ? "#ff4444" : focusedInput === "pass" ? tdcColors.yellow : "#999"}
                 />
               </View>
               <TextInput
@@ -1279,7 +1280,7 @@ export default function SignupScreen({ navigation }) {
                 {
                   opacity: inputAnims[10],
                   backgroundColor: errors.confirmPassword ? "#fff5f5" : focusedInput === "confirm" ? "#fff" : "#f8f8f8",
-                  borderColor: errors.confirmPassword ? "#ff4444" : focusedInput === "confirm" ? "#f9c349" : "transparent",
+                  borderColor: errors.confirmPassword ? "#ff4444" : focusedInput === "confirm" ? tdcColors.yellow : "transparent",
                   borderWidth: focusedInput === "confirm" || errors.confirmPassword ? 1.5 : 0,
                 },
               ]}
@@ -1288,7 +1289,7 @@ export default function SignupScreen({ navigation }) {
                 <Ionicons
                   name="shield-checkmark-outline"
                   size={18}
-                  color={errors.confirmPassword ? "#ff4444" : focusedInput === "confirm" ? "#f9c349" : "#999"}
+                  color={errors.confirmPassword ? "#ff4444" : focusedInput === "confirm" ? tdcColors.yellow : "#999"}
                 />
               </View>
               <TextInput
@@ -1333,7 +1334,7 @@ export default function SignupScreen({ navigation }) {
               ]}
             >
               <View style={[styles.inputIconContainer, styles.referralIconContainer]}>
-                <Ionicons name="gift-outline" size={18} color="#f9c349" />
+                <Ionicons name="gift-outline" size={18} color={tdcColors.yellow} />
               </View>
               <TextInput
                 placeholder="Referral Code (Optional)"
@@ -1366,11 +1367,11 @@ export default function SignupScreen({ navigation }) {
               <TouchableOpacity style={styles.button} onPress={handleSignup} disabled={loading} activeOpacity={0.9}>
                 <LinearGradient colors={["#1a1a1a", "#1a1a1a"]} style={styles.buttonGradient}>
                   {loading ? (
-                    <ActivityIndicator color="#f9c349" size="small" />
+                    <ActivityIndicator color={tdcColors.yellow} size="small" />
                   ) : (
                     <>
                       <Text style={styles.buttonText}>CREATE ACCOUNT</Text>
-                      <Ionicons name="person-add-outline" size={20} color="#f9c349" />
+                      <Ionicons name="person-add-outline" size={20} color={tdcColors.yellow} />
                     </>
                   )}
                 </LinearGradient>
@@ -1387,7 +1388,7 @@ export default function SignupScreen({ navigation }) {
             <View style={styles.brandingFooter}>
               <Text style={styles.brandingText}>
                 <Text style={{ fontSize: 14 }}>tdc</Text>
-                <Text style={{ color: "#f9c349", fontSize: 20 }}>.</Text> PAKISTAN
+                <Text style={{ color: tdcColors.yellow, fontSize: 20 }}>.</Text> PAKISTAN
               </Text>
             </View>
           </Animated.View>
@@ -1457,7 +1458,7 @@ export default function SignupScreen({ navigation }) {
                         <Ionicons
                           name={university === uni ? "checkmark-circle" : "school-outline"}
                           size={18}
-                          color={university === uni ? "#f9c349" : "#999"}
+                          color={university === uni ? tdcColors.yellow : "#999"}
                           style={styles.modalOptionIcon}
                         />
                         <Text
@@ -1471,7 +1472,7 @@ export default function SignupScreen({ navigation }) {
                         </Text>
                       </View>
                       {university === uni && (
-                        <Ionicons name="checkmark" size={18} color="#f9c349" />
+                        <Ionicons name="checkmark" size={18} color={tdcColors.yellow} />
                       )}
                     </TouchableOpacity>
                   ))
@@ -1672,7 +1673,7 @@ export default function SignupScreen({ navigation }) {
                         <Ionicons
                           name={city === cityName ? "checkmark-circle" : "location-outline"}
                           size={18}
-                          color={city === cityName ? "#f9c349" : "#999"}
+                          color={city === cityName ? tdcColors.yellow : "#999"}
                           style={styles.modalOptionIcon}
                         />
                         <Text
@@ -1686,7 +1687,7 @@ export default function SignupScreen({ navigation }) {
                         </Text>
                       </View>
                       {city === cityName && (
-                        <Ionicons name="checkmark" size={18} color="#f9c349" />
+                        <Ionicons name="checkmark" size={18} color={tdcColors.yellow} />
                       )}
                     </TouchableOpacity>
                   ))
@@ -1761,7 +1762,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     overflow: "hidden",
     elevation: 10,
-    shadowColor: "#f9c349",
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.3,
     shadowRadius: 15,
@@ -1799,7 +1800,7 @@ const styles = StyleSheet.create({
   lineSegment: {
     width: 20,
     height: 2,
-    backgroundColor: "#f9c349",
+    backgroundColor: tdcColors.yellow,
     borderRadius: 1,
   },
   diamond: {
@@ -1847,7 +1848,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 10,
     borderWidth: 2,
-    borderColor: "#f9c349",
+    borderColor: tdcColors.yellow,
   },
   notificationTextContainer: {
     flex: 1,
@@ -1893,7 +1894,7 @@ const styles = StyleSheet.create({
     paddingVertical: 28,
   },
   loadingText: {
-    color: "#f9c349",
+    color: tdcColors.yellow,
     fontSize: 18,
     fontWeight: "800",
     marginTop: 15,
@@ -2013,7 +2014,7 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   buttonText: {
-    color: "#f9c349",
+    color: tdcColors.yellow,
     fontSize: 15,
     fontWeight: "800",
     letterSpacing: 1.5,

@@ -20,6 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../../context/AuthContext';
 import { getMyListings, getMySkillOffers, getMyMatches, getMyInquiries } from '../../api/api';
 import { timeAgo } from '../../utils/time';
+import { colors as tdcColors } from '../../theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -56,7 +57,7 @@ const ActivityItem = React.memo(({ item, index, onPress }) => {
 
   const getIconColor = (type) => {
     switch (type) {
-      case 'listing': return '#f9c349';
+      case 'listing': return tdcColors.yellow;
       case 'offer': return '#FF9500';
       case 'match': return '#34C759';
       case 'inquiry': return '#AF52DE';
@@ -315,7 +316,7 @@ export default function ActivityScreen({ navigation }) {
     return (
       <SafeAreaView style={styles.centerContainer}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-        <ActivityIndicator size="large" color="#f9c349" />
+        <ActivityIndicator size="large" color={tdcColors.yellow} />
         <Text style={styles.loadingText}>Loading activity...</Text>
       </SafeAreaView>
     );
@@ -333,7 +334,7 @@ export default function ActivityScreen({ navigation }) {
           onPress={() => navigation.navigate('Login')}
         >
           <LinearGradient
-            colors={['#f9c349', '#f7b731']}
+            colors={[tdcColors.yellow, '#f7b731']}
             style={styles.loginGradient}
           >
             <Text style={styles.loginButtonText}>Login</Text>
@@ -365,7 +366,7 @@ export default function ActivityScreen({ navigation }) {
           style={styles.headerAction}
           onPress={handleRefresh}
         >
-          <Ionicons name="refresh-outline" size={22} color="#f9c349" />
+          <Ionicons name="refresh-outline" size={22} color={tdcColors.yellow} />
         </TouchableOpacity>
       </View>
 
@@ -386,7 +387,7 @@ export default function ActivityScreen({ navigation }) {
               <Text style={styles.statLabel}>Total</Text>
             </View>
             <View style={[styles.statItem, styles.statItemListings]}>
-              <Text style={[styles.statNumber, { color: '#f9c349' }]}>{stats.listings}</Text>
+              <Text style={[styles.statNumber, { color: tdcColors.yellow }]}>{stats.listings}</Text>
               <Text style={styles.statLabel}>Listings</Text>
             </View>
             <View style={[styles.statItem, styles.statItemOffers]}>
@@ -453,8 +454,8 @@ export default function ActivityScreen({ navigation }) {
             <RefreshControl 
               refreshing={refreshing} 
               onRefresh={handleRefresh}
-              tintColor="#f9c349"
-              colors={["#f9c349"]}
+              tintColor={tdcColors.yellow}
+              colors={[tdcColors.yellow]}
             />
           }
           ListEmptyComponent={
@@ -463,7 +464,7 @@ export default function ActivityScreen({ navigation }) {
                 colors={['#f9c34920', '#f7b73120']}
                 style={styles.emptyIconContainer}
               >
-                <Ionicons name="time-outline" size={48} color="#f9c349" />
+                <Ionicons name="time-outline" size={48} color={tdcColors.yellow} />
               </LinearGradient>
               <Text style={styles.emptyText}>No activity</Text>
               <Text style={styles.emptySubtext}>
@@ -607,8 +608,8 @@ const styles = StyleSheet.create({
     borderColor: '#F0F0F0',
   },
   filterChipActive: {
-    backgroundColor: '#f9c349',
-    borderColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
+    borderColor: tdcColors.yellow,
   },
   filterChipText: {
     fontSize: 14,
@@ -724,7 +725,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderRadius: 14,
     overflow: 'hidden',
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,

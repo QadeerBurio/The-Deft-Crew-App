@@ -75,6 +75,7 @@ import {
   getOfferCities,
   resolveCity,
 } from '../utils/cityFilter';
+import { colors as tdcColors } from '../theme';
 
 const SERVER_URL = 'https://the-deft-crew-production.up.railway.app';
 
@@ -89,7 +90,7 @@ const { width, height } = Dimensions.get('window');
 
 // Modern Color Palette
 const COLORS = {
-  primary: '#f9c349',
+  primary: tdcColors.yellow,
   primaryDark: '#e8b82a',
   primaryLight: '#fde8b3',
   background: '#f2f4f8',
@@ -107,14 +108,14 @@ const COLORS = {
 };
 
 const DISCOUNT_THEMES = {
-  10: { icon: 'restaurant-outline', gradient: ['#f9c349', '#f5a623'] },
-  15: { icon: 'cafe-outline', gradient: ['#f9c349', '#f5a623'] },
-  20: { icon: 'shirt-outline', gradient: ['#f9c349', '#f5a623'] },
-  25: { icon: 'cut-outline', gradient: ['#f9c349', '#f5a623'] },
-  30: { icon: 'fitness-outline', gradient: ['#f9c349', '#f5a623'] },
-  40: { icon: 'diamond-outline', gradient: ['#f9c349', '#f5a623'] },
-  50: { icon: 'trophy-outline', gradient: ['#f9c349', '#f5a623'] },
-  default: { icon: 'pricetag-outline', gradient: ['#f9c349', '#f5a623'] },
+  10: { icon: 'restaurant-outline', gradient: [tdcColors.yellow, '#f5a623'] },
+  15: { icon: 'cafe-outline', gradient: [tdcColors.yellow, '#f5a623'] },
+  20: { icon: 'shirt-outline', gradient: [tdcColors.yellow, '#f5a623'] },
+  25: { icon: 'cut-outline', gradient: [tdcColors.yellow, '#f5a623'] },
+  30: { icon: 'fitness-outline', gradient: [tdcColors.yellow, '#f5a623'] },
+  40: { icon: 'diamond-outline', gradient: [tdcColors.yellow, '#f5a623'] },
+  50: { icon: 'trophy-outline', gradient: [tdcColors.yellow, '#f5a623'] },
+  default: { icon: 'pricetag-outline', gradient: [tdcColors.yellow, '#f5a623'] },
 };
 
 const getTheme = (percentage) => DISCOUNT_THEMES[percentage] || DISCOUNT_THEMES.default;
@@ -327,7 +328,7 @@ const PromoCodeModal = React.memo(({
           <View style={styles.modalHandle}><View style={styles.modalHandleBar} /></View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScrollContent}>
-            <LinearGradient colors={['#f9c349', '#f5a623']} style={styles.promoModalHeader} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <LinearGradient colors={[tdcColors.yellow, '#f5a623']} style={styles.promoModalHeader} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
               <View style={styles.promoModalIconContainer}>
                 <Ionicons name={isFromBackend ? "ticket-outline" : "sparkles-outline"} size={48} color="#fff" />
               </View>
@@ -374,7 +375,7 @@ const PromoCodeModal = React.memo(({
                       <Text style={styles.promoCodeDisplayText}>{promoCode}</Text>
                     </Animated.View>
                     <TouchableOpacity style={styles.promoCodeCopyButton} onPress={handleCopy} activeOpacity={0.8}>
-                      <LinearGradient colors={['#f9c349', '#f5a623']} style={styles.promoCodeCopyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                      <LinearGradient colors={[tdcColors.yellow, '#f5a623']} style={styles.promoCodeCopyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                         <Ionicons name="copy-outline" size={20} color="#fff" />
                         <Text style={styles.promoCodeCopyText}>Copy</Text>
                       </LinearGradient>
@@ -382,7 +383,7 @@ const PromoCodeModal = React.memo(({
                   </View>
                 ) : (
                   <TouchableOpacity style={styles.generatePromoButton} onPress={handleGenerate} activeOpacity={0.85}>
-                    <LinearGradient colors={['#f9c349', '#f5a623']} style={styles.generatePromoGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                    <LinearGradient colors={[tdcColors.yellow, '#f5a623']} style={styles.generatePromoGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                       <Ionicons name="sparkles-outline" size={24} color="#fff" />
                       <Text style={styles.generatePromoText}>Generate Promo Code</Text>
                     </LinearGradient>
@@ -1088,7 +1089,7 @@ const LoadingOverlay = ({ visible, message }) => {
   return (
     <Animated.View style={[styles.loadingOverlay, { opacity: overlayOpacity }]}>
       <View style={styles.loadingCard}>
-        <ActivityIndicator size="large" color="#f9c349" />
+        <ActivityIndicator size="large" color={tdcColors.yellow} />
         <Text style={styles.loadingText}>{message || "Loading discounts..."}</Text>
         <View style={styles.loadingProgressContainer}>
           <Animated.View style={[styles.loadingProgressBar, { transform: [{ scaleX: loadingScaleX }] }]} />
@@ -1876,7 +1877,7 @@ export default function MyDiscountScreen() {
         }
         ListHeaderComponent={
           <View style={styles.statsContainer}>
-            <StatCard title="Active Discounts" value={stats.activeCount} icon="pricetag-outline" gradientColors={['#f9c349', '#f5a623']} delay={200} />
+            <StatCard title="Active Discounts" value={stats.activeCount} icon="pricetag-outline" gradientColors={[tdcColors.yellow, '#f5a623']} delay={200} />
             {stats.onlineCount > 0 && (
               <StatCard title="Online Offers" value={stats.onlineCount} icon="globe-outline" gradientColors={['#3b82f6', '#2563eb']} delay={300} />
             )}
@@ -2267,8 +2268,8 @@ const styles = StyleSheet.create({
   },
   loadingProgressBar: {
     height: '100%', borderRadius: 2, transform: [{ scaleX: 0 }],
-    width: '100%', backgroundColor: '#f9c349',
+    width: '100%', backgroundColor: tdcColors.yellow,
   },
   loadingDots: { flexDirection: 'row', marginTop: 12 },
-  loadingDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#f9c349', marginHorizontal: 3, opacity: 0.5 },
+  loadingDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: tdcColors.yellow, marginHorizontal: 3, opacity: 0.5 },
 });

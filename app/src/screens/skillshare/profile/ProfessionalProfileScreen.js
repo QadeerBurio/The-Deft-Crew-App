@@ -9,8 +9,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../../../context/AuthContext';
 import { getMyProfessionalProfile } from '../../../api/profileApi';
 import { getMyListings, getMySkillOffers, getMyMatches } from '../../../api/api';
+import { colors as tdcColors } from '../../../theme';
 
-const BRAND = '#f9c349';
+const BRAND = tdcColors.yellow;
 const BRAND_DARK = '#f5a623';
 const INK = '#1C1C1E';
 const MUTED = '#8E8E93';

@@ -14,6 +14,7 @@ import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
+import { colors as tdcColors } from '../theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -196,7 +197,7 @@ const PermissionScreen = ({ onPermissionsGranted, onSkip }) => {
           {/* Icon Circle - Matching Luxury Style */}
           <View style={styles.iconWrapper}>
             <View style={styles.iconCircle}>
-              <Ionicons name={current.icon} size={32} color="#f9c349" />
+              <Ionicons name={current.icon} size={32} color={tdcColors.yellow} />
             </View>
           </View>
 
@@ -235,7 +236,7 @@ const PermissionScreen = ({ onPermissionsGranted, onSkip }) => {
               activeOpacity={0.9}
             >
               <LinearGradient
-                colors={isGranted ? ['#f9c349', '#f9c349'] : ['#000', '#000']}
+                colors={isGranted ? [tdcColors.yellow, tdcColors.yellow] : ['#000', '#000']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.buttonGradient}
@@ -250,7 +251,7 @@ const PermissionScreen = ({ onPermissionsGranted, onSkip }) => {
                     <Ionicons
                       name={isGranted ? (step === 2 ? 'checkmark-circle' : 'arrow-forward') : 'lock-open-outline'}
                       size={20}
-                      color={isGranted ? '#000' : '#f9c349'}
+                      color={isGranted ? '#000' : tdcColors.yellow}
                     />
                   </>
                 )}
@@ -307,13 +308,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
   },
   cornerAccent: {
     position: 'absolute',
     width: 20,
     height: 20,
-    borderColor: '#f9c349',
+    borderColor: tdcColors.yellow,
   },
   topLeftAccent: {
     top: 10,
@@ -341,7 +342,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E0E0',
   },
   activeDot: {
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     width: 28,
   },
   completedDot: {
@@ -358,7 +359,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#f9c349',
+    borderColor: tdcColors.yellow,
   },
   contentContainer: {
     width: '100%',
@@ -373,12 +374,12 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     marginRight: 8,
   },
   titlePrefix: {
     fontSize: 11,
-    color: '#f9c349',
+    color: tdcColors.yellow,
     fontWeight: '800',
     letterSpacing: 3,
   },
@@ -393,7 +394,7 @@ const styles = StyleSheet.create({
   titleUnderline: {
     width: 40,
     height: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     marginBottom: 16,
     borderRadius: 1.5,
   },
@@ -446,7 +447,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     marginRight: 8,
   },
   statusText: {
@@ -475,7 +476,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   allowButton: {
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOpacity: 0.3,
   },
   buttonGradient: {

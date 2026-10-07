@@ -25,8 +25,9 @@ import * as Sharing from 'expo-sharing';
 import engagementApi from '../api/engagementApi';
 import { useEngagement } from '../hooks/useEngagement';
 import { success as hapticSuccess, warn, pop } from '../utils/haptics';
+import { colors as tdcColors } from '../../theme';
 
-const GOLD = '#f9c349';
+const GOLD = tdcColors.yellow;
 const BLACK = '#0f0f0f';
 const WHITE = '#ffffff';
 

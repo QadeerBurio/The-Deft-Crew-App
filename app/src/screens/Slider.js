@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import { colors as tdcColors } from "../theme";
 
 const { width, height } = Dimensions.get("window");
 const ITEM_WIDTH = width * 0.95;
@@ -492,7 +493,7 @@ export default function Slider() {
                           colors={['rgba(0,0,0,0.4)', 'transparent']}
                           style={styles.modalGradient}
                         />
-                        <View style={[styles.modalBadge, { backgroundColor: "#f9c349" }]}>
+                        <View style={[styles.modalBadge, { backgroundColor: tdcColors.yellow }]}>
                           <Text style={styles.modalBadgeText}>
                             {selectedOffer.type?.toUpperCase() || "OFFER"}
                           </Text>
@@ -648,7 +649,7 @@ const styles = StyleSheet.create({
     height: 6,
     width: 6,
     borderRadius: 3,
-    backgroundColor: "#f9c349",
+    backgroundColor: tdcColors.yellow,
     marginHorizontal: 5,
   },
   
@@ -695,7 +696,7 @@ const styles = StyleSheet.create({
   },
   
   retryBtn: {
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 25,
@@ -835,7 +836,7 @@ const styles = StyleSheet.create({
   dividerLine: {
     width: 40,
     height: 3,
-    backgroundColor: "#f9c349",
+    backgroundColor: tdcColors.yellow,
     borderRadius: 2,
   },
   
@@ -901,13 +902,13 @@ const styles = StyleSheet.create({
   },
   
   saveBtn: { 
-    backgroundColor: "#f9c349", 
+    backgroundColor: tdcColors.yellow, 
     width: "100%", 
     paddingVertical: 14, 
     borderRadius: 25, 
     alignItems: "center", 
     justifyContent: "center",
-    shadowColor: "#f9c349",
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

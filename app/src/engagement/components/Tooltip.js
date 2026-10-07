@@ -6,8 +6,9 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useEngagement } from '../hooks/useEngagement';
 import engagementApi from '../api/engagementApi';
+import { colors } from '../../theme';
 
-const GOLD = '#f9c349';
+const GOLD = colors.yellow;
 const DARK = '#1a1a1a';
 
 export default function Tooltip({ id, text, onClose }) {

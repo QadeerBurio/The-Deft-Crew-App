@@ -7,8 +7,9 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native
 import { Ionicons } from '@expo/vector-icons';
 import Dot from './Dot';
 import { useEngagement } from '../hooks/useEngagement';
+import { colors } from '../../theme';
 
-const GOLD = '#f9c349';
+const GOLD = colors.yellow;
 const GOLD_DARK = '#e0a82e';
 const DARK = '#1a1a1a';
 const MUTED = '#888';

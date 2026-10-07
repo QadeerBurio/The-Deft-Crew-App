@@ -23,6 +23,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from "../../context/AuthContext";
 // 🆕 engagement
 import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus';
+import { colors as tdcColors } from "../../theme";
 const { width, height } = Dimensions.get('window');
 
 // ✅ Same API URL as FeedScreen/PostCard
@@ -236,7 +237,7 @@ export default function CreatePostScreen({ navigation }) {
 
   const borderColor = borderAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['#E5E5E5', '#f9c349'],
+    outputRange: ['#E5E5E5', tdcColors.yellow],
   });
 
   // ✅ Only show skeleton until isReady (max 600ms)
@@ -275,7 +276,7 @@ export default function CreatePostScreen({ navigation }) {
             >
               <Animated.View style={{ transform: [{ scale: publishBtnScale }] }}>
                 <LinearGradient
-                  colors={!text.trim() || loading ? ['#E5E5E5', '#D4D4D4'] : ['#f9c349', '#f5a623']}
+                  colors={!text.trim() || loading ? ['#E5E5E5', '#D4D4D4'] : [tdcColors.yellow, '#f5a623']}
                   style={styles.publishGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
@@ -305,7 +306,7 @@ export default function CreatePostScreen({ navigation }) {
               <View style={styles.userRow}>
                 <View style={styles.avatarContainer}>
                   <LinearGradient
-                    colors={['#f9c349', '#f5a623']}
+                    colors={[tdcColors.yellow, '#f5a623']}
                     style={styles.avatar}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
@@ -384,7 +385,7 @@ export default function CreatePostScreen({ navigation }) {
                       styles.charProgressBar,
                       {
                         width: `${(text.length / 2000) * 100}%`,
-                        backgroundColor: text.length > 1800 ? '#EF4444' : '#f9c349',
+                        backgroundColor: text.length > 1800 ? '#EF4444' : tdcColors.yellow,
                       },
                     ]}
                   />
@@ -402,7 +403,7 @@ export default function CreatePostScreen({ navigation }) {
               <View style={styles.tipsGradient}>
                 <View style={styles.tipsHeader}>
                   <View style={styles.tipsIconContainer}>
-                    <Ionicons name="bulb-outline" size={22} color="#f9c349" />
+                    <Ionicons name="bulb-outline" size={22} color={tdcColors.yellow} />
                   </View>
                   <View style={styles.tipsHeaderText}>
                     <Text style={styles.tipsTitle}>Share something with the community</Text>
@@ -411,15 +412,15 @@ export default function CreatePostScreen({ navigation }) {
                 </View>
                 <View style={styles.tipsList}>
                   <View style={styles.tipItem}>
-                    <View style={[styles.tipDot, { backgroundColor: '#f9c349' }]} />
+                    <View style={[styles.tipDot, { backgroundColor: tdcColors.yellow }]} />
                     <Text style={styles.tipText}>Share your thoughts or experiences</Text>
                   </View>
                   <View style={styles.tipItem}>
-                    <View style={[styles.tipDot, { backgroundColor: '#f9c349' }]} />
+                    <View style={[styles.tipDot, { backgroundColor: tdcColors.yellow }]} />
                     <Text style={styles.tipText}>Ask questions or seek advice</Text>
                   </View>
                   <View style={styles.tipItem}>
-                    <View style={[styles.tipDot, { backgroundColor: '#f9c349' }]} />
+                    <View style={[styles.tipDot, { backgroundColor: tdcColors.yellow }]} />
                     <Text style={styles.tipText}>Celebrate achievements and milestones</Text>
                   </View>
                 </View>
@@ -497,12 +498,12 @@ const styles = StyleSheet.create({
   },
   headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#000000', letterSpacing: -0.3 },
-  headerDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#f9c349' },
+  headerDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: tdcColors.yellow },
 
   publishButton: {
     borderRadius: 20,
     overflow: 'hidden',
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -531,7 +532,7 @@ const styles = StyleSheet.create({
   avatarContainer: { marginRight: 14 },
   avatar: {
     width: 56, height: 56, borderRadius: 28, overflow: 'hidden',
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
   },
@@ -569,7 +570,7 @@ const styles = StyleSheet.create({
   inputAccent: {
     position: 'absolute',
     bottom: -2, left: 0, right: 0, height: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     borderRadius: 2,
   },
 

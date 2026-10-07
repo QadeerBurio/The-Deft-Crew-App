@@ -14,6 +14,7 @@ import { useNavigation } from "@react-navigation/native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { colors as tdcColors } from "../theme";
 
 const { width, height } = Dimensions.get("window");
 
@@ -112,7 +113,7 @@ export default function TermsScreen() {
       icon: "account-check-outline",
       title: "Student Eligibility",
       content: "tdc is only for verified university students & alumni. You'll need valid student credentials.",
-      color: "#f9c349"
+      color: tdcColors.yellow
     },
     {
       icon: "briefcase-search-outline",
@@ -294,7 +295,7 @@ export default function TermsScreen() {
                         {
                           top: 10 + Math.random() * 80,
                           left: 10 + Math.random() * 80,
-                          backgroundColor: ['#f9c349', '#4ecdc4', '#6c5ce7', '#ff6b6b', '#a29bfe', '#fd79a8'][i % 6],
+                          backgroundColor: [tdcColors.yellow, '#4ecdc4', '#6c5ce7', '#ff6b6b', '#a29bfe', '#fd79a8'][i % 6],
                           transform: [{ translateY: particleTranslateY }],
                           opacity: particleAnim.interpolate({
                             inputRange: [0, 0.5, 1],
@@ -325,7 +326,7 @@ export default function TermsScreen() {
 
           {/* Footer - Compact */}
           <View style={styles.footer}>
-            <Text style={styles.footerLogo}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
+            <Text style={styles.footerLogo}>tdc<Text style={{color:tdcColors.yellow}}>.</Text></Text>
             <Text style={styles.footerText}>Building a Stronger Student Economy.</Text>
             <Text style={styles.footerSubText}>© 2026 tdc Privilege Program</Text>
           </View>
@@ -409,7 +410,7 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: 75,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     opacity: 0.3,
   },
   particlesContainer: {
@@ -436,7 +437,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -452,7 +453,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(249, 195, 73, 0.15)",
   },
   heroBadgeText: {
-    color: "#f9c349",
+    color: tdcColors.yellow,
     fontSize: 14,
     fontWeight: "800",
     letterSpacing: 1.5,
@@ -467,7 +468,7 @@ const styles = StyleSheet.create({
   },
   heroSubtitle: {
     fontSize: 12,
-    color: '#f9c349',
+    color: tdcColors.yellow,
     textAlign: 'center',
     lineHeight: 18,
     fontWeight: '400',
@@ -482,13 +483,13 @@ const styles = StyleSheet.create({
   decorSegment: {
     width: 20,
     height: 1.5,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     borderRadius: 1,
   },
   decorDiamond: {
     width: 5,
     height: 5,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     transform: [{ rotate: '45deg' }],
     marginHorizontal: 8,
   },
@@ -508,7 +509,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     marginRight: 8,
   },
   sectionTitle: {

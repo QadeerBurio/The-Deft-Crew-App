@@ -14,6 +14,7 @@ import { useNavigation } from "@react-navigation/native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { colors as tdcColors } from "../theme";
 
 const { width, height } = Dimensions.get("window");
 
@@ -23,7 +24,7 @@ const STEPS = [
     icon: "account-check-outline",
     title: "Verify You're a Student",
     desc: "Sign up with your university details to unlock student-only deals.",
-    color: "#f9c349",
+    color: tdcColors.yellow,
     tag: "Start",
   },
   {
@@ -344,7 +345,7 @@ export default function HowItWorks() {
   // ----- Particle -----
   const Particle = ({ index }) => {
     const particleColors = [
-      "#f9c349",
+      tdcColors.yellow,
       "#4ecdc4",
       "#6c5ce7",
       "#ff6b6b",
@@ -426,7 +427,7 @@ export default function HowItWorks() {
                 style={[styles.heroIconCircle, { transform: [{ rotate: spin }] }]}
               >
                 <LinearGradient
-                  colors={["#f9c349", "#e6b800"]}
+                  colors={[tdcColors.yellow, "#e6b800"]}
                   style={styles.heroIconGradient}
                 >
                   <MaterialCommunityIcons
@@ -491,7 +492,7 @@ export default function HowItWorks() {
               onPress={() => navigation.navigate("HomeTabs")}
             >
               <LinearGradient
-                colors={["#f9c349", "#e6b800"]}
+                colors={[tdcColors.yellow, "#e6b800"]}
                 style={styles.ctaGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
@@ -510,7 +511,7 @@ export default function HowItWorks() {
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerLogo}>
-              tdc<Text style={{ color: "#f9c349" }}>.</Text>
+              tdc<Text style={{ color: tdcColors.yellow }}>.</Text>
             </Text>
             <Text style={styles.footerText}>
               Building a Stronger Student Economy.
@@ -587,7 +588,7 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: 75,
-    backgroundColor: "#f9c349",
+    backgroundColor: tdcColors.yellow,
     opacity: 0.3,
   },
   particlesContainer: {
@@ -614,14 +615,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#f9c349",
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 8,
   },
   heroLabel: {
-    color: "#f9c349",
+    color: tdcColors.yellow,
     fontSize: 8,
     fontWeight: "800",
     letterSpacing: 1.5,
@@ -652,13 +653,13 @@ const styles = StyleSheet.create({
   decorSegment: {
     width: 20,
     height: 1.5,
-    backgroundColor: "#f9c349",
+    backgroundColor: tdcColors.yellow,
     borderRadius: 1,
   },
   decorDiamond: {
     width: 5,
     height: 5,
-    backgroundColor: "#f9c349",
+    backgroundColor: tdcColors.yellow,
     transform: [{ rotate: "45deg" }],
     marginHorizontal: 8,
   },
@@ -677,7 +678,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#f9c349",
+    backgroundColor: tdcColors.yellow,
     marginRight: 8,
   },
   sectionTitle: {
@@ -804,7 +805,7 @@ const styles = StyleSheet.create({
   ctaWrapper: {
     marginHorizontal: 16,
     marginTop: 8,
-    shadowColor: "#f9c349",
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 10,

@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated } from "react-native
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { AuthContext } from "../context/AuthContext";
+import { colors } from "../theme";
 
 export default function GuestGuard({ title, message, children, navigation: propNav }) {
   const { user, isGuest, setIsGuest } = useContext(AuthContext);
@@ -17,7 +18,7 @@ export default function GuestGuard({ title, message, children, navigation: propN
     return (
       <View style={styles.container}>
         <View style={styles.iconCircle}>
-          <Ionicons name="lock-closed" size={48} color="#f9c349" />
+          <Ionicons name="lock-closed" size={48} color={colors.yellow} />
         </View>
         <Text style={styles.title}>{title || "Sign In Required"}</Text>
         <Text style={styles.message}>
@@ -31,7 +32,7 @@ export default function GuestGuard({ title, message, children, navigation: propN
             navigation.navigate('Login');
           }}
         >
-          <Ionicons name="log-in-outline" size={20} color="#f9c349" style={{marginRight: 8}} />
+          <Ionicons name="log-in-outline" size={20} color={colors.yellow} style={{marginRight: 8}} />
           <Text style={styles.signInText}>Sign In</Text>
         </TouchableOpacity>
         
@@ -75,7 +76,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', 
     marginBottom: 20, 
     borderWidth: 2, 
-    borderColor: '#f9c349' 
+    borderColor: colors.yellow 
   },
   title: { 
     fontSize: 22, 
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   signInText: { 
-    color: '#f9c349', 
+    color: colors.yellow, 
     fontWeight: '700', 
     fontSize: 16 
   },

@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { colors as tdcColors } from '../../theme';
 
 export default function HelpCenter({ navigation }) {
   const [loading, setLoading] = useState(true);
@@ -66,7 +67,7 @@ export default function HelpCenter({ navigation }) {
         </View>
 
         <TouchableOpacity onPress={openInBrowser} style={styles.headerBtn}>
-          <Ionicons name="open-outline" size={20} color="#f9c349" />
+          <Ionicons name="open-outline" size={20} color={tdcColors.yellow} />
         </TouchableOpacity>
       </Animated.View>
 
@@ -74,7 +75,7 @@ export default function HelpCenter({ navigation }) {
       {loading && (
         <View style={styles.progressBarContainer}>
           <Animated.View style={[styles.progressBar, { width: progressWidthInterpolated }]}>
-            <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.progressGradient} />
+            <LinearGradient colors={[tdcColors.yellow, '#1a1a1a']} style={styles.progressGradient} />
           </Animated.View>
         </View>
       )}
@@ -97,12 +98,12 @@ export default function HelpCenter({ navigation }) {
         {/* Loading Overlay */}
         {loading && (
           <Animated.View style={[styles.loaderContainer, { opacity: fadeAnim }]}>
-            <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.loaderIconCircle}>
+            <LinearGradient colors={[tdcColors.yellow, '#1a1a1a']} style={styles.loaderIconCircle}>
               <Ionicons name="help-circle" size={40} color="#fff" />
             </LinearGradient>
             <Text style={styles.loadingTitle}>Loading Help Center</Text>
             <Text style={styles.loadingSubtitle}>Fetching the latest support articles...</Text>
-            <ActivityIndicator size="small" color="#f9c349" style={{ marginTop: 16 }} />
+            <ActivityIndicator size="small" color={tdcColors.yellow} style={{ marginTop: 16 }} />
           </Animated.View>
         )}
 
@@ -116,10 +117,10 @@ export default function HelpCenter({ navigation }) {
           </TouchableOpacity>
           <View style={{ flex: 1 }} />
           <TouchableOpacity style={styles.toolbarBtn} onPress={openInBrowser} activeOpacity={0.7}>
-            <Ionicons name="compass-outline" size={20} color="#f9c349" />
+            <Ionicons name="compass-outline" size={20} color={tdcColors.yellow} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.toolbarBtn} onPress={() => {}} activeOpacity={0.7}>
-            <Ionicons name="share-outline" size={20} color="#f9c349" />
+            <Ionicons name="share-outline" size={20} color={tdcColors.yellow} />
           </TouchableOpacity>
         </Animated.View>
       </View>

@@ -21,12 +21,13 @@ import Dot from '../components/Dot';
 import engagementApi from '../api/engagementApi';
 import { useMissions } from '../hooks/useMissions';
 import { useEngagement } from '../hooks/useEngagement';
+import { colors as tdcColors } from '../../theme';
 
 const { width } = Dimensions.get('window');
 const CARD_GAP = 12;
 const CARD_WIDTH = (width - 32 - CARD_GAP) / 2;
 
-const GOLD = '#f9c349';
+const GOLD = tdcColors.yellow;
 const BLACK = '#0f0f0f';
 const WHITE = '#ffffff';
 

@@ -29,6 +29,7 @@ import {
   getMyInquiries 
 } from '../../api/api';
 import { timeAgo } from '../../utils/time';
+import { colors as tdcColors } from '../../theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -57,7 +58,7 @@ const ActivityItem = React.memo(({ item, index, onPress }) => {
 
   const getIconConfig = (type) => {
     const configs = {
-      listing: { icon: 'document-text-outline', color: '#f9c349', bg: '#f9c34915' },
+      listing: { icon: 'document-text-outline', color: tdcColors.yellow, bg: '#f9c34915' },
       offer: { icon: 'git-pull-request-outline', color: '#FF9500', bg: '#FF950015' },
       match: { icon: 'people-outline', color: '#34C759', bg: '#34C75915' },
       inquiry: { icon: 'chatbubble-outline', color: '#AF52DE', bg: '#AF52DE15' },
@@ -345,7 +346,7 @@ export default function SkillProfile({ navigation }) {
       <SafeAreaView style={styles.centerContainer}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#f9c349" />
+          <ActivityIndicator size="large" color={tdcColors.yellow} />
           <Text style={styles.loadingText}>Loading profile...</Text>
         </View>
       </SafeAreaView>
@@ -362,7 +363,7 @@ export default function SkillProfile({ navigation }) {
             style={styles.guestCard}
           >
             <View style={styles.guestIconContainer}>
-              <Ionicons name="person-outline" size={64} color="#f9c349" />
+              <Ionicons name="person-outline" size={64} color={tdcColors.yellow} />
             </View>
             <Text style={styles.emptyTitle}>Guest Mode</Text>
             <Text style={styles.emptySubtext}>Login to see your skill profile</Text>
@@ -372,7 +373,7 @@ export default function SkillProfile({ navigation }) {
               activeOpacity={0.8}
             >
               <LinearGradient
-                colors={['#f9c349', '#f7b731']}
+                colors={[tdcColors.yellow, '#f7b731']}
                 style={styles.loginGradient}
               >
                 <Text style={styles.loginButtonText}>Login</Text>
@@ -417,8 +418,8 @@ export default function SkillProfile({ navigation }) {
           <RefreshControl 
             refreshing={refreshing} 
             onRefresh={handleRefresh}
-            tintColor="#f9c349"
-            colors={["#f9c349"]}
+            tintColor={tdcColors.yellow}
+            colors={[tdcColors.yellow]}
           />
         }
         contentContainerStyle={styles.content}
@@ -451,7 +452,7 @@ export default function SkillProfile({ navigation }) {
                   <Image source={{ uri: userImage }} style={styles.avatar} />
                 ) : (
                   <LinearGradient
-                    colors={['#f9c349', '#f7b731']}
+                    colors={[tdcColors.yellow, '#f7b731']}
                     style={styles.avatar}
                   >
                     <Text style={styles.avatarText}>{userInitial}</Text>
@@ -466,7 +467,7 @@ export default function SkillProfile({ navigation }) {
                 <Text style={styles.userName}>{userName}</Text>
                 <Text style={styles.userEmail}>{userEmail}</Text>
                 <View style={styles.userBadge}>
-                  <Ionicons name="star" size={12} color="#f9c349" />
+                  <Ionicons name="star" size={12} color={tdcColors.yellow} />
                   <Text style={styles.userBadgeText}>Skill Swapper</Text>
                 </View>
               </View>
@@ -514,7 +515,7 @@ export default function SkillProfile({ navigation }) {
               activeOpacity={0.7}
             >
               <LinearGradient
-                colors={['#f9c349', '#f7b731']}
+                colors={[tdcColors.yellow, '#f7b731']}
                 style={styles.actionIconGradient}
               >
                 <Ionicons name="add-outline" size={24} color="#FFFFFF" />
@@ -528,7 +529,7 @@ export default function SkillProfile({ navigation }) {
               activeOpacity={0.7}
             >
               <View style={[styles.actionIcon, { backgroundColor: '#f9c34915' }]}>
-                <Ionicons name="list-outline" size={24} color="#f9c349" />
+                <Ionicons name="list-outline" size={24} color={tdcColors.yellow} />
               </View>
               <Text style={styles.actionLabel}>Listings</Text>
             </TouchableOpacity>
@@ -560,7 +561,7 @@ export default function SkillProfile({ navigation }) {
         >
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeaderLeft}>
-              <Ionicons name="time-outline" size={20} color="#f9c349" />
+              <Ionicons name="time-outline" size={20} color={tdcColors.yellow} />
               <Text style={styles.sectionTitle}>Recent Activity</Text>
             </View>
             {recentActivity.length > 0 && (
@@ -786,7 +787,7 @@ const styles = StyleSheet.create({
   },
   userBadgeText: {
     fontSize: 11,
-    color: '#f9c349',
+    color: tdcColors.yellow,
     fontWeight: '600',
   },
   quickStatsRow: {
@@ -892,7 +893,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -933,7 +934,7 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontSize: 14,
-    color: '#f9c349',
+    color: tdcColors.yellow,
     fontWeight: '600',
   },
   activityList: {

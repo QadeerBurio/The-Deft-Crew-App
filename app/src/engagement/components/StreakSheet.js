@@ -9,8 +9,9 @@ import Dot from './Dot';
 import { useStreak } from '../hooks/useStreak';
 import { STREAK_HEALTH_TO_MOOD } from '../utils/mood';
 import { pop, success as hapticSuccess, warn as hapticWarn } from '../utils/haptics';
+import { colors } from '../../theme';
 
-const GOLD = '#f9c349';
+const GOLD = colors.yellow;
 const DARK = '#1a1a1a';
 const MUTED = '#888';
 const LIGHT = '#fafafa';

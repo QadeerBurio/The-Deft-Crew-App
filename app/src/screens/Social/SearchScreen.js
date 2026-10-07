@@ -35,16 +35,17 @@ import {
 } from "@react-navigation/native";
 import { AuthContext } from "../../context/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { colors as tdcColors } from "../../theme";
 
 const { width, height } = Dimensions.get("window");
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
 // Enhanced Color Palette
 const COLORS = {
-  primary: "#f9c349",
+  primary: tdcColors.yellow,
   primaryDark: "#e6b800",
   primaryLight: "#fdebb3",
-  primaryGradient: ["#f9c349", "#f5b81b"],
+  primaryGradient: [tdcColors.yellow, "#f5b81b"],
   white: "#ffffff",
   black: "#1a1a1a",
   gray: "#666666",

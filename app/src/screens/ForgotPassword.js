@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import api from "../api/api";
+import { colors as tdcColors } from "../theme";
 
 const { width } = Dimensions.get("window");
 
@@ -203,7 +204,7 @@ export default function ForgotPassword({ navigation }) {
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 >
-                  <Text style={styles.logoText}>tdc<Text style={{color:"#f9c349"}}>.</Text></Text>
+                  <Text style={styles.logoText}>tdc<Text style={{color:tdcColors.yellow}}>.</Text></Text>
                 </LinearGradient>
               </Animated.View>
               
@@ -224,7 +225,7 @@ export default function ForgotPassword({ navigation }) {
                 colors={['#1a1a1a', '#1a1a1a']}
                 style={styles.iconGradient}
               >
-                <Ionicons name="lock-open-outline" size={28} color="#f9c349" />
+                <Ionicons name="lock-open-outline" size={28} color={tdcColors.yellow} />
               </LinearGradient>
             </View>
 
@@ -238,7 +239,7 @@ export default function ForgotPassword({ navigation }) {
                 <Ionicons 
                   name="mail-outline" 
                   size={18} 
-                  color={focusedInput ? "#f9c349" : "#999"} 
+                  color={focusedInput ? tdcColors.yellow : "#999"} 
                 />
               </View>
               <TextInput
@@ -299,11 +300,11 @@ export default function ForgotPassword({ navigation }) {
                   style={styles.buttonGradient}
                 >
                   {loading ? (
-                    <ActivityIndicator color="#f9c349" size="small" />
+                    <ActivityIndicator color={tdcColors.yellow} size="small" />
                   ) : (
                     <>
                       <Text style={styles.buttonText}>SEND OTP CODE</Text>
-                      <Ionicons name="arrow-forward" size={20} color="#f9c349" />
+                      <Ionicons name="arrow-forward" size={20} color={tdcColors.yellow} />
                     </>
                   )}
                 </LinearGradient>
@@ -321,7 +322,7 @@ export default function ForgotPassword({ navigation }) {
 
           {/* Bottom Branding */}
           <Animated.View style={[styles.brandingFooter, { opacity: fadeAnim }]}>
-            <Text style={styles.brandingText}>tdc<Text style={{color:'#f9c349'}}>.</Text> KARACHI • 2026</Text>
+            <Text style={styles.brandingText}>tdc<Text style={{color:tdcColors.yellow}}>.</Text> KARACHI • 2026</Text>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -364,7 +365,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     overflow: 'hidden',
     elevation: 10,
-    shadowColor: "#f9c349",
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.3,
     shadowRadius: 15,
@@ -405,7 +406,7 @@ const styles = StyleSheet.create({
   lineSegment: {
     width: 30,
     height: 2,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     borderRadius: 1,
   },
   diamond: {
@@ -448,9 +449,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   inputFocused: { 
-    borderColor: "#f9c349", 
+    borderColor: tdcColors.yellow, 
     backgroundColor: "#fff",
-    shadowColor: "#f9c349",
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.2,
     shadowRadius: 10,
@@ -493,7 +494,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     elevation: 8,
-    shadowColor: "#f9c349",
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.3,
     shadowRadius: 15,

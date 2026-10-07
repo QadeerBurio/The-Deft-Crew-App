@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import TravelChatBot from './TravelChatBot';
+import { colors as tdcColors } from '../theme';
 
 const TravelingScreen = () => {
   const navigation = useNavigation();
@@ -62,7 +63,7 @@ const TravelingScreen = () => {
           >
             <View style={styles.heroContent}>
               <View style={styles.iconContainer}>
-                <Ionicons name="chatbubbles" size={40} color="#f9c349" />
+                <Ionicons name="chatbubbles" size={40} color={tdcColors.yellow} />
               </View>
               <View style={styles.heroTextContainer}>
                 <Text style={styles.heroTitle}>AI Travel Assistant</Text>
@@ -79,7 +80,7 @@ const TravelingScreen = () => {
           <Text style={styles.sectionTitle}>About This Assistant</Text>
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
-              <Ionicons name="time" size={22} color="#f9c349" />
+              <Ionicons name="time" size={22} color={tdcColors.yellow} />
               <View style={styles.infoTextContainer}>
                 <Text style={styles.infoLabel}>Available 24/7</Text>
                 <Text style={styles.infoValue}>Always ready to help you anytime</Text>
@@ -89,7 +90,7 @@ const TravelingScreen = () => {
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
-              <Ionicons name="globe" size={22} color="#f9c349" />
+              <Ionicons name="globe" size={22} color={tdcColors.yellow} />
               <View style={styles.infoTextContainer}>
                 <Text style={styles.infoLabel}>Multi-language</Text>
                 <Text style={styles.infoValue}>Communicate in your preferred language</Text>
@@ -99,7 +100,7 @@ const TravelingScreen = () => {
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
-              <Ionicons name="rocket" size={22} color="#f9c349" />
+              <Ionicons name="rocket" size={22} color={tdcColors.yellow} />
               <View style={styles.infoTextContainer}>
                 <Text style={styles.infoLabel}>Instant Responses</Text>
                 <Text style={styles.infoValue}>Get answers to your queries in real-time</Text>
@@ -109,7 +110,7 @@ const TravelingScreen = () => {
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
-              <Ionicons name="shield-checkmark" size={22} color="#f9c349" />
+              <Ionicons name="shield-checkmark" size={22} color={tdcColors.yellow} />
               <View style={styles.infoTextContainer}>
                 <Text style={styles.infoLabel}>Secure & Private</Text>
                 <Text style={styles.infoValue}>Your conversations are encrypted and safe</Text>
@@ -357,7 +358,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     marginTop: 6,
     marginRight: 14,
   },
@@ -399,7 +400,7 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
   stepNumberText: {
-    color: '#f9c349',
+    color: tdcColors.yellow,
     fontSize: 16,
     fontWeight: '700',
   },

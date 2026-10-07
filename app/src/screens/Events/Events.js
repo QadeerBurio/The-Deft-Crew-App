@@ -43,6 +43,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import GuestGuard from "../../components/GuestGuard";
 import io from "socket.io-client";
 import { engagementBus, ENGAGEMENT_EVENTS } from "../../engagement/engagementBus";
+import { colors as tdcColors } from "../../theme";
 
 const { height, width } = Dimensions.get("window");
 const SHEET_HEIGHT = Math.round(height * 0.85);
@@ -135,8 +136,8 @@ const COLORS = {
   card: "#ffffff",
   surface: "#f5f6fa",
   primary: "#1a1a2e",
-  secondary: "#f9c349",
-  accent: "#f9c349",
+  secondary: tdcColors.yellow,
+  accent: tdcColors.yellow,
   danger: "#e74c3c",
   goldSoft: "#fff5e0",
   overlayDark: "rgba(26, 26, 46, 0.85)",
@@ -291,7 +292,7 @@ const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel }) 
         <View style={styles.contentWrapper}>
           <View style={styles.headerRow}>
             <View style={styles.orgContainer}>
-              <LinearGradient colors={["#f9c349", "#f5a623"]} style={styles.orgAvatar}>
+              <LinearGradient colors={[tdcColors.yellow, "#f5a623"]} style={styles.orgAvatar}>
                 <Ionicons name="location" size={16} color="#fff" />
               </LinearGradient>
               <Text style={styles.locationText} numberOfLines={1}>
@@ -329,7 +330,7 @@ const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel }) 
                 activeOpacity={0.7}
               >
                 <LinearGradient
-                  colors={imported ? ["#6366f1", "#4f46e5"] : ["#f9c349", "#f5a623"]}
+                  colors={imported ? ["#6366f1", "#4f46e5"] : [tdcColors.yellow, "#f5a623"]}
                   style={styles.registerGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -1149,7 +1150,7 @@ export default function EventsScreen() {
                     style={styles.exploreButton}
                     onPress={() => setShowApplied(false)}
                   >
-                    <LinearGradient colors={["#f9c349", "#f5a623"]} style={styles.exploreGradient}>
+                    <LinearGradient colors={[tdcColors.yellow, "#f5a623"]} style={styles.exploreGradient}>
                       <Text style={styles.exploreButtonText}>Explore Events</Text>
                     </LinearGradient>
                   </TouchableOpacity>
@@ -1159,7 +1160,7 @@ export default function EventsScreen() {
                     style={styles.exploreButton}
                     onPress={() => setActiveCity("All")}
                   >
-                    <LinearGradient colors={["#f9c349", "#f5a623"]} style={styles.exploreGradient}>
+                    <LinearGradient colors={[tdcColors.yellow, "#f5a623"]} style={styles.exploreGradient}>
                       <Text style={styles.exploreButtonText}>Clear City Filter</Text>
                     </LinearGradient>
                   </TouchableOpacity>
@@ -1815,7 +1816,7 @@ export default function EventsScreen() {
                         onPress={handleRegistrationSubmit}
                       >
                         <LinearGradient
-                          colors={["#f9c349", "#f5a623"]}
+                          colors={[tdcColors.yellow, "#f5a623"]}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 0 }}
                           style={styles.primaryFormGradient}

@@ -14,6 +14,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { colors as tdcColors } from '../../theme';
 
 const { width } = Dimensions.get('window');
 
@@ -80,7 +81,7 @@ export default function CommunityGuidelinesScreen({ navigation }) {
       icon: 'chatbubbles-outline',
       title: 'Be Constructive',
       desc: 'Engage positively. Respect different viewpoints.',
-      color: '#f9c349',
+      color: tdcColors.yellow,
     },
     {
       icon: 'megaphone-outline',
@@ -153,7 +154,7 @@ export default function CommunityGuidelinesScreen({ navigation }) {
             },
           ]}
         >
-          <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.heroIcon}>
+          <LinearGradient colors={[tdcColors.yellow, '#e6b800']} style={styles.heroIcon}>
             <Ionicons name="people" size={28} color="#1A1A1A" />
           </LinearGradient>
           <Text style={styles.heroTitle}>Community Guidelines</Text>
@@ -171,7 +172,7 @@ export default function CommunityGuidelinesScreen({ navigation }) {
           ]}
         >
           <Text style={styles.introText}>
-            tdc<Text style={{color:'#f9c349', fontSize:20}}>.</Text> is for everyone. Treat people with respect. Harmful behaviour isn't allowed here.
+            tdc<Text style={{color:tdcColors.yellow, fontSize:20}}>.</Text> is for everyone. Treat people with respect. Harmful behaviour isn't allowed here.
           </Text>
         </Animated.View>
 
@@ -225,14 +226,14 @@ export default function CommunityGuidelinesScreen({ navigation }) {
         <Text style={styles.sectionLabel}>Moderation</Text>
         <View style={styles.card}>
           <View style={styles.moderationItem}>
-            <Ionicons name="flag-outline" size={16} color="#f9c349" />
+            <Ionicons name="flag-outline" size={16} color={tdcColors.yellow} />
             <Text style={styles.moderationText}>
               <Text style={styles.moderationStrong}>Report</Text> content or
               <Text style={styles.moderationStrong}> block</Text> users
             </Text>
           </View>
           <View style={[styles.moderationItem, { borderBottomWidth: 0 }]}>
-            <Ionicons name="shield-outline" size={16} color="#f9c349" />
+            <Ionicons name="shield-outline" size={16} color={tdcColors.yellow} />
             <Text style={styles.moderationText}>
               Violations may result in <Text style={styles.moderationStrong}>removal</Text>,{' '}
               <Text style={styles.moderationStrong}>suspension</Text>, or{' '}
@@ -304,7 +305,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 2.5,
     borderRadius: 1.5,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     marginTop: 3,
   },
   headerRight: {

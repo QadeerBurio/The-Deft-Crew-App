@@ -22,6 +22,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { getMatchConversation, getConversationMessages, markMessagesRead } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
 import { timeAgo } from '../../utils/time';
+import { colors as tdcColors } from '../../theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -51,7 +52,7 @@ const MessageBubble = React.memo(({ message, isOwn }) => {
       {!isOwn && (
         <View style={styles.senderAvatar}>
           <LinearGradient
-            colors={['#f9c349', '#f5a623']}
+            colors={[tdcColors.yellow, '#f5a623']}
             style={styles.avatarGradient}
           >
             <Text style={styles.avatarText}>
@@ -273,7 +274,7 @@ export default function ChatMatch({ route, navigation }) {
                 <Image source={{ uri: displayImage }} style={styles.headerAvatarImage} />
               ) : (
                 <LinearGradient
-                  colors={['#f9c349', '#f5a623']}
+                  colors={[tdcColors.yellow, '#f5a623']}
                   style={styles.headerAvatarGradient}
                 >
                   <Text style={styles.headerAvatarText}>{displayInitial}</Text>
@@ -305,7 +306,7 @@ export default function ChatMatch({ route, navigation }) {
         colors={['#f9c34920', '#f5a62320']}
         style={styles.emptyIcon}
       >
-        <Ionicons name="chatbubbles-outline" size={48} color="#f9c349" />
+        <Ionicons name="chatbubbles-outline" size={48} color={tdcColors.yellow} />
       </LinearGradient>
       <Text style={styles.emptyTitle}>No messages yet</Text>
       <Text style={styles.emptySubtext}>
@@ -318,7 +319,7 @@ export default function ChatMatch({ route, navigation }) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-        <ActivityIndicator size="large" color="#f9c349" />
+        <ActivityIndicator size="large" color={tdcColors.yellow} />
         <Text style={styles.loadingText}>Loading conversation...</Text>
       </SafeAreaView>
     );
@@ -381,7 +382,7 @@ export default function ChatMatch({ route, navigation }) {
               >
                 <Animated.View style={{ transform: [{ scale: sendScale }] }}>
                   <LinearGradient
-                    colors={newMessage.trim() ? ['#f9c349', '#f5a623'] : ['#E5E5EA', '#E5E5EA']}
+                    colors={newMessage.trim() ? [tdcColors.yellow, '#f5a623'] : ['#E5E5EA', '#E5E5EA']}
                     style={styles.sendGradient}
                   >
                     {sending ? (
@@ -541,7 +542,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   messageBubbleOwn: {
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     borderBottomRightRadius: 4,
   },
   messageBubbleOther: {
@@ -553,7 +554,7 @@ const styles = StyleSheet.create({
   senderNameText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#f9c349',
+    color: tdcColors.yellow,
     marginBottom: 2,
   },
   messageText: {

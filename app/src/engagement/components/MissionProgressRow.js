@@ -1,8 +1,9 @@
 // app/src/engagement/components/MissionProgressRow.js
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { colors } from '../../theme';
 
-const GOLD = '#f9c349';
+const GOLD = colors.yellow;
 const MUTED = '#888';
 const EMPTY = '#e5e5e5';
 

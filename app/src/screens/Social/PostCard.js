@@ -33,6 +33,7 @@ import {
 } from "../../lib/tdcSounds";
 
 import BadgePip from '../../engagement/components/BadgePip';
+import { colors as tdcColors } from "../../theme";
 
 const { width, height } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
@@ -408,8 +409,8 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
 
   const getStatusDisplay = () => {
     if (isOwnPost) return null;
-    if (connectionStatus === 'connected') return { text: 'Connected', color: '#f9c349' };
-    if (connectionStatus === 'pending') return { text: 'Request Sent', color: '#f9c349' };
+    if (connectionStatus === 'connected') return { text: 'Connected', color: tdcColors.yellow };
+    if (connectionStatus === 'pending') return { text: 'Request Sent', color: tdcColors.yellow };
     if (connectionStatus === 'received') return { text: 'Request Received', color: '#4CAF50' };
     return null;
   };
@@ -877,7 +878,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
             {item.user?.profileImage ? (
               <Image source={{ uri: item.user.profileImage }} style={styles.avatarLg} />
             ) : (
-              <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.avatarLgPlaceholder}>
+              <LinearGradient colors={[tdcColors.yellow, '#e6b800']} style={styles.avatarLgPlaceholder}>
                 <Text style={styles.avatarLgText}>
                   {item.user?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </Text>
@@ -959,7 +960,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                     {reply.user?.profileImage ? (
                       <Image source={{ uri: reply.user.profileImage }} style={styles.avatarSm} />
                     ) : (
-                      <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.avatarSmPlaceholder}>
+                      <LinearGradient colors={[tdcColors.yellow, '#e6b800']} style={styles.avatarSmPlaceholder}>
                         <Text style={styles.avatarSmText}>
                           {replyAuthorName.charAt(0).toUpperCase()}
                         </Text>
@@ -1040,7 +1041,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
             )}
             {showConnectButton && (
               <TouchableOpacity style={styles.plusBadge} onPress={handleConnect} disabled={isConnecting}>
-                <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.plusBadgeGradient}>
+                <LinearGradient colors={[tdcColors.yellow, '#e6b800']} style={styles.plusBadgeGradient}>
                   {isConnecting ? <ActivityIndicator size={10} color="#fff" /> : <Ionicons name="add" size={14} color="#fff" />}
                 </LinearGradient>
               </TouchableOpacity>
@@ -1097,7 +1098,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
           <View style={styles.imageContainer}>
             {!imageLoaded && (
               <View style={styles.imageLoading}>
-                <ActivityIndicator color="#f9c349" />
+                <ActivityIndicator color={tdcColors.yellow} />
               </View>
             )}
             <Image
@@ -1122,7 +1123,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
               <Ionicons
                 name={isLiked ? "heart" : "heart-outline"}
                 size={20}
-                color={isLiked ? "#f9c349" : "#666"}
+                color={isLiked ? tdcColors.yellow : "#666"}
               />
             </Animated.View>
             <Text style={[styles.actionCount, isLiked && styles.actionCountActive]}>
@@ -1149,7 +1150,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
               <Ionicons
                 name={isSaved ? "bookmark" : "bookmark-outline"}
                 size={20}
-                color={isSaved ? "#f9c349" : "#666"}
+                color={isSaved ? tdcColors.yellow : "#666"}
               />
             </TouchableOpacity>
           </Animated.View>
@@ -1182,7 +1183,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
             <View style={styles.dragHandle} />
             <View style={styles.modalHeader}>
               <View style={styles.modalHeaderLeft}>
-                <Ionicons name="chatbubbles" size={20} color="#f9c349" />
+                <Ionicons name="chatbubbles" size={20} color={tdcColors.yellow} />
                 <Text style={styles.modalTitle}>Comments</Text>
                 <View style={styles.commentCountBadge}>
                   <Text style={styles.commentCountBadgeText}>{totalCommentsCount}</Text>
@@ -1220,7 +1221,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                 {replyTo && (
                   <View style={styles.replyNotifier}>
                     <View style={styles.replyNotifierLeft}>
-                      <Ionicons name="return-down-forward" size={14} color="#f9c349" />
+                      <Ionicons name="return-down-forward" size={14} color={tdcColors.yellow} />
                       <Text style={styles.replyNotifierText}>
                         Replying to <Text style={styles.replyNotifierName}>{replyTo.userName}</Text>
                       </Text>
@@ -1253,7 +1254,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                           {item.profileImage ? (
                             <Image source={{ uri: item.profileImage }} style={styles.mentionAvatar} />
                           ) : (
-                            <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.mentionAvatarPlaceholder}>
+                            <LinearGradient colors={[tdcColors.yellow, '#e6b800']} style={styles.mentionAvatarPlaceholder}>
                               <Text style={styles.mentionAvatarText}>
                                 {item.name?.charAt(0)?.toUpperCase()}
                               </Text>
@@ -1291,7 +1292,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                       style={[styles.postBtn, !commentText.trim() && styles.postBtnDisabled]}
                     >
                       <LinearGradient
-                        colors={commentText.trim() ? ['#f9c349', '#e6b800'] : ['#e0e0e0', '#e0e0e0']}
+                        colors={commentText.trim() ? [tdcColors.yellow, '#e6b800'] : ['#e0e0e0', '#e0e0e0']}
                         style={styles.postBtnGradient}
                       >
                         {isSubmitting ? (
@@ -1323,7 +1324,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                   <Ionicons
                     name={isSaved ? "bookmark" : "bookmark-outline"}
                     size={20}
-                    color={isSaved ? "#f9c349" : "#1a1a1a"}
+                    color={isSaved ? tdcColors.yellow : "#1a1a1a"}
                   />
                 </View>
                 <Text style={styles.menuText}>{isSaved ? "Remove from Saved" : "Save Post"}</Text>
@@ -1438,7 +1439,7 @@ const styles = StyleSheet.create({
 
   contentContainer: { paddingHorizontal: 16, marginTop: 10 },
   postText: { fontSize: 15, color: "#1a1a1a", lineHeight: 22, fontWeight: '400' },
-  showMoreText: { fontSize: 14, color: '#f9c349', fontWeight: '700', marginTop: 4, paddingVertical: 4 },
+  showMoreText: { fontSize: 14, color: tdcColors.yellow, fontWeight: '700', marginTop: 4, paddingVertical: 4 },
   imageContainer: { marginTop: 12, borderRadius: 14, overflow: 'hidden', backgroundColor: '#f8f8f8', position: 'relative' },
   imageLoading: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: 1 },
   postImage: { width: "100%", height: 280, borderRadius: 14 },
@@ -1448,7 +1449,7 @@ const styles = StyleSheet.create({
   actionBtn: { flexDirection: "row", alignItems: "center", paddingVertical: 6, paddingHorizontal: 10, borderRadius: 20, gap: 5 },
   actionBtnActive: { backgroundColor: '#fef9f0' },
   actionCount: { fontSize: 13, color: "#666", fontWeight: "600" },
-  actionCountActive: { color: "#f9c349" },
+  actionCountActive: { color: tdcColors.yellow },
   saveBtn: { padding: 6, borderRadius: 20 },
   saveBtnActive: { backgroundColor: '#fef9f0' },
 
@@ -1588,7 +1589,7 @@ const styles = StyleSheet.create({
   },
   replyNotifierLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   replyNotifierText: { fontSize: 12, color: '#666' },
-  replyNotifierName: { fontWeight: '700', color: '#f9c349' },
+  replyNotifierName: { fontWeight: '700', color: tdcColors.yellow },
   inputArea: { flexDirection: "row", paddingHorizontal: 12, paddingVertical: 10, alignItems: "flex-end", gap: 8 },
   commentInput: {
     flex: 1,

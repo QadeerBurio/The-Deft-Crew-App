@@ -15,6 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Video, ResizeMode } from "expo-av";
+import { colors as tdcColors } from "../theme";
 
 const { width, height } = Dimensions.get("window");
 
@@ -117,7 +118,7 @@ export default function AboutScreen() {
   };
 
   const features = [
-    { title: "Student Deals", desc: "Discounts at 100+ brands", icon: "pricetag-outline", color: "#f9c349" },
+    { title: "Student Deals", desc: "Discounts at 100+ brands", icon: "pricetag-outline", color: tdcColors.yellow },
     { title: "Skills Share", desc: "Learn from other students", icon: "people-outline", color: "#a29bfe" },
     { title: "Premium Events", desc: "Workshops and meetups", icon: "calendar-outline", color: "#fd79a8" },
     { title: "Resume Builder", desc: "AI resumes that pass ATS", icon: "document-text-outline", color: "#00b894" },
@@ -203,13 +204,13 @@ export default function AboutScreen() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <Text style={styles.heroBrandName}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
+              <Text style={styles.heroBrandName}>tdc<Text style={{color:tdcColors.yellow}}>.</Text></Text>
               <View style={styles.heroTaglineBadge}>
                 <Text style={styles.heroTaglineText}>STUDENT ECOSYSTEM</Text>
               </View>
               <Text style={styles.heroDesc}>
                 Pakistan's {' '}
-                <Text style={{ fontWeight: '700', color: '#f9c349' }}>student & alumni community</Text>
+                <Text style={{ fontWeight: '700', color: tdcColors.yellow }}>student & alumni community</Text>
                 . for savings, careers and everything in between.
               </Text>
 
@@ -237,15 +238,15 @@ export default function AboutScreen() {
               </Text>
               <View style={styles.aboutHighlights}>
                 <View style={styles.highlightItem}>
-                  <Ionicons name="checkmark-circle" size={14} color="#f9c349" />
+                  <Ionicons name="checkmark-circle" size={14} color={tdcColors.yellow} />
                   <Text style={styles.highlightText}>100+ Partner Brands</Text>
                 </View>
                 <View style={styles.highlightItem}>
-                  <Ionicons name="checkmark-circle" size={14} color="#f9c349" />
+                  <Ionicons name="checkmark-circle" size={14} color={tdcColors.yellow} />
                   <Text style={styles.highlightText}>15+ Universities</Text>
                 </View>
                 <View style={styles.highlightItem}>
-                  <Ionicons name="checkmark-circle" size={14} color="#f9c349" />
+                  <Ionicons name="checkmark-circle" size={14} color={tdcColors.yellow} />
                   <Text style={styles.highlightText}>10,000+ Active Students</Text>
                 </View>
               </View>
@@ -305,7 +306,7 @@ The idea for tdc came in 2025. By early 2026, it was live. Student discounts at 
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerLogo}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
+            <Text style={styles.footerLogo}>tdc<Text style={{color:tdcColors.yellow}}>.</Text></Text>
             <Text style={styles.footerText}>Making student life simpler and careers easier.</Text>
             <Text style={styles.footerSubText}>© 2026 The Deft Crew</Text>
           </View>
@@ -389,7 +390,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(249, 195, 73, 0.15)",
   },
   heroTaglineText: {
-    color: "#f9c349",
+    color: tdcColors.yellow,
     fontSize: 8,
     fontWeight: "700",
     letterSpacing: 1.5,
@@ -411,13 +412,13 @@ const styles = StyleSheet.create({
   decorSegment: {
     width: 20,
     height: 1.5,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     borderRadius: 1,
   },
   decorDiamond: {
     width: 5,
     height: 5,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     transform: [{ rotate: '45deg' }],
     marginHorizontal: 8,
   },
@@ -453,7 +454,7 @@ const styles = StyleSheet.create({
   playBtn: {
     borderRadius: 22,
     overflow: 'hidden',
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -492,7 +493,7 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: "100%",
-    backgroundColor: "#f9c349",
+    backgroundColor: tdcColors.yellow,
     borderRadius: 1.5
   },
   timeLabel: {
@@ -532,7 +533,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     marginRight: 8,
   },
   sectionTitle: {

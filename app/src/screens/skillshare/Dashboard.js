@@ -19,8 +19,9 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../../context/AuthContext';
 import ListingCard from '../../components/ListingCard';
 import useMyProfessionalProfile from '../../hooks/useMyProfessionalProfile';
+import { colors as tdcColors } from '../../theme';
 
-const BRAND = '#f9c349';
+const BRAND = tdcColors.yellow;
 const INK = '#1a1a1a';
 const MUTED = '#999';
 const BORDER = '#1a1a1a';

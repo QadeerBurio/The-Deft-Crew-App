@@ -14,12 +14,13 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import { colors } from '../../theme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Modern color palette - Black, White, Gold
 const COLORS = {
-  primary: '#F9C349',
+  primary: colors.yellow,
   primaryLight: '#FAD775',
   primaryDark: '#E0A830',
   background: 'rgba(249, 195, 73, 0.15)',

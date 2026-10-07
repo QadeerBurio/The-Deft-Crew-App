@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { colors as tdcColors } from '../theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -245,7 +246,7 @@ export default function TermsScreen({ navigation }) {
               <Ionicons 
                 name="document-text-outline" 
                 size={18} 
-                color={activeTab === 'terms' ? '#f9c349' : '#999'} 
+                color={activeTab === 'terms' ? tdcColors.yellow : '#999'} 
               />
             </View>
             <Text style={[styles.tabText, activeTab === 'terms' && styles.tabTextActive]}>
@@ -265,7 +266,7 @@ export default function TermsScreen({ navigation }) {
               <Ionicons 
                 name="shield-outline" 
                 size={18} 
-                color={activeTab === 'privacy' ? '#f9c349' : '#999'} 
+                color={activeTab === 'privacy' ? tdcColors.yellow : '#999'} 
               />
             </View>
             <Text style={[styles.tabText, activeTab === 'privacy' && styles.tabTextActive]}>
@@ -347,7 +348,7 @@ export default function TermsScreen({ navigation }) {
               activeOpacity={0.8}
             >
               <LinearGradient
-                colors={agreed ? ['#f9c349', '#f5a623'] : ['#e0e0e0', '#e0e0e0']}
+                colors={agreed ? [tdcColors.yellow, '#f5a623'] : ['#e0e0e0', '#e0e0e0']}
                 style={styles.continueGradient}
               >
                 <Text style={[styles.continueText, !agreed && styles.continueTextDisabled]}>
@@ -497,7 +498,7 @@ const styles = StyleSheet.create({
     marginLeft: -12,
     width: 24,
     height: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     borderRadius: 2,
   },
   scrollView: {
@@ -530,7 +531,7 @@ const styles = StyleSheet.create({
   heroDivider: {
     width: 32,
     height: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     borderRadius: 2,
     marginTop: 10,
   },
@@ -557,7 +558,7 @@ const styles = StyleSheet.create({
   sectionNumber: {
     fontSize: 11,
     fontWeight: '900',
-    color: '#f9c349',
+    color: tdcColors.yellow,
     letterSpacing: 0.5,
     marginRight: 8,
   },
@@ -603,8 +604,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   checkboxChecked: {
-    backgroundColor: '#f9c349',
-    borderColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
+    borderColor: tdcColors.yellow,
   },
   agreementText: {
     flex: 1,
@@ -619,7 +620,7 @@ const styles = StyleSheet.create({
   continueBtn: {
     borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,

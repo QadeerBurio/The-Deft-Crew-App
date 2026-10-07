@@ -31,6 +31,7 @@ import * as Haptics from "expo-haptics";
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/api";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { colors as tdcColors } from "../theme";
 
 const { width } = Dimensions.get("window");
 const CARD_W = width - 32;
@@ -39,7 +40,7 @@ const CHIP_IMAGE = require("../../../assets/images/chip.png");
 const BACKGROUND_IMAGE = require("../../../assets/images/background.jpeg");
 
 // ─── Theme ───
-const GOLD = "#f9c349";
+const GOLD = tdcColors.yellow;
 const GOLD_DARK = "#e0a82e";
 const GOLD_LIGHT = "#fffbee";
 const BLACK = "#0f0f0f";

@@ -15,6 +15,7 @@ import axios from 'axios';
 import { AuthContext } from "../../context/AuthContext";
 import { TouchableWithoutFeedback } from 'react-native';
 import { soundLike, soundTap } from "../../lib/tdcSounds";
+import { colors as tdcColors } from '../../theme';
 const { width, height } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 const COMMENTS_POLL_INTERVAL = 6000;
@@ -995,7 +996,7 @@ export default function UserProfile({ route, navigation }) {
             {item.user?.profileImage ? (
               <Image source={{ uri: item.user.profileImage }} style={styles.avatarLg} />
             ) : (
-              <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.avatarLgPlaceholder}>
+              <LinearGradient colors={[tdcColors.yellow, '#e6b800']} style={styles.avatarLgPlaceholder}>
                 <Text style={styles.avatarLgText}>
                   {item.user?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </Text>
@@ -1076,7 +1077,7 @@ export default function UserProfile({ route, navigation }) {
                     {reply.user?.profileImage ? (
                       <Image source={{ uri: reply.user.profileImage }} style={styles.avatarSm} />
                     ) : (
-                      <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.avatarSmPlaceholder}>
+                      <LinearGradient colors={[tdcColors.yellow, '#e6b800']} style={styles.avatarSmPlaceholder}>
                         <Text style={styles.avatarSmText}>
                           {replyAuthorName.charAt(0).toUpperCase()}
                         </Text>
@@ -1260,7 +1261,7 @@ export default function UserProfile({ route, navigation }) {
         <View style={styles.btnRow}>
           <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('EditProfile')}>
             <LinearGradient colors={['#1a1a1a', '#1a1a1a']} style={styles.editGradient}>
-              <Ionicons name="create-outline" size={16} color="#f9c349" />
+              <Ionicons name="create-outline" size={16} color={tdcColors.yellow} />
               <Text style={styles.editBtnText}>Edit Profile</Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -1272,13 +1273,13 @@ export default function UserProfile({ route, navigation }) {
       return (
         <View style={styles.btnRow}>
           <TouchableOpacity style={styles.connectedBtn} onPress={handleDisconnect}>
-            <LinearGradient colors={['#f9c349', '#f9c349']} style={styles.btnGradient}>
+            <LinearGradient colors={[tdcColors.yellow, tdcColors.yellow]} style={styles.btnGradient}>
               <Ionicons name="checkmark-circle" size={16} color="#1a1a1a" />
               <Text style={styles.connectedBtnText}>Connected</Text>
             </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity style={styles.msgBtn} onPress={handleMessagePress}>
-            <Ionicons name="chatbubble-outline" size={16} color="#f9c349" />
+            <Ionicons name="chatbubble-outline" size={16} color={tdcColors.yellow} />
             <Text style={styles.msgBtnText}>Message</Text>
           </TouchableOpacity>
         </View>
@@ -1322,13 +1323,13 @@ export default function UserProfile({ route, navigation }) {
     return (
       <View style={styles.btnRow}>
         <TouchableOpacity style={styles.connectBtn} onPress={handleConnect}>
-          <LinearGradient colors={['#f9c349', '#f9c349']} style={styles.btnGradient}>
+          <LinearGradient colors={[tdcColors.yellow, tdcColors.yellow]} style={styles.btnGradient}>
             <Ionicons name="person-add" size={16} color="#1a1a1a" />
             <Text style={styles.connectedBtnText}>Connect</Text>
           </LinearGradient>
         </TouchableOpacity>
         <TouchableOpacity style={styles.msgBtn} onPress={handleMessagePress}>
-          <Ionicons name="chatbubble-outline" size={16} color="#f9c349" />
+          <Ionicons name="chatbubble-outline" size={16} color={tdcColors.yellow} />
           <Text style={styles.msgBtnText}>Message</Text>
         </TouchableOpacity>
       </View>
@@ -1357,7 +1358,7 @@ export default function UserProfile({ route, navigation }) {
         {profileData?.bio && (
           <View style={styles.aboutSection}>
             <View style={styles.aboutIcon}>
-              <Ionicons name="person-outline" size={20} color="#f9c349" />
+              <Ionicons name="person-outline" size={20} color={tdcColors.yellow} />
             </View>
             <View style={styles.aboutContent}>
               <Text style={styles.aboutLabel}>Bio</Text>
@@ -1369,7 +1370,7 @@ export default function UserProfile({ route, navigation }) {
         {profileData?.university?.name && (
           <View style={styles.aboutSection}>
             <View style={styles.aboutIcon}>
-              <Ionicons name="school-outline" size={20} color="#f9c349" />
+              <Ionicons name="school-outline" size={20} color={tdcColors.yellow} />
             </View>
             <View style={styles.aboutContent}>
               <Text style={styles.aboutLabel}>University</Text>
@@ -1389,7 +1390,7 @@ export default function UserProfile({ route, navigation }) {
         {profileData?.location && (
           <View style={styles.aboutSection}>
             <View style={styles.aboutIcon}>
-              <Ionicons name="location-outline" size={20} color="#f9c349" />
+              <Ionicons name="location-outline" size={20} color={tdcColors.yellow} />
             </View>
             <View style={styles.aboutContent}>
               <Text style={styles.aboutLabel}>Location</Text>
@@ -1401,7 +1402,7 @@ export default function UserProfile({ route, navigation }) {
         {profileData?.headline && (
           <View style={styles.aboutSection}>
             <View style={styles.aboutIcon}>
-              <Ionicons name="briefcase-outline" size={20} color="#f9c349" />
+              <Ionicons name="briefcase-outline" size={20} color={tdcColors.yellow} />
             </View>
             <View style={styles.aboutContent}>
               <Text style={styles.aboutLabel}>Headline</Text>
@@ -1413,7 +1414,7 @@ export default function UserProfile({ route, navigation }) {
         {profileData?.createdAt && (
           <View style={styles.aboutSection}>
             <View style={styles.aboutIcon}>
-              <Ionicons name="calendar-outline" size={20} color="#f9c349" />
+              <Ionicons name="calendar-outline" size={20} color={tdcColors.yellow} />
             </View>
             <View style={styles.aboutContent}>
               <Text style={styles.aboutLabel}>Joined</Text>
@@ -1461,7 +1462,7 @@ export default function UserProfile({ route, navigation }) {
           {profileData?.profileImage ? (
             <Image source={{ uri: profileData.profileImage }} style={styles.postAvatar} />
           ) : (
-            <LinearGradient colors={['#f9c349', '#f9c349']} style={styles.postAvatarPlaceholder}>
+            <LinearGradient colors={[tdcColors.yellow, tdcColors.yellow]} style={styles.postAvatarPlaceholder}>
               <Text style={styles.postAvatarText}>{profileData?.name?.charAt(0)?.toUpperCase()}</Text>
             </LinearGradient>
           )}
@@ -1473,7 +1474,7 @@ export default function UserProfile({ route, navigation }) {
           </Text>
           {isOwnProfile && (
             <TouchableOpacity onPress={() => handleDeletePost(item._id)} style={styles.deleteBtn}>
-              <Ionicons name="trash-outline" size={16} color="#f9c349" />
+              <Ionicons name="trash-outline" size={16} color={tdcColors.yellow} />
             </TouchableOpacity>
           )}
         </View>
@@ -1502,10 +1503,10 @@ export default function UserProfile({ route, navigation }) {
               <Ionicons
                 name={isLiked ? "heart" : "heart-outline"}
                 size={18}
-                color={isLiked ? "#f9c349" : "#71767b"}
+                color={isLiked ? tdcColors.yellow : "#71767b"}
               />
             </Animated.View>
-            <Text style={[styles.actionText, isLiked && { color: "#f9c349" }]}>{likeCount}</Text>
+            <Text style={[styles.actionText, isLiked && { color: tdcColors.yellow }]}>{likeCount}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionBtn} onPress={() => openComments(item)}>
@@ -1545,7 +1546,7 @@ export default function UserProfile({ route, navigation }) {
             You have blocked this user. They cannot interact with you.
           </Text>
           <TouchableOpacity style={styles.unblockFullBtn} onPress={handleUnblockUser}>
-            <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.unblockFullGradient}>
+            <LinearGradient colors={[tdcColors.yellow, '#e6b800']} style={styles.unblockFullGradient}>
               <Ionicons name="person-add" size={20} color="#1a1a1a" />
               <Text style={styles.unblockFullBtnText}>Unblock User</Text>
             </LinearGradient>
@@ -1603,8 +1604,8 @@ export default function UserProfile({ route, navigation }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#f9c349"
-            colors={["#f9c349"]}
+            tintColor={tdcColors.yellow}
+            colors={[tdcColors.yellow]}
           />
         }
         ListHeaderComponent={
@@ -1626,7 +1627,7 @@ export default function UserProfile({ route, navigation }) {
                     {profileData?.profileImage ? (
                       <Image source={{ uri: profileData.profileImage }} style={styles.avatar} />
                     ) : (
-                      <LinearGradient colors={['#f9c349', '#f9c349']} style={styles.avatarPlaceholder}>
+                      <LinearGradient colors={[tdcColors.yellow, tdcColors.yellow]} style={styles.avatarPlaceholder}>
                         <Text style={styles.avatarText}>{profileData?.name?.charAt(0)?.toUpperCase()}</Text>
                       </LinearGradient>
                     )}
@@ -1691,7 +1692,7 @@ export default function UserProfile({ route, navigation }) {
                       <Ionicons
                         name={isBlocked ? "person-add" : "ban-outline"}
                         size={20}
-                        color={isBlocked ? "#f9c349" : "#e74c3c"}
+                        color={isBlocked ? tdcColors.yellow : "#e74c3c"}
                       />
                     </View>
                     <Text style={[styles.menuText, isBlocked ? styles.menuUnblockText : styles.menuBlockText]}>
@@ -1786,7 +1787,7 @@ export default function UserProfile({ route, navigation }) {
                 <View style={styles.dragHandle} />
                 <View style={styles.commentModalHeader}>
                   <View style={styles.commentModalHeaderLeft}>
-                    <Ionicons name="chatbubbles" size={20} color="#f9c349" />
+                    <Ionicons name="chatbubbles" size={20} color={tdcColors.yellow} />
                     <Text style={styles.commentModalTitle}>Comments</Text>
                     <View style={styles.commentCountBadge}>
                       <Text style={styles.commentCountBadgeText}>{commentsList.length}</Text>
@@ -1835,7 +1836,7 @@ export default function UserProfile({ route, navigation }) {
                     {replyTo && (
                       <View style={styles.replyNotifier}>
                         <View style={styles.replyNotifierLeft}>
-                          <Ionicons name="return-down-forward" size={14} color="#f9c349" />
+                          <Ionicons name="return-down-forward" size={14} color={tdcColors.yellow} />
                           <Text style={styles.replyNotifierText}>
                             Replying to <Text style={styles.replyNotifierName}>{replyTo.userName}</Text>
                           </Text>
@@ -1867,7 +1868,7 @@ export default function UserProfile({ route, navigation }) {
                                 <Image source={{ uri: item.profileImage }} style={styles.mentionAvatar} />
                               ) : (
                                 <LinearGradient
-                                  colors={['#f9c349', '#e6b800']}
+                                  colors={[tdcColors.yellow, '#e6b800']}
                                   style={styles.mentionAvatarPlaceholder}
                                 >
                                   <Text style={styles.mentionAvatarText}>
@@ -1905,7 +1906,7 @@ export default function UserProfile({ route, navigation }) {
                         style={[styles.postCommentBtn, !commentText.trim() && styles.postCommentBtnDisabled]}
                       >
                         <LinearGradient
-                          colors={commentText.trim() ? ['#f9c349', '#e6b800'] : ['#ccc', '#ddd']}
+                          colors={commentText.trim() ? [tdcColors.yellow, '#e6b800'] : ['#ccc', '#ddd']}
                           style={styles.postCommentBtnGradient}
                         >
                           {isSubmittingComment ? (
@@ -1964,7 +1965,7 @@ const styles = StyleSheet.create({
   btnRow: { flexDirection: 'row', marginTop: 12, gap: 8 },
   editBtn: { flex: 1, borderRadius: 20, overflow: 'hidden' },
   editGradient: { flexDirection: 'row', height: 40, justifyContent: 'center', alignItems: 'center', gap: 8, borderRadius: 20 },
-  editBtnText: { color: '#f9c349', fontWeight: '700', fontSize: 14 },
+  editBtnText: { color: tdcColors.yellow, fontWeight: '700', fontSize: 14 },
   connectBtn: { flex: 1, borderRadius: 20, overflow: 'hidden' },
   connectedBtn: { flex: 1, borderRadius: 20, overflow: 'hidden' },
   btnGradient: { flexDirection: 'row', height: 40, justifyContent: 'center', alignItems: 'center', gap: 8, borderRadius: 20 },
@@ -1987,7 +1988,7 @@ const styles = StyleSheet.create({
   activeTab: { position: 'relative' },
   tabText: { fontSize: 15, fontWeight: '500', color: '#71767b' },
   activeTabText: { color: '#1a1a1a', fontWeight: '700' },
-  tabIndicator: { position: 'absolute', bottom: 0, width: 56, height: 4, borderRadius: 2, backgroundColor: '#f9c349' },
+  tabIndicator: { position: 'absolute', bottom: 0, width: 56, height: 4, borderRadius: 2, backgroundColor: tdcColors.yellow },
   tabContentContainer: { padding: 16 },
   aboutSection: { flexDirection: 'row', marginBottom: 18, alignItems: 'flex-start' },
   aboutIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#eff3f4', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
@@ -2014,7 +2015,7 @@ const styles = StyleSheet.create({
   deleteBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#eff3f4', justifyContent: 'center', alignItems: 'center' },
   postText: { fontSize: 15, color: '#1a1a1a', lineHeight: 22, marginBottom: 4 },
   showMoreBtn: { marginTop: 2 },
-  showMoreText: { color: '#f9c349', fontSize: 14, fontWeight: '500' },
+  showMoreText: { color: tdcColors.yellow, fontSize: 14, fontWeight: '500' },
   postImage: { width: '100%', height: 250, borderRadius: 16, backgroundColor: '#eff3f4', marginTop: 8 },
   postActions: { flexDirection: 'row', marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#eff3f4', alignItems: 'center' },
   actionBtn: { flexDirection: 'row', alignItems: 'center', marginRight: 20, gap: 4 },
@@ -2046,7 +2047,7 @@ const styles = StyleSheet.create({
   unblockFullBtn: { marginTop: 24, borderRadius: 12, overflow: 'hidden' },
   unblockFullGradient: { flexDirection: 'row', paddingHorizontal: 32, paddingVertical: 14, alignItems: 'center', gap: 10 },
   unblockFullBtnText: { fontSize: 16, fontWeight: '700', color: '#1a1a1a' },
-  unblockBtn: { marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#f9c349', borderRadius: 10 },
+  unblockBtn: { marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: tdcColors.yellow, borderRadius: 10 },
   unblockBtnText: { fontSize: 16, fontWeight: '700', color: '#1a1a1a' },
 
   menuBox: {
@@ -2093,7 +2094,7 @@ const styles = StyleSheet.create({
   bubbleLg: { backgroundColor: "#f0f2f5", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18, borderTopLeftRadius: 4, alignSelf: 'flex-start', maxWidth: '100%' },
   bubbleHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 },
   authorNameLg: { fontWeight: "700", fontSize: 13, color: '#1a1a1a' },
-  ownBadge: { backgroundColor: '#f9c349', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 },
+  ownBadge: { backgroundColor: tdcColors.yellow, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 },
   ownBadgeText: { fontSize: 9, fontWeight: '700', color: '#1a1a1a' },
   commentText: { fontSize: 14, color: "#1a1a1a", lineHeight: 20 },
   metaRowLg: { flexDirection: 'row', marginTop: 5, marginLeft: 14, alignItems: 'center' },
@@ -2116,7 +2117,7 @@ const styles = StyleSheet.create({
   avatarSmText: { fontWeight: "700", color: "#1a1a1a", fontSize: 12 },
   replyContent: { flex: 1 },
   bubbleSm: { backgroundColor: "#f0f2f5", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, borderTopLeftRadius: 4, alignSelf: 'flex-start', maxWidth: '100%' },
-  ownBadgeSmall: { backgroundColor: '#f9c349', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 },
+  ownBadgeSmall: { backgroundColor: tdcColors.yellow, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 },
   ownBadgeTextSmall: { fontSize: 8, fontWeight: '700', color: '#1a1a1a' },
   authorNameSm: { fontWeight: "700", fontSize: 12, color: '#1a1a1a' },
   replyTextContent: { fontSize: 13, color: "#1a1a1a", lineHeight: 18 },
@@ -2133,7 +2134,7 @@ const styles = StyleSheet.create({
   replyNotifier: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#fef9f0', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   replyNotifierLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   replyNotifierText: { fontSize: 12, color: '#666' },
-  replyNotifierName: { fontWeight: '700', color: '#f9c349' },
+  replyNotifierName: { fontWeight: '700', color: tdcColors.yellow },
 
   mentionSuggestions: { backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f0f0f0', maxHeight: 200 },
   mentionItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 10, borderBottomWidth: 1, borderBottomColor: '#f8f8f8' },

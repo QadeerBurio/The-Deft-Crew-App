@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
-import NotificationModal from './NotificationModal';  // ✅ FIXED: Use default import (no braces)
+import NotificationModal from './NotificationModal';
+import { colors } from '../theme';  // ✅ FIXED: Use default import (no braces)
 
 const { width } = Dimensions.get('window');
 
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -6,
     right: -6,
-    backgroundColor: '#f9c349',
+    backgroundColor: colors.yellow,
     minWidth: 20,
     height: 20,
     borderRadius: 10,

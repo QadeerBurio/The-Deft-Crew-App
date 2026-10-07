@@ -20,6 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../../context/AuthContext';
 import { getMyInquiries } from '../../api/api';
 import { timeAgo } from '../../utils/time';
+import { colors as tdcColors } from '../../theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -137,7 +138,7 @@ const InquiryItem = React.memo(({ item, index, onPress }) => {
             activeOpacity={0.7}
           >
             <LinearGradient
-              colors={['#f9c349', '#f7b731']}
+              colors={[tdcColors.yellow, '#f7b731']}
               style={styles.chatGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -236,7 +237,7 @@ export default function MyInquiriesScreen({ navigation }) {
     return (
       <SafeAreaView style={styles.centerContainer}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-        <ActivityIndicator size="large" color="#f9c349" />
+        <ActivityIndicator size="large" color={tdcColors.yellow} />
         <Text style={styles.loadingText}>Loading your inquiries...</Text>
       </SafeAreaView>
     );
@@ -254,7 +255,7 @@ export default function MyInquiriesScreen({ navigation }) {
           onPress={() => navigation.navigate('Login')}
         >
           <LinearGradient
-            colors={['#f9c349', '#f7b731']}
+            colors={[tdcColors.yellow, '#f7b731']}
             style={styles.loginGradient}
           >
             <Text style={styles.loginButtonText}>Login</Text>
@@ -330,7 +331,7 @@ export default function MyInquiriesScreen({ navigation }) {
               style={styles.statCardButton}
               onPress={() => navigation.navigate('Dashboard')}
             >
-              <Ionicons name="search-outline" size={32} color="#f9c349" />
+              <Ionicons name="search-outline" size={32} color={tdcColors.yellow} />
               <Text style={styles.statCardButtonText}>Browse Listings</Text>
             </TouchableOpacity>
           </LinearGradient>
@@ -362,8 +363,8 @@ export default function MyInquiriesScreen({ navigation }) {
             <RefreshControl 
               refreshing={refreshing} 
               onRefresh={handleRefresh}
-              tintColor="#f9c349"
-              colors={["#f9c349"]}
+              tintColor={tdcColors.yellow}
+              colors={[tdcColors.yellow]}
             />
           }
           ListEmptyComponent={
@@ -372,7 +373,7 @@ export default function MyInquiriesScreen({ navigation }) {
                 colors={['#f9c34920', '#f7b73120']}
                 style={styles.emptyIconContainer}
               >
-                <Ionicons name="chatbubbles-outline" size={64} color="#f9c349" />
+                <Ionicons name="chatbubbles-outline" size={64} color={tdcColors.yellow} />
               </LinearGradient>
               <Text style={styles.emptyTitle}>No Inquiries Yet</Text>
               <Text style={styles.emptySubtext}>
@@ -383,7 +384,7 @@ export default function MyInquiriesScreen({ navigation }) {
                 onPress={() => navigation.navigate('Dashboard')}
               >
                 <LinearGradient
-                  colors={['#f9c349', '#f7b731']}
+                  colors={[tdcColors.yellow, '#f7b731']}
                   style={styles.emptyButtonGradient}
                 >
                   <Ionicons name="search-outline" size={20} color="#FFFFFF" />
@@ -479,7 +480,7 @@ const styles = StyleSheet.create({
   },
   statCardButtonText: {
     fontSize: 12,
-    color: '#f9c349',
+    color: tdcColors.yellow,
     fontWeight: '600',
     marginTop: 2,
   },
@@ -607,7 +608,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     gap: 8,
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -645,7 +646,7 @@ const styles = StyleSheet.create({
   emptyButton: {
     borderRadius: 14,
     overflow: 'hidden',
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -667,7 +668,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderRadius: 14,
     overflow: 'hidden',
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,

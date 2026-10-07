@@ -30,6 +30,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus';
+import { colors as tdcColors } from '../../theme';
 const { width, height } = Dimensions.get('window');
 
 // ✅ FIXED: Correct API URL (no duplicate /api)
@@ -38,7 +39,7 @@ const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 const COMMENTS_POLL_INTERVAL = 6000;
 
 const COLORS = {
-  primary: '#f9c349',
+  primary: tdcColors.yellow,
   primaryDark: '#e6b800',
   primaryLight: '#fef9f0',
   white: '#ffffff',

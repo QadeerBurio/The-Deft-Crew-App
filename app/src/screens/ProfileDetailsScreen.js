@@ -35,11 +35,12 @@ import BadgeShelf from "../engagement/components/BadgeShelf";
 import StreakChip from "../engagement/components/StreakChip";
 import StreakSheet from "../engagement/components/StreakSheet";
 import { useEngagement } from "../engagement/hooks/useEngagement";
+import { colors as tdcColors } from "../theme";
 
 const { width } = Dimensions.get("window");
 
 // ─── Theme ───
-const GOLD = "#f9c349";
+const GOLD = tdcColors.yellow;
 const GOLD_DARK = "#e0a82e";
 const GOLD_DEEP = "#b8860b";
 const GOLD_LIGHT = "#fffbee";

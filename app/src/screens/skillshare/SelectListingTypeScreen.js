@@ -6,8 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { getMyListings } from '../../api/api';
 import { Image } from 'react-native'; // add Image to existing react-native import
 import useMyProfessionalProfile from '../../hooks/useMyProfessionalProfile';
+import { colors } from '../../theme';
 
-const BRAND = '#f9c349';
+const BRAND = colors.yellow;
 const INK = '#1a1a1a';
 const MUTED = '#8E8E93';
 

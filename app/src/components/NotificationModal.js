@@ -28,11 +28,12 @@ import { soundPopupOpen, soundPopupClose, playSoundForNotification } from "../li
 import { AuthContext } from "../context/AuthContext";
 import { BASE_URL } from "../api/api";
 import { navigationRef } from "../navigation/navigationRef";
+import { colors as tdcColors } from "../theme";
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // ─── Theme ───
-const GOLD = "#f9c349";
+const GOLD = tdcColors.yellow;
 const GOLD_DARK = "#e0a82e";
 const GOLD_LIGHT = "#fffbee";
 const BLACK = "#0f0f0f";

@@ -22,6 +22,7 @@ import { io } from 'socket.io-client';
 import { AuthContext } from '../../context/AuthContext';
 import { getConversationMessages, markMessagesRead } from '../../api/api';
 import { timeAgo } from '../../utils/time';
+import { colors as tdcColors } from '../../theme';
 
 const { width, height } = Dimensions.get('window');
 const SOCKET_URL = __DEV__ ? 'https://the-deft-crew-production.up.railway.app' : 'https://the-deft-crew-production.up.railway.app';
@@ -283,7 +284,7 @@ export default function InquiryChatScreen({ route, navigation }) {
     return (
       <SafeAreaView style={styles.centerContainer}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-        <ActivityIndicator size="large" color="#f9c349" />
+        <ActivityIndicator size="large" color={tdcColors.yellow} />
         <Text style={styles.loadingText}>Loading conversation...</Text>
       </SafeAreaView>
     );
@@ -310,7 +311,7 @@ export default function InquiryChatScreen({ route, navigation }) {
         <View style={styles.headerInfo}>
           <View style={styles.headerAvatar}>
             <LinearGradient
-              colors={['#f9c349', '#f7b731']}
+              colors={[tdcColors.yellow, '#f7b731']}
               style={styles.avatarGradient}
             >
               <Text style={styles.avatarText}>{getUserInitial()}</Text>
@@ -357,7 +358,7 @@ export default function InquiryChatScreen({ route, navigation }) {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconContainer}>
-                <Ionicons name="chatbubble-ellipses-outline" size={48} color="#f9c349" />
+                <Ionicons name="chatbubble-ellipses-outline" size={48} color={tdcColors.yellow} />
               </View>
               <Text style={styles.emptyText}>No messages yet</Text>
               <Text style={styles.emptySubtext}>Start the conversation about this listing</Text>
@@ -412,7 +413,7 @@ export default function InquiryChatScreen({ route, navigation }) {
             activeOpacity={0.7}
           >
             <LinearGradient
-              colors={['#f9c349', '#f7b731']}
+              colors={[tdcColors.yellow, '#f7b731']}
               style={styles.sendGradient}
             >
               <Ionicons name="send-outline" size={20} color="#FFFFFF" />
@@ -544,7 +545,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   messageBubbleOwn: {
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     borderBottomRightRadius: 4,
   },
   messageBubbleOther: {

@@ -17,8 +17,9 @@ import {
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { createSkillOffer } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
+import { colors } from '../../theme';
 
-const BRAND = '#f9c349';
+const BRAND = colors.yellow;
 const INK = '#1a1a1a';
 const MUTED = '#8E8E93';
 const BORDER = '#e5e5e5';

@@ -16,6 +16,7 @@ import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 import PostCard, { PostCardSkeleton } from "./PostCard";
 import ConfessionScreen from './ConfessionScreen';
+import { colors as tdcColors } from "../../theme";
 
 const { width, height } = Dimensions.get('window');
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
@@ -430,7 +431,7 @@ export default function FeedScreen({ navigation }) {
         </Text>
       </View>
       <View style={styles.userArrow}>
-        <Ionicons name={isGuest ? "lock-closed" : "chevron-forward"} size={16} color="#f9c349" />
+        <Ionicons name={isGuest ? "lock-closed" : "chevron-forward"} size={16} color={tdcColors.yellow} />
       </View>
     </TouchableOpacity>
   );
@@ -439,7 +440,7 @@ export default function FeedScreen({ navigation }) {
     if (!isLoadingMore) return <View style={styles.footerEnd}><Text style={styles.footerEndText}>— End of feed —</Text></View>;
     return (
       <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color="#f9c349" />
+        <ActivityIndicator size="small" color={tdcColors.yellow} />
         <Text style={styles.loadingText}>Loading more...</Text>
       </View>
     );
@@ -453,7 +454,7 @@ export default function FeedScreen({ navigation }) {
       <Text style={styles.emptyText}>No posts available</Text>
       <Text style={styles.emptySubText}>Check back later for updates!</Text>
       <TouchableOpacity style={styles.retryBtn} onPress={onRefresh} activeOpacity={0.7}>
-        <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.retryGradient}>
+        <LinearGradient colors={[tdcColors.yellow, '#1a1a1a']} style={styles.retryGradient}>
           <Ionicons name="refresh" size={18} color="#fff" />
           <Text style={styles.retryText}>Refresh Feed</Text>
         </LinearGradient>
@@ -473,8 +474,8 @@ export default function FeedScreen({ navigation }) {
             <RefreshControl 
               refreshing={refreshing} 
               onRefresh={onRefresh} 
-              tintColor="#f9c349"
-              colors={["#f9c349"]}
+              tintColor={tdcColors.yellow}
+              colors={[tdcColors.yellow]}
             />
           }
           renderItem={({ item }) => (
@@ -558,7 +559,7 @@ export default function FeedScreen({ navigation }) {
               {/* TDC Logo - Center */}
               <View style={styles.centerLogoContainer}>
                 <Animated.View style={{ transform: [{ scale: headerScale }] }}>
-                  <Text style={styles.logoText}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
+                  <Text style={styles.logoText}>tdc<Text style={{color:tdcColors.yellow}}>.</Text></Text>
                 </Animated.View>
               </View>
 
@@ -672,7 +673,7 @@ const styles = StyleSheet.create({
     fontWeight: '500'
   },
   signInButton: {
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8
@@ -733,7 +734,7 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 14, color: '#1a1a1a', fontWeight: '500' },
   cancelBtn: { marginLeft: 12 },
-  cancelText: { color: '#f9c349', fontSize: 15, fontWeight: '700' },
+  cancelText: { color: tdcColors.yellow, fontSize: 15, fontWeight: '700' },
   
   userResultItem: {
     flexDirection: 'row', alignItems: 'center', padding: 14, paddingHorizontal: 20,
@@ -742,7 +743,7 @@ const styles = StyleSheet.create({
   avatarImg: { width: 48, height: 48, borderRadius: 14 },
   avatarPlaceholder: { 
     width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center',
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
   },
   avatarText: { color: '#1a1a1a', fontWeight: '900', fontSize: 20 },
   userInfo: { flex: 1, marginLeft: 12 },
@@ -756,7 +757,7 @@ const styles = StyleSheet.create({
   badgeContainer: { position: 'relative' },
   redBadge: {
     position: 'absolute', top: 2, right: 2, width: 8, height: 8, borderRadius: 4,
-    backgroundColor: '#f9c349', borderWidth: 1.5, borderColor: '#fff',
+    backgroundColor: tdcColors.yellow, borderWidth: 1.5, borderColor: '#fff',
   },
   
   emptyContainer: { alignItems: 'center', marginTop: 80, paddingHorizontal: 40 },
@@ -788,6 +789,6 @@ const styles = StyleSheet.create({
   activeTabText: { color: '#1a1a1a', fontWeight: '700' },
   activeTabIndicator: {
     position: 'absolute', bottom: -1, left: '30%', right: '30%',
-    height: 3, backgroundColor: '#f9c349', borderRadius: 2,
+    height: 3, backgroundColor: tdcColors.yellow, borderRadius: 2,
   },
 });

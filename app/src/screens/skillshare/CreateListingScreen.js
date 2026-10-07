@@ -22,8 +22,9 @@ import { AuthContext } from '../../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import useMyProfessionalProfile from '../../hooks/useMyProfessionalProfile';
+import { colors as tdcColors } from '../../theme';
 
-const BRAND = '#f9c349';
+const BRAND = tdcColors.yellow;
 const INK = '#1C1C1E';
 const MUTED = '#8E8E93';
 

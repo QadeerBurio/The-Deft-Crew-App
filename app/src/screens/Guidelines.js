@@ -16,6 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { colors as tdcColors } from '../theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -182,7 +183,7 @@ export default function CommunityGuidelinesScreen({ navigation }) {
         >
           <View style={styles.heroIcon}>
             <LinearGradient
-              colors={['#f9c349', '#f5a623']}
+              colors={[tdcColors.yellow, '#f5a623']}
               style={styles.heroIconGradient}
             >
               <Ionicons name="people" size={28} color="#000" />
@@ -254,7 +255,7 @@ export default function CommunityGuidelinesScreen({ navigation }) {
         >
           <View style={styles.moderationHeader}>
             <View style={styles.moderationIconContainer}>
-              <Ionicons name="flag" size={20} color="#f9c349" />
+              <Ionicons name="flag" size={20} color={tdcColors.yellow} />
             </View>
             <Text style={styles.moderationTitle}>Reporting & Moderation</Text>
           </View>
@@ -328,7 +329,7 @@ export default function CommunityGuidelinesScreen({ navigation }) {
               activeOpacity={0.8}
             >
               <LinearGradient
-                colors={agreed ? ['#f9c349', '#f5a623'] : ['#e0e0e0', '#e0e0e0']}
+                colors={agreed ? [tdcColors.yellow, '#f5a623'] : ['#e0e0e0', '#e0e0e0']}
                 style={styles.continueGradient}
               >
                 <Text style={[styles.continueText, !agreed && styles.continueTextDisabled]}>
@@ -383,7 +384,7 @@ export default function CommunityGuidelinesScreen({ navigation }) {
           >
             <View style={styles.modalIconContainer}>
               <LinearGradient
-                colors={['#f9c349', '#f5a623']}
+                colors={[tdcColors.yellow, '#f5a623']}
                 style={styles.modalIcon}
               >
                 <Ionicons name="checkmark-circle" size={32} color="#000" />
@@ -401,7 +402,7 @@ export default function CommunityGuidelinesScreen({ navigation }) {
               activeOpacity={0.8}
             >
               <LinearGradient
-                colors={['#f9c349', '#f5a623']}
+                colors={[tdcColors.yellow, '#f5a623']}
                 style={styles.modalButtonGradient}
               >
                 <Text style={styles.modalButtonText}>Get Started</Text>
@@ -489,7 +490,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -615,7 +616,7 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     marginRight: 10,
     marginTop: 7,
   },
@@ -652,8 +653,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   checkboxChecked: {
-    backgroundColor: '#f9c349',
-    borderColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
+    borderColor: tdcColors.yellow,
   },
   agreementText: {
     flex: 1,
@@ -668,7 +669,7 @@ const styles = StyleSheet.create({
   continueBtn: {
     borderRadius: 10,
     overflow: 'hidden',
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
     shadowRadius: 6,

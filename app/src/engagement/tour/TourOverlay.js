@@ -13,9 +13,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTour } from './TourProvider';
 import { TOUR_STEPS } from './tourSteps';
 import { pop } from '../utils/haptics';
+import { colors } from '../../theme';
 
 const { width, height } = Dimensions.get('window');
-const GOLD = '#f9c349';
+const GOLD = colors.yellow;
 const DARK = '#1a1a1a';
 const DIM = 'rgba(0,0,0,0.75)';
 

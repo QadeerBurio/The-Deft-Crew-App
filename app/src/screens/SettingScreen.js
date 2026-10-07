@@ -24,6 +24,7 @@ import * as Haptics from "expo-haptics";
 import StreakSheet from "../engagement/components/StreakSheet";
 import { useStreak } from "../engagement/hooks/useStreak";
 import { useTour } from "../engagement/tour/TourProvider";
+import { colors } from "../theme";
 
 export default function SettingsScreen({ navigation }) {
   const { user, token, logout } = useContext(AuthContext);
@@ -145,7 +146,7 @@ export default function SettingsScreen({ navigation }) {
       icon: "person-outline",
       title: "Edit Profile",
       subtitle: "Update your personal information",
-      color: "#f9c349",
+      color: colors.yellow,
       onPress: () => navigation.navigate("EditProfile"),
     },
     {
@@ -180,7 +181,7 @@ export default function SettingsScreen({ navigation }) {
         examModeActive && examModeUntil
           ? `On until ${examModeUntil}`
           : "Your streak waits while you study",
-      color: "#f9c349",
+      color: colors.yellow,
       badge: examModeActive ? "On" : "Off",
       onPress: () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -443,7 +444,7 @@ export default function SettingsScreen({ navigation }) {
                     <Ionicons
                       name="notifications-off-outline"
                       size={20}
-                      color="#f9c349"
+                      color={colors.yellow}
                     />
                     <Text style={styles.alternativeText}>
                       Turn off notifications
@@ -456,7 +457,7 @@ export default function SettingsScreen({ navigation }) {
                       navigation.navigate("EditProfile");
                     }}
                   >
-                    <Ionicons name="create-outline" size={20} color="#f9c349" />
+                    <Ionicons name="create-outline" size={20} color={colors.yellow} />
                     <Text style={styles.alternativeText}>
                       Update your profile
                     </Text>
@@ -471,7 +472,7 @@ export default function SettingsScreen({ navigation }) {
                     <Ionicons
                       name="help-circle-outline"
                       size={20}
-                      color="#f9c349"
+                      color={colors.yellow}
                     />
                     <Text style={styles.alternativeText}>Contact support</Text>
                   </TouchableOpacity>
@@ -618,7 +619,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  userInitial: { fontSize: 22, fontWeight: "800", color: "#f9c349" },
+  userInitial: { fontSize: 22, fontWeight: "800", color: colors.yellow },
   userInfo: { flex: 1, marginLeft: 12 },
   userName: { fontSize: 16, fontWeight: "700", color: "#1a1a1a" },
   userEmail: { fontSize: 12, color: "#999", marginTop: 2 },
@@ -630,7 +631,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#f9c34930",
   },
-  userBadgeText: { fontSize: 11, fontWeight: "700", color: "#f9c349" },
+  userBadgeText: { fontSize: 11, fontWeight: "700", color: colors.yellow },
 
   // Settings Section
   settingsSection: {

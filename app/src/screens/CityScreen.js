@@ -44,6 +44,7 @@ import {
   isLocallyClaimed,
 } from "./OfferScreen";
 import { brandMatchesCity, setSelectedCity as saveSelectedCity } from "../utils/cityFilter";
+import { colors as tdcColors } from "../theme";
 
 const { width } = Dimensions.get("window");
 const HORIZONTAL_PADDING = 16;
@@ -119,7 +120,7 @@ const FeaturedCityCard = memo(({ city, brandCount, onPress }) => {
           <Text style={styles.featuredTagline}>{city.tagline}</Text>
           <Text style={styles.featuredName}>{city.name}</Text>
           <View style={styles.featuredMetaRow}>
-            <MaterialCommunityIcons name="map-marker" size={11} color="#f9c349" />
+            <MaterialCommunityIcons name="map-marker" size={11} color={tdcColors.yellow} />
             <Text style={styles.featuredProvince}>{city.province}</Text>
           </View>
         </View>
@@ -470,7 +471,7 @@ export default function CityScreen() {
       {/* Content */}
       {loading ? (
         <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color="#f9c349" />
+          <ActivityIndicator size="large" color={tdcColors.yellow} />
           <Text style={styles.loadingText}>Loading cities...</Text>
         </View>
       ) : selectedCity ? (
@@ -587,7 +588,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "#f9c349",
+    backgroundColor: tdcColors.yellow,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 20,
@@ -607,7 +608,7 @@ const styles = StyleSheet.create({
   featuredTagline: {
     fontSize: 10,
     fontWeight: "900",
-    color: "#f9c349",
+    color: tdcColors.yellow,
     letterSpacing: 1.4,
     textTransform: "uppercase",
     marginBottom: 6,
@@ -637,7 +638,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "#f9c349",
+    backgroundColor: tdcColors.yellow,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -706,7 +707,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 6,
   },
-  brandDiscountText: { fontSize: 9, fontWeight: "900", color: "#f9c349" },
+  brandDiscountText: { fontSize: 9, fontWeight: "900", color: tdcColors.yellow },
   brandInfo: { flex: 1 },
   brandName: {
     fontSize: 14,
@@ -726,7 +727,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 4,
   },
-  brandStatusClaimed: { color: "#f9c349", fontWeight: "800" },
+  brandStatusClaimed: { color: tdcColors.yellow, fontWeight: "800" },
   brandChevron: { padding: 4 },
 
   // Empty state
@@ -758,7 +759,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: "#f9c349",
+    backgroundColor: tdcColors.yellow,
     marginTop: 20,
   },
   emptyBtnText: { fontSize: 13, fontWeight: "800", color: "#000" },

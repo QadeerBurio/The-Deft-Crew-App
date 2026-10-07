@@ -26,7 +26,7 @@ import { FEATURE_ID_TO_MISSION } from "../engagement/utils/mood";
 
 const { width } = Dimensions.get("window");
 
-const GOLD = "#f9c349";
+const GOLD = tdcColors.yellow;
 const GOLD_DARK = "#e0a82e";
 const DARK = "#1a1a1a";
 const WHITE = "#ffffff";
@@ -46,6 +46,7 @@ const FEATURES = [
 ];
 
 import * as Notifications from "expo-notifications";
+import { colors as tdcColors } from "../theme";
 
 // ─── FadeInView ─────────────────────────────────────────────────────────
 const FadeInView = React.memo(({ delay = 0, children, style }) => {

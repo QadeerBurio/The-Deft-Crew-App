@@ -21,6 +21,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { colors as tdcColors } from '../theme';
 
 const { width } = Dimensions.get("window");
 
@@ -505,13 +506,13 @@ const BookingScreen = () => {
                     <Ionicons 
                       name={notification.type === 'success' ? "checkmark-circle" : "alert-circle"} 
                       size={24} 
-                      color={notification.type === 'success' ? "#1a1a1a" : "#f9c349"} 
+                      color={notification.type === 'success' ? "#1a1a1a" : tdcColors.yellow} 
                     />
                   </Animated.View>
                   <View style={styles.notificationTextContainer}>
                     <Text style={[
                       styles.notificationTitle,
-                      { color: notification.type === 'success' ? '#1a1a1a' : '#f9c349' }
+                      { color: notification.type === 'success' ? '#1a1a1a' : tdcColors.yellow }
                     ]}>
                       {notification.title}
                     </Text>
@@ -523,7 +524,7 @@ const BookingScreen = () => {
                 
                 {notification.type === 'error' && (
                   <TouchableOpacity onPress={hideNotification} style={styles.notificationClose}>
-                    <Ionicons name="close" size={20} color="#f9c349" />
+                    <Ionicons name="close" size={20} color={tdcColors.yellow} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -547,7 +548,7 @@ const BookingScreen = () => {
         {/* Loading Overlay */}
         {showLoading && (
           <Animated.View style={[styles.loadingOverlay, { opacity: overlayOpacity }]}>
-            <ActivityIndicator size="large" color="#f9c349" />
+            <ActivityIndicator size="large" color={tdcColors.yellow} />
             <Text style={styles.loadingText}>Submitting Booking...</Text>
             
             <View style={styles.loadingProgressContainer}>
@@ -558,7 +559,7 @@ const BookingScreen = () => {
                 ]}
               >
                 <LinearGradient
-                  colors={['#f9c349', '#f7b733']}
+                  colors={[tdcColors.yellow, '#f7b733']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.progressGradientFill}
@@ -618,15 +619,15 @@ const BookingScreen = () => {
                 
                 <View style={styles.packageDetails}>
                   <View style={styles.detailChip}>
-                    <Ionicons name="location-outline" size={14} color="#f9c349" />
+                    <Ionicons name="location-outline" size={14} color={tdcColors.yellow} />
                     <Text style={styles.detailChipText}>{item.location}</Text>
                   </View>
                   <View style={styles.detailChip}>
-                    <MaterialCommunityIcons name="clock-outline" size={14} color="#f9c349" />
+                    <MaterialCommunityIcons name="clock-outline" size={14} color={tdcColors.yellow} />
                     <Text style={styles.detailChipText}>Flexible</Text>
                   </View>
                   <View style={styles.detailChip}>
-                    <Ionicons name="star" size={14} color="#f9c349" />
+                    <Ionicons name="star" size={14} color={tdcColors.yellow} />
                     <Text style={styles.detailChipText}>Premium</Text>
                   </View>
                 </View>
@@ -637,7 +638,7 @@ const BookingScreen = () => {
             <Animated.View style={[styles.formContainer, { transform: [{ translateY: slideUpAnim }] }]}>
               <View style={styles.sectionHeader}>
                 <LinearGradient
-                  colors={['#f9c349', '#f9c349']}
+                  colors={[tdcColors.yellow, tdcColors.yellow]}
                   style={styles.sectionDot}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -657,7 +658,7 @@ const BookingScreen = () => {
                   ]}
                 >
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="person-outline" size={18} color={focusedInput === 'fullName' ? "#f9c349" : "#999"} />
+                    <Ionicons name="person-outline" size={18} color={focusedInput === 'fullName' ? tdcColors.yellow : "#999"} />
                   </View>
                   <TextInput
                     style={styles.input}
@@ -671,7 +672,7 @@ const BookingScreen = () => {
                     returnKeyType="next"
                   />
                   {formData.fullName.length > 0 && !errors.fullName && (
-                    <Ionicons name="checkmark-circle" size={20} color="#f9c349" />
+                    <Ionicons name="checkmark-circle" size={20} color={tdcColors.yellow} />
                   )}
                 </View>
                 {errors.fullName && touched.fullName && <Text style={styles.errorText}>{errors.fullName}</Text>}
@@ -689,7 +690,7 @@ const BookingScreen = () => {
                   ]}
                 >
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="mail-outline" size={18} color={focusedInput === 'email' ? "#f9c349" : "#999"} />
+                    <Ionicons name="mail-outline" size={18} color={focusedInput === 'email' ? tdcColors.yellow : "#999"} />
                   </View>
                   <TextInput
                     style={styles.input}
@@ -705,7 +706,7 @@ const BookingScreen = () => {
                     returnKeyType="next"
                   />
                   {formData.email.length > 0 && !errors.email && /\S+@\S+\.\S+/.test(formData.email) && (
-                    <Ionicons name="checkmark-circle" size={20} color="#f9c349" />
+                    <Ionicons name="checkmark-circle" size={20} color={tdcColors.yellow} />
                   )}
                 </View>
                 {errors.email && touched.email && <Text style={styles.errorText}>{errors.email}</Text>}
@@ -723,7 +724,7 @@ const BookingScreen = () => {
                   ]}
                 >
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="call-outline" size={18} color={focusedInput === 'phone' ? "#f9c349" : "#999"} />
+                    <Ionicons name="call-outline" size={18} color={focusedInput === 'phone' ? tdcColors.yellow : "#999"} />
                   </View>
                   <TextInput
                     style={styles.input}
@@ -743,7 +744,7 @@ const BookingScreen = () => {
 
               <View style={styles.sectionHeader}>
                 <LinearGradient
-                  colors={['#f9c349', '#f9c349']}
+                  colors={[tdcColors.yellow, tdcColors.yellow]}
                   style={styles.sectionDot}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -762,11 +763,11 @@ const BookingScreen = () => {
                   activeOpacity={0.7}
                 >
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="calendar-outline" size={18} color="#f9c349" />
+                    <Ionicons name="calendar-outline" size={18} color={tdcColors.yellow} />
                   </View>
                   <Text style={styles.dateText}>{formatDate(formData.travelDate)}</Text>
                   <View style={styles.chevronContainer}>
-                    <Ionicons name="chevron-down" size={18} color="#f9c349" />
+                    <Ionicons name="chevron-down" size={18} color={tdcColors.yellow} />
                   </View>
                 </TouchableOpacity>
                 {errors.travelDate && touched.travelDate && <Text style={styles.errorText}>{errors.travelDate}</Text>}
@@ -830,7 +831,7 @@ const BookingScreen = () => {
                         <Ionicons 
                           name={method.icon} 
                           size={24} 
-                          color={formData.paymentMethod === method.id ? '#f9c349' : '#666'} 
+                          color={formData.paymentMethod === method.id ? tdcColors.yellow : '#666'} 
                         />
                       </View>
                       <Text style={[
@@ -841,7 +842,7 @@ const BookingScreen = () => {
                       </Text>
                       {formData.paymentMethod === method.id && (
                         <View style={styles.paymentCheckmark}>
-                          <Ionicons name="checkmark-circle" size={20} color="#f9c349" />
+                          <Ionicons name="checkmark-circle" size={20} color={tdcColors.yellow} />
                         </View>
                       )}
                     </TouchableOpacity>
@@ -1013,7 +1014,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
     borderWidth: 2,
-    borderColor: '#f9c349',
+    borderColor: tdcColors.yellow,
   },
   notificationTextContainer: {
     flex: 1,
@@ -1046,7 +1047,7 @@ const styles = StyleSheet.create({
   },
   notificationProgress: {
     height: '100%',
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     transform: [{ scaleX: 0 }],
     flex: 1,
   },
@@ -1064,7 +1065,7 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   loadingText: {
-    color: '#f9c349',
+    color: tdcColors.yellow,
     fontSize: 18,
     fontWeight: '800',
     marginTop: 15,
@@ -1083,7 +1084,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     transform: [{ scaleX: 0 }],
     width: '100%',
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
   },
   progressGradientFill: {
     width: '100%',
@@ -1127,7 +1128,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     overflow: 'hidden',
     elevation: 15,
-    shadowColor: "#f9c349",
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 20,
@@ -1267,9 +1268,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   inputFocused: {
-    borderColor: '#f9c349',
+    borderColor: tdcColors.yellow,
     backgroundColor: '#fff',
-    shadowColor: "#f9c349",
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.2,
     shadowRadius: 10,
@@ -1334,7 +1335,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   travelerBtnAdd: {
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
   },
   travelerCountContainer: {
     alignItems: 'center',
@@ -1373,9 +1374,9 @@ const styles = StyleSheet.create({
   },
   paymentGridItemActive: {
     backgroundColor: '#1a1a1a',
-    borderColor: '#f9c349',
+    borderColor: tdcColors.yellow,
     elevation: 5,
-    shadowColor: "#f9c349",
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -1392,7 +1393,7 @@ const styles = StyleSheet.create({
   paymentIconContainerActive: {
     backgroundColor: '#1a1a1a',
     borderWidth: 1,
-    borderColor: '#f9c349',
+    borderColor: tdcColors.yellow,
   },
   paymentGridLabel: {
     fontSize: 11,
@@ -1402,7 +1403,7 @@ const styles = StyleSheet.create({
     lineHeight: 14,
   },
   paymentGridLabelActive: {
-    color: '#f9c349',
+    color: tdcColors.yellow,
   },
   paymentCheckmark: {
     position: 'absolute',
@@ -1473,13 +1474,13 @@ const styles = StyleSheet.create({
   totalCurrency: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#f9c349',
+    color: tdcColors.yellow,
     marginRight: 2,
   },
   totalAmount: {
     fontSize: 24,
     fontWeight: '900',
-    color: '#f9c349',
+    color: tdcColors.yellow,
   },
 
   // Submit Button
@@ -1487,7 +1488,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     elevation: 10,
-    shadowColor: "#f9c349",
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.4,
     shadowRadius: 15,

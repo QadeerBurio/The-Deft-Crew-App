@@ -16,6 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { ChatContext } from '../context/ChatContext';
 import aiService from '../services/aiService';
+import { colors } from '../theme';
 
 const ChatHistoryScreen = () => {
   const navigation = useNavigation();
@@ -113,7 +114,7 @@ const ChatHistoryScreen = () => {
             <Ionicons
               name={item.pinned ? 'pin' : 'pin-outline'}
               size={18}
-              color={item.pinned ? '#f9c349' : '#888888'}
+              color={item.pinned ? colors.yellow : '#888888'}
             />
           </TouchableOpacity>
           <TouchableOpacity
@@ -154,7 +155,7 @@ const ChatHistoryScreen = () => {
       {/* Sessions History List */}
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#f9c349" />
+          <ActivityIndicator size="large" color={colors.yellow} />
         </View>
       ) : (
         <FlatList
@@ -242,7 +243,7 @@ const styles = StyleSheet.create({
     borderColor: '#eeeeee',
   },
   pinnedItem: {
-    borderColor: '#f9c349',
+    borderColor: colors.yellow,
     backgroundColor: '#fffdf4',
   },
   sessionInfo: {

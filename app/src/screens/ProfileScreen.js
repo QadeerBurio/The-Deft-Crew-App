@@ -42,6 +42,7 @@ import SavingsCounter from '../engagement/components/SavingsCounter';
 import BadgeShelf from '../engagement/components/BadgeShelf';
 import StreakChip from '../engagement/components/StreakChip';
 import StreakSheet from '../engagement/components/StreakSheet';
+import { colors as tdcColors } from "../theme";
 
 const { width, height } = Dimensions.get("window");
 
@@ -124,7 +125,7 @@ const MenuItem = ({ item, index, isLast }) => {
           {item.rightText !== undefined && item.rightText !== null ? (
             <View style={styles.menuBadge}>
               <LinearGradient
-                colors={["#f9c349", "#f9c349"]}
+                colors={[tdcColors.yellow, tdcColors.yellow]}
                 style={styles.menuBadgeGradient}
               >
                 <Text style={styles.menuBadgeText}>
@@ -478,7 +479,7 @@ export default function ProfileScreen() {
           name: "Profile Details",
           subtitle: "View and edit your information",
           icon: "person-outline",
-          color: "#f9c349",
+          color: tdcColors.yellow,
           onPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             navigation.navigate("ProfileDetails");
@@ -578,7 +579,7 @@ export default function ProfileScreen() {
             >
               <TouchableOpacity onPress={pickImage} activeOpacity={0.8}>
                 <LinearGradient
-                  colors={["#f9c349", "#e6b800"]}
+                  colors={[tdcColors.yellow, "#e6b800"]}
                   style={styles.avatarRing}
                 >
                   {selectedImage ? (
@@ -598,7 +599,7 @@ export default function ProfileScreen() {
                 </LinearGradient>
                 <View style={styles.cameraBadge}>
                   <LinearGradient
-                    colors={["#f9c349", "#e6b800"]}
+                    colors={[tdcColors.yellow, "#e6b800"]}
                     style={styles.cameraBadgeGradient}
                   >
                     <Icon name="camera" size={12} color="#1A1A1A" />
@@ -668,10 +669,10 @@ export default function ProfileScreen() {
         >
           <View style={styles.statItem}>
             <View style={[styles.statIconBox, { backgroundColor: "#FFD93D20" }]}>
-              <Icon name="gift-outline" size={16} color="#f9c349" />
+              <Icon name="gift-outline" size={16} color={tdcColors.yellow} />
             </View>
             <Text style={styles.statLabel}>Used</Text>
-            <Text style={[styles.statValue, { color: "#f9c349" }]}>
+            <Text style={[styles.statValue, { color: tdcColors.yellow }]}>
               {redemptionCount || 0}
             </Text>
           </View>
@@ -732,18 +733,18 @@ export default function ProfileScreen() {
             onPress={(e) => e.stopPropagation()}
           >
             <LinearGradient
-              colors={["#1A1A1A", "#f9c349", "#1A1A1A"]}
+              colors={["#1A1A1A", tdcColors.yellow, "#1A1A1A"]}
               style={styles.membershipGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
               <Text style={styles.cardTitle}>
-                tdc<Text style={{ color: "#f9c349" }}>.</Text> PREMIUM
+                tdc<Text style={{ color: tdcColors.yellow }}>.</Text> PREMIUM
               </Text>
               <View style={styles.cardBody}>
                 <View style={styles.diamondBox}>
                   <LinearGradient
-                    colors={["#f9c349", "#e6b800"]}
+                    colors={[tdcColors.yellow, "#e6b800"]}
                     style={styles.diamondGradient}
                   >
                     <Icon name="diamond" size={44} color="#1A1A1A" />
@@ -765,7 +766,7 @@ export default function ProfileScreen() {
                 activeOpacity={0.8}
               >
                 <LinearGradient
-                  colors={["#f9c349", "#e6b800"]}
+                  colors={[tdcColors.yellow, "#e6b800"]}
                   style={styles.cardBtnGradient}
                 >
                   <Text style={styles.cardBtnText}>GET MEMBERSHIP</Text>
@@ -806,7 +807,7 @@ export default function ProfileScreen() {
             ]}
           >
             <View style={styles.modalIconContainer}>
-              <MaterialCommunityIcons name="logout" size={32} color="#f9c349" />
+              <MaterialCommunityIcons name="logout" size={32} color={tdcColors.yellow} />
             </View>
             <Text style={styles.modalTitle}>Sign Out?</Text>
             <Text style={styles.modalDesc}>
@@ -886,18 +887,18 @@ export default function ProfileScreen() {
               <>
                 <View style={styles.modalHeader}>
                   <View style={[styles.modalIconBox, { backgroundColor: "#FFD93D20" }]}>
-                    <MaterialCommunityIcons name="pause-circle" size={36} color="#f9c349" />
+                    <MaterialCommunityIcons name="pause-circle" size={36} color={tdcColors.yellow} />
                   </View>
                   <Text style={styles.modalTitle}>Wait! Before You Go</Text>
                   <Text style={styles.modalDesc}>Consider these options instead:</Text>
                 </View>
                 <View style={styles.alternativeList}>
                   <TouchableOpacity style={styles.alternativeItem} onPress={closeDeleteModal}>
-                    <Icon name="create-outline" size={18} color="#f9c349" />
+                    <Icon name="create-outline" size={18} color={tdcColors.yellow} />
                     <Text style={styles.alternativeText}>Update your profile</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.alternativeItem} onPress={closeDeleteModal}>
-                    <Icon name="help-circle-outline" size={18} color="#f9c349" />
+                    <Icon name="help-circle-outline" size={18} color={tdcColors.yellow} />
                     <Text style={styles.alternativeText}>Contact support</Text>
                   </TouchableOpacity>
                 </View>
@@ -906,7 +907,7 @@ export default function ProfileScreen() {
                     <Text style={styles.modalCancelText}>Keep Account</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.modalConfirmBtn, { backgroundColor: "#f9c349" }]}
+                    style={[styles.modalConfirmBtn, { backgroundColor: tdcColors.yellow }]}
                     onPress={handleNextStep}
                   >
                     <Text style={[styles.modalConfirmText, { color: "#1A1A1A" }]}>
@@ -1016,7 +1017,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  avatarText: { fontSize: 28, fontWeight: "800", color: "#f9c349" },
+  avatarText: { fontSize: 28, fontWeight: "800", color: tdcColors.yellow },
   cameraBadge: {
     position: "absolute",
     bottom: 0,
@@ -1227,7 +1228,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 13,
     borderRadius: 14,
-    backgroundColor: "#f9c349",
+    backgroundColor: tdcColors.yellow,
     alignItems: "center",
   },
   modalConfirmText: { fontSize: 13, fontWeight: "600", color: "#FFFFFF" },
@@ -1328,13 +1329,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     paddingHorizontal: 8,
   },
-  priceHighlight: { color: "#f9c349", fontWeight: "800" },
+  priceHighlight: { color: tdcColors.yellow, fontWeight: "800" },
   cardBtn: {
     borderRadius: 14,
     overflow: "hidden",
     width: "100%",
     elevation: 4,
-    shadowColor: "#f9c349",
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,

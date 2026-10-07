@@ -12,6 +12,7 @@ import FeedScreen from "./FeedScreen";
 import SearchScreen from "./SearchScreen";
 import MessagesScreen from "./MessageScreen";
 import ProfileScreen from "./ProfileScreen";
+import { colors as tdcColors } from "../../theme";
 
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get('window');
@@ -135,12 +136,12 @@ const TabIcon = ({ name, focused, badge }) => {
       <Ionicons 
         name={iconNames[name] || name} 
         size={24} 
-        color={focused ? "#f9c349" : "#8e8e8e"} 
+        color={focused ? tdcColors.yellow : "#8e8e8e"} 
       />
       {badge > 0 && (
         <View style={styles.badge}>
           <LinearGradient
-            colors={['#f9c349', '#f9c349']}
+            colors={[tdcColors.yellow, tdcColors.yellow]}
             style={styles.badgeGradient}
           >
             <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
@@ -162,7 +163,7 @@ const ProfileIcon = ({ focused }) => {
         <Ionicons 
           name={focused ? "person" : "person-outline"} 
           size={20} 
-          color={focused ? "#f9c349" : "#8e8e8e"} 
+          color={focused ? tdcColors.yellow : "#8e8e8e"} 
         />
       </View>
     </View>
@@ -246,7 +247,7 @@ const CreateButton = ({ onPress, navigation, isGuest }) => {
           { transform: [{ scale: scaleAnim }] }
         ]}>
           <LinearGradient
-            colors={['#f9c349', '#e6b800']}
+            colors={[tdcColors.yellow, '#e6b800']}
             style={styles.createButtonGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -307,7 +308,7 @@ function CustomTabBar({ state, descriptors, navigation }) {
         {options.tabBarLabel && (
           <Text style={[
             styles.tabBarLabel,
-            { color: isFocused ? '#f9c349' : '#8e8e8e' }
+            { color: isFocused ? tdcColors.yellow : '#8e8e8e' }
           ]}>
             {typeof options.tabBarLabel === 'function' 
               ? options.tabBarLabel({ focused: isFocused }) 
@@ -383,7 +384,7 @@ export default function Social() {
           tabBar={(props) => <CustomTabBar {...props} />}
           screenOptions={{
             headerShown: false,
-            tabBarActiveTintColor: "#f9c349",
+            tabBarActiveTintColor: tdcColors.yellow,
             tabBarInactiveTintColor: "#8e8e8e",
           }}
         >
@@ -498,7 +499,7 @@ const styles = StyleSheet.create({
     right: -3,
     bottom: -3,
     borderRadius: 50,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
   },
   
   iconWrapper: {
@@ -549,7 +550,7 @@ const styles = StyleSheet.create({
     width: 16,
     height: 2.5,
     borderRadius: 1.5,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
   },
   
   // Profile Icon
@@ -567,7 +568,7 @@ const styles = StyleSheet.create({
     bottom: -3,
     borderRadius: 26,
     borderWidth: 2,
-    borderColor: '#f9c349',
+    borderColor: tdcColors.yellow,
   },
   
   profileImageContainer: {
@@ -599,7 +600,7 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     overflow: 'hidden',
     // Elevation for the button to pop out
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,

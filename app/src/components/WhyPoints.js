@@ -7,6 +7,7 @@ import { useNavigation } from "@react-navigation/native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { colors as tdcColors } from "../theme";
 
 const { width, height } = Dimensions.get("window");
 
@@ -98,7 +99,7 @@ export default function WhyPointsScreen() {
   const benefits = [
     { 
       icon: "briefcase-check-outline", 
-      color: "#f9c349", 
+      color: tdcColors.yellow, 
       title: "Career Hub", 
       desc: "See top internships first and get direct referrals.",
       category: "Career"
@@ -126,7 +127,7 @@ export default function WhyPointsScreen() {
     },
     { 
       icon: "shield-star-outline", 
-      color: "#f9c349", 
+      color: tdcColors.yellow, 
       title: "Campus Leadership", 
       desc: "Get verified as a campus leader and grow your network.",
       category: "Leadership"
@@ -269,7 +270,7 @@ export default function WhyPointsScreen() {
             >
               <Animated.View style={[styles.heroIconCircle, { transform: [{ rotate: spin }] }]}>
                 <LinearGradient
-                  colors={['#f9c349', '#e6b800']}
+                  colors={[tdcColors.yellow, '#e6b800']}
                   style={styles.heroIconGradient}
                 >
                   <MaterialCommunityIcons name="crown-outline" size={28} color="#1a1a1a" />
@@ -381,7 +382,7 @@ const styles = StyleSheet.create({
     borderRadius: 16, 
     justifyContent: 'center', 
     alignItems: 'center',
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -412,13 +413,13 @@ const styles = StyleSheet.create({
   decorSegment: { 
     width: 20, 
     height: 1.5, 
-    backgroundColor: '#f9c349', 
+    backgroundColor: tdcColors.yellow, 
     borderRadius: 1,
   },
   decorDiamond: { 
     width: 5, 
     height: 5, 
-    backgroundColor: '#f9c349', 
+    backgroundColor: tdcColors.yellow, 
     transform: [{ rotate: '45deg' }], 
     marginHorizontal: 8,
   },
@@ -483,7 +484,7 @@ const styles = StyleSheet.create({
     width: 6, 
     height: 6, 
     borderRadius: 3, 
-    backgroundColor: '#f9c349', 
+    backgroundColor: tdcColors.yellow, 
     marginRight: 8,
   },
   sectionTitle: { 

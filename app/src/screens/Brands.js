@@ -56,6 +56,7 @@ import {
   buildCityOptions,
   resolveCity,
 } from "../utils/cityFilter";
+import { colors } from "../theme";
 
 const { width, height } = Dimensions.get("window");
 const NUM_COLUMNS = 2;
@@ -81,7 +82,7 @@ const MIN_FETCH_GAP = 4000;
 
 // ── Categories ─────────────────────────────────────────
 const CATEGORIES = [
-  { id: "all", name: "All", icon: "apps", color: "#f9c349", bgColor: "#f9c34915" },
+  { id: "all", name: "All", icon: "apps", color: colors.yellow, bgColor: "#f9c34915" },
   { id: "restaurant", name: "Restaurant", icon: "silverware-fork-knife", color: "#FF6B6B", bgColor: "#FF6B6B15" },
   { id: "cafe", name: "Cafe & Coffee", icon: "coffee", color: "#A0522D", bgColor: "#A0522D15" },
   { id: "food", name: "Food & Drinks", icon: "food", color: "#FF8C00", bgColor: "#FF8C0015" },
@@ -271,7 +272,7 @@ const StatsBar = memo(({ stats, loading }) => {
       </View>
       <View style={styles.statDivider} />
       <View style={styles.statItem}>
-        <Text style={[styles.statValue, { color: "#f9c349" }]}>
+        <Text style={[styles.statValue, { color: colors.yellow }]}>
           {stats.maxDiscount}%
         </Text>
         <Text style={styles.statLabel}>Max Off</Text>
@@ -318,7 +319,7 @@ const BrandCard = memo(
               <MaterialCommunityIcons
                 name="earth"
                 size={12}
-                color="#f9c349"
+                color={colors.yellow}
                 style={{ marginRight: 3 }}
               />
             )}
@@ -326,7 +327,7 @@ const BrandCard = memo(
               <MaterialCommunityIcons
                 name="storefront-outline"
                 size={12}
-                color="#f9c349"
+                color={colors.yellow}
               />
             )}
           </View>
@@ -1353,7 +1354,7 @@ export default function BrandsScreen() {
     if (loadingMore) {
       return (
         <View style={styles.footerLoader}>
-          <ActivityIndicator size="small" color="#f9c349" />
+          <ActivityIndicator size="small" color={colors.yellow} />
           <Text style={styles.footerLoaderText}>Loading more...</Text>
         </View>
       );
@@ -1460,7 +1461,7 @@ export default function BrandsScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.discountIconWrapper}>
-                <MaterialCommunityIcons name="ticket-percent" size={22} color="#f9c349" />
+                <MaterialCommunityIcons name="ticket-percent" size={22} color={colors.yellow} />
                 <View style={styles.discountBadgeDot} />
               </View>
             </TouchableOpacity>
@@ -1517,7 +1518,7 @@ export default function BrandsScreen() {
           <View style={styles.searchIndicatorRow}>
             <Text style={styles.searchIndicatorText}>
               Showing results for:{" "}
-              <Text style={{ fontWeight: "bold", color: "#f9c349" }}>"{query}"</Text>
+              <Text style={{ fontWeight: "bold", color: colors.yellow }}>"{query}"</Text>
             </Text>
             <TouchableOpacity
               onPress={() => {
@@ -1545,7 +1546,7 @@ export default function BrandsScreen() {
 
         {loading && displayedBrands.length === 0 ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#f9c349" />
+            <ActivityIndicator size="large" color={colors.yellow} />
             <Text style={styles.loadingText}>Loading brands...</Text>
           </View>
         ) : (
@@ -1776,7 +1777,7 @@ const styles = StyleSheet.create({
     height: 18,
     paddingHorizontal: 5,
     borderRadius: 9,
-    backgroundColor: "#f9c349",
+    backgroundColor: colors.yellow,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1.5,
@@ -1805,7 +1806,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#f9c349",
+    backgroundColor: colors.yellow,
     borderWidth: 1.5,
     borderColor: "#fff",
   },
@@ -1838,7 +1839,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     zIndex: 1,
   },
-  discountText: { fontSize: 12, fontWeight: "900", color: "#f9c349", fontFamily: "Cardo" },
+  discountText: { fontSize: 12, fontWeight: "900", color: colors.yellow, fontFamily: "Cardo" },
   logoContainer: {
     width: "100%",
     height: 100,
@@ -1851,7 +1852,7 @@ const styles = StyleSheet.create({
   infoContainer: { alignItems: "center", width: "100%" },
   name: { fontSize: 14, fontWeight: "800", color: "#000000", fontFamily: "Cardo", textAlign: "center" },
   offerStatusText: { fontSize: 10, color: "#bbb", marginTop: 4 },
-  offerStatusClaimed: { color: "#f9c349", fontWeight: "bold" },
+  offerStatusClaimed: { color: colors.yellow, fontWeight: "bold" },
   categoryBadgeCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -1911,7 +1912,7 @@ const styles = StyleSheet.create({
   noResultsContainer: { alignItems: "center", justifyContent: "center", paddingVertical: 40, paddingHorizontal: 20 },
   noResultsText: { fontSize: 18, fontWeight: "700", color: "#333", marginTop: 16 },
   noResultsSubText: { fontSize: 14, color: "#999", marginTop: 6, marginBottom: 20 },
-  clearFiltersBtn: { backgroundColor: "#f9c349", paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
+  clearFiltersBtn: { backgroundColor: colors.yellow, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
   clearFiltersBtnText: { color: "#000", fontWeight: "700", fontSize: 14 },
 
   errorContainer: {
@@ -1986,7 +1987,7 @@ const styles = StyleSheet.create({
     borderColor: "#f9c34930",
   },
   guestBannerText: { flex: 1, fontSize: 12, color: "#1a1a1a", marginLeft: 8, fontWeight: "500" },
-  signInLink: { color: "#f9c349", fontWeight: "700", fontSize: 12, marginLeft: 8 },
+  signInLink: { color: colors.yellow, fontWeight: "700", fontSize: 12, marginLeft: 8 },
 
   searchIndicatorRow: {
     flexDirection: "row",

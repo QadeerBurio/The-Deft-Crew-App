@@ -65,6 +65,7 @@ import {
   soundRefresh,
   soundCopy,
 } from "../lib/tdcSounds";
+import { colors as tdcColors } from "../theme";
 
 const { width } = Dimensions.get("window");
 const BASE_URL = "https://the-deft-crew-production.up.railway.app";
@@ -451,7 +452,7 @@ const ClaimSuccessModal = ({ visible, onClose, brandName, discount }) => {
         <View style={styles.successCard}>
           <View style={styles.successIconCircle}>
             <LinearGradient
-              colors={["#f9c349", "#f5a623"]}
+              colors={[tdcColors.yellow, "#f5a623"]}
               style={styles.successIconGradient}
             >
               <MaterialCommunityIcons
@@ -520,7 +521,7 @@ const BranchDropdown = ({
             <MaterialCommunityIcons
               name="store-marker"
               size={18}
-              color="#f9c349"
+              color={tdcColors.yellow}
             />
           </View>
           <View style={{ flex: 1 }}>
@@ -562,7 +563,7 @@ const BranchDropdown = ({
               <MaterialCommunityIcons
                 name="tag-outline"
                 size={16}
-                color={!selectedBranch ? "#f9c349" : "#999"}
+                color={!selectedBranch ? tdcColors.yellow : "#999"}
               />
               <Text
                 style={[
@@ -576,7 +577,7 @@ const BranchDropdown = ({
                 <MaterialCommunityIcons
                   name="check-circle"
                   size={18}
-                  color="#f9c349"
+                  color={tdcColors.yellow}
                 />
               )}
             </View>
@@ -598,7 +599,7 @@ const BranchDropdown = ({
                   <MaterialCommunityIcons
                     name={branch.isOnline ? "earth" : "storefront"}
                     size={16}
-                    color={isSelected ? "#f9c349" : "#999"}
+                    color={isSelected ? tdcColors.yellow : "#999"}
                   />
                   <View style={{ flex: 1 }}>
                     <Text
@@ -635,7 +636,7 @@ const BranchDropdown = ({
                     <MaterialCommunityIcons
                       name="check-circle"
                       size={18}
-                      color="#f9c349"
+                      color={tdcColors.yellow}
                     />
                   )}
                 </View>
@@ -1288,7 +1289,7 @@ export default function OfferScreen() {
       <SafeAreaView style={styles.mainSafeArea}>
         <StatusBar barStyle="dark-content" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#f9c349" />
+          <ActivityIndicator size="large" color={tdcColors.yellow} />
           <Text style={styles.loadingText}>Loading offer...</Text>
         </View>
       </SafeAreaView>
@@ -1328,7 +1329,7 @@ export default function OfferScreen() {
           activeOpacity={0.7}
         >
           {refreshing ? (
-            <ActivityIndicator size="small" color="#f9c349" />
+            <ActivityIndicator size="small" color={tdcColors.yellow} />
           ) : (
             <MaterialCommunityIcons name="refresh" size={22} color="#000" />
           )}
@@ -1363,7 +1364,7 @@ export default function OfferScreen() {
           <View style={styles.availabilityRow}>
             {activeIsOnline && (
               <View style={styles.availabilityPill}>
-                <MaterialCommunityIcons name="earth" size={14} color="#f9c349" />
+                <MaterialCommunityIcons name="earth" size={14} color={tdcColors.yellow} />
                 <Text style={styles.availabilityText}>Online</Text>
               </View>
             )}
@@ -1372,7 +1373,7 @@ export default function OfferScreen() {
                 <MaterialCommunityIcons
                   name="storefront"
                   size={14}
-                  color="#f9c349"
+                  color={tdcColors.yellow}
                 />
                 <Text style={styles.availabilityText}>In-Store</Text>
               </View>
@@ -1438,7 +1439,7 @@ export default function OfferScreen() {
 
             {activeDiscount > 0 && (
               <View style={styles.discountInfoRow}>
-                <MaterialCommunityIcons name="percent" size={20} color="#f9c349" />
+                <MaterialCommunityIcons name="percent" size={20} color={tdcColors.yellow} />
                 <Text style={styles.discountInfoText}>
                   {activeDiscount}% OFF for students
                 </Text>
@@ -1450,7 +1451,7 @@ export default function OfferScreen() {
                 <MaterialCommunityIcons
                   name="store-marker"
                   size={20}
-                  color="#f9c349"
+                  color={tdcColors.yellow}
                 />
                 <View style={{ flex: 1, marginLeft: 10 }}>
                   <Text style={styles.branchInfoTitle}>{activeBranchName}</Text>
@@ -1479,7 +1480,7 @@ export default function OfferScreen() {
                 <MaterialCommunityIcons
                   name="account-plus"
                   size={24}
-                  color="#f9c349"
+                  color={tdcColors.yellow}
                 />
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={styles.guestPromptTitle}>
@@ -1489,7 +1490,7 @@ export default function OfferScreen() {
                     Sign in to claim offers and get student discounts!
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#f9c349" />
+                <Ionicons name="chevron-forward" size={20} color={tdcColors.yellow} />
               </TouchableOpacity>
             )}
           </View>
@@ -1547,7 +1548,7 @@ export default function OfferScreen() {
                   <MaterialCommunityIcons
                     name="storefront"
                     size={18}
-                    color="#f9c349"
+                    color={tdcColors.yellow}
                   />
                   <View style={{ flex: 1, marginLeft: 10 }}>
                     <Text style={styles.branchLocationTitle}>
@@ -1604,7 +1605,7 @@ export default function OfferScreen() {
             activeOpacity={0.8}
           >
             <LinearGradient
-              colors={isClaimed ? ["#ccc", "#bbb"] : ["#f9c349", "#f5a623"]}
+              colors={isClaimed ? ["#ccc", "#bbb"] : [tdcColors.yellow, "#f5a623"]}
               style={styles.claimGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -1741,7 +1742,7 @@ const styles = StyleSheet.create({
     borderColor: "#f9c34940",
     gap: 4,
   },
-  availabilityText: { fontSize: 12, color: "#f9c349", fontWeight: "700" },
+  availabilityText: { fontSize: 12, color: tdcColors.yellow, fontWeight: "700" },
 
   branchDropdownWrap: {
     marginTop: 20,
@@ -1810,7 +1811,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 4,
   },
-  branchDropdownPillActive: { backgroundColor: "#f9c349" },
+  branchDropdownPillActive: { backgroundColor: tdcColors.yellow },
   branchDropdownPillText: { fontSize: 11, fontWeight: "800", color: "#666" },
   branchDropdownPillTextActive: { color: "#fff" },
 
@@ -1903,7 +1904,7 @@ const styles = StyleSheet.create({
   discountInfoText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#f9c349",
+    color: tdcColors.yellow,
     marginLeft: 10,
   },
 
@@ -2020,7 +2021,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: "hidden",
     elevation: 4,
-    shadowColor: "#f9c349",
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -2064,7 +2065,7 @@ const styles = StyleSheet.create({
   },
   successIconCircle: {
     marginBottom: 20,
-    shadowColor: "#f9c349",
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -2101,7 +2102,7 @@ const styles = StyleSheet.create({
   successDiscountText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#f9c349",
+    color: tdcColors.yellow,
   },
   successSubtext: {
     fontSize: 14,

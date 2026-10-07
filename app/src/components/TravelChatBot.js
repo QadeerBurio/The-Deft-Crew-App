@@ -16,6 +16,7 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import api from '../api/api';
 import { AuthContext } from '../context/AuthContext';
 import { engagementBus, ENGAGEMENT_EVENTS } from '../engagement/engagementBus';
+import { colors as tdcColors } from '../theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -156,7 +157,7 @@ const MessageBubble = React.memo(({ item, onCopy, onShare, isLast }) => {
       {isUser ? (
         <View style={msgStyles.bubbleWrapper}>
           <LinearGradient
-            colors={['#f9c349', '#f0a500']}
+            colors={[tdcColors.yellow, '#f0a500']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[msgStyles.bubble, msgStyles.bubbleUser]}
@@ -245,7 +246,7 @@ const TypingIndicator = () => {
           {[dot1, dot2, dot3].map((dot, i) => (
             <Animated.View
               key={i}
-              style={[msgStyles.dot, { transform: [{ translateY: dot }], backgroundColor: '#f9c349' }]}
+              style={[msgStyles.dot, { transform: [{ translateY: dot }], backgroundColor: tdcColors.yellow }]}
             />
           ))}
         </View>
@@ -656,14 +657,14 @@ const TravelChatBot = () => {
             strokeWidth="2"
             strokeDasharray="5 7"
           />
-          <Circle cx="20" cy="110" r="4" fill="#f9c349" />
-          <Circle cx="260" cy="35" r="4" fill="#f9c349" />
+          <Circle cx="20" cy="110" r="4" fill={tdcColors.yellow} />
+          <Circle cx="260" cy="35" r="4" fill={tdcColors.yellow} />
         </Svg>
         <View style={styles.pinIcon1}>
           <Ionicons name="location" size={16} color="#EF4444" />
         </View>
         <Animated.View style={[styles.compassDecoration, { transform: [{ rotate: spinVal }] }]}>
-          <Ionicons name="compass" size={20} color="#f9c349" />
+          <Ionicons name="compass" size={20} color={tdcColors.yellow} />
         </Animated.View>
       </View>
 
@@ -677,8 +678,8 @@ const TravelChatBot = () => {
           resizeMode="contain"
         />
         <Animated.View style={[styles.sparklesOverlay, { transform: [{ rotate: spinVal }] }]}>
-          <Ionicons name="sparkles" size={22} color="#f9c349" style={styles.sparkle1} />
-          <Ionicons name="sparkles" size={14} color="#f9c349" style={styles.sparkle2} />
+          <Ionicons name="sparkles" size={22} color={tdcColors.yellow} style={styles.sparkle1} />
+          <Ionicons name="sparkles" size={14} color={tdcColors.yellow} style={styles.sparkle2} />
         </Animated.View>
       </View>
 
@@ -746,7 +747,7 @@ const TravelChatBot = () => {
                       <LinearGradient colors={['#FFF9E6', '#FFFFFF']} style={styles.headerIconSmall}>
                         {isStreaming ? (
                           <Animated.View style={{ transform: [{ rotate: compassSpinVal }] }}>
-                            <Ionicons name="compass" size={16} color="#f9c349" />
+                            <Ionicons name="compass" size={16} color={tdcColors.yellow} />
                           </Animated.View>
                         ) : (
                           <Image
@@ -766,7 +767,7 @@ const TravelChatBot = () => {
                           styles.statusDot,
                           {
                             backgroundColor: isStreaming
-                              ? '#f9c349'
+                              ? tdcColors.yellow
                               : isOnline
                               ? '#10B981'
                               : '#EF4444',
@@ -896,7 +897,7 @@ const msgStyles = StyleSheet.create({
     width: 42, height: 42, borderRadius: 21,
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1.5, borderColor: '#fde047',
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.12, shadowRadius: 4,
     elevation: 2,
@@ -924,7 +925,7 @@ const msgStyles = StyleSheet.create({
   bubbleUser: {
     borderTopLeftRadius: 20, borderBottomLeftRadius: 20,
     borderTopRightRadius: 20, borderBottomRightRadius: 6,
-    shadowColor: '#f9c349', shadowOpacity: 0.2,
+    shadowColor: tdcColors.yellow, shadowOpacity: 0.2,
     shadowRadius: 6, elevation: 3,
   },
   bubbleAssistant: {
@@ -1139,10 +1140,10 @@ const styles = StyleSheet.create({
   },
   sendBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     justifyContent: 'center', alignItems: 'center',
     marginLeft: 4,
-    shadowColor: '#f9c349',
+    shadowColor: tdcColors.yellow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3, shadowRadius: 4,
     elevation: 3,

@@ -29,6 +29,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import GuestGuard from "./GuestGuard";
 import { BASE_URL } from "../api/api";
+import { colors } from "../theme";
 
 const { width, height } = Dimensions.get("window");
 
@@ -44,7 +45,7 @@ const COLORS = {
   card: "#1c1c1c",
   line: "#272727",
   primary: "#ffffff",
-  accent: "#f9c349",
+  accent: colors.yellow,
   accentSoft: "#f9c34915",
   muted: "#666",
   body: "#aaa",
@@ -86,7 +87,7 @@ const TDCCareerCard = React.memo(({ item, index, onPress, hasApplied }) => {
       {/* TDC Badge */}
       <View style={styles.tdcBadgeRow}>
         <View style={styles.tdcBadge}>
-          <MaterialCommunityIcons name="star-circle" size={12} color="#f9c349" />
+          <MaterialCommunityIcons name="star-circle" size={12} color={colors.yellow} />
           <Text style={styles.tdcBadgeText}>The Deft Crew</Text>
         </View>
         {hasApplied && (
@@ -104,7 +105,7 @@ const TDCCareerCard = React.memo(({ item, index, onPress, hasApplied }) => {
       {/* Badges */}
       <View style={styles.badgeRow}>
         <View style={styles.typeBadge}>
-          <Ionicons name="briefcase-outline" size={11} color="#f9c349" />
+          <Ionicons name="briefcase-outline" size={11} color={colors.yellow} />
           <Text style={styles.typeBadgeText}>{item.type || "Full-time"}</Text>
         </View>
         {item.experienceLevel && (
@@ -124,11 +125,11 @@ const TDCCareerCard = React.memo(({ item, index, onPress, hasApplied }) => {
       {/* Meta */}
       <View style={styles.infoRow}>
         <View style={styles.metaItem}>
-          <Ionicons name="location-sharp" size={14} color="#f9c349" />
+          <Ionicons name="location-sharp" size={14} color={colors.yellow} />
           <Text style={styles.metaText} numberOfLines={1}>{item.location}</Text>
         </View>
         <View style={styles.metaItem}>
-          <Ionicons name="cash-outline" size={14} color="#f9c349" />
+          <Ionicons name="cash-outline" size={14} color={colors.yellow} />
           <Text style={styles.metaText} numberOfLines={1}>{item.salary || "Competitive"}</Text>
         </View>
       </View>
@@ -157,7 +158,7 @@ const TDCCareerCard = React.memo(({ item, index, onPress, hasApplied }) => {
         <Ionicons
           name={hasApplied ? "eye-outline" : "arrow-forward-circle"}
           size={22}
-          color="#f9c349"
+          color={colors.yellow}
         />
       </View>
     </AnimatedTouchable>
@@ -858,8 +859,8 @@ const TDCCareers = ({ navigation }) => {
                       onPress={pickResume}
                       disabled={submitting}
                     >
-                      <Ionicons name={selectedResume ? "document-text" : "cloud-upload-outline"} size={20} color={selectedResume ? "#f9c349" : "#555"} />
-                      <Text style={[styles.resumeBtnText, selectedResume && { color: "#f9c349" }]}>
+                      <Ionicons name={selectedResume ? "document-text" : "cloud-upload-outline"} size={20} color={selectedResume ? colors.yellow : "#555"} />
+                      <Text style={[styles.resumeBtnText, selectedResume && { color: colors.yellow }]}>
                         {selectedResume ? selectedResume.name : "Upload Resume (PDF/DOC)"}
                       </Text>
                     </TouchableOpacity>
@@ -917,7 +918,7 @@ const TDCCareers = ({ navigation }) => {
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>
-              Careers at <Text style={{ color: "#f9c349" }}>TDC</Text>
+              Careers at <Text style={{ color: colors.yellow }}>TDC</Text>
             </Text>
             <Text style={styles.headerSub}>Join the Deft Crew</Text>
           </View>
@@ -925,7 +926,7 @@ const TDCCareers = ({ navigation }) => {
             if (!token) { Alert.alert("Login Required", "Please login"); return; }
             setShowApplicationsModal(true);
           }}>
-            <Ionicons name="document-text-outline" size={22} color="#f9c349" />
+            <Ionicons name="document-text-outline" size={22} color={colors.yellow} />
             {myApplications.length > 0 && (
               <View style={styles.headerBadge}>
                 <Text style={styles.headerBadgeText}>{myApplications.length}</Text>
@@ -936,7 +937,7 @@ const TDCCareers = ({ navigation }) => {
 
         {/* TDC Banner */}
         <View style={styles.tdcBanner}>
-          <MaterialCommunityIcons name="star-circle" size={18} color="#f9c349" />
+          <MaterialCommunityIcons name="star-circle" size={18} color={colors.yellow} />
           <Text style={styles.tdcBannerText}>
             {totalJobsCount > 0 ? `${totalJobsCount} opening${totalJobsCount !== 1 ? "s" : ""} available` : "Internal openings at The Deft Crew"}
           </Text>
@@ -959,7 +960,7 @@ const TDCCareers = ({ navigation }) => {
               </TouchableOpacity>
             )}
             <TouchableOpacity onPress={() => setShowFilters(true)} style={styles.filterIcon}>
-              <Ionicons name="options-outline" size={20} color="#f9c349" />
+              <Ionicons name="options-outline" size={20} color={colors.yellow} />
               {Object.values(filters).some(v => v && v !== "all") && <View style={styles.filterDot} />}
             </TouchableOpacity>
           </View>
@@ -968,7 +969,7 @@ const TDCCareers = ({ navigation }) => {
         {/* CONTENT */}
         {loading ? (
           <View style={styles.centerSection}>
-            <ActivityIndicator size="large" color="#f9c349" />
+            <ActivityIndicator size="large" color={colors.yellow} />
             <Text style={styles.loadingText}>Loading TDC openings...</Text>
           </View>
         ) : error ? (
@@ -1001,11 +1002,11 @@ const TDCCareers = ({ navigation }) => {
             )}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f9c349" />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.yellow} />}
             onEndReached={loadMore}
             onEndReachedThreshold={0.3}
             onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
-            ListFooterComponent={loadingMore ? <ActivityIndicator color="#f9c349" style={{ marginVertical: 20 }} /> : null}
+            ListFooterComponent={loadingMore ? <ActivityIndicator color={colors.yellow} style={{ marginVertical: 20 }} /> : null}
           />
         )}
 
@@ -1092,7 +1093,7 @@ const styles = StyleSheet.create({
   headerBadgeText: { fontSize: 9, fontWeight: "800", color: "#0d0d0d" },
   // TDC Banner
   tdcBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#f9c34910", paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#f9c34920" },
-  tdcBannerText: { fontSize: 12, color: "#f9c349", fontWeight: "700" },
+  tdcBannerText: { fontSize: 12, color: colors.yellow, fontWeight: "700" },
   // Search
   searchWrapper: { paddingHorizontal: 16, paddingVertical: 10 },
   searchBar: { flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1, borderColor: COLORS.line, gap: 10 },
@@ -1112,14 +1113,14 @@ const styles = StyleSheet.create({
   card: { backgroundColor: COLORS.card, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: COLORS.line },
   tdcBadgeRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
   tdcBadge: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "#f9c34915", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: "#f9c34930" },
-  tdcBadgeText: { fontSize: 10, color: "#f9c349", fontWeight: "700" },
+  tdcBadgeText: { fontSize: 10, color: colors.yellow, fontWeight: "700" },
   appliedBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#10b98115", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: "#10b98130" },
   appliedBadgeText: { fontSize: 10, color: "#10b981", fontWeight: "700" },
   jobTitle: { fontSize: 17, fontWeight: "900", color: COLORS.primary, marginBottom: 4, lineHeight: 22 },
   departmentText: { fontSize: 12, color: COLORS.muted, marginBottom: 10 },
   badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 },
   typeBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#f9c34910", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  typeBadgeText: { fontSize: 10, color: "#f9c349", fontWeight: "700" },
+  typeBadgeText: { fontSize: 10, color: colors.yellow, fontWeight: "700" },
   expBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#8b5cf610", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   expBadgeText: { fontSize: 10, color: "#8b5cf6", fontWeight: "700" },
   locTypeBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#10b98110", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
@@ -1131,7 +1132,7 @@ const styles = StyleSheet.create({
   skillBadge: { backgroundColor: "#1f1f1f", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: "#2a2a2a" },
   skillText: { fontSize: 10, color: COLORS.muted, fontWeight: "600" },
   cardFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 10, borderTopWidth: 1, borderTopColor: COLORS.line },
-  viewDetailsLabel: { fontSize: 12, fontWeight: "700", color: "#f9c349" },
+  viewDetailsLabel: { fontSize: 12, fontWeight: "700", color: colors.yellow },
   // Filter Modal
   filterModalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.7)" },
   filterModalContent: { backgroundColor: COLORS.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: height * 0.75 },
@@ -1154,7 +1155,7 @@ const styles = StyleSheet.create({
   detailModalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.8)" },
   detailModalContent: { backgroundColor: COLORS.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: height * 0.85 },
   detailModalTitle: { fontSize: 20, fontWeight: "900", color: COLORS.primary, marginTop: 16, marginBottom: 4 },
-  detailModalCompany: { fontSize: 13, color: "#f9c349", fontWeight: "700", marginBottom: 16 },
+  detailModalCompany: { fontSize: 13, color: colors.yellow, fontWeight: "700", marginBottom: 16 },
   statusBanner: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14, borderRadius: 14, marginBottom: 16, borderWidth: 1 },
   statusDot: { width: 10, height: 10, borderRadius: 5 },
   statusBannerTitle: { fontSize: 11, color: COLORS.muted, fontWeight: "600" },
@@ -1169,7 +1170,7 @@ const styles = StyleSheet.create({
   formModalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.85)" },
   formModalContent: { backgroundColor: COLORS.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: height * 0.92 },
   formModalTitle: { fontSize: 20, fontWeight: "900", color: COLORS.primary, marginTop: 16, marginBottom: 2 },
-  formModalSubtitle: { fontSize: 13, color: "#f9c349", fontWeight: "700", marginBottom: 16 },
+  formModalSubtitle: { fontSize: 13, color: colors.yellow, fontWeight: "700", marginBottom: 16 },
   formRequiredNote: { fontSize: 11, color: COLORS.error, fontWeight: "600", marginBottom: 12 },
   formScrollContent: { paddingBottom: 20 },
   formLabel: { fontSize: 12, fontWeight: "700", color: COLORS.primary, marginBottom: 5, marginTop: 8 },
@@ -1195,7 +1196,7 @@ const styles = StyleSheet.create({
   appCard: { backgroundColor: COLORS.surface, borderRadius: 16, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: COLORS.line },
   appHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 6 },
   appJobTitle: { fontSize: 14, fontWeight: "800", color: COLORS.primary },
-  appCompany: { fontSize: 11, color: "#f9c349", fontWeight: "600" },
+  appCompany: { fontSize: 11, color: colors.yellow, fontWeight: "600" },
   appStatus: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
   appStatusText: { fontSize: 10, fontWeight: "700" },
   appDate: { fontSize: 11, color: COLORS.muted },

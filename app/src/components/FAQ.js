@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
+import { colors as tdcColors } from "../theme";
 
 const { width, height } = Dimensions.get("window");
 
@@ -28,8 +29,8 @@ const FAQ_DATA = [
   {
     category: "Offers & Rewards",
     icon: "gift-outline",
-    color: "#f9c349",
-    gradient: ['#f9c349', '#f5a623'],
+    color: tdcColors.yellow,
+    gradient: [tdcColors.yellow, '#f5a623'],
     questions: [
       { q: "How do I redeem an offer?", a: "Open the offer details and tap the 'Redeem' button to claim your rewards instantly." },
       { q: "Do points from multiple offers accumulate?", a: "Yes, points from all eligible transactions are cumulative and reflected in your account dashboard." },
@@ -313,7 +314,7 @@ export default function FAQScreen() {
               
               <Animated.View style={[styles.heroIconCircle, { transform: [{ rotate: spin }] }]}>
                 <LinearGradient
-                  colors={['#f9c349', '#f5a623']}
+                  colors={[tdcColors.yellow, '#f5a623']}
                   style={styles.heroIconGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -368,7 +369,7 @@ export default function FAQScreen() {
                         {
                           top: 10 + Math.random() * 80,
                           left: 10 + Math.random() * 80,
-                          backgroundColor: ['#f9c349', '#4ecdc4', '#6c5ce7', '#ff6b6b', '#a29bfe', '#fd79a8'][i % 6],
+                          backgroundColor: [tdcColors.yellow, '#4ecdc4', '#6c5ce7', '#ff6b6b', '#a29bfe', '#fd79a8'][i % 6],
                           transform: [{ translateY: particleTranslateY }],
                           opacity: particleAnim.interpolate({
                             inputRange: [0, 0.5, 1],
@@ -457,7 +458,7 @@ export default function FAQScreen() {
             >
               <View style={styles.supportIconBox}>
                 <LinearGradient
-                  colors={['#f9c349', '#f5a623']}
+                  colors={[tdcColors.yellow, '#f5a623']}
                   style={styles.supportIconGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -473,7 +474,7 @@ export default function FAQScreen() {
                 style={styles.supportArrow}
                 onPress={() => navigation.navigate("ContactUs")}
               >
-                <Ionicons name="arrow-forward" size={20} color="#f9c349" />
+                <Ionicons name="arrow-forward" size={20} color={tdcColors.yellow} />
               </TouchableOpacity>
             </LinearGradient>
           </Animated.View>
@@ -567,7 +568,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: '#f9c349',
+        shadowColor: tdcColors.yellow,
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.2,
         shadowRadius: 30,
@@ -591,7 +592,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     opacity: 0.3,
   },
   particlesContainer: {
@@ -620,7 +621,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...Platform.select({
       ios: {
-        shadowColor: '#f9c349',
+        shadowColor: tdcColors.yellow,
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.3,
         shadowRadius: 15,
@@ -655,13 +656,13 @@ const styles = StyleSheet.create({
   decorSegment: {
     width: 30,
     height: 2,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     borderRadius: 1,
   },
   decorDiamond: {
     width: 8,
     height: 8,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     transform: [{ rotate: '45deg' }],
     marginHorizontal: 10,
   },
@@ -906,7 +907,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   footerLogoAccent: {
-    color: '#f9c349',
+    color: tdcColors.yellow,
   },
   footerText: {
     fontSize: 12,

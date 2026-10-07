@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
 import { AuthContext } from "../../context/AuthContext";
+import { colors as tdcColors } from "../../theme";
 
 const { width, height } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
@@ -21,7 +22,7 @@ const POLL_INTERVAL = 8000; // Poll every 8 seconds
 
 // TDC Brand Colors
 const COLORS = {
-  primary: '#f9c349',
+  primary: tdcColors.yellow,
   white: '#ffffff',
   black: '#1a1a1a',
   gray: '#666666',
@@ -877,9 +878,9 @@ const styles = StyleSheet.create({
   headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerTitle: { fontSize: 20, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.3 },
   headerBadge: { 
-    backgroundColor: '#f9c349', minWidth: 24, height: 24, borderRadius: 12, 
+    backgroundColor: tdcColors.yellow, minWidth: 24, height: 24, borderRadius: 12, 
     justifyContent: 'center', alignItems: 'center', paddingHorizontal: 8,
-    shadowColor: '#f9c349', shadowOffset: { width: 0, height: 2 },
+    shadowColor: tdcColors.yellow, shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3, shadowRadius: 4, elevation: 3,
   },
   headerBadgeText: { color: '#1a1a1a', fontSize: 12, fontWeight: '800' },
@@ -905,7 +906,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1, borderColor: '#f0f0f0',
   },
-  avatarBorderUnread: { borderColor: '#f9c349', borderWidth: 2 },
+  avatarBorderUnread: { borderColor: tdcColors.yellow, borderWidth: 2 },
   avatarBorderMention: { borderColor: '#1877f2', borderWidth: 2 },
   avatar: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#f0f0f0' },
   typeBadge: { 
@@ -923,9 +924,9 @@ const styles = StyleSheet.create({
   actionText: { color: '#555', fontWeight: '400' },
   actionTextMention: { color: COLORS.mention, fontWeight: '500' },
   unreadDot: { 
-    width: 8, height: 8, borderRadius: 4, backgroundColor: '#f9c349', 
+    width: 8, height: 8, borderRadius: 4, backgroundColor: tdcColors.yellow, 
     marginLeft: 8, marginTop: 6,
-    shadowColor: '#f9c349', shadowOffset: { width: 0, height: 1 },
+    shadowColor: tdcColors.yellow, shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.4, shadowRadius: 3, elevation: 2,
   },
   timeText: { fontSize: 11, color: '#999', marginTop: 4, fontWeight: '500' },

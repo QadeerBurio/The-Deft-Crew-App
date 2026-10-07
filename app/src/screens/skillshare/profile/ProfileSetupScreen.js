@@ -23,8 +23,9 @@ import {
   saveProfessionalProfile,
   completeProfessionalProfile,
 } from '../../../api/profileApi';
+import { colors } from '../../../theme';
 
-const BRAND = '#f9c349';
+const BRAND = colors.yellow;
 const BRAND_DARK = '#f5a623';
 const INK = '#1C1C1E';
 const MUTED = '#8E8E93';

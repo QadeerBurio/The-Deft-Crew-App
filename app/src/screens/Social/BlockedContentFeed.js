@@ -13,6 +13,7 @@ import {
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 import PostCard from './PostCard';
+import { colors } from '../../theme';
 
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
@@ -51,7 +52,7 @@ export default function BlockedContentFeed() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#f9c349" />
+        <ActivityIndicator size="large" color={colors.yellow} />
         <Text style={styles.loadingText}>Loading feed...</Text>
       </View>
     );

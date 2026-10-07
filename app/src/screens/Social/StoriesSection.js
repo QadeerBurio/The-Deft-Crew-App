@@ -12,6 +12,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from "../../context/AuthContext";
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { colors as tdcColors } from '../../theme';
 
 const { width, height } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
@@ -31,7 +32,7 @@ const formatTimeAgo = (dateString) => {
 const GradientStoryRing = ({ children, hasUnseen, style }) => {
   if (hasUnseen) {
     return (
-      <LinearGradient colors={['#f9c349', '#1a1a1a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[style, { padding: 3 }]}>
+      <LinearGradient colors={[tdcColors.yellow, '#1a1a1a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[style, { padding: 3 }]}>
         <View style={styles.innerWhiteBorder}>{children}</View>
       </LinearGradient>
     );
@@ -450,7 +451,7 @@ export default function StoriesSection() {
                   colors={['#1a1a1a', '#1a1a1a']} 
                   style={hasStory ? styles.addIconGradientSmall : styles.addIconGradientLarge}
                 >
-                  <Ionicons name="add" size={hasStory ? 14 : 24} color="#f9c349" />
+                  <Ionicons name="add" size={hasStory ? 14 : 24} color={tdcColors.yellow} />
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -531,7 +532,7 @@ export default function StoriesSection() {
               disabled={isUploading} 
               activeOpacity={0.8}
             >
-              <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.shareButtonGradient}>
+              <LinearGradient colors={[tdcColors.yellow, '#1a1a1a']} style={styles.shareButtonGradient}>
                 {isUploading ? <ActivityIndicator color="#fff" /> : <Text style={styles.shareText}>Share to Story</Text>}
               </LinearGradient>
             </TouchableOpacity>
@@ -587,7 +588,7 @@ export default function StoriesSection() {
                 </Animated.View>
                 <Animated.View style={[styles.pauseOverlay, { opacity: pauseOpacity }]}>
                   <View style={styles.pauseIconContainer}>
-                    <Ionicons name="pause" size={40} color="#f9c349" />
+                    <Ionicons name="pause" size={40} color={tdcColors.yellow} />
                   </View>
                 </Animated.View>
                 {selectedStory?.images?.[currentImageIndex]?.caption ? (
@@ -670,7 +671,7 @@ export default function StoriesSection() {
                 onPress={handlePostComment} 
                 disabled={isCommenting || !commentText.trim()}
               >
-                <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.commentSendGradient}>
+                <LinearGradient colors={[tdcColors.yellow, '#1a1a1a']} style={styles.commentSendGradient}>
                   {isCommenting ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="send" size={20} color="#fff" />}
                 </LinearGradient>
               </TouchableOpacity>
@@ -947,7 +948,7 @@ const styles = StyleSheet.create({
   },
   progressBarFill: { 
     height: '100%', 
-    backgroundColor: '#f9c349', 
+    backgroundColor: tdcColors.yellow, 
     borderRadius: 2 
   },
   viewerHeader: { 
@@ -967,7 +968,7 @@ const styles = StyleSheet.create({
     height: 40, 
     borderRadius: 12, 
     borderWidth: 2, 
-    borderColor: '#f9c349', 
+    borderColor: tdcColors.yellow, 
     marginRight: 10 
   },
   viewerUserInfo: { 

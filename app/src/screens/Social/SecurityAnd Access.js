@@ -12,8 +12,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { colors as tdcColors } from '../../theme';
 
-const SecurityItem = ({ icon, title, subtitle, onPress, isLast = false, color = "#f9c349" }) => {
+const SecurityItem = ({ icon, title, subtitle, onPress, isLast = false, color = tdcColors.yellow }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -79,7 +80,7 @@ export default function SecurityAndAccess({ navigation }) {
           {/* Hero Section */}
           <View style={styles.heroSection}>
             <Animated.View style={{ transform: [{ scale: shieldScale }] }}>
-              <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.shieldCircle}>
+              <LinearGradient colors={[tdcColors.yellow, '#1a1a1a']} style={styles.shieldCircle}>
                 <Ionicons name="shield-checkmark" size={45} color="#fff" />
               </LinearGradient>
             </Animated.View>
@@ -115,7 +116,7 @@ export default function SecurityAndAccess({ navigation }) {
               icon="key-outline" 
               title="Two-Factor Authentication" 
               subtitle="Add an extra layer of security to your account"
-              color="#f9c349"
+              color={tdcColors.yellow}
               onPress={() => Alert.alert("2FA", "Setup two-factor authentication")} 
             />
             <SecurityItem 
@@ -189,7 +190,7 @@ export default function SecurityAndAccess({ navigation }) {
           </View>
 
           <Text style={styles.footerNote}>
-            <Ionicons name="information-circle-outline" size={14} color="#f9c349" />
+            <Ionicons name="information-circle-outline" size={14} color={tdcColors.yellow} />
             {" "}If you notice suspicious activity, change your password immediately.
           </Text>
         </Animated.View>
@@ -237,7 +238,7 @@ const styles = StyleSheet.create({
     fontSize: 13, fontWeight: '800', color: '#1a1a1a', marginTop: 24, marginBottom: 12, 
     marginLeft: 20, flexDirection: 'row', alignItems: 'center' 
   },
-  sectionDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#f9c349', marginRight: 10 },
+  sectionDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: tdcColors.yellow, marginRight: 10 },
   
   // Cards
   card: { 

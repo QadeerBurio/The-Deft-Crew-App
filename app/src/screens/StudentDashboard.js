@@ -22,6 +22,7 @@ import { useNavigation } from '@react-navigation/native';
 // 🆕 engagement
 import FeatureDot from '../engagement/components/FeatureDot';
 import { useMissions } from '../engagement/hooks/useMissions';
+import { colors as tdcColors } from '../theme';
 
 const { width } = Dimensions.get('window');
 const COLUMN_WIDTH = (width - 60) / 2;
@@ -36,7 +37,7 @@ const ParticleBackground = () => {
       opacity: new Animated.Value(0),
       duration: 4000 + Math.random() * 4000,
       delay: Math.random() * 3000,
-      color: ['#f9c349', '#6366f1', '#a855f7', '#f43f5e', '#10b981', '#06b6d4', '#fb923c'][
+      color: [tdcColors.yellow, '#6366f1', '#a855f7', '#f43f5e', '#10b981', '#06b6d4', '#fb923c'][
         Math.floor(Math.random() * 7)
       ],
     }))
@@ -508,7 +509,7 @@ const StudentDashboard = () => {
       routeName: 'Career',
       icon: 'briefcase-variant',
       sub: 'Careers & Hiring',
-      colors: ['#f9c349', '#f59e0b'],
+      colors: [tdcColors.yellow, '#f59e0b'],
       size: 'small',
     },
     {
@@ -540,8 +541,8 @@ const StudentDashboard = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              tintColor="#f9c349"
-              colors={['#f9c349']}
+              tintColor={tdcColors.yellow}
+              colors={[tdcColors.yellow]}
               progressViewOffset={20}
             />
           }
@@ -641,7 +642,7 @@ const StudentDashboard = () => {
                 colors={['rgba(249, 195, 73, 0.12)', 'rgba(245, 158, 11, 0.12)']}
                 style={styles.statIconBox}
               >
-                <Ionicons name="briefcase" size={20} color="#f9c349" />
+                <Ionicons name="briefcase" size={20} color={tdcColors.yellow} />
               </LinearGradient>
               <Text style={styles.statNumber}>50+</Text>
               <Text style={styles.statLabel}>Jobs</Text>
@@ -676,7 +677,7 @@ const styles = StyleSheet.create({
     width: 400,
     height: 350,
     borderRadius: 200,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
   },
   glowBottom: {
     position: 'absolute',
@@ -685,7 +686,7 @@ const styles = StyleSheet.create({
     width: 400,
     height: 370,
     borderRadius: 200,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
   },
 
   header: {
@@ -708,7 +709,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: tdcColors.yellow,
     marginRight: 8,
   },
   brandSubtitle: {

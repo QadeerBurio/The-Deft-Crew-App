@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { ChatContext } from '../context/ChatContext';
+import { colors } from '../theme';
 
 const { width } = Dimensions.get('window');
 
@@ -510,7 +511,7 @@ const ChatBotInterface = ({ onClose }) => {
                 <Ionicons
                   name="sparkles-sharp"
                   size={26}
-                  color="#f9c349"
+                  color={colors.yellow}
                   style={styles.welcomeSparkle}
                 />
                 <Text style={styles.welcomeTitle}>TDC Assistant</Text>
@@ -817,7 +818,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   userMessageBubble: {
-    backgroundColor: '#f9c349',
+    backgroundColor: colors.yellow,
     borderTopRightRadius: 2,
   },
   botMessageBubble: {

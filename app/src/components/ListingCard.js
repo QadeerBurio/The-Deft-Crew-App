@@ -2,8 +2,9 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../theme';
 
-const BRAND = '#f9c349';
+const BRAND = colors.yellow;
 const INK = '#1a1a1a';
 const MUTED = '#8E8E93';
 

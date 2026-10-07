@@ -13,8 +13,9 @@ import {
 } from 'react-native';
 import Dot from './Dot';
 import { pop, success as hapticSuccess } from '../utils/haptics';
+import { colors } from '../../theme';
 
-const GOLD = '#f9c349';
+const GOLD = colors.yellow;
 const BLACK = '#0f0f0f';
 const WHITE = '#ffffff';
 const MUTED = '#8b8b8b';

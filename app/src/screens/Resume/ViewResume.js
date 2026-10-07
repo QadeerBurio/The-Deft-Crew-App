@@ -28,6 +28,7 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
+import { colors } from '../../theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -173,7 +174,7 @@ const ResumeViewScreen = () => {
   // Get status color
   const getStatusColor = (percentage) => {
     if (percentage >= 80) return '#2ECC71';
-    if (percentage >= 50) return '#f9c349';
+    if (percentage >= 50) return colors.yellow;
     if (percentage >= 30) return '#E67E22';
     return '#E74C3C';
   };
@@ -182,11 +183,11 @@ const ResumeViewScreen = () => {
   const getSkillLevelStyle = (level) => {
     switch (level?.toLowerCase()) {
       case 'expert':
-        return { backgroundColor: '#000', borderColor: '#f9c349' };
+        return { backgroundColor: '#000', borderColor: colors.yellow };
       case 'advanced':
-        return { backgroundColor: '#1a1a1a', borderColor: '#f9c349' };
+        return { backgroundColor: '#1a1a1a', borderColor: colors.yellow };
       case 'intermediate':
-        return { backgroundColor: '#2a2a2a', borderColor: '#f9c349' };
+        return { backgroundColor: '#2a2a2a', borderColor: colors.yellow };
       default:
         return { backgroundColor: '#f5f5f5', borderColor: '#e8e8e8' };
     }
@@ -197,7 +198,7 @@ const ResumeViewScreen = () => {
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="dark-content" backgroundColor="#f5f7fa" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#f9c349" />
+          <ActivityIndicator size="large" color={colors.yellow} />
           <Text style={styles.loadingText}>Loading resume...</Text>
         </View>
       </SafeAreaView>
@@ -255,7 +256,7 @@ const ResumeViewScreen = () => {
             startInLoadingState={true}
             renderLoading={() => (
               <View style={styles.inlineLoading}>
-                <ActivityIndicator size="large" color="#f9c349" />
+                <ActivityIndicator size="large" color={colors.yellow} />
                 <Text style={styles.inlineLoadingText}>Loading document preview...</Text>
               </View>
             )}
@@ -291,8 +292,8 @@ const ResumeViewScreen = () => {
             onPress={handleExportPDF}
             disabled={isExporting}
           >
-            <Ionicons name="download-outline" size={22} color="#f9c349" />
-            <Text style={[styles.toolbarButtonText, { color: '#f9c349' }]}>Download PDF</Text>
+            <Ionicons name="download-outline" size={22} color={colors.yellow} />
+            <Text style={[styles.toolbarButtonText, { color: colors.yellow }]}>Download PDF</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -397,7 +398,7 @@ const styles = StyleSheet.create({
   exportButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9c349',
+    backgroundColor: colors.yellow,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -436,7 +437,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#f9c349',
+    backgroundColor: colors.yellow,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -501,7 +502,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(249, 195, 73, 0.3)',
   },
   completionBadgeText: {
-    color: '#f9c349',
+    color: colors.yellow,
   },
   progressBarContainer: {
     marginTop: 4,
@@ -514,7 +515,7 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#f9c349',
+    backgroundColor: colors.yellow,
     borderRadius: 2,
   },
   statsRow: {
@@ -572,7 +573,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: '#f9c349',
+    backgroundColor: colors.yellow,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
@@ -808,7 +809,7 @@ const styles = StyleSheet.create({
   webViewExport: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9c349',
+    backgroundColor: colors.yellow,
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 16,
