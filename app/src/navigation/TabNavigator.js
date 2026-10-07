@@ -2,18 +2,14 @@
 import React, { useEffect, useRef } from "react";
 import {
   View,
+  Text,
   StyleSheet,
   TouchableOpacity,
   Dimensions,
   StatusBar,
 } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import {
-  Octicons,
-  MaterialCommunityIcons,
-  MaterialIcons,
-  Foundation,
-} from "@expo/vector-icons";
+import { Ionicons, Foundation } from "@expo/vector-icons";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import HomeStack from "./HomeStack";
@@ -24,6 +20,7 @@ import ProfileScreen from "../screens/ProfileScreen";
 
 // 🆕 tour
 import { useTour } from "../engagement/tour/TourProvider";
+import { colors, shadow } from "../theme";
 
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get("window");
@@ -112,6 +109,31 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
   const campusIndex = state.routes.findIndex((r) => r.name === "Campus");
   const profileIndex = state.routes.findIndex((r) => r.name === "Profile");
 
+  // One side tab: icon, lowercase label, yellow dot when active.
+  // The ref box wraps only the icon so the tour spotlight stays tight.
+  const renderTab = ({ label, iconOn, iconOff, active, onPress, refBox }) => (
+    <TouchableOpacity
+      style={styles.tabItem}
+      onPress={onPress}
+      activeOpacity={0.7}
+      accessibilityRole="tab"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: active }}
+    >
+      <View ref={refBox} collapsable={false} style={styles.refBox}>
+        <Ionicons
+          name={active ? iconOn : iconOff}
+          size={24}
+          color={active ? colors.ink : colors.textFaint}
+        />
+      </View>
+      <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
+        {label}
+      </Text>
+      <View style={[styles.activeDot, active && styles.activeDotOn]} />
+    </TouchableOpacity>
+  );
+
   return (
     <View
       style={[
@@ -132,82 +154,63 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
         ]}
       >
         {/* ─── Home tab ─────────────────────────────────────────── */}
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() =>
-            navigation.navigate("Home", { screen: "HomeStackMain" })
-          }
-          activeOpacity={0.7}
-        >
-          {/* ✅ Native View with ref — measureInWindow works on this */}
-          <View ref={homeRef} collapsable={false} style={styles.refBox}>
-            <Octicons
-              name="home"
-              size={26}
-              color={state.index === homeIndex ? "#f9c349" : "#9AA0A6"}
-            />
-          </View>
-        </TouchableOpacity>
+        {renderTab({
+          label: "home",
+          iconOn: "home",
+          iconOff: "home-outline",
+          active: state.index === homeIndex,
+          onPress: () => navigation.navigate("Home", { screen: "HomeStackMain" }),
+          refBox: homeRef,
+        })}
 
         {/* ─── Explore tab ──────────────────────────────────────── */}
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => navigation.navigate("Explore")}
-          activeOpacity={0.7}
-        >
-          <View ref={exploreRef} collapsable={false} style={styles.refBox}>
-            <MaterialIcons
-              name="explore"
-              size={26}
-              color={state.index === exploreIndex ? "#f9c349" : "#9AA0A6"}
-            />
-          </View>
-        </TouchableOpacity>
+        {renderTab({
+          label: "explore",
+          iconOn: "compass",
+          iconOff: "compass-outline",
+          active: state.index === exploreIndex,
+          onPress: () => navigation.navigate("Explore"),
+          refBox: exploreRef,
+        })}
 
         {/* ─── Social (center) ──────────────────────────────────── */}
         <TouchableOpacity
           style={styles.centerButtonContainer}
           onPress={handleSocialPress}
           activeOpacity={0.9}
+          accessibilityRole="button"
+          accessibilityLabel="social"
         >
           <View ref={socialRef} collapsable={false} style={styles.refBox}>
             <View style={styles.centerButton}>
               <Foundation
                 name="social-skillshare"
-                size={32}
-                color={"#f9c349"}
+                size={30}
+                color={colors.yellow}
               />
             </View>
           </View>
         </TouchableOpacity>
 
         {/* ─── Campus tab ───────────────────────────────────────── */}
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => navigation.navigate("Campus")}
-          activeOpacity={0.7}
-        >
-          <View ref={campusRef} collapsable={false} style={styles.refBox}>
-            <MaterialCommunityIcons
-              name="school-outline"
-              size={26}
-              color={state.index === campusIndex ? "#f9c349" : "#9AA0A6"}
-            />
-          </View>
-        </TouchableOpacity>
+        {renderTab({
+          label: "campus",
+          iconOn: "school",
+          iconOff: "school-outline",
+          active: state.index === campusIndex,
+          onPress: () => navigation.navigate("Campus"),
+          refBox: campusRef,
+        })}
 
         {/* ─── Profile tab ──────────────────────────────────────── */}
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => navigation.navigate("Profile")}
-          activeOpacity={0.7}
-        >
-          <MaterialCommunityIcons
-            name="account-circle"
-            size={26}
-            color={state.index === profileIndex ? "#f9c349" : "#9AA0A6"}
-          />
-        </TouchableOpacity>
+        {renderTab({
+          label: "profile",
+          iconOn: "person-circle",
+          iconOff: "person-circle-outline",
+          active: state.index === profileIndex,
+          onPress: () => navigation.navigate("Profile"),
+          refBox: undefined,
+        })}
       </View>
     </View>
   );
@@ -275,14 +278,14 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     width: width,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.card,
     borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.08)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 20,
+    borderTopColor: colors.line,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 16,
   },
   contentContainer: {
     flexDirection: "row",
@@ -297,11 +300,33 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     height: TAB_HEIGHT,
+    paddingTop: 4,
   },
   // ✅ Small wrapper so measureInWindow measures just the icon
   refBox: {
     alignItems: "center",
     justifyContent: "center",
+  },
+  tabLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "500",
+    color: colors.textFaint,
+    marginTop: 2,
+  },
+  tabLabelActive: {
+    color: colors.ink,
+    fontWeight: "700",
+  },
+  activeDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    marginTop: 2,
+    backgroundColor: "transparent",
+  },
+  activeDotOn: {
+    backgroundColor: colors.yellow,
   },
   centerButtonContainer: {
     flex: 1,
@@ -311,20 +336,16 @@ const styles = StyleSheet.create({
     marginTop: -5,
   },
   centerButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 45,
-    backgroundColor: "#FFFFFF",
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: colors.ink,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 2.5,
-    borderColor: "#f9c349",
-    elevation: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
+    borderWidth: 4,
+    borderColor: colors.card,
+    ...shadow.lift,
     zIndex: 10,
-    marginTop: -15,
+    marginTop: -22,
   },
 });
