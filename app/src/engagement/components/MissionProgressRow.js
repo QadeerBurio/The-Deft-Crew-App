@@ -32,8 +32,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 6,
   },
   dots: {
     flexDirection: 'row',

@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Alert,
   Animated,
   Platform,
 } from 'react-native';
@@ -33,12 +34,13 @@ const BORDER = '#ececec';
 const BLACK = '#0f0f0f';
 
 export default function DailyDropCard() {
-  const { drop, refresh } = useDailyDrop();
+  const { drop, refresh, isLoading } = useDailyDrop();
   const { celebrate } = useEngagement();
   const navigation = useNavigation();
 
   const [busy, setBusy] = useState(false);
   const [votedChoice, setVotedChoice] = useState(null);
+  const [localCounts, setLocalCounts] = useState(null);
   const [target, setTarget] = useState(null);
 
   // Animations
@@ -109,18 +111,56 @@ export default function DailyDropCard() {
     if (drop?.target) setTarget(drop.target);
   }, [drop?.target]);
 
+  // New day / new drop → forget the local vote of the old one
+  const dropKey = drop?.dayKey || null;
+  const lastDropKeyRef = useRef(dropKey);
+  useEffect(() => {
+    if (lastDropKeyRef.current !== dropKey) {
+      lastDropKeyRef.current = dropKey;
+      setVotedChoice(null);
+      setLocalCounts(null);
+      setTarget(drop?.target || null);
+    }
+  }, [dropKey, drop?.target]);
+
+  // Fresh server counts replace the optimistic ones
+  useEffect(() => {
+    if (!busy) setLocalCounts(null);
+  }, [drop?.counts]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // First load: same-size placeholder so the home screen doesn't jump
+  if (!drop && isLoading) {
+    return (
+      <View style={[styles.card, styles.placeholderCard]}>
+        <View style={styles.phRow}>
+          <View style={[styles.phBlock, { width: 90, height: 10 }]} />
+          <View style={[styles.phBlock, { width: 60, height: 10 }]} />
+        </View>
+        <View style={[styles.phBlock, { width: '85%', height: 16, marginTop: 14 }]} />
+        <View style={[styles.phBlock, { width: '60%', height: 12, marginTop: 8 }]} />
+        <View style={styles.phRow}>
+          <View style={[styles.phBlock, styles.phOption]} />
+          <View style={[styles.phBlock, styles.phOption]} />
+        </View>
+      </View>
+    );
+  }
   if (!drop) return null;
 
-  const counts = drop.counts || {};
+  const counts = localCounts || drop.counts || {};
   const total = Object.values(counts).reduce((s, n) => s + n, 0) || 0;
   const myChoice = votedChoice || drop.myChoice;
   const hasVoted = !!myChoice;
   const options = drop.action?.options || [];
 
   const onVote = async (choice) => {
-    if (busy || hasVoted) return;
+    if (busy || hasVoted || !choice) return;
     setBusy(true);
-    pop();
+    try { pop(); } catch (e) {}
+
+    // Optimistic: the bars + tick show instantly, server confirms after
+    setVotedChoice(choice);
+    setLocalCounts({ ...counts, [choice]: (counts[choice] || 0) + 1 });
 
     Animated.sequence([
       Animated.timing(scaleAnim, {
@@ -137,20 +177,35 @@ export default function DailyDropCard() {
 
     try {
       const res = await engagementApi.reactToDrop(drop.dayKey, choice);
-      setVotedChoice(choice);
+      if (res?.myChoice) setVotedChoice(res.myChoice);
+      if (res?.counts) setLocalCounts(res.counts);
       if (res?.target) setTarget(res.target);
-      if (res?.engagement) celebrate(res.engagement);
-      success();
-      await refresh();
+      if (res?.engagement) {
+        try { celebrate(res.engagement); } catch (e) {}
+      }
+      try { success(); } catch (e) {}
+      refresh();
     } catch (e) {
-      console.log('[DailyDrop] react error:', e?.message);
+      // Undo the optimistic vote and say why
+      setVotedChoice(null);
+      setLocalCounts(null);
+      const msg = e?.response?.data?.message || e?.message || 'try again';
+      console.log('[DailyDrop] react error:', msg);
+      Alert.alert(
+        "couldn't save your vote",
+        msg === 'drop_not_live'
+          ? "this drop isn't live anymore. pull down to refresh."
+          : msg === 'drop_not_found'
+          ? 'this drop was removed. pull down to refresh.'
+          : msg === 'invalid_choice'
+          ? 'the options changed. pull down to refresh.'
+          : msg
+      );
     } finally {
       setBusy(false);
     }
   };
 
-  // Opens the content this drop is about (job, offer, event, program,
-  // confessions, listing). Works before AND after voting.
   const handleOpenTarget = () => {
     if (!target?.route) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -261,6 +316,7 @@ export default function DailyDropCard() {
               ]}
               onPress={() => onVote(option)}
               disabled={busy || hasVoted}
+              hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
               activeOpacity={0.85}
             >
               {hasVoted && (
@@ -364,14 +420,19 @@ export default function DailyDropCard() {
 }
 
 const styles = StyleSheet.create({
+  placeholderCard: { minHeight: 150 },
+  phRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, marginTop: 12 },
+  phBlock: { backgroundColor: '#f1f1f1', borderRadius: 8 },
+  phOption: { flex: 1, height: 42, borderRadius: 12 },
   card: {
     backgroundColor: WHITE,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: GOLD + '35',
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    marginHorizontal: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    // Same width as the mission card: the home content padding sets the gutter
+    marginHorizontal: 0,
     marginTop: 12,
     marginBottom: 4,
     overflow: 'hidden',

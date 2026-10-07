@@ -155,9 +155,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: BORDER,
 
-    // ✅ WIDER — spans nearly full screen with minimal side margins
-    marginHorizontal: 8,
-    marginBottom: 12,
+    // Same width as the Daily Drop card: the home content padding sets the gutter
+    marginHorizontal: 0,
+    marginBottom: 10,
 
     // ✅ More generous internal padding since the card is wider
     padding: 18,

@@ -4,8 +4,9 @@ import React, {
 } from "react";
 import {
   ScrollView, StyleSheet, View, TouchableOpacity, Modal, Text,
-  RefreshControl, Animated, StatusBar, Dimensions, Easing, Alert,
+  RefreshControl, Animated, StatusBar, Dimensions, Easing, Alert, AppState,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthContext } from "../context/AuthContext";
@@ -278,7 +279,7 @@ export default function Home({ navigation }) {
   };
 
   // ── Engagement home query (user-scoped, abort-safe)
-  const { refetch: refetchEngagement, isRefetching } = useQuery({
+  const { refetch: refetchEngagement } = useQuery({
     queryKey: ["engagement", "home", userId],
     queryFn: async ({ signal }) => {
       try {
@@ -301,9 +302,45 @@ export default function Home({ navigation }) {
     refetchOnWindowFocus: false,
   });
 
-  const onRefresh = useCallback(() => {
-    refetchEngagement();
-  }, [refetchEngagement]);
+  // Pull to refresh: missions, streak, daily drop, everything engagement
+  const [pullRefreshing, setPullRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setPullRefreshing(true);
+    try {
+      await Promise.all([
+        refetchEngagement(),
+        queryClient.invalidateQueries({ queryKey: ["engagement"] }),
+      ]);
+    } finally {
+      setPullRefreshing(false);
+    }
+  }, [refetchEngagement, queryClient]);
+
+  // Auto refresh whenever Home is opened again (max once every 15s), so a
+  // new drop / finished mission shows without pulling down
+  const lastFocusRefreshRef = useRef(0);
+  useFocusEffect(
+    useCallback(() => {
+      if (isGuest) return;
+      const now = Date.now();
+      if (now - lastFocusRefreshRef.current < 15000) return;
+      lastFocusRefreshRef.current = now;
+      queryClient.invalidateQueries({ queryKey: ["engagement"] });
+    }, [isGuest, queryClient])
+  );
+
+  // App back from background → refresh too
+  useEffect(() => {
+    if (isGuest) return;
+    let prev = AppState.currentState;
+    const sub = AppState.addEventListener("change", (next) => {
+      if (prev.match(/inactive|background/) && next === "active") {
+        queryClient.invalidateQueries({ queryKey: ["engagement"] });
+      }
+      prev = next;
+    });
+    return () => sub.remove();
+  }, [isGuest, queryClient]);
 
   const sortedFeatureIds = useMemo(() => {
     if (!missions?.cards) return new Set();
@@ -340,7 +377,7 @@ export default function Home({ navigation }) {
           contentContainerStyle={styles.scrollContent}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
+              refreshing={pullRefreshing}
               onRefresh={onRefresh}
               colors={[GOLD]}
               tintColor={GOLD}
