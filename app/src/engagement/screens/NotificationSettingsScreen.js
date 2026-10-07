@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Animated,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -18,6 +19,35 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import Dot from '../components/Dot';
 import engagementApi from '../api/engagementApi';
+import api from '../../api/api';
+import {
+  registerForPushNotificationsAsync,
+  savePushTokenToServer,
+} from '../../utils/pushNotifications';
+
+// Re-saves this device's push token, then asks the server to push to it.
+// Shows exactly what is wrong if the push can't be delivered.
+async function runPushTest(setTesting) {
+  setTesting(true);
+  try {
+    const token = await registerForPushNotificationsAsync();
+    if (!token) {
+      Alert.alert('no push token', 'allow notifications for tdc in phone settings, and test on the installed app, not Expo Go.');
+      return;
+    }
+    await savePushTokenToServer(api, token);
+    Alert.alert('test sent', 'minimise the app now. a notification should drop in within ~10 seconds.');
+    const { data } = await api.get('/notification/test-push', { timeout: 30000 });
+    if (!data?.ok) {
+      const r = data?.results?.find((x) => x.error) || {};
+      Alert.alert('push failed', [data?.problem, r.error, r.fix].filter(Boolean).join('\n\n') || 'unknown error');
+    }
+  } catch (e) {
+    Alert.alert('push test error', e?.response?.data?.error || e?.message || 'unknown');
+  } finally {
+    setTesting(false);
+  }
+}
 
 const GOLD = '#f9c349';
 const DARK = '#1a1a1a';
@@ -154,6 +184,8 @@ export default function NotificationSettingsScreen() {
     }
   };
 
+  const [testing, setTesting] = useState(false);
+
   // Count how many are ON
   const enabledCount = ROWS.filter((r) => prefs[r.key] !== false).length;
   const totalCount = ROWS.length;
@@ -251,6 +283,23 @@ export default function NotificationSettingsScreen() {
             ))}
           </View>
 
+          {/* ── PUSH TEST ─────────────────────────────────────── */}
+          <TouchableOpacity
+            style={styles.testBtn}
+            onPress={() => runPushTest(setTesting)}
+            disabled={testing}
+            activeOpacity={0.85}
+          >
+            {testing ? (
+              <ActivityIndicator color={DARK} />
+            ) : (
+              <>
+                <Ionicons name="paper-plane" size={16} color={DARK} />
+                <Text style={styles.testBtnText}>send me a test notification</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
           {/* ── INFO NOTE ─────────────────────────────────────── */}
           <View style={styles.note}>
             <MaterialCommunityIcons
@@ -272,6 +321,17 @@ export default function NotificationSettingsScreen() {
 
 // ─── Styles ────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
+  testBtn: {
+    marginTop: 16,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: GOLD,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  testBtnText: { color: DARK, fontWeight: '700', fontSize: 14 },
   container: { flex: 1, backgroundColor: WHITE },
 
   header: {

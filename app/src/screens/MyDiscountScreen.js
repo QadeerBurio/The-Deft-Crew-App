@@ -64,7 +64,26 @@ import {
   unregisterLocalClaim,
   hydrateClaimedRegistry,
   isLocallyClaimed,
+  replaceClaimedIds,
 } from './OfferScreen';
+import CityDropdown from '../components/CityDropdown';
+import {
+  ALL_CITIES,
+  useSelectedCity,
+  offerMatchesCity,
+  buildCityOptions,
+  getOfferCities,
+  resolveCity,
+} from '../utils/cityFilter';
+
+const SERVER_URL = 'https://the-deft-crew-production.up.railway.app';
+
+// Offer image → full URL (was pointing at /api/<path>, which 404s)
+const offerImageUrl = (img) => {
+  if (!img) return null;
+  if (img.startsWith('http')) return img;
+  return `${SERVER_URL}/${img.replace(/^\/+/, '')}`;
+};
 
 const { width, height } = Dimensions.get('window');
 
@@ -103,6 +122,23 @@ const getTheme = (percentage) => DISCOUNT_THEMES[percentage] || DISCOUNT_THEMES.
 // ==================== ✅ USER-SCOPED CACHE ====================
 const userCaches = new Map();
 
+// "Just removed" IDs hide an offer only until the server catches up.
+// Before, this was a plain Set that never expired, so an offer you removed
+// and claimed again never came back in My Discounts.
+const REMOVED_HIDE_MS = 20000;
+class TimedSet {
+  constructor() { this.map = new Map(); }
+  add(id) { if (id) this.map.set(String(id), Date.now()); return this; }
+  delete(id) { return this.map.delete(String(id)); }
+  has(id) {
+    const t = this.map.get(String(id));
+    if (!t) return false;
+    if (Date.now() - t > REMOVED_HIDE_MS) { this.map.delete(String(id)); return false; }
+    return true;
+  }
+  clear() { this.map.clear(); }
+}
+
 const CACHE_DURATION = 15000;
 
 const getUserCache = (userId) => {
@@ -112,7 +148,7 @@ const getUserCache = (userId) => {
       offers: null,
       totalSaved: 0,
       timestamp: null,
-      removedIds: new Set(),
+      removedIds: new TimedSet(),
       inFlight: null,
     });
   }
@@ -1128,6 +1164,24 @@ export default function MyDiscountScreen() {
   const [promoDetails, setPromoDetails] = useState(null);
   const [generatingPromo, setGeneratingPromo] = useState(false);
 
+  // ── City filter (Karachi default, shared with Brands + Offer screens) ──
+  const [savedCity, setSelectedCity] = useSelectedCity();
+
+  // "All" + only cities your claimed deals are in, count = deals in that city
+  const cityOptions = useMemo(
+    () => buildCityOptions(claimedOffers, getOfferCities),
+    [claimedOffers]
+  );
+  const selectedCity = claimedOffers.length
+    ? resolveCity(savedCity, cityOptions)
+    : savedCity;
+
+  const visibleOffers = useMemo(
+    () => claimedOffers.filter((o) => offerMatchesCity(o, selectedCity)),
+    [claimedOffers, selectedCity]
+  );
+  const hiddenByCity = claimedOffers.length - visibleOffers.length;
+
   const headerAnim = useRef(new Animated.Value(0)).current;
   const isMounted = useRef(true);
   const refreshTimerRef = useRef(null);
@@ -1228,6 +1282,8 @@ export default function MyDiscountScreen() {
       const [offersRes, savingsRes] = await Promise.all([
         api.get('/offers/claimed', {
           headers: { Authorization: `Bearer ${token}` },
+          // refresh / focus / polling skip the server cache
+          params: isRefresh || !useCache ? { fresh: 1 } : undefined,
           timeout: 10000,
         }),
         api.get('/offers/my-total-savings', {
@@ -1264,15 +1320,9 @@ export default function MyDiscountScreen() {
             if (cachedOffer?.activePromoDetails) offerPromo = cachedOffer.activePromoDetails;
           }
 
-          try { registerLocalClaim(offer._id); } catch (e) {}
-
           return {
             ...offer,
-            displayImage: offer.image
-              ? offer.image.startsWith('http')
-                ? offer.image
-                : `https://the-deft-crew-production.up.railway.app/api/${offer.image}`
-              : null,
+            displayImage: offerImageUrl(offer.image),
             redemptionsToday: offer.redemptionsToday || 0,
             hasActivePromo: offerPromo?.status === 'active',
             promoStatus: offerPromo?.status || null,
@@ -1283,6 +1333,14 @@ export default function MyDiscountScreen() {
         });
 
       const saved = savingsRes.data?.totalSaved || 0;
+
+      // This is the full claimed list → the registry becomes exactly this list
+      // (redeemed / removed offers stop showing "Claimed" on Brands + Offer)
+      try {
+        replaceClaimedIds(
+          (Array.isArray(offersRes.data) ? offersRes.data : []).map((o) => o._id)
+        );
+      } catch (e) {}
 
       activeCache.offers = offersWithImages;
       activeCache.totalSaved = saved;
@@ -1374,7 +1432,7 @@ export default function MyDiscountScreen() {
     const performInitialLoad = async () => {
       if (!hasHydratedRef.current) {
         hasHydratedRef.current = true;
-        try { await hydrateClaimedRegistry(); } catch (e) { console.log('hydrate failed:', e); }
+        try { await hydrateClaimedRegistry(activeUserId); } catch (e) { console.log('hydrate failed:', e); }
       }
       if (!isSubscribed || currentUserIdRef.current !== activeUserId) return;
 
@@ -1450,7 +1508,10 @@ export default function MyDiscountScreen() {
         try { registerLocalClaim(event.offerId); } catch (e) {}
 
         const c = getUserCache(activeUserId);
-        if (c) c.timestamp = null;
+        if (c) {
+          c.timestamp = null;
+          c.removedIds.delete(event.offerId); // claimed again → show it again
+        }
 
         setTimeout(() => {
           if (isMounted.current && token && currentUserIdRef.current === activeUserId) {
@@ -1726,12 +1787,12 @@ export default function MyDiscountScreen() {
   }, [loadDiscounts]);
 
   const stats = useMemo(() => {
-    const activeCount = claimedOffers.filter(o => o.isActive !== false).length;
-    const onlineCount = claimedOffers.filter(o => o.isOnline).length;
-    const inStoreCount = claimedOffers.filter(o => o.isInStore).length;
-    const promoCount = claimedOffers.filter(o => o.hasActivePromo).length;
+    const activeCount = visibleOffers.filter(o => o.isActive !== false).length;
+    const onlineCount = visibleOffers.filter(o => o.isOnline).length;
+    const inStoreCount = visibleOffers.filter(o => o.isInStore).length;
+    const promoCount = visibleOffers.filter(o => o.hasActivePromo).length;
     return { activeCount, onlineCount, inStoreCount, promoCount };
-  }, [claimedOffers]);
+  }, [visibleOffers]);
 
   if (initialLoading && claimedOffers.length === 0) {
     return (
@@ -1771,8 +1832,22 @@ export default function MyDiscountScreen() {
         </TouchableOpacity>
       </Animated.View>
 
+      {cityOptions.length > 1 && (
+        <View style={styles.cityRow}>
+          <Text style={styles.cityRowText}>
+            {selectedCity === ALL_CITIES ? 'All your discounts' : `Discounts in ${selectedCity}`}
+          </Text>
+          <CityDropdown
+            options={cityOptions}
+            selected={selectedCity}
+            onSelect={setSelectedCity}
+            title="My discounts in"
+          />
+        </View>
+      )}
+
       <FlatList
-        data={claimedOffers}
+        data={visibleOffers}
         renderItem={({ item, index }) => (
           <DiscountCard
             item={item}
@@ -1810,7 +1885,26 @@ export default function MyDiscountScreen() {
             )}
           </View>
         }
-        ListEmptyComponent={<EmptyState navigation={navigation} />}
+        ListEmptyComponent={
+          hiddenByCity > 0 ? (
+            <View style={styles.cityEmpty}>
+              <Ionicons name="location-outline" size={40} color={COLORS.primary} />
+              <Text style={styles.cityEmptyTitle}>No discounts in {selectedCity}</Text>
+              <Text style={styles.cityEmptyText}>
+                You have {hiddenByCity} {hiddenByCity === 1 ? 'discount' : 'discounts'} in other cities.
+              </Text>
+              <TouchableOpacity
+                style={styles.cityEmptyBtn}
+                activeOpacity={0.85}
+                onPress={() => { soundTap(); setSelectedCity(ALL_CITIES); }}
+              >
+                <Text style={styles.cityEmptyBtnText}>Show All Cities</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <EmptyState navigation={navigation} />
+          )
+        }
       />
 
       <UseNowModal visible={modalVisible} onClose={() => setModalVisible(false)} item={selectedOffer} />
@@ -1861,6 +1955,19 @@ export default function MyDiscountScreen() {
 // ==================== STYLES ====================
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
+  cityRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, marginTop: 4, marginBottom: 4,
+  },
+  cityRowText: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted },
+  cityEmpty: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 24 },
+  cityEmptyTitle: { fontSize: 16, fontWeight: '700', color: '#1a1a1a', marginTop: 12 },
+  cityEmptyText: { fontSize: 13, color: '#777', marginTop: 6, textAlign: 'center' },
+  cityEmptyBtn: {
+    marginTop: 16, backgroundColor: '#1a1a1a', paddingHorizontal: 20,
+    paddingVertical: 10, borderRadius: 20,
+  },
+  cityEmptyBtnText: { color: COLORS.primary, fontWeight: '800', fontSize: 13 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 8 : 10,

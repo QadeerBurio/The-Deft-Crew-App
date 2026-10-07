@@ -2,7 +2,8 @@
 import { useState, useCallback, useContext } from 'react';
 import { Platform } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
-import { playSoundForNotification } from '../lib/tdcSounds';
+import { playSound } from '../lib/soundManager';
+import { styleNotification } from '../utils/notificationStyle';
 import { navigationRef } from '../navigation/navigationRef';
 
 export const useNotificationPopup = () => {
@@ -12,17 +13,20 @@ export const useNotificationPopup = () => {
   const [pendingNotifications, setPendingNotifications] = useState([]);
 
   const showNotificationBanner = useCallback(
-    (notification) => {
-      // ✅ Play the sound mapped to this notification type
-      try {
-        playSoundForNotification(notification?.type, notification?.mood);
-      } catch (e) {
-        console.log('[useNotificationPopup] sound error:', e?.message);
-      }
+    (raw) => {
+      const notification = styleNotification(raw || {});
 
+      // Queue it; the sound plays when it's actually shown
       if (bannerVisible) {
         setPendingNotifications((prev) => [...prev, notification]);
         return;
+      }
+
+      // Same sound file the push uses outside the app
+      try {
+        playSound(notification?.soundKey || 'tdc_push_default');
+      } catch (e) {
+        console.log('[useNotificationPopup] sound error:', e?.message);
       }
 
       setCurrentNotification(notification);
@@ -96,6 +100,7 @@ export const useNotificationPopup = () => {
         title: notification.title || 'New Notification',
         description: notification.description || notification.body || '',
         type: notification.type || 'System',
+        soundKey: notification.soundKey || data.soundKey || null,
         mood:
           notification.mood ||
           data.mood ||
@@ -116,7 +121,7 @@ export const useNotificationPopup = () => {
         createdAt: notification.createdAt || new Date().toISOString(),
         isRead: false,
       };
-      showNotificationBanner(formattedNotif);
+      showNotificationBanner(styleNotification(formattedNotif));
     },
     [showNotificationBanner]
   );

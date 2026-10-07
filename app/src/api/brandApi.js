@@ -11,9 +11,9 @@ const getBaseURL = () => {
     const manifest = Constants.expoConfig || Constants.manifest || {};
     const hostUri = manifest.hostUri;
     const devIp = hostUri ? hostUri.split(":")[0] : "192.168.18.93";
-    return `https://the-deft-crew-production.up.railway.app/api`;
+    return `http://192.168.18.93:5000/api`;
   }
-  return "https://the-deft-crew-production.up.railway.app/api";
+  return "http://192.168.18.93:5000/api";
 };
 
 export const BASE_URL = getBaseURL();
@@ -194,6 +194,13 @@ export const clearAuth = () => {
   cachedToken = null;
   cachedIsGuest = null;
   memoryCache.clear();
+  inFlight.clear();
+};
+
+// Called by AuthContext when the logged-in user changes
+export const notifyUserChanged = () => {
+  memoryCache.clear();
+  inFlight.clear();
 };
 
 // ─────────────────────────────────────────────────────
@@ -209,14 +216,38 @@ function makeKey(config) {
 // ─────────────────────────────────────────────────────
 // REQUEST INTERCEPTOR
 // ─────────────────────────────────────────────────────
-api.interceptors.request.use(
-  (config) => {
-    if (!authHydrated) {
-      hydrateAuth();
-    }
+// Reads the CURRENT token on every request. Before, the token was read once
+// and kept forever, so after logout / switching account the old user's token
+// (and their claimed offers) kept coming back.
+let lastAuthKey = undefined;
 
-    if (cachedToken && !cachedIsGuest) {
-      config.headers.Authorization = `Bearer ${cachedToken}`;
+api.interceptors.request.use(
+  async (config) => {
+    let token = null;
+    let isGuest = false;
+    try {
+      const [[, t], [, g]] = await AsyncStorage.multiGet(["token", "isGuest"]);
+      token = t || null;
+      isGuest = g === "true";
+    } catch {
+      token = cachedToken;
+      isGuest = !!cachedIsGuest;
+    }
+    cachedToken = token;
+    cachedIsGuest = isGuest;
+    authHydrated = true;
+
+    // Different user than last request → drop every cached response
+    const authKey = isGuest ? "guest" : token || "none";
+    if (lastAuthKey !== undefined && lastAuthKey !== authKey) {
+      memoryCache.clear();
+      inFlight.clear();
+    }
+    lastAuthKey = authKey;
+
+    // Always the live token (ignores a stale one passed by a screen)
+    if (token && !isGuest) {
+      config.headers.Authorization = `Bearer ${token}`;
     } else {
       delete config.headers.Authorization;
     }
@@ -231,7 +262,7 @@ api.interceptors.request.use(
         const controller = new AbortController();
         config.signal = controller.signal;
         controller.abort();
-        config._dedupKey = key;
+        config._dedupKey = null;
       } else {
         config._dedupKey = key;
         inFlight.set(key, true);
@@ -308,13 +339,16 @@ api.interceptors.response.use(
 // ─────────────────────────────────────────────────────
 // DEDUPLICATED + CACHED REQUEST HELPER
 // ─────────────────────────────────────────────────────
-async function cachedGet(url, { ttl = 30000, config = {} } = {}) {
+async function cachedGet(url, { ttl = 30000, config = {}, force = false } = {}) {
   const cacheKey = `GET:${url}:${JSON.stringify(config.params || {})}`;
 
-  const cached = memoryCache.get(cacheKey);
-  if (cached) return cached;
+  if (!force) {
+    const cached = memoryCache.get(cacheKey);
+    if (cached) return cached;
+  }
 
-  if (inFlight.has(cacheKey)) return inFlight.get(cacheKey);
+  const pending = inFlight.get(cacheKey);
+  if (pending && typeof pending.then === "function") return pending;
 
   const promise = api
     .get(url, { ...config, _skipDedup: true })
@@ -345,13 +379,21 @@ export const optimizedAPI = {
       if (cached) return cached;
     }
 
+    // forceRefresh really goes to the server now (before, the 5 min
+    // memory cache answered even on pull-to-refresh)
     return cachedGet("/brands", {
-      ttl: 300000,
+      ttl: 30000,
+      force: forceRefresh,
       config: { params: { limit } },
     }).then(async (brandsRaw) => {
       let summary = {};
       try {
-        summary = (await cachedGet("/offers/summary", { ttl: 300000 })) || {};
+        summary =
+          (await cachedGet("/offers/summary", {
+            ttl: 30000,
+            force: forceRefresh,
+            config: forceRefresh ? { params: { fresh: 1 } } : {},
+          })) || {};
       } catch {}
 
       const brands = Array.isArray(brandsRaw)
@@ -380,7 +422,10 @@ export const optimizedAPI = {
             ...o,
             image: formatImg(o.image, "offer", baseUrl),
             displayImage: formatImg(o.image, "offer", baseUrl),
-            isClaimed: o.claimedBy?.includes(userId) || false,
+            isClaimed:
+              (o.claimedBy || []).some((id) => String(id) === String(userId)) || false,
+            serverClaimed:
+              (o.claimedBy || []).some((id) => String(id) === String(userId)) || false,
             discountPercentage: o.discountPercentage || 0,
           };
         }
@@ -405,7 +450,7 @@ export const optimizedAPI = {
           new Date(a.createdAt || a._id).getTime()
       );
 
-      memoryCache.set(cacheKey, mapped, 300000);
+      memoryCache.set(cacheKey, mapped, 30000);
       return mapped;
     });
   },

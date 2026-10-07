@@ -15,10 +15,22 @@ import {
   navigateWhenReady,
 } from '../utils/pushNotifications';
 
-const DEDUPE_WINDOW_MS = 8000;
+// Long enough that the 10s poller doesn't re-show a push already on screen
+const DEDUPE_WINDOW_MS = 2 * 60 * 1000;
+
+// App open → only the TDC in-app popup. Set here (on mount) as well as in
+// App.js so it always wins, even if an older App.js handler is still around.
+const HIDE_SYSTEM_POPUP = {
+  handleNotification: async () => ({
+    shouldShowBanner: false,
+    shouldShowList: false,
+    shouldPlaySound: false,
+    shouldSetBadge: true,
+  }),
+};
 
 export default function GlobalNotificationLayer() {
-  const { token, isGuest } = useContext(AuthContext);
+  const { token, isGuest, updateUnreadCount } = useContext(AuthContext);
   const appStateRef = useRef(AppState.currentState);
 
   const {
@@ -49,8 +61,17 @@ export default function GlobalNotificationLayer() {
     return false;
   }, []);
 
+  // Conversations that just got a system push (avoid a 2nd in-app popup
+  // when the 10s message poller notices the same message)
+  const recentChatPushRef = useRef(new Map());
+
   // ── Handle new notification from polling ──
   const handleNewNotification = useCallback((notification) => {
+    const convId = notification?.conversationId ? String(notification.conversationId) : null;
+    if (convId && String(notification?.type).toLowerCase() === 'message') {
+      const t = recentChatPushRef.current.get(convId);
+      if (t && Date.now() - t < DEDUPE_WINDOW_MS) return;
+    }
     if (isDuplicate(notification?._id)) return;
     addNotification(notification);
   }, [addNotification, isDuplicate]);
@@ -63,6 +84,7 @@ export default function GlobalNotificationLayer() {
   // ═══════════════════════════════════════════════════════════════
   useEffect(() => {
     console.log('[GlobalNotificationLayer] Setting up foreground listener...');
+    Notifications.setNotificationHandler(HIDE_SYSTEM_POPUP);
 
     const sub = Notifications.addNotificationReceivedListener((notification) => {
       // Skip if guest
@@ -73,7 +95,17 @@ export default function GlobalNotificationLayer() {
 
       const content = notification?.request?.content || {};
       const data = content.data || {};
-      
+
+      // Only while the app is on screen. Otherwise the phone shows it.
+      if (AppState.currentState !== 'active') return;
+
+      // Safety net: if the phone still put it in the tray, remove it,
+      // so the user only sees the in-app popup.
+      const reqId = notification?.request?.identifier;
+      if (reqId) {
+        Notifications.dismissNotificationAsync(reqId).catch(() => {});
+      }
+
       // Generate unique ID for deduplication
       const id =
         data.notificationId ||
@@ -86,40 +118,38 @@ export default function GlobalNotificationLayer() {
         mood: data.mood,
       });
 
-      // Check for duplicate
-      if (isDuplicate(id)) {
-        console.log('[GlobalNotificationLayer] Duplicate push - skipping');
-        return;
+      // App is open: show the TDC in-app popup (the system popup is hidden
+      // in App.js). Same title, emoji, mood icon and sound as outside the app.
+      if (isDuplicate(id)) return;
+      if (data.conversationId) {
+        recentChatPushRef.current.set(String(data.conversationId), Date.now());
       }
 
-      // Play sound
-      try {
-        const { playSoundForNotification } = require('../lib/tdcSounds');
-        playSoundForNotification(data.type, data.mood);
-      } catch (e) {
-        console.log('[GlobalNotificationLayer] sound error:', e.message);
-      }
-
-      // Add to banner queue
       addNotification({
         _id: id,
         title: content.title || 'notification',
         description: content.body || '',
         type: data.type || 'System',
         mood: data.mood || 'sorted',
+        soundKey: data.soundKey || null,
         iconUrl: data.iconUrl || null,
         link: data.link || null,
-        screenToOpen: data.screen || data.route || null,
+        conversationId: data.conversationId || null,
+        screenToOpen: data.route || data.screen || null,
         metadata: data,
         createdAt: new Date().toISOString(),
       });
+
+      if (token && typeof updateUnreadCount === 'function') {
+        try { updateUnreadCount(token); } catch {}
+      }
     });
 
     return () => {
       console.log('[GlobalNotificationLayer] Removing foreground listener');
       sub.remove();
     };
-  }, [addNotification, isGuest, isDuplicate]);
+  }, [isGuest, isDuplicate, addNotification, token, updateUnreadCount]);
 
   // ═══════════════════════════════════════════════════════════════
   // BACKGROUND TAP: Handle notification tap (app was background/killed)

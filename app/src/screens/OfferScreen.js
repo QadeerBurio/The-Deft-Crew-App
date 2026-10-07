@@ -44,6 +44,13 @@ import api, {
 } from "../api/brandApi";
 
 import { AuthContext } from "../context/AuthContext";
+import CityFilterBar from "../components/CityFilterBar";
+import {
+  ALL_CITIES,
+  useSelectedCity,
+  branchMatchesCity,
+  buildCityOptions,
+} from "../utils/cityFilter";
 
 // ═══════════════════════════════════════════
 // TDC SOUND KIT
@@ -71,54 +78,103 @@ const MIN_FETCH_GAP = 3000;
 const STATS_POLL_INTERVAL = 12000;
 
 // ============================================================
-// ✅ PERSISTENT CLAIMED IDS REGISTRY
+// ✅ PERSISTENT CLAIMED IDS REGISTRY (per user)
+// Before: one shared key for every account and IDs were only ever added,
+// so a redeemed/removed offer stayed "Claimed" forever and the next user
+// on the same phone saw the previous user's claims.
 // ============================================================
-const CLAIMED_IDS_STORAGE_KEY = "@tdc_claimed_offer_ids";
+const CLAIMED_IDS_STORAGE_PREFIX = "@tdc_claimed_offer_ids:";
+const LEGACY_CLAIMED_IDS_KEY = "@tdc_claimed_offer_ids";
+const RECENT_CLAIM_GRACE_MS = 20000; // ignore server for 20s after a local claim
 
 const claimedIdsRegistry = new Set();
+const recentLocalClaims = new Map(); // offerId → timestamp
+let registryOwner = null; // userId the registry belongs to
 let registryHydrated = false;
+let hydratingPromise = null;
+
+const storageKeyFor = (uid) => `${CLAIMED_IDS_STORAGE_PREFIX}${uid}`;
+
+const userIdFromStoredToken = async () => {
+  try {
+    const [[, tk], [, guest]] = await AsyncStorage.multiGet(["token", "isGuest"]);
+    if (!tk || guest === "true") return null;
+    const payload = JSON.parse(atob(tk.split(".")[1]));
+    return payload.id || payload._id || payload.userId || payload.sub || null;
+  } catch {
+    return null;
+  }
+};
 
 let persistTimer = null;
 const persistRegistry = () => {
+  if (!registryOwner) return;
+  const owner = registryOwner;
   if (persistTimer) clearTimeout(persistTimer);
   persistTimer = setTimeout(async () => {
     try {
       const arr = Array.from(claimedIdsRegistry);
-      await AsyncStorage.setItem(CLAIMED_IDS_STORAGE_KEY, JSON.stringify(arr));
+      await AsyncStorage.setItem(storageKeyFor(owner), JSON.stringify(arr));
     } catch (e) {
       console.log("persistRegistry error:", e);
     }
   }, 200);
 };
 
-export const hydrateClaimedRegistry = async () => {
-  if (registryHydrated) return;
-  registryHydrated = true;
-  try {
-    const raw = await AsyncStorage.getItem(CLAIMED_IDS_STORAGE_KEY);
-    if (raw) {
-      const arr = JSON.parse(raw);
-      if (Array.isArray(arr)) {
-        arr.forEach((id) => {
-          if (id) claimedIdsRegistry.add(String(id));
-        });
-        console.log(`[Registry] Hydrated ${arr.length} claimed offer IDs`);
-      }
-    }
-  } catch (e) {
-    console.log("hydrateClaimedRegistry error:", e);
+// Loads the claimed IDs of the logged-in user. Safe to call many times.
+export const hydrateClaimedRegistry = async (userId) => {
+  const uid = userId || (await userIdFromStoredToken());
+
+  if (registryHydrated && registryOwner === (uid || null)) return;
+  if (hydratingPromise) {
+    await hydratingPromise;
+    if (registryOwner === (uid || null)) return;
   }
+
+  hydratingPromise = (async () => {
+    claimedIdsRegistry.clear();
+    recentLocalClaims.clear();
+    registryOwner = uid || null;
+    registryHydrated = true;
+
+    try { await AsyncStorage.removeItem(LEGACY_CLAIMED_IDS_KEY); } catch {}
+    if (!uid) return;
+
+    try {
+      const raw = await AsyncStorage.getItem(storageKeyFor(uid));
+      const arr = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(arr)) arr.forEach((id) => id && claimedIdsRegistry.add(String(id)));
+    } catch (e) {
+      console.log("hydrateClaimedRegistry error:", e);
+    }
+  })();
+
+  try { await hydratingPromise; } finally { hydratingPromise = null; }
+};
+
+// Called by AuthContext on logout / account switch
+export const clearClaimedRegistry = async (userId) => {
+  claimedIdsRegistry.clear();
+  recentLocalClaims.clear();
+  registryOwner = null;
+  registryHydrated = false;
+  try {
+    if (userId) await AsyncStorage.removeItem(storageKeyFor(userId));
+    await AsyncStorage.removeItem(LEGACY_CLAIMED_IDS_KEY);
+  } catch {}
 };
 
 export const registerLocalClaim = (offerId) => {
   if (!offerId) return;
   claimedIdsRegistry.add(String(offerId));
+  recentLocalClaims.set(String(offerId), Date.now());
   persistRegistry();
 };
 
 export const unregisterLocalClaim = (offerId) => {
   if (!offerId) return;
   claimedIdsRegistry.delete(String(offerId));
+  recentLocalClaims.delete(String(offerId));
   persistRegistry();
 };
 
@@ -129,17 +185,46 @@ export const isLocallyClaimed = (offerId) => {
 
 export const getAllLocallyClaimed = () => Array.from(claimedIdsRegistry);
 
-export const reconcileClaimedIds = (serverIds) => {
+/**
+ * Server is the source of truth.
+ * serverIds: offers the server says this user has claimed
+ * scopeIds:  every offer ID that response covered (optional).
+ *   With scopeIds, any ID in scope that the server no longer lists is removed
+ *   (redeemed, unclaimed on another phone, offer deleted), except claims made
+ *   on this phone in the last 20s (server may not have caught up yet).
+ */
+export const reconcileClaimedIds = (serverIds, scopeIds = null) => {
   if (!Array.isArray(serverIds)) return;
   const serverSet = new Set(serverIds.map(String));
   let changed = false;
+
   serverSet.forEach((id) => {
     if (!claimedIdsRegistry.has(id)) {
       claimedIdsRegistry.add(id);
       changed = true;
     }
   });
+
+  if (Array.isArray(scopeIds)) {
+    const now = Date.now();
+    scopeIds.map(String).forEach((id) => {
+      if (serverSet.has(id) || !claimedIdsRegistry.has(id)) return;
+      const t = recentLocalClaims.get(id);
+      if (t && now - t < RECENT_CLAIM_GRACE_MS) return;
+      claimedIdsRegistry.delete(id);
+      recentLocalClaims.delete(id);
+      changed = true;
+    });
+  }
+
   if (changed) persistRegistry();
+  return changed;
+};
+
+// Full list from /offers/claimed → registry becomes exactly that list
+export const replaceClaimedIds = (serverIds) => {
+  if (!Array.isArray(serverIds)) return;
+  return reconcileClaimedIds(serverIds, Array.from(claimedIdsRegistry));
 };
 
 // ============================================================
@@ -589,6 +674,38 @@ export default function OfferScreen() {
 
   const [claimVersion, setClaimVersion] = useState(0);
 
+  // ── City filter (shared with Brands + My Discounts, Karachi default) ──
+  const [city, setCity] = useSelectedCity();
+
+  const branchCityOf = useCallback((b) => {
+    if (b?.city) return [b.city];
+    const loc = (b?.location || b?.address || "").split(",").pop()?.trim();
+    return loc ? [loc] : [];
+  }, []);
+
+  const cityOptions = useMemo(() => {
+    if (!branches.length) return [];
+    const opts = buildCityOptions(branches, branchCityOf).filter(
+      (o) => o.city === ALL_CITIES || o.count > 0
+    );
+    // Only worth showing when branches are in more than one city
+    return opts.length > 2 ? opts : [];
+  }, [branches, branchCityOf]);
+
+  const cityBranches = useMemo(
+    () => branches.filter((b) => branchMatchesCity(b, city)),
+    [branches, city]
+  );
+  const noBranchesInCity = branches.length > 0 && cityBranches.length === 0;
+  const visibleBranches = noBranchesInCity ? branches : cityBranches;
+
+  // Selected branch from another city → clear it when the city changes
+  useEffect(() => {
+    setSelectedBranch((prev) =>
+      prev && !visibleBranches.some((b) => b._id === prev._id) ? null : prev
+    );
+  }, [visibleBranches]);
+
   const isMountedRef = useRef(true);
   const isScreenFocusedRef = useRef(false);
   const pollTimerRef = useRef(null);
@@ -719,8 +836,9 @@ export default function OfferScreen() {
       isFetchingRef.current = true;
       lastFetchAtRef.current = now;
 
+      // Spinner only for the first load or a manual refresh, not for polling
       if (!silent) setLoading(true);
-      else setRefreshing(true);
+      else if (forceFresh) setRefreshing(true);
 
       try {
         const hasAuth = token && !isGuest;
@@ -728,9 +846,11 @@ export default function OfferScreen() {
           ? { Authorization: `Bearer ${token}` }
           : undefined;
 
-        const offersUrl = forceFresh
-          ? `/offers/brand/${initialBrand._id}?fresh=1&t=${Date.now()}`
-          : `/offers/brand/${initialBrand._id}`;
+        // Logged-in users always read fresh claim state (server cache skipped)
+        const offersUrl =
+          forceFresh || hasAuth
+            ? `/offers/brand/${initialBrand._id}?fresh=1`
+            : `/offers/brand/${initialBrand._id}`;
 
         const [brandRes, offersRes, branchesRes] = await Promise.all([
           api
@@ -754,7 +874,11 @@ export default function OfferScreen() {
         const rawOffers = offersRes.data || [];
         if (meId) {
           const serverClaimedIds = extractClaimedIdsFromOffers(rawOffers, meId);
-          reconcileClaimedIds(serverClaimedIds);
+          // Authoritative for this brand's offers (removes redeemed/unclaimed ones)
+          reconcileClaimedIds(
+            serverClaimedIds,
+            rawOffers.map((o) => o?._id).filter(Boolean)
+          );
         }
 
         const freshOffers = rawOffers.map((offer) => {
@@ -839,7 +963,7 @@ export default function OfferScreen() {
     isMountedRef.current = true;
 
     (async () => {
-      await hydrateClaimedRegistry();
+      await hydrateClaimedRegistry(userIdFromToken(token));
 
       const cachedStats = await loadStatsCache();
       if (cachedStats && isMountedRef.current) {
@@ -1257,8 +1381,22 @@ export default function OfferScreen() {
           </View>
         </View>
 
+        {cityOptions.length > 0 && (
+          <CityFilterBar
+            options={cityOptions}
+            selected={cityOptions.some((o) => o.city === city) ? city : ALL_CITIES}
+            onSelect={setCity}
+            style={{ marginTop: 16, marginBottom: 0, marginHorizontal: -20 }}
+          />
+        )}
+        {noBranchesInCity && city !== ALL_CITIES && (
+          <Text style={styles.cityNotice}>
+            No branches in {city} yet. Showing all branches.
+          </Text>
+        )}
+
         <BranchDropdown
-          branches={branches}
+          branches={visibleBranches}
           selectedBranch={selectedBranch}
           onSelect={(b) => {
             setSelectedBranch(b);
@@ -1509,6 +1647,15 @@ export default function OfferScreen() {
 // STYLES (unchanged)
 // ============================================================
 const styles = StyleSheet.create({
+  cityNotice: {
+    fontSize: 11.5,
+    color: "#8a6d1a",
+    backgroundColor: "#fff8e6",
+    marginTop: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
   mainSafeArea: { flex: 1, backgroundColor: "#fff" },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   loadingText: { marginTop: 12, color: "#999", fontSize: 14 },

@@ -21,7 +21,9 @@
         "NSLocationWhenInUseUsageDescription": "TDC uses your location to share your current location in chats and provide location-based features.",
         "NSPhotoLibraryUsageDescription": "TDC uses your photo library so you can select photos to upload to your profile and share with other users.",
         "ITSAppUsesNonExemptEncryption": false,
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       }
     },
     "android": {
@@ -42,8 +44,7 @@
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.USE_FULL_SCREEN_INTENT",
         "android.permission.SCHEDULE_EXACT_ALARM",
-        
-    "android.permission.SYSTEM_ALERT_WINDOW"
+        "android.permission.SYSTEM_ALERT_WINDOW"
       ],
       "blockedPermissions": [
         "android.permission.READ_MEDIA_IMAGES",
@@ -58,73 +59,110 @@
         "backgroundColor": "#000000"
       },
       "intentFilters": [
-    { "action": "VIEW", "data": { "scheme": "geo" } },
-    { "action": "VIEW", "data": { "scheme": "https", "host": "www.google.com", "pathPrefix": "/maps" } },
-    {
-      "action": "VIEW",
-      "autoVerify": true,
-      "data": [
-        { "scheme": "tdcapp" },
-        { "scheme": "https", "host": "the-deft-crew-production.up.railway.app" }
-      ],
-      "category": ["BROWSABLE", "DEFAULT"]
-    }
-  ]
-      
-      
+        {
+          "action": "VIEW",
+          "data": {
+            "scheme": "geo"
+          }
+        },
+        {
+          "action": "VIEW",
+          "data": {
+            "scheme": "https",
+            "host": "www.google.com",
+            "pathPrefix": "/maps"
+          }
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "tdcapp"
+            },
+            {
+              "scheme": "https",
+              "host": "the-deft-crew-production.up.railway.app"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "output": "static"
     },
     "plugins": [
-  "@react-native-community/datetimepicker",
-  [
-    "expo-notifications",
-    {
-      "icon": "./assets/notification-icon.png",
-      "color": "#f9c349",
-      "defaultChannel": "engagement",
-      "sounds": [
-        "./assets/sounds/push/tdc_push_default.wav",
-        "./assets/sounds/push/tdc_push_deal.wav",
-        "./assets/sounds/push/tdc_push_message.wav",
-        "./assets/sounds/push/tdc_push_internship.wav",
-        "./assets/sounds/push/tdc_push_reminder.wav",
-        "./assets/sounds/push/tdc_push_points.wav",
-        "./assets/sounds/push/tdc_push_streak.wav",
-        "./assets/sounds/push/tdc_push_confession.wav",
-        "./assets/sounds/push/tdc_push_event.wav",
-        "./assets/sounds/push/tdc_push_level_up.wav"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#f9c349",
+          "defaultChannel": "snd_tdc_push_default",
+          "sounds": [
+            "./assets/sounds/push/tdc_push_default.wav",
+            "./assets/sounds/push/tdc_push_deal.wav",
+            "./assets/sounds/push/tdc_push_message.wav",
+            "./assets/sounds/push/tdc_push_internship.wav",
+            "./assets/sounds/push/tdc_push_reminder.wav",
+            "./assets/sounds/push/tdc_push_points.wav",
+            "./assets/sounds/push/tdc_push_streak.wav",
+            "./assets/sounds/push/tdc_push_confession.wav",
+            "./assets/sounds/push/tdc_push_event.wav",
+            "./assets/sounds/push/tdc_push_level_up.wav",
+            "./assets/sounds/moods/tdc_mood_sorted.wav",
+            "./assets/sounds/moods/tdc_mood_excited.wav",
+            "./assets/sounds/moods/tdc_mood_panic.wav",
+            "./assets/sounds/moods/tdc_mood_broke.wav",
+            "./assets/sounds/moods/tdc_mood_sleepy.wav",
+            "./assets/sounds/moods/tdc_mood_shook.wav",
+            "./assets/sounds/moods/tdc_mood_sus.wav",
+            "./assets/sounds/moods/tdc_mood_cheeky.wav",
+            "./assets/sounds/moods/tdc_mood_rs.wav",
+            "./assets/sounds/ui/tdc_like.wav",
+            "./assets/sounds/ui/tdc_nope.wav"
+          ],
+          "androidMode": "default",
+          "androidCollapsedTitle": "New notification from TDC"
+        }
       ],
-      "androidMode": "default",
-      "androidCollapsedTitle": "New notification from TDC"
-    }
-  ],
-  [
-    "expo-build-properties",
-    {
-      "android": {
-        "hermesEnabled": true,
-        "compileSdkVersion": 36,
-        "targetSdkVersion": 36,
-        "minSdkVersion": 24,
-        "buildToolsVersion": "36.0.0",
-        "enableProguardInReleaseBuilds": false
-      },
-      "ios": { "hermesEnabled": true }
-    }
-  ],
-  ["expo-av", {
-    "microphonePermission": "TDC uses the microphone to record and send voice messages in chats."
-  }],
-  ["expo-location", {
-    "locationWhenInUsePermission": "TDC uses your location to share your current location in chats and provide location-based features."
-  }],
-  "expo-navigation-bar",
-  "expo-web-browser",
-  "expo-font",
-  "expo-task-manager"
-],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "hermesEnabled": true,
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "minSdkVersion": 24,
+            "buildToolsVersion": "36.0.0",
+            "enableProguardInReleaseBuilds": false
+          },
+          "ios": {
+            "hermesEnabled": true
+          }
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "TDC uses the microphone to record and send voice messages in chats."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "TDC uses your location to share your current location in chats and provide location-based features."
+        }
+      ],
+      "expo-navigation-bar",
+      "expo-web-browser",
+      "expo-font",
+      "expo-task-manager"
+    ],
     "extra": {
       "eas": {
         "projectId": "112506b0-7553-4a1b-afeb-6a37019cc15f"

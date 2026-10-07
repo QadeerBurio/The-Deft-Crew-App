@@ -6,7 +6,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import api from '../../api/api';
 import Constants from 'expo-constants';
-import { setupAndroidChannels } from '../../utils/pushNotifications';
+import { setupAndroidChannels, CHANNEL_SET } from '../../utils/pushNotifications';
 
 // Uses the shared channel setup so "engagement" keeps its MAX importance + sound
 export async function ensureChannel() {
@@ -40,7 +40,7 @@ export async function registerForPushNotificationsAsync() {
     const token = tokenData?.data;
     if (!token) return null;
 
-    await api.put('/notification/save-token', { token, platform: Platform.OS });
+    await api.put('/notification/save-token', { token, platform: Platform.OS, channels: CHANNEL_SET });
 
     try {
       await api.post('/engagement/push-permission', { status: 'granted' });

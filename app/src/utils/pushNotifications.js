@@ -15,21 +15,51 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 // ═══════════════════════════════════════════════════════════════
-// ANDROID CHANNELS (IDs must match backend utils/pushNotification.js)
+// ANDROID CHANNELS: one per sound
+// On Android a background/killed notification plays the sound of its
+// channel, not a per-message sound. So every sound the in-app banner can
+// play (see lib/tdcSounds.js playSoundForNotification) gets its own
+// channel "snd_<sound>". The backend (utils/pushNotification.js
+// resolveSoundKey) picks the same sound with the same rule, so the
+// notification outside the app sounds exactly like the one inside.
+// Every file below must also be listed in app.json → expo-notifications → sounds.
 // ═══════════════════════════════════════════════════════════════
-const CHANNELS = {
-  engagement:  { name: 'General',        sound: 'tdc_push_default',    importance: 'MAX' },
-  default:     { name: 'Default',        sound: 'tdc_push_default',    importance: 'MAX' },
-  messages:    { name: 'Messages',       sound: 'tdc_push_message',    importance: 'MAX' },
-  deals:       { name: 'Deals & offers', sound: 'tdc_push_deal',       importance: 'MAX' },
-  jobs:        { name: 'Jobs',           sound: 'tdc_push_internship', importance: 'HIGH' },
-  reminders:   { name: 'Reminders',      sound: 'tdc_push_reminder',   importance: 'HIGH' },
-  points:      { name: 'Points',         sound: 'tdc_push_points',     importance: 'HIGH' },
-  streaks:     { name: 'Streaks',        sound: 'tdc_push_streak',     importance: 'HIGH' },
-  confessions: { name: 'Confessions',    sound: 'tdc_push_confession', importance: 'HIGH' },
-  events:      { name: 'Events',         sound: 'tdc_push_event',      importance: 'HIGH' },
-  levelup:     { name: 'Level up',       sound: 'tdc_push_level_up',   importance: 'MAX' },
+const SOUND_CHANNELS = {
+  // mood sounds (used first, same as in-app)
+  tdc_mood_sorted:     'Sorted',
+  tdc_mood_excited:    'Excited',
+  tdc_mood_panic:      'Panic',
+  tdc_mood_broke:      'Broke',
+  tdc_mood_sleepy:     'Sleepy',
+  tdc_mood_shook:      'Shook',
+  tdc_mood_sus:        'Sus',
+  tdc_mood_cheeky:     'Cheeky',
+  tdc_mood_rs:         'Rs',
+  // type sounds (used when the mood has no sound)
+  tdc_push_default:    'General',
+  tdc_push_deal:       'Deals & offers',
+  tdc_push_message:    'Messages',
+  tdc_push_internship: 'Jobs & internships',
+  tdc_push_reminder:   'Reminders',
+  tdc_push_points:     'Points',
+  tdc_push_streak:     'Streaks',
+  tdc_push_confession: 'Confessions',
+  tdc_push_event:      'Events',
+  tdc_push_level_up:   'Level up',
+  tdc_like:            'Likes',
+  tdc_nope:            'Declined',
 };
+
+export const channelForSound = (soundKey) => `snd_${soundKey}`;
+
+// Sent with the push token so the backend knows this build has the snd_* channels
+export const CHANNEL_SET = 'snd_v1';
+
+// Old channel IDs from earlier builds. Removed so Settings stays clean.
+const LEGACY_CHANNELS = [
+  'engagement', 'default', 'messages', 'deals', 'jobs', 'reminders',
+  'points', 'streaks', 'confessions', 'events', 'levelup',
+];
 
 let channelsPromise = null;
 
@@ -38,15 +68,13 @@ export function setupAndroidChannels() {
   if (channelsPromise) return channelsPromise;
 
   channelsPromise = (async () => {
-    for (const [id, cfg] of Object.entries(CHANNELS)) {
+    for (const [soundKey, name] of Object.entries(SOUND_CHANNELS)) {
+      const id = channelForSound(soundKey);
       try {
         await Notifications.setNotificationChannelAsync(id, {
-          name: cfg.name,
-          importance:
-            cfg.importance === 'MAX'
-              ? Notifications.AndroidImportance.MAX
-              : Notifications.AndroidImportance.HIGH,
-          sound: `${cfg.sound}.wav`, // bundled via expo-notifications "sounds" in app.json
+          name: `tdc · ${name}`,
+          importance: Notifications.AndroidImportance.MAX, // heads-up popup
+          sound: `${soundKey}.wav`,                         // from res/raw (app.json sounds)
           vibrationPattern: [0, 250, 250, 250],
           enableVibrate: true,
           lightColor: '#f9c349',
@@ -57,7 +85,12 @@ export function setupAndroidChannels() {
         console.warn(`[push] channel "${id}" failed:`, e?.message);
       }
     }
-    console.log('[push] android channels ready');
+
+    for (const id of LEGACY_CHANNELS) {
+      try { await Notifications.deleteNotificationChannelAsync(id); } catch {}
+    }
+
+    console.log('[push] android sound channels ready');
   })();
 
   return channelsPromise;
@@ -111,6 +144,7 @@ export async function savePushTokenToServer(axiosInstance, token) {
     const res = await axiosInstance.put('/notification/save-token', {
       token,
       platform: Platform.OS,
+      channels: CHANNEL_SET,
     });
     console.log('[push] token saved:', res.status);
     return { ok: true };

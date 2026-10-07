@@ -9,6 +9,7 @@ import SignupScreen from "../screens/SignupScreen";
 import DrawerNavigator from "./DrawerNavigator";
 import ForgotPassword from "../screens/ForgotPassword"
 import VerifyOTP from "../screens/VerifyOTPScreen"
+import SignupVerifyScreen from "../screens/SignupVerifyScreen"
 import ResetPassword from "../screens/ResetPasswordScreen"
 import VerificationScreen from "../screens/VerificationScreen";
 import TDCFlow from "../screens/SplashScren";
@@ -36,6 +37,7 @@ export default function AppNavigator() {
           
           {/* Auth screens */}
           <Stack.Screen name="Signup" component={SignupScreen} />
+          <Stack.Screen name="SignupVerify" component={SignupVerifyScreen} />
           <Stack.Screen name="VerificationScreen" component={VerificationScreen}/>
           <Stack.Screen name="Login" component={SignIn} />
           <Stack.Screen name="ForgotPassword" component={ForgotPassword}/>

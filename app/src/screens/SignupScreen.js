@@ -517,13 +517,25 @@ export default function SignupScreen({ navigation }) {
       // ═══════════════════════════════════════════════════════════
       // STEP 1: SIGNUP — only this can throw "Connection error"
       // ═══════════════════════════════════════════════════════════
-      const signupResponse = await api.post("/auth/signup", body);
+      const signupResponse = await api.post("/auth/signup", body, { timeout: 25000 });
       console.log("Signup successful:", signupResponse.data);
 
       // ═══════════════════════════════════════════════════════════
-      // STEP 2: AUTO-LOGIN — isolated try/catch, NEVER shows
-      // "Connection error" even if it fails
+      // EMAIL VERIFICATION — backend sent a 6-digit code.
+      // Go to the code screen; the account logs in after the code.
       // ═══════════════════════════════════════════════════════════
+      if (signupResponse.data?.requiresVerification) {
+        hideLoadingOverlay();
+        setLoading(false);
+        navigation.navigate("SignupVerify", {
+          userId: signupResponse.data.userId,
+          email: email.trim().toLowerCase(),
+          maskedEmail: signupResponse.data.email,
+          emailSent: signupResponse.data.emailSent !== false,
+        });
+        return;
+      }
+
       let autoLoginSucceeded = false;
 
       try {

@@ -7,8 +7,14 @@ import axios from 'axios';
 
 import { AuthContext } from '../context/AuthContext';
 import { BASE_URL } from '../api/api';
+import { SOCIAL_TITLES } from '../utils/notificationStyle';
 
 const POLL_INTERVAL_MS = 10000;
+// Only pop up things that just happened while the app is open. Anything older
+// was already shown by the phone (outside the app), so don't show it twice.
+const FRESH_MS = 30000;
+const isFresh = (date) => !date || Date.now() - new Date(date).getTime() < FRESH_MS;
+const appIsActive = () => AppState.currentState === 'active';
 const activeResetters = new Set();
 
 // ✅ Export function to reset all active pollers
@@ -102,6 +108,7 @@ export const useNotifications = (onNewNotification) => {
       // New message detected
       if (latestTime > lastNotifiedMessageTimeRef.current) {
         lastNotifiedMessageTimeRef.current = latestTime;
+        if (!appIsActive() || !isFresh(latestTime)) return;
 
         const otherUser = (latestConv.participants || []).find(
           (p) => p._id && p._id.toString() !== user?._id?.toString()
@@ -115,7 +122,7 @@ export const useNotifications = (onNewNotification) => {
 
         const notif = {
           _id: `msg-${latestConv._id}-${latestTime}`,
-          title: `💬 ${senderName}`,
+          title: `${senderName} 💬`,
           description: preview,
           conversationId: latestConv._id,
           type: 'Message',
@@ -171,7 +178,7 @@ export const useNotifications = (onNewNotification) => {
         .filter((n) => n.type !== 'message')
         .map((n) => ({
           _id: n._id,
-          title: TITLE_MAP[n.type] || 'Notification',
+          title: SOCIAL_TITLES[n.type] || TITLE_MAP[n.type] || 'notification',
           description: n.text,
           type: n.type,
           category: 'Social',
@@ -208,7 +215,9 @@ export const useNotifications = (onNewNotification) => {
         console.log('[useNotifications] New notification detected:', latest._id);
         lastSeenIdRef.current = latest._id;
         await fetchUnreadCount();
-        if (onNewNotification) onNewNotification(latest);
+        if (onNewNotification && appIsActive() && isFresh(latest.createdAt)) {
+          onNewNotification(latest);
+        }
       }
     } catch (error) { /* noop */ }
   }, [token, isGuest, user, onNewNotification, fetchUnreadCount]);
@@ -269,13 +278,16 @@ export const useNotifications = (onNewNotification) => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       if (nextAppState === 'active' && token && !isGuest) {
         console.log('[useNotifications] App active - refreshing');
+        // Whatever arrived while the app was closed was shown by the phone.
+        // Start a new baseline so it doesn't pop up again inside the app.
+        resetBaseline();
         fetchUnreadCount();
         pollForNewNotifications();
         pollForNewMessages();
       }
     });
     return () => subscription.remove();
-  }, [token, isGuest, fetchUnreadCount, pollForNewNotifications, pollForNewMessages]);
+  }, [token, isGuest, resetBaseline, fetchUnreadCount, pollForNewNotifications, pollForNewMessages]);
 
   // ── Initial fetch ──
   useEffect(() => {

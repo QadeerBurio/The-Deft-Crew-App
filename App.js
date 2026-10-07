@@ -50,13 +50,13 @@ import TourOverlay from "./app/src/engagement/tour/TourOverlay";
 //    (pushNotifications.js must NOT set its own handler.)
 // ═══════════════════════════════════════════════════════════════
 Notifications.setNotificationHandler({
-  // Runs ONLY while the app is open. GlobalNotificationLayer already shows
-  // the TDC in-app banner + sound, so the system popup is muted here to
-  // avoid a double popup. Background/killed pushes are shown by Android/iOS
-  // directly and are NOT affected by this handler.
+  // Runs ONLY while the app is open (foreground).
+  // App open   → TDC in-app popup (GlobalNotificationLayer) with mood icon + TDC sound.
+  // App closed → Android/iOS system popup with the same title, emoji, image and sound.
+  // So here we hide the system popup and its sound to avoid a double popup.
   handleNotification: async () => ({
     shouldShowBanner: false,
-    shouldShowList: true,
+    shouldShowList: false,
     shouldPlaySound: false,
     shouldSetBadge: true,
   }),

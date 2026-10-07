@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   View, 
   Text, 
@@ -15,23 +15,56 @@ import api from "../api/api";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function VerifyOTP({ route, navigation }) {
-  const { userId } = route.params;
+  const { userId, emailOrPhone, sentTo, retryAfter } = route.params || {};
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [cooldown, setCooldown] = useState(retryAfter || 60);
+
+  // Resend countdown
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
 
   const handleVerifyOTP = async () => {
-    if (!otp) return Alert.alert("Error", "Please enter the 6-digit OTP code");
+    const code = otp.replace(/\D/g, "");
+    if (code.length !== 6) return Alert.alert("Error", "Please enter the 6-digit code");
 
     try {
       setLoading(true);
-      const res = await api.post("/auth/verify-otp", { userId, otp });
-      
-      Alert.alert("Success", "OTP verified successfully");
-      navigation.navigate("ResetPassword", { resetToken: res.data.resetToken });
+      const res = await api.post("/auth/verify-otp", { userId, otp: code }, { timeout: 15000 });
+      navigation.replace("ResetPassword", { resetToken: res.data.resetToken });
     } catch (err) {
-      Alert.alert("Error", err.response?.data?.message || "Invalid or expired OTP");
+      const msg =
+        err.response?.data?.message ||
+        (err.code === "ECONNABORTED" ? "The server took too long. Please try again." : "Invalid or expired code");
+      Alert.alert("Error", msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (cooldown > 0 || resending) return;
+    if (!emailOrPhone) {
+      navigation.goBack();
+      return;
+    }
+    try {
+      setResending(true);
+      const res = await api.post("/auth/forgot-password", { emailOrPhone }, { timeout: 25000 });
+      setOtp("");
+      setCooldown(60);
+      Alert.alert("Code sent", res.data?.message || "A new code is on its way.");
+    } catch (err) {
+      if (err.response?.status === 429) {
+        setCooldown(err.response.data?.retryAfter || 60);
+      }
+      Alert.alert("Error", err.response?.data?.message || "Couldn't resend the code. Please try again.");
+    } finally {
+      setResending(false);
     }
   };
 
@@ -57,14 +90,16 @@ export default function VerifyOTP({ route, navigation }) {
 
           <Text style={styles.title}>Verification</Text>
           <Text style={styles.subtitle}>
-            We've sent a 6-digit verification code to your registered contact. Please enter it below.
+            {sentTo
+              ? `We sent a 6-digit code to ${sentTo}. Check inbox and spam.`
+              : "We sent a 6-digit code to your email. Check inbox and spam."}
           </Text>
 
           <View style={styles.inputWrapper}>
             <TextInput
               placeholder="0 0 0 0 0 0"
               value={otp}
-              onChangeText={setOtp}
+              onChangeText={(t) => setOtp(t.replace(/\D/g, ""))}
               style={styles.input}
               keyboardType="numeric"
               maxLength={6}
@@ -87,8 +122,10 @@ export default function VerifyOTP({ route, navigation }) {
 
           <View style={styles.resendContainer}>
             <Text style={styles.resendText}>Didn't receive the code?</Text>
-            <TouchableOpacity onPress={() => Alert.alert("Resend", "OTP Resent!")}>
-              <Text style={styles.resendLink}> Resend OTP</Text>
+            <TouchableOpacity onPress={handleResend} disabled={cooldown > 0 || resending}>
+              <Text style={[styles.resendLink, (cooldown > 0 || resending) && { opacity: 0.4 }]}>
+                {resending ? " Sending…" : cooldown > 0 ? ` Resend in ${cooldown}s` : " Resend OTP"}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

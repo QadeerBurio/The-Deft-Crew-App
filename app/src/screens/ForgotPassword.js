@@ -115,37 +115,44 @@ export default function ForgotPassword({ navigation }) {
     try {
       setLoading(true);
 
-      const res = await api.post("/auth/forgot-password", {
-        emailOrPhone: emailOrPhone.trim(),
-      });
-
-      Alert.alert(
-        "OTP Sent! 📩",
-        res.data.message || "A verification code has been sent to your email/phone.",
-        [
-          {
-            text: "Continue",
-            onPress: () => {
-              if (res.data.userId) {
-                navigation.navigate("VerifyOTP", { userId: res.data.userId });
-              } else {
-                Alert.alert("Error", "User ID not found. Please try again.");
-              }
-            }
-          }
-        ]
+      const res = await api.post(
+        "/auth/forgot-password",
+        { emailOrPhone: emailOrPhone.trim() },
+        { timeout: 25000 } // email sending can take a few seconds
       );
+
+      if (!res.data?.userId) {
+        return Alert.alert("Error", "Something went wrong. Please try again.");
+      }
+
+      navigation.navigate("VerifyOTP", {
+        userId: res.data.userId,
+        emailOrPhone: emailOrPhone.trim(),
+        sentTo: res.data.email || null,
+      });
 
     } catch (err) {
       handleShake();
-      
+
+      // Already sent a code less than a minute ago: go enter that one
+      if (err.response?.status === 429 && err.response.data?.userId) {
+        navigation.navigate("VerifyOTP", {
+          userId: err.response.data.userId,
+          emailOrPhone: emailOrPhone.trim(),
+          retryAfter: err.response.data.retryAfter || 60,
+        });
+        return;
+      }
+
       let errorMessage = "Server not reachable. Please try again.";
       if (err.response) {
         errorMessage = err.response.data?.message || err.response.data?.error || "Server error occurred.";
+      } else if (err.code === "ECONNABORTED") {
+        errorMessage = "The server took too long. Please try again.";
       } else if (err.request) {
-        errorMessage = "No response from server. Please check your connection.";
+        errorMessage = "No internet connection. Please check and try again.";
       }
-      
+
       Alert.alert("Request Failed", errorMessage);
     } finally {
       setLoading(false);

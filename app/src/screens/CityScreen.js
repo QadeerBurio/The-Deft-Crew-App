@@ -43,11 +43,12 @@ import {
   registerLocalClaim,
   isLocallyClaimed,
 } from "./OfferScreen";
+import { brandMatchesCity, setSelectedCity as saveSelectedCity } from "../utils/cityFilter";
 
 const { width } = Dimensions.get("window");
 const HORIZONTAL_PADDING = 16;
 
-const BASE_URL = "http://192.168.18.93:5000";
+const BASE_URL = "https://the-deft-crew-production.up.railway.app";
 
 // ═══════════════════════════════════════════════════════════
 // THREE FEATURED CITIES — hero cards
@@ -258,6 +259,7 @@ export default function CityScreen() {
             formatImageUrl(b.logo, "brand") ||
             "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
           city: (b.city || "Karachi").trim(),
+          cities: Array.isArray(b.cities) && b.cities.length ? b.cities : [(b.city || "Karachi").trim()],
           category: b.category || "General",
           discount: 0,
           hasOffer: false,
@@ -286,9 +288,8 @@ export default function CityScreen() {
   // ═══════════════════════════════════════════════════════════
   const cityCounts = useMemo(() => {
     const counts = {};
-    for (const b of brands) {
-      const key = (b.city || "Karachi").toLowerCase();
-      counts[key] = (counts[key] || 0) + 1;
+    for (const c of FEATURED_CITIES) {
+      counts[c.name.toLowerCase()] = brands.filter((b) => brandMatchesCity(b, c.name)).length;
     }
     return counts;
   }, [brands]);
@@ -298,8 +299,7 @@ export default function CityScreen() {
   // ═══════════════════════════════════════════════════════════
   const cityBrands = useMemo(() => {
     if (!selectedCity) return [];
-    const cityKey = selectedCity.name.toLowerCase();
-    return brands.filter((b) => (b.city || "Karachi").toLowerCase() === cityKey);
+    return brands.filter((b) => brandMatchesCity(b, selectedCity.name));
   }, [selectedCity, brands]);
 
   // ═══════════════════════════════════════════════════════════
@@ -356,6 +356,7 @@ export default function CityScreen() {
   const handleCityPress = useCallback((city) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedCity(city);
+    saveSelectedCity(city.name); // Brands + My Discounts follow this choice
   }, []);
 
   const handleBackToCities = useCallback(() => {

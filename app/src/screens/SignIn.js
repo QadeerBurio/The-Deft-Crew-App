@@ -390,6 +390,18 @@ export default function SignIn({ navigation }) {
 
       console.log("Login error:", err.response?.status, err.response?.data);
 
+      // Signed up but email not verified yet: backend sent a code
+      if (err.response?.status === 403 && err.response?.data?.needsVerification) {
+        navigation.navigate("SignupVerify", {
+          userId: err.response.data.userId,
+          email: email.trim().toLowerCase(),
+          maskedEmail: err.response.data.email,
+          retryAfter: err.response.data.retryAfter || 0,
+          fromLogin: true,
+        });
+        return;
+      }
+
       let errorMessage = "Invalid credentials. Please try again.";
 
       if (err.response) {

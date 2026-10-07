@@ -12,7 +12,7 @@ const getBaseURL = () => {
     const hostUri = manifest.hostUri;
     const devIp = hostUri ? hostUri.split(':')[0] : '192.168.18.93';
 
-    return `https://the-deft-crew-production.up.railway.app/api`;
+    return `http://192.168.18.93:5000/api`;
 
     // Alternative:
     // return `http://${devIp}:5000/api`;
@@ -21,7 +21,7 @@ const getBaseURL = () => {
     // return 'https://the-deft-crew-production.up.railway.app/api';
   }
 
-  return 'https://the-deft-crew-production.up.railway.app/api';
+  return 'http://192.168.18.93:5000/api';
 };
 
 export const BASE_URL = getBaseURL();
@@ -104,6 +104,17 @@ const pendingRequests = new Map();
 
 // FIXED: Global flag to track guest mode
 let isGuestMode = false;
+
+// AuthContext calls this when the logged-in user changes (login, logout,
+// switch account, guest). Drops every cached response of the old user.
+export const notifyUserChanged = () => {
+  try { memoryCache.clear(); } catch {}
+  try { pendingRequests.clear(); } catch {}
+  try {
+    // brandApi has its own cache (Brands / Offer / My Discounts)
+    require("./brandApi").notifyUserChanged();
+  } catch {}
+};
 
 // FIXED: Export function to set guest mode
 export const setGuestMode = (guestMode) => {

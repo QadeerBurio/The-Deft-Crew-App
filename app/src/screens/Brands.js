@@ -46,7 +46,16 @@ import {
   unregisterLocalClaim,
   isLocallyClaimed,
   hydrateClaimedRegistry,
+  reconcileClaimedIds,
 } from "./OfferScreen";
+import CityDropdown from "../components/CityDropdown";
+import {
+  ALL_CITIES,
+  useSelectedCity,
+  brandMatchesCity,
+  buildCityOptions,
+  resolveCity,
+} from "../utils/cityFilter";
 
 const { width, height } = Dimensions.get("window");
 const NUM_COLUMNS = 2;
@@ -55,8 +64,11 @@ const GAP = 15;
 const CARD_WIDTH = (width - HORIZONTAL_PADDING * 2 - GAP) / NUM_COLUMNS;
 
 const BASE_URL = "https://the-deft-crew-production.up.railway.app";
-const CACHE_KEY = "@brands_cache";
-const STATS_CACHE_KEY = "@brands_stats_cache";
+// Per-user keys (v2 = includes brand cities). The old shared key showed one
+// user's claimed offers to the next user on the same phone.
+const CACHE_PREFIX = "@brands_cache:v2:";
+const STATS_CACHE_PREFIX = "@brands_stats_cache:v2:";
+const LEGACY_CACHE_KEYS = ["@brands_cache", "@brands_stats_cache"];
 const CACHE_DURATION = 5 * 60 * 1000;
 const PAGE_SIZE = 10;
 const MAX_PRELOAD = 12;
@@ -96,7 +108,11 @@ const CATEGORIES = [
 const CATEGORY_BY_ID = new Map(CATEGORIES.map((c) => [c.id, c]));
 const CATEGORY_BY_NAME = new Map(CATEGORIES.map((c) => [c.name, c]));
 
-const DISCOUNT_OPTIONS = [0, 10, 15, 20, 25, 30, 35, 40, 45, 50];
+// Discount shown on the card (number, never a string like "10")
+const brandDiscount = (b) => {
+  const n = Number(b?.discount);
+  return Number.isFinite(n) ? Math.round(n) : 0;
+};
 
 // Global caches
 let brandsCache = null;
@@ -104,7 +120,10 @@ let cacheTimestamp = null;
 let pendingFetchPromise = null;
 let statsCache = null;
 let statsCacheTimestamp = null;
+let brandsCacheOwner = null; // which user the module cache belongs to
 const preloadedImages = new Set();
+
+AsyncStorage.multiRemove(LEGACY_CACHE_KEYS).catch(() => {});
 
 // ── Deep-diff helpers ──
 const offersEqual = (a, b) => {
@@ -391,11 +410,12 @@ export default function BrandsScreen() {
   const { query } = route.params || {};
 
   const [allBrands, setAllBrands] = useState([]);
-  const [displayedBrands, setDisplayedBrands] = useState([]);
+  // How many of the FILTERED brands are rendered (paging). The visible list
+  // is always derived from filteredData, never set from raw fetch results.
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
-  const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
 
@@ -432,6 +452,22 @@ export default function BrandsScreen() {
       return null;
     }
   }, [token, isGuest]);
+
+  // ── Per-user cache ownership ──
+  const cacheOwnerKey = isGuest ? "guest" : userId || "none";
+  const CACHE_KEY = `${CACHE_PREFIX}${cacheOwnerKey}`;
+  const STATS_CACHE_KEY = `${STATS_CACHE_PREFIX}${cacheOwnerKey}`;
+  if (brandsCacheOwner !== cacheOwnerKey) {
+    brandsCache = null;
+    cacheTimestamp = null;
+    statsCache = null;
+    statsCacheTimestamp = null;
+    pendingFetchPromise = null;
+    brandsCacheOwner = cacheOwnerKey;
+  }
+
+  // ── City filter (Karachi default, shared with Offer + My Discounts) ──
+  const [savedCity, setSelectedCity] = useSelectedCity();
 
   const formatImageUrl = useCallback((imagePath, type = "offer") => {
     if (!imagePath) return null;
@@ -504,9 +540,14 @@ export default function BrandsScreen() {
     ).catch(() => {});
 
     return computed;
-  }, [computeStatsFromBrands]);
+  }, [computeStatsFromBrands, STATS_CACHE_KEY]);
 
   const fetchStatsOnly = useCallback(async () => {
+    // Stats are computed locally from the loaded brands (updateStatsFromLocal).
+    // /brands/stats returns { stats: {...} } and needs auth, so reading it here
+    // overwrote the numbers with zeros every 15s.
+    return;
+    // eslint-disable-next-line no-unreachable
     if (isStatsFetchingRef.current) return;
     if (!token && !isGuest) return;
 
@@ -566,8 +607,6 @@ export default function BrandsScreen() {
             new Date(a.createdAt || a._id).getTime()
         );
         setAllBrands(sorted);
-        setDisplayedBrands(sorted.slice(0, PAGE_SIZE));
-        setHasMore(sorted.length > PAGE_SIZE);
         setLoading(false);
         updateStatsFromLocal(sorted);
         return true;
@@ -576,7 +615,7 @@ export default function BrandsScreen() {
     } catch {
       return false;
     }
-  }, [updateStatsFromLocal]);
+  }, [updateStatsFromLocal, CACHE_KEY]);
 
   const loadStatsCache = useCallback(async () => {
     try {
@@ -594,7 +633,7 @@ export default function BrandsScreen() {
     } catch {
       return false;
     }
-  }, []);
+  }, [STATS_CACHE_KEY]);
 
   const saveCache = useCallback(async (data) => {
     try {
@@ -603,7 +642,7 @@ export default function BrandsScreen() {
         JSON.stringify({ data, timestamp: Date.now() })
       );
     } catch {}
-  }, []);
+  }, [CACHE_KEY]);
 
   const fetchBrands = useCallback(
     async (forceRefresh = false, { silent = false } = {}) => {
@@ -629,11 +668,6 @@ export default function BrandsScreen() {
         );
         if (isMounted.current) {
           setAllBrands((prev) => (brandsEqual(prev, sorted) ? prev : sorted));
-          setDisplayedBrands((prev) => {
-            const next = sorted.slice(0, Math.max(PAGE_SIZE, prev.length));
-            return brandsEqual(prev, next) ? prev : next;
-          });
-          setHasMore(sorted.length > PAGE_SIZE);
           setLoading(false);
           setError(null);
           updateStatsFromLocal(sorted);
@@ -643,11 +677,9 @@ export default function BrandsScreen() {
           });
         }
 
-        if (!silent) {
-          // Continue to network
-        } else {
-          return sorted;
-        }
+        // Stale-while-revalidate: cache is shown instantly, network still runs.
+        // (Before, a silent call returned here, so focus/polling never fetched
+        // new brands or offers for 5 minutes.)
       }
 
       if (!forceRefresh && !brandsCache) {
@@ -669,11 +701,6 @@ export default function BrandsScreen() {
                 new Date(a.createdAt || a._id).getTime()
             );
             setAllBrands((prev) => (brandsEqual(prev, sorted) ? prev : sorted));
-            setDisplayedBrands((prev) => {
-              const next = sorted.slice(0, Math.max(PAGE_SIZE, prev.length));
-              return brandsEqual(prev, next) ? prev : next;
-            });
-            setHasMore(sorted.length > PAGE_SIZE);
             setLoading(false);
             setError(null);
             updateStatsFromLocal(sorted);
@@ -770,13 +797,15 @@ export default function BrandsScreen() {
                 offersResults.map(({ brandId, offers }) => [
                   brandId,
                   offers.map((offer) => {
-                    const serverClaimed = offer.claimedBy?.includes(userId) || false;
+                    const serverClaimed =
+                      (offer.claimedBy || []).some((id) => String(id) === String(userId)) || false;
                     const registryClaimed = isLocallyClaimed(offer._id);
                     return {
                       ...offer,
                       image: formatImageUrl(offer.image, "offer"),
                       displayImage: formatImageUrl(offer.image, "offer"),
                       isClaimed: serverClaimed || registryClaimed,
+                      serverClaimed,
                       discountPercentage: offer.discountPercentage || 0,
                     };
                   }),
@@ -807,7 +836,28 @@ export default function BrandsScreen() {
             }
           }
 
-          // ✅ Apply registry one final time before storing
+          // ✅ Server is the source of truth for claims (removes redeemed /
+          // unclaimed offers from the local registry), then apply registry
+          if (userId) {
+            const allIds = [];
+            const serverIds = [];
+            brandsData.forEach((b) =>
+              (b.offers || []).forEach((o) => {
+                if (!o?._id) return;
+                allIds.push(o._id);
+                if (o.serverClaimed) serverIds.push(o._id);
+              })
+            );
+            reconcileClaimedIds(serverIds, allIds);
+            brandsData = brandsData.map((b) => ({
+              ...b,
+              offers: (b.offers || []).map((o) => ({
+                ...o,
+                isClaimed: !!o.serverClaimed || isLocallyClaimed(o._id),
+              })),
+            }));
+          }
+
           const withClaims = brandsData.map(applyLocalClaimRegistry);
 
           const sorted = [...withClaims].sort(
@@ -821,11 +871,6 @@ export default function BrandsScreen() {
               if (brandsEqual(prev, sorted)) return prev;
               return sorted;
             });
-            setDisplayedBrands((prev) => {
-              const next = sorted.slice(0, Math.max(PAGE_SIZE, prev.length));
-              return brandsEqual(prev, next) ? prev : next;
-            });
-            setHasMore(sorted.length > PAGE_SIZE);
 
             brandsCache = sorted;
             cacheTimestamp = Date.now();
@@ -856,8 +901,6 @@ export default function BrandsScreen() {
             } else {
               const fallback = brandsCache.map(applyLocalClaimRegistry);
               setAllBrands(fallback);
-              setDisplayedBrands(fallback.slice(0, PAGE_SIZE));
-              setHasMore(fallback.length > PAGE_SIZE);
               updateStatsFromLocal(fallback);
             }
           }
@@ -879,6 +922,7 @@ export default function BrandsScreen() {
       loadCache,
       saveCache,
       updateStatsFromLocal,
+      CACHE_KEY,
     ]
   );
 
@@ -909,12 +953,7 @@ export default function BrandsScreen() {
 
       if (brandsCache) brandsCache = brandsCache.map(applyClaim);
 
-      setAllBrands((prev) => {
-        const next = prev.map(applyClaim);
-        updateStatsFromLocal(next);
-        return next;
-      });
-      setDisplayedBrands((prev) => prev.map(applyClaim));
+      setAllBrands((prev) => prev.map(applyClaim));
       setClaimVersion((v) => v + 1);
 
       cacheTimestamp = Date.now();
@@ -957,12 +996,7 @@ export default function BrandsScreen() {
           };
         };
 
-        setAllBrands((prev) => {
-          const next = prev.map(applyUnclaim);
-          updateStatsFromLocal(next);
-          return next;
-        });
-        setDisplayedBrands((prev) => prev.map(applyUnclaim));
+        setAllBrands((prev) => prev.map(applyUnclaim));
         setClaimVersion((v) => v + 1);
       }
 
@@ -987,12 +1021,7 @@ export default function BrandsScreen() {
           };
         };
 
-        setAllBrands((prev) => {
-          const next = prev.map(applyClaim);
-          updateStatsFromLocal(next);
-          return next;
-        });
-        setDisplayedBrands((prev) => prev.map(applyClaim));
+        setAllBrands((prev) => prev.map(applyClaim));
         setClaimVersion((v) => v + 1);
       }
 
@@ -1008,7 +1037,7 @@ export default function BrandsScreen() {
       unsubscribeClaim?.();
       unsubscribeCacheEvent?.();
     };
-  }, [updateStatsFromLocal, fetchBrands, fetchStatsOnly, token, isGuest]);
+  }, [updateStatsFromLocal, fetchBrands, fetchStatsOnly, token, isGuest, CACHE_KEY, STATS_CACHE_KEY]);
 
   // ── SMART POLLING ──
   useEffect(() => {
@@ -1052,7 +1081,8 @@ export default function BrandsScreen() {
     useCallback(() => {
       isScreenFocused.current = true;
 
-      fetchBrands(false, { silent: true });
+      // Fresh data every time the screen opens (cache is shown meanwhile)
+      fetchBrands(true, { silent: true });
       fetchStatsOnly();
 
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
@@ -1098,6 +1128,22 @@ export default function BrandsScreen() {
     };
   }, [fetchBrands, fetchStatsOnly]);
 
+  // Account changed while this screen is alive → drop old user's list
+  const lastOwnerRef = useRef(cacheOwnerKey);
+  useEffect(() => {
+    if (lastOwnerRef.current === cacheOwnerKey) return;
+    lastOwnerRef.current = cacheOwnerKey;
+    setAllBrands([]);
+    setLoading(true);
+    initialLoadDone.current = false;
+    lastFetchAtRef.current = 0;
+    (async () => {
+      try { await hydrateClaimedRegistry(userId); } catch {}
+      setClaimVersion((v) => v + 1);
+      fetchBrands(true, { silent: false });
+    })();
+  }, [cacheOwnerKey, userId, fetchBrands]);
+
   // ─────────────────────────────────────────────
   // ✅ Load cached stats + brands on mount
   // CRITICAL: Hydrate the persisted claim registry FIRST,
@@ -1109,7 +1155,7 @@ export default function BrandsScreen() {
     (async () => {
       // ✅ Step 1: Hydrate the persisted claim registry from AsyncStorage
       try {
-        await hydrateClaimedRegistry();
+        await hydrateClaimedRegistry(userId);
       } catch (e) {
         console.log("hydrateClaimedRegistry failed:", e);
       }
@@ -1142,19 +1188,56 @@ export default function BrandsScreen() {
     };
   }, [loadCache, loadStatsCache]);
 
-  const loadMoreBrands = useCallback(() => {
-    if (loadingMore || !hasMore || loading) return;
-    setLoadingMore(true);
-    const currentCount = displayedBrands.length;
-    const nextBatch = allBrands.slice(currentCount, currentCount + PAGE_SIZE);
-    if (nextBatch.length > 0) {
-      setDisplayedBrands((prev) => [...prev, ...nextBatch]);
-      setHasMore(allBrands.length > currentCount + PAGE_SIZE);
-    } else {
-      setHasMore(false);
+
+  // City chips: "All" + only cities that have brands (count = brands there)
+  const cityOptions = useMemo(() => buildCityOptions(allBrands), [allBrands]);
+  // Saved city with no brands anymore → All (wait for data before deciding)
+  const selectedCity = allBrands.length
+    ? resolveCity(savedCity, cityOptions)
+    : savedCity;
+
+  // Brands in the selected city (before category / discount filters)
+  const cityBrands = useMemo(
+    () => allBrands.filter((b) => brandMatchesCity(b, selectedCity)),
+    [allBrands, selectedCity]
+  );
+
+  // Category chips:
+  //   All Cities → categories that have brands in any city
+  //   a city     → only categories that have brands in that city
+  const visibleCategories = useMemo(() => {
+    const present = new Set(cityBrands.map((b) => b.category));
+    return CATEGORIES.filter((c) => c.id === "all" || present.has(c.name));
+  }, [cityBrands]);
+
+  // Discount chips: only the exact discounts that exist in this city
+  // (and selected category / online toggle), lowest first
+  const discountOptions = useMemo(() => {
+    const catName =
+      selectedCategory !== "all" ? CATEGORY_BY_ID.get(selectedCategory)?.name : null;
+    const set = new Set();
+    cityBrands.forEach((b) => {
+      if (catName && b.category !== catName) return;
+      if (showOnlyOnline && !b.isOnline) return;
+      const d = brandDiscount(b);
+      if (d > 0) set.add(d);
+    });
+    return [0, ...[...set].sort((a, b) => a - b)];
+  }, [cityBrands, selectedCategory, showOnlyOnline]);
+
+  // Selected discount not available anymore (city/category changed) → Any
+  useEffect(() => {
+    if (minDiscount > 0 && cityBrands.length && !discountOptions.includes(minDiscount)) {
+      setMinDiscount(0);
     }
-    setLoadingMore(false);
-  }, [loadingMore, hasMore, loading, displayedBrands.length, allBrands]);
+  }, [discountOptions, minDiscount, cityBrands.length]);
+
+  // Selected category has no brands in the new city → back to All
+  useEffect(() => {
+    if (selectedCategory === "all" || !cityBrands.length) return;
+    const name = CATEGORY_BY_ID.get(selectedCategory)?.name;
+    if (!cityBrands.some((b) => b.category === name)) setSelectedCategory("all");
+  }, [cityBrands, selectedCategory]);
 
   const filteredData = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -1163,25 +1246,47 @@ export default function BrandsScreen() {
         ? CATEGORY_BY_ID.get(selectedCategory)?.name
         : null;
 
-    return allBrands.filter((b) => {
-      if (minDiscount > 0 && b.discount !== minDiscount) return false;
+    return cityBrands.filter((b) => {
+      // Exact: 10% shows only brands whose deal is exactly 10%
+      if (minDiscount > 0 && brandDiscount(b) !== minDiscount) return false;
       if (catName && b.category !== catName) return false;
       if (showOnlyOnline && !b.isOnline) return false;
       if (q && !b.name?.toLowerCase().includes(q)) return false;
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allBrands, searchQuery, minDiscount, selectedCategory, showOnlyOnline, claimVersion]);
+  }, [cityBrands, searchQuery, minDiscount, selectedCategory, showOnlyOnline, claimVersion]);
 
+  // Back to the top of the list when the city changes
+  const listRef = useRef(null);
   useEffect(() => {
-    if (filteredData.length > 0) {
-      setDisplayedBrands(filteredData.slice(0, PAGE_SIZE));
-      setHasMore(filteredData.length > PAGE_SIZE);
-    } else {
-      setDisplayedBrands([]);
-      setHasMore(false);
-    }
-  }, [filteredData]);
+    listRef.current?.scrollToOffset?.({ offset: 0, animated: false });
+  }, [selectedCity]);
+
+  // Stats follow the brand list (was a setState inside another setState
+  // updater, which React warns about)
+  useEffect(() => {
+    if (allBrands.length) updateStatsFromLocal(allBrands);
+  }, [allBrands, claimVersion, updateStatsFromLocal]);
+
+  // Filters changed → start again from the first page
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [selectedCity, selectedCategory, minDiscount, showOnlyOnline, searchQuery]);
+
+  const displayedBrands = useMemo(
+    () => filteredData.slice(0, visibleCount),
+    [filteredData, visibleCount]
+  );
+  const hasMore = visibleCount < filteredData.length;
+
+  const loadMoreBrands = useCallback(() => {
+    if (loadingMore || loading) return;
+    if (visibleCount >= filteredData.length) return;
+    setLoadingMore(true);
+    setVisibleCount((c) => c + PAGE_SIZE);
+    setLoadingMore(false);
+  }, [loadingMore, loading, visibleCount, filteredData.length]);
 
   const openOfferScreen = useCallback(
     (brand) => {
@@ -1232,6 +1337,11 @@ export default function BrandsScreen() {
     setSearchQuery("");
   }, []);
 
+  const activeFilterCount =
+    (minDiscount > 0 ? 1 : 0) +
+    (selectedCategory !== "all" ? 1 : 0) +
+    (showOnlyOnline ? 1 : 0);
+
   const renderBrand = useCallback(
     ({ item }) => <BrandCard item={item} onPress={openOfferScreen} />,
     [openOfferScreen]
@@ -1249,13 +1359,26 @@ export default function BrandsScreen() {
       );
     }
     if (displayedBrands.length === 0 && !loading) {
+      const cityEmpty =
+        selectedCity !== ALL_CITIES &&
+        activeFilterCount === 0 &&
+        !searchQuery.trim();
       return (
         <View style={styles.noResultsContainer}>
           <MaterialCommunityIcons name="ticket-off-outline" size={60} color="#ccc" />
-          <Text style={styles.noResultsText}>No Brands Found</Text>
-          <Text style={styles.noResultsSubText}>Try adjusting your filters</Text>
-          <TouchableOpacity style={styles.clearFiltersBtn} onPress={clearAllFilters}>
-            <Text style={styles.clearFiltersBtnText}>Clear All Filters</Text>
+          <Text style={styles.noResultsText}>
+            {cityEmpty ? `No brands in ${selectedCity} yet` : "No Brands Found"}
+          </Text>
+          <Text style={styles.noResultsSubText}>
+            {cityEmpty ? "New brands are joining soon" : "Try adjusting your filters"}
+          </Text>
+          <TouchableOpacity
+            style={styles.clearFiltersBtn}
+            onPress={cityEmpty ? () => setSelectedCity(ALL_CITIES) : clearAllFilters}
+          >
+            <Text style={styles.clearFiltersBtnText}>
+              {cityEmpty ? "Show All Cities" : "Clear All Filters"}
+            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -1265,6 +1388,7 @@ export default function BrandsScreen() {
         <View style={styles.footerContainer}>
           <Text style={styles.totalBrandsText}>
             Showing all {filteredData.length} brands
+            {selectedCity !== ALL_CITIES ? ` in ${selectedCity}` : ""}
           </Text>
           {lastUpdated ? (
             <Text style={styles.liveFooterText}>· live · auto-synced</Text>
@@ -1279,17 +1403,18 @@ export default function BrandsScreen() {
         </Text>
       </View>
     );
-  }, [loadingMore, displayedBrands.length, loading, filteredData.length, hasMore, clearAllFilters, lastUpdated]);
+  }, [loadingMore, displayedBrands.length, loading, filteredData.length, hasMore, clearAllFilters, lastUpdated, selectedCity, activeFilterCount, searchQuery, setSelectedCity]);
 
   const renderHeader = useCallback(
     () => (
+      <View>
       <View style={styles.categoryGridContainer}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoryGridScroll}
         >
-          {CATEGORIES.map((category) => (
+          {visibleCategories.map((category) => (
             <CategoryGridItem
               key={category.id}
               category={category}
@@ -1299,14 +1424,10 @@ export default function BrandsScreen() {
           ))}
         </ScrollView>
       </View>
+      </View>
     ),
-    [selectedCategory]
+    [selectedCategory, visibleCategories]
   );
-
-  const activeFilterCount =
-    (minDiscount > 0 ? 1 : 0) +
-    (selectedCategory !== "all" ? 1 : 0) +
-    (showOnlyOnline ? 1 : 0);
 
   return (
     <SafeAreaView style={styles.mainSafeArea}>
@@ -1368,6 +1489,16 @@ export default function BrandsScreen() {
               )}
             </TouchableOpacity>
           </View>
+
+          {/* City picker: full width under the title, arrow on the right */}
+          <CityDropdown
+            options={cityOptions}
+            selected={selectedCity}
+            onSelect={setSelectedCity}
+            title="Brands in"
+            fullWidth
+            style={{ marginTop: 12 }}
+          />
         </View>
 
         {isGuest && (
@@ -1419,6 +1550,7 @@ export default function BrandsScreen() {
           </View>
         ) : (
           <FlatList
+            ref={listRef}
             data={displayedBrands}
             keyExtractor={keyExtractor}
             removeClippedSubviews
@@ -1470,9 +1602,12 @@ export default function BrandsScreen() {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 20 }}
               >
-                <Text style={styles.filterLabel}>Exact Discount</Text>
+                <Text style={styles.filterLabel}>
+                  Exact Discount
+                  {selectedCity !== ALL_CITIES ? ` in ${selectedCity}` : ""}
+                </Text>
                 <View style={styles.filterChipRow}>
-                  {DISCOUNT_OPTIONS.map((val) => (
+                  {discountOptions.map((val) => (
                     <TouchableOpacity
                       key={val}
                       style={[styles.chip, minDiscount === val && styles.activeChip]}

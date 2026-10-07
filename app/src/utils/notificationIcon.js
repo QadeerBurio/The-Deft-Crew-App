@@ -4,20 +4,20 @@
 
 // ─── Emoji + color per mood (always available) ───
 const MOOD_META = {
-  sorted:   { emoji: '😌', color: '#10b981' },
+  sorted:   { emoji: '😊', color: '#10b981' },
   panic:    { emoji: '😰', color: '#ef4444' },
   excited:  { emoji: '🤩', color: '#f9c349' },
-  broke:    { emoji: '😔', color: '#94a3b8' },
+  broke:    { emoji: '😢', color: '#94a3b8' },
   sleepy:   { emoji: '😴', color: '#8b5cf6' },
-  shook:    { emoji: '😳', color: '#a855f7' },
-  sus:      { emoji: '👀', color: '#f97316' },
+  shook:    { emoji: '😮', color: '#a855f7' },
+  sus:      { emoji: '😒', color: '#f97316' },
   cheeky:   { emoji: '😜', color: '#ec4899' },
-  hype:     { emoji: '🔥', color: '#f97316' },
+  hype:     { emoji: '😆', color: '#f97316' },
   smug:     { emoji: '😏', color: '#3b82f6' },
-  shock:    { emoji: '😮', color: '#eab308' },
-  urgent:   { emoji: '🚨', color: '#ff6b6b' },
-  money:    { emoji: '💰', color: '#d4a373' },
-  ghost:    { emoji: '👻', color: '#94a3b8' },
+  shock:    { emoji: '😳', color: '#eab308' },
+  urgent:   { emoji: '😨', color: '#ff6b6b' },
+  money:    { emoji: '🤑', color: '#d4a373' },
+  ghost:    { emoji: '😑', color: '#94a3b8' },
   default:  { emoji: '✨', color: '#f9c349' },
 };
 
