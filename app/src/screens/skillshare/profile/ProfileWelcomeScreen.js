@@ -11,9 +11,10 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { color as T, font as F } from "../../../theme/tokens";
+import { LinearGradient } from "../../../ui/FlatGradient"; // flat fills, no gradients (design system)
 
-const BRAND = '#f9c349';
+const BRAND = T.yellow;
 const BRAND_DARK = '#efa52e';
 
 // Local hero illustration — replace with your own asset at this path.
@@ -37,7 +38,7 @@ export default function ProfileWelcomeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <ScrollView
         style={styles.container}
@@ -56,7 +57,7 @@ export default function ProfileWelcomeScreen({ navigation }) {
       'transparent',
       'rgba(255,255,255,0.25)',
       'rgba(255,255,255,0.75)',
-      '#FFFFFF',
+      T.white,
     ]}
     locations={[0.55, 0.72, 0.88, 1]}
     style={styles.heroFade}
@@ -69,18 +70,18 @@ export default function ProfileWelcomeScreen({ navigation }) {
     accessibilityRole="button"
     accessibilityLabel="Go back"
   >
-    <Ionicons name="arrow-back" size={22} color="#1C1C1E" />
+    <Ionicons name="arrow-back" size={22} color={T.ink} />
   </TouchableOpacity>
 </ImageBackground>
 
       <View style={styles.content}>
         <View style={styles.pill}>
           <Ionicons name="school-outline" size={14} color="#8A6D1D" />
-          <Text style={styles.pillText}>WELCOME TO SKILLSHARE</Text>
+          <Text style={styles.pillText}>welcome to skillshare</Text>
         </View>
 
         <Text style={styles.title}>
-          Share your skills. <Text style={{ color: BRAND_DARK }}>Find opportunities.</Text>
+          share your skills. <Text style={{ color: BRAND_DARK }}>find opportunities.</Text>
         </Text>
 
         <Text style={styles.subtitle}>
@@ -95,13 +96,13 @@ export default function ProfileWelcomeScreen({ navigation }) {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            <Text style={styles.primaryText}>Build Your Professional Profile</Text>
-            <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+            <Text style={styles.primaryText}>build your professional profile</Text>
+            <Ionicons name="arrow-forward" size={18} color={T.white} />
           </LinearGradient>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.secondaryButton} onPress={goExploreFirst} activeOpacity={0.7}>
-          <Text style={styles.secondaryText}>Explore first</Text>
+          <Text style={styles.secondaryText}>explore first</Text>
         </TouchableOpacity>
       </View>
       </ScrollView>
@@ -111,7 +112,7 @@ export default function ProfileWelcomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
   },
 
   scroll: {
@@ -135,11 +136,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.9)',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.06,
     shadowRadius: 6,
-    elevation: 3,
+    elevation: 2,
   },
 
   heroImage: {
@@ -165,7 +166,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: T.sand,
     borderWidth: 1,
     borderColor: '#EFE3C0',
     borderRadius: 20,
@@ -177,21 +178,21 @@ const styles = StyleSheet.create({
 
   pillText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
     color: '#8A6D1D',
     letterSpacing: 0.5,
   },
 
   title: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#1C1C1E',
+    fontFamily: F.heading,
+    color: T.ink,
     lineHeight: 36,
     letterSpacing: -0.5,
   },
 
   subtitle: {
-    fontSize: 15,
+    fontSize: 15, fontFamily: F.body,
     color: '#6B6B70',
     lineHeight: 22,
     marginTop: 14,
@@ -203,9 +204,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     shadowColor: BRAND,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
 
   primaryGradient: {
@@ -217,9 +218,9 @@ const styles = StyleSheet.create({
   },
 
   primaryText: {
-    color: '#FFFFFF',
+    color: T.white,
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
   },
 
   secondaryButton: {
@@ -233,8 +234,8 @@ const styles = StyleSheet.create({
   },
 
   secondaryText: {
-    color: '#1C1C1E',
+    color: T.ink,
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
   },
 });

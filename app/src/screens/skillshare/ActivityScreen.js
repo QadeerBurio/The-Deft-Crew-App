@@ -15,12 +15,13 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { AuthContext } from '../../context/AuthContext';
 import { getMyListings, getMySkillOffers, getMyMatches, getMyInquiries } from '../../api/api';
 import { timeAgo } from '../../utils/time';
 import { goToAuth } from '../../utils/goToAuth';
 
+import { color as T, font as F } from "../../theme/tokens";
 // Last loaded activity per user, so coming back shows it instantly.
 const activityCache = {};
 
@@ -35,11 +36,11 @@ const keyExtractor = (item) => item.id;
 const ActivityItem = React.memo(({ item, onPress }) => {
   const getIconColor = (type) => {
     switch (type) {
-      case 'listing': return '#f9c349';
+      case 'listing': return T.yellow;
       case 'offer': return '#FF9500';
-      case 'match': return '#34C759';
+      case 'match': return T.success;
       case 'inquiry': return '#AF52DE';
-      default: return '#8E8E93';
+      default: return T.textMuted;
     }
   };
 
@@ -64,7 +65,7 @@ const ActivityItem = React.memo(({ item, onPress }) => {
         activeOpacity={0.7}
       >
         <LinearGradient
-          colors={['#FFFFFF', '#FFF8F0']}
+          colors={[T.white, '#FFF8F0']}
           style={styles.cardGradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -284,9 +285,9 @@ export default function ActivityScreen({ navigation }) {
   if (loading && !refreshing && !isGuest) {
     return (
       <SafeAreaView style={styles.centerContainer} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-        <ActivityIndicator size="large" color="#f9c349" />
-        <Text style={styles.loadingText}>Loading activity...</Text>
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
+        <ActivityIndicator size="large" color={T.yellow} />
+        <Text style={styles.loadingText}>loading activity...</Text>
       </SafeAreaView>
     );
   }
@@ -294,19 +295,19 @@ export default function ActivityScreen({ navigation }) {
   if (isGuest) {
     return (
       <SafeAreaView style={styles.centerContainer} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <Ionicons name="lock-closed-outline" size={64} color="#C7C7CC" />
-        <Text style={styles.emptyTitle}>Login Required</Text>
-        <Text style={styles.emptySubtext}>Login to see your activity</Text>
+        <Text style={styles.emptyTitle}>login required</Text>
+        <Text style={styles.emptySubtext}>login to see your activity</Text>
         <TouchableOpacity
           style={styles.loginButton}
           onPress={() => goToAuth(setIsGuest)}
         >
           <LinearGradient
-            colors={['#f9c349', '#f7b731']}
+            colors={[T.yellow, '#f7b731']}
             style={styles.loginGradient}
           >
-            <Text style={styles.loginButtonText}>Login</Text>
+            <Text style={styles.loginButtonText}>login</Text>
           </LinearGradient>
         </TouchableOpacity>
       </SafeAreaView>
@@ -315,7 +316,7 @@ export default function ActivityScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       {/* Modern Header */}
       <View style={styles.headerBar}>
@@ -328,16 +329,16 @@ export default function ActivityScreen({ navigation }) {
           <Ionicons 
             name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'} 
             size={24} 
-            color="#1C1C1E" 
+            color={T.ink} 
           />
         </TouchableOpacity>
-        <Text style={styles.headerBarTitle}>Activity</Text>
+        <Text style={styles.headerBarTitle}>activity</Text>
         <TouchableOpacity 
           style={styles.headerAction}
           onPress={handleRefresh}
           disabled={refreshing}
         >
-          <Ionicons name="refresh-outline" size={22} color="#f9c349" />
+          <Ionicons name="refresh-outline" size={22} color={T.yellow} />
         </TouchableOpacity>
       </View>
 
@@ -347,23 +348,23 @@ export default function ActivityScreen({ navigation }) {
           <View style={styles.statsRow}>
             <View style={[styles.statItem, styles.statItemTotal]}>
               <Text style={styles.statNumber}>{stats.total}</Text>
-              <Text style={styles.statLabel}>Total</Text>
+              <Text style={styles.statLabel}>total</Text>
             </View>
             <View style={[styles.statItem, styles.statItemListings]}>
-              <Text style={[styles.statNumber, { color: '#f9c349' }]}>{stats.listings}</Text>
-              <Text style={styles.statLabel}>Listings</Text>
+              <Text style={[styles.statNumber, { color: T.yellow }]}>{stats.listings}</Text>
+              <Text style={styles.statLabel}>listings</Text>
             </View>
             <View style={[styles.statItem, styles.statItemOffers]}>
               <Text style={[styles.statNumber, { color: '#FF9500' }]}>{stats.offers}</Text>
-              <Text style={styles.statLabel}>Offers</Text>
+              <Text style={styles.statLabel}>offers</Text>
             </View>
             <View style={[styles.statItem, styles.statItemMatches]}>
-              <Text style={[styles.statNumber, { color: '#34C759' }]}>{stats.matches}</Text>
-              <Text style={styles.statLabel}>Matches</Text>
+              <Text style={[styles.statNumber, { color: T.success }]}>{stats.matches}</Text>
+              <Text style={styles.statLabel}>matches</Text>
             </View>
             <View style={[styles.statItem, styles.statItemInquiries]}>
               <Text style={[styles.statNumber, { color: '#AF52DE' }]}>{stats.inquiries}</Text>
-              <Text style={styles.statLabel}>Inquiries</Text>
+              <Text style={styles.statLabel}>inquiries</Text>
             </View>
           </View>
         </ScrollView>
@@ -399,8 +400,8 @@ export default function ActivityScreen({ navigation }) {
             <RefreshControl 
               refreshing={refreshing} 
               onRefresh={handleRefresh}
-              tintColor="#f9c349"
-              colors={["#f9c349"]}
+              tintColor={T.yellow}
+              colors={[T.yellow]}
             />
           }
           ListEmptyComponent={
@@ -409,9 +410,9 @@ export default function ActivityScreen({ navigation }) {
                 colors={['#f9c34920', '#f7b73120']}
                 style={styles.emptyIconContainer}
               >
-                <Ionicons name="time-outline" size={48} color="#f9c349" />
+                <Ionicons name="time-outline" size={48} color={T.yellow} />
               </LinearGradient>
-              <Text style={styles.emptyText}>No activity</Text>
+              <Text style={styles.emptyText}>no activity</Text>
               <Text style={styles.emptySubtext}>
                 Start by creating a listing or making an offer
               </Text>
@@ -427,7 +428,7 @@ export default function ActivityScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: T.paper,
   },
   headerBar: {
     flexDirection: 'row',
@@ -435,24 +436,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: T.line,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: T.line,
   },
   headerBarTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1C1C1E',
+    fontFamily: F.headingBold,
+    color: T.ink,
     flex: 1,
     textAlign: 'center',
   },
@@ -469,20 +470,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: T.paper,
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
-    color: '#8E8E93',
+    fontSize: 16, fontFamily: F.body,
+    color: T.textMuted,
   },
   statsContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     marginHorizontal: 16,
     marginTop: 12,
     borderRadius: 16,
     padding: 12,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -500,7 +501,7 @@ const styles = StyleSheet.create({
     minWidth: 70,
   },
   statItemTotal: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: T.sand,
   },
   statItemListings: {
     backgroundColor: '#FFF8F0',
@@ -516,22 +517,22 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     fontSize: 20,
-    fontWeight: '800',
-    color: '#1C1C1E',
+    fontFamily: F.heading,
+    color: T.ink,
   },
   statLabel: {
     fontSize: 11,
-    color: '#8E8E93',
+    color: T.textMuted,
     marginTop: 1,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
   filterContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     paddingVertical: 12,
     marginTop: 12,
     marginHorizontal: 16,
     borderRadius: 12,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -546,31 +547,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: T.sand,
     marginHorizontal: 4,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: T.line,
   },
   filterChipActive: {
-    backgroundColor: '#f9c349',
-    borderColor: '#f9c349',
+    backgroundColor: T.yellow,
+    borderColor: T.yellow,
   },
   filterChipText: {
     fontSize: 14,
-    color: '#8E8E93',
-    fontWeight: '500',
+    color: T.textMuted,
+    fontFamily: F.bodyMedium,
   },
   filterChipTextActive: {
-    color: '#FFFFFF',
+    color: T.white,
   },
   filterChipCount: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#8E8E93',
+    fontFamily: F.bodySemi,
+    color: T.textMuted,
     marginLeft: 4,
   },
   filterChipCountActive: {
-    color: '#FFFFFF',
+    color: T.white,
   },
   listContainer: {
     flex: 1,
@@ -583,13 +584,13 @@ const styles = StyleSheet.create({
   activityCard: {
     borderRadius: 14,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: T.line,
     overflow: 'hidden',
   },
   cardGradient: {
@@ -616,12 +617,12 @@ const styles = StyleSheet.create({
   },
   activityTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#1C1C1E',
+    fontFamily: F.bodySemi,
+    color: T.ink,
   },
   activitySubtitle: {
-    fontSize: 13,
-    color: '#8E8E93',
+    fontSize: 13, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 1,
   },
   activityTimeContainer: {
@@ -631,7 +632,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   activityTime: {
-    fontSize: 12,
+    fontSize: 12, fontFamily: F.body,
     color: '#C7C7CC',
   },
   emptyContainer: {
@@ -649,39 +650,39 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#8E8E93',
+    fontFamily: F.headingBold,
+    color: T.textMuted,
     marginTop: 8,
   },
   emptySubtext: {
-    fontSize: 14,
+    fontSize: 14, fontFamily: F.body,
     color: '#C7C7CC',
     marginTop: 4,
     textAlign: 'center',
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1C1C1E',
+    fontFamily: F.headingBold,
+    color: T.ink,
     marginTop: 12,
   },
   loginButton: {
     marginTop: 16,
     borderRadius: 14,
     overflow: 'hidden',
-    shadowColor: '#f9c349',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 2,
   },
   loginGradient: {
     paddingHorizontal: 32,
     paddingVertical: 14,
   },
   loginButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: T.white,
+    fontFamily: F.bodyBold,
     fontSize: 16,
   },
 });

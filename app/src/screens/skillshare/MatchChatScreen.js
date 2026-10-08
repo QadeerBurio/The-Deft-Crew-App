@@ -33,19 +33,20 @@ import { Video, ResizeMode } from 'expo-av';
 import * as Linking from 'expo-linking';
 import ImagePreviewModal from '../../../../components/media/ImagePreviewModal';
 
+import { color as T, font as F } from "../../theme/tokens";
 // ==================== DESIGN TOKENS ====================
 const C = {
-  white: '#ffffff',
-  dark: '#1a1a1a',
-  gold: '#f9c349',
-  goldSoft: '#fff8e6',
-  soft: '#F7F9F8',
-  border: '#E8E8E8',
-  divider: '#f2f2f2',
-  muted: '#8a8a8a',
-  text2: '#5f5f5f',
-  danger: '#e11d48',
-  ok: '#16a34a',
+  white: T.white,
+  dark: T.ink,
+  gold: T.yellow,
+  goldSoft: T.yellowSoft,
+  soft: T.sand,
+  border: T.line,
+  divider: T.line,
+  muted: T.textFaint,
+  text2: T.textMuted,
+  danger: T.danger,
+  ok: T.success,
 };
 
 const SCREEN_W = Dimensions.get('window').width;
@@ -849,7 +850,7 @@ export default function MatchChatScreen({ route, navigation }) {
             disabled={!canSend}
             activeOpacity={0.8}
           >
-            <Ionicons name="arrow-up" size={20} color={canSend ? C.gold : '#9a9a9a'} />
+            <Ionicons name="arrow-up" size={20} color={canSend ? C.gold : T.textFaint} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -898,7 +899,7 @@ const styles = StyleSheet.create({
     padding: 24,
     backgroundColor: C.white,
   },
-  loadingText: { marginTop: 12, fontSize: 13.5, color: C.muted, fontWeight: '600' },
+  loadingText: { marginTop: 12, fontSize: 13.5, color: C.muted, fontFamily: F.bodySemi },
   errorTile: {
     width: 72,
     height: 72,
@@ -907,8 +908,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  errorTitle: { marginTop: 16, fontSize: 18, fontWeight: '900', color: C.dark },
-  errorText: { marginTop: 6, fontSize: 13.5, color: C.muted, textAlign: 'center' },
+  errorTitle: { marginTop: 16, fontSize: 18, fontFamily: F.heading, color: C.dark },
+  errorText: { marginTop: 6, fontSize: 13.5, fontFamily: F.body, color: C.muted, textAlign: 'center' },
   errorActions: { flexDirection: 'row', gap: 10, marginTop: 20 },
   ghostBtn: {
     height: 42,
@@ -919,7 +920,7 @@ const styles = StyleSheet.create({
     borderColor: C.border,
     justifyContent: 'center',
   },
-  ghostBtnText: { fontSize: 13.5, fontWeight: '800', color: C.dark },
+  ghostBtnText: { fontSize: 13.5, fontFamily: F.bodyBold, color: C.dark },
   darkBtn: {
     height: 42,
     paddingHorizontal: 18,
@@ -927,7 +928,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.dark,
     justifyContent: 'center',
   },
-  darkBtnText: { fontSize: 13.5, fontWeight: '800', color: C.gold },
+  darkBtnText: { fontSize: 13.5, fontFamily: F.bodyBold, color: C.gold },
 
   // header
   header: {
@@ -952,7 +953,7 @@ const styles = StyleSheet.create({
   headerInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', marginHorizontal: 12 },
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.soft },
   avatarFallback: { backgroundColor: C.gold, justifyContent: 'center', alignItems: 'center' },
-  avatarText: { color: C.dark, fontSize: 16, fontWeight: '900' },
+  avatarText: { color: C.dark, fontSize: 16, fontFamily: F.bodyBold },
   onlineDot: {
     position: 'absolute',
     bottom: 0,
@@ -966,8 +967,8 @@ const styles = StyleSheet.create({
   },
   onlineDotOn: { backgroundColor: C.ok },
   headerText: { flex: 1, marginLeft: 10 },
-  headerName: { fontSize: 16, fontWeight: '900', color: C.dark },
-  headerSub: { fontSize: 11.5, color: C.muted, marginTop: 1, fontWeight: '600' },
+  headerName: { fontSize: 16, fontFamily: F.bodyBold, color: C.dark },
+  headerSub: { fontSize: 11.5, color: C.muted, marginTop: 1, fontFamily: F.bodySemi },
 
   // context card
   ctxCard: {
@@ -990,16 +991,16 @@ const styles = StyleSheet.create({
   },
   ctxBody: { flex: 1, marginRight: 8 },
   ctxTitleRow: { flexDirection: 'row', alignItems: 'center' },
-  ctxTitle: { fontSize: 14, fontWeight: '800', color: C.dark, flexShrink: 1 },
+  ctxTitle: { fontSize: 14, fontFamily: F.bodyBold, color: C.dark, flexShrink: 1 },
   ctxSwap: { marginHorizontal: 6 },
-  ctxSub: { fontSize: 12, color: C.muted, marginTop: 2 },
+  ctxSub: { fontSize: 12, fontFamily: F.body, color: C.muted, marginTop: 2 },
   statusPill: {
     height: 24,
     borderRadius: 12,
     paddingHorizontal: 10,
     justifyContent: 'center',
   },
-  statusText: { fontSize: 11.5, fontWeight: '800' },
+  statusText: { fontSize: 11.5, fontFamily: F.bodyBold },
 
   // list
   listContent: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 6 },
@@ -1013,7 +1014,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
-  dividerText: { fontSize: 11.5, fontWeight: '800', color: C.muted },
+  dividerText: { fontSize: 11.5, fontFamily: F.bodyBold, color: C.muted },
 
   systemWrap: { alignItems: 'center', marginVertical: 8 },
   systemPill: {
@@ -1022,7 +1023,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
-  systemText: { fontSize: 11.5, color: C.muted, fontWeight: '700', textAlign: 'center' },
+  systemText: { fontSize: 11.5, color: C.muted, fontFamily: F.bodyBold, textAlign: 'center' },
 
   row: { maxWidth: '80%' },
   rowOwn: { alignSelf: 'flex-end' },
@@ -1035,7 +1036,7 @@ const styles = StyleSheet.create({
   bubbleOther: { backgroundColor: C.soft, borderBottomLeftRadius: 6 },
   bubbleMedia: { padding: 4, paddingTop: 4, paddingBottom: 4 },
 
-  msgText: { fontSize: 14.5, lineHeight: 20 },
+  msgText: { fontSize: 14.5, fontFamily: F.body, lineHeight: 20 },
   textOwn: { color: C.white },
   textOther: { color: C.dark },
 
@@ -1046,8 +1047,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   metaMedia: { paddingHorizontal: 6, paddingBottom: 2 },
-  timeOwn: { fontSize: 10.5, color: 'rgba(255,255,255,0.6)' },
-  timeOther: { fontSize: 10.5, color: C.muted },
+  timeOwn: { fontSize: 10.5, fontFamily: F.body, color: 'rgba(255,255,255,0.6)' },
+  timeOther: { fontSize: 10.5, fontFamily: F.body, color: C.muted },
   tick: { marginLeft: 3 },
 
   mediaImage: { width: IMAGE_W, borderRadius: 14, backgroundColor: C.border },
@@ -1068,7 +1069,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingLeft: 3,
   },
-  mediaVideoLabel: { color: C.white, fontSize: 12, fontWeight: '700', marginTop: 6 },
+  mediaVideoLabel: { color: C.white, fontSize: 12, fontFamily: F.bodyBold, marginTop: 6 },
 
   fileRow: { flexDirection: 'row', alignItems: 'center', gap: 8, maxWidth: 230, paddingVertical: 2 },
   fileIcon: {
@@ -1080,7 +1081,7 @@ const styles = StyleSheet.create({
   },
   fileIconOwn: { backgroundColor: C.gold },
   fileIconOther: { backgroundColor: C.dark },
-  fileName: { fontSize: 14, fontWeight: '600', flexShrink: 1 },
+  fileName: { fontSize: 14, fontFamily: F.bodySemi, flexShrink: 1 },
 
   // empty
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
@@ -1092,8 +1093,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  emptyTitle: { marginTop: 16, fontSize: 18, fontWeight: '900', color: C.dark },
-  emptySub: { marginTop: 6, fontSize: 13.5, color: C.muted, textAlign: 'center' },
+  emptyTitle: { marginTop: 16, fontSize: 18, fontFamily: F.heading, color: C.dark },
+  emptySub: { marginTop: 6, fontSize: 13.5, fontFamily: F.body, color: C.muted, textAlign: 'center' },
 
   // typing
   typingWrap: { paddingHorizontal: 14, paddingBottom: 6 },
@@ -1142,7 +1143,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'ios' ? 13 : 10,
     paddingBottom: Platform.OS === 'ios' ? 13 : 10,
-    fontSize: 14.5,
+    fontSize: 14.5, fontFamily: F.body,
     color: C.dark,
     textAlignVertical: 'center',
   },
@@ -1154,12 +1155,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  sendBtnOff: { backgroundColor: '#e9e9e9' },
+  sendBtnOff: { backgroundColor: T.sand },
 
   // video modal
   videoBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.95)',
+    backgroundColor: T.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },

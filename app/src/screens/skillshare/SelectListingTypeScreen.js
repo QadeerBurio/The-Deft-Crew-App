@@ -9,14 +9,15 @@ import { getMyListings } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
 import useMyProfessionalProfile from '../../hooks/useMyProfessionalProfile';
 
-const BRAND = '#f9c349';
-const INK = '#1a1a1a';
-const MUTED = '#8E8E93';
+import { color as T, font as F } from "../../theme/tokens";
+const BRAND = T.yellow;
+const INK = T.ink;
+const MUTED = T.textMuted;
 
 const TYPES = [
-  { key: 'barter', title: 'Exchange', desc: 'Offer a service and receive another service in return.', icon: 'swap-horizontal-outline', iconBg: '#f0f0f0' },
-  { key: 'paid', title: 'Paid Service', desc: 'Offer your skills and earn money.', icon: 'cash-outline', iconBg: BRAND, iconColor: '#fff' },
-  { key: 'job', title: 'Hire', desc: 'Find a student for your project or task.', icon: 'people-outline', iconBg: '#f0f0f0' },
+  { key: 'barter', title: 'Exchange', desc: 'Offer a service and receive another service in return.', icon: 'swap-horizontal-outline', iconBg: T.sand },
+  { key: 'paid', title: 'Paid Service', desc: 'Offer your skills and earn money.', icon: 'cash-outline', iconBg: BRAND, iconColor: T.white },
+  { key: 'job', title: 'Hire', desc: 'Find a student for your project or task.', icon: 'people-outline', iconBg: T.sand },
 ];
 
 const NAV_ITEMS = [
@@ -93,19 +94,19 @@ export default function SelectListingTypeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <View style={styles.topHeader}>
         <TouchableOpacity onPress={goBack} hitSlop={10}>
           <Ionicons name="arrow-back" size={22} color={INK} />
         </TouchableOpacity>
-        <Text style={styles.topHeaderTitle}>Skill<Text style={{ color: BRAND }}>Share</Text></Text>
+        <Text style={styles.topHeaderTitle}>skill<Text style={{ color: BRAND }}>share</Text></Text>
         <TouchableOpacity onPress={() => navigation.navigate('SkillProfile')} hitSlop={10}>
           {myPhoto ? (
             <Image source={{ uri: myPhoto }} style={styles.headerAvatar} />
           ) : (
             <View style={[styles.headerAvatar, styles.headerAvatarFallback]}>
-              <Ionicons name="person" size={14} color="#999" />
+              <Ionicons name="person" size={14} color={T.textFaint} />
             </View>
           )}
         </TouchableOpacity>
@@ -116,7 +117,7 @@ export default function SelectListingTypeScreen({ navigation }) {
           const active = item.key === 'Post';
           return (
             <TouchableOpacity key={item.key} style={styles.navItem} onPress={() => goTo(item.route)}>
-              <Ionicons name={item.icon} size={20} color={active ? BRAND : '#666'} />
+              <Ionicons name={item.icon} size={20} color={active ? BRAND : T.textMuted} />
               <Text style={[styles.navItemText, active && styles.navItemTextActive]}>{item.label}</Text>
               {active && <View style={styles.navUnderline} />}
             </TouchableOpacity>
@@ -145,7 +146,7 @@ export default function SelectListingTypeScreen({ navigation }) {
           </TouchableOpacity>
         ))}
 
-        <Text style={styles.sectionLabel}>MY POSTS</Text>
+        <Text style={styles.sectionLabel}>my posts</Text>
 
         {loading ? (
           <ActivityIndicator color={BRAND} style={{ marginTop: 20 }} />
@@ -166,7 +167,7 @@ export default function SelectListingTypeScreen({ navigation }) {
                   {counts[p.key]} {p.unit}{counts[p.key] === 1 ? '' : 's'}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color="#999" />
+              <Ionicons name="chevron-forward" size={18} color={T.textFaint} />
             </TouchableOpacity>
           ))
         )}
@@ -176,36 +177,36 @@ export default function SelectListingTypeScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
+  container: { flex: 1, backgroundColor: T.paper },
   topHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee',
+    backgroundColor: T.card, borderBottomWidth: 1, borderBottomColor: T.line,
   },
-  topHeaderTitle: { fontSize: 20, fontWeight: '800', color: INK },
-  navRow: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee', paddingBottom: 4 },
+  topHeaderTitle: { fontSize: 20, fontFamily: F.heading, color: INK },
+  navRow: { flexDirection: 'row', backgroundColor: T.card, borderBottomWidth: 1, borderBottomColor: T.line, paddingBottom: 4 },
   navItem: { flex: 1, alignItems: 'center', paddingVertical: 8 },
-  navItemText: { fontSize: 11, color: '#666', marginTop: 3, fontWeight: '600' },
-  navItemTextActive: { color: BRAND, fontWeight: '800' },
+  navItemText: { fontSize: 11, color: T.textMuted, marginTop: 3, fontFamily: F.bodySemi },
+  navItemTextActive: { color: BRAND, fontFamily: F.bodyBold },
   navUnderline: { marginTop: 4, height: 2, width: 24, backgroundColor: BRAND, borderRadius: 1 },
   content: { padding: 20 },
-  pageTitle: { fontSize: 26, fontWeight: '800', color: INK },
-  pageSubtitle: { fontSize: 14, color: '#555', marginTop: 4, marginBottom: 20 },
+  pageTitle: { fontSize: 26, fontFamily: F.heading, color: INK },
+  pageSubtitle: { fontSize: 14, fontFamily: F.body, color: T.textMuted, marginTop: 4, marginBottom: 20 },
   typeCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#fff',
+    flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: T.card,
     borderRadius: 16, padding: 16, marginBottom: 14,
   },
   typeIconCircle: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' },
-  typeTitle: { fontSize: 18, fontWeight: '800', color: INK },
-  typeDesc: { fontSize: 13, color: '#666', marginTop: 2, lineHeight: 18 },
-  sectionLabel: { fontSize: 12, fontWeight: '700', color: '#999', letterSpacing: 0.6, marginTop: 12, marginBottom: 10 },
+  typeTitle: { fontSize: 18, fontFamily: F.heading, color: INK },
+  typeDesc: { fontSize: 13, fontFamily: F.body, color: T.textMuted, marginTop: 2, lineHeight: 18 },
+  sectionLabel: { fontSize: 12, fontFamily: F.bodyBold, color: T.textFaint, letterSpacing: 0.6, marginTop: 12, marginBottom: 10 },
   postRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff',
+    flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: T.card,
     borderRadius: 14, padding: 14, marginBottom: 10,
   },
-  postIconCircle: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' },
-  postLabel: { fontSize: 15, fontWeight: '700', color: INK },
-  postCount: { fontSize: 12, color: MUTED, marginTop: 2 },
+  postIconCircle: { width: 38, height: 38, borderRadius: 19, backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center' },
+  postLabel: { fontSize: 15, fontFamily: F.bodyBold, color: INK },
+  postCount: { fontSize: 12, fontFamily: F.body, color: MUTED, marginTop: 2 },
   headerAvatar: { width: 28, height: 28, borderRadius: 14 },
-headerAvatarFallback: { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' },
+headerAvatarFallback: { backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center' },
 });

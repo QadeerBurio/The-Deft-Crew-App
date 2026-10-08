@@ -15,14 +15,15 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { AuthContext } from '../../../context/AuthContext';
 import { getMyProfessionalProfile } from '../../../api/profileApi';
 
-const BRAND = '#f9c349';
-const BRAND_DARK = '#f5a623';
-const INK = '#1C1C1E';
-const MUTED = '#8E8E93';
+import { color as T, font as F } from "../../../theme/tokens";
+const BRAND = T.yellow;
+const BRAND_DARK = T.yellow;
+const INK = T.ink;
+const MUTED = T.textMuted;
 
 export default function ProfileSuccessScreen({ navigation }) {
   const { user } = useContext(AuthContext);
@@ -89,7 +90,7 @@ export default function ProfileSuccessScreen({ navigation }) {
   if (loading) {
     return (
       <SafeAreaView style={styles.center} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FDF9F0" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <ActivityIndicator size="large" color={BRAND} />
       </SafeAreaView>
     );
@@ -100,7 +101,7 @@ export default function ProfileSuccessScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FDF9F0" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
       <ScrollView
         style={styles.container}
         contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 12) + 16 }]}
@@ -132,7 +133,7 @@ export default function ProfileSuccessScreen({ navigation }) {
 
         {topSkills.length > 0 && (
           <View style={styles.skillCard}>
-            <Text style={styles.skillCardLabel}>TOP SKILLS</Text>
+            <Text style={styles.skillCardLabel}>top skills</Text>
             <View style={styles.skillRow}>
               {topSkills.map((skill) => (
                 <View key={skill} style={styles.skillPill}>
@@ -144,12 +145,12 @@ export default function ProfileSuccessScreen({ navigation }) {
         )}
 
         <TouchableOpacity style={styles.primaryButton} onPress={goExplore} activeOpacity={0.85}>
-          <Text style={styles.primaryText}>Explore SkillShare</Text>
-          <Ionicons name="arrow-forward" size={18} color="#1C1C1E" />
+          <Text style={styles.primaryText}>explore skillshare</Text>
+          <Ionicons name="arrow-forward" size={18} color={T.ink} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.secondaryButton} onPress={goViewProfile} activeOpacity={0.7}>
-          <Text style={styles.secondaryText}>View My Profile</Text>
+          <Text style={styles.secondaryText}>view my profile</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -157,41 +158,41 @@ export default function ProfileSuccessScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FDF9F0' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FDF9F0' },
+  container: { flex: 1, backgroundColor: T.paper },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: T.paper },
   content: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 36, alignItems: 'center' },
   checkCircle: {
     width: 72, height: 72, borderRadius: 36, backgroundColor: BRAND,
     justifyContent: 'center', alignItems: 'center', marginBottom: 20,
   },
-  title: { fontSize: 26, fontWeight: '800', color: INK, textAlign: 'center', lineHeight: 32 },
+  title: { fontSize: 26, fontFamily: F.heading, color: INK, textAlign: 'center', lineHeight: 32 },
   strengthRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, marginBottom: 30 },
-  strengthText: { fontSize: 14, color: MUTED, fontWeight: '600' },
+  strengthText: { fontSize: 14, color: MUTED, fontFamily: F.bodySemi },
   previewCard: {
     flexDirection: 'row', alignItems: 'center', width: '100%',
-    backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#EFE3C0',
+    backgroundColor: T.card, borderRadius: 16, borderWidth: 1, borderColor: '#EFE3C0',
     padding: 16, marginBottom: 12,
   },
   avatar: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center' },
-  avatarText: { color: '#4A3B10', fontSize: 22, fontWeight: '800' },
-  previewName: { fontSize: 16, fontWeight: '700', color: INK },
-  previewHeadline: { fontSize: 12, color: MUTED, marginTop: 2 },
+  avatarText: { color: '#4A3B10', fontSize: 22, fontFamily: F.heading },
+  previewName: { fontSize: 16, fontFamily: F.bodyBold, color: INK },
+  previewHeadline: { fontSize: 12, fontFamily: F.body, color: MUTED, marginTop: 2 },
   skillCard: {
-    width: '100%', backgroundColor: '#FFFFFF', borderRadius: 16,
+    width: '100%', backgroundColor: T.card, borderRadius: 16,
     borderWidth: 1, borderColor: '#EFE3C0', padding: 16, marginBottom: 30,
   },
-  skillCardLabel: { fontSize: 10, fontWeight: '700', color: MUTED, letterSpacing: 0.5, marginBottom: 8 },
+  skillCardLabel: { fontSize: 10, fontFamily: F.bodyBold, color: MUTED, letterSpacing: 0.5, marginBottom: 8 },
   skillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  skillPill: { backgroundColor: '#F8F9FA', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6 },
-  skillPillText: { fontSize: 12, fontWeight: '600', color: INK },
+  skillPill: { backgroundColor: T.sand, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6 },
+  skillPillText: { fontSize: 12, fontFamily: F.bodySemi, color: INK },
   primaryButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     width: '100%', backgroundColor: BRAND, borderRadius: 14, paddingVertical: 16,
   },
-  primaryText: { fontSize: 15, fontWeight: '700', color: INK },
+  primaryText: { fontSize: 15, fontFamily: F.bodyBold, color: INK },
   secondaryButton: {
     width: '100%', alignItems: 'center', paddingVertical: 16, marginTop: 12,
     borderRadius: 14, borderWidth: 1, borderColor: '#E5E5EA',
   },
-  secondaryText: { fontSize: 15, fontWeight: '600', color: INK },
+  secondaryText: { fontSize: 15, fontFamily: F.bodySemi, color: INK },
 });

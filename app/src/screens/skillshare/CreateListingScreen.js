@@ -20,13 +20,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { createListing, uploadListingAttachment } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
 import { goToAuth } from '../../utils/goToAuth';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import * as ImagePicker from 'expo-image-picker';
 import useMyProfessionalProfile from '../../hooks/useMyProfessionalProfile';
 
-const BRAND = '#f9c349';
-const INK = '#1C1C1E';
-const MUTED = '#8E8E93';
+import { color as T, font as F } from "../../theme/tokens";
+const BRAND = T.yellow;
+const INK = T.ink;
+const MUTED = T.textMuted;
 
 const PROFICIENCY_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
 
@@ -389,7 +390,7 @@ export default function CreateListingScreen({ route, navigation }) {
           <View key={i} style={styles.deliverableRow}>
             <Text style={styles.deliverableText}>• {d}</Text>
             <TouchableOpacity onPress={() => removeDeliverable(i)}>
-              <Ionicons name="close-circle" size={18} color="#FF3B30" />
+              <Ionicons name="close-circle" size={18} color={T.danger} />
             </TouchableOpacity>
           </View>
         ))}
@@ -416,7 +417,7 @@ export default function CreateListingScreen({ route, navigation }) {
             activeOpacity={0.7}
           >
             <Ionicons name="add-circle" size={16} color={BRAND} />
-            <Text style={styles.addLinkText}>Add custom deliverables</Text>
+            <Text style={styles.addLinkText}>add custom deliverables</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -426,7 +427,7 @@ export default function CreateListingScreen({ route, navigation }) {
           <View style={styles.sectionIcon}>
             <Ionicons name="ribbon-outline" size={16} color={BRAND} />
           </View>
-          <Text style={styles.sectionTitle}>Your Skill</Text>
+          <Text style={styles.sectionTitle}>your skill</Text>
         </View>
 
         <Field label="Skill Name">
@@ -506,7 +507,7 @@ export default function CreateListingScreen({ route, navigation }) {
           <View style={styles.sectionIcon}>
             <Ionicons name="document-text-outline" size={16} color={BRAND} />
           </View>
-          <Text style={styles.sectionTitle}>Basic Info</Text>
+          <Text style={styles.sectionTitle}>basic info</Text>
         </View>
 
         <Field label="Job Title">
@@ -537,7 +538,7 @@ export default function CreateListingScreen({ route, navigation }) {
           <View style={styles.sectionIcon}>
             <Ionicons name="briefcase-outline" size={16} color={BRAND} />
           </View>
-          <Text style={styles.sectionTitle}>Job Details</Text>
+          <Text style={styles.sectionTitle}>job details</Text>
         </View>
 
         <Field label="Skills Needed">
@@ -546,7 +547,7 @@ export default function CreateListingScreen({ route, navigation }) {
               <View key={i} style={styles.skillTag}>
                 <Text style={styles.skillTagText}>{skill}</Text>
                 <TouchableOpacity onPress={() => removeJobSkill(i)}>
-                  <Ionicons name="close" size={14} color="#555" style={{ marginLeft: 4 }} />
+                  <Ionicons name="close" size={14} color={T.textMuted} style={{ marginLeft: 4 }} />
                 </TouchableOpacity>
               </View>
             ))}
@@ -570,7 +571,7 @@ export default function CreateListingScreen({ route, navigation }) {
           <View style={styles.sectionIcon}>
             <Ionicons name="cash-outline" size={16} color={BRAND} />
           </View>
-          <Text style={styles.sectionTitle}>Compensation</Text>
+          <Text style={styles.sectionTitle}>compensation</Text>
         </View>
 
         <Field label="Budget">
@@ -612,7 +613,7 @@ export default function CreateListingScreen({ route, navigation }) {
           <View style={styles.sectionIcon}>
             <Ionicons name="document-text-outline" size={16} color={BRAND} />
           </View>
-          <Text style={styles.sectionTitle}>Basic Info</Text>
+          <Text style={styles.sectionTitle}>basic info</Text>
         </View>
 
         <Field label="Service Title">
@@ -643,7 +644,7 @@ export default function CreateListingScreen({ route, navigation }) {
           <View style={styles.sectionIcon}>
             <Ionicons name="ribbon-outline" size={16} color={BRAND} />
           </View>
-          <Text style={styles.sectionTitle}>Your Skill</Text>
+          <Text style={styles.sectionTitle}>your skill</Text>
         </View>
 
         <Field label="Skill Name">
@@ -666,7 +667,7 @@ export default function CreateListingScreen({ route, navigation }) {
               value={yearsOfExperience}
               onChangeText={setYearsOfExperience}
             />
-            <Text style={styles.suffixText}>Years</Text>
+            <Text style={styles.suffixText}>years</Text>
           </View>
         </Field>
 
@@ -678,7 +679,7 @@ export default function CreateListingScreen({ route, navigation }) {
           <View style={styles.sectionIcon}>
             <Ionicons name="images-outline" size={16} color={BRAND} />
           </View>
-          <Text style={styles.sectionTitle}>Previous Work</Text>
+          <Text style={styles.sectionTitle}>previous work</Text>
         </View>
 
         <View style={styles.warningBox}>
@@ -702,19 +703,19 @@ export default function CreateListingScreen({ route, navigation }) {
                 <Image source={{ uri: att.uri }} style={{ width: '100%', height: '100%' }} />
                 {att.uploading && (
                   <View style={styles.thumbUploadingOverlay}>
-                    <ActivityIndicator size="small" color="#fff" />
+                    <ActivityIndicator size="small" color={T.white} />
                   </View>
                 )}
                 {!att.uploading && att.type === 'video' && (
                   <View style={{ position: 'absolute', top: 4, right: 4 }}>
-                    <Ionicons name="videocam" size={14} color="#fff" />
+                    <Ionicons name="videocam" size={14} color={T.white} />
                   </View>
                 )}
                 <TouchableOpacity
                   onPress={() => handleRemoveMedia(att.id)}
                   style={{ position: 'absolute', top: 2, right: 2 }}
                 >
-                  <Ionicons name="close-circle" size={18} color="#FF3B30" />
+                  <Ionicons name="close-circle" size={18} color={T.danger} />
                 </TouchableOpacity>
               </View>
             ))}
@@ -742,7 +743,7 @@ export default function CreateListingScreen({ route, navigation }) {
           <View style={styles.sectionIcon}>
             <Ionicons name="pricetag-outline" size={16} color={BRAND} />
           </View>
-          <Text style={styles.sectionTitle}>Pricing & Delivery</Text>
+          <Text style={styles.sectionTitle}>pricing & delivery</Text>
         </View>
 
         <Field label="Starting Price (Rs)">
@@ -799,7 +800,7 @@ export default function CreateListingScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <View style={styles.header}>
         <TouchableOpacity
@@ -830,11 +831,11 @@ export default function CreateListingScreen({ route, navigation }) {
       <Image source={{ uri: myPhoto }} style={styles.postingAsAvatar} />
     ) : (
       <View style={[styles.postingAsAvatar, styles.postingAsAvatarFallback]}>
-        <Ionicons name="person" size={16} color="#999" />
+        <Ionicons name="person" size={16} color={T.textFaint} />
       </View>
     )}
     <Text style={styles.postingAsText}>
-      Posting as <Text style={styles.postingAsName}>{myName || 'You'}</Text>
+      posting as <Text style={styles.postingAsName}>{myName || 'You'}</Text>
     </Text>
   </View>
 
@@ -846,10 +847,10 @@ export default function CreateListingScreen({ route, navigation }) {
   )}
             {error && (
               <View style={styles.errorBanner}>
-                <Ionicons name="alert-circle" size={18} color="#FF3B30" />
+                <Ionicons name="alert-circle" size={18} color={T.danger} />
                 <Text style={styles.errorBannerText}>{error}</Text>
                 <TouchableOpacity onPress={() => setError(null)}>
-                  <Ionicons name="close" size={18} color="#FF3B30" />
+                  <Ionicons name="close" size={18} color={T.danger} />
                 </TouchableOpacity>
               </View>
             )}
@@ -868,17 +869,17 @@ export default function CreateListingScreen({ route, navigation }) {
             activeOpacity={0.85}
           >
             <LinearGradient
-              colors={[BRAND, '#f5a623']}
+              colors={[BRAND, T.yellow]}
               style={styles.submitGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
               {submitting ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <ActivityIndicator color={T.white} size="small" />
               ) : (
                 <>
                   <Text style={styles.submitButtonText}>{submitLabel}</Text>
-                  <Ionicons name="arrow-forward" size={18} color="#fff" />
+                  <Ionicons name="arrow-forward" size={18} color={T.white} />
                 </>
               )}
             </LinearGradient>
@@ -900,30 +901,30 @@ function Field({ label, children }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FC' },
+  container: { flex: 1, backgroundColor: T.paper },
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: T.line,
   },
   headerBtn: { width: 32, alignItems: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: INK },
+  headerTitle: { fontSize: 17, fontFamily: F.bodyBold, color: INK },
 
   content: { padding: 16, paddingBottom: 100 },
 
-  pageTitle: { fontSize: 24, fontWeight: '800', color: INK, marginTop: 4 },
-  pageSubtitle: { fontSize: 13, color: '#666', marginTop: 4, marginBottom: 16 },
+  pageTitle: { fontSize: 24, fontFamily: F.heading, color: INK, marginTop: 4 },
+  pageSubtitle: { fontSize: 13, fontFamily: F.body, color: T.textMuted, marginTop: 4, marginBottom: 16 },
 
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFEBEE',
+    backgroundColor: T.dangerBg,
     padding: 10,
     borderRadius: 10,
     marginBottom: 12,
@@ -931,38 +932,38 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FFCDD2',
   },
-  errorBannerText: { color: '#C62828', fontWeight: '500', fontSize: 13, flex: 1 },
+  errorBannerText: { color: '#C62828', fontFamily: F.bodyMedium, fontSize: 13, flex: 1 },
 
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     padding: 16,
     borderRadius: 16,
     marginBottom: 14,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
+    borderColor: T.line,
   },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
   sectionIcon: {
     width: 30,
     height: 30,
     borderRadius: 9,
-    backgroundColor: '#f9c34918',
+    backgroundColor: T.yellowSoft,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
   },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: INK, flexShrink: 1 },
+  sectionTitle: { fontSize: 16, fontFamily: F.bodyBold, color: INK, flexShrink: 1 },
   sectionIconImg: { width: 16, height: 16, tintColor: BRAND },
 
   inputGroup: { marginBottom: 14 },
-  label: { fontSize: 12, fontWeight: '600', color: MUTED, marginBottom: 6 },
+  label: { fontSize: 12, fontFamily: F.bodySemi, color: MUTED, marginBottom: 6 },
 
-  input: { fontSize: 14, color: INK, paddingVertical: 12, paddingHorizontal: 12 },
+  input: { fontSize: 14, fontFamily: F.body, color: INK, paddingVertical: 12, paddingHorizontal: 12 },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -970,7 +971,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E5EA',
     borderRadius: 10,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     minHeight: 46,
     paddingHorizontal: 12,
   },
@@ -978,7 +979,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E5EA',
     borderRadius: 10,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     minHeight: 90,
     textAlignVertical: 'top',
   },
@@ -988,12 +989,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E5EA',
     borderRadius: 10,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     paddingLeft: 12,
     minHeight: 46,
   },
-  prefixText: { fontSize: 14, fontWeight: '700', color: '#555', marginRight: 4 },
-  suffixText: { fontSize: 13, color: MUTED, paddingRight: 12 },
+  prefixText: { fontSize: 14, fontFamily: F.bodyBold, color: T.textMuted, marginRight: 4 },
+  suffixText: { fontSize: 13, fontFamily: F.body, color: MUTED, paddingRight: 12 },
 
   // Barter pill chips
   chipContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
@@ -1001,15 +1002,15 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 12,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderWidth: 1,
     borderColor: '#E5E5EA',
   },
-  chipActive: { backgroundColor: '#1a1a1a', borderColor: '#1a1a1a' },
-  chipHint: { backgroundColor: '#1a1a1a', borderColor: '#1a1a1a' },
-  chipText: { fontSize: 12, color: '#555', fontWeight: '600' },
-  chipTextActive: { color: '#fff', fontWeight: '700' },
-  chipTextHint: { color: '#fff', fontWeight: '700' },
+  chipActive: { backgroundColor: T.ink, borderColor: T.ink },
+  chipHint: { backgroundColor: T.ink, borderColor: T.ink },
+  chipText: { fontSize: 12, color: T.textMuted, fontFamily: F.bodySemi },
+  chipTextActive: { color: T.white, fontFamily: F.bodyBold },
+  chipTextHint: { color: T.white, fontFamily: F.bodyBold },
 
   // Job/Paid 2x2 level grid
   levelGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -1017,27 +1018,27 @@ const styles = StyleSheet.create({
     width: '48%',
     paddingVertical: 12,
     borderRadius: 10,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderWidth: 1,
     borderColor: '#E5E5EA',
     alignItems: 'center',
   },
-  levelGridBtnActive: { backgroundColor: '#1a1a1a', borderColor: '#1a1a1a' },
-  levelGridBtnHint: { backgroundColor: '#1a1a1a', borderColor: '#1a1a1a' },
-  levelGridText: { fontSize: 13, fontWeight: '600', color: '#555' },
-  levelGridTextActive: { color: '#fff', fontWeight: '700' },
-  levelGridTextHint: { color: '#fff', fontWeight: '700' },
+  levelGridBtnActive: { backgroundColor: T.ink, borderColor: T.ink },
+  levelGridBtnHint: { backgroundColor: T.ink, borderColor: T.ink },
+  levelGridText: { fontSize: 13, fontFamily: F.bodySemi, color: T.textMuted },
+  levelGridTextActive: { color: T.white, fontFamily: F.bodyBold },
+  levelGridTextHint: { color: T.white, fontFamily: F.bodyBold },
 
   // Job skill tags
   skillTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0F0F0',
+    backgroundColor: T.sand,
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  skillTagText: { fontSize: 12, color: INK, fontWeight: '600' },
+  skillTagText: { fontSize: 12, color: INK, fontFamily: F.bodySemi },
 
   // Barter deliverables
   deliverableRow: {
@@ -1046,14 +1047,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 4,
   },
-  deliverableText: { fontSize: 13, color: INK, flex: 1 },
+  deliverableText: { fontSize: 13, fontFamily: F.body, color: INK, flex: 1 },
   linkInputContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   addLinkButton: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4 },
-  addLinkText: { color: BRAND, fontSize: 13, fontWeight: '700' },
+  addLinkText: { color: BRAND, fontSize: 13, fontFamily: F.bodyBold },
 
   // Paid: previous work
   warningBox: { flexDirection: 'row', gap: 6, marginBottom: 12 },
-  warningText: { flex: 1, fontSize: 11.5, color: '#C62828', lineHeight: 16 },
+  warningText: { flex: 1, fontSize: 11.5, fontFamily: F.body, color: '#C62828', lineHeight: 16 },
   uploadBox: {
     borderWidth: 1.5,
     borderColor: '#D8D8DC',
@@ -1063,8 +1064,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FAFAFC',
   },
-  uploadTitle: { fontSize: 13, fontWeight: '600', color: '#555', marginTop: 8 },
-  uploadSubtitle: { fontSize: 11, color: MUTED, marginTop: 2 },
+  uploadTitle: { fontSize: 13, fontFamily: F.bodySemi, color: T.textMuted, marginTop: 8 },
+  uploadSubtitle: { fontSize: 11, fontFamily: F.body, color: MUTED, marginTop: 2 },
   thumb: { width: 64, height: 64, borderRadius: 10, overflow: 'hidden' },
   thumbUploadingOverlay: {
     position: 'absolute',
@@ -1072,12 +1073,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: T.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
-  roadmapHint: { fontSize: 12, color: MUTED, marginBottom: 10, marginTop: -8 },
+  roadmapHint: { fontSize: 12, fontFamily: F.body, color: MUTED, marginBottom: 10, marginTop: -8 },
 
   footer: {
     position: 'absolute',
@@ -1086,18 +1087,18 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.03)',
+    borderTopColor: T.line,
   },
   submitButton: {
     borderRadius: 12,
     overflow: 'hidden',
     shadowColor: BRAND,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   submitButtonDisabled: { opacity: 0.5, shadowOpacity: 0 },
   submitGradient: {
@@ -1107,12 +1108,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  submitButtonText: { color: '#fff', fontSize: 15, fontWeight: '700', letterSpacing: 0.3 },
+  submitButtonText: { color: T.white, fontSize: 15, fontFamily: F.bodyBold, letterSpacing: 0.3 },
   postingAsRow: {
   flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12,
 },
 postingAsAvatar: { width: 28, height: 28, borderRadius: 14 },
-postingAsAvatarFallback: { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' },
-postingAsText: { fontSize: 12, color: MUTED, fontWeight: '600' },
-postingAsName: { color: INK, fontWeight: '800' },
+postingAsAvatarFallback: { backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center' },
+postingAsText: { fontSize: 12, color: MUTED, fontFamily: F.bodySemi },
+postingAsName: { color: INK, fontFamily: F.bodyBold },
 });

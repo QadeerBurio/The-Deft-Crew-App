@@ -18,7 +18,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { AuthContext } from '../../context/AuthContext';
 import { 
   getMyListings, 
@@ -29,15 +29,16 @@ import {
 import { timeAgo } from '../../utils/time';
 import { goToAuth } from '../../utils/goToAuth';
 
+import { color as T, font as F } from "../../theme/tokens";
 // Last loaded stats + activity per user, so coming back is instant.
 const statsCache = {};
 
 const ICON_CONFIGS = {
-  listing: { icon: 'document-text-outline', color: '#f9c349', bg: '#f9c34915' },
+  listing: { icon: 'document-text-outline', color: T.yellow, bg: '#f9c34915' },
   offer: { icon: 'git-pull-request-outline', color: '#FF9500', bg: '#FF950015' },
-  match: { icon: 'people-outline', color: '#34C759', bg: '#34C75915' },
+  match: { icon: 'people-outline', color: T.success, bg: '#34C75915' },
   inquiry: { icon: 'chatbubble-outline', color: '#AF52DE', bg: '#AF52DE15' },
-  default: { icon: 'time-outline', color: '#8E8E93', bg: '#8E8E9315' }
+  default: { icon: 'time-outline', color: T.textMuted, bg: '#8E8E9315' }
 };
 
 const capitalize = (v) => {
@@ -91,7 +92,7 @@ const StatCard = React.memo(({ number, label, icon, gradient, onPress }) => {
           end={{ x: 1, y: 1 }}
         >
           <View style={styles.statIconContainer}>
-            <Ionicons name={icon} size={18} color="#FFFFFF" />
+            <Ionicons name={icon} size={18} color={T.white} />
           </View>
           <Text style={styles.statNumber}>{number}</Text>
           <Text style={styles.statLabel}>{label}</Text>
@@ -286,10 +287,10 @@ export default function SkillProfile({ navigation }) {
   if (loading && !refreshing && !isGuest) {
     return (
       <SafeAreaView style={styles.centerContainer} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#f9c349" />
-          <Text style={styles.loadingText}>Loading profile...</Text>
+          <ActivityIndicator size="large" color={T.yellow} />
+          <Text style={styles.loadingText}>loading profile...</Text>
         </View>
       </SafeAreaView>
     );
@@ -298,16 +299,16 @@ export default function SkillProfile({ navigation }) {
   if (isGuest) {
     return (
       <SafeAreaView style={styles.centerContainer} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <View style={styles.guestContainer}>
           <LinearGradient
-            colors={['#FFF8F0', '#FFFFFF']}
+            colors={['#FFF8F0', T.white]}
             style={styles.guestCard}
           >
             <View style={styles.guestIconContainer}>
-              <Ionicons name="person-outline" size={64} color="#f9c349" />
+              <Ionicons name="person-outline" size={64} color={T.yellow} />
             </View>
-            <Text style={styles.emptyTitle}>Guest Mode</Text>
+            <Text style={styles.emptyTitle}>guest mode</Text>
             <Text style={styles.emptySubtext}>Login to see your skill profile</Text>
             <TouchableOpacity
               style={styles.loginButton}
@@ -315,11 +316,11 @@ export default function SkillProfile({ navigation }) {
               activeOpacity={0.8}
             >
               <LinearGradient
-                colors={['#f9c349', '#f7b731']}
+                colors={[T.yellow, '#f7b731']}
                 style={styles.loginGradient}
               >
-                <Text style={styles.loginButtonText}>Login</Text>
-                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                <Text style={styles.loginButtonText}>login</Text>
+                <Ionicons name="arrow-forward" size={20} color={T.white} />
               </LinearGradient>
             </TouchableOpacity>
           </LinearGradient>
@@ -330,7 +331,7 @@ export default function SkillProfile({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       {/* Modern Header */}
       <View style={styles.headerBar}>
@@ -343,16 +344,16 @@ export default function SkillProfile({ navigation }) {
           <Ionicons 
             name="chevron-back"
             size={24} 
-            color="#1C1C1E" 
+            color={T.ink} 
           />
         </TouchableOpacity>
-        <Text style={styles.headerBarTitle}>My Stats</Text>
+        <Text style={styles.headerBarTitle}>my stats</Text>
         <TouchableOpacity 
           style={styles.headerActionButton}
           onPress={handleLogout}
           activeOpacity={0.7}
         >
-          <Feather name="log-out" size={22} color="#8E8E93" />
+          <Feather name="log-out" size={22} color={T.textMuted} />
         </TouchableOpacity>
       </View>
 
@@ -361,8 +362,8 @@ export default function SkillProfile({ navigation }) {
           <RefreshControl 
             refreshing={refreshing} 
             onRefresh={handleRefresh}
-            tintColor="#f9c349"
-            colors={["#f9c349"]}
+            tintColor={T.yellow}
+            colors={[T.yellow]}
           />
         }
         contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}
@@ -371,7 +372,7 @@ export default function SkillProfile({ navigation }) {
         {/* Profile Header - Modern Card */}
         <View style={styles.profileCard}>
           <LinearGradient
-            colors={['#FFFFFF', '#FFFDF5']}
+            colors={[T.white, T.yellowSoft]}
             style={styles.profileCardGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -382,14 +383,14 @@ export default function SkillProfile({ navigation }) {
                   <Image source={{ uri: userImage }} style={styles.avatar} />
                 ) : (
                   <LinearGradient
-                    colors={['#f9c349', '#f7b731']}
+                    colors={[T.yellow, '#f7b731']}
                     style={styles.avatar}
                   >
                     <Text style={styles.avatarText}>{userInitial}</Text>
                   </LinearGradient>
                 )}
                 <View style={styles.avatarBadge}>
-                  <Ionicons name="checkmark-circle" size={16} color="#34C759" />
+                  <Ionicons name="checkmark-circle" size={16} color={T.success} />
                 </View>
               </View>
               
@@ -397,8 +398,8 @@ export default function SkillProfile({ navigation }) {
                 <Text style={styles.userName}>{userName}</Text>
                 <Text style={styles.userEmail}>{userEmail}</Text>
                 <View style={styles.userBadge}>
-                  <Ionicons name="star" size={12} color="#f9c349" />
-                  <Text style={styles.userBadgeText}>Skill Swapper</Text>
+                  <Ionicons name="star" size={12} color={T.yellow} />
+                  <Text style={styles.userBadgeText}>skill swapper</Text>
                 </View>
               </View>
             </View>
@@ -407,17 +408,17 @@ export default function SkillProfile({ navigation }) {
             <View style={styles.quickStatsRow}>
               <View style={styles.quickStat}>
                 <Text style={styles.quickStatNumber}>{stats.listings}</Text>
-                <Text style={styles.quickStatLabel}>Listings</Text>
+                <Text style={styles.quickStatLabel}>listings</Text>
               </View>
               <View style={styles.quickStatDivider} />
               <View style={styles.quickStat}>
                 <Text style={styles.quickStatNumber}>{stats.offers}</Text>
-                <Text style={styles.quickStatLabel}>Offers</Text>
+                <Text style={styles.quickStatLabel}>offers</Text>
               </View>
               <View style={styles.quickStatDivider} />
               <View style={styles.quickStat}>
                 <Text style={styles.quickStatNumber}>{stats.matches}</Text>
-                <Text style={styles.quickStatLabel}>Matches</Text>
+                <Text style={styles.quickStatLabel}>matches</Text>
               </View>
               <View style={styles.quickStatDivider} />
               
@@ -429,7 +430,7 @@ export default function SkillProfile({ navigation }) {
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <Text style={styles.quickActionsTitle}>Quick Actions</Text>
+          <Text style={styles.quickActionsTitle}>quick actions</Text>
           <View style={styles.actionsGrid}>
             <TouchableOpacity 
               style={styles.actionCard}
@@ -437,12 +438,12 @@ export default function SkillProfile({ navigation }) {
               activeOpacity={0.7}
             >
               <LinearGradient
-                colors={['#f9c349', '#f7b731']}
+                colors={[T.yellow, '#f7b731']}
                 style={styles.actionIconGradient}
               >
-                <Ionicons name="add-outline" size={24} color="#FFFFFF" />
+                <Ionicons name="add-outline" size={24} color={T.white} />
               </LinearGradient>
-              <Text style={styles.actionLabel}>Create</Text>
+              <Text style={styles.actionLabel}>create</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -450,10 +451,10 @@ export default function SkillProfile({ navigation }) {
               onPress={() => navigation.navigate('MyListings')}
               activeOpacity={0.7}
             >
-              <View style={[styles.actionIcon, { backgroundColor: '#f9c34915' }]}>
-                <Ionicons name="list-outline" size={24} color="#f9c349" />
+              <View style={[styles.actionIcon, { backgroundColor: T.yellowSoft }]}>
+                <Ionicons name="list-outline" size={24} color={T.yellow} />
               </View>
-              <Text style={styles.actionLabel}>Listings</Text>
+              <Text style={styles.actionLabel}>listings</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -464,7 +465,7 @@ export default function SkillProfile({ navigation }) {
               <View style={[styles.actionIcon, { backgroundColor: '#FF950015' }]}>
                 <Ionicons name="git-pull-request-outline" size={24} color="#FF9500" />
               </View>
-              <Text style={styles.actionLabel}>Offers</Text>
+              <Text style={styles.actionLabel}>offers</Text>
             </TouchableOpacity>
 
             
@@ -475,15 +476,15 @@ export default function SkillProfile({ navigation }) {
         <View style={styles.activitySection}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeaderLeft}>
-              <Ionicons name="time-outline" size={20} color="#f9c349" />
-              <Text style={styles.sectionTitle}>Recent Activity</Text>
+              <Ionicons name="time-outline" size={20} color={T.yellow} />
+              <Text style={styles.sectionTitle}>recent activity</Text>
             </View>
             {recentActivity.length > 0 && (
               <TouchableOpacity 
                 onPress={() => navigation.navigate('Activity')}
                 activeOpacity={0.7}
               >
-                <Text style={styles.seeAllText}>See All</Text>
+                <Text style={styles.seeAllText}>see all</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -503,7 +504,7 @@ export default function SkillProfile({ navigation }) {
               <View style={styles.emptyIconContainer}>
                 <Ionicons name="time-outline" size={48} color="#C7C7CC" />
               </View>
-              <Text style={styles.emptyActivityText}>No activity yet</Text>
+              <Text style={styles.emptyActivityText}>no activity yet</Text>
               <Text style={styles.emptyActivitySubtext}>
                 Create listings, make offers, or start inquiries to get started!
               </Text>
@@ -521,7 +522,7 @@ export default function SkillProfile({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: T.paper,
   },
   headerBar: {
     flexDirection: 'row',
@@ -529,34 +530,34 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: T.line,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: T.line,
   },
   headerBarTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1C1C1E',
+    fontFamily: F.headingBold,
+    color: T.ink,
   },
   headerActionButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: T.line,
   },
   content: {
     paddingBottom: 20,
@@ -566,15 +567,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: T.paper,
   },
   loadingContainer: {
     alignItems: 'center',
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
-    color: '#8E8E93',
+    fontSize: 16, fontFamily: F.body,
+    color: T.textMuted,
   },
   guestContainer: {
     width: '100%',
@@ -585,31 +586,31 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#F0F0F0',
-    shadowColor: '#000',
+    borderColor: T.line,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
-    shadowRadius: 20,
-    elevation: 4,
+    shadowRadius: 8,
+    elevation: 2,
   },
   guestIconContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#f9c34915',
+    backgroundColor: T.yellowSoft,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1C1C1E',
+    fontFamily: F.headingBold,
+    color: T.ink,
     marginTop: 8,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#8E8E93',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 4,
     marginBottom: 20,
   },
@@ -626,20 +627,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loginButtonText: {
-    color: '#FFFFFF',
+    color: T.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
   },
   profileCard: {
     marginHorizontal: 16,
     marginTop: 16,
     borderRadius: 20,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 4,
+    shadowRadius: 8,
+    elevation: 2,
   },
   profileCardGradient: {
     padding: 20,
@@ -660,17 +661,17 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: 32,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontFamily: F.heading,
+    color: T.white,
   },
   avatarBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: T.white,
   },
   userInfo: {
     marginLeft: 16,
@@ -678,18 +679,18 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1C1C1E',
+    fontFamily: F.headingBold,
+    color: T.ink,
   },
   userEmail: {
-    fontSize: 13,
-    color: '#8E8E93',
+    fontSize: 13, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 2,
   },
   userBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9c34910',
+    backgroundColor: T.yellowSoft,
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 12,
@@ -699,8 +700,8 @@ const styles = StyleSheet.create({
   },
   userBadgeText: {
     fontSize: 11,
-    color: '#f9c349',
-    fontWeight: '600',
+    color: T.yellow,
+    fontFamily: F.bodySemi,
   },
   quickStatsRow: {
     flexDirection: 'row',
@@ -708,25 +709,25 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: T.line,
   },
   quickStat: {
     alignItems: 'center',
   },
   quickStatNumber: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#1C1C1E',
+    fontFamily: F.heading,
+    color: T.ink,
   },
   quickStatLabel: {
-    fontSize: 11,
-    color: '#8E8E93',
+    fontSize: 11, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 2,
   },
   quickStatDivider: {
     width: 1,
     height: 30,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: T.sand,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -745,11 +746,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 14,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 2,
   },
   statIconContainer: {
     width: 28,
@@ -762,14 +763,14 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontFamily: F.heading,
+    color: T.white,
   },
   statLabel: {
     fontSize: 9,
     color: 'rgba(255,255,255,0.8)',
     marginTop: 2,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
   quickActions: {
     paddingHorizontal: 16,
@@ -777,8 +778,8 @@ const styles = StyleSheet.create({
   },
   quickActionsTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#1C1C1E',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     marginBottom: 12,
   },
   actionsGrid: {
@@ -787,17 +788,17 @@ const styles = StyleSheet.create({
   },
   actionCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     borderRadius: 14,
     padding: 14,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: T.line,
   },
   actionIconGradient: {
     width: 44,
@@ -805,9 +806,9 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#f9c349',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
   },
   actionIcon: {
@@ -819,9 +820,9 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     fontSize: 10,
-    color: '#1C1C1E',
+    color: T.ink,
     marginTop: 6,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
     textAlign: 'center',
   },
   activitySection: {
@@ -841,32 +842,32 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#1C1C1E',
+    fontFamily: F.bodyBold,
+    color: T.ink,
   },
   seeAllText: {
     fontSize: 14,
-    color: '#f9c349',
-    fontWeight: '600',
+    color: T.yellow,
+    fontFamily: F.bodySemi,
   },
   activityList: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: T.line,
   },
   activityItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: T.line,
   },
   activityIcon: {
     width: 38,
@@ -881,12 +882,12 @@ const styles = StyleSheet.create({
   },
   activityTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#1C1C1E',
+    fontFamily: F.bodySemi,
+    color: T.ink,
   },
   activitySubtitle: {
-    fontSize: 12,
-    color: '#8E8E93',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 1,
   },
   activityTimeContainer: {
@@ -896,25 +897,25 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   activityTime: {
-    fontSize: 11,
+    fontSize: 11, fontFamily: F.body,
     color: '#C7C7CC',
   },
   activityArrow: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
   },
   emptyActivity: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     borderRadius: 16,
     padding: 32,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#F0F0F0',
-    shadowColor: '#000',
+    borderColor: T.line,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -924,18 +925,18 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
   },
   emptyActivityText: {
     fontSize: 16,
-    color: '#1C1C1E',
+    color: T.ink,
     marginTop: 12,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
   },
   emptyActivitySubtext: {
-    fontSize: 13,
+    fontSize: 13, fontFamily: F.body,
     color: '#C7C7CC',
     marginTop: 4,
     textAlign: 'center',

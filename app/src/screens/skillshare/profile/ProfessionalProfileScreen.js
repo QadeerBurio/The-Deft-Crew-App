@@ -7,19 +7,20 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, Feather } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { AuthContext } from '../../../context/AuthContext';
 import { getMyProfessionalProfile } from '../../../api/profileApi';
 import { getMyListings, getMySkillOffers, getMyMatches } from '../../../api/api';
 import { goToAuth } from '../../../utils/goToAuth';
 
+import { color as T, font as F } from "../../../theme/tokens";
 // Last loaded data per user, so coming back shows it instantly.
 const profileCache = {};
 
-const BRAND = '#f9c349';
-const BRAND_DARK = '#f5a623';
-const INK = '#1C1C1E';
-const MUTED = '#8E8E93';
+const BRAND = T.yellow;
+const BRAND_DARK = T.yellow;
+const INK = T.ink;
+const MUTED = T.textMuted;
 
 
   
@@ -43,7 +44,7 @@ function SkillShareHeader({ navigation, goTo }) {
           <Ionicons name="arrow-back" size={22} color={INK} />
         </TouchableOpacity>
         <Text style={styles.topHeaderTitle}>
-          Skill<Text style={{ color: BRAND }}>Share</Text>
+          skill<Text style={{ color: BRAND }}>share</Text>
         </Text>
         <TouchableOpacity
           onPress={() => navigation.navigate('NotificationSkillshare')}
@@ -58,7 +59,7 @@ function SkillShareHeader({ navigation, goTo }) {
           const active = item.key === 'Profile';
           return (
             <TouchableOpacity key={item.key} style={styles.navItem} onPress={() => goTo(item.route)}>
-              <Ionicons name={item.icon} size={20} color={active ? BRAND : '#666'} />
+              <Ionicons name={item.icon} size={20} color={active ? BRAND : T.textMuted} />
               <Text style={[styles.navItemText, active && styles.navItemTextActive]}>{item.label}</Text>
               {active && <View style={styles.navUnderline} />}
             </TouchableOpacity>
@@ -144,7 +145,7 @@ export default function ProfessionalProfileScreen({ navigation }) {
   if (loading) {
     return (
       <SafeAreaView style={styles.center} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <ActivityIndicator size="large" color={BRAND} />
       </SafeAreaView>
     );
@@ -154,13 +155,13 @@ export default function ProfessionalProfileScreen({ navigation }) {
   if (isGuest) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <SkillShareHeader navigation={navigation} goTo={goTo} />
         <View style={styles.emptyWrap}>
           <View style={styles.emptyIconCircle}>
             <Ionicons name="person-outline" size={48} color={BRAND} />
           </View>
-          <Text style={styles.emptyTitle}>Login Required</Text>
+          <Text style={styles.emptyTitle}>login required</Text>
           <Text style={styles.emptySubtitle}>
             Create an account or log in to build your professional profile and start
             exchanging skills, offering paid services, or hiring on SkillShare.
@@ -170,7 +171,7 @@ export default function ProfessionalProfileScreen({ navigation }) {
             onPress={() => goToAuth(setIsGuest)}
             activeOpacity={0.85}
           >
-            <Text style={styles.emptyButtonText}>Login</Text>
+            <Text style={styles.emptyButtonText}>login</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -183,7 +184,7 @@ export default function ProfessionalProfileScreen({ navigation }) {
     const started = hasProfile && (profile?.lastCompletedStep || 0) > 0;
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
          <SkillShareHeader navigation={navigation} goTo={goTo} />
         <View style={styles.emptyWrap}>
           <View style={styles.emptyIconCircle}>
@@ -216,7 +217,7 @@ export default function ProfessionalProfileScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
       <SkillShareHeader navigation={navigation} goTo={goTo} />
 
       <ScrollView
@@ -243,38 +244,38 @@ export default function ProfessionalProfileScreen({ navigation }) {
         <View style={styles.quickStatsRow}>
           <View style={styles.quickStat}>
             <Text style={styles.quickStatNumber}>{stats.listings}</Text>
-            <Text style={styles.quickStatLabel}>Listings</Text>
+            <Text style={styles.quickStatLabel}>listings</Text>
           </View>
           <View style={styles.quickStatDivider} />
           <View style={styles.quickStat}>
             <Text style={styles.quickStatNumber}>{stats.offers}</Text>
-            <Text style={styles.quickStatLabel}>Offers</Text>
+            <Text style={styles.quickStatLabel}>offers</Text>
           </View>
           <View style={styles.quickStatDivider} />
           <View style={styles.quickStat}>
             <Text style={styles.quickStatNumber}>{stats.matches}</Text>
-            <Text style={styles.quickStatLabel}>Matches</Text>
+            <Text style={styles.quickStatLabel}>matches</Text>
           </View>
         </View>
 
         <View style={styles.actionsGrid}>
           <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('SelectListingTypeScreen')}>
             <View style={[styles.actionIcon, { backgroundColor: BRAND }]}>
-              <Ionicons name="add-outline" size={22} color="#fff" />
+              <Ionicons name="add-outline" size={22} color={T.white} />
             </View>
-            <Text style={styles.actionLabel}>Create</Text>
+            <Text style={styles.actionLabel}>create</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('MyListings')}>
-            <View style={[styles.actionIcon, { backgroundColor: '#f9c34915' }]}>
+            <View style={[styles.actionIcon, { backgroundColor: T.yellowSoft }]}>
               <Ionicons name="list-outline" size={22} color={BRAND} />
             </View>
-            <Text style={styles.actionLabel}>Listings</Text>
+            <Text style={styles.actionLabel}>listings</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('MyOffers')}>
             <View style={[styles.actionIcon, { backgroundColor: '#FF950015' }]}>
               <Ionicons name="git-pull-request-outline" size={22} color="#FF9500" />
             </View>
-            <Text style={styles.actionLabel}>Offers</Text>
+            <Text style={styles.actionLabel}>offers</Text>
           </TouchableOpacity>
         </View>
 
@@ -319,7 +320,7 @@ export default function ProfessionalProfileScreen({ navigation }) {
           onPress={() => navigation.navigate('ProfileSetup', { step: 1 })}
           activeOpacity={0.85}
         >
-          <Text style={styles.updateButtonText}>Update Profile</Text>
+          <Text style={styles.updateButtonText}>update profile</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -352,67 +353,67 @@ const styles = StyleSheet.create({
   topHeader: {
   flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10,
-  backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee',
+  backgroundColor: T.card, borderBottomWidth: 1, borderBottomColor: T.line,
 },
-topHeaderTitle: { fontSize: 20, fontWeight: '800', color: INK },
+topHeaderTitle: { fontSize: 20, fontFamily: F.heading, color: INK },
 navRow: {
-  flexDirection: 'row', backgroundColor: '#fff',
-  borderBottomWidth: 1, borderBottomColor: '#eee', paddingBottom: 4,
+  flexDirection: 'row', backgroundColor: T.card,
+  borderBottomWidth: 1, borderBottomColor: T.line, paddingBottom: 4,
 },
 navItem: { flex: 1, alignItems: 'center', paddingVertical: 8 },
-navItemText: { fontSize: 11, color: '#666', marginTop: 3, fontWeight: '600' },
-navItemTextActive: { color: BRAND, fontWeight: '800' },
+navItemText: { fontSize: 11, color: T.textMuted, marginTop: 3, fontFamily: F.bodySemi },
+navItemTextActive: { color: BRAND, fontFamily: F.bodyBold },
 navUnderline: { marginTop: 4, height: 2, width: 24, backgroundColor: BRAND, borderRadius: 1 },
 
-  container: { flex: 1, backgroundColor: '#FDF9F0' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FDF9F0' },
+  container: { flex: 1, backgroundColor: T.paper },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: T.paper },
   content: { padding: 20, alignItems: 'center', paddingBottom: 40 },
   logoutFloating: { alignSelf: 'flex-end', padding: 8 },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   emptyIconCircle: {
-    width: 88, height: 88, borderRadius: 44, backgroundColor: '#f9c34915',
+    width: 88, height: 88, borderRadius: 44, backgroundColor: T.yellowSoft,
     justifyContent: 'center', alignItems: 'center', marginBottom: 20,
   },
-  emptyTitle: { fontSize: 20, fontWeight: '800', color: INK, textAlign: 'center' },
-  emptySubtitle: { fontSize: 14, color: MUTED, textAlign: 'center', marginTop: 8, marginBottom: 24, lineHeight: 20 },
+  emptyTitle: { fontSize: 20, fontFamily: F.heading, color: INK, textAlign: 'center' },
+  emptySubtitle: { fontSize: 14, fontFamily: F.body, color: MUTED, textAlign: 'center', marginTop: 8, marginBottom: 24, lineHeight: 20 },
   emptyButton: { backgroundColor: BRAND, borderRadius: 14, paddingVertical: 15, paddingHorizontal: 28 },
-  emptyButtonText: { color: '#1C1C1E', fontWeight: '700', fontSize: 15 },
+  emptyButtonText: { color: T.ink, fontFamily: F.bodyBold, fontSize: 15 },
   avatarWrap: { marginTop: 0, marginBottom: 12 },
   avatar: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center' },
-  avatarText: { fontSize: 36, fontWeight: '800', color: '#4A3B10' },
-  name: { fontSize: 22, fontWeight: '800', color: INK },
-  headline: { fontSize: 14, color: MUTED, marginTop: 2, marginBottom: 16, textAlign: 'center' },
+  avatarText: { fontSize: 36, fontFamily: F.heading, color: '#4A3B10' },
+  name: { fontSize: 22, fontFamily: F.heading, color: INK },
+  headline: { fontSize: 14, fontFamily: F.body, color: MUTED, marginTop: 2, marginBottom: 16, textAlign: 'center' },
   quickStatsRow: {
-    flexDirection: 'row', width: '100%', backgroundColor: '#FFFFFF', borderRadius: 16,
+    flexDirection: 'row', width: '100%', backgroundColor: T.card, borderRadius: 16,
     borderWidth: 1, borderColor: '#EFE3C0', paddingVertical: 14, marginBottom: 14, justifyContent: 'space-around',
   },
   quickStat: { alignItems: 'center' },
-  quickStatNumber: { fontSize: 18, fontWeight: '800', color: INK },
-  quickStatLabel: { fontSize: 11, color: MUTED, marginTop: 2 },
+  quickStatNumber: { fontSize: 18, fontFamily: F.heading, color: INK },
+  quickStatLabel: { fontSize: 11, fontFamily: F.body, color: MUTED, marginTop: 2 },
   quickStatDivider: { width: 1, backgroundColor: '#EFE3C0' },
   actionsGrid: { flexDirection: 'row', gap: 10, width: '100%', marginBottom: 14 },
   actionCard: {
-    flex: 1, backgroundColor: '#FFFFFF', borderRadius: 14, paddingVertical: 14,
+    flex: 1, backgroundColor: T.card, borderRadius: 14, paddingVertical: 14,
     alignItems: 'center', borderWidth: 1, borderColor: '#EFE3C0',
   },
   actionIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  actionLabel: { fontSize: 11, color: INK, marginTop: 6, fontWeight: '600' },
+  actionLabel: { fontSize: 11, color: INK, marginTop: 6, fontFamily: F.bodySemi },
   section: {
-    width: '100%', backgroundColor: '#FFFFFF', borderRadius: 16,
+    width: '100%', backgroundColor: T.card, borderRadius: 16,
     borderWidth: 1, borderColor: '#EFE3C0', padding: 16, marginBottom: 14,
   },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: INK },
-  sectionText: { fontSize: 13, color: '#3A3A3C', lineHeight: 20 },
+  sectionTitle: { fontSize: 15, fontFamily: F.bodyBold, color: INK },
+  sectionText: { fontSize: 13, fontFamily: F.body, color: '#3A3A3C', lineHeight: 20 },
   pillWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pill: { backgroundColor: '#F8F9FA', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6 },
-  pillText: { fontSize: 12, fontWeight: '600', color: INK },
+  pill: { backgroundColor: T.sand, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6 },
+  pillText: { fontSize: 12, fontFamily: F.bodySemi, color: INK },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  rowLabel: { fontSize: 13, color: MUTED },
-  rowValue: { fontSize: 13, fontWeight: '700', color: INK },
+  rowLabel: { fontSize: 13, fontFamily: F.body, color: MUTED },
+  rowValue: { fontSize: 13, fontFamily: F.bodyBold, color: INK },
   updateButton: {
     width: '100%', backgroundColor: BRAND, borderRadius: 14, paddingVertical: 15,
     alignItems: 'center', marginTop: 6,
   },
-  updateButtonText: { color: '#1C1C1E', fontWeight: '700', fontSize: 15 },
+  updateButtonText: { color: T.ink, fontFamily: F.bodyBold, fontSize: 15 },
 });

@@ -19,10 +19,11 @@ import { createSkillOffer } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
 import { goToAuth } from '../../utils/goToAuth';
 
-const BRAND = '#f9c349';
-const INK = '#1a1a1a';
-const MUTED = '#8E8E93';
-const BORDER = '#e5e5e5';
+import { color as T, font as F } from "../../theme/tokens";
+const BRAND = T.yellow;
+const INK = T.ink;
+const MUTED = T.textMuted;
+const BORDER = T.line;
 
 const MESSAGE_MAX = 500;
 
@@ -151,13 +152,13 @@ export default function CreateOfferScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <View style={styles.topHeader}>
         <TouchableOpacity onPress={goBack} hitSlop={10}>
           <Ionicons name="arrow-back" size={22} color={INK} />
         </TouchableOpacity>
-        <Text style={styles.topHeaderTitle}>Submit Offer</Text>
+        <Text style={styles.topHeaderTitle}>submit offer</Text>
         <View style={{ width: 22 }} />
       </View>
 
@@ -184,7 +185,7 @@ export default function CreateOfferScreen({ route, navigation }) {
                 <Text style={styles.listingTitle}>{listing.title || 'Listing'}</Text>
               </View>
             </View>
-            <Text style={styles.listingSubtext}>Responding to listing request</Text>
+            <Text style={styles.listingSubtext}>responding to listing request</Text>
           </View>
 
           {/* Offer Form Card */}
@@ -196,32 +197,32 @@ export default function CreateOfferScreen({ route, navigation }) {
 
             {isBarter && (
               <>
-                <Text style={styles.label}>Your Skill</Text>
+                <Text style={styles.label}>your skill</Text>
                 <View style={styles.inputWrapper}>
                   <MaterialCommunityIcons name="lightbulb-on-outline" size={18} color={MUTED} style={{ marginRight: 8 }} />
                   <TextInput
                     style={styles.input}
                     placeholder="What skill are you offering?"
-                    placeholderTextColor="#aaa"
+                    placeholderTextColor={T.textFaint}
                     value={offeredSkillName}
                     onChangeText={setOfferedSkillName}
                   />
                 </View>
 
-                <Text style={[styles.label, { marginTop: 16 }]}>Your Level</Text>
+                <Text style={[styles.label, { marginTop: 16 }]}>your level</Text>
                 {renderLevelChips(offeredSkillLevel, setOfferedSkillLevel)}
               </>
             )}
 
             {isPaid && (
               <>
-                <Text style={styles.label}>Proposed Price</Text>
+                <Text style={styles.label}>proposed price</Text>
                 <View style={styles.inputWrapper}>
-                  <Text style={styles.pricePrefix}>Rs.</Text>
+                  <Text style={styles.pricePrefix}>rs.</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="Enter amount"
-                    placeholderTextColor="#aaa"
+                    placeholderTextColor={T.textFaint}
                     keyboardType="numeric"
                     value={proposedPrice}
                     onChangeText={setProposedPrice}
@@ -232,11 +233,11 @@ export default function CreateOfferScreen({ route, navigation }) {
 
             {isJob && (
               <>
-                <Text style={styles.label}>Why You're a Good Fit</Text>
+                <Text style={styles.label}>why you're a good fit</Text>
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   placeholder="Describe your experience and qualifications..."
-                  placeholderTextColor="#aaa"
+                  placeholderTextColor={T.textFaint}
                   multiline
                   numberOfLines={4}
                   value={applicationNotes}
@@ -246,11 +247,11 @@ export default function CreateOfferScreen({ route, navigation }) {
               </>
             )}
 
-            <Text style={[styles.label, { marginTop: 16 }]}>Your Message</Text>
+            <Text style={[styles.label, { marginTop: 16 }]}>your message</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder={messagePlaceholder}
-              placeholderTextColor="#aaa"
+              placeholderTextColor={T.textFaint}
               multiline
               numberOfLines={5}
               value={message}
@@ -284,69 +285,69 @@ export default function CreateOfferScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
+  container: { flex: 1, backgroundColor: T.paper },
 
   topHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee',
+    backgroundColor: T.card, borderBottomWidth: 1, borderBottomColor: T.line,
   },
-  topHeaderTitle: { fontSize: 20, fontWeight: '700', color: INK },
+  topHeaderTitle: { fontSize: 20, fontFamily: F.headingBold, color: INK },
 
   content: { padding: 20, paddingBottom: 30 },
 
   card: {
-    backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: BORDER,
+    backgroundColor: T.card, borderRadius: 16, borderWidth: 1, borderColor: BORDER,
     padding: 18, marginBottom: 16,
   },
 
   listingRow: { flexDirection: 'row', gap: 14 },
   listingIconBox: {
-    width: 54, height: 54, borderRadius: 14, backgroundColor: '#F0F0F0',
+    width: 54, height: 54, borderRadius: 14, backgroundColor: T.sand,
     justifyContent: 'center', alignItems: 'center',
   },
   typePill: {
     alignSelf: 'flex-start', backgroundColor: '#FFF3D6',
     paddingHorizontal: 12, paddingVertical: 4, borderRadius: 10, marginBottom: 6,
   },
-  typePillText: { fontSize: 12, fontWeight: '700', color: '#8a6d1d' },
-  listingTitle: { fontSize: 19, fontWeight: '800', color: INK, lineHeight: 24 },
-  listingSubtext: { fontSize: 13, color: MUTED, marginTop: 12 },
+  typePillText: { fontSize: 12, fontFamily: F.bodyBold, color: '#8a6d1d' },
+  listingTitle: { fontSize: 19, fontFamily: F.heading, color: INK, lineHeight: 24 },
+  listingSubtext: { fontSize: 13, fontFamily: F.body, color: MUTED, marginTop: 12 },
 
-  formTitle: { fontSize: 19, fontWeight: '800', color: INK },
-  formDivider: { height: 1, backgroundColor: '#eee', marginTop: 12, marginBottom: 18 },
+  formTitle: { fontSize: 19, fontFamily: F.heading, color: INK },
+  formDivider: { height: 1, backgroundColor: T.sand, marginTop: 12, marginBottom: 18 },
 
-  label: { fontSize: 14, fontWeight: '700', color: INK, marginBottom: 8 },
+  label: { fontSize: 14, fontFamily: F.bodyBold, color: INK, marginBottom: 8 },
 
   inputWrapper: {
     flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: BORDER,
-    borderRadius: 10, paddingHorizontal: 14, minHeight: 50, backgroundColor: '#fff',
+    borderRadius: 10, paddingHorizontal: 14, minHeight: 50, backgroundColor: T.card,
   },
-  pricePrefix: { fontSize: 15, fontWeight: '700', color: INK, marginRight: 6 },
-  input: { flex: 1, fontSize: 15, color: INK, paddingVertical: 0 },
+  pricePrefix: { fontSize: 15, fontFamily: F.bodyBold, color: INK, marginRight: 6 },
+  input: { flex: 1, fontSize: 15, fontFamily: F.body, color: INK, paddingVertical: 0 },
   textArea: {
     borderWidth: 1, borderColor: BORDER, borderRadius: 10, padding: 14,
-    minHeight: 120, textAlignVertical: 'top', fontSize: 14,
+    minHeight: 120, textAlignVertical: 'top', fontSize: 14, fontFamily: F.body,
   },
-  charCount: { fontSize: 12, color: MUTED, textAlign: 'right', marginTop: 6 },
+  charCount: { fontSize: 12, fontFamily: F.body, color: MUTED, textAlign: 'right', marginTop: 6 },
 
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     paddingVertical: 8, paddingHorizontal: 16, borderRadius: 14,
-    backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER,
+    backgroundColor: T.card, borderWidth: 1, borderColor: BORDER,
   },
   chipActive: { backgroundColor: BRAND, borderColor: BRAND },
-  chipText: { fontSize: 13, fontWeight: '600', color: '#555' },
-  chipTextActive: { color: INK, fontWeight: '800' },
+  chipText: { fontSize: 13, fontFamily: F.bodySemi, color: T.textMuted },
+  chipTextActive: { color: INK, fontFamily: F.bodyBold },
 
   submitBtn: {
     flexDirection: 'row', backgroundColor: BRAND, borderRadius: 14,
     paddingVertical: 16, alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 22,
   },
   submitBtnDisabled: { opacity: 0.6 },
-  submitBtnText: { fontSize: 16, fontWeight: '800', color: INK },
+  submitBtnText: { fontSize: 16, fontFamily: F.bodyBold, color: INK },
 
-  termsText: { fontSize: 12, color: MUTED, textAlign: 'center', marginTop: 14 },
+  termsText: { fontSize: 12, fontFamily: F.body, color: MUTED, textAlign: 'center', marginTop: 14 },
 
   
 });

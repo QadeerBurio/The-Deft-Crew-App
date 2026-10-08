@@ -14,19 +14,20 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { AuthContext } from '../../context/AuthContext';
 import { getMyInquiries } from '../../api/api';
 import { timeAgo } from '../../utils/time';
 import { goToAuth } from '../../utils/goToAuth';
 
+import { color as T, font as F } from "../../theme/tokens";
 // last inquiries per user, so returning to this screen is instant
 const inquiriesCache = new Map();
 
 const InquiryItem = memo(function InquiryItem({ item, onPress }) {
   const isActive = item.status === 'active';
   const listing = item.listingId || {};
-  const statusColor = isActive ? '#34C759' : '#8E8E93';
+  const statusColor = isActive ? T.success : T.textMuted;
   const statusIcon = isActive ? 'chatbubble-ellipses-outline' : 'checkmark-done-outline';
   const statusLabel = isActive ? 'Active' : 'Resolved';
   const open = () => onPress(item);
@@ -38,7 +39,7 @@ const InquiryItem = memo(function InquiryItem({ item, onPress }) {
       activeOpacity={0.8}
     >
       <LinearGradient
-        colors={['#FFFFFF', isActive ? '#FFF8F0' : '#FFFFFF']}
+        colors={[T.white, isActive ? '#FFF8F0' : T.white]}
         style={styles.cardGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -59,7 +60,7 @@ const InquiryItem = memo(function InquiryItem({ item, onPress }) {
 
         <View style={styles.listingTypeContainer}>
           <View style={styles.typeBadge}>
-            <Ionicons name="document-text-outline" size={12} color="#8E8E93" />
+            <Ionicons name="document-text-outline" size={12} color={T.textMuted} />
             <Text style={styles.listingType}>
               {listing.type ? listing.type.charAt(0).toUpperCase() + listing.type.slice(1) : 'Listing'}
             </Text>
@@ -68,15 +69,15 @@ const InquiryItem = memo(function InquiryItem({ item, onPress }) {
 
         <View style={styles.inquiryDetails}>
           <View style={styles.detailRow}>
-            <Ionicons name="time-outline" size={14} color="#8E8E93" />
+            <Ionicons name="time-outline" size={14} color={T.textMuted} />
             <Text style={styles.inquiryInfo}>
-              Started: <Text style={styles.inquiryInfoValue}>{timeAgo(item.createdAt)}</Text>
+              started: <Text style={styles.inquiryInfoValue}>{timeAgo(item.createdAt)}</Text>
             </Text>
           </View>
 
           {!!item.lastMessage && (
             <View style={styles.messageContainer}>
-              <Ionicons name="chatbubble-outline" size={14} color="#8E8E93" />
+              <Ionicons name="chatbubble-outline" size={14} color={T.textMuted} />
               <Text style={styles.lastMessage} numberOfLines={2}>
                 {item.lastMessage}
               </Text>
@@ -90,13 +91,13 @@ const InquiryItem = memo(function InquiryItem({ item, onPress }) {
           activeOpacity={0.7}
         >
           <LinearGradient
-            colors={['#f9c349', '#f7b731']}
+            colors={[T.yellow, '#f7b731']}
             style={styles.chatGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            <Ionicons name="chatbubble-ellipses-outline" size={18} color="#FFFFFF" />
-            <Text style={styles.chatButtonText}>Open Chat</Text>
+            <Ionicons name="chatbubble-ellipses-outline" size={18} color={T.white} />
+            <Text style={styles.chatButtonText}>open chat</Text>
           </LinearGradient>
         </TouchableOpacity>
       </LinearGradient>
@@ -188,19 +189,19 @@ export default function MyInquiriesScreen({ navigation }) {
   if (isGuest) {
     return (
       <SafeAreaView style={styles.centerContainer} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <Ionicons name="person-outline" size={64} color="#C7C7CC" />
-        <Text style={styles.emptyTitle}>Login Required</Text>
-        <Text style={styles.emptySubtext}>Login to see your inquiries</Text>
+        <Text style={styles.emptyTitle}>login required</Text>
+        <Text style={styles.emptySubtext}>login to see your inquiries</Text>
         <TouchableOpacity
           style={styles.loginButton}
           onPress={() => goToAuth(setIsGuest)}
         >
           <LinearGradient
-            colors={['#f9c349', '#f7b731']}
+            colors={[T.yellow, '#f7b731']}
             style={styles.loginGradient}
           >
-            <Text style={styles.loginButtonText}>Login</Text>
+            <Text style={styles.loginButtonText}>login</Text>
           </LinearGradient>
         </TouchableOpacity>
       </SafeAreaView>
@@ -210,16 +211,16 @@ export default function MyInquiriesScreen({ navigation }) {
   if (loading && inquiries.length === 0) {
     return (
       <SafeAreaView style={styles.centerContainer} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-        <ActivityIndicator size="large" color="#f9c349" />
-        <Text style={styles.loadingText}>Loading your inquiries...</Text>
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
+        <ActivityIndicator size="large" color={T.yellow} />
+        <Text style={styles.loadingText}>loading your inquiries...</Text>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <View style={styles.headerBar}>
         <TouchableOpacity
@@ -231,51 +232,51 @@ export default function MyInquiriesScreen({ navigation }) {
           <Ionicons
             name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'}
             size={24}
-            color="#1C1C1E"
+            color={T.ink}
           />
         </TouchableOpacity>
-        <Text style={styles.headerBarTitle}>My Inquiries</Text>
+        <Text style={styles.headerBarTitle}>my inquiries</Text>
         <View style={styles.headerPlaceholder} />
       </View>
 
       <View style={styles.statsContainer}>
         <View style={styles.statsRow}>
           <LinearGradient
-            colors={['#FFFFFF', '#F8F9FA']}
+            colors={[T.white, T.sand]}
             style={[styles.statCard, styles.statCardTotal]}
           >
             <Text style={styles.statNumber}>{counts.total}</Text>
-            <Text style={styles.statLabel}>Total Inquiries</Text>
+            <Text style={styles.statLabel}>total inquiries</Text>
           </LinearGradient>
 
           <LinearGradient
-            colors={['#FFFFFF', '#F0FFF4']}
+            colors={[T.white, '#F0FFF4']}
             style={[styles.statCard, styles.statCardActive]}
           >
-            <Text style={[styles.statNumber, { color: '#34C759' }]}>{counts.active}</Text>
-            <Text style={styles.statLabel}>Active</Text>
+            <Text style={[styles.statNumber, { color: T.success }]}>{counts.active}</Text>
+            <Text style={styles.statLabel}>active</Text>
           </LinearGradient>
         </View>
 
         <View style={styles.statsRow}>
           <LinearGradient
-            colors={['#FFFFFF', '#F8F0FF']}
+            colors={[T.white, '#F8F0FF']}
             style={[styles.statCard, styles.statCardResolved]}
           >
             <Text style={[styles.statNumber, { color: '#AF52DE' }]}>{counts.resolved}</Text>
-            <Text style={styles.statLabel}>Resolved</Text>
+            <Text style={styles.statLabel}>resolved</Text>
           </LinearGradient>
 
           <LinearGradient
-            colors={['#FFFFFF', '#FFF8F0']}
+            colors={[T.white, '#FFF8F0']}
             style={[styles.statCard, styles.statCardBrowse]}
           >
             <TouchableOpacity
               style={styles.statCardButton}
               onPress={goBrowse}
             >
-              <Ionicons name="search-outline" size={32} color="#f9c349" />
-              <Text style={styles.statCardButtonText}>Browse Listings</Text>
+              <Ionicons name="search-outline" size={32} color={T.yellow} />
+              <Text style={styles.statCardButtonText}>browse listings</Text>
             </TouchableOpacity>
           </LinearGradient>
         </View>
@@ -291,8 +292,8 @@ export default function MyInquiriesScreen({ navigation }) {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              tintColor="#f9c349"
-              colors={["#f9c349"]}
+              tintColor={T.yellow}
+              colors={[T.yellow]}
             />
           }
           initialNumToRender={8}
@@ -305,7 +306,7 @@ export default function MyInquiriesScreen({ navigation }) {
                 colors={['#f9c34920', '#f7b73120']}
                 style={styles.emptyIconContainer}
               >
-                <Ionicons name="chatbubbles-outline" size={64} color="#f9c349" />
+                <Ionicons name="chatbubbles-outline" size={64} color={T.yellow} />
               </LinearGradient>
               <Text style={styles.emptyTitle}>{error ? 'could not load inquiries' : 'No Inquiries Yet'}</Text>
               <Text style={styles.emptySubtext}>
@@ -316,11 +317,11 @@ export default function MyInquiriesScreen({ navigation }) {
                 onPress={goBrowse}
               >
                 <LinearGradient
-                  colors={['#f9c349', '#f7b731']}
+                  colors={[T.yellow, '#f7b731']}
                   style={styles.emptyButtonGradient}
                 >
-                  <Ionicons name="search-outline" size={20} color="#FFFFFF" />
-                  <Text style={styles.emptyButtonText}>Browse Listings</Text>
+                  <Ionicons name="search-outline" size={20} color={T.white} />
+                  <Text style={styles.emptyButtonText}>browse listings</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -335,7 +336,7 @@ export default function MyInquiriesScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: T.paper,
   },
   headerBar: {
     flexDirection: 'row',
@@ -343,24 +344,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: T.line,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: T.line,
   },
   headerBarTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1C1C1E',
+    fontFamily: F.headingBold,
+    color: T.ink,
     flex: 1,
     textAlign: 'center',
   },
@@ -381,7 +382,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 14,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -389,11 +390,11 @@ const styles = StyleSheet.create({
   },
   statCardTotal: {
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: T.line,
   },
   statCardActive: {
     borderWidth: 1,
-    borderColor: '#34C75930',
+    borderColor: T.success,
   },
   statCardResolved: {
     borderWidth: 1,
@@ -401,7 +402,7 @@ const styles = StyleSheet.create({
   },
   statCardBrowse: {
     borderWidth: 1,
-    borderColor: '#f9c34930',
+    borderColor: T.line,
     paddingVertical: 10,
   },
   statCardButton: {
@@ -411,20 +412,20 @@ const styles = StyleSheet.create({
   },
   statCardButtonText: {
     fontSize: 12,
-    color: '#f9c349',
-    fontWeight: '600',
+    color: T.yellow,
+    fontFamily: F.bodySemi,
     marginTop: 2,
   },
   statNumber: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#1C1C1E',
+    fontFamily: F.heading,
+    color: T.ink,
   },
   statLabel: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: T.textMuted,
     marginTop: 2,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
   listContainer: {
     flex: 1,
@@ -439,23 +440,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: T.paper,
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
-    color: '#8E8E93',
+    fontSize: 16, fontFamily: F.body,
+    color: T.textMuted,
   },
   inquiryCard: {
     borderRadius: 16,
     marginBottom: 14,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: T.line,
     overflow: 'hidden',
   },
   cardGradient: {
@@ -471,8 +472,8 @@ const styles = StyleSheet.create({
   },
   inquiryTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1C1C1E',
+    fontFamily: F.bodySemi,
+    color: T.ink,
     flex: 1,
     marginRight: 8,
   },
@@ -486,7 +487,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
   },
   listingTypeContainer: {
     marginBottom: 8,
@@ -497,8 +498,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   listingType: {
-    fontSize: 13,
-    color: '#8E8E93',
+    fontSize: 13, fontFamily: F.body,
+    color: T.textMuted,
   },
   inquiryDetails: {
     gap: 6,
@@ -510,12 +511,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   inquiryInfo: {
-    fontSize: 14,
-    color: '#8E8E93',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
   },
   inquiryInfoValue: {
-    color: '#1C1C1E',
-    fontWeight: '500',
+    color: T.ink,
+    fontFamily: F.bodyMedium,
   },
   messageContainer: {
     flexDirection: 'row',
@@ -523,7 +524,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   lastMessage: {
-    fontSize: 14,
+    fontSize: 14, fontFamily: F.body,
     color: '#3A3A3C',
     lineHeight: 20,
     flex: 1,
@@ -539,14 +540,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     gap: 8,
-    shadowColor: '#f9c349',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
   },
   chatButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: T.white,
+    fontFamily: F.bodySemi,
     fontSize: 14,
   },
   emptyContainer: {
@@ -563,13 +564,13 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1C1C1E',
+    fontFamily: F.headingBold,
+    color: T.ink,
     marginTop: 12,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#8E8E93',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 4,
     textAlign: 'center',
     marginBottom: 16,
@@ -577,11 +578,11 @@ const styles = StyleSheet.create({
   emptyButton: {
     borderRadius: 14,
     overflow: 'hidden',
-    shadowColor: '#f9c349',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 2,
   },
   emptyButtonGradient: {
     flexDirection: 'row',
@@ -591,27 +592,27 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   emptyButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: T.white,
+    fontFamily: F.bodyBold,
     fontSize: 14,
   },
   loginButton: {
     marginTop: 16,
     borderRadius: 14,
     overflow: 'hidden',
-    shadowColor: '#f9c349',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 2,
   },
   loginGradient: {
     paddingHorizontal: 32,
     paddingVertical: 14,
   },
   loginButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: T.white,
+    fontFamily: F.bodyBold,
     fontSize: 16,
   },
 });

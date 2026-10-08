@@ -20,9 +20,10 @@ import { AuthContext } from '../../context/AuthContext';
 import { goToAuth } from '../../utils/goToAuth';
 import { timeAgo } from '../../utils/time';
 
-const BRAND = '#f9c349';
-const INK = '#1a1a1a';
-const MUTED = '#8E8E93';
+import { color as T, font as F } from "../../theme/tokens";
+const BRAND = T.yellow;
+const INK = T.ink;
+const MUTED = T.textMuted;
 
 const TYPE_META = {
   barter: { label: 'Exchange', icon: 'swap-horizontal-outline' },
@@ -61,7 +62,7 @@ const MatchRow = memo(function MatchRow({ item, onPress }) {
           </View>
         )}
         <View style={styles.typeBadge}>
-          <Ionicons name={meta.icon} size={10} color="#555" />
+          <Ionicons name={meta.icon} size={10} color={T.textMuted} />
         </View>
       </View>
 
@@ -87,7 +88,7 @@ const MatchRow = memo(function MatchRow({ item, onPress }) {
           </View>
         ) : item.status === 'active' ? (
           <View style={styles.activePill}>
-            <Text style={styles.activePillText}>Active</Text>
+            <Text style={styles.activePillText}>active</Text>
           </View>
         ) : null}
       </View>
@@ -197,12 +198,12 @@ export default function MyMatches({ navigation }) {
   if (isGuest) {
     return (
       <SafeAreaView style={styles.centerContainer} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-        <Ionicons name="chatbubbles-outline" size={56} color="#ddd" />
-        <Text style={styles.emptyTitle}>Welcome Back!</Text>
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
+        <Ionicons name="chatbubbles-outline" size={56} color={T.textFaint} />
+        <Text style={styles.emptyTitle}>welcome back!</Text>
         <Text style={styles.emptySubtext}>Login to view your chats and connect with others</Text>
         <TouchableOpacity style={styles.loginButton} onPress={() => goToAuth(setIsGuest)}>
-          <Text style={styles.loginButtonText}>Login</Text>
+          <Text style={styles.loginButtonText}>login</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -211,16 +212,16 @@ export default function MyMatches({ navigation }) {
   if (loading && !refreshing && matches.length === 0) {
     return (
       <SafeAreaView style={styles.centerContainer} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <ActivityIndicator size="large" color={BRAND} />
-        <Text style={styles.loadingText}>Loading your chats...</Text>
+        <Text style={styles.loadingText}>loading your chats...</Text>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerBtn} onPress={goBack} hitSlop={10}>
@@ -236,7 +237,7 @@ export default function MyMatches({ navigation }) {
             autoFocus
           />
         ) : (
-          <Text style={styles.headerTitle}>My Chats</Text>
+          <Text style={styles.headerTitle}>my chats</Text>
         )}
 
         <TouchableOpacity
@@ -264,7 +265,7 @@ export default function MyMatches({ navigation }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={BRAND} colors={[BRAND]} />}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="chatbubbles-outline" size={56} color="#ddd" />
+            <Ionicons name="chatbubbles-outline" size={56} color={T.textFaint} />
             <Text style={styles.emptyTitle}>{searchQuery ? 'No Results' : 'No Chats Yet'}</Text>
             <Text style={styles.emptySubtext}>
               {searchQuery ? `No matches found for "${searchQuery}"` : 'Start exchanging or applying to jobs to connect with others'}
@@ -277,40 +278,40 @@ export default function MyMatches({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#fff' },
-  loadingText: { marginTop: 12, fontSize: 14, color: MUTED },
+  container: { flex: 1, backgroundColor: T.card },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: T.card },
+  loadingText: { marginTop: 12, fontSize: 14, fontFamily: F.body, color: MUTED },
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: T.line,
   },
   headerBtn: { width: 32, alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: INK, flex: 1, textAlign: 'center' },
+  headerTitle: { fontSize: 18, fontFamily: F.headingBold, color: INK, flex: 1, textAlign: 'center' },
   headerSearchInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 15, fontFamily: F.body,
     color: INK,
     marginHorizontal: 10,
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: T.paper,
     borderRadius: 10,
   },
 
-  divider: { height: 1, backgroundColor: '#eee', marginLeft: 82 },
+  divider: { height: 1, backgroundColor: T.sand, marginLeft: 82 },
 
   row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
   avatarWrap: { position: 'relative', marginRight: 14 },
   avatar: { width: 52, height: 52, borderRadius: 26 },
   avatarFallback: { backgroundColor: BRAND, justifyContent: 'center', alignItems: 'center' },
-  avatarInitial: { fontSize: 20, fontWeight: '800', color: '#4A3B10' },
+  avatarInitial: { fontSize: 20, fontFamily: F.heading, color: '#4A3B10' },
   typeBadge: {
     position: 'absolute',
     top: -2,
@@ -318,23 +319,23 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: T.sand,
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: T.white,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   rowBody: { flex: 1, marginRight: 8 },
-  userName: { fontSize: 16, fontWeight: '600', color: INK },
-  userNameUnread: { fontWeight: '800' },
+  userName: { fontSize: 16, fontFamily: F.bodySemi, color: INK },
+  userNameUnread: { fontFamily: F.bodyBold },
   typeLine: { marginTop: 1, marginBottom: 2 },
-  typeLineText: { fontSize: 12.5, color: '#777', fontWeight: '500' },
-  previewText: { fontSize: 13.5, color: '#777' },
-  previewTextUnread: { color: INK, fontWeight: '700' },
+  typeLineText: { fontSize: 12.5, color: T.textMuted, fontFamily: F.bodyMedium },
+  previewText: { fontSize: 13.5, fontFamily: F.body, color: T.textMuted },
+  previewTextUnread: { color: INK, fontFamily: F.bodyBold },
 
   rowRight: { alignItems: 'flex-end', gap: 6 },
-  timeText: { fontSize: 12, color: '#8a6d1d', fontWeight: '600' },
+  timeText: { fontSize: 12, color: '#8a6d1d', fontFamily: F.bodySemi },
   unreadBadge: {
     backgroundColor: BRAND,
     borderRadius: 10,
@@ -344,13 +345,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  unreadBadgeText: { color: INK, fontSize: 11, fontWeight: '800' },
-  activePill: { backgroundColor: '#F0F0F0', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
-  activePillText: { fontSize: 11, color: '#555', fontWeight: '600' },
+  unreadBadgeText: { color: INK, fontSize: 11, fontFamily: F.bodyBold },
+  activePill: { backgroundColor: T.sand, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
+  activePillText: { fontSize: 11, color: T.textMuted, fontFamily: F.bodySemi },
 
   emptyContainer: { alignItems: 'center', paddingVertical: 70, paddingHorizontal: 30 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: INK, marginTop: 14 },
-  emptySubtext: { fontSize: 13.5, color: MUTED, marginTop: 6, textAlign: 'center', lineHeight: 19 },
+  emptyTitle: { fontSize: 18, fontFamily: F.headingBold, color: INK, marginTop: 14 },
+  emptySubtext: { fontSize: 13.5, fontFamily: F.body, color: MUTED, marginTop: 6, textAlign: 'center', lineHeight: 19 },
   loginButton: { backgroundColor: BRAND, paddingHorizontal: 28, paddingVertical: 13, borderRadius: 14, marginTop: 18 },
-  loginButtonText: { color: INK, fontWeight: '800', fontSize: 15 },
+  loginButtonText: { color: INK, fontFamily: F.bodyBold, fontSize: 15 },
 });

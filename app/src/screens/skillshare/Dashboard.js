@@ -21,10 +21,11 @@ import { AuthContext } from '../../context/AuthContext';
 import ListingCard from '../../components/ListingCard';
 import useMyProfessionalProfile from '../../hooks/useMyProfessionalProfile';
 
-const BRAND = '#f9c349';
-const INK = '#1a1a1a';
-const MUTED = '#999';
-const BORDER = '#1a1a1a';
+import { color as T, font as F } from "../../theme/tokens";
+const BRAND = T.yellow;
+const INK = T.ink;
+const MUTED = T.textFaint;
+const BORDER = T.ink;
 
 const TYPE_META = {
   barter: { label: 'EXCHANGE', icon: 'swap-horizontal-outline' },
@@ -158,7 +159,7 @@ export default function Dashboard({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <View style={styles.topHeader}>
         <TouchableOpacity onPress={goBack} hitSlop={10}>
@@ -166,7 +167,7 @@ export default function Dashboard({ navigation }) {
         </TouchableOpacity>
 
         <Text style={styles.topHeaderTitle}>
-          Skill<Text style={{ color: BRAND }}>Share</Text>
+          skill<Text style={{ color: BRAND }}>share</Text>
         </Text>
 
         <TouchableOpacity onPress={() => navigation.navigate('NotificationSkillshare')} hitSlop={10}>
@@ -179,7 +180,7 @@ export default function Dashboard({ navigation }) {
           const active = item.key === 'Home';
           return (
             <TouchableOpacity key={item.key} style={styles.navItem} onPress={() => goTo(item.route)}>
-              <Ionicons name={item.icon} size={20} color={active ? BRAND : '#666'} />
+              <Ionicons name={item.icon} size={20} color={active ? BRAND : T.textMuted} />
               <Text style={[styles.navItemText, active && styles.navItemTextActive]}>{item.label}</Text>
               {active && <View style={styles.navUnderline} />}
             </TouchableOpacity>
@@ -203,8 +204,8 @@ export default function Dashboard({ navigation }) {
           removeClippedSubviews={Platform.OS === 'android'}
           ListHeaderComponent={
             <View>
-              <Text style={styles.pageTitle}>Dashboard</Text>
-              <Text style={styles.pageSubtitle}>Welcome back! Here's an overview of your activities.</Text>
+              <Text style={styles.pageTitle}>skillsshare<Text style={{ color: T.yellow }}>.</Text></Text>
+              <Text style={styles.pageSubtitle}>swap a skill, or get paid to teach it.</Text>
 
               <View style={styles.statsRow}>
                 <View style={styles.statCard}>
@@ -224,7 +225,7 @@ export default function Dashboard({ navigation }) {
                 </View>
               </View>
 
-              <Text style={styles.sectionTitle}>My Activities</Text>
+              <Text style={styles.sectionTitle}>my activities</Text>
 
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow}>
                 {FILTERS.map((f) => {
@@ -256,7 +257,7 @@ export default function Dashboard({ navigation }) {
           }
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <MaterialCommunityIcons name="briefcase-search-outline" size={50} color="#ddd" />
+              <MaterialCommunityIcons name="briefcase-search-outline" size={50} color={T.textFaint} />
               <Text style={styles.emptyText}>
                 {error || 'Nothing here yet. Create your first listing!'}
               </Text>
@@ -264,7 +265,7 @@ export default function Dashboard({ navigation }) {
                 style={styles.emptyButton}
                 onPress={() => navigation.navigate('SelectListingTypeScreen')}
               >
-                <Text style={styles.emptyButtonText}>Create Listing</Text>
+                <Text style={styles.emptyButtonText}>create listing</Text>
               </TouchableOpacity>
             </View>
           }
@@ -275,65 +276,65 @@ export default function Dashboard({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
+  container: { flex: 1, backgroundColor: T.paper },
   centerFill: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   topHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee',
+    backgroundColor: T.card, borderBottomWidth: 1, borderBottomColor: T.line,
   },
-  topHeaderTitle: { fontSize: 22, fontWeight: '800', color: INK },
+  topHeaderTitle: { fontSize: 22, fontFamily: F.heading, color: INK },
   navRow: {
-    flexDirection: 'row', backgroundColor: '#fff',
-    borderBottomWidth: 1, borderBottomColor: '#eee', paddingBottom: 4,
+    flexDirection: 'row', backgroundColor: T.card,
+    borderBottomWidth: 1, borderBottomColor: T.line, paddingBottom: 4,
   },
   navItem: { flex: 1, alignItems: 'center', paddingVertical: 8 },
-  navItemText: { fontSize: 11, color: '#666', marginTop: 3, fontWeight: '600' },
-  navItemTextActive: { color: BRAND, fontWeight: '800' },
+  navItemText: { fontSize: 11, color: T.textMuted, marginTop: 3, fontFamily: F.bodySemi },
+  navItemTextActive: { color: BRAND, fontFamily: F.bodyBold },
   navUnderline: { marginTop: 4, height: 2, width: 24, backgroundColor: BRAND, borderRadius: 1 },
   listContent: { padding: 20, paddingTop: 16 },
-  pageTitle: { fontSize: 26, fontWeight: '800', color: INK },
-  pageSubtitle: { fontSize: 13, color: '#555', marginTop: 4, marginBottom: 18, lineHeight: 18 },
+  pageTitle: { fontSize: 26, fontFamily: F.heading, color: INK },
+  pageSubtitle: { fontSize: 13, fontFamily: F.body, color: T.textMuted, marginTop: 4, marginBottom: 18, lineHeight: 18 },
   statsRow: { flexDirection: 'row', gap: 10, marginBottom: 22 },
   statCard: {
     flex: 1, alignItems: 'center', borderWidth: 1.5, borderColor: BORDER,
-    borderRadius: 14, paddingVertical: 16, backgroundColor: '#fff', gap: 4,
+    borderRadius: 14, paddingVertical: 16, backgroundColor: T.card, gap: 4,
   },
-  statValue: { fontSize: 20, fontWeight: '800', color: INK },
-  statLabel: { fontSize: 11, color: '#555', textAlign: 'center', lineHeight: 14 },
-  sectionTitle: { fontSize: 20, fontWeight: '800', color: INK, marginBottom: 12 },
+  statValue: { fontSize: 20, fontFamily: F.heading, color: INK },
+  statLabel: { fontSize: 11, fontFamily: F.body, color: T.textMuted, textAlign: 'center', lineHeight: 14 },
+  sectionTitle: { fontSize: 20, fontFamily: F.heading, color: INK, marginBottom: 12 },
   chipsRow: { marginBottom: 14 },
   chip: {
     paddingHorizontal: 16, paddingVertical: 8, borderRadius: 18,
-    backgroundColor: '#eee', marginRight: 8,
+    backgroundColor: T.sand, marginRight: 8,
   },
   chipActive: { backgroundColor: BRAND },
-  chipText: { fontSize: 13, fontWeight: '600', color: '#555' },
-  chipTextActive: { color: INK, fontWeight: '800' },
+  chipText: { fontSize: 13, fontFamily: F.bodySemi, color: T.textMuted },
+  chipTextActive: { color: INK, fontFamily: F.bodyBold },
   tabsRow: {
-    flexDirection: 'row', gap: 22, borderBottomWidth: 1, borderBottomColor: '#e5e5e5', marginBottom: 14,
+    flexDirection: 'row', gap: 22, borderBottomWidth: 1, borderBottomColor: T.line, marginBottom: 14,
   },
   tabItem: { paddingBottom: 8 },
-  tabText: { fontSize: 14, color: '#999', fontWeight: '600' },
-  tabTextActive: { color: INK, fontWeight: '800' },
+  tabText: { fontSize: 14, color: T.textFaint, fontFamily: F.bodySemi },
+  tabTextActive: { color: INK, fontFamily: F.bodyBold },
   tabUnderline: { marginTop: 6, height: 2, backgroundColor: INK, borderRadius: 1 },
   card: {
-    backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: '#e5e5e5',
+    backgroundColor: T.card, borderRadius: 16, borderWidth: 1, borderColor: T.line,
     padding: 16, marginBottom: 14,
   },
   cardTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   cardTypeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  cardTypeLabel: { fontSize: 11, fontWeight: '700', color: MUTED, letterSpacing: 0.5 },
+  cardTypeLabel: { fontSize: 11, fontFamily: F.bodyBold, color: MUTED, letterSpacing: 0.5 },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   badgeActive: { backgroundColor: '#E8F0FE' },
-  badgeActiveText: { fontSize: 11, fontWeight: '700', color: '#3b82f6' },
-  badgePending: { backgroundColor: '#F0F0F0' },
-  badgePendingText: { fontSize: 11, fontWeight: '700', color: '#666' },
-  cardTitle: { fontSize: 17, fontWeight: '800', color: INK, marginBottom: 6 },
-  cardMeta: { fontSize: 13, color: '#555', marginBottom: 6 },
-  cardTime: { fontSize: 11, color: '#aaa' },
+  badgeActiveText: { fontSize: 11, fontFamily: F.bodyBold, color: T.ink },
+  badgePending: { backgroundColor: T.sand },
+  badgePendingText: { fontSize: 11, fontFamily: F.bodyBold, color: T.textMuted },
+  cardTitle: { fontSize: 17, fontFamily: F.bodyBold, color: INK, marginBottom: 6 },
+  cardMeta: { fontSize: 13, fontFamily: F.body, color: T.textMuted, marginBottom: 6 },
+  cardTime: { fontSize: 11, fontFamily: F.body, color: T.textFaint },
   emptyState: { alignItems: 'center', paddingVertical: 50 },
-  emptyText: { fontSize: 14, color: '#666', textAlign: 'center', marginTop: 10, marginBottom: 16, paddingHorizontal: 20 },
+  emptyText: { fontSize: 14, fontFamily: F.body, color: T.textMuted, textAlign: 'center', marginTop: 10, marginBottom: 16, paddingHorizontal: 20 },
   emptyButton: { backgroundColor: BRAND, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 },
-  emptyButtonText: { color: INK, fontWeight: '800', fontSize: 14 },
+  emptyButtonText: { color: INK, fontFamily: F.bodyBold, fontSize: 14 },
 });

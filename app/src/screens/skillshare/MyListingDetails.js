@@ -12,10 +12,11 @@ import { AuthContext } from '../../context/AuthContext';
 import { timeAgo } from '../../utils/time';
 import { goToAuth } from '../../utils/goToAuth';
 
-const BRAND = '#f9c349';
-const INK = '#1a1a1a';
-const MUTED = '#8E8E93';
-const BORDER = '#e5e5e5';
+import { color as T, font as F } from "../../theme/tokens";
+const BRAND = T.yellow;
+const INK = T.ink;
+const MUTED = T.textMuted;
+const BORDER = T.line;
 
 const TYPE_META = {
   barter: { label: 'Exchange', icon: 'swap-horizontal-outline' },
@@ -39,7 +40,7 @@ const ListingCard = memo(function ListingCard({ item, onClose, onPress }) {
         </View>
         <View style={[styles.statusPill, isOpen ? styles.statusPillOpen : styles.statusPillClosed]}>
           {isOpen && <View style={styles.statusDot} />}
-          <Text style={[styles.statusPillText2, { color: isOpen ? '#2e7d32' : '#888' }]}>
+          <Text style={[styles.statusPillText2, { color: isOpen ? '#2e7d32' : T.textFaint }]}>
             {isOpen ? 'Active' : 'Closed'}
           </Text>
         </View>
@@ -51,7 +52,7 @@ const ListingCard = memo(function ListingCard({ item, onClose, onPress }) {
         <View style={styles.detailRow}>
           <MaterialCommunityIcons name="lightbulb-on-outline" size={16} color={BRAND} />
           <Text style={styles.detailText}>
-            <Text style={styles.detailLabel}>Offering: </Text>
+            <Text style={styles.detailLabel}>offering: </Text>
             <Text style={styles.detailValue}>{item.skillOffered.skillName}</Text>
             {!!item.skillOffered.proficiencyLevel && (
               <Text style={styles.detailLevel}> · {capitalize(item.skillOffered.proficiencyLevel)}</Text>
@@ -64,7 +65,7 @@ const ListingCard = memo(function ListingCard({ item, onClose, onPress }) {
         <View style={styles.detailRow}>
           <Ionicons name="cash-outline" size={16} color="#2e7d32" />
           <Text style={styles.detailText}>
-            <Text style={styles.detailLabel}>Price: </Text>
+            <Text style={styles.detailLabel}>price: </Text>
             <Text style={[styles.detailValue, styles.priceValue]}>${item.price}</Text>
           </Text>
         </View>
@@ -74,7 +75,7 @@ const ListingCard = memo(function ListingCard({ item, onClose, onPress }) {
         <View style={styles.detailRow}>
           <Ionicons name="cash-outline" size={16} color="#2e7d32" />
           <Text style={styles.detailText}>
-            <Text style={styles.detailLabel}>Budget: </Text>
+            <Text style={styles.detailLabel}>budget: </Text>
             <Text style={[styles.detailValue, styles.priceValue]}>${item.budget}</Text>
           </Text>
         </View>
@@ -84,7 +85,7 @@ const ListingCard = memo(function ListingCard({ item, onClose, onPress }) {
         <View style={styles.detailRow}>
           <MaterialCommunityIcons name="target" size={16} color={BRAND} />
           <Text style={styles.detailText}>
-            <Text style={styles.detailLabel}>Seeking: </Text>
+            <Text style={styles.detailLabel}>seeking: </Text>
             <Text style={styles.detailValue}>{item.skillWanted.skillName}</Text>
           </Text>
         </View>
@@ -94,13 +95,13 @@ const ListingCard = memo(function ListingCard({ item, onClose, onPress }) {
 
       <View style={styles.cardFooter}>
         <View style={styles.timeRow}>
-          <Ionicons name="time-outline" size={14} color="#bbb" />
+          <Ionicons name="time-outline" size={14} color={T.textFaint} />
           <Text style={styles.timeText}>{timeAgo(item.createdAt)}</Text>
         </View>
         {isOpen && (
           <TouchableOpacity style={styles.closeBtn} onPress={() => onClose(item._id)} hitSlop={6}>
             <Ionicons name="close" size={13} color="#c62828" />
-            <Text style={styles.closeBtnText}>Close</Text>
+            <Text style={styles.closeBtnText}>close</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -193,12 +194,12 @@ export default function MyListingsScreen({ navigation }) {
   if (isGuest) {
     return (
       <SafeAreaView style={styles.centerFillScreen} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-        <Ionicons name="person-outline" size={56} color="#ddd" />
-        <Text style={styles.emptyTitle}>Welcome Back!</Text>
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
+        <Ionicons name="person-outline" size={56} color={T.textFaint} />
+        <Text style={styles.emptyTitle}>welcome back!</Text>
         <Text style={styles.emptyText}>Login to view and manage your listings</Text>
         <TouchableOpacity style={styles.emptyButton} onPress={() => goToAuth(setIsGuest)}>
-          <Text style={styles.emptyButtonText}>Login</Text>
+          <Text style={styles.emptyButtonText}>login</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -206,13 +207,13 @@ export default function MyListingsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <View style={styles.topHeader}>
         <TouchableOpacity onPress={goBack} style={styles.headerBtn} hitSlop={8}>
           <Ionicons name="arrow-back" size={22} color={INK} />
         </TouchableOpacity>
-        <Text style={styles.topHeaderTitle}>My Listings</Text>
+        <Text style={styles.topHeaderTitle}>my listings</Text>
         <TouchableOpacity
           style={styles.addBtn}
           onPress={() => navigation.navigate('SelectListingTypeScreen')}
@@ -243,17 +244,17 @@ export default function MyListingsScreen({ navigation }) {
                 </View>
                 <View style={styles.statsMain}>
                   <Text style={styles.statsMainNumber}>{counts.total}</Text>
-                  <Text style={styles.statsMainLabel}>TOTAL LISTINGS</Text>
+                  <Text style={styles.statsMainLabel}>total listings</Text>
                 </View>
                 <View style={styles.statsDivider} />
                 <View style={styles.statsSub}>
                   <Text style={styles.statsSubNumber}>{counts.open}</Text>
-                  <Text style={styles.statsSubLabel}>Active</Text>
+                  <Text style={styles.statsSubLabel}>active</Text>
                 </View>
                 <View style={styles.statsDivider} />
                 <View style={styles.statsSub}>
                   <Text style={styles.statsSubNumber}>{counts.closed}</Text>
-                  <Text style={styles.statsSubLabel}>Closed</Text>
+                  <Text style={styles.statsSubLabel}>closed</Text>
                 </View>
               </View>
 
@@ -281,7 +282,7 @@ export default function MyListingsScreen({ navigation }) {
           }
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <MaterialCommunityIcons name="file-document-plus-outline" size={50} color="#ddd" />
+              <MaterialCommunityIcons name="file-document-plus-outline" size={50} color={T.textFaint} />
               <Text style={styles.emptyTitle}>
                 {filter !== 'all' ? `No ${filter} listings` : 'No Listings Yet'}
               </Text>
@@ -295,7 +296,7 @@ export default function MyListingsScreen({ navigation }) {
                   style={styles.emptyButton}
                   onPress={() => navigation.navigate('SelectListingTypeScreen')}
                 >
-                  <Text style={styles.emptyButtonText}>Create Listing</Text>
+                  <Text style={styles.emptyButtonText}>create listing</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -307,20 +308,20 @@ export default function MyListingsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
+  container: { flex: 1, backgroundColor: T.paper },
   centerFill: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  centerFillScreen: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8f9fa', padding: 20 },
+  centerFillScreen: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: T.paper, padding: 20 },
 
   topHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee',
+    backgroundColor: T.card, borderBottomWidth: 1, borderBottomColor: T.line,
   },
   headerBtn: {
-    width: 36, height: 36, borderRadius: 18, backgroundColor: '#f0f0f0',
+    width: 36, height: 36, borderRadius: 18, backgroundColor: T.sand,
     justifyContent: 'center', alignItems: 'center',
   },
-  topHeaderTitle: { fontSize: 18, fontWeight: '800', color: '#8a6d1d' },
+  topHeaderTitle: { fontSize: 18, fontFamily: F.heading, color: '#8a6d1d' },
   addBtn: {
     width: 36, height: 36, borderRadius: 18, backgroundColor: BRAND,
     justifyContent: 'center', alignItems: 'center',
@@ -329,7 +330,7 @@ const styles = StyleSheet.create({
   listContent: { padding: 20, paddingTop: 16, paddingBottom: 20 },
 
   statsCard: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: T.card,
     borderWidth: 1, borderColor: '#e8d9a8', borderRadius: 16, padding: 14, marginBottom: 16,
   },
   statsIconBox: {
@@ -337,24 +338,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center', marginRight: 12,
   },
   statsMain: { marginRight: 'auto' },
-  statsMainNumber: { fontSize: 22, fontWeight: '800', color: INK },
-  statsMainLabel: { fontSize: 10, color: MUTED, fontWeight: '700', letterSpacing: 0.5 },
-  statsDivider: { width: 1, height: 30, backgroundColor: '#eee', marginHorizontal: 14 },
+  statsMainNumber: { fontSize: 22, fontFamily: F.heading, color: INK },
+  statsMainLabel: { fontSize: 10, color: MUTED, fontFamily: F.bodyBold, letterSpacing: 0.5 },
+  statsDivider: { width: 1, height: 30, backgroundColor: T.sand, marginHorizontal: 14 },
   statsSub: { alignItems: 'center' },
-  statsSubNumber: { fontSize: 18, fontWeight: '800', color: INK },
-  statsSubLabel: { fontSize: 11, color: MUTED, marginTop: 1 },
+  statsSubNumber: { fontSize: 18, fontFamily: F.heading, color: INK },
+  statsSubLabel: { fontSize: 11, fontFamily: F.body, color: MUTED, marginTop: 1 },
 
   filterRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   filterChip: {
     paddingHorizontal: 16, paddingVertical: 9, borderRadius: 18,
-    backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e5e5',
+    backgroundColor: T.card, borderWidth: 1, borderColor: T.line,
   },
   filterChipActive: { backgroundColor: BRAND, borderColor: BRAND },
-  filterChipText: { fontSize: 13, fontWeight: '600', color: '#555' },
-  filterChipTextActive: { color: INK, fontWeight: '800' },
+  filterChipText: { fontSize: 13, fontFamily: F.bodySemi, color: T.textMuted },
+  filterChipTextActive: { color: INK, fontFamily: F.bodyBold },
 
   card: {
-    backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: BORDER,
+    backgroundColor: T.card, borderRadius: 16, borderWidth: 1, borderColor: BORDER,
     padding: 16, marginBottom: 14,
   },
   cardTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
@@ -362,36 +363,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: '#FFF3D6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12,
   },
-  typePillText: { fontSize: 12, fontWeight: '700', color: '#8a6d1d' },
+  typePillText: { fontSize: 12, fontFamily: F.bodyBold, color: '#8a6d1d' },
   statusPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  statusPillOpen: { backgroundColor: '#E8F5E9' },
-  statusPillClosed: { backgroundColor: '#F0F0F0' },
+  statusPillOpen: { backgroundColor: T.successBg },
+  statusPillClosed: { backgroundColor: T.sand },
   statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#2e7d32' },
-  statusPillText2: { fontSize: 12, fontWeight: '700' },
+  statusPillText2: { fontSize: 12, fontFamily: F.bodyBold },
 
-  cardTitle: { fontSize: 20, fontWeight: '800', color: INK, marginBottom: 12 },
+  cardTitle: { fontSize: 20, fontFamily: F.heading, color: INK, marginBottom: 12 },
 
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  detailText: { fontSize: 14, flex: 1 },
-  detailLabel: { color: MUTED, fontWeight: '600' },
-  detailValue: { color: INK, fontWeight: '700' },
-  detailLevel: { color: MUTED, fontWeight: '500' },
-  priceValue: { color: '#2e7d32', fontWeight: '800' },
+  detailText: { fontSize: 14, fontFamily: F.body, flex: 1 },
+  detailLabel: { color: MUTED, fontFamily: F.bodySemi },
+  detailValue: { color: INK, fontFamily: F.bodyBold },
+  detailLevel: { color: MUTED, fontFamily: F.bodyMedium },
+  priceValue: { color: '#2e7d32', fontFamily: F.bodyBold },
 
-  cardDivider: { height: 1, backgroundColor: '#f0f0f0', marginVertical: 10 },
+  cardDivider: { height: 1, backgroundColor: T.sand, marginVertical: 10 },
 
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  timeText: { fontSize: 12, color: '#bbb' },
+  timeText: { fontSize: 12, fontFamily: F.body, color: T.textFaint },
   closeBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#FFEBEE', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16,
+    backgroundColor: T.dangerBg, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16,
   },
-  closeBtnText: { fontSize: 13, fontWeight: '700', color: '#c62828' },
+  closeBtnText: { fontSize: 13, fontFamily: F.bodyBold, color: '#c62828' },
 
   emptyState: { alignItems: 'center', paddingVertical: 60 },
-  emptyTitle: { fontSize: 18, fontWeight: '800', color: INK, marginTop: 12 },
-  emptyText: { fontSize: 14, color: '#666', textAlign: 'center', marginTop: 6, marginBottom: 16, paddingHorizontal: 20 },
+  emptyTitle: { fontSize: 18, fontFamily: F.heading, color: INK, marginTop: 12 },
+  emptyText: { fontSize: 14, fontFamily: F.body, color: T.textMuted, textAlign: 'center', marginTop: 6, marginBottom: 16, paddingHorizontal: 20 },
   emptyButton: { backgroundColor: BRAND, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 },
-  emptyButtonText: { color: INK, fontWeight: '800', fontSize: 14 },
+  emptyButtonText: { color: INK, fontFamily: F.bodyBold, fontSize: 14 },
 });

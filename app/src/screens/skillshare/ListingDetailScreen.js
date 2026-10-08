@@ -14,13 +14,14 @@ import { AuthContext } from '../../context/AuthContext';
 import { goToAuth } from '../../utils/goToAuth';
 import useMyProfessionalProfile from '../../hooks/useMyProfessionalProfile';
 
+import { color as T, font as F } from "../../theme/tokens";
 const { width } = Dimensions.get('window');
 const HERO_WIDTH = width - 40; // matches the ScrollView's 20px content padding on each side
 
-const BRAND = '#f9c349';
-const INK = '#1a1a1a';
-const MUTED = '#8E8E93';
-const BORDER = '#e5e5e5';
+const BRAND = T.yellow;
+const INK = T.ink;
+const MUTED = T.textMuted;
+const BORDER = T.line;
 
 // last loaded details per listing id (+ viewer), so reopening a listing is instant
 const LISTING_CACHE = {};
@@ -170,9 +171,9 @@ export default function ListingDetailScreen({ route, navigation }) {
   if (loading && !listing) {
     return (
       <SafeAreaView style={styles.centerContainer} edges={['top', 'bottom']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <ActivityIndicator size="large" color={BRAND} />
-        <Text style={styles.loadingText}>Loading...</Text>
+        <Text style={styles.loadingText}>loading...</Text>
       </SafeAreaView>
     );
   }
@@ -180,14 +181,14 @@ export default function ListingDetailScreen({ route, navigation }) {
   if (error || !listing) {
     return (
       <SafeAreaView style={styles.centerContainer} edges={['top', 'bottom']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <TouchableOpacity style={[styles.errorBack, { top: insets.top + 12 }]} onPress={goBack} hitSlop={10}>
           <Ionicons name="arrow-back" size={22} color={INK} />
         </TouchableOpacity>
-        <Ionicons name="alert-circle" size={56} color="#FF3B30" />
+        <Ionicons name="alert-circle" size={56} color={T.danger} />
         <Text style={styles.errorText}>{error || 'Listing not found'}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={() => { setLoading(true); fetchListing(); }}>
-          <Text style={styles.retryButtonText}>Try Again</Text>
+          <Text style={styles.retryButtonText}>try again</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -210,13 +211,13 @@ export default function ListingDetailScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <View style={styles.topHeader}>
         <TouchableOpacity onPress={goBack} hitSlop={10}>
           <Ionicons name="arrow-back" size={22} color={INK} />
         </TouchableOpacity>
-        <Text style={styles.topHeaderTitle}>Details</Text>
+        <Text style={styles.topHeaderTitle}>details</Text>
         <TouchableOpacity onPress={() => navigation.navigate('NotificationSkillshare')} hitSlop={10}>
           <Ionicons name="notifications-outline" size={22} color={INK} />
         </TouchableOpacity>
@@ -232,7 +233,7 @@ export default function ListingDetailScreen({ route, navigation }) {
           <>
             <View style={styles.paidTopRow}>
               <View style={styles.pill}>
-                <Text style={styles.pillText}>Paid</Text>
+                <Text style={styles.pillText}>paid</Text>
               </View>
               <View style={styles.statusInlineRow}>
                 <View style={[styles.statusDot, listing.status === 'open' && styles.statusDotOpen]} />
@@ -247,7 +248,7 @@ export default function ListingDetailScreen({ route, navigation }) {
                 <Image source={{ uri: ownerData.profileImage }} style={styles.ownerAvatar} />
               ) : (
                 <View style={[styles.ownerAvatar, styles.ownerAvatarFallback]}>
-                  <Ionicons name="person" size={16} color="#999" />
+                  <Ionicons name="person" size={16} color={T.textFaint} />
                 </View>
               )}
               <View>
@@ -271,14 +272,14 @@ export default function ListingDetailScreen({ route, navigation }) {
                     <View key={att.url || String(i)} style={styles.heroImageWrap}>
                       {att.type === 'video' ? (
                         <View style={[styles.heroImage, styles.attachmentVideoFallback]}>
-                          <Ionicons name="play-circle" size={44} color="#fff" />
+                          <Ionicons name="play-circle" size={44} color={T.white} />
                         </View>
                       ) : (
                         <Image source={{ uri: att.url }} style={styles.heroImage} />
                       )}
                       <View style={styles.heroBadge}>
-                        <Ionicons name="pricetag" size={11} color="#fff" />
-                        <Text style={styles.heroBadgeText}>Paid</Text>
+                        <Ionicons name="pricetag" size={11} color={T.white} />
+                        <Text style={styles.heroBadgeText}>paid</Text>
                       </View>
                     </View>
                   ))}
@@ -324,21 +325,21 @@ export default function ListingDetailScreen({ route, navigation }) {
                   style={styles.ctaBtn}
                   onPress={() => navigation.navigate('ManageOffers', { id: listing._id, type: listing.type })}
                 >
-                  <Text style={styles.ctaBtnText}>Manage Requests</Text>
+                  <Text style={styles.ctaBtnText}>manage requests</Text>
                 </TouchableOpacity>
               ) : !currentUserId || isGuest ? (
                 <TouchableOpacity style={styles.ctaBtn} onPress={goLogin}>
-                  <Text style={styles.ctaBtnText}>Login to Request</Text>
+                  <Text style={styles.ctaBtnText}>login to request</Text>
                 </TouchableOpacity>
               ) : listing.status !== 'open' ? (
-                <View style={styles.closedPill}><Text style={styles.closedPillText}>Listing Closed</Text></View>
+                <View style={styles.closedPill}><Text style={styles.closedPillText}>listing closed</Text></View>
               ) : hasActiveMatch ? (
                 <TouchableOpacity style={styles.ctaBtn} onPress={() => navigation.navigate('MatchChat', { listingId: listing._id })}>
-                  <Text style={styles.ctaBtnText}>Chat Now</Text>
+                  <Text style={styles.ctaBtnText}>chat now</Text>
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity style={styles.ctaBtn} onPress={() => navigation.navigate('CreateOffer', { listing })}>
-                  <Text style={styles.ctaBtnText}>Request Service</Text>
+                  <Text style={styles.ctaBtnText}>request service</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -393,7 +394,7 @@ export default function ListingDetailScreen({ route, navigation }) {
                   <Image source={{ uri: ownerData.profileImage }} style={styles.ownerAvatar} />
                 ) : (
                   <View style={[styles.ownerAvatar, styles.ownerAvatarFallback]}>
-                    <Ionicons name="person" size={16} color="#999" />
+                    <Ionicons name="person" size={16} color={T.textFaint} />
                   </View>
                 )}
                 <View>
@@ -434,7 +435,7 @@ export default function ListingDetailScreen({ route, navigation }) {
               </Section>
             )}
 
-            <Text style={styles.sectionLabelSmall}>PRICING</Text>
+            <Text style={styles.sectionLabelSmall}>pricing</Text>
             <View style={styles.mainCard}>
               <View style={styles.sectionHeaderRow}>
                 <Ionicons name={isBarter ? 'swap-horizontal-outline' : 'briefcase-outline'} size={16} color={BRAND} />
@@ -445,7 +446,7 @@ export default function ListingDetailScreen({ route, navigation }) {
 
               {isBarter && !!listing.skillWanted?.skillName && (
                 <View style={styles.wantedBox}>
-                  <Text style={styles.wantedLabel}>IN RETURN</Text>
+                  <Text style={styles.wantedLabel}>in return</Text>
                   <Text style={styles.wantedValue}>{listing.skillWanted.skillName}</Text>
                 </View>
               )}
@@ -459,14 +460,14 @@ export default function ListingDetailScreen({ route, navigation }) {
                 </TouchableOpacity>
               ) : !currentUserId || isGuest ? (
                 <TouchableOpacity style={styles.ctaBtn} onPress={goLogin}>
-                  <Text style={styles.ctaBtnText}>Login to Continue</Text>
+                  <Text style={styles.ctaBtnText}>login to continue</Text>
                   <Ionicons name="arrow-forward" size={16} color={INK} />
                 </TouchableOpacity>
               ) : listing.status !== 'open' ? (
-                <View style={styles.closedPill}><Text style={styles.closedPillText}>Listing Closed</Text></View>
+                <View style={styles.closedPill}><Text style={styles.closedPillText}>listing closed</Text></View>
               ) : hasActiveMatch ? (
                 <TouchableOpacity style={styles.ctaBtn} onPress={() => navigation.navigate('MatchChat', { listingId: listing._id })}>
-                  <Text style={styles.ctaBtnText}>Chat Now</Text>
+                  <Text style={styles.ctaBtnText}>chat now</Text>
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity style={styles.ctaBtn} onPress={() => navigation.navigate('CreateOffer', { listing })}>
@@ -510,7 +511,7 @@ export default function ListingDetailScreen({ route, navigation }) {
           <View style={[styles.modalContent, { paddingBottom: 24 + insets.bottom }]}>
             <View style={styles.modalHandle} />
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Ask Question</Text>
+              <Text style={styles.modalTitle}>ask question</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <Ionicons name="close" size={24} color={MUTED} />
               </TouchableOpacity>
@@ -531,7 +532,7 @@ export default function ListingDetailScreen({ route, navigation }) {
               onPress={handleSendInquiry}
               disabled={!inquiryText.trim() || submittingInquiry}
             >
-              {submittingInquiry ? <ActivityIndicator color={INK} /> : <Text style={styles.modalSendBtnText}>Send</Text>}
+              {submittingInquiry ? <ActivityIndicator color={INK} /> : <Text style={styles.modalSendBtnText}>send</Text>}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -565,20 +566,20 @@ function SkillRow({ icon, label, value, valueStyle, onPress, last }) {
 function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
-  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#f8f9fa' },
-  loadingText: { marginTop: 12, fontSize: 15, color: MUTED },
-  errorText: { fontSize: 15, color: '#FF3B30', textAlign: 'center', marginVertical: 14 },
+  container: { flex: 1, backgroundColor: T.paper },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: T.paper },
+  loadingText: { marginTop: 12, fontSize: 15, fontFamily: F.body, color: MUTED },
+  errorText: { fontSize: 15, fontFamily: F.body, color: T.danger, textAlign: 'center', marginVertical: 14 },
   retryButton: { backgroundColor: BRAND, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 },
-  retryButtonText: { color: INK, fontWeight: '800', fontSize: 14 },
+  retryButtonText: { color: INK, fontFamily: F.bodyBold, fontSize: 14 },
   errorBack: { position: 'absolute', top: 12, left: 20, padding: 4 },
 
   topHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee',
+    backgroundColor: T.card, borderBottomWidth: 1, borderBottomColor: T.line,
   },
-  topHeaderTitle: { fontSize: 18, fontWeight: '800', color: BRAND },
+  topHeaderTitle: { fontSize: 18, fontFamily: F.heading, color: BRAND },
 
   content: { padding: 20, paddingBottom: 40 },
 
@@ -586,21 +587,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start',
     backgroundColor: '#FFF3D6', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12, marginBottom: 10,
   },
-  pillText: { fontSize: 12, fontWeight: '700', color: '#8a6d1d' },
+  pillText: { fontSize: 12, fontFamily: F.bodyBold, color: '#8a6d1d' },
 
   paidTopRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
   statusInlineRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#ccc' },
-  statusDotOpen: { backgroundColor: '#34C759' },
-  statusInlineText: { fontSize: 12, color: MUTED, fontWeight: '600' },
+  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: T.sand },
+  statusDotOpen: { backgroundColor: T.success },
+  statusInlineText: { fontSize: 12, color: MUTED, fontFamily: F.bodySemi },
 
-  title: { fontSize: 22, fontWeight: '800', color: INK, lineHeight: 28, marginBottom: 10 },
+  title: { fontSize: 22, fontFamily: F.heading, color: INK, lineHeight: 28, marginBottom: 10 },
 
   ownerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
   ownerAvatar: { width: 34, height: 34, borderRadius: 17 },
-  ownerAvatarFallback: { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' },
-  ownerName: { fontSize: 14, fontWeight: '700', color: INK },
-  ownerMeta: { fontSize: 11, color: MUTED, marginTop: 1 },
+  ownerAvatarFallback: { backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center' },
+  ownerName: { fontSize: 14, fontFamily: F.bodyBold, color: INK },
+  ownerMeta: { fontSize: 11, fontFamily: F.body, color: MUTED, marginTop: 1 },
 
   heroWrap: { marginBottom: 16 },
   heroImageWrap: {
@@ -608,75 +609,75 @@ const styles = StyleSheet.create({
     height: 220,
     borderRadius: 18,
     overflow: 'hidden',
-    backgroundColor: '#eee',
+    backgroundColor: T.sand,
   },
   heroImage: { width: '100%', height: '100%' },
-  attachmentVideoFallback: { justifyContent: 'center', alignItems: 'center', backgroundColor: '#1a1a1a' },
+  attachmentVideoFallback: { justifyContent: 'center', alignItems: 'center', backgroundColor: T.ink },
   heroBadge: {
     position: 'absolute', top: 12, left: 12, flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: 'rgba(26,26,26,0.85)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
   },
-  heroBadgeText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+  heroBadgeText: { fontSize: 11, fontFamily: F.bodyBold, color: T.white },
   heroDotsRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 10 },
-  heroDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#ddd' },
+  heroDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: T.sand },
   heroDotActive: { backgroundColor: BRAND, width: 16 },
 
   mainCard: {
-    backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: BORDER,
+    backgroundColor: T.card, borderRadius: 16, borderWidth: 1, borderColor: BORDER,
     padding: 16, marginBottom: 14,
   },
-  divider: { height: 1, backgroundColor: '#eee', marginVertical: 12 },
-  bodyText: { fontSize: 14, color: '#3a3a3c', lineHeight: 21 },
+  divider: { height: 1, backgroundColor: T.sand, marginVertical: 12 },
+  bodyText: { fontSize: 14, fontFamily: F.body, color: '#3a3a3c', lineHeight: 21 },
 
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: INK, marginBottom: 12 },
-  sectionLabelSmall: { fontSize: 11, fontWeight: '700', color: MUTED, letterSpacing: 0.6, marginBottom: 8, marginLeft: 2 },
+  sectionTitle: { fontSize: 16, fontFamily: F.bodyBold, color: INK, marginBottom: 12 },
+  sectionLabelSmall: { fontSize: 11, fontFamily: F.bodyBold, color: MUTED, letterSpacing: 0.6, marginBottom: 8, marginLeft: 2 },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
-  sectionHeaderText: { fontSize: 15, fontWeight: '800', color: INK },
+  sectionHeaderText: { fontSize: 15, fontFamily: F.bodyBold, color: INK },
 
   skillRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 },
-  skillRowBorder: { borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  skillRowBorder: { borderBottomWidth: 1, borderBottomColor: T.line },
   skillRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  skillRowLabel: { fontSize: 13, color: MUTED, fontWeight: '600' },
-  skillRowValue: { fontSize: 13, color: INK, fontWeight: '700' },
+  skillRowLabel: { fontSize: 13, color: MUTED, fontFamily: F.bodySemi },
+  skillRowValue: { fontSize: 13, color: INK, fontFamily: F.bodyBold },
   linkValue: { color: BRAND, textDecorationLine: 'underline' },
 
   roadmapRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },
-  roadmapDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#ddd', marginTop: 5 },
+  roadmapDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: T.sand, marginTop: 5 },
   roadmapDotActive: { backgroundColor: BRAND },
-  roadmapText: { flex: 1, fontSize: 13, color: '#3a3a3c', lineHeight: 19 },
+  roadmapText: { flex: 1, fontSize: 13, fontFamily: F.body, color: '#3a3a3c', lineHeight: 19 },
 
-  priceCard: { backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: BORDER, padding: 18, marginBottom: 14, alignItems: 'center' },
-  priceValue: { fontSize: 28, fontWeight: '800', color: INK },
+  priceCard: { backgroundColor: T.card, borderRadius: 16, borderWidth: 1, borderColor: BORDER, padding: 18, marginBottom: 14, alignItems: 'center' },
+  priceValue: { fontSize: 28, fontFamily: F.heading, color: INK },
   deliveryRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4, marginBottom: 14 },
-  deliveryText: { fontSize: 12, color: MUTED, fontWeight: '600' },
+  deliveryText: { fontSize: 12, color: MUTED, fontFamily: F.bodySemi },
 
   ctaBtn: {
     backgroundColor: BRAND, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 24,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, alignSelf: 'stretch',
   },
-  ctaBtnText: { fontSize: 15, fontWeight: '800', color: INK },
-  ctaFootnote: { fontSize: 11, color: MUTED, textAlign: 'center', marginTop: 10 },
+  ctaBtnText: { fontSize: 15, fontFamily: F.bodyBold, color: INK },
+  ctaFootnote: { fontSize: 11, fontFamily: F.body, color: MUTED, textAlign: 'center', marginTop: 10 },
 
-  closedPill: { backgroundColor: '#f0f0f0', borderRadius: 14, paddingVertical: 14, alignItems: 'center', alignSelf: 'stretch' },
-  closedPillText: { fontSize: 14, fontWeight: '700', color: '#888' },
+  closedPill: { backgroundColor: T.sand, borderRadius: 14, paddingVertical: 14, alignItems: 'center', alignSelf: 'stretch' },
+  closedPillText: { fontSize: 14, fontFamily: F.bodyBold, color: T.textFaint },
 
-  wantedBox: { backgroundColor: '#F8F8F8', borderRadius: 12, padding: 12, marginBottom: 14 },
-  wantedLabel: { fontSize: 10, fontWeight: '800', color: MUTED, letterSpacing: 0.6, marginBottom: 4 },
-  wantedValue: { fontSize: 14, fontWeight: '700', color: INK },
+  wantedBox: { backgroundColor: T.sand, borderRadius: 12, padding: 12, marginBottom: 14 },
+  wantedLabel: { fontSize: 10, fontFamily: F.bodyBold, color: MUTED, letterSpacing: 0.6, marginBottom: 4 },
+  wantedValue: { fontSize: 14, fontFamily: F.bodyBold, color: INK },
 
   askRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12, paddingVertical: 6 },
-  askRowText: { fontSize: 13, fontWeight: '700', color: INK },
+  askRowText: { fontSize: 13, fontFamily: F.bodyBold, color: INK },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
+  modalOverlay: { flex: 1, backgroundColor: T.overlay, justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: T.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
   modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E5EA', alignSelf: 'center', marginBottom: 16 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  modalTitle: { fontSize: 19, fontWeight: '800', color: INK },
-  modalSubtitle: { fontSize: 13, color: MUTED, marginTop: 4, marginBottom: 14 },
+  modalTitle: { fontSize: 19, fontFamily: F.heading, color: INK },
+  modalSubtitle: { fontSize: 13, fontFamily: F.body, color: MUTED, marginTop: 4, marginBottom: 14 },
   modalInput: {
-    backgroundColor: '#f8f9fa', borderRadius: 12, borderWidth: 1, borderColor: '#eee',
-    padding: 14, fontSize: 15, minHeight: 100, textAlignVertical: 'top', color: INK, marginBottom: 16,
+    backgroundColor: T.sand, borderRadius: 12, borderWidth: 1, borderColor: T.line,
+    padding: 14, fontSize: 15, fontFamily: F.body, minHeight: 100, textAlignVertical: 'top', color: INK, marginBottom: 16,
   },
   modalSendBtn: { backgroundColor: BRAND, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  modalSendBtnText: { color: INK, fontWeight: '800', fontSize: 15 },
+  modalSendBtnText: { color: INK, fontFamily: F.bodyBold, fontSize: 15 },
 });

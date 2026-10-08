@@ -26,10 +26,11 @@ import {
   completeProfessionalProfile,
 } from '../../../api/profileApi';
 
-const BRAND = '#f9c349';
-const BRAND_DARK = '#f5a623';
-const INK = '#1C1C1E';
-const MUTED = '#8E8E93';
+import { color as T, font as F } from "../../../theme/tokens";
+const BRAND = T.yellow;
+const BRAND_DARK = T.yellow;
+const INK = T.ink;
+const MUTED = T.textMuted;
 const BORDER = '#E5E5EA';
 
 const TOTAL_STEPS = 5;
@@ -285,7 +286,7 @@ setUniversity(defaultUniversity);
   if (loading) {
     return (
       <SafeAreaView style={styles.center} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FDF9F0" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <ActivityIndicator size="large" color={BRAND} />
       </SafeAreaView>
     );
@@ -295,14 +296,14 @@ setUniversity(defaultUniversity);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FDF9F0" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
       >
         <View style={styles.topBar}>
-          <Text style={styles.brand}>SkillShare</Text>
+          <Text style={styles.brand}>skillshare</Text>
           <TouchableOpacity
             onPress={handleSaveAndExit}
             disabled={saving}
@@ -395,22 +396,22 @@ setUniversity(defaultUniversity);
               activeOpacity={0.85}
             >
               {saving ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color={T.white} />
               ) : (
                 <Text style={styles.continueText}>
                   {step === TOTAL_STEPS ? 'Complete Profile' : 'Continue'}
                 </Text>
               )}
               {step < TOTAL_STEPS && !saving && (
-                <Ionicons name="arrow-forward" size={16} color="#FFFFFF" style={{ marginLeft: 6 }} />
+                <Ionicons name="arrow-forward" size={16} color={T.white} style={{ marginLeft: 6 }} />
               )}
               {step === TOTAL_STEPS && !saving && (
-                <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
+                <Ionicons name="checkmark-circle" size={18} color={T.white} style={{ marginLeft: 6 }} />
               )}
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.backLink} onPress={handleBack} disabled={saving}>
-              <Text style={styles.backLinkText}>Back</Text>
+              <Text style={styles.backLinkText}>back</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -427,7 +428,7 @@ function StepBasicInfo({
 }) {
   return (
     <View>
-      <Text style={styles.title}>Create Your Professional Profile</Text>
+      <Text style={styles.title}>create your professional profile</Text>
       <Text style={styles.subtitle}>
         Your professional profile helps other students understand your skills, experience and
         what you can offer.
@@ -439,7 +440,7 @@ function StepBasicInfo({
         ) : (
           <>
             <Ionicons name="camera-outline" size={26} color={MUTED} />
-            <Text style={styles.photoUploadText}>Upload Photo</Text>
+            <Text style={styles.photoUploadText}>upload photo</Text>
           </>
         )}
       </TouchableOpacity>
@@ -449,7 +450,7 @@ function StepBasicInfo({
       <Field label="University" value={university} onChangeText={setUniversity} placeholder="e.g. Stanford University" />
       <Field label="Field of Study" value={fieldOfStudy} onChangeText={setFieldOfStudy} placeholder="e.g. Interaction Design" />
 
-      <Text style={styles.label}>Professional Bio</Text>
+      <Text style={styles.label}>professional bio</Text>
       <TextInput
         style={[styles.input, styles.textArea]}
         placeholder="Tell other students about your background, interests, and what kind of projects you're looking for..."
@@ -467,7 +468,7 @@ function StepSkills({ skillInput, setSkillInput, skills, addSkill, removeSkill }
   const suggestions = SUGGESTED_SKILLS.filter((s) => !skills.includes(s));
   return (
     <View>
-      <Text style={styles.title}>Skills & Expertise</Text>
+      <Text style={styles.title}>skills & expertise</Text>
       <Text style={styles.subtitle}>
         What are your core strengths? Add at least 3 skills to help others find you.
       </Text>
@@ -506,7 +507,7 @@ function StepSkills({ skillInput, setSkillInput, skills, addSkill, removeSkill }
 
       {suggestions.length > 0 && (
         <>
-          <Text style={styles.sectionLabel}>SUGGESTED FOR YOU</Text>
+          <Text style={styles.sectionLabel}>suggested for you</Text>
           <View style={styles.chipWrap}>
             {suggestions.map((s) => (
               <TouchableOpacity key={s} style={styles.suggestChip} onPress={() => addSkill(s)}>
@@ -523,7 +524,7 @@ function StepSkills({ skillInput, setSkillInput, skills, addSkill, removeSkill }
 function StepPortfolio({ portfolioLinks, updateLink, addLinkField }) {
   return (
     <View>
-      <Text style={styles.title}>Portfolio & Links</Text>
+      <Text style={styles.title}>portfolio & links</Text>
       <Text style={styles.subtitle}>
         Optional. Share links to work samples, GitHub, Behance, or a personal site.
       </Text>
@@ -540,7 +541,7 @@ function StepPortfolio({ portfolioLinks, updateLink, addLinkField }) {
       ))}
       <TouchableOpacity style={styles.addLinkButton} onPress={addLinkField}>
         <Ionicons name="add-circle" size={16} color={BRAND_DARK} />
-        <Text style={styles.addLinkText}>Add another link</Text>
+        <Text style={styles.addLinkText}>add another link</Text>
       </TouchableOpacity>
     </View>
   );
@@ -549,7 +550,7 @@ function StepPortfolio({ portfolioLinks, updateLink, addLinkField }) {
 function StepPreferences({ interestedCategories, toggleCategory }) {
   return (
     <View>
-      <Text style={styles.title}>What Are You Interested In?</Text>
+      <Text style={styles.title}>what are you interested in?</Text>
       <Text style={styles.subtitle}>
         Pick a few categories so we can recommend relevant listings to you.
       </Text>
@@ -578,10 +579,10 @@ function StepAvailability({
 }) {
   return (
     <View>
-      <Text style={styles.title}>Availability & Earning</Text>
+      <Text style={styles.title}>availability & earning</Text>
       <Text style={styles.subtitle}>Let's set up how and when you want to collaborate.</Text>
 
-      <Text style={styles.label}>Services you provide</Text>
+      <Text style={styles.label}>services you provide</Text>
       <View style={styles.chipWrap}>
         {[...SERVICE_CHOICES, ...customServices].map((svc) => {
           const active = servicesProvided.includes(svc);
@@ -622,7 +623,7 @@ function StepAvailability({
 
       <Text style={styles.label}>Starting Rate (PKR / hr)</Text>
       <View style={styles.rateWrapper}>
-        <Text style={styles.ratePrefix}>PKR</Text>
+        <Text style={styles.ratePrefix}>pkr</Text>
         <TextInput
           style={styles.rateInput}
           placeholder="2500"
@@ -636,7 +637,7 @@ function StepAvailability({
         You can always negotiate this per project or agree to a skill exchange.
       </Text>
 
-      <Text style={styles.label}>Work Mode</Text>
+      <Text style={styles.label}>work mode</Text>
       <View style={styles.workModeTrack}>
         {['remote', 'on-site', 'both'].map((mode) => {
           const active = workMode === mode;
@@ -654,7 +655,7 @@ function StepAvailability({
         })}
       </View>
 
-      <Text style={styles.label}>Availability</Text>
+      <Text style={styles.label}>availability</Text>
       <View style={styles.chipWrap}>
         {AVAILABILITY_OPTIONS.map((opt) => {
           const active = availabilityPerWeek === opt;
@@ -683,8 +684,8 @@ function Field({ label, ...inputProps }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FDF9F0' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FDF9F0' },
+  container: { flex: 1, backgroundColor: T.paper },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: T.paper },
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -692,92 +693,92 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
   },
-  brand: { fontSize: 18, fontWeight: '800', color: INK },
-  saveExit: { fontSize: 13, color: MUTED, fontWeight: '500' },
+  brand: { fontSize: 18, fontFamily: F.heading, color: INK },
+  saveExit: { fontSize: 13, color: MUTED, fontFamily: F.bodyMedium },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#EFE3C0',
     padding: 20,
   },
   progressRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  stepLabel: { fontSize: 11, fontWeight: '700', color: MUTED, letterSpacing: 0.5 },
-  stepPct: { fontSize: 12, fontWeight: '700', color: BRAND_DARK },
-  progressTrack: { height: 6, backgroundColor: '#F0F0F0', borderRadius: 3, marginBottom: 20 },
+  stepLabel: { fontSize: 11, fontFamily: F.bodyBold, color: MUTED, letterSpacing: 0.5 },
+  stepPct: { fontSize: 12, fontFamily: F.bodyBold, color: BRAND_DARK },
+  progressTrack: { height: 6, backgroundColor: T.sand, borderRadius: 3, marginBottom: 20 },
   progressFill: { height: 6, backgroundColor: BRAND, borderRadius: 3 },
-  title: { fontSize: 20, fontWeight: '800', color: INK, marginBottom: 6 },
-  subtitle: { fontSize: 13, color: MUTED, lineHeight: 19, marginBottom: 18 },
+  title: { fontSize: 20, fontFamily: F.heading, color: INK, marginBottom: 6 },
+  subtitle: { fontSize: 13, fontFamily: F.body, color: MUTED, lineHeight: 19, marginBottom: 18 },
   photoUpload: {
     width: 96, height: 96, borderRadius: 48, alignSelf: 'center',
     borderWidth: 1.5, borderColor: BORDER, borderStyle: 'dashed',
     justifyContent: 'center', alignItems: 'center', marginBottom: 22, overflow: 'hidden',
   },
   photoImage: { width: 96, height: 96, borderRadius: 48 },
-  photoUploadText: { fontSize: 11, color: MUTED, marginTop: 4 },
-  label: { fontSize: 13, fontWeight: '600', color: INK, marginBottom: 6 },
+  photoUploadText: { fontSize: 11, fontFamily: F.body, color: MUTED, marginTop: 4 },
+  label: { fontSize: 13, fontFamily: F.bodySemi, color: INK, marginBottom: 6 },
   input: {
     borderWidth: 1, borderColor: BORDER, borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: INK,
+    paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, fontFamily: F.body, color: INK,
   },
   textArea: { minHeight: 90, textAlignVertical: 'top' },
-  charCount: { fontSize: 11, color: MUTED, textAlign: 'right', marginTop: 4 },
+  charCount: { fontSize: 11, fontFamily: F.body, color: MUTED, textAlign: 'right', marginTop: 4 },
   searchInputWrapper: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     borderWidth: 1, borderColor: BORDER, borderRadius: 10,
     paddingHorizontal: 12, paddingVertical: 10, marginBottom: 16,
   },
-  searchInput: { flex: 1, fontSize: 14, color: INK },
+  searchInput: { flex: 1, fontSize: 14, fontFamily: F.body, color: INK },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
   skillChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: BRAND, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 8,
   },
-  skillChipText: { color: '#4A3B10', fontWeight: '700', fontSize: 13 },
-  sectionLabel: { fontSize: 11, fontWeight: '700', color: MUTED, letterSpacing: 0.5, marginBottom: 8 },
+  skillChipText: { color: '#4A3B10', fontFamily: F.bodyBold, fontSize: 13 },
+  sectionLabel: { fontSize: 11, fontFamily: F.bodyBold, color: MUTED, letterSpacing: 0.5, marginBottom: 8 },
   suggestChip: {
     borderWidth: 1, borderColor: BORDER, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 8,
   },
-  suggestChipText: { color: INK, fontWeight: '600', fontSize: 13 },
+  suggestChipText: { color: INK, fontFamily: F.bodySemi, fontSize: 13 },
   addLinkButton: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
-  addLinkText: { color: BRAND_DARK, fontWeight: '600', fontSize: 13 },
+  addLinkText: { color: BRAND_DARK, fontFamily: F.bodySemi, fontSize: 13 },
   serviceChip: {
     borderWidth: 1, borderColor: BORDER, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 9,
   },
   serviceChipActive: { backgroundColor: BRAND, borderColor: BRAND },
-  serviceChipText: { color: INK, fontWeight: '600', fontSize: 13 },
+  serviceChipText: { color: INK, fontFamily: F.bodySemi, fontSize: 13 },
   serviceChipTextActive: { color: '#4A3B10' },
   addCustomChip: {
     borderWidth: 1, borderColor: BORDER, borderStyle: 'dashed', borderRadius: 20,
     paddingHorizontal: 16, paddingVertical: 9,
   },
-  addCustomChipText: { color: MUTED, fontWeight: '600', fontSize: 13 },
+  addCustomChipText: { color: MUTED, fontFamily: F.bodySemi, fontSize: 13 },
   rateWrapper: {
     flexDirection: 'row', alignItems: 'center',
     borderWidth: 1, borderColor: BORDER, borderRadius: 10, paddingHorizontal: 12, marginBottom: 4,
   },
-  ratePrefix: { fontSize: 14, color: MUTED, fontWeight: '600', marginRight: 8 },
-  rateInput: { flex: 1, fontSize: 14, color: INK, paddingVertical: 10 },
-  helperText: { fontSize: 11, color: MUTED, marginBottom: 16 },
+  ratePrefix: { fontSize: 14, color: MUTED, fontFamily: F.bodySemi, marginRight: 8 },
+  rateInput: { flex: 1, fontSize: 14, fontFamily: F.body, color: INK, paddingVertical: 10 },
+  helperText: { fontSize: 11, fontFamily: F.body, color: MUTED, marginBottom: 16 },
   workModeTrack: {
-    flexDirection: 'row', backgroundColor: '#F8F9FA', borderRadius: 12, padding: 4, marginBottom: 16,
+    flexDirection: 'row', backgroundColor: T.sand, borderRadius: 12, padding: 4, marginBottom: 16,
   },
   workModeOption: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 10 },
-  workModeOptionActive: { backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 1 },
-  workModeText: { fontSize: 13, color: MUTED, fontWeight: '600' },
+  workModeOptionActive: { backgroundColor: T.card, shadowColor: T.ink, shadowOpacity: 0.06, shadowRadius: 4, elevation: 1 },
+  workModeText: { fontSize: 13, color: MUTED, fontFamily: F.bodySemi },
   workModeTextActive: { color: INK },
   dropdownField: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     borderWidth: 1, borderColor: BORDER, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12,
     marginBottom: 20,
   },
-  dropdownText: { fontSize: 14, color: INK },
+  dropdownText: { fontSize: 14, fontFamily: F.body, color: INK },
   continueButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     backgroundColor: BRAND, borderRadius: 14, paddingVertical: 15, marginTop: 4,
   },
-  continueText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  continueText: { color: T.white, fontSize: 15, fontFamily: F.bodyBold },
   backLink: { alignItems: 'center', paddingVertical: 14 },
-  backLinkText: { color: MUTED, fontWeight: '600', fontSize: 14 },
+  backLinkText: { color: MUTED, fontFamily: F.bodySemi, fontSize: 14 },
 });

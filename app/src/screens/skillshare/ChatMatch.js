@@ -18,11 +18,12 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 // works on Android edge-to-edge too (the app is wrapped in KeyboardProvider)
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { getMatchConversation, getConversationMessages, markMessagesRead } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
 import { timeAgo } from '../../utils/time';
 
+import { color as T, font as F } from "../../theme/tokens";
 const { width, height } = Dimensions.get('window');
 
 // last loaded thread per match, so reopening a chat is instant
@@ -42,7 +43,7 @@ const MessageBubble = React.memo(({ message, isOwn }) => {
       {!isOwn && (
         <View style={styles.senderAvatar}>
           <LinearGradient
-            colors={['#f9c349', '#f5a623']}
+            colors={[T.yellow, T.yellow]}
             style={styles.avatarGradient}
           >
             <Text style={styles.avatarText}>
@@ -229,7 +230,7 @@ export default function ChatMatch({ route, navigation }) {
   const renderHeader = () => (
     <View style={styles.header}>
       <LinearGradient
-        colors={['#FFFFFF', '#FFFDF5']}
+        colors={[T.white, T.yellowSoft]}
         style={styles.headerGradient}
       >
         <View style={styles.headerContent}>
@@ -239,7 +240,7 @@ export default function ChatMatch({ route, navigation }) {
             activeOpacity={0.7}
             hitSlop={8}
           >
-            <Ionicons name="chevron-back" size={24} color="#1C1C1E" />
+            <Ionicons name="chevron-back" size={24} color={T.ink} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -252,7 +253,7 @@ export default function ChatMatch({ route, navigation }) {
                 <Image source={{ uri: displayImage }} style={styles.headerAvatarImage} />
               ) : (
                 <LinearGradient
-                  colors={['#f9c349', '#f5a623']}
+                  colors={[T.yellow, T.yellow]}
                   style={styles.headerAvatarGradient}
                 >
                   <Text style={styles.headerAvatarText}>{displayInitial}</Text>
@@ -271,7 +272,7 @@ export default function ChatMatch({ route, navigation }) {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.headerAction}>
-            <Ionicons name="ellipsis-vertical" size={20} color="#1C1C1E" />
+            <Ionicons name="ellipsis-vertical" size={20} color={T.ink} />
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -284,9 +285,9 @@ export default function ChatMatch({ route, navigation }) {
         colors={['#f9c34920', '#f5a62320']}
         style={styles.emptyIcon}
       >
-        <Ionicons name="chatbubbles-outline" size={48} color="#f9c349" />
+        <Ionicons name="chatbubbles-outline" size={48} color={T.yellow} />
       </LinearGradient>
-      <Text style={styles.emptyTitle}>No messages yet</Text>
+      <Text style={styles.emptyTitle}>no messages yet</Text>
       <Text style={styles.emptySubtext}>
         Say hello to start the conversation!
       </Text>
@@ -296,16 +297,16 @@ export default function ChatMatch({ route, navigation }) {
   if (loading && messages.length === 0) {
     return (
       <SafeAreaView style={styles.loadingContainer} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-        <ActivityIndicator size="large" color="#f9c349" />
-        <Text style={styles.loadingText}>Loading conversation...</Text>
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
+        <ActivityIndicator size="large" color={T.yellow} />
+        <Text style={styles.loadingText}>loading conversation...</Text>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       {renderHeader()}
 
@@ -335,7 +336,7 @@ export default function ChatMatch({ route, navigation }) {
 
         <View style={styles.inputContainer}>
           <LinearGradient
-            colors={['#FFFFFF', '#F8F9FA']}
+            colors={[T.white, T.sand]}
             style={[styles.inputGradient, { paddingBottom: Math.max(insets.bottom, 10) }]}
           >
             <View style={styles.inputWrapper}>
@@ -344,7 +345,7 @@ export default function ChatMatch({ route, navigation }) {
                   ref={inputRef}
                   style={styles.input}
                   placeholder="Type a message..."
-                  placeholderTextColor="#8E8E93"
+                  placeholderTextColor={T.textMuted}
                   value={newMessage}
                   onChangeText={setNewMessage}
                   multiline
@@ -364,16 +365,16 @@ export default function ChatMatch({ route, navigation }) {
                 activeOpacity={0.8}
               >
                 <LinearGradient
-                  colors={newMessage.trim() ? ['#f9c349', '#f5a623'] : ['#E5E5EA', '#E5E5EA']}
+                  colors={newMessage.trim() ? [T.yellow, T.yellow] : ['#E5E5EA', '#E5E5EA']}
                   style={styles.sendGradient}
                 >
                   {sending ? (
-                    <ActivityIndicator color="#FFFFFF" size="small" />
+                    <ActivityIndicator color={T.white} size="small" />
                   ) : (
                     <Ionicons
                       name="send"
                       size={20}
-                      color={newMessage.trim() ? '#FFFFFF' : '#C7C7CC'}
+                      color={newMessage.trim() ? T.white : '#C7C7CC'}
                     />
                   )}
                 </LinearGradient>
@@ -389,22 +390,22 @@ export default function ChatMatch({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: T.paper,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: T.paper,
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
-    color: '#8E8E93',
+    fontSize: 16, fontFamily: F.body,
+    color: T.textMuted,
   },
   header: {
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: T.line,
   },
   headerGradient: {
     paddingBottom: 8,
@@ -419,11 +420,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: T.line,
   },
   headerUserInfo: {
     flex: 1,
@@ -447,9 +448,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerAvatarText: {
-    color: '#FFFFFF',
+    color: T.white,
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
   },
   onlineIndicator: {
     position: 'absolute',
@@ -458,9 +459,9 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#34C759',
+    backgroundColor: T.success,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: T.white,
   },
   headerUserText: {
     marginLeft: 10,
@@ -468,12 +469,12 @@ const styles = StyleSheet.create({
   },
   headerUserName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1C1C1E',
+    fontFamily: F.bodySemi,
+    color: T.ink,
   },
   headerListingTitle: {
-    fontSize: 12,
-    color: '#8E8E93',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textMuted,
   },
   headerAction: {
     width: 40,
@@ -513,9 +514,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarText: {
-    color: '#FFFFFF',
+    color: T.white,
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
   },
   messageBubble: {
     maxWidth: width * 0.75,
@@ -523,33 +524,33 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   messageBubbleOwn: {
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     borderBottomRightRadius: 4,
   },
   messageBubbleOther: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     borderBottomLeftRadius: 4,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: T.line,
   },
   senderNameText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#f9c349',
+    fontFamily: F.bodySemi,
+    color: T.yellow,
     marginBottom: 2,
   },
   messageText: {
-    fontSize: 15,
+    fontSize: 15, fontFamily: F.body,
     lineHeight: 20,
   },
   messageTextOwn: {
-    color: '#FFFFFF',
+    color: T.white,
   },
   messageTextOther: {
-    color: '#1C1C1E',
+    color: T.ink,
   },
   messageTime: {
-    fontSize: 10,
+    fontSize: 10, fontFamily: F.body,
     marginTop: 4,
     alignSelf: 'flex-end',
   },
@@ -576,18 +577,18 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#1C1C1E',
+    fontFamily: F.headingBold,
+    color: T.ink,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#8E8E93',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 4,
     textAlign: 'center',
   },
   inputContainer: {
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: T.line,
   },
   inputGradient: {
     paddingHorizontal: 12,
@@ -600,7 +601,7 @@ const styles = StyleSheet.create({
   },
   inputField: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: T.paper,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E5E5EA',
@@ -609,8 +610,8 @@ const styles = StyleSheet.create({
     maxHeight: 100,
   },
   input: {
-    fontSize: 16,
-    color: '#1C1C1E',
+    fontSize: 16, fontFamily: F.body,
+    color: T.ink,
     padding: 0,
     minHeight: 36,
   },

@@ -9,10 +9,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { getOffersForListing, updateOfferStatus } from '../../api/api';
 import { timeAgo } from '../../utils/time';
 
-const BRAND = '#f9c349';
-const INK = '#1a1a1a';
-const MUTED = '#8E8E93';
-const BORDER = '#e5e5e5';
+import { color as T, font as F } from "../../theme/tokens";
+const BRAND = T.yellow;
+const INK = T.ink;
+const MUTED = T.textMuted;
+const BORDER = T.line;
 
 // last offers per listing, so coming back shows the list instantly
 const offersCache = new Map();
@@ -24,9 +25,9 @@ const OfferCard = memo(function OfferCard({ item, isBarter, busy, onAction, onOp
   const offeror = item.offerorId || {};
 
   const statusPill = isAccepted
-    ? { bg: '#E8F5E9', color: '#2e7d32', label: 'Accepted', icon: 'checkmark-circle' }
+    ? { bg: T.successBg, color: '#2e7d32', label: 'Accepted', icon: 'checkmark-circle' }
     : isRejected
-    ? { bg: '#FFEBEE', color: '#c62828', label: 'Rejected', icon: 'close-circle' }
+    ? { bg: T.dangerBg, color: '#c62828', label: 'Rejected', icon: 'close-circle' }
     : { bg: '#FFF3D6', color: '#8a6d1d', label: 'Pending', icon: 'time' };
 
   return (
@@ -54,19 +55,19 @@ const OfferCard = memo(function OfferCard({ item, isBarter, busy, onAction, onOp
       {isBarter && item.offeredSkillName && (
         <View style={styles.detailRow}>
           <Ionicons name="git-compare-outline" size={15} color={MUTED} />
-          <Text style={styles.detailLabel}>Skill: <Text style={styles.detailValue}>{item.offeredSkillName}</Text></Text>
+          <Text style={styles.detailLabel}>skill: <Text style={styles.detailValue}>{item.offeredSkillName}</Text></Text>
         </View>
       )}
       {item.offeredSkillLevel && (
         <View style={styles.detailRow}>
           <Ionicons name="star-outline" size={15} color={MUTED} />
-          <Text style={styles.detailLabel}>Experience: <Text style={styles.detailValue}>{item.offeredSkillLevel}</Text></Text>
+          <Text style={styles.detailLabel}>experience: <Text style={styles.detailValue}>{item.offeredSkillLevel}</Text></Text>
         </View>
       )}
       {item.proposedPrice != null && (
         <View style={styles.detailRow}>
           <Ionicons name="cash-outline" size={15} color={MUTED} />
-          <Text style={styles.detailLabel}>Price: <Text style={styles.detailValue}>${item.proposedPrice}</Text></Text>
+          <Text style={styles.detailLabel}>price: <Text style={styles.detailValue}>${item.proposedPrice}</Text></Text>
         </View>
       )}
       {item.applicationNotes && (
@@ -90,14 +91,14 @@ const OfferCard = memo(function OfferCard({ item, isBarter, busy, onAction, onOp
               disabled={busy}
               onPress={() => onAction(item._id, 'reject')}
             >
-              <Text style={styles.rejectBtnText}>Reject</Text>
+              <Text style={styles.rejectBtnText}>reject</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.acceptBtn, busy && styles.btnDisabled]}
               disabled={busy}
               onPress={() => onAction(item._id, 'accept')}
             >
-              {busy ? <ActivityIndicator size="small" color={INK} /> : <Text style={styles.acceptBtnText}>Accept</Text>}
+              {busy ? <ActivityIndicator size="small" color={INK} /> : <Text style={styles.acceptBtnText}>accept</Text>}
             </TouchableOpacity>
           </>
         ) : (
@@ -108,7 +109,7 @@ const OfferCard = memo(function OfferCard({ item, isBarter, busy, onAction, onOp
             {isAccepted && (
               <TouchableOpacity style={styles.chatBtn} onPress={() => onOpenChat(item)}>
                 <Ionicons name="chatbubble-ellipses-outline" size={15} color={INK} />
-                <Text style={styles.chatBtnText}>Open Chat</Text>
+                <Text style={styles.chatBtnText}>open chat</Text>
               </TouchableOpacity>
             )}
           </>
@@ -231,7 +232,7 @@ export default function ManageOffersScreen({ route, navigation }) {
   if (loading && !refreshing && offers.length === 0) {
     return (
       <SafeAreaView style={styles.centerFillScreen} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <ActivityIndicator size="large" color={BRAND} />
       </SafeAreaView>
     );
@@ -239,13 +240,13 @@ export default function ManageOffersScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <View style={styles.topHeader}>
         <TouchableOpacity onPress={goBack} hitSlop={10}>
           <Ionicons name="arrow-back" size={22} color={INK} />
         </TouchableOpacity>
-        <Text style={styles.topHeaderTitle}>Manage Offers</Text>
+        <Text style={styles.topHeaderTitle}>manage offers</Text>
         <TouchableOpacity onPress={() => navigation.navigate('NotificationSkillshare')}>
           <Ionicons name="notifications-outline" size={22} color={INK} />
         </TouchableOpacity>
@@ -265,20 +266,20 @@ export default function ManageOffersScreen({ route, navigation }) {
           <View style={styles.headerCard}>
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
-                <Text style={styles.statLabel}>TOTAL</Text>
+                <Text style={styles.statLabel}>total</Text>
                 <Text style={styles.statValue}>{offers.length}</Text>
               </View>
               <View style={styles.statItem}>
                 <View style={styles.statLabelRow}>
                   <Ionicons name="remove-circle-outline" size={12} color={MUTED} />
-                  <Text style={styles.statLabel}>PENDING</Text>
+                  <Text style={styles.statLabel}>pending</Text>
                 </View>
                 <Text style={[styles.statValue, { color: BRAND }]}>{pendingCount}</Text>
               </View>
               <View style={styles.statItem}>
                 <View style={styles.statLabelRow}>
                   <Ionicons name="checkmark-circle-outline" size={12} color={MUTED} />
-                  <Text style={styles.statLabel}>ACCEPTED</Text>
+                  <Text style={styles.statLabel}>accepted</Text>
                 </View>
                 <Text style={[styles.statValue, { color: BRAND }]}>{acceptedCount}</Text>
               </View>
@@ -297,8 +298,8 @@ export default function ManageOffersScreen({ route, navigation }) {
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Ionicons name="people-outline" size={48} color="#ddd" />
-            <Text style={styles.emptyText}>No Offers Yet</Text>
+            <Ionicons name="people-outline" size={48} color={T.textFaint} />
+            <Text style={styles.emptyText}>no offers yet</Text>
             <Text style={styles.emptySubtext}>Check back later for offers on your listing</Text>
           </View>
         }
@@ -308,62 +309,62 @@ export default function ManageOffersScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
-  centerFillScreen: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8f9fa' },
+  container: { flex: 1, backgroundColor: T.paper },
+  centerFillScreen: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: T.paper },
   topHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee',
+    backgroundColor: T.card, borderBottomWidth: 1, borderBottomColor: T.line,
   },
-  topHeaderTitle: { fontSize: 18, fontWeight: '800', color: INK },
+  topHeaderTitle: { fontSize: 18, fontFamily: F.heading, color: INK },
 
   listContent: { padding: 20, paddingTop: 16 },
 
   headerCard: {
-    backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: BORDER,
+    backgroundColor: T.card, borderRadius: 16, borderWidth: 1, borderColor: BORDER,
     padding: 16, marginBottom: 16,
   },
   statsRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 14 },
   statItem: { alignItems: 'center' },
   statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  statLabel: { fontSize: 11, color: MUTED, fontWeight: '700', letterSpacing: 0.5 },
-  statValue: { fontSize: 20, fontWeight: '800', color: INK, marginTop: 4 },
+  statLabel: { fontSize: 11, color: MUTED, fontFamily: F.bodyBold, letterSpacing: 0.5 },
+  statValue: { fontSize: 20, fontFamily: F.heading, color: INK, marginTop: 4 },
   filterBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
     borderWidth: 1, borderColor: BORDER, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8,
   },
-  filterBtnText: { fontSize: 13, fontWeight: '700', color: INK },
+  filterBtnText: { fontSize: 13, fontFamily: F.bodyBold, color: INK },
 
-  card: { backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: BORDER, padding: 16, marginBottom: 14 },
+  card: { backgroundColor: T.card, borderRadius: 16, borderWidth: 1, borderColor: BORDER, padding: 16, marginBottom: 14 },
   cardTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   offerorRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   avatar: { width: 40, height: 40, borderRadius: 20 },
-  avatarFallback: { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' },
-  avatarInitial: { fontSize: 15, fontWeight: '800', color: '#666' },
-  offerorName: { fontSize: 15, fontWeight: '700', color: INK },
-  offerorTime: { fontSize: 11, color: MUTED, marginTop: 1 },
+  avatarFallback: { backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center' },
+  avatarInitial: { fontSize: 15, fontFamily: F.bodyBold, color: T.textMuted },
+  offerorName: { fontSize: 15, fontFamily: F.bodyBold, color: INK },
+  offerorTime: { fontSize: 11, fontFamily: F.body, color: MUTED, marginTop: 1 },
   statusPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 },
-  statusPillText: { fontSize: 12, fontWeight: '700' },
+  statusPillText: { fontSize: 12, fontFamily: F.bodyBold },
 
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  detailLabel: { fontSize: 13, color: MUTED, fontWeight: '500', flex: 1 },
-  detailValue: { color: INK, fontWeight: '700' },
+  detailLabel: { fontSize: 13, color: MUTED, fontFamily: F.bodyMedium, flex: 1 },
+  detailValue: { color: INK, fontFamily: F.bodyBold },
 
-  messageBox: { backgroundColor: '#F8F8F8', borderRadius: 10, padding: 12, marginTop: 6, marginBottom: 4 },
-  messageText: { fontSize: 13, color: '#3a3a3c', fontStyle: 'italic', lineHeight: 18 },
+  messageBox: { backgroundColor: T.sand, borderRadius: 10, padding: 12, marginTop: 6, marginBottom: 4 },
+  messageText: { fontSize: 13, fontFamily: F.body, color: '#3a3a3c', fontStyle: 'italic', lineHeight: 18 },
 
   actionRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
   acceptBtn: { flex: 1, backgroundColor: BRAND, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
-  acceptBtnText: { fontSize: 14, fontWeight: '800', color: INK },
+  acceptBtnText: { fontSize: 14, fontFamily: F.bodyBold, color: INK },
   rejectBtn: { flex: 1, borderWidth: 1, borderColor: BORDER, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
-  rejectBtnText: { fontSize: 14, fontWeight: '700', color: '#c62828' },
+  rejectBtnText: { fontSize: 14, fontFamily: F.bodyBold, color: '#c62828' },
   outlineBtn: { flex: 1, borderWidth: 1, borderColor: BORDER, borderRadius: 12, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
-  outlineBtnText: { fontSize: 13, fontWeight: '700', color: INK, textAlign: 'center' },
+  outlineBtnText: { fontSize: 13, fontFamily: F.bodyBold, color: INK, textAlign: 'center' },
   chatBtn: { flex: 1.5, flexDirection: 'row', gap: 6, backgroundColor: BRAND, borderRadius: 12, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
-  chatBtnText: { fontSize: 14, fontWeight: '800', color: INK },
+  chatBtnText: { fontSize: 14, fontFamily: F.bodyBold, color: INK },
   btnDisabled: { opacity: 0.5 },
 
   emptyState: { alignItems: 'center', paddingVertical: 60 },
-  emptyText: { fontSize: 18, fontWeight: '800', color: INK, marginTop: 14 },
-  emptySubtext: { fontSize: 13, color: MUTED, marginTop: 4 },
+  emptyText: { fontSize: 18, fontFamily: F.heading, color: INK, marginTop: 14 },
+  emptySubtext: { fontSize: 13, fontFamily: F.body, color: MUTED, marginTop: 4 },
 });

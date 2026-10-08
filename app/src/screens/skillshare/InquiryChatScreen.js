@@ -23,18 +23,19 @@ import { io } from 'socket.io-client';
 import { AuthContext } from '../../context/AuthContext';
 import { getConversationMessages, markMessagesRead } from '../../api/api';
 
+import { color as T, font as F } from "../../theme/tokens";
 const SOCKET_URL = __DEV__ ? 'https://the-deft-crew-production.up.railway.app' : 'https://the-deft-crew-production.up.railway.app';
 
 // ==================== DESIGN TOKENS (same as MatchChatScreen) ====================
 const C = {
-  white: '#ffffff',
-  dark: '#1a1a1a',
-  gold: '#f9c349',
-  goldSoft: '#fff8e6',
-  soft: '#F7F9F8',
-  border: '#E8E8E8',
-  divider: '#f2f2f2',
-  muted: '#8a8a8a',
+  white: T.white,
+  dark: T.ink,
+  gold: T.yellow,
+  goldSoft: T.yellowSoft,
+  soft: T.sand,
+  border: T.line,
+  divider: T.line,
+  muted: T.textFaint,
 };
 
 // last loaded thread per conversation, so reopening a chat is instant
@@ -524,7 +525,7 @@ export default function InquiryChatScreen({ route, navigation }) {
             disabled={!canSend}
             activeOpacity={0.8}
           >
-            <Ionicons name="arrow-up" size={20} color={canSend ? C.gold : '#9a9a9a'} />
+            <Ionicons name="arrow-up" size={20} color={canSend ? C.gold : T.textFaint} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -545,7 +546,7 @@ const styles = StyleSheet.create({
     padding: 24,
     backgroundColor: C.white,
   },
-  loadingText: { marginTop: 12, fontSize: 13.5, color: C.muted, fontWeight: '600' },
+  loadingText: { marginTop: 12, fontSize: 13.5, color: C.muted, fontFamily: F.bodySemi },
 
   // header
   header: {
@@ -570,7 +571,7 @@ const styles = StyleSheet.create({
   headerInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', marginHorizontal: 12 },
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.soft },
   avatarFallback: { backgroundColor: C.gold, justifyContent: 'center', alignItems: 'center' },
-  avatarText: { color: C.dark, fontSize: 16, fontWeight: '900' },
+  avatarText: { color: C.dark, fontSize: 16, fontFamily: F.bodyBold },
   onlineDot: {
     position: 'absolute',
     bottom: 0,
@@ -582,10 +583,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: C.white,
   },
-  onlineDotOn: { backgroundColor: '#16a34a' },
+  onlineDotOn: { backgroundColor: T.success },
   headerText: { flex: 1, marginLeft: 10 },
-  headerName: { fontSize: 16, fontWeight: '900', color: C.dark },
-  headerSub: { fontSize: 11.5, color: C.muted, marginTop: 1, fontWeight: '600' },
+  headerName: { fontSize: 16, fontFamily: F.bodyBold, color: C.dark },
+  headerSub: { fontSize: 11.5, color: C.muted, marginTop: 1, fontFamily: F.bodySemi },
 
   // list
   listContent: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 6 },
@@ -599,7 +600,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
-  dividerText: { fontSize: 11.5, fontWeight: '800', color: C.muted },
+  dividerText: { fontSize: 11.5, fontFamily: F.bodyBold, color: C.muted },
 
   systemWrap: { alignItems: 'center', marginVertical: 8 },
   systemPill: {
@@ -608,7 +609,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
-  systemText: { fontSize: 11.5, color: C.muted, fontWeight: '700', textAlign: 'center' },
+  systemText: { fontSize: 11.5, color: C.muted, fontFamily: F.bodyBold, textAlign: 'center' },
 
   row: { maxWidth: '80%' },
   rowOwn: { alignSelf: 'flex-end' },
@@ -620,7 +621,7 @@ const styles = StyleSheet.create({
   bubbleOwn: { backgroundColor: C.dark, borderBottomRightRadius: 6 },
   bubbleOther: { backgroundColor: C.soft, borderBottomLeftRadius: 6 },
 
-  msgText: { fontSize: 14.5, lineHeight: 20 },
+  msgText: { fontSize: 14.5, fontFamily: F.body, lineHeight: 20 },
   textOwn: { color: C.white },
   textOther: { color: C.dark },
 
@@ -630,8 +631,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     marginTop: 2,
   },
-  timeOwn: { fontSize: 10.5, color: 'rgba(255,255,255,0.6)' },
-  timeOther: { fontSize: 10.5, color: C.muted },
+  timeOwn: { fontSize: 10.5, fontFamily: F.body, color: 'rgba(255,255,255,0.6)' },
+  timeOther: { fontSize: 10.5, fontFamily: F.body, color: C.muted },
   tick: { marginLeft: 3 },
 
   // empty
@@ -644,8 +645,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  emptyTitle: { marginTop: 16, fontSize: 18, fontWeight: '900', color: C.dark },
-  emptySub: { marginTop: 6, fontSize: 13.5, color: C.muted, textAlign: 'center' },
+  emptyTitle: { marginTop: 16, fontSize: 18, fontFamily: F.heading, color: C.dark },
+  emptySub: { marginTop: 6, fontSize: 13.5, fontFamily: F.body, color: C.muted, textAlign: 'center' },
 
   // typing
   typingWrap: { paddingHorizontal: 14, paddingBottom: 6 },
@@ -694,7 +695,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'ios' ? 13 : 10,
     paddingBottom: Platform.OS === 'ios' ? 13 : 10,
-    fontSize: 14.5,
+    fontSize: 14.5, fontFamily: F.body,
     color: C.dark,
     textAlignVertical: 'center',
   },
@@ -706,5 +707,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  sendBtnOff: { backgroundColor: '#e9e9e9' },
+  sendBtnOff: { backgroundColor: T.sand },
 });

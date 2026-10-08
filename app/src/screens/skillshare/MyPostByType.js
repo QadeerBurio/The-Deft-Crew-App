@@ -7,9 +7,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { getMyListings } from '../../api/api';
 import ListingCard from '../../components/ListingCard';
 
-const BRAND = '#f9c349';
-const INK = '#1a1a1a';
-const MUTED = '#8E8E93';
+import { color as T, font as F } from "../../theme/tokens";
+const BRAND = T.yellow;
+const INK = T.ink;
+const MUTED = T.textMuted;
 
 const STATUS_TABS = {
   barter: ['All Active', 'Pending Responses', 'Paused'],
@@ -105,7 +106,7 @@ export default function MyPostsByType({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
       <View style={styles.topHeader}>
         <TouchableOpacity onPress={goBack} hitSlop={10}>
           <Ionicons name="arrow-back" size={22} color={BRAND} />
@@ -142,7 +143,7 @@ export default function MyPostsByType({ route, navigation }) {
           initialNumToRender={10}
           windowSize={7}
           removeClippedSubviews={Platform.OS === 'android'}
-          ListEmptyComponent={<Text style={styles.emptyText}>Nothing here yet.</Text>}
+          ListEmptyComponent={<Text style={styles.emptyText}>nothing here yet.</Text>}
         />
       )}
     </SafeAreaView>
@@ -150,33 +151,33 @@ export default function MyPostsByType({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
+  container: { flex: 1, backgroundColor: T.paper },
   topHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee',
+    backgroundColor: T.card, borderBottomWidth: 1, borderBottomColor: T.line,
   },
-  topHeaderTitle: { fontSize: 18, fontWeight: '800', color: BRAND },
-  createLink: { fontSize: 14, fontWeight: '700', color: INK },
+  topHeaderTitle: { fontSize: 18, fontFamily: F.heading, color: BRAND },
+  createLink: { fontSize: 14, fontFamily: F.bodyBold, color: INK },
   tabsRow: { paddingHorizontal: 16, paddingTop: 12, maxHeight: 44 },
-  tab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 18, backgroundColor: '#fff', marginRight: 8, borderWidth: 1, borderColor: '#e5e5e5' },
+  tab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 18, backgroundColor: T.card, marginRight: 8, borderWidth: 1, borderColor: T.line },
   tabActive: { backgroundColor: INK, borderColor: INK },
-  tabText: { fontSize: 13, fontWeight: '600', color: '#555' },
-  tabTextActive: { color: '#fff' },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 14 },
+  tabText: { fontSize: 13, fontFamily: F.bodySemi, color: T.textMuted },
+  tabTextActive: { color: T.white },
+  card: { backgroundColor: T.card, borderRadius: 16, padding: 16, marginBottom: 14 },
   cardTopRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
-  typePill: { backgroundColor: '#f0f0f0', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
-  typePillText: { fontSize: 11, fontWeight: '700', color: '#555' },
+  typePill: { backgroundColor: T.sand, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
+  typePillText: { fontSize: 11, fontFamily: F.bodyBold, color: T.textMuted },
   statusPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
   statusActive: { backgroundColor: '#FFF3D6' },
   statusClosed: { backgroundColor: '#fde2e1' },
-  statusPillText: { fontSize: 11, fontWeight: '700', color: '#8a6d1d' },
-  cardTitle: { fontSize: 17, fontWeight: '800', color: INK, marginBottom: 4 },
-  cardDesc: { fontSize: 13, color: '#666', lineHeight: 18 },
-  divider: { height: 1, backgroundColor: '#eee', marginVertical: 10 },
+  statusPillText: { fontSize: 11, fontFamily: F.bodyBold, color: '#8a6d1d' },
+  cardTitle: { fontSize: 17, fontFamily: F.bodyBold, color: INK, marginBottom: 4 },
+  cardDesc: { fontSize: 13, fontFamily: F.body, color: T.textMuted, lineHeight: 18 },
+  divider: { height: 1, backgroundColor: T.sand, marginVertical: 10 },
   bottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  budgetValue: { fontSize: 15, fontWeight: '800', color: INK },
-  budgetLabel: { fontSize: 11, color: MUTED },
-  countText: { fontSize: 13, fontWeight: '700', color: '#8a6d1d' },
-  emptyText: { textAlign: 'center', color: '#999', marginTop: 40 },
+  budgetValue: { fontSize: 15, fontFamily: F.bodyBold, color: INK },
+  budgetLabel: { fontSize: 11, fontFamily: F.body, color: MUTED },
+  countText: { fontSize: 13, fontFamily: F.bodyBold, color: '#8a6d1d' },
+  emptyText: { textAlign: 'center', color: T.textFaint, marginTop: 40 },
 });

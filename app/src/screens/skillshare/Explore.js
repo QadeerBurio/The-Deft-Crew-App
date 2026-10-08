@@ -10,9 +10,10 @@ import { getListings } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
 import ListingCard from '../../components/ListingCard';
 
-const BRAND = '#f9c349';
-const INK = '#1a1a1a';
-const MUTED = '#8E8E93';
+import { color as T, font as F } from "../../theme/tokens";
+const BRAND = T.yellow;
+const INK = T.ink;
+const MUTED = T.textMuted;
 
 const TYPE_FILTERS = [
   { key: 'All', label: 'All' },
@@ -147,7 +148,7 @@ export default function Explore({ navigation }) {
   if (initialLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <View style={styles.centerFill}><ActivityIndicator size="large" color={BRAND} /></View>
       </SafeAreaView>
     );
@@ -155,14 +156,14 @@ export default function Explore({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <View style={styles.topHeader}>
         <TouchableOpacity onPress={goBack} hitSlop={10}>
           <Ionicons name="arrow-back" size={22} color={INK} />
         </TouchableOpacity>
         <Text style={styles.topHeaderTitle}>
-          Skill<Text style={{ color: BRAND }}>Share</Text>
+          skill<Text style={{ color: BRAND }}>share</Text>
         </Text>
         <TouchableOpacity onPress={() => navigation.navigate('NotificationSkillshare')} hitSlop={10}>
           <Ionicons name="notifications-outline" size={22} color={INK} />
@@ -174,7 +175,7 @@ export default function Explore({ navigation }) {
           const active = item.key === 'Explore';
           return (
             <TouchableOpacity key={item.key} style={styles.navItem} onPress={() => goTo(item.route)}>
-              <Ionicons name={item.icon} size={20} color={active ? BRAND : '#666'} />
+              <Ionicons name={item.icon} size={20} color={active ? BRAND : T.textMuted} />
               <Text style={[styles.navItemText, active && styles.navItemTextActive]}>{item.label}</Text>
               {active && <View style={styles.navUnderline} />}
             </TouchableOpacity>
@@ -196,11 +197,11 @@ export default function Explore({ navigation }) {
         ListHeaderComponent={
           <View>
             <View style={styles.searchBar}>
-              <Ionicons name="search" size={18} color="#999" />
+              <Ionicons name="search" size={18} color={T.textFaint} />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Search for skills, services, or users..."
-                placeholderTextColor="#999"
+                placeholderTextColor={T.textFaint}
                 value={search}
                 onChangeText={setSearch}
                 autoCorrect={false}
@@ -208,7 +209,7 @@ export default function Explore({ navigation }) {
               {searching && <ActivityIndicator size="small" color={BRAND} />}
               {!searching && search.length > 0 && (
                 <TouchableOpacity onPress={() => setSearch('')} hitSlop={8}>
-                  <Ionicons name="close-circle" size={18} color="#ccc" />
+                  <Ionicons name="close-circle" size={18} color={T.textFaint} />
                 </TouchableOpacity>
               )}
             </View>
@@ -230,7 +231,7 @@ export default function Explore({ navigation }) {
 
             {recommended.length > 0 && (
               <>
-                <Text style={styles.sectionTitle}>Recommended For You</Text>
+                <Text style={styles.sectionTitle}>recommended for you</Text>
                 <FlatList
                   data={recommended}
                   keyExtractor={(item, index) => `rec-${item._id ?? index}`}
@@ -246,7 +247,7 @@ export default function Explore({ navigation }) {
               </>
             )}
 
-            <Text style={styles.sectionTitle}>Popular Skills</Text>
+            <Text style={styles.sectionTitle}>popular skills</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow}>
               {POPULAR_SKILLS.map((skill) => {
                 const active = search.trim().toLowerCase() === skill.toLowerCase();
@@ -269,7 +270,7 @@ export default function Explore({ navigation }) {
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Ionicons name="search-outline" size={48} color="#ddd" />
+            <Ionicons name="search-outline" size={48} color={T.textFaint} />
             <Text style={styles.emptyText}>
               {searchLower
                 ? `No listings match "${search.trim()}" yet.`
@@ -288,37 +289,37 @@ export default function Explore({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
+  container: { flex: 1, backgroundColor: T.paper },
   centerFill: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   topHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee',
+    backgroundColor: T.card, borderBottomWidth: 1, borderBottomColor: T.line,
   },
-  topHeaderTitle: { fontSize: 20, fontWeight: '800', color: INK },
-  navRow: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee', paddingBottom: 4 },
+  topHeaderTitle: { fontSize: 20, fontFamily: F.heading, color: INK },
+  navRow: { flexDirection: 'row', backgroundColor: T.card, borderBottomWidth: 1, borderBottomColor: T.line, paddingBottom: 4 },
   navItem: { flex: 1, alignItems: 'center', paddingVertical: 8 },
-  navItemText: { fontSize: 11, color: '#666', marginTop: 3, fontWeight: '600' },
-  navItemTextActive: { color: BRAND, fontWeight: '800' },
+  navItemText: { fontSize: 11, color: T.textMuted, marginTop: 3, fontFamily: F.bodySemi },
+  navItemTextActive: { color: BRAND, fontFamily: F.bodyBold },
   navUnderline: { marginTop: 4, height: 2, width: 24, backgroundColor: BRAND, borderRadius: 1 },
   listContent: { padding: 20, paddingTop: 16 },
   searchBar: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: T.card,
     borderRadius: 14, paddingHorizontal: 14, height: 46, marginBottom: 14, gap: 8,
-    borderWidth: 1, borderColor: '#eee',
+    borderWidth: 1, borderColor: T.line,
   },
-  searchInput: { flex: 1, fontSize: 14, color: INK },
+  searchInput: { flex: 1, fontSize: 14, fontFamily: F.body, color: INK },
   chipsRow: { marginBottom: 18 },
-  chip: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20, backgroundColor: '#fff', marginRight: 8, borderWidth: 1, borderColor: '#e5e5e5' },
+  chip: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20, backgroundColor: T.card, marginRight: 8, borderWidth: 1, borderColor: T.line },
   chipActive: { backgroundColor: INK, borderColor: INK },
-  chipText: { fontSize: 13, fontWeight: '600', color: '#555' },
-  chipTextActive: { color: '#fff', fontWeight: '700' },
-  skillChip: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: 12, backgroundColor: '#fff', marginRight: 10, borderWidth: 1, borderColor: '#e5e5e5' },
+  chipText: { fontSize: 13, fontFamily: F.bodySemi, color: T.textMuted },
+  chipTextActive: { color: T.white, fontFamily: F.bodyBold },
+  skillChip: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: 12, backgroundColor: T.card, marginRight: 10, borderWidth: 1, borderColor: T.line },
   skillChipActive: { backgroundColor: BRAND, borderColor: BRAND },
-  skillChipText: { fontSize: 13, fontWeight: '600', color: INK },
-  skillChipTextActive: { color: INK, fontWeight: '800' },
-  sectionTitle: { fontSize: 19, fontWeight: '800', color: INK, marginBottom: 12, marginTop: 4 },
+  skillChipText: { fontSize: 13, fontFamily: F.bodySemi, color: INK },
+  skillChipTextActive: { color: INK, fontFamily: F.bodyBold },
+  sectionTitle: { fontSize: 19, fontFamily: F.heading, color: INK, marginBottom: 12, marginTop: 4 },
   emptyState: { alignItems: 'center', paddingVertical: 50 },
-  emptyText: { fontSize: 14, color: '#666', marginTop: 10, textAlign: 'center', paddingHorizontal: 30 },
-  emptySubtext: { fontSize: 13, color: '#aaa', marginTop: 6, textAlign: 'center', paddingHorizontal: 30 },
+  emptyText: { fontSize: 14, fontFamily: F.body, color: T.textMuted, marginTop: 10, textAlign: 'center', paddingHorizontal: 30 },
+  emptySubtext: { fontSize: 13, fontFamily: F.body, color: T.textFaint, marginTop: 6, textAlign: 'center', paddingHorizontal: 30 },
 });
