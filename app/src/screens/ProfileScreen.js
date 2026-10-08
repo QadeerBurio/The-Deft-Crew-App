@@ -33,7 +33,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import * as Haptics from "expo-haptics";
 
 // 🆕 engagement
@@ -43,6 +43,7 @@ import BadgeShelf from '../engagement/components/BadgeShelf';
 import StreakChip from '../engagement/components/StreakChip';
 import StreakSheet from '../engagement/components/StreakSheet';
 
+import { color as T, font as F } from "../theme/tokens";
 const { width, height } = Dimensions.get("window");
 
 // ─── Modern Menu Item ────────────────────────────────────────────────────────
@@ -112,7 +113,7 @@ const MenuItem = ({ item, index, isLast }) => {
             <Icon name={item.icon} size={20} color={item.color} />
           </View>
           <View style={styles.menuTextContainer}>
-            <Text style={[styles.menuItemTitle, item.danger && { color: "#FF4757" }]}>
+            <Text style={[styles.menuItemTitle, item.danger && { color: T.danger }]}>
               {item.name}
             </Text>
             {item.subtitle && (
@@ -124,7 +125,7 @@ const MenuItem = ({ item, index, isLast }) => {
           {item.rightText !== undefined && item.rightText !== null ? (
             <View style={styles.menuBadge}>
               <LinearGradient
-                colors={["#f9c349", "#f9c349"]}
+                colors={[T.yellow, T.yellow]}
                 style={styles.menuBadgeGradient}
               >
                 <Text style={styles.menuBadgeText}>
@@ -135,7 +136,7 @@ const MenuItem = ({ item, index, isLast }) => {
               </LinearGradient>
             </View>
           ) : (
-            <Icon name="chevron-forward" size={16} color="#C5C7CC" />
+            <Icon name="chevron-forward" size={16} color={T.textFaint} />
           )}
         </View>
       </TouchableOpacity>
@@ -475,10 +476,10 @@ export default function ProfileScreen() {
     {
       items: [
         {
-          name: "Profile Details",
-          subtitle: "View and edit your information",
+          name: "profile details",
+          subtitle: "view and edit your info",
           icon: "person-outline",
-          color: "#f9c349",
+          color: T.ink,
           onPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             navigation.navigate("ProfileDetails");
@@ -495,10 +496,10 @@ export default function ProfileScreen() {
         //   },
         // },
         {
-          name: "Loyalty Points",
-          subtitle: "Your earned rewards balance",
+          name: "crew points",
+          subtitle: "your rewards balance",
           icon: "gift-outline",
-          color: "#FF6B6B",
+          color: T.ink,
           rightText: (me?.points?.balance || 0).toLocaleString(),
           onPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -506,10 +507,10 @@ export default function ProfileScreen() {
           },
         },
         {
-          name: "Badges",
-          subtitle: "Your achievement collection",
+          name: "badges",
+          subtitle: "your collection",
           icon: "ribbon-outline",
-          color: "#A855F7",
+          color: T.ink,
           rightText: `${me?.badges?.earned || 0}/${me?.badges?.total || 17}`,
           onPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -517,10 +518,10 @@ export default function ProfileScreen() {
           },
         },
         {
-          name: "My Discounts",
-          subtitle: "Track your savings and redemptions",
+          name: "my discounts",
+          subtitle: "codes, qr and redemptions",
           icon: "pricetag-outline",
-          color: "#4ECDC4",
+          color: T.ink,
           rightText: claimedOffers.length,
           onPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -532,20 +533,20 @@ export default function ProfileScreen() {
           },
         },
         {
-          name: "Settings",
-          subtitle: "App preferences and options",
+          name: "settings",
+          subtitle: "notifications, privacy, account",
           icon: "settings-outline",
-          color: "#3B82F6",
+          color: T.ink,
           onPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             navigation.navigate("SettingsScreen");
           },
         },
         {
-          name: "Sign Out",
-          subtitle: "Log out of your account",
+          name: "sign out",
+          subtitle: "log out of your account",
           icon: "log-out-outline",
-          color: "#FF4757",
+          color: T.danger,
           onPress: openSignOutModal,
           danger: true,
         },
@@ -556,7 +557,7 @@ export default function ProfileScreen() {
   // ─── Render ────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -578,7 +579,7 @@ export default function ProfileScreen() {
             >
               <TouchableOpacity onPress={pickImage} activeOpacity={0.8}>
                 <LinearGradient
-                  colors={["#f9c349", "#e6b800"]}
+                  colors={[T.yellow, "#e6b800"]}
                   style={styles.avatarRing}
                 >
                   {selectedImage ? (
@@ -598,10 +599,10 @@ export default function ProfileScreen() {
                 </LinearGradient>
                 <View style={styles.cameraBadge}>
                   <LinearGradient
-                    colors={["#f9c349", "#e6b800"]}
+                    colors={[T.yellow, "#e6b800"]}
                     style={styles.cameraBadgeGradient}
                   >
-                    <Icon name="camera" size={12} color="#1A1A1A" />
+                    <Icon name="camera" size={12} color={T.ink} />
                   </LinearGradient>
                 </View>
               </TouchableOpacity>
@@ -610,7 +611,7 @@ export default function ProfileScreen() {
             <View style={styles.userInfo}>
               <Text style={styles.userName}>{user?.name || "Student"}</Text>
               <View style={styles.emailRow}>
-                <Icon name="mail-outline" size={13} color="#94A3B8" />
+                <Icon name="mail-outline" size={13} color={T.textFaint} />
                 <Text style={styles.userEmail}>{user?.email || ""}</Text>
               </View>
 
@@ -639,11 +640,11 @@ export default function ProfileScreen() {
                     style={styles.saveBtnGradient}
                   >
                     {isSaving ? (
-                      <ActivityIndicator size="small" color="#FFF" />
+                      <ActivityIndicator size="small" color={T.white} />
                     ) : (
                       <>
-                        <Icon name="checkmark-outline" size={14} color="#FFF" />
-                        <Text style={styles.saveBtnText}>Save</Text>
+                        <Icon name="checkmark-outline" size={14} color={T.white} />
+                        <Text style={styles.saveBtnText}>save</Text>
                       </>
                     )}
                   </LinearGradient>
@@ -667,33 +668,24 @@ export default function ProfileScreen() {
           ]}
         >
           <View style={styles.statItem}>
-            <View style={[styles.statIconBox, { backgroundColor: "#FFD93D20" }]}>
-              <Icon name="gift-outline" size={16} color="#f9c349" />
-            </View>
-            <Text style={styles.statLabel}>Used</Text>
-            <Text style={[styles.statValue, { color: "#f9c349" }]}>
+            <Text style={styles.statValue}>
               {redemptionCount || 0}
             </Text>
+            <Text style={styles.statLabel}>used</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <View style={[styles.statIconBox, { backgroundColor: "#A855F720" }]}>
-              <Icon name="card-outline" size={16} color="#A855F7" />
-            </View>
-            <Text style={styles.statLabel}>Discounts</Text>
-            <Text style={[styles.statValue, { color: "#A855F7" }]}>
+            <Text style={styles.statValue}>
               {claimedOffers.length || 0}
             </Text>
+            <Text style={styles.statLabel}>discounts</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <View style={[styles.statIconBox, { backgroundColor: "#10B98120" }]}>
-              <Icon name="checkmark-done-outline" size={16} color="#10B981" />
-            </View>
-            <Text style={styles.statLabel}>Sorted</Text>
-            <Text style={[styles.statValue, { color: "#10B981" }]}>
+            <Text style={styles.statValue}>
               {me?.missions?.sortedCount || 0}/8
             </Text>
+            <Text style={styles.statLabel}>sorted</Text>
           </View>
         </Animated.View>
 
@@ -732,24 +724,24 @@ export default function ProfileScreen() {
             onPress={(e) => e.stopPropagation()}
           >
             <LinearGradient
-              colors={["#1A1A1A", "#f9c349", "#1A1A1A"]}
+              colors={[T.ink, T.yellow, T.ink]}
               style={styles.membershipGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
               <Text style={styles.cardTitle}>
-                tdc<Text style={{ color: "#f9c349" }}>.</Text> PREMIUM
+                tdc<Text style={{ color: T.yellow }}>.</Text> premium
               </Text>
               <View style={styles.cardBody}>
                 <View style={styles.diamondBox}>
                   <LinearGradient
-                    colors={["#f9c349", "#e6b800"]}
+                    colors={[T.yellow, "#e6b800"]}
                     style={styles.diamondGradient}
                   >
-                    <Icon name="diamond" size={44} color="#1A1A1A" />
+                    <Icon name="diamond" size={44} color={T.ink} />
                   </LinearGradient>
                 </View>
-                <Text style={styles.cardPromoTitle}>Unlock Full Access</Text>
+                <Text style={styles.cardPromoTitle}>unlock full access</Text>
                 <Text style={styles.cardPromoDesc}>
                   Get exclusive student discounts for just{" "}
                   <Text style={styles.priceHighlight}>750-Rs / year</Text>
@@ -765,14 +757,14 @@ export default function ProfileScreen() {
                 activeOpacity={0.8}
               >
                 <LinearGradient
-                  colors={["#f9c349", "#e6b800"]}
+                  colors={[T.yellow, "#e6b800"]}
                   style={styles.cardBtnGradient}
                 >
-                  <Text style={styles.cardBtnText}>GET MEMBERSHIP</Text>
+                  <Text style={styles.cardBtnText}>get membership</Text>
                   <Icon
                     name="arrow-forward"
                     size={18}
-                    color="#1A1A1A"
+                    color={T.ink}
                     style={{ marginLeft: 8 }}
                   />
                 </LinearGradient>
@@ -781,7 +773,7 @@ export default function ProfileScreen() {
                 onPress={() => setEcardModalVisible(false)}
                 style={{ marginTop: 16 }}
               >
-                <Text style={styles.maybeLater}>Maybe Later</Text>
+                <Text style={styles.maybeLater}>maybe later</Text>
               </TouchableOpacity>
             </LinearGradient>
           </Pressable>
@@ -806,9 +798,9 @@ export default function ProfileScreen() {
             ]}
           >
             <View style={styles.modalIconContainer}>
-              <MaterialCommunityIcons name="logout" size={32} color="#f9c349" />
+              <MaterialCommunityIcons name="logout" size={32} color={T.yellow} />
             </View>
-            <Text style={styles.modalTitle}>Sign Out?</Text>
+            <Text style={styles.modalTitle}>sign out?</Text>
             <Text style={styles.modalDesc}>
               Are you sure you want to sign out?
             </Text>
@@ -817,13 +809,13 @@ export default function ProfileScreen() {
                 style={styles.modalCancelBtn}
                 onPress={closeSignOutModal}
               >
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.modalConfirmBtn}
                 onPress={handleSignOut}
               >
-                <Text style={styles.modalConfirmText}>Sign Out</Text>
+                <Text style={styles.modalConfirmText}>sign out</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -850,34 +842,34 @@ export default function ProfileScreen() {
             {deleteStep === 1 && (
               <>
                 <View style={styles.modalHeader}>
-                  <View style={[styles.modalIconBox, { backgroundColor: "#FF475720" }]}>
-                    <MaterialCommunityIcons name="alert-circle" size={36} color="#FF4757" />
+                  <View style={[styles.modalIconBox, { backgroundColor: T.dangerBg }]}>
+                    <MaterialCommunityIcons name="alert-circle" size={36} color={T.danger} />
                   </View>
-                  <Text style={styles.modalTitle}>Delete Account?</Text>
+                  <Text style={styles.modalTitle}>delete account?</Text>
                   <Text style={styles.modalDesc}>
                     This action cannot be undone. All your data will be permanently deleted.
                   </Text>
                 </View>
                 <View style={styles.warningList}>
                   <View style={styles.warningItem}>
-                    <Icon name="close-circle" size={16} color="#FF4757" />
-                    <Text style={styles.warningText}>Profile removed</Text>
+                    <Icon name="close-circle" size={16} color={T.danger} />
+                    <Text style={styles.warningText}>profile removed</Text>
                   </View>
                   <View style={styles.warningItem}>
-                    <Icon name="close-circle" size={16} color="#FF4757" />
-                    <Text style={styles.warningText}>All connections lost</Text>
+                    <Icon name="close-circle" size={16} color={T.danger} />
+                    <Text style={styles.warningText}>all connections lost</Text>
                   </View>
                   <View style={styles.warningItem}>
-                    <Icon name="close-circle" size={16} color="#FF4757" />
-                    <Text style={styles.warningText}>History deleted</Text>
+                    <Icon name="close-circle" size={16} color={T.danger} />
+                    <Text style={styles.warningText}>history deleted</Text>
                   </View>
                 </View>
                 <View style={styles.modalBtns}>
                   <TouchableOpacity style={styles.modalCancelBtn} onPress={closeDeleteModal}>
-                    <Text style={styles.modalCancelText}>Cancel</Text>
+                    <Text style={styles.modalCancelText}>cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.modalDangerBtn} onPress={handleNextStep}>
-                    <Text style={styles.modalDangerText}>Continue</Text>
+                    <Text style={styles.modalDangerText}>continue</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -886,31 +878,31 @@ export default function ProfileScreen() {
               <>
                 <View style={styles.modalHeader}>
                   <View style={[styles.modalIconBox, { backgroundColor: "#FFD93D20" }]}>
-                    <MaterialCommunityIcons name="pause-circle" size={36} color="#f9c349" />
+                    <MaterialCommunityIcons name="pause-circle" size={36} color={T.yellow} />
                   </View>
-                  <Text style={styles.modalTitle}>Wait! Before You Go</Text>
-                  <Text style={styles.modalDesc}>Consider these options instead:</Text>
+                  <Text style={styles.modalTitle}>wait! before you go</Text>
+                  <Text style={styles.modalDesc}>consider these options instead:</Text>
                 </View>
                 <View style={styles.alternativeList}>
                   <TouchableOpacity style={styles.alternativeItem} onPress={closeDeleteModal}>
-                    <Icon name="create-outline" size={18} color="#f9c349" />
-                    <Text style={styles.alternativeText}>Update your profile</Text>
+                    <Icon name="create-outline" size={18} color={T.yellow} />
+                    <Text style={styles.alternativeText}>update your profile</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.alternativeItem} onPress={closeDeleteModal}>
-                    <Icon name="help-circle-outline" size={18} color="#f9c349" />
-                    <Text style={styles.alternativeText}>Contact support</Text>
+                    <Icon name="help-circle-outline" size={18} color={T.yellow} />
+                    <Text style={styles.alternativeText}>contact support</Text>
                   </TouchableOpacity>
                 </View>
                 <View style={styles.modalBtns}>
                   <TouchableOpacity style={styles.modalCancelBtn} onPress={closeDeleteModal}>
-                    <Text style={styles.modalCancelText}>Keep Account</Text>
+                    <Text style={styles.modalCancelText}>keep account</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.modalConfirmBtn, { backgroundColor: "#f9c349" }]}
+                    style={[styles.modalConfirmBtn, { backgroundColor: T.yellow }]}
                     onPress={handleNextStep}
                   >
-                    <Text style={[styles.modalConfirmText, { color: "#1A1A1A" }]}>
-                      Still Delete
+                    <Text style={[styles.modalConfirmText, { color: T.ink }]}>
+                      still delete
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -919,11 +911,11 @@ export default function ProfileScreen() {
             {deleteStep === 3 && (
               <>
                 <View style={styles.modalHeader}>
-                  <View style={[styles.modalIconBox, { backgroundColor: "#FF475720" }]}>
-                    <MaterialCommunityIcons name="delete-forever" size={36} color="#FF4757" />
+                  <View style={[styles.modalIconBox, { backgroundColor: T.dangerBg }]}>
+                    <MaterialCommunityIcons name="delete-forever" size={36} color={T.danger} />
                   </View>
-                  <Text style={[styles.modalTitle, { color: "#FF4757" }]}>
-                    Final Confirmation
+                  <Text style={[styles.modalTitle, { color: T.danger }]}>
+                    final confirmation
                   </Text>
                   <Text style={styles.modalDesc}>
                     Type "delete my account" to confirm.
@@ -932,7 +924,7 @@ export default function ProfileScreen() {
                 <TextInput
                   style={styles.confirmInput}
                   placeholder='Type "delete my account"'
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={T.textFaint}
                   value={confirmText}
                   onChangeText={setConfirmText}
                   autoCapitalize="none"
@@ -944,7 +936,7 @@ export default function ProfileScreen() {
                     onPress={closeDeleteModal}
                     disabled={deleting}
                   >
-                    <Text style={styles.modalCancelText}>Cancel</Text>
+                    <Text style={styles.modalCancelText}>cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
@@ -956,9 +948,9 @@ export default function ProfileScreen() {
                     disabled={deleting}
                   >
                     {deleting ? (
-                      <ActivityIndicator color="#FFF" size="small" />
+                      <ActivityIndicator color={T.white} size="small" />
                     ) : (
-                      <Text style={styles.modalDangerText}>Delete Permanently</Text>
+                      <Text style={styles.modalDangerText}>delete permanently</Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -979,21 +971,21 @@ export default function ProfileScreen() {
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: { flex: 1, backgroundColor: T.paper },
   scrollContent: { paddingBottom: 40 },
 
   // Profile Header
   profileHeader: {
     marginHorizontal: 16,
     marginTop: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: T.card,
     borderRadius: 20,
     padding: 16,
-    shadowColor: "#000",
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.5)",
   },
@@ -1012,11 +1004,11 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "#1A1A1A",
+    backgroundColor: T.ink,
     justifyContent: "center",
     alignItems: "center",
   },
-  avatarText: { fontSize: 28, fontWeight: "800", color: "#f9c349" },
+  avatarText: { fontSize: 28, fontFamily: F.heading, color: T.yellow },
   cameraBadge: {
     position: "absolute",
     bottom: 0,
@@ -1024,7 +1016,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     overflow: "hidden",
     borderWidth: 2.5,
-    borderColor: "#FFFFFF",
+    borderColor: T.white,
   },
   cameraBadgeGradient: {
     width: 26,
@@ -1036,8 +1028,8 @@ const styles = StyleSheet.create({
   userInfo: { marginLeft: 14, flex: 1 },
   userName: {
     fontSize: 18,
-    fontWeight: "700",
-    color: "#1A1A1A",
+    fontFamily: F.headingBold,
+    color: T.ink,
     letterSpacing: -0.3,
     marginBottom: 2,
   },
@@ -1047,7 +1039,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     gap: 6,
   },
-  userEmail: { fontSize: 12, color: "#94A3B8", fontWeight: "500" },
+  userEmail: { fontSize: 12, color: T.textFaint, fontFamily: F.bodyMedium },
   saveBtn: {
     marginTop: 8,
     borderRadius: 10,
@@ -1062,21 +1054,21 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     gap: 4,
   },
-  saveBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "700" },
+  saveBtnText: { color: T.white, fontSize: 11, fontFamily: F.bodyBold },
 
   // Stats Row
   statsRow: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: T.card,
     marginHorizontal: 16,
     marginTop: 12,
     borderRadius: 16,
     padding: 14,
-    shadowColor: "#000",
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.5)",
   },
@@ -1094,26 +1086,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 8,
   },
-  statDivider: { width: 1, backgroundColor: "rgba(0,0,0,0.06)" },
+  statDivider: { width: 1, backgroundColor: T.sand },
   statLabel: {
     fontSize: 11,
-    color: "#94A3B8",
-    fontWeight: "600",
+    color: T.textFaint,
+    fontFamily: F.bodySemi,
     marginRight: 4,
   },
-  statValue: { fontSize: 16, fontWeight: "700", color: "#1A1A1A" },
+  statValue: { fontSize: 16, fontFamily: F.bodyBold, color: T.ink },
 
   // Menu
   menuContainer: { paddingHorizontal: 16, marginTop: 12 },
   menuCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: T.card,
     borderRadius: 16,
     overflow: "hidden",
-    shadowColor: "#000",
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.5)",
   },
@@ -1124,7 +1116,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.04)",
+    borderBottomColor: T.line,
   },
   menuItemDanger: { borderBottomColor: "rgba(255, 71, 87, 0.06)" },
   menuLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
@@ -1139,48 +1131,48 @@ const styles = StyleSheet.create({
   menuTextContainer: { flex: 1 },
   menuItemTitle: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#1A1A1A",
+    fontFamily: F.bodySemi,
+    color: T.ink,
     letterSpacing: -0.2,
   },
   menuItemSubtitle: {
     fontSize: 11,
-    color: "#94A3B8",
+    color: T.textFaint,
     marginTop: 1,
-    fontWeight: "500",
+    fontFamily: F.bodyMedium,
   },
   menuRight: { marginLeft: 8 },
   menuBadge: { borderRadius: 10, overflow: "hidden" },
   menuBadgeGradient: { paddingHorizontal: 10, paddingVertical: 3 },
-  menuBadgeText: { fontSize: 10, fontWeight: "700", color: "#1A1A1A" },
+  menuBadgeText: { fontSize: 10, fontFamily: F.bodyBold, color: T.ink },
 
   versionText: {
     textAlign: "center",
     fontSize: 11,
-    color: "#CBD5E1",
+    color: T.textFaint,
     marginTop: 20,
-    fontWeight: "500",
+    fontFamily: F.bodyMedium,
   },
 
   // Modals
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: T.overlay,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
   modalContent: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: T.card,
     borderRadius: 24,
     padding: 24,
     width: "100%",
     maxWidth: 400,
-    shadowColor: "#000",
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.15,
-    shadowRadius: 28,
-    elevation: 12,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   modalHeader: { alignItems: "center", marginBottom: 16 },
   modalIconBox: {
@@ -1203,14 +1195,14 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: "700",
-    color: "#1A1A1A",
+    fontFamily: F.headingBold,
+    color: T.ink,
     marginBottom: 4,
     letterSpacing: -0.3,
   },
   modalDesc: {
-    fontSize: 13,
-    color: "#64748B",
+    fontSize: 13, fontFamily: F.body,
+    color: T.textMuted,
     textAlign: "center",
     lineHeight: 20,
   },
@@ -1219,36 +1211,36 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 13,
     borderRadius: 14,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: T.paper,
     alignItems: "center",
   },
-  modalCancelText: { fontSize: 13, fontWeight: "600", color: "#64748B" },
+  modalCancelText: { fontSize: 13, fontFamily: F.bodySemi, color: T.textMuted },
   modalConfirmBtn: {
     flex: 1,
     paddingVertical: 13,
     borderRadius: 14,
-    backgroundColor: "#f9c349",
+    backgroundColor: T.yellow,
     alignItems: "center",
   },
-  modalConfirmText: { fontSize: 13, fontWeight: "600", color: "#FFFFFF" },
+  modalConfirmText: { fontSize: 13, fontFamily: F.bodySemi, color: T.white },
   modalDangerBtn: {
     flex: 1,
     paddingVertical: 13,
     borderRadius: 14,
-    backgroundColor: "#FF4757",
+    backgroundColor: T.danger,
     alignItems: "center",
   },
-  modalDangerActive: { backgroundColor: "#FF4757" },
-  modalDangerText: { fontSize: 13, fontWeight: "600", color: "#FFFFFF" },
+  modalDangerActive: { backgroundColor: T.danger },
+  modalDangerText: { fontSize: 13, fontFamily: F.bodySemi, color: T.white },
 
   // Warning / Alternative Lists
   warningList: { marginBottom: 16 },
   warningItem: { flexDirection: "row", alignItems: "center", paddingVertical: 6 },
   warningText: {
     fontSize: 12,
-    color: "#64748B",
+    color: T.textMuted,
     marginLeft: 8,
-    fontWeight: "500",
+    fontFamily: F.bodyMedium,
   },
   alternativeList: { marginBottom: 16 },
   alternativeItem: {
@@ -1256,28 +1248,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 10,
     paddingHorizontal: 12,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: T.sand,
     borderRadius: 12,
     marginBottom: 6,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.04)",
+    borderColor: T.line,
   },
   alternativeText: {
     fontSize: 12,
-    color: "#1A1A1A",
+    color: T.ink,
     marginLeft: 10,
-    fontWeight: "500",
+    fontFamily: F.bodyMedium,
   },
   confirmInput: {
     borderWidth: 1.5,
-    borderColor: "#E2E8F0",
+    borderColor: T.line,
     borderRadius: 14,
     padding: 12,
     fontSize: 13,
-    color: "#1A1A1A",
+    color: T.ink,
     marginBottom: 16,
-    fontWeight: "500",
-    backgroundColor: "#F8FAFC",
+    fontFamily: F.bodyMedium,
+    backgroundColor: T.sand,
   },
 
   // Membership Card
@@ -1285,11 +1277,11 @@ const styles = StyleSheet.create({
     width: width * 0.9,
     borderRadius: 28,
     overflow: "hidden",
-    elevation: 20,
-    shadowColor: "#000",
+    elevation: 2,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.25,
-    shadowRadius: 28,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
   },
   membershipGradient: {
     padding: 28,
@@ -1298,11 +1290,11 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     color: "rgba(255,255,255,0.8)",
-    fontWeight: "800",
+    fontFamily: F.bodyBold,
     letterSpacing: 3,
     fontSize: 13,
     marginBottom: 24,
-    textTransform: "uppercase",
+    textTransform: 'none',
   },
   cardBody: { alignItems: "center", marginBottom: 24 },
   diamondBox: { marginBottom: 16 },
@@ -1315,9 +1307,9 @@ const styles = StyleSheet.create({
     transform: [{ rotate: "45deg" }],
   },
   cardPromoTitle: {
-    color: "#FFFFFF",
+    color: T.white,
     fontSize: 22,
-    fontWeight: "800",
+    fontFamily: F.heading,
     marginBottom: 6,
     letterSpacing: -0.5,
   },
@@ -1325,19 +1317,19 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.85)",
     textAlign: "center",
     lineHeight: 22,
-    fontSize: 13,
+    fontSize: 13, fontFamily: F.body,
     paddingHorizontal: 8,
   },
-  priceHighlight: { color: "#f9c349", fontWeight: "800" },
+  priceHighlight: { color: T.yellow, fontFamily: F.bodyBold },
   cardBtn: {
     borderRadius: 14,
     overflow: "hidden",
     width: "100%",
-    elevation: 4,
-    shadowColor: "#f9c349",
+    elevation: 2,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
   },
   cardBtnGradient: {
     paddingHorizontal: 20,
@@ -1347,14 +1339,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cardBtnText: {
-    color: "#1A1A1A",
-    fontWeight: "800",
+    color: T.ink,
+    fontFamily: F.bodyBold,
     fontSize: 14,
     letterSpacing: 0.5,
   },
   maybeLater: {
     color: "rgba(255,255,255,0.35)",
     fontSize: 12,
-    fontWeight: "500",
+    fontFamily: F.bodyMedium,
   },
 });
