@@ -39,11 +39,12 @@ import axios from "axios";
 import { useOpenFromParams } from "../../engagement/hooks/useOpenFromParams";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import GuestGuard from "../../components/GuestGuard";
 import io from "socket.io-client";
 import { engagementBus, ENGAGEMENT_EVENTS } from "../../engagement/engagementBus";
 
+import { color as T, font as F } from "../../theme/tokens";
 const { height, width } = Dimensions.get("window");
 const SHEET_HEIGHT = Math.round(height * 0.85);
 
@@ -69,11 +70,11 @@ const isImportedEvent = (event) => {
 // (like cities) plus the backend /categories endpoint. Unknown categories
 // get a deterministic fallback theme derived from their name.
 const CATEGORY_THEME = {
-  Hackathons: { icon: "code-outline", color: "#2563eb", bg: "#dbeafe" },
+  Hackathons: { icon: "code-outline", color: T.ink, bg: "#dbeafe" },
   Workshops: { icon: "construct-outline", color: "#7c3aed", bg: "#ede9fe" },
-  Conferences: { icon: "people-outline", color: "#dc2626", bg: "#fef2f2" },
+  Conferences: { icon: "people-outline", color: T.danger, bg: T.dangerBg },
   Competitions: { icon: "trophy-outline", color: "#d97706", bg: "#fffbeb" },
-  "Career Fairs": { icon: "briefcase-outline", color: "#059669", bg: "#ecfdf5" },
+  "Career Fairs": { icon: "briefcase-outline", color: T.success, bg: T.successBg },
   Concerts: { icon: "musical-notes-outline", color: "#ec4899", bg: "#fce7f3" },
   Poetry: { icon: "book-outline", color: "#8b5cf6", bg: "#f3e8ff" },
   Classes: { icon: "school-outline", color: "#0891b2", bg: "#cffafe" },
@@ -83,24 +84,24 @@ const CATEGORY_THEME = {
   "Arts & Crafts": { icon: "color-palette-outline", color: "#db2777", bg: "#fce7f3" },
   "Festivals & Markets": { icon: "balloon-outline", color: "#ea580c", bg: "#ffedd5" },
   "Fashion & Lifestyle": { icon: "shirt-outline", color: "#9333ea", bg: "#f3e8ff" },
-  "Food & Culinary": { icon: "restaurant-outline", color: "#dc2626", bg: "#fee2e2" },
-  "Adventure & Tours": { icon: "trail-sign-outline", color: "#16a34a", bg: "#dcfce7" },
+  "Food & Culinary": { icon: "restaurant-outline", color: T.danger, bg: T.dangerBg },
+  "Adventure & Tours": { icon: "trail-sign-outline", color: T.success, bg: T.successBg },
   "Education & Business": { icon: "business-outline", color: "#0f766e", bg: "#ccfbf1" },
-  "Health,Wellness & Beauty": { icon: "heart-outline", color: "#e11d48", bg: "#ffe4e6" },
+  "Health,Wellness & Beauty": { icon: "heart-outline", color: T.danger, bg: "#ffe4e6" },
   "Sports & Screenings": { icon: "football-outline", color: "#0284c7", bg: "#e0f2fe" },
   "Movie Night": { icon: "videocam-outline", color: "#4338ca", bg: "#e0e7ff" },
   Comedy: { icon: "happy-outline", color: "#ca8a04", bg: "#fef9c3" },
-  Automotive: { icon: "car-sport-outline", color: "#334155", bg: "#e2e8f0" },
+  Automotive: { icon: "car-sport-outline", color: "#334155", bg: T.sand },
   "Concerts & Live Music": { icon: "musical-notes-outline", color: "#ec4899", bg: "#fce7f3" },
 };
 
 // Deterministic fallback palette for categories we haven't themed yet
 const FALLBACK_PALETTE = [
-  { color: "#2563eb", bg: "#dbeafe", icon: "sparkles-outline" },
+  { color: T.ink, bg: "#dbeafe", icon: "sparkles-outline" },
   { color: "#7c3aed", bg: "#ede9fe", icon: "sparkles-outline" },
-  { color: "#dc2626", bg: "#fee2e2", icon: "sparkles-outline" },
+  { color: T.danger, bg: T.dangerBg, icon: "sparkles-outline" },
   { color: "#d97706", bg: "#fffbeb", icon: "sparkles-outline" },
-  { color: "#059669", bg: "#ecfdf5", icon: "sparkles-outline" },
+  { color: T.success, bg: T.successBg, icon: "sparkles-outline" },
   { color: "#ec4899", bg: "#fce7f3", icon: "sparkles-outline" },
   { color: "#0891b2", bg: "#cffafe", icon: "sparkles-outline" },
   { color: "#7c2d12", bg: "#ffedd5", icon: "sparkles-outline" },
@@ -129,23 +130,23 @@ const FALLBACK_BANNER =
   "https://images.unsplash.com/photo-1523240715632-d984bb4b970e?w=1200";
 
 const COLORS = {
-  page: "#f8f9fc",
+  page: T.sand,
   pageAlt: "#f0f2f6",
   ink: "#1a1a2e",
   body: "#2d2d44",
   muted: "#6b6b8a",
   line: "#e8ecf1",
-  card: "#ffffff",
-  surface: "#f5f6fa",
+  card: T.white,
+  surface: T.sand,
   primary: "#1a1a2e",
-  secondary: "#f9c349",
-  accent: "#f9c349",
-  danger: "#e74c3c",
+  secondary: T.yellow,
+  accent: T.yellow,
+  danger: T.danger,
   goldSoft: "#fff5e0",
   overlayDark: "rgba(26, 26, 46, 0.85)",
   gradientStart: "#1a1a2e",
   gradientEnd: "#16213e",
-  success: "#10b981",
+  success: T.success,
   warning: "#f59e0b",
 };
 
@@ -245,7 +246,7 @@ const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel }) 
       style={[styles.card, { opacity, transform: [{ translateY }, { scale: cardScale }] }]}
     >
       <LinearGradient
-        colors={["#FFFFFF", "#FAFBFF"]}
+        colors={[T.white, "#FAFBFF"]}
         style={styles.cardGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -265,21 +266,21 @@ const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel }) 
 
           {imported && (
             <View style={styles.importedPill}>
-              <Ionicons name="open-outline" size={10} color="#fff" />
-              <Text style={styles.importedPillText}>External</Text>
+              <Ionicons name="open-outline" size={10} color={T.white} />
+              <Text style={styles.importedPillText}>external</Text>
             </View>
           )}
 
           {isRegistered && (
             <View style={styles.registeredBadge}>
               <LinearGradient
-                colors={["#10b981", "#059669"]}
+                colors={[T.success, T.success]}
                 style={styles.registeredBadgeGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <Ionicons name="checkmark-circle" size={12} color="#fff" />
-                <Text style={styles.registeredBadgeText}>Registered</Text>
+                <Ionicons name="checkmark-circle" size={12} color={T.white} />
+                <Text style={styles.registeredBadgeText}>registered</Text>
               </LinearGradient>
             </View>
           )}
@@ -294,8 +295,8 @@ const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel }) 
         <View style={styles.contentWrapper}>
           <View style={styles.headerRow}>
             <View style={styles.orgContainer}>
-              <LinearGradient colors={["#f9c349", "#f5a623"]} style={styles.orgAvatar}>
-                <Ionicons name="location" size={16} color="#fff" />
+              <LinearGradient colors={[T.yellow, T.yellow]} style={styles.orgAvatar}>
+                <Ionicons name="location" size={16} color={T.white} />
               </LinearGradient>
               <Text style={styles.locationText} numberOfLines={1}>
                 {item.city || "City"}
@@ -322,8 +323,8 @@ const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel }) 
                 onPress={() => onCancel && onCancel(item)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="close-circle" size={16} color="#FF3B30" />
-                <Text style={styles.cancelActionText}>Cancel</Text>
+                <Ionicons name="close-circle" size={16} color={T.danger} />
+                <Text style={styles.cancelActionText}>cancel</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
@@ -332,12 +333,12 @@ const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel }) 
                 activeOpacity={0.7}
               >
                 <LinearGradient
-                  colors={imported ? ["#6366f1", "#4f46e5"] : ["#f9c349", "#f5a623"]}
+                  colors={imported ? ["#6366f1", "#4f46e5"] : [T.yellow, T.yellow]}
                   style={styles.registerGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 >
-                  <Ionicons name={imported ? "open-outline" : "add"} size={16} color="#fff" />
+                  <Ionicons name={imported ? "open-outline" : "add"} size={16} color={T.white} />
                   <Text style={styles.registerActionText}>
                     {imported ? "Open Link" : "Register"}
                   </Text>
@@ -346,7 +347,7 @@ const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel }) 
             )}
 
             <TouchableOpacity style={styles.detailsActionButton} onPress={() => onOpen(item)} activeOpacity={0.7}>
-              <Text style={styles.detailsActionText}>View Details</Text>
+              <Text style={styles.detailsActionText}>view details</Text>
               <Ionicons name="chevron-forward" size={14} color={COLORS.accent} />
             </TouchableOpacity>
           </View>
@@ -382,14 +383,14 @@ const ModernHeader = ({ onBack, onMenuPress, showApplied, appliedCount }) => {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            <MaterialCommunityIcons name="calendar-star" size={16} color="#000" />
+            <MaterialCommunityIcons name="calendar-star" size={16} color={T.ink} />
           </LinearGradient>
           <View>
             <Text style={styles.headerTitle}>
-              {showApplied ? "My Events" : "Events"}
+              {showApplied ? "my events" : "events"}<Text style={{ color: T.yellow }}>.</Text>
             </Text>
             <Text style={styles.headerSubtitle}>
-              {showApplied ? "Your registrations" : "Discover & Connect"}
+              {showApplied ? "your registrations" : "discover and connect"}
             </Text>
           </View>
         </View>
@@ -959,7 +960,7 @@ export default function EventsScreen() {
               : isAll
               ? COLORS.pageAlt
               : theme.bg;
-            const fg = active ? "#fff" : isAll ? COLORS.primary : theme.color;
+            const fg = active ? T.white : isAll ? COLORS.primary : theme.color;
 
             return (
               <TouchableOpacity
@@ -1014,7 +1015,7 @@ export default function EventsScreen() {
       <Animated.View style={[styles.cityScrollContainer, { opacity: filterOpacity }]}>
         <View style={styles.cityScrollHeader}>
           <Ionicons name="location-outline" size={13} color={COLORS.muted} />
-          <Text style={styles.cityScrollHeaderText}>Filter by city</Text>
+          <Text style={styles.cityScrollHeaderText}>filter by city</Text>
         </View>
         <ScrollView
           horizontal
@@ -1034,7 +1035,7 @@ export default function EventsScreen() {
                 }}
               >
                 {active && (
-                  <Ionicons name="checkmark-circle" size={12} color="#000" style={{ marginRight: 4 }} />
+                  <Ionicons name="checkmark-circle" size={12} color={T.ink} style={{ marginRight: 4 }} />
                 )}
                 <Text style={[styles.cityChipText, active && styles.cityChipTextActive]}>
                   {city}
@@ -1155,8 +1156,8 @@ export default function EventsScreen() {
                     style={styles.exploreButton}
                     onPress={() => setShowApplied(false)}
                   >
-                    <LinearGradient colors={["#f9c349", "#f5a623"]} style={styles.exploreGradient}>
-                      <Text style={styles.exploreButtonText}>Explore Events</Text>
+                    <LinearGradient colors={[T.yellow, T.yellow]} style={styles.exploreGradient}>
+                      <Text style={styles.exploreButtonText}>explore events</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 )}
@@ -1165,8 +1166,8 @@ export default function EventsScreen() {
                     style={styles.exploreButton}
                     onPress={() => setActiveCity("All")}
                   >
-                    <LinearGradient colors={["#f9c349", "#f5a623"]} style={styles.exploreGradient}>
-                      <Text style={styles.exploreButtonText}>Clear City Filter</Text>
+                    <LinearGradient colors={[T.yellow, T.yellow]} style={styles.exploreGradient}>
+                      <Text style={styles.exploreButtonText}>clear city filter</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 )}
@@ -1206,7 +1207,7 @@ export default function EventsScreen() {
                     </TouchableOpacity>
 
                     <Text style={styles.sheetHeaderTitle} numberOfLines={1}>
-                      Event Details
+                      event details
                     </Text>
 
                     <TouchableOpacity
@@ -1241,7 +1242,7 @@ export default function EventsScreen() {
                     {isEventRegistered(selectedEvent._id) && (
                       <View style={styles.sheetRegisteredBadge}>
                         <Ionicons name="checkmark-circle" size={12} color={COLORS.success} />
-                        <Text style={styles.sheetRegisteredText}>Registered</Text>
+                        <Text style={styles.sheetRegisteredText}>registered</Text>
                       </View>
                     )}
                   </View>
@@ -1273,7 +1274,7 @@ export default function EventsScreen() {
                         <View style={[styles.detailTag, { backgroundColor: "#d1fae5" }]}>
                           <Ionicons name="checkmark-circle" size={12} color={COLORS.success} />
                           <Text style={[styles.detailTagText, { color: COLORS.success }]}>
-                            Registered
+                            registered
                           </Text>
                         </View>
                       )}
@@ -1286,7 +1287,7 @@ export default function EventsScreen() {
                         colors={[COLORS.gradientStart, COLORS.gradientEnd]}
                         style={styles.detailAvatarSmall}
                       >
-                        <Ionicons name="location" size={16} color="#fff" />
+                        <Ionicons name="location" size={16} color={T.white} />
                       </LinearGradient>
                       <Text style={styles.detailOrgLocationLarge}>
                         {selectedEvent.city || "City"}
@@ -1298,7 +1299,7 @@ export default function EventsScreen() {
                         <View style={styles.specIcon}>
                           <Ionicons name="calendar" size={18} color={COLORS.accent} />
                         </View>
-                        <Text style={styles.specTitle}>Date</Text>
+                        <Text style={styles.specTitle}>date</Text>
                         <Text style={styles.specText}>{selectedEvent.date || "TBA"}</Text>
                       </View>
 
@@ -1306,7 +1307,7 @@ export default function EventsScreen() {
                         <View style={styles.specIcon}>
                           <Ionicons name="hourglass" size={18} color={COLORS.accent} />
                         </View>
-                        <Text style={styles.specTitle}>Deadline</Text>
+                        <Text style={styles.specTitle}>deadline</Text>
                         <Text style={styles.specText}>{selectedEvent.deadline || "Open"}</Text>
                       </View>
 
@@ -1314,20 +1315,20 @@ export default function EventsScreen() {
                         <View style={styles.specIcon}>
                           <Ionicons name="people" size={18} color={COLORS.accent} />
                         </View>
-                        <Text style={styles.specTitle}>Team</Text>
+                        <Text style={styles.specTitle}>team</Text>
                         <Text style={styles.specText}>{selectedEvent.teamSize || "Any"}</Text>
                       </View>
                     </View>
 
                     <View style={styles.sectionCard}>
-                      <Text style={styles.sectionCardTitle}>Description</Text>
+                      <Text style={styles.sectionCardTitle}>description</Text>
                       <Text style={styles.sectionCardBody}>
                         {selectedEvent.description || "No description provided."}
                       </Text>
                     </View>
 
                     <View style={styles.sectionCard}>
-                      <Text style={styles.sectionCardTitle}>Location</Text>
+                      <Text style={styles.sectionCardTitle}>location</Text>
                       <Text style={styles.sectionCardBody}>
                         <Ionicons name="location" size={14} color={COLORS.accent} />{" "}
                         {selectedEvent.location || "Online event"}
@@ -1336,7 +1337,7 @@ export default function EventsScreen() {
 
                     {selectedEvent.university ? (
                       <View style={styles.sectionCard}>
-                        <Text style={styles.sectionCardTitle}>University</Text>
+                        <Text style={styles.sectionCardTitle}>university</Text>
                         <Text style={styles.sectionCardBody}>
                           <Ionicons name="school" size={14} color={COLORS.accent} />{" "}
                           {selectedEvent.university}
@@ -1346,7 +1347,7 @@ export default function EventsScreen() {
 
                     {selectedEvent.prize ? (
                       <View style={styles.sectionCard}>
-                        <Text style={styles.sectionCardTitle}>Prize Pool</Text>
+                        <Text style={styles.sectionCardTitle}>prize pool</Text>
                         <Text style={styles.sectionCardBody}>
                           <Ionicons name="trophy" size={14} color={COLORS.accent} />{" "}
                           {selectedEvent.prize}
@@ -1356,7 +1357,7 @@ export default function EventsScreen() {
 
                     {selectedEvent.contact ? (
                       <View style={styles.sectionCard}>
-                        <Text style={styles.sectionCardTitle}>Contact</Text>
+                        <Text style={styles.sectionCardTitle}>contact</Text>
                         <Text style={styles.sectionCardBody}>
                           <Ionicons name="call" size={14} color={COLORS.accent} />{" "}
                           {selectedEvent.contact}
@@ -1440,7 +1441,7 @@ export default function EventsScreen() {
                 <View style={styles.modalHeroTop}>
                   <View style={styles.modalHeroTitleRow}>
                     <Ionicons name="add-circle-outline" size={24} color={COLORS.accent} />
-                    <Text style={styles.modalHeroTitle}>Create Event</Text>
+                    <Text style={styles.modalHeroTitle}>create event</Text>
                   </View>
                   <TouchableOpacity
                     style={styles.modalClose}
@@ -1474,7 +1475,7 @@ export default function EventsScreen() {
                     <TextInput
                       style={styles.textInput}
                       placeholder="Enter event title"
-                      placeholderTextColor="#8a8a8a"
+                      placeholderTextColor={T.textFaint}
                       value={form.title}
                       onChangeText={(text) => setForm({ ...form, title: text })}
                     />
@@ -1487,7 +1488,7 @@ export default function EventsScreen() {
                         <TextInput
                           style={styles.textInput}
                           placeholder="University name"
-                          placeholderTextColor="#8a8a8a"
+                          placeholderTextColor={T.textFaint}
                           value={form.university}
                           onChangeText={(text) => setForm({ ...form, university: text })}
                         />
@@ -1499,7 +1500,7 @@ export default function EventsScreen() {
                         <TextInput
                           style={styles.textInput}
                           placeholder="City"
-                          placeholderTextColor="#8a8a8a"
+                          placeholderTextColor={T.textFaint}
                           value={form.city}
                           onChangeText={(text) => setForm({ ...form, city: text })}
                         />
@@ -1536,7 +1537,7 @@ export default function EventsScreen() {
                               <Ionicons
                                 name={theme.icon}
                                 size={14}
-                                color={selected ? "#fff" : theme.color}
+                                color={selected ? T.white : theme.color}
                                 style={{ marginRight: 4 }}
                               />
                               <Text
@@ -1559,11 +1560,11 @@ export default function EventsScreen() {
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Description</Text>
+                    <Text style={styles.inputLabel}>description</Text>
                     <TextInput
                       style={[styles.textInput, styles.multiLineInput]}
                       placeholder="Describe your event..."
-                      placeholderTextColor="#8a8a8a"
+                      placeholderTextColor={T.textFaint}
                       multiline
                       value={form.description}
                       onChangeText={(text) => setForm({ ...form, description: text })}
@@ -1573,11 +1574,11 @@ export default function EventsScreen() {
                   <View style={styles.row}>
                     <View style={styles.colLeft}>
                       <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>Event Date</Text>
+                        <Text style={styles.inputLabel}>event date</Text>
                         <TextInput
                           style={styles.textInput}
                           placeholder="15 May 2026"
-                          placeholderTextColor="#8a8a8a"
+                          placeholderTextColor={T.textFaint}
                           value={form.date}
                           onChangeText={(text) => setForm({ ...form, date: text })}
                         />
@@ -1585,11 +1586,11 @@ export default function EventsScreen() {
                     </View>
                     <View style={styles.colRight}>
                       <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>Team Size</Text>
+                        <Text style={styles.inputLabel}>team size</Text>
                         <TextInput
                           style={styles.textInput}
                           placeholder="2-4 Members"
-                          placeholderTextColor="#8a8a8a"
+                          placeholderTextColor={T.textFaint}
                           value={form.teamSize}
                           onChangeText={(text) => setForm({ ...form, teamSize: text })}
                         />
@@ -1602,7 +1603,7 @@ export default function EventsScreen() {
                     <TextInput
                       style={styles.textInput}
                       placeholder="Auditorium, online, lab..."
-                      placeholderTextColor="#8a8a8a"
+                      placeholderTextColor={T.textFaint}
                       value={form.location}
                       onChangeText={(text) => setForm({ ...form, location: text })}
                     />
@@ -1611,11 +1612,11 @@ export default function EventsScreen() {
                   <View style={styles.row}>
                     <View style={styles.colLeft}>
                       <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>Prize Pool</Text>
+                        <Text style={styles.inputLabel}>prize pool</Text>
                         <TextInput
                           style={styles.textInput}
                           placeholder="PKR 100,000"
-                          placeholderTextColor="#8a8a8a"
+                          placeholderTextColor={T.textFaint}
                           value={form.prize}
                           onChangeText={(text) => setForm({ ...form, prize: text })}
                         />
@@ -1623,11 +1624,11 @@ export default function EventsScreen() {
                     </View>
                     <View style={styles.colRight}>
                       <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>Deadline</Text>
+                        <Text style={styles.inputLabel}>deadline</Text>
                         <TextInput
                           style={styles.textInput}
                           placeholder="30 April 2026"
-                          placeholderTextColor="#8a8a8a"
+                          placeholderTextColor={T.textFaint}
                           value={form.deadline}
                           onChangeText={(text) => setForm({ ...form, deadline: text })}
                         />
@@ -1636,11 +1637,11 @@ export default function EventsScreen() {
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Contact Info</Text>
+                    <Text style={styles.inputLabel}>contact info</Text>
                     <TextInput
                       style={styles.textInput}
                       placeholder="Email or phone"
-                      placeholderTextColor="#8a8a8a"
+                      placeholderTextColor={T.textFaint}
                       value={form.contact}
                       onChangeText={(text) => setForm({ ...form, contact: text })}
                     />
@@ -1651,7 +1652,7 @@ export default function EventsScreen() {
                     <TextInput
                       style={styles.textInput}
                       placeholder="https://forms.google.com/... or https://luma.com/..."
-                      placeholderTextColor="#8a8a8a"
+                      placeholderTextColor={T.textFaint}
                       value={form.registrationUrl}
                       onChangeText={(text) => setForm({ ...form, registrationUrl: text })}
                       autoCapitalize="none"
@@ -1660,7 +1661,7 @@ export default function EventsScreen() {
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Event Banner</Text>
+                    <Text style={styles.inputLabel}>event banner</Text>
                     <TouchableOpacity
                       style={styles.uploadCard}
                       activeOpacity={0.88}
@@ -1673,7 +1674,7 @@ export default function EventsScreen() {
                           <View style={styles.uploadIconCircle}>
                             <Ionicons name="image-outline" size={30} color={COLORS.primary} />
                           </View>
-                          <Text style={styles.uploadTitle}>Upload banner</Text>
+                          <Text style={styles.uploadTitle}>upload banner</Text>
                           <Text style={styles.uploadSubtitle}>Recommended 16:9 ratio</Text>
                         </View>
                       )}
@@ -1696,7 +1697,7 @@ export default function EventsScreen() {
                         <ActivityIndicator color={COLORS.accent} />
                       ) : (
                         <>
-                          <Text style={styles.primaryFormText}>Publish Event</Text>
+                          <Text style={styles.primaryFormText}>publish event</Text>
                           <Ionicons name="rocket-outline" size={22} color={COLORS.accent} />
                         </>
                       )}
@@ -1737,7 +1738,7 @@ export default function EventsScreen() {
                     <View style={styles.modalHeroTop}>
                       <View style={styles.modalHeroTitleRow}>
                         <Ionicons name="clipboard" size={22} color={COLORS.accent} />
-                        <Text style={styles.modalHeroTitle}>Register</Text>
+                        <Text style={styles.modalHeroTitle}>register</Text>
                       </View>
                       <TouchableOpacity
                         style={styles.modalClose}
@@ -1771,7 +1772,7 @@ export default function EventsScreen() {
                         <TextInput
                           style={styles.textInput}
                           placeholder="Enter your full name"
-                          placeholderTextColor="#8a8a8a"
+                          placeholderTextColor={T.textFaint}
                           value={regForm.studentName}
                           onChangeText={(text) =>
                             setRegForm({ ...regForm, studentName: text })
@@ -1784,7 +1785,7 @@ export default function EventsScreen() {
                         <TextInput
                           style={styles.textInput}
                           placeholder="student@university.edu"
-                          placeholderTextColor="#8a8a8a"
+                          placeholderTextColor={T.textFaint}
                           value={regForm.email}
                           keyboardType="email-address"
                           autoCapitalize="none"
@@ -1797,7 +1798,7 @@ export default function EventsScreen() {
                         <TextInput
                           style={styles.textInput}
                           placeholder="+92 3XX XXXXXXX"
-                          placeholderTextColor="#8a8a8a"
+                          placeholderTextColor={T.textFaint}
                           keyboardType="phone-pad"
                           value={regForm.whatsapp}
                           onChangeText={(text) => setRegForm({ ...regForm, whatsapp: text })}
@@ -1809,7 +1810,7 @@ export default function EventsScreen() {
                         <TextInput
                           style={styles.textInput}
                           placeholder="Optional"
-                          placeholderTextColor="#8a8a8a"
+                          placeholderTextColor={T.textFaint}
                           value={regForm.studentId}
                           onChangeText={(text) => setRegForm({ ...regForm, studentId: text })}
                         />
@@ -1821,13 +1822,13 @@ export default function EventsScreen() {
                         onPress={handleRegistrationSubmit}
                       >
                         <LinearGradient
-                          colors={["#f9c349", "#f5a623"]}
+                          colors={[T.yellow, T.yellow]}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 0 }}
                           style={styles.primaryFormGradient}
                         >
-                          <Text style={styles.primaryFormText}>Submit Registration</Text>
-                          <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                          <Text style={styles.primaryFormText}>submit registration</Text>
+                          <Ionicons name="checkmark-circle" size={20} color={T.white} />
                         </LinearGradient>
                       </TouchableOpacity>
 
@@ -1872,21 +1873,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3, borderRadius: 8, backgroundColor: COLORS.danger,
     justifyContent: "center", alignItems: "center",
   },
-  headerBadgeText: { color: "#fff", fontSize: 9, fontWeight: "800" },
+  headerBadgeText: { color: T.white, fontSize: 9, fontFamily: F.bodyBold },
   logoContainer: { flexDirection: "row", alignItems: "center", marginLeft: 10 },
   logoBadge: {
     width: 32, height: 32, borderRadius: 8,
     justifyContent: "center", alignItems: "center",
     shadowColor: COLORS.accent,
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3, shadowRadius: 6, elevation: 4,
+    shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
   },
   headerTitle: {
-    fontSize: 16, fontWeight: "800", color: COLORS.primary,
+    fontSize: 16, fontFamily: F.bodyBold, color: COLORS.primary,
     letterSpacing: 0.3, marginLeft: 8,
   },
   headerSubtitle: {
-    fontSize: 9, color: COLORS.muted, fontWeight: "600",
+    fontSize: 9, color: COLORS.muted, fontFamily: F.bodySemi,
     marginLeft: 8, letterSpacing: 0.5,
   },
 
@@ -1929,7 +1930,7 @@ const styles = StyleSheet.create({
   categoryScrollLabel: {
     fontSize: 8.5,
     lineHeight: 10.5,
-    fontWeight: "700",
+    fontFamily: F.bodyBold,
     color: COLORS.body,
     textAlign: "center",
     marginTop: 1,
@@ -1946,8 +1947,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingBottom: 6,
   },
   cityScrollHeaderText: {
-    fontSize: 10, fontWeight: "700", color: COLORS.muted,
-    letterSpacing: 0.4, marginLeft: 4, textTransform: "uppercase",
+    fontSize: 10, fontFamily: F.bodyBold, color: COLORS.muted,
+    letterSpacing: 0.4, marginLeft: 4, textTransform: 'none',
   },
   cityScrollContent: { paddingHorizontal: 14, paddingVertical: 2 },
   cityChip: {
@@ -1957,16 +1958,16 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card, marginRight: 8,
   },
   cityChipActive: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
-  cityChipText: { fontSize: 12, fontWeight: "600", color: COLORS.body },
-  cityChipTextActive: { color: "#000", fontWeight: "800" },
+  cityChipText: { fontSize: 12, fontFamily: F.bodySemi, color: COLORS.body },
+  cityChipTextActive: { color: T.ink, fontFamily: F.bodyBold },
 
   feedContainer: { flex: 1 },
 
   skeletonCard: {
-    backgroundColor: "#fff", borderRadius: 14, overflow: "hidden",
-    marginBottom: 12, shadowColor: "#000",
+    backgroundColor: T.card, borderRadius: 14, overflow: "hidden",
+    marginBottom: 12, shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06, shadowRadius: 12, elevation: 4,
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
     borderWidth: 1, borderColor: COLORS.line,
   },
   skeletonImage: { width: "100%", height: 140, backgroundColor: "#e8ecf1", overflow: "hidden" },
@@ -1995,9 +1996,9 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 30 },
   card: {
     borderRadius: 16, overflow: "hidden", marginBottom: 12,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06, shadowRadius: 16, elevation: 4,
-    borderWidth: 1, borderColor: "rgba(0,0,0,0.04)",
+    shadowColor: T.ink, shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+    borderWidth: 1, borderColor: T.line,
   },
   cardGradient: { position: "relative", overflow: "hidden" },
   glowEffect: {
@@ -2013,7 +2014,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
     maxWidth: "65%",
   },
-  categoryBadgeText: { fontSize: 9, fontWeight: "700", marginLeft: 3, flexShrink: 1 },
+  categoryBadgeText: { fontSize: 9, fontFamily: F.bodyBold, marginLeft: 3, flexShrink: 1 },
   importedPill: {
     position: "absolute", top: 10, left: 10,
     flexDirection: "row", alignItems: "center",
@@ -2021,7 +2022,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(99,102,241,0.85)",
   },
   importedPillText: {
-    fontSize: 9, fontWeight: "700", color: "#fff", marginLeft: 3,
+    fontSize: 9, fontFamily: F.bodyBold, color: T.white, marginLeft: 3,
   },
   registeredBadge: {
     position: "absolute", top: 10, right: 10,
@@ -2032,14 +2033,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 4,
   },
   registeredBadgeText: {
-    fontSize: 9, fontWeight: "700", color: "#fff", marginLeft: 2,
+    fontSize: 9, fontFamily: F.bodyBold, color: T.white, marginLeft: 2,
   },
   dateBadge: {
     position: "absolute", bottom: 10, right: 10,
     borderRadius: 8, overflow: "hidden",
   },
   dateBadgeGradient: { paddingHorizontal: 8, paddingVertical: 4 },
-  dateBadgeText: { fontSize: 9, fontWeight: "700", color: "#fff" },
+  dateBadgeText: { fontSize: 9, fontFamily: F.bodyBold, color: T.white },
   contentWrapper: { padding: 14 },
   headerRow: {
     flexDirection: "row", justifyContent: "space-between",
@@ -2050,17 +2051,17 @@ const styles = StyleSheet.create({
     width: 32, height: 32, borderRadius: 16,
     justifyContent: "center", alignItems: "center", marginRight: 8,
   },
-  locationText: { fontSize: 14, fontWeight: "600", color: COLORS.primary },
+  locationText: { fontSize: 14, fontFamily: F.bodySemi, color: COLORS.primary },
   title: {
-    fontSize: 16, fontWeight: "700", color: COLORS.primary,
+    fontSize: 16, fontFamily: F.bodyBold, color: COLORS.primary,
     marginBottom: 4, lineHeight: 20,
   },
   description: {
-    fontSize: 12, color: COLORS.body, lineHeight: 16, marginBottom: 8,
+    fontSize: 12, fontFamily: F.body, color: COLORS.body, lineHeight: 16, marginBottom: 8,
   },
   statsRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
   statItem: { flexDirection: "row", alignItems: "center", marginRight: 12 },
-  statText: { fontSize: 10, color: COLORS.muted, marginLeft: 3, fontWeight: "500" },
+  statText: { fontSize: 10, color: COLORS.muted, marginLeft: 3, fontFamily: F.bodyMedium },
   actionRow: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
   },
@@ -2070,19 +2071,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 6,
   },
   registerActionText: {
-    fontSize: 12, fontWeight: "700", color: "#fff", marginLeft: 3,
+    fontSize: 12, fontFamily: F.bodyBold, color: T.white, marginLeft: 3,
   },
   cancelActionButton: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10,
-    backgroundColor: "#fee2e2",
+    backgroundColor: T.dangerBg,
   },
   cancelActionText: {
-    fontSize: 12, fontWeight: "700", color: "#FF3B30", marginLeft: 3,
+    fontSize: 12, fontFamily: F.bodyBold, color: T.danger, marginLeft: 3,
   },
   detailsActionButton: { flexDirection: "row", alignItems: "center" },
   detailsActionText: {
-    fontSize: 11, color: COLORS.accent, fontWeight: "600", marginRight: 2,
+    fontSize: 11, color: COLORS.accent, fontFamily: F.bodySemi, marginRight: 2,
   },
 
   emptyState: { alignItems: "center", justifyContent: "center", paddingTop: 40, paddingBottom: 20 },
@@ -2092,36 +2093,36 @@ const styles = StyleSheet.create({
     justifyContent: "center", alignItems: "center",
     marginBottom: 12, borderWidth: 1, borderColor: COLORS.line,
   },
-  emptyTitle: { color: COLORS.primary, fontSize: 18, fontWeight: "800" },
+  emptyTitle: { color: COLORS.primary, fontSize: 18, fontFamily: F.heading },
   emptyText: {
-    marginTop: 4, color: COLORS.body, fontSize: 12,
+    marginTop: 4, color: COLORS.body, fontSize: 12, fontFamily: F.body,
     lineHeight: 17, textAlign: "center", maxWidth: 240,
   },
   exploreButton: { marginTop: 12, borderRadius: 12, overflow: "hidden" },
   exploreGradient: { paddingHorizontal: 20, paddingVertical: 8 },
-  exploreButtonText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  exploreButtonText: { color: T.white, fontSize: 13, fontFamily: F.bodyBold },
 
   sheetBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: T.overlay,
     justifyContent: "flex-end",
   },
   sheetContainer: {
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     overflow: "hidden",
-    shadowColor: "#000",
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 20,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
     flexDirection: "column",
   },
   sheetHeader: {
     paddingTop: 8,
     paddingBottom: 8,
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.line,
     flexShrink: 0,
@@ -2141,7 +2142,7 @@ const styles = StyleSheet.create({
   },
   sheetHeaderTitle: {
     flex: 1, textAlign: "center", fontSize: 15,
-    fontWeight: "800", color: COLORS.primary, marginHorizontal: 8,
+    fontFamily: F.bodyBold, color: COLORS.primary, marginHorizontal: 8,
   },
   sheetScroll: {
     flex: 1,
@@ -2162,13 +2163,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.95)",
   },
   sheetRegisteredText: {
-    color: COLORS.success, fontSize: 11, fontWeight: "700", marginLeft: 3,
+    color: COLORS.success, fontSize: 11, fontFamily: F.bodyBold, marginLeft: 3,
   },
   sheetBody: { padding: 16, paddingBottom: 8 },
 
   sheetStickyFooter: {
     borderTopWidth: 1, borderTopColor: COLORS.line,
-    backgroundColor: "#fff", paddingTop: 10,
+    backgroundColor: T.card, paddingTop: 10,
     flexShrink: 0,
   },
   sheetStickyContent: {
@@ -2185,9 +2186,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
     maxWidth: "70%",
   },
-  detailTagText: { fontSize: 11, fontWeight: "700", marginLeft: 3, flexShrink: 1 },
+  detailTagText: { fontSize: 11, fontFamily: F.bodyBold, marginLeft: 3, flexShrink: 1 },
   detailTitle: {
-    color: COLORS.primary, fontSize: 20, fontWeight: "900",
+    color: COLORS.primary, fontSize: 20, fontFamily: F.heading,
     lineHeight: 26, marginBottom: 8,
   },
   detailOrgRow: {
@@ -2198,7 +2199,7 @@ const styles = StyleSheet.create({
     justifyContent: "center", alignItems: "center", marginRight: 8,
   },
   detailOrgLocationLarge: {
-    fontSize: 14, fontWeight: "700", color: COLORS.primary,
+    fontSize: 14, fontFamily: F.bodyBold, color: COLORS.primary,
   },
   specRow: { flexDirection: "row", marginBottom: 12 },
   specCard: {
@@ -2210,10 +2211,10 @@ const styles = StyleSheet.create({
   specCardLast: { marginRight: 0 },
   specIcon: { marginBottom: 4 },
   specTitle: {
-    color: COLORS.muted, fontSize: 10, fontWeight: "700", marginBottom: 2,
+    color: COLORS.muted, fontSize: 10, fontFamily: F.bodyBold, marginBottom: 2,
   },
   specText: {
-    color: COLORS.primary, fontSize: 12, fontWeight: "800", textAlign: "center",
+    color: COLORS.primary, fontSize: 12, fontFamily: F.bodyBold, textAlign: "center",
   },
   sectionCard: {
     backgroundColor: COLORS.surface, borderRadius: 12,
@@ -2221,19 +2222,19 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.line,
   },
   sectionCardTitle: {
-    color: COLORS.primary, fontSize: 13, fontWeight: "700", marginBottom: 4,
+    color: COLORS.primary, fontSize: 13, fontFamily: F.bodyBold, marginBottom: 4,
   },
   sectionCardBody: {
-    color: COLORS.body, fontSize: 12, lineHeight: 18,
+    color: COLORS.body, fontSize: 12, fontFamily: F.body, lineHeight: 18,
   },
-  stickyLabel: { color: COLORS.danger, fontSize: 9, fontWeight: "700", marginBottom: 0 },
-  stickyValue: { color: COLORS.primary, fontSize: 13, fontWeight: "800" },
+  stickyLabel: { color: COLORS.danger, fontSize: 9, fontFamily: F.bodyBold, marginBottom: 0 },
+  stickyValue: { color: COLORS.primary, fontSize: 13, fontFamily: F.bodyBold },
   stickyButton: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 16, paddingVertical: 9, borderRadius: 12,
   },
   stickyButtonText: {
-    color: "#fff", fontSize: 12, fontWeight: "700", marginRight: 3,
+    color: T.white, fontSize: 12, fontFamily: F.bodyBold, marginRight: 3,
   },
 
   modalScreen: { flex: 1, backgroundColor: COLORS.page },
@@ -2248,7 +2249,7 @@ const styles = StyleSheet.create({
   },
   modalHeroTitleRow: { flexDirection: "row", alignItems: "center" },
   modalHeroTitle: {
-    color: "#fff", fontSize: 18, fontWeight: "800", marginLeft: 6,
+    color: T.white, fontSize: 18, fontFamily: F.heading, marginLeft: 6,
   },
   modalClose: {
     width: 30, height: 30, borderRadius: 15,
@@ -2257,18 +2258,18 @@ const styles = StyleSheet.create({
   },
   modalHeroSubtitle: {
     marginTop: 4, color: "rgba(255,255,255,0.85)",
-    fontSize: 12, fontWeight: "600",
+    fontSize: 12, fontFamily: F.bodySemi,
   },
   formScrollView: { flex: 1, paddingHorizontal: 14 },
   formScrollContent: { paddingTop: 10 },
   inputGroup: { marginBottom: 0 },
   inputLabel: {
-    color: COLORS.primary, fontSize: 11, fontWeight: "700", marginBottom: 3,
+    color: COLORS.primary, fontSize: 11, fontFamily: F.bodyBold, marginBottom: 3,
   },
   textInput: {
-    backgroundColor: "#fff", borderWidth: 1.5, borderColor: COLORS.line,
+    backgroundColor: T.card, borderWidth: 1.5, borderColor: COLORS.line,
     borderRadius: 12, paddingHorizontal: 10, paddingVertical: 10,
-    marginBottom: 10, color: COLORS.primary, fontSize: 12,
+    marginBottom: 10, color: COLORS.primary, fontSize: 12, fontFamily: F.body,
   },
   row: { flexDirection: "row" },
   colLeft: { flex: 1, marginRight: 4 },
@@ -2282,22 +2283,22 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1.5,
     marginRight: 6,
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
     overflow: "hidden",
     maxWidth: 220,
   },
   optionPillActive: { borderWidth: 1.5 },
   optionPillText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
     color: COLORS.body,
     flexShrink: 1,
   },
-  optionPillTextActive: { color: "#fff" },
+  optionPillTextActive: { color: T.white },
   uploadCard: {
     borderRadius: 12, overflow: "hidden",
     borderWidth: 1.5, borderColor: COLORS.line, borderStyle: "dashed",
-    backgroundColor: "#fff", minHeight: 110,
+    backgroundColor: T.card, minHeight: 110,
     justifyContent: "center", alignItems: "center",
   },
   uploadPlaceholder: { alignItems: "center", paddingVertical: 20 },
@@ -2305,20 +2306,20 @@ const styles = StyleSheet.create({
     width: 48, height: 48, borderRadius: 24, backgroundColor: COLORS.surface,
     justifyContent: "center", alignItems: "center", marginBottom: 8,
   },
-  uploadTitle: { fontSize: 13, fontWeight: "700", color: COLORS.primary },
-  uploadSubtitle: { fontSize: 11, color: COLORS.muted, marginTop: 2 },
+  uploadTitle: { fontSize: 13, fontFamily: F.bodyBold, color: COLORS.primary },
+  uploadSubtitle: { fontSize: 11, fontFamily: F.body, color: COLORS.muted, marginTop: 2 },
   uploadPreview: { width: "100%", height: 160, resizeMode: "cover" },
   primaryFormButton: {
     borderRadius: 12, overflow: "hidden",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12, shadowRadius: 10, elevation: 4, marginTop: 14,
+    shadowColor: T.ink, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 2, marginTop: 14,
   },
   primaryFormGradient: {
     flexDirection: "row", justifyContent: "center", alignItems: "center",
     paddingVertical: 12, paddingHorizontal: 14,
   },
   primaryFormText: {
-    color: "#fff", fontSize: 14, fontWeight: "700", marginRight: 4,
+    color: T.white, fontSize: 14, fontFamily: F.bodyBold, marginRight: 4,
   },
   formBottomSpacer: { height: Platform.OS === "ios" ? 30 : 20 },
 });
