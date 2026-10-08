@@ -21,10 +21,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { AuthContext } from "../../context/AuthContext";
 import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus';
 
+import { color as T, font as F } from "../../theme/tokens";
 const { width, height } = Dimensions.get('window');
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
 
@@ -301,15 +302,15 @@ export default function CreatePostScreen({ navigation, route }) {
                   activeOpacity={0.7}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <Ionicons name="close" size={20} color="#111111" />
+                  <Ionicons name="close" size={20} color={T.ink} />
                 </TouchableOpacity>
 
                 <View style={styles.headerCenter}>
                   <View style={styles.headerTitleRow}>
-                    <Text style={styles.headerTitle}>New Post</Text>
+                    <Text style={styles.headerTitle}>new post</Text>
                     <View style={styles.headerDot} />
                   </View>
-                  <Text style={styles.headerSub}>Compose your story</Text>
+                  <Text style={styles.headerSub}>compose your story</Text>
                 </View>
 
                 <TouchableOpacity
@@ -320,25 +321,25 @@ export default function CreatePostScreen({ navigation, route }) {
                 >
                   <Animated.View style={{ transform: [{ scale: btnScale }] }}>
                     <LinearGradient
-                      colors={canPost ? ['#f9c349', '#f5a623'] : ['#F5F5F5', '#EFEFEF']}
+                      colors={canPost ? [T.yellow, T.yellow] : [T.sand, T.sand]}
                       style={styles.headerBtn}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                     >
                       {loading ? (
-                        <ActivityIndicator color="#111111" size="small" />
+                        <ActivityIndicator color={T.ink} size="small" />
                       ) : (
                         <>
                           <Ionicons
                             name="arrow-up"
                             size={15}
-                            color={canPost ? "#111111" : "#BBBBBB"}
+                            color={canPost ? T.ink : T.textFaint}
                             style={{ marginRight: 4 }}
                           />
                           <Text
                             style={[
                               styles.headerBtnText,
-                              !canPost && { color: '#BBBBBB' },
+                              !canPost && { color: T.textFaint },
                             ]}
                           >
                             Post
@@ -365,7 +366,7 @@ export default function CreatePostScreen({ navigation, route }) {
                     <View style={styles.authorRow}>
                       <View style={styles.avatarWrap}>
                         <LinearGradient
-                          colors={['#f9c349', '#f5a623']}
+                          colors={[T.yellow, T.yellow]}
                           style={styles.avatarGradient}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 1 }}
@@ -393,7 +394,7 @@ export default function CreatePostScreen({ navigation, route }) {
                           {user?.name || "Community Member"}
                         </Text>
                         <View style={styles.authorSub}>
-                          <Ionicons name="location-sharp" size={11} color="#f5a623" />
+                          <Ionicons name="location-sharp" size={11} color={T.yellow} />
                           <Text style={styles.authorLoc} numberOfLines={1}>
                             {user?.location || "Karachi"}
                           </Text>
@@ -401,8 +402,8 @@ export default function CreatePostScreen({ navigation, route }) {
                       </View>
 
                       <View style={styles.visibilityPill}>
-                        <Ionicons name="globe-outline" size={12} color="#666666" />
-                        <Text style={styles.visibilityText}>Public</Text>
+                        <Ionicons name="globe-outline" size={12} color={T.textMuted} />
+                        <Text style={styles.visibilityText}>public</Text>
                       </View>
                     </View>
 
@@ -427,7 +428,7 @@ export default function CreatePostScreen({ navigation, route }) {
                             {
                               borderColor: focusGlow.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: ['#EFEFEF', '#f9c349'],
+                                outputRange: [T.sand, T.yellow],
                               }),
                             },
                           ]}
@@ -436,7 +437,7 @@ export default function CreatePostScreen({ navigation, route }) {
                         <TextInput
                           ref={inputRef}
                           placeholder="What's on your mind today?"
-                          placeholderTextColor="#B5B5B5"
+                          placeholderTextColor={T.textFaint}
                           multiline
                           value={text}
                           onChangeText={setText}
@@ -444,7 +445,7 @@ export default function CreatePostScreen({ navigation, route }) {
                           maxLength={2000}
                           onFocus={() => setIsFocused(true)}
                           onBlur={() => setIsFocused(false)}
-                          selectionColor="#f5a623"
+                          selectionColor={T.yellow}
                           scrollEnabled
                         />
                       </View>
@@ -453,11 +454,11 @@ export default function CreatePostScreen({ navigation, route }) {
                       <Animated.View style={[styles.statsBar, { opacity: statsFade }]}>
                         <View style={styles.statsGroup}>
                           <View style={styles.statPill}>
-                            <Ionicons name="pencil-outline" size={12} color="#666666" />
+                            <Ionicons name="pencil-outline" size={12} color={T.textMuted} />
                             <Text style={styles.statPillText}>{text.length}</Text>
                           </View>
                           <View style={styles.statPill}>
-                            <Ionicons name="reader-outline" size={12} color="#666666" />
+                            <Ionicons name="reader-outline" size={12} color={T.textMuted} />
                             <Text style={styles.statPillText}>{wordCount}w</Text>
                           </View>
                         </View>
@@ -469,7 +470,7 @@ export default function CreatePostScreen({ navigation, route }) {
                                 styles.progressFill,
                                 {
                                   width: `${charProgress}%`,
-                                  backgroundColor: nearLimit ? '#EF4444' : '#f9c349',
+                                  backgroundColor: nearLimit ? T.danger : T.yellow,
                                 },
                               ]}
                             />
@@ -477,7 +478,7 @@ export default function CreatePostScreen({ navigation, route }) {
                           <Text
                             style={[
                               styles.progressLabel,
-                              nearLimit && { color: '#EF4444' },
+                              nearLimit && { color: T.danger },
                             ]}
                           >
                             {text.length}/2000
@@ -491,7 +492,7 @@ export default function CreatePostScreen({ navigation, route }) {
                       <View style={styles.tipsWrap}>
                         <View style={styles.tipsHeaderRow}>
                           <View style={styles.tipsAccent} />
-                          <Text style={styles.tipsHeaderText}>Quick ideas</Text>
+                          <Text style={styles.tipsHeaderText}>quick ideas</Text>
                         </View>
 
                         <View style={styles.tipsGrid}>
@@ -500,14 +501,14 @@ export default function CreatePostScreen({ navigation, route }) {
                             activeOpacity={0.75}
                             onPress={() => setText("Today I want to share... ")}
                           >
-                            <View style={[styles.ideaIcon, { backgroundColor: '#FFF4D6' }]}>
+                            <View style={[styles.ideaIcon, { backgroundColor: T.yellowSoft }]}>
                               <Ionicons
                                 name="chatbubble-ellipses-outline"
                                 size={16}
-                                color="#f5a623"
+                                color={T.yellow}
                               />
                             </View>
-                            <Text style={styles.ideaText}>Share a thought</Text>
+                            <Text style={styles.ideaText}>share a thought</Text>
                           </TouchableOpacity>
 
                           <TouchableOpacity
@@ -515,14 +516,14 @@ export default function CreatePostScreen({ navigation, route }) {
                             activeOpacity={0.75}
                             onPress={() => setText("Quick question for the community: ")}
                           >
-                            <View style={[styles.ideaIcon, { backgroundColor: '#E8F5E9' }]}>
+                            <View style={[styles.ideaIcon, { backgroundColor: T.successBg }]}>
                               <Ionicons
                                 name="help-circle-outline"
                                 size={16}
-                                color="#22C55E"
+                                color={T.success}
                               />
                             </View>
-                            <Text style={styles.ideaText}>Ask a question</Text>
+                            <Text style={styles.ideaText}>ask a question</Text>
                           </TouchableOpacity>
 
                           <TouchableOpacity
@@ -530,14 +531,14 @@ export default function CreatePostScreen({ navigation, route }) {
                             activeOpacity={0.75}
                             onPress={() => setText("Small win worth celebrating: ")}
                           >
-                            <View style={[styles.ideaIcon, { backgroundColor: '#FDE8E8' }]}>
+                            <View style={[styles.ideaIcon, { backgroundColor: T.dangerBg }]}>
                               <Ionicons
                                 name="trophy-outline"
                                 size={16}
-                                color="#EF4444"
+                                color={T.danger}
                               />
                             </View>
-                            <Text style={styles.ideaText}>Celebrate a win</Text>
+                            <Text style={styles.ideaText}>celebrate a win</Text>
                           </TouchableOpacity>
                         </View>
                       </View>
@@ -554,10 +555,10 @@ export default function CreatePostScreen({ navigation, route }) {
                           <Ionicons
                             name="close-circle-outline"
                             size={18}
-                            color="#EF4444"
+                            color={T.danger}
                           />
-                          <Text style={[styles.actionBtnText, { color: '#EF4444' }]}>
-                            Clear
+                          <Text style={[styles.actionBtnText, { color: T.danger }]}>
+                            clear
                           </Text>
                         </TouchableOpacity>
 
@@ -569,8 +570,8 @@ export default function CreatePostScreen({ navigation, route }) {
                           activeOpacity={0.7}
                           disabled={loading}
                         >
-                          <Ionicons name="send" size={16} color="#22C55E" />
-                          <Text style={[styles.actionBtnText, { color: '#22C55E' }]}>
+                          <Ionicons name="send" size={16} color={T.success} />
+                          <Text style={[styles.actionBtnText, { color: T.success }]}>
                             {loading ? 'Publishing...' : 'Publish'}
                           </Text>
                         </TouchableOpacity>
@@ -582,7 +583,7 @@ export default function CreatePostScreen({ navigation, route }) {
                       <Ionicons
                         name="shield-checkmark-outline"
                         size={13}
-                        color="#BBBBBB"
+                        color={T.textFaint}
                       />
                       <Text style={styles.footerHintText}>
                         Be kind. Be authentic. Community guidelines apply.
@@ -608,7 +609,7 @@ const styles = StyleSheet.create({
   // ---------- Modal shell ----------
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: T.overlay,
   },
   kavWrapper: {
     flex: 1,
@@ -618,22 +619,22 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   sheet: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
     maxHeight: height * 0.88,
     paddingBottom: Platform.OS === 'ios' ? 12 : 6,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 20,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   dragHandle: {
     width: 42,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: T.sand,
     alignSelf: 'center',
     marginTop: 10,
     marginBottom: 4,
@@ -646,14 +647,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   skAvatar: {
-    width: 50, height: 50, borderRadius: 25, backgroundColor: '#F0F0F0',
+    width: 50, height: 50, borderRadius: 25, backgroundColor: T.sand,
   },
-  skLine: { backgroundColor: '#F0F0F0', borderRadius: 6 },
+  skLine: { backgroundColor: T.sand, borderRadius: 6 },
   skCard: {
     width: '100%',
     height: 180,
     borderRadius: 22,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: T.sand,
   },
 
   // ---------- Header ----------
@@ -667,7 +668,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#F7F7F7',
+    backgroundColor: T.sand,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -675,22 +676,22 @@ const styles = StyleSheet.create({
   headerTitleRow: { flexDirection: 'row', alignItems: 'center' },
   headerTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#111111',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     letterSpacing: -0.3,
   },
   headerDot: {
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     marginLeft: 6,
     marginTop: 1,
   },
   headerSub: {
     fontSize: 11.5,
-    color: '#9A9A9A',
-    fontWeight: '500',
+    color: T.textFaint,
+    fontFamily: F.bodyMedium,
     marginTop: 2,
   },
   headerBtn: {
@@ -704,8 +705,8 @@ const styles = StyleSheet.create({
   },
   headerBtnText: {
     fontSize: 13.5,
-    fontWeight: '700',
-    color: '#111111',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     letterSpacing: -0.2,
   },
 
@@ -720,15 +721,15 @@ const styles = StyleSheet.create({
   authorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     borderRadius: 18,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#F2F2F2',
-    shadowColor: '#000',
+    borderColor: T.line,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
-    shadowRadius: 10,
+    shadowRadius: 8,
     elevation: 2,
     marginBottom: 16,
   },
@@ -739,40 +740,40 @@ const styles = StyleSheet.create({
   },
   avatarMask: {
     width: '100%', height: '100%', borderRadius: 22,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden',
   },
   avatarImg: { width: '100%', height: '100%' },
-  avatarLetter: { fontSize: 17, fontWeight: '800', color: '#111111' },
+  avatarLetter: { fontSize: 17, fontFamily: F.bodyBold, color: T.ink },
   onlineBadge: {
     position: 'absolute',
     bottom: -2, right: -2,
     width: 15, height: 15, borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     alignItems: 'center', justifyContent: 'center',
   },
   onlineInner: {
     width: 9, height: 9, borderRadius: 5,
-    backgroundColor: '#22C55E',
+    backgroundColor: T.success,
   },
   authorText: { flex: 1, marginLeft: 12, marginRight: 8 },
   authorName: {
-    fontSize: 14.5, fontWeight: '700', color: '#111111',
+    fontSize: 14.5, fontFamily: F.bodyBold, color: T.ink,
     letterSpacing: -0.2,
   },
   authorSub: { flexDirection: 'row', alignItems: 'center', marginTop: 3, gap: 3 },
   authorLoc: {
-    fontSize: 11.5, color: '#888888', fontWeight: '500', marginLeft: 2,
+    fontSize: 11.5, color: T.textFaint, fontFamily: F.bodyMedium, marginLeft: 2,
   },
   visibilityPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: T.sand,
     paddingHorizontal: 10, paddingVertical: 6,
     borderRadius: 12,
   },
   visibilityText: {
-    fontSize: 11, color: '#666666', fontWeight: '600',
+    fontSize: 11, color: T.textMuted, fontFamily: F.bodySemi,
   },
 
   // ---------- Composer ----------
@@ -780,11 +781,11 @@ const styles = StyleSheet.create({
   composerGlow: {
     position: 'absolute',
     top: -6, left: -6, right: -6, bottom: -6,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     borderRadius: 26,
   },
   composer: {
-    backgroundColor: '#FCFCFC',
+    backgroundColor: T.sand,
     borderRadius: 22,
     minHeight: 170,
     padding: 16,
@@ -797,12 +798,12 @@ const styles = StyleSheet.create({
   },
   composerInput: {
     fontSize: 16,
-    color: '#111111',
+    color: T.ink,
     lineHeight: 25,
     textAlignVertical: 'top',
     minHeight: 140,
     paddingTop: 2,
-    fontWeight: '400',
+    fontFamily: F.body,
   },
 
   // Stats
@@ -816,21 +817,21 @@ const styles = StyleSheet.create({
   statsGroup: { flexDirection: 'row', gap: 8 },
   statPill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: T.sand,
     paddingHorizontal: 10, paddingVertical: 5,
     borderRadius: 10,
   },
   statPillText: {
-    fontSize: 11.5, color: '#555555', fontWeight: '700',
+    fontSize: 11.5, color: T.textMuted, fontFamily: F.bodyBold,
   },
   statRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   progressTrack: {
     width: 50, height: 4,
-    backgroundColor: '#EDEDED', borderRadius: 2, overflow: 'hidden',
+    backgroundColor: T.sand, borderRadius: 2, overflow: 'hidden',
   },
   progressFill: { height: '100%', borderRadius: 2 },
   progressLabel: {
-    fontSize: 11.5, color: '#9A9A9A', fontWeight: '600',
+    fontSize: 11.5, color: T.textFaint, fontFamily: F.bodySemi,
     minWidth: 52, textAlign: 'right',
   },
 
@@ -840,22 +841,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8,
   },
   tipsAccent: {
-    width: 3, height: 14, borderRadius: 2, backgroundColor: '#f9c349',
+    width: 3, height: 14, borderRadius: 2, backgroundColor: T.yellow,
   },
   tipsHeaderText: {
-    fontSize: 12.5, fontWeight: '700', color: '#111111',
-    letterSpacing: -0.2, textTransform: 'uppercase',
+    fontSize: 12.5, fontFamily: F.bodyBold, color: T.ink,
+    letterSpacing: -0.2, textTransform: 'none',
   },
   tipsGrid: { flexDirection: 'row', gap: 10 },
   ideaCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     borderRadius: 16,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: T.line,
     alignItems: 'flex-start',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
@@ -867,17 +868,17 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   ideaText: {
-    fontSize: 12, fontWeight: '600', color: '#333333', lineHeight: 16,
+    fontSize: 12, fontFamily: F.bodySemi, color: T.ink, lineHeight: 16,
   },
 
   // ---------- Action bar ----------
   actionBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FAFAFA',
+    backgroundColor: T.sand,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: T.line,
     paddingVertical: 4,
     marginTop: 4,
   },
@@ -889,8 +890,8 @@ const styles = StyleSheet.create({
     gap: 7,
     paddingVertical: 13,
   },
-  actionBtnText: { fontSize: 13.5, fontWeight: '700' },
-  actionDivider: { width: 1, height: 22, backgroundColor: '#E8E8E8' },
+  actionBtnText: { fontSize: 13.5, fontFamily: F.bodyBold },
+  actionDivider: { width: 1, height: 22, backgroundColor: T.sand },
 
   // ---------- Footer ----------
   footerHint: {
@@ -903,8 +904,8 @@ const styles = StyleSheet.create({
   },
   footerHintText: {
     fontSize: 11,
-    color: '#BBBBBB',
-    fontWeight: '500',
+    color: T.textFaint,
+    fontFamily: F.bodyMedium,
     textAlign: 'center',
   },
 });
