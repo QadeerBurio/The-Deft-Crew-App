@@ -30,7 +30,8 @@ import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradie
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus';
-import { color as T, font as F } from "../../theme/tokens";
+import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
+import { ScreenHeader, Card, EmptyState, Skeleton } from "../../ui";
 const { width, height } = Dimensions.get('window');
 
 // ✅ FIXED: Correct API URL (no duplicate /api)
@@ -40,7 +41,7 @@ const COMMENTS_POLL_INTERVAL = 6000;
 
 const COLORS = {
   primary: T.yellow,
-  primaryDark: '#e6b800',
+  primaryDark: T.yellow,
   primaryLight: T.yellowSoft,
   white: T.white,
   black: T.ink,
@@ -697,14 +698,13 @@ export default function PostDetailScreen({ route, navigation }) {
   // ============ LOADING STATE ============
   if (loading) {
     return (
-      <SafeAreaView style={styles.centered}>
-        <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
-        <Animated.View style={{ opacity: fadeAnim }}>
-          <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.loadingText}>loading post...</Text>
-          </View>
-        </Animated.View>
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
+        <ScreenHeader title="post" />
+        <View style={{ padding: 16 }} accessibilityLabel="loading post">
+          <Skeleton rows={1} height={220} />
+          <Skeleton rows={3} height={64} style={{ marginTop: 16 }} />
+        </View>
       </SafeAreaView>
     );
   }
@@ -712,28 +712,17 @@ export default function PostDetailScreen({ route, navigation }) {
   // ============ NOT FOUND STATE ============
   if (!post) {
     return (
-      <SafeAreaView style={styles.centered}>
-        <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
-        <View style={styles.errorContainer}>
-          <LinearGradient colors={[T.yellowSoft, T.white]} style={styles.errorIconContainer}>
-            <Ionicons name="alert-circle-outline" size={60} color={COLORS.primary} />
-          </LinearGradient>
-          <Text style={styles.errorText}>post not found</Text>
-          <Text style={styles.errorSubText}>The post you're looking for doesn't exist</Text>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-            activeOpacity={0.7}
-          >
-            <LinearGradient
-              colors={[COLORS.primary, COLORS.primaryDark]}
-              style={styles.backButtonGradient}
-            >
-              <Ionicons name="arrow-back" size={20} color={COLORS.black} />
-              <Text style={styles.backButtonText}>go back</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
+        <ScreenHeader title="post" />
+        <EmptyState
+          mood="sus"
+          title="post not found."
+          line="the post you're looking for doesn't exist anymore."
+          actionLabel="go back"
+          onAction={() => navigation.goBack()}
+          style={{ marginTop: 40 }}
+        />
       </SafeAreaView>
     );
   }
@@ -741,7 +730,7 @@ export default function PostDetailScreen({ route, navigation }) {
   // ============ MAIN RENDER ============
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -749,19 +738,14 @@ export default function PostDetailScreen({ route, navigation }) {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         {/* Header */}
-        <Animated.View style={[styles.header, { opacity: headerFade }]}>
-          <TouchableOpacity
-            onPress={() => {
+        <Animated.View style={{ opacity: headerFade }}>
+          <ScreenHeader
+            title="post"
+            onBack={() => {
               Keyboard.dismiss();
               navigation.goBack();
             }}
-            style={styles.headerBackBtn}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="arrow-back" size={24} color={COLORS.black} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>post</Text>
-          <View style={styles.headerPlaceholder} />
+          />
         </Animated.View>
 
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
@@ -778,6 +762,7 @@ export default function PostDetailScreen({ route, navigation }) {
               opacity: fadeAnim,
               transform: [{ translateY: slideAnim }]
             }}>
+              <Card padded={false} style={styles.postCard}>
               {/* Post Author */}
               <View style={styles.authorSection}>
                 <TouchableOpacity
@@ -836,6 +821,9 @@ export default function PostDetailScreen({ route, navigation }) {
                   style={styles.likeButton}
                   activeOpacity={0.6}
                   disabled={isLiking}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: liked }}
+                  accessibilityLabel={liked ? 'unlike post' : 'like post'}
                 >
                   <Animated.View style={{ transform: [{ scale: likeScale }] }}>
                     <Animated.View style={{ transform: [{ scale: heartPulse }] }}>
@@ -850,13 +838,13 @@ export default function PostDetailScreen({ route, navigation }) {
                         <Ionicons
                           name={liked ? "heart" : "heart-outline"}
                           size={24}
-                          color={liked ? COLORS.white : COLORS.textSecondary}
+                          color={liked ? COLORS.black : COLORS.textSecondary}
                         />
                       </LinearGradient>
                     </Animated.View>
                   </Animated.View>
                   <Text style={[styles.likeCount, liked && styles.likedText]}>
-                    {likesCount} {likesCount === 1 ? 'Like' : 'Likes'}
+                    {likesCount} {likesCount === 1 ? 'like' : 'likes'}
                   </Text>
                 </TouchableOpacity>
 
@@ -867,22 +855,19 @@ export default function PostDetailScreen({ route, navigation }) {
                     <Ionicons name="chatbubble-outline" size={20} color={COLORS.textSecondary} />
                   </View>
                   <Text style={styles.commentStatText}>
-                    {totalCommentsCount} Comments
+                    {totalCommentsCount} {totalCommentsCount === 1 ? 'comment' : 'comments'}
                   </Text>
                 </View>
               </View>
+              </Card>
 
               {/* Comments Section */}
               <View style={styles.commentsSection}>
                 <View style={styles.commentsHeader}>
                   <View style={styles.commentsHeaderLeft}>
-                    <LinearGradient
-                      colors={[COLORS.primary, COLORS.primaryDark]}
-                      style={styles.commentsIconWrapper}
-                    >
-                      <Ionicons name="chatbubbles-outline" size={18} color={COLORS.black} />
-                    </LinearGradient>
-                    <Text style={styles.commentsTitle}>comments</Text>
+                    <Text style={styles.commentsTitle} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                      comments<Text style={{ color: T.yellow }}>.</Text>
+                    </Text>
                   </View>
                   <View style={styles.commentsCount}>
                     <Text style={styles.commentsCountText}>{totalCommentsCount}</Text>
@@ -898,13 +883,7 @@ export default function PostDetailScreen({ route, navigation }) {
                     showsVerticalScrollIndicator={false}
                   />
                 ) : (
-                  <View style={styles.emptyComments}>
-                    <LinearGradient colors={[T.yellowSoft, T.white]} style={styles.emptyIconCircle}>
-                      <Ionicons name="chatbubble-ellipses-outline" size={36} color={COLORS.primary} />
-                    </LinearGradient>
-                    <Text style={styles.emptyCommentsTitle}>no comments yet</Text>
-                    <Text style={styles.emptyCommentsText}>Be the first to share your thoughts!</Text>
-                  </View>
+                  <EmptyState mood="sleepy" title="no comments yet." line="be the first to say something." />
                 )}
               </View>
 
@@ -921,7 +900,7 @@ export default function PostDetailScreen({ route, navigation }) {
           {replyTo && (
             <View style={styles.replyNotifier}>
               <View style={styles.replyNotifierLeft}>
-                <Ionicons name="return-down-forward" size={14} color={COLORS.primary} />
+                <Ionicons name="return-down-forward" size={14} color={COLORS.black} />
                 <Text style={styles.replyNotifierText}>
                   replying to <Text style={styles.replyNotifierName}>{replyTo.userName}</Text>
                 </Text>
@@ -995,7 +974,8 @@ export default function PostDetailScreen({ route, navigation }) {
               <TextInput
                 ref={inputRef}
                 style={styles.commentInput}
-                placeholder="Write a comment... Use @ to mention"
+                placeholder="write a comment… use @ to mention"
+                accessibilityLabel="write a comment"
                 placeholderTextColor={COLORS.textLight}
                 value={commentText}
                 onChangeText={handleCommentTextChange}
@@ -1011,6 +991,8 @@ export default function PostDetailScreen({ route, navigation }) {
             <TouchableOpacity
               onPress={handleComment}
               disabled={submitting || !commentText.trim()}
+              accessibilityRole="button"
+              accessibilityLabel="send comment"
               style={[
                 styles.sendButton,
                 (!commentText.trim() || submitting) && styles.sendButtonDisabled
@@ -1020,18 +1002,18 @@ export default function PostDetailScreen({ route, navigation }) {
               <LinearGradient
                 colors={
                   commentText.trim() && !submitting
-                    ? [COLORS.primary, COLORS.primaryDark]
+                    ? [T.ink, T.ink]
                     : [T.sand, T.sand]
                 }
                 style={styles.sendButtonGradient}
               >
                 {submitting ? (
-                  <ActivityIndicator size="small" color={COLORS.black} />
+                  <ActivityIndicator size="small" color={T.white} />
                 ) : (
                   <Ionicons
-                    name="send"
-                    size={18}
-                    color={commentText.trim() && !submitting ? COLORS.black : COLORS.textLight}
+                    name="arrow-up"
+                    size={20}
+                    color={commentText.trim() && !submitting ? T.white : COLORS.textLight}
                   />
                 )}
               </LinearGradient>
@@ -1045,7 +1027,8 @@ export default function PostDetailScreen({ route, navigation }) {
 
 // ============ STYLES ============
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.white },
+  container: { flex: 1, backgroundColor: T.paper },
+  postCard: { marginHorizontal: 16, marginTop: 4, overflow: 'hidden' },
   flex: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.white },
 
@@ -1083,22 +1066,21 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontFamily: F.headingBold, color: COLORS.black, letterSpacing: 0.3 },
   headerPlaceholder: { width: 40, height: 40 },
 
-  content: { flex: 1, backgroundColor: COLORS.white },
+  content: { flex: 1, backgroundColor: T.paper },
   contentContainer: { paddingBottom: 20 },
 
   authorSection: {
-    flexDirection: 'row', alignItems: 'center', padding: 16,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    flexDirection: 'row', alignItems: 'center', padding: 16, paddingBottom: 4,
   },
   authorAvatarWrapper: { marginRight: 14 },
-  authorAvatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: COLORS.lightGray },
+  authorAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.lightGray },
   authorAvatarPlaceholder: {
-    width: 52, height: 52, borderRadius: 26,
+    width: 44, height: 44, borderRadius: 22,
     justifyContent: 'center', alignItems: 'center',
   },
   authorAvatarText: { color: COLORS.black, fontFamily: F.headingBold, fontSize: 20 },
   authorInfo: { flex: 1 },
-  authorName: { fontSize: 16, fontFamily: F.bodyBold, color: COLORS.black, marginBottom: 4 },
+  authorName: { fontSize: 15, fontFamily: F.bodyBold, color: COLORS.black, marginBottom: 2 },
   authorMeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   postTime: { fontSize: 12, color: COLORS.textLight, fontFamily: F.bodyMedium },
   metaDot: { fontSize: 11, fontFamily: F.body, color: COLORS.textLight, marginHorizontal: 4 },
@@ -1112,37 +1094,29 @@ const styles = StyleSheet.create({
   },
 
   postContent: {
-    fontSize: 16, color: COLORS.text, lineHeight: 28,
-    paddingHorizontal: 16, paddingVertical: 16, fontFamily: F.body,
+    fontSize: 15, color: COLORS.text, lineHeight: 23,
+    paddingHorizontal: 16, paddingVertical: 12, fontFamily: F.body,
   },
   imageWrapper: {
-    marginHorizontal: 16, marginVertical: 8, borderRadius: 16, overflow: 'hidden',
+    marginHorizontal: 12, marginBottom: 4, borderRadius: 18, overflow: 'hidden',
     position: 'relative',
-    shadowColor: T.ink, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
-  postImage: { width: '100%', height: 350, backgroundColor: COLORS.lightGray },
+  postImage: { width: '100%', aspectRatio: 1, backgroundColor: COLORS.lightGray },
   imageGradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 60 },
 
   statsSection: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderTopWidth: 1, borderTopColor: T.lineSoft, marginTop: 8,
   },
   likeButton: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   likeIconWrapper: {
     width: 36, height: 36, borderRadius: 18,
     justifyContent: 'center', alignItems: 'center',
   },
-  likeIconActive: {
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
+  likeIconActive: {},
   likeCount: { fontSize: 14, color: COLORS.textSecondary, fontFamily: F.bodySemi },
-  likedText: { color: COLORS.primary },
+  likedText: { color: T.ink, fontFamily: F.bodyBold },
   divider: { width: 1, height: 24, backgroundColor: COLORS.border, marginHorizontal: 16 },
   commentStat: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   commentIconWrapper: {
@@ -1151,7 +1125,7 @@ const styles = StyleSheet.create({
   },
   commentStatText: { fontSize: 14, color: COLORS.textSecondary, fontFamily: F.bodyMedium },
 
-  commentsSection: { padding: 16 },
+  commentsSection: { paddingHorizontal: 16, paddingTop: 24 },
   commentsHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: 16,
@@ -1161,10 +1135,10 @@ const styles = StyleSheet.create({
     width: 32, height: 32, borderRadius: 10,
     justifyContent: 'center', alignItems: 'center',
   },
-  commentsTitle: { fontSize: 17, fontFamily: F.bodyBold, color: COLORS.black },
+  commentsTitle: { fontSize: 19, fontFamily: F.heading, color: COLORS.black },
   commentsCount: {
-    backgroundColor: COLORS.primary, paddingHorizontal: 12, paddingVertical: 4,
-    borderRadius: 12,
+    backgroundColor: T.sand, paddingHorizontal: 10, height: 26, justifyContent: 'center',
+    borderRadius: 13,
   },
   commentsCountText: { fontSize: 13, fontFamily: F.bodyBold, color: COLORS.black },
 
@@ -1179,7 +1153,7 @@ const styles = StyleSheet.create({
   avatarLgText: { fontFamily: F.bodyBold, color: COLORS.black, fontSize: 14 },
   parentContent: { flex: 1, marginLeft: 10 },
   bubbleLg: {
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: T.card, borderWidth: 1, borderColor: T.line,
     paddingHorizontal: 14, paddingVertical: 10,
     borderRadius: 18, borderTopLeftRadius: 4,
     alignSelf: 'flex-start', maxWidth: '100%',
@@ -1190,13 +1164,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary, paddingHorizontal: 6, paddingVertical: 1,
     borderRadius: 6,
   },
-  ownBadgeText: { fontSize: 9, fontFamily: F.bodyBold, color: COLORS.black },
+  ownBadgeText: { fontSize: 10.5, fontFamily: F.bodyBold, color: COLORS.black },
   commentText: { fontSize: 14, fontFamily: F.body, color: COLORS.text, lineHeight: 20 },
   metaRowLg: {
     flexDirection: 'row', marginTop: 5, marginLeft: 14, alignItems: 'center',
   },
-  metaText: { fontSize: 11, color: COLORS.textSecondary, fontFamily: F.bodyMedium },
-  replyBtn: { fontSize: 12, color: COLORS.black, fontFamily: F.bodyBold },
+  metaText: { fontSize: 12, color: COLORS.textSecondary, fontFamily: F.bodyMedium },
+  replyBtn: { fontSize: 12.5, color: COLORS.black, fontFamily: F.bodyBold, paddingVertical: 6 },
   deleteBtnText: { color: COLORS.danger },
 
   treeWrapper: { marginTop: 4, marginLeft: 18, paddingLeft: 20, position: 'relative' },
@@ -1206,8 +1180,8 @@ const styles = StyleSheet.create({
   },
   viewRepliesBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingVertical: 6, paddingHorizontal: 12, borderRadius: 14,
-    backgroundColor: COLORS.lightGray,
+    height: 32, paddingHorizontal: 12, borderRadius: 16,
+    backgroundColor: T.sand,
     alignSelf: 'flex-start', marginBottom: 12, marginLeft: -4,
   },
   viewRepliesText: { fontSize: 12, color: COLORS.black, fontFamily: F.bodyBold },
@@ -1231,7 +1205,7 @@ const styles = StyleSheet.create({
   avatarSmText: { fontFamily: F.bodyBold, color: COLORS.black, fontSize: 12 },
   replyContent: { flex: 1 },
   bubbleSm: {
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: T.card, borderWidth: 1, borderColor: T.line,
     paddingHorizontal: 12, paddingVertical: 8,
     borderRadius: 16, borderTopLeftRadius: 4,
     alignSelf: 'flex-start', maxWidth: '100%',
@@ -1240,15 +1214,15 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary, paddingHorizontal: 5, paddingVertical: 1,
     borderRadius: 4,
   },
-  ownBadgeTextSmall: { fontSize: 8, fontFamily: F.bodyBold, color: COLORS.black },
+  ownBadgeTextSmall: { fontSize: 10, fontFamily: F.bodyBold, color: COLORS.black },
   authorNameSm: { fontFamily: F.bodyBold, fontSize: 12, color: COLORS.black },
   replyTextContent: { fontSize: 13, fontFamily: F.body, color: COLORS.text, lineHeight: 18 },
   mentionText: { color: COLORS.mention, fontFamily: F.bodySemi },
   metaRowSm: {
     flexDirection: 'row', marginTop: 4, marginLeft: 12, alignItems: 'center',
   },
-  metaTextSm: { fontSize: 10, color: COLORS.textSecondary, fontFamily: F.bodyMedium },
-  replyBtnSm: { fontSize: 11, color: COLORS.black, fontFamily: F.bodyBold },
+  metaTextSm: { fontSize: 11.5, color: COLORS.textSecondary, fontFamily: F.bodyMedium },
+  replyBtnSm: { fontSize: 12, color: COLORS.black, fontFamily: F.bodyBold, paddingVertical: 6 },
 
   emptyComments: {
     alignItems: 'center', paddingVertical: 40,
@@ -1267,11 +1241,8 @@ const styles = StyleSheet.create({
 
   // INPUT
   commentInputContainer: {
-    paddingHorizontal: 16, paddingVertical: 12,
-    borderTopWidth: 1, borderTopColor: COLORS.border,
-    backgroundColor: COLORS.white,
-    shadowColor: T.ink, shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+    paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12,
+    backgroundColor: T.paper,
   },
   replyNotifier: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -1281,7 +1252,7 @@ const styles = StyleSheet.create({
   },
   replyNotifierLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   replyNotifierText: { fontSize: 12, fontFamily: F.body, color: COLORS.gray },
-  replyNotifierName: { fontFamily: F.bodyBold, color: COLORS.primary },
+  replyNotifierName: { fontFamily: F.bodyBold, color: COLORS.black },
 
   mentionSuggestions: {
     backgroundColor: COLORS.white,
@@ -1306,8 +1277,8 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
   commentInputWrapper: {
     flex: 1, flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.lightGray,
-    borderRadius: 24, paddingHorizontal: 4, paddingVertical: 4,
+    backgroundColor: T.card, borderWidth: 1, borderColor: T.line,
+    borderRadius: 26, paddingHorizontal: 4, paddingVertical: 4, minHeight: 52,
   },
   inputAvatar: {
     width: 32, height: 32, borderRadius: 16, marginLeft: 4,
@@ -1320,15 +1291,13 @@ const styles = StyleSheet.create({
   inputAvatarText: { color: COLORS.black, fontFamily: F.bodyBold, fontSize: 13 },
   commentInput: {
     flex: 1, paddingHorizontal: 12, paddingVertical: 8,
-    maxHeight: 100, fontSize: 14, fontFamily: F.body, color: COLORS.black,
+    maxHeight: 100, fontSize: 15, fontFamily: F.body, color: COLORS.black,
   },
   charCount: {
-    fontSize: 10, color: COLORS.textLight, marginRight: 8, fontFamily: F.bodyMedium,
+    fontSize: 11, color: COLORS.textLight, marginRight: 8, fontFamily: F.bodyMedium,
   },
   sendButton: {
     borderRadius: 24, overflow: 'hidden',
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
   sendButtonGradient: {
     width: 48, height: 48, justifyContent: 'center', alignItems: 'center',
