@@ -26,6 +26,7 @@ import { useStreak } from "../engagement/hooks/useStreak";
 import { useTour } from "../engagement/tour/TourProvider";
 
 import { color as T, font as F } from "../theme/tokens";
+import { APP_VERSION } from "../utils/appVersion";
 import { ScreenHeader, ListRow } from "../ui";
 export default function SettingsScreen({ navigation }) {
   const { user, token, logout } = useContext(AuthContext);
@@ -306,7 +307,7 @@ export default function SettingsScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.versionText}>tdc. v1.0.0 • Karachi, Pakistan</Text>
+        <Text style={styles.versionText}>tdc.{APP_VERSION ? ` version ${APP_VERSION}` : ""} • Karachi, Pakistan</Text>
       </ScrollView>
 
       {/* 🆕 Streak Sheet (opened from Exam Mode row) */}

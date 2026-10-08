@@ -264,9 +264,6 @@ export default function TermsScreen({ navigation }) {
             ))}
           </View>
 
-          <Text style={styles.version}>
-            v2.0
-          </Text>
         </ScrollView>
       </Animated.View>
 

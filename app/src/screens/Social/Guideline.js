@@ -71,8 +71,6 @@ export default function CommunityGuidelinesScreen({ navigation }) {
         </Text>
       </DocCard>
 
-      {/* the old date next to the version came from the phone clock, so only the version is shown */}
-      <Text style={styles.version}>v1.0</Text>
     </DocScreen>
   );
 }

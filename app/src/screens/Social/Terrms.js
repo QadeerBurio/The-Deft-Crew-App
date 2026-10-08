@@ -29,8 +29,6 @@ export default function TermsScreen({ navigation }) {
           body={item.text}
         />
       ))}
-      {/* the old "updated <today>" date was generated from the phone clock, so only the version is shown */}
-      <Text style={styles.version}>v2.0</Text>
     </DocScreen>
   );
 }

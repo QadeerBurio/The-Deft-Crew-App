@@ -17,6 +17,7 @@ import StreakSheet from '../../engagement/components/StreakSheet';
 import { useStreak } from '../../engagement/hooks/useStreak';
 
 import { color as T, font as F } from "../../theme/tokens";
+import { APP_VERSION } from "../../utils/appVersion";
 import { ScreenHeader, ListRow } from "../../ui";
 const { width } = Dimensions.get('window');
 
@@ -399,7 +400,7 @@ export default function SettingsScreen({ navigation }) {
             <SettingItem
               icon="information-circle-outline"
               label="about tdc"
-              subLabel="Version 2.0.1"
+              subLabel={APP_VERSION ? `version ${APP_VERSION}` : undefined}
               onPress={() => navigation.navigate('About')}
             />
             <SettingItem

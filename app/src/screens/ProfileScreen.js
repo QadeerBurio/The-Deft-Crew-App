@@ -44,6 +44,7 @@ import StreakChip from '../engagement/components/StreakChip';
 import StreakSheet from '../engagement/components/StreakSheet';
 
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
+import { APP_VERSION } from "../utils/appVersion";
 const { width, height } = Dimensions.get("window");
 
 // ─── Modern Menu Item ────────────────────────────────────────────────────────
@@ -721,7 +722,7 @@ export default function ProfileScreen() {
           ))}
         </Animated.View>
 
-        <Text style={styles.versionText}>Version 2.0.1</Text>
+        {!!APP_VERSION && <Text style={styles.versionText}>version {APP_VERSION}</Text>}
       </ScrollView>
 
       {/* ── Membership Card Modal ──────────────────────────────────────── */}

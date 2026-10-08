@@ -178,9 +178,6 @@ export default function CommunityGuidelinesScreen({ navigation }) {
             ))}
           </View>
 
-          <Text style={styles.version}>
-            v1.0
-          </Text>
         </ScrollView>
       </Animated.View>
 
