@@ -21,6 +21,7 @@ import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 
 import { color as T, font as F } from "../../theme/tokens";
+import { ScreenHeader } from "../../ui";
 const { width } = Dimensions.get('window');
 
 // IMPORTANT: Define your API URL here or import from config
@@ -201,11 +202,11 @@ export default function ChangePassword({ navigation }) {
     if (/[0-9]/.test(newPassword)) score++;
     
     const strengths = [
-      { label: 'Weak', color: T.danger },
-      { label: 'Fair', color: '#ff6b35' },
-      { label: 'Good', color: '#ffd93d' },
-      { label: 'Strong', color: '#6bcb77' },
-      { label: 'Very Strong', color: T.success },
+      { label: 'weak', color: T.danger },
+      { label: 'fair', color: T.danger },
+      { label: 'good', color: T.ink },
+      { label: 'strong', color: T.success },
+      { label: 'very strong', color: T.success },
     ];
     return { ...strengths[score], score };
   };
@@ -217,12 +218,8 @@ export default function ChangePassword({ navigation }) {
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
       
       {/* Header */}
-      <Animated.View style={[styles.header, { opacity: headerFade }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={T.ink} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>change password</Text>
-        <View style={{ width: 40 }} />
+      <Animated.View style={{ opacity: headerFade }}>
+        <ScreenHeader title="change password" onBack={() => navigation.goBack()} />
       </Animated.View>
 
       <KeyboardAvoidingView 
@@ -242,7 +239,7 @@ export default function ChangePassword({ navigation }) {
             {/* Header Icon */}
             <Animated.View style={[styles.iconContainer, { transform: [{ scale: scaleAnim }] }]}>
               <LinearGradient 
-                colors={[T.yellow, '#e6b800']} 
+                colors={[T.yellow, T.yellow]} 
                 style={styles.iconGradient}
               >
                 <Ionicons name="key-outline" size={44} color={T.ink} />
@@ -404,7 +401,7 @@ export default function ChangePassword({ navigation }) {
               activeOpacity={0.8}
             >
               <LinearGradient 
-                colors={[T.yellow, '#e6b800']} 
+                colors={[T.yellow, T.yellow]} 
                 style={styles.updateGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
@@ -548,11 +545,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: T.card,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1.5,
     borderColor: T.line,
     paddingHorizontal: 4,
-    height: 47,
+    height: 52,
   },
   inputFocused: {
     borderColor: T.yellow,
@@ -665,7 +662,7 @@ const styles = StyleSheet.create({
   
   // Update Button
   updateBtn: {
-    borderRadius: 14,
+    borderRadius: 28,
     overflow: 'hidden',
     shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },

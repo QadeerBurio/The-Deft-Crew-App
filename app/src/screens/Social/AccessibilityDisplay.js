@@ -1,91 +1,45 @@
+// screens/Social/AccessibilityDisplay.js — display & languages. Same rows; design system layout.
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  
-  TouchableOpacity, 
-  ScrollView, 
-  StatusBar 
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenHeader, ListRow } from '../../ui';
+import { color as T, font as F, MAX_FONT_SCALE } from '../../theme/tokens';
 
-import { color as T, font as F } from "../../theme/tokens";
-const DisplayItem = ({ icon, label, subtitle, onPress }) => (
-  <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.7}>
-    <View style={styles.iconBackground}>
-      <Ionicons name={icon} size={22} color={T.ink} />
-    </View>
-    <View style={styles.menuContent}>
-      <Text style={styles.menuLabel}>{label}</Text>
-      <Text style={styles.menuSubLabel}>{subtitle}</Text>
-    </View>
-    <Ionicons name="chevron-forward" size={18} color={T.textFaint} />
-  </TouchableOpacity>
+const Group = ({ title, children }) => (
+  <View style={styles.group}>
+    <Text style={styles.groupTitle} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>{title}</Text>
+    <View style={styles.card}>{children}</View>
+  </View>
 );
 
 export default function AccessibilityDisplay({ navigation }) {
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={28} color={T.ink} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>display & languages</Text>
-        <View style={{ width: 28 }} />
-      </View>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
+      <ScreenHeader title="display & languages" onBack={() => navigation.goBack()} />
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.introSection}>
-          <View style={styles.illustrationCircle}>
-            <Ionicons name="color-palette-outline" size={40} color="#1D9BF0" />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.intro}>
+          <View style={styles.introIcon}>
+            <Ionicons name="color-palette-outline" size={24} color={T.ink} />
           </View>
-          <Text style={styles.description}>
+          <Text style={styles.introText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
             Manage how TDC looks to you and select your preferred language settings.
           </Text>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>appearance</Text>
-          <View style={styles.card}>
-            <DisplayItem 
-              icon="moon-outline"
-              label="Display"
-              subtitle="Manage Dark Mode, Light Mode, and contrast."
-              onPress={() => {}}
-            />
-            <DisplayItem 
-              icon="text-outline"
-              label="Text Size"
-              subtitle="Adjust the font size for better readability."
-              onPress={() => {}}
-            />
-          </View>
-        </View>
+        <Group title="appearance">
+          <ListRow icon="moon-outline" title="display" meta="Manage Dark Mode, Light Mode, and contrast." onPress={() => {}} />
+          <ListRow icon="text-outline" title="text size" meta="Adjust the font size for better readability." onPress={() => {}} divider={false} />
+        </Group>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>localization</Text>
-          <View style={styles.card}>
-            <DisplayItem 
-              icon="language-outline"
-              label="Languages"
-              subtitle="Choose your primary language for TDC."
-              onPress={() => {}}
-            />
-            <DisplayItem 
-              icon="globe-outline"
-              label="Region"
-              subtitle="Set your preferred regional formats."
-              onPress={() => {}}
-            />
-          </View>
-        </View>
+        <Group title="localization">
+          <ListRow icon="language-outline" title="languages" meta="Choose your primary language for TDC." onPress={() => {}} />
+          <ListRow icon="globe-outline" title="region" meta="Set your preferred regional formats." onPress={() => {}} divider={false} />
+        </Group>
 
-        <Text style={styles.footerNote}>
+        <Text style={styles.footer} maxFontSizeMultiplier={MAX_FONT_SCALE}>
           These settings affect your experience on this device only.
         </Text>
       </ScrollView>
@@ -95,91 +49,12 @@ export default function AccessibilityDisplay({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: T.paper },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between',
-    paddingHorizontal: 16, 
-    paddingVertical: 12,
-    backgroundColor: T.card,
-    borderBottomWidth: 0.5,
-    borderBottomColor: T.line,
-    paddingTop: 40 
-  },
-  backBtn: { padding: 4 },
-  headerTitle: { fontSize: 18, fontFamily: F.heading, color: T.ink },
-  
-  content: { flex: 1 },
-  introSection: {
-    alignItems: 'center',
-    padding: 24,
-    backgroundColor: T.card,
-    borderBottomWidth: 0.5,
-    borderBottomColor: T.line,
-  },
-  illustrationCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: T.sand,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16
-  },
-  description: { 
-    textAlign: 'center',
-    color: T.textMuted, 
-    fontSize: 14, fontFamily: F.body, 
-    lineHeight: 20,
-  },
-
-  section: { paddingHorizontal: 16, marginTop: 24 },
-  sectionTitle: { 
-    paddingLeft: 4,
-    fontSize: 13, 
-    fontFamily: F.bodyBold, 
-    color: T.textMuted, 
-    marginBottom: 8, 
-    textTransform: 'none',
-    letterSpacing: 0.5
-  },
-  card: { 
-    backgroundColor: T.card, 
-    borderRadius: 16, 
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: T.line,
-    shadowColor: T.ink,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2
-  },
-  menuItem: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    padding: 16, 
-    borderBottomWidth: 0.5, 
-    borderBottomColor: T.line 
-  },
-  iconBackground: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: T.sand,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16
-  },
-  menuContent: { flex: 1 },
-  menuLabel: { fontSize: 16, fontFamily: F.bodyBold, color: T.ink },
-  menuSubLabel: { fontSize: 13, fontFamily: F.body, color: T.textMuted, marginTop: 2, lineHeight: 18 },
-  
-  footerNote: {
-    padding: 30,
-    textAlign: 'center',
-    fontSize: 12, fontFamily: F.body,
-    color: T.textMuted,
-    lineHeight: 18
-  }
+  content: { paddingHorizontal: 16, paddingBottom: 32 },
+  intro: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: 22, backgroundColor: T.card, borderWidth: 1, borderColor: T.line, marginTop: 4 },
+  introIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: T.yellowSoft, alignItems: 'center', justifyContent: 'center' },
+  introText: { flex: 1, fontFamily: F.body, fontSize: 14, lineHeight: 20, color: T.textMuted },
+  group: { marginTop: 20 },
+  groupTitle: { fontFamily: F.heading, fontSize: 17, color: T.ink, marginBottom: 10, paddingLeft: 4 },
+  card: { borderRadius: 22, backgroundColor: T.card, borderWidth: 1, borderColor: T.line, overflow: 'hidden' },
+  footer: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, textAlign: 'center', marginTop: 20 },
 });

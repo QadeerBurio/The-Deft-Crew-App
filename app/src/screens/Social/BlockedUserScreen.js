@@ -24,6 +24,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 
 import { color as T, font as F } from "../../theme/tokens";
+import { ScreenHeader, EmptyState } from "../../ui";
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
 // Skeleton Loader for Blocked Users
@@ -110,7 +111,7 @@ const BlockedUserItem = React.memo(({ item, index, onUnblock, onNavigate, unbloc
             <Image source={{ uri: item.profileImage }} style={styles.avatar} />
           ) : (
             <LinearGradient
-              colors={[T.yellow, '#e6b800']}
+              colors={[T.yellow, T.yellow]}
               style={styles.avatarPlaceholder}
             >
               <Text style={styles.avatarText}>{item.name?.charAt(0)?.toUpperCase()}</Text>
@@ -143,7 +144,7 @@ const BlockedUserItem = React.memo(({ item, index, onUnblock, onNavigate, unbloc
           disabled={isUnblocking}
         >
           {isUnblocking ? (
-            <ActivityIndicator size="small" color={T.yellow} />
+            <ActivityIndicator size="small" color={T.ink} />
           ) : (
             <Text style={styles.unblockButtonText}>unblock</Text>
           )}
@@ -293,7 +294,7 @@ export default function BlockedUsersScreen() {
     if (blockedUsers.length === 0) return null;
 
     return (
-      <TouchableOpacity onPress={handleClearAll} style={styles.headerAction}>
+      <TouchableOpacity onPress={handleClearAll} style={styles.headerAction} accessibilityRole="button" accessibilityLabel="unblock all">
         <Text style={styles.headerActionText}>clear all</Text>
       </TouchableOpacity>
     );
@@ -302,13 +303,7 @@ export default function BlockedUsersScreen() {
   // Shared header component
   const Header = () => (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeHeader}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={T.ink} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>blocked users</Text>
-        {renderClearAllButton() ?? <View style={{ width: 40 }} />}
-      </View>
+      <ScreenHeader title="blocked users" onBack={() => navigation.goBack()} right={renderClearAllButton()} />
     </SafeAreaView>
   );
 
@@ -340,18 +335,7 @@ export default function BlockedUsersScreen() {
             },
           ]}
         >
-          <View style={styles.emptyIconWrapper}>
-            <LinearGradient
-              colors={['rgba(249,195,73,0.1)', 'rgba(249,195,73,0.05)']}
-              style={styles.emptyIcon}
-            >
-              <Ionicons name="ban-outline" size={60} color={T.yellow} />
-            </LinearGradient>
-          </View>
-          <Text style={styles.emptyTitle}>no blocked users</Text>
-          <Text style={styles.emptySubtext}>
-            Users you block will appear here. You can unblock them at any time.
-          </Text>
+          <EmptyState mood="sorted" title="no blocked users." line="users you block will appear here. you can unblock them at any time." />
         </Animated.View>
       ) : (
         <FlatList
@@ -370,8 +354,8 @@ export default function BlockedUsersScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={T.yellow}
-              colors={[T.yellow]}
+              tintColor={T.ink}
+              colors={[T.ink]}
             />
           }
           contentContainerStyle={[
@@ -406,18 +390,7 @@ const styles = StyleSheet.create({
 
   // Safe Header
   safeHeader: {
-    backgroundColor: T.card,
-    ...Platform.select({
-      ios: {
-        shadowColor: T.ink,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    backgroundColor: T.paper,
   },
 
   // Header
@@ -447,17 +420,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   headerAction: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 14,
+    height: 36,
+    justifyContent: "center",
+    borderRadius: 18,
     backgroundColor: T.yellowSoft,
-    borderWidth: 1,
-    borderColor: T.yellow,
   },
   headerActionText: {
-    fontSize: 12,
-    fontFamily: F.bodySemi,
-    color: T.yellow,
+    fontSize: 13,
+    fontFamily: F.bodyBold,
+    color: T.ink,
   },
   headerActionTextDisabled: {
     color: T.textFaint,
@@ -602,9 +574,8 @@ const styles = StyleSheet.create({
   // Empty State
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
+    justifyContent: "center",
+    paddingHorizontal: 16,
   },
   emptyIconWrapper: {
     marginBottom: 16,

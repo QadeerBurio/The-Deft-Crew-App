@@ -7,7 +7,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthContext } from '../../context/AuthContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -18,68 +17,63 @@ import StreakSheet from '../../engagement/components/StreakSheet';
 import { useStreak } from '../../engagement/hooks/useStreak';
 
 import { color as T, font as F } from "../../theme/tokens";
+import { ScreenHeader, ListRow } from "../../ui";
 const { width } = Dimensions.get('window');
 
-// ── SettingItem ────────────────────────────────────────────────────────────
-const SettingItem = ({ icon, label, subLabel, color = T.ink, onPress, danger = false, badge, iconBg }) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-
-  const handlePressIn = () => {
-    Animated.spring(scaleAnim, { toValue: 0.97, friction: 5, useNativeDriver: true }).start();
-  };
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, { toValue: 1, friction: 5, useNativeDriver: true }).start();
-  };
-
-  return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <TouchableOpacity
-        style={styles.settingRow}
-        onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        activeOpacity={0.6}
-      >
-        <View style={[styles.settingIconWrapper, { backgroundColor: iconBg || (danger ? T.dangerBg : T.sand) }]}>
-          <Ionicons name={icon} size={18} color={danger ? T.danger : color} />
-        </View>
-        <View style={styles.textContainer}>
-          <Text style={[styles.settingLabel, danger && { color: T.danger }]}>{label}</Text>
-          {subLabel && <Text style={styles.settingSubLabel}>{subLabel}</Text>}
-        </View>
-        {badge && (
+// ── SettingItem (kit ListRow) ──────────────────────────────────────────────
+const SettingItem = ({ icon, label, subLabel, onPress, danger = false, badge, last = false }) => (
+  <ListRow
+    icon={icon}
+    title={label}
+    meta={subLabel}
+    onPress={onPress}
+    danger={danger}
+    divider={!last}
+    right={
+      badge ? (
+        <View style={styles.rowRight}>
           <View style={styles.badgeContainer}>
             <Text style={styles.badgeText}>{badge}</Text>
           </View>
-        )}
-        <Ionicons name="chevron-forward" size={16} color={T.textFaint} />
-      </TouchableOpacity>
-    </Animated.View>
-  );
-};
+          <Ionicons name="chevron-forward" size={16} color={T.textFaint} />
+        </View>
+      ) : undefined
+    }
+  />
+);
 
-// ── ToggleItem ─────────────────────────────────────────────────────────────
-const ToggleItem = ({ icon, label, subLabel, color = T.ink, value, onToggle, iconBg }) => {
-  return (
-    <TouchableOpacity style={styles.settingRow} onPress={onToggle} activeOpacity={0.6}>
-      <View style={[styles.settingIconWrapper, { backgroundColor: iconBg || T.sand }]}>
-        <Ionicons name={icon} size={18} color={color} />
-      </View>
-      <View style={styles.textContainer}>
-        <Text style={styles.settingLabel}>{label}</Text>
-        {subLabel && <Text style={styles.settingSubLabel}>{subLabel}</Text>}
-      </View>
+// ── ToggleItem (kit ListRow + switch) ──────────────────────────────────────
+const ToggleItem = ({ icon, label, subLabel, value, onToggle, last = false }) => (
+  <ListRow
+    icon={icon}
+    title={label}
+    meta={subLabel}
+    onPress={onToggle}
+    divider={!last}
+    accessibilityLabel={`${label}, ${value ? 'on' : 'off'}`}
+    right={
       <Switch
-        trackColor={{ false: T.sand, true: T.yellow }}
-        thumbColor={T.white}
-        ios_backgroundColor={T.sand}
+        trackColor={{ false: T.line, true: T.ink }}
+        thumbColor={value ? T.yellow : T.white}
+        ios_backgroundColor={T.line}
         onValueChange={onToggle}
         value={value}
-        style={{ transform: [{ scale: 0.85 }] }}
       />
-    </TouchableOpacity>
-  );
-};
+    }
+  />
+);
+
+// ── Group: section title + one white card ──────────────────────────────────
+const Group = ({ title, children }) => (
+  <View style={styles.settingsGroup}>
+    {!!title && (
+      <Text style={styles.groupLabel} accessibilityRole="header">
+        {title}
+      </Text>
+    )}
+    <View style={styles.groupCard}>{children}</View>
+  </View>
+);
 
 // ══════════════════════════════════════════════════════════════════════════
 // PRIVACY & SAFETY SCREEN
@@ -93,94 +87,71 @@ const PrivacyAndSafetyScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
-
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
-          <Ionicons name="arrow-back" size={22} color={T.ink} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>privacy & safety</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <ScreenHeader title="privacy & safety" onBack={() => navigation.goBack()} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.compactContent}>
-        <View style={styles.settingsGroup}>
-          <Text style={styles.groupLabel}>privacy controls</Text>
+        <Group title="privacy controls">
           <ToggleItem
             icon="lock-closed-outline"
-            label="Private Account"
+            label="private account"
             subLabel="Only connections can see your posts"
-            color={T.yellow}
-            iconBg={T.yellowSoft}
             value={isPrivate}
             onToggle={() => setIsPrivate(!isPrivate)}
           />
           <ToggleItem
             icon="eye-outline"
-            label="Show Online Status"
+            label="show online status"
             subLabel="Let others see when you're online"
-            color={T.yellow}
-            iconBg={T.yellowSoft}
             value={showOnlineStatus}
             onToggle={() => setShowOnlineStatus(!showOnlineStatus)}
           />
           <ToggleItem
             icon="time-outline"
-            label="Show Last Seen"
+            label="show last seen"
             subLabel="Show when you were last active"
-            color={T.yellow}
-            iconBg={T.yellowSoft}
             value={showLastSeen}
             onToggle={() => setShowLastSeen(!showLastSeen)}
+            last
           />
-        </View>
+        </Group>
 
-        <View style={styles.settingsGroup}>
-          <Text style={styles.groupLabel}>safety</Text>
+        <Group title="safety">
           <SettingItem
             icon="ban-outline"
-            label="Blocked Users"
+            label="blocked users"
             subLabel="Manage your blocked list"
-            color={T.yellow}
-            iconBg={T.yellowSoft}
             onPress={() => navigation.navigate('BlockedUsers')}
           />
           <SettingItem
             icon="flag-outline"
-            label="Report History"
+            label="report history"
             subLabel="View your past reports"
-            color={T.yellow}
-            iconBg={T.yellowSoft}
             onPress={() => Alert.alert("Report History", "Your reports will appear here")}
+            last
           />
-        </View>
+        </Group>
 
-        <View style={styles.settingsGroup}>
-          <Text style={styles.groupLabel}>legal</Text>
+        <Group title="legal">
           <SettingItem
             icon="document-text-outline"
-            label="Privacy Policy"
+            label="privacy policy"
             subLabel="How we handle your data"
-            color={T.yellow}
-            iconBg={T.yellowSoft}
             onPress={() => navigation.navigate('PrivacyPolicy')}
           />
           <SettingItem
             icon="document-text-outline"
-            label="Terms & Conditions"
+            label="terms & conditions"
             subLabel="Our terms and conditions"
-            color={T.yellow}
-            iconBg={T.yellowSoft}
             onPress={() => navigation.navigate('TermsAndConditions')}
           />
           <SettingItem
             icon="people-outline"
-            label="Community Guidelines"
+            label="community guidelines"
             subLabel="Our community standards"
-            color={T.yellow}
-            iconBg={T.yellowSoft}
             onPress={() => navigation.navigate('CommunityGuidelines')}
+            last
           />
-        </View>
+        </Group>
 
         <View style={styles.footerCompact}>
           <Text style={styles.footerText}>© 2026 TDC</Text>
@@ -329,14 +300,7 @@ export default function SettingsScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
-
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
-          <Ionicons name="arrow-back" size={22} color={T.ink} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>settings</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <ScreenHeader title="settings" onBack={() => navigation.goBack()} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.compactContent}>
         <Animated.View style={{ opacity: fadeAnim }}>
@@ -351,6 +315,8 @@ export default function SettingsScreen({ navigation }) {
               ]).start(() => navigation.navigate("YourAccount"));
             }}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="your account"
           >
             <Animated.View
               style={{
@@ -360,7 +326,7 @@ export default function SettingsScreen({ navigation }) {
                 flex: 1,
               }}
             >
-              <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.profileAvatarCompact}>
+              <View style={styles.profileAvatarCompact}>
                 {user?.profileImage ? (
                   <Image source={{ uri: user.profileImage }} style={styles.profileAvatarImage} />
                 ) : (
@@ -368,107 +334,95 @@ export default function SettingsScreen({ navigation }) {
                     {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                   </Text>
                 )}
-              </LinearGradient>
-              <View style={styles.profileInfoCompact}>
-                <Text style={styles.profileNameCompact}>{user?.name || 'User'}</Text>
-                <Text style={styles.profileEmailCompact}>{user?.email || 'user@email.com'}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={T.textFaint} />
+              <View style={styles.profileInfoCompact}>
+                <Text style={styles.profileNameCompact}>{user?.name || 'your account'}</Text>
+                {!!user?.email && <Text style={styles.profileEmailCompact}>{user.email}</Text>}
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={T.onInkMuted} />
             </Animated.View>
           </TouchableOpacity>
 
-          {/* Settings Group */}
-          <View style={styles.settingsGroup}>
+          <Group title="account">
             <SettingItem
               icon="lock-closed-outline"
-              label="Change Password"
-              color={T.yellow}
-              iconBg={T.yellowSoft}
+              label="change password"
               onPress={() => navigation.navigate("ChangePassword")}
             />
             <SettingItem
               icon="shield-checkmark-outline"
-              label="Privacy & Safety"
-              color={T.yellow}
-              iconBg={T.yellowSoft}
+              label="privacy & safety"
               onPress={() => navigation.navigate('PrivacyAndSafety')}
             />
             <SettingItem
               icon="notifications-outline"
-              color={T.ink}
-              iconBg={T.sand}
-              label="Notifications"
+              label="notifications"
               onPress={() => navigation.navigate('NotificationSettings')}
             />
             <SettingItem
+              icon="ban-outline"
+              label="blocked users"
+              onPress={() => navigation.navigate('BlockedUsers')}
+              last
+            />
+          </Group>
+
+          <Group title="app">
+            <SettingItem
               icon="refresh-outline"
-              color={T.ink}
-              iconBg={T.sand}
-              label="Replay the Tour"
+              label="replay the tour"
               subLabel="See the app walkthrough again"
               onPress={handleReplayTour}
             />
-
             {/* 🆕 EXAM MODE ROW */}
             <SettingItem
               icon="school-outline"
-              label="Exam Mode"
+              label="exam mode"
               subLabel={
                 examModeActive && examModeUntil
                   ? `On until ${examModeUntil}`
                   : 'Your streak waits while you study'
               }
-              color={T.yellow}
-              iconBg={T.yellowSoft}
-              badge={examModeActive ? 'On' : 'Off'}
+              badge={examModeActive ? 'on' : 'off'}
               onPress={handleExamModePress}
+              last
             />
+          </Group>
 
+          <Group title="help & legal">
             <SettingItem
               icon="help-circle-outline"
-              label="Help Center"
-              color={T.yellow}
-              iconBg={T.yellowSoft}
+              label="help center"
               onPress={() => navigation.navigate('HelpCenter')}
             />
             <SettingItem
               icon="information-circle-outline"
-              label="About TDC"
+              label="about tdc"
               subLabel="Version 2.0.1"
-              color={T.yellow}
-              iconBg={T.yellowSoft}
               onPress={() => navigation.navigate('About')}
             />
             <SettingItem
               icon="document-text-outline"
-              label="Terms & Conditions"
-              color={T.yellow}
-              iconBg={T.yellowSoft}
+              label="terms & conditions"
               onPress={() => navigation.navigate('Terrms')}
             />
             <SettingItem
               icon="people-outline"
-              label="Community Guidelines"
-              color={T.yellow}
-              iconBg={T.yellowSoft}
+              label="community guidelines"
               onPress={() => navigation.navigate('Guideline')}
+              last
             />
-            <SettingItem
-              icon="ban-outline"
-              label="Blocked Users"
-              color={T.yellow}
-              iconBg={T.yellowSoft}
-              onPress={() => navigation.navigate('BlockedUsers')}
-            />
+          </Group>
+
+          <Group>
             <SettingItem
               icon="log-out-outline"
-              label="Log Out"
-              color={T.danger}
-              iconBg={T.dangerBg}
+              label="log out"
               danger
               onPress={handleLogoutPress}
+              last
             />
-          </View>
+          </Group>
 
           <View style={styles.footerCompact}>
             <Text style={styles.footerText}>© 2026 TDC. All rights reserved.</Text>
@@ -494,7 +448,7 @@ export default function SettingsScreen({ navigation }) {
 
             <TouchableOpacity style={styles.modalOption} onPress={handleSignOut}>
               <View style={[styles.modalOptionIcon, { backgroundColor: T.yellowSoft }]}>
-                <Ionicons name="exit-outline" size={22} color="#FF9800" />
+                <Ionicons name="exit-outline" size={22} color={T.ink} />
               </View>
               <View style={styles.modalOptionContent}>
                 <Text style={styles.modalOptionTitle}>sign out</Text>
@@ -571,19 +525,19 @@ export default function SettingsScreen({ navigation }) {
             {deleteStep === 2 && (
               <>
                 <View style={styles.deleteModalHeader}>
-                  <View style={[styles.deleteModalIcon, { backgroundColor: '#FFD93D20' }]}>
-                    <MaterialCommunityIcons name="pause-circle" size={36} color={T.yellow} />
+                  <View style={[styles.deleteModalIcon, { backgroundColor: T.yellowSoft }]}>
+                    <MaterialCommunityIcons name="pause-circle" size={36} color={T.ink} />
                   </View>
                   <Text style={styles.deleteModalTitle}>wait! before you go</Text>
                   <Text style={styles.deleteModalDesc}>consider these options instead:</Text>
                 </View>
                 <View style={styles.alternativeList}>
                   <TouchableOpacity style={styles.alternativeItem} onPress={closeDeleteModal}>
-                    <Ionicons name="create-outline" size={18} color={T.yellow} />
+                    <Ionicons name="create-outline" size={18} color={T.ink} />
                     <Text style={styles.alternativeText}>update your profile</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.alternativeItem} onPress={closeDeleteModal}>
-                    <Ionicons name="help-circle-outline" size={18} color={T.yellow} />
+                    <Ionicons name="help-circle-outline" size={18} color={T.ink} />
                     <Text style={styles.alternativeText}>contact support</Text>
                   </TouchableOpacity>
                 </View>
@@ -697,45 +651,46 @@ const styles = StyleSheet.create({
   },
 
   settingsGroup: {
-    marginTop: 16,
+    marginTop: 20,
   },
   groupLabel: {
-    fontSize: 12,
-    fontFamily: F.bodyBold,
-    color: T.textMuted,
-    letterSpacing: 0.8,
-    textTransform: 'none',
-    marginBottom: 6,
+    fontSize: 17,
+    fontFamily: F.heading,
+    color: T.ink,
+    marginBottom: 10,
     paddingLeft: 4,
   },
+  groupCard: {
+    backgroundColor: T.card,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: T.line,
+    overflow: 'hidden',
+  },
+  rowRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 
   // Profile Card
   profileCardCompact: {
-    backgroundColor: T.card,
-    borderRadius: 14,
-    padding: 14,
+    backgroundColor: T.ink,
+    borderRadius: 24,
+    padding: 16,
     marginTop: 4,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: T.ink,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: T.line,
   },
   profileAvatarCompact: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: T.yellow,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
   profileAvatarImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
   },
   profileAvatarText: {
     fontSize: 18,
@@ -747,14 +702,13 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   profileNameCompact: {
-    fontSize: 15,
-    fontFamily: F.bodyBold,
-    color: T.ink,
-    letterSpacing: -0.2,
+    fontSize: 18,
+    fontFamily: F.heading,
+    color: T.white,
   },
   profileEmailCompact: {
-    fontSize: 12,
-    color: T.textMuted,
+    fontSize: 12.5,
+    color: T.onInkMuted,
     fontFamily: F.bodyMedium,
     marginTop: 1,
   },
@@ -790,14 +744,14 @@ const styles = StyleSheet.create({
     fontFamily: F.body,
   },
   badgeContainer: {
-    backgroundColor: T.yellow,
-    paddingHorizontal: 7,
-    paddingVertical: 1,
-    borderRadius: 8,
-    marginRight: 8,
+    backgroundColor: T.yellowSoft,
+    paddingHorizontal: 9,
+    height: 22,
+    justifyContent: 'center',
+    borderRadius: 11,
   },
   badgeText: {
-    fontSize: 9,
+    fontSize: 11.5,
     fontFamily: F.bodyBold,
     color: T.ink,
   },
@@ -808,8 +762,8 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   footerText: {
-    fontSize: 11,
-    color: T.textFaint,
+    fontSize: 12,
+    color: T.textMuted,
     fontFamily: F.body,
   },
 
@@ -866,7 +820,7 @@ const styles = StyleSheet.create({
   modalOptionDanger: {
     backgroundColor: T.dangerBg,
     borderWidth: 1,
-    borderColor: '#FFEBEE',
+    borderColor: T.dangerBg,
   },
   modalOptionIcon: {
     width: 38,

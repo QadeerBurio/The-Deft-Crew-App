@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  View, 
-  StyleSheet, 
-  TouchableOpacity, 
-  Text, 
-  ActivityIndicator, 
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Text,
+  ActivityIndicator,
   StatusBar,
   Linking,
   Animated,
@@ -15,6 +15,7 @@ import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { color as T, font as F } from "../../theme/tokens";
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
+import { ScreenHeader, HeaderIconButton } from "../../ui";
 
 export default function HelpCenter({ navigation }) {
   const [loading, setLoading] = useState(true);
@@ -54,36 +55,29 @@ export default function HelpCenter({ navigation }) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
-      
-      {/* Header */}
-      <Animated.View style={[styles.header, { opacity: headerFade }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
-          <Ionicons name="close" size={22} color={T.ink} />
-        </TouchableOpacity>
-        
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>help center</Text>
-          <Text style={styles.headerSubtitle}>thedeftcrew.com</Text>
-        </View>
 
-        <TouchableOpacity onPress={openInBrowser} style={styles.headerBtn}>
-          <Ionicons name="open-outline" size={20} color={T.yellow} />
-        </TouchableOpacity>
+      {/* Header */}
+      <Animated.View style={{ opacity: headerFade }}>
+        <ScreenHeader
+          title="help center"
+          onBack={() => navigation.goBack()}
+          right={<HeaderIconButton icon="open-outline" label="open thedeftcrew.com in browser" onPress={openInBrowser} />}
+        />
       </Animated.View>
 
       {/* Loading Progress Bar */}
       {loading && (
         <View style={styles.progressBarContainer}>
           <Animated.View style={[styles.progressBar, { width: progressWidthInterpolated }]}>
-            <LinearGradient colors={[T.yellow, T.ink]} style={styles.progressGradient} />
+            <LinearGradient colors={[T.ink, T.ink]} style={styles.progressGradient} />
           </Animated.View>
         </View>
       )}
 
       {/* WebView */}
       <View style={styles.webWrapper}>
-        <WebView 
-          source={{ uri: helpUrl }} 
+        <WebView
+          source={{ uri: helpUrl }}
           onLoadStart={() => setLoading(true)}
           onLoadEnd={() => setLoading(false)}
           onLoadProgress={({ nativeEvent }) => setLoadingProgress(nativeEvent.progress * 100)}
@@ -94,16 +88,16 @@ export default function HelpCenter({ navigation }) {
           scalesPageToFit={true}
           renderLoading={() => null}
         />
-        
+
         {/* Loading Overlay */}
         {loading && (
           <Animated.View style={[styles.loaderContainer, { opacity: fadeAnim }]}>
-            <LinearGradient colors={[T.yellow, T.ink]} style={styles.loaderIconCircle}>
-              <Ionicons name="help-circle" size={40} color={T.white} />
+            <LinearGradient colors={[T.ink, T.ink]} style={styles.loaderIconCircle}>
+              <Ionicons name="help-circle" size={36} color={T.yellow} />
             </LinearGradient>
             <Text style={styles.loadingTitle}>loading help center</Text>
             <Text style={styles.loadingSubtitle}>fetching the latest support articles...</Text>
-            <ActivityIndicator size="small" color={T.yellow} style={{ marginTop: 16 }} />
+            <ActivityIndicator size="small" color={T.ink} style={{ marginTop: 16 }} />
           </Animated.View>
         )}
 
@@ -117,10 +111,10 @@ export default function HelpCenter({ navigation }) {
           </TouchableOpacity>
           <View style={{ flex: 1 }} />
           <TouchableOpacity style={styles.toolbarBtn} onPress={openInBrowser} activeOpacity={0.7}>
-            <Ionicons name="compass-outline" size={20} color={T.yellow} />
+            <Ionicons name="compass-outline" size={20} color={T.ink} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.toolbarBtn} onPress={() => {}} activeOpacity={0.7}>
-            <Ionicons name="share-outline" size={20} color={T.yellow} />
+            <Ionicons name="share-outline" size={20} color={T.ink} />
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -129,10 +123,10 @@ export default function HelpCenter({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: T.card },
-  
+  container: { flex: 1, backgroundColor: T.paper },
+
   // Header
-  header: { 
+  header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 12, paddingVertical: 8,
     borderBottomWidth: 1, borderBottomColor: T.line, backgroundColor: T.card
@@ -141,30 +135,30 @@ const styles = StyleSheet.create({
   headerCenter: { alignItems: 'center' },
   headerTitle: { fontSize: 17, fontFamily: F.bodyBold, color: T.ink, letterSpacing: 0.5 },
   headerSubtitle: { fontSize: 10, color: T.textFaint, fontFamily: F.bodyMedium, marginTop: 1 },
-  
+
   // Progress Bar
   progressBarContainer: { height: 3, backgroundColor: T.sand, overflow: 'hidden' },
   progressBar: { height: '100%' },
   progressGradient: { width: '100%', height: '100%' },
-  
+
   // WebView
   webWrapper: { flex: 1, backgroundColor: T.card },
   webview: { flex: 1 },
-  
+
   // Loading
   loaderContainer: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     justifyContent: 'center', alignItems: 'center', backgroundColor: T.card
   },
-  loaderIconCircle: { 
-    width: 80, height: 80, borderRadius: 20, justifyContent: 'center', 
-    alignItems: 'center', marginBottom: 16 
+  loaderIconCircle: {
+    width: 80, height: 80, borderRadius: 20, justifyContent: 'center',
+    alignItems: 'center', marginBottom: 16
   },
   loadingTitle: { fontSize: 18, fontFamily: F.heading, color: T.ink },
   loadingSubtitle: { fontSize: 13, color: T.textFaint, marginTop: 6, fontFamily: F.bodyMedium },
-  
+
   // Bottom Bar
-  bottomBar: { 
+  bottomBar: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 6,
     borderTopWidth: 1, borderTopColor: T.line, backgroundColor: T.card,
     paddingBottom: Platform.OS === 'ios' ? 20 : 6
