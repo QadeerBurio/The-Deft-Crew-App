@@ -23,6 +23,7 @@ import { renderResumeHTML } from '../../services/templateService';
 import { WebView } from 'react-native-webview';
 
 import { color as T, font as F } from "../../theme/tokens";
+import ScreenHeader from "../../ui/ScreenHeader";
 const { width, height } = Dimensions.get('window');
 
 const ResumeTemplateScreen = () => {
@@ -314,7 +315,7 @@ const ResumeTemplateScreen = () => {
             style={styles.previewButton}
             onPress={() => handlePreviewTemplate(item)}
           >
-            <Ionicons name="eye-outline" size={18} color="#4A90D9" />
+            <Ionicons name="eye-outline" size={18} color={T.ink} />
             <Text style={styles.previewButtonText}>preview</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -363,7 +364,7 @@ const ResumeTemplateScreen = () => {
             <View style={styles.modalBody}>
               {isGeneratingPreview ? (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color="#4A90D9" />
+                  <ActivityIndicator size="large" color={T.ink} />
                   <Text style={styles.loadingText}>generating preview...</Text>
                 </View>
               ) : previewHTML ? (
@@ -377,7 +378,7 @@ const ResumeTemplateScreen = () => {
                   startInLoadingState={true}
                   renderLoading={() => (
                     <View style={styles.loadingContainer}>
-                      <ActivityIndicator size="large" color="#4A90D9" />
+                      <ActivityIndicator size="large" color={T.ink} />
                       <Text style={styles.loadingText}>loading preview...</Text>
                     </View>
                   )}
@@ -415,7 +416,7 @@ const ResumeTemplateScreen = () => {
   if (loading || isApplying) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4A90D9" />
+        <ActivityIndicator size="large" color={T.ink} />
         <Text style={styles.loadingText}>
           {isApplying ? 'Applying template...' : 'Loading templates...'}
         </Text>
@@ -425,13 +426,7 @@ const ResumeTemplateScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#2c3e50" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>choose template</Text>
-        <View style={styles.headerPlaceholder} />
-      </View>
+      <ScreenHeader title="choose template" onBack={() => navigation.goBack()} />
 
       <View style={styles.resumeInfo}>
         <Text style={styles.resumeInfoText}>
@@ -480,7 +475,7 @@ const ResumeTemplateScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: T.sand,
   },
   loadingContainer: {
     flex: 1,
@@ -504,7 +499,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontFamily: F.headingBold,
-    color: '#2c3e50',
+    color: T.ink,
   },
   headerPlaceholder: {
     width: 24,
@@ -518,7 +513,7 @@ const styles = StyleSheet.create({
   resumeInfoText: {
     fontSize: 14,
     fontFamily: F.bodySemi,
-    color: '#2c3e50',
+    color: T.ink,
   },
   resumeInfoSubtext: {
     fontSize: 12, fontFamily: F.body,
@@ -559,12 +554,12 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   templateCardSelected: {
-    borderColor: '#4A90D9',
-    backgroundColor: '#f0f7ff',
+    borderColor: T.ink,
+    backgroundColor: T.sand,
   },
   templateCardApplied: {
     borderColor: T.success,
-    backgroundColor: '#f0faf4',
+    backgroundColor: T.successBg,
   },
   templatePreview: {
     height: 100,
@@ -622,7 +617,7 @@ const styles = StyleSheet.create({
   templateName: {
     fontSize: 16,
     fontFamily: F.bodyBold,
-    color: '#2c3e50',
+    color: T.ink,
   },
   appliedBadge: {
     backgroundColor: T.success,
@@ -647,7 +642,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   featureTag: {
-    backgroundColor: '#e8f0fe',
+    backgroundColor: T.sand,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -656,7 +651,7 @@ const styles = StyleSheet.create({
   },
   featureText: {
     fontSize: 11, fontFamily: F.body,
-    color: '#4A90D9',
+    color: T.ink,
   },
   templateActions: {
     flexDirection: 'row',
@@ -672,11 +667,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 6,
-    backgroundColor: '#f0f7ff',
+    backgroundColor: T.sand,
   },
   previewButtonText: {
     fontSize: 13, fontFamily: F.body,
-    color: '#4A90D9',
+    color: T.ink,
     marginLeft: 4,
   },
   selectButton: {
@@ -686,7 +681,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.sand,
   },
   selectButtonActive: {
-    backgroundColor: '#4A90D9',
+    backgroundColor: T.ink,
   },
   selectButtonText: {
     fontSize: 13, fontFamily: F.body,
@@ -709,12 +704,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4A90D9',
+    backgroundColor: T.ink,
     paddingVertical: 14,
     borderRadius: 8,
   },
   applyButtonDisabled: {
-    backgroundColor: '#b0c4de',
+    backgroundColor: T.line,
   },
   applyButtonText: {
     fontSize: 16,
@@ -747,7 +742,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontFamily: F.headingBold,
-    color: '#2c3e50',
+    color: T.ink,
     flex: 1,
   },
   modalCloseButton: {
@@ -786,7 +781,7 @@ const styles = StyleSheet.create({
     fontFamily: F.bodyMedium,
   },
   modalApplyButton: {
-    backgroundColor: '#4A90D9',
+    backgroundColor: T.ink,
     marginLeft: 8,
   },
   modalApplyText: {

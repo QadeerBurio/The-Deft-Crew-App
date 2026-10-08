@@ -19,6 +19,7 @@ import { AuthContext } from '../../context/AuthContext';
 import * as DocumentPicker from 'expo-document-picker';
 
 import { color as T, font as F } from "../../theme/tokens";
+import ScreenHeader from "../../ui/ScreenHeader";
 const EnhanceCareer = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -140,13 +141,7 @@ const EnhanceCareer = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#2c3e50" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>apply for job</Text>
-        <View style={styles.headerPlaceholder} />
-      </View>
+      <ScreenHeader title="apply for job" onBack={() => navigation.goBack()} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.jobInfo}>
@@ -224,11 +219,11 @@ const EnhanceCareer = () => {
               onPress={handleResumeUpload}
               disabled={uploading}
             >
-              <Ionicons name="cloud-upload-outline" size={24} color="#4A90D9" />
+              <Ionicons name="cloud-upload-outline" size={24} color={T.ink} />
               <Text style={styles.uploadButtonText}>
                 {formData.resume ? 'Resume Uploaded' : 'Upload Resume'}
               </Text>
-              {uploading && <ActivityIndicator size="small" color="#4A90D9" />}
+              {uploading && <ActivityIndicator size="small" color={T.ink} />}
             </TouchableOpacity>
             {formData.resume && (
               <Text style={styles.fileName}>{formData.resume.name}</Text>
@@ -258,7 +253,7 @@ const EnhanceCareer = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: T.sand,
   },
   header: {
     flexDirection: 'row',
@@ -272,7 +267,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontFamily: F.headingBold,
-    color: '#2c3e50',
+    color: T.ink,
   },
   headerPlaceholder: {
     width: 24,
@@ -295,7 +290,7 @@ const styles = StyleSheet.create({
   jobTitle: {
     fontSize: 18,
     fontFamily: F.headingBold,
-    color: '#2c3e50',
+    color: T.ink,
   },
   jobCompany: {
     fontSize: 14, fontFamily: F.body,
@@ -332,7 +327,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontFamily: F.bodyBold,
-    color: '#2c3e50',
+    color: T.ink,
     marginBottom: 16,
   },
   inputGroup: {
@@ -341,7 +336,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontFamily: F.bodyMedium,
-    color: '#2c3e50',
+    color: T.ink,
     marginBottom: 4,
   },
   input: {
@@ -362,7 +357,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#4A90D9',
+    borderColor: T.ink,
     borderStyle: 'dashed',
     borderRadius: 8,
     padding: 16,
@@ -370,7 +365,7 @@ const styles = StyleSheet.create({
   },
   uploadButtonText: {
     fontSize: 14,
-    color: '#4A90D9',
+    color: T.ink,
     fontFamily: F.bodyMedium,
     marginLeft: 8,
   },
@@ -384,7 +379,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4A90D9',
+    backgroundColor: T.ink,
     paddingVertical: 14,
     borderRadius: 8,
     marginTop: 8,

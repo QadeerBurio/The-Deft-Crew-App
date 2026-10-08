@@ -28,6 +28,7 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { WebView } from 'react-native-webview';
 import { color as T, font as F } from "../../theme/tokens";
+import ScreenHeader from "../../ui/ScreenHeader";
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 
 const { width, height } = Dimensions.get('window');
@@ -175,7 +176,7 @@ const ResumeViewScreen = () => {
   const getStatusColor = (percentage) => {
     if (percentage >= 80) return T.success;
     if (percentage >= 50) return T.yellow;
-    if (percentage >= 30) return '#E67E22';
+    if (percentage >= 30) return T.ink;
     return T.danger;
   };
 
@@ -187,7 +188,7 @@ const ResumeViewScreen = () => {
       case 'advanced':
         return { backgroundColor: T.ink, borderColor: T.yellow };
       case 'intermediate':
-        return { backgroundColor: '#2a2a2a', borderColor: T.yellow };
+        return { backgroundColor: T.inkSoft, borderColor: T.yellow };
       default:
         return { backgroundColor: T.sand, borderColor: T.line };
     }
@@ -221,33 +222,29 @@ const ResumeViewScreen = () => {
         ]}
       >
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={T.white} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>resume document</Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity onPress={handleShare} style={styles.headerAction} disabled={isExporting}>
-              <Ionicons name="share-social-outline" size={22} color={T.white} />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              onPress={handleExportPDF} 
-              style={[styles.headerAction, styles.exportButton]} 
-              disabled={isExporting}
-            >
-               {isExporting ? (
-                 <ActivityIndicator size="small" color={T.ink} />
-               ) : (
-                 <>
-                   <Ionicons name="download-outline" size={18} color={T.ink} />
-                   <Text style={styles.exportButtonText}>pdf</Text>
-                 </>
-               )}
-            </TouchableOpacity>
-          </View>
-        </View>
+        <ScreenHeader dark title="resume document" onBack={() => navigation.goBack()} right={
+            <>
+              <TouchableOpacity onPress={handleShare} style={styles.headerAction} disabled={isExporting}>
+                            <Ionicons name="share-social-outline" size={22} color={T.white} />
+                          </TouchableOpacity>
+              <TouchableOpacity 
+                            onPress={handleExportPDF} 
+                            style={[styles.headerAction, styles.exportButton]} 
+                            disabled={isExporting}
+                          >
+                             {isExporting ? (
+                               <ActivityIndicator size="small" color={T.ink} />
+                             ) : (
+                               <>
+                                 <Ionicons name="download-outline" size={18} color={T.ink} />
+                                 <Text style={styles.exportButtonText}>pdf</Text>
+                               </>
+                             )}
+                          </TouchableOpacity>
+            </>
+          } />
         {/* WebView Preview container */}
-        <View style={{ flex: 1, backgroundColor: '#525659' }}>
+        <View style={{ flex: 1, backgroundColor: T.inkSoft }}>
           <WebView
             originWhitelist={['*']}
             source={{ html: htmlContent }}
@@ -336,7 +333,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#525659',
+    backgroundColor: T.inkSoft,
   },
   inlineLoadingText: {
     color: T.white,
@@ -690,7 +687,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   techTag: {
-    backgroundColor: '#e8f0fe',
+    backgroundColor: T.sand,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
@@ -699,7 +696,7 @@ const styles = StyleSheet.create({
   },
   techText: {
     fontSize: 11, fontFamily: F.body,
-    color: '#4A90D9',
+    color: T.ink,
   },
   credentialText: {
     fontSize: 12, fontFamily: F.body,
@@ -735,7 +732,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 8,
     borderLeftWidth: 3,
-    borderLeftColor: '#4A90D9',
+    borderLeftColor: T.ink,
   },
   targetJobHeader: {
     flexDirection: 'row',
@@ -748,7 +745,7 @@ const styles = StyleSheet.create({
     color: T.ink,
   },
   targetJobTypeBadge: {
-    backgroundColor: '#4A90D9',
+    backgroundColor: T.ink,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,

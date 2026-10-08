@@ -20,6 +20,7 @@ import { AuthContext } from '../../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { color as T, font as F } from "../../theme/tokens";
+import ScreenHeader from "../../ui/ScreenHeader";
 const ResumeSettingsScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -147,7 +148,7 @@ const ResumeSettingsScreen = () => {
   const SettingSection = ({ title, icon, children }) => (
     <View style={styles.settingSection}>
       <View style={styles.sectionHeader}>
-        <Ionicons name={icon} size={20} color="#4A90D9" />
+        <Ionicons name={icon} size={20} color={T.ink} />
         <Text style={styles.sectionTitle}>{title}</Text>
       </View>
       <View style={styles.sectionContent}>
@@ -168,7 +169,7 @@ const ResumeSettingsScreen = () => {
         <Switch
           value={value}
           onValueChange={onValueChange}
-          trackColor={{ false: T.sand, true: '#4A90D9' }}
+          trackColor={{ false: T.sand, true: T.ink }}
           thumbColor={value ? T.white : T.white}
         />
       ) : type === 'select' ? (
@@ -198,7 +199,7 @@ const ResumeSettingsScreen = () => {
   if (loading || isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4A90D9" />
+        <ActivityIndicator size="large" color={T.ink} />
         <Text style={styles.loadingText}>loading settings...</Text>
       </View>
     );
@@ -207,17 +208,10 @@ const ResumeSettingsScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={T.ink} />
-          </TouchableOpacity>
-          <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>resume settings</Text>
-            <Text style={styles.headerSubtitle}>
-              customize your resume preferences
-            </Text>
-          </View>
-        </View>
+        <ScreenHeader title="resume settings" onBack={() => navigation.goBack()} />
+        <Text style={{ fontFamily: F.body, fontSize: 13, color: T.textMuted, paddingHorizontal: 20, marginTop: -6, marginBottom: 6 }}>
+          customize your resume preferences
+        </Text>
 
         {/* Visibility Settings */}
         <SettingSection title="Visibility & Privacy" icon="eye-outline">
@@ -433,7 +427,7 @@ const ResumeSettingsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: T.sand,
   },
   loadingContainer: {
     flex: 1,
@@ -463,7 +457,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontFamily: F.heading,
-    color: '#2c3e50',
+    color: T.ink,
   },
   headerSubtitle: {
     fontSize: 14, fontFamily: F.body,
@@ -494,7 +488,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 15,
     fontFamily: F.bodySemi,
-    color: '#2c3e50',
+    color: T.ink,
     marginLeft: 8,
   },
   sectionContent: {
@@ -514,7 +508,7 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontSize: 14, fontFamily: F.body,
-    color: '#2c3e50',
+    color: T.ink,
   },
   settingDescription: {
     fontSize: 12, fontFamily: F.body,
@@ -531,7 +525,7 @@ const styles = StyleSheet.create({
   },
   selectText: {
     fontSize: 14, fontFamily: F.body,
-    color: '#2c3e50',
+    color: T.ink,
     marginRight: 4,
   },
   dangerButton: {
@@ -543,7 +537,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.dangerBg,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: T.dangerBg,
   },
   dangerButtonText: {
     color: T.danger,
@@ -580,7 +574,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
-    backgroundColor: '#4A90D9',
+    backgroundColor: T.ink,
     borderRadius: 8,
     marginLeft: 6,
   },

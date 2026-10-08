@@ -26,6 +26,7 @@ import { renderResumeHTML } from '../../services/templateService';
 import resumeApi from '../../api/resumeApi';
 
 import { color as T, font as F } from "../../theme/tokens";
+import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
 const { width, height } = Dimensions.get('window');
 
 const INDUSTRIES = [
@@ -934,8 +935,8 @@ const ResumeBuilderScreen = () => {
           <Switch
             value={eduCurrent}
             onValueChange={setEduCurrent}
-            trackColor={{ false: '#767577', true: T.yellow }}
-            thumbColor={eduCurrent ? T.white : '#f4f3f4'}
+            trackColor={{ false: T.line, true: T.yellow }}
+            thumbColor={eduCurrent ? T.white : T.sand}
           />
         </View>
 
@@ -1099,8 +1100,8 @@ const ResumeBuilderScreen = () => {
           <Switch
             value={workCurrent}
             onValueChange={setWorkCurrent}
-            trackColor={{ false: '#767577', true: T.yellow }}
-            thumbColor={workCurrent ? T.white : '#f4f3f4'}
+            trackColor={{ false: T.line, true: T.yellow }}
+            thumbColor={workCurrent ? T.white : T.sand}
           />
         </View>
 
@@ -1519,7 +1520,7 @@ const ResumeBuilderScreen = () => {
                   <Ionicons 
                     name={expandedIndustry === ind.name ? 'chevron-up' : 'chevron-down'} 
                     size={16} 
-                    color="#475569" 
+                    color={T.textMuted} 
                   />
                 </TouchableOpacity>
 
@@ -1714,22 +1715,27 @@ const ResumeBuilderScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor={T.paper} />
-      
+      <StatusBar barStyle="light-content" backgroundColor={T.ink} />
+
       {/* Top Header */}
-      <View style={styles.mainHeader}>
-        <TouchableOpacity onPress={handleGoBack} style={styles.headerBackBtn}>
-          <Ionicons name="arrow-back" size={24} color={T.white} />
-        </TouchableOpacity>
-        <Text style={styles.mainHeaderTitle}>tdc resume builder</Text>
-        <TouchableOpacity onPress={async () => {
-          await savePersonalInfo();
-          setPreviewTemplateId(currentResume?.template || 'modern_ats');
-          setPreviewVisible(true);
-        }} style={styles.previewFloatBtn}>
-          <Ionicons name="eye-outline" size={22} color={T.yellow} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        dark
+        title="resume builder"
+        onBack={handleGoBack}
+        right={
+          <HeaderIconButton
+            dark
+            label="preview resume"
+            onPress={async () => {
+              await savePersonalInfo();
+              setPreviewTemplateId(currentResume?.template || 'modern_ats');
+              setPreviewVisible(true);
+            }}
+          >
+            <Ionicons name="eye-outline" size={20} color={T.yellow} />
+          </HeaderIconButton>
+        }
+      />
 
       {/* Stepper icons */}
       <View style={styles.stepperContainer}>
@@ -1925,11 +1931,11 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#1E293B',
+    backgroundColor: T.inkSoft,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#334155',
+    borderColor: T.inkLine,
     zIndex: 2,
   },
   stepCircleActive: {
@@ -1943,7 +1949,7 @@ const styles = StyleSheet.create({
   stepLine: {
     position: 'absolute',
     height: 2,
-    backgroundColor: '#334155',
+    backgroundColor: T.inkSoft,
     left: '50%',
     right: '-50%',
     top: 15,
@@ -1981,7 +1987,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 22,
     fontFamily: F.heading,
-    color: '#0F172A',
+    color: T.ink,
   },
   cardStepBadge: {
     backgroundColor: T.sand,
@@ -1992,7 +1998,7 @@ const styles = StyleSheet.create({
   cardStepBadgeText: {
     fontSize: 12,
     fontFamily: F.bodyBold,
-    color: '#475569',
+    color: T.textMuted,
   },
   cardSubtitle: {
     fontSize: 14, fontFamily: F.body,
@@ -2011,7 +2017,7 @@ const styles = StyleSheet.create({
   bannerTitle: {
     fontSize: 15,
     fontFamily: F.bodyBold,
-    color: '#0F172A',
+    color: T.ink,
     marginBottom: 4,
   },
   bannerText: {
@@ -2051,7 +2057,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 12,
     fontFamily: F.bodyBold,
-    color: '#475569',
+    color: T.textMuted,
     textTransform: 'none',
     marginBottom: 6,
     marginTop: 12,
@@ -2063,7 +2069,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     fontSize: 14, fontFamily: F.body,
-    color: '#0F172A',
+    color: T.ink,
     marginBottom: 12,
   },
   inputGridRow: {
@@ -2091,7 +2097,7 @@ const styles = StyleSheet.create({
   toggleLabel: {
     fontSize: 13,
     fontFamily: F.bodySemi,
-    color: '#475569',
+    color: T.textMuted,
   },
   labelWithAction: {
     flexDirection: 'row',
@@ -2125,7 +2131,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     fontSize: 14, fontFamily: F.body,
-    color: '#0F172A',
+    color: T.ink,
     marginRight: 10,
   },
   skillAddBtn: {
@@ -2152,7 +2158,7 @@ const styles = StyleSheet.create({
   },
   skillTagText: {
     fontSize: 13,
-    color: '#334155',
+    color: T.textMuted,
     fontFamily: F.bodySemi,
   },
   skillTipText: {
@@ -2164,7 +2170,7 @@ const styles = StyleSheet.create({
   certificationHeading: {
     fontSize: 15,
     fontFamily: F.bodyBold,
-    color: '#0F172A',
+    color: T.ink,
     marginTop: 20,
     marginBottom: 8,
     borderBottomWidth: 1,
@@ -2199,7 +2205,7 @@ const styles = StyleSheet.create({
   itemBadgeTitle: {
     fontSize: 14,
     fontFamily: F.bodyBold,
-    color: '#0F172A',
+    color: T.ink,
   },
   itemBadgeSub: {
     fontSize: 12, fontFamily: F.body,
@@ -2226,7 +2232,7 @@ const styles = StyleSheet.create({
   industryHeaderTitle: {
     fontSize: 14,
     fontFamily: F.bodyBold,
-    color: '#334155',
+    color: T.textMuted,
   },
   industryRolesGrid: {
     flexDirection: 'row',
@@ -2252,7 +2258,7 @@ const styles = StyleSheet.create({
   },
   roleSelectText: {
     fontSize: 12, fontFamily: F.body,
-    color: '#475569',
+    color: T.textMuted,
   },
   roleSelectTextActive: {
     color: T.ink,
@@ -2272,7 +2278,7 @@ const styles = StyleSheet.create({
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
+    backgroundColor: T.inkSoft,
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 10,
@@ -2349,7 +2355,7 @@ const styles = StyleSheet.create({
   },
   aiModalContent: {
     width: width * 0.85,
-    backgroundColor: '#1E293B',
+    backgroundColor: T.inkSoft,
     borderRadius: 20,
     padding: 24,
     alignItems: 'center',
@@ -2359,7 +2365,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: T.inkLine,
   },
   aiModalTitle: {
     fontSize: 20,
@@ -2376,7 +2382,7 @@ const styles = StyleSheet.create({
   aiProgressTrack: {
     width: '100%',
     height: 6,
-    backgroundColor: '#334155',
+    backgroundColor: T.inkSoft,
     borderRadius: 3,
     overflow: 'hidden',
     marginBottom: 10,

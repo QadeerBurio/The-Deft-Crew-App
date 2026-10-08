@@ -23,6 +23,7 @@ import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradie
 import { LineChart, PieChart } from 'react-native-chart-kit';
 
 import { color as T, font as F } from "../../theme/tokens";
+import ScreenHeader from "../../ui/ScreenHeader";
 const { width } = Dimensions.get('window');
 
 const ResumeAnalyticsScreen = () => {
@@ -244,7 +245,7 @@ const ResumeAnalyticsScreen = () => {
       styles.improvementCard,
       { 
         borderLeftColor: improvement.priority === 'high' ? T.danger : 
-                         improvement.priority === 'medium' ? T.yellow : '#4A90D9' 
+                         improvement.priority === 'medium' ? T.yellow: T.ink 
       }
     ]}>
       <View style={styles.improvementHeader}>
@@ -253,7 +254,7 @@ const ResumeAnalyticsScreen = () => {
           styles.priorityBadge,
           { 
             backgroundColor: improvement.priority === 'high' ? T.danger : 
-                             improvement.priority === 'medium' ? T.yellow : '#4A90D9' 
+                             improvement.priority === 'medium' ? T.yellow: T.ink 
           }
         ]}>
           <Text style={styles.priorityText}>{improvement.priority}</Text>
@@ -328,15 +329,13 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
           contentContainerStyle={styles.scrollContent}
         >
           {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color={T.ink} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>analytics</Text>
-            <TouchableOpacity onPress={handleExportReport} style={styles.shareButton}>
-              <Ionicons name="share-outline" size={22} color={T.yellow} />
-            </TouchableOpacity>
-          </View>
+          <ScreenHeader title="analytics" onBack={() => navigation.goBack()} right={
+              <>
+                <TouchableOpacity onPress={handleExportReport} style={styles.shareButton}>
+                              <Ionicons name="share-outline" size={22} color={T.yellow} />
+                            </TouchableOpacity>
+              </>
+            } />
 
           {/* Resume Info */}
           <View style={styles.resumeInfoCard}>
@@ -400,7 +399,7 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
             </View>
             <View style={styles.quickStatDivider} />
             <View style={styles.quickStat}>
-              <Text style={[styles.quickStatValue, { color: '#4A90D9' }]}>
+              <Text style={[styles.quickStatValue, { color: T.ink }]}>
                 {analytics.skillMatch || 0}%
               </Text>
               <Text style={styles.quickStatLabel}>skill match</Text>
@@ -408,7 +407,7 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
                 <View 
                   style={[
                     styles.quickStatBarFill, 
-                    { width: `${Math.min(analytics.skillMatch || 0, 100)}%`, backgroundColor: '#4A90D9' }
+                    { width: `${Math.min(analytics.skillMatch || 0, 100)}%`, backgroundColor: T.ink }
                   ]} 
                 />
               </View>
@@ -435,14 +434,14 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
               icon="share-outline"
               title="Shares"
               value={analytics.shares || 0}
-              color="#4A90D9"
+              color={T.ink}
               subtitle="Times shared"
             />
             <StatCard
               icon="briefcase-outline"
               title="Applications"
               value={analytics.applications || 0}
-              color="#9B59B6"
+              color={T.ink}
               subtitle="Jobs applied"
             />
           </View>
@@ -537,11 +536,11 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: T.sand,
   },
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: T.sand,
     marginTop:40
   },
   scrollContent: {
