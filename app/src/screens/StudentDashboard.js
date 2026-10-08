@@ -14,7 +14,9 @@ import {
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills (design system)
+import PressScale from "../ui/PressScale";
+import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
@@ -109,7 +111,7 @@ const DashboardSkeleton = () => {
     });
 
     return (
-      <View style={[style, { overflow: 'hidden', backgroundColor: '#F1F5F9' }]}>
+      <View style={[style, { overflow: 'hidden', backgroundColor: T.sand }]}>
         <Animated.View
           style={{
             position: 'absolute',
@@ -525,138 +527,117 @@ const StudentDashboard = () => {
 
   if (loading && showSkeleton) return <DashboardSkeleton />;
 
+  // Same routes as the old cards (resume opens inside the Home stack)
+  const go = (routeName) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (routeName === 'ResumeDashboard') {
+      navigation.navigate('Home', { screen: 'Resume' });
+    } else {
+      navigation.navigate(routeName);
+    }
+  };
+  const moodFor = (routeName) => {
+    const missionKey = getMissionKey(routeName);
+    return { missionKey, sorted: !!missionKey && sortedFeatureIds.has(missionKey) };
+  };
+  const resume = moodFor('ResumeDashboard');
+  const jobs = moodFor('Career');
+  const skills = moodFor('Dashboard');
+  const scholar = moodFor('Exchange');
+
+  const Module = ({ routeName, icon, title, sub, mood }) => (
+    <PressScale
+      onPress={() => go(routeName)}
+      containerStyle={styles.tileWrap}
+      style={styles.tile}
+      accessibilityLabel={`${title}, ${sub}`}
+    >
+      <View style={styles.tileIcon}>
+        <MaterialCommunityIcons name={icon} size={22} color={T.ink} />
+        {mood.missionKey && <FeatureDot missionKey={mood.missionKey} sorted={mood.sorted} />}
+      </View>
+      <View>
+        <Text style={styles.tileTitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+          {title}
+          <Text style={{ color: T.yellow }}>.</Text>
+        </Text>
+        <Text style={styles.tileSub} maxFontSizeMultiplier={MAX_FONT_SCALE}>{sub}</Text>
+      </View>
+    </PressScale>
+  );
+
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      <ParticleBackground />
-      <Animated.View style={[styles.glowTop, { opacity: glowTopOpacity }]} />
-      <Animated.View style={[styles.glowBottom, { opacity: glowBottomOpacity }]} />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: 110 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              tintColor="#f9c349"
-              colors={['#f9c349']}
+              tintColor={T.ink}
+              colors={[T.ink]}
               progressViewOffset={20}
             />
           }
         >
           {/* Header */}
           <Animated.View
-            style={[
-              styles.header,
-              { opacity: headerOpacity, transform: [{ translateY: headerSlide }] },
-            ]}
+            style={[styles.header, { opacity: headerOpacity, transform: [{ translateY: headerSlide }] }]}
           >
-            <View>
-              <View style={styles.brandRow}>
-                <Text style={styles.brandTitle}>Explore</Text>
-              </View>
-              <View style={styles.subBadge}>
-                <View style={styles.subBadgeDot} />
-                <Text style={styles.brandSubtitle}>Career DASHBOARD</Text>
-              </View>
+            <Text style={styles.kicker} maxFontSizeMultiplier={MAX_FONT_SCALE}>career dashboard</Text>
+            <Text style={styles.title} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+              campus<Text style={{ color: T.yellow }}>.</Text>
+            </Text>
+            <Text style={styles.subtitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>from campus to career.</Text>
+          </Animated.View>
+
+          <Animated.View style={{ opacity: sectionFade }}>
+            {/* Resume (dark) */}
+            <View style={styles.section}>
+              <PressScale onPress={() => go('ResumeDashboard')} style={styles.hero} accessibilityLabel="resume builder">
+                <View style={styles.heroIcon}>
+                  <MaterialCommunityIcons name="file-document-edit-outline" size={26} color={T.yellow} />
+                  {resume.missionKey && <FeatureDot missionKey={resume.missionKey} sorted={resume.sorted} />}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.heroKicker} maxFontSizeMultiplier={MAX_FONT_SCALE}>resume</Text>
+                  <Text style={styles.heroTitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>make yours ats ready.</Text>
+                  <Text style={styles.heroLine} maxFontSizeMultiplier={MAX_FONT_SCALE}>builder, templates and analytics.</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={T.onInkMuted} />
+              </PressScale>
+            </View>
+
+            {/* Modules */}
+            <View style={styles.tiles}>
+              <Module routeName="Career" icon="briefcase-variant-outline" title="jobs" sub="careers and hiring" mood={jobs} />
+              <Module routeName="Dashboard" icon="swap-horizontal" title="skillsshare" sub="swap or teach a skill" mood={skills} />
             </View>
           </Animated.View>
 
-          {/* Welcome Message */}
-          <Animated.View style={[styles.welcomeContainer, { opacity: sectionFade }]}>
-            <Text style={styles.welcomeSub}>Discover your academic journey with tdc.</Text>
-          </Animated.View>
-
-          {/* Section Label */}
+          {/* Scholarships & meetups */}
           <Animated.View
-            style={[styles.sectionLabelContainer, { opacity: sectionFade }]}
+            style={[styles.section, { paddingTop: 10, opacity: footerOpacity, transform: [{ translateY: footerSlide }] }]}
           >
-            <View style={styles.sectionLine} />
-            <Text style={styles.sectionLabel}>EXPLORE MODULES</Text>
-            <View style={styles.sectionLine} />
-          </Animated.View>
-
-          {/* Grid */}
-          <View style={styles.gridContainer}>
-            <View style={styles.gridColumn}>
-              {menuItems
-                .filter((_, i) => i % 2 === 0)
-                .map((item, index) => {
-                  const missionKey = getMissionKey(item.routeName);
-                  const sorted = missionKey && sortedFeatureIds.has(missionKey);
-                  return (
-                    <AnimatedGridCard
-                      key={item.id}
-                      item={item}
-                      index={index * 2}
-                      navigation={navigation}
-                      missionKey={missionKey}
-                      sorted={sorted}
-                    />
-                  );
-                })}
-            </View>
-            <View style={[styles.gridColumn, { marginTop: 25 }]}>
-              {menuItems
-                .filter((_, i) => i % 2 !== 0)
-                .map((item, index) => {
-                  const missionKey = getMissionKey(item.routeName);
-                  const sorted = missionKey && sortedFeatureIds.has(missionKey);
-                  return (
-                    <AnimatedGridCard
-                      key={item.id}
-                      item={item}
-                      index={index * 2 + 1}
-                      navigation={navigation}
-                      missionKey={missionKey}
-                      sorted={sorted}
-                    />
-                  );
-                })}
-            </View>
-          </View>
-
-          {/* Stats Footer */}
-          <Animated.View
-            style={[
-              styles.statsContainer,
-              { opacity: footerOpacity, transform: [{ translateY: footerSlide }] },
-            ]}
-          >
-            <View style={styles.statItem}>
-              <LinearGradient
-                colors={['rgba(99, 102, 241, 0.12)', 'rgba(168, 85, 247, 0.12)']}
-                style={styles.statIconBox}
-              >
-                <Ionicons name="people" size={20} color="#6366f1" />
-              </LinearGradient>
-              <Text style={styles.statNumber}>2.4k</Text>
-              <Text style={styles.statLabel}>Members</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <LinearGradient
-                colors={['rgba(249, 195, 73, 0.12)', 'rgba(245, 158, 11, 0.12)']}
-                style={styles.statIconBox}
-              >
-                <Ionicons name="briefcase" size={20} color="#f9c349" />
-              </LinearGradient>
-              <Text style={styles.statNumber}>50+</Text>
-              <Text style={styles.statLabel}>Jobs</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <LinearGradient
-                colors={['rgba(244, 63, 94, 0.12)', 'rgba(251, 146, 60, 0.12)']}
-                style={styles.statIconBox}
-              >
-                <Ionicons name="calendar" size={20} color="#f43f5e" />
-              </LinearGradient>
-              <Text style={styles.statNumber}>25+</Text>
-              <Text style={styles.statLabel}>Events</Text>
-            </View>
+            <PressScale
+              onPress={() => go('Exchange')}
+              style={styles.row}
+              accessibilityLabel="scholarships, meetups and conferences"
+            >
+              <View style={[styles.tileIcon, { backgroundColor: T.ink }]}>
+                <MaterialCommunityIcons name="calendar-star" size={22} color={T.yellow} />
+                {scholar.missionKey && <FeatureDot missionKey={scholar.missionKey} sorted={scholar.sorted} />}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowTitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>scholarships & meetups</Text>
+                <Text style={styles.tileSub} maxFontSizeMultiplier={MAX_FONT_SCALE}>career fairs and scholarship events</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={T.textFaint} />
+            </PressScale>
           </Animated.View>
         </ScrollView>
       </SafeAreaView>
@@ -666,236 +647,75 @@ const StudentDashboard = () => {
 
 // ─── Styles ──────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: T.paper },
   particle: { position: 'absolute', borderRadius: 50 },
 
-  glowTop: {
-    position: 'absolute',
-    top: -150,
-    right: -50,
-    width: 400,
-    height: 350,
-    borderRadius: 200,
-    backgroundColor: '#f9c349',
-  },
-  glowBottom: {
-    position: 'absolute',
-    bottom: -100,
-    left: -100,
-    width: 400,
-    height: 370,
-    borderRadius: 200,
-    backgroundColor: '#f9c349',
-  },
+  header: { paddingHorizontal: 20, paddingTop: 22 },
+  kicker: { fontFamily: F.bodyBold, fontSize: 12, color: T.textMuted },
+  title: { fontFamily: F.heading, fontSize: 32, letterSpacing: -1, color: T.ink, marginTop: 2 },
+  subtitle: { fontFamily: F.body, fontSize: 14, color: T.textMuted, marginTop: 2 },
 
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'android' ? 18 : 12,
-    marginBottom: 8,
-  },
-  brandRow: { flexDirection: 'row', alignItems: 'baseline' },
-  brandTitle: {
-    fontSize: 36,
-    fontWeight: '900',
-    color: '#0F172A',
-    letterSpacing: -1.5,
-  },
-  subBadge: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  subBadgeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#f9c349',
-    marginRight: 8,
-  },
-  brandSubtitle: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#94A3B8',
-    letterSpacing: 2,
-  },
+  section: { paddingHorizontal: 16, paddingTop: 16 },
 
-  welcomeContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 20,
-    marginTop: 4,
-  },
-  welcomeSub: {
-    fontSize: 13,
-    color: '#94A3B8',
-    marginTop: 4,
-    fontWeight: '500',
-  },
-
-  sectionLabelContainer: {
+  hero: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    marginBottom: 24,
+    gap: 14,
+    padding: 18,
+    borderRadius: 26,
+    backgroundColor: T.ink,
   },
-  sectionLine: { flex: 1, height: 1, backgroundColor: '#E2E8F0' },
-  sectionLabel: {
-    color: '#94A3B8',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 2.5,
-    marginHorizontal: 15,
-  },
-
-  gridContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  gridColumn: { width: COLUMN_WIDTH },
-  gridItem: { width: '100%', marginBottom: 20 },
-  cardGlow: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    right: -8,
-    bottom: -8,
-    borderRadius: 32,
-    opacity: 0.1,
-    zIndex: -1,
-  },
-  whiteCard: {
-    flex: 1,
+  heroIcon: {
+    width: 56,
+    height: 56,
     borderRadius: 28,
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 4,
-    position: 'relative',
+    backgroundColor: T.inkSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  cardDecorLine: {
-    position: 'absolute',
-    top: 0,
-    left: 28,
-    right: 28,
-    height: 2,
-    borderRadius: 1,
-    overflow: 'hidden',
-  },
-  decorLineInner: { width: '100%', height: '100%' },
+  heroKicker: { fontFamily: F.body, fontSize: 12, color: T.onInkMuted },
+  heroTitle: { fontFamily: F.bodyBold, fontSize: 16, color: T.white, marginTop: 2 },
+  heroLine: { fontFamily: F.body, fontSize: 13, color: T.onInkMuted, marginTop: 2 },
 
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-  },
-  iconCircleWrap: {
-    position: 'relative',
-    overflow: 'visible',
-  },
-  iconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
-  },
-  cardNumberBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F8FAFC',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  cardNumberText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0F172A',
-    letterSpacing: 0.5,
-  },
-  cardInfo: { flex: 1, justifyContent: 'flex-end' },
-  cardMainText: {
-    color: '#0F172A',
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-  cardSubText: {
-    color: '#94A3B8',
-    fontSize: 13,
-    marginTop: 4,
-    fontWeight: '600',
-  },
-  plusIcon: {
-    position: 'absolute',
-    bottom: 25,
-    right: 5,
-    width: 34,
-    height: 34,
-    borderRadius: 12,
-    backgroundColor: '#F8FAFC',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    overflow: 'hidden',
-  },
-  plusGradient: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginHorizontal: 24,
-    marginTop: 5,
-    marginBottom: 25,
-    padding: 20,
-    backgroundColor: '#FFFFFF',
+  tiles: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingTop: 10 },
+  tileWrap: { flex: 1 },
+  tile: {
+    minHeight: 150,
     borderRadius: 24,
+    backgroundColor: T.card,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 3,
+    borderColor: T.line,
+    padding: 14,
+    justifyContent: 'space-between',
   },
-  statItem: { flex: 1, alignItems: 'center' },
-  statIconBox: {
+  tileIcon: {
     width: 44,
     height: 44,
     borderRadius: 14,
-    justifyContent: 'center',
+    backgroundColor: T.sand,
     alignItems: 'center',
-    marginBottom: 10,
+    justifyContent: 'center',
+    position: 'relative',
   },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 2,
+  tileTitle: { fontFamily: F.heading, fontSize: 18, color: T.ink },
+  tileSub: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, marginTop: 2 },
+
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 22,
+    backgroundColor: T.yellowSoft,
   },
-  statLabel: { fontSize: 11, color: '#94A3B8', fontWeight: '600' },
-  statDivider: { width: 1, height: 45, backgroundColor: '#F1F5F9' },
+  rowTitle: { fontFamily: F.bodyBold, fontSize: 15, color: T.ink },
+
+  // skeleton (DashboardSkeleton)
+  sectionLabelContainer: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, marginTop: 20, gap: 12 },
+  sectionLine: { flex: 1, height: 1, backgroundColor: T.line },
+  gridContainer: { flexDirection: 'row', paddingHorizontal: 20, gap: 20, marginTop: 20 },
+  gridColumn: { flex: 1 },
 });
 
 export default StudentDashboard;
