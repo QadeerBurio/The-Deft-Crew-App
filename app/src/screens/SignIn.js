@@ -1,5 +1,10 @@
-// SignIn.js - Updated with Session Expiry Handler
-import React, { useState, useContext, useRef, useEffect } from "react";
+// SignIn.js - same tdc design, made smooth
+// - No spinning logo / sliding inputs on open (one quick 180ms fade)
+// - No full-screen "Signing In..." overlay; the button shows the spinner
+// - No 2 second wait after a correct password: you go straight into the app
+// - Errors: quick top bar + red field, light shake
+// - Unverified accounts still go to SignupVerify; session-expired messages still show
+import React, { useState, useContext, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -12,533 +17,216 @@ import {
   ScrollView,
   StatusBar,
   Animated,
-  Dimensions,
+  Keyboard,
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 import api, { injectSessionErrorHandler } from "../api/api";
 import { AuthContext } from "../context/AuthContext";
 
-const { width, height } = Dimensions.get("window");
+const GOLD = "#f9c349";
+const DARK = "#1a1a1a";
+
+const validateEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim().toLowerCase());
 
 export default function SignIn({ navigation }) {
   const { setUser, setToken, loginAsGuest } = useContext(AuthContext);
 
-  // Form States
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [guestLoading, setGuestLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [focusedInput, setFocusedInput] = useState(null);
+  const [errors, setErrors] = useState({ email: false, password: false });
+  const [notification, setNotification] = useState(null); // { title, message }
 
-  // Error states for required fields
-  const [errors, setErrors] = useState({
-    email: false,
-    password: false,
-  });
-
-  // Animation Values
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideUpAnim = useRef(new Animated.Value(50)).current;
-  const logoScale = useRef(new Animated.Value(0.5)).current;
-  const logoRotate = useRef(new Animated.Value(0)).current;
-  const buttonScale = useRef(new Animated.Value(1)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
-  const inputAnim1 = useRef(new Animated.Value(0)).current;
-  const inputAnim2 = useRef(new Animated.Value(0)).current;
-
-  // Top Notification Animation
-  const notificationSlide = useRef(new Animated.Value(-200)).current;
-  const notificationOpacity = useRef(new Animated.Value(0)).current;
-  const notificationScale = useRef(new Animated.Value(0.9)).current;
-
-  // Loading Overlay Animation
-  const overlayOpacity = useRef(new Animated.Value(0)).current;
-
-  // Alert States
-  const [notification, setNotification] = useState(null);
-  const [showLoading, setShowLoading] = useState(false);
-
-  // Timer ref for auto-hide success notification
-  const successTimerRef = useRef(null);
-  // Track if the component is still mounted (to skip state updates after unmount)
+  const noteAnim = useRef(new Animated.Value(0)).current;
+  const passwordRef = useRef(null);
   const isMountedRef = useRef(true);
+  const noteTimer = useRef(null);
 
-  const logoSpin = logoRotate.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
-  // Function to start animations - ALWAYS runs on mount
-  const startAnimations = () => {
-    // Reset animation values so the animation always plays from the start
-    fadeAnim.setValue(0);
-    slideUpAnim.setValue(50);
-    logoScale.setValue(0.5);
-    logoRotate.setValue(0);
-    inputAnim1.setValue(0);
-    inputAnim2.setValue(0);
-
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.spring(logoScale, {
-        toValue: 1,
-        friction: 4,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.timing(logoRotate, {
-        toValue: 1,
-        duration: 1200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideUpAnim, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.sequence([
-        Animated.delay(400),
-        Animated.spring(inputAnim1, {
-          toValue: 1,
-          friction: 6,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.sequence([
-        Animated.delay(600),
-        Animated.spring(inputAnim2, {
-          toValue: 1,
-          friction: 6,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-      ]),
-    ]).start();
-  };
-
-  // --------------------------------------------------
-  // Mount: run animations + inject session handler
-  // --------------------------------------------------
+  // ── one quick fade on open ──
   useEffect(() => {
     isMountedRef.current = true;
-
-    // Always play the entrance animation on mount
-    startAnimations();
-
-    // Inject the session-expired handler
-    injectSessionErrorHandler((title, message) => {
-      if (!isMountedRef.current) return;
-      showNotification(title, message, "error");
-    });
-
+    Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }).start();
     return () => {
       isMountedRef.current = false;
-
-      // Clear any pending success auto-hide timer so it can't
-      // fire after the screen is gone (which was causing the
-      // "auto reload" — a late setState on an unmounted screen).
-      if (successTimerRef.current) {
-        clearTimeout(successTimerRef.current);
-        successTimerRef.current = null;
-      }
-
-      // Remove the session handler on real unmount
+      clearTimeout(noteTimer.current);
       injectSessionErrorHandler(null);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fadeAnim]);
 
-  // --------------------------------------------------
-  // Re-inject session handler whenever the screen regains focus
-  // (e.g. after Signup → back to SignIn)
-  // --------------------------------------------------
-  useFocusEffect(
-    React.useCallback(() => {
-      injectSessionErrorHandler((title, message) => {
-        if (!isMountedRef.current) return;
-        showNotification(title, message, "error");
-      });
+  // ── top bar ──
+  const hideNotification = useCallback(() => {
+    clearTimeout(noteTimer.current);
+    Animated.timing(noteAnim, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
+      if (isMountedRef.current) setNotification(null);
+    });
+  }, [noteAnim]);
 
-      return () => {
-        // Intentionally do NOT null the handler here — the mount
-        // effect's cleanup will handle the real unmount. Nulling
-        // it on blur causes a brief window where session errors
-        // are silently dropped and then re-injected, which triggers
-        // an extra render that looks like a reload.
-      };
-    }, [])
+  const showNotification = useCallback(
+    (title, message) => {
+      if (!isMountedRef.current) return;
+      setNotification({ title, message });
+      noteAnim.setValue(0);
+      Animated.timing(noteAnim, { toValue: 1, duration: 180, useNativeDriver: true }).start();
+      clearTimeout(noteTimer.current);
+      noteTimer.current = setTimeout(() => isMountedRef.current && hideNotification(), 4000);
+    },
+    [noteAnim, hideNotification]
   );
 
-  const showNotification = (title, message, type = "success") => {
-    if (!isMountedRef.current) return;
+  // session-expired messages from the API (re-attached when coming back here)
+  useFocusEffect(
+    useCallback(() => {
+      injectSessionErrorHandler((title, message) => showNotification(title, message));
+    }, [showNotification])
+  );
 
-    setNotification({ title, message, type });
-
-    notificationSlide.setValue(-200);
-    notificationOpacity.setValue(0);
-    notificationScale.setValue(0.9);
-
-    Animated.parallel([
-      Animated.spring(notificationSlide, {
-        toValue: 0,
-        friction: 6,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.timing(notificationOpacity, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.spring(notificationScale, {
-        toValue: 1,
-        friction: 6,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    if (type === "success") {
-      // Clear any previous timer before starting a new one
-      if (successTimerRef.current) {
-        clearTimeout(successTimerRef.current);
-      }
-      successTimerRef.current = setTimeout(() => {
-        successTimerRef.current = null;
-        if (isMountedRef.current) {
-          hideNotification();
-        }
-      }, 3000);
-    }
-  };
-
-  const hideNotification = () => {
-    if (!isMountedRef.current) return;
-
-    Animated.parallel([
-      Animated.timing(notificationSlide, {
-        toValue: -200,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.timing(notificationOpacity, {
-        toValue: 0,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.timing(notificationScale, {
-        toValue: 0.9,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      if (isMountedRef.current) {
-        setNotification(null);
-      }
-    });
-  };
-
-  const showLoadingOverlay = () => {
-    if (!isMountedRef.current) return;
-    setShowLoading(true);
-    Animated.timing(overlayOpacity, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const hideLoadingOverlay = () => {
-    Animated.timing(overlayOpacity, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start(() => {
-      if (isMountedRef.current) {
-        setShowLoading(false);
-      }
-    });
-  };
-
-  const handleShake = () => {
+  const shake = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+    shakeAnim.setValue(0);
     Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: 15, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -15, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 10, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -10, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 5, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 8, duration: 45, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 45, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 4, duration: 45, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 45, useNativeDriver: true }),
     ]).start();
-  };
-
-  const validateEmail = (email) => {
-    return String(email).toLowerCase().match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
   };
 
   const clearError = (field) => {
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: false }));
-    }
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: false }));
+    if (notification) hideNotification();
   };
 
   const handleGuestBrowse = async () => {
+    if (guestLoading || loading) return;
+    setGuestLoading(true);
     try {
       await loginAsGuest();
     } catch (error) {
-      showNotification("Error", "Could not enter guest mode. Please try again.", "error");
+      showNotification("Couldn't open guest mode", "Please try again.");
+    } finally {
+      if (isMountedRef.current) setGuestLoading(false);
     }
   };
 
   const handleLogin = async () => {
-    // Button animation
-    Animated.sequence([
-      Animated.timing(buttonScale, {
-        toValue: 0.92,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.spring(buttonScale, {
-        toValue: 1,
-        friction: 3,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    if (loading) return;
+    Keyboard.dismiss();
 
-    // Reset all errors first
-    const newErrors = {
-      email: false,
-      password: false,
-    };
-
-    let hasError = false;
-
-    if (!email.trim()) {
-      newErrors.email = true;
-      hasError = true;
-    }
-    if (!password.trim()) {
-      newErrors.password = true;
-      hasError = true;
-    }
-
+    const newErrors = { email: !email.trim(), password: !password.trim() };
     setErrors(newErrors);
-
-    if (hasError) {
-      handleShake();
-      return showNotification("Missing Information", "Please fill in all fields to continue.", "error");
+    if (newErrors.email || newErrors.password) {
+      shake();
+      return showNotification("Missing information", "Enter your email and password.");
     }
-
     if (!validateEmail(email)) {
-      handleShake();
-      return showNotification("Invalid Email", "Please enter a valid email address.", "error");
+      setErrors({ email: true, password: false });
+      shake();
+      return showNotification("Invalid email", "Please enter a valid email address.");
     }
 
+    setLoading(true);
     try {
-      showLoadingOverlay();
-      setLoading(true);
-
-      console.log("Attempting login with:", { email: email.trim() });
-
-      const res = await api.post("/auth/login", {
-        email: email.trim(),
-        password: password
-      });
-
-      const { token, user } = res.data;
+      const res = await api.post("/auth/login", { email: email.trim(), password });
+      const { token, user } = res.data || {};
 
       if (!token || !user) {
-        hideLoadingOverlay();
-        setLoading(false);
-        return showNotification("Login Failed", "Invalid response from server. Please try again.", "error");
+        showNotification("Login failed", "Unexpected response from the server. Please try again.");
+        return;
       }
-
       if (user.role && user.role !== "student") {
-        hideLoadingOverlay();
-        setLoading(false);
-        return showNotification("Access Denied", "This portal is for Students only.", "error");
+        showNotification("Access denied", "This app is for student accounts only.");
+        return;
       }
 
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-
-      hideLoadingOverlay();
-      showNotification("Welcome Back! 🎉", `Great to see you, ${user.fullName || 'Student'}.`, "success");
-
-      // Store the timer so we can clear it on unmount
-      if (successTimerRef.current) {
-        clearTimeout(successTimerRef.current);
-      }
-      successTimerRef.current = setTimeout(() => {
-        successTimerRef.current = null;
-        if (!isMountedRef.current) return;
-        hideNotification();
-        setToken(token);
-        setUser(user);
-      }, 2000);
-
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      // straight into the app (the navigator switches screens by itself)
+      setToken(token);
+      setUser(user);
     } catch (err) {
-      hideLoadingOverlay();
-      if (isMountedRef.current) setLoading(false);
-
-      console.log("Login error:", err.response?.status, err.response?.data);
+      const status = err.response?.status;
+      const data = err.response?.data || {};
 
       // Signed up but email not verified yet: backend sent a code
-      if (err.response?.status === 403 && err.response?.data?.needsVerification) {
+      if (status === 403 && data.needsVerification) {
         navigation.navigate("SignupVerify", {
-          userId: err.response.data.userId,
+          userId: data.userId,
           email: email.trim().toLowerCase(),
-          maskedEmail: err.response.data.email,
-          retryAfter: err.response.data.retryAfter || 0,
+          maskedEmail: data.email,
+          retryAfter: data.retryAfter || 0,
           fromLogin: true,
         });
         return;
       }
 
-      let errorMessage = "Invalid credentials. Please try again.";
-
-      if (err.response) {
-        switch (err.response.status) {
-          case 400:
-            errorMessage = err.response.data?.message || "Invalid email or password.";
-            break;
-          case 401:
-            errorMessage = "Invalid credentials. Please check your email and password.";
-            break;
-          case 404:
-            errorMessage = "Account not found. Please sign up first.";
-            break;
-          case 429:
-            errorMessage = "Too many attempts. Please try again later.";
-            break;
-          case 500:
-            errorMessage = "Server error. Please try again later.";
-            break;
-          default:
-            errorMessage = err.response.data?.message || "Login failed. Please try again.";
-        }
-      } else if (err.request) {
-        errorMessage = "Network error. Please check your internet connection.";
+      let title = "Login failed";
+      let message = "Please try again.";
+      if (status === 401 || status === 400) {
+        setErrors({ email: false, password: true });
+        message = status === 400 && data.message ? data.message : "Wrong email or password.";
+      } else if (status === 404) {
+        setErrors({ email: true, password: false });
+        title = "Account not found";
+        message = "No account with this email. Create one below.";
+      } else if (status === 429) {
+        message = "Too many attempts. Please wait a minute.";
+      } else if (status >= 500) {
+        message = "Server error. Please try again shortly.";
+      } else if (!err.response) {
+        title = "No connection";
+        message = "Check your internet and try again.";
+      } else if (data.message) {
+        message = data.message;
       }
-
-      handleShake();
-      showNotification("Login Failed", errorMessage, "error");
+      shake();
+      showNotification(title, message);
     } finally {
       if (isMountedRef.current) setLoading(false);
     }
   };
 
+  const emailOk = email.length > 0 && validateEmail(email) && !errors.email;
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.keyboardView}
       >
-        <StatusBar barStyle="dark-content" />
-
-        {/* Top Notification Bar */}
+        {/* Top notification bar */}
         {notification && (
           <Animated.View
             style={[
               styles.notificationContainer,
               {
-                transform: [
-                  { translateY: notificationSlide },
-                  { scale: notificationScale },
-                ],
-                opacity: notificationOpacity,
+                opacity: noteAnim,
+                transform: [{ translateY: noteAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }],
               },
             ]}
           >
-            <LinearGradient
-              colors={notification.type === 'success'
-                ? ['#fff', '#fff']
-                : ['#a09c9c', '#b5b0b0']
-              }
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.notificationGradient}
-            >
-              <View style={styles.notificationContent}>
-                <View style={styles.notificationIconRow}>
-                  <Animated.View style={[
-                    styles.notificationIconCircle,
-                    {
-                      transform: [{
-                        scale: notificationScale.interpolate({
-                          inputRange: [0.9, 1],
-                          outputRange: [0.5, 1],
-                        })
-                      }]
-                    }
-                  ]}>
-                    <Ionicons
-                      name={notification.type === 'success' ? "checkmark-circle" : "alert-circle"}
-                      size={24}
-                      color={notification.type === 'success' ? "#1a1a1a" : "#f9c349"}
-                    />
-                  </Animated.View>
-                  <View style={styles.notificationTextContainer}>
-                    <Text style={[
-                      styles.notificationTitle,
-                      { color: notification.type === 'success' ? '#1a1a1a' : '#1a1a1a' }
-                    ]}>
-                      {notification.title}
-                    </Text>
-                    <Text style={styles.notificationMessage} numberOfLines={2}>
-                      {notification.message}
-                    </Text>
-                  </View>
-                </View>
-
-                {notification.type === 'error' && (
-                  <TouchableOpacity
-                    onPress={hideNotification}
-                    style={styles.notificationClose}
-                  >
-                    <Ionicons name="close" size={20} color="#666" />
-                  </TouchableOpacity>
-                )}
+            <View style={styles.notificationContent}>
+              <View style={styles.notificationIconCircle}>
+                <Ionicons name="alert-circle" size={22} color={GOLD} />
               </View>
-
-              {notification.type === 'success' && (
-                <View style={styles.notificationProgressBar}>
-                  <Animated.View
-                    style={[
-                      styles.notificationProgress,
-                      {
-                        transform: [{
-                          scaleX: notificationSlide.interpolate({
-                            inputRange: [-200, 0],
-                            outputRange: [0, 1],
-                          })
-                        }]
-                      }
-                    ]}
-                  />
-                </View>
-              )}
-            </LinearGradient>
-          </Animated.View>
-        )}
-
-        {/* Loading Overlay */}
-        {showLoading && (
-          <Animated.View style={[styles.loadingOverlay, { opacity: overlayOpacity }]}>
-              <ActivityIndicator size="large" color="#f9c349" />
-              <Text style={styles.loadingText}>Signing In...</Text>
-              <View style={styles.loadingDots}>
-                {[0, 1, 2].map((i) => (
-                  <View key={i} style={styles.loadingDot} />
-                ))}
+              <View style={styles.notificationTextContainer}>
+                <Text style={styles.notificationTitle}>{notification.title}</Text>
+                {notification.message ? (
+                  <Text style={styles.notificationMessage} numberOfLines={2}>{notification.message}</Text>
+                ) : null}
               </View>
+              <TouchableOpacity onPress={hideNotification} style={styles.notificationClose} hitSlop={8}>
+                <Ionicons name="close" size={18} color="#666" />
+              </TouchableOpacity>
+            </View>
           </Animated.View>
         )}
 
@@ -546,42 +234,16 @@ export default function SignIn({ navigation }) {
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          bounces={false}
         >
-          <Animated.View
-            style={[
-              styles.card,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideUpAnim }],
-              },
-            ]}
-          >
-            {/* Header with Logo */}
+          <Animated.View style={[styles.card, { opacity: fadeAnim }]}>
+            {/* Header with logo */}
             <View style={styles.header}>
-              <Animated.View
-                style={[
-                  styles.logoBadge,
-                  {
-                    transform: [
-                      { scale: logoScale },
-                      { rotate: logoSpin },
-                    ]
-                  }
-                ]}
-              >
-                <LinearGradient
-                  colors={['#1a1a1a', '#1a1a1a']}
-                  style={styles.logoGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Text style={styles.logoText}>tdc<Text style={{color:"#f9c349"}}>.</Text></Text>
-                </LinearGradient>
-              </Animated.View>
-
+              <View style={styles.logoBadge}>
+                <Text style={styles.logoText}>tdc<Text style={{ color: GOLD }}>.</Text></Text>
+              </View>
               <Text style={styles.title}>The Deft Crew</Text>
-              <Text style={styles.subtitle}>Sign in to manage your Account</Text>
-
+              <Text style={styles.subtitle}>Sign in to manage your account</Text>
               <View style={styles.decorativeLine}>
                 <View style={styles.lineSegment} />
                 <View style={styles.diamond} />
@@ -589,215 +251,153 @@ export default function SignIn({ navigation }) {
               </View>
             </View>
 
-            {/* Email Input */}
-            <Animated.View
+            {/* Email */}
+            <View
               style={[
                 styles.inputWrapper,
                 focusedInput === 'email' && !errors.email && styles.inputFocused,
                 errors.email && styles.inputError,
-                {
-                  opacity: inputAnim1,
-                  transform: [
-                    {
-                      translateX: inputAnim1.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [-60, 0],
-                      })
-                    },
-                    {
-                      scale: inputAnim1.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.9, 1],
-                      })
-                    }
-                  ],
-                }
               ]}
             >
-              <View style={[
-                styles.inputIconContainer,
-                errors.email && styles.inputIconError
-              ]}>
+              <View style={[styles.inputIconContainer, errors.email && styles.inputIconError]}>
                 <Ionicons
                   name="mail-outline"
                   size={18}
-                  color={errors.email ? "#ff4444" : (focusedInput === 'email' ? "#f9c349" : "#999")}
+                  color={errors.email ? "#ff4444" : focusedInput === 'email' ? GOLD : "#999"}
                 />
               </View>
               <TextInput
                 placeholder="Email Address"
-                placeholderTextColor={errors.email ? "#ff4444" : "#999"}
+                placeholderTextColor={errors.email ? "#ff8a8a" : "#999"}
                 value={email}
                 onChangeText={(text) => {
                   setEmail(text);
                   clearError('email');
                 }}
-                onFocus={() => {
-                  setFocusedInput('email');
-                  clearError('email');
-                }}
+                onFocus={() => setFocusedInput('email')}
                 onBlur={() => setFocusedInput(null)}
-                style={[
-                  styles.input,
-                  errors.email && styles.inputTextError
-                ]}
+                style={[styles.input, errors.email && styles.inputTextError]}
                 autoCapitalize="none"
+                autoCorrect={false}
                 keyboardType="email-address"
+                textContentType="emailAddress"
+                autoComplete="email"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
+                editable={!loading}
               />
-              {email.length > 0 && validateEmail(email) && !errors.email && (
-                <Animated.View style={styles.checkmarkContainer}>
-                  <Ionicons name="checkmark-circle" size={20} color="#f9c349" />
-                </Animated.View>
-              )}
-              {errors.email && (
-                <View style={styles.checkmarkContainer}>
-                  <Ionicons name="alert-circle" size={20} color="#ff4444" />
-                </View>
-              )}
-            </Animated.View>
+              {emailOk && <Ionicons name="checkmark-circle" size={20} color={GOLD} style={styles.checkmarkContainer} />}
+              {errors.email && <Ionicons name="alert-circle" size={20} color="#ff4444" style={styles.checkmarkContainer} />}
+            </View>
 
-            {/* Password Input */}
-            <Animated.View
+            {/* Password */}
+            <View
               style={[
                 styles.inputWrapper,
                 focusedInput === 'password' && !errors.password && styles.inputFocused,
                 errors.password && styles.inputError,
-                {
-                  opacity: inputAnim2,
-                  transform: [
-                    {
-                      translateX: inputAnim2.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [60, 0],
-                      })
-                    },
-                    {
-                      scale: inputAnim2.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.9, 1],
-                      })
-                    }
-                  ],
-                }
               ]}
             >
-              <View style={[
-                styles.inputIconContainer,
-                errors.password && styles.inputIconError
-              ]}>
+              <View style={[styles.inputIconContainer, errors.password && styles.inputIconError]}>
                 <Ionicons
                   name="lock-closed-outline"
                   size={18}
-                  color={errors.password ? "#ff4444" : (focusedInput === 'password' ? "#f9c349" : "#999")}
+                  color={errors.password ? "#ff4444" : focusedInput === 'password' ? GOLD : "#999"}
                 />
               </View>
               <TextInput
+                ref={passwordRef}
                 placeholder="Password"
-                placeholderTextColor={errors.password ? "#ff4444" : "#999"}
+                placeholderTextColor={errors.password ? "#ff8a8a" : "#999"}
                 value={password}
                 onChangeText={(text) => {
                   setPassword(text);
                   clearError('password');
                 }}
-                onFocus={() => {
-                  setFocusedInput('password');
-                  clearError('password');
-                }}
+                onFocus={() => setFocusedInput('password')}
                 onBlur={() => setFocusedInput(null)}
-                style={[
-                  styles.input,
-                  errors.password && styles.inputTextError
-                ]}
+                style={[styles.input, errors.password && styles.inputTextError]}
                 secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                textContentType="password"
+                autoComplete="password"
+                returnKeyType="go"
+                onSubmitEditing={handleLogin}
+                editable={!loading}
               />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeButton}
-                activeOpacity={0.7}
-              >
+              <TouchableOpacity onPress={() => setShowPassword((v) => !v)} style={styles.eyeButton} hitSlop={8}>
                 <Ionicons
                   name={showPassword ? "eye-off-outline" : "eye-outline"}
                   size={18}
                   color={errors.password ? "#ff4444" : "#999"}
                 />
               </TouchableOpacity>
-            </Animated.View>
+            </View>
 
-            {/* Forgot Password */}
-            <Animated.View style={{ opacity: fadeAnim }}>
-              <TouchableOpacity
-                style={styles.forgotBtn}
-                onPress={() => navigation.navigate("ForgotPassword")}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.forgotText}>Forgot Password?</Text>
-                <Ionicons name="arrow-forward" size={14} color="#f9c349" style={{ marginLeft: 4 }} />
-              </TouchableOpacity>
-            </Animated.View>
-
-            {/* Login Button with Shake Animation */}
-            <Animated.View
-              style={[
-                {
-                  transform: [
-                    { translateX: shakeAnim },
-                    { scale: buttonScale },
-                  ]
-                }
-              ]}
+            {/* Forgot password */}
+            <TouchableOpacity
+              style={styles.forgotBtn}
+              onPress={() => navigation.navigate("ForgotPassword")}
+              activeOpacity={0.7}
+              hitSlop={8}
             >
+              <Text style={styles.forgotText}>Forgot Password?</Text>
+              <Ionicons name="arrow-forward" size={14} color={GOLD} style={{ marginLeft: 4 }} />
+            </TouchableOpacity>
+
+            {/* Sign in */}
+            <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
               <TouchableOpacity
-                style={styles.button}
+                style={[styles.button, loading && styles.buttonBusy]}
                 onPress={handleLogin}
                 disabled={loading}
-                activeOpacity={0.9}
+                activeOpacity={0.85}
               >
-                <LinearGradient
-                  colors={['#1a1a1a', '#1a1a1a']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.buttonGradient}
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#f9c349" size="small" />
-                  ) : (
-                    <>
-                      <Text style={styles.buttonText}>SIGN IN</Text>
-                      <Ionicons name="log-in-outline" size={20} color="#f9c349" />
-                    </>
-                  )}
-                </LinearGradient>
+                {loading ? (
+                  <ActivityIndicator color={GOLD} size="small" />
+                ) : (
+                  <>
+                    <Text style={styles.buttonText}>SIGN IN</Text>
+                    <Ionicons name="log-in-outline" size={20} color={GOLD} />
+                  </>
+                )}
               </TouchableOpacity>
             </Animated.View>
 
-            {/* Guest Browse Button */} 
-              <Animated.View style={{ opacity: fadeAnim }}>
-              <TouchableOpacity
-                style={styles.guestButton}
-                onPress={handleGuestBrowse}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="globe-outline" size={20} color="#1a1a1a" style={{ marginRight: 8 }} />
-                <Text style={styles.guestButtonText}>Browse as Guest</Text>
-              </TouchableOpacity>
-            </Animated.View>
+            {/* Guest */}
+            <TouchableOpacity
+              style={styles.guestButton}
+              onPress={handleGuestBrowse}
+              activeOpacity={0.7}
+              disabled={guestLoading || loading}
+            >
+              {guestLoading ? (
+                <ActivityIndicator color={DARK} size="small" />
+              ) : (
+                <>
+                  <Ionicons name="globe-outline" size={20} color={DARK} style={{ marginRight: 8 }} />
+                  <Text style={styles.guestButtonText}>Browse as Guest</Text>
+                </>
+              )}
+            </TouchableOpacity>
 
             {/* Footer */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
+              <TouchableOpacity onPress={() => navigation.navigate("Signup")} hitSlop={8}>
                 <Text style={styles.signupLink}>Create Account</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
 
-          {/* Bottom Branding */}
-          <Animated.View style={[styles.brandingFooter, { opacity: fadeAnim }]}>
+          {/* Bottom branding */}
+          <View style={styles.brandingFooter}>
             <Text style={styles.brandingText}>
-              <Text style={{fontSize:14}}>tdc</Text>
-              <Text style={{color:'#f9c349', fontSize:20}}>.</Text> PAKISTAN
+              <Text style={{ fontSize: 14 }}>tdc</Text>
+              <Text style={{ color: GOLD, fontSize: 20 }}>.</Text> PAKISTAN
             </Text>
-          </Animated.View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -805,187 +405,72 @@ export default function SignIn({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#ffffff",
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: "center",
-  },
+  safeArea: { flex: 1, backgroundColor: "#ffffff" },
+  keyboardView: { flex: 1 },
+  scrollContainer: { flexGrow: 1, justifyContent: "center" },
+
   notificationContainer: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
+    top: 8,
+    left: 16,
+    right: 16,
     zIndex: 1000,
-    overflow: 'hidden',
-    elevation: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-  },
-  notificationGradient: {
-    width: '100%',
-  },
-  notificationContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    width: '100%',
-  },
-  notificationIconRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  notificationIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#f1f1f1',
+    elevation: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+  },
+  notificationContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12 },
+  notificationIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: DARK,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
-    borderWidth: 2,
-    borderColor: '#f9c349',
   },
-  notificationTextContainer: {
-    flex: 1,
-  },
-  notificationTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    marginBottom: 1,
-    letterSpacing: 0.5,
-    color:'#000'
-  },
-  notificationMessage: {
-    fontSize: 12,
-    color: '#666',
-    lineHeight: 16,
-    opacity: 0.9,
-  },
+  notificationTextContainer: { flex: 1 },
+  notificationTitle: { fontSize: 14.5, fontWeight: '800', color: DARK },
+  notificationMessage: { fontSize: 12.5, color: '#666', lineHeight: 17, marginTop: 1 },
   notificationClose: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: 'rgba(0,0,0,0.05)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 10,
+    marginLeft: 8,
   },
-  notificationProgressBar: {
-    height: 3,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    width: '100%',
-    overflow: 'hidden',
-  },
-  notificationProgress: {
-    height: '100%',
-    backgroundColor: '#f9c349',
-    transform: [{ scaleX: 1 }],
-    flex: 1,
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 999,
-  },
-  loadingText: {
-    color: '#f9c349',
-    fontSize: 18,
-    fontWeight: '800',
-    marginTop: 15,
-    letterSpacing: 1,
-  },
-  loadingDots: {
-    flexDirection: 'row',
-    marginTop: 15,
-  },
-  loadingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#f9c349',
-    marginHorizontal: 4,
-    opacity: 0.5,
-  },
-  card: {
-    backgroundColor: "#fff",
-    padding: 30,
-    paddingTop: 50,
-    width: '100%',
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: 30,
-  },
+
+  card: { backgroundColor: "#fff", padding: 30, paddingTop: 40, width: '100%' },
+  header: { alignItems: "center", marginBottom: 30 },
   logoBadge: {
-    marginBottom: 20,
-    borderRadius: 50,
-    overflow: 'hidden',
-    elevation: 10,
-    shadowColor: "#f9c349",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-  },
-  logoGradient: {
     width: 80,
     height: 80,
-    borderRadius: 50,
+    borderRadius: 40,
+    backgroundColor: DARK,
     justifyContent: "center",
     alignItems: "center",
+    marginBottom: 20,
+    elevation: 8,
+    shadowColor: GOLD,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
   },
-  logoText: {
-    fontSize: 32,
-    color: "#fff",
-    fontWeight: "900",
-    letterSpacing: -1,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "900",
-    color: "#1a1a1a",
-    letterSpacing: 1,
-  },
-  subtitle: {
-    color: "#666",
-    marginTop: 6,
-    fontSize: 14,
-    letterSpacing: 0.5,
-  },
-  decorativeLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 18,
-  },
-  lineSegment: {
-    width: 25,
-    height: 2,
-    backgroundColor: '#f9c349',
-    borderRadius: 1,
-  },
-  diamond: {
-    width: 7,
-    height: 7,
-    backgroundColor: '#1a1a1a',
-    transform: [{ rotate: '45deg' }],
-    marginHorizontal: 8,
-  },
+  logoText: { fontSize: 32, color: "#fff", fontWeight: "900", letterSpacing: -1 },
+  title: { fontSize: 28, fontWeight: "900", color: DARK, letterSpacing: 1 },
+  subtitle: { color: "#666", marginTop: 6, fontSize: 14, letterSpacing: 0.5 },
+  decorativeLine: { flexDirection: 'row', alignItems: 'center', marginTop: 18 },
+  lineSegment: { width: 25, height: 2, backgroundColor: GOLD, borderRadius: 1 },
+  diamond: { width: 7, height: 7, backgroundColor: DARK, transform: [{ rotate: '45deg' }], marginHorizontal: 8 },
+
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
@@ -998,24 +483,8 @@ const styles = StyleSheet.create({
     height: 56,
     width: '100%',
   },
-  inputFocused: {
-    borderColor: "#f9c349",
-    backgroundColor: "#fff",
-    shadowColor: "#f9c349",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  inputError: {
-    borderColor: "#ff4444",
-    backgroundColor: "#fff5f5",
-    shadowColor: "#ff4444",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 3,
-  },
+  inputFocused: { borderColor: GOLD, backgroundColor: "#fff" },
+  inputError: { borderColor: "#ff4444", backgroundColor: "#fff5f5" },
   inputIconContainer: {
     width: 36,
     height: 36,
@@ -1025,105 +494,50 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
   },
-  inputIconError: {
-    backgroundColor: '#ffebee',
-  },
-  input: {
-    flex: 1,
-    paddingVertical: 8,
-    fontSize: 15,
-    color: "#1a1a1a",
-    fontWeight: '500',
-  },
-  inputTextError: {
-    color: '#ff4444',
-  },
-  eyeButton: {
-    padding: 8,
-    marginLeft: 4,
-  },
-  checkmarkContainer: {
-    marginLeft: 4,
-  },
-  forgotBtn: {
-    alignSelf: "flex-end",
-    marginBottom: 25,
-    marginTop: 5,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  forgotText: {
-    color: "#f9c349",
-    fontWeight: "700",
-    fontSize: 13,
-    letterSpacing: 0.5,
-  },
+  inputIconError: { backgroundColor: '#ffebee' },
+  input: { flex: 1, paddingVertical: 8, fontSize: 15, color: DARK, fontWeight: '500' },
+  inputTextError: { color: '#ff4444' },
+  eyeButton: { padding: 8, marginLeft: 4 },
+  checkmarkContainer: { marginLeft: 4 },
+
+  forgotBtn: { alignSelf: "flex-end", marginBottom: 25, marginTop: 5, flexDirection: 'row', alignItems: 'center' },
+  forgotText: { color: GOLD, fontWeight: "700", fontSize: 13, letterSpacing: 0.5 },
+
   button: {
+    height: 56,
     borderRadius: 16,
-    overflow: 'hidden',
-    elevation: 8,
-    shadowColor: "#1a1a1a",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    marginBottom: 10,
-    width: '100%',
-  },
-  buttonGradient: {
+    backgroundColor: DARK,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 17,
+    marginBottom: 10,
     width: '100%',
+    elevation: 6,
+    shadowColor: DARK,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
   },
-  buttonText: {
-    color: "#f9c349",
-    fontSize: 16,
-    fontWeight: "800",
-    letterSpacing: 2,
-    marginRight: 8,
-  },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  footerText: {
-    color: "#999",
-    fontSize: 14,
-  },
-  signupLink: {
-    color: "#1a1a1a",
-    fontWeight: "800",
-    fontSize: 14,
-    textDecorationLine: 'underline',
-  },
-  brandingFooter: {
-    alignItems: 'center',
-    marginTop: 30,
-    marginBottom: 20,
-  },
-  brandingText: {
-    color: '#ccc',
-    fontSize: 11,
-    letterSpacing: 3,
-    fontWeight: '600',
-  },
+  buttonBusy: { opacity: 0.85 },
+  buttonText: { color: GOLD, fontSize: 16, fontWeight: "800", letterSpacing: 2, marginRight: 8 },
+
   guestButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    height: 54,
     marginBottom: 20,
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: '#1a1a1a',
+    borderColor: DARK,
     backgroundColor: 'transparent',
   },
-  guestButtonText: {
-    color: '#1a1a1a',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  guestButtonText: { color: DARK, fontSize: 16, fontWeight: '700' },
+
+  footer: { flexDirection: "row", justifyContent: "center", marginTop: 20, marginBottom: 20 },
+  footerText: { color: "#999", fontSize: 14 },
+  signupLink: { color: DARK, fontWeight: "800", fontSize: 14, textDecorationLine: 'underline' },
+
+  brandingFooter: { alignItems: 'center', marginTop: 10, marginBottom: 20 },
+  brandingText: { color: '#ccc', fontSize: 11, letterSpacing: 3, fontWeight: '600' },
 });

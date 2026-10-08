@@ -1,4 +1,13 @@
-// screens/ChatBotInterface.js
+// app/src/screens/ChatBotInterface.js
+// TDC Assistant (opened from Home in a full-screen sheet).
+//
+// - tdc design: white, black, gold. Same header style as the rest of the app
+// - History opens inside this sheet (before, it closed the chat, went to
+//   another screen and picking a chat dropped you back on Home)
+// - New chat button
+// - Copy uses expo-clipboard (Clipboard from react-native was removed in RN 0.81)
+// - Retry only on the latest answer; actions hidden while it is still typing
+
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import {
   View,
@@ -8,211 +17,177 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
-  Clipboard,
-  Alert,
   Keyboard,
-  Dimensions,
   Share,
   Linking,
+  Animated,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
+import * as ExpoClipboard from 'expo-clipboard';
 import { ChatContext } from '../context/ChatContext';
+import { ChatHistoryPanel } from './ChatHistoryScreen';
 
-const { width } = Dimensions.get('window');
+const DARK = '#1a1a1a';
+const GOLD = '#f9c349';
+const GOLD_SOFT = '#fff8e6';
+const SOFT = '#F7F9F8';
+const BORDER = '#E8E8E8';
+const MUTED = '#8a8a8a';
+const TEXT2 = '#5f5f5f';
 
-/* ------------------------------------------------------------------ */
-/*  Inline markdown formatter (bold + links)                          */
-/* ------------------------------------------------------------------ */
-const parseInlineFormatting = (content) => {
+const STARTERS = [
+  { icon: 'school-outline', title: 'study abroad', sub: 'masters, bachelors, phd', q: 'Study Abroad scholarship options and programs' },
+  { icon: 'briefcase-outline', title: 'jobs & careers', sub: 'internships and full-time', q: 'Show me active internships and job opportunities on TDC', cat: 'jobs' },
+  { icon: 'pricetags-outline', title: 'brand discounts', sub: '200+ brands', q: 'Show me the latest brand discounts and student deals', cat: 'offers' },
+  { icon: 'gift-outline', title: 'exclusive offers', sub: 'promos and codes', q: 'Show exclusive student discounts and promo deals', cat: 'offers' },
+  { icon: 'airplane-outline', title: 'travel packages', sub: 'student tours', q: 'Show me student travel packages and tour plans', cat: 'packages' },
+  { icon: 'book-outline', title: 'learning', sub: 'notes and books', q: 'Show notes, lectures and books available on TDC', cat: 'notes' },
+  { icon: 'card-outline', title: 'tdc gold card', sub: 'premium membership', q: 'What are the benefits of TDC Gold Card membership?', cat: 'tdc_knowledge' },
+  { icon: 'star-outline', title: 'reward points', sub: 'earn and redeem', q: 'How can I earn and redeem TDC reward points?', cat: 'tdc_knowledge' },
+];
+
+/* ---------------- markdown (bold, links, headers, bullets, code, tables) ---------------- */
+const parseInline = (content) => {
   const parts = [];
-  const boldParts = content.split('**');
-
-  boldParts.forEach((part, index) => {
-    const isBold = index % 2 === 1;
-    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-    let match;
-    let lastIndex = 0;
-    const localRegex = new RegExp(linkRegex);
-
-    while ((match = localRegex.exec(part)) !== null) {
-      const matchIndex = match.index;
-      if (matchIndex > lastIndex) {
+  String(content)
+    .split('**')
+    .forEach((part, index) => {
+      const bold = index % 2 === 1;
+      const re = /\[([^\]]+)\]\(([^)]+)\)/g;
+      let m;
+      let last = 0;
+      while ((m = re.exec(part)) !== null) {
+        if (m.index > last) {
+          parts.push(
+            <Text key={`t-${index}-${m.index}`} style={bold ? styles.mdBold : styles.mdText}>
+              {part.substring(last, m.index)}
+            </Text>
+          );
+        }
+        const url = m[2];
         parts.push(
-          <Text
-            key={`text-${index}-${matchIndex}`}
-            style={isBold ? styles.mdBoldText : styles.mdNormalText}
-          >
-            {part.substring(lastIndex, matchIndex)}
+          <Text key={`l-${index}-${m.index}`} style={styles.link} onPress={() => Linking.openURL(url).catch(() => {})}>
+            {m[1]}
+          </Text>
+        );
+        last = re.lastIndex;
+      }
+      if (last < part.length) {
+        parts.push(
+          <Text key={`e-${index}`} style={bold ? styles.mdBold : styles.mdText}>
+            {part.substring(last)}
           </Text>
         );
       }
-
-      const linkText = match[1];
-      const linkUrl = match[2];
-
-      parts.push(
-        <Text
-          key={`link-${index}-${matchIndex}`}
-          style={styles.linkText}
-          onPress={() =>
-            Linking.openURL(linkUrl).catch((err) =>
-              console.error('Error opening URL:', err)
-            )
-          }
-        >
-          {linkText}
-        </Text>
-      );
-
-      lastIndex = localRegex.lastIndex;
-    }
-
-    if (lastIndex < part.length) {
-      parts.push(
-        <Text
-          key={`text-end-${index}`}
-          style={isBold ? styles.mdBoldText : styles.mdNormalText}
-        >
-          {part.substring(lastIndex)}
-        </Text>
-      );
-    }
-  });
-
+    });
   return parts;
 };
 
-/* ------------------------------------------------------------------ */
-/*  Markdown renderer                                                  */
-/* ------------------------------------------------------------------ */
-const MarkdownRenderer = ({ text, style }) => {
+const Markdown = React.memo(({ text }) => {
   if (!text) return null;
-
-  const parts = [];
-  let isCode = false;
-  let codeBuffer = [];
-
-  const rawLines = text.split('\n');
-
-  for (let i = 0; i < rawLines.length; i++) {
-    const line = rawLines[i];
+  const blocks = [];
+  let code = null;
+  text.split('\n').forEach((line) => {
     if (line.trim().startsWith('```')) {
-      if (isCode) {
-        parts.push({ type: 'code', content: codeBuffer.join('\n') });
-        codeBuffer = [];
-        isCode = false;
-      } else {
-        isCode = true;
-      }
-    } else if (isCode) {
-      codeBuffer.push(line);
-    } else {
-      parts.push({ type: 'line', content: line });
-    }
-  }
-
-  if (codeBuffer.length > 0) {
-    parts.push({ type: 'code', content: codeBuffer.join('\n') });
-  }
+      if (code) {
+        blocks.push({ type: 'code', content: code.join('\n') });
+        code = null;
+      } else code = [];
+    } else if (code) code.push(line);
+    else blocks.push({ type: 'line', content: line });
+  });
+  if (code && code.length) blocks.push({ type: 'code', content: code.join('\n') });
 
   return (
-    <View style={styles.markdownContainer}>
-      {parts.map((part, index) => {
-        if (part.type === 'code') {
+    <View>
+      {blocks.map((b, i) => {
+        if (b.type === 'code') {
           return (
-            <View key={index} style={styles.codeBlockContainer}>
-              <Text style={styles.codeText}>{part.content}</Text>
+            <View key={i} style={styles.code}>
+              <Text style={styles.codeText} selectable>
+                {b.content}
+              </Text>
             </View>
           );
         }
-
-        const line = part.content;
-        const trimmed = line.trim();
-
-        if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
-          if (trimmed.replace(/[|\-\s]/g, '') === '') return null;
-          const cells = trimmed.split('|').slice(1, -1).map((c) => c.trim());
+        const t = b.content.trim();
+        if (!t) return <View key={i} style={{ height: 6 }} />;
+        if (t.startsWith('|') && t.endsWith('|')) {
+          if (t.replace(/[|\-:\s]/g, '') === '') return null;
+          const cells = t.split('|').slice(1, -1).map((c) => c.trim());
           return (
-            <View key={index} style={styles.tableRow}>
-              {cells.map((cell, cIdx) => (
-                <View key={cIdx} style={styles.tableCell}>
-                  <Text style={styles.tableCellText}>{cell}</Text>
-                </View>
+            <View key={i} style={styles.tableRow}>
+              {cells.map((c, ci) => (
+                <Text key={ci} style={styles.tableCell}>
+                  {parseInline(c)}
+                </Text>
               ))}
             </View>
           );
         }
-
-        if (trimmed.startsWith('#')) {
-          const match = trimmed.match(/^(#{1,6})\s+(.*)$/);
-          if (match) {
-            const level = match[1].length;
-            const content = match[2];
-            const headerStyle =
-              level === 1 ? styles.h1 : level === 2 ? styles.h2 : styles.h3;
-            return (
-              <Text key={index} style={[headerStyle, style]}>
-                {parseInlineFormatting(content)}
-              </Text>
-            );
-          }
-        }
-
-        const isBullet =
-          trimmed.startsWith('-') ||
-          trimmed.startsWith('*') ||
-          trimmed.startsWith('•');
-        const cleanContent = isBullet
-          ? trimmed.replace(/^[-*•]\s+/, '')
-          : line;
-
-        return (
-          <View
-            key={index}
-            style={[styles.lineWrapper, isBullet && styles.bulletLine]}
-          >
-            {isBullet && <Text style={styles.bulletSymbol}>• </Text>}
-            <Text style={[styles.textLine, style]}>
-              {parseInlineFormatting(cleanContent)}
+        const h = t.match(/^(#{1,6})\s+(.*)$/);
+        if (h) {
+          const st = h[1].length === 1 ? styles.h1 : h[1].length === 2 ? styles.h2 : styles.h3;
+          return (
+            <Text key={i} style={st}>
+              {parseInline(h[2])}
             </Text>
-          </View>
+          );
+        }
+        const bullet = /^[-*•]\s+/.test(t);
+        const numbered = t.match(/^(\d+)[.)]\s+(.*)$/);
+        if (bullet || numbered) {
+          return (
+            <View key={i} style={styles.bulletRow}>
+              <Text style={styles.bulletMark}>{numbered ? `${numbered[1]}.` : '•'}</Text>
+              <Text style={styles.mdLine}>{parseInline(numbered ? numbered[2] : t.replace(/^[-*•]\s+/, ''))}</Text>
+            </View>
+          );
+        }
+        return (
+          <Text key={i} style={styles.mdLine}>
+            {parseInline(b.content)}
+          </Text>
         );
       })}
     </View>
   );
-};
+});
 
-/* ------------------------------------------------------------------ */
-/*  Animated typing dots                                               */
-/* ------------------------------------------------------------------ */
-const AnimatedTyping = () => {
-  const [dots, setDots] = useState('.');
-
+/* ---------------- typing dots ---------------- */
+const TypingDots = () => {
+  const a = useRef([0, 1, 2].map(() => new Animated.Value(0.3))).current;
   useEffect(() => {
-    const interval = setInterval(() => {
-      setDots((prev) => (prev.length >= 3 ? '.' : prev + '.'));
-    }, 450);
-    return () => clearInterval(interval);
-  }, []);
-
+    const loops = a.map((v, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 150),
+          Animated.timing(v, { toValue: 1, duration: 300, useNativeDriver: true }),
+          Animated.timing(v, { toValue: 0.3, duration: 300, useNativeDriver: true }),
+          Animated.delay((2 - i) * 150),
+        ])
+      )
+    );
+    loops.forEach((l) => l.start());
+    return () => loops.forEach((l) => l.stop());
+  }, [a]);
   return (
-    <View style={styles.typingBubbleContainer}>
-      <Text style={styles.typingBubbleText}>
-        Generating response...{dots}
-      </Text>
+    <View style={styles.dots}>
+      {a.map((v, i) => (
+        <Animated.View key={i} style={[styles.dot, { opacity: v }]} />
+      ))}
     </View>
   );
 };
 
-/* ------------------------------------------------------------------ */
-/*  Main component                                                     */
-/* ------------------------------------------------------------------ */
+/* ================================================================ */
 const ChatBotInterface = ({ onClose }) => {
   const navigation = useNavigation();
-  const flatListRef = useRef(null);
+  const listRef = useRef(null);
   const insets = useSafeAreaInsets();
 
   const {
@@ -225,194 +200,144 @@ const ChatBotInterface = ({ onClose }) => {
     sendMessage,
     loadSessionDetails,
     regenerateLastResponse,
+    startNewSession,
   } = useContext(ChatContext);
 
   const [input, setInput] = useState('');
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [showHistory, setShowHistory] = useState(false);
+  const [copiedId, setCopiedId] = useState(null);
 
-  /* ---------- Auto-scroll on new messages ---------- */
+  const close = () => (onClose ? onClose() : navigation.goBack());
+
+  // Android back: close history first
   useEffect(() => {
-    if (messages.length > 0) {
-      const t = setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-      return () => clearTimeout(t);
-    }
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (showHistory) {
+        setShowHistory(false);
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, [showHistory]);
+
+  // keep the newest message in view
+  useEffect(() => {
+    if (!messages.length) return;
+    const t = setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
+    return () => clearTimeout(t);
   }, [messages, isLoading, isStreaming]);
 
-  /* ---------- Keyboard listeners (track height) ---------- */
+  // keyboard height → bottom spacer (works inside the sheet on both platforms)
   useEffect(() => {
-    const showEvent =
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent =
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const showSub = Keyboard.addListener(showEvent, (e) => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const s = Keyboard.addListener(showEvt, (e) => {
       setKeyboardHeight(e.endCoordinates.height);
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 120);
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 120);
     });
-
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-    });
-
+    const h = Keyboard.addListener(hideEvt, () => setKeyboardHeight(0));
     return () => {
-      showSub.remove();
-      hideSub.remove();
+      s.remove();
+      h.remove();
     };
   }, []);
 
-  /* ---------- Handlers ---------- */
-  const handleSend = () => {
-    if (!input.trim() || isLoading) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    sendMessage(input.trim());
+  const send = (text, category) => {
+    const msg = (text ?? input).trim();
+    if (!msg || isLoading || isStreaming) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    sendMessage(msg, category);
+    if (text === undefined) setInput('');
+  };
+
+  const newChat = () => {
+    Haptics.selectionAsync().catch(() => {});
+    startNewSession?.();
+    setShowHistory(false);
     setInput('');
   };
 
-  const handleSuggestionPress = (question) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    sendMessage(question);
-  };
-
-  const handleFeatureCardPress = (suggestedQuery, category) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    sendMessage(suggestedQuery, category);
-  };
-
-  const handleRefresh = async () => {
+  const onRefresh = async () => {
     if (!activeSessionId) return;
-    setIsRefreshing(true);
+    setRefreshing(true);
     await loadSessionDetails(activeSessionId);
-    setIsRefreshing(false);
+    setRefreshing(false);
   };
 
-  const copyToClipboard = (text) => {
-    Clipboard.setString(text);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert('Copied', 'Message copied to clipboard.');
-  };
-
-  const shareMessage = async (text) => {
+  const copy = async (id, text) => {
     try {
-      await Share.share({ message: text });
-    } catch (error) {
-      console.error('Error sharing message:', error.message);
-    }
+      await ExpoClipboard.setStringAsync(text || '');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      setCopiedId(id);
+      setTimeout(() => setCopiedId((c) => (c === id ? null : c)), 1500);
+    } catch {}
   };
 
-  /* ---------- Render single message ---------- */
-  const renderMessageItem = ({ item }) => {
-    if (item.isLoadingBubble) {
+  const share = (text) => Share.share({ message: text }).catch(() => {});
+
+  const lastBotId = [...messages].reverse().find((m) => m.role === 'assistant' && !String(m._id).startsWith('warn-'))?._id;
+
+  const data = [...messages];
+  if (isLoading && !isStreaming) data.push({ _id: 'typing', role: 'assistant', typing: true });
+
+  const renderItem = ({ item }) => {
+    const bot = item.role === 'assistant';
+    if (item.typing) {
       return (
-        <View style={[styles.messageWrapper, styles.botMessageWrapper]}>
-          <View style={styles.avatarIcon}>
-            <Ionicons
-              name="chatbubble-ellipses"
-              size={16}
-              color="#ffffff"
-            />
+        <View style={styles.botRow}>
+          <View style={styles.botAvatar}>
+            <Ionicons name="sparkles" size={13} color={GOLD} />
           </View>
-          <View
-            style={[
-              styles.messageBubble,
-              styles.botMessageBubble,
-              { paddingVertical: 12 },
-            ]}
-          >
-            <AnimatedTyping />
+          <View style={[styles.bubble, styles.botBubble, { paddingVertical: 14 }]}>
+            <TypingDots />
           </View>
         </View>
       );
     }
 
-    const isBot = item.role === 'assistant';
-    return (
-      <View
-        style={[
-          styles.messageWrapper,
-          isBot ? styles.botMessageWrapper : styles.userMessageWrapper,
-          { maxWidth: isBot ? '85%' : '75%' },
-        ]}
-      >
-        {isBot && (
-          <View style={styles.avatarIcon}>
-            <Ionicons
-              name="chatbubble-ellipses"
-              size={16}
-              color="#ffffff"
-            />
-          </View>
-        )}
-        <View
-          style={[
-            styles.messageBubble,
-            isBot ? styles.botMessageBubble : styles.userMessageBubble,
-          ]}
-        >
-          {isBot ? (
-            <MarkdownRenderer
-              text={item.message}
-              style={styles.botMessageText}
-            />
-          ) : (
-            <Text style={styles.userMessageText} selectable={true}>
+    if (!bot) {
+      return (
+        <View style={styles.userRow}>
+          <TouchableOpacity activeOpacity={0.9} onLongPress={() => copy(item._id, item.message)} style={[styles.bubble, styles.userBubble]}>
+            <Text style={styles.userText} selectable>
               {item.message}
             </Text>
-          )}
+          </TouchableOpacity>
+          {item.isOffline ? <Text style={styles.queued}>queued, sends when you're online</Text> : null}
+        </View>
+      );
+    }
 
-          {isBot && !item._id.startsWith('warn-') ? (
-            <View style={styles.actionRow}>
-              <TouchableOpacity
-                onPress={() => copyToClipboard(item.message)}
-                style={styles.actionBtn}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="copy-outline" size={13} color="#777777" />
-                <Text style={styles.actionText}>Copy</Text>
+    const isWarn = String(item._id).startsWith('warn-');
+    const stillTyping = isStreaming && item._id === lastBotId;
+    return (
+      <View style={styles.botRow}>
+        <View style={[styles.botAvatar, isWarn && { backgroundColor: '#fdecef' }]}>
+          <Ionicons name={isWarn ? 'cloud-offline-outline' : 'sparkles'} size={13} color={isWarn ? '#e11d48' : GOLD} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <View style={[styles.bubble, styles.botBubble, isWarn && styles.warnBubble]}>
+            <Markdown text={item.message} />
+          </View>
+          {!isWarn && !stillTyping ? (
+            <View style={styles.actions}>
+              <TouchableOpacity onPress={() => copy(item._id, item.message)} style={styles.action} hitSlop={8}>
+                <Ionicons name={copiedId === item._id ? 'checkmark' : 'copy-outline'} size={13} color={MUTED} />
+                <Text style={styles.actionText}>{copiedId === item._id ? 'copied' : 'copy'}</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => shareMessage(item.message)}
-                style={styles.actionBtn}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons
-                  name="share-social-outline"
-                  size={13}
-                  color="#777777"
-                />
-                <Text style={styles.actionText}>Share</Text>
+              <TouchableOpacity onPress={() => share(item.message)} style={styles.action} hitSlop={8}>
+                <Ionicons name="share-social-outline" size={13} color={MUTED} />
+                <Text style={styles.actionText}>share</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={regenerateLastResponse}
-                style={styles.actionBtn}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons
-                  name="refresh-outline"
-                  size={13}
-                  color="#777777"
-                />
-                <Text style={styles.actionText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
-          ) : !isBot ? (
-            <View style={styles.actionRow}>
-              <TouchableOpacity
-                onPress={() => copyToClipboard(item.message)}
-                style={styles.actionBtn}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="copy-outline" size={12} color="#555555" />
-                <Text style={[styles.actionText, { color: '#555555' }]}>
-                  Copy
-                </Text>
-              </TouchableOpacity>
+              {item._id === lastBotId && !isLoading ? (
+                <TouchableOpacity onPress={regenerateLastResponse} style={styles.action} hitSlop={8}>
+                  <Ionicons name="refresh" size={13} color={MUTED} />
+                  <Text style={styles.actionText}>retry</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           ) : null}
         </View>
@@ -420,590 +345,280 @@ const ChatBotInterface = ({ onClose }) => {
     );
   };
 
-  const displayMessages = [...messages];
-  if (isLoading && !isStreaming) {
-    displayMessages.push({
-      _id: 'loading-bubble',
-      role: 'assistant',
-      message: '',
-      isLoadingBubble: true,
-    });
-  }
+  const Welcome = (
+    <View style={styles.welcome}>
+      <View style={styles.welcomeIcon}>
+        <Ionicons name="sparkles" size={26} color={GOLD} />
+      </View>
+      <Text style={styles.welcomeTitle}>ask tdc anything</Text>
+      <Text style={styles.welcomeSub}>Deals, jobs, scholarships, events or how something in the app works.</Text>
 
-  /* ---------------------------------------------------------------- */
-  /*  KEY FIX: apply keyboard height as bottom padding                */
-  /*  on the whole screen container. No KeyboardAvoidingView needed.  */
-  /* ---------------------------------------------------------------- */
-  // The screen already sits inside SafeAreaView (top edge only), so
-  // we don't need to subtract the top inset. We just push everything
-  // up by the exact keyboard height reported by the OS.
-  const bottomSpacer =
-    keyboardHeight > 0
-      ? keyboardHeight
-      : insets.bottom; // safe-area inset when keyboard is closed
+      <Text style={styles.sectionLabel}>try asking about</Text>
+      <View style={styles.grid}>
+        {STARTERS.map((s) => (
+          <TouchableOpacity key={s.title} style={styles.starter} onPress={() => send(s.q, s.cat)} activeOpacity={0.85}>
+            <View style={styles.starterIcon}>
+              <Ionicons name={s.icon} size={17} color={GOLD} />
+            </View>
+            <Text style={styles.starterTitle} numberOfLines={1}>
+              {s.title}
+            </Text>
+            <Text style={styles.starterSub} numberOfLines={1}>
+              {s.sub}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
 
-  /* ---------- Render ---------- */
+  const busy = isLoading || isStreaming;
+  const canSend = !!input.trim() && !busy;
+  const bottomSpacer = keyboardHeight > 0 ? keyboardHeight : insets.bottom;
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
+      {/* header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => (onClose ? onClose() : navigation.goBack())}
-          style={styles.backBtn}
-        >
-          <Ionicons
-            name={onClose ? 'close' : 'chevron-back'}
-            size={24}
-            color="#111111"
-          />
+        <TouchableOpacity onPress={close} style={styles.squareBtn} activeOpacity={0.7} hitSlop={10}>
+          <Ionicons name={onClose ? 'close' : 'chevron-back'} size={21} color={DARK} />
         </TouchableOpacity>
-        <View style={styles.titleWrapper}>
-          <Text style={styles.headerTitle}>TDC Assistant</Text>
+
+        <View style={styles.headerMid}>
+          <Text style={styles.title}>
+            tdc assistant<Text style={{ color: GOLD }}>.</Text>
+          </Text>
           <View style={styles.statusRow}>
-            <View
-              style={[
-                styles.statusIndicator,
-                isOnline ? styles.onlineColor : styles.offlineColor,
-              ]}
-            />
-            <Text style={styles.statusText}>
-              {isOnline ? 'Online' : 'Offline Mode'}
-            </Text>
+            <View style={[styles.statusDot, { backgroundColor: isOnline ? '#22c55e' : '#e11d48' }]} />
+            <Text style={styles.statusText}>{isOnline ? (busy ? 'typing…' : 'online') : 'offline, messages will queue'}</Text>
           </View>
         </View>
-        <TouchableOpacity
-          onPress={() => {
-            if (onClose) onClose();
-            navigation.navigate('ChatHistory');
-          }}
-          style={styles.historyBtn}
-        >
-          <Ionicons
-            name="file-tray-full-outline"
-            size={22}
-            color="#111111"
-          />
-        </TouchableOpacity>
+
+        <View style={styles.headerRight}>
+          {messages.length ? (
+            <TouchableOpacity onPress={newChat} style={styles.squareBtn} activeOpacity={0.7} hitSlop={6}>
+              <Ionicons name="create-outline" size={19} color={DARK} />
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity onPress={() => setShowHistory(true)} style={styles.darkBtn} activeOpacity={0.8} hitSlop={6}>
+            <Ionicons name="time-outline" size={19} color={GOLD} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Everything below the header sits in a flex container.
-          The bottom spacer height tracks the keyboard. */}
-      <View style={styles.body}>
-        {/* Messages */}
+      <View style={{ flex: 1 }}>
         <FlatList
-          ref={flatListRef}
-          data={displayMessages}
-          renderItem={renderMessageItem}
-          keyExtractor={(item) => item._id}
-          contentContainerStyle={[
-            styles.listContent,
-            displayMessages.length === 0 && styles.listContentEmpty,
-          ]}
+          ref={listRef}
+          data={data}
+          renderItem={renderItem}
+          keyExtractor={(item, i) => String(item._id || i)}
+          contentContainerStyle={[styles.list, data.length === 0 && { flexGrow: 1 }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           showsVerticalScrollIndicator={false}
-          refreshing={isRefreshing}
-          onRefresh={handleRefresh}
-          ListEmptyComponent={
-            <View style={styles.welcomeContainer}>
-              <View style={styles.welcomeHeaderContainer}>
-                <Ionicons
-                  name="sparkles-sharp"
-                  size={26}
-                  color="#f9c349"
-                  style={styles.welcomeSparkle}
-                />
-                <Text style={styles.welcomeTitle}>TDC Assistant</Text>
-              </View>
-              <Text style={styles.welcomeSubtitle}>
-                I'm here to help with TDC App!
-              </Text>
-
-              <Text style={styles.tryAskingTitle}>
-                Try asking me about:
-              </Text>
-
-              <View style={styles.featuresGrid}>
-                <TouchableOpacity
-                  onPress={() =>
-                    handleFeatureCardPress(
-                      'Study Abroad scholarship options and programs'
-                    )
-                  }
-                  style={styles.welcomeCard}
-                >
-                  <Text style={styles.cardEmoji}>🎓</Text>
-                  <View style={styles.cardContent}>
-                    <Text style={styles.cardTitle}>Study Abroad</Text>
-                    <Text style={styles.cardSubtitle}>
-                      Masters / Bachelors / PhD
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() =>
-                    handleFeatureCardPress(
-                      'Show me active internships and job opportunities on TDC',
-                      'jobs'
-                    )
-                  }
-                  style={styles.welcomeCard}
-                >
-                  <Text style={styles.cardEmoji}>💼</Text>
-                  <View style={styles.cardContent}>
-                    <Text style={styles.cardTitle}>Jobs & Careers</Text>
-                    <Text style={styles.cardSubtitle}>
-                      Internships & Full-time
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() =>
-                    handleFeatureCardPress(
-                      'Show me the latest brand discounts and student deals',
-                      'offers'
-                    )
-                  }
-                  style={styles.welcomeCard}
-                >
-                  <Text style={styles.cardEmoji}>🏷</Text>
-                  <View style={styles.cardContent}>
-                    <Text style={styles.cardTitle}>Brand Discounts</Text>
-                    <Text style={styles.cardSubtitle}>
-                      200+ Brands registered
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() =>
-                    handleFeatureCardPress(
-                      'Show exclusive student discounts and promo deals',
-                      'offers'
-                    )
-                  }
-                  style={styles.welcomeCard}
-                >
-                  <Text style={styles.cardEmoji}>🎁</Text>
-                  <View style={styles.cardContent}>
-                    <Text style={styles.cardTitle}>Exclusive Offers</Text>
-                    <Text style={styles.cardSubtitle}>
-                      Promos & Voucher Codes
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() =>
-                    handleFeatureCardPress(
-                      'Show me student travel packages and tour plans',
-                      'packages'
-                    )
-                  }
-                  style={styles.welcomeCard}
-                >
-                  <Text style={styles.cardEmoji}>✈</Text>
-                  <View style={styles.cardContent}>
-                    <Text style={styles.cardTitle}>Travel Packages</Text>
-                    <Text style={styles.cardSubtitle}>Student tours</Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() =>
-                    handleFeatureCardPress(
-                      'Show notes, lectures and books available on TDC',
-                      'notes'
-                    )
-                  }
-                  style={styles.welcomeCard}
-                >
-                  <Text style={styles.cardEmoji}>📚</Text>
-                  <View style={styles.cardContent}>
-                    <Text style={styles.cardTitle}>Learning Platform</Text>
-                    <Text style={styles.cardSubtitle}>Notes & books</Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() =>
-                    handleFeatureCardPress(
-                      'What are the benefits of TDC Gold Card membership?',
-                      'tdc_knowledge'
-                    )
-                  }
-                  style={styles.welcomeCard}
-                >
-                  <Text style={styles.cardEmoji}>🏆</Text>
-                  <View style={styles.cardContent}>
-                    <Text style={styles.cardTitle}>TDC Gold Card</Text>
-                    <Text style={styles.cardSubtitle}>
-                      Premium membership
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() =>
-                    handleFeatureCardPress(
-                      'Tell me about TDC social networking and community features',
-                      'tdc_knowledge'
-                    )
-                  }
-                  style={styles.welcomeCard}
-                >
-                  <Text style={styles.cardEmoji}>👥</Text>
-                  <View style={styles.cardContent}>
-                    <Text style={styles.cardTitle}>Social Features</Text>
-                    <Text style={styles.cardSubtitle}>Posts & Stories</Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() =>
-                    handleFeatureCardPress(
-                      'How do I manage push notification settings in the TDC app?',
-                      'tdc_knowledge'
-                    )
-                  }
-                  style={styles.welcomeCard}
-                >
-                  <Text style={styles.cardEmoji}>🔔</Text>
-                  <View style={styles.cardContent}>
-                    <Text style={styles.cardTitle}>Notifications</Text>
-                    <Text style={styles.cardSubtitle}>Alerts & Updates</Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() =>
-                    handleFeatureCardPress(
-                      'How can I earn and redeem TDC reward points?',
-                      'tdc_knowledge'
-                    )
-                  }
-                  style={styles.welcomeCard}
-                >
-                  <Text style={styles.cardEmoji}>⭐</Text>
-                  <View style={styles.cardContent}>
-                    <Text style={styles.cardTitle}>Reward Points</Text>
-                    <Text style={styles.cardSubtitle}>
-                      Redeem achievements
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
-
-              <Text style={styles.justTypeInstructions}>
-                Just type your question!
-              </Text>
-            </View>
-          }
+          refreshing={refreshing}
+          onRefresh={activeSessionId ? onRefresh : undefined}
+          ListEmptyComponent={Welcome}
         />
 
-        {/* Suggestions */}
-        {suggestions.length > 0 && !isLoading && (
-          <View style={styles.suggestionsContainer}>
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              data={suggestions}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  onPress={() => handleSuggestionPress(item)}
-                  style={styles.suggestionBubble}
-                >
-                  <Text style={styles.suggestionText}>{item}</Text>
-                </TouchableOpacity>
-              )}
-              keyExtractor={(item, index) => index.toString()}
-              contentContainerStyle={styles.suggestionsList}
-              keyboardShouldPersistTaps="handled"
+        {/* follow-up suggestions */}
+        {suggestions.length > 0 && !busy ? (
+          <FlatList
+            horizontal
+            data={suggestions}
+            keyExtractor={(s, i) => `${i}-${s}`}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.suggestions}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => (
+              <TouchableOpacity style={styles.chip} onPress={() => send(item)} activeOpacity={0.8}>
+                <Text style={styles.chipText} numberOfLines={1}>
+                  {item}
+                </Text>
+              </TouchableOpacity>
+            )}
+            style={{ flexGrow: 0 }}
+          />
+        ) : null}
+
+        {/* input */}
+        <View style={styles.inputBar}>
+          <View style={styles.inputWrap}>
+            <TextInput
+              style={styles.input}
+              value={input}
+              onChangeText={setInput}
+              placeholder={isOnline ? 'ask anything…' : "you're offline, it will send later"}
+              placeholderTextColor={MUTED}
+              multiline
+              maxLength={2000}
+              onFocus={() => setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 150)}
             />
           </View>
-        )}
-
-        {/* Input bar */}
-        <View style={styles.inputBar}>
-          <TextInput
-            style={styles.textInput}
-            value={input}
-            onChangeText={setInput}
-            placeholder="Type your question..."
-            placeholderTextColor="#888888"
-            multiline
-            maxHeight={100}
-            onFocus={() => {
-              setTimeout(() => {
-                flatListRef.current?.scrollToEnd({ animated: true });
-              }, 150);
-            }}
-          />
           <TouchableOpacity
-            onPress={handleSend}
-            style={[
-              styles.sendBtn,
-              !input.trim() && styles.sendBtnDisabled,
-            ]}
-            disabled={!input.trim() || isLoading}
+            onPress={() => send()}
+            style={[styles.send, !canSend && styles.sendOff]}
+            disabled={!canSend}
+            activeOpacity={0.85}
           >
-            <Ionicons name="send" size={18} color="#ffffff" />
+            <Ionicons name="arrow-up" size={20} color={canSend ? GOLD : '#9a9a9a'} />
           </TouchableOpacity>
         </View>
-
-        {/* -------------------------------------------------------- */}
-        {/*  KEY FIX: an explicit spacer that exactly matches the     */}
-        {/*  keyboard height (or safe-area bottom when closed).       */}
-        {/* -------------------------------------------------------- */}
-        <View style={{ height: bottomSpacer }} />
+        <View style={{ height: bottomSpacer, backgroundColor: '#fff' }} />
       </View>
+
+      {/* history inside the same sheet */}
+      {showHistory ? (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: '#fff', paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+          <ChatHistoryPanel onClose={() => setShowHistory(false)} onSelect={() => setShowHistory(false)} onNewChat={newChat} />
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 };
 
-/* ------------------------------------------------------------------ */
-/*  Styles                                                             */
-/* ------------------------------------------------------------------ */
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f6f6f9' },
+  container: { flex: 1, backgroundColor: '#fff' },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#ffffff',
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#eeeeee',
+    borderBottomColor: '#f2f2f2',
   },
-  backBtn: { padding: 4 },
-  titleWrapper: { alignItems: 'center' },
-  headerTitle: { fontSize: 16, fontWeight: 'bold', color: '#111111' },
+  squareBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: SOFT,
+    borderWidth: 1,
+    borderColor: BORDER,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  darkBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: DARK, justifyContent: 'center', alignItems: 'center' },
+  headerMid: { flex: 1, marginLeft: 12 },
+  headerRight: { flexDirection: 'row', gap: 8 },
+  title: { fontSize: 18, fontWeight: '900', color: DARK, letterSpacing: -0.3 },
   statusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  statusIndicator: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 4,
-  },
-  onlineColor: { backgroundColor: '#44db5e' },
-  offlineColor: { backgroundColor: '#ff3b30' },
-  statusText: { fontSize: 10, color: '#666666' },
-  historyBtn: { padding: 4 },
+  statusDot: { width: 7, height: 7, borderRadius: 4, marginRight: 5 },
+  statusText: { fontSize: 11.5, color: MUTED, fontWeight: '600' },
 
-  body: { flex: 1 },
+  list: { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 16 },
 
-  listContent: { padding: 16, paddingBottom: 24 },
-  listContentEmpty: { flexGrow: 1, justifyContent: 'center' },
-
-  messageWrapper: { flexDirection: 'row', marginVertical: 6 },
-  userMessageWrapper: { alignSelf: 'flex-end' },
-  botMessageWrapper: { alignSelf: 'flex-start' },
-  avatarIcon: {
+  userRow: { alignItems: 'flex-end', marginVertical: 6 },
+  botRow: { flexDirection: 'row', alignItems: 'flex-start', marginVertical: 6, paddingRight: 24 },
+  botAvatar: {
     width: 28,
     height: 28,
-    borderRadius: 14,
-    backgroundColor: '#111111',
-    alignItems: 'center',
+    borderRadius: 9,
+    backgroundColor: DARK,
     justifyContent: 'center',
-    marginRight: 8,
-    marginTop: 4,
-  },
-  messageBubble: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 16,
-  },
-  userMessageBubble: {
-    backgroundColor: '#f9c349',
-    borderTopRightRadius: 2,
-  },
-  botMessageBubble: {
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 2,
-    borderWidth: 1,
-    borderColor: '#e8e8e8',
-  },
-  userMessageText: { fontSize: 14, color: '#111111' },
-  botMessageText: { fontSize: 14, color: '#222222', lineHeight: 20 },
-  actionRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 8,
-    borderTopWidth: 0.5,
-    borderTopColor: '#f0f0f0',
-    paddingTop: 6,
-  },
-  actionBtn: {
-    flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 12,
+    marginRight: 8,
+    marginTop: 2,
   },
-  actionText: { fontSize: 11, color: '#777777', marginLeft: 3 },
+  bubble: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18 },
+  userBubble: { backgroundColor: DARK, borderBottomRightRadius: 6, maxWidth: '82%' },
+  userText: { color: '#fff', fontSize: 14.5, lineHeight: 20 },
+  queued: { fontSize: 11, color: MUTED, marginTop: 4, marginRight: 4 },
+  botBubble: { backgroundColor: SOFT, borderBottomLeftRadius: 6, alignSelf: 'flex-start', maxWidth: '100%' },
+  warnBubble: { backgroundColor: '#fdecef' },
 
+  actions: { flexDirection: 'row', gap: 14, marginTop: 6, marginLeft: 6 },
+  action: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  actionText: { fontSize: 11.5, color: MUTED, fontWeight: '700' },
+
+  dots: { flexDirection: 'row', gap: 5, paddingHorizontal: 2 },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: DARK },
+
+  // markdown
+  mdLine: { fontSize: 14.5, color: '#222', lineHeight: 21 },
+  mdText: { color: '#222' },
+  mdBold: { fontWeight: '800', color: DARK },
+  link: { color: '#b7791f', fontWeight: '700', textDecorationLine: 'underline' },
+  h1: { fontSize: 17, fontWeight: '900', color: DARK, marginTop: 6, marginBottom: 4 },
+  h2: { fontSize: 15.5, fontWeight: '900', color: DARK, marginTop: 6, marginBottom: 3 },
+  h3: { fontSize: 14.5, fontWeight: '800', color: DARK, marginTop: 4, marginBottom: 2 },
+  bulletRow: { flexDirection: 'row', marginVertical: 2, paddingRight: 4 },
+  bulletMark: { width: 18, fontSize: 14.5, color: DARK, fontWeight: '800', lineHeight: 21 },
+  code: { backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 10, padding: 10, marginVertical: 6 },
+  codeText: { fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 12.5, color: DARK },
+  tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#e9e9e9', paddingVertical: 6 },
+  tableCell: { flex: 1, fontSize: 12.5, color: '#333', paddingHorizontal: 3 },
+
+  // welcome
+  welcome: { flex: 1, paddingTop: 18 },
+  welcomeIcon: { width: 56, height: 56, borderRadius: 18, backgroundColor: DARK, justifyContent: 'center', alignItems: 'center' },
+  welcomeTitle: { fontSize: 26, fontWeight: '900', color: DARK, letterSpacing: -0.6, marginTop: 16 },
+  welcomeSub: { fontSize: 14.5, color: TEXT2, lineHeight: 21, marginTop: 6 },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: MUTED,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginTop: 24,
+    marginBottom: 10,
+  },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
+  starter: {
+    width: '48.5%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#efefef',
+    padding: 13,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  starterIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: DARK, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
+  starterTitle: { fontSize: 13.5, fontWeight: '800', color: DARK },
+  starterSub: { fontSize: 11.5, color: MUTED, marginTop: 2 },
+
+  // suggestions + input
+  suggestions: { paddingHorizontal: 14, paddingVertical: 8, gap: 8 },
+  chip: {
+    height: 34,
+    paddingHorizontal: 14,
+    borderRadius: 17,
+    backgroundColor: GOLD_SOFT,
+    borderWidth: 1,
+    borderColor: '#f6e2ad',
+    justifyContent: 'center',
+    maxWidth: 260,
+  },
+  chipText: { fontSize: 13, fontWeight: '700', color: DARK },
   inputBar: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
+    gap: 8,
     paddingHorizontal: 12,
-    paddingTop: 12,
-    paddingBottom: 12,
-    backgroundColor: '#ffffff',
+    paddingTop: 8,
+    paddingBottom: 10,
+    backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: '#eeeeee',
+    borderTopColor: '#f2f2f2',
   },
-  textInput: {
+  inputWrap: {
     flex: 1,
-    backgroundColor: '#f0f0f4',
-    borderRadius: 20,
+    minHeight: 46,
+    maxHeight: 120,
+    borderRadius: 23,
+    backgroundColor: SOFT,
+    borderWidth: 1,
+    borderColor: BORDER,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    fontSize: 14,
-    color: '#111111',
-    marginRight: 8,
-  },
-  sendBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#111111',
-    alignItems: 'center',
     justifyContent: 'center',
   },
-  sendBtnDisabled: { backgroundColor: '#cccccc' },
-
-  suggestionsContainer: { paddingVertical: 8, backgroundColor: '#f6f6f9' },
-  suggestionsList: { paddingHorizontal: 12 },
-  suggestionBubble: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e2e2e6',
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginHorizontal: 4,
-  },
-  suggestionText: { fontSize: 12, color: '#444444' },
-
-  welcomeContainer: { padding: 16, alignItems: 'center' },
-  welcomeHeaderContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
-    marginBottom: 8,
-  },
-  welcomeSparkle: { marginRight: 6 },
-  welcomeTitle: { fontSize: 22, fontWeight: 'bold', color: '#111111' },
-  welcomeSubtitle: {
-    fontSize: 14,
-    color: '#666666',
-    textAlign: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 10,
-    lineHeight: 20,
-  },
-  tryAskingTitle: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#333333',
-    alignSelf: 'flex-start',
-    marginBottom: 12,
-    marginLeft: 4,
-  },
-  featuresGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  welcomeCard: {
-    width: '48%',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: '#f0f0f2',
-  },
-  cardEmoji: { fontSize: 22, marginRight: 8 },
-  cardContent: { flex: 1 },
-  cardTitle: { fontSize: 13, fontWeight: 'bold', color: '#111111' },
-  cardSubtitle: { fontSize: 10, color: '#888888', marginTop: 2 },
-  justTypeInstructions: {
-    fontSize: 13,
-    color: '#888888',
-    textAlign: 'center',
-    marginTop: 10,
-    fontStyle: 'italic',
-  },
-
-  typingBubbleContainer: { paddingVertical: 2, paddingHorizontal: 4 },
-  typingBubbleText: {
-    fontSize: 13,
-    color: '#666666',
-    fontStyle: 'italic',
-  },
-
-  codeBlockContainer: {
-    backgroundColor: '#f4f4f6',
-    borderColor: '#e1e1e8',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 10,
-    marginVertical: 6,
-  },
-  codeText: {
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    fontSize: 12,
-    color: '#c7254e',
-  },
-  tableRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#dddddd',
-    paddingVertical: 6,
-  },
-  tableCell: { flex: 1, paddingHorizontal: 4, justifyContent: 'center' },
-  tableCellText: { fontSize: 12, color: '#333333' },
-
-  h1: {
-    fontSize: 17,
-    fontWeight: 'bold',
-    color: '#111111',
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  h2: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#111111',
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  h3: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#111111',
-    marginTop: 6,
-    marginBottom: 2,
-  },
-  linkText: { color: '#0066cc', textDecorationLine: 'underline' },
-  mdBoldText: { fontWeight: 'bold', color: '#111111' },
-  mdNormalText: { fontWeight: 'normal', color: '#222222' },
-  markdownContainer: { flexDirection: 'column' },
-  lineWrapper: { flexDirection: 'row', marginVertical: 1 },
-  bulletLine: { paddingLeft: 6 },
-  bulletSymbol: { fontSize: 14, color: '#111111' },
-  textLine: { fontSize: 14, color: '#222222' },
+  input: { fontSize: 15, color: DARK, paddingTop: Platform.OS === 'ios' ? 12 : 8, paddingBottom: Platform.OS === 'ios' ? 12 : 8, maxHeight: 110 },
+  send: { width: 46, height: 46, borderRadius: 23, backgroundColor: DARK, justifyContent: 'center', alignItems: 'center' },
+  sendOff: { backgroundColor: '#e9e9e9' },
 });
 
 export default ChatBotInterface;

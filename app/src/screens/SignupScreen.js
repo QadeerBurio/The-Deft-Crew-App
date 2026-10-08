@@ -1,30 +1,30 @@
-// SignupScreen.js - Updated: hide Academic Level when Alumni is selected
-import React, { useEffect, useMemo, useRef, useState, useContext } from "react";
+// app/src/screens/SignupScreen.js
+// Create account. Same look as Sign in / Forgot / Verify (components/AuthShell).
+// - Errors show under each field, server errors in a small banner (no popups)
+// - No entrance animations or loading overlay: the button spinner is enough
+// - requiresVerification → SignupVerify (6-digit email code)
+// - Otherwise auto-login; setting the user switches the app by itself
+
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Animated,
-  Dimensions,
-  KeyboardAvoidingView,
+  FlatList,
+  Keyboard,
   Modal,
-  Platform,
   Pressable,
-  ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Haptics from "expo-haptics";
 import api from "../api/api";
 import { AuthContext } from "../context/AuthContext";
-
-const { width, height } = Dimensions.get("window");
-const isTablet = Math.min(width, height) >= 768;
+import { AuthShell, AuthInput, AuthButton, AUTH } from "../components/AuthShell";
 
 const UNIVERSITIES = [
   "Aga Khan Higher Secondary School",
@@ -204,19 +204,156 @@ const CITIES = [
   "Skardu",
 ];
 
+const RULES = [
+  { key: "len", label: "6+ characters", test: (p) => p.length >= 6 },
+  { key: "num", label: "a number", test: (p) => /\d/.test(p) },
+  { key: "case", label: "upper and lower case", test: (p) => /[a-z]/.test(p) && /[A-Z]/.test(p) },
+];
+
+const STRENGTH = [
+  { label: "too short", color: "#e5e5e5" },
+  { label: "weak", color: AUTH.danger },
+  { label: "okay", color: "#f59e0b" },
+  { label: "strong", color: AUTH.ok },
+];
+
+const EMPTY_ERRORS = {
+  name: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
+  university: "",
+  gender: "",
+  academicLevel: "",
+  city: "",
+  phone: "",
+};
+
+const validateEmail = (value) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).toLowerCase());
+
+const validatePassword = (value) =>
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/.test(value);
+
+const validatePhone = (value) => /^0\d{10}$/.test(value);
+
+// ─── small building blocks ────────────────────────────────────
+
+function SectionLabel({ children }) {
+  return <Text style={styles.section}>{children}</Text>;
+}
+
+function PickerField({ label, icon, value, placeholder, error, onPress, active, disabled }) {
+  const selected = !!value;
+  return (
+    <View style={{ marginBottom: 14 }}>
+      {label ? <Text style={styles.fieldLabel}>{label}</Text> : null}
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={onPress}
+        disabled={disabled}
+        style={[
+          styles.picker,
+          (active || selected) && styles.pickerOn,
+          !!error && styles.pickerError,
+        ]}
+      >
+        <Ionicons name={icon} size={18} color={active || selected ? AUTH.dark : AUTH.muted} />
+        <Text style={[styles.pickerText, !selected && styles.pickerPlaceholder]} numberOfLines={1}>
+          {value || placeholder}
+        </Text>
+        <Ionicons name="chevron-down" size={18} color={AUTH.muted} />
+      </TouchableOpacity>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    </View>
+  );
+}
+
+function PickerSheet({ visible, title, options, selected, onSelect, onClose, searchable, searchPlaceholder }) {
+  const insets = useSafeAreaInsets();
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    if (!visible) setQuery("");
+  }, [visible]);
+
+  const data = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    if (!q) return options;
+    return options.filter((o) => o.toLowerCase().includes(q));
+  }, [options, query]);
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+      <View style={styles.sheetWrap}>
+        <Pressable style={styles.backdrop} onPress={onClose} />
+        <View style={[styles.sheet, searchable && styles.sheetTall, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+          <View style={styles.handle} />
+          <View style={styles.sheetHead}>
+            <Text style={styles.sheetTitle}>{title}</Text>
+            <TouchableOpacity onPress={onClose} style={styles.sheetClose} hitSlop={10}>
+              <Ionicons name="close" size={18} color={AUTH.dark} />
+            </TouchableOpacity>
+          </View>
+
+          {searchable ? (
+            <View style={styles.search}>
+              <Ionicons name="search" size={17} color={AUTH.muted} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder={searchPlaceholder || "search"}
+                placeholderTextColor="#a8a8a8"
+                value={query}
+                onChangeText={setQuery}
+                autoCorrect={false}
+                autoCapitalize="none"
+                returnKeyType="search"
+              />
+              {query ? (
+                <TouchableOpacity onPress={() => setQuery("")} hitSlop={10}>
+                  <Ionicons name="close-circle" size={17} color={AUTH.muted} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ) : null}
+
+          <FlatList
+            data={data}
+            keyExtractor={(item) => item}
+            keyboardShouldPersistTaps="handled"
+            initialNumToRender={20}
+            style={searchable ? { flex: 1 } : undefined}
+            ListEmptyComponent={<Text style={styles.empty}>No matches. Try another spelling.</Text>}
+            renderItem={({ item }) => {
+              const on = item === selected;
+              return (
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => onSelect(item)}
+                  style={[styles.row, on && styles.rowOn]}
+                >
+                  <Text style={[styles.rowText, on && styles.rowTextOn]} numberOfLines={2}>
+                    {item}
+                  </Text>
+                  {on ? <Ionicons name="checkmark-circle" size={20} color={AUTH.dark} /> : null}
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ─── screen ───────────────────────────────────────────────────
+
 export default function SignupScreen({ navigation }) {
   const route = useRoute();
   const { setUser, setToken } = useContext(AuthContext);
 
   const [loading, setLoading] = useState(false);
-  const [focusedInput, setFocusedInput] = useState(null);
-  const [showUniversityModal, setShowUniversityModal] = useState(false);
-  const [showRoleModal, setShowRoleModal] = useState(false);
-  const [showGenderModal, setShowGenderModal] = useState(false);
-  const [showAcademicLevelModal, setShowAcademicLevelModal] = useState(false);
-  const [showCityModal, setShowCityModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [citySearchQuery, setCitySearchQuery] = useState("");
+  const [sheet, setSheet] = useState(null); // 'university' | 'city' | 'gender' | 'academicLevel'
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -231,69 +368,24 @@ export default function SignupScreen({ navigation }) {
   const [gender, setGender] = useState("");
   const [academicLevel, setAcademicLevel] = useState("");
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [notification, setNotification] = useState(null);
-  const [showLoading, setShowLoading] = useState(false);
-  const [errors, setErrors] = useState({
-    name: false,
-    email: false,
-    password: false,
-    confirmPassword: false,
-    university: false,
-    gender: false,
-    academicLevel: false,
-    city: false,
-  });
+  const [errors, setErrors] = useState(EMPTY_ERRORS);
+  const [banner, setBanner] = useState(null); // { title, message }
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideUpAnim = useRef(new Animated.Value(50)).current;
-  const logoScale = useRef(new Animated.Value(0.5)).current;
-  const logoRotate = useRef(new Animated.Value(0)).current;
-  const buttonScale = useRef(new Animated.Value(1)).current;
-  const shakeAnim = useRef(new Animated.Value(0)).current;
-  const notificationSlide = useRef(new Animated.Value(-200)).current;
-  const notificationOpacity = useRef(new Animated.Value(0)).current;
-  const notificationScale = useRef(new Animated.Value(0.9)).current;
-  const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const loadingProgress = useRef(new Animated.Value(0)).current;
+  const nameRef = useRef(null);
+  const phoneRef = useRef(null);
+  const rollRef = useRef(null);
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
+  const confirmRef = useRef(null);
+  const referralRef = useRef(null);
+  const mounted = useRef(true);
 
-  const inputAnims = useRef(
-    Array.from({ length: 13 }, () => new Animated.Value(0))
-  ).current;
-
-  const logoSpin = logoRotate.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0deg", "360deg"],
-  });
-
-  const loadingScaleX = loadingProgress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 1],
-  });
-
-  const cardWidth = useMemo(() => {
-    if (isTablet) return Math.min(width - 72, 720);
-    return width;
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
   }, []);
-
-  // Filter universities based on search query
-  const filteredUniversities = useMemo(() => {
-    if (!searchQuery.trim()) return UNIVERSITIES;
-    const query = searchQuery.toLowerCase().trim();
-    return UNIVERSITIES.filter(uni =>
-      uni.toLowerCase().includes(query)
-    );
-  }, [searchQuery]);
-
-  // Filter cities based on search query
-  const filteredCities = useMemo(() => {
-    if (!citySearchQuery.trim()) return CITIES;
-    const query = citySearchQuery.toLowerCase().trim();
-    return CITIES.filter(c =>
-      c.toLowerCase().includes(query)
-    );
-  }, [citySearchQuery]);
 
   useEffect(() => {
     if (route.params?.ref) {
@@ -301,203 +393,86 @@ export default function SignupScreen({ navigation }) {
     }
   }, [route.params?.ref]);
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.spring(logoScale, {
-        toValue: 1,
-        friction: 4,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.timing(logoRotate, {
-        toValue: 1,
-        duration: 1200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideUpAnim, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      ...inputAnims.map((anim, index) =>
-        Animated.sequence([
-          Animated.delay(300 + index * 60),
-          Animated.spring(anim, {
-            toValue: 1,
-            friction: 6,
-            tension: 40,
-            useNativeDriver: true,
-          }),
-        ])
-      ),
-    ]).start();
-  }, []);
-
-  const validateEmail = (value) =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).toLowerCase());
-
-  const validatePassword = (value) =>
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/.test(value);
-
-  const validatePhone = (value) => /^0\d{10}$/.test(value);
-
   const clearError = (field) => {
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: false }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
+  };
+
+  // password strength (same as ResetPassword)
+  const passed = RULES.filter((r) => r.test(password)).length;
+  const level = password.length === 0 ? 0 : password.length < 6 ? 1 : passed;
+  const strength = STRENGTH[Math.min(level, 3)];
+  const mismatch = confirmPassword.length > 0 && confirmPassword !== password;
+
+  const openSheet = (key) => {
+    Keyboard.dismiss();
+    setSheet(key);
+  };
+  const closeSheet = () => setSheet(null);
+
+  const selectRole = (alumni) => {
+    setIsAlumni(alumni);
+    if (alumni) {
+      // Alumni → academic level is not needed
+      setAcademicLevel("");
+      setErrors((prev) => ({ ...prev, academicLevel: "" }));
     }
   };
 
-  const showNotification = (title, message, type = "success") => {
-    setNotification({ title, message, type });
-
-    notificationSlide.setValue(-200);
-    notificationOpacity.setValue(0);
-    notificationScale.setValue(0.9);
-
-    Animated.parallel([
-      Animated.spring(notificationSlide, {
-        toValue: 0,
-        friction: 6,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.timing(notificationOpacity, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.spring(notificationScale, {
-        toValue: 1,
-        friction: 6,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    if (type === "success") {
-      setTimeout(hideNotification, 3000);
-    }
+  const onSelect = (value) => {
+    if (sheet === "university") setUniversity(value);
+    else if (sheet === "city") setCity(value);
+    else if (sheet === "gender") setGender(value);
+    else if (sheet === "academicLevel") setAcademicLevel(value);
+    clearError(sheet);
+    closeSheet();
   };
 
-  const hideNotification = () => {
-    Animated.parallel([
-      Animated.timing(notificationSlide, {
-        toValue: -200,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.timing(notificationOpacity, {
-        toValue: 0,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.timing(notificationScale, {
-        toValue: 0.9,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-    ]).start(() => setNotification(null));
-  };
+  const validate = () => {
+    const e = { ...EMPTY_ERRORS };
+    const em = email.trim();
+    const ph = phone.trim();
 
-  const showLoadingOverlay = () => {
-    setShowLoading(true);
-    loadingProgress.setValue(0);
-
-    Animated.parallel([
-      Animated.timing(overlayOpacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(loadingProgress, {
-        toValue: 1,
-        duration: 2000,
-        useNativeDriver: false,
-      }),
-    ]).start();
-  };
-
-  const hideLoadingOverlay = () => {
-    Animated.timing(overlayOpacity, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start(() => setShowLoading(false));
-  };
-
-  const handleShake = () => {
-    Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: 15, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -15, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 10, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -10, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 5, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
-    ]).start();
-  };
-
-   const handleSignup = async () => {
-    Animated.sequence([
-      Animated.timing(buttonScale, {
-        toValue: 0.92,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.spring(buttonScale, {
-        toValue: 1,
-        friction: 3,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
+    if (!name.trim()) e.name = "Enter your full name";
+    if (!gender) e.gender = "Pick your gender";
+    if (ph && !validatePhone(ph)) e.phone = "Enter an 11-digit number starting with 0";
+    if (!university) e.university = "Pick your university";
+    if (!city) e.city = "Pick your city";
     // Academic Level is only required for Students (not Alumni)
-    const newErrors = {
-      name: !name.trim(),
-      email: !email.trim(),
-      password: !password.trim(),
-      confirmPassword: !confirmPassword.trim(),
-      university: !university,
-      gender: !gender,
-      academicLevel: !isAlumni && !academicLevel,
-      city: !city,
-    };
+    if (!isAlumni && !academicLevel) e.academicLevel = "Pick your academic level";
+    if (!em) e.email = "Enter your email";
+    else if (!validateEmail(em)) e.email = "That email doesn't look right";
+    if (!password.trim()) e.password = "Create a password";
+    else if (!validatePassword(password)) e.password = "Use 6+ characters with upper case, lower case and a number";
+    if (!confirmPassword.trim()) e.confirmPassword = "Confirm your password";
+    else if (password !== confirmPassword) e.confirmPassword = "Passwords don't match";
 
-    setErrors(newErrors);
+    return e;
+  };
 
-    if (Object.values(newErrors).some(Boolean)) {
-      handleShake();
-      return showNotification("Required Fields", "Please complete all mandatory fields.", "error");
-    }
+  const handleSignup = async () => {
+    if (loading) return;
+    Keyboard.dismiss();
+    setBanner(null);
 
-    if (phone.trim() && !validatePhone(phone.trim())) {
-      handleShake();
-      return showNotification("Invalid Phone", "Enter an 11-digit number starting with 0.", "error");
-    }
-
-    if (!validateEmail(email.trim())) {
-      handleShake();
-      return showNotification("Invalid Email", "Please enter a valid email address.", "error");
-    }
-
-    if (!validatePassword(password)) {
-      handleShake();
-      return showNotification("Weak Password", "Use 6+ characters with uppercase, lowercase, and a number.", "error");
-    }
-
-    if (password !== confirmPassword) {
-      handleShake();
-      return showNotification("Password Mismatch", "Passwords do not match.", "error");
+    const e = validate();
+    setErrors(e);
+    const firstError = Object.keys(e).find((k) => e[k]);
+    if (firstError) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      // focusing the first bad text field scrolls it into view
+      const refs = {
+        name: nameRef,
+        phone: phoneRef,
+        email: emailRef,
+        password: passwordRef,
+        confirmPassword: confirmRef,
+      };
+      refs[firstError]?.current?.focus();
+      return;
     }
 
     try {
       setLoading(true);
-      showLoadingOverlay();
 
       const body = {
         role: "student",
@@ -514,1656 +489,518 @@ export default function SignupScreen({ navigation }) {
         city: city || undefined,
       };
 
-      // ═══════════════════════════════════════════════════════════
-      // STEP 1: SIGNUP — only this can throw "Connection error"
-      // ═══════════════════════════════════════════════════════════
+      // STEP 1: signup (only this one can show an error)
       const signupResponse = await api.post("/auth/signup", body, { timeout: 25000 });
-      console.log("Signup successful:", signupResponse.data);
 
-      // ═══════════════════════════════════════════════════════════
-      // EMAIL VERIFICATION — backend sent a 6-digit code.
-      // Go to the code screen; the account logs in after the code.
-      // ═══════════════════════════════════════════════════════════
+      // Email verification: backend sent a 6-digit code.
+      // The account logs in after the code on SignupVerify.
       if (signupResponse.data?.requiresVerification) {
-        hideLoadingOverlay();
-        setLoading(false);
+        if (mounted.current) setLoading(false);
         navigation.navigate("SignupVerify", {
           userId: signupResponse.data.userId,
           email: email.trim().toLowerCase(),
           maskedEmail: signupResponse.data.email,
           emailSent: signupResponse.data.emailSent !== false,
+          retryAfter: signupResponse.data.retryAfter || 0,
+          resumed: !!signupResponse.data.resumed,
         });
         return;
       }
 
-      let autoLoginSucceeded = false;
-
+      // STEP 2: auto-login. Setting the user switches to the app by itself.
       try {
         const loginResponse = await api.post("/auth/login", {
           email: email.trim().toLowerCase(),
           password: password,
         });
-
         const { token: newToken, user: newUser } = loginResponse.data || {};
-
         if (newToken && newUser) {
           api.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
           setToken(newToken);
           setUser(newUser);
-          autoLoginSucceeded = true;
+          return;
         }
       } catch (loginError) {
-        // Swallow the error — signup already succeeded
-        console.log(
-          "Auto-login failed (non-fatal):",
-          loginError?.response?.data || loginError?.message
-        );
-        autoLoginSucceeded = false;
+        // signup already succeeded, fall through to Login
+        console.log("Auto-login failed (non-fatal):", loginError?.response?.data || loginError?.message);
       }
 
-      // ═══════════════════════════════════════════════════════════
-      // STEP 3: NAVIGATE — based on auto-login result
-      // ═══════════════════════════════════════════════════════════
-      hideLoadingOverlay();
-      setLoading(false);
-
-      if (autoLoginSucceeded) {
-        // Success path: user is signed in
-        showNotification(
-          "Welcome to the Crew! 🎉",
-          "Account created and signed in successfully!",
-          "success"
-        );
-
-        setTimeout(() => {
-          hideNotification();
-          navigation.reset({
-            index: 0,
-            routes: [{ name: "Drawer" }],
-          });
-        }, 1500);
-      } else {
-        // Signup succeeded but auto-login failed — send to Login
-        showNotification(
-          "Account Created! 🎉",
-          "Please sign in with your credentials.",
-          "success"
-        );
-
-        setTimeout(() => {
-          hideNotification();
-          navigation.reset({
-            index: 0,
-            routes: [{ name: "Login" }],
-          });
-        }, 2000);
-      }
+      if (mounted.current) setLoading(false);
+      Alert.alert("Account created", "Sign in with your email and password.");
+      navigation.replace("Login");
     } catch (err) {
-      // ═══════════════════════════════════════════════════════════
-      // This catch ONLY runs if /auth/signup itself failed
-      // ═══════════════════════════════════════════════════════════
-      hideLoadingOverlay();
-      setLoading(false);
-      handleShake();
+      // only runs if /auth/signup itself failed
+      if (mounted.current) setLoading(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
 
       const status = err?.response?.status;
-      const serverMsg =
-        err?.response?.data?.error ||
-        err?.response?.data?.message ||
-        err?.message;
+      const serverMsg = err?.response?.data?.error || err?.response?.data?.message;
 
-      let message;
       if (serverMsg) {
-        message = serverMsg;
-      } else if (err?.request) {
-        message = "Cannot reach server. Check your internet connection.";
+        showBannerSafe("Couldn't create account", serverMsg);
+      } else if (!err?.response) {
+        showBannerSafe(
+          "No connection",
+          err?.code === "ECONNABORTED"
+            ? "The server took too long. Please try again."
+            : "Cannot reach the server. Check your internet and try again."
+        );
+      } else if (status >= 500) {
+        showBannerSafe("Server busy", "Something went wrong on our side. Please try again.");
       } else {
-        message = "Something went wrong. Please try again.";
+        showBannerSafe("Couldn't create account", err?.message || "Something went wrong. Please try again.");
       }
-
-      console.log("Signup error:", status, message);
-      showNotification("Signup Error", message, "error");
+      console.log("Signup error:", status, serverMsg || err?.message);
     }
+    // on auto-login success the auth stack unmounts, so loading is left on
   };
 
-  const openUniversityModal = () => {
-    setSearchQuery("");
-    setFocusedInput("uni");
-    setShowUniversityModal(true);
+  function showBannerSafe(title, message) {
+    if (mounted.current) setBanner({ title, message });
+  }
+
+  const sheetConfig = {
+    university: { title: "select university", options: UNIVERSITIES, selected: university, searchable: true, searchPlaceholder: "search university" },
+    city: { title: "select city", options: CITIES, selected: city, searchable: true, searchPlaceholder: "search city" },
+    gender: { title: "select gender", options: GENDER_OPTIONS, selected: gender },
+    academicLevel: { title: "academic level", options: ACADEMIC_LEVELS, selected: academicLevel },
   };
-
-  const closeUniversityModal = () => {
-    setShowUniversityModal(false);
-    setFocusedInput(null);
-    setSearchQuery("");
-  };
-
-  const selectUniversity = (uni) => {
-    setUniversity(uni);
-    clearError("university");
-    closeUniversityModal();
-  };
-
-  const openRoleModal = () => {
-    setFocusedInput("role");
-    setShowRoleModal(true);
-  };
-
-  const closeRoleModal = () => {
-    setShowRoleModal(false);
-    setFocusedInput(null);
-  };
-
-  // ─────────────────────────────────────────────
-  // ROLE SELECT — clears academic level when Alumni
-  // ─────────────────────────────────────────────
-  const selectRole = (alumni) => {
-    setIsAlumni(alumni);
-    if (alumni) {
-      // Alumni → academic level is not needed
-      setAcademicLevel("");
-      setErrors((prev) => ({ ...prev, academicLevel: false }));
-    }
-    closeRoleModal();
-  };
-
-  const openGenderModal = () => {
-    setFocusedInput("gender");
-    setShowGenderModal(true);
-  };
-
-  const closeGenderModal = () => {
-    setShowGenderModal(false);
-    setFocusedInput(null);
-  };
-
-  const selectGender = (value) => {
-    setGender(value);
-    clearError("gender");
-    closeGenderModal();
-  };
-
-  const openAcademicLevelModal = () => {
-    setFocusedInput("academicLevel");
-    setShowAcademicLevelModal(true);
-  };
-
-  const closeAcademicLevelModal = () => {
-    setShowAcademicLevelModal(false);
-    setFocusedInput(null);
-  };
-
-  const selectAcademicLevel = (value) => {
-    setAcademicLevel(value);
-    clearError("academicLevel");
-    closeAcademicLevelModal();
-  };
-
-  const openCityModal = () => {
-    setCitySearchQuery("");
-    setFocusedInput("city");
-    setShowCityModal(true);
-  };
-
-  const closeCityModal = () => {
-    setShowCityModal(false);
-    setFocusedInput(null);
-    setCitySearchQuery("");
-  };
-
-  const selectCity = (value) => {
-    setCity(value);
-    clearError("city");
-    closeCityModal();
-  };
-
-  const inputFields = [
-    {
-      key: "name",
-      icon: "person-outline",
-      placeholder: "Full Name",
-      value: name,
-      onChange: (text) => {
-        setName(text);
-        clearError("name");
-      },
-      keyboardType: "default",
-      autoCapitalize: "words",
-      errorKey: "name",
-    },
-    {
-      key: "roll",
-      icon: "id-card-outline",
-      placeholder: isAlumni ? "Old Roll No (Optional)" : "Current Roll No / ID (Optional)",
-      value: rollNo,
-      onChange: setRollNo,
-      keyboardType: "default",
-      autoCapitalize: "characters",
-    },
-    {
-      key: "phone",
-      icon: "call-outline",
-      placeholder: "Phone (Optional)",
-      value: phone,
-      onChange: setPhone,
-      keyboardType: "phone-pad",
-      autoCapitalize: "none",
-    },
-    {
-      key: "email",
-      icon: "mail-outline",
-      placeholder: "Email Address",
-      value: email,
-      onChange: (text) => {
-        setEmail(text);
-        clearError("email");
-      },
-      keyboardType: "email-address",
-      autoCapitalize: "none",
-      errorKey: "email",
-    },
-  ];
-
-  const getBorderColor = (errorKey, fieldKey) => {
-    if (errorKey && errors[errorKey]) return "#ff4444";
-    if (focusedInput === fieldKey) return "#f9c349";
-    return "transparent";
-  };
-
-  const getBackgroundColor = (errorKey, fieldKey) => {
-    if (errorKey && errors[errorKey]) return "#fff5f5";
-    if (focusedInput === fieldKey) return "#fff";
-    return "#f8f8f8";
-  };
-
-  // Generic selector row component
-  const renderSelector = (options) => (
-    options.map((option) => (
-      <TouchableOpacity
-        key={option.value}
-        style={[styles.modalOption, option.selected && styles.modalOptionActive]}
-        onPress={option.onPress}
-        activeOpacity={0.7}
-      >
-        <View style={styles.modalOptionContent}>
-          <Ionicons
-            name={option.selected ? "checkmark-circle" : option.icon || "ellipse-outline"}
-            size={18}
-            color={option.selected ? "#f9c349" : "#999"}
-            style={styles.modalOptionIcon}
-          />
-          <Text
-            style={[
-              styles.modalOptionText,
-              option.selected && styles.modalOptionTextActive
-            ]}
-            numberOfLines={1}
-          >
-            {option.label}
-          </Text>
-        </View>
-        {option.selected && (
-          <Ionicons name="checkmark" size={18} color="#f9c349" />
-        )}
-      </TouchableOpacity>
-    ))
-  );
+  const cfg = sheet ? sheetConfig[sheet] : null;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
-      >
-        <StatusBar barStyle="dark-content" />
-
-        {notification && (
-          <Animated.View
-            style={[
-              styles.notificationContainer,
-              {
-                transform: [{ translateY: notificationSlide }, { scale: notificationScale }],
-                opacity: notificationOpacity,
-              },
-            ]}
-          >
-            <LinearGradient
-              colors={notification.type === "success" ? ["#fff", "#fff"] : ["#f0f0f0", "#e0e0e0"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.notificationGradient}
-            >
-              <View style={styles.notificationContent}>
-                <View style={styles.notificationIconRow}>
-                  <View style={styles.notificationIconCircle}>
-                    <Ionicons
-                      name={notification.type === "success" ? "checkmark-circle" : "alert-circle"}
-                      size={24}
-                      color="#f9c349"
-                    />
-                  </View>
-                  <View style={styles.notificationTextContainer}>
-                    <Text style={styles.notificationTitle}>{notification.title}</Text>
-                    <Text style={styles.notificationMessage} numberOfLines={2}>
-                      {notification.message}
-                    </Text>
-                  </View>
-                </View>
-
-                {notification.type === "error" && (
-                  <TouchableOpacity onPress={hideNotification} style={styles.notificationClose}>
-                    <Ionicons name="close" size={20} color="#666" />
-                  </TouchableOpacity>
-                )}
-              </View>
-            </LinearGradient>
-          </Animated.View>
-        )}
-
-        {showLoading && (
-          <Animated.View style={[styles.loadingOverlay, { opacity: overlayOpacity }]}>
-            <View style={styles.loadingContent}>
-              <ActivityIndicator size="large" color="#f9c349" />
-              <Text style={styles.loadingText}>Creating Account</Text>
-              <View style={styles.loadingProgressContainer}>
-                <Animated.View
-                  style={[
-                    styles.loadingProgressBar,
-                    {
-                      transform: [{ scaleX: loadingScaleX }],
-                    },
-                  ]}
-                >
-                  <LinearGradient
-                    colors={["#f9c349", "#f7b733"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.progressGradient}
-                  />
-                </Animated.View>
-              </View>
-              <Text style={styles.loadingSubtext}>Please wait...</Text>
-            </View>
-          </Animated.View>
-        )}
-
-        <View style={styles.mainContainer}>
-          {/* Fixed Header */}
-          <Animated.View
-            style={[
-              styles.fixedHeader,
-              isTablet && styles.fixedHeaderTablet,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideUpAnim }],
-              },
-            ]}
-          >
-            <View style={styles.header}>
-              <Animated.View
-                style={[
-                  styles.logoBadge,
-                  {
-                    transform: [{ scale: logoScale }, { rotate: logoSpin }],
-                  },
-                ]}
-              >
-                <LinearGradient colors={["#1a1a1a", "#1a1a1a"]} style={styles.logoGradient}>
-                  <Text style={styles.logoText}>
-                    tdc<Text style={{ color: "#f9c349" }}>.</Text>
-                  </Text>
-                </LinearGradient>
-              </Animated.View>
-
-              <Text style={styles.title}>The Deft Crew</Text>
-              <Text style={styles.subtitle}>Create Your Account</Text>
-
-              <View style={styles.decorativeLine}>
-                <View style={styles.lineSegment} />
-                <View style={styles.diamond} />
-                <View style={styles.lineSegment} />
-              </View>
-            </View>
-          </Animated.View>
-
-          {/* Scrollable Fields */}
-          <ScrollView
-            style={styles.fieldsScrollView}
-            contentContainerStyle={styles.fieldsScrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            bounces={true}
-            scrollEventThrottle={16}
-            decelerationRate="normal"
-          >
-            {/* Role Dropdown (Student/Alumni) */}
-            <Animated.View
-              style={[
-                styles.inputWrapper,
-                isTablet && styles.inputWrapperTablet,
-                {
-                  opacity: inputAnims[0],
-                  backgroundColor: focusedInput === "role" ? "#fff" : "#f8f8f8",
-                  borderColor: focusedInput === "role" ? "#f9c349" : "transparent",
-                  borderWidth: focusedInput === "role" ? 1.5 : 0,
-                },
-              ]}
-            >
-              <View style={styles.inputIconContainer}>
-                <Ionicons
-                  name={isAlumni ? "ribbon-outline" : "school-outline"}
-                  size={18}
-                  color={focusedInput === "role" ? "#f9c349" : "#999"}
-                />
-              </View>
-              <TouchableOpacity
-                style={styles.selectorButton}
-                activeOpacity={0.8}
-                onPress={openRoleModal}
-              >
-                <Text style={styles.selectorText}>
-                  {isAlumni ? "Alumni" : "Student"}
-                </Text>
-                <Ionicons
-                  name={showRoleModal ? "chevron-up" : "chevron-down"}
-                  size={16}
-                  color="#999"
-                />
-              </TouchableOpacity>
-            </Animated.View>
-
-            {/* Input Fields */}
-            {inputFields.map((field, index) => (
-              <Animated.View
-                key={field.key}
-                style={[
-                  styles.inputWrapper,
-                  isTablet && styles.inputWrapperTablet,
-                  {
-                    opacity: inputAnims[index + 1],
-                    backgroundColor: field.errorKey
-                      ? getBackgroundColor(field.errorKey, field.key)
-                      : focusedInput === field.key
-                        ? "#fff"
-                        : "#f8f8f8",
-                    borderColor: field.errorKey
-                      ? getBorderColor(field.errorKey, field.key)
-                      : focusedInput === field.key
-                        ? "#f9c349"
-                        : "transparent",
-                    borderWidth: focusedInput === field.key || (field.errorKey && errors[field.errorKey]) ? 1.5 : 0,
-                  },
-                ]}
-              >
-                <View style={styles.inputIconContainer}>
-                  <Ionicons
-                    name={field.icon}
-                    size={18}
-                    color={
-                      field.errorKey && errors[field.errorKey]
-                        ? "#ff4444"
-                        : focusedInput === field.key
-                          ? "#f9c349"
-                          : "#999"
-                    }
-                  />
-                </View>
-
-                <TextInput
-                  placeholder={field.placeholder}
-                  placeholderTextColor={field.errorKey && errors[field.errorKey] ? "#ff4444" : "#999"}
-                  value={field.value}
-                  onChangeText={field.onChange}
-                  onFocus={() => {
-                    setFocusedInput(field.key);
-                    field.errorKey && clearError(field.errorKey);
-                  }}
-                  onBlur={() => setFocusedInput(null)}
-                  style={[
-                    styles.input,
-                    field.errorKey && errors[field.errorKey] && { color: "#ff4444" }
-                  ]}
-                  keyboardType={field.keyboardType}
-                  autoCapitalize={field.autoCapitalize}
-                  autoCorrect={false}
-                  textContentType={field.key === "email" ? "emailAddress" : "none"}
-                  importantForAutofill="yes"
-                  returnKeyType="next"
-                />
-
-                {field.key === "email" && field.value.length > 0 && validateEmail(field.value) && !errors.email && (
-                  <View style={styles.checkmarkContainer}>
-                    <Ionicons name="checkmark-circle" size={18} color="#f9c349" />
-                  </View>
-                )}
-
-                {field.errorKey && errors[field.errorKey] && (
-                  <View style={styles.checkmarkContainer}>
-                    <Ionicons name="alert-circle" size={18} color="#ff4444" />
-                  </View>
-                )}
-              </Animated.View>
-            ))}
-
-            {/* Gender Dropdown */}
-            <Animated.View
-              style={[
-                styles.inputWrapper,
-                isTablet && styles.inputWrapperTablet,
-                {
-                  opacity: inputAnims[5],
-                  backgroundColor: errors.gender ? "#fff5f5" : focusedInput === "gender" ? "#fff" : "#f8f8f8",
-                  borderColor: errors.gender ? "#ff4444" : focusedInput === "gender" ? "#f9c349" : "transparent",
-                  borderWidth: focusedInput === "gender" || errors.gender ? 1.5 : 0,
-                },
-              ]}
-            >
-              <View style={styles.inputIconContainer}>
-                <Ionicons
-                  name="person-outline"
-                  size={18}
-                  color={errors.gender ? "#ff4444" : focusedInput === "gender" ? "#f9c349" : "#999"}
-                />
-              </View>
-              <TouchableOpacity
-                style={styles.selectorButton}
-                activeOpacity={0.8}
-                onPress={openGenderModal}
-              >
-                <Text
-                  style={[
-                    styles.selectorText,
-                    !gender && styles.selectorPlaceholder,
-                    errors.gender && styles.selectorError,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {gender || "Select Gender"}
-                </Text>
-                <Ionicons
-                  name={showGenderModal ? "chevron-up" : "chevron-down"}
-                  size={16}
-                  color={errors.gender ? "#ff4444" : "#999"}
-                />
-              </TouchableOpacity>
-            </Animated.View>
-
-            {/* Academic Level Dropdown — HIDDEN FOR ALUMNI */}
-            {!isAlumni && (
-              <Animated.View
-                style={[
-                  styles.inputWrapper,
-                  isTablet && styles.inputWrapperTablet,
-                  {
-                    opacity: inputAnims[6],
-                    backgroundColor: errors.academicLevel ? "#fff5f5" : focusedInput === "academicLevel" ? "#fff" : "#f8f8f8",
-                    borderColor: errors.academicLevel ? "#ff4444" : focusedInput === "academicLevel" ? "#f9c349" : "transparent",
-                    borderWidth: focusedInput === "academicLevel" || errors.academicLevel ? 1.5 : 0,
-                  },
-                ]}
-              >
-                <View style={styles.inputIconContainer}>
-                  <Ionicons
-                    name="school-outline"
-                    size={18}
-                    color={errors.academicLevel ? "#ff4444" : focusedInput === "academicLevel" ? "#f9c349" : "#999"}
-                  />
-                </View>
-                <TouchableOpacity
-                  style={styles.selectorButton}
-                  activeOpacity={0.8}
-                  onPress={openAcademicLevelModal}
-                >
-                  <Text
-                    style={[
-                      styles.selectorText,
-                      !academicLevel && styles.selectorPlaceholder,
-                      errors.academicLevel && styles.selectorError,
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {academicLevel || "Select Academic Level"}
-                  </Text>
-                  <Ionicons
-                    name={showAcademicLevelModal ? "chevron-up" : "chevron-down"}
-                    size={16}
-                    color={errors.academicLevel ? "#ff4444" : "#999"}
-                  />
-                </TouchableOpacity>
-              </Animated.View>
-            )}
-
-            {/* University Dropdown */}
-            <Animated.View
-              style={[
-                styles.inputWrapper,
-                styles.universityWrapper,
-                isTablet && styles.inputWrapperTablet,
-                {
-                  opacity: inputAnims[7],
-                  backgroundColor: errors.university ? "#fff5f5" : focusedInput === "uni" ? "#fff" : "#f8f8f8",
-                  borderColor: errors.university ? "#ff4444" : focusedInput === "uni" ? "#f9c349" : "transparent",
-                  borderWidth: focusedInput === "uni" || errors.university ? 1.5 : 0,
-                },
-              ]}
-            >
-              <View style={styles.inputIconContainer}>
-                <Ionicons
-                  name="school-outline"
-                  size={18}
-                  color={errors.university ? "#ff4444" : focusedInput === "uni" ? "#f9c349" : "#999"}
-                />
-              </View>
-
-              <TouchableOpacity
-                style={styles.selectorButton}
-                activeOpacity={0.8}
-                onPress={openUniversityModal}
-              >
-                <Text
-                  style={[
-                    styles.selectorText,
-                    !university && styles.selectorPlaceholder,
-                    errors.university && styles.selectorError,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {university || "Select University"}
-                </Text>
-                <Ionicons
-                  name={showUniversityModal ? "chevron-up" : "chevron-down"}
-                  size={16}
-                  color={errors.university ? "#ff4444" : "#999"}
-                />
-              </TouchableOpacity>
-            </Animated.View>
-
-            {/* City Dropdown */}
-            <Animated.View
-              style={[
-                styles.inputWrapper,
-                isTablet && styles.inputWrapperTablet,
-                {
-                  opacity: inputAnims[8],
-                  backgroundColor: errors.city ? "#fff5f5" : focusedInput === "city" ? "#fff" : "#f8f8f8",
-                  borderColor: errors.city ? "#ff4444" : focusedInput === "city" ? "#f9c349" : "transparent",
-                  borderWidth: focusedInput === "city" || errors.city ? 1.5 : 0,
-                },
-              ]}
-            >
-              <View style={styles.inputIconContainer}>
-                <Ionicons
-                  name="location-outline"
-                  size={18}
-                  color={errors.city ? "#ff4444" : focusedInput === "city" ? "#f9c349" : "#999"}
-                />
-              </View>
-              <TouchableOpacity
-                style={styles.selectorButton}
-                activeOpacity={0.8}
-                onPress={openCityModal}
-              >
-                <Text
-                  style={[
-                    styles.selectorText,
-                    !city && styles.selectorPlaceholder,
-                    errors.city && styles.selectorError,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {city || "Select City"}
-                </Text>
-                <Ionicons
-                  name={showCityModal ? "chevron-up" : "chevron-down"}
-                  size={16}
-                  color={errors.city ? "#ff4444" : "#999"}
-                />
-              </TouchableOpacity>
-            </Animated.View>
-
-            {/* Password Field */}
-            <Animated.View
-              style={[
-                styles.inputWrapper,
-                isTablet && styles.inputWrapperTablet,
-                {
-                  opacity: inputAnims[9],
-                  backgroundColor: errors.password ? "#fff5f5" : focusedInput === "pass" ? "#fff" : "#f8f8f8",
-                  borderColor: errors.password ? "#ff4444" : focusedInput === "pass" ? "#f9c349" : "transparent",
-                  borderWidth: focusedInput === "pass" || errors.password ? 1.5 : 0,
-                },
-              ]}
-            >
-              <View style={styles.inputIconContainer}>
-                <Ionicons
-                  name="lock-closed-outline"
-                  size={18}
-                  color={errors.password ? "#ff4444" : focusedInput === "pass" ? "#f9c349" : "#999"}
-                />
-              </View>
-              <TextInput
-                placeholder="Password"
-                placeholderTextColor={errors.password ? "#ff4444" : "#999"}
-                secureTextEntry={!showPassword}
-                value={password}
-                onChangeText={(text) => {
-                  setPassword(text);
-                  clearError("password");
-                }}
-                onFocus={() => setFocusedInput("pass")}
-                onBlur={() => setFocusedInput(null)}
-                style={[styles.input, errors.password && { color: "#ff4444" }]}
-                autoCapitalize="none"
-                autoCorrect={false}
-                textContentType="newPassword"
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword((prev) => !prev)}
-                style={styles.eyeButton}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={showPassword ? "eye-off-outline" : "eye-outline"}
-                  size={18}
-                  color={errors.password ? "#ff4444" : "#999"}
-                />
-              </TouchableOpacity>
-            </Animated.View>
-
-            {/* Confirm Password Field */}
-            <Animated.View
-              style={[
-                styles.inputWrapper,
-                isTablet && styles.inputWrapperTablet,
-                {
-                  opacity: inputAnims[10],
-                  backgroundColor: errors.confirmPassword ? "#fff5f5" : focusedInput === "confirm" ? "#fff" : "#f8f8f8",
-                  borderColor: errors.confirmPassword ? "#ff4444" : focusedInput === "confirm" ? "#f9c349" : "transparent",
-                  borderWidth: focusedInput === "confirm" || errors.confirmPassword ? 1.5 : 0,
-                },
-              ]}
-            >
-              <View style={styles.inputIconContainer}>
-                <Ionicons
-                  name="shield-checkmark-outline"
-                  size={18}
-                  color={errors.confirmPassword ? "#ff4444" : focusedInput === "confirm" ? "#f9c349" : "#999"}
-                />
-              </View>
-              <TextInput
-                placeholder="Confirm Password"
-                placeholderTextColor={errors.confirmPassword ? "#ff4444" : "#999"}
-                secureTextEntry={!showConfirmPassword}
-                value={confirmPassword}
-                onChangeText={(text) => {
-                  setConfirmPassword(text);
-                  clearError("confirmPassword");
-                }}
-                onFocus={() => setFocusedInput("confirm")}
-                onBlur={() => setFocusedInput(null)}
-                style={[styles.input, errors.confirmPassword && { color: "#ff4444" }]}
-                autoCapitalize="none"
-                autoCorrect={false}
-                textContentType="newPassword"
-              />
-              <TouchableOpacity
-                onPress={() => setShowConfirmPassword((prev) => !prev)}
-                style={styles.eyeButton}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
-                  size={18}
-                  color={errors.confirmPassword ? "#ff4444" : "#999"}
-                />
-              </TouchableOpacity>
-            </Animated.View>
-
-            {/* Referral Code Field */}
-            <Animated.View
-              style={[
-                styles.inputWrapper,
-                styles.referralWrapper,
-                isTablet && styles.inputWrapperTablet,
-                {
-                  opacity: inputAnims[11],
-                  borderWidth: focusedInput === "ref" ? 1.5 : 0,
-                },
-              ]}
-            >
-              <View style={[styles.inputIconContainer, styles.referralIconContainer]}>
-                <Ionicons name="gift-outline" size={18} color="#f9c349" />
-              </View>
-              <TextInput
-                placeholder="Referral Code (Optional)"
-                placeholderTextColor="#999"
-                value={referralCode}
-                onChangeText={setReferralCode}
-                onFocus={() => setFocusedInput("ref")}
-                onBlur={() => setFocusedInput(null)}
-                style={[styles.input, styles.referralInput]}
-                autoCapitalize="characters"
-                autoCorrect={false}
-              />
-            </Animated.View>
-
-            {/* Spacer for bottom padding */}
-            <View style={styles.scrollBottomSpacer} />
-          </ScrollView>
-
-          {/* Fixed Footer */}
-          <Animated.View
-            style={[
-              styles.fixedFooter,
-              isTablet && styles.fixedFooterTablet,
-              {
-                opacity: fadeAnim,
-              },
-            ]}
-          >
-            <Animated.View style={{ transform: [{ translateX: shakeAnim }, { scale: buttonScale }] }}>
-              <TouchableOpacity style={styles.button} onPress={handleSignup} disabled={loading} activeOpacity={0.9}>
-                <LinearGradient colors={["#1a1a1a", "#1a1a1a"]} style={styles.buttonGradient}>
-                  {loading ? (
-                    <ActivityIndicator color="#f9c349" size="small" />
-                  ) : (
-                    <>
-                      <Text style={styles.buttonText}>CREATE ACCOUNT</Text>
-                      <Ionicons name="person-add-outline" size={20} color="#f9c349" />
-                    </>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            </Animated.View>
-
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Already in the crew? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-                <Text style={styles.signupLink}>Login</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.brandingFooter}>
-              <Text style={styles.brandingText}>
-                <Text style={{ fontSize: 14 }}>tdc</Text>
-                <Text style={{ color: "#f9c349", fontSize: 20 }}>.</Text> PAKISTAN
-              </Text>
-            </View>
-          </Animated.View>
+    <AuthShell
+      step={0}
+      icon="person-add-outline"
+      title="create your account"
+      subtitle="Takes a minute. Your student perks unlock right after."
+      onBack={navigation.canGoBack() ? () => navigation.goBack() : null}
+      footer={
+        <View style={styles.footerRow}>
+          <Text style={styles.footerText}>have an account? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate("Login")} hitSlop={8}>
+            <Text style={styles.footerLink}>sign in</Text>
+          </TouchableOpacity>
         </View>
+      }
+    >
+      {banner ? (
+        <View style={styles.banner}>
+          <Ionicons name="alert-circle" size={18} color={AUTH.danger} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.bannerTitle}>{banner.title}</Text>
+            {banner.message ? <Text style={styles.bannerText}>{banner.message}</Text> : null}
+          </View>
+          <TouchableOpacity onPress={() => setBanner(null)} hitSlop={10}>
+            <Ionicons name="close" size={16} color={AUTH.muted} />
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
-        {/* University Modal */}
-        <Modal
-          visible={showUniversityModal}
-          transparent
-          animationType="fade"
-          onRequestClose={closeUniversityModal}
-        >
-          <Pressable
-            style={styles.modalBackdrop}
-            onPress={closeUniversityModal}
-          >
-            <Pressable style={[styles.modalCard, isTablet && styles.modalCardTablet]}>
-              <View style={styles.modalHeader}>
-                <View style={styles.modalHeaderLeft}>
-                  <Ionicons name="school-outline" size={22} color="#1a1a1a" />
-                  <Text style={styles.modalTitle}>Select University</Text>
+      {/* ── about you ── */}
+      <SectionLabel>about you</SectionLabel>
+
+      <Text style={styles.fieldLabel}>I am a</Text>
+      <View style={styles.segment}>
+        {[
+          { alumni: false, label: "Student", icon: "school-outline" },
+          { alumni: true, label: "Alumni", icon: "ribbon-outline" },
+        ].map((o) => {
+          const on = isAlumni === o.alumni;
+          return (
+            <TouchableOpacity
+              key={o.label}
+              activeOpacity={0.85}
+              onPress={() => selectRole(o.alumni)}
+              disabled={loading}
+              style={[styles.segmentPill, on && styles.segmentPillOn]}
+            >
+              <Ionicons name={o.icon} size={16} color={on ? AUTH.gold : AUTH.text2} />
+              <Text style={[styles.segmentText, on && styles.segmentTextOn]}>{o.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      <AuthInput
+        ref={nameRef}
+        label="Full name"
+        icon="person-outline"
+        placeholder="your full name"
+        value={name}
+        onChangeText={(t) => {
+          setName(t);
+          clearError("name");
+        }}
+        autoCapitalize="words"
+        autoCorrect={false}
+        textContentType="name"
+        autoComplete="name"
+        returnKeyType="next"
+        onSubmitEditing={() => phoneRef.current?.focus()}
+        editable={!loading}
+        error={errors.name}
+      />
+
+      <PickerField
+        label="Gender"
+        icon="male-female-outline"
+        value={gender}
+        placeholder="select gender"
+        error={errors.gender}
+        active={sheet === "gender"}
+        disabled={loading}
+        onPress={() => openSheet("gender")}
+      />
+
+      <AuthInput
+        ref={phoneRef}
+        label="Phone (optional)"
+        icon="call-outline"
+        placeholder="03XXXXXXXXX"
+        value={phone}
+        onChangeText={(t) => {
+          setPhone(t);
+          clearError("phone");
+        }}
+        keyboardType="phone-pad"
+        autoCapitalize="none"
+        textContentType="telephoneNumber"
+        autoComplete="tel"
+        maxLength={11}
+        returnKeyType="next"
+        onSubmitEditing={() => rollRef.current?.focus()}
+        editable={!loading}
+        error={errors.phone}
+      />
+
+      {/* ── your campus ── */}
+      <SectionLabel>your campus</SectionLabel>
+
+      <PickerField
+        label="University"
+        icon="school-outline"
+        value={university}
+        placeholder="select university"
+        error={errors.university}
+        active={sheet === "university"}
+        disabled={loading}
+        onPress={() => openSheet("university")}
+      />
+
+      <PickerField
+        label="City"
+        icon="location-outline"
+        value={city}
+        placeholder="select city"
+        error={errors.city}
+        active={sheet === "city"}
+        disabled={loading}
+        onPress={() => openSheet("city")}
+      />
+
+      {!isAlumni ? (
+        <PickerField
+          label="Academic level"
+          icon="layers-outline"
+          value={academicLevel}
+          placeholder="select academic level"
+          error={errors.academicLevel}
+          active={sheet === "academicLevel"}
+          disabled={loading}
+          onPress={() => openSheet("academicLevel")}
+        />
+      ) : null}
+
+      <AuthInput
+        ref={rollRef}
+        label={isAlumni ? "Old roll no (optional)" : "Roll no / student ID (optional)"}
+        icon="id-card-outline"
+        placeholder={isAlumni ? "your old roll no" : "your roll no or ID"}
+        value={rollNo}
+        onChangeText={setRollNo}
+        autoCapitalize="characters"
+        autoCorrect={false}
+        returnKeyType="next"
+        onSubmitEditing={() => emailRef.current?.focus()}
+        editable={!loading}
+      />
+
+      {/* ── login details ── */}
+      <SectionLabel>login details</SectionLabel>
+
+      <AuthInput
+        ref={emailRef}
+        label="Email"
+        icon="mail-outline"
+        placeholder="you@university.edu.pk"
+        value={email}
+        onChangeText={(t) => {
+          setEmail(t);
+          clearError("email");
+        }}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoCorrect={false}
+        textContentType="emailAddress"
+        autoComplete="email"
+        returnKeyType="next"
+        onSubmitEditing={() => passwordRef.current?.focus()}
+        editable={!loading}
+        error={errors.email}
+        right={
+          email.length > 0 && validateEmail(email.trim()) && !errors.email ? (
+            <Ionicons name="checkmark-circle" size={18} color={AUTH.ok} />
+          ) : null
+        }
+      />
+
+      <AuthInput
+        ref={passwordRef}
+        label="Password"
+        icon="lock-closed-outline"
+        placeholder="create a password"
+        value={password}
+        onChangeText={(t) => {
+          setPassword(t);
+          clearError("password");
+        }}
+        secure
+        autoCapitalize="none"
+        autoCorrect={false}
+        textContentType="newPassword"
+        autoComplete="password-new"
+        returnKeyType="next"
+        onSubmitEditing={() => confirmRef.current?.focus()}
+        editable={!loading}
+        error={errors.password}
+      />
+
+      {password.length > 0 ? (
+        <>
+          <View style={styles.meterRow}>
+            {[1, 2, 3].map((i) => (
+              <View key={i} style={[styles.meter, { backgroundColor: level >= i ? strength.color : "#ededed" }]} />
+            ))}
+            <Text style={[styles.meterLabel, { color: level ? strength.color : AUTH.muted }]}>{strength.label}</Text>
+          </View>
+          <View style={styles.rules}>
+            {RULES.map((r) => {
+              const ok = r.test(password);
+              return (
+                <View key={r.key} style={styles.rule}>
+                  <Ionicons name={ok ? "checkmark-circle" : "ellipse-outline"} size={15} color={ok ? AUTH.ok : "#c4c4c4"} />
+                  <Text style={[styles.ruleText, ok && { color: AUTH.dark }]}>{r.label}</Text>
                 </View>
-                <TouchableOpacity onPress={closeUniversityModal} style={styles.modalCloseButton}>
-                  <Ionicons name="close" size={20} color="#666" />
-                </TouchableOpacity>
-              </View>
+              );
+            })}
+          </View>
+        </>
+      ) : null}
 
-              <View style={styles.searchContainer}>
-                <View style={styles.searchInputWrapper}>
-                  <Ionicons name="search-outline" size={18} color="#999" style={styles.searchIcon} />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search universities..."
-                    placeholderTextColor="#999"
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    autoFocus={true}
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                  />
-                  {searchQuery.length > 0 && (
-                    <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearSearchButton}>
-                      <Ionicons name="close-circle" size={18} color="#999" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
+      <AuthInput
+        ref={confirmRef}
+        label="Confirm password"
+        icon="checkmark-done-outline"
+        placeholder="type it again"
+        value={confirmPassword}
+        onChangeText={(t) => {
+          setConfirmPassword(t);
+          clearError("confirmPassword");
+        }}
+        secure
+        autoCapitalize="none"
+        autoCorrect={false}
+        textContentType="newPassword"
+        returnKeyType="next"
+        onSubmitEditing={() => referralRef.current?.focus()}
+        editable={!loading}
+        error={errors.confirmPassword || (mismatch ? "Passwords don't match" : "")}
+      />
 
-              <Text style={styles.resultsCount}>
-                {filteredUniversities.length} {filteredUniversities.length === 1 ? 'university' : 'universities'} found
-              </Text>
+      {/* ── extras ── */}
+      <SectionLabel>extras</SectionLabel>
 
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                style={styles.modalScrollView}
-              >
-                {filteredUniversities.length > 0 ? (
-                  filteredUniversities.map((uni) => (
-                    <TouchableOpacity
-                      key={uni}
-                      style={[styles.modalOption, university === uni && styles.modalOptionActive]}
-                      onPress={() => selectUniversity(uni)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.modalOptionContent}>
-                        <Ionicons
-                          name={university === uni ? "checkmark-circle" : "school-outline"}
-                          size={18}
-                          color={university === uni ? "#f9c349" : "#999"}
-                          style={styles.modalOptionIcon}
-                        />
-                        <Text
-                          style={[
-                            styles.modalOptionText,
-                            university === uni && styles.modalOptionTextActive
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {uni}
-                        </Text>
-                      </View>
-                      {university === uni && (
-                        <Ionicons name="checkmark" size={18} color="#f9c349" />
-                      )}
-                    </TouchableOpacity>
-                  ))
-                ) : (
-                  <View style={styles.noResultsContainer}>
-                    <Ionicons name="school-outline" size={48} color="#ddd" />
-                    <Text style={styles.noResultsText}>No universities found</Text>
-                    <Text style={styles.noResultsSubtext}>Try adjusting your search</Text>
-                  </View>
-                )}
-              </ScrollView>
-            </Pressable>
-          </Pressable>
-        </Modal>
+      <AuthInput
+        ref={referralRef}
+        label="Referral code (optional)"
+        icon="gift-outline"
+        placeholder="got a code from a friend?"
+        value={referralCode}
+        onChangeText={setReferralCode}
+        autoCapitalize="characters"
+        autoCorrect={false}
+        returnKeyType="go"
+        onSubmitEditing={handleSignup}
+        editable={!loading}
+      />
 
-        {/* Role Modal */}
-        <Modal
-          visible={showRoleModal}
-          transparent
-          animationType="fade"
-          onRequestClose={closeRoleModal}
-        >
-          <Pressable
-            style={styles.modalBackdrop}
-            onPress={closeRoleModal}
-          >
-            <Pressable style={[styles.modalCard, isTablet && styles.modalCardTablet]}>
-              <View style={styles.modalHeader}>
-                <View style={styles.modalHeaderLeft}>
-                  <Ionicons name="people-outline" size={22} color="#1a1a1a" />
-                  <Text style={styles.modalTitle}>Select Role</Text>
-                </View>
-                <TouchableOpacity onPress={closeRoleModal} style={styles.modalCloseButton}>
-                  <Ionicons name="close" size={20} color="#666" />
-                </TouchableOpacity>
-              </View>
+      <AuthButton title="create account" onPress={handleSignup} loading={loading} />
 
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                style={styles.modalScrollView}
-              >
-                {renderSelector([
-                  {
-                    value: "student",
-                    label: "Student",
-                    selected: !isAlumni,
-                    icon: "school-outline",
-                    onPress: () => selectRole(false),
-                  },
-                  {
-                    value: "alumni",
-                    label: "Alumni",
-                    selected: isAlumni,
-                    icon: "ribbon-outline",
-                    onPress: () => selectRole(true),
-                  },
-                ])}
-              </ScrollView>
-            </Pressable>
-          </Pressable>
-        </Modal>
+      <Text style={styles.terms}>
+        By creating an account you agree to the tdc terms and privacy policy.
+      </Text>
 
-        {/* Gender Modal */}
-        <Modal
-          visible={showGenderModal}
-          transparent
-          animationType="fade"
-          onRequestClose={closeGenderModal}
-        >
-          <Pressable
-            style={styles.modalBackdrop}
-            onPress={closeGenderModal}
-          >
-            <Pressable style={[styles.modalCard, isTablet && styles.modalCardTablet]}>
-              <View style={styles.modalHeader}>
-                <View style={styles.modalHeaderLeft}>
-                  <Ionicons name="person-outline" size={22} color="#1a1a1a" />
-                  <Text style={styles.modalTitle}>Select Gender</Text>
-                </View>
-                <TouchableOpacity onPress={closeGenderModal} style={styles.modalCloseButton}>
-                  <Ionicons name="close" size={20} color="#666" />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                style={styles.modalScrollView}
-              >
-                {renderSelector(GENDER_OPTIONS.map((option) => ({
-                  value: option,
-                  label: option,
-                  selected: gender === option,
-                  onPress: () => selectGender(option),
-                })))}
-              </ScrollView>
-            </Pressable>
-          </Pressable>
-        </Modal>
-
-        {/* Academic Level Modal */}
-        <Modal
-          visible={showAcademicLevelModal}
-          transparent
-          animationType="fade"
-          onRequestClose={closeAcademicLevelModal}
-        >
-          <Pressable
-            style={styles.modalBackdrop}
-            onPress={closeAcademicLevelModal}
-          >
-            <Pressable style={[styles.modalCard, isTablet && styles.modalCardTablet]}>
-              <View style={styles.modalHeader}>
-                <View style={styles.modalHeaderLeft}>
-                  <Ionicons name="school-outline" size={22} color="#1a1a1a" />
-                  <Text style={styles.modalTitle}>Select Academic Level</Text>
-                </View>
-                <TouchableOpacity onPress={closeAcademicLevelModal} style={styles.modalCloseButton}>
-                  <Ionicons name="close" size={20} color="#666" />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                style={styles.modalScrollView}
-              >
-                {renderSelector(ACADEMIC_LEVELS.map((option) => ({
-                  value: option,
-                  label: option,
-                  selected: academicLevel === option,
-                  onPress: () => selectAcademicLevel(option),
-                })))}
-              </ScrollView>
-            </Pressable>
-          </Pressable>
-        </Modal>
-
-        {/* City Modal */}
-        <Modal
-          visible={showCityModal}
-          transparent
-          animationType="fade"
-          onRequestClose={closeCityModal}
-        >
-          <Pressable
-            style={styles.modalBackdrop}
-            onPress={closeCityModal}
-          >
-            <Pressable style={[styles.modalCard, isTablet && styles.modalCardTablet]}>
-              <View style={styles.modalHeader}>
-                <View style={styles.modalHeaderLeft}>
-                  <Ionicons name="location-outline" size={22} color="#1a1a1a" />
-                  <Text style={styles.modalTitle}>Select City</Text>
-                </View>
-                <TouchableOpacity onPress={closeCityModal} style={styles.modalCloseButton}>
-                  <Ionicons name="close" size={20} color="#666" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.searchContainer}>
-                <View style={styles.searchInputWrapper}>
-                  <Ionicons name="search-outline" size={18} color="#999" style={styles.searchIcon} />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search cities..."
-                    placeholderTextColor="#999"
-                    value={citySearchQuery}
-                    onChangeText={setCitySearchQuery}
-                    autoFocus={true}
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                  />
-                  {citySearchQuery.length > 0 && (
-                    <TouchableOpacity onPress={() => setCitySearchQuery("")} style={styles.clearSearchButton}>
-                      <Ionicons name="close-circle" size={18} color="#999" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-
-              <Text style={styles.resultsCount}>
-                {filteredCities.length} {filteredCities.length === 1 ? 'city' : 'cities'} found
-              </Text>
-
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                style={styles.modalScrollView}
-              >
-                {filteredCities.length > 0 ? (
-                  filteredCities.map((cityName) => (
-                    <TouchableOpacity
-                      key={cityName}
-                      style={[styles.modalOption, city === cityName && styles.modalOptionActive]}
-                      onPress={() => selectCity(cityName)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.modalOptionContent}>
-                        <Ionicons
-                          name={city === cityName ? "checkmark-circle" : "location-outline"}
-                          size={18}
-                          color={city === cityName ? "#f9c349" : "#999"}
-                          style={styles.modalOptionIcon}
-                        />
-                        <Text
-                          style={[
-                            styles.modalOptionText,
-                            city === cityName && styles.modalOptionTextActive
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {cityName}
-                        </Text>
-                      </View>
-                      {city === cityName && (
-                        <Ionicons name="checkmark" size={18} color="#f9c349" />
-                      )}
-                    </TouchableOpacity>
-                  ))
-                ) : (
-                  <View style={styles.noResultsContainer}>
-                    <Ionicons name="location-outline" size={48} color="#ddd" />
-                    <Text style={styles.noResultsText}>No cities found</Text>
-                    <Text style={styles.noResultsSubtext}>Try adjusting your search</Text>
-                  </View>
-                )}
-              </ScrollView>
-            </Pressable>
-          </Pressable>
-        </Modal>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      <PickerSheet
+        visible={!!cfg}
+        title={cfg?.title || ""}
+        options={cfg?.options || []}
+        selected={cfg?.selected}
+        searchable={!!cfg?.searchable}
+        searchPlaceholder={cfg?.searchPlaceholder}
+        onSelect={onSelect}
+        onClose={closeSheet}
+      />
+    </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#ffffff",
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  mainContainer: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  fixedHeader: {
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    paddingBottom: 4,
-    backgroundColor: "#fff",
-    zIndex: 10,
-  },
-  fixedHeaderTablet: {
-    paddingHorizontal: 36,
-    paddingTop: 12,
-  },
-  fieldsScrollView: {
-    flex: 1,
-  },
-  fieldsScrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    paddingBottom: 8,
-  },
-  scrollBottomSpacer: {
-    height: 8,
-  },
-  fixedFooter: {
-    paddingHorizontal: 24,
-    paddingBottom: 8,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
-    zIndex: 10,
-  },
-  fixedFooterTablet: {
-    paddingHorizontal: 36,
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: 8,
-    marginTop: 2,
-  },
-  logoBadge: {
-    marginBottom: 12,
-    borderRadius: 50,
-    overflow: "hidden",
-    elevation: 10,
-    shadowColor: "#f9c349",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-  },
-  logoGradient: {
-    width: 56,
-    height: 56,
-    borderRadius: 50,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  logoText: {
-    fontSize: 24,
-    color: "#fff",
-    fontWeight: "900",
-    letterSpacing: -1,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "900",
-    color: "#1a1a1a",
-    letterSpacing: 1,
-  },
-  subtitle: {
-    color: "#666",
-    marginTop: 2,
+  section: {
     fontSize: 12,
-    letterSpacing: 0.5,
-  },
-  decorativeLine: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 8,
-  },
-  lineSegment: {
-    width: 20,
-    height: 2,
-    backgroundColor: "#f9c349",
-    borderRadius: 1,
-  },
-  diamond: {
-    width: 6,
-    height: 6,
-    backgroundColor: "#1a1a1a",
-    transform: [{ rotate: "45deg" }],
-    marginHorizontal: 8,
-  },
-  notificationContainer: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
-    overflow: "hidden",
-    elevation: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-  },
-  notificationGradient: {
-    width: "100%",
-  },
-  notificationContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    width: "100%",
-  },
-  notificationIconRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  notificationIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-    borderWidth: 2,
-    borderColor: "#f9c349",
-  },
-  notificationTextContainer: {
-    flex: 1,
-  },
-  notificationTitle: {
-    fontSize: 15,
     fontWeight: "800",
-    marginBottom: 1,
-    letterSpacing: 0.5,
-    color: "#1a1a1a",
-  },
-  notificationMessage: {
-    fontSize: 12,
-    color: "#666",
-    lineHeight: 16,
-  },
-  notificationClose: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "rgba(0,0,0,0.05)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 10,
-  },
-  loadingOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.7)",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 999,
-  },
-  loadingContent: {
-    width: isTablet ? 320 : 260,
-    alignItems: "center",
-    backgroundColor: "#111",
-    borderRadius: 20,
-    paddingHorizontal: 24,
-    paddingVertical: 28,
-  },
-  loadingText: {
-    color: "#f9c349",
-    fontSize: 18,
-    fontWeight: "800",
-    marginTop: 15,
-    letterSpacing: 1,
-  },
-  loadingSubtext: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 12,
-    marginTop: 8,
-    letterSpacing: 1,
-  },
-  loadingProgressContainer: {
-    width: "100%",
-    height: 4,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 2,
-    marginTop: 20,
-    overflow: "hidden",
-  },
-  loadingProgressBar: {
-    width: "100%",
-    height: "100%",
-    transform: [{ scaleX: 0 }],
-  },
-  progressGradient: {
-    width: "100%",
-    height: "100%",
-  },
-  inputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f8f8f8",
-    borderWidth: 1.5,
-    borderColor: "transparent",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    marginBottom: 10,
-    height: 48,
-  },
-  inputWrapperTablet: {
-    height: 54,
-    marginBottom: 12,
-    paddingHorizontal: 14,
-  },
-  universityWrapper: {
-    marginBottom: 10,
-  },
-  referralWrapper: {
-    backgroundColor: "#fffbf0",
-    borderColor: "#f9c34930",
+    color: AUTH.muted,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginTop: 10,
     marginBottom: 12,
   },
-  referralIconContainer: {
-    backgroundColor: "#f9c34920",
-  },
-  referralInput: {
-    color: "#1a1a1a",
-  },
-  inputIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: "#f0f0f0",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-  },
-  input: {
-    flex: 1,
-    paddingVertical: 8,
-    fontSize: isTablet ? 15 : 14,
-    color: "#1a1a1a",
-    fontWeight: "500",
-  },
-  eyeButton: {
-    padding: 6,
-    marginLeft: 4,
-  },
-  checkmarkContainer: {
-    marginLeft: 4,
-  },
-  selectorButton: {
-    flex: 1,
+  fieldLabel: { fontSize: 12.5, fontWeight: "800", color: AUTH.dark, marginBottom: 8 },
+  errorText: { color: AUTH.danger, fontSize: 12, fontWeight: "600", marginTop: 6, marginLeft: 4 },
+
+  banner: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-  },
-  selectorText: {
-    flex: 1,
-    color: "#1a1a1a",
-    fontSize: isTablet ? 15 : 14,
-    fontWeight: "500",
-    marginRight: 8,
-  },
-  selectorPlaceholder: {
-    color: "#999",
-  },
-  selectorError: {
-    color: "#ff4444",
-  },
-  button: {
-    borderRadius: 12,
-    overflow: "hidden",
-    elevation: 8,
-    shadowColor: "#1a1a1a",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    marginTop: 8,
-    marginBottom: 6,
-  },
-  buttonGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 14,
-  },
-  buttonText: {
-    color: "#f9c349",
-    fontSize: 15,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-    marginRight: 8,
-  },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  footerText: {
-    color: "#999",
-    fontSize: 13,
-  },
-  signupLink: {
-    color: "#1a1a1a",
-    fontWeight: "800",
-    fontSize: 13,
-    textDecorationLine: "underline",
-  },
-  brandingFooter: {
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  brandingText: {
-    color: "#ccc",
-    fontSize: 11,
-    letterSpacing: 3,
-    fontWeight: "600",
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  modalCard: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    maxHeight: height * 0.7,
-    width: "100%",
-    padding: 20,
-  },
-  modalCardTablet: {
-    maxWidth: 560,
-    padding: 24,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 10,
+    backgroundColor: "#fdecef",
+    borderRadius: 14,
+    padding: 12,
     marginBottom: 16,
   },
-  modalHeaderLeft: {
+  bannerTitle: { fontSize: 13.5, fontWeight: "800", color: AUTH.dark },
+  bannerText: { fontSize: 12.5, color: AUTH.text2, marginTop: 2, lineHeight: 18 },
+
+  segment: {
+    flexDirection: "row",
+    gap: 8,
+    padding: 4,
+    borderRadius: 16,
+    backgroundColor: AUTH.soft,
+    borderWidth: 1.5,
+    borderColor: AUTH.border,
+    marginBottom: 14,
+  },
+  segmentPill: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  segmentPillOn: { backgroundColor: AUTH.dark },
+  segmentText: { fontSize: 14.5, fontWeight: "800", color: AUTH.text2 },
+  segmentTextOn: { color: AUTH.gold },
+
+  picker: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#1a1a1a",
-  },
-  modalCloseButton: {
-    width: 32,
-    height: 32,
+    height: 54,
     borderRadius: 16,
-    backgroundColor: "#f5f5f5",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  searchContainer: {
-    marginBottom: 8,
-  },
-  searchInputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f5f5f5",
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
+    backgroundColor: AUTH.soft,
     borderWidth: 1.5,
-    borderColor: "#eee",
+    borderColor: AUTH.border,
   },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: "#1a1a1a",
-  },
-  clearSearchButton: {
-    padding: 4,
-  },
-  resultsCount: {
-    fontSize: 12,
-    color: "#999",
-    marginBottom: 8,
-    paddingHorizontal: 4,
-  },
-  modalScrollView: {
-    maxHeight: height * 0.5,
-  },
-  modalOption: {
-    minHeight: 44,
-    borderRadius: 10,
+  pickerOn: { borderColor: AUTH.dark, backgroundColor: "#fff" },
+  pickerError: { borderColor: AUTH.danger, backgroundColor: "#fff" },
+  pickerText: { flex: 1, fontSize: 15.5, color: AUTH.dark, fontWeight: "600" },
+  pickerPlaceholder: { color: "#a8a8a8" },
+
+  meterRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: -4, marginBottom: 10 },
+  meter: { flex: 1, height: 4, borderRadius: 2 },
+  meterLabel: { fontSize: 11.5, fontWeight: "800", marginLeft: 6, minWidth: 54, textAlign: "right" },
+  rules: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 16 },
+  rule: { flexDirection: "row", alignItems: "center", gap: 5 },
+  ruleText: { fontSize: 12, color: AUTH.muted, fontWeight: "600" },
+
+  terms: {
+    fontSize: 11.5,
+    color: AUTH.muted,
+    textAlign: "center",
+    lineHeight: 17,
+    marginTop: 14,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+  },
+
+  footerRow: { flexDirection: "row", alignItems: "center" },
+  footerText: { color: AUTH.muted, fontSize: 14 },
+  footerLink: { color: AUTH.dark, fontSize: 14, fontWeight: "900" },
+
+  // bottom sheet
+  sheetWrap: { flex: 1, justifyContent: "flex-end" },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.4)" },
+  sheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    maxHeight: "80%",
+  },
+  sheetTall: { height: "80%" },
+  handle: {
+    alignSelf: "center",
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: "#e2e2e2",
+    marginBottom: 12,
+  },
+  sheetHead: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 2,
+    marginBottom: 12,
   },
-  modalOptionActive: {
-    backgroundColor: "#f9c34915",
+  sheetTitle: { fontSize: 19, fontWeight: "900", color: AUTH.dark, letterSpacing: -0.4 },
+  sheetClose: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: AUTH.soft,
+    borderWidth: 1,
+    borderColor: AUTH.border,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  modalOptionContent: {
+  search: {
     flexDirection: "row",
     alignItems: "center",
-    flex: 1,
+    gap: 8,
+    height: 46,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    backgroundColor: AUTH.soft,
+    borderWidth: 1.5,
+    borderColor: AUTH.border,
+    marginBottom: 8,
   },
-  modalOptionIcon: {
-    marginRight: 10,
-  },
-  modalOptionText: {
-    flex: 1,
-    color: "#1a1a1a",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  modalOptionTextActive: {
-    color: "#1a1a1a",
-    fontWeight: "600",
-  },
-  noResultsContainer: {
+  searchInput: { flex: 1, fontSize: 15, color: AUTH.dark, fontWeight: "600", paddingVertical: 0 },
+  row: {
+    minHeight: 50,
+    flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 30,
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginVertical: 1,
   },
-  noResultsText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#666",
-    marginTop: 12,
-  },
-  noResultsSubtext: {
-    fontSize: 13,
-    color: "#999",
-    marginTop: 4,
-  },
+  rowOn: { backgroundColor: AUTH.goldSoft },
+  rowText: { flex: 1, fontSize: 15, color: AUTH.dark, fontWeight: "600" },
+  rowTextOn: { fontWeight: "800" },
+  empty: { textAlign: "center", color: AUTH.muted, fontSize: 13.5, paddingVertical: 24 },
 });

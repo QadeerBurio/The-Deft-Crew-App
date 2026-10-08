@@ -1,45 +1,50 @@
 // ChatDetailScreen.js
-import React, { useState, useEffect, useContext, useRef, useCallback } from "react";
+import React, { useState, useEffect, useContext, useRef, useCallback, useMemo } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList,
   Platform, Image, ActivityIndicator, StatusBar,
-  Modal, Alert, Dimensions, Animated, Keyboard,
+  Modal, Alert, Dimensions, Animated, Keyboard, Pressable,
   Vibration, KeyboardAvoidingView, BackHandler
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation, useRoute, useIsFocused, CommonActions } from "@react-navigation/native";
+import { useNavigation, useRoute, CommonActions } from "@react-navigation/native";
 import axios from "axios";
 import { AuthContext } from "../../context/AuthContext";
 import { io } from "socket.io-client";
 import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from 'expo-haptics';
+import * as Clipboard from 'expo-clipboard';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 const socket = io("https://the-deft-crew-production.up.railway.app");
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/decaxpera/auto/upload";
 const UPLOAD_PRESET = "tdc_profiles";
 
-const COLORS = {
-  primary: '#f9c349',
-  primaryDark: '#e6b800',
-  primaryLight: '#fef9f0',
+const C = {
   white: '#ffffff',
-  black: '#1a1a1a',
-  dark: '#0f1419',
-  gray: '#666666',
-  lightGray: '#f5f6f8',
-  border: '#eef0f2',
-  danger: '#ff4757',
-  success: '#4CAF50',
-  text: '#1a1a1a',
-  textSecondary: '#71767b',
-  textLight: '#8899a6',
-  shadow: 'rgba(0,0,0,0.05)',
+  dark: '#1a1a1a',
+  gold: '#f9c349',
+  goldSoft: '#fff8e6',
+  soft: '#F7F9F8',
+  border: '#E8E8E8',
+  divider: '#f2f2f2',
+  muted: '#8a8a8a',
+  text2: '#5f5f5f',
+  danger: '#e11d48',
+  dangerSoft: '#fdecef',
+  online: '#22c55e',
+  metaLight: 'rgba(255,255,255,0.6)',
 };
+
+const IMG_MAX_W = Math.round(width * 0.7);
+const IMG_MAX_H = 340;
+const imageSizeCache = new Map();
+
+const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
 const formatDuration = (seconds) => {
   if (!seconds || seconds < 0) return "0:00";
@@ -52,174 +57,80 @@ const formatDateHeader = (date) => {
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
-
-  const msgDate = new Date(date);
-
-  if (msgDate.toDateString() === today.toDateString()) {
-    return 'Today';
-  } else if (msgDate.toDateString() === yesterday.toDateString()) {
-    return 'Yesterday';
-  } else {
-    return msgDate.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      year: msgDate.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
-    });
-  }
+  const d = new Date(date);
+  if (d.toDateString() === today.toDateString()) return 'today';
+  if (d.toDateString() === yesterday.toDateString()) return 'yesterday';
+  const base = `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return d.getFullYear() !== today.getFullYear() ? `${base} ${d.getFullYear()}` : base;
 };
 
-// Text Bubble Component
-const TextBubble = React.memo(({ item, isMe, onLongPress }) => {
-  const messageTime = item.createdAt ? new Date(item.createdAt) : new Date();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+const formatTime = (date) => {
+  const d = date ? new Date(date) : new Date();
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }).toLowerCase();
+};
+
+const senderIdOf = (m) => m?.sender?._id || m?.sender;
+const isDeletedMsg = (m) => !!(m?.isDeleted || m?.deleted || m?.messageType === 'deleted');
+const isReadMsg = (m) => !!(m?.read || m?.isRead || m?.seen);
+
+// ---------- small pieces ----------
+
+const MetaRow = React.memo(({ item, isMe, overlay }) => (
+  <View style={[styles.metaRow, overlay && styles.metaOverlay]}>
+    <Text style={[styles.metaTime, isMe || overlay ? styles.metaTimeLight : null]}>{formatTime(item.createdAt)}</Text>
+    {isMe ? (
+      <Ionicons
+        name={isReadMsg(item) ? "checkmark-done" : "checkmark"}
+        size={14}
+        color={isReadMsg(item) ? C.gold : C.metaLight}
+        style={styles.metaTick}
+      />
+    ) : null}
+  </View>
+));
+
+const ImageContent = React.memo(({ item, isMe, onImagePress, onLongPress }) => {
+  const [size, setSize] = useState(() => imageSizeCache.get(item.mediaUrl) || { width: IMG_MAX_W, height: IMG_MAX_W * 0.75 });
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 6,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  return (
-    <Animated.View style={{
-      opacity: fadeAnim,
-      transform: [{ scale: scaleAnim }]
-    }}>
-      <TouchableOpacity
-        style={[styles.msgWrapper, isMe ? styles.myMsg : styles.otherMsg]}
-        onLongPress={() => onLongPress(item)}
-        delayLongPress={500}
-        activeOpacity={0.7}
-      >
-        <View style={[styles.bubble, isMe ? styles.myBubble : styles.otherBubble]}>
-          <Text style={[styles.msgText, isMe ? styles.myText : styles.otherText]}>{item.text}</Text>
-        </View>
-        <Text style={[styles.timeText, isMe && styles.timeRight]}>
-          {messageTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-        </Text>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-});
-
-// Image Bubble Component
-const ImageBubble = React.memo(({ item, isMe, onLongPress, onImagePress }) => {
-  const [imageSize, setImageSize] = useState({ width: 200, height: 200 });
-  const messageTime = item.createdAt ? new Date(item.createdAt) : new Date();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 6,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    if (item.mediaUrl) {
-      Image.getSize(item.mediaUrl, (w, h) => {
-        const maxWidth = width * 0.65;
-        const ratio = maxWidth / w;
-        const newHeight = Math.min(h * ratio, 350);
-        const newWidth = h * ratio > 350 ? (350 / h) * w : maxWidth;
-        setImageSize({ width: Math.min(newWidth, maxWidth), height: newHeight });
-      }, () => {});
-    }
+    if (!item.mediaUrl || imageSizeCache.has(item.mediaUrl)) return;
+    let alive = true;
+    Image.getSize(item.mediaUrl, (w, h) => {
+      if (!w || !h) return;
+      let nw = IMG_MAX_W;
+      let nh = (h / w) * nw;
+      if (nh > IMG_MAX_H) { nh = IMG_MAX_H; nw = (w / h) * nh; }
+      const s = { width: Math.round(nw), height: Math.round(nh) };
+      imageSizeCache.set(item.mediaUrl, s);
+      if (alive) setSize(s);
+    }, () => {});
+    return () => { alive = false; };
   }, [item.mediaUrl]);
 
   return (
-    <Animated.View style={{
-      opacity: fadeAnim,
-      transform: [{ scale: scaleAnim }]
-    }}>
-      <TouchableOpacity
-        style={[styles.msgWrapper, isMe ? styles.myMsg : styles.otherMsg]}
-        onLongPress={() => onLongPress(item)}
-        delayLongPress={500}
-        activeOpacity={0.7}
-      >
-        <TouchableOpacity
-          style={[styles.bubble, styles.mediaBubble, isMe ? styles.myBubble : styles.otherBubble]}
-          onPress={() => onImagePress && onImagePress(item.mediaUrl)}
-          activeOpacity={0.9}
-        >
-          <Image source={{ uri: item.mediaUrl }} style={[{ width: imageSize.width, height: imageSize.height }, styles.msgMedia]} resizeMode="cover" />
-        </TouchableOpacity>
-        <Text style={[styles.timeText, isMe && styles.timeRight]}>
-          {messageTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-        </Text>
-      </TouchableOpacity>
-    </Animated.View>
+    <Pressable
+      onPress={() => onImagePress(item.mediaUrl)}
+      onLongPress={() => onLongPress(item)}
+      delayLongPress={400}
+      style={[styles.imageWrap, isMe ? styles.myCorner : styles.theirCorner]}
+    >
+      <Image source={{ uri: item.mediaUrl }} style={[styles.msgImage, size]} resizeMode="cover" />
+      <MetaRow item={item} isMe={isMe} overlay />
+    </Pressable>
   );
 });
 
-// Audio Bubble Component
-const AudioBubble = React.memo(({ item, isMe, onPlay, onLongPress, isCurrentlyPlaying, currentPlayingId }) => {
+const AudioContent = React.memo(({ item, isMe, isPlaying, onPlay }) => {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(item.duration || 0);
   const [currentTime, setCurrentTime] = useState(0);
-  const isPlaying = isCurrentlyPlaying && currentPlayingId === item._id;
-  const messageTime = item.createdAt ? new Date(item.createdAt) : new Date();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const waveAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 6,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  useEffect(() => {
-    if (isPlaying) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(waveAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
-          Animated.timing(waveAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
-        ])
-      ).start();
-    } else {
-      waveAnim.stopAnimation();
-      waveAnim.setValue(0);
-    }
-  }, [isPlaying]);
-
-  const handlePlay = async () => {
-    await onPlay(item, (status) => {
+  const handlePlay = useCallback(() => {
+    onPlay(item, (status) => {
       if (status.isLoaded) {
-        setDuration(status.durationMillis / 1000);
-        if (status.isPlaying) {
-          const progress = status.positionMillis / status.durationMillis;
-          setProgress(progress);
+        if (status.durationMillis) setDuration(status.durationMillis / 1000);
+        if (status.isPlaying && status.durationMillis) {
+          setProgress(status.positionMillis / status.durationMillis);
           setCurrentTime(status.positionMillis / 1000);
         }
         if (status.didJustFinish) {
@@ -228,110 +139,158 @@ const AudioBubble = React.memo(({ item, isMe, onPlay, onLongPress, isCurrentlyPl
         }
       }
     });
-  };
-
-  const displayCurrentTime = duration > 0 ? formatDuration(currentTime) : '0:00';
-  const totalDuration = duration > 0 ? formatDuration(duration) : '0:00';
-
-  const waveHeights = [8, 12, 16, 12, 8];
+  }, [item, onPlay]);
 
   return (
-    <Animated.View style={{
-      opacity: fadeAnim,
-      transform: [{ scale: scaleAnim }]
-    }}>
+    <View style={styles.audioRow}>
       <TouchableOpacity
-        style={[styles.msgWrapper, isMe ? styles.myMsg : styles.otherMsg]}
-        onLongPress={() => onLongPress(item)}
-        delayLongPress={500}
-        activeOpacity={0.7}
+        onPress={handlePlay}
+        activeOpacity={0.8}
+        style={[styles.playBtn, { backgroundColor: isMe ? C.gold : C.dark }]}
       >
-        <View style={[styles.bubble, styles.audioBubble, isMe ? styles.myAudioBubble : styles.otherAudioBubble]}>
-          <View style={styles.audioContainer}>
-            <TouchableOpacity onPress={handlePlay} style={styles.audioPlayBtn}>
-              <LinearGradient
-                colors={isMe ? [COLORS.primary, COLORS.primaryDark] : [COLORS.dark, COLORS.dark]}
-                style={styles.audioPlayGradient}
-              >
-                <Ionicons
-                  name={isPlaying ? "pause" : "play"}
-                  size={22}
-                  color={isMe ? COLORS.black : COLORS.primary}
-                />
-              </LinearGradient>
-            </TouchableOpacity>
+        <Ionicons name={isPlaying ? "pause" : "play"} size={16} color={isMe ? C.dark : C.gold} style={!isPlaying && styles.playIconNudge} />
+      </TouchableOpacity>
+      <View style={styles.audioBody}>
+        <View style={[styles.audioTrack, isMe ? styles.audioTrackDark : styles.audioTrackLight]}>
+          <View style={[styles.audioFill, { width: `${Math.min(progress * 100, 100)}%`, backgroundColor: isMe ? C.gold : C.dark }]} />
+        </View>
+        <Text style={[styles.audioTime, isMe && styles.audioTimeLight]}>
+          {isPlaying ? formatDuration(currentTime) : formatDuration(duration)}
+        </Text>
+      </View>
+    </View>
+  );
+});
 
-            <View style={styles.audioProgressSection}>
-              <View style={styles.audioProgressContainer}>
-                <Animated.View style={[
-                  styles.audioProgressBar,
-                  { width: `${Math.min(progress * 100, 100)}%` }
-                ]} />
-              </View>
-              <View style={styles.audioTimeRow}>
-                <Text style={[styles.audioCurrentTime, isMe ? styles.myText : styles.otherText]}>
-                  {isPlaying ? displayCurrentTime : totalDuration}
-                </Text>
-                {isPlaying && (
-                  <View style={styles.waveContainer}>
-                    {waveHeights.map((h, i) => (
-                      <Animated.View
-                        key={i}
-                        style={[
-                          styles.waveBar,
-                          {
-                            height: h,
-                            transform: [{
-                              scaleY: waveAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0.5 + i * 0.1, 1.5 - i * 0.1],
-                              })
-                            }],
-                            backgroundColor: isMe ? COLORS.black : COLORS.primary,
-                          }
-                        ]}
-                      />
-                    ))}
-                  </View>
-                )}
-              </View>
-            </View>
+const MessageRow = React.memo(({ item, isMe, showDate, grouped, isPlaying, fresh, onLongPress, onImagePress, onPlay }) => {
+  const fade = useRef(new Animated.Value(fresh ? 0 : 1)).current;
+  useEffect(() => {
+    if (fresh) Animated.timing(fade, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+  }, []);
+
+  const deleted = isDeletedMsg(item);
+  const type = item.messageType;
+  let body = null;
+
+  if (deleted) {
+    body = (
+      <View style={[styles.bubble, isMe ? styles.myBubble : styles.theirBubble]}>
+        <View style={styles.deletedRow}>
+          <Ionicons name="ban-outline" size={14} color={isMe ? C.metaLight : C.muted} />
+          <Text style={[styles.deletedText, isMe && styles.deletedTextLight]}>message deleted</Text>
+        </View>
+      </View>
+    );
+  } else if (type === "image" && item.mediaUrl) {
+    body = <ImageContent item={item} isMe={isMe} onImagePress={onImagePress} onLongPress={onLongPress} />;
+  } else if (type === "audio" && item.mediaUrl) {
+    body = (
+      <Pressable onLongPress={() => onLongPress(item)} delayLongPress={400}
+        style={[styles.bubble, styles.audioBubble, isMe ? styles.myBubble : styles.theirBubble]}>
+        <AudioContent item={item} isMe={isMe} isPlaying={isPlaying} onPlay={onPlay} />
+        <MetaRow item={item} isMe={isMe} />
+      </Pressable>
+    );
+  } else if (item.text) {
+    body = (
+      <Pressable onLongPress={() => onLongPress(item)} delayLongPress={400}
+        style={[styles.bubble, isMe ? styles.myBubble : styles.theirBubble]}>
+        <Text style={[styles.msgText, isMe ? styles.myText : styles.theirText]}>{item.text}</Text>
+        <MetaRow item={item} isMe={isMe} />
+      </Pressable>
+    );
+  }
+
+  if (!body && !showDate) return null;
+
+  return (
+    <Animated.View style={{ opacity: fade }}>
+      {showDate && item.createdAt ? (
+        <View style={styles.datePillWrap}>
+          <View style={styles.datePill}>
+            <Text style={styles.datePillText}>{formatDateHeader(item.createdAt)}</Text>
           </View>
         </View>
-        <Text style={[styles.timeText, isMe && styles.timeRight]}>
-          {messageTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-        </Text>
-      </TouchableOpacity>
+      ) : null}
+      {body ? (
+        <View style={[styles.rowWrap, isMe ? styles.rowMe : styles.rowThem, { marginTop: grouped ? 4 : 10 }]}>
+          {body}
+        </View>
+      ) : null}
     </Animated.View>
   );
 });
 
-// Date Header Component
-const DateHeader = React.memo(({ date }) => (
-  <View style={styles.dateHeaderContainer}>
-    <LinearGradient colors={['transparent', COLORS.border]} style={styles.dateHeaderLine} />
-    <View style={styles.dateHeaderContent}>
-      <Text style={styles.dateHeaderText}>{formatDateHeader(date)}</Text>
+const TypingBubble = React.memo(() => {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.timing(t, { toValue: 3, duration: 1200, useNativeDriver: true }));
+    loop.start();
+    return () => loop.stop();
+  }, []);
+  const dot = (i) => ({
+    opacity: t.interpolate({
+      inputRange: [0, 0.5, 1, 1.5, 2, 2.5, 3],
+      outputRange: i === 0 ? [1, 0.3, 0.3, 0.3, 0.3, 0.3, 1] : i === 1 ? [0.3, 0.3, 1, 0.3, 0.3, 0.3, 0.3] : [0.3, 0.3, 0.3, 0.3, 1, 0.3, 0.3],
+    }),
+  });
+  return (
+    <View style={[styles.rowWrap, styles.rowThem, styles.typingWrap]}>
+      <View style={[styles.bubble, styles.theirBubble, styles.typingBubble]}>
+        {[0, 1, 2].map((i) => <Animated.View key={i} style={[styles.typingDot, dot(i)]} />)}
+      </View>
     </View>
-    <LinearGradient colors={[COLORS.border, 'transparent']} style={styles.dateHeaderLine} />
-  </View>
-));
+  );
+});
+
+const Sheet = ({ visible, onClose, insetBottom, children }) => {
+  const slide = useRef(new Animated.Value(300)).current;
+  useEffect(() => {
+    if (visible) {
+      slide.setValue(300);
+      Animated.timing(slide, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+    }
+  }, [visible]);
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+      <Pressable style={styles.sheetOverlay} onPress={onClose}>
+        <Animated.View style={[styles.sheet, { paddingBottom: Math.max(insetBottom, 16) + 8, transform: [{ translateY: slide }] }]}>
+          <Pressable>
+            <View style={styles.sheetHandle} />
+            {children}
+          </Pressable>
+        </Animated.View>
+      </Pressable>
+    </Modal>
+  );
+};
+
+const SheetRow = ({ icon, label, onPress, destructive }) => (
+  <TouchableOpacity style={styles.sheetRow} onPress={onPress} activeOpacity={0.7}>
+    <View style={[styles.sheetIcon, destructive && styles.sheetIconDanger]}>
+      <Ionicons name={icon} size={18} color={destructive ? C.danger : C.dark} />
+    </View>
+    <Text style={[styles.sheetLabel, destructive && styles.sheetLabelDanger]}>{label}</Text>
+  </TouchableOpacity>
+);
+
+// ---------- screen ----------
 
 export default function ChatDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
   const { token, user: currentUser } = useContext(AuthContext);
-  const isFocused = useIsFocused();
 
   const conversationId = route.params?.conversationId;
   const recipient = route.params?.recipient || {};
+  const myId = currentUser?._id;
 
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(true);
   const [showOptionsModal, setShowOptionsModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showMsgSheet, setShowMsgSheet] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
@@ -344,15 +303,19 @@ export default function ChatDetailScreen() {
   const [currentPlayingId, setCurrentPlayingId] = useState(null);
   const [isCurrentlyPlaying, setIsCurrentlyPlaying] = useState(false);
   const [typingUser, setTypingUser] = useState(null);
-  const [isNavigating, setIsNavigating] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [newCount, setNewCount] = useState(0);
 
   const flatListRef = useRef();
   const soundRef = useRef(null);
   const inputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
-  const messagesEndRef = useRef(null);
+  const isNavigatingRef = useRef(false);
+  const nearBottomRef = useRef(true);
+  const freshIdsRef = useRef(new Set());
+  const currentPlayingIdRef = useRef(null);
+  const isPlayingRef = useRef(false);
 
   // Refs for recording (avoid stale closure issues)
   const recordingRef = useRef(null);
@@ -363,77 +326,82 @@ export default function ChatDetailScreen() {
   const isStartingRecordingRef = useRef(false);
   // CHAIN: forces next start to wait for previous stop to fully unload
   const recordingCleanupRef = useRef(Promise.resolve());
-
-  const optionsSlide = useRef(new Animated.Value(400)).current;
-  const deleteSlide = useRef(new Animated.Value(400)).current;
-  const imagePickerSlide = useRef(new Animated.Value(400)).current;
-  const headerFade = useRef(new Animated.Value(0)).current;
-  const recordingAnim = useRef(new Animated.Value(1)).current;
   const recordingTimerRef = useRef(null);
-  const onlinePulse = useRef(new Animated.Value(1)).current;
 
-  const config = { headers: { Authorization: `Bearer ${token}` } };
+  const config = useMemo(() => ({ headers: { Authorization: `Bearer ${token}` } }), [token]);
+
+  const scrollToEnd = useCallback((animated = true) => {
+    flatListRef.current?.scrollToEnd({ animated });
+  }, []);
 
   // Validate params
   useEffect(() => {
     if (!conversationId || !recipient?._id) {
-      Alert.alert('Error', 'Invalid conversation data');
+      Alert.alert('error', 'invalid conversation data');
       navigation.goBack();
       return;
     }
   }, [conversationId, recipient]);
 
   const handleGoBack = useCallback(() => {
-    if (!isNavigating) {
-      setIsNavigating(true);
-      if (navigation.canGoBack()) {
-        navigation.goBack();
-      } else {
-        navigation.dispatch(
-          CommonActions.reset({
-            index: 0,
-            routes: [{ name: 'Messages' }],
-          })
-        );
-      }
-      setTimeout(() => setIsNavigating(false), 500);
+    if (isNavigatingRef.current) return;
+    isNavigatingRef.current = true;
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'Messages' }],
+        })
+      );
     }
-  }, [navigation, isNavigating]);
+    setTimeout(() => { isNavigatingRef.current = false; }, 500);
+  }, [navigation]);
 
   // Hardware back button
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (!isNavigating) {
+      if (!isNavigatingRef.current) {
         handleGoBack();
         return true;
       }
       return false;
     });
-
     return () => backHandler.remove();
-  }, [handleGoBack, isNavigating]);
+  }, [handleGoBack]);
 
   // Keyboard listeners
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
-    const showSub = Keyboard.addListener(showEvent, (e) => {
+    const showSub = Keyboard.addListener(showEvent, () => {
       setKeyboardVisible(true);
-      setKeyboardHeight(e.endCoordinates.height);
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 200);
+      setTimeout(() => scrollToEnd(true), 200);
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
       setKeyboardVisible(false);
-      setKeyboardHeight(0);
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+      setTimeout(() => scrollToEnd(true), 100);
     });
 
     return () => {
       showSub.remove();
       hideSub.remove();
     };
-  }, []);
+  }, [scrollToEnd]);
+
+  const fetchMessages = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/messages/${conversationId}`, config);
+      setMessages(Array.isArray(res.data) ? res.data : []);
+      setTimeout(() => scrollToEnd(false), 100);
+    } catch (err) {
+      console.error("Fetch Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Lifecycle
   useEffect(() => {
@@ -441,18 +409,9 @@ export default function ChatDetailScreen() {
 
     fetchMessages();
 
-    Animated.timing(headerFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
-
     if (recipient?.online !== undefined) {
       setIsRecipientOnline(recipient.online);
     }
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(onlinePulse, { toValue: 0.6, duration: 800, useNativeDriver: true }),
-        Animated.timing(onlinePulse, { toValue: 1, duration: 800, useNativeDriver: true }),
-      ])
-    ).start();
 
     socket.emit("user_online", currentUser._id);
     socket.emit("join_chat", conversationId);
@@ -471,12 +430,17 @@ export default function ChatDetailScreen() {
 
     const handleNewMessage = (msg) => {
       if (msg.conversationId === conversationId) {
+        if (msg._id) freshIdsRef.current.add(msg._id);
         setMessages((prev) => {
-          const exists = prev.some(m => m._id === msg._id);
-          if (exists) return prev;
+          if (prev.some(m => m._id === msg._id)) return prev;
           return [...prev, msg];
         });
-        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 300);
+        const mine = senderIdOf(msg) === currentUser._id;
+        if (mine || nearBottomRef.current) {
+          setTimeout(() => scrollToEnd(true), 120);
+        } else {
+          setNewCount((n) => n + 1);
+        }
       }
     };
 
@@ -486,7 +450,7 @@ export default function ChatDetailScreen() {
 
     const handleUserTyping = ({ userId, userName, typing }) => {
       if (userId !== currentUser._id) {
-        setTypingUser(typing ? userName : null);
+        setTypingUser(typing ? (userName || 'typing') : null);
       }
     };
 
@@ -529,29 +493,7 @@ export default function ChatDetailScreen() {
     };
   }, [conversationId]);
 
-  // Modal animations
-  useEffect(() => {
-    if (showOptionsModal) {
-      optionsSlide.setValue(400);
-      Animated.spring(optionsSlide, { toValue: 0, friction: 8, tension: 40, useNativeDriver: true }).start();
-    }
-  }, [showOptionsModal]);
-
-  useEffect(() => {
-    if (showDeleteModal) {
-      deleteSlide.setValue(400);
-      Animated.spring(deleteSlide, { toValue: 0, friction: 8, tension: 40, useNativeDriver: true }).start();
-    }
-  }, [showDeleteModal]);
-
-  useEffect(() => {
-    if (showImagePicker) {
-      imagePickerSlide.setValue(400);
-      Animated.spring(imagePickerSlide, { toValue: 0, friction: 8, tension: 40, useNativeDriver: true }).start();
-    }
-  }, [showImagePicker]);
-
-  // Recording UI animation + duration timer
+  // Recording duration timer
   useEffect(() => {
     if (isRecording) {
       recordingTimerRef.current = setInterval(() => {
@@ -561,22 +503,10 @@ export default function ChatDetailScreen() {
           setRecordingDuration(elapsed);
         }
       }, 500);
-
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(recordingAnim, { toValue: 1.4, duration: 500, useNativeDriver: true }),
-          Animated.timing(recordingAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-        ])
-      ).start();
-
       Vibration.vibrate([0, 100]);
-    } else {
-      if (recordingTimerRef.current) {
-        clearInterval(recordingTimerRef.current);
-        recordingTimerRef.current = null;
-      }
-      recordingAnim.stopAnimation();
-      recordingAnim.setValue(1);
+    } else if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
     }
 
     return () => {
@@ -587,21 +517,9 @@ export default function ChatDetailScreen() {
     };
   }, [isRecording]);
 
-  const fetchMessages = async () => {
-    try {
-      const res = await axios.get(`${API_URL}/messages/${conversationId}`, config);
-      setMessages(Array.isArray(res.data) ? res.data : []);
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 100);
-    } catch (err) {
-      console.error("Fetch Error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const uploadFile = async (uri, type) => {
     setUploading(true);
-    setUploadProgress(`Uploading ${type}...`);
+    setUploadProgress(`uploading ${type}…`);
 
     try {
       const formData = new FormData();
@@ -617,8 +535,9 @@ export default function ChatDetailScreen() {
       const res = await axios.post(CLOUDINARY_URL, formData, {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (progressEvent) => {
+          if (!progressEvent.total) return;
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setUploadProgress(`Uploading... ${percentCompleted}%`);
+          setUploadProgress(`uploading… ${percentCompleted}%`);
         }
       });
       setUploading(false);
@@ -628,7 +547,7 @@ export default function ChatDetailScreen() {
       console.error('Upload error:', e);
       setUploading(false);
       setUploadProgress("");
-      Alert.alert("Upload Failed", "Please try again");
+      Alert.alert("upload failed", "please try again");
       return null;
     }
   };
@@ -644,6 +563,14 @@ export default function ChatDetailScreen() {
       messageType: "text",
     });
 
+    setInputText("");
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    socket.emit("typing_stop", {
+      conversationId,
+      userId: currentUser._id
+    });
+    inputRef.current?.focus();
+
     try {
       await axios.post(
         `${API_URL}/notifications/create-message-notif`,
@@ -658,9 +585,6 @@ export default function ChatDetailScreen() {
     } catch (e) {
       console.log('Message notif create failed (non-blocking):', e.message);
     }
-
-    setInputText("");
-    inputRef.current?.focus();
   };
 
   const handleInputChange = (text) => {
@@ -688,11 +612,38 @@ export default function ChatDetailScreen() {
     }
   };
 
+  const sendImageUri = async (uri) => {
+    const url = await uploadFile(uri, "image");
+    if (url) {
+      socket.emit("send_message", {
+        conversationId,
+        senderId: currentUser._id,
+        mediaUrl: url,
+        messageType: "image"
+      });
+      try {
+        await axios.post(
+          `${API_URL}/notifications/create-message-notif`,
+          {
+            recipientId: recipient._id,
+            conversationId,
+            text: '',
+            messageType: 'image',
+          },
+          config
+        );
+      } catch (e) {
+        console.log('Image notif failed:', e.message);
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  };
+
   const pickImage = async () => {
     setShowImagePicker(false);
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Media library permission is required to send images.');
+      Alert.alert('permission needed', 'allow photo access to send images.');
       return;
     }
 
@@ -704,34 +655,9 @@ export default function ChatDetailScreen() {
     });
 
     if (!result.canceled) {
-      Alert.alert("Send Image", "Send this image?", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Send", onPress: async () => {
-            const url = await uploadFile(result.assets[0].uri, "image");
-            if (url) {
-              socket.emit("send_message", {
-                conversationId,
-                senderId: currentUser._id,
-                mediaUrl: url,
-                messageType: "image"
-              });
-              try {
-                await axios.post(
-                  `${API_URL}/notifications/create-message-notif`,
-                  {
-                    recipientId: recipient._id,
-                    conversationId,
-                    text: '',
-                    messageType: 'image',
-                  },
-                  config
-                );
-              } catch (e) {
-                console.log('Image notif failed:', e.message);
-              }
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            }
-        }}
+      Alert.alert("send image", "send this image?", [
+        { text: "cancel", style: "cancel" },
+        { text: "send", onPress: () => sendImageUri(result.assets[0].uri) }
       ]);
     }
   };
@@ -740,7 +666,7 @@ export default function ChatDetailScreen() {
     setShowImagePicker(false);
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Camera permission is required to take photos.');
+      Alert.alert('permission needed', 'allow camera access to take photos.');
       return;
     }
 
@@ -751,34 +677,9 @@ export default function ChatDetailScreen() {
     });
 
     if (!result.canceled) {
-      Alert.alert("Send Image", "Send this photo?", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Send", onPress: async () => {
-            const url = await uploadFile(result.assets[0].uri, "image");
-            if (url) {
-              socket.emit("send_message", {
-                conversationId,
-                senderId: currentUser._id,
-                mediaUrl: url,
-                messageType: "image"
-              });
-              try {
-                await axios.post(
-                  `${API_URL}/notifications/create-message-notif`,
-                  {
-                    recipientId: recipient._id,
-                    conversationId,
-                    text: '',
-                    messageType: 'image',
-                  },
-                  config
-                );
-              } catch (e) {
-                console.log('Image notif failed:', e.message);
-              }
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            }
-        }}
+      Alert.alert("send image", "send this photo?", [
+        { text: "cancel", style: "cancel" },
+        { text: "send", onPress: () => sendImageUri(result.assets[0].uri) }
       ]);
     }
   };
@@ -790,7 +691,7 @@ export default function ChatDetailScreen() {
   const startRecording = async () => {
     // Guard: already recording OR currently starting
     if (isRecordingRef.current || isStartingRecordingRef.current) {
-      console.log('[Recording] blocked — already active or starting');
+      console.log('[Recording] blocked, already active or starting');
       return;
     }
 
@@ -810,10 +711,7 @@ export default function ChatDetailScreen() {
 
       const perm = await Audio.requestPermissionsAsync();
       if (perm.status !== 'granted') {
-        Alert.alert(
-          'Permission needed',
-          'Microphone permission is required to record voice messages.'
-        );
+        Alert.alert('permission needed', 'allow microphone access to record voice notes.');
         isStartingRecordingRef.current = false;
         return;
       }
@@ -840,8 +738,6 @@ export default function ChatDetailScreen() {
 
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       Vibration.vibrate([0, 50]);
-
-      console.log('[Recording] Started');
     } catch (err) {
       console.error('[Recording] start error:', err);
 
@@ -859,25 +755,15 @@ export default function ChatDetailScreen() {
       recordingStartTimeRef.current = null;
       setIsRecording(false);
 
-      Alert.alert(
-        'Recording unavailable',
-        'Could not start recording. Please wait a moment and try again.'
-      );
+      Alert.alert('recording unavailable', 'could not start recording. wait a moment and try again.');
     } finally {
       isStartingRecordingRef.current = false;
     }
   };
 
   const stopRecording = async (shouldSend = true) => {
-    if (!isRecordingRef.current && !recordingRef.current) {
-      console.log('[Recording] stop ignored — nothing active');
-      return;
-    }
-
-    if (isStartingRecordingRef.current && !recordingRef.current) {
-      console.log('[Recording] stop ignored — start still initializing');
-      return;
-    }
+    if (!isRecordingRef.current && !recordingRef.current) return;
+    if (isStartingRecordingRef.current && !recordingRef.current) return;
 
     const activeRecording = recordingRef.current;
     recordingRef.current = null;
@@ -892,35 +778,27 @@ export default function ChatDetailScreen() {
 
     recordingStartTimeRef.current = null;
 
+    const resetMode = async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        });
+      } catch (e) {}
+    };
+
     const cleanupPromise = (async () => {
       try {
         if (!activeRecording) return null;
-
         await activeRecording.stopAndUnloadAsync();
         const uri = activeRecording.getURI();
-
-        try {
-          await Audio.setAudioModeAsync({
-            allowsRecordingIOS: false,
-            playsInSilentModeIOS: true,
-            shouldDuckAndroid: true,
-            playThroughEarpieceAndroid: false,
-          });
-        } catch (e) {}
-
+        await resetMode();
         return uri;
       } catch (error) {
         console.error('[Recording] stop/unload error:', error);
-
-        try {
-          await Audio.setAudioModeAsync({
-            allowsRecordingIOS: false,
-            playsInSilentModeIOS: true,
-            shouldDuckAndroid: true,
-            playThroughEarpieceAndroid: false,
-          });
-        } catch (e) {}
-
+        await resetMode();
         return null;
       }
     })();
@@ -929,21 +807,11 @@ export default function ChatDetailScreen() {
 
     const uri = await cleanupPromise;
 
-    if (!shouldSend) {
-      console.log('[Recording] cancelled');
+    if (!shouldSend || !uri) {
       setRecordingDuration(0);
       recordingDurationRef.current = 0;
       return;
     }
-
-    if (!uri) {
-      console.log('[Recording] no uri — aborting send');
-      setRecordingDuration(0);
-      recordingDurationRef.current = 0;
-      return;
-    }
-
-    console.log('[Recording] Stopped — duration:', elapsedSec, 's');
 
     try {
       const url = await uploadFile(uri, 'audio');
@@ -986,11 +854,20 @@ export default function ChatDetailScreen() {
     await stopRecording(false);
   };
 
-  const playVoice = async (item, onProgressUpdate) => {
+  // Stable across renders (reads playback state from refs) so memoized rows don't re-render
+  const playVoice = useCallback(async (item, onProgressUpdate) => {
+    const setPlaying = (id, playing) => {
+      currentPlayingIdRef.current = id;
+      isPlayingRef.current = playing;
+      setCurrentPlayingId(id);
+      setIsCurrentlyPlaying(playing);
+    };
+
     try {
-      if (currentPlayingId === item._id && isCurrentlyPlaying) {
+      if (currentPlayingIdRef.current === item._id && isPlayingRef.current) {
         if (soundRef.current) {
           await soundRef.current.pauseAsync();
+          isPlayingRef.current = false;
           setIsCurrentlyPlaying(false);
         }
         return;
@@ -1015,18 +892,13 @@ export default function ChatDetailScreen() {
       );
 
       soundRef.current = sound;
-      setCurrentPlayingId(item._id);
-      setIsCurrentlyPlaying(true);
+      setPlaying(item._id, true);
 
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded) {
-          if (onProgressUpdate) {
-            onProgressUpdate(status);
-          }
-
+          if (onProgressUpdate) onProgressUpdate(status);
           if (status.didJustFinish) {
-            setIsCurrentlyPlaying(false);
-            setCurrentPlayingId(null);
+            setPlaying(null, false);
             if (soundRef.current) {
               soundRef.current.unloadAsync();
               soundRef.current = null;
@@ -1036,23 +908,45 @@ export default function ChatDetailScreen() {
       });
 
       await sound.playAsync();
-
     } catch (e) {
       console.error('Play voice error:', e);
-      setIsCurrentlyPlaying(false);
-      setCurrentPlayingId(null);
+      setPlaying(null, false);
       if (soundRef.current) {
         soundRef.current.unloadAsync();
         soundRef.current = null;
       }
     }
+  }, []);
+
+  const handleLongPress = useCallback((message) => {
+    if (!message || isDeletedMsg(message)) return;
+    const mine = senderIdOf(message) === myId;
+    const canCopy = !!message.text && message.messageType !== 'image' && message.messageType !== 'audio';
+    if (!mine && !canCopy) return;
+    setSelectedMessage(message);
+    setShowMsgSheet(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, [myId]);
+
+  const handleImagePress = useCallback((url) => {
+    setFullscreenImage(url);
+    setIsImageFullscreen(true);
+  }, []);
+
+  const closeMsgSheet = () => {
+    setShowMsgSheet(false);
+    setSelectedMessage(null);
   };
 
-  const handleLongPress = (message) => {
-    if (message.sender?._id === currentUser._id || message.sender === currentUser._id) {
-      setSelectedMessage(message);
-      setShowDeleteModal(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const copySelected = async () => {
+    const text = selectedMessage?.text;
+    closeMsgSheet();
+    if (!text) return;
+    try {
+      await Clipboard.setStringAsync(text);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e) {
+      console.log('Copy failed:', e?.message);
     }
   };
 
@@ -1069,23 +963,23 @@ export default function ChatDetailScreen() {
         });
 
         setMessages(prev => prev.filter(m => m._id !== selectedMessage._id));
-        setShowDeleteModal(false);
+        setShowMsgSheet(false);
         setSelectedMessage(null);
 
-        Alert.alert('Success', 'Message deleted successfully');
+        Alert.alert('deleted', 'message deleted');
       } else {
-        Alert.alert('Error', response.data?.error || 'Failed to delete message');
+        Alert.alert('error', response.data?.error || 'could not delete the message');
       }
     } catch (err) {
       console.error('Delete message error:', err);
-      Alert.alert('Error', 'Failed to delete message. Please try again.');
+      Alert.alert('error', 'could not delete the message. try again.');
     }
   };
 
   const clearChat = () => {
-    Alert.alert("Clear Chat", "Delete all messages?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Clear", style: "destructive", onPress: async () => {
+    Alert.alert("clear chat", "delete all messages?", [
+      { text: "cancel", style: "cancel" },
+      { text: "clear", style: "destructive", onPress: async () => {
           try {
             await axios.delete(`${API_URL}/conversations/${conversationId}`, config);
             setMessages([]);
@@ -1094,386 +988,287 @@ export default function ChatDetailScreen() {
             handleGoBack();
           } catch (err) {
             console.error('Clear chat error:', err);
-            Alert.alert('Error', 'Failed to clear chat');
+            Alert.alert('error', 'could not clear the chat');
           }
       }}
     ]);
   };
 
   const navigateToProfile = () => {
-    if (recipient?._id && !isNavigating) {
-      setIsNavigating(true);
+    if (recipient?._id && !isNavigatingRef.current) {
+      isNavigatingRef.current = true;
       navigation.navigate("UserProfile", { userId: recipient._id });
-      setTimeout(() => setIsNavigating(false), 500);
+      setTimeout(() => { isNavigatingRef.current = false; }, 500);
     }
   };
 
-  const renderMessage = ({ item, index }) => {
-    if (!item) return null;
-    const isMe = (item.sender?._id || item.sender) === currentUser._id;
+  // ---------- list ----------
 
-    let showDateHeader = false;
-    if (index === 0) {
-      showDateHeader = true;
-    } else {
-      const prevItem = messages[index - 1];
-      if (prevItem && prevItem.createdAt) {
-        const currentDate = new Date(item.createdAt);
-        const prevDate = new Date(prevItem.createdAt);
-        if (currentDate.toDateString() !== prevDate.toDateString()) {
-          showDateHeader = true;
-        }
+  const rowMeta = useMemo(() => {
+    const meta = new Array(messages.length);
+    for (let i = 0; i < messages.length; i++) {
+      const item = messages[i];
+      const prev = i > 0 ? messages[i - 1] : null;
+      let showDate = i === 0;
+      if (prev && prev.createdAt && item?.createdAt) {
+        showDate = new Date(item.createdAt).toDateString() !== new Date(prev.createdAt).toDateString();
       }
+      const grouped = !!prev && !showDate && senderIdOf(prev) === senderIdOf(item);
+      meta[i] = { showDate, grouped };
     }
+    return meta;
+  }, [messages]);
 
-    let messageComponent = null;
-
-    if (item.messageType === "image") {
-      messageComponent = <ImageBubble item={item} isMe={isMe} onLongPress={handleLongPress} onImagePress={(url) => {
-        setFullscreenImage(url);
-        setIsImageFullscreen(true);
-      }} />;
-    } else if (item.messageType === "audio") {
-      messageComponent = (
-        <AudioBubble
-          item={item}
-          isMe={isMe}
-          onPlay={playVoice}
-          onLongPress={handleLongPress}
-          isCurrentlyPlaying={isCurrentlyPlaying}
-          currentPlayingId={currentPlayingId}
-        />
-      );
-    } else if (item.messageType === "text" && item.text) {
-      messageComponent = <TextBubble item={item} isMe={isMe} onLongPress={handleLongPress} />;
-    }
-
+  const renderMessage = useCallback(({ item, index }) => {
+    if (!item) return null;
+    const m = rowMeta[index] || { showDate: false, grouped: false };
     return (
-      <View>
-        {showDateHeader && item.createdAt && (
-          <DateHeader date={item.createdAt} />
-        )}
-        {messageComponent}
-      </View>
+      <MessageRow
+        item={item}
+        isMe={senderIdOf(item) === myId}
+        showDate={m.showDate}
+        grouped={m.grouped}
+        isPlaying={isCurrentlyPlaying && currentPlayingId === item._id}
+        fresh={freshIdsRef.current.has(item._id)}
+        onLongPress={handleLongPress}
+        onImagePress={handleImagePress}
+        onPlay={playVoice}
+      />
     );
+  }, [rowMeta, myId, isCurrentlyPlaying, currentPlayingId, handleLongPress, handleImagePress, playVoice]);
+
+  const keyExtractor = useCallback((item, index) => item?._id || `msg-${index}-${item?.createdAt || ''}`, []);
+
+  const onScroll = useCallback((e) => {
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    const fromBottom = contentSize.height - layoutMeasurement.height - contentOffset.y;
+    nearBottomRef.current = fromBottom < 120;
+    const show = fromBottom > 300;
+    setShowScrollBtn((s) => (s === show ? s : show));
+    if (fromBottom < 120) setNewCount((n) => (n === 0 ? n : 0));
+  }, []);
+
+  const onContentSizeChange = useCallback(() => {
+    if (nearBottomRef.current) scrollToEnd(true);
+  }, [scrollToEnd]);
+
+  const jumpToBottom = () => {
+    nearBottomRef.current = true;
+    setNewCount(0);
+    scrollToEnd(true);
   };
 
   if (!conversationId || !recipient?._id) {
     return (
       <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Invalid conversation</Text>
+        <View style={styles.center}>
+          <ActivityIndicator size="small" color={C.dark} />
+          <Text style={styles.loadingText}>invalid conversation</Text>
         </View>
       </View>
     );
   }
 
+  const hasText = inputText.trim().length > 0;
+  const statusLabel = typingUser ? 'typing…' : isRecipientOnline ? 'online' : 'offline';
+  const recipientName = recipient?.name || 'user';
+
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} translucent={false} />
+      <StatusBar barStyle="dark-content" backgroundColor={C.white} translucent={false} />
 
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeHeader}>
-        <Animated.View style={[styles.header, { opacity: headerFade }]}>
-          <TouchableOpacity
-            onPress={handleGoBack}
-            style={styles.backBtn}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="arrow-back" size={24} color={COLORS.black} />
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleGoBack} style={styles.squareBtn} activeOpacity={0.7}>
+            <Ionicons name="chevron-back" size={21} color={C.dark} />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.headerInfo}
-            onPress={navigateToProfile}
-            activeOpacity={0.7}
-          >
-            <View style={styles.avatarContainer}>
-              <Image
-                source={{ uri: recipient?.profileImage || `https://ui-avatars.com/api/?name=${recipient?.name || 'User'}&background=f9c349&color=1a1a1a&size=128` }}
-                style={styles.avatar}
-              />
-              {isRecipientOnline && (
-                <Animated.View style={[styles.statusDot, { transform: [{ scale: onlinePulse }] }]} />
+          <TouchableOpacity style={styles.headerInfo} onPress={navigateToProfile} activeOpacity={0.7}>
+            <View style={styles.avatarWrap}>
+              {recipient?.profileImage ? (
+                <Image source={{ uri: recipient.profileImage }} style={styles.avatar} />
+              ) : (
+                <View style={[styles.avatar, styles.avatarFallback]}>
+                  <Text style={styles.avatarInitial}>{recipientName.charAt(0).toUpperCase()}</Text>
+                </View>
               )}
+              {isRecipientOnline ? <View style={styles.onlineDot} /> : null}
             </View>
             <View style={styles.headerText}>
-              <Text style={styles.userName} numberOfLines={1}>{recipient?.name || "User"}</Text>
-              <Text style={[styles.statusText, { color: isRecipientOnline ? COLORS.success : COLORS.textLight }]}>
-                {isRecipientOnline ? "Online" : "Offline"}
-              </Text>
+              <Text style={styles.userName} numberOfLines={1}>{recipientName}</Text>
+              <Text style={[styles.statusText, typingUser && styles.statusTyping]} numberOfLines={1}>{statusLabel}</Text>
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => setShowOptionsModal(true)} style={styles.headerActionBtn}>
-            <Ionicons name="ellipsis-vertical" size={22} color={COLORS.textSecondary} />
+          <TouchableOpacity onPress={() => setShowOptionsModal(true)} style={styles.squareBtn} activeOpacity={0.7}>
+            <Ionicons name="ellipsis-vertical" size={18} color={C.dark} />
           </TouchableOpacity>
-        </Animated.View>
+        </View>
       </SafeAreaView>
 
       <KeyboardAvoidingView
         style={styles.flex1}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+        behavior="padding"
         keyboardVerticalOffset={0}
         enabled={true}
       >
-        <View style={styles.messagesContainer}>
+        <View style={styles.flex1}>
           {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={COLORS.primary} />
-              <Text style={styles.loadingText}>Loading messages...</Text>
+            <View style={styles.center}>
+              <ActivityIndicator size="small" color={C.dark} />
+              <Text style={styles.loadingText}>loading messages…</Text>
             </View>
           ) : (
             <FlatList
               ref={flatListRef}
               data={messages}
               renderItem={renderMessage}
-              keyExtractor={(item, index) => item._id || `msg-${index}-${Date.now()}`}
+              keyExtractor={keyExtractor}
+              extraData={rowMeta}
               contentContainerStyle={styles.listContent}
-              onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-              onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
-              scrollEnabled={true}
-              nestedScrollEnabled={true}
+              onContentSizeChange={onContentSizeChange}
+              onLayout={() => scrollToEnd(false)}
+              onScroll={onScroll}
+              scrollEventThrottle={64}
+              initialNumToRender={20}
+              maxToRenderPerBatch={12}
+              windowSize={10}
+              removeClippedSubviews={Platform.OS === 'android'}
               keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
               keyboardShouldPersistTaps="handled"
               ListFooterComponent={
                 <>
-                  {typingUser && (
-                    <View style={styles.typingIndicator}>
-                      <Text style={styles.typingText}>{typingUser} is typing...</Text>
-                    </View>
-                  )}
-                  <View style={{ height: 6 }} />
+                  {typingUser ? <TypingBubble /> : null}
+                  <View style={styles.listFooterSpace} />
                 </>
               }
               ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.emptyIcon}>
-                    <Ionicons name="chatbubble-ellipses" size={40} color={COLORS.black} />
-                  </LinearGradient>
-                  <Text style={styles.emptyTitle}>Start a conversation</Text>
-                  <Text style={styles.emptySubtitle}>Send a message to begin chatting!</Text>
+                <View style={styles.emptyWrap}>
+                  <View style={styles.emptyIcon}>
+                    <Ionicons name="chatbubbles-outline" size={32} color={C.dark} />
+                  </View>
+                  <Text style={styles.emptyTitle}>say hi 👋</Text>
+                  <Text style={styles.emptySub}>send a message to start the chat with {recipientName}</Text>
                 </View>
               }
             />
           )}
 
-          {uploading && (
+          {showScrollBtn ? (
+            <TouchableOpacity style={styles.scrollBtn} onPress={jumpToBottom} activeOpacity={0.8}>
+              <Ionicons name="chevron-down" size={20} color={C.dark} />
+              {newCount > 0 ? (
+                <View style={styles.scrollBadge}>
+                  <Text style={styles.scrollBadgeText}>{newCount > 99 ? '99+' : newCount}</Text>
+                </View>
+              ) : null}
+            </TouchableOpacity>
+          ) : null}
+
+          {uploading ? (
             <View style={styles.uploadBar}>
-              <ActivityIndicator size="small" color={COLORS.primary} />
+              <ActivityIndicator size="small" color={C.dark} />
               <Text style={styles.uploadText}>{uploadProgress}</Text>
             </View>
-          )}
+          ) : null}
 
-          {isRecording && (
+          {isRecording ? (
             <View style={styles.recordingBar}>
-              <Animated.View style={[styles.recordingDot, { transform: [{ scale: recordingAnim }] }]} />
+              <View style={styles.recordingDot} />
               <Text style={styles.recordingTime}>{formatDuration(recordingDuration)}</Text>
-              <Text style={styles.recordingLabel}>Recording...</Text>
-              <View style={styles.recordingActions}>
-                <TouchableOpacity onPress={cancelRecording} style={styles.cancelRecordBtn}>
-                  <Ionicons name="close" size={20} color={COLORS.textSecondary} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => stopRecording(true)} style={styles.sendRecordBtn}>
-                  <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.sendRecordGradient}>
-                    <Ionicons name="send" size={18} color={COLORS.black} />
-                  </LinearGradient>
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.recordingLabel}>recording… release to send</Text>
+              <TouchableOpacity onPress={cancelRecording} style={styles.squareBtnSm} activeOpacity={0.7}>
+                <Ionicons name="close" size={18} color={C.text2} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => stopRecording(true)} style={styles.recordSendBtn} activeOpacity={0.8}>
+                <Ionicons name="arrow-up" size={18} color={C.gold} />
+              </TouchableOpacity>
             </View>
-          )}
+          ) : null}
         </View>
 
-        <View
-          style={[
-            styles.inputArea,
-            {
-              paddingBottom: keyboardVisible ? 10 : Math.max(insets.bottom, 10),
-            },
-          ]}
-        >
-          <TouchableOpacity onPress={() => setShowImagePicker(true)} style={styles.plusBtn}>
-            <LinearGradient colors={[COLORS.dark, COLORS.dark]} style={styles.plusGradient}>
-              <Ionicons name="add" size={24} color={COLORS.white} />
-            </LinearGradient>
+        <View style={[styles.inputArea, { paddingBottom: keyboardVisible ? 8 : Math.max(insets.bottom, 8) }]}>
+          <TouchableOpacity onPress={() => setShowImagePicker(true)} style={styles.squareBtn} activeOpacity={0.7}>
+            <Ionicons name="add" size={22} color={C.dark} />
           </TouchableOpacity>
 
           <TextInput
             ref={inputRef}
             style={styles.input}
-            placeholder="Type a message..."
-            placeholderTextColor={COLORS.textLight}
+            placeholder="message…"
+            placeholderTextColor={C.muted}
             value={inputText}
             onChangeText={handleInputChange}
             multiline
             editable={!isRecording}
             scrollEnabled={true}
-            maxHeight={100}
           />
 
-          {inputText.trim().length > 0 ? (
-            <TouchableOpacity onPress={sendMessage} style={styles.sendBtn}>
-              <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.sendGradient}>
-                <Ionicons name="send" size={18} color={COLORS.black} />
-              </LinearGradient>
+          {hasText ? (
+            <TouchableOpacity
+              onPress={sendMessage}
+              disabled={uploading}
+              style={[styles.sendBtn, uploading && styles.sendBtnDisabled]}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="arrow-up" size={20} color={uploading ? '#9a9a9a' : C.gold} />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
               onPressIn={() => {
-                if (isStartingRecordingRef.current || isRecordingRef.current) {
-                  console.log('[Recording] onPressIn blocked');
-                  return;
-                }
+                if (isStartingRecordingRef.current || isRecordingRef.current) return;
                 startRecording();
               }}
               onPressOut={() => stopRecording(true)}
               delayPressIn={100}
               delayPressOut={0}
               activeOpacity={0.7}
-              style={styles.micBtn}
+              style={[styles.sendBtn, isRecording && styles.micActive]}
             >
-              <LinearGradient colors={[COLORS.dark, COLORS.dark]} style={styles.micGradient}>
-                <Ionicons name="mic" size={22} color={COLORS.primary} />
-              </LinearGradient>
+              <Ionicons name="mic" size={20} color={isRecording ? C.dark : C.gold} />
             </TouchableOpacity>
           )}
         </View>
       </KeyboardAvoidingView>
 
-      {/* Image Picker Modal */}
-      <Modal visible={showImagePicker} transparent animationType="fade" onRequestClose={() => setShowImagePicker(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowImagePicker(false)}>
-          <Animated.View
-            style={[
-              styles.imagePickerModal,
-              {
-                transform: [{ translateY: imagePickerSlide }],
-                paddingBottom: Math.max(insets.bottom, 20) + 14,
-              },
-            ]}
-          >
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Add Photo</Text>
+      {/* Attach sheet */}
+      <Sheet visible={showImagePicker} onClose={() => setShowImagePicker(false)} insetBottom={insets.bottom}>
+        <Text style={styles.sheetTitle}>send a photo</Text>
+        <SheetRow icon="camera-outline" label="camera" onPress={takePhoto} />
+        <SheetRow icon="images-outline" label="gallery" onPress={pickImage} />
+      </Sheet>
 
-            <View style={styles.imagePickerGrid}>
-              <TouchableOpacity style={styles.imagePickerItem} onPress={takePhoto}>
-                <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.imagePickerIcon}>
-                  <Ionicons name="camera" size={28} color={COLORS.black} />
-                </LinearGradient>
-                <Text style={styles.imagePickerLabel}>Camera</Text>
-              </TouchableOpacity>
+      {/* Chat options sheet */}
+      <Sheet visible={showOptionsModal} onClose={() => setShowOptionsModal(false)} insetBottom={insets.bottom}>
+        <Text style={styles.sheetTitle}>chat options</Text>
+        <SheetRow icon="person-outline" label="view profile" onPress={() => { setShowOptionsModal(false); navigateToProfile(); }} />
+        <SheetRow icon="trash-outline" label="clear chat" onPress={clearChat} destructive />
+      </Sheet>
 
-              <TouchableOpacity style={styles.imagePickerItem} onPress={pickImage}>
-                <LinearGradient colors={[COLORS.dark, COLORS.dark]} style={styles.imagePickerIcon}>
-                  <Ionicons name="images" size={28} color={COLORS.primary} />
-                </LinearGradient>
-                <Text style={styles.imagePickerLabel}>Gallery</Text>
-              </TouchableOpacity>
-            </View>
+      {/* Message actions sheet */}
+      <Sheet visible={showMsgSheet} onClose={closeMsgSheet} insetBottom={insets.bottom}>
+        {selectedMessage?.text && selectedMessage?.messageType !== 'image' && selectedMessage?.messageType !== 'audio' ? (
+          <SheetRow icon="copy-outline" label="copy" onPress={copySelected} />
+        ) : null}
+        {selectedMessage && senderIdOf(selectedMessage) === myId ? (
+          <SheetRow icon="trash-outline" label="delete message" onPress={handleDeleteMessage} destructive />
+        ) : null}
+      </Sheet>
 
-            <TouchableOpacity style={styles.cancelPickerBtn} onPress={() => setShowImagePicker(false)}>
-              <Text style={styles.cancelPickerText}>Cancel</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* Options Modal */}
-      <Modal visible={showOptionsModal} transparent animationType="fade" onRequestClose={() => setShowOptionsModal(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowOptionsModal(false)}>
-          <Animated.View
-            style={[
-              styles.optionsModal,
-              {
-                transform: [{ translateY: optionsSlide }],
-                paddingBottom: Math.max(insets.bottom, 20) + 14,
-              },
-            ]}
-          >
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Chat Options</Text>
-
-            <TouchableOpacity style={styles.optionItem} onPress={clearChat}>
-              <View style={[styles.optionIcon, { backgroundColor: '#fff5f5' }]}>
-                <Ionicons name="trash-outline" size={22} color={COLORS.danger} />
-              </View>
-              <View style={styles.optionContent}>
-                <Text style={[styles.optionTitle, { color: COLORS.danger }]}>Clear Chat</Text>
-                <Text style={styles.optionSubtitle}>Delete all messages</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={COLORS.textLight} />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.optionItem} onPress={() => setShowOptionsModal(false)}>
-              <View style={[styles.optionIcon, { backgroundColor: COLORS.lightGray }]}>
-                <Ionicons name="close-outline" size={22} color={COLORS.textSecondary} />
-              </View>
-              <View style={styles.optionContent}>
-                <Text style={styles.optionTitle}>Cancel</Text>
-              </View>
-            </TouchableOpacity>
-          </Animated.View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* Delete Message Modal */}
-      <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowDeleteModal(false)}>
-          <Animated.View
-            style={[
-              styles.deleteModal,
-              {
-                transform: [{ translateY: deleteSlide }],
-                paddingBottom: Math.max(insets.bottom, 20) + 14,
-              },
-            ]}
-          >
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Delete Message</Text>
-
-            <TouchableOpacity style={styles.optionItem} onPress={handleDeleteMessage}>
-              <View style={[styles.optionIcon, { backgroundColor: '#fff5f5' }]}>
-                <Ionicons name="trash-outline" size={22} color={COLORS.danger} />
-              </View>
-              <View style={styles.optionContent}>
-                <Text style={[styles.optionTitle, { color: COLORS.danger }]}>Delete</Text>
-                <Text style={styles.optionSubtitle}>Remove this message</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.optionItem} onPress={() => setShowDeleteModal(false)}>
-              <View style={[styles.optionIcon, { backgroundColor: COLORS.lightGray }]}>
-                <Ionicons name="close-outline" size={22} color={COLORS.textSecondary} />
-              </View>
-              <View style={styles.optionContent}>
-                <Text style={styles.optionTitle}>Cancel</Text>
-              </View>
-            </TouchableOpacity>
-          </Animated.View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* Fullscreen Image Modal */}
-      <Modal visible={isImageFullscreen} transparent animationType="fade">
+      {/* Fullscreen image viewer */}
+      <Modal visible={isImageFullscreen} transparent animationType="fade" onRequestClose={() => setIsImageFullscreen(false)}>
         <View style={styles.fullscreenOverlay}>
+          <Pressable style={styles.fullscreenTouchable} onPress={() => setIsImageFullscreen(false)}>
+            {fullscreenImage ? (
+              <Image source={{ uri: fullscreenImage }} style={styles.fullscreenImage} resizeMode="contain" />
+            ) : null}
+          </Pressable>
           <TouchableOpacity
-            style={styles.fullscreenTouchable}
-            activeOpacity={1}
+            style={[styles.closeFullscreen, { top: Math.max(insets.top, 20) + 10 }]}
             onPress={() => setIsImageFullscreen(false)}
+            activeOpacity={0.8}
           >
-            <Image
-              source={{ uri: fullscreenImage }}
-              style={styles.fullscreenImage}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.closeFullscreen, { top: Math.max(insets.top, 20) + 20 }]}
-            onPress={() => setIsImageFullscreen(false)}
-          >
-            <LinearGradient colors={['rgba(0,0,0,0.5)', 'rgba(0,0,0,0.3)']} style={styles.closeFullscreenGradient}>
-              <Ionicons name="close" size={30} color={COLORS.white} />
-            </LinearGradient>
+            <Ionicons name="close" size={22} color={C.white} />
           </TouchableOpacity>
         </View>
       </Modal>
@@ -1482,245 +1277,190 @@ export default function ChatDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fc' },
+  container: { flex: 1, backgroundColor: C.white },
   flex1: { flex: 1 },
-  safeHeader: {
-    backgroundColor: COLORS.white,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 4,
-      },
-      android: { elevation: 2 },
-    }),
-  },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 10, fontSize: 13, color: C.muted, fontWeight: '600' },
+
+  // header
+  safeHeader: { backgroundColor: C.white },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    backgroundColor: COLORS.white,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: C.divider,
+    backgroundColor: C.white,
   },
-  backBtn: {
+  squareBtn: {
     width: 40, height: 40, borderRadius: 12,
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: C.soft, borderWidth: 1, borderColor: C.border,
     justifyContent: 'center', alignItems: 'center',
   },
-  headerInfo: {
-    flexDirection: "row", alignItems: "center",
-    flex: 1, marginHorizontal: 10,
+  squareBtnSm: {
+    width: 34, height: 34, borderRadius: 10,
+    backgroundColor: C.white, borderWidth: 1, borderColor: C.border,
+    justifyContent: 'center', alignItems: 'center',
   },
-  avatarContainer: { position: 'relative', width: 44, height: 44 },
-  avatar: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: COLORS.lightGray,
-    borderWidth: 2.5, borderColor: COLORS.primary,
-  },
-  statusDot: {
-    position: 'absolute', bottom: 0, right: 0,
-    width: 14, height: 14, borderRadius: 7,
-    backgroundColor: COLORS.success,
-    borderWidth: 2.5, borderColor: COLORS.white,
-    shadowColor: COLORS.success,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5, shadowRadius: 4, elevation: 3,
+  headerInfo: { flexDirection: 'row', alignItems: 'center', flex: 1, marginHorizontal: 12 },
+  avatarWrap: { width: 40, height: 40 },
+  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.soft },
+  avatarFallback: { backgroundColor: C.gold, justifyContent: 'center', alignItems: 'center' },
+  avatarInitial: { fontSize: 16, fontWeight: '900', color: C.dark },
+  onlineDot: {
+    position: 'absolute', right: -1, bottom: -1,
+    width: 13, height: 13, borderRadius: 6.5,
+    backgroundColor: C.online, borderWidth: 2.5, borderColor: C.white,
   },
   headerText: { marginLeft: 10, flex: 1 },
-  userName: { fontSize: 16, fontWeight: "700", color: COLORS.black },
-  statusText: { fontSize: 11, fontWeight: "500", marginTop: 1 },
-  headerActionBtn: {
-    width: 40, height: 40, borderRadius: 12,
-    backgroundColor: COLORS.lightGray,
-    justifyContent: 'center', alignItems: 'center',
+  userName: { fontSize: 16, fontWeight: '900', color: C.dark },
+  statusText: { fontSize: 11.5, color: C.muted, marginTop: 1, fontWeight: '500' },
+  statusTyping: { color: C.dark, fontWeight: '700' },
+
+  // list
+  listContent: { paddingHorizontal: 14, paddingTop: 6, paddingBottom: 4, flexGrow: 1 },
+  listFooterSpace: { height: 8 },
+  datePillWrap: { alignItems: 'center', marginTop: 14, marginBottom: 4 },
+  datePill: {
+    backgroundColor: C.soft, borderWidth: 1, borderColor: C.border,
+    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4,
   },
-  messagesContainer: { flex: 1 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: {
-    marginTop: 12, fontSize: 14,
-    color: COLORS.textSecondary, fontWeight: '500',
+  datePillText: { fontSize: 11.5, fontWeight: '800', color: C.muted },
+
+  rowWrap: { maxWidth: '80%' },
+  rowMe: { alignSelf: 'flex-end' },
+  rowThem: { alignSelf: 'flex-start' },
+
+  bubble: { borderRadius: 18, paddingHorizontal: 13, paddingTop: 8, paddingBottom: 6 },
+  myBubble: { backgroundColor: C.dark, borderBottomRightRadius: 6 },
+  theirBubble: { backgroundColor: C.soft, borderBottomLeftRadius: 6 },
+  myCorner: { borderBottomRightRadius: 6 },
+  theirCorner: { borderBottomLeftRadius: 6 },
+  msgText: { fontSize: 14.5, lineHeight: 20 },
+  myText: { color: C.white },
+  theirText: { color: C.dark },
+
+  metaRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', marginTop: 2 },
+  metaOverlay: {
+    position: 'absolute', right: 8, bottom: 8, marginTop: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 8,
+    paddingHorizontal: 6, paddingVertical: 2,
   },
-  listContent: { padding: 14, paddingBottom: 10, flexGrow: 1 },
-  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingTop: 100 },
+  metaTime: { fontSize: 10.5, color: C.muted },
+  metaTimeLight: { color: C.metaLight },
+  metaTick: { marginLeft: 3 },
+
+  imageWrap: { borderRadius: 14, overflow: 'hidden', backgroundColor: C.soft },
+  msgImage: { borderRadius: 0 },
+
+  audioBubble: { minWidth: 210, paddingTop: 10 },
+  audioRow: { flexDirection: 'row', alignItems: 'center' },
+  playBtn: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center' },
+  playIconNudge: { marginLeft: 2 },
+  audioBody: { flex: 1, marginLeft: 10 },
+  audioTrack: { height: 4, borderRadius: 2, overflow: 'hidden' },
+  audioTrackDark: { backgroundColor: 'rgba(255,255,255,0.2)' },
+  audioTrackLight: { backgroundColor: C.border },
+  audioFill: { height: '100%', borderRadius: 2 },
+  audioTime: { fontSize: 11, color: C.muted, marginTop: 5, fontWeight: '600' },
+  audioTimeLight: { color: C.metaLight },
+
+  deletedRow: { flexDirection: 'row', alignItems: 'center', paddingBottom: 2 },
+  deletedText: { marginLeft: 6, fontSize: 13.5, fontStyle: 'italic', color: C.muted },
+  deletedTextLight: { color: C.metaLight },
+
+  typingWrap: { marginTop: 10 },
+  typingBubble: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 14 },
+  typingDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.dark, marginHorizontal: 2 },
+
+  emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingVertical: 60 },
   emptyIcon: {
-    width: 72, height: 72, borderRadius: 24,
-    justifyContent: 'center', alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
+    width: 72, height: 72, borderRadius: 22,
+    backgroundColor: C.goldSoft, justifyContent: 'center', alignItems: 'center', marginBottom: 14,
   },
-  emptyTitle: { fontSize: 18, fontWeight: '800', color: COLORS.black },
-  emptySubtitle: { fontSize: 13, color: COLORS.textLight, marginTop: 4, fontWeight: '500' },
-  dateHeaderContainer: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    marginVertical: 16, paddingHorizontal: 20,
-  },
-  dateHeaderLine: { flex: 1, height: 0.5 },
-  dateHeaderContent: { paddingHorizontal: 12 },
-  dateHeaderText: {
-    fontSize: 12, color: COLORS.textSecondary,
-    fontWeight: '600', letterSpacing: 0.3,
-  },
-  msgWrapper: { marginBottom: 8, maxWidth: "78%" },
-  myMsg: { alignSelf: "flex-end" },
-  otherMsg: { alignSelf: "flex-start" },
-  bubble: { padding: 12, borderRadius: 18 },
-  mediaBubble: { padding: 0, overflow: "hidden" },
-  audioBubble: { padding: 8, paddingHorizontal: 12, minWidth: 200 },
-  myAudioBubble: { backgroundColor: COLORS.primary, borderBottomRightRadius: 4 },
-  otherAudioBubble: { backgroundColor: '#2d2d2d', borderBottomLeftRadius: 4 },
-  myBubble: { backgroundColor: COLORS.black, borderBottomRightRadius: 4 },
-  otherBubble: { backgroundColor: COLORS.lightGray, borderBottomLeftRadius: 4 },
-  msgText: { fontSize: 15, lineHeight: 21 },
-  myText: { color: COLORS.white },
-  otherText: { color: COLORS.black },
-  timeText: { fontSize: 10, color: COLORS.textLight, marginTop: 3, marginLeft: 4 },
-  timeRight: { textAlign: 'right', marginRight: 4 },
-  msgMedia: { borderRadius: 14 },
-  audioContainer: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
-  audioPlayBtn: { borderRadius: 24, overflow: 'hidden', flexShrink: 0 },
-  audioPlayGradient: {
-    width: 44, height: 44, borderRadius: 24,
+  emptyTitle: { fontSize: 18, fontWeight: '900', color: C.dark },
+  emptySub: { fontSize: 13.5, color: C.muted, marginTop: 4, textAlign: 'center' },
+
+  scrollBtn: {
+    position: 'absolute', right: 14, bottom: 12,
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: C.white, borderWidth: 1, borderColor: C.border,
     justifyContent: 'center', alignItems: 'center',
   },
-  audioProgressSection: { flex: 1, gap: 6 },
-  audioProgressContainer: {
-    height: 4, backgroundColor: 'rgba(255,255,255,0.25)',
-    borderRadius: 2, overflow: 'hidden', width: '100%',
+  scrollBadge: {
+    position: 'absolute', top: -6, right: -4,
+    minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4,
+    backgroundColor: C.gold, justifyContent: 'center', alignItems: 'center',
   },
-  audioProgressBar: { height: '100%', backgroundColor: COLORS.primary, borderRadius: 2 },
-  audioTimeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  audioCurrentTime: { fontSize: 11, fontWeight: '500', opacity: 0.9 },
-  waveContainer: { flexDirection: 'row', alignItems: 'center', gap: 2, height: 20 },
-  waveBar: { width: 3, borderRadius: 1.5 },
-  typingIndicator: { paddingHorizontal: 14, paddingVertical: 8 },
-  typingText: { fontSize: 13, color: COLORS.textSecondary, fontStyle: 'italic' },
+  scrollBadgeText: { fontSize: 10, fontWeight: '900', color: C.dark },
+
   uploadBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    padding: 8, backgroundColor: COLORS.lightGray, gap: 8,
+    paddingVertical: 8, backgroundColor: C.soft,
+    borderTopWidth: 1, borderTopColor: C.divider,
   },
-  uploadText: { fontSize: 12, color: COLORS.primary, fontWeight: '500' },
+  uploadText: { marginLeft: 8, fontSize: 12, color: C.text2, fontWeight: '700' },
+
   recordingBar: {
     flexDirection: 'row', alignItems: 'center',
-    padding: 10, paddingHorizontal: 16,
-    backgroundColor: COLORS.primaryLight,
-    borderTopWidth: 0.5, borderTopColor: COLORS.border, gap: 10,
+    paddingVertical: 8, paddingHorizontal: 14,
+    backgroundColor: C.goldSoft,
+    borderTopWidth: 1, borderTopColor: C.divider,
   },
-  recordingDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: COLORS.danger },
-  recordingTime: { fontSize: 14, fontWeight: '700', color: COLORS.black },
-  recordingLabel: { fontSize: 12, color: COLORS.textLight, flex: 1 },
-  recordingActions: { flexDirection: 'row', gap: 8 },
-  cancelRecordBtn: {
-    width: 36, height: 36, borderRadius: 12,
-    backgroundColor: COLORS.lightGray,
-    justifyContent: 'center', alignItems: 'center',
+  recordingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: C.danger },
+  recordingTime: { marginLeft: 8, fontSize: 14, fontWeight: '800', color: C.dark },
+  recordingLabel: { marginLeft: 8, fontSize: 12, color: C.muted, flex: 1 },
+  recordSendBtn: {
+    marginLeft: 8, width: 34, height: 34, borderRadius: 17,
+    backgroundColor: C.dark, justifyContent: 'center', alignItems: 'center',
   },
-  sendRecordBtn: { borderRadius: 12, overflow: 'hidden' },
-  sendRecordGradient: {
-    width: 36, height: 36, borderRadius: 12,
-    justifyContent: 'center', alignItems: 'center',
-  },
+
+  // input
   inputArea: {
-    flexDirection: "row", padding: 10, paddingHorizontal: 12, paddingTop: 10,
-    alignItems: "flex-end",
-    borderTopWidth: 1, borderTopColor: COLORS.border,
-    backgroundColor: COLORS.white, gap: 8,
-  },
-  plusBtn: { borderRadius: 14, overflow: 'hidden' },
-  plusGradient: {
-    width: 40, height: 40, borderRadius: 14,
-    justifyContent: 'center', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'flex-end',
+    paddingHorizontal: 12, paddingTop: 8,
+    borderTopWidth: 1, borderTopColor: C.divider,
+    backgroundColor: C.white,
   },
   input: {
-    flex: 1, backgroundColor: COLORS.lightGray,
-    borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10,
-    maxHeight: 100, fontSize: 15, color: COLORS.black,
+    flex: 1, minHeight: 46, maxHeight: 110,
+    marginHorizontal: 8,
+    borderRadius: 23, backgroundColor: C.soft,
+    borderWidth: 1, borderColor: C.border,
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12,
+    fontSize: 15, color: C.dark,
   },
-  sendBtn: { borderRadius: 14, overflow: 'hidden' },
-  sendGradient: {
-    width: 40, height: 40, borderRadius: 14,
-    justifyContent: 'center', alignItems: 'center',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2, shadowRadius: 4, elevation: 3,
+  sendBtn: {
+    width: 46, height: 46, borderRadius: 23,
+    backgroundColor: C.dark, justifyContent: 'center', alignItems: 'center',
   },
-  micBtn: { borderRadius: 14, overflow: 'hidden' },
-  micGradient: {
-    width: 40, height: 40, borderRadius: 14,
-    justifyContent: 'center', alignItems: 'center',
+  sendBtnDisabled: { backgroundColor: '#e9e9e9' },
+  micActive: { backgroundColor: C.gold },
+
+  // sheets
+  sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: C.white,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingHorizontal: 16, paddingTop: 10,
   },
-  modalOverlay: {
-    flex: 1, backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
+  sheetHandle: { width: 38, height: 4, borderRadius: 2, backgroundColor: '#e2e2e2', alignSelf: 'center', marginBottom: 12 },
+  sheetTitle: { fontSize: 13, fontWeight: '800', color: C.muted, marginBottom: 4, marginLeft: 4 },
+  sheetRow: { flexDirection: 'row', alignItems: 'center', height: 52 },
+  sheetIcon: {
+    width: 36, height: 36, borderRadius: 11,
+    backgroundColor: C.soft, justifyContent: 'center', alignItems: 'center', marginRight: 12,
   },
-  modalHandle: {
-    width: 36, height: 4, backgroundColor: COLORS.border,
-    borderRadius: 2, alignSelf: 'center', marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 18, fontWeight: '800', color: COLORS.black,
-    marginBottom: 16, textAlign: 'center',
-  },
-  imagePickerModal: {
-    backgroundColor: COLORS.white,
-    borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20,
-  },
-  imagePickerGrid: {
-    flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20,
-  },
-  imagePickerItem: { alignItems: 'center', width: '40%' },
-  imagePickerIcon: {
-    width: 70, height: 70, borderRadius: 20,
-    justifyContent: 'center', alignItems: 'center',
-    marginBottom: 10,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1, shadowRadius: 4, elevation: 2,
-  },
-  imagePickerLabel: { fontSize: 14, color: COLORS.black, fontWeight: '600' },
-  cancelPickerBtn: {
-    paddingVertical: 12, alignItems: 'center',
-    borderTopWidth: 0.5, borderTopColor: COLORS.border, marginTop: 4,
-  },
-  cancelPickerText: { fontSize: 15, color: COLORS.textSecondary, fontWeight: '600' },
-  optionsModal: {
-    backgroundColor: COLORS.white,
-    borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20,
-  },
-  optionItem: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 14, gap: 12,
-  },
-  optionIcon: {
-    width: 44, height: 44, borderRadius: 14,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  optionContent: { flex: 1 },
-  optionTitle: { fontSize: 15, fontWeight: '700', color: COLORS.black },
-  optionSubtitle: { fontSize: 12, color: COLORS.textLight, marginTop: 1, fontWeight: '500' },
-  deleteModal: {
-    backgroundColor: COLORS.white,
-    borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20,
-  },
-  fullscreenOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.95)',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  fullscreenTouchable: {
-    width: '100%', height: '100%',
-    justifyContent: 'center', alignItems: 'center',
-  },
+  sheetIconDanger: { backgroundColor: C.dangerSoft },
+  sheetLabel: { fontSize: 15, fontWeight: '700', color: C.dark },
+  sheetLabelDanger: { color: C.danger },
+
+  // viewer
+  fullscreenOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' },
+  fullscreenTouchable: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
   fullscreenImage: { width: '100%', height: '100%' },
   closeFullscreen: {
-    position: 'absolute', right: 20,
-    width: 50, height: 50, borderRadius: 25, overflow: 'hidden',
-  },
-  closeFullscreenGradient: {
-    width: '100%', height: '100%',
+    position: 'absolute', right: 16,
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center', alignItems: 'center',
   },
 });

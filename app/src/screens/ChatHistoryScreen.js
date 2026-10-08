@@ -1,5 +1,16 @@
-// screens/ChatHistoryScreen.js
-import React, { useContext, useEffect, useState } from 'react';
+// app/src/screens/ChatHistoryScreen.js
+// TDC Assistant chat history.
+//
+// ChatHistoryPanel is used inside the assistant (same modal), so picking a chat
+// opens it right there. The default export is the same panel as a stack screen
+// (route "ChatHistory") for any old links.
+//
+// - Shows the sessions already loaded at once, refreshes in the background
+// - Search waits 300ms after typing (one request, not one per letter)
+// - Pinned chats stay on top. Pins are saved on this phone (the chat server
+//   has no pin field yet; the old pin button re-generated the title instead)
+
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,299 +18,327 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
   Alert,
+  RefreshControl,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { ChatContext } from '../context/ChatContext';
-import aiService from '../services/aiService';
 
-const ChatHistoryScreen = () => {
-  const navigation = useNavigation();
-  const {
-    sessions,
-    loadSessions,
-    loadSessionDetails,
-    deleteSession,
-  } = useContext(ChatContext);
+const DARK = '#1a1a1a';
+const GOLD = '#f9c349';
+const GOLD_SOFT = '#fff8e6';
+const SOFT = '#F7F9F8';
+const BORDER = '#E8E8E8';
+const MUTED = '#8a8a8a';
+const DANGER = '#e11d48';
+
+const PINS_KEY = '@tdc_chat_pins';
+
+const when = (d) => {
+  if (!d) return '';
+  const date = new Date(d);
+  if (isNaN(date.getTime())) return '';
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const t = date.getTime();
+  if (t >= today) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (t >= today - 86400000) return 'yesterday';
+  if (t >= today - 6 * 86400000) return date.toLocaleDateString('en-US', { weekday: 'short' });
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+const groupOf = (d) => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const t = new Date(d).getTime() || 0;
+  if (t >= today) return 'today';
+  if (t >= today - 6 * 86400000) return 'this week';
+  return 'earlier';
+};
+
+export function ChatHistoryPanel({ onClose, onSelect, onNewChat, asScreen }) {
+  const { sessions, loadSessions, loadSessionDetails, deleteSession, activeSessionId } = useContext(ChatContext);
 
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!sessions?.length);
   const [refreshing, setRefreshing] = useState(false);
+  const [pins, setPins] = useState([]);
+  const firstRun = useRef(true);
 
+  // pins saved on this phone
   useEffect(() => {
-    setLoading(true);
-    loadSessions().finally(() => setLoading(false));
-  }, [loadSessions]);
+    AsyncStorage.getItem(PINS_KEY)
+      .then((v) => setPins(v ? JSON.parse(v) : []))
+      .catch(() => {});
+  }, []);
 
+  // first load + debounced search
   useEffect(() => {
-    loadSessions(search);
+    const delay = firstRun.current ? 0 : 300;
+    firstRun.current = false;
+    const t = setTimeout(() => {
+      loadSessions(search.trim()).finally(() => setLoading(false));
+    }, delay);
+    return () => clearTimeout(t);
   }, [search, loadSessions]);
 
-  const handleRefresh = async () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    await loadSessions(search);
+    await loadSessions(search.trim());
     setRefreshing(false);
   };
 
-  const handleSelectSession = async (sessionId) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await loadSessionDetails(sessionId);
-    navigation.goBack();
+  const togglePin = (id) => {
+    Haptics.selectionAsync().catch(() => {});
+    setPins((prev) => {
+      const next = prev.includes(id) ? prev.filter((p) => p !== id) : [id, ...prev];
+      AsyncStorage.setItem(PINS_KEY, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
   };
 
-  const handleTogglePin = async (sessionId) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    try {
-      await aiService.togglePinSession(sessionId);
-      await loadSessions(search);
-    } catch (err) {
-      console.error('Failed to toggle pin:', err.message);
-    }
-  };
-
-  const handleDeleteSession = (sessionId, title) => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    Alert.alert(
-      'Delete Conversation',
-      `Are you sure you want to delete "${title}"? This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteSession(sessionId);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          },
+  const remove = (item) => {
+    Alert.alert('Delete this chat?', `"${item.title || 'New conversation'}" will be removed for good.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          await deleteSession(item.sessionId);
+          setPins((prev) => {
+            const next = prev.filter((p) => p !== item.sessionId);
+            AsyncStorage.setItem(PINS_KEY, JSON.stringify(next)).catch(() => {});
+            return next;
+          });
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  const renderSessionItem = ({ item }) => {
-    return (
-      <View style={[styles.sessionItem, item.pinned && styles.pinnedItem]}>
-        <TouchableOpacity
-          onPress={() => handleSelectSession(item.sessionId)}
-          style={styles.sessionInfo}
-        >
-          <View style={styles.iconCircle}>
-            <Ionicons name="chatbubbles-outline" size={20} color="#111111" />
-          </View>
-          <View style={styles.textWrapper}>
-            <Text style={styles.sessionTitle} numberOfLines={1}>
-              {item.title}
-            </Text>
-            <Text style={styles.sessionTime}>
-              {new Date(item.updatedAt).toLocaleDateString(undefined, {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </Text>
-          </View>
-        </TouchableOpacity>
+  const open = async (item) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    onSelect?.(item.sessionId); // close the panel first so it feels instant
+    await loadSessionDetails(item.sessionId);
+  };
 
-        <View style={styles.actionControls}>
-          <TouchableOpacity
-            onPress={() => handleTogglePin(item.sessionId)}
-            style={styles.controlBtn}
-          >
-            <Ionicons
-              name={item.pinned ? 'pin' : 'pin-outline'}
-              size={18}
-              color={item.pinned ? '#f9c349' : '#888888'}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => handleDeleteSession(item.sessionId, item.title)}
-            style={styles.controlBtn}
-          >
-            <Ionicons name="trash-outline" size={18} color="#ff3b30" />
-          </TouchableOpacity>
+  // pinned section + date sections
+  const data = useMemo(() => {
+    const list = Array.isArray(sessions) ? sessions : [];
+    const pinned = list.filter((s) => pins.includes(s.sessionId) || s.pinned);
+    const rest = list
+      .filter((s) => !(pins.includes(s.sessionId) || s.pinned))
+      .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    const out = [];
+    if (pinned.length) {
+      out.push({ _section: 'pinned' });
+      pinned.forEach((s) => out.push({ ...s, _pinned: true }));
+    }
+    let last = null;
+    rest.forEach((s) => {
+      const g = groupOf(s.updatedAt);
+      if (g !== last) {
+        out.push({ _section: g });
+        last = g;
+      }
+      out.push(s);
+    });
+    return out;
+  }, [sessions, pins]);
+
+  const renderItem = ({ item }) => {
+    if (item._section) return <Text style={styles.section}>{item._section}</Text>;
+    const active = item.sessionId === activeSessionId;
+    return (
+      <TouchableOpacity style={[styles.row, active && styles.rowActive]} onPress={() => open(item)} activeOpacity={0.75}>
+        <View style={[styles.rowIcon, item._pinned && styles.rowIconPinned]}>
+          <Ionicons name={item._pinned ? 'pin' : 'chatbubble-ellipses-outline'} size={17} color={item._pinned ? DARK : DARK} />
         </View>
-      </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.rowTitle} numberOfLines={1}>
+            {item.title || 'New conversation'}
+          </Text>
+          <Text style={styles.rowMeta}>
+            {active ? 'open now · ' : ''}
+            {when(item.updatedAt)}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={() => togglePin(item.sessionId)} hitSlop={8} style={styles.iconBtn}>
+          <Ionicons name={item._pinned ? 'pin' : 'pin-outline'} size={17} color={item._pinned ? '#b7791f' : '#b5b5b5'} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => remove(item)} hitSlop={8} style={styles.iconBtn}>
+          <Ionicons name="trash-outline" size={17} color="#c4c4c4" />
+        </TouchableOpacity>
+      </TouchableOpacity>
     );
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      {/* Header Panel */}
+    <View style={styles.panel}>
+      {asScreen ? <StatusBar barStyle="dark-content" backgroundColor="#fff" /> : null}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="close" size={24} color="#111111" />
+        <TouchableOpacity onPress={onClose} style={styles.squareBtn} activeOpacity={0.7} hitSlop={10}>
+          <Ionicons name={asScreen ? 'chevron-back' : 'close'} size={21} color={DARK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>History Logs</Text>
-        <View style={{ width: 24 }} />
+        <Text style={styles.title}>
+          chat history<Text style={{ color: GOLD }}>.</Text>
+        </Text>
+        <TouchableOpacity onPress={onNewChat} style={styles.newBtn} activeOpacity={0.85} hitSlop={10}>
+          <Ionicons name="add" size={20} color={GOLD} />
+        </TouchableOpacity>
       </View>
 
-      {/* Search Input Bar */}
-      <View style={styles.searchBar}>
-        <Ionicons name="search-outline" size={18} color="#888888" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search conversation titles..."
-          placeholderTextColor="#888888"
-          clearButtonMode="while-editing"
-        />
+      <View style={styles.searchWrap}>
+        <View style={[styles.search, search.length > 0 && styles.searchOn]}>
+          <Ionicons name="search" size={17} color={search ? DARK : MUTED} />
+          <TextInput
+            style={styles.searchInput}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="search your chats"
+            placeholderTextColor={MUTED}
+            returnKeyType="search"
+          />
+          {search ? (
+            <TouchableOpacity onPress={() => setSearch('')} hitSlop={10}>
+              <Ionicons name="close-circle" size={18} color={MUTED} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </View>
 
-      {/* Sessions History List */}
-      {loading && !refreshing ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#f9c349" />
+      {loading ? (
+        <View style={{ paddingHorizontal: 16, paddingTop: 10 }}>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <View key={i} style={styles.skRow}>
+              <View style={styles.skIcon} />
+              <View style={{ flex: 1 }}>
+                <View style={[styles.skLine, { width: '60%' }]} />
+                <View style={[styles.skLine, { width: '30%', height: 10, marginTop: 8 }]} />
+              </View>
+            </View>
+          ))}
         </View>
       ) : (
         <FlatList
-          data={sessions}
-          renderItem={renderSessionItem}
-          keyExtractor={(item) => item.sessionId}
-          contentContainerStyle={styles.listContent}
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
+          data={data}
+          keyExtractor={(item, i) => (item._section ? `s-${item._section}` : item.sessionId || String(i))}
+          renderItem={renderItem}
+          contentContainerStyle={[styles.list, data.length === 0 && { flexGrow: 1 }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[DARK]} tintColor={DARK} />}
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="folder-open-outline" size={50} color="#cccccc" style={styles.emptyIcon} />
-              <Text style={styles.emptyTitle}>No Conversations found</Text>
-              <Text style={styles.emptySubtitle}>
-                Your active chat histories will be listed here.
+            <View style={styles.empty}>
+              <View style={styles.emptyIcon}>
+                <Ionicons name={search ? 'search' : 'chatbubbles-outline'} size={30} color={DARK} />
+              </View>
+              <Text style={styles.emptyTitle}>{search ? 'no chats found' : 'no chats yet'}</Text>
+              <Text style={styles.emptySub}>
+                {search ? 'try a different word' : 'your conversations with the assistant show up here.'}
               </Text>
+              {!search ? (
+                <TouchableOpacity style={styles.emptyBtn} onPress={onNewChat} activeOpacity={0.85}>
+                  <Ionicons name="add" size={17} color={GOLD} />
+                  <Text style={styles.emptyBtnText}>start a chat</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           }
         />
       )}
+    </View>
+  );
+}
+
+// Stack-screen version (route "ChatHistory")
+export default function ChatHistoryScreen() {
+  const navigation = useNavigation();
+  const { startNewSession } = useContext(ChatContext);
+  const back = () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('HomeTabs'));
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['top', 'bottom']}>
+      <ChatHistoryPanel
+        asScreen
+        onClose={back}
+        onSelect={back}
+        onNewChat={() => {
+          startNewSession?.();
+          back();
+        }}
+      />
     </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f6f6f9',
-  },
+  panel: { flex: 1, backgroundColor: '#fff' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eeeeee',
+    paddingVertical: 10,
   },
-  backBtn: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#111111',
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    margin: 16,
-    backgroundColor: '#ffffff',
+  squareBtn: {
+    width: 40,
+    height: 40,
     borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 44,
+    backgroundColor: SOFT,
     borderWidth: 1,
-    borderColor: '#e8e8e8',
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: '#111111',
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
+    borderColor: BORDER,
     justifyContent: 'center',
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 24,
-  },
-  sessionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 12,
-    marginVertical: 6,
-    borderWidth: 1,
-    borderColor: '#eeeeee',
-  },
-  pinnedItem: {
-    borderColor: '#f9c349',
-    backgroundColor: '#fffdf4',
-  },
-  sessionInfo: {
-    flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
   },
-  iconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#f0f0f4',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  textWrapper: {
-    flex: 1,
-  },
-  sessionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111111',
-  },
-  sessionTime: {
-    fontSize: 11,
-    color: '#888888',
-    marginTop: 4,
-  },
-  actionControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  controlBtn: {
-    padding: 8,
-    marginLeft: 4,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 80,
-    paddingHorizontal: 30,
-  },
-  emptyIcon: {
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#111111',
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 13,
-    color: '#666666',
-    textAlign: 'center',
-  },
-});
+  newBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: DARK, justifyContent: 'center', alignItems: 'center' },
+  title: { fontSize: 20, fontWeight: '900', color: DARK, letterSpacing: -0.3 },
 
-export default ChatHistoryScreen;
+  searchWrap: { paddingHorizontal: 16, paddingTop: 2, paddingBottom: 6 },
+  search: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    height: 46,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    backgroundColor: SOFT,
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  searchOn: { borderColor: DARK, backgroundColor: '#fff' },
+  searchInput: { flex: 1, fontSize: 15, color: DARK, paddingVertical: 0 },
+
+  list: { paddingHorizontal: 10, paddingBottom: 30 },
+  section: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: MUTED,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginTop: 14,
+    marginBottom: 4,
+    marginHorizontal: 8,
+  },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 8, borderRadius: 14 },
+  rowActive: { backgroundColor: GOLD_SOFT },
+  rowIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: SOFT, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  rowIconPinned: { backgroundColor: GOLD },
+  rowTitle: { fontSize: 14.5, fontWeight: '700', color: DARK },
+  rowMeta: { fontSize: 12, color: MUTED, marginTop: 3, fontWeight: '600' },
+  iconBtn: { padding: 6, marginLeft: 2 },
+
+  skRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11 },
+  skIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: '#f0f0f0', marginRight: 12 },
+  skLine: { height: 13, borderRadius: 6, backgroundColor: '#f0f0f0' },
+
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingBottom: 60 },
+  emptyIcon: { width: 72, height: 72, borderRadius: 22, backgroundColor: GOLD_SOFT, justifyContent: 'center', alignItems: 'center', marginBottom: 14 },
+  emptyTitle: { fontSize: 18, fontWeight: '900', color: DARK },
+  emptySub: { fontSize: 13.5, color: MUTED, marginTop: 6, textAlign: 'center', lineHeight: 19 },
+  emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 18, backgroundColor: DARK, height: 44, paddingHorizontal: 18, borderRadius: 14 },
+  emptyBtnText: { color: '#fff', fontSize: 14, fontWeight: '800' },
+});

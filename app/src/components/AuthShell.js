@@ -32,7 +32,7 @@ export const AUTH = {
 
 const STEPS = ['email', 'code', 'new password'];
 
-export function AuthShell({ step = 1, icon, title, subtitle, onBack, children, footer }) {
+export function AuthShell({ step = 1, icon, title, subtitle, onBack, children, footer, top }) {
   return (
     <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
@@ -58,7 +58,8 @@ export function AuthShell({ step = 1, icon, title, subtitle, onBack, children, f
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          {/* step bar */}
+          {/* step bar (only on the 3 password-reset screens) */}
+          {step ? (
           <View style={s.steps}>
             {STEPS.map((label, i) => {
               const n = i + 1;
@@ -74,10 +75,14 @@ export function AuthShell({ step = 1, icon, title, subtitle, onBack, children, f
               );
             })}
           </View>
+          ) : null}
 
-          <View style={s.iconTile}>
-            <Ionicons name={icon} size={26} color={AUTH.gold} />
-          </View>
+          {top}
+          {icon ? (
+            <View style={s.iconTile}>
+              <Ionicons name={icon} size={26} color={AUTH.gold} />
+            </View>
+          ) : null}
           <Text style={s.title}>{title}</Text>
           {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
 
