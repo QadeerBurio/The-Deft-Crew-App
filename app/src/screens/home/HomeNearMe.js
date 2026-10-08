@@ -5,7 +5,9 @@
 //   granted            → nearest brands from GET /brands/nearby, "1.2 km · food"
 //   granted, none near → "no partner deals near you yet." + selected-city deals
 //   denied             → selected-city deals + "turn on location… settings"
-//   endpoint missing / failing / no position → selected-city deals, silently
+//   endpoint missing / failing / no position → selected-city deals, titled
+//                      "in [city]" or "deals" (never "near me"), max 6
+// "near me" is the title only while showing a real nearby list.
 // Location is read only on this phone; it's rounded and sent once per query, never stored.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, Linking, Pressable, StyleSheet, Text, View } from "react-native";
@@ -143,7 +145,13 @@ export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, s
 
   if (!signedIn) return null;
 
-  const common = { savedLabel, onSeeAll, onOpenDeal, title: "near me" };
+  // "near me" only for a list that really came from /brands/nearby with distances;
+  // every fallback is titled by what it is: the selected city, or plain "deals"
+  const fallbackTitle = cityLabel ? `in ${String(cityLabel).toLowerCase()}` : "deals";
+  const common = { savedLabel, onSeeAll, onOpenDeal, title: fallbackTitle };
+  const nearbyList = Array.isArray(nearby.data) ? nearby.data : null;
+  const nearbyHasDistances =
+    !!nearbyList && nearbyList.length > 0 && nearbyList.every((b) => Number.isFinite(Number(b?.distanceKm)));
 
   // Still checking the permission → placeholders
   if (perm === null) return <HomeDeals {...common} deals={[]} loading />;
@@ -179,11 +187,19 @@ export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, s
   if (perm === "granted" && !positionFailed) {
     const waiting = !coords || nearby.isLoading;
     if (waiting) return <HomeDeals {...common} deals={[]} loading />;
-    if (!nearby.isError && Array.isArray(nearby.data) && nearby.data.length > 0) {
-      return <HomeDeals {...common} deals={nearby.data} loading={false} getMeta={nearMeta} />;
+    if (!nearby.isError && nearbyHasDistances) {
+      return (
+        <HomeDeals
+          {...common}
+          title="near me"
+          deals={nearbyList.slice(0, MAX_DEALS)}
+          loading={false}
+          getMeta={nearMeta}
+        />
+      );
     }
-    // 4. Granted, nothing within range → note + city deals
-    if (!nearby.isError && Array.isArray(nearby.data)) {
+    // 4. Granted, the endpoint answered but nothing within range → note + city deals
+    if (!nearby.isError && nearbyList && nearbyList.length === 0) {
       return (
         <HomeDeals
           {...common}
@@ -198,7 +214,8 @@ export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, s
         />
       );
     }
-    // 6. Endpoint missing / failing → silently fall through to city deals
+    // 6. Endpoint missing / failing / no distances → city deals under their own
+    //    title, no "turn on location" row (location is already on)
   }
 
   // 5. Denied (with a settings link) or 6. silent fallback
