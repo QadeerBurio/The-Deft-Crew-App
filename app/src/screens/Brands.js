@@ -24,6 +24,7 @@ import {
   Platform,
   Animated,
   AppState,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -56,6 +57,8 @@ import {
   buildCityOptions,
   resolveCity,
 } from "../utils/cityFilter";
+import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
+import { Button, Chip, EmptyState, HeaderIconButton, PressScale, SectionTitle, SheetHandle, Skeleton } from "../ui";
 
 const { width, height } = Dimensions.get("window");
 const NUM_COLUMNS = 2;
@@ -214,38 +217,18 @@ const applyLocalClaimRegistry = (brand) => {
 };
 
 // ==========================================
-// CATEGORY ITEM
+// CATEGORY CHIP
 // ==========================================
 const CategoryGridItem = memo(({ category, isSelected, onPress }) => (
-  <TouchableOpacity
-    style={[styles.categoryGridItem, isSelected && styles.categoryGridItemActive]}
+  <Chip
+    label={category.id === "all" ? "all" : category.name.toLowerCase()}
+    selected={isSelected}
     onPress={() => onPress(category.id)}
-    activeOpacity={0.7}
-  >
-    <View
-      style={[
-        styles.categoryIconWrapper,
-        isSelected && styles.categoryIconWrapperActive,
-        { backgroundColor: isSelected ? category.color : category.bgColor },
-      ]}
-    >
-      <MaterialCommunityIcons
-        name={category.icon}
-        size={20}
-        color={isSelected ? "#fff" : category.color}
-      />
-    </View>
-    <Text
-      style={[styles.categoryGridName, isSelected && styles.categoryGridNameActive]}
-      numberOfLines={1}
-    >
-      {category.name}
-    </Text>
-  </TouchableOpacity>
+  />
 ));
 
 // ==========================================
-// STATS BAR
+// STATS BAR (not rendered; kept for reference)
 // ==========================================
 const StatsBar = memo(({ stats, loading }) => {
   if (loading && !stats) {
@@ -262,37 +245,35 @@ const StatsBar = memo(({ stats, loading }) => {
     <View style={styles.statsBarContainer}>
       <View style={styles.statItem}>
         <Text style={styles.statValue}>{stats.totalBrands}</Text>
-        <Text style={styles.statLabel}>Brands</Text>
+        <Text style={styles.statLabel}>brands</Text>
       </View>
-      <View style={styles.statDivider} />
       <View style={styles.statItem}>
         <Text style={styles.statValue}>{stats.totalOffers}</Text>
-        <Text style={styles.statLabel}>Offers</Text>
+        <Text style={styles.statLabel}>offers</Text>
       </View>
-      <View style={styles.statDivider} />
       <View style={styles.statItem}>
-        <Text style={[styles.statValue, { color: "#f9c349" }]}>
-          {stats.maxDiscount}%
-        </Text>
-        <Text style={styles.statLabel}>Max Off</Text>
-      </View>
-      <View style={styles.statDivider} />
-      <View style={styles.statItem}>
-        <View style={styles.liveDot} />
-        <Text style={styles.statLabel}>Live</Text>
+        <Text style={styles.statValue}>{stats.maxDiscount}%</Text>
+        <Text style={styles.statLabel}>max off</Text>
       </View>
     </View>
   );
 });
 
+// online / in-store line under the brand name
+const modeLabel = (b) => {
+  if (b.isOnline && b.isInStore) return "online + in-store";
+  if (b.isOnline) return "online";
+  if (b.isInStore) return "in-store";
+  return "";
+};
+
 // ==========================================
-// BRAND CARD
+// BRAND ROW (Brands design: logo · name + meta · off pill)
 // ==========================================
 const BrandCard = memo(
   ({ item, onPress }) => {
     const firstOffer = item.offers?.[0];
     const displayImage = item.displayImage;
-    const categoryColor = CATEGORY_BY_NAME.get(item.category)?.color || "#000000";
 
     // ✅ Consult BOTH server flag AND local registry
     const isClaimed =
@@ -306,75 +287,51 @@ const BrandCard = memo(
       }
     }, [displayImage]);
 
+    const meta = [String(item.category || "general").toLowerCase(), modeLabel(item)]
+      .filter(Boolean)
+      .join(" · ");
+    const discount = brandDiscount(item);
+
     return (
-      <View style={styles.cardWrapper}>
-        <TouchableOpacity
-          style={styles.card}
-          activeOpacity={0.8}
-          onPress={() => onPress(item)}
-        >
-          <View style={styles.availabilityWrapper}>
-            {item.isOnline && (
-              <MaterialCommunityIcons
-                name="earth"
-                size={12}
-                color="#f9c349"
-                style={{ marginRight: 3 }}
-              />
-            )}
-            {item.isInStore && (
-              <MaterialCommunityIcons
-                name="storefront-outline"
-                size={12}
-                color="#f9c349"
-              />
-            )}
-          </View>
-
-          {item.discount > 0 && (
-            <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>-{item.discount}%</Text>
-            </View>
+      <PressScale
+        onPress={() => onPress(item)}
+        style={styles.card}
+        accessibilityLabel={`${item.name}${discount > 0 ? `, ${discount}% off` : ""}${isClaimed ? ", claimed" : ""}`}
+      >
+        <View style={styles.logoContainer}>
+          {displayImage ? (
+            <Image source={{ uri: displayImage }} style={styles.logo} resizeMode="contain" />
+          ) : (
+            <MaterialCommunityIcons name="storefront-outline" size={22} color={T.textFaint} />
           )}
+        </View>
 
-          <View style={styles.logoContainer}>
-            <Image
-              source={{ uri: displayImage }}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
-
-          <View style={styles.infoContainer}>
-            <Text style={styles.name} numberOfLines={1}>
-              {item.name}
+        <View style={styles.infoContainer}>
+          <Text style={styles.name} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            {item.name}
+          </Text>
+          <Text style={styles.meta} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            {meta}
+          </Text>
+          {isClaimed ? (
+            <Text style={styles.offerStatusClaimed} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+              claimed
             </Text>
-            <View
-              style={[
-                styles.categoryBadgeCard,
-                { borderColor: categoryColor + "40" },
-              ]}
-            >
-              <MaterialIcons name="category" size={8} color={categoryColor} />
-              <Text style={[styles.categoryCardText, { color: categoryColor }]}>
-                {item.category || "General"}
-              </Text>
-            </View>
-            <Text
-              style={[
-                styles.offerStatusText,
-                isClaimed && styles.offerStatusClaimed,
-              ]}
-            >
-              {isClaimed
-                ? "✓ Claimed"
-                : item.hasOffer
-                ? "Student's Deal"
-                : "No Offers"}
+          ) : !item.hasOffer ? (
+            <Text style={styles.offerStatusText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+              no offers yet
+            </Text>
+          ) : null}
+        </View>
+
+        {discount > 0 && (
+          <View style={styles.discountBadge}>
+            <Text style={styles.discountText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+              {discount}% off
             </Text>
           </View>
-        </TouchableOpacity>
-      </View>
+        )}
+      </PressScale>
     );
   },
   (prev, next) => {
@@ -1353,8 +1310,7 @@ export default function BrandsScreen() {
     if (loadingMore) {
       return (
         <View style={styles.footerLoader}>
-          <ActivityIndicator size="small" color="#f9c349" />
-          <Text style={styles.footerLoaderText}>Loading more...</Text>
+          <ActivityIndicator size="small" color={T.ink} />
         </View>
       );
     }
@@ -1364,189 +1320,204 @@ export default function BrandsScreen() {
         activeFilterCount === 0 &&
         !searchQuery.trim();
       return (
-        <View style={styles.noResultsContainer}>
-          <MaterialCommunityIcons name="ticket-off-outline" size={60} color="#ccc" />
-          <Text style={styles.noResultsText}>
-            {cityEmpty ? `No brands in ${selectedCity} yet` : "No Brands Found"}
-          </Text>
-          <Text style={styles.noResultsSubText}>
-            {cityEmpty ? "New brands are joining soon" : "Try adjusting your filters"}
-          </Text>
-          <TouchableOpacity
-            style={styles.clearFiltersBtn}
-            onPress={cityEmpty ? () => setSelectedCity(ALL_CITIES) : clearAllFilters}
-          >
-            <Text style={styles.clearFiltersBtnText}>
-              {cityEmpty ? "Show All Cities" : "Clear All Filters"}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <EmptyState
+          mood={cityEmpty ? "sleepy" : "sus"}
+          title={cityEmpty ? `no brands in ${selectedCity} yet` : "no brands found"}
+          line={cityEmpty ? "new brands are joining soon." : "try a different filter or search."}
+          actionLabel={cityEmpty ? "show all cities" : "clear all filters"}
+          onAction={cityEmpty ? () => setSelectedCity(ALL_CITIES) : clearAllFilters}
+        />
       );
     }
     if (!hasMore && displayedBrands.length > 0) {
       return (
         <View style={styles.footerContainer}>
-          <Text style={styles.totalBrandsText}>
-            Showing all {filteredData.length} brands
+          <Text style={styles.totalBrandsText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            showing all {filteredData.length} brands
             {selectedCity !== ALL_CITIES ? ` in ${selectedCity}` : ""}
+            {lastUpdated ? " · live · auto-synced" : ""}
           </Text>
-          {lastUpdated ? (
-            <Text style={styles.liveFooterText}>· live · auto-synced</Text>
-          ) : null}
         </View>
       );
     }
     return (
       <View style={styles.footerContainer}>
-        <Text style={styles.showingText}>
-          Showing {displayedBrands.length} of {filteredData.length} brands
+        <Text style={styles.showingText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+          showing {displayedBrands.length} of {filteredData.length} brands
         </Text>
       </View>
     );
   }, [loadingMore, displayedBrands.length, loading, filteredData.length, hasMore, clearAllFilters, lastUpdated, selectedCity, activeFilterCount, searchQuery, setSelectedCity]);
 
+  const universityName = isGuest ? null : user?.university?.name || null;
+
   const renderHeader = useCallback(
     () => (
-      <View>
-      <View style={styles.categoryGridContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryGridScroll}
-        >
-          {visibleCategories.map((category) => (
-            <CategoryGridItem
-              key={category.id}
-              category={category}
-              isSelected={selectedCategory === category.id}
-              onPress={setSelectedCategory}
-            />
-          ))}
-        </ScrollView>
-      </View>
+      <View style={styles.listHeader}>
+        <SectionTitle title="crew's privilege brands" right={universityName || undefined} />
       </View>
     ),
-    [selectedCategory, visibleCategories]
+    [universityName]
   );
 
   return (
     <SafeAreaView style={styles.mainSafeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#9a979708" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <View style={styles.fadeContainer}>
         {/* Header */}
         <View style={styles.customHeader}>
-          <TouchableOpacity
-            style={styles.backButton}
+          <HeaderIconButton
+            icon="chevron-back"
+            label="back"
             onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
+          />
+          <Text
+            style={styles.customHeaderTitle}
+            accessibilityRole="header"
+            maxFontSizeMultiplier={MAX_FONT_SCALE}
           >
-            <Ionicons
-              name={Platform.OS === "ios" ? "chevron-back" : "arrow-back"}
-              size={24}
-              color="#000"
-            />
-          </TouchableOpacity>
-          <View style={styles.customHeaderCenter}>
-            <Text style={styles.customHeaderTitle}>Brands</Text>
-          </View>
-          <View style={styles.headerRight}>
-            <TouchableOpacity
-              style={styles.discountIconBtn}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                navigation.navigate("MyDiscountScreen");
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={styles.discountIconWrapper}>
-                <MaterialCommunityIcons name="ticket-percent" size={22} color="#f9c349" />
-                <View style={styles.discountBadgeDot} />
-              </View>
-            </TouchableOpacity>
-          </View>
+            brands<Text style={{ color: T.yellow }}>.</Text>
+          </Text>
+          <HeaderIconButton
+            label="my discounts"
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              navigation.navigate("MyDiscountScreen");
+            }}
+          >
+            <MaterialCommunityIcons name="ticket-percent-outline" size={20} color={T.ink} />
+          </HeaderIconButton>
         </View>
 
-        {/* Welcome */}
-        <View style={styles.welcomeContainer}>
-          <View style={styles.welcomeRow}>
-            <View style={styles.welcomeLeftContent}>
-              <Text style={styles.welcomeTextAbove}>
-                {isGuest ? "Guest User" : user?.university?.name || "No University"}
-              </Text>
-              <Text style={styles.welcomeTitle}>Crew's Privilege Brands</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.welcomeFilterTrigger}
-              onPress={openFilterModal}
-              activeOpacity={0.7}
-            >
-              <MaterialCommunityIcons name="tune-variant" size={15} color="#000000" />
-              {activeFilterCount > 0 && (
-                <View style={styles.filterBadge}>
-                  <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
+        {/* Search + filters */}
+        <View style={styles.searchRow}>
+          <View style={styles.searchBox}>
+            <Ionicons name="search-outline" size={18} color={T.textFaint} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="search brands"
+              placeholderTextColor={T.textFaint}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              returnKeyType="search"
+              accessibilityLabel="search brands"
+              autoCorrect={false}
+            />
+            {!!searchQuery && (
+              <TouchableOpacity
+                onPress={() => {
+                  setSearchQuery("");
+                  if (query) navigation.setParams({ query: undefined });
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="clear search"
+                hitSlop={10}
+              >
+                <Ionicons name="close-circle" size={18} color={T.textFaint} />
+              </TouchableOpacity>
+            )}
           </View>
+          <TouchableOpacity
+            style={styles.filterBtn}
+            onPress={openFilterModal}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={activeFilterCount > 0 ? `filters, ${activeFilterCount} on` : "filters"}
+          >
+            <MaterialCommunityIcons name="tune-variant" size={20} color={T.white} />
+            {activeFilterCount > 0 && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
 
-          {/* City picker: full width under the title, arrow on the right */}
-          <CityDropdown
-            options={cityOptions}
-            selected={selectedCity}
-            onSelect={setSelectedCity}
-            title="Brands in"
-            fullWidth
-            style={{ marginTop: 12 }}
-          />
+        {/* City + quick filters + categories */}
+        <View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryGridScroll}
+          >
+            <CityDropdown
+              options={cityOptions}
+              selected={selectedCity}
+              onSelect={setSelectedCity}
+              title="brands in"
+              variant="chip"
+            />
+            <Chip
+              label="online only"
+              selected={showOnlyOnline}
+              onPress={() => setShowOnlyOnline(!showOnlyOnline)}
+            />
+            {visibleCategories.map((category) => (
+              <CategoryGridItem
+                key={category.id}
+                category={category}
+                isSelected={selectedCategory === category.id}
+                onPress={setSelectedCategory}
+              />
+            ))}
+          </ScrollView>
         </View>
 
         {isGuest && (
           <View style={styles.guestBanner}>
-            <Ionicons name="information-circle" size={20} color="#1a1a1a" />
-            <Text style={styles.guestBannerText}>
-              Browsing as guest. Sign in to claim offers!
+            <Ionicons name="information-circle-outline" size={18} color={T.ink} />
+            <Text style={styles.guestBannerText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+              browsing as guest. sign in to claim offers.
             </Text>
-            <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-              <Text style={styles.signInLink}>Sign In</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("Login")}
+              accessibilityRole="button"
+              accessibilityLabel="sign in"
+              hitSlop={10}
+            >
+              <Text style={styles.signInLink}>sign in</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {query && (
           <View style={styles.searchIndicatorRow}>
-            <Text style={styles.searchIndicatorText}>
-              Showing results for:{" "}
-              <Text style={{ fontWeight: "bold", color: "#f9c349" }}>"{query}"</Text>
+            <Text style={styles.searchIndicatorText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+              results for <Text style={styles.searchIndicatorQuery}>{`"${query}"`}</Text>
             </Text>
             <TouchableOpacity
               onPress={() => {
                 setSearchQuery("");
                 navigation.setParams({ query: undefined });
               }}
+              accessibilityRole="button"
+              accessibilityLabel="clear search"
+              hitSlop={10}
             >
-              <MaterialCommunityIcons name="close-circle" size={20} color="#999" />
+              <MaterialCommunityIcons name="close-circle" size={18} color={T.textFaint} />
             </TouchableOpacity>
           </View>
         )}
 
         {error && !loading && (
           <View style={styles.errorContainer}>
-            <MaterialCommunityIcons name="alert-circle" size={24} color="#ef4444" />
+            <MaterialCommunityIcons name="alert-circle-outline" size={20} color={T.danger} />
             <Text style={styles.errorText}>{error}</Text>
             <TouchableOpacity
               onPress={() => fetchBrands(true, { silent: false })}
               style={styles.retryButton}
+              accessibilityRole="button"
+              accessibilityLabel="retry"
             >
-              <Text style={styles.retryButtonText}>Retry</Text>
+              <Text style={styles.retryButtonText}>retry</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {loading && displayedBrands.length === 0 ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#f9c349" />
-            <Text style={styles.loadingText}>Loading brands...</Text>
+            <Skeleton rows={6} height={72} gap={8} style={{ paddingHorizontal: 0 }} />
           </View>
         ) : (
           <FlatList
@@ -1556,15 +1527,14 @@ export default function BrandsScreen() {
             removeClippedSubviews
             renderItem={renderBrand}
             windowSize={5}
-            maxToRenderPerBatch={6}
-            initialNumToRender={6}
+            maxToRenderPerBatch={8}
+            initialNumToRender={8}
             updateCellsBatchingPeriod={30}
-            numColumns={NUM_COLUMNS}
-            columnWrapperStyle={styles.columnWrapper}
             refreshing={refreshing}
             onRefresh={onRefresh}
             ListHeaderComponent={renderHeader}
             ListFooterComponent={renderFooter}
+            ItemSeparatorComponent={ListGap}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             onEndReached={loadMoreBrands}
@@ -1590,11 +1560,18 @@ export default function BrandsScreen() {
             ]}
           >
             <Pressable style={styles.modalContentWrapper} onPress={(e) => e.stopPropagation()}>
-              <View style={styles.modalIndicator} />
+              <SheetHandle />
               <View style={styles.modalHeader}>
-                <Text style={styles.filterHeader}>Refine Search</Text>
-                <TouchableOpacity onPress={clearAllFilters}>
-                  <Text style={styles.resetText}>Reset All</Text>
+                <Text style={styles.filterHeader} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                  refine<Text style={{ color: T.yellow }}>.</Text>
+                </Text>
+                <TouchableOpacity
+                  onPress={clearAllFilters}
+                  accessibilityRole="button"
+                  accessibilityLabel="reset all filters"
+                  hitSlop={10}
+                >
+                  <Text style={styles.resetText}>reset all</Text>
                 </TouchableOpacity>
               </View>
 
@@ -1602,26 +1579,18 @@ export default function BrandsScreen() {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 20 }}
               >
-                <Text style={styles.filterLabel}>
-                  Exact Discount
+                <Text style={styles.filterLabel} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                  exact discount
                   {selectedCity !== ALL_CITIES ? ` in ${selectedCity}` : ""}
                 </Text>
                 <View style={styles.filterChipRow}>
                   {discountOptions.map((val) => (
-                    <TouchableOpacity
+                    <Chip
                       key={val}
-                      style={[styles.chip, minDiscount === val && styles.activeChip]}
+                      label={val === 0 ? "any" : `${val}% off`}
+                      selected={minDiscount === val}
                       onPress={() => setMinDiscount(val)}
-                    >
-                      <Text
-                        style={[
-                          styles.chipText,
-                          minDiscount === val && styles.activeChipText,
-                        ]}
-                      >
-                        {val === 0 ? "Any" : `${val}% Off`}
-                      </Text>
-                    </TouchableOpacity>
+                    />
                   ))}
                 </View>
 
@@ -1630,25 +1599,24 @@ export default function BrandsScreen() {
                   style={styles.toggleRow}
                   activeOpacity={0.7}
                   onPress={() => setShowOnlyOnline(!showOnlyOnline)}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: showOnlyOnline }}
+                  accessibilityLabel="show online only"
                 >
-                  <View>
-                    <Text style={styles.toggleTitle}>Show Online Only</Text>
-                    <Text style={styles.toggleSubtitle}>
-                      Only show deals available on websites
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.toggleTitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>show online only</Text>
+                    <Text style={styles.toggleSubtitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                      only deals you can use on a website.
                     </Text>
                   </View>
-                  <MaterialCommunityIcons
-                    name={showOnlyOnline ? "toggle-switch" : "toggle-switch-off"}
-                    size={45}
-                    color={showOnlyOnline ? "#08634f" : "#CCC"}
-                  />
+                  <View style={[styles.switchTrack, showOnlyOnline && styles.switchTrackOn]}>
+                    <View style={[styles.switchKnob, showOnlyOnline && styles.switchKnobOn]} />
+                  </View>
                 </TouchableOpacity>
               </ScrollView>
 
               <View style={styles.modalFooter}>
-                <TouchableOpacity style={styles.applyBtn} onPress={closeFilterModal}>
-                  <Text style={styles.applyBtnText}>Apply Filters</Text>
-                </TouchableOpacity>
+                <Button title="apply filters" onPress={closeFilterModal} />
               </View>
             </Pressable>
           </Animated.View>
@@ -1658,346 +1626,206 @@ export default function BrandsScreen() {
   );
 }
 
+const ListGap = () => <View style={{ height: 8 }} />;
+
 // ==========================================
 // STYLES
 // ==========================================
 const styles = StyleSheet.create({
-  mainSafeArea: { flex: 1, backgroundColor: "#fff" },
+  mainSafeArea: { flex: 1, backgroundColor: T.paper },
   fadeContainer: { flex: 1 },
 
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", paddingVertical: 40 },
-  loadingText: { color: "#999", fontSize: 14, marginTop: 12 },
-
-  statsBarContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
-    backgroundColor: "#fff",
-    marginHorizontal: 20,
-    marginTop: 10,
-    marginBottom: 4,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#f0f0f0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  statsBarSkeleton: {
-    height: 28,
-    width: "80%",
-    backgroundColor: "#f5f5f5",
-    borderRadius: 8,
-  },
-  statItem: {
-    alignItems: "center",
-    justifyContent: "center",
-    flex: 1,
-    flexDirection: "row",
-    gap: 4,
-  },
-  statValue: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#000",
-    fontFamily: "Cardo",
-  },
-  statLabel: {
-    fontSize: 10,
-    color: "#999",
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
-  },
-  statDivider: {
-    width: 1,
-    height: 18,
-    backgroundColor: "#f0f0f0",
-  },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#22c55e",
-    marginRight: 2,
-  },
-
+  // Header
   customHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 10,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    paddingTop: 8,
   },
-  customHeaderCenter: { flex: 1, alignItems: "center", justifyContent: "center" },
-  customHeaderTitle: { fontSize: 18, fontWeight: "700", color: "#000", fontFamily: "Cardo" },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#f5f5f5",
-    justifyContent: "center",
-    alignItems: "center",
+  customHeaderTitle: {
+    flex: 1,
+    fontFamily: F.heading,
+    fontSize: 28,
+    letterSpacing: -0.8,
+    color: T.ink,
   },
 
-  welcomeContainer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
-  welcomeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  welcomeLeftContent: { flex: 1 },
-  welcomeTextAbove: {
-    fontSize: 14,
-    color: "#676363",
-    fontWeight: "600",
-    fontFamily: "Cardo",
-    marginBottom: 2,
-  },
-  welcomeTitle: { fontSize: 16, fontWeight: "700", color: "#000", fontFamily: "Cardo" },
-  welcomeFilterTrigger: {
-    padding: 10,
-    marginLeft: 12,
-    backgroundColor: "#F7F9F8",
-    borderRadius: 12,
+  // Search
+  searchRow: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingTop: 14 },
+  searchBox: {
+    flex: 1,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: T.card,
     borderWidth: 1,
-    borderColor: "#E0E0E0",
-    alignSelf: "center",
-    position: "relative",
+    borderColor: T.line,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  searchInput: { flex: 1, fontFamily: F.body, fontSize: 15, color: T.ink, paddingVertical: 0 },
+  filterBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: T.ink,
+    alignItems: "center",
+    justifyContent: "center",
   },
   filterBadge: {
     position: "absolute",
-    top: -4,
-    right: -4,
+    top: 2,
+    right: 2,
     minWidth: 18,
     height: 18,
-    paddingHorizontal: 5,
-    borderRadius: 9,
-    backgroundColor: "#f9c349",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: "#fff",
-  },
-  filterBadgeText: { fontSize: 10, fontWeight: "800", color: "#000" },
-
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
-  discountIconBtn: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: "#f0f0f0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  discountIconWrapper: { position: "relative", alignItems: "center", justifyContent: "center" },
-  discountBadgeDot: {
-    position: "absolute",
-    top: -2,
-    right: -2,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#f9c349",
-    borderWidth: 1.5,
-    borderColor: "#fff",
-  },
-
-  listContent: { paddingBottom: 20 },
-  columnWrapper: { justifyContent: "space-between", paddingHorizontal: 20, marginBottom: 15 },
-  cardWrapper: { width: CARD_WIDTH },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 22,
-    width: "100%",
-    padding: 7,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#F0F0F0",
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-  },
-  availabilityWrapper: { position: "absolute", top: 12, left: 12, flexDirection: "row", zIndex: 1 },
-  discountBadge: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    backgroundColor: "#ffffff",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    zIndex: 1,
-  },
-  discountText: { fontSize: 12, fontWeight: "900", color: "#f9c349", fontFamily: "Cardo" },
-  logoContainer: {
-    width: "100%",
-    height: 100,
-    marginTop: 24,
-    marginBottom: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  logo: { width: "100%", height: "100%", borderRadius: 20 },
-  infoContainer: { alignItems: "center", width: "100%" },
-  name: { fontSize: 14, fontWeight: "800", color: "#000000", fontFamily: "Cardo", textAlign: "center" },
-  offerStatusText: { fontSize: 10, color: "#bbb", marginTop: 4 },
-  offerStatusClaimed: { color: "#f9c349", fontWeight: "bold" },
-  categoryBadgeCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f1f5f9",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginTop: 4,
-    borderWidth: 0.5,
-  },
-  categoryCardText: {
-    fontSize: 9,
-    color: "#000000",
-    fontWeight: "600",
-    textTransform: "uppercase",
-    paddingLeft: 2,
-  },
-
-  categoryGridContainer: { paddingHorizontal: 20, marginBottom: 10, marginTop: 2 },
-  categoryGridScroll: { paddingVertical: 5, gap: 6 },
-  categoryGridItem: {
-    alignItems: "center",
-    justifyContent: "center",
     paddingHorizontal: 4,
-    paddingVertical: 4,
-    borderRadius: 14,
-    minWidth: 44,
-    marginRight: 4,
-  },
-  categoryGridItemActive: { borderColor: "#000000", borderWidth: 1.5 },
-  categoryIconWrapper: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    borderRadius: 9,
+    backgroundColor: T.yellow,
+    borderWidth: 2,
+    borderColor: T.paper,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
   },
-  categoryIconWrapperActive: { backgroundColor: "#000000" },
-  categoryGridName: { fontSize: 9, fontWeight: "600", color: "#555", textAlign: "center", maxWidth: 52 },
-  categoryGridNameActive: { color: "#000000", fontWeight: "700" },
+  filterBadgeText: { fontFamily: F.bodyBold, fontSize: 10, color: T.ink },
 
-  footerContainer: { paddingHorizontal: 20, paddingVertical: 15, alignItems: "center" },
-  footerLoader: { paddingVertical: 20, alignItems: "center" },
-  footerLoaderText: { fontSize: 12, color: "#999", marginTop: 8 },
-  showingText: { fontSize: 12, color: "#999" },
-  totalBrandsText: { fontSize: 13, color: "#666", fontWeight: "500" },
-  liveFooterText: {
-    fontSize: 10,
-    color: "#22c55e",
-    fontWeight: "700",
-    marginTop: 4,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
+  // Chips row
+  categoryGridScroll: { paddingHorizontal: 16, paddingTop: 12, gap: 8, alignItems: "center" },
 
-  noResultsContainer: { alignItems: "center", justifyContent: "center", paddingVertical: 40, paddingHorizontal: 20 },
-  noResultsText: { fontSize: 18, fontWeight: "700", color: "#333", marginTop: 16 },
-  noResultsSubText: { fontSize: 14, color: "#999", marginTop: 6, marginBottom: 20 },
-  clearFiltersBtn: { backgroundColor: "#f9c349", paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
-  clearFiltersBtnText: { color: "#000", fontWeight: "700", fontSize: 14 },
-
-  errorContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fef2f2",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginHorizontal: 20,
-    marginBottom: 15,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#fecaca",
-  },
-  errorText: { flex: 1, fontSize: 13, color: "#991b1b", marginLeft: 8 },
-  retryButton: { backgroundColor: "#ef4444", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  retryButtonText: { color: "#fff", fontSize: 12, fontWeight: "600" },
-
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
-  modalContentWrapper: { flex: 1, padding: 25 },
-  filterModalContainer: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 35,
-    borderTopRightRadius: 35,
-    padding: 25,
-    maxHeight: "85%",
-    minHeight: "50%",
-  },
-  modalIndicator: {
-    width: 45,
-    height: 5,
-    backgroundColor: "#E0E0E0",
-    borderRadius: 10,
-    alignSelf: "center",
-    marginBottom: 25,
-  },
-  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
-  filterHeader: { fontSize: 22, fontWeight: "900", color: "#000000", fontFamily: "Cardo" },
-  resetText: { color: "#000000", fontWeight: "600", fontSize: 14 },
-
-  filterLabel: { fontSize: 16, fontWeight: "700", color: "#333", marginTop: 15, marginBottom: 10 },
-  filterChipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: "#F5F7F6",
-    borderWidth: 1,
-    borderColor: "#F0F0F0",
-  },
-  activeChip: { backgroundColor: "#010101", borderColor: "#000000" },
-  chipText: { color: "#555", fontSize: 12, fontWeight: "600" },
-  activeChipText: { color: "#fff" },
-  divider: { height: 1, backgroundColor: "#F0F0F0", marginVertical: 20 },
-  toggleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  toggleTitle: { fontSize: 16, fontWeight: "700", color: "#1A1A1A" },
-  toggleSubtitle: { fontSize: 13, color: "#888", marginTop: 2 },
-  modalFooter: { borderTopWidth: 1, borderTopColor: "#F0F0F0", paddingTop: 20, marginTop: 10 },
-  applyBtn: { backgroundColor: "#000000", paddingVertical: 16, borderRadius: 14, alignItems: "center" },
-  applyBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
-
+  // Banners
   guestBanner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFF9E6",
-    paddingHorizontal: 16,
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingHorizontal: 14,
     paddingVertical: 12,
-    marginHorizontal: 20,
-    borderRadius: 12,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: "#f9c34930",
+    borderRadius: 16,
+    backgroundColor: T.yellowSoft,
   },
-  guestBannerText: { flex: 1, fontSize: 12, color: "#1a1a1a", marginLeft: 8, fontWeight: "500" },
-  signInLink: { color: "#f9c349", fontWeight: "700", fontSize: 12, marginLeft: 8 },
-
+  guestBannerText: { flex: 1, fontFamily: F.bodyMedium, fontSize: 13, color: T.ink },
+  signInLink: { fontFamily: F.bodyBold, fontSize: 13, color: T.ink, textDecorationLine: "underline" },
   searchIndicatorRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#f0f0f0",
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 10,
-    marginBottom: 10,
-    marginHorizontal: 20,
+    marginHorizontal: 16,
+    marginTop: 12,
   },
-  searchIndicatorText: { fontSize: 14, color: "#666" },
+  searchIndicatorText: { fontFamily: F.body, fontSize: 13, color: T.textMuted },
+  searchIndicatorQuery: { fontFamily: F.bodyBold, color: T.ink },
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: T.dangerBg,
+  },
+  errorText: { flex: 1, fontFamily: F.bodyMedium, fontSize: 13, color: T.danger },
+  retryButton: {
+    height: 32,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
+    justifyContent: "center",
+  },
+  retryButtonText: { fontFamily: F.bodyBold, fontSize: 12.5, color: T.ink },
+
+  // List
+  loadingContainer: { paddingHorizontal: 16, paddingTop: 16 },
+  listHeader: { paddingTop: 16, paddingBottom: 10 },
+  listContent: { paddingHorizontal: 16, paddingBottom: 40 },
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
+  },
+  logoContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: T.lineSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  logo: { width: 40, height: 40 },
+  infoContainer: { flex: 1, minWidth: 0 },
+  name: { fontFamily: F.bodyBold, fontSize: 15, color: T.ink },
+  meta: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, marginTop: 2 },
+  offerStatusText: { fontFamily: F.bodySemi, fontSize: 12, color: T.textFaint, marginTop: 2 },
+  offerStatusClaimed: { fontFamily: F.bodyBold, fontSize: 12, color: T.success, marginTop: 2 },
+  discountBadge: {
+    height: 28,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    backgroundColor: T.yellow,
+    justifyContent: "center",
+  },
+  discountText: { fontFamily: F.bodyBold, fontSize: 12, color: T.ink },
+
+  // Footer
+  footerLoader: { paddingVertical: 20, alignItems: "center" },
+  footerContainer: { paddingVertical: 20, alignItems: "center" },
+  totalBrandsText: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, textAlign: "center" },
+  showingText: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted },
+
+  // Unused StatsBar (kept)
+  statsBarContainer: { flexDirection: "row", gap: 16 },
+  statsBarSkeleton: { height: 40, flex: 1, borderRadius: 12, backgroundColor: T.sand },
+  statItem: { alignItems: "center" },
+  statValue: { fontFamily: F.heading, fontSize: 18, color: T.ink },
+  statLabel: { fontFamily: F.body, fontSize: 12, color: T.textMuted },
+
+  // Filter sheet
+  modalOverlay: { flex: 1, backgroundColor: T.overlay, justifyContent: "flex-end" },
+  filterModalContainer: {
+    backgroundColor: T.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "80%",
+  },
+  modalContentWrapper: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 28 },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 4,
+    marginBottom: 14,
+  },
+  filterHeader: { fontFamily: F.heading, fontSize: 22, color: T.ink },
+  resetText: { fontFamily: F.bodySemi, fontSize: 13, color: T.textMuted },
+  filterLabel: { fontFamily: F.bodySemi, fontSize: 13, color: T.textMuted, marginBottom: 10 },
+  filterChipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  divider: { height: 1, backgroundColor: T.lineSoft, marginVertical: 18 },
+  toggleRow: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 48 },
+  toggleTitle: { fontFamily: F.bodySemi, fontSize: 15, color: T.ink },
+  toggleSubtitle: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, marginTop: 2 },
+  switchTrack: {
+    width: 46,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: T.sand,
+    borderWidth: 1,
+    borderColor: T.line,
+    padding: 2,
+    justifyContent: "center",
+  },
+  switchTrackOn: { backgroundColor: T.ink, borderColor: T.ink },
+  switchKnob: { width: 22, height: 22, borderRadius: 11, backgroundColor: T.white },
+  switchKnobOn: { alignSelf: "flex-end", backgroundColor: T.yellow },
+  modalFooter: { paddingTop: 8 },
 });

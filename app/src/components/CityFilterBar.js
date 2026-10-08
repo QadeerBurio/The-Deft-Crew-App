@@ -5,6 +5,7 @@ import { ScrollView, Text, TouchableOpacity, View, StyleSheet } from "react-nati
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { ALL_CITIES } from "../utils/cityFilter";
+import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 
 function CityFilterBar({ options, selected, onSelect, style }) {
   if (!options || options.length === 0) return null;
@@ -24,6 +25,9 @@ function CityFilterBar({ options, selected, onSelect, style }) {
               key={city}
               style={[styles.chip, active && styles.chipActive]}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={city === ALL_CITIES ? "all cities" : city}
               onPress={() => {
                 if (active) return;
                 Haptics.selectionAsync().catch(() => {});
@@ -33,10 +37,10 @@ function CityFilterBar({ options, selected, onSelect, style }) {
               <MaterialCommunityIcons
                 name={city === ALL_CITIES ? "map-outline" : "map-marker"}
                 size={13}
-                color={active ? "#f9c349" : "#666"}
+                color={active ? T.white : T.textFaint}
               />
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                {city === ALL_CITIES ? "All Cities" : city}
+              <Text style={[styles.chipText, active && styles.chipTextActive]} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                {city === ALL_CITIES ? "all cities" : city}
               </Text>
               {typeof count === "number" && (
                 <View style={[styles.count, active && styles.countActive]}>
@@ -57,31 +61,31 @@ export default memo(CityFilterBar);
 
 const styles = StyleSheet.create({
   wrap: { marginBottom: 8 },
-  row: { paddingHorizontal: 20, gap: 8, alignItems: "center" },
+  row: { paddingHorizontal: 16, gap: 8, alignItems: "center" },
   chip: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
+    height: 34,
     paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 18,
-    backgroundColor: "#fff",
+    borderRadius: 17,
+    backgroundColor: T.card,
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: T.line,
   },
-  chipActive: { backgroundColor: "#1a1a1a", borderColor: "#1a1a1a" },
-  chipText: { fontSize: 12.5, fontWeight: "600", color: "#444" },
-  chipTextActive: { color: "#fff", fontWeight: "800" },
+  chipActive: { backgroundColor: T.ink, borderColor: T.ink },
+  chipText: { fontFamily: F.bodySemi, fontSize: 13, color: T.ink },
+  chipTextActive: { color: T.white, fontFamily: F.bodyBold },
   count: {
     minWidth: 18,
     paddingHorizontal: 5,
     height: 18,
     borderRadius: 9,
-    backgroundColor: "#f3f3f3",
+    backgroundColor: T.sand,
     alignItems: "center",
     justifyContent: "center",
   },
-  countActive: { backgroundColor: "#f9c349" },
-  countText: { fontSize: 10, fontWeight: "700", color: "#777" },
-  countTextActive: { color: "#000" },
+  countActive: { backgroundColor: T.yellow },
+  countText: { fontFamily: F.bodyBold, fontSize: 10, color: T.textMuted },
+  countTextActive: { color: T.ink },
 });

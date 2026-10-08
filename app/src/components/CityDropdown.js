@@ -1,5 +1,6 @@
 // app/src/components/CityDropdown.js
-// Right-side city picker: [📍 All Cities ▾] → bottom sheet with city list + counts
+// City picker: [📍 all cities ▾] → bottom sheet with city list + counts
+// variant "chip": the yellow city chip at the start of a chip row (Brands design)
 import React, { memo, useState } from "react";
 import {
   Modal,
@@ -13,11 +14,14 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { ALL_CITIES } from "../utils/cityFilter";
+import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
+import { SheetHandle } from "../ui/Sheet";
 
-const label = (city) => (city === ALL_CITIES ? "All Cities" : city);
+const label = (city) => (city === ALL_CITIES ? "all cities" : city);
 
-function CityDropdown({ options, selected, onSelect, style, title = "Select City", fullWidth = false }) {
+function CityDropdown({ options, selected, onSelect, style, title = "select city", fullWidth = false, variant }) {
   const [open, setOpen] = useState(false);
+  const chip = variant === "chip";
 
   // Only "All" means no city has data yet → nothing to pick
   if (!options || options.length < 2) return null;
@@ -30,41 +34,36 @@ function CityDropdown({ options, selected, onSelect, style, title = "Select City
     }
   };
 
+  const active = selected !== ALL_CITIES;
+  const fg = chip ? T.ink : active ? T.white : T.ink;
+
   return (
     <>
       <TouchableOpacity
         style={[
           styles.trigger,
           fullWidth && styles.triggerFull,
-          selected !== ALL_CITIES && styles.triggerActive,
+          active && styles.triggerActive,
+          chip && styles.triggerChip,
           style,
         ]}
         activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={`city: ${label(selected)}, change`}
         onPress={() => {
           Haptics.selectionAsync().catch(() => {});
           setOpen(true);
         }}
       >
-        <MaterialCommunityIcons
-          name="map-marker"
-          size={14}
-          color={selected !== ALL_CITIES ? "#f9c349" : "#000"}
-        />
+        {!chip && <MaterialCommunityIcons name="map-marker-outline" size={15} color={fg} />}
         <Text
-          style={[
-            styles.triggerText,
-            fullWidth && styles.triggerTextFull,
-            selected !== ALL_CITIES && styles.triggerTextActive,
-          ]}
+          style={[styles.triggerText, fullWidth && styles.triggerTextFull, { color: fg }]}
           numberOfLines={1}
+          maxFontSizeMultiplier={MAX_FONT_SCALE}
         >
-          {fullWidth && selected === ALL_CITIES ? "All Cities" : label(selected)}
+          {label(selected)}
         </Text>
-        <MaterialCommunityIcons
-          name="chevron-down"
-          size={16}
-          color={selected !== ALL_CITIES ? "#f9c349" : "#000"}
-        />
+        <MaterialCommunityIcons name="chevron-down" size={16} color={fg} />
       </TouchableOpacity>
 
       <Modal
@@ -76,38 +75,37 @@ function CityDropdown({ options, selected, onSelect, style, title = "Select City
       >
         <Pressable style={styles.overlay} onPress={() => setOpen(false)}>
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.handle} />
-            <Text style={styles.sheetTitle}>{title}</Text>
+            <SheetHandle style={{ marginBottom: 6 }} />
+            <Text style={styles.sheetTitle} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+              {title}
+              <Text style={{ color: T.yellow }}>.</Text>
+            </Text>
             <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
               {options.map(({ city, count }) => {
-                const active = city === selected;
+                const on = city === selected;
                 return (
                   <TouchableOpacity
                     key={city}
-                    style={[styles.row, active && styles.rowActive]}
+                    style={[styles.row, on && styles.rowActive]}
                     activeOpacity={0.7}
                     onPress={() => pick(city)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: on }}
+                    accessibilityLabel={`${label(city)}, ${count}`}
                   >
                     <MaterialCommunityIcons
                       name={city === ALL_CITIES ? "map-outline" : "map-marker-outline"}
                       size={18}
-                      color={active ? "#f9c349" : "#666"}
+                      color={on ? T.white : T.textFaint}
                     />
-                    <Text style={[styles.rowText, active && styles.rowTextActive]}>
+                    <Text style={[styles.rowText, on && styles.rowTextActive]} maxFontSizeMultiplier={MAX_FONT_SCALE}>
                       {label(city)}
                     </Text>
-                    <View style={[styles.count, active && styles.countActive]}>
-                      <Text style={[styles.countText, active && styles.countTextActive]}>
-                        {count}
-                      </Text>
+                    <View style={[styles.count, on && styles.countActive]}>
+                      <Text style={[styles.countText, on && styles.countTextActive]}>{count}</Text>
                     </View>
-                    {active && (
-                      <MaterialCommunityIcons
-                        name="check"
-                        size={18}
-                        color="#f9c349"
-                        style={{ marginLeft: 8 }}
-                      />
+                    {on && (
+                      <MaterialCommunityIcons name="check" size={18} color={T.yellow} style={{ marginLeft: 8 }} />
                     )}
                   </TouchableOpacity>
                 );
@@ -126,66 +124,59 @@ const styles = StyleSheet.create({
   trigger: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: "#F7F9F8",
+    gap: 5,
+    height: 36,
+    paddingHorizontal: 12,
+    borderRadius: 18,
+    backgroundColor: T.card,
     borderWidth: 1,
-    borderColor: "#E0E0E0",
-    maxWidth: 150,
+    borderColor: T.line,
+    maxWidth: 170,
   },
   triggerFull: {
     width: "100%",
     maxWidth: "100%",
     alignSelf: "stretch",
+    height: 48,
+    borderRadius: 24,
     paddingHorizontal: 14,
-    paddingVertical: 11,
     gap: 8,
   },
   triggerTextFull: { flex: 1, fontSize: 14 },
-  triggerActive: { backgroundColor: "#1a1a1a", borderColor: "#1a1a1a" },
-  triggerText: { fontSize: 12.5, fontWeight: "700", color: "#000", flexShrink: 1 },
-  triggerTextActive: { color: "#fff" },
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+  triggerActive: { backgroundColor: T.ink, borderColor: T.ink },
+  triggerChip: { backgroundColor: T.yellow, borderColor: T.yellow, gap: 4 },
+  triggerText: { fontFamily: F.bodyBold, fontSize: 13.5, color: T.ink, flexShrink: 1 },
+  overlay: { flex: 1, backgroundColor: T.overlay, justifyContent: "flex-end" },
   sheet: {
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 8,
     paddingBottom: 34,
   },
-  handle: {
-    alignSelf: "center",
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#ddd",
-    marginBottom: 14,
-  },
-  sheetTitle: { fontSize: 17, fontWeight: "800", color: "#000", marginBottom: 10 },
+  sheetTitle: { fontFamily: F.heading, fontSize: 20, color: T.ink, marginBottom: 10 },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 13,
+    minHeight: 48,
     paddingHorizontal: 12,
-    borderRadius: 12,
+    borderRadius: 14,
     marginBottom: 4,
   },
-  rowActive: { backgroundColor: "#1a1a1a" },
-  rowText: { flex: 1, marginLeft: 10, fontSize: 15, fontWeight: "600", color: "#222" },
-  rowTextActive: { color: "#fff", fontWeight: "800" },
+  rowActive: { backgroundColor: T.ink },
+  rowText: { flex: 1, marginLeft: 10, fontFamily: F.bodySemi, fontSize: 15, color: T.ink },
+  rowTextActive: { color: T.white, fontFamily: F.bodyBold },
   count: {
     minWidth: 24,
     height: 22,
     paddingHorizontal: 6,
     borderRadius: 11,
-    backgroundColor: "#f1f1f1",
+    backgroundColor: T.sand,
     alignItems: "center",
     justifyContent: "center",
   },
-  countActive: { backgroundColor: "#f9c349" },
-  countText: { fontSize: 11.5, fontWeight: "700", color: "#666" },
-  countTextActive: { color: "#000" },
+  countActive: { backgroundColor: T.yellow },
+  countText: { fontFamily: F.bodyBold, fontSize: 11.5, color: T.textMuted },
+  countTextActive: { color: T.ink },
 });

@@ -9,6 +9,8 @@ import {
   Alert,
 } from "react-native";
 import api from "../api/api";
+import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
+import { Screen, ScreenHeader, Button, Card, EmptyState, Skeleton } from "../ui";
 import { AuthContext } from "../context/AuthContext";
 
 export default function BrandOffersScreen({ route }) {
@@ -63,146 +65,94 @@ export default function BrandOffersScreen({ route }) {
     const claimedCount = item.claimedBy?.length || 0;
 
     return (
-      <View style={styles.card}>
+      <Card style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.title}>{item.title}</Text>
-          <View style={styles.discountBadge}>
-            <Text style={styles.discountText}>{item.discount}</Text>
-          </View>
+          <Text style={styles.title} maxFontSizeMultiplier={MAX_FONT_SCALE}>{item.title}</Text>
+          {item.discount != null && item.discount !== "" && (
+            <View style={styles.discountBadge}>
+              <Text style={styles.discountText} maxFontSizeMultiplier={MAX_FONT_SCALE}>{item.discount}</Text>
+            </View>
+          )}
         </View>
 
-        <Text style={styles.desc}>{item.description}</Text>
-        <Text style={styles.uni}>University: {item.university?.name || "All"}</Text>
-
-        {/* Show how many students claimed this offer */}
-        <Text style={styles.claimCount}>
-          Claimed by {claimedCount} {claimedCount === 1 ? "student" : "students"}
+        {!!item.description && <Text style={styles.desc}>{item.description}</Text>}
+        <Text style={styles.uni} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+          university: {item.university?.name || "all"}
         </Text>
 
-        <TouchableOpacity
-          style={[styles.claimButton, claimedByStudent && styles.claimedButton]}
+        {/* Show how many students claimed this offer (hidden at 0) */}
+        {claimedCount > 0 && (
+          <Text style={styles.claimCount} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            claimed by {claimedCount} {claimedCount === 1 ? "student" : "students"}
+          </Text>
+        )}
+
+        <Button
+          title={claimedByStudent ? "already claimed" : "claim offer"}
+          variant={claimedByStudent ? "secondary" : "accent"}
           onPress={() => handleClaim(item._id, item.title)}
           disabled={claimedByStudent}
-        >
-          <Text style={styles.claimButtonText}>
-            {claimedByStudent ? "Already Claimed" : "Claim Offer"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+          style={styles.claimButton}
+        />
+      </Card>
     );
   };
 
   if (loading)
-    return <ActivityIndicator style={styles.loading} size="large" color="#007bff" />;
+    return (
+      <Screen>
+        <ScreenHeader title={brandName ? `${brandName} offers` : "offers"} />
+        <Skeleton rows={3} height={140} style={{ paddingTop: 8 }} />
+      </Screen>
+    );
 
   if (!offers.length)
     return (
-      <View style={styles.loading}>
-        <Text style={styles.emptyText}>No offers found for {brandName}</Text>
-      </View>
+      <Screen>
+        <ScreenHeader title={brandName ? `${brandName} offers` : "offers"} />
+        <EmptyState
+          mood="sleepy"
+          title="no offers yet"
+          line={brandName ? `no offers found for ${brandName}.` : "check back soon."}
+        />
+      </Screen>
     );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>{brandName} Offers</Text>
+    <Screen>
+      <ScreenHeader title={brandName ? `${brandName} offers` : "offers"} />
       <FlatList
         data={offers}
         keyExtractor={(item) => item._id}
         renderItem={renderOffer}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={styles.list}
+        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f0f2f5",
-    paddingHorizontal: 15,
-    paddingTop: 50,
-  },
-  header: {
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 20,
-    textAlign: "center",
-    color: "#007bff",
-  },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 15,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
-  },
+  list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32 },
+  card: {},
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    gap: 10,
+    marginBottom: 8,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#333",
-    flexShrink: 1,
-  },
+  title: { fontFamily: F.headingBold, fontSize: 17, color: T.ink, flexShrink: 1 },
   discountBadge: {
-    backgroundColor: "#ff6347",
+    height: 28,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  discountText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 14,
-  },
-  desc: {
-    fontSize: 14,
-    color: "#555",
-    marginBottom: 10,
-    lineHeight: 20,
-  },
-  uni: {
-    fontSize: 13,
-    color: "#28a745",
-    fontWeight: "600",
-    marginBottom: 5,
-  },
-  claimCount: {
-    fontSize: 13,
-    color: "#ff6347",
-    fontWeight: "600",
-    marginBottom: 10,
-  },
-  claimButton: {
-    backgroundColor: "#007bff",
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: "center",
-    marginTop: 5,
-  },
-  claimedButton: {
-    backgroundColor: "#6c757d",
-  },
-  claimButtonText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 16,
-  },
-  loading: {
-    flex: 1,
+    borderRadius: 14,
+    backgroundColor: T.yellow,
     justifyContent: "center",
-    alignItems: "center",
   },
-  emptyText: {
-    fontSize: 16,
-    color: "#888",
-  },
+  discountText: { fontFamily: F.bodyBold, fontSize: 12.5, color: T.ink },
+  desc: { fontFamily: F.body, fontSize: 14, lineHeight: 20, color: T.textMuted, marginBottom: 10 },
+  uni: { fontFamily: F.bodySemi, fontSize: 12.5, color: T.textMuted, marginBottom: 4 },
+  claimCount: { fontFamily: F.bodySemi, fontSize: 12.5, color: T.ink, marginBottom: 4 },
+  claimButton: { marginTop: 10 },
 });
