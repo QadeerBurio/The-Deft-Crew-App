@@ -1,5 +1,5 @@
 // app/src/screens/home/HomeDeals.js
-// "fresh deals." — horizontal rail of brands that have an offer.
+// Horizontal rail of deal cards. Used by "near me." (HomeNearMe.js).
 import React, { useState } from "react";
 import { View, Text, Image, FlatList, StyleSheet, Platform } from "react-native";
 import SectionTitle from "../../ui/SectionTitle";
@@ -16,10 +16,10 @@ function metaFor(brand) {
   return category;
 }
 
-const DealCard = React.memo(function DealCard({ brand, onPress }) {
+const DealCard = React.memo(function DealCard({ brand, onPress, getMeta }) {
   const [imageFailed, setImageFailed] = useState(false);
   const discount = Number(brand?.discount) || 0;
-  const meta = metaFor(brand);
+  const meta = (getMeta || metaFor)(brand);
   const name = brand?.name || "";
 
   return (
@@ -64,20 +64,34 @@ const DealCard = React.memo(function DealCard({ brand, onPress }) {
   );
 });
 
-export default function HomeDeals({ deals, loading, savedLabel, onSeeAll, onOpenDeal }) {
+export default function HomeDeals({
+  deals,
+  loading,
+  savedLabel,
+  onSeeAll,
+  onOpenDeal,
+  title = "near me",
+  notice, // optional node under the title (permission / fallback line)
+  body, // optional node instead of the rail (permission card)
+  getMeta,
+  hideWhenEmpty = true,
+}) {
   const hasDeals = Array.isArray(deals) && deals.length > 0;
-  if (!hasDeals && !loading) return null;
+  if (!hasDeals && !loading && !body && hideWhenEmpty) return null;
 
   return (
     <View style={styles.section}>
       <SectionTitle
-        title="fresh deals"
+        title={title}
         right={savedLabel}
         onRightPress={onSeeAll}
         rightLabel="see all deals"
         style={styles.title}
       />
-      {hasDeals ? (
+      {notice ? <View style={styles.notice}>{notice}</View> : null}
+      {body ? (
+        <View style={styles.bodySlot}>{body}</View>
+      ) : hasDeals ? (
         <FlatList
           data={deals}
           keyExtractor={(b, i) => String(b?._id || i)}
@@ -86,14 +100,14 @@ export default function HomeDeals({ deals, loading, savedLabel, onSeeAll, onOpen
           snapToInterval={CARD_W + GAP}
           decelerationRate="fast"
           contentContainerStyle={styles.rail}
-          renderItem={({ item }) => <DealCard brand={item} onPress={onOpenDeal} />}
+          renderItem={({ item }) => <DealCard brand={item} onPress={onOpenDeal} getMeta={getMeta} />}
         />
-      ) : (
+      ) : loading ? (
         <View style={[styles.rail, styles.placeholderRow]}>
           <View style={styles.placeholder} />
           <View style={styles.placeholder} />
         </View>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -101,6 +115,8 @@ export default function HomeDeals({ deals, loading, savedLabel, onSeeAll, onOpen
 const styles = StyleSheet.create({
   section: { paddingTop: 24, paddingBottom: 24 },
   title: { paddingHorizontal: 20 },
+  notice: { paddingHorizontal: 20, paddingTop: 6 },
+  bodySlot: { paddingHorizontal: 16, paddingTop: 12 },
   rail: { paddingTop: 12, paddingHorizontal: 20, paddingBottom: 6, gap: GAP },
   placeholderRow: { flexDirection: "row", overflow: "hidden" },
   placeholder: { width: CARD_W, height: 178, borderRadius: radius.deal, backgroundColor: color.sand },

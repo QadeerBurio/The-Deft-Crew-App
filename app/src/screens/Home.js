@@ -31,7 +31,7 @@ import { FEATURE_ID_TO_MISSION } from "../engagement/utils/mood";
 import HomeHello from "./home/HomeHello";
 import HomeCampus from "./home/HomeCampus";
 import HomeTools from "./home/HomeTools";
-import HomeDeals from "./home/HomeDeals";
+import HomeNearMe from "./home/HomeNearMe";
 import AiFab, { AI_FAB_BOTTOM } from "./home/AiFab";
 import {
   LATEST_CONFESSION_KEY, DEALS_KEY, fetchLatestConfession, fetchDeals, devLogOnce,
@@ -187,6 +187,7 @@ export default function Home({ navigation }) {
               .then((fresh) => queryClient.setQueryData(DEALS_KEY(userId), fresh))
               .catch((e) => devLogOnce("deals refresh", e))
           : null,
+        signedIn ? queryClient.invalidateQueries({ queryKey: ["home", "nearby"] }) : null,
       ]);
     } finally {
       setPullRefreshing(false);
@@ -334,11 +335,13 @@ export default function Home({ navigation }) {
             />
           </FadeInView>
 
-          {signedIn && (dealsLoading || (deals && deals.length > 0)) && (
+          {signedIn && (
             <FadeInView delay={200}>
-              <HomeDeals
-                deals={deals}
-                loading={dealsLoading}
+              <HomeNearMe
+                signedIn={signedIn}
+                userId={userId}
+                allDeals={deals}
+                dealsLoading={dealsLoading}
                 savedLabel={savedLabel}
                 onSeeAll={openAllDeals}
                 onOpenDeal={openDeal}
