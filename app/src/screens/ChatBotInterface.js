@@ -31,10 +31,9 @@ import * as ExpoClipboard from 'expo-clipboard';
 import { ChatContext } from '../context/ChatContext';
 import { ChatHistoryPanel } from './ChatHistoryScreen';
 
-import { color as T, font as F } from "../theme/tokens";
+import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 const DARK = T.ink;
 const GOLD = T.yellow;
-const GOLD_SOFT = T.yellowSoft;
 const SOFT = T.sand;
 const BORDER = T.line;
 const MUTED = T.textFaint;
@@ -288,10 +287,7 @@ const ChatBotInterface = ({ onClose }) => {
     const bot = item.role === 'assistant';
     if (item.typing) {
       return (
-        <View style={styles.botRow}>
-          <View style={styles.botAvatar}>
-            <Ionicons name="sparkles" size={13} color={GOLD} />
-          </View>
+        <View style={styles.botRow} accessibilityLabel="tdc ai is typing">
           <View style={[styles.bubble, styles.botBubble, { paddingVertical: 14 }]}>
             <TypingDots />
           </View>
@@ -316,26 +312,26 @@ const ChatBotInterface = ({ onClose }) => {
     const stillTyping = isStreaming && item._id === lastBotId;
     return (
       <View style={styles.botRow}>
-        <View style={[styles.botAvatar, isWarn && { backgroundColor: T.dangerBg }]}>
-          <Ionicons name={isWarn ? 'cloud-offline-outline' : 'sparkles'} size={13} color={isWarn ? T.danger : GOLD} />
-        </View>
         <View style={{ flex: 1 }}>
           <View style={[styles.bubble, styles.botBubble, isWarn && styles.warnBubble]}>
+            {isWarn ? (
+              <Ionicons name="cloud-offline-outline" size={15} color={T.danger} style={{ marginBottom: 4 }} />
+            ) : null}
             <Markdown text={item.message} />
           </View>
           {!isWarn && !stillTyping ? (
             <View style={styles.actions}>
               <TouchableOpacity onPress={() => copy(item._id, item.message)} style={styles.action} hitSlop={8}>
-                <Ionicons name={copiedId === item._id ? 'checkmark' : 'copy-outline'} size={13} color={MUTED} />
+                <Ionicons name={copiedId === item._id ? 'checkmark' : 'copy-outline'} size={14} color={TEXT2} />
                 <Text style={styles.actionText}>{copiedId === item._id ? 'copied' : 'copy'}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => share(item.message)} style={styles.action} hitSlop={8}>
-                <Ionicons name="share-social-outline" size={13} color={MUTED} />
+                <Ionicons name="share-social-outline" size={14} color={TEXT2} />
                 <Text style={styles.actionText}>share</Text>
               </TouchableOpacity>
               {item._id === lastBotId && !isLoading ? (
                 <TouchableOpacity onPress={regenerateLastResponse} style={styles.action} hitSlop={8}>
-                  <Ionicons name="refresh" size={13} color={MUTED} />
+                  <Ionicons name="refresh" size={14} color={TEXT2} />
                   <Text style={styles.actionText}>retry</Text>
                 </TouchableOpacity>
               ) : null}
@@ -351,13 +347,22 @@ const ChatBotInterface = ({ onClose }) => {
       <View style={styles.welcomeIcon}>
         <Ionicons name="sparkles" size={26} color={GOLD} />
       </View>
-      <Text style={styles.welcomeTitle}>ask tdc anything</Text>
-      <Text style={styles.welcomeSub}>Deals, jobs, scholarships, events or how something in the app works.</Text>
+      <Text style={styles.welcomeTitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+        ask tdc anything<Text style={{ color: GOLD }}>.</Text>
+      </Text>
+      <Text style={styles.welcomeSub}>deals, jobs, scholarships, events or how something in the app works.</Text>
 
       <Text style={styles.sectionLabel}>try asking about</Text>
       <View style={styles.grid}>
         {STARTERS.map((s) => (
-          <TouchableOpacity key={s.title} style={styles.starter} onPress={() => send(s.q, s.cat)} activeOpacity={0.85}>
+          <TouchableOpacity
+            key={s.title}
+            style={styles.starter}
+            onPress={() => send(s.q, s.cat)}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={`${s.title}, ${s.sub}`}
+          >
             <View style={styles.starterIcon}>
               <Ionicons name={s.icon} size={17} color={GOLD} />
             </View>
@@ -381,13 +386,20 @@ const ChatBotInterface = ({ onClose }) => {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={close} style={styles.squareBtn} activeOpacity={0.7} hitSlop={10}>
+        <TouchableOpacity
+          onPress={close}
+          style={styles.squareBtn}
+          activeOpacity={0.7}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={onClose ? 'close' : 'back'}
+        >
           <Ionicons name={onClose ? 'close' : 'chevron-back'} size={21} color={DARK} />
         </TouchableOpacity>
 
         <View style={styles.headerMid}>
-          <Text style={styles.title}>
-            tdc assistant<Text style={{ color: GOLD }}>.</Text>
+          <Text style={styles.title} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            tdc ai<Text style={{ color: GOLD }}>.</Text>
           </Text>
           <View style={styles.statusRow}>
             <View style={[styles.statusDot, { backgroundColor: isOnline ? T.success : T.danger }]} />
@@ -397,12 +409,26 @@ const ChatBotInterface = ({ onClose }) => {
 
         <View style={styles.headerRight}>
           {messages.length ? (
-            <TouchableOpacity onPress={newChat} style={styles.squareBtn} activeOpacity={0.7} hitSlop={6}>
+            <TouchableOpacity
+              onPress={newChat}
+              style={styles.squareBtn}
+              activeOpacity={0.7}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel="new chat"
+            >
               <Ionicons name="create-outline" size={19} color={DARK} />
             </TouchableOpacity>
           ) : null}
-          <TouchableOpacity onPress={() => setShowHistory(true)} style={styles.darkBtn} activeOpacity={0.8} hitSlop={6}>
-            <Ionicons name="time-outline" size={19} color={GOLD} />
+          <TouchableOpacity
+            onPress={() => setShowHistory(true)}
+            style={styles.darkBtn}
+            activeOpacity={0.8}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel="chat history"
+          >
+            <Ionicons name="time-outline" size={19} color={T.white} />
           </TouchableOpacity>
         </View>
       </View>
@@ -455,17 +481,20 @@ const ChatBotInterface = ({ onClose }) => {
               maxLength={2000}
               onFocus={() => setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 150)}
             />
+            <TouchableOpacity
+              onPress={() => send()}
+              style={[styles.send, !canSend && styles.sendOff]}
+              disabled={!canSend}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="send"
+            >
+              <Ionicons name="arrow-up" size={20} color={canSend ? T.white : T.textMuted} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            onPress={() => send()}
-            style={[styles.send, !canSend && styles.sendOff]}
-            disabled={!canSend}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="arrow-up" size={20} color={canSend ? GOLD : T.textFaint} />
-          </TouchableOpacity>
+          <Text style={styles.footNote}>tdc ai plans it. you book it.</Text>
         </View>
-        <View style={{ height: bottomSpacer, backgroundColor: T.card }} />
+        <View style={{ height: bottomSpacer, backgroundColor: T.paper }} />
       </View>
 
       {/* history inside the same sheet */}
@@ -479,58 +508,54 @@ const ChatBotInterface = ({ onClose }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: T.card },
+  container: { flex: 1, backgroundColor: T.paper },
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: T.line,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 8,
   },
   squareBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: SOFT,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: T.card,
     borderWidth: 1,
     borderColor: BORDER,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  darkBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: DARK, justifyContent: 'center', alignItems: 'center' },
+  darkBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: DARK, justifyContent: 'center', alignItems: 'center' },
   headerMid: { flex: 1, marginLeft: 12 },
   headerRight: { flexDirection: 'row', gap: 8 },
-  title: { fontSize: 18, fontFamily: F.heading, color: DARK, letterSpacing: -0.3 },
-  statusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  statusDot: { width: 7, height: 7, borderRadius: 4, marginRight: 5 },
-  statusText: { fontSize: 11.5, color: MUTED, fontFamily: F.bodySemi },
+  title: { fontSize: 26, fontFamily: F.heading, color: DARK, letterSpacing: -0.6 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 1 },
+  statusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 5 },
+  statusText: { fontSize: 12, color: TEXT2, fontFamily: F.body },
 
-  list: { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 16 },
+  list: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 },
 
   userRow: { alignItems: 'flex-end', marginVertical: 6 },
-  botRow: { flexDirection: 'row', alignItems: 'flex-start', marginVertical: 6, paddingRight: 24 },
-  botAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 9,
-    backgroundColor: DARK,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-    marginTop: 2,
+  botRow: { flexDirection: 'row', alignItems: 'flex-start', marginVertical: 6, paddingRight: 28 },
+  bubble: { paddingHorizontal: 14, paddingVertical: 12, borderRadius: 20 },
+  userBubble: { backgroundColor: DARK, borderBottomRightRadius: 6, maxWidth: '78%' },
+  userText: { color: T.white, fontSize: 15, fontFamily: F.body, lineHeight: 21 },
+  queued: { fontSize: 11.5, fontFamily: F.body, color: TEXT2, marginTop: 4, marginRight: 4 },
+  botBubble: {
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderBottomLeftRadius: 6,
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
   },
-  bubble: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18 },
-  userBubble: { backgroundColor: DARK, borderBottomRightRadius: 6, maxWidth: '82%' },
-  userText: { color: T.white, fontSize: 14.5, fontFamily: F.body, lineHeight: 20 },
-  queued: { fontSize: 11, fontFamily: F.body, color: MUTED, marginTop: 4, marginRight: 4 },
-  botBubble: { backgroundColor: SOFT, borderBottomLeftRadius: 6, alignSelf: 'flex-start', maxWidth: '100%' },
-  warnBubble: { backgroundColor: T.dangerBg },
+  warnBubble: { backgroundColor: T.dangerBg, borderColor: T.dangerBg },
 
-  actions: { flexDirection: 'row', gap: 14, marginTop: 6, marginLeft: 6 },
-  action: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  actionText: { fontSize: 11.5, color: MUTED, fontFamily: F.bodyBold },
+  actions: { flexDirection: 'row', gap: 16, marginTop: 4, marginLeft: 6 },
+  action: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 32 },
+  actionText: { fontSize: 12, color: TEXT2, fontFamily: F.bodySemi },
 
   dots: { flexDirection: 'row', gap: 5, paddingHorizontal: 2 },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: DARK },
@@ -539,28 +564,26 @@ const styles = StyleSheet.create({
   mdLine: { fontSize: 14.5, fontFamily: F.body, color: T.ink, lineHeight: 21 },
   mdText: { color: T.ink },
   mdBold: { fontFamily: F.bodyBold, color: DARK },
-  link: { color: '#b7791f', fontFamily: F.bodyBold, textDecorationLine: 'underline' },
-  h1: { fontSize: 17, fontFamily: F.bodyBold, color: DARK, marginTop: 6, marginBottom: 4 },
+  link: { color: T.ink, fontFamily: F.bodyBold, textDecorationLine: 'underline' },
+  h1: { fontSize: 17, fontFamily: F.heading, color: DARK, marginTop: 6, marginBottom: 4 },
   h2: { fontSize: 15.5, fontFamily: F.bodyBold, color: DARK, marginTop: 6, marginBottom: 3 },
   h3: { fontSize: 14.5, fontFamily: F.bodyBold, color: DARK, marginTop: 4, marginBottom: 2 },
   bulletRow: { flexDirection: 'row', marginVertical: 2, paddingRight: 4 },
   bulletMark: { width: 18, fontSize: 14.5, color: DARK, fontFamily: F.bodyBold, lineHeight: 21 },
-  code: { backgroundColor: T.card, borderWidth: 1, borderColor: BORDER, borderRadius: 10, padding: 10, marginVertical: 6 },
+  code: { backgroundColor: SOFT, borderRadius: 12, padding: 10, marginVertical: 6 },
   codeText: { fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 12.5, color: DARK },
   tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: T.line, paddingVertical: 6 },
   tableCell: { flex: 1, fontSize: 12.5, fontFamily: F.body, color: T.ink, paddingHorizontal: 3 },
 
   // welcome
   welcome: { flex: 1, paddingTop: 18 },
-  welcomeIcon: { width: 56, height: 56, borderRadius: 18, backgroundColor: DARK, justifyContent: 'center', alignItems: 'center' },
+  welcomeIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: DARK, justifyContent: 'center', alignItems: 'center' },
   welcomeTitle: { fontSize: 26, fontFamily: F.heading, color: DARK, letterSpacing: -0.6, marginTop: 16 },
   welcomeSub: { fontSize: 14.5, fontFamily: F.body, color: TEXT2, lineHeight: 21, marginTop: 6 },
   sectionLabel: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontFamily: F.bodyBold,
-    color: MUTED,
-    textTransform: 'none',
-    letterSpacing: 0.8,
+    color: TEXT2,
     marginTop: 24,
     marginBottom: 10,
   },
@@ -568,58 +591,51 @@ const styles = StyleSheet.create({
   starter: {
     width: '48.5%',
     backgroundColor: T.card,
-    borderRadius: 16,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: T.line,
-    padding: 13,
-    shadowColor: T.ink,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 1,
+    padding: 14,
   },
-  starterIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: DARK, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  starterTitle: { fontSize: 13.5, fontFamily: F.bodyBold, color: DARK },
-  starterSub: { fontSize: 11.5, fontFamily: F.body, color: MUTED, marginTop: 2 },
+  starterIcon: { width: 34, height: 34, borderRadius: 12, backgroundColor: DARK, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
+  starterTitle: { fontSize: 14, fontFamily: F.bodyBold, color: DARK },
+  starterSub: { fontSize: 12, fontFamily: F.body, color: TEXT2, marginTop: 2 },
 
   // suggestions + input
-  suggestions: { paddingHorizontal: 14, paddingVertical: 8, gap: 8 },
+  suggestions: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
   chip: {
-    height: 34,
+    height: 36,
     paddingHorizontal: 14,
-    borderRadius: 17,
-    backgroundColor: GOLD_SOFT,
+    borderRadius: 18,
+    backgroundColor: T.card,
     borderWidth: 1,
-    borderColor: '#f6e2ad',
+    borderColor: BORDER,
     justifyContent: 'center',
     maxWidth: 260,
   },
-  chipText: { fontSize: 13, fontFamily: F.bodyBold, color: DARK },
+  chipText: { fontSize: 13, fontFamily: F.bodySemi, color: DARK },
   inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingTop: 8,
+    paddingHorizontal: 16,
+    paddingTop: 6,
     paddingBottom: 10,
-    backgroundColor: T.card,
-    borderTopWidth: 1,
-    borderTopColor: T.line,
+    backgroundColor: T.paper,
   },
   inputWrap: {
-    flex: 1,
-    minHeight: 46,
-    maxHeight: 120,
-    borderRadius: 23,
-    backgroundColor: SOFT,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    minHeight: 58,
+    maxHeight: 130,
+    borderRadius: 29,
+    backgroundColor: T.card,
     borderWidth: 1,
     borderColor: BORDER,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
+    paddingLeft: 18,
+    paddingRight: 6,
+    paddingVertical: 5,
   },
-  input: { fontSize: 15, fontFamily: F.body, color: DARK, paddingTop: Platform.OS === 'ios' ? 12 : 8, paddingBottom: Platform.OS === 'ios' ? 12 : 8, maxHeight: 110 },
-  send: { width: 46, height: 46, borderRadius: 23, backgroundColor: DARK, justifyContent: 'center', alignItems: 'center' },
+  input: { flex: 1, fontSize: 15, fontFamily: F.body, color: DARK, paddingTop: Platform.OS === 'ios' ? 13 : 10, paddingBottom: Platform.OS === 'ios' ? 13 : 10, maxHeight: 110 },
+  send: { width: 46, height: 46, borderRadius: 23, backgroundColor: DARK, justifyContent: 'center', alignItems: 'center', marginLeft: 6 },
   sendOff: { backgroundColor: T.sand },
+  footNote: { textAlign: 'center', fontSize: 12, fontFamily: F.body, color: TEXT2, marginTop: 8 },
 });
 
 export default ChatBotInterface;
