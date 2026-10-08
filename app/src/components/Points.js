@@ -39,6 +39,7 @@ import { useEngagement } from '../engagement/hooks/useEngagement';
 import { useReferrals } from '../engagement/hooks/useReferrals';
 
 import { color as T, font as F } from "../theme/tokens";
+import ScreenHeader from "../ui/ScreenHeader";
 const { width } = Dimensions.get('window');
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -63,8 +64,8 @@ const LEVELS = [
     activityFloor: 300,
     referrals: 0,
     icon: 'egg-easter',                 // 🥚 was: 'egg'
-    color: '#00F5FF',                   // electric cyan
-    gradient: ['#00F5FF', '#7B2FF7'],   // cyan → violet
+    color: T.ink,
+    gradient: [T.ink, T.ink],
     reward: 'digital badge with your name',
     perks: ['Digital badge'],
   },
@@ -75,8 +76,8 @@ const LEVELS = [
     activityFloor: 300,
     referrals: 10,
     icon: 'gamepad-variant',            // 👾 was: 'gamepad'
-    color: '#39FF14',                   // neon lime
-    gradient: ['#39FF14', '#00FFA3'],   // lime → mint
+    color: T.ink,
+    gradient: [T.ink, T.ink],
     reward: 'upgraded badge . verified starter status',
     perks: ['Upgraded badge', 'Starter status'],
   },
@@ -87,8 +88,8 @@ const LEVELS = [
     activityFloor: 600,
     referrals: 20,
     icon: 'star-four-points',           // ✨ was: 'sparkles'
-    color: '#FF2E93',                   // hot pink
-    gradient: ['#FF2E93', '#FF00E5'],   // pink → magenta
+    color: T.ink,
+    gradient: [T.ink, T.ink],
     reward: 'silver card . 10% off for 1 year (cap Rs 350) . tdc starter pack',
     perks: ['Silver card', '10% off, 1 year', 'tdc starter pack'],
     discount: { pct: 10, capRs: 350 },
@@ -100,8 +101,8 @@ const LEVELS = [
     activityFloor: 900,
     referrals: 30,
     icon: 'lightning-bolt',             // ⚡ was: 'crown'
-    color: '#FF8A00',                   // sunset orange
-    gradient: ['#FF8A00', '#FFD600'],   // orange → gold
+    color: T.ink,
+    gradient: [T.ink, T.ink],
     reward: 'gold card . 15% off for 1 year (cap Rs 500) . Instagram feature . tdc essentials',
     perks: ['Gold card', '15% off, 1 year', 'Instagram feature'],
     discount: { pct: 15, capRs: 500 },
@@ -113,8 +114,8 @@ const LEVELS = [
     activityFloor: 1800,
     referrals: 40,
     icon: 'infinity',                   // 🐐 was: 'diamond-stone'
-    color: '#A855F7',                   // aurora purple
-    gradient: ['#A855F7', '#22D3EE'],   // purple → ice blue
+    color: T.ink,
+    gradient: [T.ink, T.ink],
     reward: 'platinum card . 20% off for 1 year (cap Rs 750) . tdc delux pack',
     perks: ['Platinum card', '20% off, 1 year', 'Ambassador cert'],
     discount: { pct: 20, capRs: 750 },
@@ -126,8 +127,8 @@ const LEVELS = [
     activityFloor: 2400,
     referrals: 50,
     icon: 'rocket-launch',              // 🚀 was: 'crown-circle'
-    color: '#FF0844',                   // fire red
-    gradient: ['#FF0844', '#FFB199'],   // red → peach (2-stop for RN gradient)
+    color: T.ink,
+    gradient: [T.ink, T.ink],
     reward: 'founder card . 25% off (cap Rs 1000) . internship referral . signature box',
     perks: ['Founder card', '25% off, 1 year', 'Internship referral'],
     discount: { pct: 25, capRs: 1000 },
@@ -143,13 +144,13 @@ const SkeletonLoader = memo(() => (
   <SafeAreaView style={styles.container} edges={['top']}>
     <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
     <View style={styles.header}>
-      <View style={{ width: 38, height: 38, backgroundColor: '#E8ECF1', borderRadius: 12 }} />
-      <View style={{ width: 100, height: 20, backgroundColor: '#E8ECF1', borderRadius: 6 }} />
-      <View style={{ width: 38, height: 38, backgroundColor: '#E8ECF1', borderRadius: 12 }} />
+      <View style={{ width: 38, height: 38, backgroundColor: T.sand, borderRadius: 12 }} />
+      <View style={{ width: 100, height: 20, backgroundColor: T.sand, borderRadius: 6 }} />
+      <View style={{ width: 38, height: 38, backgroundColor: T.sand, borderRadius: 12 }} />
     </View>
     <ScrollView contentContainerStyle={styles.scrollContent}>
-      <View style={{ margin: 16, padding: 24, backgroundColor: '#E8ECF1', borderRadius: 24, height: 180 }} />
-      <View style={{ margin: 16, padding: 20, backgroundColor: '#E8ECF1', borderRadius: 20, height: 120 }} />
+      <View style={{ margin: 16, padding: 24, backgroundColor: T.sand, borderRadius: 24, height: 180 }} />
+      <View style={{ margin: 16, padding: 20, backgroundColor: T.sand, borderRadius: 20, height: 120 }} />
     </ScrollView>
   </SafeAreaView>
 ));
@@ -247,7 +248,7 @@ const MembersCard = memo(({ referralCount, verifiedCount = 0, onShare }) => {
   const membersToShow = Math.min(referralCount, 5);
   const extras = Math.max(0, referralCount - 5);
   const pendingCount = Math.max(0, referralCount - verifiedCount);
-  const AVATAR_COLORS = ['#6C63FF', T.danger, '#FFD93D', T.success, '#FF6B35'];
+  const AVATAR_COLORS = [T.ink, T.yellow, T.inkSoft, T.yellow, T.ink];
 
   // ── Empty state ──
   if (referralCount === 0) {
@@ -451,7 +452,7 @@ const LevelCard = memo(
             <MaterialCommunityIcons
               name={level.icon}
               size={26}
-              color={isUnlocked ? T.white : T.textFaint}
+              color={isUnlocked ? T.yellow : T.textFaint}
             />
           </LinearGradient>
 
@@ -773,19 +774,8 @@ const PointsScreen = () => {
       <SafeAreaView style={styles.container} edges={['top']}>
         <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
-        <Animated.View style={[styles.header, { opacity: headerFade }]}>
-          <TouchableOpacity
-            onPress={handleGoBack}
-            style={styles.headerBtn}
-            activeOpacity={0.7}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="chevron-back" size={24} color={T.ink} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>
-            the crew<Text style={{ color: T.yellow }}>.</Text>
-          </Text>
-          <View style={{ width: 38 }} />
+        <Animated.View style={{ opacity: headerFade }}>
+          <ScreenHeader title="the crew" onBack={handleGoBack} />
         </Animated.View>
 
         <ScrollView
@@ -963,20 +953,20 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginBottom: 8,
   },
   heroLabel: {
-    color: 'rgba(255,255,255,0.55)', fontSize: 11,
+    color: T.onInkMuted, fontSize: 11,
     fontFamily: F.bodyBold, letterSpacing: 1.6,
   },
   levelBadge: {
     backgroundColor: T.yellow, paddingHorizontal: 12,
     paddingVertical: 6, borderRadius: 20,
   },
-  levelBadgeText: { color: T.ink, fontSize: 10, fontFamily: F.bodyBold, letterSpacing: 0.6 },
+  levelBadgeText: { color: T.ink, fontSize: 11, fontFamily: F.bodyBold, letterSpacing: 0.6 },
   heroBalance: { color: T.white, fontSize: 44, fontFamily: F.heading, letterSpacing: -1.4, marginTop: 2 },
-  heroSub: { color: 'rgba(255,255,255,0.55)', fontSize: 12, fontFamily: F.bodySemi, marginTop: 2 },
+  heroSub: { color: T.onInkMuted, fontSize: 12, fontFamily: F.bodySemi, marginTop: 2 },
   progressRow: { flexDirection: 'row', alignItems: 'center', marginTop: 18, gap: 12 },
   progressTextWrap: { flex: 1 },
   progressTitle: { color: T.white, fontSize: 14, fontFamily: F.bodyBold, marginBottom: 4 },
-  progressSub: { color: 'rgba(255,255,255,0.65)', fontSize: 11, fontFamily: F.bodyMedium, lineHeight: 16 },
+  progressSub: { color: T.onInkMuted, fontSize: 11, fontFamily: F.bodyMedium, lineHeight: 16 },
 
   // Members
   membersCard: {
@@ -1166,7 +1156,7 @@ const styles = StyleSheet.create({
   },
   applyBannerTitle: { color: T.yellow, fontSize: 13, fontFamily: F.bodyBold, letterSpacing: 0.3 },
   applyBannerSub: {
-    color: 'rgba(255,255,255,0.6)', fontSize: 11,
+    color: T.onInkMuted, fontSize: 11,
     marginTop: 2, fontFamily: F.bodyMedium,
   },
   applyBtn: {
@@ -1195,12 +1185,12 @@ const styles = StyleSheet.create({
   },
   storeIconBox: {
     width: 34, height: 34, borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: T.inkSoft,
     alignItems: 'center', justifyContent: 'center',
   },
   storeTextCol: { flex: 1 },
   storeSmall: {
-    color: 'rgba(255,255,255,0.65)', fontSize: 9,
+    color: T.onInkMuted, fontSize: 11,
     fontFamily: F.bodyBold, letterSpacing: 0.5, textTransform: 'none',
   },
   storeBig: { color: T.white, fontSize: 13, fontFamily: F.bodyBold, marginTop: 1 },
