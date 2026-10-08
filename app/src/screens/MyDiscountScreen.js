@@ -131,14 +131,14 @@ const COLORS = {
 };
 
 const DISCOUNT_THEMES = {
-  10: { icon: 'restaurant-outline', gradient: ['#f9c349', '#f5a623'] },
-  15: { icon: 'cafe-outline', gradient: ['#f9c349', '#f5a623'] },
-  20: { icon: 'shirt-outline', gradient: ['#f9c349', '#f5a623'] },
-  25: { icon: 'cut-outline', gradient: ['#f9c349', '#f5a623'] },
-  30: { icon: 'fitness-outline', gradient: ['#f9c349', '#f5a623'] },
-  40: { icon: 'diamond-outline', gradient: ['#f9c349', '#f5a623'] },
-  50: { icon: 'trophy-outline', gradient: ['#f9c349', '#f5a623'] },
-  default: { icon: 'pricetag-outline', gradient: ['#f9c349', '#f5a623'] },
+  10: { icon: 'restaurant-outline', gradient: [T.yellow, T.yellow] },
+  15: { icon: 'cafe-outline', gradient: [T.yellow, T.yellow] },
+  20: { icon: 'shirt-outline', gradient: [T.yellow, T.yellow] },
+  25: { icon: 'cut-outline', gradient: [T.yellow, T.yellow] },
+  30: { icon: 'fitness-outline', gradient: [T.yellow, T.yellow] },
+  40: { icon: 'diamond-outline', gradient: [T.yellow, T.yellow] },
+  50: { icon: 'trophy-outline', gradient: [T.yellow, T.yellow] },
+  default: { icon: 'pricetag-outline', gradient: [T.yellow, T.yellow] },
 };
 
 const getTheme = (percentage) => DISCOUNT_THEMES[percentage] || DISCOUNT_THEMES.default;
@@ -230,7 +230,7 @@ const StatCard = React.memo(({ title, value, icon, gradientColors, delay, isCurr
 
   return (
     <Animated.View style={[styles.statCard, { opacity: animValue, transform: [{ translateY: slideValue }] }]}>
-      <LinearGradient colors={['#ffffff', '#fafafa']} style={styles.statCardInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+      <LinearGradient colors={[T.card, T.sand]} style={styles.statCardInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
         <View style={styles.statCardLeft}>
           <View style={[styles.statIconBox, { backgroundColor: `${gradientColors[0]}15` }]}>
             <LinearGradient colors={[T.sand]} style={styles.statIconGradient}>
@@ -376,7 +376,7 @@ const PromoCodeModal = React.memo(({
                 <Text style={[styles.promoCodeDisplayText, { color: T.success, letterSpacing: 1 }]}>code used</Text>
                 <View style={styles.promoCodeCopyButton}>
                   <LinearGradient colors={['rgba(16,185,129,0.9)', 'rgba(5,150,105,0.9)']} style={styles.promoCodeCopyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                    <Ionicons name="checkmark-done-circle" size={20} color="#fff" />
+                    <Ionicons name="checkmark-done-circle" size={20} color={T.white} />
                     <Text style={styles.promoCodeCopyText}>used</Text>
                   </LinearGradient>
                 </View>
@@ -386,7 +386,7 @@ const PromoCodeModal = React.memo(({
                 <Text style={[styles.promoCodeDisplayText, { color: T.textMuted, letterSpacing: 1 }]}>expired</Text>
                 <View style={styles.promoCodeCopyButton}>
                   <LinearGradient colors={['rgba(156,163,175,0.9)', 'rgba(107,114,128,0.9)']} style={styles.promoCodeCopyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                    <Ionicons name="time" size={20} color="#fff" />
+                    <Ionicons name="time" size={20} color={T.white} />
                     <Text style={styles.promoCodeCopyText}>expired</Text>
                   </LinearGradient>
                 </View>
@@ -400,7 +400,7 @@ const PromoCodeModal = React.memo(({
                     </Animated.View>
                     <TouchableOpacity style={styles.promoCodeCopyButton} onPress={handleCopy} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="copy code">
                       <LinearGradient colors={[T.ink]} style={styles.promoCodeCopyGradient}>
-                        <Ionicons name="copy-outline" size={20} color="#fff" />
+                        <Ionicons name="copy-outline" size={20} color={T.white} />
                         <Text style={styles.promoCodeCopyText}>copy</Text>
                       </LinearGradient>
                     </TouchableOpacity>
@@ -453,7 +453,7 @@ const PromoCodeModal = React.memo(({
 
             {isFromBackend && promoDetails?.status === 'active' && (
               <TouchableOpacity style={styles.useCodeButton} onPress={handleUseCode} activeOpacity={0.85}>
-                <LinearGradient colors={['#1a1a1a']} style={styles.useCodeGradient}>
+                <LinearGradient colors={[T.ink]} style={styles.useCodeGradient}>
                   <Text style={styles.useCodeText}>use this code</Text>
                   <Ionicons name="arrow-forward" size={18} color={COLORS.primary} style={{ marginLeft: 8 }} />
                 </LinearGradient>
@@ -461,7 +461,7 @@ const PromoCodeModal = React.memo(({
             )}
 
             <TouchableOpacity style={styles.closeModalButton} onPress={onClose} activeOpacity={0.85}>
-              <LinearGradient colors={['#f0f0f0']} style={[styles.closeModalGradient, styles.closeModalGradientLight]}>
+              <LinearGradient colors={[T.sand]} style={[styles.closeModalGradient, styles.closeModalGradientLight]}>
                 <Text style={[styles.closeModalText, { color: T.ink }]}>close</Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -676,7 +676,7 @@ const DiscountCard = React.memo(({
                   disabled={!canRedeem}
                 >
                   <LinearGradient
-                    colors={canRedeem ? [T.ink] : ['#cccccc']}
+                    colors={canRedeem ? [T.ink] : [T.line]}
                     style={styles.cardBackButtonGradient}
                   >
                     <Text style={[styles.cardBackButtonText, !canRedeem && styles.cardBackButtonTextDisabled]}>
@@ -876,7 +876,7 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
             <View style={styles.scannerHeader}>
               <Text style={styles.scannerHeaderTitle}>scan qr code</Text>
               <TouchableOpacity onPress={onClose} style={styles.scannerCloseBtn}>
-                <Ionicons name="close" size={24} color="#fff" />
+                <Ionicons name="close" size={24} color={T.white} />
               </TouchableOpacity>
             </View>
             <View style={styles.scannerPermissionContainer}>
@@ -897,11 +897,11 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
             <View style={styles.scannerHeader}>
               <Text style={styles.scannerHeaderTitle}>scan qr code</Text>
               <TouchableOpacity onPress={onClose} style={styles.scannerCloseBtn}>
-                <Ionicons name="close" size={24} color="#fff" />
+                <Ionicons name="close" size={24} color={T.white} />
               </TouchableOpacity>
             </View>
             <View style={styles.scannerPermissionContainer}>
-              <Ionicons name="camera-off" size={48} color="#fff" />
+              <Ionicons name="camera-off" size={48} color={T.white} />
               <Text style={styles.scannerPermissionText}>camera access is off</Text>
               <Text style={styles.scannerPermissionSubtext}>
                 turn on camera access in your phone settings to scan qr codes.
@@ -924,10 +924,10 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
             <Text style={styles.scannerHeaderTitle}>scan qr code</Text>
             <View style={styles.scannerHeaderActions}>
               <TouchableOpacity onPress={toggleTorch} style={styles.scannerTorchBtn}>
-                <Ionicons name={torchOn ? "flashlight" : "flashlight-outline"} size={22} color="#fff" />
+                <Ionicons name={torchOn ? "flashlight" : "flashlight-outline"} size={22} color={T.white} />
               </TouchableOpacity>
               <TouchableOpacity onPress={onClose} style={styles.scannerCloseBtn}>
-                <Ionicons name="close" size={24} color="#fff" />
+                <Ionicons name="close" size={24} color={T.white} />
               </TouchableOpacity>
             </View>
           </View>
@@ -1074,7 +1074,7 @@ const UseNowModal = React.memo(({ visible, onClose, item }) => {
             </View>
 
             <TouchableOpacity style={styles.closeModalButton} onPress={onClose} activeOpacity={0.85}>
-              <LinearGradient colors={['#1a1a1a']} style={styles.closeModalGradient}>
+              <LinearGradient colors={[T.ink]} style={styles.closeModalGradient}>
                 <Text style={styles.closeModalText}>got it</Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -1149,7 +1149,7 @@ const EmptyState = React.memo(({ navigation }) => {
         onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); soundTap(); navigation.navigate('Brands'); }}
         activeOpacity={0.85}
       >
-        <LinearGradient colors={['#1a1a1a']} style={styles.exploreButtonGradient}>
+        <LinearGradient colors={[T.ink]} style={styles.exploreButtonGradient}>
           <Text style={styles.exploreButtonText}>see brands</Text>
         </LinearGradient>
       </TouchableOpacity>

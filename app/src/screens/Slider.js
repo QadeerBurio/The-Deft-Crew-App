@@ -16,9 +16,9 @@ import {
 } from "react-native";
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
-import { color, font } from '../theme/tokens';
+import { color, font, color as T, font as F } from '../theme/tokens';
 
-const DOT_GREY = '#E2DCCF';
+const DOT_GREY = T.handle;
 
 const { width, height } = Dimensions.get("window");
 const ITEM_WIDTH = width * 0.95;
@@ -438,8 +438,8 @@ export default function Slider({ route } = {}) {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#FFD700"
-              colors={["#FFD700"]}
+              tintColor={T.ink}
+              colors={[T.yellow]}
             />
           }
           maxToRenderPerBatch={2}
@@ -639,10 +639,10 @@ const styles = StyleSheet.create({
   
   loadingText: {
     fontSize: 14,
-    color: '#666',
+    color: T.textMuted,
     marginTop: 12,
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
   
   emptyContainer: {
@@ -662,7 +662,7 @@ const styles = StyleSheet.create({
   
   emptySubText: {
     fontSize: 14,
-    color: '#999',
+    color: T.textMuted,
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -785,7 +785,7 @@ const styles = StyleSheet.create({
   
   infoCard: {
     width: "100%",
-    backgroundColor: "#F8F9FA",
+    backgroundColor: T.sand,
     padding: 14,
     borderRadius: 16,
     marginBottom: 16,
@@ -807,7 +807,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FFD70020',
+    backgroundColor: T.yellowSoft,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -825,24 +825,24 @@ const styles = StyleSheet.create({
   
   infoLabel: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#333',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     marginBottom: 1,
   },
   
   infoText: {
     fontSize: 12,
-    color: "#777",
+    color: T.textMuted,
   },
   
   saveBtn: { 
-    backgroundColor: "#f9c349", 
+    backgroundColor: T.yellow, 
     width: "100%", 
     paddingVertical: 14, 
     borderRadius: 25, 
     alignItems: "center", 
     justifyContent: "center",
-    shadowColor: "#f9c349",
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -853,22 +853,22 @@ const styles = StyleSheet.create({
   },
   
   savedBtnActive: { 
-    backgroundColor: "#E8F5E9", 
+    backgroundColor: T.successBg, 
     borderWidth: 2, 
-    borderColor: "#4CAF50",
-    shadowColor: "#4CAF50",
+    borderColor: T.success,
+    shadowColor: T.ink,
     shadowOpacity: 0.15,
   },
   
   saveBtnText: { 
-    color: "#000", 
-    fontWeight: "800", 
+    color: T.ink, 
+    fontFamily: F.heading, 
     fontSize: 16,
     letterSpacing: 0.3,
   },
   
   savedBtnTextActive: { 
-    color: "#4CAF50",
+    color: T.success,
   },
   
   bottomCloseBtn: {

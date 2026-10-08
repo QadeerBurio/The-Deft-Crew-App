@@ -12,6 +12,7 @@ import { useNavigation } from "@react-navigation/native";
 import { AuthContext } from "../context/AuthContext";
 
 import { color as T, font as F } from "../theme/tokens";
+import ScreenHeader from "../ui/ScreenHeader";
 export default function University() {
   const { user } = useContext(AuthContext);
 const navigation = useNavigation();
@@ -19,7 +20,7 @@ const navigation = useNavigation();
   if (!user) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4b7bec" />
+        <ActivityIndicator size="large" color={T.ink} />
       </View>
     );
   }
@@ -27,12 +28,7 @@ const navigation = useNavigation();
   return (
     <>
 {/* Header with back arrow */}
-      <View style={styles.headerContainer}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={28} color={T.success} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>my university</Text>
-      </View>
+      <ScreenHeader title="my university" onBack={() => navigation.goBack()} />
     <View style={styles.container}>
       <Text style={styles.title}>my university</Text>
 
@@ -58,7 +54,7 @@ const navigation = useNavigation();
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f2f5fa",
+    backgroundColor: T.sand,
     padding: 20,
     justifyContent: "center",
   },
@@ -84,7 +80,7 @@ const styles = StyleSheet.create({
     fontFamily: F.heading,
     textAlign: "center",
     marginBottom: 30,
-    color: "#1e2a78",
+    color: T.ink,
   },
 
   card: {
@@ -103,7 +99,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#4b7bec20",
+    backgroundColor: T.sand,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,

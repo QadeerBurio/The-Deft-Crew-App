@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated } from "react-native
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { AuthContext } from "../context/AuthContext";
+import { color as T, font as F } from "../theme/tokens";
 
 export default function GuestGuard({ title, message, children, navigation: propNav }) {
   const { user, isGuest, setIsGuest } = useContext(AuthContext);
@@ -17,7 +18,7 @@ export default function GuestGuard({ title, message, children, navigation: propN
     return (
       <View style={styles.container}>
         <View style={styles.iconCircle}>
-          <Ionicons name="lock-closed" size={48} color="#f9c349" />
+          <Ionicons name="lock-closed" size={48} color={T.yellow} />
         </View>
         <Text style={styles.title}>{title || "Sign In Required"}</Text>
         <Text style={styles.message}>
@@ -31,7 +32,7 @@ export default function GuestGuard({ title, message, children, navigation: propN
             navigation.navigate('Login');
           }}
         >
-          <Ionicons name="log-in-outline" size={20} color="#f9c349" style={{marginRight: 8}} />
+          <Ionicons name="log-in-outline" size={20} color={T.yellow} style={{marginRight: 8}} />
           <Text style={styles.signInText}>Sign In</Text>
         </TouchableOpacity>
         
@@ -63,36 +64,36 @@ const styles = StyleSheet.create({
     flex: 1, 
     justifyContent: 'center', 
     alignItems: 'center', 
-    backgroundColor: '#fff', 
+    backgroundColor: T.card, 
     padding: 32 
   },
   iconCircle: { 
     width: 80, 
     height: 80, 
     borderRadius: 40, 
-    backgroundColor: '#fafafa', 
+    backgroundColor: T.sand, 
     justifyContent: 'center', 
     alignItems: 'center', 
     marginBottom: 20, 
     borderWidth: 2, 
-    borderColor: '#f9c349' 
+    borderColor: T.yellow 
   },
   title: { 
     fontSize: 22, 
-    fontWeight: '800', 
-    color: '#1a1a1a', 
+    fontFamily: F.heading, 
+    color: T.ink, 
     marginBottom: 8 
   },
   message: { 
     fontSize: 14, 
-    color: '#666', 
+    color: T.textMuted, 
     textAlign: 'center', 
     lineHeight: 20, 
     marginBottom: 28 
   },
   signInBtn: { 
     flexDirection: 'row', 
-    backgroundColor: '#1a1a1a', 
+    backgroundColor: T.ink, 
     paddingHorizontal: 28, 
     paddingVertical: 14, 
     borderRadius: 14, 
@@ -102,8 +103,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   signInText: { 
-    color: '#f9c349', 
-    fontWeight: '700', 
+    color: T.yellow, 
+    fontFamily: F.bodyBold, 
     fontSize: 16 
   },
   createBtn: { 
@@ -111,8 +112,8 @@ const styles = StyleSheet.create({
     marginBottom: 8
   },
   createText: { 
-    color: '#1a1a1a', 
-    fontWeight: '600', 
+    color: T.ink, 
+    fontFamily: F.bodySemi, 
     fontSize: 14, 
     textDecorationLine: 'underline' 
   },
@@ -121,8 +122,8 @@ const styles = StyleSheet.create({
     marginTop: 8
   },
   continueGuestText: {
-    color: '#999',
-    fontWeight: '500',
+    color: T.textMuted,
+    fontFamily: F.bodyMedium,
     fontSize: 14
   }
 });

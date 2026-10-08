@@ -38,8 +38,8 @@ const ParticleBackground = () => {
       opacity: new Animated.Value(0),
       duration: 4000 + Math.random() * 4000,
       delay: Math.random() * 3000,
-      color: ['#f9c349', '#6366f1', '#a855f7', '#f43f5e', '#10b981', '#06b6d4', '#fb923c'][
-        Math.floor(Math.random() * 7)
+      color: [T.yellow, T.ink, T.handle][
+        Math.floor(Math.random() * 3)
       ],
     }))
   ).current;
@@ -292,7 +292,7 @@ const AnimatedGridCard = ({ item, index, navigation, missionKey, sorted }) => {
         onPressOut={handlePressOut}
       >
         <LinearGradient
-          colors={['#FFFFFF', '#F8FAFC']}
+          colors={[T.card, T.sand]}
           style={styles.whiteCard}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -306,7 +306,7 @@ const AnimatedGridCard = ({ item, index, navigation, missionKey, sorted }) => {
                 end={{ x: 1, y: 1 }}
                 style={styles.iconCircle}
               >
-                <MaterialCommunityIcons name={item.icon} size={24} color="#FFF" />
+                <MaterialCommunityIcons name={item.icon} size={24} color={T.white} />
               </LinearGradient>
 
               {missionKey && (
@@ -331,7 +331,7 @@ const AnimatedGridCard = ({ item, index, navigation, missionKey, sorted }) => {
               end={{ x: 1, y: 1 }}
               style={styles.plusGradient}
             >
-              <MaterialCommunityIcons name="arrow-top-right" size={16} color="#FFF" />
+              <MaterialCommunityIcons name="arrow-top-right" size={16} color={T.white} />
             </LinearGradient>
           </View>
 
@@ -490,7 +490,7 @@ const StudentDashboard = () => {
       routeName: 'ResumeDashboard',
       icon: 'file-document-edit',
       sub: 'Builder & Templates',
-      colors: ['#06b6d4', '#3b82f6'],
+      colors: [T.ink, T.ink],
       size: 'large',
     },
     {
@@ -500,7 +500,7 @@ const StudentDashboard = () => {
       routeName: 'Dashboard',
       icon: 'brain',
       sub: 'tdc. Mastery',
-      colors: ['#6366f1', '#a855f7'],
+      colors: [T.ink, T.ink],
       size: 'small',
     },
     {
@@ -510,7 +510,7 @@ const StudentDashboard = () => {
       routeName: 'Career',
       icon: 'briefcase-variant',
       sub: 'Careers & Hiring',
-      colors: ['#f9c349', '#f59e0b'],
+      colors: [T.ink, T.ink],
       size: 'small',
     },
     {
@@ -520,7 +520,7 @@ const StudentDashboard = () => {
       routeName: 'Exchange',
       icon: 'calendar-star',
       sub: 'Meetups & Conferences',
-      colors: ['#f43f5e', '#fb923c'],
+      colors: [T.ink, T.ink],
       size: 'large',
     },
   ];

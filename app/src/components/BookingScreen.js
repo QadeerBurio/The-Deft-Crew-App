@@ -23,6 +23,7 @@ import { AuthContext } from '../context/AuthContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { color as T, font as F } from "../theme/tokens";
+import ScreenHeader from "../ui/ScreenHeader";
 const { width } = Dimensions.get("window");
 
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/bookings';
@@ -484,7 +485,7 @@ const BookingScreen = () => {
             <LinearGradient
               colors={notification.type === 'success' 
                 ? [T.white, T.white] 
-                : ['#a09c9c', '#b5b0b0']
+                : [T.line, T.line]
               }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
@@ -559,7 +560,7 @@ const BookingScreen = () => {
                 ]}
               >
                 <LinearGradient
-                  colors={[T.yellow, '#f7b733']}
+                  colors={[T.yellow, T.yellow]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.progressGradientFill}
@@ -576,12 +577,8 @@ const BookingScreen = () => {
           keyboardShouldPersistTaps="handled"
         >
           {/* Header */}
-          <Animated.View style={[styles.header, { opacity: headerFade }]}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
-              <Ionicons name="chevron-back" size={24} color={T.ink} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Book Your Trip</Text>
-            <View style={styles.headerRight} />
+          <Animated.View style={{ opacity: headerFade }}>
+            <ScreenHeader title="book your trip" onBack={() => navigation.goBack()} />
           </Animated.View>
 
           <Animated.View style={{ opacity: fadeAnim }}>
@@ -1277,7 +1274,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   inputError: {
-    borderColor: '#F56565',
+    borderColor: T.danger,
   },
   inputIconContainer: {
     width: 36,
@@ -1515,7 +1512,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorText: {
-    color: '#F56565',
+    color: T.danger,
     fontSize: 12,
     fontFamily: F.bodySemi,
     marginTop: 5,
