@@ -382,7 +382,7 @@ const MembersCard = memo(({ referralCount, verifiedCount = 0, onShare }) => {
 // LEVEL CARD — 3-condition progress
 // ═══════════════════════════════════════════════════════════════════════
 const LevelCard = memo(
-  ({ level, index, userLifetime, userActivity, userReferrals, tiersIssued, onPress }) => {
+  ({ level, index, userLifetime, userActivity, userReferrals, tiersIssued, onPress, isCurrent }) => {
     const cardAnim = useRef(new Animated.Value(0)).current;
     const scaleAnim = useRef(new Animated.Value(0.95)).current;
     const shimmerAnim = useRef(new Animated.Value(0)).current;
@@ -433,6 +433,7 @@ const LevelCard = memo(
           style={[
             styles.levelCard,
             isUnlocked && styles.levelCardUnlocked,
+            isCurrent && styles.levelCardCurrent,
             isNext && styles.levelCardNext,
             { opacity: cardAnim, transform: [{ scale: scaleAnim }] },
           ]}
@@ -458,10 +459,22 @@ const LevelCard = memo(
 
           <View style={styles.levelContent}>
             <View style={styles.levelHeader}>
-              <Text style={styles.levelName}>{level.name}</Text>
-              {isUnlocked ? (
+              <View style={styles.levelNameRow}>
+                <View style={[styles.levelNumPill, isCurrent && styles.levelNumPillCurrent, !isUnlocked && styles.levelNumPillLocked]}>
+                  <Text style={[styles.levelNumText, isCurrent && styles.levelNumTextCurrent, !isUnlocked && styles.levelNumTextLocked]}>
+                    level {index + 1}
+                  </Text>
+                </View>
+                <Text style={styles.levelName}>{level.name}</Text>
+              </View>
+              {isCurrent ? (
+                <View style={[styles.unlockedBadge, styles.currentBadge]}>
+                  <Ionicons name="star" size={12} color={T.ink} />
+                  <Text style={styles.unlockedText}>your level</Text>
+                </View>
+              ) : isUnlocked ? (
                 <View style={styles.unlockedBadge}>
-                  <Ionicons name="checkmark-circle" size={12} color={T.white} />
+                  <Ionicons name="checkmark-circle" size={12} color={T.ink} />
                   <Text style={styles.unlockedText}>unlocked</Text>
                 </View>
               ) : isNext ? (
@@ -660,6 +673,8 @@ const PointsScreen = () => {
   const lifetimeReferral = me?.points?.lifetimeReferral || 0;
   const activityPoints = me?.points?.activityPoints ?? (lifetime - lifetimeReferral);
   const tiersIssued = me?.level?.tiersIssued || [];
+  // the student's current level = the highest level they have unlocked (yellow marks only this one)
+  const currentLevelIdx = LEVELS.reduce((acc, l, i) => (tiersIssued.includes(l.id) ? i : acc), -1);
   const level = me?.level?.id || 'member';
   const nextTier = me?.nextTier || null;
   const applyAvailable = !!me?.nextTier?.applyAvailable;
@@ -872,6 +887,7 @@ const PointsScreen = () => {
                   key={lvl.id}
                   level={lvl}
                   index={idx}
+                  isCurrent={idx === currentLevelIdx}
                   userLifetime={lifetime}
                   userActivity={activityPoints}
                   userReferrals={verifiedCount}
@@ -1081,12 +1097,9 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: T.line,
     alignItems: 'flex-start', position: 'relative', overflow: 'hidden',
   },
-  levelCardUnlocked: {
-    borderColor: T.yellow, backgroundColor: T.yellowSoft,
-    shadowColor: T.ink, shadowOpacity: 0.06,
-    shadowRadius: 8, elevation: 2,
-  },
-  levelCardNext: { borderColor: T.yellow, borderStyle: 'dashed' },
+  levelCardUnlocked: { borderColor: T.ink },
+  levelCardCurrent: { borderColor: T.yellow, backgroundColor: T.yellowSoft },
+  levelCardNext: { borderColor: T.ink, borderStyle: 'dashed' },
   levelShimmer: {
     position: 'absolute', top: 0, left: 0,
     width: 120, height: '100%',
@@ -1103,18 +1116,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', flexWrap: 'wrap', gap: 6,
   },
-  levelName: { fontSize: 13, fontFamily: F.bodyBold, color: T.ink, letterSpacing: 0.3 },
+  levelNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1, flexWrap: 'wrap' },
+  levelNumPill: { backgroundColor: T.ink, paddingHorizontal: 8, height: 22, borderRadius: 11, justifyContent: 'center' },
+  levelNumPillCurrent: { backgroundColor: T.yellow },
+  levelNumPillLocked: { backgroundColor: T.sand },
+  levelNumText: { color: T.white, fontSize: 11, fontFamily: F.bodyBold },
+  levelNumTextCurrent: { color: T.ink },
+  levelNumTextLocked: { color: T.textMuted },
+  levelName: { fontSize: 14, fontFamily: F.bodyBold, color: T.ink },
   unlockedBadge: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: T.yellow, paddingHorizontal: 9,
-    paddingVertical: 3, borderRadius: 12, gap: 4,
+    backgroundColor: T.sand, paddingHorizontal: 9,
+    height: 24, borderRadius: 12, gap: 4,
   },
-  unlockedText: { color: T.ink, fontSize: 8, fontFamily: F.bodyBold, letterSpacing: 0.5 },
+  currentBadge: { backgroundColor: T.yellow },
+  unlockedText: { color: T.ink, fontSize: 11, fontFamily: F.bodyBold },
   nextBadge: {
     backgroundColor: T.sand, paddingHorizontal: 9,
     paddingVertical: 3, borderRadius: 12,
   },
-  nextText: { color: T.textMuted, fontSize: 8, fontFamily: F.bodyBold, letterSpacing: 0.5 },
+  nextText: { color: T.textMuted, fontSize: 11, fontFamily: F.bodyBold },
   levelReward: {
     fontSize: 12, color: T.textMuted, fontFamily: F.bodyMedium,
     marginTop: 4, lineHeight: 16,
