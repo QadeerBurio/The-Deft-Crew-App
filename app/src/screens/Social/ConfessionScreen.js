@@ -35,7 +35,7 @@ import {
 import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus';
 
 const { height, width } = Dimensions.get('window');
-const API_URL = 'http://192.168.18.93:5000/api/social';
+const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
 
 const CONFESSIONS_POLL_INTERVAL = 8000;
 

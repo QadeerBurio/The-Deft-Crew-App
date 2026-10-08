@@ -23,9 +23,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { io } from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
 import { AuthContext } from '../../context/AuthContext';
-import { getMatchConversation, getMyMatches } from '../../api/api';
+import { getMatchConversation, getMyMatches, BASE_URL } from '../../api/api';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadChatFile } from '../../api/api';
@@ -52,20 +51,10 @@ const C = {
 const SCREEN_W = Dimensions.get('window').width;
 const IMAGE_W = Math.round(SCREEN_W * 0.7);
 
-// Mirrors api.js's getBaseURL() exactly, so the socket connection and raw
-// fetch() below always hit the SAME backend (and therefore the same
-// database) as the rest of the app's API calls: dev IP in dev, Railway in prod.
-const getSocketUrl = () => {
-  if (__DEV__) {
-    const manifest = Constants.expoConfig || Constants.manifest || {};
-    const hostUri = manifest.hostUri;
-    const devIp = hostUri ? hostUri.split(':')[0] : '192.168.100.4'; // fallback dev IP if hostUri is not available
-    return `http://${devIp}:5000`;
-  }
-  return 'https://the-deft-crew-production.up.railway.app';
-};
-
-const SOCKET_URL = getSocketUrl();
+// Socket + raw fetch() use the SAME server as every other API call.
+// (Before, in dev builds this pointed at a local IP:5000 while the API used
+// Railway, so the socket never connected and the chat sat on "connecting…".)
+const SOCKET_URL = String(BASE_URL || 'https://the-deft-crew-production.up.railway.app/api').replace(/\/api\/?$/, '');
 
 // ==================== HELPERS ====================
 const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];

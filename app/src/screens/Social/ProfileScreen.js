@@ -14,7 +14,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from "../../context/AuthContext";
 import { soundLike, soundTap } from "../../lib/tdcSounds";
 const { width } = Dimensions.get('window');
-const API_URL = 'http://192.168.18.93:5000/api/social';
+const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
 
 // ============ IN-MEMORY CACHE ============
 const profileCache = {
