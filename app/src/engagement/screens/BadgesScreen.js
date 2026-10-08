@@ -22,13 +22,14 @@ import engagementApi from '../api/engagementApi';
 import { useMissions } from '../hooks/useMissions';
 import { useEngagement } from '../hooks/useEngagement';
 
+import { color as T, font as F } from "../../theme/tokens";
 const { width } = Dimensions.get('window');
 const CARD_GAP = 12;
 const CARD_WIDTH = (width - 32 - CARD_GAP) / 2;
 
-const GOLD = '#f9c349';
-const BLACK = '#0f0f0f';
-const WHITE = '#ffffff';
+const GOLD = T.yellow;
+const BLACK = T.ink;
+const WHITE = T.white;
 
 // ─── Group config ──────────────────────────────────────────────────────
 const GROUPS = {
@@ -416,7 +417,7 @@ export default function BadgesScreen() {
           >
             <Ionicons name="chevron-back" size={22} color={BLACK} />
           </TouchableOpacity>
-          <Text style={styles.title}>badges</Text>
+          <Text style={styles.title} accessibilityRole="header">badges<Text style={{ color: T.yellow }}>.</Text></Text>
           <View style={{ width: 34 }} />
         </View>
         <View style={styles.center}>
@@ -447,7 +448,7 @@ export default function BadgesScreen() {
         >
           <Ionicons name="chevron-back" size={22} color={BLACK} />
         </TouchableOpacity>
-        <Text style={styles.title}>badges</Text>
+        <Text style={styles.title} accessibilityRole="header">badges<Text style={{ color: T.yellow }}>.</Text></Text>
         <View style={{ width: 34 }} />
       </View>
 
@@ -463,7 +464,7 @@ export default function BadgesScreen() {
 
             <View style={styles.heroTopRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.heroLabel}>YOUR COLLECTION</Text>
+                <Text style={styles.heroLabel}>your collection</Text>
                 <View style={styles.heroAmountRow}>
                   <Text style={styles.heroAmount}>{earnedCount}</Text>
                   <Text style={styles.heroSlash}>/{total}</Text>
@@ -682,13 +683,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 17,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: BLACK,
     letterSpacing: -0.3,
   },
 
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  loadingText: { fontSize: 13, color: BLACK, opacity: 0.55, fontWeight: '600' },
+  loadingText: { fontSize: 13, color: BLACK, opacity: 0.55, fontFamily: F.bodySemi },
 
   scroll: { paddingBottom: 20 },
 
@@ -723,9 +724,9 @@ const styles = StyleSheet.create({
   heroLabel: {
     fontSize: 10,
     color: GOLD,
-    textTransform: 'uppercase',
+    textTransform: 'none',
     letterSpacing: 2,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
   },
   heroAmountRow: {
     flexDirection: 'row',
@@ -735,20 +736,20 @@ const styles = StyleSheet.create({
   heroAmount: {
     fontSize: 48,
     color: WHITE,
-    fontWeight: '900',
+    fontFamily: F.heading,
     letterSpacing: -1.5,
   },
   heroSlash: {
     fontSize: 22,
     color: GOLD,
-    fontWeight: '800',
+    fontFamily: F.heading,
     marginLeft: 4,
   },
   heroSub: {
     fontSize: 12,
     color: WHITE,
     opacity: 0.6,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
     marginTop: 2,
   },
   heroIconWrap: { marginTop: 4 },
@@ -778,10 +779,10 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   progressText: {
-    fontSize: 11, color: WHITE, opacity: 0.6, fontWeight: '600',
+    fontSize: 11, color: WHITE, opacity: 0.6, fontFamily: F.bodySemi,
   },
   progressPct: {
-    fontSize: 13, color: GOLD, fontWeight: '900', letterSpacing: -0.2,
+    fontSize: 13, color: GOLD, fontFamily: F.bodyBold, letterSpacing: -0.2,
   },
 
   // ── Missions / Referral tracker (shared) ─────────────
@@ -816,7 +817,7 @@ const styles = StyleSheet.create({
     borderRadius: 14, backgroundColor: BLACK,
   },
   missionCountText: {
-    fontSize: 12, fontWeight: '900', color: GOLD,
+    fontSize: 12, fontFamily: F.bodyBold, color: GOLD,
   },
   missionGrid: {
     flexDirection: 'row',
@@ -843,7 +844,7 @@ const styles = StyleSheet.create({
     width: 6, height: 6, borderRadius: 3, backgroundColor: WHITE,
   },
   missionChipLabel: {
-    fontSize: 11.5, fontWeight: '800',
+    fontSize: 11.5, fontFamily: F.bodyBold,
     color: BLACK, opacity: 0.45, letterSpacing: 0.1,
   },
   missionChipLabelSorted: { color: BLACK, opacity: 1 },
@@ -887,7 +888,7 @@ const styles = StyleSheet.create({
   },
   referralLabel: {
     fontSize: 10,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: BLACK,
     opacity: 0.45,
     letterSpacing: 0.3,
@@ -915,7 +916,7 @@ const styles = StyleSheet.create({
     backgroundColor: GOLD, borderColor: BLACK,
   },
   groupTabLabel: {
-    fontSize: 12, fontWeight: '800',
+    fontSize: 12, fontFamily: F.bodyBold,
     color: WHITE, letterSpacing: -0.1,
     textTransform: 'lowercase',
   },
@@ -928,7 +929,7 @@ const styles = StyleSheet.create({
   },
   groupTabCountActive: { backgroundColor: WHITE },
   groupTabCountText: {
-    fontSize: 10, fontWeight: '900', color: WHITE,
+    fontSize: 10, fontFamily: F.bodyBold, color: WHITE,
   },
   groupTabCountTextActive: { color: BLACK },
 
@@ -952,13 +953,13 @@ const styles = StyleSheet.create({
     backgroundColor: GOLD,
   },
   groupTitle: {
-    fontSize: 15, fontWeight: '900',
+    fontSize: 15, fontFamily: F.bodyBold,
     color: BLACK, letterSpacing: -0.3,
     textTransform: 'lowercase',
   },
   groupSub: {
     fontSize: 11, color: BLACK, opacity: 0.5,
-    fontWeight: '500', marginTop: 1,
+    fontFamily: F.bodyMedium, marginTop: 1,
   },
   groupCount: {
     minWidth: 44, height: 26, borderRadius: 13,
@@ -967,7 +968,7 @@ const styles = StyleSheet.create({
     backgroundColor: BLACK,
   },
   groupCountText: {
-    fontSize: 12, fontWeight: '900',
+    fontSize: 12, fontFamily: F.bodyBold,
     color: GOLD, letterSpacing: 0.2,
   },
 
@@ -1039,14 +1040,14 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   cardTitle: {
-    fontSize: 13.5, fontWeight: '900',
+    fontSize: 13.5, fontFamily: F.bodyBold,
     color: BLACK, textAlign: 'center',
     letterSpacing: -0.2, marginBottom: 4,
   },
   cardTitleLocked: { color: BLACK, opacity: 0.4 },
   cardLine: {
     fontSize: 11, color: BLACK, opacity: 0.65,
-    textAlign: 'center', lineHeight: 15, fontWeight: '500',
+    textAlign: 'center', lineHeight: 15, fontFamily: F.bodyMedium,
   },
   cardLineLocked: { color: BLACK, opacity: 0.35 },
   earnedDateWrap: {
@@ -1061,9 +1062,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   earnedDate: {
-    fontSize: 10, fontWeight: '900',
+    fontSize: 10, fontFamily: F.bodyBold,
     color: BLACK, letterSpacing: 0.3,
-    textTransform: 'uppercase',
+    textTransform: 'none',
   },
 
   // ── Empty ────────────────────────────────────────────
@@ -1075,11 +1076,11 @@ const styles = StyleSheet.create({
   },
   empty: {
     marginTop: 12, color: BLACK,
-    fontSize: 14, fontWeight: '700',
+    fontSize: 14, fontFamily: F.bodyBold,
   },
   emptySub: {
     marginTop: 4, color: BLACK, opacity: 0.4,
-    fontSize: 12, fontWeight: '500',
+    fontSize: 12, fontFamily: F.bodyMedium,
     textAlign: 'center',
   },
 });

@@ -26,9 +26,10 @@ import engagementApi from '../api/engagementApi';
 import { useEngagement } from '../hooks/useEngagement';
 import { success as hapticSuccess, warn, pop } from '../utils/haptics';
 
-const GOLD = '#f9c349';
-const BLACK = '#0f0f0f';
-const WHITE = '#ffffff';
+import { color as T, font as F } from "../../theme/tokens";
+const GOLD = T.yellow;
+const BLACK = T.ink;
+const WHITE = T.white;
 
 const RECENT_LIMIT = 10;
 const PAGE_SIZE = 200;
@@ -359,7 +360,7 @@ export default function RewardsScreen() {
         >
           <Ionicons name="chevron-back" size={22} color={BLACK} />
         </TouchableOpacity>
-        <Text style={styles.title}>rewards</Text>
+        <Text style={styles.title} accessibilityRole="header">rewards<Text style={{ color: T.yellow }}>.</Text></Text>
         <TouchableOpacity
           onPress={onRefresh}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -510,7 +511,7 @@ export default function RewardsScreen() {
           {breakdownRows.length > 0 && (
             <View style={styles.totalCard}>
               <View style={styles.totalLeft}>
-                <Text style={styles.totalLabel}>NET TOTAL</Text>
+                <Text style={styles.totalLabel}>net total</Text>
                 <Text style={styles.totalSub}>
                   earned {totalEarned} · spent {totalSpent}
                 </Text>
@@ -922,13 +923,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 17,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: BLACK,
     letterSpacing: -0.3,
   },
 
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  loadingText: { fontSize: 13, color: BLACK, opacity: 0.55, fontWeight: '600' },
+  loadingText: { fontSize: 13, color: BLACK, opacity: 0.55, fontFamily: F.bodySemi },
 
   scroll: { paddingBottom: 20 },
 
@@ -968,9 +969,9 @@ const styles = StyleSheet.create({
   heroLabel: {
     fontSize: 10,
     color: GOLD,
-    textTransform: 'uppercase',
+    textTransform: 'none',
     letterSpacing: 2,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
   },
   levelChip: {
     flexDirection: 'row',
@@ -985,10 +986,10 @@ const styles = StyleSheet.create({
   },
   levelChipText: {
     fontSize: 10,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: GOLD,
     letterSpacing: 0.4,
-    textTransform: 'uppercase',
+    textTransform: 'none',
   },
   heroAmountRow: {
     flexDirection: 'row',
@@ -1001,7 +1002,7 @@ const styles = StyleSheet.create({
   heroAmount: {
     fontSize: 46,
     color: WHITE,
-    fontWeight: '900',
+    fontFamily: F.heading,
     letterSpacing: -1.4,
   },
   heroLifetimeRow: {
@@ -1016,7 +1017,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: WHITE,
     opacity: 0.55,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
   progressWrap: { marginTop: 18, position: 'relative', zIndex: 1 },
   progressBar: {
@@ -1031,14 +1032,14 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: WHITE,
     opacity: 0.65,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
   },
-  progressTextBold: { color: GOLD, fontWeight: '900' },
+  progressTextBold: { color: GOLD, fontFamily: F.bodyBold },
   maxLevelText: {
     marginTop: 16,
     fontSize: 12,
     color: GOLD,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     fontStyle: 'italic',
     position: 'relative',
     zIndex: 1,
@@ -1059,7 +1060,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 15,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: BLACK,
     letterSpacing: -0.2,
     textTransform: 'lowercase',
@@ -1074,7 +1075,7 @@ const styles = StyleSheet.create({
   viewAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   viewAllText: {
     fontSize: 12,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: GOLD,
     letterSpacing: 0.2,
     textTransform: 'lowercase',
@@ -1115,14 +1116,14 @@ const styles = StyleSheet.create({
   earnTextWrap: { flex: 1, marginRight: 6 },
   earnLabel: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: BLACK,
     letterSpacing: -0.1,
     textTransform: 'lowercase',
   },
   earnDetail: {
     fontSize: 10.5,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
     color: BLACK,
     opacity: 0.55,
     marginTop: 1,
@@ -1140,7 +1141,7 @@ const styles = StyleSheet.create({
   },
   earnPointsText: {
     fontSize: 11,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: GOLD,
     letterSpacing: 0.3,
   },
@@ -1159,7 +1160,7 @@ const styles = StyleSheet.create({
   totalLeft: { flex: 1 },
   totalLabel: {
     fontSize: 11,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: GOLD,
     letterSpacing: 2,
   },
@@ -1167,7 +1168,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: WHITE,
     opacity: 0.55,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
     marginTop: 3,
   },
   totalPill: {
@@ -1181,7 +1182,7 @@ const styles = StyleSheet.create({
   },
   totalText: {
     fontSize: 14,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: BLACK,
     letterSpacing: -0.2,
   },
@@ -1216,7 +1217,7 @@ const styles = StyleSheet.create({
   ledgerTextWrap: { flex: 1 },
   ledgerLabel: {
     fontSize: 12.5,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
     color: BLACK,
     textTransform: 'lowercase',
   },
@@ -1224,7 +1225,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: BLACK,
     opacity: 0.5,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
     marginTop: 1,
   },
   ledgerDeltaWrap: {
@@ -1234,7 +1235,7 @@ const styles = StyleSheet.create({
   },
   ledgerDelta: {
     fontSize: 13,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: BLACK,
     letterSpacing: -0.1,
   },
@@ -1255,7 +1256,7 @@ const styles = StyleSheet.create({
   },
   viewAllFullText: {
     fontSize: 13,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: BLACK,
     letterSpacing: 0.1,
     textTransform: 'lowercase',
@@ -1290,21 +1291,21 @@ const styles = StyleSheet.create({
   rewardBody: { flex: 1, marginRight: 10 },
   rewardBrand: {
     fontSize: 10,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: BLACK,
     opacity: 0.55,
     letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    textTransform: 'none',
     marginBottom: 2,
   },
   rewardTitle: {
     fontSize: 14,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: BLACK,
     lineHeight: 18,
   },
   rewardDesc: {
-    fontSize: 11.5,
+    fontSize: 11.5, fontFamily: F.body,
     color: BLACK,
     opacity: 0.65,
     marginTop: 3,
@@ -1325,13 +1326,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: BLACK,
   },
-  costPillText: { fontSize: 10.5, fontWeight: '900', color: GOLD },
+  costPillText: { fontSize: 10.5, fontFamily: F.bodyBold, color: GOLD },
   stockText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: BLACK,
     opacity: 0.5,
-    textTransform: 'uppercase',
+    textTransform: 'none',
     letterSpacing: 0.4,
   },
   redeemBtn: {
@@ -1351,7 +1352,7 @@ const styles = StyleSheet.create({
   },
   redeemText: {
     fontSize: 12,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: BLACK,
     letterSpacing: 0.2,
   },
@@ -1375,10 +1376,10 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 10,
   },
-  myRewardTitle: { fontSize: 13, fontWeight: '800', color: BLACK },
+  myRewardTitle: { fontSize: 13, fontFamily: F.bodyBold, color: BLACK },
   myRewardCode: {
     fontSize: 12,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: BLACK,
     marginTop: 2,
     letterSpacing: 0.6,
@@ -1391,10 +1392,10 @@ const styles = StyleSheet.create({
   },
   myRewardStatus: {
     fontSize: 10,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: GOLD,
     letterSpacing: 0.6,
-    textTransform: 'uppercase',
+    textTransform: 'none',
   },
 
   emptyBox: {
@@ -1403,13 +1404,13 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
     marginHorizontal: 16,
   },
-  empty: { marginTop: 10, color: BLACK, fontSize: 14, fontWeight: '700' },
+  empty: { marginTop: 10, color: BLACK, fontSize: 14, fontFamily: F.bodyBold },
   emptySub: {
     marginTop: 4,
     color: BLACK,
     opacity: 0.4,
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
 
   modalContainer: { flex: 1, backgroundColor: WHITE },
@@ -1440,7 +1441,7 @@ const styles = StyleSheet.create({
   },
   exportText: {
     fontSize: 13,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: BLACK,
     letterSpacing: 0.2,
     textTransform: 'lowercase',
@@ -1468,7 +1469,7 @@ const styles = StyleSheet.create({
   },
   fullLabel: {
     fontSize: 13.5,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: BLACK,
     textTransform: 'lowercase',
   },
@@ -1476,7 +1477,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: BLACK,
     opacity: 0.5,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
     marginTop: 2,
   },
   fullDeltaWrap: {
@@ -1486,7 +1487,7 @@ const styles = StyleSheet.create({
   },
   fullDelta: {
     fontSize: 14,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: BLACK,
     letterSpacing: -0.1,
   },
@@ -1496,7 +1497,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: BLACK,
     opacity: 0.35,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
     paddingVertical: 16,
     letterSpacing: 2,
   },
