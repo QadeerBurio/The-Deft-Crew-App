@@ -8,6 +8,7 @@ import CelebrationPopup from './CelebrationPopup';
 import FullySortedCelebration from './FullySortedCelebration';
 import { useCelebrationQueue } from '../hooks/useCelebrationQueue';
 import { navigationRef } from '../../navigation/navigationRef';
+import { holdTour, releaseTour } from '../tour/tourGate';
 
 const EXIT_DELAY_MS = 400;   // delay before allowing the next popup to mount
 
@@ -19,6 +20,14 @@ export default function CelebrationHost() {
 
   // Prevent queue changes from instantly swapping popups mid-animation
   const lockedRef = useRef(false);
+
+  // Hold the app tour while a popup is queued or on screen
+  const celebrating = !!(current || activePopup);
+  useEffect(() => {
+    if (celebrating) holdTour('celebration');
+    else releaseTour('celebration');
+  }, [celebrating]);
+  useEffect(() => () => releaseTour('celebration'), []);
 
   useEffect(() => {
     // No popup queued → clear after exit delay

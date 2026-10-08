@@ -133,8 +133,9 @@ export default function SettingsScreen({ navigation }) {
   const handleReplayTour = () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      startTour();
+      // back to the tabs first, then start once the tab bar is on screen to be measured
       navigation.navigate("HomeTabs");
+      setTimeout(startTour, 500);
     } catch (e) {
       console.log("tour start error:", e?.message);
     }

@@ -89,6 +89,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
   const homeRef = useRef(null);
   const exploreRef = useRef(null);
   const campusRef = useRef(null);
+  const profileRef = useRef(null);
   const socialRef = useRef(null);
 
   // Register targets once mounted
@@ -98,6 +99,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
       if (exploreRef.current) registerTarget("tab_explore", exploreRef.current);
       if (campusRef.current) registerTarget("tab_campus", campusRef.current);
       if (socialRef.current) registerTarget("tab_social", socialRef.current);
+      if (profileRef.current) registerTarget("tab_profile", profileRef.current);
     }, 100);
     return () => clearTimeout(t);
   }, [registerTarget]);
@@ -293,7 +295,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
           label: "profile",
           selected: state.index === profileIndex,
           onPress: () => navigation.navigate("Profile"),
-          tourRef: undefined,
+          tourRef: profileRef,
           renderIcon: (tint) => <MaterialCommunityIcons name="account-circle" size={23} color={tint} />,
         })}
       </View>

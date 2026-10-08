@@ -1,323 +1,237 @@
 // app/src/engagement/tour/TourOverlay.js
+// Dims the screen, rings the current tab in yellow and shows one card above it:
+// dot face · title · line · "n of 5" · back / next (let's go on the last step) · skip.
+// Tapping the dim area does nothing; hardware back = skip.
 import React, { useEffect, useState } from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Pressable,
-  Dimensions,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTour } from './TourProvider';
 import { TOUR_STEPS } from './tourSteps';
 import { pop } from '../utils/haptics';
+import Dot from '../components/Dot';
+import { color as T, font as F, MAX_FONT_SCALE } from '../../theme/tokens';
 
-import { color as T, font as F } from "../../theme/tokens";
-const { width, height } = Dimensions.get('window');
-const GOLD = T.yellow;
-const DARK = T.ink;
-const DIM = 'rgba(0,0,0,0.75)';
-
-// Height of the tab bar (keep in sync with TabNavigator.js)
-const TAB_HEIGHT = 55;
-const BOTTOM_INSET = 30;
-// Distance from bottom of screen where the sheet sits.
-// Leaves room BELOW the sheet for the downward caret to point at the tab.
-const SHEET_BOTTOM_OFFSET = TAB_HEIGHT + BOTTOM_INSET;
-
-const ARROW_W = 14;   // half-width of the caret
-const ARROW_H = 12;   // height of the caret
+const DIM = 'rgba(17,17,17,0.72)';
+const PAD = 8; // ring padding around the tab
+const ARROW = 10;
 
 export default function TourOverlay() {
   const { running, stop, getTargets } = useTour();
+  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
   const [stepIdx, setStepIdx] = useState(0);
   const [rect, setRect] = useState(null);
 
-  // Reset step on start
   useEffect(() => {
     if (running) setStepIdx(0);
   }, [running]);
 
-  // Measure the current step's target
+  // Measure the current step's tab
   useEffect(() => {
     if (!running) {
       setRect(null);
-      return;
+      return undefined;
     }
     const step = TOUR_STEPS[stepIdx];
     if (!step) {
       stop();
-      return;
-    }
-    const node = getTargets().get(step.id);
-    if (node && node.measureInWindow) {
-      const id = setTimeout(() => {
-        try {
-          node.measureInWindow((x, y, w, h) => {
-            if (w > 0 && h > 0) {
-              setRect({ x, y, width: w, height: h });
-            } else {
-              setRect(null);
-            }
-          });
-        } catch {
-          setRect(null);
-        }
-      }, 180);
-      return () => clearTimeout(id);
+      return undefined;
     }
     setRect(null);
+    const node = getTargets().get(step.id);
+    if (!node?.measureInWindow) return undefined;
+    const measure = () => {
+      try {
+        node.measureInWindow((x, y, w, h) => {
+          setRect(w > 0 && h > 0 ? { x, y, width: w, height: h } : null);
+        });
+      } catch {
+        setRect(null);
+      }
+    };
+    // measure, then again once any screen transition has settled
+    const a = setTimeout(measure, 160);
+    const b = setTimeout(measure, 600);
+    return () => {
+      clearTimeout(a);
+      clearTimeout(b);
+    };
   }, [running, stepIdx, getTargets, stop]);
 
   if (!running) return null;
 
   const step = TOUR_STEPS[stepIdx];
-  const isLast = stepIdx === TOUR_STEPS.length - 1;
+  if (!step) return null;
   const total = TOUR_STEPS.length;
+  const isFirst = stepIdx === 0;
+  const isLast = stepIdx === total - 1;
 
-  const onNext = () => {
+  const next = () => {
     pop();
-    if (isLast) {
-      stop();
-      return;
-    }
-    setStepIdx((i) => i + 1);
+    if (isLast) stop();
+    else setStepIdx((i) => i + 1);
   };
-
-  const onSkip = () => {
+  const back = () => {
+    pop();
+    setStepIdx((i) => Math.max(0, i - 1));
+  };
+  const skip = () => {
     pop();
     stop();
   };
 
-  const onBackdrop = () => onNext();
-
-  // ── Spotlight rect padding
-  const PAD = 12;
-  const spotlightLeft = rect ? rect.x - PAD : 0;
-  const spotlightTop = rect ? rect.y - PAD : 0;
-  const spotlightW = rect ? rect.width + PAD * 2 : 0;
-  const spotlightH = rect ? rect.height + PAD * 2 : 0;
-
-  // ── Arrow horizontal alignment (center of the highlighted icon)
-  const spotlightCenterX = rect ? rect.x + rect.width / 2 : width / 2;
-  const sheetHPad = 16; // matches styles.sheetWrap.paddingHorizontal
-  const sheetWidth = width - sheetHPad * 2;
-  let arrowLeft = spotlightCenterX - sheetHPad - ARROW_W;
-  // Clamp inside the sheet so it never overflows
-  arrowLeft = Math.max(16, Math.min(sheetWidth - ARROW_W * 2 - 16, arrowLeft));
+  // Ring + card position (card sits above the ringed tab; falls back above the tab bar)
+  const ring = rect && {
+    left: rect.x - PAD,
+    top: rect.y - PAD,
+    width: rect.width + PAD * 2,
+    height: rect.height + PAD * 2,
+  };
+  const cardBottom = ring ? height - ring.top + ARROW + 6 : insets.bottom + 96;
+  const sidePad = 16;
+  const arrowLeft = ring
+    ? Math.max(24, Math.min(width - sidePad * 2 - 24 - ARROW * 2, ring.left + ring.width / 2 - sidePad - ARROW))
+    : null;
 
   return (
-    <Modal visible transparent animationType="fade" statusBarTranslucent>
-      <Pressable style={styles.root} onPress={onBackdrop}>
-        {/* ── DIM + SPOTLIGHT LAYER ───────────────────────────── */}
-        {rect ? (
+    <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={skip}>
+      {/* Tapping the dim area does nothing (no accidental skips) */}
+      <Pressable style={StyleSheet.absoluteFill} accessible={false}>
+        {ring ? (
           <>
-            {/* top dim */}
-            <View style={[styles.dim, { top: 0, left: 0, right: 0, height: spotlightTop }]} />
-            {/* bottom dim */}
-            <View
-              style={[
-                styles.dim,
-                { top: spotlightTop + spotlightH, left: 0, right: 0, bottom: 0 },
-              ]}
-            />
-            {/* left dim */}
-            <View
-              style={[
-                styles.dim,
-                { top: spotlightTop, left: 0, width: spotlightLeft, height: spotlightH },
-              ]}
-            />
-            {/* right dim */}
-            <View
-              style={[
-                styles.dim,
-                {
-                  top: spotlightTop,
-                  left: spotlightLeft + spotlightW,
-                  right: 0,
-                  height: spotlightH,
-                },
-              ]}
-            />
-
-            {/* Gold spotlight ring */}
-            <View
-              style={[
-                styles.spotlight,
-                {
-                  left: spotlightLeft,
-                  top: spotlightTop,
-                  width: spotlightW,
-                  height: spotlightH,
-                },
-              ]}
-            />
+            <View style={[s.dim, { top: 0, left: 0, right: 0, height: Math.max(0, ring.top) }]} />
+            <View style={[s.dim, { top: ring.top + ring.height, left: 0, right: 0, bottom: 0 }]} />
+            <View style={[s.dim, { top: ring.top, left: 0, width: Math.max(0, ring.left), height: ring.height }]} />
+            <View style={[s.dim, { top: ring.top, left: ring.left + ring.width, right: 0, height: ring.height }]} />
+            <View pointerEvents="none" style={[s.ring, ring]} />
           </>
         ) : (
-          <View style={[styles.dim, StyleSheet.absoluteFillObject]} />
+          <View style={[s.dim, StyleSheet.absoluteFillObject]} />
         )}
+      </Pressable>
 
-        {/* ── SHEET + ARROW (sits ABOVE the tab bar) ─────────── */}
+      <View style={[s.cardWrap, { bottom: cardBottom, paddingHorizontal: sidePad }]} pointerEvents="box-none">
         <View
-          style={[styles.sheetWrap, { bottom: SHEET_BOTTOM_OFFSET }]}
-          pointerEvents="box-none"
+          style={s.card}
+          accessible={false}
+          accessibilityViewIsModal
         >
-          <View style={styles.sheetInner}>
-            <View style={styles.headerRow}>
-              <Text style={styles.counter}>
-                {stepIdx + 1} of {total}
+          <View style={s.top}>
+            <Text style={s.counter} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+              {stepIdx + 1} of {total}
+            </Text>
+            <TouchableOpacity
+              onPress={skip}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="skip the tour"
+            >
+              <Text style={s.skip} maxFontSizeMultiplier={MAX_FONT_SCALE}>skip</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={s.body} accessible accessibilityLabel={`${step.title} ${step.line}`}>
+            <Dot mood={step.mood} size={48} animated={false} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.title} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                {step.title.replace(/\.$/, '')}
+                <Text style={{ color: T.yellow }}>.</Text>
               </Text>
-              <TouchableOpacity onPress={onSkip} hitSlop={12}>
-                <Text style={styles.skipText}>skip</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.line}>{step.line}</Text>
-
-            <View style={styles.footerRow}>
-              <View style={styles.dotsRow}>
-                {TOUR_STEPS.map((_, i) => (
-                  <View
-                    key={i}
-                    style={[styles.dotIndicator, i === stepIdx && styles.dotIndicatorActive]}
-                  />
-                ))}
-              </View>
-
-              <TouchableOpacity style={styles.nextBtn} onPress={onNext} activeOpacity={0.9}>
-                <Text style={styles.nextText}>{isLast ? 'Done' : 'Next'}</Text>
-                {isLast && (
-                  <Ionicons name="checkmark" size={16} color={DARK} style={{ marginLeft: 4 }} />
-                )}
-              </TouchableOpacity>
+              <Text style={s.line} maxFontSizeMultiplier={MAX_FONT_SCALE}>{step.line}</Text>
             </View>
           </View>
 
-          {/* ✅ Arrow BELOW the sheet, pointing DOWN at the tab icon */}
-          {rect && (
-            <View
-              style={[styles.arrowRow, { paddingLeft: arrowLeft }]}
-              pointerEvents="none"
-            >
-              <View style={styles.arrowOuter} />
+          <View style={s.foot}>
+            <View style={s.dots}>
+              {TOUR_STEPS.map((x, i) => (
+                <View key={x.id} style={[s.dot, i === stepIdx && s.dotOn]} />
+              ))}
             </View>
-          )}
+            {!isFirst && (
+              <TouchableOpacity
+                onPress={back}
+                style={s.backBtn}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="previous step"
+              >
+                <Text style={s.backText} maxFontSizeMultiplier={MAX_FONT_SCALE}>back</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={next}
+              style={s.nextBtn}
+              activeOpacity={0.9}
+              accessibilityRole="button"
+              accessibilityLabel={isLast ? 'finish the tour' : 'next step'}
+            >
+              <Text style={s.nextText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                {isLast ? "let's go" : 'next'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </Pressable>
+
+        {ring && (
+          <View style={[s.arrowRow, { paddingLeft: arrowLeft }]} pointerEvents="none">
+            <View style={s.arrow} />
+          </View>
+        )}
+      </View>
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  // dim: {
-  //   position: 'absolute',
-  //   backgroundColor: DIM,
-  // },
-  // spotlight: {
-  //   position: 'absolute',
-  //   borderRadius: 16,
-  //   borderWidth: 2.5,
-  //   borderColor: GOLD,
-  //   backgroundColor: T.yellowSoft,
-  // },
-  // ── Sheet wrapper: absolutely positioned above the tab bar
-  sheetWrap: {
+const s = StyleSheet.create({
+  dim: { position: 'absolute', backgroundColor: DIM },
+  ring: {
     position: 'absolute',
-    left: 0,
-    right: 0,
+    borderRadius: 18,
+    borderWidth: 2.5,
+    borderColor: T.yellow,
+  },
+  cardWrap: { position: 'absolute', left: 0, right: 0 },
+  card: {
+    backgroundColor: T.card,
+    borderRadius: 24,
+    padding: 16,
+  },
+  top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  counter: { fontFamily: F.bodyBold, fontSize: 12.5, color: T.textMuted },
+  skip: { fontFamily: F.bodyBold, fontSize: 13.5, color: T.ink, textDecorationLine: 'underline', paddingVertical: 4 },
+  body: { flexDirection: 'row', gap: 12, alignItems: 'center', marginTop: 10 },
+  title: { fontFamily: F.heading, fontSize: 20, color: T.ink },
+  line: { fontFamily: F.body, fontSize: 14.5, lineHeight: 20, color: T.textMuted, marginTop: 2 },
+  foot: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14 },
+  dots: { flex: 1, flexDirection: 'row', gap: 5 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: T.handle },
+  dotOn: { width: 18, backgroundColor: T.ink },
+  backBtn: {
+    height: 44,
     paddingHorizontal: 16,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: T.line,
+    justifyContent: 'center',
   },
-  // ── Arrow row sits UNDER the sheet, aligned with the highlighted tab
-  arrowRow: {
-    height: ARROW_H,
+  backText: { fontFamily: F.bodyBold, fontSize: 14, color: T.ink },
+  nextBtn: {
+    height: 44,
+    paddingHorizontal: 20,
+    borderRadius: 22,
+    backgroundColor: T.yellow,
+    justifyContent: 'center',
   },
-  // Downward-pointing caret (speech-bubble tail below the card)
-  arrowOuter: {
+  nextText: { fontFamily: F.bodyBold, fontSize: 14, color: T.ink },
+  arrowRow: { width: '100%' },
+  arrow: {
     width: 0,
     height: 0,
-    borderLeftWidth: ARROW_W,
-    borderRightWidth: ARROW_W,
-    borderTopWidth: ARROW_H,
+    borderLeftWidth: ARROW,
+    borderRightWidth: ARROW,
+    borderTopWidth: ARROW,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: T.white,
-  },
-  sheetInner: {
-    backgroundColor: T.card,
-    borderRadius: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    shadowColor: T.ink,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  counter: {
-    fontSize: 12,
-    fontFamily: F.bodyBold,
-    color: T.textFaint,
-    letterSpacing: 0.3,
-  },
-  skipText: {
-    fontSize: 13,
-    fontFamily: F.bodySemi,
-    color: T.textFaint,
-  },
-  line: {
-    fontSize: 16,
-    fontFamily: F.bodyBold,
-    color: DARK,
-    lineHeight: 22,
-    marginBottom: 20,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  dotsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  dotIndicator: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: T.sand,
-  },
-  dotIndicatorActive: {
-    backgroundColor: GOLD,
-    width: 18,
-  },
-  nextBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: GOLD,
-    paddingHorizontal: 22,
-    paddingVertical: 11,
-    borderRadius: 24,
-    minWidth: 90,
-  },
-  nextText: {
-    fontSize: 14,
-    fontFamily: F.bodyBold,
-    color: DARK,
-    letterSpacing: 0.3,
+    borderTopColor: T.card,
   },
 });

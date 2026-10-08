@@ -1,26 +1,35 @@
 // app/src/engagement/tour/tourSteps.js
-// 4 steps matching the PDF screenshot — targets = real tab bar icons.
+// 5 steps, one per tab. ids = tab bar targets registered in TabNavigator.js.
 
 export const TOUR_STEPS = [
   {
     id: 'tab_home',
     mood: 'excited',
-    line: 'Home. Your missions live here, one at a time.',
+    title: 'home.',
+    line: "your daily drop, deals and what's new on campus.",
   },
   {
     id: 'tab_explore',
     mood: 'broke',
-    line: 'Explore. Every tdc. feature in one place.',
+    title: 'explore.',
+    line: 'every tdc tool in one place: deals, events, travel, scholarships.',
   },
   {
     id: 'tab_social',
-    mood: 'sus',
-    line: 'Social. Feed and confessions. Say hi to your campus.',
+    mood: 'cheeky',
+    title: 'social.',
+    line: 'your campus feed and anonymous confessions. say hi.',
   },
   {
     id: 'tab_campus',
-    mood: 'panic',
-    line: 'Campus. Resume, jobs and skills for your career.',
+    mood: 'shook',
+    title: 'campus.',
+    line: 'resume, jobs and skills for what comes after uni.',
   },
-  
+  {
+    id: 'tab_profile',
+    mood: 'sorted',
+    title: 'profile.',
+    line: "your points, badges and savings. that's the tour. sorted.",
+  },
 ];

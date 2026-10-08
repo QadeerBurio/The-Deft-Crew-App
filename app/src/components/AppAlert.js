@@ -30,6 +30,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { color as T, font as F } from "../theme/tokens";
+import { holdTour, releaseTour } from "../engagement/tour/tourGate";
 const DARK = T.ink;
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -89,6 +90,12 @@ export const showAppAlert = appAlert;
 export function AppAlertHost() {
   const [queue, setQueue] = useState([]);
   const current = queue[0] || null;
+
+  // Hold the app tour while an alert is on screen
+  useEffect(() => {
+    if (current) holdTour("app-alert");
+    else releaseTour("app-alert");
+  }, [current]);
   const fade = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.94)).current;
   const busyRef = useRef(false);

@@ -55,6 +55,7 @@ import EngagementProvider from "./app/src/engagement/EngagementProvider";
 import CelebrationHost from "./app/src/engagement/components/CelebrationHost";
 import TourProvider from "./app/src/engagement/tour/TourProvider";
 import TourOverlay from "./app/src/engagement/tour/TourOverlay";
+import { holdTour, releaseTour } from "./app/src/engagement/tour/tourGate";
 
 // ═══════════════════════════════════════════════════════════════
 // 1. NOTIFICATION HANDLER — set ONCE at module load.
@@ -130,11 +131,19 @@ function PushRegistration() {
     lastRegisteredUserRef.current = authToken;
 
     (async () => {
+      // the system permission prompt can appear during registration:
+      // hold the app tour until it has been answered
+      holdTour("push-permission");
       try {
         console.log("[PushRegistration] registering device...");
         await registerBackgroundNotificationTask();
 
-        const expoPushToken = await registerForPushNotificationsAsync();
+        let expoPushToken = null;
+        try {
+          expoPushToken = await registerForPushNotificationsAsync();
+        } finally {
+          releaseTour("push-permission");
+        }
         if (!expoPushToken) {
           console.log("[PushRegistration] no token returned");
           return;
@@ -148,6 +157,8 @@ function PushRegistration() {
         }
       } catch (err) {
         console.log("[PushRegistration] error:", err?.message);
+      } finally {
+        releaseTour("push-permission");
       }
     })();
   }, [authToken, isGuest]);

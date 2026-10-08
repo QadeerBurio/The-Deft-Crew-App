@@ -218,8 +218,9 @@ export default function SettingsScreen({ navigation }) {
   // 🆕 Replay the tour
   const handleReplayTour = () => {
     try {
-      startTour();
+      // back to the tabs first, then start once the tab bar is on screen to be measured
       navigation.navigate('HomeTabs');
+      setTimeout(startTour, 500);
     } catch (e) {
       console.log('tour start error:', e?.message);
     }

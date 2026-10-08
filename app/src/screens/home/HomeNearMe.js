@@ -22,6 +22,7 @@ import { NEARBY_KEY, MAX_DEALS, fetchNearby, devLogOnce } from "./homeData";
 import { ALL_CITIES, useSelectedCity, brandMatchesCity } from "../../utils/cityFilter";
 import { formatDistance } from "../../utils/distance";
 import { color, font, radius, MAX_FONT_SCALE } from "../../theme/tokens";
+import { holdTour, releaseTour } from "../../engagement/tour/tourGate";
 
 const LOCATION_TTL_MS = 10 * 60 * 1000; // refresh the position at most every 10 minutes
 const POSITION_TIMEOUT_MS = 6000;
@@ -130,12 +131,15 @@ export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, s
 
   const allowLocation = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    holdTour("location-permission");
     try {
       const res = await Location.requestForegroundPermissionsAsync();
       if (mountedRef.current) setPerm(res?.status || "denied");
     } catch (e) {
       devLogOnce("location request", e);
       if (mountedRef.current) setPerm("denied");
+    } finally {
+      releaseTour("location-permission");
     }
   }, []);
 

@@ -37,6 +37,7 @@ import {
   LATEST_CONFESSION_KEY, DEALS_KEY, fetchLatestConfession, fetchDeals, devLogOnce,
 } from "./home/homeData";
 import { color } from "../theme/tokens";
+import { useTour } from "../engagement/tour/TourProvider";
 
 // ids + screens unchanged; labels and colours per HOME_SPEC §2.5
 const FEATURES = [
@@ -219,6 +220,21 @@ export default function Home({ navigation }) {
     });
     return () => sub.remove();
   }, [isGuest, queryClient]);
+
+  // App tour: Home reports "ready" only while it is focused, signed in, its deals have
+  // loaded and none of its own sheets (AI chat, streak) are open
+  const { setHomeLoaded } = useTour();
+  const [homeFocused, setHomeFocused] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      setHomeFocused(true);
+      return () => setHomeFocused(false);
+    }, [])
+  );
+  useEffect(() => {
+    setHomeLoaded(homeFocused && signedIn && !dealsLoading && !isChatVisible && !streakSheetVisible);
+  }, [setHomeLoaded, homeFocused, signedIn, dealsLoading, isChatVisible, streakSheetVisible]);
+  useEffect(() => () => setHomeLoaded(false), [setHomeLoaded]);
 
   const sortedFeatureIds = useMemo(() => {
     if (!missions?.cards) return new Set();
