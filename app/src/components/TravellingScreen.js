@@ -21,7 +21,7 @@ import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients
 import * as Haptics from 'expo-haptics';
 import TravelChatBot from './TravelChatBot';
 
-import { color as T, font as F } from "../theme/tokens";
+import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 const GOLD = T.yellow;
 const DARK = T.ink;
 const MUTED = T.textMuted;
@@ -97,7 +97,7 @@ const TravelingScreen = () => {
         >
           <Ionicons name="chevron-back" size={22} color={DARK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>
+        <Text style={styles.headerTitle} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
           travel<Text style={{ color: GOLD }}>.</Text>
         </Text>
         <View style={styles.headerRight} />
@@ -119,7 +119,7 @@ const TravelingScreen = () => {
             <Text style={styles.heroSub}>
               plans, budgets in PKR and visa help, in one chat.
             </Text>
-            <TouchableOpacity style={styles.heroBtn} onPress={() => ask(null)} activeOpacity={0.85}>
+            <TouchableOpacity style={styles.heroBtn} onPress={() => ask(null)} activeOpacity={0.85} accessibilityRole="button">
               <Ionicons name="chatbubble-ellipses" size={16} color={DARK} />
               <Text style={styles.heroBtnText}>start planning</Text>
             </TouchableOpacity>
@@ -133,8 +133,9 @@ const TravelingScreen = () => {
 
         {/* Quick trips */}
         <View style={styles.sectionHead}>
-          <View style={styles.accent} />
-          <Text style={styles.sectionTitle}>quick trip ideas</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            quick trip ideas<Text style={{ color: GOLD }}>.</Text>
+          </Text>
         </View>
         <View style={styles.grid}>
           {QUICK_TRIPS.map((t) => (
@@ -143,11 +144,13 @@ const TravelingScreen = () => {
               style={styles.tripCard}
               onPress={() => ask(t.message)}
               activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel={`${t.title}, ${t.sub}`}
             >
               <View style={styles.tripEmojiWrap}>
                 <Text style={styles.tripEmoji}>{t.emoji}</Text>
               </View>
-              <Text style={styles.tripTitle} numberOfLines={1}>{t.title}</Text>
+              <Text style={styles.tripTitle} numberOfLines={1}>{t.title.toLowerCase()}</Text>
               <Text style={styles.tripSub} numberOfLines={1}>{t.sub}</Text>
               <View style={styles.tripArrow}>
                 <Ionicons name="arrow-forward" size={13} color={DARK} />
@@ -158,8 +161,9 @@ const TravelingScreen = () => {
 
         {/* What it does */}
         <View style={styles.sectionHead}>
-          <View style={styles.accent} />
-          <Text style={styles.sectionTitle}>what it can do</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            what it can do<Text style={{ color: GOLD }}>.</Text>
+          </Text>
         </View>
         <View style={styles.listCard}>
           {CAN_DO.map((c, i) => (
@@ -168,7 +172,7 @@ const TravelingScreen = () => {
                 <Ionicons name={c.icon} size={18} color={GOLD} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.listTitle}>{c.title}</Text>
+                <Text style={styles.listTitle}>{c.title.toLowerCase()}</Text>
                 <Text style={styles.listSub}>{c.sub}</Text>
               </View>
             </View>
@@ -186,16 +190,8 @@ const TravelingScreen = () => {
   );
 };
 
-const shadow = {
-  shadowColor: T.ink,
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.05,
-  shadowRadius: 8,
-  elevation: 2,
-};
-
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: T.card },
+  safeArea: { flex: 1, backgroundColor: T.paper },
 
   header: {
     flexDirection: 'row',
@@ -203,64 +199,62 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: T.card,
+    backgroundColor: T.paper,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: T.sand,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: T.card,
     borderWidth: 1,
     borderColor: T.line,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: { fontSize: 20, fontFamily: F.heading, color: DARK, letterSpacing: -0.3 },
-  headerRight: { width: 40 },
+  headerTitle: { fontSize: 24, fontFamily: F.heading, color: DARK, letterSpacing: -0.3 },
+  headerRight: { width: 44 },
 
-  container: { flex: 1, backgroundColor: T.card },
+  container: { flex: 1, backgroundColor: T.paper },
   content: { paddingHorizontal: 16, paddingBottom: 140 },
 
   hero: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 20,
-    padding: 18,
+    borderRadius: 28,
+    padding: 20,
     marginTop: 6,
     overflow: 'hidden',
   },
   liveRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: T.success },
-  liveText: { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontFamily: F.bodyBold },
-  heroTitle: { color: T.white, fontSize: 22, fontFamily: F.heading, letterSpacing: -0.4 },
-  heroSub: { color: 'rgba(255,255,255,0.75)', fontSize: 12.5, fontFamily: F.body, lineHeight: 18, marginTop: 4, marginRight: 6 },
+  liveText: { color: T.onInkMuted, fontSize: 12, fontFamily: F.bodyBold },
+  heroTitle: { color: T.white, fontSize: 24, fontFamily: F.heading, letterSpacing: -0.4 },
+  heroSub: { color: T.onInkMuted, fontSize: 13.5, fontFamily: F.body, lineHeight: 19, marginTop: 4, marginRight: 6 },
   heroBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: 6,
     backgroundColor: GOLD,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 44,
+    borderRadius: 22,
     marginTop: 14,
   },
-  heroBtnText: { color: DARK, fontSize: 13, fontFamily: F.bodyBold },
+  heroBtnText: { color: DARK, fontSize: 14, fontFamily: F.bodyBold },
   heroMascot: { width: 96, height: 96 },
 
-  sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24, marginBottom: 12 },
-  accent: { width: 3, height: 16, borderRadius: 2, backgroundColor: GOLD },
-  sectionTitle: { fontSize: 16, fontFamily: F.bodyBold, color: DARK },
+  sectionHead: { flexDirection: 'row', alignItems: 'center', marginTop: 22, marginBottom: 10 },
+  sectionTitle: { fontSize: 17, fontFamily: F.heading, color: DARK },
 
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
   tripCard: {
     width: CARD_W,
     backgroundColor: T.card,
-    borderRadius: 16,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: BORDER,
     padding: 14,
-    ...shadow,
   },
   tripEmojiWrap: {
     width: 38,
@@ -272,15 +266,15 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   tripEmoji: { fontSize: 19, fontFamily: F.body },
-  tripTitle: { fontSize: 13.5, fontFamily: F.bodyBold, color: DARK },
-  tripSub: { fontSize: 11.5, fontFamily: F.body, color: MUTED, marginTop: 2 },
+  tripTitle: { fontSize: 14, fontFamily: F.bodyBold, color: DARK },
+  tripSub: { fontSize: 12, fontFamily: F.body, color: MUTED, marginTop: 2 },
   tripArrow: {
     position: 'absolute',
     top: 14,
     right: 14,
-    width: 24,
-    height: 24,
-    borderRadius: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
@@ -288,18 +282,17 @@ const styles = StyleSheet.create({
 
   listCard: {
     backgroundColor: T.card,
-    borderRadius: 16,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: BORDER,
     paddingHorizontal: 14,
-    ...shadow,
   },
-  listRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13 },
-  listRowBorder: { borderTopWidth: 1, borderTopColor: T.line },
+  listRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, minHeight: 58 },
+  listRowBorder: { borderTopWidth: 1, borderTopColor: T.lineSoft },
   listIcon: {
     width: 36,
     height: 36,
-    borderRadius: 11,
+    borderRadius: 12,
     backgroundColor: DARK,
     justifyContent: 'center',
     alignItems: 'center',
@@ -308,7 +301,7 @@ const styles = StyleSheet.create({
   listTitle: { fontSize: 14, fontFamily: F.bodyBold, color: DARK },
   listSub: { fontSize: 12, fontFamily: F.body, color: MUTED, marginTop: 2 },
 
-  footNote: { fontSize: 11, fontFamily: F.body, color: T.textFaint, textAlign: 'center', marginTop: 18, lineHeight: 16 },
+  footNote: { fontSize: 11.5, fontFamily: F.body, color: T.textMuted, textAlign: 'center', marginTop: 18, lineHeight: 16 },
 });
 
 export default TravelingScreen;

@@ -8,7 +8,6 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
-import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
@@ -17,7 +16,7 @@ import api from '../api/api';
 import { AuthContext } from '../context/AuthContext';
 import { engagementBus, ENGAGEMENT_EVENTS } from '../engagement/engagementBus';
 
-import { color as T, font as F } from "../theme/tokens";
+import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 const { width, height } = Dimensions.get('window');
 
 // ─── SUGGESTED PROMPT CHIPS ───────────────────────────────────────────
@@ -137,33 +136,11 @@ const MessageBubble = React.memo(({ item, onCopy, onShare, isLast }) => {
         },
       ]}
     >
-      {!isUser && (
-        <View style={msgStyles.avatarWrap}>
-          <LinearGradient colors={[T.yellowSoft, T.white]} style={msgStyles.avatar}>
-            <Image
-              source={require('../../../assets/travel_mascot.png')}
-              style={msgStyles.avatarImage}
-              resizeMode="contain"
-            />
-          </LinearGradient>
-          {isLast && item.content && !item.isStreaming && (
-            <Animated.View style={msgStyles.responseIndicator}>
-              <Ionicons name="checkmark-done" size={12} color={T.white} />
-            </Animated.View>
-          )}
-        </View>
-      )}
-
       {isUser ? (
         <View style={msgStyles.bubbleWrapper}>
-          <LinearGradient
-            colors={[T.yellow, '#f0a500']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[msgStyles.bubble, msgStyles.bubbleUser]}
-          >
+          <View style={[msgStyles.bubble, msgStyles.bubbleUser]}>
             <Text style={msgStyles.userText}>{item.content}</Text>
-          </LinearGradient>
+          </View>
         </View>
       ) : (
         <TouchableOpacity
@@ -172,7 +149,7 @@ const MessageBubble = React.memo(({ item, onCopy, onShare, isLast }) => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             setShowActions(!showActions);
           }}
-          style={msgStyles.bubbleWrapper}
+          style={msgStyles.bubbleWrapperAssistant}
         >
           <View style={[msgStyles.bubble, msgStyles.bubbleAssistant]}>
             <View>{renderMarkdownContent(item.content)}</View>
@@ -185,7 +162,7 @@ const MessageBubble = React.memo(({ item, onCopy, onShare, isLast }) => {
                   }}
                   style={msgStyles.actionBtn}
                 >
-                  <Feather name="copy" size={12} color={T.textFaint} />
+                  <Feather name="copy" size={13} color={T.textMuted} />
                   <Text style={msgStyles.actionText}>copy</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -195,7 +172,7 @@ const MessageBubble = React.memo(({ item, onCopy, onShare, isLast }) => {
                   }}
                   style={msgStyles.actionBtn}
                 >
-                  <Feather name="share-2" size={12} color={T.textFaint} />
+                  <Feather name="share-2" size={13} color={T.textMuted} />
                   <Text style={msgStyles.actionText}>share</Text>
                 </TouchableOpacity>
               </View>
@@ -229,20 +206,13 @@ const TypingIndicator = () => {
   }, []);
 
   return (
-    <View style={msgStyles.typingRow}>
-      <LinearGradient colors={[T.yellowSoft, T.white]} style={msgStyles.avatar}>
-        <Image
-          source={require('../../../assets/travel_mascot.png')}
-          style={msgStyles.avatarImage}
-          resizeMode="contain"
-        />
-      </LinearGradient>
+    <View style={msgStyles.typingRow} accessibilityLabel="travel ai is thinking">
       <View style={msgStyles.typingBubble}>
         <View style={msgStyles.typingDots}>
           {[dot1, dot2, dot3].map((dot, i) => (
             <Animated.View
               key={i}
-              style={[msgStyles.dot, { transform: [{ translateY: dot }], backgroundColor: T.yellow }]}
+              style={[msgStyles.dot, { transform: [{ translateY: dot }], backgroundColor: T.ink }]}
             />
           ))}
         </View>
@@ -755,29 +725,30 @@ const TravelChatBot = forwardRef((props, ref) => {
                     style={styles.headerLeftBtn}
                     activeOpacity={0.7}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="close travel chat"
                   >
                     <Ionicons name="chevron-back" size={22} color={T.ink} />
                   </TouchableOpacity>
 
+                  <View style={styles.headerIconSmall}>
+                    {isStreaming ? (
+                      <Animated.View style={{ transform: [{ rotate: compassSpinVal }] }}>
+                        <Ionicons name="compass" size={20} color={T.yellow} />
+                      </Animated.View>
+                    ) : (
+                      <Image
+                        source={require('../../../assets/travel_mascot.png')}
+                        style={styles.headerMascotImageSmall}
+                        resizeMode="contain"
+                      />
+                    )}
+                  </View>
+
                   <View style={styles.headerCenter}>
-                    <View style={styles.headerTitleRow}>
-                      <LinearGradient colors={[T.yellowSoft, T.white]} style={styles.headerIconSmall}>
-                        {isStreaming ? (
-                          <Animated.View style={{ transform: [{ rotate: compassSpinVal }] }}>
-                            <Ionicons name="compass" size={16} color={T.yellow} />
-                          </Animated.View>
-                        ) : (
-                          <Image
-                            source={require('../../../assets/travel_mascot.png')}
-                            style={styles.headerMascotImageSmall}
-                            resizeMode="contain"
-                          />
-                        )}
-                      </LinearGradient>
-                      <Text style={styles.headerTitle} numberOfLines={1}>
-                        travel assist<Text style={{ color: T.yellow }}>.</Text>
-                      </Text>
-                    </View>
+                    <Text style={styles.headerTitle} numberOfLines={1} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                      travel ai<Text style={{ color: T.yellow }}>.</Text>
+                    </Text>
                     <View style={styles.statusRow}>
                       <View
                         style={[
@@ -792,16 +763,21 @@ const TravelChatBot = forwardRef((props, ref) => {
                         ]}
                       />
                       <Text style={styles.statusText}>
-                        {isStreaming ? 'Thinking...' : isOnline ? 'Online' : 'Offline'}
+                        {isStreaming ? 'thinking...' : isOnline ? 'here 24/7' : 'offline'}
                       </Text>
                     </View>
                   </View>
 
                   <View style={styles.headerRight}>
                     {messages.length > 0 ? (
-                      <TouchableOpacity onPress={startNewTrip} style={styles.newTripBtn} activeOpacity={0.7}>
-                        <Ionicons name="refresh-outline" size={13} color="#d97706" />
-                        <Text style={styles.newTripText}>new</Text>
+                      <TouchableOpacity
+                        onPress={startNewTrip}
+                        style={styles.newTripBtn}
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel="start a new trip"
+                      >
+                        <Ionicons name="refresh-outline" size={18} color={T.ink} />
                       </TouchableOpacity>
                     ) : (
                       <View style={styles.headerRightPlaceholder} />
@@ -818,7 +794,7 @@ const TravelChatBot = forwardRef((props, ref) => {
                 )}
 
                 {/* Messages list */}
-                <LinearGradient colors={[T.sand, T.sand, T.white]} style={styles.flex}>
+                <View style={[styles.flex, { backgroundColor: T.paper }]}>
                   <FlatList
                     ref={flatListRef}
                     data={messages}
@@ -838,7 +814,7 @@ const TravelChatBot = forwardRef((props, ref) => {
                     windowSize={10}
                     initialNumToRender={10}
                   />
-                </LinearGradient>
+                </View>
 
                 {/* Suggested chips */}
                 {!isStreaming && (
@@ -855,8 +831,7 @@ const TravelChatBot = forwardRef((props, ref) => {
                           onPress={() => sendMessage(chip.message)}
                           activeOpacity={0.75}
                         >
-                          <Text style={styles.pillChipIcon}>{chip.icon}</Text>
-                          <Text style={styles.pillChipTitle}>{chip.title}</Text>
+                          <Text style={styles.pillChipTitle}>{chip.title.toLowerCase()}</Text>
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
@@ -886,14 +861,17 @@ const TravelChatBot = forwardRef((props, ref) => {
                       onPress={() => sendMessage()}
                       disabled={!inputText.trim() || isStreaming}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel="send"
                     >
                       {isStreaming ? (
-                        <ActivityIndicator size="small" color={T.yellow} />
+                        <ActivityIndicator size="small" color={T.white} />
                       ) : (
-                        <Ionicons name="arrow-up" size={18} color={T.yellow} />
+                        <Ionicons name="arrow-up" size={20} color={T.white} />
                       )}
                     </TouchableOpacity>
                   </View>
+                  <Text style={styles.footNote}>tdc ai plans it. you book it.</Text>
                 </View>
               </KeyboardAvoidingView>
             </SafeAreaView>
@@ -931,44 +909,38 @@ const msgStyles = StyleSheet.create({
     shadowOpacity: 0.06, shadowRadius: 3,
     elevation: 2,
   },
-  bubbleWrapper: { maxWidth: '80%' },
-  bubble: {
-    padding: 13,
-    shadowColor: T.ink,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04, shadowRadius: 3,
-    elevation: 1,
-  },
+  bubbleWrapper: { maxWidth: '78%' },
+  bubbleWrapperAssistant: { maxWidth: '88%' },
+  bubble: { paddingVertical: 12, paddingHorizontal: 14 },
   bubbleUser: {
-    borderTopLeftRadius: 18, borderBottomLeftRadius: 18,
-    borderTopRightRadius: 18, borderBottomRightRadius: 6,
-    shadowColor: T.ink, shadowOpacity: 0.06,
-    shadowRadius: 6, elevation: 2,
+    backgroundColor: T.ink,
+    borderTopLeftRadius: 20, borderBottomLeftRadius: 20,
+    borderTopRightRadius: 20, borderBottomRightRadius: 6,
   },
   bubbleAssistant: {
     backgroundColor: T.card,
-    borderTopLeftRadius: 6, borderBottomLeftRadius: 20,
+    borderTopLeftRadius: 20, borderBottomLeftRadius: 6,
     borderTopRightRadius: 20, borderBottomRightRadius: 20,
     borderWidth: 1, borderColor: T.line,
   },
-  userText: { color: T.ink, fontSize: 14, lineHeight: 20, fontFamily: F.bodySemi },
-  normal: { color: T.ink, fontSize: 13.8, fontFamily: F.body, lineHeight: 21 },
-  bold: { color: T.ink, fontSize: 13.8, lineHeight: 21, fontFamily: F.bodyBold },
-  link: { color: T.ink, fontSize: 13.8, lineHeight: 21, textDecorationLine: 'underline', fontFamily: F.bodySemi },
-  h1: { color: T.ink, fontSize: 16, fontFamily: F.bodyBold, marginTop: 6, marginBottom: 4 },
-  h2: { color: T.ink, fontSize: 14.5, fontFamily: F.bodyBold, marginTop: 5, marginBottom: 3 },
-  h3: { color: T.ink, fontSize: 13.5, fontFamily: F.bodyBold, marginTop: 4, marginBottom: 2 },
+  userText: { color: T.white, fontSize: 15, lineHeight: 21, fontFamily: F.body },
+  normal: { color: T.ink, fontSize: 14, fontFamily: F.body, lineHeight: 20 },
+  bold: { color: T.ink, fontSize: 14, lineHeight: 20, fontFamily: F.bodyBold },
+  link: { color: T.ink, fontSize: 14, lineHeight: 20, textDecorationLine: 'underline', fontFamily: F.bodySemi },
+  h1: { color: T.ink, fontSize: 16, fontFamily: F.heading, marginTop: 6, marginBottom: 4 },
+  h2: { color: T.ink, fontSize: 15, fontFamily: F.bodyBold, marginTop: 5, marginBottom: 3 },
+  h3: { color: T.ink, fontSize: 14, fontFamily: F.bodyBold, marginTop: 4, marginBottom: 2 },
   bulletRow: { flexDirection: 'row', marginTop: 3 },
   bullet: { color: T.textMuted, fontSize: 13, width: 14, fontFamily: F.bodySemi },
-  bulletText: { color: T.ink, fontSize: 13.8, fontFamily: F.body, lineHeight: 21, flex: 1 },
+  bulletText: { color: T.ink, fontSize: 14, fontFamily: F.body, lineHeight: 20, flex: 1 },
   actions: {
     flexDirection: 'row', marginTop: 10, gap: 14,
     alignItems: 'center',
-    borderTopWidth: 1, borderTopColor: T.line,
+    borderTopWidth: 1, borderTopColor: T.lineSoft,
     paddingTop: 8,
   },
-  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  actionText: { fontSize: 11, color: T.textFaint, fontFamily: F.bodySemi },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 32 },
+  actionText: { fontSize: 12, color: T.textMuted, fontFamily: F.bodySemi },
   tagBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
     marginLeft: 'auto',
@@ -980,14 +952,10 @@ const msgStyles = StyleSheet.create({
   typingRow: { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 14 },
   typingBubble: {
     backgroundColor: T.card,
-    borderTopLeftRadius: 6, borderBottomLeftRadius: 20,
+    borderTopLeftRadius: 20, borderBottomLeftRadius: 6,
     borderTopRightRadius: 20, borderBottomRightRadius: 20,
     paddingHorizontal: 16, paddingVertical: 14,
     borderWidth: 1, borderColor: T.line,
-    shadowColor: T.ink,
-    shadowOffset: { width: 0, height: 1.5 },
-    shadowOpacity: 0.04, shadowRadius: 2,
-    elevation: 1,
   },
   typingDots: { flexDirection: 'row', gap: 5, alignItems: 'center', height: 10 },
   dot: { width: 6, height: 6, borderRadius: 3 },
@@ -1027,51 +995,37 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 8, paddingVertical: 8,
-    minHeight: 56,
-    backgroundColor: T.card,
-    borderBottomWidth: 1, borderBottomColor: T.line,
+    gap: 10,
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8,
+    backgroundColor: T.paper,
   },
   headerLeftBtn: {
-    width: 40, height: 40, borderRadius: 12,
-    backgroundColor: T.sand,
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: T.card,
     borderWidth: 1, borderColor: T.line,
     justifyContent: 'center', alignItems: 'center',
-    marginLeft: 8,
   },
-  headerCenter: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  headerCenter: { flex: 1 },
   headerIconSmall: {
-    width: 28, height: 28, borderRadius: 14,
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: T.ink,
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: '#fde047',
   },
-  headerMascotImageSmall: { width: 22, height: 22 },
-  headerTitle: {
-    color: T.ink, fontSize: 16, fontFamily: F.bodyBold,
-    letterSpacing: -0.2,
-  },
+  headerMascotImageSmall: { width: 30, height: 30 },
+  headerTitle: { color: T.ink, fontSize: 20, fontFamily: F.heading },
   statusRow: {
     flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2,
   },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { color: T.textMuted, fontSize: 10, fontFamily: F.bodySemi },
-  headerRight: {
-    width: 80, alignItems: 'flex-end', justifyContent: 'center',
-  },
-  headerRightPlaceholder: { width: 40 },
+  statusText: { color: T.textMuted, fontSize: 12, fontFamily: F.body },
+  headerRight: { alignItems: 'flex-end', justifyContent: 'center' },
+  headerRightPlaceholder: { width: 44 },
   newTripBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: T.yellowSoft,
-    paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: 20,
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: T.card,
     borderWidth: 1, borderColor: T.line,
+    alignItems: 'center', justifyContent: 'center',
   },
-  newTripText: { color: '#d97706', fontSize: 10, fontFamily: F.bodyBold },
 
   offlineBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -1119,58 +1073,46 @@ const styles = StyleSheet.create({
     zIndex: 1, fontFamily: F.bodyMedium,
   },
 
-  quickPromptsRow: {
-    borderTopWidth: 1, borderTopColor: T.line,
-    backgroundColor: T.card,
-  },
+  quickPromptsRow: { backgroundColor: T.paper },
   chipsScrollContainer: {
-    paddingHorizontal: 16, paddingVertical: 10, gap: 8,
+    paddingHorizontal: 16, paddingTop: 10, paddingBottom: 2, gap: 8,
   },
   pillChip: {
-    flexDirection: 'row', alignItems: 'center',
+    height: 36,
+    justifyContent: 'center',
     backgroundColor: T.card,
     borderWidth: 1, borderColor: T.line,
-    paddingHorizontal: 13, paddingVertical: 8,
-    borderRadius: 14,
-    shadowColor: T.ink,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 4,
-    elevation: 2, gap: 6, marginRight: 8,
+    paddingHorizontal: 14,
+    borderRadius: 18,
   },
-  pillChipIcon: { fontSize: 13.5, fontFamily: F.body },
-  pillChipTitle: { fontSize: 12, fontFamily: F.bodyBold, color: T.ink },
+  pillChipTitle: { fontSize: 13, fontFamily: F.bodySemi, color: T.ink },
 
   inputBar: {
-    backgroundColor: T.card,
-    borderTopWidth: 1, borderTopColor: T.line,
-    paddingHorizontal: 12, paddingTop: 10,
+    backgroundColor: T.paper,
+    paddingHorizontal: 16, paddingTop: 10,
   },
   inputWrap: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: T.sand,
-    borderRadius: 18,
+    minHeight: 56,
+    backgroundColor: T.card,
+    borderRadius: 28,
     borderWidth: 1, borderColor: T.line,
-    paddingLeft: 6, paddingRight: 5, paddingVertical: 4,
+    paddingLeft: 6, paddingRight: 6, paddingVertical: 6,
   },
   textInput: {
-    flex: 1, fontSize: 14, fontFamily: F.body, color: T.ink,
+    flex: 1, fontSize: 15, fontFamily: F.body, color: T.ink,
     maxHeight: 100,
     paddingLeft: 12, paddingRight: 8,
     paddingVertical: Platform.OS === 'ios' ? 10 : 8,
   },
   sendBtn: {
-    width: 38, height: 38, borderRadius: 14,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: T.ink,
     justifyContent: 'center', alignItems: 'center',
     marginLeft: 4,
-    shadowColor: T.ink,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 4,
-    elevation: 2,
   },
-  sendBtnDisabled: {
-    backgroundColor: '#d6d6d6', shadowOpacity: 0,
-  },
+  sendBtnDisabled: { backgroundColor: T.textFaint },
+  footNote: { textAlign: 'center', fontSize: 11.5, fontFamily: F.body, color: T.textMuted, marginTop: 8 },
 });
 
 export default TravelChatBot;
