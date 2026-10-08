@@ -497,7 +497,8 @@ export default function ProfileScreen() {
           subtitle: "your collection",
           icon: "ribbon-outline",
           color: T.ink,
-          rightText: `${me?.badges?.earned || 0}/${me?.badges?.total || 17}`,
+          // earned/total only when the server sends a total; never a made-up 17
+          rightText: me?.badges?.total ? `${me?.badges?.earned || 0}/${me.badges.total}` : `${me?.badges?.earned || 0}`,
           onPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             navigation.navigate('Badges');

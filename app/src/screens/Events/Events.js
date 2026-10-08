@@ -126,8 +126,6 @@ const getCategoryTheme = (cat) => {
   return FALLBACK_PALETTE[hashString(String(cat)) % FALLBACK_PALETTE.length];
 };
 
-const FALLBACK_BANNER =
-  "https://images.unsplash.com/photo-1523240715632-d984bb4b970e?w=1200";
 
 const COLORS = {
   page: T.paper,
@@ -1182,11 +1180,18 @@ export default function EventsScreen() {
                   nestedScrollEnabled={true}
                 >
                   <View style={styles.sheetImageWrapper}>
-                    <Image
-                      source={{ uri: selectedEvent.image || FALLBACK_BANNER }}
-                      style={styles.sheetBanner}
-                      resizeMode="cover"
-                    />
+                    {/* the event's own image only; no stock banner when it has none */}
+                    {selectedEvent.image ? (
+                      <Image
+                        source={{ uri: selectedEvent.image }}
+                        style={styles.sheetBanner}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={[styles.sheetBanner, { backgroundColor: T.sand, alignItems: "center", justifyContent: "center" }]}>
+                        <MaterialCommunityIcons name="calendar-star" size={44} color={T.textFaint} />
+                      </View>
+                    )}
                     <LinearGradient
                       colors={["rgba(0,0,0,0.05)", "rgba(0,0,0,0.55)"]}
                       style={styles.sheetBannerOverlay}
@@ -1247,13 +1252,15 @@ export default function EventsScreen() {
                     </View>
 
                     <View style={styles.specRow}>
-                      <View style={styles.specCard}>
-                        <View style={styles.specIcon}>
-                          <Ionicons name="calendar" size={18} color={COLORS.accent} />
+                      {!!selectedEvent.date && (
+                        <View style={styles.specCard}>
+                          <View style={styles.specIcon}>
+                            <Ionicons name="calendar" size={18} color={COLORS.accent} />
+                          </View>
+                          <Text style={styles.specTitle}>date</Text>
+                          <Text style={styles.specText}>{selectedEvent.date}</Text>
                         </View>
-                        <Text style={styles.specTitle}>date</Text>
-                        <Text style={styles.specText}>{selectedEvent.date || "TBA"}</Text>
-                      </View>
+                      )}
 
                       <View style={styles.specCard}>
                         <View style={styles.specIcon}>

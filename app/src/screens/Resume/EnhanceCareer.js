@@ -146,20 +146,29 @@ const EnhanceCareer = () => {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.jobInfo}>
           <Text style={styles.jobTitle}>{job?.title || 'Position'}</Text>
-          <Text style={styles.jobCompany}>{job?.companyName || job?.company || 'Company'}</Text>
+          {!!(job?.companyName || job?.company) && (
+            <Text style={styles.jobCompany}>{job?.companyName || job?.company}</Text>
+          )}
+          {/* only real values; nothing is shown for a missing location, type or salary */}
           <View style={styles.jobInfoDetails}>
-            <View style={styles.jobInfoItem}>
-              <Ionicons name="location-outline" size={16} color={T.textMuted} />
-              <Text style={styles.jobInfoText}>{job?.location || 'Remote'}</Text>
-            </View>
-            <View style={styles.jobInfoItem}>
-              <Ionicons name="time-outline" size={16} color={T.textMuted} />
-              <Text style={styles.jobInfoText}>{job?.type || 'Full-time'}</Text>
-            </View>
-            <View style={styles.jobInfoItem}>
-              <Ionicons name="cash-outline" size={16} color={T.textMuted} />
-              <Text style={styles.jobInfoText}>{job?.salary || 'Competitive'}</Text>
-            </View>
+            {!!job?.location && (
+              <View style={styles.jobInfoItem}>
+                <Ionicons name="location-outline" size={16} color={T.textMuted} />
+                <Text style={styles.jobInfoText}>{job.location}</Text>
+              </View>
+            )}
+            {!!job?.type && (
+              <View style={styles.jobInfoItem}>
+                <Ionicons name="time-outline" size={16} color={T.textMuted} />
+                <Text style={styles.jobInfoText}>{job.type}</Text>
+              </View>
+            )}
+            {!!job?.salary && (
+              <View style={styles.jobInfoItem}>
+                <Ionicons name="cash-outline" size={16} color={T.textMuted} />
+                <Text style={styles.jobInfoText}>{job.salary}</Text>
+              </View>
+            )}
           </View>
         </View>
 

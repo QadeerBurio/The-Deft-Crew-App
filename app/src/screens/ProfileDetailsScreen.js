@@ -188,8 +188,9 @@ export default function ProfileDetailsScreen({ navigation }) {
   };
 
   const earnedBadges = me?.badges?.earned || 0;
-  const totalBadges = me?.badges?.total || 17;
-  const badgePercent = Math.min(100, Math.round((earnedBadges / Math.max(totalBadges, 1)) * 100));
+  // progress only when the server sends a total (no made-up total of 17)
+  const totalBadges = Number(me?.badges?.total) || 0;
+  const badgePercent = totalBadges > 0 ? Math.min(100, Math.round((earnedBadges / totalBadges) * 100)) : null;
   const st = statusLook(profile.status);
   const vipRow = profile.isVip && profile.vipExpiry;
 
@@ -286,20 +287,24 @@ export default function ProfileDetailsScreen({ navigation }) {
             title="badges"
             right={
               <View style={styles.countPill}>
-                <Text style={styles.countText}>{earnedBadges}/{totalBadges}</Text>
+                <Text style={styles.countText}>{totalBadges > 0 ? `${earnedBadges}/${totalBadges}` : earnedBadges}</Text>
               </View>
             }
           />
           <View style={{ marginTop: 14 }}>
             <BadgeShelf max={7} onSeeAll={() => navigation.navigate("Badges")} />
           </View>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${badgePercent}%` }]} />
-          </View>
-          <View style={styles.progressMeta}>
-            <Text style={styles.progressLabel}>{badgePercent}% collected</Text>
-            <Text style={styles.progressHint}>{Math.max(totalBadges - earnedBadges, 0)} to go</Text>
-          </View>
+          {badgePercent !== null && (
+            <>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${badgePercent}%` }]} />
+              </View>
+              <View style={styles.progressMeta}>
+                <Text style={styles.progressLabel}>{badgePercent}% collected</Text>
+                <Text style={styles.progressHint}>{Math.max(totalBadges - earnedBadges, 0)} to go</Text>
+              </View>
+            </>
+          )}
         </View>
 
         {/* Personal info */}

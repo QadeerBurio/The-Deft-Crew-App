@@ -529,7 +529,7 @@ const CareerHub = ({ navigation }) => {
 
   // Helper function to get job type display name
   const getJobTypeDisplay = (type) => {
-    if (!type) return 'Full-time';
+    if (!type) return null; // no type → no badge (never a made-up "Full-time")
     const typeLower = type.toLowerCase();
     if (typeLower.includes('full')) return 'Full-time';
     if (typeLower.includes('part')) return 'Part-time';
@@ -772,16 +772,22 @@ const CareerHub = ({ navigation }) => {
                         {/* Company Name & Badge */}
                         <View style={styles.jobHeaderRow}>
                           <View style={styles.companyNameContainer}>
-                            <View style={styles.companyDot} />
-                            <Text style={styles.companyNameText} numberOfLines={1}>
-                              {job.companyName || job.department || 'Company'}
-                            </Text>
+                            {!!(job.companyName || job.department) && (
+                              <>
+                                <View style={styles.companyDot} />
+                                <Text style={styles.companyNameText} numberOfLines={1}>
+                                  {job.companyName || job.department}
+                                </Text>
+                              </>
+                            )}
                           </View>
-                          {/* Job Type Badge */}
-                          <View style={[styles.jobTypeBadge, { backgroundColor: jobTypeColor + '15', borderColor: jobTypeColor + '30' }]}>
-                            <Ionicons name={jobTypeIcon} size={10} color={jobTypeColor} />
-                            <Text style={[styles.jobTypeText, { color: jobTypeColor }]}>{jobType}</Text>
-                          </View>
+                          {/* Job Type Badge (only when the job has a type) */}
+                          {!!jobType && (
+                            <View style={[styles.jobTypeBadge, { backgroundColor: jobTypeColor + '15', borderColor: jobTypeColor + '30' }]}>
+                              <Ionicons name={jobTypeIcon} size={10} color={jobTypeColor} />
+                              <Text style={[styles.jobTypeText, { color: jobTypeColor }]}>{jobType}</Text>
+                            </View>
+                          )}
                         </View>
 
                         {/* Job Title */}
@@ -797,13 +803,17 @@ const CareerHub = ({ navigation }) => {
                               {job.department || 'General'}
                             </Text>
                           </View>
-                          <View style={styles.metaDivider} />
-                          <View style={styles.metaItem}>
-                            <Ionicons name="location-outline" size={13} color={T.textMuted} />
-                            <Text style={styles.metaText} numberOfLines={1}>
-                              {job.location || 'Remote'}
-                            </Text>
-                          </View>
+                          {!!job.location && (
+                            <>
+                              <View style={styles.metaDivider} />
+                              <View style={styles.metaItem}>
+                                <Ionicons name="location-outline" size={13} color={T.textMuted} />
+                                <Text style={styles.metaText} numberOfLines={1}>
+                                  {job.location}
+                                </Text>
+                              </View>
+                            </>
+                          )}
                           {job.salary && (
                             <>
                               <View style={styles.metaDivider} />
