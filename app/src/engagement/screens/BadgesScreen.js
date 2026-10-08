@@ -21,8 +21,9 @@ import Dot from '../components/Dot';
 import engagementApi from '../api/engagementApi';
 import { useMissions } from '../hooks/useMissions';
 import { useEngagement } from '../hooks/useEngagement';
+import { useStreak } from '../hooks/useStreak';
 
-import { color as T, font as F } from "../../theme/tokens";
+import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 const { width } = Dimensions.get('window');
 const CARD_GAP = 12;
 const CARD_WIDTH = (width - 32 - CARD_GAP) / 2;
@@ -318,6 +319,8 @@ export default function BadgesScreen() {
   const [badges, setBadges] = useState(badgesCache.list || []);
   const [loading, setLoading] = useState(!badgesCache.list);
   const [activeGroup, setActiveGroup] = useState('features');
+  const [selectedId, setSelectedId] = useState(null);
+  const { count: streakCount, enabled: streakEnabled } = useStreak();
 
   const heroScale = useRef(new Animated.Value(0.95)).current;
   const heroFade = useRef(new Animated.Value(0)).current;
@@ -431,6 +434,7 @@ export default function BadgesScreen() {
   const currentGroup = grouped[activeGroup] || grouped.features;
   const groupEarned = currentGroup.earned.length;
   const groupTotal = currentGroup.all.length;
+  const selected = currentGroup.all.find((b) => b.id === selectedId) || currentGroup.all[0] || null;
 
   const nextTier = REFERRAL_TIERS.find((t) => referralCount < t);
   const referralProgressText = nextTier
@@ -449,206 +453,169 @@ export default function BadgesScreen() {
           <Ionicons name="chevron-back" size={22} color={BLACK} />
         </TouchableOpacity>
         <Text style={styles.title} accessibilityRole="header">badges<Text style={{ color: T.yellow }}>.</Text></Text>
-        <View style={{ width: 34 }} />
+        <Text style={B.headerCount} accessibilityLabel={`${earnedCount} of ${total} badges earned`}>
+          {earnedCount} / {total}
+        </Text>
       </View>
 
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── HERO ─────────────────────────────────────────── */}
-        <Animated.View style={{ opacity: heroFade, transform: [{ scale: heroScale }] }}>
-          <View style={styles.hero}>
-            <View style={styles.heroOrb1} />
-            <View style={styles.heroOrb2} />
-
-            <View style={styles.heroTopRow}>
+        {/* ── STREAK (dark, real daily streak; hidden when the streak feature is off) ── */}
+        {streakEnabled && (
+          <Animated.View style={[B.section, { opacity: heroFade, transform: [{ scale: heroScale }] }]}>
+            <View style={B.streak}>
+              <View style={B.streakIcon}>
+                <MaterialCommunityIcons name="fire" size={24} color={T.ink} />
+              </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.heroLabel}>your collection</Text>
-                <View style={styles.heroAmountRow}>
-                  <Text style={styles.heroAmount}>{earnedCount}</Text>
-                  <Text style={styles.heroSlash}>/{total}</Text>
-                </View>
-                <Text style={styles.heroSub}>badges earned</Text>
-              </View>
-
-              <View style={styles.heroIconWrap}>
-                <View style={styles.heroIconCircle}>
-                  <MaterialCommunityIcons name="shield-star" size={28} color={GOLD} />
-                </View>
+                <Text style={B.streakLabel}>streak</Text>
+                <Text style={B.streakValue} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                  {streakCount} {streakCount === 1 ? 'day' : 'days'}<Text style={{ color: T.yellow }}>.</Text>
+                </Text>
+                <Text style={B.streakSub}>one sorted thing a day keeps it going.</Text>
               </View>
             </View>
+          </Animated.View>
+        )}
 
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  { width: `${Math.round(progressPct * 100)}%` },
-                ]}
-              />
-            </View>
-            <View style={styles.heroBottomRow}>
-              <Text style={styles.progressText}>
-                {earnedCount === total && total > 0
-                  ? 'all badges unlocked. legend.'
-                  : `${total - earnedCount} more to go.`}
-              </Text>
-              <Text style={styles.progressPct}>
-                {Math.round(progressPct * 100)}%
-              </Text>
-            </View>
-          </View>
-        </Animated.View>
-
-        {/* ── MISSIONS TRACKER ─────────────────────────────── */}
-        <View style={styles.missionSection}>
-          <View style={styles.missionHeader}>
-            <View style={styles.missionHeaderLeft}>
-              <View style={styles.missionIconWrap}>
-                <MaterialCommunityIcons name="bullseye-arrow" size={14} color={BLACK} />
+        {/* ── MISSIONS ─────────────────────────────────────── */}
+        <View style={B.section}>
+          <View style={B.card}>
+            <View style={B.cardHead}>
+              <View style={{ flex: 1 }}>
+                <Text style={B.cardTitle}>missions</Text>
+                <Text style={B.cardSub}>sort each card to earn its badge</Text>
               </View>
-              <View>
-                <Text style={styles.groupTitle}>missions</Text>
-                <Text style={styles.groupSub}>sort each card to earn its badge</Text>
+              <View style={B.countPill}>
+                <Text style={B.countText}>{sortedCount}/8</Text>
               </View>
             </View>
-            <View style={styles.missionCountPill}>
-              <Text style={styles.missionCountText}>{sortedCount}/8</Text>
-            </View>
-          </View>
-
-          <View style={styles.missionGrid}>
-            {MISSION_FEATURES.map((f, i) => (
-              <MissionChip
-                key={f.key}
-                label={f.label}
-                sorted={sortedFeatureIds.has(f.key)}
-                index={i}
-              />
-            ))}
-          </View>
-        </View>
-
-        {/* ── REFERRAL TRACKER ─────────────────────────────── */}
-        <View style={styles.missionSection}>
-          <View style={styles.missionHeader}>
-            <View style={styles.missionHeaderLeft}>
-              <View style={styles.missionIconWrap}>
-                <MaterialCommunityIcons name="account-multiple-plus" size={14} color={BLACK} />
-              </View>
-              <View>
-                <Text style={styles.groupTitle}>referrals</Text>
-                <Text style={styles.groupSub}>{referralProgressText}</Text>
-              </View>
-            </View>
-            <View style={styles.missionCountPill}>
-              <Text style={styles.missionCountText}>
-                {referralCount.toLocaleString()}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.referralTrack}>
-            {REFERRAL_TIERS.map((num, i) => {
-              const reached = referralCount >= num;
-              return (
-                <View key={num} style={styles.referralStep}>
-                  <View
-                    style={[
-                      styles.referralDot,
-                      reached && styles.referralDotReached,
-                    ]}
-                  >
-                    {reached && (
-                      <Ionicons name="checkmark" size={9} color={BLACK} />
-                    )}
-                  </View>
-                  {i < REFERRAL_TIERS.length - 1 && (
-                    <View
-                      style={[
-                        styles.referralBar,
-                        reached && styles.referralBarReached,
-                      ]}
-                    />
-                  )}
-                </View>
-              );
-            })}
-          </View>
-
-          <View style={styles.referralLabels}>
-            <Text style={styles.referralLabel}>10</Text>
-            <Text style={styles.referralLabel}>100</Text>
-            <Text style={styles.referralLabel}>1k</Text>
-            <Text style={styles.referralLabel}>3k</Text>
-            <Text style={styles.referralLabel}>5k</Text>
-          </View>
-        </View>
-
-        {/* ── GROUP TABS ───────────────────────────────────── */}
-        <View style={styles.tabsSection}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabsRow}
-          >
-            {Object.keys(GROUPS).map((gKey) => {
-              const g = grouped[gKey];
-              const count = g ? g.earned.length : 0;
-              return (
-                <GroupTab
-                  key={gKey}
-                  group={GROUPS[gKey]}
-                  count={count}
-                  active={activeGroup === gKey}
-                  onPress={() => setActiveGroup(gKey)}
-                />
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        {/* ── ACTIVE GROUP GRID ────────────────────────────── */}
-        <View style={styles.groupSection}>
-          <View style={styles.groupHeader}>
-            <View style={styles.groupHeaderLeft}>
-              <View style={styles.groupIconWrap}>
-                <MaterialCommunityIcons
-                  name={GROUPS[activeGroup].icon}
-                  size={14}
-                  color={BLACK}
-                />
-              </View>
-              <View>
-                <Text style={styles.groupTitle}>{GROUPS[activeGroup].label}</Text>
-                <Text style={styles.groupSub}>{GROUPS[activeGroup].sub}</Text>
-              </View>
-            </View>
-            <View style={styles.groupCount}>
-              <Text style={styles.groupCountText}>
-                {groupEarned}/{groupTotal}
-              </Text>
-            </View>
-          </View>
-
-          {currentGroup.all.length === 0 ? (
-            <View style={styles.emptyBox}>
-              <MaterialCommunityIcons
-                name="shield-off-outline"
-                size={42}
-                color={BLACK}
-              />
-              <Text style={styles.empty}>no badges in this group yet.</Text>
-              <Text style={styles.emptySub}>
-                keep using the app to unlock them.
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.grid}>
-              {currentGroup.all.map((b, i) => (
-                <BadgeCard key={b.id} badge={b} index={i} earned={!!b.earnedAt} />
+            <View style={B.chips}>
+              {MISSION_FEATURES.map((f, i) => (
+                <MissionChip key={f.key} label={f.label} sorted={sortedFeatureIds.has(f.key)} index={i} />
               ))}
             </View>
+          </View>
+        </View>
+
+        {/* ── REFERRALS ────────────────────────────────────── */}
+        <View style={B.section}>
+          <View style={B.card}>
+            <View style={B.cardHead}>
+              <View style={{ flex: 1 }}>
+                <Text style={B.cardTitle}>referrals</Text>
+                <Text style={B.cardSub}>{referralProgressText}</Text>
+              </View>
+              <View style={B.countPill}>
+                <Text style={B.countText}>{referralCount.toLocaleString()}</Text>
+              </View>
+            </View>
+            <View style={styles.referralTrack}>
+              {REFERRAL_TIERS.map((num, i) => {
+                const reached = referralCount >= num;
+                return (
+                  <View key={num} style={styles.referralStep}>
+                    <View style={[styles.referralDot, reached && styles.referralDotReached]}>
+                      {reached && <Ionicons name="checkmark" size={9} color={BLACK} />}
+                    </View>
+                    {i < REFERRAL_TIERS.length - 1 && (
+                      <View style={[styles.referralBar, reached && styles.referralBarReached]} />
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+            <View style={styles.referralLabels}>
+              <Text style={styles.referralLabel}>10</Text>
+              <Text style={styles.referralLabel}>100</Text>
+              <Text style={styles.referralLabel}>1k</Text>
+              <Text style={styles.referralLabel}>3k</Text>
+              <Text style={styles.referralLabel}>5k</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* ── YOUR COLLECTION ──────────────────────────────── */}
+        <View style={B.section}>
+          <Text style={B.h2} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            your collection<Text style={{ color: T.yellow }}>.</Text>
+          </Text>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={B.groupRow}>
+          {Object.keys(GROUPS).map((gKey) => {
+            const g = grouped[gKey];
+            const on = activeGroup === gKey;
+            return (
+              <TouchableOpacity
+                key={gKey}
+                onPress={() => {
+                  setActiveGroup(gKey);
+                  setSelectedId(null);
+                }}
+                style={[B.groupChip, on && B.groupChipOn]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={`${GROUPS[gKey].label}, ${g ? g.earned.length : 0} earned`}
+              >
+                <Text style={[B.groupChipText, on && B.groupChipTextOn]}>{GROUPS[gKey].label}</Text>
+                <Text style={[B.groupChipCount, on && B.groupChipTextOn]}>{g ? g.earned.length : 0}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        <View style={B.section}>
+          <Text style={B.groupSub}>
+            {GROUPS[activeGroup].sub} · {groupEarned}/{groupTotal}
+          </Text>
+          {currentGroup.all.length === 0 ? (
+            <View style={[B.card, { alignItems: 'center' }]}>
+              <Text style={B.cardTitle}>no badges in this group yet.</Text>
+              <Text style={B.cardSub}>keep using the app to unlock them.</Text>
+            </View>
+          ) : (
+            <>
+              <View style={B.grid}>
+                {currentGroup.all.map((b) => {
+                  const earned = !!b.earnedAt;
+                  const sel = (selected?.id || currentGroup.all[0]?.id) === b.id;
+                  return (
+                    <TouchableOpacity
+                      key={b.id}
+                      onPress={() => setSelectedId(b.id)}
+                      activeOpacity={0.85}
+                      style={[B.tile, !earned && B.tileLocked, sel && B.tileSelected]}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: sel }}
+                      accessibilityLabel={`${b.title}, ${earned ? 'unlocked' : 'locked'}`}
+                    >
+                      <View style={!earned && { opacity: 0.35 }}>
+                        <Dot mood={b.mood || 'sorted'} size={48} remoteUrl={b.iconUrl || null} />
+                      </View>
+                      <Text style={[B.tileName, !earned && { color: T.textFaint }]} numberOfLines={2}>
+                        {b.title}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {selected && (
+                <View style={B.detail}>
+                  <Text style={B.detailText}>
+                    <Text style={B.bold}>{selected.title}. </Text>
+                    <Text style={{ color: T.textMuted }}>
+                      {selected.earnedAt ? 'unlocked: ' : 'to unlock: '}
+                      {selected.line}
+                      {selected.earnedAt
+                        ? ` · ${new Date(selected.earnedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+                        : ''}
+                    </Text>
+                  </Text>
+                </View>
+              )}
+            </>
           )}
         </View>
 
@@ -1083,4 +1050,94 @@ const styles = StyleSheet.create({
     fontSize: 12, fontFamily: F.bodyMedium,
     textAlign: 'center',
   },
+});
+
+// ─── Badges design layout ─────────────────────────────────────────────
+const B = StyleSheet.create({
+  headerCount: { fontFamily: F.bodyBold, fontSize: 14, color: T.textMuted, minWidth: 34, textAlign: 'right' },
+  section: { paddingHorizontal: 16, paddingTop: 14 },
+  h2: { fontFamily: F.heading, fontSize: 17, color: T.ink },
+  bold: { fontFamily: F.bodyBold, color: T.ink },
+
+  streak: {
+    borderRadius: 26,
+    backgroundColor: T.ink,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  streakIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: T.yellow,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  streakLabel: { fontFamily: F.bodyBold, fontSize: 11.5, color: T.onInkMuted },
+  streakValue: { fontFamily: F.heading, fontSize: 24, color: T.white },
+  streakSub: { fontFamily: F.body, fontSize: 12.5, color: T.onInkMuted },
+
+  card: {
+    borderRadius: 22,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
+    padding: 14,
+  },
+  cardHead: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  cardTitle: { fontFamily: F.headingBold, fontSize: 16, color: T.ink },
+  cardSub: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, marginTop: 1 },
+  countPill: { height: 26, paddingHorizontal: 10, borderRadius: 13, backgroundColor: T.sand, justifyContent: 'center' },
+  countText: { fontFamily: F.bodyBold, fontSize: 12.5, color: T.ink },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+
+  groupRow: { paddingHorizontal: 16, paddingTop: 12, gap: 8 },
+  groupChip: {
+    height: 34,
+    paddingHorizontal: 14,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: T.line,
+    backgroundColor: T.card,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  groupChipOn: { backgroundColor: T.ink, borderColor: T.ink },
+  groupChipText: { fontFamily: F.bodySemi, fontSize: 13, color: T.ink },
+  groupChipCount: { fontFamily: F.bodyBold, fontSize: 12, color: T.textMuted },
+  groupChipTextOn: { color: T.white },
+  groupSub: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, marginBottom: 10 },
+
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  tile: {
+    width: '31%',
+    flexGrow: 1,
+    minHeight: 118,
+    borderRadius: 22,
+    backgroundColor: T.card,
+    borderWidth: 1.5,
+    borderColor: T.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 10,
+  },
+  tileLocked: { backgroundColor: T.sand },
+  tileSelected: { borderColor: T.ink },
+  tileName: { fontFamily: F.bodyBold, fontSize: 12, color: T.ink, textAlign: 'center' },
+  detail: {
+    marginTop: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
+  },
+  detailText: { fontFamily: F.body, fontSize: 13.5, lineHeight: 19, color: T.ink },
 });
