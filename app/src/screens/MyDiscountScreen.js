@@ -23,7 +23,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { color as T, font as F, MAX_FONT_SCALE } from '../theme/tokens';
+import { SheetHandle } from '../ui/Sheet';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
@@ -75,6 +76,7 @@ import {
   getOfferCities,
   resolveCity,
 } from '../utils/cityFilter';
+import Dot from '../engagement/components/Dot';
 
 const SERVER_URL = 'https://the-deft-crew-production.up.railway.app';
 
@@ -87,23 +89,45 @@ const offerImageUrl = (img) => {
 
 const { width, height } = Dimensions.get('window');
 
+// Design system: no gradients. Same <LinearGradient colors=…> call sites, drawn as one
+// flat token colour picked from the first stop.
+const FLAT = {
+  '#f9c349': T.yellow,
+  '#1a1a1a': T.ink,
+  '#ffffff': T.card,
+  '#fff': T.card,
+  '#f0f0f0': T.sand,
+  '#cccccc': T.sand,
+  'rgba(16,185,129,0.9)': T.success,
+  'rgba(156,163,175,0.9)': T.textFaint,
+  'rgba(249,195,73,0.92)': T.yellow,
+  'rgba(16,185,129,0.92)': T.card,
+  'rgba(16,185,129,0.3)': 'rgba(17,17,17,0.10)',
+  'rgba(255,255,255,0.2)': 'rgba(17,17,17,0.08)',
+  'rgba(255,255,255,0.15)': 'rgba(17,17,17,0.08)',
+  transparent: 'transparent',
+};
+const LinearGradient = ({ colors = [], style, children }) => (
+  <View style={[{ backgroundColor: FLAT[String(colors[0])] ?? colors[0] }, style]}>{children}</View>
+);
+
 // Modern Color Palette
 const COLORS = {
-  primary: '#f9c349',
-  primaryDark: '#e8b82a',
-  primaryLight: '#fde8b3',
-  background: '#f2f4f8',
-  cardBg: '#ffffff',
-  textPrimary: '#0a0a0a',
-  textSecondary: '#6b7280',
-  textMuted: '#9ca3af',
-  borderLight: 'rgba(0,0,0,0.05)',
-  shadow: 'rgba(0,0,0,0.06)',
-  success: '#10b981',
-  danger: '#ef4444',
-  warning: '#f59e0b',
-  cardShadow: 'rgba(249,195,73,0.12)',
-  darkOverlay: 'rgba(0,0,0,0.4)',
+  primary: T.yellow,
+  primaryDark: T.ink,
+  primaryLight: T.yellowSoft,
+  background: T.paper,
+  cardBg: T.card,
+  textPrimary: T.ink,
+  textSecondary: T.textMuted,
+  textMuted: T.textFaint,
+  borderLight: T.line,
+  shadow: 'rgba(17,17,17,0.06)',
+  success: T.success,
+  danger: T.danger,
+  warning: T.textMuted,
+  cardShadow: 'rgba(17,17,17,0.06)',
+  darkOverlay: 'transparent',
 };
 
 const DISCOUNT_THEMES = {
@@ -201,7 +225,7 @@ const StatCard = React.memo(({ title, value, icon, gradientColors, delay, isCurr
   }, [delay]);
 
   const formattedValue = isCurrency
-    ? `Rs. ${typeof value === 'number' ? value.toFixed(0) : '0'}`
+    ? `rs ${typeof value === 'number' ? value.toFixed(0) : '0'}`
     : typeof value === 'number' ? value.toLocaleString() : value || '0';
 
   return (
@@ -209,12 +233,12 @@ const StatCard = React.memo(({ title, value, icon, gradientColors, delay, isCurr
       <LinearGradient colors={['#ffffff', '#fafafa']} style={styles.statCardInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
         <View style={styles.statCardLeft}>
           <View style={[styles.statIconBox, { backgroundColor: `${gradientColors[0]}15` }]}>
-            <LinearGradient colors={gradientColors} style={styles.statIconGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-              <Ionicons name={icon} size={18} color="#fff" />
+            <LinearGradient colors={[T.sand]} style={styles.statIconGradient}>
+              <Ionicons name={icon} size={18} color={T.ink} />
             </LinearGradient>
           </View>
           <View>
-            <Text style={styles.statValue} numberOfLines={1}>{formattedValue}</Text>
+            <Text style={styles.statValue} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>{formattedValue}</Text>
             <Text style={styles.statLabel}>{title}</Text>
           </View>
         </View>
@@ -324,45 +348,46 @@ const PromoCodeModal = React.memo(({
         </Animated.View>
 
         <Animated.View style={[styles.modalContent, { transform: [{ translateY: slideAnim }] }]}>
-          <View style={styles.modalHandle}><View style={styles.modalHandleBar} /></View>
+          <SheetHandle />
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScrollContent}>
-            <LinearGradient colors={['#f9c349', '#f5a623']} style={styles.promoModalHeader} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <LinearGradient colors={[T.yellowSoft]} style={styles.promoModalHeader}>
               <View style={styles.promoModalIconContainer}>
-                <Ionicons name={isFromBackend ? "ticket-outline" : "sparkles-outline"} size={48} color="#fff" />
+                <Ionicons name={isFromBackend ? "ticket-outline" : "sparkles-outline"} size={32} color={T.ink} />
               </View>
-              <Text style={styles.promoModalTitle}>
-                {isFromBackend ? 'Your Promo Code' : 'Get Your Promo Code'}
+              <Text style={styles.promoModalTitle} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                {isFromBackend ? 'your promo code' : 'get your promo code'}
+                <Text style={{ color: T.ink }}>.</Text>
               </Text>
               <Text style={styles.promoModalSubtitle}>
                 {isFromBackend
-                  ? `Use this code at ${brandName} checkout to get ${discountPercentage}% OFF`
-                  : `Generate a unique promo code for ${offerTitle}`}
+                  ? `use this code at ${brandName} checkout to get ${discountPercentage}% off.`
+                  : `generate a unique promo code for ${offerTitle}.`}
               </Text>
             </LinearGradient>
 
             {generating ? (
               <View style={styles.generatingContainer}>
                 <ActivityIndicator size="large" color={COLORS.primary} />
-                <Text style={styles.generatingText}>Generating your promo code...</Text>
+                <Text style={styles.generatingText}>generating your promo code…</Text>
               </View>
             ) : promoDetails?.status === 'used' ? (
-              <View style={[styles.promoCodeDisplay, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }]}>
-                <Text style={[styles.promoCodeDisplayText, { color: '#166534', letterSpacing: 1 }]}>CODE USED</Text>
+              <View style={[styles.promoCodeDisplay, { backgroundColor: T.successBg, borderColor: T.successBg }]}>
+                <Text style={[styles.promoCodeDisplayText, { color: T.success, letterSpacing: 1 }]}>code used</Text>
                 <View style={styles.promoCodeCopyButton}>
                   <LinearGradient colors={['rgba(16,185,129,0.9)', 'rgba(5,150,105,0.9)']} style={styles.promoCodeCopyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                     <Ionicons name="checkmark-done-circle" size={20} color="#fff" />
-                    <Text style={styles.promoCodeCopyText}>Used</Text>
+                    <Text style={styles.promoCodeCopyText}>used</Text>
                   </LinearGradient>
                 </View>
               </View>
             ) : promoDetails?.status === 'expired' ? (
-              <View style={[styles.promoCodeDisplay, { backgroundColor: '#f3f4f6', borderColor: '#e5e7eb' }]}>
-                <Text style={[styles.promoCodeDisplayText, { color: '#4b5563', letterSpacing: 1 }]}>EXPIRED</Text>
+              <View style={[styles.promoCodeDisplay, { backgroundColor: T.sand, borderColor: T.line }]}>
+                <Text style={[styles.promoCodeDisplayText, { color: T.textMuted, letterSpacing: 1 }]}>expired</Text>
                 <View style={styles.promoCodeCopyButton}>
                   <LinearGradient colors={['rgba(156,163,175,0.9)', 'rgba(107,114,128,0.9)']} style={styles.promoCodeCopyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                     <Ionicons name="time" size={20} color="#fff" />
-                    <Text style={styles.promoCodeCopyText}>Expired</Text>
+                    <Text style={styles.promoCodeCopyText}>expired</Text>
                   </LinearGradient>
                 </View>
               </View>
@@ -373,18 +398,18 @@ const PromoCodeModal = React.memo(({
                     <Animated.View style={{ transform: [{ scale: pulseAnim }], flex: 1 }}>
                       <Text style={styles.promoCodeDisplayText}>{promoCode}</Text>
                     </Animated.View>
-                    <TouchableOpacity style={styles.promoCodeCopyButton} onPress={handleCopy} activeOpacity={0.8}>
-                      <LinearGradient colors={['#f9c349', '#f5a623']} style={styles.promoCodeCopyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                    <TouchableOpacity style={styles.promoCodeCopyButton} onPress={handleCopy} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="copy code">
+                      <LinearGradient colors={[T.ink]} style={styles.promoCodeCopyGradient}>
                         <Ionicons name="copy-outline" size={20} color="#fff" />
-                        <Text style={styles.promoCodeCopyText}>Copy</Text>
+                        <Text style={styles.promoCodeCopyText}>copy</Text>
                       </LinearGradient>
                     </TouchableOpacity>
                   </View>
                 ) : (
-                  <TouchableOpacity style={styles.generatePromoButton} onPress={handleGenerate} activeOpacity={0.85}>
-                    <LinearGradient colors={['#f9c349', '#f5a623']} style={styles.generatePromoGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                      <Ionicons name="sparkles-outline" size={24} color="#fff" />
-                      <Text style={styles.generatePromoText}>Generate Promo Code</Text>
+                  <TouchableOpacity style={styles.generatePromoButton} onPress={handleGenerate} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="generate promo code">
+                    <LinearGradient colors={[T.ink]} style={styles.generatePromoGradient}>
+                      <Ionicons name="sparkles-outline" size={20} color={T.white} />
+                      <Text style={styles.generatePromoText}>generate promo code</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 )}
@@ -392,53 +417,52 @@ const PromoCodeModal = React.memo(({
                 {isFromBackend && expiresAt && (
                   <View style={styles.expiryContainer}>
                     <Ionicons name="time-outline" size={16} color={COLORS.warning} />
-                    <Text style={styles.expiryText}>Expires: {formatDate(expiresAt)}</Text>
+                    <Text style={styles.expiryText}>expires {formatDate(expiresAt)}</Text>
                   </View>
                 )}
 
                 {isFromBackend && (
                   <TouchableOpacity style={styles.cancelPromoButton} onPress={handleCancel} activeOpacity={0.7}>
-                    <Text style={styles.cancelPromoText}>Cancel Promo Code</Text>
+                    <Text style={styles.cancelPromoText}>cancel promo code</Text>
                   </TouchableOpacity>
                 )}
               </>
             )}
 
             <View style={styles.promoDetails}>
-              <Text style={styles.promoDetailsTitle}>How to use:</Text>
+              <Text style={styles.promoDetailsTitle}>how to use<Text style={{ color: T.yellow }}>.</Text></Text>
               <View style={styles.promoStep}>
                 <View style={styles.promoStepNumber}><Text style={styles.promoStepNumberText}>1</Text></View>
                 <Text style={styles.promoStepText}>
-                  {isFromBackend ? 'Copy the promo code above' : 'Tap "Generate Promo Code" to get your code'}
+                  {isFromBackend ? 'copy the promo code above.' : 'tap "generate promo code" to get your code.'}
                 </Text>
               </View>
               <View style={styles.promoStep}>
                 <View style={styles.promoStepNumber}><Text style={styles.promoStepNumberText}>2</Text></View>
-                <Text style={styles.promoStepText}>Go to {brandName} website/app</Text>
+                <Text style={styles.promoStepText}>go to the {brandName} website or app.</Text>
               </View>
               <View style={styles.promoStep}>
                 <View style={styles.promoStepNumber}><Text style={styles.promoStepNumberText}>3</Text></View>
-                <Text style={styles.promoStepText}>Enter code at checkout</Text>
+                <Text style={styles.promoStepText}>enter the code at checkout.</Text>
               </View>
               <View style={styles.promoStep}>
                 <View style={styles.promoStepNumber}><Text style={styles.promoStepNumberText}>4</Text></View>
-                <Text style={styles.promoStepText}>Get {discountPercentage}% discount instantly!</Text>
+                <Text style={styles.promoStepText}>get {discountPercentage}% off. sorted.</Text>
               </View>
             </View>
 
             {isFromBackend && promoDetails?.status === 'active' && (
               <TouchableOpacity style={styles.useCodeButton} onPress={handleUseCode} activeOpacity={0.85}>
-                <LinearGradient colors={['#1a1a1a', '#2d2d2d']} style={styles.useCodeGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-                  <Text style={styles.useCodeText}>Use This Code</Text>
+                <LinearGradient colors={['#1a1a1a']} style={styles.useCodeGradient}>
+                  <Text style={styles.useCodeText}>use this code</Text>
                   <Ionicons name="arrow-forward" size={18} color={COLORS.primary} style={{ marginLeft: 8 }} />
                 </LinearGradient>
               </TouchableOpacity>
             )}
 
             <TouchableOpacity style={styles.closeModalButton} onPress={onClose} activeOpacity={0.85}>
-              <LinearGradient colors={['#f0f0f0', '#e0e0e0']} style={styles.closeModalGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-                <Text style={styles.closeModalText}>Close</Text>
-                <Ionicons name="close-circle-outline" size={18} color={COLORS.textMuted} style={{ marginLeft: 8 }} />
+              <LinearGradient colors={['#f0f0f0']} style={[styles.closeModalGradient, styles.closeModalGradientLight]}>
+                <Text style={[styles.closeModalText, { color: T.ink }]}>close</Text>
               </LinearGradient>
             </TouchableOpacity>
           </ScrollView>
@@ -539,22 +563,22 @@ const DiscountCard = React.memo(({
 
   const getDiscountDescription = () => {
     if (item?.isOnline) {
-      return hasActivePromo ? '✅ Promo code ready!' : `Use code at ${item?.brand?.name || 'brand'} checkout`;
+      return hasActivePromo ? 'promo code ready.' : `use a code at ${item?.brand?.name || 'brand'} checkout.`;
     }
-    if (item?.isInStore) return 'Show this card in-store to redeem';
-    return item?.description || 'Tap to view details';
+    if (item?.isInStore) return 'ready to save. show this in-store.';
+    return item?.description || 'tap to view details.';
   };
 
   return (
     <Animated.View style={[styles.cardWrapper, { opacity: entry, transform: [{ translateY }, { scale }] }]}>
       <TouchableOpacity activeOpacity={0.9} onPress={handleCardPress} style={styles.cardTouchable}>
         <Animated.View style={[styles.card, { transform: [{ rotateY: frontInterpolate }], backfaceVisibility: 'hidden' }]}>
-          <LinearGradient colors={['#ffffff', '#f8f9fa']} style={styles.cardInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+          <LinearGradient colors={[T.ink]} style={styles.cardInner}>
             <View style={styles.cardImageContainer}>
               {item?.displayImage ? (
                 <Image source={{ uri: item.displayImage }} style={styles.cardImage} resizeMode="cover" />
               ) : (
-                <LinearGradient colors={['#f0f0f0', '#e8e8e8']} style={styles.cardPlaceholder}>
+                <LinearGradient colors={[T.inkSoft]} style={styles.cardPlaceholder}>
                   <Ionicons name={theme.icon} size={32} color={`${COLORS.primary}30`} />
                 </LinearGradient>
               )}
@@ -562,14 +586,14 @@ const DiscountCard = React.memo(({
 
               <LinearGradient colors={theme.gradient} style={styles.cardPercentBadge} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                 <Text style={styles.cardPercentText}>{percentage}%</Text>
-                <Text style={styles.cardPercentOff}>OFF</Text>
+                <Text style={styles.cardPercentOff}>off</Text>
               </LinearGradient>
 
               {item?.isInStore && canRedeem && (
-                <TouchableOpacity style={styles.scanQrButton} onPress={handleScanPress} activeOpacity={0.85}>
+                <TouchableOpacity style={styles.scanQrButton} onPress={handleScanPress} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="scan qr">
                   <LinearGradient colors={['rgba(249,195,73,0.92)', 'rgba(245,166,35,0.92)']} style={styles.scanQrButtonGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                    <Ionicons name="qr-code-outline" size={20} color="#fff" />
-                    <Text style={styles.scanQrButtonText}>Scan QR</Text>
+                    <Ionicons name="qr-code-outline" size={18} color={T.ink} />
+                    <Text style={styles.scanQrButtonText}>scan qr</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               )}
@@ -585,36 +609,36 @@ const DiscountCard = React.memo(({
                       : ['rgba(249,195,73,0.92)', 'rgba(245,166,35,0.92)']}
                     style={styles.scanQrButtonGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                   >
-                    <Ionicons name={item.promoStatus === 'active' ? "checkmark-circle" : "code-outline"} size={20} color="#fff" />
-                    <Text style={styles.scanQrButtonText}>{item.promoStatus === 'active' ? 'View Code' : 'Get Code'}</Text>
+                    <Ionicons name={item.promoStatus === 'active' ? "checkmark-circle" : "code-outline"} size={18} color={T.ink} />
+                    <Text style={styles.scanQrButtonText}>{item.promoStatus === 'active' ? 'view code' : 'get code'}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               )}
 
               <View style={styles.redemptionInfo}>
                 <Text style={styles.redemptionText}>{redemptionsToday}/{maxRedemptions} used today</Text>
-                {!canRedeem && <Text style={styles.redemptionLimitText}>Limit reached</Text>}
+                {!canRedeem && <Text style={styles.redemptionLimitText}>limit reached</Text>}
               </View>
             </View>
 
             <View style={styles.cardContent}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardCategory}>
-                  <Ionicons name={theme.icon} size={12} color={COLORS.primary} />
-                  <Text style={styles.cardCategoryText}>{item?.isOnline ? 'Online' : item?.isInStore ? 'In-Store' : 'Offer'}</Text>
+                  <Ionicons name={theme.icon} size={12} color={T.yellow} />
+                  <Text style={styles.cardCategoryText}>{item?.isOnline ? 'online' : item?.isInStore ? 'in-store' : 'offer'}</Text>
                 </View>
                 <View style={styles.cardFlipIndicator}>
-                  <Ionicons name="sync-outline" size={14} color={COLORS.textMuted} />
+                  <Ionicons name="sync-outline" size={14} color={T.onInkMuted} />
                 </View>
               </View>
 
-              <Text numberOfLines={1} style={styles.cardTitle}>{item?.title || 'Special Offer'}</Text>
+              <Text numberOfLines={1} style={styles.cardTitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>{item?.title || 'special offer'}</Text>
               <Text numberOfLines={1} style={styles.cardDescription}>{getDiscountDescription()}</Text>
 
               <View style={styles.cardFooter}>
                 <View style={styles.cardTapHint}>
-                  <Ionicons name="finger-print-outline" size={12} color={COLORS.textMuted} />
-                  <Text style={styles.cardTapHintText}>Tap to flip</Text>
+                  <Ionicons name="sync-outline" size={12} color={T.onInkMuted} />
+                  <Text style={styles.cardTapHintText}>tap to flip</Text>
                 </View>
                 {item?.brand?.name && <Text style={styles.cardBrandName}>{item.brand.name}</Text>}
               </View>
@@ -631,9 +655,9 @@ const DiscountCard = React.memo(({
         >
           <LinearGradient colors={theme.gradient} style={styles.cardBackInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
             <View style={styles.cardBackContent}>
-              <Text style={styles.cardBackTitle}>Ready to Save!</Text>
+              <Text style={styles.cardBackTitle}>ready to save<Text style={{ color: T.ink }}>.</Text></Text>
               <Text style={styles.cardBackDescription}>
-                {canRedeem ? 'Choose your redemption method' : 'Limit reached for today'}
+                {canRedeem ? 'choose how to redeem.' : 'limit reached for today.'}
               </Text>
 
               <View style={styles.cardBackActions}>
@@ -652,11 +676,11 @@ const DiscountCard = React.memo(({
                   disabled={!canRedeem}
                 >
                   <LinearGradient
-                    colors={canRedeem ? ['#ffffff', '#f0f0f0'] : ['#cccccc', '#bbbbbb']}
-                    style={styles.cardBackButtonGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                    colors={canRedeem ? [T.ink] : ['#cccccc']}
+                    style={styles.cardBackButtonGradient}
                   >
                     <Text style={[styles.cardBackButtonText, !canRedeem && styles.cardBackButtonTextDisabled]}>
-                      {canRedeem ? 'Redeem' : 'Limit Reached'}
+                      {canRedeem ? 'redeem' : 'limit reached'}
                     </Text>
                     {canRedeem && <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />}
                   </LinearGradient>
@@ -669,8 +693,8 @@ const DiscountCard = React.memo(({
                     activeOpacity={0.8}
                   >
                     <LinearGradient colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.05)']} style={styles.cardBackScanGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                      <Ionicons name="qr-code-outline" size={18} color="#fff" />
-                      <Text style={styles.cardBackScanText}>Scan QR</Text>
+                      <Ionicons name="qr-code-outline" size={18} color={T.ink} />
+                      <Text style={styles.cardBackScanText}>scan qr</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 )}
@@ -686,8 +710,8 @@ const DiscountCard = React.memo(({
                         : ['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.05)']}
                       style={styles.cardBackPromoGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                     >
-                      <Ionicons name={item.promoStatus === 'active' ? "checkmark-circle" : "code-outline"} size={18} color="#fff" />
-                      <Text style={styles.cardBackPromoText}>{item.promoStatus === 'active' ? 'View Code' : 'Get Code'}</Text>
+                      <Ionicons name={item.promoStatus === 'active' ? "checkmark-circle" : "code-outline"} size={18} color={T.ink} />
+                      <Text style={styles.cardBackPromoText}>{item.promoStatus === 'active' ? 'view code' : 'get code'}</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 )}
@@ -695,12 +719,12 @@ const DiscountCard = React.memo(({
 
               <TouchableOpacity style={styles.unclaimButton} onPress={handleUnclaim} activeOpacity={0.7}>
                 <LinearGradient colors={['rgba(255,255,255,0.15)', 'rgba(255,255,255,0.05)']} style={styles.unclaimButtonGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                  <Ionicons name="trash-outline" size={14} color="#fff" />
-                  <Text style={styles.unclaimButtonText}>Remove Discount</Text>
+                  <Ionicons name="trash-outline" size={14} color={T.ink} />
+                  <Text style={styles.unclaimButtonText}>remove discount</Text>
                 </LinearGradient>
               </TouchableOpacity>
 
-              {!canRedeem && <Text style={styles.limitMessage}>⏰ Try again tomorrow</Text>}
+              {!canRedeem && <Text style={styles.limitMessage}>try again tomorrow.</Text>}
             </View>
           </LinearGradient>
         </Animated.View>
@@ -850,14 +874,14 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
         <View style={styles.scannerModalContainer}>
           <View style={styles.scannerModalContent}>
             <View style={styles.scannerHeader}>
-              <Text style={styles.scannerHeaderTitle}>Scan QR Code</Text>
+              <Text style={styles.scannerHeaderTitle}>scan qr code</Text>
               <TouchableOpacity onPress={onClose} style={styles.scannerCloseBtn}>
                 <Ionicons name="close" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
             <View style={styles.scannerPermissionContainer}>
               <ActivityIndicator size="large" color={COLORS.primary} />
-              <Text style={styles.scannerPermissionText}>Requesting camera permission...</Text>
+              <Text style={styles.scannerPermissionText}>asking for camera access…</Text>
             </View>
           </View>
         </View>
@@ -871,19 +895,19 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
         <View style={styles.scannerModalContainer}>
           <View style={styles.scannerModalContent}>
             <View style={styles.scannerHeader}>
-              <Text style={styles.scannerHeaderTitle}>Scan QR Code</Text>
+              <Text style={styles.scannerHeaderTitle}>scan qr code</Text>
               <TouchableOpacity onPress={onClose} style={styles.scannerCloseBtn}>
                 <Ionicons name="close" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
             <View style={styles.scannerPermissionContainer}>
               <Ionicons name="camera-off" size={48} color="#fff" />
-              <Text style={styles.scannerPermissionText}>Camera access denied</Text>
+              <Text style={styles.scannerPermissionText}>camera access is off</Text>
               <Text style={styles.scannerPermissionSubtext}>
-                Please enable camera access in your device settings to scan QR codes.
+                turn on camera access in your phone settings to scan qr codes.
               </Text>
               <TouchableOpacity style={styles.scannerPermissionButton} onPress={onClose}>
-                <Text style={styles.scannerPermissionButtonText}>Close</Text>
+                <Text style={styles.scannerPermissionButtonText}>close</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -897,7 +921,7 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
       <View style={styles.scannerModalContainer}>
         <View style={styles.scannerModalContent}>
           <View style={styles.scannerHeader}>
-            <Text style={styles.scannerHeaderTitle}>Scan QR Code</Text>
+            <Text style={styles.scannerHeaderTitle}>scan qr code</Text>
             <View style={styles.scannerHeaderActions}>
               <TouchableOpacity onPress={toggleTorch} style={styles.scannerTorchBtn}>
                 <Ionicons name={torchOn ? "flashlight" : "flashlight-outline"} size={22} color="#fff" />
@@ -911,8 +935,8 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
           {offer && (
             <View style={styles.scannerOfferInfo}>
               <Text style={styles.scannerOfferTitle}>{offer.title}</Text>
-              <Text style={styles.scannerOfferDiscount}>{offer.discountPercentage}% OFF</Text>
-              <Text style={styles.scannerOfferHint}>Scan the QR code displayed at the brand store</Text>
+              <Text style={styles.scannerOfferDiscount}>{offer.discountPercentage}% off</Text>
+              <Text style={styles.scannerOfferHint}>{"scan the qr code shown at the brand's counter."}</Text>
             </View>
           )}
 
@@ -934,14 +958,14 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
               </View>
 
               <View style={styles.scannerInstructionContainer}>
-                <Text style={styles.scannerInstruction}>Place QR code in the frame</Text>
+                <Text style={styles.scannerInstruction}>place the qr code in the frame</Text>
               </View>
 
               <View style={styles.scannerBottomContent}>
                 {loading && <ActivityIndicator size="large" color={COLORS.primary} />}
                 {scanned && !loading && (
                   <TouchableOpacity style={styles.scannerRetryBtn} onPress={() => { soundTap(); setScanned(false); }}>
-                    <Text style={styles.scannerRetryText}>Scan Again</Text>
+                    <Text style={styles.scannerRetryText}>scan again</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -949,7 +973,7 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
           </View>
 
           <View style={styles.scannerFooter}>
-            <Text style={styles.scannerFooterText}>Make sure the QR code is well lit and centered</Text>
+            <Text style={styles.scannerFooterText}>make sure the qr code is well lit and centred.</Text>
           </View>
         </View>
       </View>
@@ -967,12 +991,12 @@ const UseNowModal = React.memo(({ visible, onClose, item }) => {
   const steps = [
     {
       icon: item?.isOnline ? 'globe-outline' : 'storefront-outline',
-      title: item?.isOnline ? 'Visit Website' : 'Visit the Store',
-      description: item?.isOnline ? `Go to ${item?.brand?.name || 'brand'} website` : 'Visit the participating brand or store',
+      title: item?.isOnline ? 'visit the website' : 'visit the store',
+      description: item?.isOnline ? `go to the ${item?.brand?.name || 'brand'} website.` : 'visit the participating brand or store.',
     },
-    { icon: 'id-card-outline', title: 'Scan QR Code', description: 'Ask the staff to scan your TDC QR code to verify your discount.' },
-    { icon: 'shield-checkmark-outline', title: 'Verification', description: 'Staff will verify your eligibility' },
-    { icon: 'checkmark-circle-outline', title: 'Redeem & Save', description: 'Discount will be applied to your purchase' },
+    { icon: 'id-card-outline', title: 'scan the qr code', description: 'ask the staff to scan your tdc qr code to verify your discount.' },
+    { icon: 'shield-checkmark-outline', title: 'verification', description: 'staff will check that you are eligible.' },
+    { icon: 'checkmark-circle-outline', title: 'redeem and save', description: 'the discount is applied to your purchase. sorted.' },
   ];
 
   useEffect(() => {
@@ -997,49 +1021,48 @@ const UseNowModal = React.memo(({ visible, onClose, item }) => {
         </Animated.View>
 
         <Animated.View style={[styles.modalContent, { transform: [{ translateY: slideAnim }] }]}>
-          <View style={styles.modalHandle}><View style={styles.modalHandleBar} /></View>
+          <SheetHandle />
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScrollContent}>
-            <LinearGradient colors={theme.gradient} style={styles.modalHeaderGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <LinearGradient colors={[T.yellowSoft]} style={styles.modalHeaderGradient}>
               <View style={styles.modalHeaderContent}>
                 <View style={styles.modalIconCircle}>
-                  <Ionicons name={theme.icon} size={28} color="#fff" />
+                  <Ionicons name={theme.icon} size={24} color={T.ink} />
                 </View>
                 <View style={styles.modalPercentageCircle}>
                   <Text style={styles.modalPercentageBig}>{percentage}%</Text>
-                  <Text style={styles.modalPercentageOffBig}>OFF</Text>
+                  <Text style={styles.modalPercentageOffBig}>off</Text>
                 </View>
               </View>
             </LinearGradient>
 
             <View style={styles.modalTitleSection}>
-              <Text style={styles.modalTitle}>{item?.title || 'Special Offer'}</Text>
+              <Text style={styles.modalTitle} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>{item?.title || 'special offer'}</Text>
               <Text style={styles.modalSubtitle}>
-                {item?.isOnline ? '💻 Online Discount' : item?.isInStore ? '🏪 In-Store Discount' : ''}
+                {item?.isOnline ? 'online discount' : item?.isInStore ? 'in-store discount' : ''}
               </Text>
               <Text style={[styles.modalSubtitle, { marginTop: 4 }]}>
-                {item?.description || 'Redeem your discount today!'}
+                {item?.description || 'redeem your discount today.'}
               </Text>
-              {item?.brand?.name && <Text style={styles.modalBrandName}>By {item.brand.name}</Text>}
+              {item?.brand?.name && <Text style={styles.modalBrandName}>by {item.brand.name}</Text>}
             </View>
 
             <View style={styles.stepsWrapper}>
               <View style={styles.stepsSectionHeader}>
-                <LinearGradient colors={theme.gradient} style={styles.stepsSectionDot} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-                <Text style={styles.stepsHeader}>How to Redeem</Text>
+                <Text style={styles.stepsHeader}>how to redeem<Text style={{ color: T.yellow }}>.</Text></Text>
               </View>
 
               {steps.map((step, index) => (
                 <View key={index} style={styles.stepItem}>
                   <View style={styles.stepNumberContainer}>
-                    <LinearGradient colors={theme.gradient} style={styles.stepNumber} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                    <LinearGradient colors={[T.ink]} style={styles.stepNumber}>
                       <Text style={styles.stepNumberText}>{index + 1}</Text>
                     </LinearGradient>
                     {index < steps.length - 1 && <View style={styles.stepLine} />}
                   </View>
                   <View style={styles.stepContentBox}>
                     <View style={styles.stepContentIcon}>
-                      <Ionicons name={step.icon} size={16} color={COLORS.primary} />
+                      <Ionicons name={step.icon} size={16} color={T.ink} />
                     </View>
                     <View style={styles.stepTextContainer}>
                       <Text style={styles.stepTitle}>{step.title}</Text>
@@ -1051,9 +1074,8 @@ const UseNowModal = React.memo(({ visible, onClose, item }) => {
             </View>
 
             <TouchableOpacity style={styles.closeModalButton} onPress={onClose} activeOpacity={0.85}>
-              <LinearGradient colors={['#1a1a1a', '#2d2d2d']} style={styles.closeModalGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-                <Text style={styles.closeModalText}>Got It!</Text>
-                <Ionicons name="checkmark-circle" size={18} color={COLORS.primary} style={{ marginLeft: 8 }} />
+              <LinearGradient colors={['#1a1a1a']} style={styles.closeModalGradient}>
+                <Text style={styles.closeModalText}>got it</Text>
               </LinearGradient>
             </TouchableOpacity>
           </ScrollView>
@@ -1088,8 +1110,8 @@ const LoadingOverlay = ({ visible, message }) => {
   return (
     <Animated.View style={[styles.loadingOverlay, { opacity: overlayOpacity }]}>
       <View style={styles.loadingCard}>
-        <ActivityIndicator size="large" color="#f9c349" />
-        <Text style={styles.loadingText}>{message || "Loading discounts..."}</Text>
+        <ActivityIndicator size="large" color={T.ink} />
+        <Text style={styles.loadingText}>{message || "loading discounts…"}</Text>
         <View style={styles.loadingProgressContainer}>
           <Animated.View style={[styles.loadingProgressBar, { transform: [{ scaleX: loadingScaleX }] }]} />
         </View>
@@ -1116,22 +1138,19 @@ const EmptyState = React.memo(({ navigation }) => {
   return (
     <Animated.View style={[styles.emptyState, { opacity, transform: [{ scale }] }]}>
       <View style={styles.emptyIconContainer}>
-        <LinearGradient colors={['#fff', '#f8f8f8']} style={styles.emptyIconGradient}>
-          <MaterialCommunityIcons name="ticket-percent-outline" size={56} color={COLORS.primary} />
-        </LinearGradient>
+        <Dot mood="broke" size={56} animated={false} />
       </View>
-      <Text style={styles.emptyTitle}>No Discounts Yet</Text>
+      <Text style={styles.emptyTitle}>no discounts yet</Text>
       <Text style={styles.emptyDescription}>
-        Explore partner offers and claim{'\n'}amazing student discounts!
+        claim a partner offer and it shows up here.
       </Text>
       <TouchableOpacity
         style={styles.exploreButton}
         onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); soundTap(); navigation.navigate('Brands'); }}
         activeOpacity={0.85}
       >
-        <LinearGradient colors={['#1a1a1a', '#2d2d2d']} style={styles.exploreButtonGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-          <Ionicons name="compass-outline" size={16} color={COLORS.primary} style={{ marginRight: 8 }} />
-          <Text style={styles.exploreButtonText}>Explore Offers</Text>
+        <LinearGradient colors={['#1a1a1a']} style={styles.exploreButtonGradient}>
+          <Text style={styles.exploreButtonText}>see brands</Text>
         </LinearGradient>
       </TouchableOpacity>
     </Animated.View>
@@ -1809,20 +1828,22 @@ export default function MyDiscountScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor='#ffffff08' />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <Animated.View style={[styles.header, { opacity: headerAnim, transform: [{ translateY: headerTranslateY }] }]}>
         <TouchableOpacity
           onPress={() => { soundTap(); navigation.goBack(); }}
           style={styles.backBtn}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="back"
         >
-          <Ionicons name="chevron-back" size={20} color={COLORS.textPrimary} />
+          <Ionicons name="chevron-back" size={19} color={T.ink} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Discounts</Text>
-        <TouchableOpacity onPress={handleRefresh} style={styles.headerBadge} activeOpacity={0.7} disabled={refreshing}>
+        <Text style={styles.headerTitle} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>my discounts<Text style={{ color: T.yellow }}>.</Text></Text>
+        <TouchableOpacity onPress={handleRefresh} style={styles.headerBadge} activeOpacity={0.7} disabled={refreshing} accessibilityRole="button" accessibilityLabel={`${stats.activeCount} active, refresh`}>
           {refreshing ? (
-            <ActivityIndicator size="small" color={COLORS.primary} />
+            <ActivityIndicator size="small" color={T.ink} />
           ) : (
             <>
               <Text style={styles.headerBadgeText}>{stats.activeCount}</Text>
@@ -1835,13 +1856,13 @@ export default function MyDiscountScreen() {
       {cityOptions.length > 1 && (
         <View style={styles.cityRow}>
           <Text style={styles.cityRowText}>
-            {selectedCity === ALL_CITIES ? 'All your discounts' : `Discounts in ${selectedCity}`}
+            {selectedCity === ALL_CITIES ? 'all your discounts' : `discounts in ${selectedCity}`}
           </Text>
           <CityDropdown
             options={cityOptions}
             selected={selectedCity}
             onSelect={setSelectedCity}
-            title="My discounts in"
+            title="my discounts in"
           />
         </View>
       )}
@@ -1869,36 +1890,36 @@ export default function MyDiscountScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
-            progressBackgroundColor="#fff"
+            tintColor={T.ink}
+            colors={[T.ink]}
+            progressBackgroundColor={T.card}
           />
         }
         ListHeaderComponent={
           <View style={styles.statsContainer}>
-            <StatCard title="Active Discounts" value={stats.activeCount} icon="pricetag-outline" gradientColors={['#f9c349', '#f5a623']} delay={200} />
+            <StatCard title="active" value={stats.activeCount} icon="pricetag-outline" gradientColors={['#f9c349', '#f5a623']} delay={200} />
             {stats.onlineCount > 0 && (
-              <StatCard title="Online Offers" value={stats.onlineCount} icon="globe-outline" gradientColors={['#3b82f6', '#2563eb']} delay={300} />
+              <StatCard title="online" value={stats.onlineCount} icon="globe-outline" gradientColors={['#3b82f6', '#2563eb']} delay={300} />
             )}
             {stats.promoCount > 0 && (
-              <StatCard title="Promo Codes Ready" value={stats.promoCount} icon="code-outline" gradientColors={['#10b981', '#059669']} delay={400} />
+              <StatCard title="codes ready" value={stats.promoCount} icon="code-outline" gradientColors={['#10b981', '#059669']} delay={400} />
             )}
           </View>
         }
         ListEmptyComponent={
           hiddenByCity > 0 ? (
             <View style={styles.cityEmpty}>
-              <Ionicons name="location-outline" size={40} color={COLORS.primary} />
-              <Text style={styles.cityEmptyTitle}>No discounts in {selectedCity}</Text>
+              <Dot mood="sus" size={56} animated={false} />
+              <Text style={styles.cityEmptyTitle}>no discounts in {selectedCity}</Text>
               <Text style={styles.cityEmptyText}>
-                You have {hiddenByCity} {hiddenByCity === 1 ? 'discount' : 'discounts'} in other cities.
+                you have {hiddenByCity} {hiddenByCity === 1 ? 'discount' : 'discounts'} in other cities.
               </Text>
               <TouchableOpacity
                 style={styles.cityEmptyBtn}
                 activeOpacity={0.85}
                 onPress={() => { soundTap(); setSelectedCity(ALL_CITIES); }}
               >
-                <Text style={styles.cityEmptyBtnText}>Show All Cities</Text>
+                <Text style={styles.cityEmptyBtnText}>show all cities</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -1954,321 +1975,420 @@ export default function MyDiscountScreen() {
 
 // ==================== STYLES ====================
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  cityRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, marginTop: 4, marginBottom: 4,
-  },
-  cityRowText: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted },
-  cityEmpty: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 24 },
-  cityEmptyTitle: { fontSize: 16, fontWeight: '700', color: '#1a1a1a', marginTop: 12 },
-  cityEmptyText: { fontSize: 13, color: '#777', marginTop: 6, textAlign: 'center' },
-  cityEmptyBtn: {
-    marginTop: 16, backgroundColor: '#1a1a1a', paddingHorizontal: 20,
-    paddingVertical: 10, borderRadius: 20,
-  },
-  cityEmptyBtnText: { color: COLORS.primary, fontWeight: '800', fontSize: 13 },
+  container: { flex: 1, backgroundColor: T.paper },
+
+  // Header
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 8 : 10,
-    backgroundColor: COLORS.background,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
   },
   backBtn: {
-    width: 36, height: 36, borderRadius: 10, backgroundColor: '#fff',
-    justifyContent: 'center', alignItems: 'center',
-    shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary, letterSpacing: -0.2 },
+  headerTitle: { flex: 1, fontFamily: F.heading, fontSize: 28, letterSpacing: -0.8, color: T.ink },
   headerBadge: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: `${COLORS.primary}15`,
-    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, gap: 4,
-    minWidth: 60, justifyContent: 'center',
+    minWidth: 64,
+    height: 40,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
   },
-  headerBadgeText: { fontSize: 13, fontWeight: '700', color: COLORS.primary },
-  headerBadgeLabel: { fontSize: 10, fontWeight: '500', color: COLORS.textMuted },
-  listContainer: { padding: 16, paddingBottom: 30, flexGrow: 1 },
-  statsContainer: { flexDirection: 'row', gap: 12, marginBottom: 16 },
-  statCard: {
-    flex: 1, borderRadius: 14, overflow: 'hidden',
-    shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+  headerBadgeText: { fontFamily: F.bodyBold, fontSize: 15, color: T.ink },
+  headerBadgeLabel: { fontFamily: F.body, fontSize: 12, color: T.textMuted },
+
+  cityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
-  statCardInner: { padding: 14, flexDirection: 'row', alignItems: 'center', borderRadius: 14 },
-  statCardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  statIconBox: { width: 38, height: 38, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-  statIconGradient: { width: 26, height: 26, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  statValue: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 1 },
-  statLabel: { fontSize: 10, color: COLORS.textMuted, fontWeight: '500', textTransform: 'uppercase', letterSpacing: 0.5 },
-  cardWrapper: {
-    marginBottom: 12, borderRadius: 16, overflow: 'hidden',
-    shadowColor: COLORS.cardShadow, shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15, shadowRadius: 12, elevation: 3,
+  cityRowText: { flex: 1, fontFamily: F.bodySemi, fontSize: 13, color: T.textMuted },
+
+  listContainer: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 40 },
+
+  // Stats
+  statsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
+  statCard: { flexGrow: 1, flexBasis: '30%' },
+  statCardInner: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: T.line,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
-  cardTouchable: { flex: 1, height: 130 },
-  card: { borderRadius: 16, overflow: 'hidden', height: 130, backgroundColor: '#fff' },
-  cardBack: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  cardInner: { flexDirection: 'row', height: 130 },
-  cardImageContainer: { width: '38%', position: 'relative', overflow: 'hidden' },
+  statCardLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  statIconBox: { width: 34, height: 34, borderRadius: 17, overflow: 'hidden' },
+  statIconGradient: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  statValue: { fontFamily: F.heading, fontSize: 18, color: T.ink },
+  statLabel: { fontFamily: F.body, fontSize: 12, color: T.textMuted },
+
+  // Discount card
+  cardWrapper: { marginBottom: 12 },
+  cardTouchable: {},
+  card: { borderRadius: 26, overflow: 'hidden' },
+  cardInner: { borderRadius: 26, overflow: 'hidden' },
+  cardImageContainer: { height: 150, backgroundColor: T.inkSoft, position: 'relative' },
   cardImage: { width: '100%', height: '100%' },
-  cardPlaceholder: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
-  cardImageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%' },
+  cardPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  cardImageOverlay: { ...StyleSheet.absoluteFillObject },
   cardPercentBadge: {
-    position: 'absolute', top: 8, left: 8, paddingHorizontal: 8, paddingVertical: 3,
-    borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 2,
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    height: 30,
+    paddingHorizontal: 12,
+    borderRadius: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
   },
-  cardPercentText: { color: '#fff', fontSize: 12, fontWeight: '800' },
-  cardPercentOff: { color: '#fff', fontSize: 7, fontWeight: '700', opacity: 0.9 },
-  scanQrButton: {
-    position: 'absolute', top: '50%', left: '50%',
-    transform: [{ translateX: -45 }, { translateY: -18 }],
-    borderRadius: 20, overflow: 'hidden', elevation: 5,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4,
+  cardPercentText: { fontFamily: F.bodyBold, fontSize: 14, color: T.ink },
+  cardPercentOff: { fontFamily: F.bodyBold, fontSize: 12, color: T.ink },
+  scanQrButton: { position: 'absolute', right: 12, bottom: 12, borderRadius: 20, overflow: 'hidden' },
+  promoReadyButton: {},
+  scanQrButtonGradient: {
+    height: 40,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  promoReadyButton: { borderWidth: 2, borderColor: '#10b981' },
-  scanQrButtonGradient: { paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  scanQrButtonText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  scanQrButtonText: { fontFamily: F.bodyBold, fontSize: 13.5, color: T.ink },
   redemptionInfo: {
-    position: 'absolute', bottom: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.75)',
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, alignItems: 'center',
+    position: 'absolute',
+    left: 12,
+    bottom: 12,
+    paddingHorizontal: 10,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(17,17,17,0.72)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  redemptionText: { fontSize: 9, color: '#fff', fontWeight: '600' },
-  redemptionLimitText: { fontSize: 8, color: '#ff6b6b', fontWeight: '700', marginTop: 1 },
-  limitMessage: { color: '#fff', fontSize: 11, fontWeight: '600', marginTop: 6, opacity: 0.9 },
-  cardContent: { flex: 1, padding: 12, justifyContent: 'space-between' },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardCategory: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: `${COLORS.primary}10`, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12,
+  redemptionText: { fontFamily: F.bodySemi, fontSize: 11.5, color: T.white },
+  redemptionLimitText: { fontFamily: F.bodyBold, fontSize: 11.5, color: T.yellow },
+  cardContent: { padding: 16 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cardCategory: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  cardCategoryText: { fontFamily: F.bodySemi, fontSize: 12, color: T.onInkMuted },
+  cardFlipIndicator: {},
+  cardTitle: { fontFamily: F.bodyBold, fontSize: 16, color: T.white, marginTop: 6 },
+  cardDescription: { fontFamily: F.body, fontSize: 12.5, color: T.onInkMuted, marginTop: 2 },
+  cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
+  cardTapHint: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  cardTapHintText: { fontFamily: F.body, fontSize: 11.5, color: T.onInkMuted },
+  cardBrandName: { fontFamily: F.bodyBold, fontSize: 12.5, color: T.yellow },
+
+  // Card back (yellow)
+  cardBack: {},
+  cardBackInner: { flex: 1, borderRadius: 26, padding: 18, justifyContent: 'center' },
+  cardBackContent: { alignItems: 'stretch' },
+  cardBackTitle: { fontFamily: F.heading, fontSize: 22, color: T.ink, textAlign: 'center' },
+  cardBackDescription: { fontFamily: F.body, fontSize: 13, color: T.ink, textAlign: 'center', marginTop: 2 },
+  cardBackActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14, justifyContent: 'center' },
+  cardBackButton: { flexGrow: 1, borderRadius: 22, overflow: 'hidden' },
+  cardBackButtonDisabled: {},
+  cardBackButtonGradient: {
+    height: 44,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
-  cardCategoryText: { fontSize: 9, fontWeight: '600', color: COLORS.primary },
-  cardFlipIndicator: {
-    width: 24, height: 24, borderRadius: 6, backgroundColor: `${COLORS.textMuted}08`,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  cardTitle: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary, marginTop: 2 },
-  cardDescription: { fontSize: 11, color: COLORS.textSecondary, marginTop: 1 },
-  cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
-  cardTapHint: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: `${COLORS.textMuted}06`, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10,
-  },
-  cardTapHintText: { fontSize: 9, color: COLORS.textMuted, fontWeight: '500' },
-  cardBrandName: { fontSize: 9, color: COLORS.textMuted, fontWeight: '500' },
-  cardBackInner: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16 },
-  cardBackContent: { alignItems: 'center', width: '100%' },
-  cardBackTitle: { fontSize: 16, fontWeight: '700', color: '#fff', marginBottom: 1 },
-  cardBackDescription: { fontSize: 11, color: 'rgba(255,255,255,0.85)', textAlign: 'center', marginBottom: 2 },
-  cardBackActions: { flexDirection: 'row', gap: 8, width: '100%', justifyContent: 'center', flexWrap: 'wrap', marginBottom: 4 },
-  cardBackButton: { borderRadius: 10, overflow: 'hidden', flex: 1, minWidth: 70 },
-  cardBackButtonDisabled: { opacity: 0.6 },
-  cardBackButtonGradient: { paddingVertical: 8, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  cardBackButtonText: { fontSize: 12, fontWeight: '700', color: COLORS.textPrimary },
-  cardBackButtonTextDisabled: { color: '#888' },
-  cardBackScanButton: { borderRadius: 10, overflow: 'hidden', flex: 1, minWidth: 80 },
+  cardBackButtonText: { fontFamily: F.bodyBold, fontSize: 14, color: T.white },
+  cardBackButtonTextDisabled: { color: T.textFaint },
+  cardBackScanButton: { flexGrow: 1, borderRadius: 22, overflow: 'hidden' },
   cardBackScanGradient: {
-    paddingVertical: 8, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
+    height: 44,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
-  cardBackScanText: { fontSize: 12, fontWeight: '600', color: '#fff' },
-  cardBackPromoButton: { borderRadius: 10, overflow: 'hidden', flex: 1, minWidth: 80 },
-  promoReadyCardButton: { borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)' },
+  cardBackScanText: { fontFamily: F.bodyBold, fontSize: 13.5, color: T.ink },
+  cardBackPromoButton: { flexGrow: 1, borderRadius: 22, overflow: 'hidden' },
+  promoReadyCardButton: {},
   cardBackPromoGradient: {
-    paddingVertical: 8, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
+    height: 44,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
-  cardBackPromoText: { fontSize: 12, fontWeight: '600', color: '#fff' },
-  unclaimButton: { borderRadius: 10, overflow: 'hidden', width: '100%', maxWidth: 180 },
+  cardBackPromoText: { fontFamily: F.bodyBold, fontSize: 13.5, color: T.ink },
+  unclaimButton: { alignSelf: 'center', marginTop: 12, borderRadius: 18, overflow: 'hidden' },
   unclaimButtonGradient: {
-    paddingVertical: 5, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
+    height: 36,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  unclaimButtonText: { fontSize: 10, fontWeight: '600', color: '#fff' },
-  emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60, flex: 1 },
-  emptyIconContainer: { marginBottom: 16 },
-  emptyIconGradient: {
-    width: 80, height: 80, borderRadius: 40, justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1.5, borderColor: COLORS.borderLight,
-  },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 6 },
-  emptyDescription: { fontSize: 13, color: COLORS.textMuted, textAlign: 'center', marginBottom: 20, paddingHorizontal: 40, lineHeight: 20 },
-  exploreButton: {
-    borderRadius: 12, overflow: 'hidden', elevation: 3,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 8,
-  },
-  exploreButtonGradient: { paddingHorizontal: 24, paddingVertical: 12, flexDirection: 'row', alignItems: 'center' },
-  exploreButtonText: { color: COLORS.primary, fontSize: 13, fontWeight: '600' },
+  unclaimButtonText: { fontFamily: F.bodySemi, fontSize: 12.5, color: T.ink },
+  limitMessage: { fontFamily: F.bodySemi, fontSize: 12.5, color: T.ink, textAlign: 'center', marginTop: 8 },
+
+  // Shared bottom-sheet modal
   modalContainer: { flex: 1, justifyContent: 'flex-end' },
-  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: T.overlay },
   modalContent: {
-    backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    maxHeight: '88%', overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: -8 }, shadowOpacity: 0.12, shadowRadius: 24, elevation: 20,
+    backgroundColor: T.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: height * 0.88,
+    paddingTop: 8,
   },
-  modalScrollContent: { paddingBottom: 30 },
-  modalHandle: { alignItems: 'center', paddingTop: 10, paddingBottom: 2 },
-  modalHandleBar: { width: 36, height: 4, backgroundColor: COLORS.borderLight, borderRadius: 2 },
-  modalHeaderGradient: {
-    paddingVertical: 24, marginHorizontal: 0,
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-  },
-  modalHeaderContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20 },
-  modalIconCircle: {
-    width: 48, height: 48, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  modalPercentageCircle: { alignItems: 'center' },
-  modalPercentageBig: { fontSize: 28, fontWeight: '800', color: '#fff' },
-  modalPercentageOffBig: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.9)' },
-  modalTitleSection: { paddingHorizontal: 20, paddingTop: 16 },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 4, letterSpacing: -0.2 },
-  modalSubtitle: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 20 },
-  modalBrandName: { fontSize: 12, color: COLORS.textMuted, marginTop: 4, fontWeight: '500' },
-  stepsWrapper: { paddingHorizontal: 20, paddingTop: 18 },
-  stepsSectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  stepsSectionDot: { width: 5, height: 5, borderRadius: 3, marginRight: 8 },
-  stepsHeader: { fontSize: 10, fontWeight: '700', color: COLORS.textPrimary, letterSpacing: 1.2, textTransform: 'uppercase' },
-  stepItem: { flexDirection: 'row', marginBottom: 4, minHeight: 50 },
-  stepNumberContainer: { alignItems: 'center', marginRight: 12, width: 24 },
-  stepNumber: { width: 24, height: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center', zIndex: 1 },
-  stepNumberText: { color: '#fff', fontWeight: '700', fontSize: 10 },
-  stepLine: { width: 1.5, flex: 1, minHeight: 10, backgroundColor: COLORS.borderLight, marginTop: 3 },
-  stepContentBox: {
-    flex: 1, flexDirection: 'row', backgroundColor: '#f8f9fb', borderRadius: 12,
-    padding: 12, marginBottom: 6, borderWidth: 1, borderColor: COLORS.borderLight,
-  },
-  stepContentIcon: { marginRight: 10, marginTop: 1 },
-  stepTextContainer: { flex: 1 },
-  stepTitle: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 1 },
-  stepDescription: { fontSize: 11, color: COLORS.textSecondary, lineHeight: 16 },
-  promoModalHeader: {
-    paddingVertical: 30, paddingHorizontal: 20, alignItems: 'center',
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-  },
+  modalHandle: { alignItems: 'center', paddingVertical: 6 },
+  modalHandleBar: { width: 40, height: 4, borderRadius: 2, backgroundColor: T.handle },
+  modalScrollContent: { paddingHorizontal: 20, paddingBottom: 32 },
+
+  // Promo code modal
+  promoModalHeader: { borderRadius: 22, padding: 18, alignItems: 'center', marginTop: 8 },
   promoModalIconContainer: {
-    width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center', alignItems: 'center', marginBottom: 12,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: T.card,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  promoModalTitle: { fontSize: 22, fontWeight: '700', color: '#fff', marginBottom: 4 },
-  promoModalSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.9)', textAlign: 'center' },
+  promoModalTitle: { fontFamily: F.heading, fontSize: 22, color: T.ink, marginTop: 10, textAlign: 'center' },
+  promoModalSubtitle: { fontFamily: F.body, fontSize: 14, lineHeight: 20, color: T.ink, textAlign: 'center', marginTop: 4 },
+  generatingContainer: { alignItems: 'center', paddingVertical: 24 },
+  generatingText: { fontFamily: F.body, fontSize: 14, color: T.textMuted, marginTop: 10 },
   promoCodeDisplay: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, marginTop: -20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 16,
+    padding: 10,
+    paddingLeft: 16,
+    borderRadius: 20,
+    backgroundColor: T.ink,
+    borderWidth: 1,
+    borderColor: T.ink,
   },
-  promoCodeDisplayText: {
-    flex: 1, fontSize: 24, fontWeight: '800', color: COLORS.textPrimary,
-    backgroundColor: '#fff', padding: 16, borderRadius: 12, marginRight: 12,
-    textAlign: 'center', letterSpacing: 2,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 4,
+  promoCodeDisplayText: { fontFamily: F.heading, fontSize: 24, letterSpacing: 3, color: T.yellow },
+  promoCodeCopyButton: { borderRadius: 18, overflow: 'hidden' },
+  promoCodeCopyGradient: {
+    height: 36,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 18,
   },
-  promoCodeCopyButton: { borderRadius: 12, overflow: 'hidden' },
-  promoCodeCopyGradient: { paddingHorizontal: 16, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  promoCodeCopyText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  generatingContainer: { padding: 30, alignItems: 'center', justifyContent: 'center' },
-  generatingText: { fontSize: 14, color: COLORS.textSecondary, marginTop: 12 },
-  generatePromoButton: {
-    marginHorizontal: 20, marginTop: 10, borderRadius: 14, overflow: 'hidden',
-    elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 10,
+  promoCodeCopyText: { fontFamily: F.bodyBold, fontSize: 13, color: T.white },
+  generatePromoButton: { marginTop: 16, borderRadius: 26, overflow: 'hidden' },
+  generatePromoGradient: {
+    height: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
-  generatePromoGradient: { paddingVertical: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10 },
-  generatePromoText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  expiryContainer: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    marginTop: 8, paddingHorizontal: 16, paddingVertical: 6,
+  generatePromoText: { fontFamily: F.bodyBold, fontSize: 15, color: T.white },
+  expiryContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10 },
+  expiryText: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted },
+  cancelPromoButton: { alignSelf: 'center', marginTop: 8, paddingVertical: 10, paddingHorizontal: 12 },
+  cancelPromoText: { fontFamily: F.bodySemi, fontSize: 13, color: T.danger },
+  promoDetails: {
+    marginTop: 18,
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: T.paper,
+    borderWidth: 1,
+    borderColor: T.line,
   },
-  expiryText: { fontSize: 12, color: COLORS.warning, fontWeight: '600', marginLeft: 6 },
-  cancelPromoButton: { alignItems: 'center', paddingVertical: 8 },
-  cancelPromoText: { fontSize: 13, color: COLORS.danger, fontWeight: '600', textDecorationLine: 'underline' },
-  useCodeButton: {
-    marginHorizontal: 20, marginTop: 12, borderRadius: 14, overflow: 'hidden',
-    elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 10,
-  },
-  useCodeGradient: { paddingVertical: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-  useCodeText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  closeModalButton: {
-    marginHorizontal: 20, marginTop: 18, borderRadius: 14, overflow: 'hidden',
-    elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 10,
-  },
-  closeModalGradient: { paddingVertical: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-  closeModalText: { color: 'white', fontSize: 15, fontWeight: '700' },
-  promoDetails: { paddingHorizontal: 20, paddingTop: 20 },
-  promoDetailsTitle: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 12 },
-  promoStep: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  promoDetailsTitle: { fontFamily: F.heading, fontSize: 17, color: T.ink, marginBottom: 10 },
+  promoStep: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
   promoStepNumber: {
-    width: 24, height: 24, borderRadius: 12, backgroundColor: `${COLORS.primary}15`,
-    justifyContent: 'center', alignItems: 'center', marginRight: 12,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: T.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  promoStepNumberText: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
-  promoStepText: { fontSize: 13, color: COLORS.textSecondary, flex: 1 },
-  scannerModalContainer: { flex: 1, backgroundColor: '#000' },
-  scannerModalContent: { flex: 1, backgroundColor: '#000' },
+  promoStepNumberText: { fontFamily: F.bodyBold, fontSize: 12, color: T.white },
+  promoStepText: { flex: 1, fontFamily: F.body, fontSize: 14, color: T.ink },
+  useCodeButton: { marginTop: 16, borderRadius: 26, overflow: 'hidden' },
+  useCodeGradient: { height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  useCodeText: { fontFamily: F.bodyBold, fontSize: 15, color: T.white },
+  closeModalButton: { marginTop: 12, borderRadius: 26, overflow: 'hidden' },
+  closeModalGradient: {
+    height: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 26,
+  },
+  closeModalGradientLight: { borderWidth: 1.5, borderColor: T.ink, backgroundColor: T.card },
+  closeModalText: { fontFamily: F.bodyBold, fontSize: 15, color: T.white },
+
+  // QR scanner (camera stays dark)
+  scannerModalContainer: { flex: 1, backgroundColor: 'rgba(17,17,17,0.92)' },
+  scannerModalContent: { flex: 1, paddingTop: Platform.OS === 'ios' ? 54 : 32 },
   scannerHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: 16, paddingTop: Platform.OS === 'ios' ? 50 : 16,
-    backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
-  scannerHeaderTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
-  scannerHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  scannerTorchBtn: { padding: 4 },
-  scannerCloseBtn: { padding: 4 },
-  scannerOfferInfo: {
-    padding: 16, backgroundColor: 'rgba(255,255,255,0.05)',
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)',
+  scannerHeaderTitle: { fontFamily: F.heading, fontSize: 22, color: T.white },
+  scannerHeaderActions: { flexDirection: 'row', gap: 10 },
+  scannerTorchBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: T.inkSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  scannerOfferTitle: { fontSize: 14, fontWeight: '600', color: '#fff' },
-  scannerOfferDiscount: { fontSize: 16, fontWeight: '800', color: COLORS.primary, marginTop: 2 },
-  scannerOfferHint: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 4 },
-  scannerWrapper: { flex: 1, position: 'relative' },
+  scannerCloseBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: T.inkSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scannerOfferInfo: { alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12 },
+  scannerOfferTitle: { fontFamily: F.bodyBold, fontSize: 16, color: T.white, textAlign: 'center' },
+  scannerOfferDiscount: { fontFamily: F.heading, fontSize: 26, color: T.yellow, marginTop: 2 },
+  scannerOfferHint: { fontFamily: F.body, fontSize: 13, color: T.onInkMuted, marginTop: 4, textAlign: 'center' },
+  scannerWrapper: { flex: 1, marginHorizontal: 16, borderRadius: 26, overflow: 'hidden' },
   scannerCamera: { flex: 1 },
-  scannerOverlay: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    justifyContent: 'center', alignItems: 'center', pointerEvents: 'none',
-  },
-  scannerFrame: { width: 250, height: 250, position: 'relative' },
-  scannerCornerTL: { position: 'absolute', top: 0, left: 0, width: 30, height: 30, borderTopWidth: 4, borderLeftWidth: 4, borderColor: COLORS.primary },
-  scannerCornerTR: { position: 'absolute', top: 0, right: 0, width: 30, height: 30, borderTopWidth: 4, borderRightWidth: 4, borderColor: COLORS.primary },
-  scannerCornerBL: { position: 'absolute', bottom: 0, left: 0, width: 30, height: 30, borderBottomWidth: 4, borderLeftWidth: 4, borderColor: COLORS.primary },
-  scannerCornerBR: { position: 'absolute', bottom: 0, right: 0, width: 30, height: 30, borderBottomWidth: 4, borderRightWidth: 4, borderColor: COLORS.primary },
-  scannerInstructionContainer: {
-    position: 'absolute', top: 40, left: 0, right: 0, alignItems: 'center', pointerEvents: 'none',
-  },
+  scannerOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  scannerFrame: { width: 230, height: 230, position: 'relative' },
+  scannerCornerTL: { position: 'absolute', top: 0, left: 0, width: 36, height: 36, borderTopWidth: 4, borderLeftWidth: 4, borderColor: T.yellow, borderTopLeftRadius: 16 },
+  scannerCornerTR: { position: 'absolute', top: 0, right: 0, width: 36, height: 36, borderTopWidth: 4, borderRightWidth: 4, borderColor: T.yellow, borderTopRightRadius: 16 },
+  scannerCornerBL: { position: 'absolute', bottom: 0, left: 0, width: 36, height: 36, borderBottomWidth: 4, borderLeftWidth: 4, borderColor: T.yellow, borderBottomLeftRadius: 16 },
+  scannerCornerBR: { position: 'absolute', bottom: 0, right: 0, width: 36, height: 36, borderBottomWidth: 4, borderRightWidth: 4, borderColor: T.yellow, borderBottomRightRadius: 16 },
+  scannerInstructionContainer: { position: 'absolute', top: 24, left: 0, right: 0, alignItems: 'center' },
   scannerInstruction: {
-    fontSize: 14, color: '#fff', textAlign: 'center',
-    padding: 16, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 8, marginHorizontal: 30,
+    fontFamily: F.bodySemi,
+    fontSize: 13,
+    color: T.white,
+    backgroundColor: 'rgba(17,17,17,0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    overflow: 'hidden',
   },
-  scannerBottomContent: {
-    position: 'absolute', bottom: 80, left: 0, right: 0, alignItems: 'center', pointerEvents: 'none',
+  scannerBottomContent: { position: 'absolute', bottom: 24, left: 0, right: 0, alignItems: 'center' },
+  scannerRetryBtn: { height: 44, paddingHorizontal: 20, borderRadius: 22, backgroundColor: T.yellow, justifyContent: 'center' },
+  scannerRetryText: { fontFamily: F.bodyBold, fontSize: 14, color: T.ink },
+  scannerFooter: { paddingHorizontal: 20, paddingVertical: 18, alignItems: 'center' },
+  scannerFooterText: { fontFamily: F.body, fontSize: 12.5, color: T.onInkMuted, textAlign: 'center' },
+  scannerPermissionContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 10 },
+  scannerPermissionText: { fontFamily: F.bodyBold, fontSize: 16, color: T.white, textAlign: 'center' },
+  scannerPermissionSubtext: { fontFamily: F.body, fontSize: 14, color: T.onInkMuted, textAlign: 'center' },
+  scannerPermissionButton: { marginTop: 8, height: 48, paddingHorizontal: 24, borderRadius: 24, backgroundColor: T.white, justifyContent: 'center' },
+  scannerPermissionButtonText: { fontFamily: F.bodyBold, fontSize: 15, color: T.ink },
+
+  // Use now modal
+  modalHeaderGradient: { borderRadius: 22, padding: 18, marginTop: 8 },
+  modalHeaderContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  modalIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: T.card,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  scannerRetryBtn: {
-    paddingHorizontal: 24, paddingVertical: 12, backgroundColor: COLORS.primary,
-    borderRadius: 8, pointerEvents: 'auto',
+  modalPercentageCircle: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  modalPercentageBig: { fontFamily: F.heading, fontSize: 40, letterSpacing: -1.2, color: T.ink },
+  modalPercentageOffBig: { fontFamily: F.bodyBold, fontSize: 15, color: T.ink },
+  modalTitleSection: { marginTop: 16 },
+  modalTitle: { fontFamily: F.heading, fontSize: 22, color: T.ink },
+  modalSubtitle: { fontFamily: F.body, fontSize: 14, lineHeight: 20, color: T.textMuted, marginTop: 2 },
+  modalBrandName: { fontFamily: F.bodySemi, fontSize: 13, color: T.ink, marginTop: 6 },
+  stepsWrapper: { marginTop: 20 },
+  stepsSectionHeader: { marginBottom: 12 },
+  stepsSectionDot: {},
+  stepsHeader: { fontFamily: F.heading, fontSize: 18, color: T.ink },
+  stepItem: { flexDirection: 'row', gap: 12, minHeight: 64 },
+  stepNumberContainer: { alignItems: 'center' },
+  stepNumber: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  stepNumberText: { fontFamily: F.bodyBold, fontSize: 13, color: T.white },
+  stepLine: { flex: 1, width: 2, backgroundColor: T.lineSoft, marginVertical: 4 },
+  stepContentBox: { flex: 1, flexDirection: 'row', gap: 10, paddingBottom: 12 },
+  stepContentIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: T.sand,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  scannerRetryText: { fontSize: 14, fontWeight: '600', color: '#fff' },
-  scannerFooter: { padding: 16, backgroundColor: 'rgba(0,0,0,0.8)', alignItems: 'center' },
-  scannerFooterText: { fontSize: 12, color: 'rgba(255,255,255,0.6)', textAlign: 'center' },
-  scannerPermissionContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 30 },
-  scannerPermissionText: { fontSize: 16, fontWeight: '600', color: '#fff', marginTop: 16 },
-  scannerPermissionSubtext: { fontSize: 14, color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: 8, marginBottom: 24 },
-  scannerPermissionButton: { paddingHorizontal: 32, paddingVertical: 12, backgroundColor: COLORS.primary, borderRadius: 8 },
-  scannerPermissionButtonText: { fontSize: 14, fontWeight: '600', color: '#fff' },
-  loadingOverlay: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    justifyContent: 'center', alignItems: 'center', zIndex: 999,
-  },
+  stepTextContainer: { flex: 1 },
+  stepTitle: { fontFamily: F.bodyBold, fontSize: 14.5, color: T.ink },
+  stepDescription: { fontFamily: F.body, fontSize: 13, lineHeight: 18, color: T.textMuted, marginTop: 2 },
+
+  // Loading
+  loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: T.paper, alignItems: 'center', justifyContent: 'center' },
   loadingCard: {
-    backgroundColor: '#fff', borderRadius: 20, padding: 32, alignItems: 'center',
-    width: '80%', maxWidth: 320,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 30, elevation: 10,
+    alignItems: 'center',
+    padding: 24,
+    borderRadius: 22,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
+    minWidth: 220,
   },
-  loadingText: { color: '#1a1a1a', fontSize: 16, fontWeight: '700', marginTop: 16, letterSpacing: 0.5 },
-  loadingProgressContainer: {
-    width: '100%', height: 4, backgroundColor: '#f0f0f0', borderRadius: 2, marginTop: 16, overflow: 'hidden',
+  loadingText: { fontFamily: F.bodySemi, fontSize: 14, color: T.textMuted, marginTop: 12 },
+  loadingProgressContainer: { width: 140, height: 4, borderRadius: 2, backgroundColor: T.sand, marginTop: 14, overflow: 'hidden' },
+  loadingProgressBar: { width: '100%', height: '100%', backgroundColor: T.ink },
+  loadingDots: { flexDirection: 'row', gap: 6, marginTop: 12 },
+  loadingDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: T.handle },
+
+  // Empty
+  emptyState: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: 24 },
+  emptyIconContainer: { marginBottom: 4 },
+  emptyIconGradient: {},
+  emptyTitle: { fontFamily: F.headingBold, fontSize: 18, color: T.ink, marginTop: 12 },
+  emptyDescription: { fontFamily: F.body, fontSize: 14, lineHeight: 20, color: T.textMuted, textAlign: 'center', marginTop: 4 },
+  exploreButton: { marginTop: 16, borderRadius: 26, overflow: 'hidden' },
+  exploreButtonGradient: { height: 48, paddingHorizontal: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  exploreButtonText: { fontFamily: F.bodyBold, fontSize: 15, color: T.white },
+
+  cityEmpty: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: 24 },
+  cityEmptyTitle: { fontFamily: F.headingBold, fontSize: 18, color: T.ink, marginTop: 12, textAlign: 'center' },
+  cityEmptyText: { fontFamily: F.body, fontSize: 14, color: T.textMuted, textAlign: 'center', marginTop: 4 },
+  cityEmptyBtn: {
+    marginTop: 16,
+    height: 44,
+    paddingHorizontal: 20,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: T.ink,
+    backgroundColor: T.card,
+    justifyContent: 'center',
   },
-  loadingProgressBar: {
-    height: '100%', borderRadius: 2, transform: [{ scaleX: 0 }],
-    width: '100%', backgroundColor: '#f9c349',
-  },
-  loadingDots: { flexDirection: 'row', marginTop: 12 },
-  loadingDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#f9c349', marginHorizontal: 3, opacity: 0.5 },
+  cityEmptyBtnText: { fontFamily: F.bodyBold, fontSize: 14, color: T.ink },
 });
