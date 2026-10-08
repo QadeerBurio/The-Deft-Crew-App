@@ -21,7 +21,7 @@ import { AuthContext } from '../../context/AuthContext';
 import ListingCard from '../../components/ListingCard';
 import useMyProfessionalProfile from '../../hooks/useMyProfessionalProfile';
 
-import { color as T, font as F } from "../../theme/tokens";
+import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 const BRAND = T.yellow;
 const INK = T.ink;
 const MUTED = T.textFaint;
@@ -167,7 +167,7 @@ export default function Dashboard({ navigation }) {
         </TouchableOpacity>
 
         <Text style={styles.topHeaderTitle}>
-          skill<Text style={{ color: BRAND }}>share</Text>
+          skillsshare<Text style={{ color: BRAND }}>.</Text>
         </Text>
 
         <TouchableOpacity onPress={() => navigation.navigate('NotificationSkillshare')} hitSlop={10}>
@@ -180,7 +180,7 @@ export default function Dashboard({ navigation }) {
           const active = item.key === 'Home';
           return (
             <TouchableOpacity key={item.key} style={styles.navItem} onPress={() => goTo(item.route)}>
-              <Ionicons name={item.icon} size={20} color={active ? BRAND : T.textMuted} />
+              <Ionicons name={item.icon} size={20} color={active ? INK : T.textMuted} />
               <Text style={[styles.navItemText, active && styles.navItemTextActive]}>{item.label}</Text>
               {active && <View style={styles.navUnderline} />}
             </TouchableOpacity>
@@ -204,55 +204,81 @@ export default function Dashboard({ navigation }) {
           removeClippedSubviews={Platform.OS === 'android'}
           ListHeaderComponent={
             <View>
-              <Text style={styles.pageTitle}>skillsshare<Text style={{ color: T.yellow }}>.</Text></Text>
-              <Text style={styles.pageSubtitle}>swap a skill, or get paid to teach it.</Text>
-
-              <View style={styles.statsRow}>
-                <View style={styles.statCard}>
-                  <Ionicons name="swap-horizontal-outline" size={22} color={INK} />
-                  <Text style={styles.statValue}>{activeExchanges}</Text>
-                  <Text style={styles.statLabel}>Active{'\n'}Exchanges</Text>
+              {/* Hero (yellow, Skills design) */}
+              <View style={S.hero}>
+                <View style={{ flex: 1 }}>
+                  <Text style={S.heroTitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>know something? trade it.</Text>
+                  <Text style={S.heroSub} maxFontSizeMultiplier={MAX_FONT_SCALE}>swap a skill, or get paid to teach it.</Text>
+                  <TouchableOpacity
+                    style={S.heroBtn}
+                    onPress={() => navigation.navigate('SelectListingTypeScreen')}
+                    accessibilityRole="button"
+                  >
+                    <Text style={S.heroBtnText}>create listing</Text>
+                  </TouchableOpacity>
                 </View>
-                <View style={styles.statCard}>
-                  <Ionicons name="wallet-outline" size={22} color={INK} />
-                  <Text style={styles.statValue}>Rs.{totalEarnings}</Text>
-                  <Text style={styles.statLabel}>Total{'\n'}Earnings</Text>
-                </View>
-                <View style={styles.statCard}>
-                  <Ionicons name="hourglass-outline" size={22} color={INK} />
-                  <Text style={styles.statValue}>{pendingProjects}</Text>
-                  <Text style={styles.statLabel}>Pending{'\n'}Projects</Text>
+                <View style={S.heroIcon}>
+                  <Ionicons name="swap-horizontal" size={30} color={INK} />
                 </View>
               </View>
 
-              <Text style={styles.sectionTitle}>my activities</Text>
+              {/* Stats (real, from your own listings) */}
+              <View style={S.stats}>
+                <View style={S.stat}>
+                  <Text style={S.statN} maxFontSizeMultiplier={MAX_FONT_SCALE}>{activeExchanges}</Text>
+                  <Text style={S.statLabel}>active</Text>
+                </View>
+                <View style={S.stat}>
+                  <Text style={S.statN} maxFontSizeMultiplier={MAX_FONT_SCALE}>{pendingProjects}</Text>
+                  <Text style={S.statLabel}>pending</Text>
+                </View>
+                <View style={S.stat}>
+                  <Text style={S.statN} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                    rs {totalEarnings.toLocaleString()}
+                  </Text>
+                  <Text style={S.statLabel}>earned</Text>
+                </View>
+              </View>
 
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow}>
+              <Text style={S.h2} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                my activity<Text style={{ color: BRAND }}>.</Text>
+              </Text>
+
+              {/* Status: segmented control */}
+              <View style={S.seg}>
+                {TABS.map((t) => {
+                  const active = statusTab === t;
+                  return (
+                    <TouchableOpacity
+                      key={t}
+                      onPress={() => setStatusTab(t)}
+                      style={[S.segItem, active && S.segItemOn]}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected: active }}
+                    >
+                      <Text style={[S.segText, active && S.segTextOn]}>{t.toLowerCase()}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Type filter */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={S.chips}>
                 {FILTERS.map((f) => {
                   const active = typeFilter === f.key;
                   return (
                     <TouchableOpacity
                       key={f.key}
-                      style={[styles.chip, active && styles.chipActive]}
+                      style={[S.chip, active && S.chipOn]}
                       onPress={() => setTypeFilter(f.key)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
                     >
-                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{f.label}</Text>
+                      <Text style={[S.chipText, active && S.chipTextOn]}>{f.label.toLowerCase()}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </ScrollView>
-
-              <View style={styles.tabsRow}>
-                {TABS.map((t) => {
-                  const active = statusTab === t;
-                  return (
-                    <TouchableOpacity key={t} onPress={() => setStatusTab(t)} style={styles.tabItem}>
-                      <Text style={[styles.tabText, active && styles.tabTextActive]}>{t}</Text>
-                      {active && <View style={styles.tabUnderline} />}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
             </View>
           }
           ListEmptyComponent={
@@ -281,17 +307,17 @@ const styles = StyleSheet.create({
   topHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10,
-    backgroundColor: T.card, borderBottomWidth: 1, borderBottomColor: T.line,
+    backgroundColor: T.paper,
   },
   topHeaderTitle: { fontSize: 22, fontFamily: F.heading, color: INK },
   navRow: {
-    flexDirection: 'row', backgroundColor: T.card,
+    flexDirection: 'row', backgroundColor: T.paper,
     borderBottomWidth: 1, borderBottomColor: T.line, paddingBottom: 4,
   },
   navItem: { flex: 1, alignItems: 'center', paddingVertical: 8 },
   navItemText: { fontSize: 11, color: T.textMuted, marginTop: 3, fontFamily: F.bodySemi },
-  navItemTextActive: { color: BRAND, fontFamily: F.bodyBold },
-  navUnderline: { marginTop: 4, height: 2, width: 24, backgroundColor: BRAND, borderRadius: 1 },
+  navItemTextActive: { color: INK, fontFamily: F.bodyBold },
+  navUnderline: { marginTop: 4, height: 3, width: 24, backgroundColor: BRAND, borderRadius: 2 },
   listContent: { padding: 20, paddingTop: 16 },
   pageTitle: { fontSize: 26, fontFamily: F.heading, color: INK },
   pageSubtitle: { fontSize: 13, fontFamily: F.body, color: T.textMuted, marginTop: 4, marginBottom: 18, lineHeight: 18 },
@@ -335,6 +361,34 @@ const styles = StyleSheet.create({
   cardTime: { fontSize: 11, fontFamily: F.body, color: T.textFaint },
   emptyState: { alignItems: 'center', paddingVertical: 50 },
   emptyText: { fontSize: 14, fontFamily: F.body, color: T.textMuted, textAlign: 'center', marginTop: 10, marginBottom: 16, paddingHorizontal: 20 },
-  emptyButton: { backgroundColor: BRAND, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 },
+  emptyButton: { backgroundColor: BRAND, paddingHorizontal: 24, height: 44, justifyContent: 'center', borderRadius: 22 },
   emptyButtonText: { color: INK, fontFamily: F.bodyBold, fontSize: 14 },
+});
+
+// ─── SkillsShare design layout ──────────────────────────────────────
+const S = StyleSheet.create({
+  hero: { borderRadius: 26, backgroundColor: BRAND, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  heroTitle: { fontFamily: F.heading, fontSize: 21, lineHeight: 25, color: INK },
+  heroSub: { fontFamily: F.body, fontSize: 13.5, color: INK, marginTop: 4 },
+  heroBtn: { alignSelf: 'flex-start', marginTop: 12, height: 40, paddingHorizontal: 16, borderRadius: 20, backgroundColor: INK, justifyContent: 'center' },
+  heroBtnText: { fontFamily: F.bodyBold, fontSize: 13.5, color: T.white },
+  heroIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(255,255,255,0.55)', alignItems: 'center', justifyContent: 'center' },
+
+  stats: { flexDirection: 'row', gap: 8, marginTop: 12, marginBottom: 18 },
+  stat: { flex: 1, borderRadius: 18, backgroundColor: T.card, borderWidth: 1, borderColor: T.line, paddingVertical: 12, paddingHorizontal: 6, alignItems: 'center' },
+  statN: { fontFamily: F.heading, fontSize: 22, color: INK },
+  statLabel: { fontFamily: F.body, fontSize: 12, color: T.textMuted },
+
+  h2: { fontFamily: F.heading, fontSize: 17, color: INK, marginBottom: 10 },
+  seg: { flexDirection: 'row', gap: 4, padding: 4, borderRadius: 24, backgroundColor: T.sand },
+  segItem: { flex: 1, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  segItemOn: { backgroundColor: INK },
+  segText: { fontFamily: F.bodySemi, fontSize: 14, color: INK },
+  segTextOn: { fontFamily: F.bodyBold, color: T.white },
+
+  chips: { gap: 8, paddingTop: 12, paddingBottom: 14 },
+  chip: { height: 34, paddingHorizontal: 14, borderRadius: 17, borderWidth: 1, borderColor: T.line, backgroundColor: T.card, justifyContent: 'center' },
+  chipOn: { backgroundColor: INK, borderColor: INK },
+  chipText: { fontFamily: F.bodySemi, fontSize: 13, color: INK },
+  chipTextOn: { color: T.white },
 });
