@@ -5,8 +5,8 @@ import { View, Text, Animated, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import FeatureDot from "../../engagement/components/FeatureDot";
 import { FEATURE_ID_TO_MISSION } from "../../engagement/utils/mood";
-import SectionTitle from "./SectionTitle";
-import PressScale from "./PressScale";
+import SectionTitle from "../../ui/SectionTitle";
+import PressScale from "../../ui/PressScale";
 import { color, font, radius, MAX_FONT_SCALE } from "../../theme/tokens";
 
 const COLUMNS = 4;

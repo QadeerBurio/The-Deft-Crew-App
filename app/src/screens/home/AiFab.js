@@ -3,7 +3,7 @@
 import React from "react";
 import { StyleSheet, Platform } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import PressScale from "./PressScale";
+import PressScale from "../../ui/PressScale";
 import { color } from "../../theme/tokens";
 
 // Same distance from the bottom as the old FAB (bottom 30 + marginBottom 40),

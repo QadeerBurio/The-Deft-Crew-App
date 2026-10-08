@@ -2,8 +2,8 @@
 // "fresh deals." — horizontal rail of brands that have an offer.
 import React, { useState } from "react";
 import { View, Text, Image, FlatList, StyleSheet, Platform } from "react-native";
-import SectionTitle from "./SectionTitle";
-import PressScale from "./PressScale";
+import SectionTitle from "../../ui/SectionTitle";
+import PressScale from "../../ui/PressScale";
 import { color, font, radius, MAX_FONT_SCALE } from "../../theme/tokens";
 
 const CARD_W = 200;

@@ -3,8 +3,8 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import SectionTitle from "./SectionTitle";
-import PressScale from "./PressScale";
+import SectionTitle from "../../ui/SectionTitle";
+import PressScale from "../../ui/PressScale";
 import { relativeTime } from "./homeData";
 import { color, font, radius, MAX_FONT_SCALE } from "../../theme/tokens";
 
