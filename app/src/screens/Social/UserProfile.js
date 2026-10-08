@@ -10,11 +10,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import axios from 'axios';
 import { AuthContext } from "../../context/AuthContext";
 import { TouchableWithoutFeedback } from 'react-native';
 import { soundLike, soundTap } from "../../lib/tdcSounds";
+import { color as T, font as F } from "../../theme/tokens";
 const { width, height } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 const COMMENTS_POLL_INTERVAL = 6000;
@@ -1019,7 +1020,7 @@ export default function UserProfile({ route, navigation }) {
             {item.user?.profileImage ? (
               <Image source={{ uri: item.user.profileImage }} style={styles.avatarLg} />
             ) : (
-              <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.avatarLgPlaceholder}>
+              <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.avatarLgPlaceholder}>
                 <Text style={styles.avatarLgText}>
                   {item.user?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </Text>
@@ -1033,7 +1034,7 @@ export default function UserProfile({ route, navigation }) {
                 <Text style={styles.authorNameLg}>{item.user?.name || "User"}</Text>
                 {isMyComment && (
                   <View style={styles.ownBadge}>
-                    <Text style={styles.ownBadgeText}>You</Text>
+                    <Text style={styles.ownBadgeText}>you</Text>
                   </View>
                 )}
               </View>
@@ -1044,13 +1045,13 @@ export default function UserProfile({ route, navigation }) {
               <Text style={styles.metaText}>{formatCommentTime(item.createdAt)}</Text>
               <Text style={styles.metaDot}>·</Text>
               <TouchableOpacity onPress={() => onReplyPress(item, item._id)}>
-                <Text style={styles.replyBtn}>Reply</Text>
+                <Text style={styles.replyBtn}>reply</Text>
               </TouchableOpacity>
               {isMyComment && (
                 <>
                   <Text style={styles.metaDot}>·</Text>
                   <TouchableOpacity onPress={() => handleDeleteComment(item)}>
-                    <Text style={[styles.replyBtn, styles.deleteBtnText]}>Delete</Text>
+                    <Text style={[styles.replyBtn, styles.deleteBtnText]}>delete</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -1069,7 +1070,7 @@ export default function UserProfile({ route, navigation }) {
               <Ionicons
                 name={isCollapsed ? "chevron-down" : "chevron-up"}
                 size={14}
-                color="#1a1a1a"
+                color={T.ink}
               />
               <Text style={styles.viewRepliesText}>
                 {isCollapsed
@@ -1100,7 +1101,7 @@ export default function UserProfile({ route, navigation }) {
                     {reply.user?.profileImage ? (
                       <Image source={{ uri: reply.user.profileImage }} style={styles.avatarSm} />
                     ) : (
-                      <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.avatarSmPlaceholder}>
+                      <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.avatarSmPlaceholder}>
                         <Text style={styles.avatarSmText}>
                           {replyAuthorName.charAt(0).toUpperCase()}
                         </Text>
@@ -1114,7 +1115,7 @@ export default function UserProfile({ route, navigation }) {
                         <Text style={styles.authorNameSm}>{replyAuthorName}</Text>
                         {isMyReply && (
                           <View style={styles.ownBadgeSmall}>
-                            <Text style={styles.ownBadgeTextSmall}>You</Text>
+                            <Text style={styles.ownBadgeTextSmall}>you</Text>
                           </View>
                         )}
                       </View>
@@ -1128,13 +1129,13 @@ export default function UserProfile({ route, navigation }) {
                       <Text style={styles.metaTextSm}>{formatCommentTime(reply.createdAt)}</Text>
                       <Text style={styles.metaDot}>·</Text>
                       <TouchableOpacity onPress={() => onReplyPress(reply, item._id)}>
-                        <Text style={styles.replyBtnSm}>Reply</Text>
+                        <Text style={styles.replyBtnSm}>reply</Text>
                       </TouchableOpacity>
                       {isMyReply && (
                         <>
                           <Text style={styles.metaDot}>·</Text>
                           <TouchableOpacity onPress={() => handleDeleteComment(reply)}>
-                            <Text style={[styles.replyBtnSm, styles.deleteBtnText]}>Delete</Text>
+                            <Text style={[styles.replyBtnSm, styles.deleteBtnText]}>delete</Text>
                           </TouchableOpacity>
                         </>
                       )}
@@ -1260,9 +1261,9 @@ export default function UserProfile({ route, navigation }) {
       return (
         <View style={styles.btnRow}>
           <TouchableOpacity style={styles.blockedBtn} onPress={handleBlockUser}>
-            <LinearGradient colors={['#e74c3c', '#c0392b']} style={styles.btnGradient}>
-              <Ionicons name="ban-outline" size={16} color="#fff" />
-              <Text style={styles.blockedBtnText}>Blocked</Text>
+            <LinearGradient colors={[T.danger, T.danger]} style={styles.btnGradient}>
+              <Ionicons name="ban-outline" size={16} color={T.white} />
+              <Text style={styles.blockedBtnText}>blocked</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -1273,7 +1274,7 @@ export default function UserProfile({ route, navigation }) {
       return (
         <View style={styles.btnRow}>
           <View style={[styles.connectBtn, { justifyContent: 'center', alignItems: 'center' }]}>
-            <ActivityIndicator size="small" color="#1a1a1a" />
+            <ActivityIndicator size="small" color={T.ink} />
           </View>
         </View>
       );
@@ -1283,9 +1284,9 @@ export default function UserProfile({ route, navigation }) {
       return (
         <View style={styles.btnRow}>
           <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('EditProfile')}>
-            <LinearGradient colors={['#1a1a1a', '#1a1a1a']} style={styles.editGradient}>
-              <Ionicons name="create-outline" size={16} color="#f9c349" />
-              <Text style={styles.editBtnText}>Edit Profile</Text>
+            <LinearGradient colors={[T.ink, T.ink]} style={styles.editGradient}>
+              <Ionicons name="create-outline" size={16} color={T.yellow} />
+              <Text style={styles.editBtnText}>edit profile</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -1296,14 +1297,14 @@ export default function UserProfile({ route, navigation }) {
       return (
         <View style={styles.btnRow}>
           <TouchableOpacity style={styles.connectedBtn} onPress={handleDisconnect}>
-            <LinearGradient colors={['#f9c349', '#f9c349']} style={styles.btnGradient}>
-              <Ionicons name="checkmark-circle" size={16} color="#1a1a1a" />
-              <Text style={styles.connectedBtnText}>Connected</Text>
+            <LinearGradient colors={[T.yellow, T.yellow]} style={styles.btnGradient}>
+              <Ionicons name="checkmark-circle" size={16} color={T.ink} />
+              <Text style={styles.connectedBtnText}>connected</Text>
             </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity style={styles.msgBtn} onPress={handleMessagePress}>
-            <Ionicons name="chatbubble-outline" size={16} color="#f9c349" />
-            <Text style={styles.msgBtnText}>Message</Text>
+            <Ionicons name="chatbubble-outline" size={16} color={T.yellow} />
+            <Text style={styles.msgBtnText}>message</Text>
           </TouchableOpacity>
         </View>
       );
@@ -1313,14 +1314,14 @@ export default function UserProfile({ route, navigation }) {
       return (
         <View style={styles.btnRow}>
           <TouchableOpacity style={styles.acceptBtn} onPress={handleAcceptRequest}>
-            <LinearGradient colors={['#000', '#000']} style={styles.btnGradient}>
-              <Ionicons name="checkmark" size={16} color="#fff" />
-              <Text style={styles.acceptBtnText}>Accept Request</Text>
+            <LinearGradient colors={[T.ink, T.ink]} style={styles.btnGradient}>
+              <Ionicons name="checkmark" size={16} color={T.white} />
+              <Text style={styles.acceptBtnText}>accept request</Text>
             </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity style={styles.declineBtn} onPress={handleRejectRequest}>
-            <Ionicons name="close" size={16} color="#ff3b30" />
-            <Text style={styles.declineBtnText}>Decline</Text>
+            <Ionicons name="close" size={16} color={T.danger} />
+            <Text style={styles.declineBtnText}>decline</Text>
           </TouchableOpacity>
         </View>
       );
@@ -1330,14 +1331,14 @@ export default function UserProfile({ route, navigation }) {
       return (
         <View style={styles.btnRow}>
           <TouchableOpacity style={styles.pendingBtn} onPress={handleCancelRequest}>
-            <LinearGradient colors={['#f0f0f0', '#f0f0f0']} style={styles.btnGradient}>
-              <Ionicons name="time-outline" size={16} color="#666" />
-              <Text style={styles.pendingBtnText}>Request Sent</Text>
+            <LinearGradient colors={[T.sand, T.sand]} style={styles.btnGradient}>
+              <Ionicons name="time-outline" size={16} color={T.textMuted} />
+              <Text style={styles.pendingBtnText}>request sent</Text>
             </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity style={styles.msgBtnDisabled} disabled>
-            <Ionicons name="chatbubble-outline" size={16} color="#ccc" />
-            <Text style={styles.msgBtnDisabledText}>Message</Text>
+            <Ionicons name="chatbubble-outline" size={16} color={T.textFaint} />
+            <Text style={styles.msgBtnDisabledText}>message</Text>
           </TouchableOpacity>
         </View>
       );
@@ -1346,14 +1347,14 @@ export default function UserProfile({ route, navigation }) {
     return (
       <View style={styles.btnRow}>
         <TouchableOpacity style={styles.connectBtn} onPress={handleConnect}>
-          <LinearGradient colors={['#f9c349', '#f9c349']} style={styles.btnGradient}>
-            <Ionicons name="person-add" size={16} color="#1a1a1a" />
-            <Text style={styles.connectedBtnText}>Connect</Text>
+          <LinearGradient colors={[T.yellow, T.yellow]} style={styles.btnGradient}>
+            <Ionicons name="person-add" size={16} color={T.ink} />
+            <Text style={styles.connectedBtnText}>connect</Text>
           </LinearGradient>
         </TouchableOpacity>
         <TouchableOpacity style={styles.msgBtn} onPress={handleMessagePress}>
-          <Ionicons name="chatbubble-outline" size={16} color="#f9c349" />
-          <Text style={styles.msgBtnText}>Message</Text>
+          <Ionicons name="chatbubble-outline" size={16} color={T.yellow} />
+          <Text style={styles.msgBtnText}>message</Text>
         </TouchableOpacity>
       </View>
     );
@@ -1366,11 +1367,11 @@ export default function UserProfile({ route, navigation }) {
     if (isBlocked) {
       return (
         <View style={styles.blockedContainer}>
-          <Ionicons name="ban-outline" size={60} color="#e74c3c" />
-          <Text style={styles.blockedTitle}>User Blocked</Text>
-          <Text style={styles.blockedSubtext}>Their content is hidden.</Text>
+          <Ionicons name="ban-outline" size={60} color={T.danger} />
+          <Text style={styles.blockedTitle}>user blocked</Text>
+          <Text style={styles.blockedSubtext}>their content is hidden.</Text>
           <TouchableOpacity style={styles.unblockBtn} onPress={handleBlockUser}>
-            <Text style={styles.unblockBtnText}>Unblock User</Text>
+            <Text style={styles.unblockBtnText}>unblock user</Text>
           </TouchableOpacity>
         </View>
       );
@@ -1381,10 +1382,10 @@ export default function UserProfile({ route, navigation }) {
         {profileData?.bio && (
           <View style={styles.aboutSection}>
             <View style={styles.aboutIcon}>
-              <Ionicons name="person-outline" size={20} color="#f9c349" />
+              <Ionicons name="person-outline" size={20} color={T.yellow} />
             </View>
             <View style={styles.aboutContent}>
-              <Text style={styles.aboutLabel}>Bio</Text>
+              <Text style={styles.aboutLabel}>bio</Text>
               <Text style={styles.aboutText}>{profileData.bio}</Text>
             </View>
           </View>
@@ -1393,16 +1394,16 @@ export default function UserProfile({ route, navigation }) {
         {profileData?.university?.name && (
           <View style={styles.aboutSection}>
             <View style={styles.aboutIcon}>
-              <Ionicons name="school-outline" size={20} color="#f9c349" />
+              <Ionicons name="school-outline" size={20} color={T.yellow} />
             </View>
             <View style={styles.aboutContent}>
-              <Text style={styles.aboutLabel}>University</Text>
+              <Text style={styles.aboutLabel}>university</Text>
               <View style={styles.universityRow}>
                 <Text style={styles.aboutText}>{profileData.university.name}</Text>
                 {profileData.university.isVIP && (
                   <View style={styles.vipBadge}>
-                    <Ionicons name="star" size={12} color="#FFD700" />
-                    <Text style={styles.vipText}>VIP</Text>
+                    <Ionicons name="star" size={12} color={T.yellow} />
+                    <Text style={styles.vipText}>vip</Text>
                   </View>
                 )}
               </View>
@@ -1413,10 +1414,10 @@ export default function UserProfile({ route, navigation }) {
         {profileData?.location && (
           <View style={styles.aboutSection}>
             <View style={styles.aboutIcon}>
-              <Ionicons name="location-outline" size={20} color="#f9c349" />
+              <Ionicons name="location-outline" size={20} color={T.yellow} />
             </View>
             <View style={styles.aboutContent}>
-              <Text style={styles.aboutLabel}>Location</Text>
+              <Text style={styles.aboutLabel}>location</Text>
               <Text style={styles.aboutText}>{profileData.location}</Text>
             </View>
           </View>
@@ -1425,10 +1426,10 @@ export default function UserProfile({ route, navigation }) {
         {profileData?.headline && (
           <View style={styles.aboutSection}>
             <View style={styles.aboutIcon}>
-              <Ionicons name="briefcase-outline" size={20} color="#f9c349" />
+              <Ionicons name="briefcase-outline" size={20} color={T.yellow} />
             </View>
             <View style={styles.aboutContent}>
-              <Text style={styles.aboutLabel}>Headline</Text>
+              <Text style={styles.aboutLabel}>headline</Text>
               <Text style={styles.aboutText}>{profileData.headline}</Text>
             </View>
           </View>
@@ -1437,10 +1438,10 @@ export default function UserProfile({ route, navigation }) {
         {profileData?.createdAt && (
           <View style={styles.aboutSection}>
             <View style={styles.aboutIcon}>
-              <Ionicons name="calendar-outline" size={20} color="#f9c349" />
+              <Ionicons name="calendar-outline" size={20} color={T.yellow} />
             </View>
             <View style={styles.aboutContent}>
-              <Text style={styles.aboutLabel}>Joined</Text>
+              <Text style={styles.aboutLabel}>joined</Text>
               <Text style={styles.aboutText}>{formatJoinedDate(profileData.createdAt)}</Text>
             </View>
           </View>
@@ -1453,12 +1454,12 @@ export default function UserProfile({ route, navigation }) {
             activeOpacity={0.7}
           >
             <Text style={styles.connectionSummaryNumber}>{connectionsCount}</Text>
-            <Text style={styles.connectionSummaryLabel}>Connections</Text>
+            <Text style={styles.connectionSummaryLabel}>connections</Text>
           </TouchableOpacity>
           <View style={styles.connectionDivider} />
           <View style={styles.connectionSummaryItem}>
             <Text style={styles.connectionSummaryNumber}>{userPosts.length}</Text>
-            <Text style={styles.connectionSummaryLabel}>Posts</Text>
+            <Text style={styles.connectionSummaryLabel}>posts</Text>
           </View>
         </View>
       </View>
@@ -1485,7 +1486,7 @@ export default function UserProfile({ route, navigation }) {
           {profileData?.profileImage ? (
             <Image source={{ uri: profileData.profileImage }} style={styles.postAvatar} />
           ) : (
-            <LinearGradient colors={['#f9c349', '#f9c349']} style={styles.postAvatarPlaceholder}>
+            <LinearGradient colors={[T.yellow, T.yellow]} style={styles.postAvatarPlaceholder}>
               <Text style={styles.postAvatarText}>{profileData?.name?.charAt(0)?.toUpperCase()}</Text>
             </LinearGradient>
           )}
@@ -1497,7 +1498,7 @@ export default function UserProfile({ route, navigation }) {
           </Text>
           {isOwnProfile && (
             <TouchableOpacity onPress={() => handleDeletePost(item._id)} style={styles.deleteBtn}>
-              <Ionicons name="trash-outline" size={16} color="#f9c349" />
+              <Ionicons name="trash-outline" size={16} color={T.yellow} />
             </TouchableOpacity>
           )}
         </View>
@@ -1526,19 +1527,19 @@ export default function UserProfile({ route, navigation }) {
               <Ionicons
                 name={isLiked ? "heart" : "heart-outline"}
                 size={18}
-                color={isLiked ? "#f9c349" : "#71767b"}
+                color={isLiked ? T.yellow : T.textMuted}
               />
             </Animated.View>
-            <Text style={[styles.actionText, isLiked && { color: "#f9c349" }]}>{likeCount}</Text>
+            <Text style={[styles.actionText, isLiked && { color: T.yellow }]}>{likeCount}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionBtn} onPress={() => openComments(item)}>
-            <Ionicons name="chatbubble-outline" size={18} color="#71767b" />
+            <Ionicons name="chatbubble-outline" size={18} color={T.textMuted} />
             <Text style={styles.actionText}>{commentsCount}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionBtn}>
-            <Ionicons name="paper-plane-outline" size={18} color="#71767b" />
+            <Ionicons name="paper-plane-outline" size={18} color={T.textMuted} />
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -1552,26 +1553,26 @@ export default function UserProfile({ route, navigation }) {
   if (isBlocked) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <View style={styles.topNav}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+            <Ionicons name="arrow-back" size={24} color={T.ink} />
           </TouchableOpacity>
-          <Text style={styles.navTitle}>Blocked User</Text>
+          <Text style={styles.navTitle}>blocked user</Text>
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.blockedFullContainer}>
           <View style={styles.blockedIconContainer}>
-            <Ionicons name="ban-outline" size={80} color="#e74c3c" />
+            <Ionicons name="ban-outline" size={80} color={T.danger} />
           </View>
-          <Text style={styles.blockedFullTitle}>User Blocked</Text>
+          <Text style={styles.blockedFullTitle}>user blocked</Text>
           <Text style={styles.blockedFullSubtext}>
             You have blocked this user. They cannot interact with you.
           </Text>
           <TouchableOpacity style={styles.unblockFullBtn} onPress={handleUnblockUser}>
-            <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.unblockFullGradient}>
-              <Ionicons name="person-add" size={20} color="#1a1a1a" />
-              <Text style={styles.unblockFullBtnText}>Unblock User</Text>
+            <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.unblockFullGradient}>
+              <Ionicons name="person-add" size={20} color={T.ink} />
+              <Text style={styles.unblockFullBtnText}>unblock user</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -1582,19 +1583,19 @@ export default function UserProfile({ route, navigation }) {
   if (isBlockedByUser) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <View style={styles.topNav}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+            <Ionicons name="arrow-back" size={24} color={T.ink} />
           </TouchableOpacity>
-          <Text style={styles.navTitle}>Blocked</Text>
+          <Text style={styles.navTitle}>blocked</Text>
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.blockedFullContainer}>
           <View style={styles.blockedIconContainer}>
-            <Ionicons name="ban-outline" size={80} color="#e74c3c" />
+            <Ionicons name="ban-outline" size={80} color={T.danger} />
           </View>
-          <Text style={styles.blockedFullTitle}>Account Blocked</Text>
+          <Text style={styles.blockedFullTitle}>account blocked</Text>
           <Text style={styles.blockedFullSubtext}>
             You have been blocked by this user.
           </Text>
@@ -1608,7 +1609,7 @@ export default function UserProfile({ route, navigation }) {
   // ============ MAIN RENDER ============
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <FlatList
         data={activeTab === 'Posts' ? userPosts : []}
@@ -1617,8 +1618,8 @@ export default function UserProfile({ route, navigation }) {
         ListEmptyComponent={
           activeTab === 'Posts' ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="document-text-outline" size={48} color="#cfd9de" />
-              <Text style={styles.emptyText}>No posts yet</Text>
+              <Ionicons name="document-text-outline" size={48} color={T.textFaint} />
+              <Text style={styles.emptyText}>no posts yet</Text>
               <Text style={styles.emptySubText}>When they post, you'll see it here</Text>
             </View>
           ) : activeTab === 'About' ? renderAboutTab() : null
@@ -1627,8 +1628,8 @@ export default function UserProfile({ route, navigation }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#f9c349"
-            colors={["#f9c349"]}
+            tintColor={T.yellow}
+            colors={[T.yellow]}
           />
         }
         ListHeaderComponent={
@@ -1636,11 +1637,11 @@ export default function UserProfile({ route, navigation }) {
             <View style={styles.profileHeader}>
               <View style={styles.topNav}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                  <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+                  <Ionicons name="arrow-back" size={24} color={T.ink} />
                 </TouchableOpacity>
                 <Text style={styles.navTitle}>{profileData?.name}</Text>
                 <TouchableOpacity onPress={() => setShowMenu(true)} style={styles.menuBtn}>
-                  <Ionicons name="ellipsis-vertical" size={22} color="#1a1a1a" />
+                  <Ionicons name="ellipsis-vertical" size={22} color={T.ink} />
                 </TouchableOpacity>
               </View>
 
@@ -1650,7 +1651,7 @@ export default function UserProfile({ route, navigation }) {
                     {profileData?.profileImage ? (
                       <Image source={{ uri: profileData.profileImage }} style={styles.avatar} />
                     ) : (
-                      <LinearGradient colors={['#f9c349', '#f9c349']} style={styles.avatarPlaceholder}>
+                      <LinearGradient colors={[T.yellow, T.yellow]} style={styles.avatarPlaceholder}>
                         <Text style={styles.avatarText}>{profileData?.name?.charAt(0)?.toUpperCase()}</Text>
                       </LinearGradient>
                     )}
@@ -1662,7 +1663,7 @@ export default function UserProfile({ route, navigation }) {
 
                 <TouchableOpacity onPress={handleViewConnections} style={styles.connectionTouchable}>
                   <Text style={styles.connectionCount}>
-                    <Text style={styles.connectionNum}>{connectionCount}</Text> Connections
+                    <Text style={styles.connectionNum}>{connectionCount}</Text> connections
                   </Text>
                 </TouchableOpacity>
 
@@ -1699,14 +1700,14 @@ export default function UserProfile({ route, navigation }) {
             <TouchableWithoutFeedback>
               <Animated.View style={[styles.menuBox, { transform: [{ translateY: menuSlide }] }]}>
                 <View style={styles.menuHeader}>
-                  <Text style={styles.menuHeaderText}>Profile Options</Text>
+                  <Text style={styles.menuHeaderText}>profile options</Text>
                 </View>
 
                 <TouchableOpacity style={styles.menuItem} onPress={handleShareProfile}>
                   <View style={styles.menuIconCircle}>
-                    <Ionicons name="share-social-outline" size={20} color="#1a1a1a" />
+                    <Ionicons name="share-social-outline" size={20} color={T.ink} />
                   </View>
-                  <Text style={styles.menuText}>Share Profile</Text>
+                  <Text style={styles.menuText}>share profile</Text>
                 </TouchableOpacity>
 
                 {!isOwnProfile && (
@@ -1715,7 +1716,7 @@ export default function UserProfile({ route, navigation }) {
                       <Ionicons
                         name={isBlocked ? "person-add" : "ban-outline"}
                         size={20}
-                        color={isBlocked ? "#f9c349" : "#e74c3c"}
+                        color={isBlocked ? T.yellow : T.danger}
                       />
                     </View>
                     <Text style={[styles.menuText, isBlocked ? styles.menuUnblockText : styles.menuBlockText]}>
@@ -1727,9 +1728,9 @@ export default function UserProfile({ route, navigation }) {
                 {!isOwnProfile && !isBlocked && (
                   <TouchableOpacity style={styles.menuItem} onPress={handleReportUser}>
                     <View style={[styles.menuIconCircle, styles.menuReportCircle]}>
-                      <Ionicons name="flag-outline" size={20} color="#e74c3c" />
+                      <Ionicons name="flag-outline" size={20} color={T.danger} />
                     </View>
-                    <Text style={[styles.menuText, styles.menuBlockText]}>Report Account</Text>
+                    <Text style={[styles.menuText, styles.menuBlockText]}>report account</Text>
                   </TouchableOpacity>
                 )}
 
@@ -1737,9 +1738,9 @@ export default function UserProfile({ route, navigation }) {
 
                 <TouchableOpacity style={styles.menuItem} onPress={() => setShowMenu(false)}>
                   <View style={[styles.menuIconCircle, styles.menuCancelCircle]}>
-                    <Ionicons name="close-outline" size={20} color="#999" />
+                    <Ionicons name="close-outline" size={20} color={T.textFaint} />
                   </View>
-                  <Text style={[styles.menuText, styles.menuCancelText]}>Cancel</Text>
+                  <Text style={[styles.menuText, styles.menuCancelText]}>cancel</Text>
                 </TouchableOpacity>
               </Animated.View>
             </TouchableWithoutFeedback>
@@ -1757,7 +1758,7 @@ export default function UserProfile({ route, navigation }) {
                 Connections ({connectionsList.length})
               </Text>
               <TouchableOpacity onPress={() => setShowConnectionsModal(false)} style={styles.modalCloseBtn}>
-                <Ionicons name="close" size={22} color="#1a1a1a" />
+                <Ionicons name="close" size={22} color={T.ink} />
               </TouchableOpacity>
             </View>
             <FlatList
@@ -1781,13 +1782,13 @@ export default function UserProfile({ route, navigation }) {
                     <Text style={styles.connectionName}>{item.name}</Text>
                     <Text style={styles.connectionHeadline}>@{item.username || 'user'}</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color="#cfd9de" />
+                  <Ionicons name="chevron-forward" size={18} color={T.textFaint} />
                 </TouchableOpacity>
               )}
               ListEmptyComponent={
                 <View style={styles.emptyConnectionsContainer}>
-                  <Ionicons name="people-outline" size={50} color="#cfd9de" />
-                  <Text style={styles.emptyConnections}>No connections yet</Text>
+                  <Ionicons name="people-outline" size={50} color={T.textFaint} />
+                  <Text style={styles.emptyConnections}>no connections yet</Text>
                 </View>
               }
             />
@@ -1810,14 +1811,14 @@ export default function UserProfile({ route, navigation }) {
                 <View style={styles.dragHandle} />
                 <View style={styles.commentModalHeader}>
                   <View style={styles.commentModalHeaderLeft}>
-                    <Ionicons name="chatbubbles" size={20} color="#f9c349" />
-                    <Text style={styles.commentModalTitle}>Comments</Text>
+                    <Ionicons name="chatbubbles" size={20} color={T.yellow} />
+                    <Text style={styles.commentModalTitle}>comments</Text>
                     <View style={styles.commentCountBadge}>
                       <Text style={styles.commentCountBadgeText}>{commentsList.length}</Text>
                     </View>
                   </View>
                   <TouchableOpacity onPress={closeComments} style={styles.modalCloseBtn}>
-                    <Ionicons name="close" size={22} color="#1a1a1a" />
+                    <Ionicons name="close" size={22} color={T.ink} />
                   </TouchableOpacity>
                 </View>
 
@@ -1833,10 +1834,10 @@ export default function UserProfile({ route, navigation }) {
                     ListEmptyComponent={
                       <View style={styles.emptyComments}>
                         <View style={styles.emptyIconCircle}>
-                          <Ionicons name="chatbubble-outline" size={40} color="#ccc" />
+                          <Ionicons name="chatbubble-outline" size={40} color={T.textFaint} />
                         </View>
-                        <Text style={styles.emptyText}>No comments yet</Text>
-                        <Text style={styles.emptySubtext}>Be the first to comment!</Text>
+                        <Text style={styles.emptyText}>no comments yet</Text>
+                        <Text style={styles.emptySubtext}>be the first to comment!</Text>
                       </View>
                     }
                     onContentSizeChange={() => {
@@ -1859,9 +1860,9 @@ export default function UserProfile({ route, navigation }) {
                     {replyTo && (
                       <View style={styles.replyNotifier}>
                         <View style={styles.replyNotifierLeft}>
-                          <Ionicons name="return-down-forward" size={14} color="#f9c349" />
+                          <Ionicons name="return-down-forward" size={14} color={T.yellow} />
                           <Text style={styles.replyNotifierText}>
-                            Replying to <Text style={styles.replyNotifierName}>{replyTo.userName}</Text>
+                            replying to <Text style={styles.replyNotifierName}>{replyTo.userName}</Text>
                           </Text>
                         </View>
                         <TouchableOpacity
@@ -1871,7 +1872,7 @@ export default function UserProfile({ route, navigation }) {
                             setSelectedMentions([]);
                           }}
                         >
-                          <Ionicons name="close-circle" size={18} color="#999" />
+                          <Ionicons name="close-circle" size={18} color={T.textFaint} />
                         </TouchableOpacity>
                       </View>
                     )}
@@ -1891,7 +1892,7 @@ export default function UserProfile({ route, navigation }) {
                                 <Image source={{ uri: item.profileImage }} style={styles.mentionAvatar} />
                               ) : (
                                 <LinearGradient
-                                  colors={['#f9c349', '#e6b800']}
+                                  colors={[T.yellow, '#e6b800']}
                                   style={styles.mentionAvatarPlaceholder}
                                 >
                                   <Text style={styles.mentionAvatarText}>
@@ -1905,7 +1906,7 @@ export default function UserProfile({ route, navigation }) {
                                   <Text style={styles.mentionUsername}>@{item.username}</Text>
                                 )}
                               </View>
-                              <Ionicons name="at" size={18} color="#1877f2" />
+                              <Ionicons name="at" size={18} color={T.ink} />
                             </TouchableOpacity>
                           )}
                         />
@@ -1917,7 +1918,7 @@ export default function UserProfile({ route, navigation }) {
                         ref={commentInputRef}
                         style={styles.commentInput}
                         placeholder="Write a comment... Use @ to mention"
-                        placeholderTextColor="#999"
+                        placeholderTextColor={T.textFaint}
                         value={commentText}
                         onChangeText={handleCommentTextChange}
                         multiline
@@ -1929,13 +1930,13 @@ export default function UserProfile({ route, navigation }) {
                         style={[styles.postCommentBtn, !commentText.trim() && styles.postCommentBtnDisabled]}
                       >
                         <LinearGradient
-                          colors={commentText.trim() ? ['#f9c349', '#e6b800'] : ['#ccc', '#ddd']}
+                          colors={commentText.trim() ? [T.yellow, '#e6b800'] : [T.textFaint, T.sand]}
                           style={styles.postCommentBtnGradient}
                         >
                           {isSubmittingComment ? (
-                            <ActivityIndicator size="small" color="#fff" />
+                            <ActivityIndicator size="small" color={T.white} />
                           ) : (
-                            <Ionicons name="send" size={18} color="#fff" />
+                            <Ionicons name="send" size={18} color={T.white} />
                           )}
                         </LinearGradient>
                       </TouchableOpacity>
@@ -1953,223 +1954,223 @@ export default function UserProfile({ route, navigation }) {
 
 // ============ STYLES ============
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff' },
-  skeletonContainer: { flex: 1, backgroundColor: '#ffffff' },
+  container: { flex: 1, backgroundColor: T.card },
+  skeletonContainer: { flex: 1, backgroundColor: T.card },
   skeletonTopNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
-  skeletonNavBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#eff3f4' },
-  skeletonNavTitle: { width: 100, height: 20, borderRadius: 4, backgroundColor: '#eff3f4' },
+  skeletonNavBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: T.sand },
+  skeletonNavTitle: { width: 100, height: 20, borderRadius: 4, backgroundColor: T.sand },
   skeletonHeader: { padding: 16 },
   skeletonHeaderRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  skeletonAvatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#eff3f4' },
+  skeletonAvatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: T.sand },
   skeletonHeaderRight: { flex: 1, marginLeft: 16 },
-  skeletonLine: { height: 12, borderRadius: 4, backgroundColor: '#eff3f4' },
-  skeletonTabs: { flexDirection: 'row', marginTop: 20, borderTopWidth: 1, borderTopColor: '#eff3f4', paddingTop: 8 },
-  skeletonTab: { flex: 1, height: 32, borderRadius: 16, backgroundColor: '#eff3f4', marginHorizontal: 4 },
-  skeletonCard: { marginHorizontal: 16, marginTop: 12, padding: 16, borderBottomWidth: 1, borderBottomColor: '#eff3f4' },
+  skeletonLine: { height: 12, borderRadius: 4, backgroundColor: T.sand },
+  skeletonTabs: { flexDirection: 'row', marginTop: 20, borderTopWidth: 1, borderTopColor: T.line, paddingTop: 8 },
+  skeletonTab: { flex: 1, height: 32, borderRadius: 16, backgroundColor: T.sand, marginHorizontal: 4 },
+  skeletonCard: { marginHorizontal: 16, marginTop: 12, padding: 16, borderBottomWidth: 1, borderBottomColor: T.line },
   skeletonCardHeader: { flexDirection: 'row', alignItems: 'center' },
-  skeletonCardAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#eff3f4', marginRight: 12 },
+  skeletonCardAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: T.sand, marginRight: 12 },
 
-  profileHeader: { backgroundColor: '#fff' },
+  profileHeader: { backgroundColor: T.card },
   topNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, paddingBottom: 20 },
   backBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  navTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a', flex: 1, textAlign: 'center' },
+  navTitle: { fontSize: 18, fontFamily: F.headingBold, color: T.ink, flex: 1, textAlign: 'center' },
   menuBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   profileContent: { paddingHorizontal: 16, paddingBottom: 12 },
   avatarRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   avatarContainer: { marginTop: -30 },
-  avatar: { width: 72, height: 72, borderRadius: 36, borderWidth: 4, borderColor: '#fff' },
-  avatarPlaceholder: { width: 72, height: 72, borderRadius: 36, borderWidth: 4, borderColor: '#fff', justifyContent: 'center', alignItems: 'center' },
-  avatarText: { fontSize: 32, fontWeight: '700', color: '#1a1a1a' },
-  fullName: { fontSize: 20, fontWeight: '700', color: '#1a1a1a', marginTop: 8 },
-  bio: { fontSize: 15, color: '#1a1a1a', marginTop: 10, lineHeight: 20 },
+  avatar: { width: 72, height: 72, borderRadius: 36, borderWidth: 4, borderColor: T.white },
+  avatarPlaceholder: { width: 72, height: 72, borderRadius: 36, borderWidth: 4, borderColor: T.white, justifyContent: 'center', alignItems: 'center' },
+  avatarText: { fontSize: 32, fontFamily: F.heading, color: T.ink },
+  fullName: { fontSize: 20, fontFamily: F.headingBold, color: T.ink, marginTop: 8 },
+  bio: { fontSize: 15, fontFamily: F.body, color: T.ink, marginTop: 10, lineHeight: 20 },
   connectionTouchable: { marginTop: 10 },
-  connectionCount: { fontSize: 15, color: '#71767b' },
-  connectionNum: { fontSize: 15, fontWeight: '700', color: '#1a1a1a' },
+  connectionCount: { fontSize: 15, fontFamily: F.body, color: T.textMuted },
+  connectionNum: { fontSize: 15, fontFamily: F.bodyBold, color: T.ink },
   btnRow: { flexDirection: 'row', marginTop: 12, gap: 8 },
   editBtn: { flex: 1, borderRadius: 20, overflow: 'hidden' },
   editGradient: { flexDirection: 'row', height: 40, justifyContent: 'center', alignItems: 'center', gap: 8, borderRadius: 20 },
-  editBtnText: { color: '#f9c349', fontWeight: '700', fontSize: 14 },
+  editBtnText: { color: T.yellow, fontFamily: F.bodyBold, fontSize: 14 },
   connectBtn: { flex: 1, borderRadius: 20, overflow: 'hidden' },
   connectedBtn: { flex: 1, borderRadius: 20, overflow: 'hidden' },
   btnGradient: { flexDirection: 'row', height: 40, justifyContent: 'center', alignItems: 'center', gap: 8, borderRadius: 20 },
-  connectedBtnText: { color: '#1a1a1a', fontWeight: '700', fontSize: 14 },
-  msgBtn: { flex: 1, flexDirection: 'row', height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', gap: 8, backgroundColor: '#eff3f4' },
-  msgBtnText: { color: '#1a1a1a', fontWeight: '700', fontSize: 14 },
+  connectedBtnText: { color: T.ink, fontFamily: F.bodyBold, fontSize: 14 },
+  msgBtn: { flex: 1, flexDirection: 'row', height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', gap: 8, backgroundColor: T.sand },
+  msgBtnText: { color: T.ink, fontFamily: F.bodyBold, fontSize: 14 },
   acceptBtn: { flex: 1, borderRadius: 20, overflow: 'hidden' },
-  acceptBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  declineBtn: { flex: 1, flexDirection: 'row', height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', gap: 8, backgroundColor: '#fef2f2' },
-  declineBtnText: { color: '#ff3b30', fontWeight: '700', fontSize: 14 },
+  acceptBtnText: { color: T.white, fontFamily: F.bodyBold, fontSize: 14 },
+  declineBtn: { flex: 1, flexDirection: 'row', height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', gap: 8, backgroundColor: T.dangerBg },
+  declineBtnText: { color: T.danger, fontFamily: F.bodyBold, fontSize: 14 },
   pendingBtn: { flex: 1, borderRadius: 20, overflow: 'hidden' },
-  pendingBtnText: { color: '#666', fontWeight: '700', fontSize: 14 },
-  msgBtnDisabled: { flex: 1, flexDirection: 'row', height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', gap: 8, backgroundColor: '#f5f5f5' },
-  msgBtnDisabledText: { color: '#ccc', fontWeight: '700', fontSize: 14 },
+  pendingBtnText: { color: T.textMuted, fontFamily: F.bodyBold, fontSize: 14 },
+  msgBtnDisabled: { flex: 1, flexDirection: 'row', height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', gap: 8, backgroundColor: T.paper },
+  msgBtnDisabledText: { color: T.textFaint, fontFamily: F.bodyBold, fontSize: 14 },
   blockedBtn: { flex: 1, borderRadius: 20, overflow: 'hidden' },
-  blockedBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  blockedBtnText: { color: T.white, fontFamily: F.bodyBold, fontSize: 14 },
 
-  tabBar: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#eff3f4' },
+  tabBar: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: T.line },
   tabItem: { flex: 1, alignItems: 'center', paddingVertical: 14, position: 'relative' },
   activeTab: { position: 'relative' },
-  tabText: { fontSize: 15, fontWeight: '500', color: '#71767b' },
-  activeTabText: { color: '#1a1a1a', fontWeight: '700' },
-  tabIndicator: { position: 'absolute', bottom: 0, width: 56, height: 4, borderRadius: 2, backgroundColor: '#f9c349' },
+  tabText: { fontSize: 15, fontFamily: F.bodyMedium, color: T.textMuted },
+  activeTabText: { color: T.ink, fontFamily: F.bodyBold },
+  tabIndicator: { position: 'absolute', bottom: 0, width: 56, height: 4, borderRadius: 2, backgroundColor: T.yellow },
   tabContentContainer: { padding: 16 },
   aboutSection: { flexDirection: 'row', marginBottom: 18, alignItems: 'flex-start' },
-  aboutIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#eff3f4', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  aboutIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   aboutContent: { flex: 1 },
-  aboutLabel: { fontSize: 11, color: '#71767b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
-  aboutText: { fontSize: 15, color: '#1a1a1a', lineHeight: 22 },
+  aboutLabel: { fontSize: 11, color: T.textMuted, fontFamily: F.bodySemi, textTransform: 'none', letterSpacing: 0.5, marginBottom: 2 },
+  aboutText: { fontSize: 15, fontFamily: F.body, color: T.ink, lineHeight: 22 },
   universityRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
-  vipBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF8E1', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, borderWidth: 1, borderColor: '#FFD700' },
-  vipText: { fontSize: 10, fontWeight: '700', color: '#FFD700', marginLeft: 2 },
-  connectionSummary: { flexDirection: 'row', backgroundColor: '#f8f9fa', borderRadius: 12, padding: 16, marginTop: 8, borderWidth: 1, borderColor: '#eff3f4' },
+  vipBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: T.yellowSoft, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, borderWidth: 1, borderColor: T.yellow },
+  vipText: { fontSize: 10, fontFamily: F.bodyBold, color: T.yellow, marginLeft: 2 },
+  connectionSummary: { flexDirection: 'row', backgroundColor: T.sand, borderRadius: 12, padding: 16, marginTop: 8, borderWidth: 1, borderColor: T.line },
   connectionSummaryItem: { flex: 1, alignItems: 'center' },
-  connectionSummaryNumber: { fontSize: 18, fontWeight: '700', color: '#1a1a1a' },
-  connectionSummaryLabel: { fontSize: 12, color: '#71767b', marginTop: 2 },
-  connectionDivider: { width: 1, backgroundColor: '#eff3f4', marginHorizontal: 8 },
+  connectionSummaryNumber: { fontSize: 18, fontFamily: F.headingBold, color: T.ink },
+  connectionSummaryLabel: { fontSize: 12, fontFamily: F.body, color: T.textMuted, marginTop: 2 },
+  connectionDivider: { width: 1, backgroundColor: T.sand, marginHorizontal: 8 },
 
-  postCard: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#eff3f4' },
+  postCard: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: T.line },
   postHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   postAvatar: { width: 40, height: 40, borderRadius: 20 },
   postAvatarPlaceholder: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  postAvatarText: { color: '#1a1a1a', fontWeight: '700', fontSize: 18 },
+  postAvatarText: { color: T.ink, fontFamily: F.headingBold, fontSize: 18 },
   postInfo: { flex: 1, marginLeft: 10 },
-  postName: { fontWeight: '700', fontSize: 15, color: '#1a1a1a' },
-  postDate: { fontSize: 14, color: '#71767b', marginRight: 8 },
-  deleteBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#eff3f4', justifyContent: 'center', alignItems: 'center' },
-  postText: { fontSize: 15, color: '#1a1a1a', lineHeight: 22, marginBottom: 4 },
+  postName: { fontFamily: F.bodyBold, fontSize: 15, color: T.ink },
+  postDate: { fontSize: 14, fontFamily: F.body, color: T.textMuted, marginRight: 8 },
+  deleteBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center' },
+  postText: { fontSize: 15, fontFamily: F.body, color: T.ink, lineHeight: 22, marginBottom: 4 },
   showMoreBtn: { marginTop: 2 },
-  showMoreText: { color: '#f9c349', fontSize: 14, fontWeight: '500' },
-  postImage: { width: '100%', height: 250, borderRadius: 16, backgroundColor: '#eff3f4', marginTop: 8 },
-  postActions: { flexDirection: 'row', marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#eff3f4', alignItems: 'center' },
+  showMoreText: { color: T.yellow, fontSize: 14, fontFamily: F.bodyMedium },
+  postImage: { width: '100%', height: 250, borderRadius: 16, backgroundColor: T.sand, marginTop: 8 },
+  postActions: { flexDirection: 'row', marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: T.line, alignItems: 'center' },
   actionBtn: { flexDirection: 'row', alignItems: 'center', marginRight: 20, gap: 4 },
-  actionText: { fontSize: 14, color: '#71767b', fontWeight: '400' },
+  actionText: { fontSize: 14, color: T.textMuted, fontFamily: F.body },
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
-  emptyText: { fontSize: 17, fontWeight: '700', color: '#1a1a1a', marginTop: 12 },
-  emptySubText: { fontSize: 14, color: '#71767b', marginTop: 4 },
+  emptyText: { fontSize: 17, fontFamily: F.bodyBold, color: T.ink, marginTop: 12 },
+  emptySubText: { fontSize: 14, fontFamily: F.body, color: T.textMuted, marginTop: 4 },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%', minHeight: '40%' },
-  dragHandle: { width: 36, height: 4, backgroundColor: '#cfd9de', borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#eff3f4' },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a' },
-  modalCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#eff3f4', justifyContent: 'center', alignItems: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: T.overlay, justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: T.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%', minHeight: '40%' },
+  dragHandle: { width: 36, height: 4, backgroundColor: T.sand, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: T.line },
+  modalTitle: { fontSize: 18, fontFamily: F.headingBold, color: T.ink },
+  modalCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center' },
 
-  connectionItem: { flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: '#eff3f4' },
+  connectionItem: { flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: T.line },
   connectionAvatar: { width: 44, height: 44, borderRadius: 22, marginRight: 12 },
   connectionInfo: { flex: 1 },
-  connectionName: { fontSize: 15, fontWeight: '700', color: '#1a1a1a' },
-  connectionHeadline: { fontSize: 13, color: '#71767b', marginTop: 1 },
+  connectionName: { fontSize: 15, fontFamily: F.bodyBold, color: T.ink },
+  connectionHeadline: { fontSize: 13, fontFamily: F.body, color: T.textMuted, marginTop: 1 },
   emptyConnectionsContainer: { alignItems: 'center', paddingVertical: 40 },
-  emptyConnections: { textAlign: 'center', color: '#71767b', padding: 40 },
+  emptyConnections: { textAlign: 'center', color: T.textMuted, padding: 40 },
 
   blockedContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   blockedFullContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
-  blockedIconContainer: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#fef0f0', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-  blockedFullTitle: { fontSize: 24, fontWeight: '700', color: '#1a1a1a', marginTop: 16 },
-  blockedFullSubtext: { fontSize: 15, color: '#666', textAlign: 'center', marginTop: 8, lineHeight: 22 },
+  blockedIconContainer: { width: 120, height: 120, borderRadius: 60, backgroundColor: T.dangerBg, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  blockedFullTitle: { fontSize: 24, fontFamily: F.heading, color: T.ink, marginTop: 16 },
+  blockedFullSubtext: { fontSize: 15, fontFamily: F.body, color: T.textMuted, textAlign: 'center', marginTop: 8, lineHeight: 22 },
   unblockFullBtn: { marginTop: 24, borderRadius: 12, overflow: 'hidden' },
   unblockFullGradient: { flexDirection: 'row', paddingHorizontal: 32, paddingVertical: 14, alignItems: 'center', gap: 10 },
-  unblockFullBtnText: { fontSize: 16, fontWeight: '700', color: '#1a1a1a' },
-  unblockBtn: { marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#f9c349', borderRadius: 10 },
-  unblockBtnText: { fontSize: 16, fontWeight: '700', color: '#1a1a1a' },
+  unblockFullBtnText: { fontSize: 16, fontFamily: F.bodyBold, color: T.ink },
+  unblockBtn: { marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: T.yellow, borderRadius: 10 },
+  unblockBtnText: { fontSize: 16, fontFamily: F.bodyBold, color: T.ink },
 
   menuBox: {
-    backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    backgroundColor: T.card, borderTopLeftRadius: 24, borderTopRightRadius: 24,
     padding: 20, paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    shadowColor: "#000", shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1, shadowRadius: 16, elevation: 10,
+    shadowColor: T.ink, shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
-  menuHeader: { borderBottomWidth: 1, borderBottomColor: '#f0f0f0', paddingBottom: 12, marginBottom: 4 },
-  menuHeaderText: { fontSize: 13, color: '#999', fontWeight: '600', textAlign: 'center', letterSpacing: 0.5 },
+  menuHeader: { borderBottomWidth: 1, borderBottomColor: T.line, paddingBottom: 12, marginBottom: 4 },
+  menuHeaderText: { fontSize: 13, color: T.textFaint, fontFamily: F.bodySemi, textAlign: 'center', letterSpacing: 0.5 },
   menuItem: { flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 4 },
-  menuIconCircle: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  menuBlockCircle: { backgroundColor: '#fef0f0' },
-  menuUnblockCircle: { backgroundColor: '#f0faf0' },
-  menuReportCircle: { backgroundColor: '#fef0f0' },
-  menuCancelCircle: { backgroundColor: '#f8f8f8' },
-  menuText: { fontSize: 15, color: "#1a1a1a", fontWeight: '500', flex: 1 },
-  menuBlockText: { color: '#e74c3c' },
-  menuUnblockText: { color: '#2ecc71' },
-  menuCancelText: { color: '#999', fontWeight: '400' },
-  menuDivider: { height: 1, backgroundColor: '#f0f0f0', marginVertical: 4 },
+  menuIconCircle: { width: 40, height: 40, borderRadius: 12, backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  menuBlockCircle: { backgroundColor: T.dangerBg },
+  menuUnblockCircle: { backgroundColor: T.successBg },
+  menuReportCircle: { backgroundColor: T.dangerBg },
+  menuCancelCircle: { backgroundColor: T.sand },
+  menuText: { fontSize: 15, color: T.ink, fontFamily: F.bodyMedium, flex: 1 },
+  menuBlockText: { color: T.danger },
+  menuUnblockText: { color: T.success },
+  menuCancelText: { color: T.textFaint, fontFamily: F.body },
+  menuDivider: { height: 1, backgroundColor: T.sand, marginVertical: 4 },
 
-  commentModalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  commentModalOverlay: { flex: 1, backgroundColor: T.overlay, justifyContent: "flex-end" },
   commentSheet: {
-    backgroundColor: "#fff", height: height * 0.85,
+    backgroundColor: T.card, height: height * 0.85,
     borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden',
   },
   commentModalHeader: {
     flexDirection: "row", justifyContent: "space-between", padding: 16, paddingTop: 8,
-    borderBottomWidth: 1, borderBottomColor: "#f0f0f0", alignItems: "center",
+    borderBottomWidth: 1, borderBottomColor: T.line, alignItems: "center",
   },
   commentModalHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  commentModalTitle: { fontSize: 18, fontWeight: "700", color: "#1a1a1a" },
-  commentCountBadge: { backgroundColor: '#f8f8f8', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
-  commentCountBadgeText: { fontSize: 12, fontWeight: "600", color: '#666' },
+  commentModalTitle: { fontSize: 18, fontFamily: F.headingBold, color: T.ink },
+  commentCountBadge: { backgroundColor: T.sand, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+  commentCountBadgeText: { fontSize: 12, fontFamily: F.bodySemi, color: T.textMuted },
   commentListContent: { padding: 16, paddingBottom: 20, flexGrow: 1 },
 
   threadContainer: { marginBottom: 20 },
   parentRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  avatarLg: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#f8f8f8' },
+  avatarLg: { width: 38, height: 38, borderRadius: 19, backgroundColor: T.sand },
   avatarLgPlaceholder: { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center' },
-  avatarLgText: { fontWeight: "700", color: "#1a1a1a", fontSize: 14 },
+  avatarLgText: { fontFamily: F.bodyBold, color: T.ink, fontSize: 14 },
   parentContent: { flex: 1, marginLeft: 10 },
-  bubbleLg: { backgroundColor: "#f0f2f5", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18, borderTopLeftRadius: 4, alignSelf: 'flex-start', maxWidth: '100%' },
+  bubbleLg: { backgroundColor: T.sand, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18, borderTopLeftRadius: 4, alignSelf: 'flex-start', maxWidth: '100%' },
   bubbleHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 },
-  authorNameLg: { fontWeight: "700", fontSize: 13, color: '#1a1a1a' },
-  ownBadge: { backgroundColor: '#f9c349', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 },
-  ownBadgeText: { fontSize: 9, fontWeight: '700', color: '#1a1a1a' },
-  commentText: { fontSize: 14, color: "#1a1a1a", lineHeight: 20 },
+  authorNameLg: { fontFamily: F.bodyBold, fontSize: 13, color: T.ink },
+  ownBadge: { backgroundColor: T.yellow, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 },
+  ownBadgeText: { fontSize: 9, fontFamily: F.bodyBold, color: T.ink },
+  commentText: { fontSize: 14, fontFamily: F.body, color: T.ink, lineHeight: 20 },
   metaRowLg: { flexDirection: 'row', marginTop: 5, marginLeft: 14, alignItems: 'center' },
-  metaText: { fontSize: 11, color: '#65676b', fontWeight: '500' },
-  metaDot: { fontSize: 11, color: '#65676b', marginHorizontal: 6 },
-  replyBtn: { fontSize: 12, color: '#1a1a1a', fontWeight: '700' },
-  deleteBtnText: { color: '#e74c3c' },
+  metaText: { fontSize: 11, color: T.textMuted, fontFamily: F.bodyMedium },
+  metaDot: { fontSize: 11, fontFamily: F.body, color: T.textMuted, marginHorizontal: 6 },
+  replyBtn: { fontSize: 12, color: T.ink, fontFamily: F.bodyBold },
+  deleteBtnText: { color: T.danger },
 
   treeWrapper: { marginTop: 4, marginLeft: 18, paddingLeft: 20, position: 'relative' },
-  verticalLine: { position: 'absolute', left: 0, top: -8, bottom: 18, width: 2, backgroundColor: '#d0d4d9', borderRadius: 1 },
-  viewRepliesBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 14, backgroundColor: '#f0f2f5', alignSelf: 'flex-start', marginBottom: 12, marginLeft: -4 },
-  viewRepliesText: { fontSize: 12, color: '#1a1a1a', fontWeight: '700' },
+  verticalLine: { position: 'absolute', left: 0, top: -8, bottom: 18, width: 2, backgroundColor: T.sand, borderRadius: 1 },
+  viewRepliesBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 14, backgroundColor: T.sand, alignSelf: 'flex-start', marginBottom: 12, marginLeft: -4 },
+  viewRepliesText: { fontSize: 12, color: T.ink, fontFamily: F.bodyBold },
 
   treeBranch: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12, position: 'relative' },
-  branchConnector: { position: 'absolute', left: -20, top: 0, width: 18, height: 15, borderLeftWidth: 2, borderBottomWidth: 2, borderColor: '#d0d4d9', borderBottomLeftRadius: 10 },
+  branchConnector: { position: 'absolute', left: -20, top: 0, width: 18, height: 15, borderLeftWidth: 2, borderBottomWidth: 2, borderColor: T.line, borderBottomLeftRadius: 10 },
   branchConnectorLast: {},
   replyAvatarWrap: { marginRight: 8 },
-  avatarSm: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#f8f8f8' },
+  avatarSm: { width: 30, height: 30, borderRadius: 15, backgroundColor: T.sand },
   avatarSmPlaceholder: { width: 30, height: 30, borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
-  avatarSmText: { fontWeight: "700", color: "#1a1a1a", fontSize: 12 },
+  avatarSmText: { fontFamily: F.bodyBold, color: T.ink, fontSize: 12 },
   replyContent: { flex: 1 },
-  bubbleSm: { backgroundColor: "#f0f2f5", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, borderTopLeftRadius: 4, alignSelf: 'flex-start', maxWidth: '100%' },
-  ownBadgeSmall: { backgroundColor: '#f9c349', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 },
-  ownBadgeTextSmall: { fontSize: 8, fontWeight: '700', color: '#1a1a1a' },
-  authorNameSm: { fontWeight: "700", fontSize: 12, color: '#1a1a1a' },
-  replyTextContent: { fontSize: 13, color: "#1a1a1a", lineHeight: 18 },
-  mentionText: { color: '#1877f2', fontWeight: '600' },
+  bubbleSm: { backgroundColor: T.sand, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, borderTopLeftRadius: 4, alignSelf: 'flex-start', maxWidth: '100%' },
+  ownBadgeSmall: { backgroundColor: T.yellow, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 },
+  ownBadgeTextSmall: { fontSize: 8, fontFamily: F.bodyBold, color: T.ink },
+  authorNameSm: { fontFamily: F.bodyBold, fontSize: 12, color: T.ink },
+  replyTextContent: { fontSize: 13, fontFamily: F.body, color: T.ink, lineHeight: 18 },
+  mentionText: { color: T.ink, fontFamily: F.bodySemi },
   metaRowSm: { flexDirection: 'row', marginTop: 4, marginLeft: 12, alignItems: 'center' },
-  metaTextSm: { fontSize: 10, color: '#65676b', fontWeight: '500' },
-  replyBtnSm: { fontSize: 11, color: '#1a1a1a', fontWeight: '700' },
+  metaTextSm: { fontSize: 10, color: T.textMuted, fontFamily: F.bodyMedium },
+  replyBtnSm: { fontSize: 11, color: T.ink, fontFamily: F.bodyBold },
 
   emptyComments: { alignItems: 'center', paddingVertical: 60, flex: 1, justifyContent: 'center' },
-  emptyIconCircle: { width: 70, height: 70, borderRadius: 20, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  emptyText: { fontSize: 16, fontWeight: '700', color: '#999', marginTop: 4 },
-  emptySubtext: { fontSize: 13, color: '#ccc', marginTop: 2 },
+  emptyIconCircle: { width: 70, height: 70, borderRadius: 20, backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  emptyText: { fontSize: 16, fontFamily: F.bodyBold, color: T.textFaint, marginTop: 4 },
+  emptySubtext: { fontSize: 13, fontFamily: F.body, color: T.textFaint, marginTop: 2 },
 
-  replyNotifier: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#fef9f0', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  replyNotifier: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: T.yellowSoft, borderBottomWidth: 1, borderBottomColor: T.line },
   replyNotifierLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  replyNotifierText: { fontSize: 12, color: '#666' },
-  replyNotifierName: { fontWeight: '700', color: '#f9c349' },
+  replyNotifierText: { fontSize: 12, fontFamily: F.body, color: T.textMuted },
+  replyNotifierName: { fontFamily: F.bodyBold, color: T.yellow },
 
-  mentionSuggestions: { backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f0f0f0', maxHeight: 200 },
-  mentionItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 10, borderBottomWidth: 1, borderBottomColor: '#f8f8f8' },
+  mentionSuggestions: { backgroundColor: T.card, borderTopWidth: 1, borderTopColor: T.line, maxHeight: 200 },
+  mentionItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 10, borderBottomWidth: 1, borderBottomColor: T.line },
   mentionAvatar: { width: 32, height: 32, borderRadius: 16 },
   mentionAvatarPlaceholder: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-  mentionAvatarText: { color: '#1a1a1a', fontWeight: '700', fontSize: 13 },
-  mentionName: { fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
-  mentionUsername: { fontSize: 12, color: '#999', marginTop: 1 },
+  mentionAvatarText: { color: T.ink, fontFamily: F.bodyBold, fontSize: 13 },
+  mentionName: { fontSize: 14, fontFamily: F.bodySemi, color: T.ink },
+  mentionUsername: { fontSize: 12, fontFamily: F.body, color: T.textFaint, marginTop: 1 },
 
-  commentInputWrapper: { flexShrink: 0, backgroundColor: '#fff' },
-  commentInputArea: { flexDirection: "row", padding: 12, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: "#f0f0f0", alignItems: "center", backgroundColor: "#fff", gap: 10, paddingBottom: 12 },
-  commentInput: { flex: 1, backgroundColor: "#f8f9fa", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, color: '#1a1a1a', maxHeight: 100, minHeight: 40 },
+  commentInputWrapper: { flexShrink: 0, backgroundColor: T.card },
+  commentInputArea: { flexDirection: "row", padding: 12, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: T.line, alignItems: "center", backgroundColor: T.card, gap: 10, paddingBottom: 12 },
+  commentInput: { flex: 1, backgroundColor: T.paper, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, fontFamily: F.body, color: T.ink, maxHeight: 100, minHeight: 40 },
   postCommentBtn: { borderRadius: 20, overflow: 'hidden' },
   postCommentBtnGradient: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   postCommentBtnDisabled: { opacity: 0.5 },

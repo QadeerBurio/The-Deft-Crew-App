@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 
+import { color as T, font as F } from "../../theme/tokens";
 const { height, width } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
@@ -176,7 +177,7 @@ export default function ReportModal({
 
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <Ionicons name="flag-outline" size={22} color="#e74c3c" />
+              <Ionicons name="flag-outline" size={22} color={T.danger} />
               <Text style={styles.title}>Report {getContentTypeLabel()}</Text>
             </View>
             <TouchableOpacity 
@@ -184,22 +185,22 @@ export default function ReportModal({
               disabled={loading}
               style={styles.closeButton}
             >
-              <Ionicons name="close" size={24} color="#1a1a1a" />
+              <Ionicons name="close" size={24} color={T.ink} />
             </TouchableOpacity>
           </View>
 
           {submitted ? (
             <View style={styles.successContainer}>
               <View style={styles.successIcon}>
-                <Ionicons name="checkmark" size={40} color="#fff" />
+                <Ionicons name="checkmark" size={40} color={T.white} />
               </View>
-              <Text style={styles.successTitle}>Report Submitted</Text>
+              <Text style={styles.successTitle}>report submitted</Text>
               <Text style={styles.successSubtext}>
                 Thank you for your report. Our moderation team will review it within 24 hours.
               </Text>
               <View style={styles.successBadge}>
-                <Ionicons name="shield-checkmark" size={16} color="#2ecc71" />
-                <Text style={styles.successBadgeText}>Under Review</Text>
+                <Ionicons name="shield-checkmark" size={16} color={T.success} />
+                <Text style={styles.successBadgeText}>under review</Text>
               </View>
             </View>
           ) : (
@@ -233,7 +234,7 @@ export default function ReportModal({
                       <Ionicons 
                         name={reason.icon} 
                         size={18} 
-                        color={selectedReason === reason.id ? '#f9c349' : '#666'} 
+                        color={selectedReason === reason.id ? T.yellow : T.textMuted} 
                       />
                       <Text
                         style={[
@@ -245,19 +246,19 @@ export default function ReportModal({
                       </Text>
                     </View>
                     {selectedReason === reason.id && (
-                      <Ionicons name="checkmark-circle" size={20} color="#f9c349" />
+                      <Ionicons name="checkmark-circle" size={20} color={T.yellow} />
                     )}
                   </TouchableOpacity>
                 ))}
               </View>
 
               <Text style={styles.descriptionLabel}>
-                Additional details <Text style={styles.optionalText}>(optional)</Text>
+                additional details <Text style={styles.optionalText}>(optional)</Text>
               </Text>
               <TextInput
                 style={styles.descriptionInput}
                 placeholder="Provide more context about this report..."
-                placeholderTextColor="#999"
+                placeholderTextColor={T.textFaint}
                 value={description}
                 onChangeText={setDescription}
                 multiline
@@ -276,14 +277,14 @@ export default function ReportModal({
                 disabled={!selectedReason || loading}
               >
                 {loading ? (
-                  <ActivityIndicator color="#fff" size="small" />
+                  <ActivityIndicator color={T.white} size="small" />
                 ) : (
-                  <Text style={styles.submitButtonText}>Submit Report</Text>
+                  <Text style={styles.submitButtonText}>submit report</Text>
                 )}
               </TouchableOpacity>
 
               <View style={styles.noteContainer}>
-                <Ionicons name="information-circle-outline" size={16} color="#999" />
+                <Ionicons name="information-circle-outline" size={16} color={T.textFaint} />
                 <Text style={styles.noteText}>
                   Reports are reviewed by our moderation team. False reports may lead to account restrictions.
                 </Text>
@@ -317,9 +318,9 @@ export default function ReportModal({
                     );
                   }}
                 >
-                  <Ionicons name="ban-outline" size={20} color="#e74c3c" />
-                  <Text style={styles.blockOptionText}>Block this user</Text>
-                  <Ionicons name="chevron-forward" size={16} color="#ccc" />
+                  <Ionicons name="ban-outline" size={20} color={T.danger} />
+                  <Text style={styles.blockOptionText}>block this user</Text>
+                  <Ionicons name="chevron-forward" size={16} color={T.textFaint} />
                 </TouchableOpacity>
               )}
             </ScrollView>
@@ -337,10 +338,10 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: T.overlay,
   },
   modalContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: height * 0.85, // FIXED: 85% of screen height
@@ -350,7 +351,7 @@ const styles = StyleSheet.create({
   dragHandle: {
     width: 40,
     height: 4,
-    backgroundColor: '#cfd9de',
+    backgroundColor: T.sand,
     borderRadius: 2,
     alignSelf: 'center',
     marginTop: 12,
@@ -363,7 +364,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: T.line,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -371,8 +372,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.headingBold,
+    color: T.ink,
     marginLeft: 10,
   },
   closeButton: {
@@ -387,8 +388,8 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 15,
-    color: '#333',
-    fontWeight: '600',
+    color: T.ink,
+    fontFamily: F.bodySemi,
     marginTop: 16,
     marginBottom: 12,
   },
@@ -405,7 +406,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   reasonSelected: {
-    backgroundColor: '#fef9f0',
+    backgroundColor: T.yellowSoft,
   },
   reasonLeft: {
     flexDirection: 'row',
@@ -417,7 +418,7 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#ddd',
+    borderColor: T.line,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -426,53 +427,53 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
   },
   reasonText: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: 14, fontFamily: F.body,
+    color: T.ink,
     marginLeft: 10,
     flex: 1,
   },
   reasonTextSelected: {
-    color: '#1a1a1a',
-    fontWeight: '500',
+    color: T.ink,
+    fontFamily: F.bodyMedium,
   },
   descriptionLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    fontFamily: F.bodySemi,
+    color: T.ink,
     marginBottom: 8,
   },
   optionalText: {
-    fontWeight: '400',
-    color: '#999',
+    fontFamily: F.body,
+    color: T.textFaint,
     fontSize: 12,
   },
   descriptionInput: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: T.sand,
     borderRadius: 12,
     padding: 14,
-    fontSize: 14,
-    color: '#1a1a1a',
+    fontSize: 14, fontFamily: F.body,
+    color: T.ink,
     minHeight: 100,
     borderWidth: 1,
-    borderColor: '#e8e8e8',
+    borderColor: T.line,
   },
   submitButton: {
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 20,
   },
   submitButtonDisabled: {
-    backgroundColor: '#d4d4d4',
+    backgroundColor: T.sand,
   },
   submitButtonText: {
-    color: '#fff',
+    color: T.white,
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
   },
   noteContainer: {
     flexDirection: 'row',
@@ -481,8 +482,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   noteText: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textFaint,
     marginLeft: 6,
     flex: 1,
     lineHeight: 18,
@@ -493,12 +494,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     marginTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: T.line,
   },
   blockOptionText: {
     fontSize: 14,
-    color: '#e74c3c',
-    fontWeight: '600',
+    color: T.danger,
+    fontFamily: F.bodySemi,
     marginLeft: 12,
     flex: 1,
   },
@@ -512,19 +513,19 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: '#4CAF50',
+    backgroundColor: T.success,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
   successTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.headingBold,
+    color: T.ink,
   },
   successSubtext: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
     textAlign: 'center',
     marginTop: 8,
     lineHeight: 20,
@@ -532,7 +533,7 @@ const styles = StyleSheet.create({
   successBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0faf0',
+    backgroundColor: T.successBg,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20,
@@ -540,8 +541,8 @@ const styles = StyleSheet.create({
   },
   successBadgeText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#2ecc71',
+    fontFamily: F.bodySemi,
+    color: T.success,
     marginLeft: 6,
   },
 });

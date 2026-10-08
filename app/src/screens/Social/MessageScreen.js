@@ -18,23 +18,24 @@ import { useNavigation, useFocusEffect, CommonActions } from '@react-navigation/
 import { AuthContext } from "../../context/AuthContext";
 import io from "socket.io-client";
 
+import { color as T, font as F } from "../../theme/tokens";
 const socket = io("https://the-deft-crew-production.up.railway.app");
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
 const C = {
-  gold: '#f9c349',
-  goldSoft: '#fff8e6',
-  dark: '#1a1a1a',
-  white: '#ffffff',
-  bg: '#ffffff',
-  soft: '#F7F9F8',
-  border: '#E8E8E8',
-  line: '#f2f2f2',
-  muted: '#8a8a8a',
-  text2: '#5f5f5f',
-  danger: '#e11d48',
-  dangerSoft: '#fdecef',
-  online: '#22c55e',
+  gold: T.yellow,
+  goldSoft: T.yellowSoft,
+  dark: T.ink,
+  white: T.white,
+  bg: T.white,
+  soft: T.sand,
+  border: T.sand,
+  line: T.sand,
+  muted: T.textFaint,
+  text2: T.textMuted,
+  danger: T.danger,
+  dangerSoft: T.dangerBg,
+  online: T.success,
 };
 
 // Last inbox per user, so coming back to Chats shows it at once
@@ -92,10 +93,10 @@ const Avatar = ({ uri, name, size = 52, dim, online }) => (
         style={[
           styles.avatarFallback,
           { width: size, height: size, borderRadius: size / 2 },
-          dim && { backgroundColor: '#e5e5e5' },
+          dim && { backgroundColor: T.sand },
         ]}
       >
-        <Text style={[styles.avatarInitial, { fontSize: size * 0.4 }, dim && { color: '#999' }]}>
+        <Text style={[styles.avatarInitial, { fontSize: size * 0.4 }, dim && { color: T.textFaint }]}>
           {(name || 'U').charAt(0).toUpperCase()}
         </Text>
       </View>
@@ -182,7 +183,7 @@ const ActionSheet = ({ visible, onClose, onAction, name, image, isBlocked }) => 
         <Ionicons name={icon} size={19} color={color} />
       </View>
       <Text style={[styles.sheetText, { color }]}>{label}</Text>
-      <Ionicons name="chevron-forward" size={16} color="#c4c4c4" />
+      <Ionicons name="chevron-forward" size={16} color={T.textFaint} />
     </TouchableOpacity>
   );
 
@@ -203,7 +204,7 @@ const ActionSheet = ({ visible, onClose, onAction, name, image, isBlocked }) => 
 
         <Option icon="person-outline" label="View profile" onPress={() => close(() => onAction('profile'))} />
         {isBlocked ? (
-          <Option icon="lock-open-outline" label="Unblock" color="#16a34a" bg="#e9f8ef" onPress={() => close(() => onAction('unblock'))} />
+          <Option icon="lock-open-outline" label="Unblock" color={T.success} bg={T.successBg} onPress={() => close(() => onAction('unblock'))} />
         ) : (
           <Option icon="notifications-off-outline" label="Mute notifications" onPress={() => close(() => onAction('mute'))} />
         )}
@@ -599,7 +600,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   titleWrap: { flexDirection: 'row', alignItems: 'center' },
-  title: { fontSize: 20, fontWeight: '900', color: C.dark, letterSpacing: -0.3 },
+  title: { fontSize: 20, fontFamily: F.heading, color: C.dark, letterSpacing: -0.3 },
   titlePill: {
     marginLeft: 8,
     minWidth: 22,
@@ -610,7 +611,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  titlePillText: { color: C.gold, fontSize: 11, fontWeight: '800' },
+  titlePillText: { color: C.gold, fontSize: 11, fontFamily: F.bodyBold },
   newBtn: {
     width: 40,
     height: 40,
@@ -634,7 +635,7 @@ const styles = StyleSheet.create({
     borderColor: C.border,
   },
   searchActive: { borderColor: C.dark, backgroundColor: C.white },
-  searchInput: { flex: 1, fontSize: 15, color: C.dark, paddingVertical: 0 },
+  searchInput: { flex: 1, fontSize: 15, fontFamily: F.body, color: C.dark, paddingVertical: 0 },
   chips: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 6 },
   chip: {
     paddingHorizontal: 14,
@@ -646,7 +647,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chipOn: { backgroundColor: C.dark, borderColor: C.dark },
-  chipText: { fontSize: 13, fontWeight: '700', color: C.text2 },
+  chipText: { fontSize: 13, fontFamily: F.bodyBold, color: C.text2 },
   chipTextOn: { color: C.gold },
 
   // list
@@ -662,13 +663,13 @@ const styles = StyleSheet.create({
   rowBody: { flex: 1, marginLeft: 12, borderBottomWidth: 0 },
   rowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   rowBottom: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  name: { flex: 1, fontSize: 15.5, fontWeight: '700', color: C.dark, marginRight: 8 },
-  nameUnread: { fontWeight: '900' },
+  name: { flex: 1, fontSize: 15.5, fontFamily: F.bodyBold, color: C.dark, marginRight: 8 },
+  nameUnread: { fontFamily: F.bodyBold },
   mutedText: { color: C.muted },
-  time: { fontSize: 11.5, color: C.muted, fontWeight: '600' },
-  timeUnread: { color: C.dark, fontWeight: '800' },
-  preview: { flex: 1, fontSize: 13.5, color: C.muted },
-  previewUnread: { color: C.dark, fontWeight: '600' },
+  time: { fontSize: 11.5, color: C.muted, fontFamily: F.bodySemi },
+  timeUnread: { color: C.dark, fontFamily: F.bodyBold },
+  preview: { flex: 1, fontSize: 13.5, fontFamily: F.body, color: C.muted },
+  previewUnread: { color: C.dark, fontFamily: F.bodySemi },
   unreadPill: {
     marginLeft: 8,
     minWidth: 20,
@@ -679,10 +680,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  unreadText: { color: C.gold, fontSize: 11, fontWeight: '800' },
+  unreadText: { color: C.gold, fontSize: 11, fontFamily: F.bodyBold },
 
   avatarFallback: { backgroundColor: C.gold, justifyContent: 'center', alignItems: 'center' },
-  avatarInitial: { fontWeight: '900', color: C.dark },
+  avatarInitial: { fontFamily: F.bodyBold, color: C.dark },
   onlineDot: {
     position: 'absolute',
     right: 1,
@@ -698,8 +699,8 @@ const styles = StyleSheet.create({
   // skeleton
   skeletonWrap: { paddingHorizontal: 18, paddingTop: 8 },
   skeletonRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
-  skeletonAvatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#f0f0f0', marginRight: 12 },
-  skeletonLine: { height: 13, borderRadius: 6, backgroundColor: '#f0f0f0' },
+  skeletonAvatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: T.sand, marginRight: 12 },
+  skeletonLine: { height: 13, borderRadius: 6, backgroundColor: T.sand },
 
   // empty
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingBottom: 60 },
@@ -712,8 +713,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  emptyTitle: { fontSize: 18, fontWeight: '900', color: C.dark },
-  emptySub: { fontSize: 13.5, color: C.muted, marginTop: 6, textAlign: 'center' },
+  emptyTitle: { fontSize: 18, fontFamily: F.heading, color: C.dark },
+  emptySub: { fontSize: 13.5, fontFamily: F.body, color: C.muted, marginTop: 6, textAlign: 'center' },
   emptyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -724,7 +725,7 @@ const styles = StyleSheet.create({
     height: 46,
     borderRadius: 14,
   },
-  emptyBtnText: { color: C.white, fontSize: 14, fontWeight: '800' },
+  emptyBtnText: { color: C.white, fontSize: 14, fontFamily: F.bodyBold },
 
   // sheet
   sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10,10,10,0.5)' },
@@ -740,11 +741,11 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: Platform.OS === 'ios' ? 34 : 22,
   },
-  sheetHandle: { width: 38, height: 4, borderRadius: 2, backgroundColor: '#e2e2e2', alignSelf: 'center', marginBottom: 14 },
+  sheetHandle: { width: 38, height: 4, borderRadius: 2, backgroundColor: T.sand, alignSelf: 'center', marginBottom: 14 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', paddingBottom: 14, marginBottom: 6, borderBottomWidth: 1, borderBottomColor: C.line },
-  sheetName: { fontSize: 16, fontWeight: '900', color: C.dark },
-  sheetSub: { fontSize: 12, color: C.muted, marginTop: 2 },
+  sheetName: { fontSize: 16, fontFamily: F.bodyBold, color: C.dark },
+  sheetSub: { fontSize: 12, fontFamily: F.body, color: C.muted, marginTop: 2 },
   sheetOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11 },
   sheetIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  sheetText: { flex: 1, fontSize: 15, fontWeight: '700' },
+  sheetText: { flex: 1, fontSize: 15, fontFamily: F.bodyBold },
 });

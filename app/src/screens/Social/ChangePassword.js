@@ -16,10 +16,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 
+import { color as T, font as F } from "../../theme/tokens";
 const { width } = Dimensions.get('window');
 
 // IMPORTANT: Define your API URL here or import from config
@@ -147,7 +148,7 @@ export default function ChangePassword({ navigation }) {
           <Text style={styles.inputLabel}>{label}</Text>
           {value.length > 0 && !error && (
             <View style={styles.validIndicator}>
-              <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
+              <Ionicons name="checkmark-circle" size={14} color={T.success} />
             </View>
           )}
         </View>
@@ -157,7 +158,7 @@ export default function ChangePassword({ navigation }) {
           error && styles.inputError
         ]}>
           <View style={styles.inputIconWrapper}>
-            <Ionicons name={icon} size={20} color={isFocused ? '#f9c349' : '#999'} />
+            <Ionicons name={icon} size={20} color={isFocused ? T.yellow : T.textFaint} />
           </View>
           <TextInput
             style={styles.input}
@@ -165,7 +166,7 @@ export default function ChangePassword({ navigation }) {
             onChangeText={onChangeText}
             secureTextEntry={secureTextEntry ? !showPassword : false}
             placeholder={placeholder}
-            placeholderTextColor="#bbb"
+            placeholderTextColor={T.textFaint}
             autoCapitalize={autoCapitalize}
             onFocus={() => setFocusedInput(false)}
             onBlur={() => setFocusedInput(false)}
@@ -175,14 +176,14 @@ export default function ChangePassword({ navigation }) {
               <Ionicons
                 name={showPassword ? "eye-off-outline" : "eye-outline"}
                 size={20}
-                color={isFocused ? '#f9c349' : '#999'}
+                color={isFocused ? T.yellow : T.textFaint}
               />
             </TouchableOpacity>
           )}
         </View>
         {error && (
           <View style={styles.errorRow}>
-            <Ionicons name="alert-circle" size={14} color="#ff4757" />
+            <Ionicons name="alert-circle" size={14} color={T.danger} />
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
@@ -192,7 +193,7 @@ export default function ChangePassword({ navigation }) {
 
   // Calculate password strength
   const getPasswordStrength = () => {
-    if (!newPassword) return { label: 'None', color: '#ddd', score: 0 };
+    if (!newPassword) return { label: 'None', color: T.textFaint, score: 0 };
     let score = 0;
     if (newPassword.length >= 6) score++;
     if (/[A-Z]/.test(newPassword)) score++;
@@ -200,11 +201,11 @@ export default function ChangePassword({ navigation }) {
     if (/[0-9]/.test(newPassword)) score++;
     
     const strengths = [
-      { label: 'Weak', color: '#ff4757' },
+      { label: 'Weak', color: T.danger },
       { label: 'Fair', color: '#ff6b35' },
       { label: 'Good', color: '#ffd93d' },
       { label: 'Strong', color: '#6bcb77' },
-      { label: 'Very Strong', color: '#4CAF50' },
+      { label: 'Very Strong', color: T.success },
     ];
     return { ...strengths[score], score };
   };
@@ -213,14 +214,14 @@ export default function ChangePassword({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
       
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerFade }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+          <Ionicons name="arrow-back" size={24} color={T.ink} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Change Password</Text>
+        <Text style={styles.headerTitle}>change password</Text>
         <View style={{ width: 40 }} />
       </Animated.View>
 
@@ -241,15 +242,15 @@ export default function ChangePassword({ navigation }) {
             {/* Header Icon */}
             <Animated.View style={[styles.iconContainer, { transform: [{ scale: scaleAnim }] }]}>
               <LinearGradient 
-                colors={['#f9c349', '#e6b800']} 
+                colors={[T.yellow, '#e6b800']} 
                 style={styles.iconGradient}
               >
-                <Ionicons name="key-outline" size={44} color="#1a1a1a" />
+                <Ionicons name="key-outline" size={44} color={T.ink} />
               </LinearGradient>
               <View style={styles.iconGlow} />
             </Animated.View>
 
-            <Text style={styles.title}>Update Password</Text>
+            <Text style={styles.title}>update password</Text>
             <Text style={styles.subtitle}>
               Create a strong password to keep your account secure
             </Text>
@@ -272,7 +273,7 @@ export default function ChangePassword({ navigation }) {
               {/* New Password with Strength Indicator */}
               <View style={styles.inputContainer}>
                 <View style={styles.labelRow}>
-                  <Text style={styles.inputLabel}>New Password</Text>
+                  <Text style={styles.inputLabel}>new password</Text>
                   {newPassword.length > 0 && (
                     <View style={styles.strengthBadge}>
                       <Text style={[styles.strengthText, { color: strength.color }]}>
@@ -287,7 +288,7 @@ export default function ChangePassword({ navigation }) {
                   errors.newPassword && styles.inputError
                 ]}>
                   <View style={styles.inputIconWrapper}>
-                    <Ionicons name="key-outline" size={20} color={focusedInput === 'new' ? '#f9c349' : '#999'} />
+                    <Ionicons name="key-outline" size={20} color={focusedInput === 'new' ? T.yellow : T.textFaint} />
                   </View>
                   <TextInput
                     style={styles.input}
@@ -295,7 +296,7 @@ export default function ChangePassword({ navigation }) {
                     onChangeText={setNewPassword}
                     secureTextEntry={!showNewPassword}
                     placeholder="Enter new password"
-                    placeholderTextColor="#bbb"
+                    placeholderTextColor={T.textFaint}
                     autoCapitalize="none"
                     onFocus={() => setFocusedInput('false')}
                     onBlur={() => setFocusedInput(null)}
@@ -304,7 +305,7 @@ export default function ChangePassword({ navigation }) {
                     <Ionicons
                       name={showNewPassword ? "eye-off-outline" : "eye-outline"}
                       size={20}
-                      color={focusedInput === 'new' ? '#f9c349' : '#999'}
+                      color={focusedInput === 'new' ? T.yellow : T.textFaint}
                     />
                   </TouchableOpacity>
                 </View>
@@ -326,7 +327,7 @@ export default function ChangePassword({ navigation }) {
                 
                 {errors.newPassword && (
                   <View style={styles.errorRow}>
-                    <Ionicons name="alert-circle" size={14} color="#ff4757" />
+                    <Ionicons name="alert-circle" size={14} color={T.danger} />
                     <Text style={styles.errorText}>{errors.newPassword}</Text>
                   </View>
                 )}
@@ -349,47 +350,47 @@ export default function ChangePassword({ navigation }) {
             {/* Password Requirements */}
             <View style={styles.requirementsCard}>
               <Text style={styles.requirementsTitle}>
-                <Ionicons name="list-outline" size={16} color="#f9c349" /> Password Requirements:
+                <Ionicons name="list-outline" size={16} color={T.yellow} /> password requirements:
               </Text>
               <View style={styles.requirementsGrid}>
                 <View style={styles.requirementItem}>
                   <View style={[styles.requirementDot, { 
-                    backgroundColor: newPassword.length >= 6 ? '#4CAF50' : '#ddd' 
+                    backgroundColor: newPassword.length >= 6 ? T.success : T.sand 
                   }]} />
                   <Text style={[styles.requirementText, {
-                    color: newPassword.length >= 6 ? '#4CAF50' : '#999'
+                    color: newPassword.length >= 6 ? T.success : T.textFaint
                   }]}>
                     Min 6 characters
                   </Text>
                 </View>
                 <View style={styles.requirementItem}>
                   <View style={[styles.requirementDot, { 
-                    backgroundColor: /[A-Z]/.test(newPassword) ? '#4CAF50' : '#ddd' 
+                    backgroundColor: /[A-Z]/.test(newPassword) ? T.success : T.sand 
                   }]} />
                   <Text style={[styles.requirementText, {
-                    color: /[A-Z]/.test(newPassword) ? '#4CAF50' : '#999'
+                    color: /[A-Z]/.test(newPassword) ? T.success : T.textFaint
                   }]}>
-                    Uppercase
+                    uppercase
                   </Text>
                 </View>
                 <View style={styles.requirementItem}>
                   <View style={[styles.requirementDot, { 
-                    backgroundColor: /[a-z]/.test(newPassword) ? '#4CAF50' : '#ddd' 
+                    backgroundColor: /[a-z]/.test(newPassword) ? T.success : T.sand 
                   }]} />
                   <Text style={[styles.requirementText, {
-                    color: /[a-z]/.test(newPassword) ? '#4CAF50' : '#999'
+                    color: /[a-z]/.test(newPassword) ? T.success : T.textFaint
                   }]}>
-                    Lowercase
+                    lowercase
                   </Text>
                 </View>
                 <View style={styles.requirementItem}>
                   <View style={[styles.requirementDot, { 
-                    backgroundColor: /[0-9]/.test(newPassword) ? '#4CAF50' : '#ddd' 
+                    backgroundColor: /[0-9]/.test(newPassword) ? T.success : T.sand 
                   }]} />
                   <Text style={[styles.requirementText, {
-                    color: /[0-9]/.test(newPassword) ? '#4CAF50' : '#999'
+                    color: /[0-9]/.test(newPassword) ? T.success : T.textFaint
                   }]}>
-                    Number
+                    number
                   </Text>
                 </View>
               </View>
@@ -403,17 +404,17 @@ export default function ChangePassword({ navigation }) {
               activeOpacity={0.8}
             >
               <LinearGradient 
-                colors={['#f9c349', '#e6b800']} 
+                colors={[T.yellow, '#e6b800']} 
                 style={styles.updateGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
               >
                 {loading ? (
-                  <ActivityIndicator size="small" color="#1a1a1a" />
+                  <ActivityIndicator size="small" color={T.ink} />
                 ) : (
                   <>
-                    <Ionicons name="save-outline" size={20} color="#1a1a1a" />
-                    <Text style={styles.updateText}>Update Password</Text>
+                    <Ionicons name="save-outline" size={20} color={T.ink} />
+                    <Text style={styles.updateText}>update password</Text>
                   </>
                 )}
               </LinearGradient>
@@ -422,7 +423,7 @@ export default function ChangePassword({ navigation }) {
             {/* Security Note */}
             <View style={styles.securityNote}>
               <View style={styles.securityIconWrapper}>
-                <Ionicons name="shield-checkmark" size={16} color="#f9c349" />
+                <Ionicons name="shield-checkmark" size={16} color={T.yellow} />
               </View>
               <Text style={styles.securityText}>
                 Your password is encrypted and stored securely
@@ -439,7 +440,7 @@ export default function ChangePassword({ navigation }) {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#f8f9fc' 
+    backgroundColor: T.paper 
   },
   flex: {
     flex: 1,
@@ -453,21 +454,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, 
     paddingVertical: 7,
     borderBottomWidth: 1, 
-    borderBottomColor: '#f0f0f0', 
-    backgroundColor: '#fff'
+    borderBottomColor: T.line, 
+    backgroundColor: T.card
   },
   backBtn: { 
     width: 40, 
     height: 40, 
     borderRadius: 12, 
-    backgroundColor: '#f5f6f8', 
+    backgroundColor: T.sand, 
     justifyContent: 'center', 
     alignItems: 'center' 
   },
   headerTitle: { 
     fontSize: 18, 
-    fontWeight: '700', 
-    color: '#1a1a1a', 
+    fontFamily: F.headingBold, 
+    color: T.ink, 
     letterSpacing: 0.3 
   },
   
@@ -489,11 +490,11 @@ const styles = StyleSheet.create({
     borderRadius: 42,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#f9c349',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
     zIndex: 2,
   },
   iconGlow: {
@@ -501,21 +502,21 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 60,
-    backgroundColor: '#f9c34915',
+    backgroundColor: T.yellowSoft,
     zIndex: 1,
   },
   
   title: {
     fontSize: 24,
-    fontWeight: '800',
-    color: '#1a1a1a',
+    fontFamily: F.heading,
+    color: T.ink,
     textAlign: 'center',
     marginBottom: 4,
     letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textFaint,
     textAlign: 'center',
     marginBottom: 20,
     lineHeight: 20,
@@ -537,8 +538,8 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontFamily: F.bodySemi,
+    color: T.ink,
   },
   validIndicator: {
     marginLeft: 8,
@@ -546,23 +547,23 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: '#e8e8e8',
+    borderColor: T.line,
     paddingHorizontal: 4,
     height: 47,
   },
   inputFocused: {
-    borderColor: '#f9c349',
-    shadowColor: '#f9c349',
+    borderColor: T.yellow,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 2,
   },
   inputError: {
-    borderColor: '#ff4757',
+    borderColor: T.danger,
     borderWidth: 1.5,
   },
   inputIconWrapper: {
@@ -572,8 +573,8 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: 14,
-    color: '#1a1a1a',
+    fontSize: 14, fontFamily: F.body,
+    color: T.ink,
     paddingVertical: 8,
     paddingHorizontal: 4,
   },
@@ -588,8 +589,8 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 11,
-    color: '#ff4757',
-    fontWeight: '500',
+    color: T.danger,
+    fontFamily: F.bodyMedium,
   },
   
   // Strength Indicator
@@ -597,18 +598,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
-    backgroundColor: '#f8f9fc',
+    backgroundColor: T.sand,
   },
   strengthText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
   },
   strengthBar: {
     marginTop: 8,
   },
   strengthBarTrack: {
     height: 3,
-    backgroundColor: '#e8e8e8',
+    backgroundColor: T.sand,
     borderRadius: 1.5,
     overflow: 'hidden',
   },
@@ -619,13 +620,13 @@ const styles = StyleSheet.create({
   
   // Requirements Card
   requirementsCard: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderRadius: 16,
     padding: 13,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
-    shadowColor: '#000',
+    borderColor: T.line,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -633,8 +634,8 @@ const styles = StyleSheet.create({
   },
   requirementsTitle: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     marginBottom: 10,
     gap: 6,
   },
@@ -646,7 +647,7 @@ const styles = StyleSheet.create({
   requirementItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f9fc',
+    backgroundColor: T.sand,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -659,18 +660,18 @@ const styles = StyleSheet.create({
   },
   requirementText: {
     fontSize: 11,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
   
   // Update Button
   updateBtn: {
     borderRadius: 14,
     overflow: 'hidden',
-    shadowColor: '#f9c349',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   updateGradient: {
     flexDirection: 'row',
@@ -681,8 +682,8 @@ const styles = StyleSheet.create({
   },
   updateText: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     letterSpacing: 0.5,
   },
   
@@ -699,13 +700,13 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#fef9f0',
+    backgroundColor: T.yellowSoft,
     justifyContent: 'center',
     alignItems: 'center',
   },
   securityText: {
     fontSize: 12,
-    color: '#999',
-    fontWeight: '500',
+    color: T.textFaint,
+    fontFamily: F.bodyMedium,
   },
 });

@@ -14,6 +14,7 @@ import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 import PostCard from './PostCard';
 
+import { color as T, font as F } from "../../theme/tokens";
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
 export default function BlockedContentFeed() {
@@ -51,8 +52,8 @@ export default function BlockedContentFeed() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#f9c349" />
-        <Text style={styles.loadingText}>Loading feed...</Text>
+        <ActivityIndicator size="large" color={T.yellow} />
+        <Text style={styles.loadingText}>loading feed...</Text>
       </View>
     );
   }
@@ -60,7 +61,7 @@ export default function BlockedContentFeed() {
   if (posts.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyTitle}>No posts to show</Text>
+        <Text style={styles.emptyTitle}>no posts to show</Text>
         <Text style={styles.emptySubtext}>
           Follow or connect with more people to see their posts.
         </Text>
@@ -86,29 +87,29 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     padding: 20,
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 14,
-    color: '#666',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.headingBold,
+    color: T.ink,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
     textAlign: 'center',
     marginTop: 8,
   },

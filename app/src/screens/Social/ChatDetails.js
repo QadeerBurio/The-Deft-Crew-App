@@ -17,6 +17,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 
+import { color as T, font as F } from "../../theme/tokens";
 const { width } = Dimensions.get('window');
 const socket = io("https://the-deft-crew-production.up.railway.app");
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
@@ -24,18 +25,18 @@ const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/decaxpera/auto/upload";
 const UPLOAD_PRESET = "tdc_profiles";
 
 const C = {
-  white: '#ffffff',
-  dark: '#1a1a1a',
-  gold: '#f9c349',
-  goldSoft: '#fff8e6',
-  soft: '#F7F9F8',
-  border: '#E8E8E8',
-  divider: '#f2f2f2',
-  muted: '#8a8a8a',
-  text2: '#5f5f5f',
-  danger: '#e11d48',
-  dangerSoft: '#fdecef',
-  online: '#22c55e',
+  white: T.white,
+  dark: T.ink,
+  gold: T.yellow,
+  goldSoft: T.yellowSoft,
+  soft: T.sand,
+  border: T.sand,
+  divider: T.sand,
+  muted: T.textFaint,
+  text2: T.textMuted,
+  danger: T.danger,
+  dangerSoft: T.dangerBg,
+  online: T.success,
   metaLight: 'rgba(255,255,255,0.6)',
 };
 
@@ -1211,7 +1212,7 @@ export default function ChatDetailScreen() {
               style={[styles.sendBtn, uploading && styles.sendBtnDisabled]}
               activeOpacity={0.8}
             >
-              <Ionicons name="arrow-up" size={20} color={uploading ? '#9a9a9a' : C.gold} />
+              <Ionicons name="arrow-up" size={20} color={uploading ? T.textFaint : C.gold} />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -1280,7 +1281,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.white },
   flex1: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 10, fontSize: 13, color: C.muted, fontWeight: '600' },
+  loadingText: { marginTop: 10, fontSize: 13, color: C.muted, fontFamily: F.bodySemi },
 
   // header
   safeHeader: { backgroundColor: C.white },
@@ -1304,16 +1305,16 @@ const styles = StyleSheet.create({
   avatarWrap: { width: 40, height: 40 },
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.soft },
   avatarFallback: { backgroundColor: C.gold, justifyContent: 'center', alignItems: 'center' },
-  avatarInitial: { fontSize: 16, fontWeight: '900', color: C.dark },
+  avatarInitial: { fontSize: 16, fontFamily: F.bodyBold, color: C.dark },
   onlineDot: {
     position: 'absolute', right: -1, bottom: -1,
     width: 13, height: 13, borderRadius: 6.5,
     backgroundColor: C.online, borderWidth: 2.5, borderColor: C.white,
   },
   headerText: { marginLeft: 10, flex: 1 },
-  userName: { fontSize: 16, fontWeight: '900', color: C.dark },
-  statusText: { fontSize: 11.5, color: C.muted, marginTop: 1, fontWeight: '500' },
-  statusTyping: { color: C.dark, fontWeight: '700' },
+  userName: { fontSize: 16, fontFamily: F.bodyBold, color: C.dark },
+  statusText: { fontSize: 11.5, color: C.muted, marginTop: 1, fontFamily: F.bodyMedium },
+  statusTyping: { color: C.dark, fontFamily: F.bodyBold },
 
   // list
   listContent: { paddingHorizontal: 14, paddingTop: 6, paddingBottom: 4, flexGrow: 1 },
@@ -1323,7 +1324,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.soft, borderWidth: 1, borderColor: C.border,
     borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4,
   },
-  datePillText: { fontSize: 11.5, fontWeight: '800', color: C.muted },
+  datePillText: { fontSize: 11.5, fontFamily: F.bodyBold, color: C.muted },
 
   rowWrap: { maxWidth: '80%' },
   rowMe: { alignSelf: 'flex-end' },
@@ -1334,17 +1335,17 @@ const styles = StyleSheet.create({
   theirBubble: { backgroundColor: C.soft, borderBottomLeftRadius: 6 },
   myCorner: { borderBottomRightRadius: 6 },
   theirCorner: { borderBottomLeftRadius: 6 },
-  msgText: { fontSize: 14.5, lineHeight: 20 },
+  msgText: { fontSize: 14.5, fontFamily: F.body, lineHeight: 20 },
   myText: { color: C.white },
   theirText: { color: C.dark },
 
   metaRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', marginTop: 2 },
   metaOverlay: {
     position: 'absolute', right: 8, bottom: 8, marginTop: 0,
-    backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 8,
+    backgroundColor: T.overlay, borderRadius: 8,
     paddingHorizontal: 6, paddingVertical: 2,
   },
-  metaTime: { fontSize: 10.5, color: C.muted },
+  metaTime: { fontSize: 10.5, fontFamily: F.body, color: C.muted },
   metaTimeLight: { color: C.metaLight },
   metaTick: { marginLeft: 3 },
 
@@ -1360,11 +1361,11 @@ const styles = StyleSheet.create({
   audioTrackDark: { backgroundColor: 'rgba(255,255,255,0.2)' },
   audioTrackLight: { backgroundColor: C.border },
   audioFill: { height: '100%', borderRadius: 2 },
-  audioTime: { fontSize: 11, color: C.muted, marginTop: 5, fontWeight: '600' },
+  audioTime: { fontSize: 11, color: C.muted, marginTop: 5, fontFamily: F.bodySemi },
   audioTimeLight: { color: C.metaLight },
 
   deletedRow: { flexDirection: 'row', alignItems: 'center', paddingBottom: 2 },
-  deletedText: { marginLeft: 6, fontSize: 13.5, fontStyle: 'italic', color: C.muted },
+  deletedText: { marginLeft: 6, fontSize: 13.5, fontFamily: F.body, fontStyle: 'italic', color: C.muted },
   deletedTextLight: { color: C.metaLight },
 
   typingWrap: { marginTop: 10 },
@@ -1376,8 +1377,8 @@ const styles = StyleSheet.create({
     width: 72, height: 72, borderRadius: 22,
     backgroundColor: C.goldSoft, justifyContent: 'center', alignItems: 'center', marginBottom: 14,
   },
-  emptyTitle: { fontSize: 18, fontWeight: '900', color: C.dark },
-  emptySub: { fontSize: 13.5, color: C.muted, marginTop: 4, textAlign: 'center' },
+  emptyTitle: { fontSize: 18, fontFamily: F.heading, color: C.dark },
+  emptySub: { fontSize: 13.5, fontFamily: F.body, color: C.muted, marginTop: 4, textAlign: 'center' },
 
   scrollBtn: {
     position: 'absolute', right: 14, bottom: 12,
@@ -1390,14 +1391,14 @@ const styles = StyleSheet.create({
     minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4,
     backgroundColor: C.gold, justifyContent: 'center', alignItems: 'center',
   },
-  scrollBadgeText: { fontSize: 10, fontWeight: '900', color: C.dark },
+  scrollBadgeText: { fontSize: 10, fontFamily: F.bodyBold, color: C.dark },
 
   uploadBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     paddingVertical: 8, backgroundColor: C.soft,
     borderTopWidth: 1, borderTopColor: C.divider,
   },
-  uploadText: { marginLeft: 8, fontSize: 12, color: C.text2, fontWeight: '700' },
+  uploadText: { marginLeft: 8, fontSize: 12, color: C.text2, fontFamily: F.bodyBold },
 
   recordingBar: {
     flexDirection: 'row', alignItems: 'center',
@@ -1406,8 +1407,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: C.divider,
   },
   recordingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: C.danger },
-  recordingTime: { marginLeft: 8, fontSize: 14, fontWeight: '800', color: C.dark },
-  recordingLabel: { marginLeft: 8, fontSize: 12, color: C.muted, flex: 1 },
+  recordingTime: { marginLeft: 8, fontSize: 14, fontFamily: F.bodyBold, color: C.dark },
+  recordingLabel: { marginLeft: 8, fontSize: 12, fontFamily: F.body, color: C.muted, flex: 1 },
   recordSendBtn: {
     marginLeft: 8, width: 34, height: 34, borderRadius: 17,
     backgroundColor: C.dark, justifyContent: 'center', alignItems: 'center',
@@ -1426,35 +1427,35 @@ const styles = StyleSheet.create({
     borderRadius: 23, backgroundColor: C.soft,
     borderWidth: 1, borderColor: C.border,
     paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12,
-    fontSize: 15, color: C.dark,
+    fontSize: 15, fontFamily: F.body, color: C.dark,
   },
   sendBtn: {
     width: 46, height: 46, borderRadius: 23,
     backgroundColor: C.dark, justifyContent: 'center', alignItems: 'center',
   },
-  sendBtnDisabled: { backgroundColor: '#e9e9e9' },
+  sendBtnDisabled: { backgroundColor: T.sand },
   micActive: { backgroundColor: C.gold },
 
   // sheets
-  sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  sheetOverlay: { flex: 1, backgroundColor: T.overlay, justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: C.white,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
     paddingHorizontal: 16, paddingTop: 10,
   },
-  sheetHandle: { width: 38, height: 4, borderRadius: 2, backgroundColor: '#e2e2e2', alignSelf: 'center', marginBottom: 12 },
-  sheetTitle: { fontSize: 13, fontWeight: '800', color: C.muted, marginBottom: 4, marginLeft: 4 },
+  sheetHandle: { width: 38, height: 4, borderRadius: 2, backgroundColor: T.sand, alignSelf: 'center', marginBottom: 12 },
+  sheetTitle: { fontSize: 13, fontFamily: F.bodyBold, color: C.muted, marginBottom: 4, marginLeft: 4 },
   sheetRow: { flexDirection: 'row', alignItems: 'center', height: 52 },
   sheetIcon: {
     width: 36, height: 36, borderRadius: 11,
     backgroundColor: C.soft, justifyContent: 'center', alignItems: 'center', marginRight: 12,
   },
   sheetIconDanger: { backgroundColor: C.dangerSoft },
-  sheetLabel: { fontSize: 15, fontWeight: '700', color: C.dark },
+  sheetLabel: { fontSize: 15, fontFamily: F.bodyBold, color: C.dark },
   sheetLabelDanger: { color: C.danger },
 
   // viewer
-  fullscreenOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' },
+  fullscreenOverlay: { flex: 1, backgroundColor: T.overlay, justifyContent: 'center', alignItems: 'center' },
   fullscreenTouchable: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
   fullscreenImage: { width: '100%', height: '100%' },
   closeFullscreen: {

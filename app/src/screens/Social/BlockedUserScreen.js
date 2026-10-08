@@ -17,12 +17,13 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 
+import { color as T, font as F } from "../../theme/tokens";
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
 // Skeleton Loader for Blocked Users
@@ -109,7 +110,7 @@ const BlockedUserItem = React.memo(({ item, index, onUnblock, onNavigate, unbloc
             <Image source={{ uri: item.profileImage }} style={styles.avatar} />
           ) : (
             <LinearGradient
-              colors={['#f9c349', '#e6b800']}
+              colors={[T.yellow, '#e6b800']}
               style={styles.avatarPlaceholder}
             >
               <Text style={styles.avatarText}>{item.name?.charAt(0)?.toUpperCase()}</Text>
@@ -125,7 +126,7 @@ const BlockedUserItem = React.memo(({ item, index, onUnblock, onNavigate, unbloc
               </Text>
             )}
             <View style={styles.blockedDateContainer}>
-              <Ionicons name="time-outline" size={12} color="#999" />
+              <Ionicons name="time-outline" size={12} color={T.textFaint} />
               <Text style={styles.blockedDate}>
                 Blocked on {new Date(item.blockedAt).toLocaleDateString('en-US', {
                   month: 'short',
@@ -142,9 +143,9 @@ const BlockedUserItem = React.memo(({ item, index, onUnblock, onNavigate, unbloc
           disabled={isUnblocking}
         >
           {isUnblocking ? (
-            <ActivityIndicator size="small" color="#f9c349" />
+            <ActivityIndicator size="small" color={T.yellow} />
           ) : (
-            <Text style={styles.unblockButtonText}>Unblock</Text>
+            <Text style={styles.unblockButtonText}>unblock</Text>
           )}
         </TouchableOpacity>
       </TouchableOpacity>
@@ -293,7 +294,7 @@ export default function BlockedUsersScreen() {
 
     return (
       <TouchableOpacity onPress={handleClearAll} style={styles.headerAction}>
-        <Text style={styles.headerActionText}>Clear All</Text>
+        <Text style={styles.headerActionText}>clear all</Text>
       </TouchableOpacity>
     );
   };
@@ -303,9 +304,9 @@ export default function BlockedUsersScreen() {
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeHeader}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+          <Ionicons name="arrow-back" size={24} color={T.ink} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Blocked Users</Text>
+        <Text style={styles.headerTitle}>blocked users</Text>
         {renderClearAllButton() ?? <View style={{ width: 40 }} />}
       </View>
     </SafeAreaView>
@@ -314,7 +315,7 @@ export default function BlockedUsersScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={false} />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} translucent={false} />
         <Header />
         <BlockedUsersSkeleton />
       </View>
@@ -323,7 +324,7 @@ export default function BlockedUsersScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={false} />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} translucent={false} />
 
       <Header />
 
@@ -344,10 +345,10 @@ export default function BlockedUsersScreen() {
               colors={['rgba(249,195,73,0.1)', 'rgba(249,195,73,0.05)']}
               style={styles.emptyIcon}
             >
-              <Ionicons name="ban-outline" size={60} color="#f9c349" />
+              <Ionicons name="ban-outline" size={60} color={T.yellow} />
             </LinearGradient>
           </View>
-          <Text style={styles.emptyTitle}>No Blocked Users</Text>
+          <Text style={styles.emptyTitle}>no blocked users</Text>
           <Text style={styles.emptySubtext}>
             Users you block will appear here. You can unblock them at any time.
           </Text>
@@ -369,8 +370,8 @@ export default function BlockedUsersScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#f9c349"
-              colors={['#f9c349']}
+              tintColor={T.yellow}
+              colors={[T.yellow]}
             />
           }
           contentContainerStyle={[
@@ -384,7 +385,7 @@ export default function BlockedUsersScreen() {
           ListHeaderComponent={
             <View style={styles.listHeader}>
               <View style={styles.listHeaderLeft}>
-                <Ionicons name="people-outline" size={16} color="#999" />
+                <Ionicons name="people-outline" size={16} color={T.textFaint} />
                 <Text style={styles.listHeaderText}>
                   {blockedUsers.length} {blockedUsers.length === 1 ? 'user' : 'users'} blocked
                 </Text>
@@ -400,15 +401,15 @@ export default function BlockedUsersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fc',
+    backgroundColor: T.paper,
   },
 
   // Safe Header
   safeHeader: {
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: T.ink,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.04,
         shadowRadius: 4,
@@ -426,22 +427,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: T.line,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#f5f6f8',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.headingBold,
+    color: T.ink,
     flex: 1,
     textAlign: 'center',
   },
@@ -449,17 +450,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: '#fef9f0',
+    backgroundColor: T.yellowSoft,
     borderWidth: 1,
-    borderColor: '#f9c349',
+    borderColor: T.yellow,
   },
   headerActionText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#f9c349',
+    fontFamily: F.bodySemi,
+    color: T.yellow,
   },
   headerActionTextDisabled: {
-    color: '#ccc',
+    color: T.textFaint,
   },
 
   // Skeleton
@@ -472,27 +473,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     borderBottomWidth: 0.5,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: T.line,
   },
   skeletonAvatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#e8ecf0',
+    backgroundColor: T.sand,
   },
   skeletonContent: {
     flex: 1,
     marginLeft: 12,
   },
   skeletonLine: {
-    backgroundColor: '#e8ecf0',
+    backgroundColor: T.sand,
     borderRadius: 4,
   },
   skeletonButton: {
     width: 80,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#e8ecf0',
+    backgroundColor: T.sand,
   },
 
   // List
@@ -507,7 +508,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 0.5,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: T.line,
   },
   listHeaderLeft: {
     flexDirection: 'row',
@@ -516,8 +517,8 @@ const styles = StyleSheet.create({
   },
   listHeaderText: {
     fontSize: 13,
-    color: '#999',
-    fontWeight: '500',
+    color: T.textFaint,
+    fontFamily: F.bodyMedium,
   },
   userItemWrapper: {
     paddingHorizontal: 16,
@@ -528,7 +529,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 14,
     borderBottomWidth: 0.5,
-    borderBottomColor: '#f5f5f5',
+    borderBottomColor: T.line,
   },
   userInfo: {
     flexDirection: 'row',
@@ -540,7 +541,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     borderWidth: 2,
-    borderColor: '#f0f0f0',
+    borderColor: T.line,
   },
   avatarPlaceholder: {
     width: 48,
@@ -549,12 +550,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#f0f0f0',
+    borderColor: T.line,
   },
   avatarText: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.headingBold,
+    color: T.ink,
   },
   userDetails: {
     marginLeft: 12,
@@ -562,12 +563,12 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
   },
   userHeadline: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: 13, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 1,
   },
   blockedDateContainer: {
@@ -578,24 +579,24 @@ const styles = StyleSheet.create({
   },
   blockedDate: {
     fontSize: 11,
-    color: '#999',
-    fontWeight: '400',
+    color: T.textFaint,
+    fontFamily: F.body,
   },
   unblockButton: {
     paddingHorizontal: 18,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: '#f9c349',
-    backgroundColor: '#fff',
+    borderColor: T.yellow,
+    backgroundColor: T.card,
   },
   unblockButtonLoading: {
     opacity: 0.6,
   },
   unblockButtonText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#f9c349',
+    fontFamily: F.bodySemi,
+    color: T.yellow,
   },
 
   // Empty State
@@ -615,17 +616,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#f0f0f0',
+    borderColor: T.line,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.headingBold,
+    color: T.ink,
     marginTop: 4,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
     textAlign: 'center',
     marginTop: 8,
     lineHeight: 22,

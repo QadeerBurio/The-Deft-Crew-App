@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { color as T, font as F } from "../../theme/tokens";
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 
 const { width } = Dimensions.get('window');
 
@@ -50,7 +51,7 @@ export default function CommunityGuidelinesScreen({ navigation }) {
       icon: 'heart-outline',
       title: 'Be Respectful',
       desc: 'Treat everyone with kindness. No harassment, bullying, or discrimination.',
-      color: '#FF6B6B',
+      color: T.danger,
     },
     {
       icon: 'shield-checkmark-outline',
@@ -68,19 +69,19 @@ export default function CommunityGuidelinesScreen({ navigation }) {
       icon: 'alert-circle-outline',
       title: 'No Harmful Content',
       desc: 'No violence, self-harm, or illegal activities.',
-      color: '#FF4757',
+      color: T.danger,
     },
     {
       icon: 'document-text-outline',
       title: 'Respect Copyright',
       desc: 'Share only content you have rights to. Give proper credit.',
-      color: '#3B82F6',
+      color: T.ink,
     },
     {
       icon: 'chatbubbles-outline',
       title: 'Be Constructive',
       desc: 'Engage positively. Respect different viewpoints.',
-      color: '#f9c349',
+      color: T.yellow,
     },
     {
       icon: 'megaphone-outline',
@@ -110,18 +111,18 @@ export default function CommunityGuidelinesScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={false} />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} translucent={false} />
 
       {/* Header wrapped in SafeAreaView (top only) */}
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeHeader}>
-        <LinearGradient colors={['#fff', '#fff']} style={styles.headerGradient}>
+        <LinearGradient colors={[T.white, T.white]} style={styles.headerGradient}>
           <View style={styles.header}>
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.goBack()}
               activeOpacity={0.7}
             >
-              <Ionicons name="chevron-back" size={26} color="#000000" />
+              <Ionicons name="chevron-back" size={26} color={T.ink} />
             </TouchableOpacity>
 
             <View style={styles.headerCenter}>
@@ -153,8 +154,8 @@ export default function CommunityGuidelinesScreen({ navigation }) {
             },
           ]}
         >
-          <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.heroIcon}>
-            <Ionicons name="people" size={28} color="#1A1A1A" />
+          <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.heroIcon}>
+            <Ionicons name="people" size={28} color={T.ink} />
           </LinearGradient>
           <Text style={styles.heroTitle}>Community Guidelines</Text>
           <Text style={styles.heroDesc}>Keeping TDC safe and respectful</Text>
@@ -171,7 +172,7 @@ export default function CommunityGuidelinesScreen({ navigation }) {
           ]}
         >
           <Text style={styles.introText}>
-            tdc<Text style={{color:'#f9c349', fontSize:20}}>.</Text> is for everyone. Treat people with respect. Harmful behaviour isn't allowed here.
+            tdc<Text style={{color:T.yellow, fontSize:20}}>.</Text> is for everyone. Treat people with respect. Harmful behaviour isn't allowed here.
           </Text>
         </Animated.View>
 
@@ -225,14 +226,14 @@ export default function CommunityGuidelinesScreen({ navigation }) {
         <Text style={styles.sectionLabel}>Moderation</Text>
         <View style={styles.card}>
           <View style={styles.moderationItem}>
-            <Ionicons name="flag-outline" size={16} color="#f9c349" />
+            <Ionicons name="flag-outline" size={16} color={T.yellow} />
             <Text style={styles.moderationText}>
               <Text style={styles.moderationStrong}>Report</Text> content or
               <Text style={styles.moderationStrong}> block</Text> users
             </Text>
           </View>
           <View style={[styles.moderationItem, { borderBottomWidth: 0 }]}>
-            <Ionicons name="shield-outline" size={16} color="#f9c349" />
+            <Ionicons name="shield-outline" size={16} color={T.yellow} />
             <Text style={styles.moderationText}>
               Violations may result in <Text style={styles.moderationStrong}>removal</Text>,{' '}
               <Text style={styles.moderationStrong}>suspension</Text>, or{' '}
@@ -252,28 +253,28 @@ export default function CommunityGuidelinesScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: T.paper,
   },
 
   // Safe Header
   safeHeader: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: T.ink,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.06,
         shadowRadius: 8,
       },
       android: {
-        elevation: 3,
+        elevation: 2,
       },
     }),
   },
 
   // Header
   headerGradient: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
   },
   header: {
     flexDirection: 'row',
@@ -288,7 +289,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 10,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: T.sand,
   },
   headerCenter: {
     flex: 1,
@@ -296,15 +297,15 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 17,
-    fontWeight: '700',
-    color: '#000',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     letterSpacing: 0.3,
   },
   headerHandle: {
     width: 20,
     height: 2.5,
     borderRadius: 1.5,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     marginTop: 3,
   },
   headerRight: {
@@ -318,14 +319,14 @@ const styles = StyleSheet.create({
   // Hero
   heroSection: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     marginHorizontal: 16,
     marginTop: 12,
     padding: 18,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.5)',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -341,27 +342,27 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#1A1A1A',
+    fontFamily: F.heading,
+    color: T.ink,
     letterSpacing: -0.3,
   },
   heroDesc: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: T.textFaint,
     marginTop: 2,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
 
   // Intro
   introCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     marginHorizontal: 16,
     marginTop: 10,
     padding: 14,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.5)',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -369,19 +370,19 @@ const styles = StyleSheet.create({
   },
   introText: {
     fontSize: 13,
-    color: '#555',
+    color: T.textMuted,
     lineHeight: 20,
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
 
   // Section Label
   sectionLabel: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#94A3B8',
+    fontFamily: F.bodyBold,
+    color: T.textFaint,
     letterSpacing: 0.8,
-    textTransform: 'uppercase',
+    textTransform: 'none',
     marginHorizontal: 20,
     marginTop: 16,
     marginBottom: 6,
@@ -389,13 +390,13 @@ const styles = StyleSheet.create({
 
   // Card
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     marginHorizontal: 16,
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.5)',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -409,7 +410,7 @@ const styles = StyleSheet.create({
     padding: 13,
     paddingHorizontal: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: T.line,
   },
   guidelineIcon: {
     width: 34,
@@ -424,15 +425,15 @@ const styles = StyleSheet.create({
   },
   guidelineTitle: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#1A1A1A',
+    fontFamily: F.bodySemi,
+    color: T.ink,
     letterSpacing: -0.2,
   },
   guidelineDesc: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: T.textFaint,
     marginTop: 1,
-    fontWeight: '400',
+    fontFamily: F.body,
     lineHeight: 15,
   },
 
@@ -446,19 +447,19 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: T.line,
   },
   prohibitedDot: {
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#FF4757',
+    backgroundColor: T.danger,
     marginRight: 10,
   },
   prohibitedText: {
     fontSize: 12.5,
-    color: '#444',
-    fontWeight: '500',
+    color: T.textMuted,
+    fontFamily: F.bodyMedium,
   },
 
   // Moderation
@@ -468,26 +469,26 @@ const styles = StyleSheet.create({
     padding: 13,
     paddingHorizontal: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: T.line,
     gap: 10,
   },
   moderationText: {
     flex: 1,
-    fontSize: 12.5,
-    color: '#555',
+    fontSize: 12.5, fontFamily: F.body,
+    color: T.textMuted,
     lineHeight: 18,
   },
   moderationStrong: {
-    fontWeight: '700',
-    color: '#1A1A1A',
+    fontFamily: F.bodyBold,
+    color: T.ink,
   },
 
   // Version
   version: {
     textAlign: 'center',
-    color: '#CBD5E1',
+    color: T.textFaint,
     fontSize: 10,
     paddingTop: 20,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
 });

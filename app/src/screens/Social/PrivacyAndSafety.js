@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { color as T } from "../../theme/tokens";
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 
 export default function PrivacyScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -57,22 +58,22 @@ export default function PrivacyScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={false} />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} translucent={false} />
 
       {/* Header wrapped in SafeAreaView (top only) */}
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeHeader}>
-        <LinearGradient colors={['#fff', '#fff']} style={styles.headerGradient}>
+        <LinearGradient colors={[T.white, T.white]} style={styles.headerGradient}>
           <View style={styles.header}>
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.goBack()}
               activeOpacity={0.7}
             >
-              <Ionicons name="chevron-back" size={28} color="#050505" />
+              <Ionicons name="chevron-back" size={28} color={T.ink} />
             </TouchableOpacity>
 
             <View style={styles.headerCenter}>
-              <Text style={styles.headerTitle}>Privacy Policy</Text>
+              <Text style={styles.headerTitle}>privacy policy</Text>
               <View style={styles.headerHandle} />
             </View>
 
@@ -102,7 +103,7 @@ export default function PrivacyScreen({ navigation }) {
             },
           ]}
         >
-          <Text style={styles.heroTitle}>Privacy Policy</Text>
+          <Text style={styles.heroTitle}>privacy policy</Text>
           <Text style={styles.heroSubtitle}>Your data is safe with us</Text>
           <View style={styles.heroDivider} />
         </Animated.View>
@@ -148,14 +149,14 @@ export default function PrivacyScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: T.sand,
   },
   safeHeader: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     // Shadow stays on the header container so it's visible over content
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: T.ink,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.08,
         shadowRadius: 8,
@@ -166,7 +167,7 @@ const styles = StyleSheet.create({
     }),
   },
   headerGradient: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
   },
   header: {
     flexDirection: 'row',
@@ -191,14 +192,14 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#000000',
+    color: T.ink,
     letterSpacing: 0.5,
   },
   headerHandle: {
     width: 24,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     marginTop: 4,
   },
   headerRight: {
@@ -214,27 +215,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 20,
     paddingHorizontal: 20,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     marginBottom: 4,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: T.line,
   },
   heroTitle: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#000',
+    color: T.ink,
     letterSpacing: 0.3,
     marginBottom: 2,
   },
   heroSubtitle: {
     fontSize: 12,
-    color: '#999',
+    color: T.textFaint,
     textAlign: 'center',
   },
   heroDivider: {
     width: 32,
     height: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     borderRadius: 2,
     marginTop: 10,
   },
@@ -243,11 +244,11 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderRadius: 12,
     padding: 14,
     marginBottom: 8,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -261,31 +262,31 @@ const styles = StyleSheet.create({
   sectionNumber: {
     fontSize: 11,
     fontWeight: '900',
-    color: '#f9c349',
+    color: T.yellow,
     letterSpacing: 0.5,
     marginRight: 8,
   },
   sectionLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: T.sand,
     marginRight: 8,
   },
   sectionTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#000',
+    color: T.ink,
     letterSpacing: 0.3,
   },
   sectionText: {
     fontSize: 12.5,
-    color: '#666',
+    color: T.textMuted,
     lineHeight: 19,
     paddingLeft: 20,
   },
   version: {
     textAlign: 'center',
-    color: '#ccc',
+    color: T.textFaint,
     fontSize: 10,
     paddingTop: 20,
   },

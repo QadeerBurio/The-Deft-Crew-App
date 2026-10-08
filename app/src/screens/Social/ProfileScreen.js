@@ -9,10 +9,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from "../../context/AuthContext";
 import { soundLike, soundTap } from "../../lib/tdcSounds";
+import { color as T, font as F } from "../../theme/tokens";
 const { width } = Dimensions.get('window');
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
 
@@ -83,13 +84,13 @@ const PostItem = React.memo(({ item, index, isPublic, user, onLike, onComment, o
           </View>
           {!isPublic && item.visibility === 'campus' && (
             <View style={styles.campusOnlyTag}>
-              <Ionicons name="lock-closed" size={9} color="#f9c349" />
+              <Ionicons name="lock-closed" size={9} color={T.yellow} />
               <Text style={styles.campusOnlyTagText}>campus only</Text>
             </View>
           )}
         </View>
         <TouchableOpacity onPress={() => onOptions(item)} style={styles.menuBtn}>
-          <Ionicons name="ellipsis-horizontal" size={20} color="#71767b" />
+          <Ionicons name="ellipsis-horizontal" size={20} color={T.textMuted} />
         </TouchableOpacity>
       </View>
 
@@ -112,16 +113,16 @@ const PostItem = React.memo(({ item, index, isPublic, user, onLike, onComment, o
       <View style={styles.cardFooter}>
         <TouchableOpacity style={styles.actionBtn} onPress={handleLocalLike} activeOpacity={0.6}>
           <Animated.View style={{ transform: [{ scale: likeScale }] }}>
-            <Ionicons name={isLiked ? "heart" : "heart-outline"} size={18} color={isLiked ? "#f9c349" : "#71767b"} />
+            <Ionicons name={isLiked ? "heart" : "heart-outline"} size={18} color={isLiked ? T.yellow : T.textMuted} />
           </Animated.View>
-          <Text style={[styles.actionText, isLiked && { color: "#f9c349" }]}>{likeCount}</Text>
+          <Text style={[styles.actionText, isLiked && { color: T.yellow }]}>{likeCount}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn} onPress={() => onComment(item, isPublic ? 'post' : 'confession')} activeOpacity={0.6}>
-          <Ionicons name="chatbubble-outline" size={18} color="#71767b" />
+          <Ionicons name="chatbubble-outline" size={18} color={T.textMuted} />
           <Text style={styles.actionText}>{commentCount}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn} onPress={() => onShare(item)} activeOpacity={0.6}>
-          <Ionicons name="paper-plane-outline" size={18} color="#71767b" />
+          <Ionicons name="paper-plane-outline" size={18} color={T.textMuted} />
         </TouchableOpacity>
       </View>
     </View>
@@ -131,7 +132,7 @@ const PostItem = React.memo(({ item, index, isPublic, user, onLike, onComment, o
 // ============ Inline Loader ============
 const InlineLoader = () => (
   <View style={styles.inlineLoader}>
-    <ActivityIndicator size="small" color="#f9c349" />
+    <ActivityIndicator size="small" color={T.yellow} />
   </View>
 );
 
@@ -433,12 +434,12 @@ export default function ProfileScreen() {
       data={userPosts}
       keyExtractor={(item) => item._id}
       renderItem={renderPostItem}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f9c349" colors={["#f9c349"]} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.yellow} colors={[T.yellow]} />}
       ListEmptyComponent={
         loading ? <InlineLoader /> : (
           <View style={styles.emptyContainer}>
-            <Ionicons name="document-text-outline" size={48} color="#cfd9de" />
-            <Text style={styles.emptyText}>No posts yet</Text>
+            <Ionicons name="document-text-outline" size={48} color={T.textFaint} />
+            <Text style={styles.emptyText}>no posts yet</Text>
             <Text style={styles.emptySubText}>Share your thoughts with the community</Text>
           </View>
         )
@@ -457,13 +458,13 @@ export default function ProfileScreen() {
       data={userConfessions}
       keyExtractor={(item) => item._id}
       renderItem={renderConfessionItem}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f9c349" colors={["#f9c349"]} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.yellow} colors={[T.yellow]} />}
       ListEmptyComponent={
         loading ? <InlineLoader /> : (
           <View style={styles.emptyContainer}>
-            <Ionicons name="lock-closed-outline" size={48} color="#cfd9de" />
-            <Text style={styles.emptyText}>No secrets yet</Text>
-            <Text style={styles.emptySubText}>Share anonymously with the community</Text>
+            <Ionicons name="lock-closed-outline" size={48} color={T.textFaint} />
+            <Text style={styles.emptyText}>no secrets yet</Text>
+            <Text style={styles.emptySubText}>share anonymously with the community</Text>
           </View>
         )
       }
@@ -478,16 +479,16 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       {/* Top Navigation */}
       <View style={styles.topNav}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navBtn}>
-          <Ionicons name="arrow-back" size={24} color="#0f1419" />
+          <Ionicons name="arrow-back" size={24} color={T.ink} />
         </TouchableOpacity>
-        <Text style={styles.navTitle}>Profile</Text>
+        <Text style={styles.navTitle}>profile</Text>
         <TouchableOpacity onPress={() => navigation.navigate("SettingsScreen")} style={styles.navBtn}>
-          <Ionicons name="settings-outline" size={24} color="#0f1419" />
+          <Ionicons name="settings-outline" size={24} color={T.ink} />
         </TouchableOpacity>
       </View>
 
@@ -505,29 +506,29 @@ export default function ProfileScreen() {
             <Text style={styles.handle}>@{user?.username || 'student'}</Text>
             {user?.bio && <Text style={styles.bioText}>{user.bio}</Text>}
             <Text style={styles.uniText}>
-              <Ionicons name="school-outline" size={14} color="#71767b" />
+              <Ionicons name="school-outline" size={14} color={T.textMuted} />
               {" "}{user?.university?.name || user?.education?.[0]?.school || "TDC Student"}
             </Text>
 
             <View style={styles.statsRow}>
               <TouchableOpacity style={styles.statBox} onPress={handleViewConnections} activeOpacity={0.7}>
                 <Text style={styles.statNum}>{connectionCount}</Text>
-                <Text style={styles.statLab}>Connections</Text>
+                <Text style={styles.statLab}>connections</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.statBox} onPress={() => setActiveTab("posts")} activeOpacity={0.7}>
                 <Text style={styles.statNum}>{userPosts.length}</Text>
-                <Text style={styles.statLab}>Posts</Text>
+                <Text style={styles.statLab}>posts</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.statBox} onPress={() => setActiveTab("secrets")} activeOpacity={0.7}>
                 <Text style={styles.statNum}>{userConfessions.length}</Text>
-                <Text style={styles.statLab}>Secrets</Text>
+                <Text style={styles.statLab}>secrets</Text>
               </TouchableOpacity>
             </View>
 
             <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate("EditProfileScreen")} activeOpacity={0.8}>
-              <LinearGradient colors={['#0f1419', '#1a1a1a']} style={styles.gradientBtn}>
-                <Ionicons name="create-outline" size={16} color="#f9c349" />
-                <Text style={styles.editBtnText}>Edit Profile</Text>
+              <LinearGradient colors={[T.ink, T.ink]} style={styles.gradientBtn}>
+                <Ionicons name="create-outline" size={16} color={T.yellow} />
+                <Text style={styles.editBtnText}>edit profile</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -562,9 +563,9 @@ export default function ProfileScreen() {
           <View style={styles.modalContent}>
             <View style={styles.dragHandle} />
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Likes</Text>
+              <Text style={styles.modalTitle}>likes</Text>
               <TouchableOpacity onPress={() => setShowLikesModal(false)} style={styles.modalCloseBtn}>
-                <Ionicons name="close" size={22} color="#0f1419" />
+                <Ionicons name="close" size={22} color={T.ink} />
               </TouchableOpacity>
             </View>
             <FlatList
@@ -574,10 +575,10 @@ export default function ProfileScreen() {
                 <TouchableOpacity style={styles.likeUserItem} onPress={() => { setShowLikesModal(false); navigation.navigate("UserProfile", { userId: item._id }); }}>
                   <Image source={{ uri: item.profileImage || `https://ui-avatars.com/api/?name=${item.name}&background=1a1a1a&color=f9c349` }} style={styles.likeUserAvatar} />
                   <Text style={styles.likeUserName}>{item.name}</Text>
-                  <Ionicons name="chevron-forward" size={18} color="#cfd9de" />
+                  <Ionicons name="chevron-forward" size={18} color={T.textFaint} />
                 </TouchableOpacity>
               )}
-              ListEmptyComponent={<Text style={styles.noDataText}>No likes yet</Text>}
+              ListEmptyComponent={<Text style={styles.noDataText}>no likes yet</Text>}
             />
           </View>
         </TouchableOpacity>
@@ -589,9 +590,9 @@ export default function ProfileScreen() {
           <View style={styles.modalContent}>
             <View style={styles.dragHandle} />
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Comments</Text>
+              <Text style={styles.modalTitle}>comments</Text>
               <TouchableOpacity onPress={() => setShowCommentsModal(false)} style={styles.modalCloseBtn}>
-                <Ionicons name="close" size={22} color="#0f1419" />
+                <Ionicons name="close" size={22} color={T.ink} />
               </TouchableOpacity>
             </View>
             <FlatList
@@ -609,20 +610,20 @@ export default function ProfileScreen() {
                   </View>
                 </View>
               )}
-              ListEmptyComponent={<Text style={styles.noDataText}>No comments yet</Text>}
+              ListEmptyComponent={<Text style={styles.noDataText}>no comments yet</Text>}
               style={{ maxHeight: 300 }}
             />
             <View style={styles.commentInputContainer}>
               <TextInput
                 style={styles.commentInput}
                 placeholder="Write a comment..."
-                placeholderTextColor="#71767b"
+                placeholderTextColor={T.textMuted}
                 value={commentText}
                 onChangeText={setCommentText}
                 multiline
               />
               <TouchableOpacity style={[styles.sendCommentBtn, !commentText.trim() && styles.sendDisabled]} onPress={addComment} disabled={!commentText.trim()}>
-                <Ionicons name="send" size={18} color="#fff" />
+                <Ionicons name="send" size={18} color={T.white} />
               </TouchableOpacity>
             </View>
           </View>
@@ -636,11 +637,11 @@ export default function ProfileScreen() {
             <View style={styles.dragHandle} />
             <View style={styles.modalHeader}>
               <View style={styles.modalHeaderLeft}>
-                <Ionicons name="people-outline" size={20} color="#f9c349" />
+                <Ionicons name="people-outline" size={20} color={T.yellow} />
                 <Text style={styles.modalTitle}>{connectionsList.length} Connections</Text>
               </View>
               <TouchableOpacity onPress={() => setShowConnectionsModal(false)} style={styles.modalCloseBtn}>
-                <Ionicons name="close" size={22} color="#0f1419" />
+                <Ionicons name="close" size={22} color={T.ink} />
               </TouchableOpacity>
             </View>
 
@@ -659,7 +660,7 @@ export default function ProfileScreen() {
                     {item.profileImage ? (
                       <Image source={{ uri: item.profileImage }} style={styles.connectionModalAvatarImg} />
                     ) : (
-                      <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.connectionModalAvatarPlaceholder}>
+                      <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.connectionModalAvatarPlaceholder}>
                         <Text style={styles.connectionModalAvatarText}>
                           {item.name?.charAt(0)?.toUpperCase()}
                         </Text>
@@ -673,13 +674,13 @@ export default function ProfileScreen() {
                       {item.headline || "TDC Member"}
                     </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color="#cfd9de" />
+                  <Ionicons name="chevron-forward" size={18} color={T.textFaint} />
                 </TouchableOpacity>
               )}
               ListEmptyComponent={
                 <View style={styles.emptyConnectionsModal}>
-                  <Ionicons name="people-outline" size={50} color="#cfd9de" />
-                  <Text style={styles.emptyConnectionsText}>No connections yet</Text>
+                  <Ionicons name="people-outline" size={50} color={T.textFaint} />
+                  <Text style={styles.emptyConnectionsText}>no connections yet</Text>
                 </View>
               }
               contentContainerStyle={styles.connectionsModalList}
@@ -706,16 +707,16 @@ export default function ProfileScreen() {
                 }
               }}
             >
-              <View style={[styles.optionIcon, { backgroundColor: '#fde8e8' }]}>
-                <Ionicons name="trash-outline" size={20} color="#f4212e" />
+              <View style={[styles.optionIcon, { backgroundColor: T.dangerBg }]}>
+                <Ionicons name="trash-outline" size={20} color={T.danger} />
               </View>
-              <Text style={[styles.optionText, { color: '#f4212e' }]}>Delete</Text>
+              <Text style={[styles.optionText, { color: T.danger }]}>delete</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.optionItem} onPress={() => setShowOptionsModal(false)}>
-              <View style={[styles.optionIcon, { backgroundColor: '#f0f2f5' }]}>
-                <Ionicons name="close-outline" size={20} color="#71767b" />
+              <View style={[styles.optionIcon, { backgroundColor: T.sand }]}>
+                <Ionicons name="close-outline" size={20} color={T.textMuted} />
               </View>
-              <Text style={styles.optionText}>Cancel</Text>
+              <Text style={styles.optionText}>cancel</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -730,14 +731,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: 3,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: T.ink,
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 8,
     marginTop: 3,
   },
-  campusOnlyTagText: { color: '#f9c349', fontSize: 10, fontWeight: '700' },
-  container: { flex: 1, backgroundColor: "#ffffff", paddingBottom: 20 },
+  campusOnlyTagText: { color: T.yellow, fontSize: 10, fontFamily: F.bodyBold },
+  container: { flex: 1, backgroundColor: T.card, paddingBottom: 20 },
 
   inlineLoader: {
     paddingVertical: 60,
@@ -752,9 +753,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 13,
     paddingVertical: 6,
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#eff3f4',
+    borderBottomColor: T.line,
   },
   navBtn: {
     width: 35,
@@ -763,35 +764,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  navTitle: { fontSize: 20, fontWeight: '700', color: '#0f1419' },
+  navTitle: { fontSize: 20, fontFamily: F.headingBold, color: T.ink },
 
   // Header
-  headerSection: { backgroundColor: '#fff' },
+  headerSection: { backgroundColor: T.card },
   headerRow: { flexDirection: 'row', padding: 10, paddingBottom: 2 },
   avatarContainer: { marginRight: 16 },
-  avatar: { width: 72, height: 72, borderRadius: 36, borderWidth: 3, borderColor: '#fff' },
+  avatar: { width: 72, height: 72, borderRadius: 36, borderWidth: 3, borderColor: T.white },
   headerRight: { flex: 1 },
-  name: { fontSize: 20, fontWeight: '700', color: '#0f1419' },
-  handle: { fontSize: 15, color: '#71767b', marginTop: 1 },
-  bioText: { fontSize: 15, color: '#0f1419', marginTop: 8, lineHeight: 20 },
-  uniText: { fontSize: 14, color: '#71767b', marginTop: 4 },
+  name: { fontSize: 20, fontFamily: F.headingBold, color: T.ink },
+  handle: { fontSize: 15, fontFamily: F.body, color: T.textMuted, marginTop: 1 },
+  bioText: { fontSize: 15, fontFamily: F.body, color: T.ink, marginTop: 8, lineHeight: 20 },
+  uniText: { fontSize: 14, fontFamily: F.body, color: T.textMuted, marginTop: 4 },
 
   // Stats
   statsRow: { flexDirection: 'row', marginTop: 12, gap: 20 },
   statBox: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  statNum: { fontSize: 17, fontWeight: '700', color: '#0f1419' },
-  statLab: { fontSize: 14, color: '#71767b' },
+  statNum: { fontSize: 17, fontFamily: F.bodyBold, color: T.ink },
+  statLab: { fontSize: 14, fontFamily: F.body, color: T.textMuted },
 
   // Edit Button
   editBtn: { marginTop: 12, alignSelf: 'flex-start' },
   gradientBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20 },
-  editBtnText: { color: '#f9c349', fontWeight: '700', fontSize: 14 },
+  editBtnText: { color: T.yellow, fontFamily: F.bodyBold, fontSize: 14 },
 
   // Tabs
   tabWrapper: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: '#eff3f4',
+    borderTopColor: T.line,
     marginTop: 4,
   },
   tab: {
@@ -800,67 +801,67 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     position: 'relative',
   },
-  tabText: { fontSize: 15, fontWeight: '500', color: '#71767b' },
-  activeTabText: { color: '#0f1419', fontWeight: '700' },
+  tabText: { fontSize: 15, fontFamily: F.bodyMedium, color: T.textMuted },
+  activeTabText: { color: T.ink, fontFamily: F.bodyBold },
   tabIndicator: {
     position: 'absolute',
     bottom: 0,
     width: 56,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
   },
 
   tabContent: { flex: 1 },
 
   // Post Card
   postCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eff3f4',
+    borderBottomColor: T.line,
   },
   cardUserHeader: { flexDirection: 'row', alignItems: 'center' },
   cardAvatarWrapper: { marginRight: 12 },
   cardAvatar: { width: 40, height: 40, borderRadius: 20 },
   cardHeaderText: { flex: 1 },
   cardNameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
-  cardUserName: { fontSize: 15, fontWeight: '700', color: '#0f1419' },
-  cardHandle: { fontSize: 14, color: '#71767b' },
-  cardTime: { fontSize: 14, color: '#71767b' },
+  cardUserName: { fontSize: 15, fontFamily: F.bodyBold, color: T.ink },
+  cardHandle: { fontSize: 14, fontFamily: F.body, color: T.textMuted },
+  cardTime: { fontSize: 14, fontFamily: F.body, color: T.textMuted },
   menuBtn: { padding: 4 },
   cardBody: { marginTop: 4 },
-  postTextContent: { fontSize: 15, color: '#0f1419', lineHeight: 22 },
+  postTextContent: { fontSize: 15, fontFamily: F.body, color: T.ink, lineHeight: 22 },
   showMoreBtn: { marginTop: 4 },
-  showMoreText: { color: '#f9c349', fontWeight: '400', fontSize: 14 },
+  showMoreText: { color: T.yellow, fontFamily: F.body, fontSize: 14 },
   imageWrapper: { marginTop: 12, borderRadius: 16, overflow: 'hidden' },
-  postImage: { width: '100%', height: 220, backgroundColor: '#eff3f4' },
+  postImage: { width: '100%', height: 220, backgroundColor: T.sand },
   cardFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 24 },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  actionText: { fontSize: 14, color: '#71767b', fontWeight: '400' },
+  actionText: { fontSize: 14, color: T.textMuted, fontFamily: F.body },
 
   // Empty State
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
-  emptyText: { fontSize: 17, fontWeight: '700', color: '#0f1419', marginTop: 12 },
-  emptySubText: { fontSize: 14, color: '#71767b', marginTop: 4 },
+  emptyText: { fontSize: 17, fontFamily: F.bodyBold, color: T.ink, marginTop: 12 },
+  emptySubText: { fontSize: 14, fontFamily: F.body, color: T.textMuted, marginTop: 4 },
 
   // Modals
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
-  modalContent: { backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '75%', minHeight: '40%' },
+  modalOverlay: { flex: 1, backgroundColor: T.overlay, justifyContent: "flex-end" },
+  modalContent: { backgroundColor: T.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '75%', minHeight: '40%' },
   connectionsModalContent: {
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '80%',
     minHeight: '40%',
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
   },
-  dragHandle: { width: 36, height: 4, backgroundColor: '#cfd9de', borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#eff3f4' },
+  dragHandle: { width: 36, height: 4, backgroundColor: T.sand, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: T.line },
   modalHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#0f1419' },
-  modalCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#eff3f4', justifyContent: 'center', alignItems: 'center' },
+  modalTitle: { fontSize: 18, fontFamily: F.headingBold, color: T.ink },
+  modalCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center' },
 
   // Connection Modal Items
   connectionsModalList: { paddingBottom: 20 },
@@ -869,12 +870,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#eff3f4',
+    borderBottomColor: T.line,
   },
   connectionModalAvatar: { position: 'relative' },
   connectionModalAvatarImg: { width: 44, height: 44, borderRadius: 22 },
   connectionModalAvatarPlaceholder: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
-  connectionModalAvatarText: { fontSize: 18, fontWeight: '700', color: '#1a1a1a' },
+  connectionModalAvatarText: { fontSize: 18, fontFamily: F.headingBold, color: T.ink },
   connectionModalOnlineDot: {
     position: 'absolute',
     bottom: 0,
@@ -882,41 +883,41 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#2ed573',
+    backgroundColor: T.success,
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: T.white,
   },
   connectionModalInfo: { flex: 1, marginLeft: 12 },
-  connectionModalName: { fontSize: 15, fontWeight: '600', color: '#0f1419' },
-  connectionModalHeadline: { fontSize: 13, color: '#71767b', marginTop: 1 },
+  connectionModalName: { fontSize: 15, fontFamily: F.bodySemi, color: T.ink },
+  connectionModalHeadline: { fontSize: 13, fontFamily: F.body, color: T.textMuted, marginTop: 1 },
   emptyConnectionsModal: { alignItems: 'center', paddingVertical: 40 },
-  emptyConnectionsText: { fontSize: 16, color: '#71767b', marginTop: 12 },
+  emptyConnectionsText: { fontSize: 16, fontFamily: F.body, color: T.textMuted, marginTop: 12 },
 
   // Like Modal
-  likeUserItem: { flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: '#eff3f4' },
+  likeUserItem: { flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: T.line },
   likeUserAvatar: { width: 44, height: 44, borderRadius: 22, marginRight: 12 },
-  likeUserName: { fontSize: 15, fontWeight: '600', color: '#0f1419', flex: 1 },
+  likeUserName: { fontSize: 15, fontFamily: F.bodySemi, color: T.ink, flex: 1 },
 
   // Comment Modal
   commentItem: { flexDirection: 'row', marginBottom: 16, paddingHorizontal: 4 },
-  commentAvatar: { width: 36, height: 36, borderRadius: 18, marginRight: 10, backgroundColor: '#eff3f4' },
+  commentAvatar: { width: 36, height: 36, borderRadius: 18, marginRight: 10, backgroundColor: T.sand },
   commentContent: { flex: 1 },
-  commentBubble: { backgroundColor: '#f0f2f5', padding: 10, borderRadius: 14, borderTopLeftRadius: 4 },
-  commentUserName: { fontSize: 13, fontWeight: '700', color: '#0f1419', marginBottom: 2 },
-  commentText: { fontSize: 14, color: '#0f1419', lineHeight: 20 },
-  commentTime: { fontSize: 10, color: '#71767b', marginTop: 4, marginLeft: 4 },
-  commentInputContainer: { flexDirection: 'row', padding: 12, borderTopWidth: 1, borderTopColor: '#eff3f4', alignItems: 'center', gap: 8 },
-  commentInput: { flex: 1, backgroundColor: '#f0f2f5', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, color: '#0f1419', maxHeight: 80 },
-  sendCommentBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#f9c349', justifyContent: 'center', alignItems: 'center' },
-  sendDisabled: { backgroundColor: '#cfd9de' },
-  noDataText: { textAlign: 'center', color: '#71767b', padding: 30, fontWeight: '500' },
+  commentBubble: { backgroundColor: T.sand, padding: 10, borderRadius: 14, borderTopLeftRadius: 4 },
+  commentUserName: { fontSize: 13, fontFamily: F.bodyBold, color: T.ink, marginBottom: 2 },
+  commentText: { fontSize: 14, fontFamily: F.body, color: T.ink, lineHeight: 20 },
+  commentTime: { fontSize: 10, fontFamily: F.body, color: T.textMuted, marginTop: 4, marginLeft: 4 },
+  commentInputContainer: { flexDirection: 'row', padding: 12, borderTopWidth: 1, borderTopColor: T.line, alignItems: 'center', gap: 8 },
+  commentInput: { flex: 1, backgroundColor: T.paper, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, fontFamily: F.body, color: T.ink, maxHeight: 80 },
+  sendCommentBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: T.yellow, justifyContent: 'center', alignItems: 'center' },
+  sendDisabled: { backgroundColor: T.sand },
+  noDataText: { textAlign: 'center', color: T.textMuted, padding: 30, fontFamily: F.bodyMedium },
 
   // Options Modal
-  optionsOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
-  optionsMenu: { backgroundColor: '#fff', borderRadius: 16, width: width * 0.6, overflow: 'hidden' },
-  optionItem: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12, borderBottomWidth: 1, borderBottomColor: '#eff3f4' },
+  optionsOverlay: { flex: 1, backgroundColor: T.overlay, justifyContent: 'center', alignItems: 'center' },
+  optionsMenu: { backgroundColor: T.card, borderRadius: 16, width: width * 0.6, overflow: 'hidden' },
+  optionItem: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12, borderBottomWidth: 1, borderBottomColor: T.line },
   optionIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  optionText: { fontSize: 15, fontWeight: '600', color: '#0f1419' },
+  optionText: { fontSize: 15, fontFamily: F.bodySemi, color: T.ink },
 
   listContentContainer: { paddingBottom: 40, flexGrow: 1 },
 });

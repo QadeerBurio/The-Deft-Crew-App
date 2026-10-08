@@ -24,7 +24,7 @@ import {
   MaterialCommunityIcons,
   Feather,
 } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import * as Haptics from "expo-haptics";
 import axios from "axios";
 import {
@@ -36,26 +36,27 @@ import {
 import { AuthContext } from "../../context/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { color as T, font as F } from "../../theme/tokens";
 const { width, height } = Dimensions.get("window");
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
 // Enhanced Color Palette
 const COLORS = {
-  primary: "#f9c349",
+  primary: T.yellow,
   primaryDark: "#e6b800",
-  primaryLight: "#fdebb3",
-  primaryGradient: ["#f9c349", "#f5b81b"],
-  white: "#ffffff",
-  black: "#1a1a1a",
-  gray: "#666666",
-  grayLight: "#999999",
-  grayLighter: "#f0f0f0",
-  lightGray: "#f8f9fa",
-  border: "#f0f0f0",
-  danger: "#ff4757",
-  success: "#2ed573",
+  primaryLight: T.yellowSoft,
+  primaryGradient: [T.yellow, T.yellow],
+  white: T.white,
+  black: T.ink,
+  gray: T.textMuted,
+  grayLight: T.textFaint,
+  grayLighter: T.sand,
+  lightGray: T.sand,
+  border: T.sand,
+  danger: T.danger,
+  success: T.success,
   shadow: "rgba(0,0,0,0.08)",
-  blocked: "#e74c3c",
+  blocked: T.danger,
   student: "#4a90d9",
 };
 
@@ -182,7 +183,7 @@ const UserResultItem = React.memo(
         <Animated.View style={[styles.userResultWrapper, animatedStyle]}>
           <View style={[styles.userResultItem, styles.blockedItem]}>
             <LinearGradient
-              colors={["#fef0f0", "#fdf0f0"]}
+              colors={[T.dangerBg, "#fdf0f0"]}
               style={styles.userResultGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -196,17 +197,17 @@ const UserResultItem = React.memo(
                     />
                   ) : (
                     <LinearGradient
-                      colors={["#ccc", "#bbb"]}
+                      colors={[T.textFaint, T.textFaint]}
                       style={styles.avatarPlaceholder}
                     >
-                      <Text style={[styles.avatarText, { color: "#999" }]}>
+                      <Text style={[styles.avatarText, { color: T.textFaint }]}>
                         {item.name?.charAt(0)?.toUpperCase()}
                       </Text>
                     </LinearGradient>
                   )}
                 </View>
                 <View style={styles.blockedBadge}>
-                  <Ionicons name="ban" size={12} color="#fff" />
+                  <Ionicons name="ban" size={12} color={T.white} />
                 </View>
               </View>
 
@@ -227,7 +228,7 @@ const UserResultItem = React.memo(
 
               <View style={styles.userAction}>
                 <View style={[styles.actionButton, styles.blockedActionButton]}>
-                  <Ionicons name="ban-outline" size={18} color="#e74c3c" />
+                  <Ionicons name="ban-outline" size={18} color={T.danger} />
                 </View>
               </View>
             </LinearGradient>
@@ -246,7 +247,7 @@ const UserResultItem = React.memo(
           activeOpacity={1}
         >
           <LinearGradient
-            colors={["#ffffff", "#fafafa"]}
+            colors={[T.white, T.sand]}
             style={styles.userResultGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -284,7 +285,7 @@ const UserResultItem = React.memo(
                       size={11}
                       color={COLORS.student}
                     />
-                    <Text style={styles.studentBadgeText}>Student</Text>
+                    <Text style={styles.studentBadgeText}>student</Text>
                   </View>
                 )}
                 {item.verified && (
@@ -433,13 +434,13 @@ const RecentPeopleItem = React.memo(
               />
             ) : (
               <LinearGradient
-                colors={isBlocked ? ["#ccc", "#bbb"] : COLORS.primaryGradient}
+                colors={isBlocked ? [T.textFaint, T.textFaint] : COLORS.primaryGradient}
                 style={styles.recentUserAvatarPlaceholder}
               >
                 <Text
                   style={[
                     styles.recentUserAvatarText,
-                    isBlocked && { color: "#999" },
+                    isBlocked && { color: T.textFaint },
                   ]}
                 >
                   {item.name?.charAt(0)?.toUpperCase()}
@@ -448,7 +449,7 @@ const RecentPeopleItem = React.memo(
             )}
             {isBlocked && (
               <View style={styles.recentBlockedBadge}>
-                <Ionicons name="ban" size={10} color="#fff" />
+                <Ionicons name="ban" size={10} color={T.white} />
               </View>
             )}
           </View>
@@ -985,7 +986,7 @@ export default function SearchScreen({ navigation }) {
       return (
         <View style={styles.searchFooterLoader}>
           <ActivityIndicator size="small" color={COLORS.primary} />
-          <Text style={styles.searchFooterText}>Loading more students...</Text>
+          <Text style={styles.searchFooterText}>loading more students...</Text>
         </View>
       );
     }
@@ -1017,13 +1018,13 @@ export default function SearchScreen({ navigation }) {
           />
         </LinearGradient>
       </View>
-      <Text style={styles.searchEmptyText}>No students found</Text>
+      <Text style={styles.searchEmptyText}>no students found</Text>
       <Text style={styles.searchEmptySubText}>
-        Try a different search term
+        try a different search term
       </Text>
       {searchHistory.length > 0 && !isGuest && (
         <View style={styles.searchHistoryContainer}>
-          <Text style={styles.searchHistoryTitle}>Recent Searches</Text>
+          <Text style={styles.searchHistoryTitle}>recent searches</Text>
           <View style={styles.searchHistoryChips}>
             {searchHistory.slice(0, 5).map((query, index) => (
               <TouchableOpacity
@@ -1074,7 +1075,7 @@ export default function SearchScreen({ navigation }) {
                 color={COLORS.primary}
               />
             </View>
-            <Text style={styles.recentTitle}>Recent Students</Text>
+            <Text style={styles.recentTitle}>recent students</Text>
             {filteredRecent.length > 0 && (
               <View style={styles.recentCountBadge}>
                 <Text style={styles.recentCountText}>
@@ -1088,7 +1089,7 @@ export default function SearchScreen({ navigation }) {
               onPress={clearRecentPeople}
               activeOpacity={0.7}
             >
-              <Text style={styles.clearText}>Clear All</Text>
+              <Text style={styles.clearText}>clear all</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -1139,7 +1140,7 @@ export default function SearchScreen({ navigation }) {
                 />
               </LinearGradient>
             </Animated.View>
-            <Text style={styles.emptyRecentText}>No recent students</Text>
+            <Text style={styles.emptyRecentText}>no recent students</Text>
             <Text style={styles.emptyRecentSubText}>
               Students you view will appear here
             </Text>
@@ -1220,7 +1221,7 @@ export default function SearchScreen({ navigation }) {
             >
               <Ionicons name="school" size={14} color={COLORS.white} />
             </LinearGradient>
-            <Text style={styles.resultsTitle}>Student Results</Text>
+            <Text style={styles.resultsTitle}>student results</Text>
           </View>
           <View style={styles.resultsBadge}>
             <Text style={styles.resultsBadgeText}>
@@ -1238,7 +1239,7 @@ export default function SearchScreen({ navigation }) {
       ) : isSearching && searchResults.length === 0 ? (
         <View style={styles.searchLoadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.searchLoadingText}>Searching students...</Text>
+          <Text style={styles.searchLoadingText}>searching students...</Text>
         </View>
       ) : (
         <Animated.View style={{ flex: 1, opacity: listOpacity }}>
@@ -1319,15 +1320,15 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   searchInput: {
     flex: 1,
     fontSize: 15,
     color: COLORS.black,
-    fontWeight: "500",
+    fontFamily: F.bodyMedium,
     height: 48,
     paddingVertical: 0,
   },
@@ -1357,7 +1358,7 @@ const styles = StyleSheet.create({
   },
   resultsTitle: {
     fontSize: 15,
-    fontWeight: "700",
+    fontFamily: F.bodyBold,
     color: COLORS.black,
   },
   resultsBadge: {
@@ -1370,7 +1371,7 @@ const styles = StyleSheet.create({
   },
   resultsBadgeText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
     color: COLORS.gray,
   },
 
@@ -1394,13 +1395,13 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 8,
-    backgroundColor: "rgba(249,195,73,0.1)",
+    backgroundColor: T.yellowSoft,
     justifyContent: "center",
     alignItems: "center",
   },
   recentTitle: {
     fontSize: 16,
-    fontWeight: "700",
+    fontFamily: F.bodyBold,
     color: COLORS.black,
   },
   recentCountBadge: {
@@ -1413,13 +1414,13 @@ const styles = StyleSheet.create({
   },
   recentCountText: {
     fontSize: 10,
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
     color: COLORS.gray,
   },
   clearText: {
     fontSize: 13,
     color: COLORS.gray,
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
   },
 
   // Recent People Section
@@ -1456,7 +1457,7 @@ const styles = StyleSheet.create({
   },
   recentUserAvatarText: {
     color: COLORS.black,
-    fontWeight: "700",
+    fontFamily: F.headingBold,
     fontSize: 18,
   },
   recentBlockedBadge: {
@@ -1478,11 +1479,11 @@ const styles = StyleSheet.create({
   },
   recentUserName: {
     fontSize: 15,
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
     color: COLORS.black,
   },
   recentUserSubtitle: {
-    fontSize: 12,
+    fontSize: 12, fontFamily: F.body,
     color: COLORS.grayLight,
     marginTop: 2,
   },
@@ -1517,7 +1518,7 @@ const styles = StyleSheet.create({
   },
   emptyRecentText: {
     fontSize: 20,
-    fontWeight: "700",
+    fontFamily: F.headingBold,
     color: COLORS.black,
     marginTop: 4,
   },
@@ -1525,7 +1526,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.grayLight,
     marginTop: 4,
-    fontWeight: "400",
+    fontFamily: F.body,
   },
 
   // User Result
@@ -1581,7 +1582,7 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     color: COLORS.black,
-    fontWeight: "800",
+    fontFamily: F.heading,
     fontSize: 22,
   },
   onlineIndicator: {
@@ -1620,7 +1621,7 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 16,
-    fontWeight: "700",
+    fontFamily: F.bodyBold,
     color: COLORS.black,
   },
   blockedText: {
@@ -1638,14 +1639,14 @@ const styles = StyleSheet.create({
   },
   studentBadgeText: {
     fontSize: 9,
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
     color: COLORS.student,
   },
   userSubtitle: {
     fontSize: 12,
     color: COLORS.grayLight,
     marginTop: 2,
-    fontWeight: "500",
+    fontFamily: F.bodyMedium,
   },
   userMeta: {
     flexDirection: "row",
@@ -1661,7 +1662,7 @@ const styles = StyleSheet.create({
   userFollowersText: {
     fontSize: 11,
     color: COLORS.grayLight,
-    fontWeight: "400",
+    fontFamily: F.body,
   },
   userAction: {
     marginLeft: 8,
@@ -1674,9 +1675,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   blockedActionButton: {
-    backgroundColor: "#fef0f0",
+    backgroundColor: T.dangerBg,
     borderWidth: 1,
-    borderColor: "#e74c3c",
+    borderColor: T.danger,
   },
 
   // Search List
@@ -1704,7 +1705,7 @@ const styles = StyleSheet.create({
   },
   searchEmptyText: {
     fontSize: 20,
-    fontWeight: "700",
+    fontFamily: F.headingBold,
     color: COLORS.black,
     marginTop: 4,
   },
@@ -1712,7 +1713,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.grayLight,
     marginTop: 4,
-    fontWeight: "500",
+    fontFamily: F.bodyMedium,
   },
   searchHistoryContainer: {
     marginTop: 24,
@@ -1721,7 +1722,7 @@ const styles = StyleSheet.create({
   },
   searchHistoryTitle: {
     fontSize: 14,
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
     color: COLORS.gray,
     marginBottom: 12,
   },
@@ -1744,7 +1745,7 @@ const styles = StyleSheet.create({
   searchHistoryChipText: {
     fontSize: 13,
     color: COLORS.black,
-    fontWeight: "500",
+    fontFamily: F.bodyMedium,
   },
 
   // Search Loading
@@ -1758,7 +1759,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     color: COLORS.grayLight,
     fontSize: 14,
-    fontWeight: "500",
+    fontFamily: F.bodyMedium,
   },
 
   // Search Footer
@@ -1772,7 +1773,7 @@ const styles = StyleSheet.create({
   searchFooterText: {
     color: COLORS.grayLight,
     fontSize: 12,
-    fontWeight: "500",
+    fontFamily: F.bodyMedium,
   },
   searchFooterEnd: {
     paddingVertical: 24,
@@ -1782,9 +1783,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   searchFooterEndText: {
-    color: "#ccc",
+    color: T.textFaint,
     fontSize: 12,
-    fontWeight: "500",
+    fontFamily: F.bodyMedium,
   },
   footerDivider: {
     width: 40,

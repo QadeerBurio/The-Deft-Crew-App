@@ -13,7 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { color as T, font as F } from "../../theme/tokens";
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 
 export default function HelpCenter({ navigation }) {
   const [loading, setLoading] = useState(true);
@@ -52,21 +53,21 @@ export default function HelpCenter({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
       
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerFade }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
-          <Ionicons name="close" size={22} color="#1a1a1a" />
+          <Ionicons name="close" size={22} color={T.ink} />
         </TouchableOpacity>
         
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Help Center</Text>
+          <Text style={styles.headerTitle}>help center</Text>
           <Text style={styles.headerSubtitle}>thedeftcrew.com</Text>
         </View>
 
         <TouchableOpacity onPress={openInBrowser} style={styles.headerBtn}>
-          <Ionicons name="open-outline" size={20} color="#f9c349" />
+          <Ionicons name="open-outline" size={20} color={T.yellow} />
         </TouchableOpacity>
       </Animated.View>
 
@@ -74,7 +75,7 @@ export default function HelpCenter({ navigation }) {
       {loading && (
         <View style={styles.progressBarContainer}>
           <Animated.View style={[styles.progressBar, { width: progressWidthInterpolated }]}>
-            <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.progressGradient} />
+            <LinearGradient colors={[T.yellow, T.ink]} style={styles.progressGradient} />
           </Animated.View>
         </View>
       )}
@@ -97,29 +98,29 @@ export default function HelpCenter({ navigation }) {
         {/* Loading Overlay */}
         {loading && (
           <Animated.View style={[styles.loaderContainer, { opacity: fadeAnim }]}>
-            <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.loaderIconCircle}>
-              <Ionicons name="help-circle" size={40} color="#fff" />
+            <LinearGradient colors={[T.yellow, T.ink]} style={styles.loaderIconCircle}>
+              <Ionicons name="help-circle" size={40} color={T.white} />
             </LinearGradient>
-            <Text style={styles.loadingTitle}>Loading Help Center</Text>
-            <Text style={styles.loadingSubtitle}>Fetching the latest support articles...</Text>
-            <ActivityIndicator size="small" color="#f9c349" style={{ marginTop: 16 }} />
+            <Text style={styles.loadingTitle}>loading help center</Text>
+            <Text style={styles.loadingSubtitle}>fetching the latest support articles...</Text>
+            <ActivityIndicator size="small" color={T.yellow} style={{ marginTop: 16 }} />
           </Animated.View>
         )}
 
         {/* Bottom Toolbar */}
         <Animated.View style={[styles.bottomBar, { opacity: fadeAnim }]}>
           <TouchableOpacity style={styles.toolbarBtn} onPress={() => {}} activeOpacity={0.7}>
-            <Ionicons name="chevron-back" size={20} color="#999" />
+            <Ionicons name="chevron-back" size={20} color={T.textFaint} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.toolbarBtn} onPress={() => {}} activeOpacity={0.7}>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
+            <Ionicons name="chevron-forward" size={20} color={T.textFaint} />
           </TouchableOpacity>
           <View style={{ flex: 1 }} />
           <TouchableOpacity style={styles.toolbarBtn} onPress={openInBrowser} activeOpacity={0.7}>
-            <Ionicons name="compass-outline" size={20} color="#f9c349" />
+            <Ionicons name="compass-outline" size={20} color={T.yellow} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.toolbarBtn} onPress={() => {}} activeOpacity={0.7}>
-            <Ionicons name="share-outline" size={20} color="#f9c349" />
+            <Ionicons name="share-outline" size={20} color={T.yellow} />
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -128,44 +129,44 @@ export default function HelpCenter({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffff" },
+  container: { flex: 1, backgroundColor: T.card },
   
   // Header
   header: { 
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 12, paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0', backgroundColor: '#fff'
+    borderBottomWidth: 1, borderBottomColor: T.line, backgroundColor: T.card
   },
-  headerBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center' },
+  headerBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center' },
   headerCenter: { alignItems: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.5 },
-  headerSubtitle: { fontSize: 10, color: '#999', fontWeight: '500', marginTop: 1 },
+  headerTitle: { fontSize: 17, fontFamily: F.bodyBold, color: T.ink, letterSpacing: 0.5 },
+  headerSubtitle: { fontSize: 10, color: T.textFaint, fontFamily: F.bodyMedium, marginTop: 1 },
   
   // Progress Bar
-  progressBarContainer: { height: 3, backgroundColor: '#f0f0f0', overflow: 'hidden' },
+  progressBarContainer: { height: 3, backgroundColor: T.sand, overflow: 'hidden' },
   progressBar: { height: '100%' },
   progressGradient: { width: '100%', height: '100%' },
   
   // WebView
-  webWrapper: { flex: 1, backgroundColor: '#fff' },
+  webWrapper: { flex: 1, backgroundColor: T.card },
   webview: { flex: 1 },
   
   // Loading
   loaderContainer: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff'
+    justifyContent: 'center', alignItems: 'center', backgroundColor: T.card
   },
   loaderIconCircle: { 
     width: 80, height: 80, borderRadius: 20, justifyContent: 'center', 
     alignItems: 'center', marginBottom: 16 
   },
-  loadingTitle: { fontSize: 18, fontWeight: '800', color: '#1a1a1a' },
-  loadingSubtitle: { fontSize: 13, color: '#999', marginTop: 6, fontWeight: '500' },
+  loadingTitle: { fontSize: 18, fontFamily: F.heading, color: T.ink },
+  loadingSubtitle: { fontSize: 13, color: T.textFaint, marginTop: 6, fontFamily: F.bodyMedium },
   
   // Bottom Bar
   bottomBar: { 
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 6,
-    borderTopWidth: 1, borderTopColor: '#f0f0f0', backgroundColor: '#fff',
+    borderTopWidth: 1, borderTopColor: T.line, backgroundColor: T.card,
     paddingBottom: Platform.OS === 'ios' ? 20 : 6
   },
   toolbarBtn: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },

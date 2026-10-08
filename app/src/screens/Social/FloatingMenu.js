@@ -15,21 +15,22 @@ import Animated, {
 } from 'react-native-reanimated';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 
+import { color as T } from "../../theme/tokens";
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Modern color palette - Black, White, Gold
 const COLORS = {
-  primary: '#F9C349',
-  primaryLight: '#FAD775',
+  primary: T.yellow,
+  primaryLight: T.yellow,
   primaryDark: '#E0A830',
   background: 'rgba(249, 195, 73, 0.15)',
   glass: 'rgba(255, 255, 255, 0.1)',
   glassBorder: 'rgba(255, 255, 255, 0.15)',
   shadow: 'rgba(249, 195, 73, 0.3)',
-  text: '#FFFFFF',
+  text: T.white,
   textLight: 'rgba(255, 255, 255, 0.8)',
-  white: '#FFFFFF',
-  black: '#000000',
+  white: T.white,
+  black: T.ink,
   darkBg: 'rgba(0, 0, 0, 0.85)',
   labelBg: 'rgba(0, 0, 0, 0.8)',
   surface: 'rgba(255, 255, 255, 0.05)',

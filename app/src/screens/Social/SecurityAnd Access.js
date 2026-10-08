@@ -11,9 +11,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { color as T, font as F } from "../../theme/tokens";
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 
-const SecurityItem = ({ icon, title, subtitle, onPress, isLast = false, color = "#f9c349" }) => {
+const SecurityItem = ({ icon, title, subtitle, onPress, isLast = false, color = T.yellow }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -39,7 +40,7 @@ const SecurityItem = ({ icon, title, subtitle, onPress, isLast = false, color = 
           <Text style={styles.menuTitle}>{title}</Text>
           <Text style={styles.menuSubtitle}>{subtitle}</Text>
         </View>
-        <Ionicons name="chevron-forward" size={18} color="#ccc" />
+        <Ionicons name="chevron-forward" size={18} color={T.textFaint} />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -62,14 +63,14 @@ export default function SecurityAndAccess({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
       
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerFade }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
-          <Ionicons name="chevron-back" size={24} color="#1a1a1a" />
+          <Ionicons name="chevron-back" size={24} color={T.ink} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Security & Access</Text>
+        <Text style={styles.headerTitle}>security & access</Text>
         <View style={{ width: 38 }} />
       </Animated.View>
 
@@ -79,11 +80,11 @@ export default function SecurityAndAccess({ navigation }) {
           {/* Hero Section */}
           <View style={styles.heroSection}>
             <Animated.View style={{ transform: [{ scale: shieldScale }] }}>
-              <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.shieldCircle}>
-                <Ionicons name="shield-checkmark" size={45} color="#fff" />
+              <LinearGradient colors={[T.yellow, T.ink]} style={styles.shieldCircle}>
+                <Ionicons name="shield-checkmark" size={45} color={T.white} />
               </LinearGradient>
             </Animated.View>
-            <Text style={styles.heroTitle}>Account Security</Text>
+            <Text style={styles.heroTitle}>account security</Text>
             <Text style={styles.heroDescription}>
               Manage your account's security, keep track of your usage, and monitor connected apps and active sessions.
             </Text>
@@ -92,44 +93,44 @@ export default function SecurityAndAccess({ navigation }) {
           {/* Security Score */}
           <View style={styles.securityScoreCard}>
             <View style={styles.scoreHeader}>
-              <Ionicons name="shield" size={20} color="#4CAF50" />
-              <Text style={styles.scoreTitle}>Security Status</Text>
+              <Ionicons name="shield" size={20} color={T.success} />
+              <Text style={styles.scoreTitle}>security status</Text>
               <View style={styles.secureBadge}>
                 <View style={styles.secureDot} />
-                <Text style={styles.secureText}>Protected</Text>
+                <Text style={styles.secureText}>protected</Text>
               </View>
             </View>
             <View style={styles.scoreBar}>
-              <LinearGradient colors={['#4CAF50', '#2E7D32']} style={[styles.scoreFill, { width: '85%' }]} />
+              <LinearGradient colors={[T.success, '#2E7D32']} style={[styles.scoreFill, { width: '85%' }]} />
             </View>
-            <Text style={styles.scoreHint}>Your account security is strong</Text>
+            <Text style={styles.scoreHint}>your account security is strong</Text>
           </View>
 
           {/* Security Settings */}
           <Text style={styles.sectionTitle}>
             <View style={styles.sectionDot} />
-            Security Settings
+            security settings
           </Text>
           <View style={styles.card}>
             <SecurityItem 
               icon="key-outline" 
               title="Two-Factor Authentication" 
               subtitle="Add an extra layer of security to your account"
-              color="#f9c349"
+              color={T.yellow}
               onPress={() => Alert.alert("2FA", "Setup two-factor authentication")} 
             />
             <SecurityItem 
               icon="lock-closed-outline" 
               title="Change Password" 
               subtitle="Update your login credentials regularly"
-              color="#2196F3"
+              color={T.ink}
               onPress={() => navigation.navigate("ChangePassword")} 
             />
             <SecurityItem 
               icon="finger-print-outline" 
               title="Biometric Login" 
               subtitle="Use fingerprint or face ID to login"
-              color="#4CAF50"
+              color={T.success}
               isLast
               onPress={() => Alert.alert("Biometric", "Setup biometric authentication")} 
             />
@@ -138,7 +139,7 @@ export default function SecurityAndAccess({ navigation }) {
           {/* Apps and Sessions */}
           <Text style={styles.sectionTitle}>
             <View style={styles.sectionDot} />
-            Apps & Sessions
+            apps & sessions
           </Text>
           <View style={styles.card}>
             <SecurityItem 
@@ -168,28 +169,28 @@ export default function SecurityAndAccess({ navigation }) {
           {/* Quick Actions */}
           <Text style={styles.sectionTitle}>
             <View style={styles.sectionDot} />
-            Quick Actions
+            quick actions
           </Text>
           <View style={styles.quickActions}>
             <TouchableOpacity style={styles.quickActionBtn} onPress={() => Alert.alert("Sign Out", "Sign out of all devices?")} activeOpacity={0.7}>
-              <View style={[styles.quickActionIcon, { backgroundColor: '#FFEBEE' }]}>
-                <Ionicons name="log-out-outline" size={20} color="#F44336" />
+              <View style={[styles.quickActionIcon, { backgroundColor: T.dangerBg }]}>
+                <Ionicons name="log-out-outline" size={20} color={T.danger} />
               </View>
-              <Text style={styles.quickActionText}>Sign Out All Devices</Text>
-              <Ionicons name="chevron-forward" size={16} color="#ccc" />
+              <Text style={styles.quickActionText}>sign out all devices</Text>
+              <Ionicons name="chevron-forward" size={16} color={T.textFaint} />
             </TouchableOpacity>
             
             <TouchableOpacity style={[styles.quickActionBtn, { borderBottomWidth: 0 }]} onPress={() => Alert.alert("Report", "Report suspicious activity")} activeOpacity={0.7}>
-              <View style={[styles.quickActionIcon, { backgroundColor: '#FFF3E0' }]}>
+              <View style={[styles.quickActionIcon, { backgroundColor: T.yellowSoft }]}>
                 <Ionicons name="warning-outline" size={20} color="#FF9800" />
               </View>
-              <Text style={styles.quickActionText}>Report Suspicious Activity</Text>
-              <Ionicons name="chevron-forward" size={16} color="#ccc" />
+              <Text style={styles.quickActionText}>report suspicious activity</Text>
+              <Ionicons name="chevron-forward" size={16} color={T.textFaint} />
             </TouchableOpacity>
           </View>
 
           <Text style={styles.footerNote}>
-            <Ionicons name="information-circle-outline" size={14} color="#f9c349" />
+            <Ionicons name="information-circle-outline" size={14} color={T.yellow} />
             {" "}If you notice suspicious activity, change your password immediately.
           </Text>
         </Animated.View>
@@ -199,73 +200,73 @@ export default function SecurityAndAccess({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffff" },
+  container: { flex: 1, backgroundColor: T.card },
   
   // Header
   header: { 
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 14, paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0', backgroundColor: '#fff'
+    borderBottomWidth: 1, borderBottomColor: T.line, backgroundColor: T.card
   },
-  headerBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.5 },
+  headerBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { fontSize: 18, fontFamily: F.heading, color: T.ink, letterSpacing: 0.5 },
   
   content: { flex: 1 },
   
   // Hero
-  heroSection: { alignItems: 'center', paddingVertical: 30, paddingHorizontal: 24, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  heroSection: { alignItems: 'center', paddingVertical: 30, paddingHorizontal: 24, backgroundColor: T.card, borderBottomWidth: 1, borderBottomColor: T.line },
   shieldCircle: { width: 90, height: 90, borderRadius: 25, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  heroTitle: { fontSize: 22, fontWeight: '900', color: '#1a1a1a', marginBottom: 8 },
-  heroDescription: { textAlign: 'center', color: '#666', fontSize: 14, lineHeight: 21, fontWeight: '500', paddingHorizontal: 10 },
+  heroTitle: { fontSize: 22, fontFamily: F.heading, color: T.ink, marginBottom: 8 },
+  heroDescription: { textAlign: 'center', color: T.textMuted, fontSize: 14, lineHeight: 21, fontFamily: F.bodyMedium, paddingHorizontal: 10 },
   
   // Security Score
   securityScoreCard: { 
     marginHorizontal: 16, marginTop: 20, padding: 16, 
-    backgroundColor: '#f8f8f8', borderRadius: 16, borderWidth: 2, borderColor: '#f0f0f0' 
+    backgroundColor: T.sand, borderRadius: 16, borderWidth: 2, borderColor: T.line 
   },
   scoreHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 },
-  scoreTitle: { fontSize: 15, fontWeight: '800', color: '#1a1a1a', flex: 1 },
-  secureBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#E8F5E9', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  secureDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#4CAF50' },
-  secureText: { fontSize: 11, fontWeight: '700', color: '#4CAF50' },
-  scoreBar: { height: 6, backgroundColor: '#e0e0e0', borderRadius: 3, overflow: 'hidden', marginBottom: 8 },
+  scoreTitle: { fontSize: 15, fontFamily: F.bodyBold, color: T.ink, flex: 1 },
+  secureBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: T.successBg, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  secureDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: T.success },
+  secureText: { fontSize: 11, fontFamily: F.bodyBold, color: T.success },
+  scoreBar: { height: 6, backgroundColor: T.sand, borderRadius: 3, overflow: 'hidden', marginBottom: 8 },
   scoreFill: { height: '100%', borderRadius: 3 },
-  scoreHint: { fontSize: 11, color: '#999', fontWeight: '500' },
+  scoreHint: { fontSize: 11, color: T.textFaint, fontFamily: F.bodyMedium },
   
   // Section
   sectionTitle: { 
-    fontSize: 13, fontWeight: '800', color: '#1a1a1a', marginTop: 24, marginBottom: 12, 
+    fontSize: 13, fontFamily: F.bodyBold, color: T.ink, marginTop: 24, marginBottom: 12, 
     marginLeft: 20, flexDirection: 'row', alignItems: 'center' 
   },
-  sectionDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#f9c349', marginRight: 10 },
+  sectionDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: T.yellow, marginRight: 10 },
   
   // Cards
   card: { 
-    marginHorizontal: 16, backgroundColor: '#fff', borderRadius: 16, 
-    borderWidth: 2, borderColor: '#f0f0f0', overflow: 'hidden' 
+    marginHorizontal: 16, backgroundColor: T.card, borderRadius: 16, 
+    borderWidth: 2, borderColor: T.line, overflow: 'hidden' 
   },
   menuItem: { 
-    flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#f5f5f5' 
+    flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: T.line 
   },
   iconBackground: { 
     width: 42, height: 42, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 
   },
   textContainer: { flex: 1 },
-  menuTitle: { fontSize: 15, fontWeight: '700', color: '#1a1a1a' },
-  menuSubtitle: { fontSize: 12, color: '#999', marginTop: 2, fontWeight: '500' },
+  menuTitle: { fontSize: 15, fontFamily: F.bodyBold, color: T.ink },
+  menuSubtitle: { fontSize: 12, color: T.textFaint, marginTop: 2, fontFamily: F.bodyMedium },
   
   // Quick Actions
   quickActions: { 
-    marginHorizontal: 16, backgroundColor: '#fff', borderRadius: 16, 
-    borderWidth: 2, borderColor: '#f0f0f0', overflow: 'hidden' 
+    marginHorizontal: 16, backgroundColor: T.card, borderRadius: 16, 
+    borderWidth: 2, borderColor: T.line, overflow: 'hidden' 
   },
   quickActionBtn: { 
     flexDirection: 'row', alignItems: 'center', padding: 16, 
-    borderBottomWidth: 1, borderBottomColor: '#f5f5f5', gap: 12 
+    borderBottomWidth: 1, borderBottomColor: T.line, gap: 12 
   },
   quickActionIcon: { width: 42, height: 42, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  quickActionText: { flex: 1, fontSize: 15, fontWeight: '600', color: '#1a1a1a' },
+  quickActionText: { flex: 1, fontSize: 15, fontFamily: F.bodySemi, color: T.ink },
   
-  footerNote: { padding: 20, textAlign: 'center', fontSize: 12, color: '#999', lineHeight: 18, fontWeight: '500' }
+  footerNote: { padding: 20, textAlign: 'center', fontSize: 12, color: T.textFaint, lineHeight: 18, fontFamily: F.bodyMedium }
 });
 

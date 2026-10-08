@@ -6,11 +6,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { AuthContext } from "../../context/AuthContext"; 
 import * as ImagePicker from 'expo-image-picker';
 import axios from "axios";
 
+import { color as T, font as F } from "../../theme/tokens";
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social'; 
 const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/decaxpera/auto/upload";
 const UPLOAD_PRESET = "tdc_profiles";
@@ -137,21 +138,21 @@ export default function EditProfileScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
       
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerFade }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
-          <Ionicons name="close-outline" size={24} color="#1a1a1a" />
+          <Ionicons name="close-outline" size={24} color={T.ink} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Profile</Text>
+        <Text style={styles.headerTitle}>edit profile</Text>
         <Animated.View style={{ transform: [{ scale: saveScale }] }}>
           <TouchableOpacity onPress={handleUpdate} disabled={loading} style={styles.saveBtn}>
-            <LinearGradient colors={['#1a1a1a', '#1a1a1a']} style={styles.saveGradient}>
+            <LinearGradient colors={[T.ink, T.ink]} style={styles.saveGradient}>
               {loading ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={T.white} />
               ) : (
-                <Text style={styles.saveBtnText}>Save</Text>
+                <Text style={styles.saveBtnText}>save</Text>
               )}
             </LinearGradient>
           </TouchableOpacity>
@@ -165,10 +166,10 @@ export default function EditProfileScreen({ navigation }) {
             {/* Profile Image Section */}
             <View style={styles.imageSection}>
               <TouchableOpacity onPress={pickImage} activeOpacity={0.8} disabled={uploadingImage}>
-                <LinearGradient colors={['#f9c349', '#f9c349']} style={styles.avatarRing}>
+                <LinearGradient colors={[T.yellow, T.yellow]} style={styles.avatarRing}>
                   {uploadingImage ? (
                     <View style={styles.avatarPlaceholder}>
-                      <ActivityIndicator size="large" color="#fff" />
+                      <ActivityIndicator size="large" color={T.white} />
                     </View>
                   ) : (
                     <Image 
@@ -178,29 +179,29 @@ export default function EditProfileScreen({ navigation }) {
                   )}
                 </LinearGradient>
                 <View style={styles.cameraBadge}>
-                  <LinearGradient colors={['#1a1a1a', '#1a1a1a']} style={styles.cameraBadgeGradient}>
-                    <Ionicons name="camera" size={16} color="#f9c349" />
+                  <LinearGradient colors={[T.ink, T.ink]} style={styles.cameraBadgeGradient}>
+                    <Ionicons name="camera" size={16} color={T.yellow} />
                   </LinearGradient>
                 </View>
               </TouchableOpacity>
-              <Text style={styles.changePhotoText}>Tap to change photo</Text>
+              <Text style={styles.changePhotoText}>tap to change photo</Text>
             </View>
 
             {/* Form */}
             <View style={styles.form}>
               {/* Name Input */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Full Name <Text style={styles.requiredStar}>*</Text></Text>
+                <Text style={styles.label}>full name <Text style={styles.requiredStar}>*</Text></Text>
                 <View style={[styles.inputWrapper, nameFocused && styles.inputFocused]}>
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="person-outline" size={18} color={nameFocused ? "#f9c349" : "#999"} />
+                    <Ionicons name="person-outline" size={18} color={nameFocused ? T.yellow : T.textFaint} />
                   </View>
                   <TextInput 
                     style={styles.input}
                     value={name}
                     onChangeText={setName}
                     placeholder="Abdul Qadeer"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={T.textFaint}
                     onFocus={() => setNameFocused(true)}
                     onBlur={() => setNameFocused(false)}
                   />
@@ -209,17 +210,17 @@ export default function EditProfileScreen({ navigation }) {
 
               {/* Headline Input */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Headline</Text>
+                <Text style={styles.label}>headline</Text>
                 <View style={[styles.inputWrapper, headlineFocused && styles.inputFocused]}>
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="briefcase-outline" size={18} color={headlineFocused ? "#f9c349" : "#999"} />
+                    <Ionicons name="briefcase-outline" size={18} color={headlineFocused ? T.yellow : T.textFaint} />
                   </View>
                   <TextInput 
                     style={styles.input}
                     value={headline}
                     onChangeText={setHeadline}
                     placeholder="Computer Systems Engineer"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={T.textFaint}
                     onFocus={() => setHeadlineFocused(false)}
                     onBlur={() => setHeadlineFocused(false)}
                   />
@@ -228,17 +229,17 @@ export default function EditProfileScreen({ navigation }) {
 
               {/* Bio Input - Multiline */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Bio</Text>
+                <Text style={styles.label}>bio</Text>
                 <View style={[styles.inputWrapper, bioFocused && styles.inputFocused]}>
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="information-circle-outline" size={18} color={bioFocused ? "#f9c349" : "#999"} />
+                    <Ionicons name="information-circle-outline" size={18} color={bioFocused ? T.yellow : T.textFaint} />
                   </View>
                   <TextInput 
                     style={[styles.input, styles.multiline]}
                     value={bio}
                     onChangeText={setBio}
                     placeholder="MERN Stack Developer | React Native | Open Source..."
-                    placeholderTextColor="#999"
+                    placeholderTextColor={T.textFaint}
                     multiline={false}
                     numberOfLines={1}
                     textAlignVertical="top"
@@ -249,21 +250,21 @@ export default function EditProfileScreen({ navigation }) {
               </View>
               
               <View style={styles.divider} />
-              <Text style={styles.sectionLabel}>Education</Text>
+              <Text style={styles.sectionLabel}>education</Text>
               
               {/* School Input */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>University / School</Text>
                 <View style={[styles.inputWrapper, schoolFocused && styles.inputFocused]}>
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="school-outline" size={18} color={schoolFocused ? "#f9c349" : "#999"} />
+                    <Ionicons name="school-outline" size={18} color={schoolFocused ? T.yellow : T.textFaint} />
                   </View>
                   <TextInput 
                     style={styles.input}
                     value={school}
                     onChangeText={setSchool}
                     placeholder="MUET, Jamshoro"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={T.textFaint}
                     onFocus={() => setSchoolFocused(false)}
                     onBlur={() => setSchoolFocused(false)}
                   />
@@ -272,17 +273,17 @@ export default function EditProfileScreen({ navigation }) {
 
               {/* Degree Input */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Degree Program</Text>
+                <Text style={styles.label}>degree program</Text>
                 <View style={[styles.inputWrapper, degreeFocused && styles.inputFocused]}>
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="ribbon-outline" size={18} color={degreeFocused ? "#f9c349" : "#999"} />
+                    <Ionicons name="ribbon-outline" size={18} color={degreeFocused ? T.yellow : T.textFaint} />
                   </View>
                   <TextInput 
                     style={styles.input}
                     value={degree}
                     onChangeText={setDegree}
                     placeholder="BS Software Engineering"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={T.textFaint}
                     onFocus={() => setDegreeFocused(false)}
                     onBlur={() => setDegreeFocused(false)}
                   />
@@ -291,17 +292,17 @@ export default function EditProfileScreen({ navigation }) {
 
               {/* Roll Number Input */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Roll Number</Text>
+                <Text style={styles.label}>roll number</Text>
                 <View style={[styles.inputWrapper, rollNoFocused && styles.inputFocused]}>
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="id-card-outline" size={18} color={rollNoFocused ? "#f9c349" : "#999"} />
+                    <Ionicons name="id-card-outline" size={18} color={rollNoFocused ? T.yellow : T.textFaint} />
                   </View>
                   <TextInput 
                     style={styles.input}
                     value={rollNo}
                     onChangeText={setRollNo}
                     placeholder="21CS042"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={T.textFaint}
                     onFocus={() => setRollNoFocused(false)}
                     onBlur={() => setRollNoFocused(false)}
                   />
@@ -317,51 +318,51 @@ export default function EditProfileScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffff" },
+  container: { flex: 1, backgroundColor: T.card },
   
   // Header
   header: { 
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', 
-    paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' 
+    paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: T.line 
   },
-  headerBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.5 },
-  saveBtn: { borderRadius: 12, overflow: 'hidden', elevation: 5, shadowColor: "#f9c349", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8 },
+  headerBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { fontSize: 18, fontFamily: F.heading, color: T.ink, letterSpacing: 0.5 },
+  saveBtn: { borderRadius: 12, overflow: 'hidden', elevation: 2, shadowColor: T.ink, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 8 },
   saveGradient: { paddingHorizontal: 20, paddingVertical: 10 },
-  saveBtnText: { color: '#fff', fontSize: 14, fontWeight: '800', letterSpacing: 0.5 },
+  saveBtnText: { color: T.white, fontSize: 14, fontFamily: F.bodyBold, letterSpacing: 0.5 },
   
   // Image Section
   imageSection: { alignItems: 'center', marginVertical: 25 },
   avatarRing: { width: 110, height: 110, borderRadius: 55, padding: 4, justifyContent: 'center', alignItems: 'center' },
-  avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: '#fff' },
-  avatarPlaceholder: { width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
-  cameraBadge: { position: 'absolute', bottom: 0, right: 0, borderRadius: 12, overflow: 'hidden', borderWidth: 3, borderColor: '#fff' },
+  avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: T.white },
+  avatarPlaceholder: { width: 100, height: 100, borderRadius: 50, backgroundColor: T.overlay, justifyContent: 'center', alignItems: 'center' },
+  cameraBadge: { position: 'absolute', bottom: 0, right: 0, borderRadius: 12, overflow: 'hidden', borderWidth: 3, borderColor: T.white },
   cameraBadgeGradient: { width: 30, height: 30, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-  changePhotoText: { color: '#f9c349', marginTop: 10, fontWeight: '700', fontSize: 13 },
+  changePhotoText: { color: T.yellow, marginTop: 10, fontFamily: F.bodyBold, fontSize: 13 },
   
   // Form
   form: { paddingHorizontal: 20, paddingTop: 10 },
-  divider: { height: 1, backgroundColor: '#f0f0f0', marginVertical: 20 },
-  sectionLabel: { fontSize: 14, fontWeight: '800', color: '#1a1a1a', marginBottom: 16, textTransform: 'uppercase', letterSpacing: 1 },
+  divider: { height: 1, backgroundColor: T.sand, marginVertical: 20 },
+  sectionLabel: { fontSize: 14, fontFamily: F.bodyBold, color: T.ink, marginBottom: 16, textTransform: 'none', letterSpacing: 1 },
   
   // Input
   inputGroup: { marginBottom: 18 },
-  label: { fontSize: 12, fontWeight: '700', color: '#666', marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' },
-  requiredStar: { color: '#f9c349' },
+  label: { fontSize: 12, fontFamily: F.bodyBold, color: T.textMuted, marginBottom: 8, letterSpacing: 0.5, textTransform: 'none' },
+  requiredStar: { color: T.yellow },
   inputWrapper: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8f8f8',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: T.sand,
     borderRadius: 14, paddingHorizontal: 14, borderWidth: 2, borderColor: 'transparent',
     minHeight: 52,
   },
   inputFocused: { 
-    borderColor: '#f9c349', backgroundColor: '#fff',
-    shadowColor: "#f9c349", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.2, shadowRadius: 10, elevation: 3 
+    borderColor: T.yellow, backgroundColor: T.card,
+    shadowColor: T.ink, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 
   },
   inputIconContainer: {
-    width: 34, height: 34, borderRadius: 10, backgroundColor: '#f0f0f0',
+    width: 34, height: 34, borderRadius: 10, backgroundColor: T.sand,
     justifyContent: 'center', alignItems: 'center', marginRight: 10
   },
-  input: { flex: 1, paddingVertical: 10, fontSize: 15, color: '#1a1a1a', fontWeight: '500' },
+  input: { flex: 1, paddingVertical: 10, fontSize: 15, color: T.ink, fontFamily: F.bodyMedium },
   multiline: { 
     minHeight: 50, 
     textAlignVertical: 'top', 

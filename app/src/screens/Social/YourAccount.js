@@ -14,12 +14,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthContext } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { color as T, font as F } from "../../theme/tokens";
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 
 const { width } = Dimensions.get('window');
 
 // Modern Info Tile Component
-const InfoTile = ({ icon, label, value, color = "#1a1a1a", isLast = false }) => {
+const InfoTile = ({ icon, label, value, color = T.ink, isLast = false }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(10)).current;
 
@@ -78,7 +79,7 @@ export default function YourAccount({ navigation }) {
   }, []);
 
   const isVerified = user?.status === 'Verified';
-  const statusColor = isVerified ? '#4CAF50' : '#f9c349';
+  const statusColor = isVerified ? T.success : T.yellow;
   const statusIcon = isVerified ? "checkmark-circle" : "time-outline";
 
   // Get user initials
@@ -91,19 +92,19 @@ export default function YourAccount({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
       
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerFade }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+          <Ionicons name="arrow-back" size={24} color={T.ink} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Account</Text>
+        <Text style={styles.headerTitle}>account</Text>
         <TouchableOpacity 
           style={styles.headerEditBtn}
           onPress={() => navigation.navigate('EditProfileScreen')}
         >
-          <Ionicons name="create-outline" size={22} color="#f9c349" />
+          <Ionicons name="create-outline" size={22} color={T.yellow} />
         </TouchableOpacity>
       </Animated.View>
 
@@ -121,7 +122,7 @@ export default function YourAccount({ navigation }) {
             <View style={styles.profileRow}>
               <Animated.View style={[styles.avatarWrapper, { transform: [{ scale: avatarScale }] }]}>
                 <LinearGradient 
-                  colors={['#f9c349', '#e6b800']} 
+                  colors={[T.yellow, '#e6b800']} 
                   style={styles.avatarRing}
                 >
                   {user?.profileImage ? (
@@ -146,13 +147,13 @@ export default function YourAccount({ navigation }) {
                 <View style={styles.userDetails}>
                   {user?.university?.name && (
                     <View style={styles.detailItem}>
-                      <Ionicons name="school-outline" size={14} color="#666" />
+                      <Ionicons name="school-outline" size={14} color={T.textMuted} />
                       <Text style={styles.detailText}>{user.university.name}</Text>
                     </View>
                   )}
                   {user?.location && (
                     <View style={styles.detailItem}>
-                      <Ionicons name="location-outline" size={14} color="#666" />
+                      <Ionicons name="location-outline" size={14} color={T.textMuted} />
                       <Text style={styles.detailText}>{user.location}</Text>
                     </View>
                   )}
@@ -173,17 +174,17 @@ export default function YourAccount({ navigation }) {
             <View style={styles.userStats}>
               <View style={styles.statItem}>
                 <Text style={styles.statNumber}>{user?.connections?.length || 0}</Text>
-                <Text style={styles.statLabel}>Connections</Text>
+                <Text style={styles.statLabel}>connections</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={styles.statNumber}>{user?.posts?.length || 0}</Text>
-                <Text style={styles.statLabel}>Posts</Text>
+                <Text style={styles.statLabel}>posts</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={styles.statNumber}>{user?.referralCount || 0}</Text>
-                <Text style={styles.statLabel}>Referrals</Text>
+                <Text style={styles.statLabel}>referrals</Text>
               </View>
             </View>
           </View>
@@ -192,7 +193,7 @@ export default function YourAccount({ navigation }) {
           <View style={styles.content}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionLine} />
-              <Text style={styles.sectionTitle}>Personal Information</Text>
+              <Text style={styles.sectionTitle}>personal information</Text>
               <View style={styles.sectionLine} />
             </View>
             
@@ -201,37 +202,37 @@ export default function YourAccount({ navigation }) {
                 icon="person-outline" 
                 label="Full Name" 
                 value={user?.name} 
-                color="#1a1a1a"
+                color={T.ink}
               />
               <InfoTile 
                 icon="mail-outline" 
                 label="Email Address" 
                 value={user?.email} 
-                color="#1a1a1a"
+                color={T.ink}
               />
               <InfoTile 
                 icon="call-outline" 
                 label="Phone Number" 
                 value={user?.phone || "Not set"} 
-                color="#1a1a1a"
+                color={T.ink}
               />
               <InfoTile 
                 icon="school-outline" 
                 label="University" 
                 value={user?.university?.name || "Not Specified"} 
-                color="#1a1a1a"
+                color={T.ink}
               />
               <InfoTile 
                 icon="id-card-outline" 
                 label="Roll Number" 
                 value={user?.rollNo || "N/A"} 
-                color="#1a1a1a"
+                color={T.ink}
               />
               <InfoTile 
                 icon="location-outline" 
                 label="Location" 
                 value={user?.location || "Not set"} 
-                color="#1a1a1a"
+                color={T.ink}
               />
               <InfoTile 
                 icon={statusIcon} 
@@ -244,11 +245,11 @@ export default function YourAccount({ navigation }) {
 
             {/* Security Note - Modern */}
             <View style={styles.securityNote}>
-              <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.securityIcon}>
-                <Ionicons name="shield-checkmark" size={20} color="#1a1a1a" />
+              <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.securityIcon}>
+                <Ionicons name="shield-checkmark" size={20} color={T.ink} />
               </LinearGradient>
               <View style={styles.securityContent}>
-                <Text style={styles.securityTitle}>Secure & Encrypted</Text>
+                <Text style={styles.securityTitle}>secure & encrypted</Text>
                 <Text style={styles.securityText}>
                   Your information is encrypted and managed according to TDC privacy policies.
                 </Text>
@@ -262,11 +263,11 @@ export default function YourAccount({ navigation }) {
               activeOpacity={0.8}
             >
               <LinearGradient 
-                colors={['#f9c349', '#e6b800']} 
+                colors={[T.yellow, '#e6b800']} 
                 style={styles.editProfileGradient}
               >
-                <Ionicons name="create-outline" size={20} color="#1a1a1a" />
-                <Text style={styles.editProfileText}>Edit Profile</Text>
+                <Ionicons name="create-outline" size={20} color={T.ink} />
+                <Text style={styles.editProfileText}>edit profile</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -280,7 +281,7 @@ export default function YourAccount({ navigation }) {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#f8f9fc' 
+    backgroundColor: T.paper 
   },
   
   // Header
@@ -291,32 +292,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, 
     paddingVertical: 12,
     borderBottomWidth: 1, 
-    borderBottomColor: '#f0f0f0', 
-    backgroundColor: '#fff'
+    borderBottomColor: T.line, 
+    backgroundColor: T.card
   },
   backBtn: { 
     width: 40, 
     height: 40, 
     borderRadius: 12, 
-    backgroundColor: '#f5f6f8', 
+    backgroundColor: T.sand, 
     justifyContent: 'center', 
     alignItems: 'center' 
   },
   headerTitle: { 
     fontSize: 18, 
-    fontWeight: '700', 
-    color: '#1a1a1a', 
+    fontFamily: F.headingBold, 
+    color: T.ink, 
     letterSpacing: 0.3 
   },
   headerEditBtn: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#fef9f0',
+    backgroundColor: T.yellowSoft,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#f9c34930',
+    borderColor: T.line,
   },
   
   scrollContent: {
@@ -326,9 +327,9 @@ const styles = StyleSheet.create({
   // Profile Header - Left/Right Layout
   profileHeader: { 
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: T.line,
   },
   profileRow: {
     flexDirection: 'row',
@@ -351,22 +352,22 @@ const styles = StyleSheet.create({
     height: 74, 
     borderRadius: 74, 
     borderWidth: 2, 
-    borderColor: '#fff' 
+    borderColor: T.white 
   },
   avatarPlaceholder: { 
     width: 74, 
     height: 74, 
     borderRadius: 74, 
-    backgroundColor: '#1a1a1a', 
+    backgroundColor: T.ink, 
     justifyContent: 'center', 
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#fff'
+    borderColor: T.white
   },
   avatarText: { 
     fontSize: 28, 
-    fontWeight: '900', 
-    color: '#f9c349' 
+    fontFamily: F.heading, 
+    color: T.yellow 
   },
   
   profileInfo: {
@@ -374,8 +375,8 @@ const styles = StyleSheet.create({
   },
   userName: { 
     fontSize: 20, 
-    fontWeight: '700', 
-    color: '#1a1a1a', 
+    fontFamily: F.headingBold, 
+    color: T.ink, 
     marginBottom: 4,
   },
   userMeta: {
@@ -384,15 +385,15 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   roleBadge: {
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     paddingHorizontal: 10,
     paddingVertical: 2,
     borderRadius: 4,
   },
   roleText: {
     fontSize: 9,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     letterSpacing: 0.5,
   },
   userDetails: {
@@ -406,8 +407,8 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
+    color: T.textMuted,
+    fontFamily: F.bodyMedium,
   },
   statusContainer: {
     flexDirection: 'row',
@@ -429,18 +430,18 @@ const styles = StyleSheet.create({
   },
   statusText: { 
     fontSize: 10, 
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
   },
   
   userStats: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f9fc',
+    backgroundColor: T.sand,
     borderRadius: 12,
     padding: 12,
     marginTop: 14,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: T.line,
   },
   statItem: {
     flex: 1,
@@ -448,21 +449,21 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
   },
   statLabel: {
     fontSize: 9,
-    color: '#999',
-    fontWeight: '600',
-    textTransform: 'uppercase',
+    color: T.textFaint,
+    fontFamily: F.bodySemi,
+    textTransform: 'none',
     letterSpacing: 0.5,
     marginTop: 2,
   },
   statDivider: {
     width: 1,
     height: 24,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: T.sand,
   },
   
   // Content
@@ -479,25 +480,25 @@ const styles = StyleSheet.create({
   sectionLine: {
     flex: 1,
     height: 0.5,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: T.sand,
   },
   sectionTitle: { 
     fontSize: 12, 
-    fontWeight: '700', 
-    color: '#888', 
+    fontFamily: F.bodyBold, 
+    color: T.textFaint, 
     marginHorizontal: 12,
     letterSpacing: 0.8,
-    textTransform: 'uppercase',
+    textTransform: 'none',
   },
   
   // Info Card
   card: { 
-    backgroundColor: '#fff', 
+    backgroundColor: T.card, 
     borderRadius: 16, 
     paddingVertical: 4,
     borderWidth: 1, 
-    borderColor: '#f0f0f0',
-    shadowColor: '#000',
+    borderColor: T.line,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -511,7 +512,7 @@ const styles = StyleSheet.create({
   },
   tileBorder: { 
     borderBottomWidth: 1, 
-    borderBottomColor: '#f5f5f5' 
+    borderBottomColor: T.line 
   },
   iconContainer: { 
     width: 40, 
@@ -526,15 +527,15 @@ const styles = StyleSheet.create({
   },
   label: { 
     fontSize: 10, 
-    color: '#999', 
-    fontWeight: '600', 
-    textTransform: 'uppercase', 
+    color: T.textFaint, 
+    fontFamily: F.bodySemi, 
+    textTransform: 'none', 
     letterSpacing: 0.5, 
     marginBottom: 2 
   },
   value: { 
     fontSize: 14, 
-    fontWeight: '600' 
+    fontFamily: F.bodySemi 
   },
   
   // Security Note - Modern
@@ -543,12 +544,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
     padding: 14,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderRadius: 16,
     marginTop: 16,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
-    shadowColor: '#000',
+    borderColor: T.line,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -566,14 +567,14 @@ const styles = StyleSheet.create({
   },
   securityTitle: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
   },
   securityText: {
     fontSize: 11,
-    color: '#999',
+    color: T.textFaint,
     lineHeight: 16,
-    fontWeight: '400',
+    fontFamily: F.body,
     marginTop: 1,
   },
   
@@ -582,11 +583,11 @@ const styles = StyleSheet.create({
     marginTop: 20,
     borderRadius: 14,
     overflow: 'hidden',
-    shadowColor: '#f9c349',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 2,
   },
   editProfileGradient: {
     flexDirection: 'row',
@@ -597,7 +598,7 @@ const styles = StyleSheet.create({
   },
   editProfileText: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
   },
 });

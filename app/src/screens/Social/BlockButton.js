@@ -12,6 +12,7 @@ import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 
+import { color as T, font as F } from "../../theme/tokens";
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
 export default function BlockButton({ userId, userName, onBlock, size = 'medium' }) {
@@ -78,15 +79,15 @@ export default function BlockButton({ userId, userName, onBlock, size = 'medium'
       disabled={loading}
     >
       {loading ? (
-        <ActivityIndicator size="small" color="#e74c3c" />
+        <ActivityIndicator size="small" color={T.danger} />
       ) : (
         <View style={styles.buttonContent}>
           <Ionicons
             name="ban-outline"
             size={size === 'small' ? 14 : 16}
-            color="#e74c3c"
+            color={T.danger}
           />
-          <Text style={[styles.buttonText, textSize]}>Block</Text>
+          <Text style={[styles.buttonText, textSize]}>block</Text>
         </View>
       )}
     </TouchableOpacity>
@@ -97,7 +98,7 @@ const styles = StyleSheet.create({
   button: {
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e74c3c',
+    borderColor: T.danger,
     backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
@@ -115,14 +116,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: {
-    color: '#e74c3c',
-    fontWeight: '600',
+    color: T.danger,
+    fontFamily: F.bodySemi,
     marginLeft: 4,
   },
   textMedium: {
-    fontSize: 14,
+    fontSize: 14, fontFamily: F.body,
   },
   textSmall: {
-    fontSize: 12,
+    fontSize: 12, fontFamily: F.body,
   },
 });

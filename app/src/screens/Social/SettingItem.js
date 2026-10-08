@@ -7,7 +7,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthContext } from '../../context/AuthContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -17,10 +17,11 @@ import { useTour } from '../../engagement/tour/TourProvider';
 import StreakSheet from '../../engagement/components/StreakSheet';
 import { useStreak } from '../../engagement/hooks/useStreak';
 
+import { color as T, font as F } from "../../theme/tokens";
 const { width } = Dimensions.get('window');
 
 // ── SettingItem ────────────────────────────────────────────────────────────
-const SettingItem = ({ icon, label, subLabel, color = "#1a1a1a", onPress, danger = false, badge, iconBg }) => {
+const SettingItem = ({ icon, label, subLabel, color = T.ink, onPress, danger = false, badge, iconBg }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -39,11 +40,11 @@ const SettingItem = ({ icon, label, subLabel, color = "#1a1a1a", onPress, danger
         onPressOut={handlePressOut}
         activeOpacity={0.6}
       >
-        <View style={[styles.settingIconWrapper, { backgroundColor: iconBg || (danger ? '#FFEBEE' : '#F5F6FA') }]}>
-          <Ionicons name={icon} size={18} color={danger ? '#F44336' : color} />
+        <View style={[styles.settingIconWrapper, { backgroundColor: iconBg || (danger ? T.dangerBg : T.sand) }]}>
+          <Ionicons name={icon} size={18} color={danger ? T.danger : color} />
         </View>
         <View style={styles.textContainer}>
-          <Text style={[styles.settingLabel, danger && { color: '#F44336' }]}>{label}</Text>
+          <Text style={[styles.settingLabel, danger && { color: T.danger }]}>{label}</Text>
           {subLabel && <Text style={styles.settingSubLabel}>{subLabel}</Text>}
         </View>
         {badge && (
@@ -51,17 +52,17 @@ const SettingItem = ({ icon, label, subLabel, color = "#1a1a1a", onPress, danger
             <Text style={styles.badgeText}>{badge}</Text>
           </View>
         )}
-        <Ionicons name="chevron-forward" size={16} color="#C5C7CC" />
+        <Ionicons name="chevron-forward" size={16} color={T.textFaint} />
       </TouchableOpacity>
     </Animated.View>
   );
 };
 
 // ── ToggleItem ─────────────────────────────────────────────────────────────
-const ToggleItem = ({ icon, label, subLabel, color = "#1a1a1a", value, onToggle, iconBg }) => {
+const ToggleItem = ({ icon, label, subLabel, color = T.ink, value, onToggle, iconBg }) => {
   return (
     <TouchableOpacity style={styles.settingRow} onPress={onToggle} activeOpacity={0.6}>
-      <View style={[styles.settingIconWrapper, { backgroundColor: iconBg || '#F5F6FA' }]}>
+      <View style={[styles.settingIconWrapper, { backgroundColor: iconBg || T.sand }]}>
         <Ionicons name={icon} size={18} color={color} />
       </View>
       <View style={styles.textContainer}>
@@ -69,9 +70,9 @@ const ToggleItem = ({ icon, label, subLabel, color = "#1a1a1a", value, onToggle,
         {subLabel && <Text style={styles.settingSubLabel}>{subLabel}</Text>}
       </View>
       <Switch
-        trackColor={{ false: '#E8E9ED', true: '#f9c349' }}
-        thumbColor="#FFFFFF"
-        ios_backgroundColor="#E8E9ED"
+        trackColor={{ false: T.sand, true: T.yellow }}
+        thumbColor={T.white}
+        ios_backgroundColor={T.sand}
         onValueChange={onToggle}
         value={value}
         style={{ transform: [{ scale: 0.85 }] }}
@@ -91,25 +92,25 @@ const PrivacyAndSafetyScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fc" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
-          <Ionicons name="arrow-back" size={22} color="#1a1a1a" />
+          <Ionicons name="arrow-back" size={22} color={T.ink} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Privacy & Safety</Text>
+        <Text style={styles.headerTitle}>privacy & safety</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.compactContent}>
         <View style={styles.settingsGroup}>
-          <Text style={styles.groupLabel}>Privacy Controls</Text>
+          <Text style={styles.groupLabel}>privacy controls</Text>
           <ToggleItem
             icon="lock-closed-outline"
             label="Private Account"
             subLabel="Only connections can see your posts"
-            color="#f9c349"
-            iconBg="#FFF8E1"
+            color={T.yellow}
+            iconBg={T.yellowSoft}
             value={isPrivate}
             onToggle={() => setIsPrivate(!isPrivate)}
           />
@@ -117,8 +118,8 @@ const PrivacyAndSafetyScreen = ({ navigation }) => {
             icon="eye-outline"
             label="Show Online Status"
             subLabel="Let others see when you're online"
-            color="#f9c349"
-            iconBg="#FFF8E1"
+            color={T.yellow}
+            iconBg={T.yellowSoft}
             value={showOnlineStatus}
             onToggle={() => setShowOnlineStatus(!showOnlineStatus)}
           />
@@ -126,57 +127,57 @@ const PrivacyAndSafetyScreen = ({ navigation }) => {
             icon="time-outline"
             label="Show Last Seen"
             subLabel="Show when you were last active"
-            color="#f9c349"
-            iconBg="#FFF8E1"
+            color={T.yellow}
+            iconBg={T.yellowSoft}
             value={showLastSeen}
             onToggle={() => setShowLastSeen(!showLastSeen)}
           />
         </View>
 
         <View style={styles.settingsGroup}>
-          <Text style={styles.groupLabel}>Safety</Text>
+          <Text style={styles.groupLabel}>safety</Text>
           <SettingItem
             icon="ban-outline"
             label="Blocked Users"
             subLabel="Manage your blocked list"
-            color="#f9c349"
-            iconBg="#FFF8E1"
+            color={T.yellow}
+            iconBg={T.yellowSoft}
             onPress={() => navigation.navigate('BlockedUsers')}
           />
           <SettingItem
             icon="flag-outline"
             label="Report History"
             subLabel="View your past reports"
-            color="#f9c349"
-            iconBg="#FFF8E1"
+            color={T.yellow}
+            iconBg={T.yellowSoft}
             onPress={() => Alert.alert("Report History", "Your reports will appear here")}
           />
         </View>
 
         <View style={styles.settingsGroup}>
-          <Text style={styles.groupLabel}>Legal</Text>
+          <Text style={styles.groupLabel}>legal</Text>
           <SettingItem
             icon="document-text-outline"
             label="Privacy Policy"
             subLabel="How we handle your data"
-            color="#f9c349"
-            iconBg="#FFF8E1"
+            color={T.yellow}
+            iconBg={T.yellowSoft}
             onPress={() => navigation.navigate('PrivacyPolicy')}
           />
           <SettingItem
             icon="document-text-outline"
             label="Terms & Conditions"
             subLabel="Our terms and conditions"
-            color="#f9c349"
-            iconBg="#FFF8E1"
+            color={T.yellow}
+            iconBg={T.yellowSoft}
             onPress={() => navigation.navigate('TermsAndConditions')}
           />
           <SettingItem
             icon="people-outline"
             label="Community Guidelines"
             subLabel="Our community standards"
-            color="#f9c349"
-            iconBg="#FFF8E1"
+            color={T.yellow}
+            iconBg={T.yellowSoft}
             onPress={() => navigation.navigate('CommunityGuidelines')}
           />
         </View>
@@ -327,13 +328,13 @@ export default function SettingsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fc" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
-          <Ionicons name="arrow-back" size={22} color="#1a1a1a" />
+          <Ionicons name="arrow-back" size={22} color={T.ink} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
+        <Text style={styles.headerTitle}>settings</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -359,7 +360,7 @@ export default function SettingsScreen({ navigation }) {
                 flex: 1,
               }}
             >
-              <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.profileAvatarCompact}>
+              <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.profileAvatarCompact}>
                 {user?.profileImage ? (
                   <Image source={{ uri: user.profileImage }} style={styles.profileAvatarImage} />
                 ) : (
@@ -372,7 +373,7 @@ export default function SettingsScreen({ navigation }) {
                 <Text style={styles.profileNameCompact}>{user?.name || 'User'}</Text>
                 <Text style={styles.profileEmailCompact}>{user?.email || 'user@email.com'}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color="#C5C7CC" />
+              <Ionicons name="chevron-forward" size={18} color={T.textFaint} />
             </Animated.View>
           </TouchableOpacity>
 
@@ -381,28 +382,28 @@ export default function SettingsScreen({ navigation }) {
             <SettingItem
               icon="lock-closed-outline"
               label="Change Password"
-              color="#f9c349"
-              iconBg="#FFF8E1"
+              color={T.yellow}
+              iconBg={T.yellowSoft}
               onPress={() => navigation.navigate("ChangePassword")}
             />
             <SettingItem
               icon="shield-checkmark-outline"
               label="Privacy & Safety"
-              color="#f9c349"
-              iconBg="#FFF8E1"
+              color={T.yellow}
+              iconBg={T.yellowSoft}
               onPress={() => navigation.navigate('PrivacyAndSafety')}
             />
             <SettingItem
               icon="notifications-outline"
-              color="#2196F3"
-              iconBg="#E3F2FD"
+              color={T.ink}
+              iconBg={T.sand}
               label="Notifications"
               onPress={() => navigation.navigate('NotificationSettings')}
             />
             <SettingItem
               icon="refresh-outline"
-              color="#2196F3"
-              iconBg="#E3F2FD"
+              color={T.ink}
+              iconBg={T.sand}
               label="Replay the Tour"
               subLabel="See the app walkthrough again"
               onPress={handleReplayTour}
@@ -417,8 +418,8 @@ export default function SettingsScreen({ navigation }) {
                   ? `On until ${examModeUntil}`
                   : 'Your streak waits while you study'
               }
-              color="#f9c349"
-              iconBg="#FFF8E1"
+              color={T.yellow}
+              iconBg={T.yellowSoft}
               badge={examModeActive ? 'On' : 'Off'}
               onPress={handleExamModePress}
             />
@@ -426,44 +427,44 @@ export default function SettingsScreen({ navigation }) {
             <SettingItem
               icon="help-circle-outline"
               label="Help Center"
-              color="#f9c349"
-              iconBg="#FFF8E1"
+              color={T.yellow}
+              iconBg={T.yellowSoft}
               onPress={() => navigation.navigate('HelpCenter')}
             />
             <SettingItem
               icon="information-circle-outline"
               label="About TDC"
               subLabel="Version 2.0.1"
-              color="#f9c349"
-              iconBg="#FFF8E1"
+              color={T.yellow}
+              iconBg={T.yellowSoft}
               onPress={() => navigation.navigate('About')}
             />
             <SettingItem
               icon="document-text-outline"
               label="Terms & Conditions"
-              color="#f9c349"
-              iconBg="#FFF8E1"
+              color={T.yellow}
+              iconBg={T.yellowSoft}
               onPress={() => navigation.navigate('Terrms')}
             />
             <SettingItem
               icon="people-outline"
               label="Community Guidelines"
-              color="#f9c349"
-              iconBg="#FFF8E1"
+              color={T.yellow}
+              iconBg={T.yellowSoft}
               onPress={() => navigation.navigate('Guideline')}
             />
             <SettingItem
               icon="ban-outline"
               label="Blocked Users"
-              color="#f9c349"
-              iconBg="#FFF8E1"
+              color={T.yellow}
+              iconBg={T.yellowSoft}
               onPress={() => navigation.navigate('BlockedUsers')}
             />
             <SettingItem
               icon="log-out-outline"
               label="Log Out"
-              color="#F44336"
-              iconBg="#FFEBEE"
+              color={T.danger}
+              iconBg={T.dangerBg}
               danger
               onPress={handleLogoutPress}
             />
@@ -486,35 +487,35 @@ export default function SettingsScreen({ navigation }) {
         <Animated.View style={[styles.modalOverlay, { opacity: modalAnim }]}>
           <Animated.View style={[styles.modalContent, { transform: [{ scale: modalAnim }] }]}>
             <View style={styles.modalIconContainer}>
-              <Ionicons name="log-out-outline" size={28} color="#F44336" />
+              <Ionicons name="log-out-outline" size={28} color={T.danger} />
             </View>
-            <Text style={styles.modalTitle}>Log Out</Text>
+            <Text style={styles.modalTitle}>log out</Text>
             <Text style={styles.modalSubtitle}>Choose how to proceed with your account</Text>
 
             <TouchableOpacity style={styles.modalOption} onPress={handleSignOut}>
-              <View style={[styles.modalOptionIcon, { backgroundColor: '#FFF3E0' }]}>
+              <View style={[styles.modalOptionIcon, { backgroundColor: T.yellowSoft }]}>
                 <Ionicons name="exit-outline" size={22} color="#FF9800" />
               </View>
               <View style={styles.modalOptionContent}>
-                <Text style={styles.modalOptionTitle}>Sign Out</Text>
+                <Text style={styles.modalOptionTitle}>sign out</Text>
                 <Text style={styles.modalOptionDesc}>Keep your data, just sign out</Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.modalOption, styles.modalOptionDanger]} onPress={openDeleteModal}>
-              <View style={[styles.modalOptionIcon, { backgroundColor: '#FFEBEE' }]}>
-                <Ionicons name="trash-outline" size={22} color="#F44336" />
+              <View style={[styles.modalOptionIcon, { backgroundColor: T.dangerBg }]}>
+                <Ionicons name="trash-outline" size={22} color={T.danger} />
               </View>
               <View style={styles.modalOptionContent}>
-                <Text style={[styles.modalOptionTitle, { color: '#F44336' }]}>Delete Account</Text>
-                <Text style={[styles.modalOptionDesc, { color: '#F44336' }]}>
-                  Permanently delete all data
+                <Text style={[styles.modalOptionTitle, { color: T.danger }]}>delete account</Text>
+                <Text style={[styles.modalOptionDesc, { color: T.danger }]}>
+                  permanently delete all data
                 </Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setShowLogoutModal(false)}>
-              <Text style={styles.modalCancelText}>Cancel</Text>
+              <Text style={styles.modalCancelText}>cancel</Text>
             </TouchableOpacity>
           </Animated.View>
         </Animated.View>
@@ -535,34 +536,34 @@ export default function SettingsScreen({ navigation }) {
             {deleteStep === 1 && (
               <>
                 <View style={styles.deleteModalHeader}>
-                  <View style={[styles.deleteModalIcon, { backgroundColor: '#FF475720' }]}>
-                    <MaterialCommunityIcons name="alert-circle" size={36} color="#FF4757" />
+                  <View style={[styles.deleteModalIcon, { backgroundColor: T.dangerBg }]}>
+                    <MaterialCommunityIcons name="alert-circle" size={36} color={T.danger} />
                   </View>
-                  <Text style={styles.deleteModalTitle}>Delete Account?</Text>
+                  <Text style={styles.deleteModalTitle}>delete account?</Text>
                   <Text style={styles.deleteModalDesc}>
                     This action cannot be undone. All your data will be permanently deleted.
                   </Text>
                 </View>
                 <View style={styles.warningList}>
                   <View style={styles.warningItem}>
-                    <Ionicons name="close-circle" size={16} color="#FF4757" />
-                    <Text style={styles.warningText}>Profile removed</Text>
+                    <Ionicons name="close-circle" size={16} color={T.danger} />
+                    <Text style={styles.warningText}>profile removed</Text>
                   </View>
                   <View style={styles.warningItem}>
-                    <Ionicons name="close-circle" size={16} color="#FF4757" />
-                    <Text style={styles.warningText}>All connections lost</Text>
+                    <Ionicons name="close-circle" size={16} color={T.danger} />
+                    <Text style={styles.warningText}>all connections lost</Text>
                   </View>
                   <View style={styles.warningItem}>
-                    <Ionicons name="close-circle" size={16} color="#FF4757" />
-                    <Text style={styles.warningText}>History deleted</Text>
+                    <Ionicons name="close-circle" size={16} color={T.danger} />
+                    <Text style={styles.warningText}>history deleted</Text>
                   </View>
                 </View>
                 <View style={styles.deleteModalBtns}>
                   <TouchableOpacity style={styles.cancelBtn} onPress={closeDeleteModal}>
-                    <Text style={styles.cancelBtnText}>Cancel</Text>
+                    <Text style={styles.cancelBtnText}>cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.continueBtn} onPress={handleNextStep}>
-                    <Text style={styles.continueBtnText}>Continue</Text>
+                    <Text style={styles.continueBtnText}>continue</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -571,31 +572,31 @@ export default function SettingsScreen({ navigation }) {
               <>
                 <View style={styles.deleteModalHeader}>
                   <View style={[styles.deleteModalIcon, { backgroundColor: '#FFD93D20' }]}>
-                    <MaterialCommunityIcons name="pause-circle" size={36} color="#f9c349" />
+                    <MaterialCommunityIcons name="pause-circle" size={36} color={T.yellow} />
                   </View>
-                  <Text style={styles.deleteModalTitle}>Wait! Before You Go</Text>
-                  <Text style={styles.deleteModalDesc}>Consider these options instead:</Text>
+                  <Text style={styles.deleteModalTitle}>wait! before you go</Text>
+                  <Text style={styles.deleteModalDesc}>consider these options instead:</Text>
                 </View>
                 <View style={styles.alternativeList}>
                   <TouchableOpacity style={styles.alternativeItem} onPress={closeDeleteModal}>
-                    <Ionicons name="create-outline" size={18} color="#f9c349" />
-                    <Text style={styles.alternativeText}>Update your profile</Text>
+                    <Ionicons name="create-outline" size={18} color={T.yellow} />
+                    <Text style={styles.alternativeText}>update your profile</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.alternativeItem} onPress={closeDeleteModal}>
-                    <Ionicons name="help-circle-outline" size={18} color="#f9c349" />
-                    <Text style={styles.alternativeText}>Contact support</Text>
+                    <Ionicons name="help-circle-outline" size={18} color={T.yellow} />
+                    <Text style={styles.alternativeText}>contact support</Text>
                   </TouchableOpacity>
                 </View>
                 <View style={styles.deleteModalBtns}>
                   <TouchableOpacity style={styles.cancelBtn} onPress={closeDeleteModal}>
-                    <Text style={styles.cancelBtnText}>Keep Account</Text>
+                    <Text style={styles.cancelBtnText}>keep account</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.continueBtn, { backgroundColor: "#f9c349" }]}
+                    style={[styles.continueBtn, { backgroundColor: T.yellow }]}
                     onPress={handleNextStep}
                   >
-                    <Text style={[styles.continueBtnText, { color: "#1A1A1A" }]}>
-                      Still Delete
+                    <Text style={[styles.continueBtnText, { color: T.ink }]}>
+                      still delete
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -604,11 +605,11 @@ export default function SettingsScreen({ navigation }) {
             {deleteStep === 3 && (
               <>
                 <View style={styles.deleteModalHeader}>
-                  <View style={[styles.deleteModalIcon, { backgroundColor: '#FF475720' }]}>
-                    <MaterialCommunityIcons name="delete-forever" size={36} color="#FF4757" />
+                  <View style={[styles.deleteModalIcon, { backgroundColor: T.dangerBg }]}>
+                    <MaterialCommunityIcons name="delete-forever" size={36} color={T.danger} />
                   </View>
-                  <Text style={[styles.deleteModalTitle, { color: '#FF4757' }]}>
-                    Final Confirmation
+                  <Text style={[styles.deleteModalTitle, { color: T.danger }]}>
+                    final confirmation
                   </Text>
                   <Text style={styles.deleteModalDesc}>
                     Type "delete my account" to confirm.
@@ -617,7 +618,7 @@ export default function SettingsScreen({ navigation }) {
                 <TextInput
                   style={styles.confirmInput}
                   placeholder='Type "delete my account"'
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={T.textFaint}
                   value={confirmText}
                   onChangeText={setConfirmText}
                   autoCapitalize="none"
@@ -629,7 +630,7 @@ export default function SettingsScreen({ navigation }) {
                     onPress={closeDeleteModal}
                     disabled={deleting}
                   >
-                    <Text style={styles.cancelBtnText}>Cancel</Text>
+                    <Text style={styles.cancelBtnText}>cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
@@ -641,9 +642,9 @@ export default function SettingsScreen({ navigation }) {
                     disabled={deleting}
                   >
                     {deleting ? (
-                      <ActivityIndicator color="#FFF" size="small" />
+                      <ActivityIndicator color={T.white} size="small" />
                     ) : (
-                      <Text style={styles.deleteFinalBtnText}>Delete Permanently</Text>
+                      <Text style={styles.deleteFinalBtnText}>delete permanently</Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -660,7 +661,7 @@ export { PrivacyAndSafetyScreen };
 
 // ── Styles ─────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8f9fc" },
+  container: { flex: 1, backgroundColor: T.paper },
 
   header: {
     flexDirection: 'row',
@@ -668,16 +669,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#f8f9fc',
+    backgroundColor: T.sand,
   },
   headerBtn: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
@@ -685,8 +686,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.headingBold,
+    color: T.ink,
     letterSpacing: -0.3,
   },
 
@@ -700,29 +701,29 @@ const styles = StyleSheet.create({
   },
   groupLabel: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#8E9098',
+    fontFamily: F.bodyBold,
+    color: T.textMuted,
     letterSpacing: 0.8,
-    textTransform: 'uppercase',
+    textTransform: 'none',
     marginBottom: 6,
     paddingLeft: 4,
   },
 
   // Profile Card
   profileCardCompact: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     borderRadius: 14,
     padding: 14,
     marginTop: 4,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#F0F1F5',
+    borderColor: T.line,
   },
   profileAvatarCompact: {
     width: 44,
@@ -738,8 +739,8 @@ const styles = StyleSheet.create({
   },
   profileAvatarText: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#1a1a1a',
+    fontFamily: F.heading,
+    color: T.ink,
   },
   profileInfoCompact: {
     flex: 1,
@@ -747,14 +748,14 @@ const styles = StyleSheet.create({
   },
   profileNameCompact: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     letterSpacing: -0.2,
   },
   profileEmailCompact: {
     fontSize: 12,
-    color: '#8E9098',
-    fontWeight: '500',
+    color: T.textMuted,
+    fontFamily: F.bodyMedium,
     marginTop: 1,
   },
 
@@ -765,8 +766,8 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     paddingHorizontal: 4,
     borderBottomWidth: 1,
-    borderBottomColor: '#F5F6FA',
-    backgroundColor: '#FFFFFF',
+    borderBottomColor: T.line,
+    backgroundColor: T.card,
   },
   settingIconWrapper: {
     width: 34,
@@ -779,17 +780,17 @@ const styles = StyleSheet.create({
   textContainer: { flex: 1 },
   settingLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontFamily: F.bodySemi,
+    color: T.ink,
   },
   settingSubLabel: {
     fontSize: 11,
-    color: '#8E9098',
+    color: T.textMuted,
     marginTop: 0,
-    fontWeight: '400',
+    fontFamily: F.body,
   },
   badgeContainer: {
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     paddingHorizontal: 7,
     paddingVertical: 1,
     borderRadius: 8,
@@ -797,8 +798,8 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 9,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
   },
 
   footerCompact: {
@@ -808,33 +809,33 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 11,
-    color: '#B0B2B8',
-    fontWeight: '400',
+    color: T.textFaint,
+    fontFamily: F.body,
   },
 
   // Logout Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: T.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
     width: width - 32,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderRadius: 20,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    elevation: 10,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   modalIconContainer: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: '#FFEBEE',
+    backgroundColor: T.dangerBg,
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
@@ -842,13 +843,13 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.headingBold,
+    color: T.ink,
     textAlign: 'center',
   },
   modalSubtitle: {
-    fontSize: 13,
-    color: '#8E9098',
+    fontSize: 13, fontFamily: F.body,
+    color: T.textMuted,
     textAlign: 'center',
     marginTop: 2,
     marginBottom: 16,
@@ -859,11 +860,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderRadius: 12,
-    backgroundColor: '#F8F9FC',
+    backgroundColor: T.sand,
     marginBottom: 8,
   },
   modalOptionDanger: {
-    backgroundColor: '#FFF5F5',
+    backgroundColor: T.dangerBg,
     borderWidth: 1,
     borderColor: '#FFEBEE',
   },
@@ -878,45 +879,45 @@ const styles = StyleSheet.create({
   modalOptionContent: { flex: 1 },
   modalOptionTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontFamily: F.bodySemi,
+    color: T.ink,
   },
   modalOptionDesc: {
     fontSize: 11,
-    color: '#8E9098',
-    fontWeight: '400',
+    color: T.textMuted,
+    fontFamily: F.body,
   },
   modalCancelBtn: {
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: '#F5F6FA',
+    backgroundColor: T.sand,
     alignItems: 'center',
     marginTop: 4,
   },
   modalCancelText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
+    fontFamily: F.bodySemi,
+    color: T.textMuted,
   },
 
   // Delete Modal
   deleteModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: T.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   deleteModalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     borderRadius: 24,
     padding: 20,
     width: '100%',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.12,
-    shadowRadius: 28,
-    elevation: 12,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   deleteModalHeader: { alignItems: 'center', marginBottom: 16 },
   deleteModalIcon: {
@@ -929,13 +930,13 @@ const styles = StyleSheet.create({
   },
   deleteModalTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1A1A',
+    fontFamily: F.headingBold,
+    color: T.ink,
     marginBottom: 4,
   },
   deleteModalDesc: {
-    fontSize: 12,
-    color: '#64748B',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textMuted,
     textAlign: 'center',
     lineHeight: 18,
   },
@@ -947,9 +948,9 @@ const styles = StyleSheet.create({
   },
   warningText: {
     fontSize: 12,
-    color: '#64748B',
+    color: T.textMuted,
     marginLeft: 8,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
   alternativeList: { marginBottom: 16 },
   alternativeItem: {
@@ -957,65 +958,65 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: T.sand,
     borderRadius: 12,
     marginBottom: 6,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
+    borderColor: T.line,
   },
   alternativeText: {
     fontSize: 12,
-    color: '#1A1A1A',
+    color: T.ink,
     marginLeft: 10,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
   deleteModalBtns: { flexDirection: 'row', gap: 10 },
   cancelBtn: {
     flex: 1,
     paddingVertical: 12,
     borderRadius: 14,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: T.paper,
     alignItems: 'center',
   },
   cancelBtnText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#64748B',
+    fontFamily: F.bodySemi,
+    color: T.textMuted,
   },
   continueBtn: {
     flex: 1,
     paddingVertical: 12,
     borderRadius: 14,
-    backgroundColor: '#FF4757',
+    backgroundColor: T.danger,
     alignItems: 'center',
   },
   continueBtnText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontFamily: F.bodySemi,
+    color: T.white,
   },
   confirmInput: {
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: T.line,
     borderRadius: 14,
     padding: 12,
     fontSize: 13,
-    color: '#1A1A1A',
+    color: T.ink,
     marginBottom: 16,
-    fontWeight: '500',
-    backgroundColor: '#F8FAFC',
+    fontFamily: F.bodyMedium,
+    backgroundColor: T.sand,
   },
   deleteFinalBtn: {
     flex: 1,
     paddingVertical: 12,
     borderRadius: 14,
-    backgroundColor: '#CBD5E1',
+    backgroundColor: T.sand,
     alignItems: 'center',
   },
-  deleteFinalBtnActive: { backgroundColor: '#FF4757' },
+  deleteFinalBtnActive: { backgroundColor: T.danger },
   deleteFinalBtnText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontFamily: F.bodySemi,
+    color: T.white,
   },
 });
