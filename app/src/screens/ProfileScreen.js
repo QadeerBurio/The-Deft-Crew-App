@@ -43,7 +43,7 @@ import BadgeShelf from '../engagement/components/BadgeShelf';
 import StreakChip from '../engagement/components/StreakChip';
 import StreakSheet from '../engagement/components/StreakSheet';
 
-import { color as T, font as F } from "../theme/tokens";
+import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 const { width, height } = Dimensions.get("window");
 
 // ─── Modern Menu Item ────────────────────────────────────────────────────────
@@ -98,47 +98,33 @@ const MenuItem = ({ item, index, isLast }) => {
       }}
     >
       <TouchableOpacity
-        style={[
-          styles.menuItem,
-          isLast && { borderBottomWidth: 0 },
-          item.danger && styles.menuItemDanger,
-        ]}
+        style={[P.row, !isLast && P.rowLine]}
         onPress={item.onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={0.6}
+        accessibilityRole="button"
+        accessibilityLabel={item.name}
       >
-        <View style={styles.menuLeft}>
-          <View style={[styles.menuIconBox, { backgroundColor: item.color + '15' }]}>
-            <Icon name={item.icon} size={20} color={item.color} />
-          </View>
-          <View style={styles.menuTextContainer}>
-            <Text style={[styles.menuItemTitle, item.danger && { color: T.danger }]}>
-              {item.name}
-            </Text>
-            {item.subtitle && (
-              <Text style={styles.menuItemSubtitle}>{item.subtitle}</Text>
-            )}
-          </View>
+        <View style={P.rowIcon}>
+          <Icon name={item.icon} size={18} color={item.danger ? T.danger : T.ink} />
         </View>
-        <View style={styles.menuRight}>
-          {item.rightText !== undefined && item.rightText !== null ? (
-            <View style={styles.menuBadge}>
-              <LinearGradient
-                colors={[T.yellow, T.yellow]}
-                style={styles.menuBadgeGradient}
-              >
-                <Text style={styles.menuBadgeText}>
-                  {typeof item.rightText === 'number' && item.rightText > 99
-                    ? '99+'
-                    : item.rightText}
-                </Text>
-              </LinearGradient>
-            </View>
-          ) : (
-            <Icon name="chevron-forward" size={16} color={T.textFaint} />
+        <View style={{ flex: 1 }}>
+          <Text style={[P.rowTitle, item.danger && { color: T.danger }]} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            {item.name}
+          </Text>
+          {item.subtitle && (
+            <Text style={P.rowSub} maxFontSizeMultiplier={MAX_FONT_SCALE}>{item.subtitle}</Text>
           )}
         </View>
+        {item.rightText !== undefined && item.rightText !== null ? (
+          <View style={P.rowBadge}>
+            <Text style={P.rowBadgeText}>
+              {typeof item.rightText === 'number' && item.rightText > 99 ? '99+' : item.rightText}
+            </Text>
+          </View>
+        ) : null}
+        <Icon name="chevron-forward" size={16} color={T.textFaint} />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -554,155 +540,184 @@ export default function ProfileScreen() {
     },
   ];
 
+  const universityName =
+    typeof user?.university === "object"
+      ? user?.university?.name || ""
+      : typeof user?.university === "string" && !/^[a-f0-9]{24}$/i.test(user.university)
+      ? user.university
+      : "";
+
   // ─── Render ────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
+    <SafeAreaView style={[styles.container, { backgroundColor: T.ink }]} edges={["top"]}>
+      <StatusBar barStyle="light-content" backgroundColor={T.ink} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        style={{ backgroundColor: T.paper }}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* ── Profile Header ─────────────────────────────────────────── */}
-        <Animated.View
-          style={[
-            styles.profileHeader,
-            { opacity: headerFade },
-          ]}
-        >
-          <View style={styles.profileHeaderContent}>
-            <Animated.View
-              style={[
-                styles.avatarContainer,
-                { transform: [{ scale: avatarScale }] },
-              ]}
+        {/* ── Dark hero (Profile design) ─────────────────────────────── */}
+        <Animated.View style={[P.hero, { opacity: headerFade }]}>
+          <View style={P.heroTop}>
+            <Text style={P.heroLabel} maxFontSizeMultiplier={MAX_FONT_SCALE}>profile</Text>
+            <TouchableOpacity
+              style={P.heroBtn}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                navigation.navigate("SettingsScreen");
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="settings"
             >
-              <TouchableOpacity onPress={pickImage} activeOpacity={0.8}>
-                <LinearGradient
-                  colors={[T.yellow, "#e6b800"]}
-                  style={styles.avatarRing}
-                >
+              <Icon name="settings-outline" size={18} color={T.white} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={P.heroRow}>
+            <Animated.View style={{ transform: [{ scale: avatarScale }] }}>
+              <TouchableOpacity
+                onPress={pickImage}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="change profile photo"
+              >
+                <View style={P.avatar}>
                   {selectedImage ? (
-                    <Image source={{ uri: selectedImage }} style={styles.avatarImage} />
+                    <Image source={{ uri: selectedImage }} style={P.avatarImg} />
                   ) : user?.profileImage ? (
-                    <Image
-                      source={{ uri: `${user.profileImage}?t=${Date.now()}` }}
-                      style={styles.avatarImage}
-                    />
+                    <Image source={{ uri: `${user.profileImage}?t=${Date.now()}` }} style={P.avatarImg} />
                   ) : (
-                    <View style={styles.avatarPlaceholder}>
-                      <Text style={styles.avatarText}>
-                        {user?.name?.charAt(0)?.toUpperCase() || "?"}
-                      </Text>
-                    </View>
+                    <Text style={P.avatarLetter}>{user?.name?.charAt(0)?.toUpperCase() || "?"}</Text>
                   )}
-                </LinearGradient>
-                <View style={styles.cameraBadge}>
-                  <LinearGradient
-                    colors={[T.yellow, "#e6b800"]}
-                    style={styles.cameraBadgeGradient}
-                  >
-                    <Icon name="camera" size={12} color={T.ink} />
-                  </LinearGradient>
+                </View>
+                <View style={P.cameraBadge}>
+                  <Icon name="camera" size={12} color={T.ink} />
                 </View>
               </TouchableOpacity>
             </Animated.View>
 
-            <View style={styles.userInfo}>
-              <Text style={styles.userName}>{user?.name || "Student"}</Text>
-              <View style={styles.emailRow}>
-                <Icon name="mail-outline" size={13} color={T.textFaint} />
-                <Text style={styles.userEmail}>{user?.email || ""}</Text>
-              </View>
-
-              {/* 🆕 Streak chip */}
-              <View style={{ marginTop: 8, alignItems: 'flex-start' }}>
-                <StreakChip onPress={() => setStreakSheetVisible(true)} />
-              </View>
-
-              {/* 🆕 Badge shelf */}
-              <View style={{ marginTop: 8 }}>
-                <BadgeShelf
-                  max={4}
-                  compact
-                  onSeeAll={() => navigation.navigate('Badges')}
-                />
-              </View>
-
+            <View style={{ flex: 1 }}>
+              <Text style={P.name} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_SCALE} accessibilityRole="header">
+                {user?.name || "student"}
+              </Text>
+              {!!universityName && (
+                <Text style={P.uni} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>{universityName}</Text>
+              )}
+              {!!user?.email && (
+                <Text style={P.email} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>{user.email}</Text>
+              )}
               {selectedImage && (
                 <TouchableOpacity
-                  style={styles.saveBtn}
+                  style={P.saveBtn}
                   onPress={handleSaveProfile}
                   disabled={isSaving}
+                  accessibilityRole="button"
+                  accessibilityLabel="save photo"
                 >
-                  <LinearGradient
-                    colors={["#4ECDC4", "#44B39D"]}
-                    style={styles.saveBtnGradient}
-                  >
-                    {isSaving ? (
-                      <ActivityIndicator size="small" color={T.white} />
-                    ) : (
-                      <>
-                        <Icon name="checkmark-outline" size={14} color={T.white} />
-                        <Text style={styles.saveBtnText}>save</Text>
-                      </>
-                    )}
-                  </LinearGradient>
+                  {isSaving ? (
+                    <ActivityIndicator size="small" color={T.ink} />
+                  ) : (
+                    <Text style={P.saveBtnText}>save photo</Text>
+                  )}
                 </TouchableOpacity>
               )}
             </View>
           </View>
         </Animated.View>
 
-        {/* 🆕 Savings counter */}
-        <SavingsCounter onShare={handleShareSavings} />
+        {/* ── Savings card (replaces SavingsCounter: same total + share) ── */}
+        <Animated.View style={[P.savings, { opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }]}>
+          <View style={P.savingsIcon}>
+            <Icon name="wallet-outline" size={22} color={T.ink} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={P.savingsLabel} maxFontSizeMultiplier={MAX_FONT_SCALE}>my tdc savings</Text>
+            <Text style={P.savingsValue} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+              rs {Math.round(totalSaved || 0).toLocaleString()}
+              <Text style={{ color: T.yellow }}>.</Text>
+            </Text>
+          </View>
+          {totalSaved > 0 && (
+            <TouchableOpacity
+              onPress={handleShareSavings}
+              style={P.shareBtn}
+              accessibilityRole="button"
+              accessibilityLabel="share my savings"
+              hitSlop={6}
+            >
+              <Icon name="share-outline" size={17} color={T.ink} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={P.detailsBtn}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              navigation.navigate("MyDiscountScreen", { claimedOffers, totalSaved, redemptionCount });
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="savings details"
+          >
+            <Text style={P.detailsBtnText}>details</Text>
+          </TouchableOpacity>
+        </Animated.View>
 
-        {/* ── Stats Row ──────────────────────────────────────────────── */}
-        <Animated.View
-          style={[
-            styles.statsRow,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideUpAnim }],
-            },
-          ]}
-        >
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>
-              {redemptionCount || 0}
-            </Text>
-            <Text style={styles.statLabel}>used</Text>
+        {/* ── Tiles: real counts ─────────────────────────────────────── */}
+        <Animated.View style={[P.tiles, { opacity: fadeAnim }]}>
+          {[
+            { n: (me?.points?.balance || 0).toLocaleString(), label: "crew points", go: "Rewards" },
+            { n: String(me?.badges?.earned || 0), label: "badges", go: "Badges" },
+            { n: String(claimedOffers.length || 0), label: "discounts", go: "MyDiscountScreen" },
+          ].map((t) => (
+            <TouchableOpacity
+              key={t.label}
+              style={P.tile}
+              activeOpacity={0.8}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                if (t.go === "MyDiscountScreen") navigation.navigate("MyDiscountScreen", { claimedOffers, totalSaved, redemptionCount });
+                else navigation.navigate(t.go);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`${t.n} ${t.label}`}
+            >
+              <Text style={P.tileN} maxFontSizeMultiplier={MAX_FONT_SCALE}>{t.n}</Text>
+              <Text style={P.tileLabel} maxFontSizeMultiplier={MAX_FONT_SCALE}>{t.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </Animated.View>
+        <Text style={P.subStats} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+          {redemptionCount || 0} used · {me?.missions?.sortedCount || 0}/8 sorted
+        </Text>
+
+        {/* ── Streak + badge shelf ───────────────────────────────────── */}
+        <Animated.View style={[P.card, { opacity: menuFade }]}>
+          <View style={{ alignItems: 'flex-start' }}>
+            <StreakChip onPress={() => setStreakSheetVisible(true)} />
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>
-              {claimedOffers.length || 0}
-            </Text>
-            <Text style={styles.statLabel}>discounts</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>
-              {me?.missions?.sortedCount || 0}/8
-            </Text>
-            <Text style={styles.statLabel}>sorted</Text>
+          <View style={{ marginTop: 10 }}>
+            <BadgeShelf max={4} compact onSeeAll={() => navigation.navigate('Badges')} />
           </View>
         </Animated.View>
 
-        {/* ── Menu Section ───────────────────────────────────────────── */}
+        {/* ── Rows ───────────────────────────────────────────────────── */}
         <Animated.View style={{ opacity: menuFade }}>
-          <View style={styles.menuContainer}>
-            <View style={styles.menuCard}>
-              {menuGroups[0].items.map((item, iIdx) => (
-                <MenuItem
-                  key={iIdx}
-                  item={item}
-                  index={iIdx}
-                  isLast={iIdx === menuGroups[0].items.length - 1}
-                />
-              ))}
-            </View>
+          <View style={P.rows}>
+            {menuGroups[0].items.filter((i) => !i.danger).map((item, iIdx, arr) => (
+              <MenuItem key={iIdx} item={item} index={iIdx} isLast={iIdx === arr.length - 1} />
+            ))}
           </View>
+          {menuGroups[0].items.filter((i) => i.danger).map((item) => (
+            <TouchableOpacity
+              key={item.name}
+              onPress={item.onPress}
+              style={P.signOut}
+              accessibilityRole="button"
+              accessibilityLabel={item.name}
+            >
+              <Text style={P.signOutText}>{item.name}</Text>
+            </TouchableOpacity>
+          ))}
         </Animated.View>
 
         <Text style={styles.versionText}>Version 2.0.1</Text>
@@ -1349,4 +1364,163 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: F.bodyMedium,
   },
+});
+
+// ─── Profile design layout ───────────────────────────────────────────────────
+const P = StyleSheet.create({
+  hero: {
+    backgroundColor: T.ink,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 64,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+  },
+  heroTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  heroLabel: { fontFamily: F.bodyBold, fontSize: 12, color: T.onInkMuted },
+  heroBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: T.inkSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroRow: { flexDirection: "row", alignItems: "center", gap: 14, marginTop: 14 },
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: T.yellow,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  avatarImg: { width: 72, height: 72, borderRadius: 36 },
+  avatarLetter: { fontFamily: F.heading, fontSize: 28, color: T.ink },
+  cameraBadge: {
+    position: "absolute",
+    right: -2,
+    bottom: -2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: T.white,
+    borderWidth: 2,
+    borderColor: T.ink,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  name: { fontFamily: F.heading, fontSize: 22, color: T.white },
+  uni: { fontFamily: F.body, fontSize: 13, color: T.onInkMuted, marginTop: 2 },
+  email: { fontFamily: F.body, fontSize: 12.5, color: T.onInkMuted, marginTop: 1 },
+  saveBtn: {
+    alignSelf: "flex-start",
+    marginTop: 10,
+    height: 32,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: T.yellow,
+    justifyContent: "center",
+  },
+  saveBtnText: { fontFamily: F.bodyBold, fontSize: 13, color: T.ink },
+
+  savings: {
+    marginTop: -44,
+    marginHorizontal: 16,
+    borderRadius: 26,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  savingsIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: T.yellowSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  savingsLabel: { fontFamily: F.body, fontSize: 12, color: T.textMuted },
+  savingsValue: { fontFamily: F.heading, fontSize: 26, color: T.ink },
+  shareBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: T.line,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  detailsBtn: {
+    height: 38,
+    paddingHorizontal: 14,
+    borderRadius: 19,
+    backgroundColor: T.ink,
+    justifyContent: "center",
+  },
+  detailsBtnText: { fontFamily: F.bodyBold, fontSize: 13, color: T.white },
+
+  tiles: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingTop: 12 },
+  tile: {
+    flex: 1,
+    borderRadius: 20,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    alignItems: "center",
+  },
+  tileN: { fontFamily: F.heading, fontSize: 22, color: T.ink },
+  tileLabel: { fontFamily: F.body, fontSize: 12, color: T.textMuted, marginTop: 2 },
+  subStats: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, textAlign: "center", marginTop: 8 },
+
+  card: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 22,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
+    padding: 14,
+  },
+
+  rows: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 22,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
+    overflow: "hidden",
+  },
+  row: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 56, paddingHorizontal: 16, paddingVertical: 8 },
+  rowLine: { borderBottomWidth: 1, borderBottomColor: T.lineSoft },
+  rowIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: T.sand,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rowTitle: { fontFamily: F.bodyBold, fontSize: 14.5, color: T.ink },
+  rowSub: { fontFamily: F.body, fontSize: 12, color: T.textMuted, marginTop: 1 },
+  rowBadge: {
+    minWidth: 28,
+    height: 24,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    backgroundColor: T.sand,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rowBadgeText: { fontFamily: F.bodyBold, fontSize: 12, color: T.ink },
+  signOut: { alignSelf: "center", paddingVertical: 14, paddingHorizontal: 24, minHeight: 44 },
+  signOutText: { fontFamily: F.bodyBold, fontSize: 14, color: T.danger },
 });
