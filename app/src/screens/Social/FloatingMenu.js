@@ -15,14 +15,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 
-import { color as T } from "../../theme/tokens";
+import { color as T, font as F } from "../../theme/tokens";
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Modern color palette - Black, White, Gold
 const COLORS = {
   primary: T.yellow,
   primaryLight: T.yellow,
-  primaryDark: '#E0A830',
+  primaryDark: T.yellow,
   background: 'rgba(249, 195, 73, 0.15)',
   glass: 'rgba(255, 255, 255, 0.1)',
   glassBorder: 'rgba(255, 255, 255, 0.15)',
@@ -31,8 +31,8 @@ const COLORS = {
   textLight: 'rgba(255, 255, 255, 0.8)',
   white: T.white,
   black: T.ink,
-  darkBg: 'rgba(0, 0, 0, 0.85)',
-  labelBg: 'rgba(0, 0, 0, 0.8)',
+  darkBg: 'rgba(17, 17, 17, 0.85)',
+  labelBg: 'rgba(17, 17, 17, 0.8)',
   surface: 'rgba(255, 255, 255, 0.05)',
   surfaceLight: 'rgba(255, 255, 255, 0.1)',
 };
@@ -312,12 +312,12 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   subBtnLabel: {
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 11,
+    fontFamily: F.bodyBold,
     color: COLORS.white,
     textAlign: 'center',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    textTransform: 'lowercase',
+    letterSpacing: 0.2,
   },
 });
 

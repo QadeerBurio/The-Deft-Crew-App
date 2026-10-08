@@ -178,7 +178,7 @@ export default function ReportModal({
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <Ionicons name="flag-outline" size={22} color={T.danger} />
-              <Text style={styles.title}>Report {getContentTypeLabel()}</Text>
+              <Text style={styles.title}>report {String(getContentTypeLabel()).toLowerCase()}</Text>
             </View>
             <TouchableOpacity 
               onPress={handleClose} 
@@ -242,7 +242,7 @@ export default function ReportModal({
                           selectedReason === reason.id && styles.reasonTextSelected
                         ]}
                       >
-                        {reason.label}
+                        {reason.label.toLowerCase()}
                       </Text>
                     </View>
                     {selectedReason === reason.id && (

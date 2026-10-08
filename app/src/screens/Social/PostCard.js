@@ -878,7 +878,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
             {item.user?.profileImage ? (
               <Image source={{ uri: item.user.profileImage }} style={styles.avatarLg} />
             ) : (
-              <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.avatarLgPlaceholder}>
+              <LinearGradient colors={[T.yellow, T.yellow]} style={styles.avatarLgPlaceholder}>
                 <Text style={styles.avatarLgText}>
                   {item.user?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </Text>
@@ -960,7 +960,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                     {reply.user?.profileImage ? (
                       <Image source={{ uri: reply.user.profileImage }} style={styles.avatarSm} />
                     ) : (
-                      <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.avatarSmPlaceholder}>
+                      <LinearGradient colors={[T.yellow, T.yellow]} style={styles.avatarSmPlaceholder}>
                         <Text style={styles.avatarSmText}>
                           {replyAuthorName.charAt(0).toUpperCase()}
                         </Text>
@@ -1034,14 +1034,14 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                 onPress={handleAcceptRequest}
                 disabled={isConnecting}
               >
-                <LinearGradient colors={[T.success, '#45a049']} style={styles.plusBadgeGradient}>
+                <LinearGradient colors={[T.success, T.success]} style={styles.plusBadgeGradient}>
                   {isConnecting ? <ActivityIndicator size={10} color={T.white} /> : <Ionicons name="checkmark" size={14} color={T.white} />}
                 </LinearGradient>
               </TouchableOpacity>
             )}
             {showConnectButton && (
               <TouchableOpacity style={styles.plusBadge} onPress={handleConnect} disabled={isConnecting}>
-                <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.plusBadgeGradient}>
+                <LinearGradient colors={[T.yellow, T.yellow]} style={styles.plusBadgeGradient}>
                   {isConnecting ? <ActivityIndicator size={10} color={T.white} /> : <Ionicons name="add" size={14} color={T.white} />}
                 </LinearGradient>
               </TouchableOpacity>
@@ -1254,7 +1254,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                           {item.profileImage ? (
                             <Image source={{ uri: item.profileImage }} style={styles.mentionAvatar} />
                           ) : (
-                            <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.mentionAvatarPlaceholder}>
+                            <LinearGradient colors={[T.yellow, T.yellow]} style={styles.mentionAvatarPlaceholder}>
                               <Text style={styles.mentionAvatarText}>
                                 {item.name?.charAt(0)?.toUpperCase()}
                               </Text>
@@ -1292,7 +1292,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                       style={[styles.postBtn, !commentText.trim() && styles.postBtnDisabled]}
                     >
                       <LinearGradient
-                        colors={commentText.trim() ? [T.yellow, '#e6b800'] : [T.sand, T.sand]}
+                        colors={commentText.trim() ? [T.yellow, T.yellow] : [T.sand, T.sand]}
                         style={styles.postBtnGradient}
                       >
                         {isSubmitting ? (
