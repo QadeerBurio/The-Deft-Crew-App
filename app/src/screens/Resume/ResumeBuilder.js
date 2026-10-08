@@ -25,6 +25,7 @@ import { WebView } from 'react-native-webview';
 import { renderResumeHTML } from '../../services/templateService';
 import resumeApi from '../../api/resumeApi';
 
+import { color as T, font as F } from "../../theme/tokens";
 const { width, height } = Dimensions.get('window');
 
 const INDUSTRIES = [
@@ -116,8 +117,8 @@ const INDUSTRIES = [
 const FONTS = ['Inter (Modern Sans)', 'Roboto', 'Playfair Display', 'Open Sans', 'Outfit'];
 const PRESETS = [
   { name: 'Indigo', color: '#4F46E5' },
-  { name: 'Classic', color: '#2563EB' },
-  { name: 'Emerald', color: '#10B981' },
+  { name: 'Classic', color: T.ink },
+  { name: 'Emerald', color: T.success },
   { name: 'Royal', color: '#1E3A8A' },
   { name: 'Rose', color: '#F43F5E' },
   { name: 'Warm', color: '#F59E0B' }
@@ -229,7 +230,7 @@ const ResumeBuilderScreen = () => {
   const [accentColor, setAccentColor] = useState('#1E3A8A');
   const [headingColor, setHeadingColor] = useState('#0F172A');
   const [textColor, setTextColor] = useState('#334155');
-  const [bgColor, setBgColor] = useState('#FFFFFF');
+  const [bgColor, setBgColor] = useState(T.white);
 
   // Sync styling options from database
   useEffect(() => {
@@ -265,10 +266,10 @@ const ResumeBuilderScreen = () => {
     }
   };
 
-  const ACCENT_COLORS = ['#1E3A8A', '#0F766E', '#2563EB', '#111827'];
+  const ACCENT_COLORS = ['#1E3A8A', '#0F766E', T.ink, '#111827'];
   const HEADING_COLORS = ['#0F172A', '#1E293B', '#111827'];
   const TEXT_COLORS = ['#334155', '#475569', '#111827'];
-  const BG_COLORS = ['#FFFFFF', '#F8FAFC', '#F1F5F9'];
+  const BG_COLORS = [T.white, T.sand, T.sand];
 
   const cycleAccentColor = () => {
     const currentIndex = ACCENT_COLORS.indexOf(accentColor);
@@ -655,20 +656,20 @@ const ResumeBuilderScreen = () => {
     return (
       <View style={styles.formContainer}>
         <View style={styles.bannerCard}>
-          <Text style={styles.bannerTitle}>Already have a resume?</Text>
+          <Text style={styles.bannerTitle}>already have a resume?</Text>
           <Text style={styles.bannerText}>
             Upload it and AI will auto-fill all fields — no manual typing needed.
           </Text>
           <View style={styles.bannerButtons}>
             <TouchableOpacity style={styles.bannerUploadBtn} onPress={handleAutoFillUpload}>
-              <Text style={styles.bannerUploadBtnText}>Upload & Auto-fill</Text>
+              <Text style={styles.bannerUploadBtnText}>upload & auto-fill</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.bannerSkipBtn} onPress={() => {
               savePersonalInfo();
               setPreviewTemplateId(currentResume?.template || 'modern_ats');
               setPreviewVisible(true);
             }}>
-              <Text style={styles.bannerSkipBtnText}>Skip to Preview</Text>
+              <Text style={styles.bannerSkipBtnText}>skip to preview</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -677,7 +678,7 @@ const ResumeBuilderScreen = () => {
         <TextInput
           style={styles.textInput}
           placeholder="e.g. John Doe"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           value={pName}
           onChangeText={setPName}
           onBlur={savePersonalInfo}
@@ -687,7 +688,7 @@ const ResumeBuilderScreen = () => {
         <TextInput
           style={styles.textInput}
           placeholder="e.g. Senior Software Engineer"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           value={pTitle}
           onChangeText={setPTitle}
           onBlur={savePersonalInfo}
@@ -699,7 +700,7 @@ const ResumeBuilderScreen = () => {
             <TextInput
               style={styles.textInput}
               placeholder="john@example.com"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={T.textFaint}
               keyboardType="email-address"
               autoCapitalize="none"
               value={pEmail}
@@ -712,7 +713,7 @@ const ResumeBuilderScreen = () => {
             <TextInput
               style={styles.textInput}
               placeholder="+92 301 0000000"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={T.textFaint}
               keyboardType="phone-pad"
               value={pPhone}
               onChangeText={setPPhone}
@@ -727,18 +728,18 @@ const ResumeBuilderScreen = () => {
             <TextInput
               style={styles.textInput}
               placeholder="Karachi, Pakistan"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={T.textFaint}
               value={pLocation}
               onChangeText={setPLocation}
               onBlur={savePersonalInfo}
             />
           </View>
           <View style={{ flex: 1, marginLeft: 8 }}>
-            <Text style={styles.inputLabel}>LinkedIn Profile</Text>
+            <Text style={styles.inputLabel}>LinkedIn profile</Text>
             <TextInput
               style={styles.textInput}
               placeholder="linkedin.com/in/johndoe"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={T.textFaint}
               autoCapitalize="none"
               value={pLinkedin}
               onChangeText={setPLinkedin}
@@ -749,11 +750,11 @@ const ResumeBuilderScreen = () => {
 
         <View style={styles.inputGridRow}>
           <View style={{ flex: 1, marginRight: 8 }}>
-            <Text style={styles.inputLabel}>GitHub Profile</Text>
+            <Text style={styles.inputLabel}>GitHub profile</Text>
             <TextInput
               style={styles.textInput}
               placeholder="github.com/johndoe"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={T.textFaint}
               autoCapitalize="none"
               value={pGithub}
               onChangeText={setPGithub}
@@ -761,11 +762,11 @@ const ResumeBuilderScreen = () => {
             />
           </View>
           <View style={{ flex: 1, marginLeft: 8 }}>
-            <Text style={styles.inputLabel}>Portfolio Website</Text>
+            <Text style={styles.inputLabel}>portfolio website</Text>
             <TextInput
               style={styles.textInput}
               placeholder="johndoe.dev"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={T.textFaint}
               autoCapitalize="none"
               value={pPortfolio}
               onChangeText={setPPortfolio}
@@ -780,7 +781,7 @@ const ResumeBuilderScreen = () => {
           disabled={savingStep1}
         >
           {savingStep1 ? (
-            <ActivityIndicator color="#000" size="small" />
+            <ActivityIndicator color={T.ink} size="small" />
           ) : (
             <Text style={styles.yellowButtonText}>💾 Save Personal Information</Text>
           )}
@@ -853,13 +854,13 @@ const ResumeBuilderScreen = () => {
                 setEduCurrent(item.current || false);
                 setEditingEduIndex(index);
               }} style={{ marginRight: 12 }}>
-                <Ionicons name="create-outline" size={20} color="#2563EB" />
+                <Ionicons name="create-outline" size={20} color={T.ink} />
               </TouchableOpacity>
               <TouchableOpacity onPress={async () => {
                 const updated = items.filter((_, i) => i !== index);
                 await updateResume(currentResume._id, { education: updated });
               }}>
-                <Ionicons name="trash-outline" size={20} color="#E74C3C" />
+                <Ionicons name="trash-outline" size={20} color={T.danger} />
               </TouchableOpacity>
             </View>
           </View>
@@ -869,20 +870,20 @@ const ResumeBuilderScreen = () => {
           {editingEduIndex !== null ? `Edit Education #${editingEduIndex + 1}` : `Education #${items.length + 1}`}
         </Text>
 
-        <Text style={styles.inputLabel}>Degree</Text>
+        <Text style={styles.inputLabel}>degree</Text>
         <TextInput
           style={styles.textInput}
           placeholder="e.g. Bachelor of Science"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           value={eduDegree}
           onChangeText={setEduDegree}
         />
 
-        <Text style={styles.inputLabel}>Field of Study</Text>
+        <Text style={styles.inputLabel}>field of study</Text>
         <TextInput
           style={styles.textInput}
           placeholder="e.g. Computer Science"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           value={eduField}
           onChangeText={setEduField}
         />
@@ -891,7 +892,7 @@ const ResumeBuilderScreen = () => {
         <TextInput
           style={styles.textInput}
           placeholder="e.g. Massachusetts Institute of Technology"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           value={eduInstitution}
           onChangeText={setEduInstitution}
         />
@@ -902,7 +903,7 @@ const ResumeBuilderScreen = () => {
             <TextInput
               style={styles.textInput}
               placeholder="e.g. 3.8 / 4.0"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={T.textFaint}
               value={eduGpa}
               onChangeText={setEduGpa}
             />
@@ -912,39 +913,39 @@ const ResumeBuilderScreen = () => {
             <TextInput
               style={styles.textInput}
               placeholder="e.g. 6th Semester"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={T.textFaint}
               value={eduSemester}
               onChangeText={setEduSemester}
             />
           </View>
         </View>
 
-        <Text style={styles.inputLabel}>Start Date</Text>
+        <Text style={styles.inputLabel}>start date</Text>
         <TextInput
           style={styles.textInput}
           placeholder="e.g. Sep 2020"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           value={eduStartDate}
           onChangeText={setEduStartDate}
         />
 
         <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>Currently studying here</Text>
+          <Text style={styles.toggleLabel}>currently studying here</Text>
           <Switch
             value={eduCurrent}
             onValueChange={setEduCurrent}
-            trackColor={{ false: '#767577', true: '#f9c349' }}
-            thumbColor={eduCurrent ? '#fff' : '#f4f3f4'}
+            trackColor={{ false: '#767577', true: T.yellow }}
+            thumbColor={eduCurrent ? T.white : '#f4f3f4'}
           />
         </View>
 
         {!eduCurrent && (
           <>
-            <Text style={styles.inputLabel}>End Date</Text>
+            <Text style={styles.inputLabel}>end date</Text>
             <TextInput
               style={styles.textInput}
               placeholder="e.g. May 2024"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={T.textFaint}
               value={eduEndDate}
               onChangeText={setEduEndDate}
             />
@@ -1041,13 +1042,13 @@ const ResumeBuilderScreen = () => {
                 setWorkDesc(item.description || '');
                 setEditingWorkIndex(index);
               }} style={{ marginRight: 12 }}>
-                <Ionicons name="create-outline" size={20} color="#2563EB" />
+                <Ionicons name="create-outline" size={20} color={T.ink} />
               </TouchableOpacity>
               <TouchableOpacity onPress={async () => {
                 const updated = items.filter((_, i) => i !== index);
                 await updateResume(currentResume._id, { workExperience: updated });
               }}>
-                <Ionicons name="trash-outline" size={20} color="#E74C3C" />
+                <Ionicons name="trash-outline" size={20} color={T.danger} />
               </TouchableOpacity>
             </View>
           </View>
@@ -1057,11 +1058,11 @@ const ResumeBuilderScreen = () => {
           {editingWorkIndex !== null ? `Edit Experience #${editingWorkIndex + 1}` : `Experience #${items.length + 1}`}
         </Text>
 
-        <Text style={styles.inputLabel}>Company Name</Text>
+        <Text style={styles.inputLabel}>company name</Text>
         <TextInput
           style={styles.textInput}
           placeholder="e.g. Google"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           value={workCompany}
           onChangeText={setWorkCompany}
         />
@@ -1070,46 +1071,46 @@ const ResumeBuilderScreen = () => {
         <TextInput
           style={styles.textInput}
           placeholder="e.g. Software Engineer"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           value={workPosition}
           onChangeText={setWorkPosition}
         />
 
-        <Text style={styles.inputLabel}>Location</Text>
+        <Text style={styles.inputLabel}>location</Text>
         <TextInput
           style={styles.textInput}
           placeholder="e.g. Mountain View, CA"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           value={workLocation}
           onChangeText={setWorkLocation}
         />
 
-        <Text style={styles.inputLabel}>Start Date</Text>
+        <Text style={styles.inputLabel}>start date</Text>
         <TextInput
           style={styles.textInput}
           placeholder="e.g. Jan 2022"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           value={workStartDate}
           onChangeText={setWorkStartDate}
         />
 
         <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>Currently working here</Text>
+          <Text style={styles.toggleLabel}>currently working here</Text>
           <Switch
             value={workCurrent}
             onValueChange={setWorkCurrent}
-            trackColor={{ false: '#767577', true: '#f9c349' }}
-            thumbColor={workCurrent ? '#fff' : '#f4f3f4'}
+            trackColor={{ false: '#767577', true: T.yellow }}
+            thumbColor={workCurrent ? T.white : '#f4f3f4'}
           />
         </View>
 
         {!workCurrent && (
           <>
-            <Text style={styles.inputLabel}>End Date</Text>
+            <Text style={styles.inputLabel}>end date</Text>
             <TextInput
               style={styles.textInput}
               placeholder="e.g. Dec 2023"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={T.textFaint}
               value={workEndDate}
               onChangeText={setWorkEndDate}
             />
@@ -1117,17 +1118,17 @@ const ResumeBuilderScreen = () => {
         )}
 
         <View style={styles.labelWithAction}>
-          <Text style={styles.inputLabel}>Responsibilities & Achievements</Text>
+          <Text style={styles.inputLabel}>responsibilities & achievements</Text>
           <TouchableOpacity style={styles.aiEnhanceMiniBtn} onPress={handleAIEnhanceWork} disabled={aiProcessing}>
-            <Ionicons name="sparkles" size={14} color="#000" />
-            <Text style={styles.aiEnhanceMiniBtnText}>AI Enhance</Text>
+            <Ionicons name="sparkles" size={14} color={T.ink} />
+            <Text style={styles.aiEnhanceMiniBtnText}>ai enhance</Text>
           </TouchableOpacity>
         </View>
         <TextInput
           style={[styles.textInput, styles.summaryTextarea]}
           multiline
           placeholder="Describe your key responsibilities and achievements. The AI can convert these into polished ATS-friendly bullet points."
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           value={workDesc}
           onChangeText={setWorkDesc}
         />
@@ -1216,13 +1217,13 @@ const ResumeBuilderScreen = () => {
                 setProjDesc(item.description || '');
                 setEditingProjIndex(index);
               }} style={{ marginRight: 12 }}>
-                <Ionicons name="create-outline" size={20} color="#2563EB" />
+                <Ionicons name="create-outline" size={20} color={T.ink} />
               </TouchableOpacity>
               <TouchableOpacity onPress={async () => {
                 const updated = items.filter((_, i) => i !== index);
                 await updateResume(currentResume._id, { projects: updated });
               }}>
-                <Ionicons name="trash-outline" size={20} color="#E74C3C" />
+                <Ionicons name="trash-outline" size={20} color={T.danger} />
               </TouchableOpacity>
             </View>
           </View>
@@ -1232,56 +1233,56 @@ const ResumeBuilderScreen = () => {
           {editingProjIndex !== null ? `Edit Project #${editingProjIndex + 1}` : `Project #${items.length + 1}`}
         </Text>
 
-        <Text style={styles.inputLabel}>Project Name</Text>
+        <Text style={styles.inputLabel}>project name</Text>
         <TextInput
           style={styles.textInput}
           placeholder="e.g. AI Resume Builder"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           value={projName}
           onChangeText={setProjName}
         />
 
-        <Text style={styles.inputLabel}>Tech Stack</Text>
+        <Text style={styles.inputLabel}>tech stack</Text>
         <TextInput
           style={styles.textInput}
           placeholder="e.g. React, Next.js, OpenAI, TailwindCSS, PostgreSQL"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           value={projTech}
           onChangeText={setProjTech}
         />
 
-        <Text style={styles.inputLabel}>GitHub URL</Text>
+        <Text style={styles.inputLabel}>GitHub url</Text>
         <TextInput
           style={styles.textInput}
           placeholder="github.com/user/project"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           autoCapitalize="none"
           value={projGithub}
           onChangeText={setProjGithub}
         />
 
-        <Text style={styles.inputLabel}>Live URL</Text>
+        <Text style={styles.inputLabel}>live url</Text>
         <TextInput
           style={styles.textInput}
           placeholder="project.vercel.app"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           autoCapitalize="none"
           value={projLive}
           onChangeText={setProjLive}
         />
 
         <View style={styles.labelWithAction}>
-          <Text style={styles.inputLabel}>Description</Text>
+          <Text style={styles.inputLabel}>description</Text>
           <TouchableOpacity style={styles.aiEnhanceMiniBtn} onPress={handleAIEnhanceProj} disabled={aiProcessing}>
-            <Ionicons name="sparkles" size={14} color="#000" />
-            <Text style={styles.aiEnhanceMiniBtnText}>AI Enhance</Text>
+            <Ionicons name="sparkles" size={14} color={T.ink} />
+            <Text style={styles.aiEnhanceMiniBtnText}>ai enhance</Text>
           </TouchableOpacity>
         </View>
         <TextInput
           style={[styles.textInput, styles.summaryTextarea]}
           multiline
           placeholder="What did you build? What problem did it solve? What was the impact?"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           value={projDesc}
           onChangeText={setProjDesc}
         />
@@ -1349,13 +1350,13 @@ const ResumeBuilderScreen = () => {
                 setCertExpiryDate(item.expiryDate || '');
                 setEditingCertIndex(index);
               }} style={{ marginRight: 12 }}>
-                <Ionicons name="create-outline" size={20} color="#2563EB" />
+                <Ionicons name="create-outline" size={20} color={T.ink} />
               </TouchableOpacity>
               <TouchableOpacity onPress={async () => {
                 const updated = items.filter((_, i) => i !== index);
                 await updateResume(currentResume._id, { certifications: updated });
               }}>
-                <Ionicons name="trash-outline" size={20} color="#E74C3C" />
+                <Ionicons name="trash-outline" size={20} color={T.danger} />
               </TouchableOpacity>
             </View>
           </View>
@@ -1365,29 +1366,29 @@ const ResumeBuilderScreen = () => {
           {editingCertIndex !== null ? `Edit Certification #${editingCertIndex + 1}` : `Certification #${items.length + 1}`}
         </Text>
 
-        <Text style={styles.inputLabel}>Certification Name</Text>
+        <Text style={styles.inputLabel}>certification name</Text>
         <TextInput
           style={styles.textInput}
           placeholder="e.g. AWS Certified Solutions Architect"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           value={certName}
           onChangeText={setCertName}
         />
 
-        <Text style={styles.inputLabel}>Issuer</Text>
+        <Text style={styles.inputLabel}>issuer</Text>
         <TextInput
           style={styles.textInput}
           placeholder="e.g. Amazon Web Services"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           value={certIssuer}
           onChangeText={setCertIssuer}
         />
 
-        <Text style={styles.inputLabel}>Issue Date</Text>
+        <Text style={styles.inputLabel}>issue date</Text>
         <TextInput
           style={styles.textInput}
           placeholder="e.g. March 2024"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           value={certIssueDate}
           onChangeText={setCertIssueDate}
         />
@@ -1396,7 +1397,7 @@ const ResumeBuilderScreen = () => {
         <TextInput
           style={styles.textInput}
           placeholder="credly.com/badges/..."
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           autoCapitalize="none"
           value={certUrl}
           onChangeText={setCertUrl}
@@ -1406,7 +1407,7 @@ const ResumeBuilderScreen = () => {
         <TextInput
           style={styles.textInput}
           placeholder="e.g. March 2027"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           value={certExpiryDate}
           onChangeText={setCertExpiryDate}
         />
@@ -1482,20 +1483,20 @@ const ResumeBuilderScreen = () => {
         <TextInput
           style={styles.textInput}
           placeholder="Search roles..."
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           value={roleSearchQuery}
           onChangeText={setRoleSearchQuery}
         />
 
         {selectedRoles.length > 0 && (
           <View style={{ marginBottom: 16 }}>
-            <Text style={styles.inputLabel}>Selected:</Text>
+            <Text style={styles.inputLabel}>selected:</Text>
             <View style={styles.skillsTagRow}>
               {selectedRoles.map((role, idx) => (
                 <View key={idx} style={styles.skillTag}>
                   <Text style={styles.skillTagText}>{role.jobTitle}</Text>
                   <TouchableOpacity onPress={() => handleClearRole(role.jobTitle)}>
-                    <Text style={{ marginLeft: 6, color: '#E74C3C', fontWeight: 'bold' }}>✕</Text>
+                    <Text style={{ marginLeft: 6, color: T.danger, fontWeight: 'bold' }}>✕</Text>
                   </TouchableOpacity>
                 </View>
               ))}
@@ -1545,12 +1546,12 @@ const ResumeBuilderScreen = () => {
           })}
         </View>
 
-        <Text style={[styles.inputLabel, { marginTop: 24 }]}>Professional Summary</Text>
+        <Text style={[styles.inputLabel, { marginTop: 24 }]}>professional summary</Text>
         <TextInput
           style={[styles.textInput, styles.summaryTextarea]}
           multiline
           placeholder="Your professional summary will appear here after generation, or type manually..."
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={T.textFaint}
           value={targetSummary}
           onChangeText={setTargetSummary}
           onBlur={saveTargetSummary}
@@ -1562,21 +1563,21 @@ const ResumeBuilderScreen = () => {
           disabled={aiProcessing}
         >
           {aiProcessing ? (
-            <ActivityIndicator color="#000" size="small" />
+            <ActivityIndicator color={T.ink} size="small" />
           ) : (
             <Text style={styles.yellowButtonText}>⚡ Generate with AI</Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={[styles.yellowButton, { marginTop: 12, backgroundColor: '#2563EB' }]} 
+          style={[styles.yellowButton, { marginTop: 12, backgroundColor: T.ink }]} 
           onPress={handleSaveStep6}
           disabled={savingStep6}
         >
           {savingStep6 ? (
-            <ActivityIndicator color="#fff" size="small" />
+            <ActivityIndicator color={T.white} size="small" />
           ) : (
-            <Text style={[styles.yellowButtonText, { color: '#ffffff' }]}>💾 Save Target Job & Summary</Text>
+            <Text style={[styles.yellowButtonText, { color: T.white }]}>💾 Save Target Job & Summary</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -1607,13 +1608,13 @@ const ResumeBuilderScreen = () => {
           <TextInput
             style={styles.skillTextInput}
             placeholder="Type a skill and press Enter or comma..."
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={T.textFaint}
             value={skillInput}
             onChangeText={setSkillInput}
             onSubmitEditing={handleAddSkill}
           />
           <TouchableOpacity style={styles.skillAddBtn} onPress={handleAddSkill}>
-            <Ionicons name="add" size={22} color="#000" />
+            <Ionicons name="add" size={22} color={T.ink} />
           </TouchableOpacity>
         </View>
 
@@ -1630,7 +1631,7 @@ const ResumeBuilderScreen = () => {
                   const updated = items.filter((_, i) => i !== index);
                   await updateResume(currentResume._id, { skills: updated });
                 }}>
-                  <Ionicons name="close" size={14} color="#64748B" style={{ marginLeft: 4 }} />
+                  <Ionicons name="close" size={14} color={T.textMuted} style={{ marginLeft: 4 }} />
                 </TouchableOpacity>
               </View>
             ))}
@@ -1713,20 +1714,20 @@ const ResumeBuilderScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
+      <StatusBar barStyle="light-content" backgroundColor={T.paper} />
       
       {/* Top Header */}
       <View style={styles.mainHeader}>
         <TouchableOpacity onPress={handleGoBack} style={styles.headerBackBtn}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={24} color={T.white} />
         </TouchableOpacity>
-        <Text style={styles.mainHeaderTitle}>TDC Resume Builder</Text>
+        <Text style={styles.mainHeaderTitle}>tdc resume builder</Text>
         <TouchableOpacity onPress={async () => {
           await savePersonalInfo();
           setPreviewTemplateId(currentResume?.template || 'modern_ats');
           setPreviewVisible(true);
         }} style={styles.previewFloatBtn}>
-          <Ionicons name="eye-outline" size={22} color="#f9c349" />
+          <Ionicons name="eye-outline" size={22} color={T.yellow} />
         </TouchableOpacity>
       </View>
 
@@ -1746,7 +1747,7 @@ const ResumeBuilderScreen = () => {
                 <Ionicons 
                   name={activeStep > s.id ? 'checkmark' : s.icon} 
                   size={16} 
-                  color={activeStep === s.id ? '#000' : activeStep > s.id ? '#fff' : '#64748B'} 
+                  color={activeStep === s.id ? T.ink : activeStep > s.id ? T.white : T.textMuted} 
                 />
               </TouchableOpacity>
               {idx < steps.length - 1 && (
@@ -1785,12 +1786,12 @@ const ResumeBuilderScreen = () => {
             disabled={activeStep === 1}
             onPress={handlePrevStep}
           >
-            <Ionicons name="arrow-back" size={16} color="#fff" />
-            <Text style={styles.backButtonText}>Back</Text>
+            <Ionicons name="arrow-back" size={16} color={T.white} />
+            <Text style={styles.backButtonText}>back</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
-  style={[styles.continueButton, activeStep === 7 && { backgroundColor: '#2ECC71' }]}
+  style={[styles.continueButton, activeStep === 7 && { backgroundColor: T.success }]}
   onPress={async () => {
     if (activeStep === 7) {
       // ✅ Skills step — nothing pending to save. Skills are already persisted
@@ -1805,13 +1806,13 @@ const ResumeBuilderScreen = () => {
     }
   }}
 >
-            <Text style={[styles.continueButtonText, activeStep === 7 && { color: '#ffffff' }]}>
+            <Text style={[styles.continueButtonText, activeStep === 7 && { color: T.white }]}>
               {activeStep === 7 ? 'Finish & Preview 🚀' : 'Continue'}
             </Text>
             <Ionicons 
               name={activeStep === 7 ? "checkmark-done" : "arrow-forward"} 
               size={16} 
-              color={activeStep === 7 ? "#ffffff" : "#000000"} 
+              color={activeStep === 7 ? T.white : T.ink} 
             />
           </TouchableOpacity>
         </View>
@@ -1833,9 +1834,9 @@ const ResumeBuilderScreen = () => {
       <Modal visible={previewVisible} transparent animationType="slide" onRequestClose={() => setPreviewVisible(false)}>
         <SafeAreaView style={styles.previewOverlay}>
           <View style={styles.previewHeader}>
-            <Text style={styles.previewTitle}>Resume Template Preview</Text>
+            <Text style={styles.previewTitle}>resume template preview</Text>
             <TouchableOpacity onPress={() => setPreviewVisible(false)}>
-              <Ionicons name="close" size={26} color="#fff" />
+              <Ionicons name="close" size={26} color={T.white} />
             </TouchableOpacity>
           </View>
           {currentResume ? (
@@ -1863,7 +1864,7 @@ const ResumeBuilderScreen = () => {
       <Modal visible={aiGeneratingVisible} transparent={true} animationType="fade">
         <View style={styles.aiModalOverlay}>
           <View style={styles.aiModalContent}>
-            <ActivityIndicator size="large" color="#f9c349" style={{ marginBottom: 16 }} />
+            <ActivityIndicator size="large" color={T.yellow} style={{ marginBottom: 16 }} />
             <Text style={styles.aiModalTitle}>AI Resume Parser 🤖</Text>
             <Text style={styles.aiModalStep}>{aiGeneratingStep}</Text>
             <View style={styles.aiProgressTrack}>
@@ -1880,25 +1881,25 @@ const ResumeBuilderScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: T.ink,
   },
   mainHeader: {
     height: 60,
-    backgroundColor: '#000000',
+    backgroundColor: T.ink,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#222222',
+    borderBottomColor: T.ink,
   },
   headerBackBtn: {
     padding: 4,
   },
   mainHeaderTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
+    fontFamily: F.headingBold,
+    color: T.white,
   },
   previewFloatBtn: {
     padding: 6,
@@ -1911,7 +1912,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#000000',
+    backgroundColor: T.ink,
   },
   stepIndicatorWrapper: {
     alignItems: 'center',
@@ -1932,12 +1933,12 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   stepCircleActive: {
-    backgroundColor: '#f9c349',
-    borderColor: '#f9c349',
+    backgroundColor: T.yellow,
+    borderColor: T.yellow,
   },
   stepCircleCompleted: {
-    backgroundColor: '#2ECC71',
-    borderColor: '#2ECC71',
+    backgroundColor: T.success,
+    borderColor: T.success,
   },
   stepLine: {
     position: 'absolute',
@@ -1949,7 +1950,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   stepLineCompleted: {
-    backgroundColor: '#2ECC71',
+    backgroundColor: T.success,
   },
   scrollContainer: {
     flex: 1,
@@ -1959,17 +1960,17 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   cardContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
     borderRadius: 20,
     marginHorizontal: 16,
     padding: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
+    shadowColor: T.ink,
+    shadowOpacity: 0.06,
     shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 12,
-    elevation: 4,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: T.line,
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -1979,43 +1980,43 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 22,
-    fontWeight: '800',
+    fontFamily: F.heading,
     color: '#0F172A',
   },
   cardStepBadge: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: T.sand,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
   cardStepBadgeText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
     color: '#475569',
   },
   cardSubtitle: {
-    fontSize: 14,
-    color: '#64748B',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
     marginBottom: 20,
   },
   bannerCard: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: T.sand,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: T.line,
     borderStyle: 'dashed',
     padding: 16,
     marginBottom: 20,
   },
   bannerTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
     color: '#0F172A',
     marginBottom: 4,
   },
   bannerText: {
-    fontSize: 12,
-    color: '#64748B',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textMuted,
     lineHeight: 16,
     marginBottom: 12,
   },
@@ -2024,44 +2025,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bannerUploadBtn: {
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
     marginRight: 10,
   },
   bannerUploadBtnText: {
-    color: '#000000',
+    color: T.ink,
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
   },
   bannerSkipBtn: {
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   bannerSkipBtnText: {
-    color: '#64748B',
+    color: T.textMuted,
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
   },
   formContainer: {
     flex: 1,
   },
   inputLabel: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
     color: '#475569',
-    textTransform: 'uppercase',
+    textTransform: 'none',
     marginBottom: 6,
     marginTop: 12,
   },
   textInput: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: T.sand,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: T.line,
     borderRadius: 10,
     padding: 12,
-    fontSize: 14,
+    fontSize: 14, fontFamily: F.body,
     color: '#0F172A',
     marginBottom: 12,
   },
@@ -2069,7 +2070,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   yellowButton: {
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     borderRadius: 10,
     height: 48,
     alignItems: 'center',
@@ -2077,9 +2078,9 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   yellowButtonText: {
-    color: '#000000',
+    color: T.ink,
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
   },
   toggleRow: {
     flexDirection: 'row',
@@ -2089,7 +2090,7 @@ const styles = StyleSheet.create({
   },
   toggleLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
     color: '#475569',
   },
   labelWithAction: {
@@ -2100,15 +2101,15 @@ const styles = StyleSheet.create({
   aiEnhanceMiniBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
   aiEnhanceMiniBtnText: {
     fontSize: 10,
-    fontWeight: '700',
-    color: '#000',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     marginLeft: 4,
   },
   skillInputWrapper: {
@@ -2118,17 +2119,17 @@ const styles = StyleSheet.create({
   },
   skillTextInput: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: T.paper,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: T.line,
     borderRadius: 10,
     padding: 12,
-    fontSize: 14,
+    fontSize: 14, fontFamily: F.body,
     color: '#0F172A',
     marginRight: 10,
   },
   skillAddBtn: {
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     width: 44,
     height: 44,
     borderRadius: 10,
@@ -2142,7 +2143,7 @@ const styles = StyleSheet.create({
   skillTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: T.sand,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -2152,57 +2153,57 @@ const styles = StyleSheet.create({
   skillTagText: {
     fontSize: 13,
     color: '#334155',
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
   },
   skillTipText: {
-    fontSize: 11,
-    color: '#94A3B8',
+    fontSize: 11, fontFamily: F.body,
+    color: T.textFaint,
     textAlign: 'center',
     marginTop: 12,
   },
   certificationHeading: {
     fontSize: 15,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: '#0F172A',
     marginTop: 20,
     marginBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: T.line,
     paddingBottom: 4,
   },
   emptyCardBody: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 32,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: T.sand,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: T.line,
     marginBottom: 12,
   },
   emptyCardText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#64748B',
+    fontFamily: F.bodyBold,
+    color: T.textMuted,
   },
   itemRowBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: T.sand,
     borderRadius: 10,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: T.line,
     marginBottom: 10,
   },
   itemBadgeTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
     color: '#0F172A',
   },
   itemBadgeSub: {
-    fontSize: 12,
-    color: '#64748B',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 2,
   },
   rolesListContainer: {
@@ -2211,9 +2212,9 @@ const styles = StyleSheet.create({
   industryBlock: {
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: T.line,
     borderRadius: 10,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: T.sand,
     overflow: 'hidden',
   },
   industryHeader: {
@@ -2224,7 +2225,7 @@ const styles = StyleSheet.create({
   },
   industryHeaderTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
     color: '#334155',
   },
   industryRolesGrid: {
@@ -2232,30 +2233,30 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     padding: 10,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    backgroundColor: '#ffffff',
+    borderTopColor: T.line,
+    backgroundColor: T.card,
   },
   roleSelectBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: T.line,
     marginRight: 6,
     marginBottom: 6,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: T.sand,
   },
   roleSelectBtnActive: {
-    backgroundColor: '#f9c349',
-    borderColor: '#f9c349',
+    backgroundColor: T.yellow,
+    borderColor: T.yellow,
   },
   roleSelectText: {
-    fontSize: 12,
+    fontSize: 12, fontFamily: F.body,
     color: '#475569',
   },
   roleSelectTextActive: {
-    color: '#000000',
-    fontWeight: '700',
+    color: T.ink,
+    fontFamily: F.bodyBold,
   },
   summaryTextarea: {
     height: 100,
@@ -2278,22 +2279,22 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#fff',
+    fontFamily: F.bodyBold,
+    color: T.white,
     marginLeft: 6,
   },
   continueButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 10,
   },
   continueButtonText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#000000',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     marginRight: 6,
   },
   bottomLabelsContainer: {
@@ -2304,16 +2305,16 @@ const styles = StyleSheet.create({
   },
   bottomLabelText: {
     fontSize: 9,
-    color: '#64748B',
-    fontWeight: '500',
+    color: T.textMuted,
+    fontFamily: F.bodyMedium,
   },
   bottomLabelTextActive: {
-    color: '#f9c349',
-    fontWeight: '700',
+    color: T.yellow,
+    fontFamily: F.bodyBold,
   },
   previewOverlay: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: T.ink,
   },
   previewHeader: {
     height: 50,
@@ -2321,16 +2322,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    backgroundColor: '#000000',
+    backgroundColor: T.ink,
   },
   previewTitle: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#fff',
+    fontFamily: F.bodySemi,
+    color: T.white,
   },
   previewWebView: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
   },
   previewEmpty: {
     flex: 1,
@@ -2338,11 +2339,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   previewEmptyText: {
-    color: '#666',
+    color: T.textMuted,
   },
   aiModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
+    backgroundColor: T.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2352,23 +2353,23 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 24,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 1,
     borderColor: '#334155',
   },
   aiModalTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#ffffff',
+    fontFamily: F.headingBold,
+    color: T.white,
     marginBottom: 10,
   },
   aiModalStep: {
-    fontSize: 14,
-    color: '#94A3B8',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textFaint,
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -2382,13 +2383,13 @@ const styles = StyleSheet.create({
   },
   aiProgressBar: {
     height: '100%',
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     borderRadius: 3,
   },
   aiModalPercent: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#f9c349',
+    fontFamily: F.bodySemi,
+    color: T.yellow,
   },
 });
 

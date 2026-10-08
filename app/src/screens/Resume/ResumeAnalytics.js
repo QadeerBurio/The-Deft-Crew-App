@@ -19,9 +19,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ResumeContext } from '../../context/ResumeContext';
 import { AuthContext } from '../../context/AuthContext';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { LineChart, PieChart } from 'react-native-chart-kit';
 
+import { color as T, font as F } from "../../theme/tokens";
 const { width } = Dimensions.get('window');
 
 const ResumeAnalyticsScreen = () => {
@@ -103,9 +104,9 @@ const ResumeAnalyticsScreen = () => {
   };
 
   const chartConfig = {
-    backgroundColor: '#fff',
-    backgroundGradientFrom: '#000',
-    backgroundGradientTo: '#1a1a1a',
+    backgroundColor: T.card,
+    backgroundGradientFrom: T.ink,
+    backgroundGradientTo: T.ink,
     decimalPlaces: 0,
     color: (opacity = 1) => `rgba(249, 195, 73, ${opacity})`,
     labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
@@ -115,7 +116,7 @@ const ResumeAnalyticsScreen = () => {
     propsForDots: {
       r: '6',
       strokeWidth: '2',
-      stroke: '#f9c349',
+      stroke: T.yellow,
     },
     propsForLabels: {
       fontSize: 10,
@@ -127,8 +128,8 @@ const ResumeAnalyticsScreen = () => {
     if (data.length === 0) {
       return (
         <View style={styles.noDataContainer}>
-          <Ionicons name="bar-chart-outline" size={40} color="#999" />
-          <Text style={styles.noDataText}>No view data available</Text>
+          <Ionicons name="bar-chart-outline" size={40} color={T.textFaint} />
+          <Text style={styles.noDataText}>no view data available</Text>
           <Text style={styles.noDataSubtext}>Views will appear here once your resume gets traffic</Text>
         </View>
       );
@@ -170,29 +171,29 @@ const ResumeAnalyticsScreen = () => {
       {
         name: 'Views',
         population: analytics.views || 1,
-        color: '#f9c349',
-        legendFontColor: '#333',
+        color: T.yellow,
+        legendFontColor: T.ink,
         legendFontSize: 12,
       },
       {
         name: 'Downloads',
         population: analytics.downloads || 1,
-        color: '#2ECC71',
-        legendFontColor: '#333',
+        color: T.success,
+        legendFontColor: T.ink,
         legendFontSize: 12,
       },
       {
         name: 'Shares',
         population: analytics.shares || 1,
         color: '#4A90D9',
-        legendFontColor: '#333',
+        legendFontColor: T.ink,
         legendFontSize: 12,
       },
       {
         name: 'Applications',
         population: analytics.applications || 1,
         color: '#9B59B6',
-        legendFontColor: '#333',
+        legendFontColor: T.ink,
         legendFontSize: 12,
       },
     ];
@@ -201,8 +202,8 @@ const ResumeAnalyticsScreen = () => {
     if (!hasData) {
       return (
         <View style={styles.noDataContainer}>
-          <Ionicons name="pie-chart-outline" size={40} color="#999" />
-          <Text style={styles.noDataText}>No engagement data yet</Text>
+          <Ionicons name="pie-chart-outline" size={40} color={T.textFaint} />
+          <Text style={styles.noDataText}>no engagement data yet</Text>
           <Text style={styles.noDataSubtext}>Start sharing your resume to see engagement</Text>
         </View>
       );
@@ -242,8 +243,8 @@ const ResumeAnalyticsScreen = () => {
     <View style={[
       styles.improvementCard,
       { 
-        borderLeftColor: improvement.priority === 'high' ? '#E74C3C' : 
-                         improvement.priority === 'medium' ? '#f9c349' : '#4A90D9' 
+        borderLeftColor: improvement.priority === 'high' ? T.danger : 
+                         improvement.priority === 'medium' ? T.yellow : '#4A90D9' 
       }
     ]}>
       <View style={styles.improvementHeader}>
@@ -251,8 +252,8 @@ const ResumeAnalyticsScreen = () => {
         <View style={[
           styles.priorityBadge,
           { 
-            backgroundColor: improvement.priority === 'high' ? '#E74C3C' : 
-                             improvement.priority === 'medium' ? '#f9c349' : '#4A90D9' 
+            backgroundColor: improvement.priority === 'high' ? T.danger : 
+                             improvement.priority === 'medium' ? T.yellow : '#4A90D9' 
           }
         ]}>
           <Text style={styles.priorityText}>{improvement.priority}</Text>
@@ -300,10 +301,10 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
   if (isLoading || loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar barStyle="dark-content" backgroundColor="#f5f7fa" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#f9c349" />
-          <Text style={styles.loadingText}>Loading analytics...</Text>
+          <ActivityIndicator size="large" color={T.yellow} />
+          <Text style={styles.loadingText}>loading analytics...</Text>
         </View>
       </SafeAreaView>
     );
@@ -311,7 +312,7 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f5f7fa" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
       
       <Animated.View 
         style={[
@@ -329,18 +330,18 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color="#000" />
+              <Ionicons name="arrow-back" size={24} color={T.ink} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Analytics</Text>
+            <Text style={styles.headerTitle}>analytics</Text>
             <TouchableOpacity onPress={handleExportReport} style={styles.shareButton}>
-              <Ionicons name="share-outline" size={22} color="#f9c349" />
+              <Ionicons name="share-outline" size={22} color={T.yellow} />
             </TouchableOpacity>
           </View>
 
           {/* Resume Info */}
           <View style={styles.resumeInfoCard}>
             <LinearGradient
-              colors={['#000', '#1a1a1a', '#f9c349']}
+              colors={[T.ink, T.ink, T.yellow]}
               style={styles.resumeInfoGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -349,19 +350,19 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
                 {resume?.personalInfo?.firstName || 'Your'} Resume
               </Text>
               <Text style={styles.resumeInfoTitle}>
-                Performance Overview
+                performance overview
               </Text>
               <View style={styles.resumeInfoBadges}>
                 <View style={styles.resumeInfoBadge}>
-                  <Ionicons name="calendar-outline" size={12} color="#f9c349" />
+                  <Ionicons name="calendar-outline" size={12} color={T.yellow} />
                   <Text style={styles.resumeInfoBadgeText}>
                     Last 30 days
                   </Text>
                 </View>
                 <View style={[styles.resumeInfoBadge, styles.resumeInfoBadgeGold]}>
-                  <Ionicons name="stats-chart-outline" size={12} color="#000" />
+                  <Ionicons name="stats-chart-outline" size={12} color={T.ink} />
                   <Text style={[styles.resumeInfoBadgeText, styles.resumeInfoBadgeTextGold]}>
-                    Live
+                    live
                   </Text>
                 </View>
               </View>
@@ -372,7 +373,7 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
           <View style={styles.quickStats}>
             <View style={styles.quickStat}>
               <Text style={styles.quickStatValue}>{analytics.completeness || 0}%</Text>
-              <Text style={styles.quickStatLabel}>Completeness</Text>
+              <Text style={styles.quickStatLabel}>completeness</Text>
               <View style={styles.quickStatBar}>
                 <View 
                   style={[
@@ -384,15 +385,15 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
             </View>
             <View style={styles.quickStatDivider} />
             <View style={styles.quickStat}>
-              <Text style={[styles.quickStatValue, { color: '#2ECC71' }]}>
+              <Text style={[styles.quickStatValue, { color: T.success }]}>
                 {analytics.strength || 0}%
               </Text>
-              <Text style={styles.quickStatLabel}>Strength</Text>
+              <Text style={styles.quickStatLabel}>strength</Text>
               <View style={styles.quickStatBar}>
                 <View 
                   style={[
                     styles.quickStatBarFill, 
-                    { width: `${Math.min(analytics.strength || 0, 100)}%`, backgroundColor: '#2ECC71' }
+                    { width: `${Math.min(analytics.strength || 0, 100)}%`, backgroundColor: T.success }
                   ]} 
                 />
               </View>
@@ -402,7 +403,7 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
               <Text style={[styles.quickStatValue, { color: '#4A90D9' }]}>
                 {analytics.skillMatch || 0}%
               </Text>
-              <Text style={styles.quickStatLabel}>Skill Match</Text>
+              <Text style={styles.quickStatLabel}>skill match</Text>
               <View style={styles.quickStatBar}>
                 <View 
                   style={[
@@ -420,14 +421,14 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
               icon="eye-outline"
               title="Views"
               value={analytics.views || 0}
-              color="#f9c349"
+              color={T.yellow}
               subtitle="Total views"
             />
             <StatCard
               icon="download-outline"
               title="Downloads"
               value={analytics.downloads || 0}
-              color="#2ECC71"
+              color={T.success}
               subtitle="PDF downloads"
             />
             <StatCard
@@ -450,8 +451,8 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
           <View style={styles.chartContainer}>
             <View style={styles.chartHeader}>
               <View style={styles.chartTitleContainer}>
-                <Ionicons name="trending-up-outline" size={18} color="#f9c349" />
-                <Text style={styles.chartTitle}>Views Over Time</Text>
+                <Ionicons name="trending-up-outline" size={18} color={T.yellow} />
+                <Text style={styles.chartTitle}>views over time</Text>
               </View>
               <View style={styles.periodSelector}>
                 {['week', 'month', 'year'].map((period) => (
@@ -481,8 +482,8 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
           {/* Distribution Chart */}
           <View style={styles.pieChartContainer}>
             <View style={styles.pieChartHeader}>
-              <Ionicons name="pie-chart-outline" size={18} color="#f9c349" />
-              <Text style={styles.chartTitle}>Engagement Distribution</Text>
+              <Ionicons name="pie-chart-outline" size={18} color={T.yellow} />
+              <Text style={styles.chartTitle}>engagement distribution</Text>
             </View>
             <View style={styles.pieChartWrapper}>
               {renderPieChart()}
@@ -493,8 +494,8 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
           <View style={styles.improvementsContainer}>
             <View style={styles.improvementsHeader}>
               <View style={styles.improvementsTitleContainer}>
-                <Ionicons name="bulb-outline" size={18} color="#f9c349" />
-                <Text style={styles.improvementsTitle}>Suggested Improvements</Text>
+                <Ionicons name="bulb-outline" size={18} color={T.yellow} />
+                <Text style={styles.improvementsTitle}>suggested improvements</Text>
               </View>
               <View style={styles.improvementsCountBadge}>
                 <Text style={styles.improvementsCount}>
@@ -509,15 +510,15 @@ ${analytics.improvements?.map(i => `- ${i.title}: ${i.description}`).join('\n') 
             ) : (
               <View style={styles.noImprovements}>
                 <LinearGradient
-                  colors={['#f9c349', '#2ECC71']}
+                  colors={[T.yellow, T.success]}
                   style={styles.noImprovementsIcon}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 >
-                  <Ionicons name="checkmark-circle" size={40} color="#fff" />
+                  <Ionicons name="checkmark-circle" size={40} color={T.white} />
                 </LinearGradient>
                 <Text style={styles.noImprovementsText}>
-                  Your resume looks great!
+                  your resume looks great!
                 </Text>
                 <Text style={styles.noImprovementsSubtext}>
                   No improvements needed at this time
@@ -556,8 +557,8 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    color: '#666',
-    fontSize: 14,
+    color: T.textMuted,
+    fontSize: 14, fontFamily: F.body,
   },
   header: {
     flexDirection: 'row',
@@ -566,20 +567,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'ios' ? 4 : 8,
     paddingBottom: 12,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: T.line,
   },
   backButton: {
     padding: 4,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#000',
+    fontFamily: F.headingBold,
+    color: T.ink,
   },
   shareButton: {
-    backgroundColor: '#000',
+    backgroundColor: T.ink,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
@@ -591,22 +592,22 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderRadius: 20,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   resumeInfoGradient: {
     padding: 20,
   },
   resumeInfoName: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
+    fontFamily: F.headingBold,
+    color: T.white,
   },
   resumeInfoTitle: {
-    fontSize: 14,
+    fontSize: 14, fontFamily: F.body,
     color: 'rgba(255,255,255,0.8)',
     marginTop: 2,
   },
@@ -624,26 +625,26 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   resumeInfoBadgeGold: {
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
   },
   resumeInfoBadgeText: {
-    fontSize: 11,
-    color: '#fff',
+    fontSize: 11, fontFamily: F.body,
+    color: T.white,
     marginLeft: 4,
   },
   resumeInfoBadgeTextGold: {
-    color: '#000',
+    color: T.ink,
   },
   quickStats: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     marginHorizontal: 16,
     marginVertical: 16,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
-    shadowColor: '#000',
+    borderColor: T.line,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -655,30 +656,30 @@ const styles = StyleSheet.create({
   },
   quickStatValue: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#f9c349',
+    fontFamily: F.heading,
+    color: T.yellow,
   },
   quickStatLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 2,
   },
   quickStatBar: {
     width: '80%',
     height: 3,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: T.sand,
     borderRadius: 2,
     marginTop: 6,
     overflow: 'hidden',
   },
   quickStatBarFill: {
     height: '100%',
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     borderRadius: 2,
   },
   quickStatDivider: {
     width: 1,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: T.sand,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -687,14 +688,14 @@ const styles = StyleSheet.create({
   },
   statCard: {
     width: '48%',
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderRadius: 16,
     padding: 14,
     margin: '1%',
     borderLeftWidth: 3,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
-    shadowColor: '#000',
+    borderColor: T.line,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -714,30 +715,30 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   statTitle: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textMuted,
   },
   statValue: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#000',
+    fontFamily: F.heading,
+    color: T.ink,
   },
   statSubtitle: {
-    fontSize: 11,
-    color: '#999',
+    fontSize: 11, fontFamily: F.body,
+    color: T.textFaint,
     marginTop: 2,
   },
   chartContainer: {
-    backgroundColor: '#000',
+    backgroundColor: T.ink,
     marginHorizontal: 16,
     marginVertical: 8,
     borderRadius: 16,
     padding: 16,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   chartHeader: {
     flexDirection: 'row',
@@ -751,8 +752,8 @@ const styles = StyleSheet.create({
   },
   chartTitle: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#fff',
+    fontFamily: F.bodySemi,
+    color: T.white,
     marginLeft: 8,
   },
   chartWrapper: {
@@ -768,29 +769,29 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   periodButtonActive: {
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
   },
   periodButtonText: {
-    fontSize: 11,
+    fontSize: 11, fontFamily: F.body,
     color: 'rgba(255,255,255,0.6)',
   },
   periodButtonTextActive: {
-    color: '#000',
-    fontWeight: '600',
+    color: T.ink,
+    fontFamily: F.bodySemi,
   },
   chart: {
     borderRadius: 12,
     marginVertical: 8,
   },
   pieChartContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     marginHorizontal: 16,
     marginVertical: 8,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
-    shadowColor: '#000',
+    borderColor: T.line,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -805,14 +806,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   improvementsContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     marginHorizontal: 16,
     marginVertical: 8,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
-    shadowColor: '#000',
+    borderColor: T.line,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -830,29 +831,29 @@ const styles = StyleSheet.create({
   },
   improvementsTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    fontFamily: F.bodySemi,
+    color: T.ink,
     marginLeft: 8,
   },
   improvementsCountBadge: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: T.sand,
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 12,
   },
   improvementsCount: {
     fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
+    color: T.textMuted,
+    fontFamily: F.bodyMedium,
   },
   improvementCard: {
     padding: 12,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: T.sand,
     borderRadius: 12,
     marginBottom: 8,
     borderLeftWidth: 3,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: T.line,
   },
   improvementHeader: {
     flexDirection: 'row',
@@ -862,8 +863,8 @@ const styles = StyleSheet.create({
   },
   improvementTitle: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#000',
+    fontFamily: F.bodyMedium,
+    color: T.ink,
   },
   priorityBadge: {
     paddingHorizontal: 8,
@@ -872,13 +873,13 @@ const styles = StyleSheet.create({
   },
   priorityText: {
     fontSize: 10,
-    color: '#fff',
-    fontWeight: '600',
-    textTransform: 'uppercase',
+    color: T.white,
+    fontFamily: F.bodySemi,
+    textTransform: 'none',
   },
   improvementDescription: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: 13, fontFamily: F.body,
+    color: T.textMuted,
     lineHeight: 18,
   },
   noImprovements: {
@@ -894,13 +895,13 @@ const styles = StyleSheet.create({
   },
   noImprovementsText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
+    fontFamily: F.headingBold,
+    color: T.ink,
     marginTop: 12,
   },
   noImprovementsSubtext: {
-    fontSize: 13,
-    color: '#999',
+    fontSize: 13, fontFamily: F.body,
+    color: T.textFaint,
     marginTop: 4,
   },
   noDataContainer: {
@@ -910,12 +911,12 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   noDataText: {
-    fontSize: 14,
+    fontSize: 14, fontFamily: F.body,
     color: 'rgba(255,255,255,0.7)',
     marginTop: 8,
   },
   noDataSubtext: {
-    fontSize: 12,
+    fontSize: 12, fontFamily: F.body,
     color: 'rgba(255,255,255,0.4)',
     marginTop: 4,
     textAlign: 'center',

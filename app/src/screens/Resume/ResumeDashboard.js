@@ -22,13 +22,14 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../../context/AuthContext';
 import { ResumeContext } from '../../context/ResumeContext';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import * as Print from 'expo-print';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { renderResumeHTML } from '../../services/templateService';
 import { useFocusEffect } from '@react-navigation/native';
 
+import { color as T, font as F } from "../../theme/tokens";
 const { width } = Dimensions.get('window');
 const MAX_CREATIONS = 2;
 
@@ -528,10 +529,10 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
   // Helpers
   // ============================================================
   const getStatusColor = (p) => {
-    if (p >= 80) return '#2ECC71';
-    if (p >= 50) return '#f9c349';
+    if (p >= 80) return T.success;
+    if (p >= 50) return T.yellow;
     if (p >= 30) return '#E67E22';
-    return '#E74C3C';
+    return T.danger;
   };
   const getStatusText = (p) => {
     if (p >= 80) return 'Excellent';
@@ -547,22 +548,22 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
     if (recommendationsLoading) {
       return (
         <View style={styles.recommendationsLoading}>
-          <ActivityIndicator size="large" color="#f9c349" />
-          <Text style={styles.loadingText}>Finding best matches...</Text>
+          <ActivityIndicator size="large" color={T.yellow} />
+          <Text style={styles.loadingText}>finding best matches...</Text>
         </View>
       );
     }
     if (recommendationsError) {
       return (
         <View style={styles.emptyJobsContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color="#E74C3C" />
-          <Text style={styles.emptyJobsTitle}>Connection Issue</Text>
+          <Ionicons name="alert-circle-outline" size={48} color={T.danger} />
+          <Text style={styles.emptyJobsTitle}>connection issue</Text>
           <Text style={styles.emptyJobsText}>{recommendationsError}</Text>
           <TouchableOpacity
             style={styles.retryButton}
             onPress={() => fetchRecommendations(selectedResume?._id)}
           >
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>retry</Text>
           </TouchableOpacity>
         </View>
       );
@@ -570,8 +571,8 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
     if (!recommendations || recommendations.length === 0) {
       return (
         <View style={styles.emptyJobsContainer}>
-          <Ionicons name="briefcase-outline" size={48} color="#ccc" />
-          <Text style={styles.emptyJobsTitle}>No Matches Found Yet</Text>
+          <Ionicons name="briefcase-outline" size={48} color={T.textFaint} />
+          <Text style={styles.emptyJobsTitle}>no matches found yet</Text>
           <Text style={styles.emptyJobsText}>
             {selectedResume
               ? "We couldn't find any job matches for your current skills. Try editing your resume to add more skills or certifications."
@@ -595,7 +596,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
     }
     return recommendations.map((job, index) => {
       const matchColor =
-        job.matchPercentage >= 80 ? '#2ECC71' : job.matchPercentage >= 60 ? '#f9c349' : '#E74C3C';
+        job.matchPercentage >= 80 ? T.success : job.matchPercentage >= 60 ? T.yellow : T.danger;
       return (
         <Animated.View
           key={job._id || index}
@@ -603,12 +604,12 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
         >
           {job.urgent && (
             <View style={styles.urgentBadge}>
-              <Text style={styles.urgentBadgeText}>URGENT</Text>
+              <Text style={styles.urgentBadgeText}>urgent</Text>
             </View>
           )}
           {job.featured && (
             <View style={styles.featuredBadge}>
-              <Text style={styles.featuredBadgeText}>FEATURED</Text>
+              <Text style={styles.featuredBadgeText}>featured</Text>
             </View>
           )}
           <View style={styles.jobHeader}>
@@ -622,25 +623,25 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
           </View>
           <View style={styles.jobDetails}>
             <View style={styles.jobDetailItem}>
-              <Ionicons name="business-outline" size={16} color="#666" />
+              <Ionicons name="business-outline" size={16} color={T.textMuted} />
               <Text style={styles.jobDetailText}>{job.department || 'Technology'}</Text>
             </View>
             <View style={styles.jobDetailItem}>
-              <Ionicons name="location-outline" size={16} color="#666" />
+              <Ionicons name="location-outline" size={16} color={T.textMuted} />
               <Text style={styles.jobDetailText}>{job.location || 'Remote'}</Text>
             </View>
             <View style={styles.jobDetailItem}>
-              <Ionicons name="cash-outline" size={16} color="#666" />
+              <Ionicons name="cash-outline" size={16} color={T.textMuted} />
               <Text style={styles.jobDetailText}>{job.salary || 'Competitive'}</Text>
             </View>
             <View style={styles.jobDetailItem}>
-              <Ionicons name="time-outline" size={16} color="#666" />
+              <Ionicons name="time-outline" size={16} color={T.textMuted} />
               <Text style={styles.jobDetailText}>{job.type || 'Full-time'}</Text>
             </View>
           </View>
           {job.matchedSkills && job.matchedSkills.length > 0 && (
             <View style={styles.matchedSkillsContainer}>
-              <Text style={styles.matchedSkillsLabel}>Matched Skills:</Text>
+              <Text style={styles.matchedSkillsLabel}>matched skills:</Text>
               <View style={styles.matchedSkillsList}>
                 {job.matchedSkills.slice(0, 4).map((skill, idx) => (
                   <View key={idx} style={styles.matchedSkillTag}>
@@ -655,11 +656,11 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
           )}
           {job.matchReasons && job.matchReasons.length > 0 && (
             <View style={styles.matchReasonsContainer}>
-              <Text style={styles.matchReasonsLabel}>Why this matches:</Text>
+              <Text style={styles.matchReasonsLabel}>why this matches:</Text>
               <View style={styles.matchReasonsList}>
                 {job.matchReasons.slice(0, 3).map((reason, idx) => (
                   <View key={idx} style={styles.matchReasonTag}>
-                    <Ionicons name="checkmark-circle" size={12} color="#2ECC71" />
+                    <Ionicons name="checkmark-circle" size={12} color={T.success} />
                     <Text style={styles.matchReasonText}>{reason}</Text>
                   </View>
                 ))}
@@ -675,7 +676,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
             </Text>
             <Text
               style={{
-                color: '#f9c349',
+                color: T.yellow,
                 fontSize: 12,
                 fontWeight: '600',
                 marginTop: 2,
@@ -686,16 +687,16 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.optimizeButton, { backgroundColor: '#f9c349' }]}
+            style={[styles.optimizeButton, { backgroundColor: T.yellow }]}
             onPress={() => handleApplyToJob(job)}
           >
-            <Text style={[styles.optimizeButtonText, { color: '#000' }]}>Apply Now</Text>
-            <Ionicons name="arrow-forward" size={16} color="#000" style={{ marginLeft: 4 }} />
+            <Text style={[styles.optimizeButtonText, { color: T.ink }]}>apply now</Text>
+            <Ionicons name="arrow-forward" size={16} color={T.ink} style={{ marginLeft: 4 }} />
           </TouchableOpacity>
           <View style={styles.jobActions}>
             <TouchableOpacity style={styles.applyButton} onPress={() => handleOptimizeResumeFlow(job)}>
-              <Ionicons name="sparkles" size={14} color="#f9c349" style={{ marginRight: 4 }} />
-              <Text style={styles.applyButtonText}>Optimize Resume</Text>
+              <Ionicons name="sparkles" size={14} color={T.yellow} style={{ marginRight: 4 }} />
+              <Text style={styles.applyButtonText}>optimize resume</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.saveJobButton}
@@ -703,12 +704,12 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
               disabled={savingJobId === job._id}
             >
               {savingJobId === job._id ? (
-                <ActivityIndicator size="small" color="#f9c349" />
+                <ActivityIndicator size="small" color={T.yellow} />
               ) : (
                 <Ionicons
                   name={savedJobIds.has(job._id) ? 'bookmark' : 'bookmark-outline'}
                   size={20}
-                  color={savedJobIds.has(job._id) ? '#f9c349' : '#666'}
+                  color={savedJobIds.has(job._id) ? T.yellow : T.textMuted}
                 />
               )}
             </TouchableOpacity>
@@ -738,13 +739,13 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
             </Text>
             {!downloading && (
               <TouchableOpacity onPress={() => setDownloadModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#333" />
+                <Ionicons name="close" size={24} color={T.ink} />
               </TouchableOpacity>
             )}
           </View>
           {downloading ? (
             <View style={styles.downloadProgressContainer}>
-              <ActivityIndicator size="large" color="#f9c349" />
+              <ActivityIndicator size="large" color={T.yellow} />
               <Text style={styles.downloadProgressText}>{downloadProgress}% Complete</Text>
               <View style={styles.progressBar}>
                 <View style={[styles.progressFill, { width: `${downloadProgress}%` }]} />
@@ -756,46 +757,46 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                 style={styles.downloadOption}
                 onPress={() => handleDownloadResume(selectedResume, 'pdf')}
               >
-                <View style={[styles.downloadOptionIcon, { backgroundColor: '#E74C3C' }]}>
-                  <Ionicons name="document-text" size={28} color="#fff" />
+                <View style={[styles.downloadOptionIcon, { backgroundColor: T.danger }]}>
+                  <Ionicons name="document-text" size={28} color={T.white} />
                 </View>
                 <View style={styles.downloadOptionInfo}>
-                  <Text style={styles.downloadOptionTitle}>PDF Resume</Text>
+                  <Text style={styles.downloadOptionTitle}>pdf resume</Text>
                   <Text style={styles.downloadOptionDesc}>
                     Professional PDF format, ready for printing
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                <Ionicons name="chevron-forward" size={20} color={T.textFaint} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.downloadOption}
                 onPress={() => handleDownloadHTML(selectedResume)}
               >
-                <View style={[styles.downloadOptionIcon, { backgroundColor: '#f9c349' }]}>
-                  <Ionicons name="code" size={28} color="#fff" />
+                <View style={[styles.downloadOptionIcon, { backgroundColor: T.yellow }]}>
+                  <Ionicons name="code" size={28} color={T.white} />
                 </View>
                 <View style={styles.downloadOptionInfo}>
-                  <Text style={styles.downloadOptionTitle}>HTML Resume</Text>
+                  <Text style={styles.downloadOptionTitle}>html resume</Text>
                   <Text style={styles.downloadOptionDesc}>
-                    Web-ready HTML format with styling
+                    web-ready html format with styling
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                <Ionicons name="chevron-forward" size={20} color={T.textFaint} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.downloadOption}
                 onPress={() => handleDownloadJSON(selectedResume)}
               >
                 <View style={[styles.downloadOptionIcon, { backgroundColor: '#9B59B6' }]}>
-                  <Ionicons name="database" size={28} color="#fff" />
+                  <Ionicons name="database" size={28} color={T.white} />
                 </View>
                 <View style={styles.downloadOptionInfo}>
-                  <Text style={styles.downloadOptionTitle}>JSON Data</Text>
+                  <Text style={styles.downloadOptionTitle}>json data</Text>
                   <Text style={styles.downloadOptionDesc}>
                     Raw resume data in JSON format
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                <Ionicons name="chevron-forward" size={20} color={T.textFaint} />
               </TouchableOpacity>
             </View>
           )}
@@ -810,10 +811,10 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
   if (isLoading || (loading && resumes.length === 0)) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#f9c349" />
-          <Text style={styles.loadingText}>Loading your resumes...</Text>
+          <ActivityIndicator size="large" color={T.yellow} />
+          <Text style={styles.loadingText}>loading your resumes...</Text>
         </View>
       </SafeAreaView>
     );
@@ -827,7 +828,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
   // ============================================================
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <Animated.View
         style={[
@@ -838,7 +839,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
         {/* ==================== HEADER ==================== */}
         <View style={[styles.header, { paddingTop: 16 }]}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.greeting}>Hello,</Text>
+            <Text style={styles.greeting}>hello,</Text>
             <Text style={styles.userName}>{isGuest ? 'Guest User' : user?.name || 'User'}</Text>
             <Text style={styles.creationCounter}>
               Resumes: {totalCreationsUsed} / {MAX_CREATIONS}
@@ -857,8 +858,8 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
               navigation.navigate('ResumeBuilder');
             }}
           >
-            <Ionicons name="add" size={20} color="#000" />
-            <Text style={styles.newResumeButtonText}>New</Text>
+            <Ionicons name="add" size={20} color={T.ink} />
+            <Text style={styles.newResumeButtonText}>new</Text>
           </TouchableOpacity>
         </View>
 
@@ -920,7 +921,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                   {/* Stats Card */}
                   <View style={styles.statsCard}>
                     <LinearGradient
-                      colors={['#000000', '#1a1a1a', '#f9c349']}
+                      colors={[T.ink, T.ink, T.yellow]}
                       style={styles.statsGradient}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
@@ -954,7 +955,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                           <Text style={styles.percentageText}>
                             {selectedResume?.completionPercentage || 0}%
                           </Text>
-                          <Text style={styles.percentageLabel}>Complete</Text>
+                          <Text style={styles.percentageLabel}>complete</Text>
                         </View>
                       </View>
                     </LinearGradient>
@@ -963,19 +964,19 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                   {/* Resume Stats */}
                   <View style={styles.resumeStats}>
                     <View style={styles.resumeStatItem}>
-                      <Ionicons name="eye-outline" size={18} color="#f9c349" />
+                      <Ionicons name="eye-outline" size={18} color={T.yellow} />
                       <Text style={styles.resumeStatText}>
                         {selectedResume.viewCount || 0} views
                       </Text>
                     </View>
                     <View style={styles.resumeStatItem}>
-                      <Ionicons name="download-outline" size={18} color="#f9c349" />
+                      <Ionicons name="download-outline" size={18} color={T.yellow} />
                       <Text style={styles.resumeStatText}>
                         {selectedResume.downloadCount || 0} downloads
                       </Text>
                     </View>
                     <View style={styles.resumeStatItem}>
-                      <Ionicons name="share-outline" size={18} color="#f9c349" />
+                      <Ionicons name="share-outline" size={18} color={T.yellow} />
                       <Text style={styles.resumeStatText}>
                         {selectedResume.shareCount || 0} shares
                       </Text>
@@ -988,21 +989,21 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                       style={styles.actionBtnPrimary}
                       onPress={() => handleViewResume(selectedResume)}
                     >
-                      <Ionicons name="document-text-outline" size={18} color="#000000" />
-                      <Text style={styles.actionBtnTextPrimary}>View & Download</Text>
+                      <Ionicons name="document-text-outline" size={18} color={T.ink} />
+                      <Text style={styles.actionBtnTextPrimary}>view & download</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.actionBtnSecondary}
                       onPress={() => handleEditResume(selectedResume)}
                     >
-                      <Ionicons name="create-outline" size={18} color="#f9c349" />
-                      <Text style={styles.actionBtnTextSecondary}>Edit Details</Text>
+                      <Ionicons name="create-outline" size={18} color={T.yellow} />
+                      <Text style={styles.actionBtnTextSecondary}>edit details</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.actionBtnDanger}
                       onPress={() => handleDeleteResume(selectedResume._id)}
                     >
-                      <Ionicons name="trash-outline" size={18} color="#E74C3C" />
+                      <Ionicons name="trash-outline" size={18} color={T.danger} />
                     </TouchableOpacity>
                   </View>
 
@@ -1010,7 +1011,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                   <View style={styles.atsScoreCard}>
                     <View style={styles.atsScoreHeader}>
                       <View>
-                        <Text style={styles.atsScoreTitle}>ATS Compatibility Score</Text>
+                        <Text style={styles.atsScoreTitle}>ats compatibility score</Text>
                         <Text style={styles.atsScoreSubtitle}>
                           Based on AI career profile analysis
                         </Text>
@@ -1025,7 +1026,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                     {selectedResume.careerProfile?.atsKeywords &&
                     selectedResume.careerProfile.atsKeywords.length > 0 ? (
                       <View style={styles.atsKeywordsSection}>
-                        <Text style={styles.atsKeywordsTitle}>Extracted ATS Keywords</Text>
+                        <Text style={styles.atsKeywordsTitle}>extracted ats keywords</Text>
                         <View style={styles.atsKeywordsList}>
                           {selectedResume.careerProfile.atsKeywords.slice(0, 10).map((kw, idx) => (
                             <View key={idx} style={styles.atsKeywordTag}>
@@ -1036,8 +1037,8 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                       </View>
                     ) : (
                       <View style={styles.atsPendingContainer}>
-                        <ActivityIndicator size="small" color="#f9c349" />
-                        <Text style={styles.atsPendingText}>AI profile enrichment in progress...</Text>
+                        <ActivityIndicator size="small" color={T.yellow} />
+                        <Text style={styles.atsPendingText}>ai profile enrichment in progress...</Text>
                       </View>
                     )}
                   </View>
@@ -1045,9 +1046,9 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                   {/* Recommendations */}
                   <View style={styles.recommendationsSection}>
                     <View style={styles.sectionHeader}>
-                      <Text style={styles.sectionTitle}>Recommended Jobs</Text>
+                      <Text style={styles.sectionTitle}>recommended jobs</Text>
                       <TouchableOpacity>
-                        <Text style={styles.seeAllText}>See All</Text>
+                        <Text style={styles.seeAllText}>see all</Text>
                       </TouchableOpacity>
                     </View>
                     {renderRecommendations()}
@@ -1055,8 +1056,8 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                 </>
               ) : (
                 <View style={styles.emptyContainer}>
-                  <Ionicons name="document-text-outline" size={64} color="#ccc" />
-                  <Text style={styles.emptyTitle}>No Resume Selected</Text>
+                  <Ionicons name="document-text-outline" size={64} color={T.textFaint} />
+                  <Text style={styles.emptyTitle}>no resume selected</Text>
                   <Text style={styles.emptyDescription}>
                     Please select a resume from the list above.
                   </Text>
@@ -1065,8 +1066,8 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
             </>
           ) : (
             <View style={styles.emptyContainer}>
-              <Ionicons name="document-text-outline" size={64} color="#ccc" />
-              <Text style={styles.emptyTitle}>No Resume Found</Text>
+              <Ionicons name="document-text-outline" size={64} color={T.textFaint} />
+              <Text style={styles.emptyTitle}>no resume found</Text>
               <Text style={styles.emptyDescription}>
                 Create your first resume to get started with your job search.
               </Text>
@@ -1084,12 +1085,12 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                 }}
               >
                 <LinearGradient
-                  colors={['#000', '#f9c349']}
+                  colors={[T.ink, T.yellow]}
                   style={styles.createButtonGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 >
-                  <Text style={styles.createButtonText}>Create Resume</Text>
+                  <Text style={styles.createButtonText}>create resume</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -1118,25 +1119,25 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
         >
           <View
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: T.card,
               borderRadius: 20,
               width: '100%',
               maxWidth: 360,
               overflow: 'hidden',
               borderWidth: 1.5,
-              borderColor: '#f9c349',
+              borderColor: T.yellow,
             }}
           >
             <View
               style={{
-                backgroundColor: '#1a1a1a',
+                backgroundColor: T.ink,
                 paddingVertical: 20,
                 alignItems: 'center',
               }}
             >
-              <MaterialCommunityIcons name="alert-decagram" size={48} color="#f9c349" />
+              <MaterialCommunityIcons name="alert-decagram" size={48} color={T.yellow} />
               <Text
-                style={{ color: '#ffffff', fontSize: 18, fontWeight: '800', marginTop: 8 }}
+                style={{ color: T.white, fontSize: 18, fontWeight: '800', marginTop: 8 }}
               >
                 Skill Gap Warning
               </Text>
@@ -1145,7 +1146,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
               <Text
                 style={{
                   fontSize: 14,
-                  color: '#333333',
+                  color: T.ink,
                   lineHeight: 22,
                   textAlign: 'center',
                   marginBottom: 16,
@@ -1153,14 +1154,14 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
               >
                 Your current expertise does not fully match the requirements for this role. To apply,
                 you should enhance your skills in{' '}
-                <Text style={{ fontWeight: '800', color: '#1a1a1a' }}>
+                <Text style={{ fontWeight: '800', color: T.ink }}>
                   {skillGapData.missingSkills.join(', ') || 'key required skills'}
                 </Text>
                 {'. '}Developing these skills will significantly increase your chances of selection.
               </Text>
               <TouchableOpacity
                 style={{
-                  backgroundColor: '#f9c349',
+                  backgroundColor: T.yellow,
                   paddingVertical: 12,
                   borderRadius: 12,
                   alignItems: 'center',
@@ -1168,8 +1169,8 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                 }}
                 onPress={() => setSkillGapVisible(false)}
               >
-                <Text style={{ color: '#1a1a1a', fontWeight: '800', fontSize: 14 }}>
-                  I will enhance them!
+                <Text style={{ color: T.ink, fontWeight: '800', fontSize: 14 }}>
+                  i will enhance them!
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1184,9 +1185,9 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
 // STYLES
 // ============================================================
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#ffffff' },
-  container: { flex: 1, backgroundColor: '#ffffff' },
-  contentContainer: { flex: 1, backgroundColor: '#ffffff' },
+  safeArea: { flex: 1, backgroundColor: T.card },
+  container: { flex: 1, backgroundColor: T.card },
+  contentContainer: { flex: 1, backgroundColor: T.card },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
@@ -1197,9 +1198,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
   },
-  loadingText: { marginTop: 12, fontSize: 14, color: '#64748B' },
+  loadingText: { marginTop: 12, fontSize: 14, fontFamily: F.body, color: T.textMuted },
 
   // ========== HEADER ==========
   header: {
@@ -1208,45 +1209,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingBottom: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: T.line,
   },
   greeting: {
     fontSize: 13,
-    color: '#64748B',
-    fontWeight: '400',
+    color: T.textMuted,
+    fontFamily: F.body,
     marginBottom: 2,
   },
   userName: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: F.heading,
     color: '#0F172A',
     marginBottom: 4,
   },
   creationCounter: {
     fontSize: 12,
-    color: '#f9c349',
-    fontWeight: '700',
+    color: T.yellow,
+    fontFamily: F.bodyBold,
     marginTop: 2,
   },
   newResumeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 25,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 2,
   },
   newResumeButtonText: {
-    color: '#000000',
+    color: T.ink,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
     marginLeft: 4,
   },
 
@@ -1254,10 +1255,10 @@ const styles = StyleSheet.create({
   resumeSelector: {
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
     marginTop: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: T.line,
   },
   resumeTab: {
     flexDirection: 'row',
@@ -1270,18 +1271,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'transparent',
   },
-  resumeTabActive: { backgroundColor: '#f9c349', borderColor: '#f9c349' },
-  resumeTabText: { fontSize: 13, color: '#94A3B8', fontWeight: '500' },
-  resumeTabTextActive: { color: '#000000' },
+  resumeTabActive: { backgroundColor: T.yellow, borderColor: T.yellow },
+  resumeTabText: { fontSize: 13, color: T.textFaint, fontFamily: F.bodyMedium },
+  resumeTabTextActive: { color: T.ink },
   resumeTabBadge: {
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 10,
     marginLeft: 6,
   },
-  resumeTabBadgeText: { fontSize: 10, color: '#fff', fontWeight: '600' },
+  resumeTabBadgeText: { fontSize: 10, color: T.white, fontFamily: F.bodySemi },
   viewAllButton: { paddingVertical: 6, paddingHorizontal: 12 },
-  viewAllText: { fontSize: 12, color: '#f9c349', fontWeight: '500' },
+  viewAllText: { fontSize: 12, color: T.yellow, fontFamily: F.bodyMedium },
 
   // ========== STATS CARD ==========
   statsCard: {
@@ -1289,11 +1290,11 @@ const styles = StyleSheet.create({
     marginVertical: 16,
     borderRadius: 20,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   statsGradient: { padding: 24 },
   statsContent: {
@@ -1302,38 +1303,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statsLeft: { flex: 1 },
-  resumeName: { fontSize: 22, fontWeight: '700', color: '#fff' },
-  resumeTitle: { fontSize: 14, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
+  resumeName: { fontSize: 22, fontFamily: F.heading, color: T.white },
+  resumeTitle: { fontSize: 14, fontFamily: F.body, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
   statusContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
-  statusText: { fontSize: 12, color: 'rgba(255,255,255,0.9)', fontWeight: '500' },
+  statusText: { fontSize: 12, color: 'rgba(255,255,255,0.9)', fontFamily: F.bodyMedium },
   statsRight: { alignItems: 'center' },
-  percentageText: { fontSize: 32, fontWeight: '700', color: '#f9c349' },
-  percentageLabel: { fontSize: 11, color: 'rgba(255,255,255,0.8)', fontWeight: '500' },
+  percentageText: { fontSize: 32, fontFamily: F.heading, color: T.yellow },
+  percentageLabel: { fontSize: 11, color: 'rgba(255,255,255,0.8)', fontFamily: F.bodyMedium },
 
   // ========== RESUME STATS ==========
   resumeStats: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     marginHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 16,
     marginBottom: 4,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: T.line,
   },
   resumeStatItem: { flexDirection: 'row', alignItems: 'center' },
   resumeStatText: {
     fontSize: 13,
-    color: '#333',
+    color: T.ink,
     marginLeft: 6,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
 
   // ========== ACTION ROW ==========
@@ -1349,7 +1350,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
@@ -1357,18 +1358,18 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   actionBtnTextPrimary: {
-    color: '#000000',
+    color: T.ink,
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
     marginLeft: 6,
   },
   actionBtnSecondary: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#000000',
+    backgroundColor: T.ink,
     borderWidth: 1,
-    borderColor: '#f9c349',
+    borderColor: T.yellow,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
@@ -1376,15 +1377,15 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   actionBtnTextSecondary: {
-    color: '#f9c349',
+    color: T.yellow,
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
     marginLeft: 6,
   },
   actionBtnDanger: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFEBEE',
+    backgroundColor: T.dangerBg,
     width: 44,
     height: 44,
     borderRadius: 12,
@@ -1401,36 +1402,36 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#f9c349',
+    borderColor: T.yellow,
   },
   atsScoreHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(249, 195, 73, 0.2)',
+    borderBottomColor: T.line,
     paddingBottom: 12,
     marginBottom: 12,
   },
-  atsScoreTitle: { fontSize: 15, fontWeight: '700', color: '#ffffff' },
-  atsScoreSubtitle: { fontSize: 11, color: '#94A3B8', marginTop: 2 },
+  atsScoreTitle: { fontSize: 15, fontFamily: F.bodyBold, color: T.white },
+  atsScoreSubtitle: { fontSize: 11, fontFamily: F.body, color: T.textFaint, marginTop: 2 },
   atsScoreBadgeContainer: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    backgroundColor: 'rgba(249, 195, 73, 0.1)',
+    backgroundColor: T.yellowSoft,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(249, 195, 73, 0.3)',
+    borderColor: T.line,
   },
-  atsScoreValue: { fontSize: 20, fontWeight: '800', color: '#f9c349' },
-  atsScoreMax: { fontSize: 11, color: '#94A3B8', marginLeft: 2 },
+  atsScoreValue: { fontSize: 20, fontFamily: F.heading, color: T.yellow },
+  atsScoreMax: { fontSize: 11, fontFamily: F.body, color: T.textFaint, marginLeft: 2 },
   atsKeywordsSection: { marginTop: 4 },
   atsKeywordsTitle: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#94A3B8',
+    fontFamily: F.bodySemi,
+    color: T.textFaint,
     marginBottom: 8,
   },
   atsKeywordsList: { flexDirection: 'row', flexWrap: 'wrap' },
@@ -1444,14 +1445,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
   },
-  atsKeywordText: { fontSize: 11, color: '#E2E8F0', fontWeight: '500' },
+  atsKeywordText: { fontSize: 11, color: T.textFaint, fontFamily: F.bodyMedium },
   atsPendingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
   },
-  atsPendingText: { fontSize: 12, color: '#94A3B8', marginLeft: 8 },
+  atsPendingText: { fontSize: 12, fontFamily: F.body, color: T.textFaint, marginLeft: 8 },
 
   // ========== RECOMMENDATIONS ==========
   recommendationsSection: {
@@ -1465,20 +1466,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
-  seeAllText: { fontSize: 13, color: '#f9c349', fontWeight: '500' },
+  sectionTitle: { fontSize: 18, fontFamily: F.headingBold, color: '#0F172A' },
+  seeAllText: { fontSize: 13, color: T.yellow, fontFamily: F.bodyMedium },
   jobCard: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: T.line,
   },
   jobHeader: { marginBottom: 8 },
   jobTitleContainer: {
@@ -1488,8 +1489,8 @@ const styles = StyleSheet.create({
   },
   jobTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    fontFamily: F.bodySemi,
+    color: T.ink,
     flex: 1,
   },
   matchBadge: {
@@ -1498,8 +1499,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginLeft: 8,
   },
-  matchText: { fontSize: 10, color: '#fff', fontWeight: '700' },
-  jobCompany: { fontSize: 14, color: '#666', marginTop: 2 },
+  matchText: { fontSize: 10, color: T.white, fontFamily: F.bodyBold },
+  jobCompany: { fontSize: 14, fontFamily: F.body, color: T.textMuted, marginTop: 2 },
   jobDetails: { flexDirection: 'row', flexWrap: 'wrap', marginVertical: 6 },
   jobDetailItem: {
     flexDirection: 'row',
@@ -1507,24 +1508,24 @@ const styles = StyleSheet.create({
     marginRight: 16,
     marginVertical: 2,
   },
-  jobDetailText: { fontSize: 12, color: '#666', marginLeft: 4 },
+  jobDetailText: { fontSize: 12, fontFamily: F.body, color: T.textMuted, marginLeft: 4 },
   matchedSkillsContainer: { marginTop: 8, marginBottom: 4 },
-  matchedSkillsLabel: { fontSize: 12, color: '#666', marginBottom: 4 },
+  matchedSkillsLabel: { fontSize: 12, fontFamily: F.body, color: T.textMuted, marginBottom: 4 },
   matchedSkillsList: { flexDirection: 'row', flexWrap: 'wrap' },
   matchedSkillTag: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: T.sand,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
     marginRight: 6,
     marginBottom: 4,
     borderWidth: 1,
-    borderColor: '#e8e8e8',
+    borderColor: T.line,
   },
-  matchedSkillText: { fontSize: 11, color: '#333', fontWeight: '500' },
-  moreSkillsText: { fontSize: 11, color: '#999', marginLeft: 4 },
+  matchedSkillText: { fontSize: 11, color: T.ink, fontFamily: F.bodyMedium },
+  moreSkillsText: { fontSize: 11, fontFamily: F.body, color: T.textFaint, marginLeft: 4 },
   matchReasonsContainer: { marginTop: 4, marginBottom: 4 },
-  matchReasonsLabel: { fontSize: 12, color: '#666', marginBottom: 2 },
+  matchReasonsLabel: { fontSize: 12, fontFamily: F.body, color: T.textMuted, marginBottom: 2 },
   matchReasonsList: { flexDirection: 'row', flexWrap: 'wrap' },
   matchReasonTag: {
     flexDirection: 'row',
@@ -1536,10 +1537,10 @@ const styles = StyleSheet.create({
     marginRight: 6,
     marginBottom: 4,
   },
-  matchReasonText: { fontSize: 11, color: '#2ECC71', marginLeft: 2 },
+  matchReasonText: { fontSize: 11, fontFamily: F.body, color: T.success, marginLeft: 2 },
   jobDescription: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: 13, fontFamily: F.body,
+    color: T.textMuted,
     lineHeight: 18,
     marginVertical: 6,
   },
@@ -1557,45 +1558,45 @@ const styles = StyleSheet.create({
   },
   applyButtonText: {
     fontSize: 14,
-    color: '#000',
-    fontWeight: '600',
+    color: T.ink,
+    fontFamily: F.bodySemi,
     marginRight: 4,
   },
   saveJobButton: {
     padding: 8,
     borderWidth: 1,
-    borderColor: '#e8e8e8',
+    borderColor: T.line,
     borderRadius: 8,
   },
   urgentBadge: {
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: '#E74C3C',
+    backgroundColor: T.danger,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
     zIndex: 1,
   },
-  urgentBadgeText: { fontSize: 10, color: '#fff', fontWeight: '700' },
+  urgentBadgeText: { fontSize: 10, color: T.white, fontFamily: F.bodyBold },
   featuredBadge: {
     position: 'absolute',
     top: 8,
     right: 80,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
     zIndex: 1,
   },
-  featuredBadgeText: { fontSize: 10, color: '#000', fontWeight: '700' },
+  featuredBadgeText: { fontSize: 10, color: T.ink, fontFamily: F.bodyBold },
   optimizeButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderWidth: 1.5,
-    borderColor: '#f9c349',
+    borderColor: T.yellow,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 8,
@@ -1604,9 +1605,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   optimizeButtonText: {
-    color: '#000',
+    color: T.ink,
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
     marginLeft: 6,
   },
 
@@ -1619,13 +1620,13 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: F.headingBold,
     color: '#0F172A',
     marginTop: 16,
   },
   emptyDescription: {
-    fontSize: 14,
-    color: '#94A3B8',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textFaint,
     textAlign: 'center',
     marginTop: 8,
     paddingHorizontal: 40,
@@ -1636,57 +1637,57 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
   },
-  createButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  createButtonText: { color: T.white, fontSize: 16, fontFamily: F.bodySemi },
   emptyJobsContainer: { alignItems: 'center', paddingVertical: 30 },
   emptyJobsTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#333',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     marginTop: 12,
   },
   emptyJobsText: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textFaint,
     textAlign: 'center',
     marginTop: 12,
     paddingHorizontal: 20,
   },
   buildResumeButton: {
-    backgroundColor: '#000',
+    backgroundColor: T.ink,
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 20,
     marginTop: 12,
   },
-  buildResumeButtonText: { color: '#f9c349', fontSize: 14, fontWeight: '600' },
+  buildResumeButtonText: { color: T.yellow, fontSize: 14, fontFamily: F.bodySemi },
   recommendationsLoading: { padding: 30, alignItems: 'center' },
   retryButton: {
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     paddingHorizontal: 20,
     paddingVertical: 8,
     borderRadius: 12,
     marginTop: 12,
   },
-  retryButtonText: { color: '#000', fontSize: 13, fontWeight: '600' },
+  retryButtonText: { color: T.ink, fontSize: 13, fontFamily: F.bodySemi },
 
   // ========== MODAL ==========
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: T.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderRadius: 24,
     width: width - 32,
     maxHeight: '80%',
     paddingBottom: Platform.OS === 'ios' ? 20 : 0,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.25,
-    shadowRadius: 30,
-    elevation: 10,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1694,16 +1695,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: T.line,
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#000' },
+  modalTitle: { fontSize: 18, fontFamily: F.headingBold, color: T.ink },
   downloadOptions: { padding: 16 },
   downloadOption: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f5',
+    borderBottomColor: T.line,
   },
   downloadOptionIcon: {
     width: 48,
@@ -1715,30 +1716,30 @@ const styles = StyleSheet.create({
   downloadOptionInfo: { flex: 1, marginLeft: 12 },
   downloadOptionTitle: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#000',
+    fontFamily: F.bodySemi,
+    color: T.ink,
   },
   downloadOptionDesc: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textFaint,
     marginTop: 2,
   },
   downloadProgressContainer: { padding: 30, alignItems: 'center' },
   downloadProgressText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
+    fontFamily: F.headingBold,
+    color: T.ink,
     marginTop: 16,
   },
   progressBar: {
     width: '100%',
     height: 6,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: T.sand,
     borderRadius: 3,
     marginTop: 12,
     overflow: 'hidden',
   },
-  progressFill: { height: '100%', backgroundColor: '#f9c349', borderRadius: 3 },
+  progressFill: { height: '100%', backgroundColor: T.yellow, borderRadius: 3 },
 });
 
 export default ResumeDashboardScreen;

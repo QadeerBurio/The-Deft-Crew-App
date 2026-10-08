@@ -18,6 +18,7 @@ import { ResumeContext } from '../../context/ResumeContext';
 import { AuthContext } from '../../context/AuthContext';
 import * as DocumentPicker from 'expo-document-picker';
 
+import { color as T, font as F } from "../../theme/tokens";
 const EnhanceCareer = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -143,7 +144,7 @@ const EnhanceCareer = () => {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="#2c3e50" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Apply for Job</Text>
+        <Text style={styles.headerTitle}>apply for job</Text>
         <View style={styles.headerPlaceholder} />
       </View>
 
@@ -153,22 +154,22 @@ const EnhanceCareer = () => {
           <Text style={styles.jobCompany}>{job?.companyName || job?.company || 'Company'}</Text>
           <View style={styles.jobInfoDetails}>
             <View style={styles.jobInfoItem}>
-              <Ionicons name="location-outline" size={16} color="#666" />
+              <Ionicons name="location-outline" size={16} color={T.textMuted} />
               <Text style={styles.jobInfoText}>{job?.location || 'Remote'}</Text>
             </View>
             <View style={styles.jobInfoItem}>
-              <Ionicons name="time-outline" size={16} color="#666" />
+              <Ionicons name="time-outline" size={16} color={T.textMuted} />
               <Text style={styles.jobInfoText}>{job?.type || 'Full-time'}</Text>
             </View>
             <View style={styles.jobInfoItem}>
-              <Ionicons name="cash-outline" size={16} color="#666" />
+              <Ionicons name="cash-outline" size={16} color={T.textMuted} />
               <Text style={styles.jobInfoText}>{job?.salary || 'Competitive'}</Text>
             </View>
           </View>
         </View>
 
         <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>Personal Information</Text>
+          <Text style={styles.sectionTitle}>personal information</Text>
 
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Full Name *</Text>
@@ -204,7 +205,7 @@ const EnhanceCareer = () => {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Cover Letter</Text>
+            <Text style={styles.inputLabel}>cover letter</Text>
             <TextInput
               style={[styles.input, styles.textarea]}
               placeholder="Tell us why you're a great fit for this position..."
@@ -241,11 +242,11 @@ const EnhanceCareer = () => {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={T.white} />
           ) : (
             <>
-              <Ionicons name="send-outline" size={20} color="#fff" />
-              <Text style={styles.submitButtonText}>Submit Application</Text>
+              <Ionicons name="send-outline" size={20} color={T.white} />
+              <Text style={styles.submitButtonText}>submit application</Text>
             </>
           )}
         </TouchableOpacity>
@@ -264,13 +265,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: T.line,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: F.headingBold,
     color: '#2c3e50',
   },
   headerPlaceholder: {
@@ -281,11 +282,11 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   jobInfo: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -293,12 +294,12 @@ const styles = StyleSheet.create({
   },
   jobTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: F.headingBold,
     color: '#2c3e50',
   },
   jobCompany: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 2,
   },
   jobInfoDetails: {
@@ -313,16 +314,16 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   jobInfoText: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: 13, fontFamily: F.body,
+    color: T.textMuted,
     marginLeft: 4,
   },
   formSection: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: F.bodyBold,
     color: '#2c3e50',
     marginBottom: 16,
   },
@@ -339,18 +340,18 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
     color: '#2c3e50',
     marginBottom: 4,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: T.line,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 14,
-    backgroundColor: '#fafafa',
+    fontSize: 14, fontFamily: F.body,
+    backgroundColor: T.sand,
   },
   textarea: {
     height: 120,
@@ -365,17 +366,17 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderRadius: 8,
     padding: 16,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: T.sand,
   },
   uploadButtonText: {
     fontSize: 14,
     color: '#4A90D9',
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
     marginLeft: 8,
   },
   fileName: {
-    fontSize: 12,
-    color: '#2ECC71',
+    fontSize: 12, fontFamily: F.body,
+    color: T.success,
     marginTop: 4,
     textAlign: 'center',
   },
@@ -394,8 +395,8 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    fontFamily: F.bodySemi,
+    color: T.white,
     marginLeft: 8,
   },
 });

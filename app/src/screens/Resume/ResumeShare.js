@@ -24,6 +24,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import QRCode from 'react-native-qrcode-svg';
 
+import { color as T, font as F } from "../../theme/tokens";
 const ResumeShareScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -180,8 +181,8 @@ View full resume: ${shareLink}
         <body>
           <h1>${resumeData?.personalInfo?.firstName || ''} ${resumeData?.personalInfo?.lastName || ''}</h1>
           <p>${resumeData?.personalInfo?.email || ''} | ${resumeData?.personalInfo?.phone || ''}</p>
-          ${resumeData?.professionalSummary?.summary ? `<h2>Summary</h2><p>${resumeData.professionalSummary.summary}</p>` : ''}
-          ${resumeData?.targetJob?.jobTitle ? `<h2>Target Job</h2><p>${resumeData.targetJob.jobTitle} - ${resumeData.targetJob.industry || ''}</p>` : ''}
+          ${resumeData?.professionalSummary?.summary ? `<h2>summary</h2><p>${resumeData.professionalSummary.summary}</p>` : ''}
+          ${resumeData?.targetJob?.jobTitle ? `<h2>target job</h2><p>${resumeData.targetJob.jobTitle} - ${resumeData.targetJob.industry || ''}</p>` : ''}
         </body>
       </html>
     `;
@@ -195,7 +196,7 @@ View full resume: ${shareLink}
       <Ionicons 
         name={value ? 'checkbox' : 'square-outline'} 
         size={22} 
-        color={value ? '#4A90D9' : '#999'} 
+        color={value ? '#4A90D9' : T.textFaint} 
       />
       <Text style={[styles.shareOptionText, value && styles.shareOptionTextActive]}>
         {label}
@@ -209,7 +210,7 @@ View full resume: ${shareLink}
       onPress={onPress}
       disabled={disabled}
     >
-      <Ionicons name={icon} size={20} color="#fff" />
+      <Ionicons name={icon} size={20} color={T.white} />
       <Text style={styles.shareButtonText}>{label}</Text>
     </TouchableOpacity>
   );
@@ -218,7 +219,7 @@ View full resume: ${shareLink}
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#4A90D9" />
-        <Text style={styles.loadingText}>Loading...</Text>
+        <Text style={styles.loadingText}>loading...</Text>
       </View>
     );
   }
@@ -227,8 +228,8 @@ View full resume: ${shareLink}
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.emptyContainer}>
-          <Ionicons name="document-text-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyTitle}>No Resume Found</Text>
+          <Ionicons name="document-text-outline" size={64} color={T.textFaint} />
+          <Text style={styles.emptyTitle}>no resume found</Text>
           <Text style={styles.emptyDescription}>
             Please create a resume first before sharing.
           </Text>
@@ -236,7 +237,7 @@ View full resume: ${shareLink}
             style={styles.createButton}
             onPress={() => navigation.navigate('ResumeBuilder')}
           >
-            <Text style={styles.createButtonText}>Create Resume</Text>
+            <Text style={styles.createButtonText}>create resume</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -248,10 +249,10 @@ View full resume: ${shareLink}
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
+            <Ionicons name="arrow-back" size={24} color={T.ink} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>Share Resume</Text>
+            <Text style={styles.headerTitle}>share resume</Text>
             <Text style={styles.headerSubtitle}>
               Share your resume with recruiters and employers
             </Text>
@@ -281,7 +282,7 @@ View full resume: ${shareLink}
 
         {/* QR Code */}
         <View style={styles.qrContainer}>
-          <Text style={styles.qrTitle}>Scan to View Resume</Text>
+          <Text style={styles.qrTitle}>scan to view resume</Text>
           <View style={styles.qrCode}>
             <QRCode
               value={shareLink}
@@ -292,7 +293,7 @@ View full resume: ${shareLink}
           </View>
           <TouchableOpacity style={styles.copyLinkButton} onPress={handleCopyLink}>
             <Ionicons name="copy-outline" size={18} color="#4A90D9" />
-            <Text style={styles.copyLinkText}>Copy Share Link</Text>
+            <Text style={styles.copyLinkText}>copy share link</Text>
           </TouchableOpacity>
           <Text style={styles.shareLink} numberOfLines={2}>
             {shareLink}
@@ -301,7 +302,7 @@ View full resume: ${shareLink}
 
         {/* Share Options */}
         <View style={styles.optionsContainer}>
-          <Text style={styles.optionsTitle}>Share Options</Text>
+          <Text style={styles.optionsTitle}>share options</Text>
           <ShareOption
             icon="link-outline"
             label="Share Link"
@@ -330,7 +331,7 @@ View full resume: ${shareLink}
 
         {/* Privacy Options */}
         <View style={styles.optionsContainer}>
-          <Text style={styles.optionsTitle}>Privacy Settings</Text>
+          <Text style={styles.optionsTitle}>privacy settings</Text>
           <ShareOption
             icon="person-outline"
             label="Include Contact Info"
@@ -353,7 +354,7 @@ View full resume: ${shareLink}
 
         {/* Share Buttons */}
         <View style={styles.shareButtonsContainer}>
-          <Text style={styles.shareButtonsTitle}>Share via</Text>
+          <Text style={styles.shareButtonsTitle}>share via</Text>
           <View style={styles.shareButtonsGrid}>
             <ShareButton
               icon="share-social-outline"
@@ -365,13 +366,13 @@ View full resume: ${shareLink}
               icon="document-text-outline"
               label="PDF"
               onPress={handleSharePDF}
-              color="#2ECC71"
+              color={T.success}
             />
             <ShareButton
               icon="mail-outline"
               label="Email"
               onPress={handleEmailShare}
-              color="#E74C3C"
+              color={T.danger}
             />
             <ShareButton
               icon="logo-linkedin"
@@ -383,7 +384,7 @@ View full resume: ${shareLink}
               icon="logo-twitter"
               label="Twitter"
               onPress={handleTwitterShare}
-              color="#1DA1F2"
+              color={T.ink}
             />
             <ShareButton
               icon="copy-outline"
@@ -410,8 +411,8 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    color: '#666',
-    fontSize: 14,
+    color: T.textMuted,
+    fontSize: 14, fontFamily: F.body,
   },
   emptyContainer: {
     flex: 1,
@@ -421,13 +422,13 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: F.headingBold,
     color: '#2c3e50',
     marginTop: 16,
   },
   emptyDescription: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
     textAlign: 'center',
     marginTop: 8,
   },
@@ -439,15 +440,15 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   createButtonText: {
-    color: '#fff',
+    color: T.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
   },
   header: {
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: T.line,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -460,23 +461,23 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontFamily: F.heading,
     color: '#2c3e50',
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 4,
   },
   resumeInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     marginHorizontal: 16,
     marginTop: 12,
     padding: 16,
     borderRadius: 12,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -492,8 +493,8 @@ const styles = StyleSheet.create({
   },
   resumeInitials: {
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontFamily: F.heading,
+    color: T.white,
   },
   resumeDetails: {
     marginLeft: 16,
@@ -501,40 +502,40 @@ const styles = StyleSheet.create({
   },
   resumeName: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: F.headingBold,
     color: '#2c3e50',
   },
   resumeTitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 2,
   },
   resumeCompleteness: {
-    fontSize: 12,
+    fontSize: 12, fontFamily: F.body,
     color: '#4A90D9',
     marginTop: 2,
   },
   qrContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     marginHorizontal: 16,
     marginTop: 12,
     padding: 20,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
   qrTitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
     marginBottom: 12,
   },
   qrCode: {
     padding: 12,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderRadius: 8,
   },
   copyLinkButton: {
@@ -543,23 +544,23 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   copyLinkText: {
-    fontSize: 14,
+    fontSize: 14, fontFamily: F.body,
     color: '#4A90D9',
     marginLeft: 6,
   },
   shareLink: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textFaint,
     marginTop: 8,
     textAlign: 'center',
   },
   optionsContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     marginHorizontal: 16,
     marginTop: 12,
     padding: 16,
     borderRadius: 12,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -567,7 +568,7 @@ const styles = StyleSheet.create({
   },
   optionsTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
     color: '#2c3e50',
     marginBottom: 12,
   },
@@ -576,27 +577,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: T.line,
   },
   shareOptionActive: {
     borderBottomColor: '#4A90D9',
   },
   shareOptionText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
     marginLeft: 10,
   },
   shareOptionTextActive: {
     color: '#2c3e50',
   },
   shareButtonsContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     marginHorizontal: 16,
     marginTop: 12,
     marginBottom: 20,
     padding: 16,
     borderRadius: 12,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -604,7 +605,7 @@ const styles = StyleSheet.create({
   },
   shareButtonsTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
     color: '#2c3e50',
     marginBottom: 12,
   },
@@ -624,9 +625,9 @@ const styles = StyleSheet.create({
     minWidth: 100,
   },
   shareButtonText: {
-    color: '#fff',
+    color: T.white,
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
     marginLeft: 6,
   },
 });

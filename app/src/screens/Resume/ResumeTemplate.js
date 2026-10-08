@@ -22,6 +22,7 @@ import { renderResumeHTML } from '../../services/templateService';
 // Use WebView only on native platforms
 import { WebView } from 'react-native-webview';
 
+import { color as T, font as F } from "../../theme/tokens";
 const { width, height } = Dimensions.get('window');
 
 const ResumeTemplateScreen = () => {
@@ -52,8 +53,8 @@ const ResumeTemplateScreen = () => {
       name: 'Modern',
       description: 'Clean and contemporary design with a professional look',
       icon: 'grid-outline',
-      colors: ['#4A90D9', '#2c3e50', '#ffffff'],
-      previewColors: ['#4A90D9', '#f0f2f5', '#2c3e50'],
+      colors: ['#4A90D9', '#2c3e50', T.white],
+      previewColors: ['#4A90D9', T.sand, '#2c3e50'],
       features: ['Professional', 'Clean Layout', 'Color Accents']
     },
     {
@@ -61,8 +62,8 @@ const ResumeTemplateScreen = () => {
       name: 'Classic',
       description: 'Traditional resume format with timeless elegance',
       icon: 'book-outline',
-      colors: ['#2c3e50', '#34495e', '#ffffff'],
-      previewColors: ['#2c3e50', '#f8f9fa', '#34495e'],
+      colors: ['#2c3e50', '#34495e', T.white],
+      previewColors: ['#2c3e50', T.sand, '#34495e'],
       features: ['Traditional', 'Elegant', 'Professional']
     },
     {
@@ -70,8 +71,8 @@ const ResumeTemplateScreen = () => {
       name: 'Creative',
       description: 'Bold and artistic design for creative professionals',
       icon: 'color-palette-outline',
-      colors: ['#9B59B6', '#E74C3C', '#F39C12'],
-      previewColors: ['#9B59B6', '#fef9e7', '#E74C3C'],
+      colors: ['#9B59B6', T.danger, '#F39C12'],
+      previewColors: ['#9B59B6', '#fef9e7', T.danger],
       features: ['Artistic', 'Bold Colors', 'Unique Layout']
     },
     {
@@ -79,8 +80,8 @@ const ResumeTemplateScreen = () => {
       name: 'Minimal',
       description: 'Simple and clean design focusing on content',
       icon: 'remove-outline',
-      colors: ['#2c3e50', '#7f8c8d', '#ffffff'],
-      previewColors: ['#2c3e50', '#ffffff', '#ecf0f1'],
+      colors: ['#2c3e50', T.textMuted, T.white],
+      previewColors: ['#2c3e50', T.white, '#ecf0f1'],
       features: ['Simple', 'Content Focused', 'Clean']
     },
     {
@@ -88,7 +89,7 @@ const ResumeTemplateScreen = () => {
       name: 'Executive',
       description: 'Executive-level design for senior positions',
       icon: 'business-outline',
-      colors: ['#1a237e', '#0d47a1', '#ffffff'],
+      colors: ['#1a237e', '#0d47a1', T.white],
       previewColors: ['#1a237e', '#e8eaf6', '#0d47a1'],
       features: ['Executive', 'Premium', 'Sophisticated']
     }
@@ -292,7 +293,7 @@ const ResumeTemplateScreen = () => {
             <Text style={styles.templateName}>{item.name}</Text>
             {isApplied && (
               <View style={styles.appliedBadge}>
-                <Text style={styles.appliedBadgeText}>Applied</Text>
+                <Text style={styles.appliedBadgeText}>applied</Text>
               </View>
             )}
           </View>
@@ -314,7 +315,7 @@ const ResumeTemplateScreen = () => {
             onPress={() => handlePreviewTemplate(item)}
           >
             <Ionicons name="eye-outline" size={18} color="#4A90D9" />
-            <Text style={styles.previewButtonText}>Preview</Text>
+            <Text style={styles.previewButtonText}>preview</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
@@ -355,7 +356,7 @@ const ResumeTemplateScreen = () => {
                 onPress={() => setShowPreview(false)}
                 style={styles.modalCloseButton}
               >
-                <Ionicons name="close" size={24} color="#333" />
+                <Ionicons name="close" size={24} color={T.ink} />
               </TouchableOpacity>
             </View>
 
@@ -363,7 +364,7 @@ const ResumeTemplateScreen = () => {
               {isGeneratingPreview ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="large" color="#4A90D9" />
-                  <Text style={styles.loadingText}>Generating preview...</Text>
+                  <Text style={styles.loadingText}>generating preview...</Text>
                 </View>
               ) : previewHTML ? (
                 <WebView
@@ -377,13 +378,13 @@ const ResumeTemplateScreen = () => {
                   renderLoading={() => (
                     <View style={styles.loadingContainer}>
                       <ActivityIndicator size="large" color="#4A90D9" />
-                      <Text style={styles.loadingText}>Loading preview...</Text>
+                      <Text style={styles.loadingText}>loading preview...</Text>
                     </View>
                   )}
                 />
               ) : (
                 <View style={styles.loadingContainer}>
-                  <Text style={styles.loadingText}>No preview available</Text>
+                  <Text style={styles.loadingText}>no preview available</Text>
                 </View>
               )}
             </View>
@@ -393,7 +394,7 @@ const ResumeTemplateScreen = () => {
                 style={[styles.modalButton, styles.modalCancelButton]}
                 onPress={() => setShowPreview(false)}
               >
-                <Text style={styles.modalCancelText}>Close</Text>
+                <Text style={styles.modalCancelText}>close</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalApplyButton]}
@@ -402,7 +403,7 @@ const ResumeTemplateScreen = () => {
                   handleSelectTemplate(previewTemplate.id);
                 }}
               >
-                <Text style={styles.modalApplyText}>Use This Template</Text>
+                <Text style={styles.modalApplyText}>use this template</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -428,7 +429,7 @@ const ResumeTemplateScreen = () => {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="#2c3e50" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Choose Template</Text>
+        <Text style={styles.headerTitle}>choose template</Text>
         <View style={styles.headerPlaceholder} />
       </View>
 
@@ -440,7 +441,7 @@ const ResumeTemplateScreen = () => {
           Select a template that best represents your professional style
         </Text>
         <View style={styles.currentTemplateBadge}>
-          <Ionicons name="checkmark-circle" size={16} color="#2ECC71" />
+          <Ionicons name="checkmark-circle" size={16} color={T.success} />
           <Text style={styles.currentTemplateText}>
             Current: {templates.find(t => t.id === resume?.template)?.name || 'Modern'}
           </Text>
@@ -464,7 +465,7 @@ const ResumeTemplateScreen = () => {
           onPress={handleApplyTemplate}
           disabled={!resume || resume?.template === selectedTemplate || isApplying}
         >
-          <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+          <Ionicons name="checkmark-circle-outline" size={20} color={T.white} />
           <Text style={styles.applyButtonText}>
             {resume?.template === selectedTemplate ? 'Template Already Applied' : 'Apply Template'}
           </Text>
@@ -488,21 +489,21 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    color: '#666',
-    fontSize: 14,
+    color: T.textMuted,
+    fontSize: 14, fontFamily: F.body,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: T.line,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: F.headingBold,
     color: '#2c3e50',
   },
   headerPlaceholder: {
@@ -510,25 +511,25 @@ const styles = StyleSheet.create({
   },
   resumeInfo: {
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: T.line,
   },
   resumeInfoText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
     color: '#2c3e50',
   },
   resumeInfoSubtext: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 4,
   },
   currentTemplateBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,
-    backgroundColor: '#e8f5e9',
+    backgroundColor: T.successBg,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -536,24 +537,24 @@ const styles = StyleSheet.create({
   },
   currentTemplateText: {
     fontSize: 12,
-    color: '#2ECC71',
+    color: T.success,
     marginLeft: 4,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
   templatesList: {
     padding: 12,
     paddingBottom: 80,
   },
   templateCard: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderRadius: 16,
     marginBottom: 16,
     padding: 16,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 2,
     borderWidth: 2,
     borderColor: 'transparent',
   },
@@ -562,12 +563,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f7ff',
   },
   templateCardApplied: {
-    borderColor: '#2ECC71',
+    borderColor: T.success,
     backgroundColor: '#f0faf4',
   },
   templatePreview: {
     height: 100,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: T.sand,
     borderRadius: 8,
     overflow: 'hidden',
     marginBottom: 12,
@@ -587,13 +588,13 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#ddd',
+    backgroundColor: T.sand,
     marginBottom: 6,
   },
   templatePreviewLine: {
     height: 4,
     width: '80%',
-    backgroundColor: '#ddd',
+    backgroundColor: T.sand,
     borderRadius: 2,
     marginBottom: 4,
   },
@@ -602,7 +603,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 8,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: T.line,
   },
   templatePreviewDot: {
     width: 10,
@@ -620,11 +621,11 @@ const styles = StyleSheet.create({
   },
   templateName: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: F.bodyBold,
     color: '#2c3e50',
   },
   appliedBadge: {
-    backgroundColor: '#2ECC71',
+    backgroundColor: T.success,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
@@ -632,12 +633,12 @@ const styles = StyleSheet.create({
   },
   appliedBadgeText: {
     fontSize: 10,
-    color: '#fff',
-    fontWeight: '600',
+    color: T.white,
+    fontFamily: F.bodySemi,
   },
   templateDescription: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: 13, fontFamily: F.body,
+    color: T.textMuted,
     lineHeight: 18,
     marginBottom: 8,
   },
@@ -654,7 +655,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   featureText: {
-    fontSize: 11,
+    fontSize: 11, fontFamily: F.body,
     color: '#4A90D9',
   },
   templateActions: {
@@ -663,7 +664,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: T.line,
   },
   previewButton: {
     flexDirection: 'row',
@@ -674,7 +675,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f7ff',
   },
   previewButtonText: {
-    fontSize: 13,
+    fontSize: 13, fontFamily: F.body,
     color: '#4A90D9',
     marginLeft: 4,
   },
@@ -682,17 +683,17 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 6,
-    backgroundColor: '#f0f2f5',
+    backgroundColor: T.sand,
   },
   selectButtonActive: {
     backgroundColor: '#4A90D9',
   },
   selectButtonText: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: 13, fontFamily: F.body,
+    color: T.textMuted,
   },
   selectButtonTextActive: {
-    color: '#fff',
+    color: T.white,
   },
   bottomActions: {
     position: 'absolute',
@@ -700,9 +701,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: T.line,
   },
   applyButton: {
     flexDirection: 'row',
@@ -717,18 +718,18 @@ const styles = StyleSheet.create({
   },
   applyButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    fontFamily: F.bodySemi,
+    color: T.white,
     marginLeft: 8,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: T.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderRadius: 20,
     width: width - 1,
     height:600,
@@ -740,12 +741,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    backgroundColor: '#fff',
+    borderBottomColor: T.line,
+    backgroundColor: T.card,
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: F.headingBold,
     color: '#2c3e50',
     flex: 1,
   },
@@ -759,15 +760,15 @@ const styles = StyleSheet.create({
   },
   webview: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     
   },
   modalFooter: {
     flexDirection: 'row',
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
-    backgroundColor: '#fff',
+    borderTopColor: T.line,
+    backgroundColor: T.card,
   },
   modalButton: {
     flex: 1,
@@ -776,22 +777,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalCancelButton: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: T.sand,
     marginRight: 8,
   },
   modalCancelText: {
-    color: '#666',
+    color: T.textMuted,
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
   modalApplyButton: {
     backgroundColor: '#4A90D9',
     marginLeft: 8,
   },
   modalApplyText: {
-    color: '#fff',
+    color: T.white,
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
 });
 

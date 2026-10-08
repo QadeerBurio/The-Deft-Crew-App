@@ -27,7 +27,8 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { WebView } from 'react-native-webview';
-import { LinearGradient } from 'expo-linear-gradient';
+import { color as T, font as F } from "../../theme/tokens";
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 
 const { width, height } = Dimensions.get('window');
 
@@ -172,33 +173,33 @@ const ResumeViewScreen = () => {
 
   // Get status color
   const getStatusColor = (percentage) => {
-    if (percentage >= 80) return '#2ECC71';
-    if (percentage >= 50) return '#f9c349';
+    if (percentage >= 80) return T.success;
+    if (percentage >= 50) return T.yellow;
     if (percentage >= 30) return '#E67E22';
-    return '#E74C3C';
+    return T.danger;
   };
 
   // Get skill level color
   const getSkillLevelStyle = (level) => {
     switch (level?.toLowerCase()) {
       case 'expert':
-        return { backgroundColor: '#000', borderColor: '#f9c349' };
+        return { backgroundColor: T.ink, borderColor: T.yellow };
       case 'advanced':
-        return { backgroundColor: '#1a1a1a', borderColor: '#f9c349' };
+        return { backgroundColor: T.ink, borderColor: T.yellow };
       case 'intermediate':
-        return { backgroundColor: '#2a2a2a', borderColor: '#f9c349' };
+        return { backgroundColor: '#2a2a2a', borderColor: T.yellow };
       default:
-        return { backgroundColor: '#f5f5f5', borderColor: '#e8e8e8' };
+        return { backgroundColor: T.sand, borderColor: T.line };
     }
   };
 
   if (loading || !resume) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar barStyle="dark-content" backgroundColor="#f5f7fa" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#f9c349" />
-          <Text style={styles.loadingText}>Loading resume...</Text>
+          <ActivityIndicator size="large" color={T.yellow} />
+          <Text style={styles.loadingText}>loading resume...</Text>
         </View>
       </SafeAreaView>
     );
@@ -208,7 +209,7 @@ const ResumeViewScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#000000" />
+      <StatusBar barStyle="light-content" backgroundColor={T.paper} />
       
       <Animated.View 
         style={[
@@ -222,12 +223,12 @@ const ResumeViewScreen = () => {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
+            <Ionicons name="arrow-back" size={24} color={T.white} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Resume Document</Text>
+          <Text style={styles.headerTitle}>resume document</Text>
           <View style={styles.headerActions}>
             <TouchableOpacity onPress={handleShare} style={styles.headerAction} disabled={isExporting}>
-              <Ionicons name="share-social-outline" size={22} color="#fff" />
+              <Ionicons name="share-social-outline" size={22} color={T.white} />
             </TouchableOpacity>
             <TouchableOpacity 
               onPress={handleExportPDF} 
@@ -235,11 +236,11 @@ const ResumeViewScreen = () => {
               disabled={isExporting}
             >
                {isExporting ? (
-                 <ActivityIndicator size="small" color="#000" />
+                 <ActivityIndicator size="small" color={T.ink} />
                ) : (
                  <>
-                   <Ionicons name="download-outline" size={18} color="#000" />
-                   <Text style={styles.exportButtonText}>PDF</Text>
+                   <Ionicons name="download-outline" size={18} color={T.ink} />
+                   <Text style={styles.exportButtonText}>pdf</Text>
                  </>
                )}
             </TouchableOpacity>
@@ -255,8 +256,8 @@ const ResumeViewScreen = () => {
             startInLoadingState={true}
             renderLoading={() => (
               <View style={styles.inlineLoading}>
-                <ActivityIndicator size="large" color="#f9c349" />
-                <Text style={styles.inlineLoadingText}>Loading document preview...</Text>
+                <ActivityIndicator size="large" color={T.yellow} />
+                <Text style={styles.inlineLoadingText}>loading document preview...</Text>
               </View>
             )}
             onShouldStartLoadWithRequest={(request) => {
@@ -274,16 +275,16 @@ const ResumeViewScreen = () => {
             style={styles.toolbarButton} 
             onPress={() => navigation.navigate('ResumeTemplate', { resumeId: resume._id })}
           >
-            <Ionicons name="color-palette-outline" size={22} color="#ffffff" />
-            <Text style={styles.toolbarButtonText}>Templates</Text>
+            <Ionicons name="color-palette-outline" size={22} color={T.white} />
+            <Text style={styles.toolbarButtonText}>templates</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
             style={styles.toolbarButton} 
             onPress={() => navigation.navigate('ResumeBuilder', { resumeId: resume._id })}
           >
-            <Ionicons name="create-outline" size={22} color="#ffffff" />
-            <Text style={styles.toolbarButtonText}>Customize</Text>
+            <Ionicons name="create-outline" size={22} color={T.white} />
+            <Text style={styles.toolbarButtonText}>customize</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -291,8 +292,8 @@ const ResumeViewScreen = () => {
             onPress={handleExportPDF}
             disabled={isExporting}
           >
-            <Ionicons name="download-outline" size={22} color="#f9c349" />
-            <Text style={[styles.toolbarButtonText, { color: '#f9c349' }]}>Download PDF</Text>
+            <Ionicons name="download-outline" size={22} color={T.yellow} />
+            <Text style={[styles.toolbarButtonText, { color: T.yellow }]}>download pdf</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -300,8 +301,8 @@ const ResumeViewScreen = () => {
             onPress={handleShare}
             disabled={isExporting}
           >
-            <Ionicons name="share-social-outline" size={22} color="#ffffff" />
-            <Text style={styles.toolbarButtonText}>Share PDF</Text>
+            <Ionicons name="share-social-outline" size={22} color={T.white} />
+            <Text style={styles.toolbarButtonText}>share pdf</Text>
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -312,9 +313,9 @@ const ResumeViewScreen = () => {
 const styles = StyleSheet.create({
   bottomToolbar: {
     flexDirection: 'row',
-    backgroundColor: '#000000',
+    backgroundColor: T.ink,
     borderTopWidth: 1,
-    borderTopColor: '#222222',
+    borderTopColor: T.ink,
     paddingVertical: 12,
     justifyContent: 'space-around',
     alignItems: 'center',
@@ -326,9 +327,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   toolbarButtonText: {
-    color: '#ffffff',
+    color: T.white,
     fontSize: 10,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
     marginTop: 4,
   },
   inlineLoading: {
@@ -338,17 +339,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#525659',
   },
   inlineLoadingText: {
-    color: '#ffffff',
+    color: T.white,
     marginTop: 10,
-    fontSize: 14,
+    fontSize: 14, fontFamily: F.body,
   },
   safeArea: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: T.ink,
   },
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: T.ink,
   },
   scrollContent: {
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
@@ -360,12 +361,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000000',
+    backgroundColor: T.ink,
   },
   loadingText: {
     marginTop: 12,
-    color: '#94A3B8',
-    fontSize: 14,
+    color: T.textFaint,
+    fontSize: 14, fontFamily: F.body,
   },
   header: {
     flexDirection: 'row',
@@ -374,17 +375,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'ios' ? 4 : 8,
     paddingBottom: 12,
-    backgroundColor: '#000000',
+    backgroundColor: T.ink,
     borderBottomWidth: 1,
-    borderBottomColor: '#222222',
+    borderBottomColor: T.ink,
   },
   backButton: {
     padding: 4,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#ffffff',
+    fontFamily: F.headingBold,
+    color: T.white,
   },
   headerActions: {
     flexDirection: 'row',
@@ -397,16 +398,16 @@ const styles = StyleSheet.create({
   exportButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     marginLeft: 14,
   },
   exportButtonText: {
-    color: '#000000',
+    color: T.ink,
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
     marginLeft: 4,
   },
   content: {
@@ -418,11 +419,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   profileGradient: {
     padding: 20,
@@ -436,16 +437,16 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: T.white,
   },
   avatarText: {
     fontSize: 28,
-    fontWeight: '700',
-    color: '#000',
+    fontFamily: F.heading,
+    color: T.ink,
   },
   profileInfo: {
     flex: 1,
@@ -453,11 +454,11 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#fff',
+    fontFamily: F.heading,
+    color: T.white,
   },
   title: {
-    fontSize: 14,
+    fontSize: 14, fontFamily: F.body,
     color: 'rgba(255,255,255,0.85)',
     marginTop: 2,
   },
@@ -473,7 +474,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   contactText: {
-    fontSize: 12,
+    fontSize: 12, fontFamily: F.body,
     color: 'rgba(255,255,255,0.85)',
     marginLeft: 4,
   },
@@ -493,15 +494,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   badgeText: {
-    fontSize: 11,
-    color: '#fff',
+    fontSize: 11, fontFamily: F.body,
+    color: T.white,
     marginLeft: 4,
   },
   completionBadge: {
-    backgroundColor: 'rgba(249, 195, 73, 0.3)',
+    backgroundColor: T.yellowSoft,
   },
   completionBadgeText: {
-    color: '#f9c349',
+    color: T.yellow,
   },
   progressBarContainer: {
     marginTop: 4,
@@ -514,18 +515,18 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     borderRadius: 2,
   },
   statsRow: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderRadius: 16,
     paddingVertical: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
-    shadowColor: '#000',
+    borderColor: T.line,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -537,27 +538,27 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#000',
+    fontFamily: F.headingBold,
+    color: T.ink,
     marginTop: 2,
   },
   statLabel: {
-    fontSize: 11,
-    color: '#999',
+    fontSize: 11, fontFamily: F.body,
+    color: T.textFaint,
     marginTop: 1,
   },
   statDivider: {
     width: 1,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: T.sand,
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
-    shadowColor: '#000',
+    borderColor: T.line,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -572,28 +573,28 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#000',
+    fontFamily: F.bodyBold,
+    color: T.ink,
   },
   sectionContent: {
-    fontSize: 14,
-    color: '#444',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
     lineHeight: 22,
   },
   itemCard: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: T.sand,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: T.line,
   },
   itemHeader: {
     flexDirection: 'row',
@@ -603,34 +604,34 @@ const styles = StyleSheet.create({
   },
   itemTitle: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#000',
+    fontFamily: F.bodySemi,
+    color: T.ink,
     flex: 1,
   },
   itemBadge: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: T.sand,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
   },
   itemBadgeText: {
     fontSize: 10,
-    color: '#666',
-    fontWeight: '500',
+    color: T.textMuted,
+    fontFamily: F.bodyMedium,
   },
   itemSubtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 1,
   },
   itemDate: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textFaint,
     marginTop: 4,
   },
   itemDescription: {
-    fontSize: 13,
-    color: '#444',
+    fontSize: 13, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 6,
     lineHeight: 20,
   },
@@ -640,14 +641,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   gpaLabel: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textFaint,
     marginRight: 4,
   },
   gpaValue: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#2ECC71',
+    fontFamily: F.bodySemi,
+    color: T.success,
   },
   skillsContainer: {
     flexDirection: 'row',
@@ -665,11 +666,11 @@ const styles = StyleSheet.create({
   },
   skillText: {
     fontSize: 13,
-    color: '#000',
-    fontWeight: '500',
+    color: T.ink,
+    fontFamily: F.bodyMedium,
   },
   skillTextLight: {
-    color: '#fff',
+    color: T.white,
   },
   skillLevelDot: {
     backgroundColor: 'rgba(255,255,255,0.2)',
@@ -680,8 +681,8 @@ const styles = StyleSheet.create({
   },
   skillLevelText: {
     fontSize: 9,
-    color: '#fff',
-    fontWeight: '600',
+    color: T.white,
+    fontFamily: F.bodySemi,
   },
   techContainer: {
     flexDirection: 'row',
@@ -697,12 +698,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   techText: {
-    fontSize: 11,
+    fontSize: 11, fontFamily: F.body,
     color: '#4A90D9',
   },
   credentialText: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textFaint,
     marginTop: 2,
   },
   languageItem: {
@@ -711,12 +712,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: T.line,
   },
   languageName: {
     fontSize: 14,
-    color: '#000',
-    fontWeight: '500',
+    color: T.ink,
+    fontFamily: F.bodyMedium,
   },
   languageProficiencyBadge: {
     paddingHorizontal: 10,
@@ -725,11 +726,11 @@ const styles = StyleSheet.create({
   },
   languageProficiencyText: {
     fontSize: 11,
-    color: '#fff',
-    fontWeight: '500',
+    color: T.white,
+    fontFamily: F.bodyMedium,
   },
   targetJobCard: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: T.sand,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
@@ -743,8 +744,8 @@ const styles = StyleSheet.create({
   },
   targetJobTitle: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#000',
+    fontFamily: F.bodySemi,
+    color: T.ink,
   },
   targetJobTypeBadge: {
     backgroundColor: '#4A90D9',
@@ -754,33 +755,33 @@ const styles = StyleSheet.create({
   },
   targetJobTypeText: {
     fontSize: 10,
-    color: '#fff',
-    fontWeight: '500',
+    color: T.white,
+    fontFamily: F.bodyMedium,
   },
   targetJobIndustry: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: 13, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 2,
   },
   targetJobLocation: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 2,
   },
   targetJobSalary: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 2,
   },
   targetJobAvailability: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 2,
   },
   // WebView Styles
   webViewContainer: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: T.ink,
   },
   webViewHeader: {
     flexDirection: 'row',
@@ -788,9 +789,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#000000',
+    backgroundColor: T.ink,
     borderBottomWidth: 1,
-    borderBottomColor: '#222222',
+    borderBottomColor: T.ink,
   },
   webViewHeaderLeft: {
     flexDirection: 'row',
@@ -802,21 +803,21 @@ const styles = StyleSheet.create({
   },
   webViewTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#ffffff',
+    fontFamily: F.headingBold,
+    color: T.white,
   },
   webViewExport: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 16,
   },
   webViewExportText: {
-    color: '#000000',
+    color: T.ink,
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
     marginLeft: 4,
   },
   webView: {

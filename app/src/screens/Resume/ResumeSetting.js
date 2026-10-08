@@ -19,6 +19,7 @@ import { ResumeContext } from '../../context/ResumeContext';
 import { AuthContext } from '../../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { color as T, font as F } from "../../theme/tokens";
 const ResumeSettingsScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -167,8 +168,8 @@ const ResumeSettingsScreen = () => {
         <Switch
           value={value}
           onValueChange={onValueChange}
-          trackColor={{ false: '#d1d5db', true: '#4A90D9' }}
-          thumbColor={value ? '#fff' : '#fff'}
+          trackColor={{ false: T.sand, true: '#4A90D9' }}
+          thumbColor={value ? T.white : T.white}
         />
       ) : type === 'select' ? (
         <TouchableOpacity
@@ -188,7 +189,7 @@ const ResumeSettingsScreen = () => {
           <Text style={styles.selectText}>
             {options.find(o => o.value === value)?.label || value}
           </Text>
-          <Ionicons name="chevron-down" size={18} color="#666" />
+          <Ionicons name="chevron-down" size={18} color={T.textMuted} />
         </TouchableOpacity>
       ) : null}
     </View>
@@ -198,7 +199,7 @@ const ResumeSettingsScreen = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#4A90D9" />
-        <Text style={styles.loadingText}>Loading settings...</Text>
+        <Text style={styles.loadingText}>loading settings...</Text>
       </View>
     );
   }
@@ -208,12 +209,12 @@ const ResumeSettingsScreen = () => {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
+            <Ionicons name="arrow-back" size={24} color={T.ink} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>Resume Settings</Text>
+            <Text style={styles.headerTitle}>resume settings</Text>
             <Text style={styles.headerSubtitle}>
-              Customize your resume preferences
+              customize your resume preferences
             </Text>
           </View>
         </View>
@@ -393,8 +394,8 @@ const ResumeSettingsScreen = () => {
           />
           {!isGuest && (
             <TouchableOpacity style={styles.dangerButton}>
-              <Ionicons name="trash-outline" size={20} color="#E74C3C" />
-              <Text style={styles.dangerButtonText}>Delete All Resumes</Text>
+              <Ionicons name="trash-outline" size={20} color={T.danger} />
+              <Text style={styles.dangerButtonText}>delete all resumes</Text>
             </TouchableOpacity>
           )}
         </SettingSection>
@@ -405,16 +406,16 @@ const ResumeSettingsScreen = () => {
             style={styles.resetButton}
             onPress={handleResetDefaults}
           >
-            <Ionicons name="refresh-outline" size={20} color="#E74C3C" />
-            <Text style={styles.resetButtonText}>Reset to Defaults</Text>
+            <Ionicons name="refresh-outline" size={20} color={T.danger} />
+            <Text style={styles.resetButtonText}>reset to defaults</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.saveButton}
             onPress={saveSettings}
           >
-            <Ionicons name="checkmark-outline" size={20} color="#fff" />
-            <Text style={styles.saveButtonText}>Save Settings</Text>
+            <Ionicons name="checkmark-outline" size={20} color={T.white} />
+            <Text style={styles.saveButtonText}>save settings</Text>
           </TouchableOpacity>
         </View>
 
@@ -441,14 +442,14 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    color: '#666',
-    fontSize: 14,
+    color: T.textMuted,
+    fontSize: 14, fontFamily: F.body,
   },
   header: {
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: T.line,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -461,21 +462,21 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontFamily: F.heading,
     color: '#2c3e50',
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 4,
   },
   settingSection: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     marginTop: 12,
     marginHorizontal: 16,
     borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -486,13 +487,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: T.sand,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: T.line,
   },
   sectionTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
     color: '#2c3e50',
     marginLeft: 8,
   },
@@ -505,19 +506,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: T.line,
   },
   settingRowLeft: {
     flex: 1,
     marginRight: 16,
   },
   settingLabel: {
-    fontSize: 14,
+    fontSize: 14, fontFamily: F.body,
     color: '#2c3e50',
   },
   settingDescription: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textFaint,
     marginTop: 2,
   },
   selectButton: {
@@ -525,11 +526,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#f0f2f5',
+    backgroundColor: T.sand,
     borderRadius: 6,
   },
   selectText: {
-    fontSize: 14,
+    fontSize: 14, fontFamily: F.body,
     color: '#2c3e50',
     marginRight: 4,
   },
@@ -539,15 +540,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     marginVertical: 8,
-    backgroundColor: '#fef2f2',
+    backgroundColor: T.dangerBg,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#fecaca',
   },
   dangerButtonText: {
-    color: '#E74C3C',
+    color: T.danger,
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
     marginLeft: 8,
   },
   actionContainer: {
@@ -561,16 +562,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E74C3C',
+    borderColor: T.danger,
     marginRight: 6,
   },
   resetButtonText: {
-    color: '#E74C3C',
+    color: T.danger,
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
     marginLeft: 8,
   },
   saveButton: {
@@ -584,9 +585,9 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   saveButtonText: {
-    color: '#fff',
+    color: T.white,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
     marginLeft: 8,
   },
   footer: {
@@ -594,13 +595,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   footerText: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textFaint,
     textAlign: 'center',
   },
   footerVersion: {
-    fontSize: 11,
-    color: '#ccc',
+    fontSize: 11, fontFamily: F.body,
+    color: T.textFaint,
     marginTop: 8,
   },
 });
