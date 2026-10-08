@@ -44,7 +44,7 @@ export default function TDCFlow() {
 
   return (
     <View style={styles.flex}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="light-content" backgroundColor={T.ink} />
       <LinearGradient
         colors={[T.ink, T.ink, T.ink]} // Subtle gradient for depth
         style={styles.center}
@@ -55,7 +55,7 @@ export default function TDCFlow() {
             { opacity: fadeAnim, transform: [{ scale: fadeAnim }] },
           ]}
         >
-          <Text style={styles.splashLogoText}>tdc.</Text>
+          <Text style={styles.splashLogoText} accessibilityLabel="tdc">tdc<Text style={{ color: T.white }}>.</Text></Text>
         </Animated.View>
 
         <Animated.Text style={[styles.splashTitle, { opacity: fadeAnim }]}>
@@ -63,7 +63,7 @@ export default function TDCFlow() {
         </Animated.Text>
 
         <View style={styles.splashFooter}>
-          <Text style={styles.footerBrandText}>EST. 2026 | KARACHI</Text>
+          <Text style={styles.footerBrandText}>est. 2026 · karachi</Text>
         </View>
       </LinearGradient>
     </View>
@@ -74,10 +74,10 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   splashLogoCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: T.card,
+    width: 132,
+    height: 132,
+    borderRadius: 66,
+    backgroundColor: T.yellow,
     justifyContent: "center",
     alignItems: "center",
     elevation: 2,
@@ -93,18 +93,18 @@ const styles = StyleSheet.create({
   },
   splashTitle: {
     color: T.white,
-    fontSize: 20,
-    fontFamily: F.headingBold,
-    marginTop: 25,
-    letterSpacing: 4,
+    fontSize: 22,
+    fontFamily: F.heading,
+    marginTop: 24,
+    letterSpacing: 1,
   },
   splashFooter: {
     position: "absolute",
     bottom: 50,
   },
   footerBrandText: {
-    color: T.textMuted,
-    fontSize: 12, fontFamily: F.body,
-    letterSpacing: 2,
+    color: T.onInkMuted,
+    fontSize: 12.5, fontFamily: F.bodySemi,
+    letterSpacing: 1,
   },
 });

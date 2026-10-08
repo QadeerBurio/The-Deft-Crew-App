@@ -32,7 +32,7 @@ const SLIDES = [
   {
     id: '1',
     title: 'student deals',
-    description: 'Discounts at your favourite cafes, restaurants, salons and stores. Show your card, pay student prices.',
+    description: 'discounts at your favourite cafes, restaurants, salons and stores. show your card, pay student prices.',
     icon: 'pricetags',
     stat: 'up to 50% off',
     category: 'savings',
@@ -40,7 +40,7 @@ const SLIDES = [
   {
     id: '2',
     title: 'jobs & internships',
-    description: 'Find internships, mentorship and career workshops before everyone else does.',
+    description: 'find internships, mentorship and career workshops before everyone else does.',
     icon: 'briefcase',
     stat: 'career hub',
     category: 'careers',
@@ -48,7 +48,7 @@ const SLIDES = [
   {
     id: '3',
     title: 'skill share',
-    description: "Teach what you know, learn what you don't. Team up with students on real projects.",
+    description: "teach what you know, learn what you don't. team up with students on real projects.",
     icon: 'school',
     stat: 'learn, share, earn',
     category: 'learning',
@@ -56,7 +56,7 @@ const SLIDES = [
   {
     id: '4',
     title: 'resume builder',
-    description: 'Build a clean, ATS-friendly resume in minutes with AI suggestions.',
+    description: 'build a clean, ats-friendly resume in minutes with ai suggestions.',
     icon: 'document-text',
     stat: 'ai powered',
     category: 'careers',
@@ -64,7 +64,7 @@ const SLIDES = [
   {
     id: '5',
     title: 'events',
-    description: 'Workshops, seminars and networking events. Meet people who can open doors.',
+    description: 'workshops, seminars and networking events. meet people who can open doors.',
     icon: 'calendar',
     stat: 'near you',
     category: 'events',
@@ -72,7 +72,7 @@ const SLIDES = [
   {
     id: '6',
     title: 'travel with ai',
-    description: 'Plan trips, routes and budgets in PKR in seconds with your AI travel assistant.',
+    description: 'plan trips, routes and budgets in pkr in seconds with your ai travel assistant.',
     icon: 'airplane',
     stat: 'ai planner',
     category: 'travel',
@@ -80,7 +80,7 @@ const SLIDES = [
   {
     id: '7',
     title: 'go global',
-    description: 'Discover exchange programs, scholarships and international university options.',
+    description: 'discover exchange programs, scholarships and international university options.',
     icon: 'globe',
     stat: 'study abroad',
     category: 'scholarships',
@@ -100,7 +100,7 @@ async function nextRoute() {
 // Stable component, so the video never remounts
 const VideoSplash = React.memo(({ onDone }) => (
   <View style={styles.videoWrap}>
-    <StatusBar barStyle="light-content" backgroundColor={T.paper} />
+    <StatusBar barStyle="light-content" backgroundColor={T.ink} />
     <Video
       source={require('../../../assets/tdc.mp4')}
       style={styles.video}
@@ -118,10 +118,11 @@ const VideoSplash = React.memo(({ onDone }) => (
 
 // One intro card
 const SlideCard = ({ item, index, total }) => (
-  <View style={styles.card}>
+  <View style={styles.card} accessible accessibilityLabel={`${item.title}, ${item.stat}, ${index + 1} of ${total}`}>
+    <View style={styles.cardGlow} />
     <View style={styles.cardTop}>
       <View style={styles.cardIcon}>
-        <Ionicons name={item.icon} size={28} color={GOLD} />
+        <Ionicons name={item.icon} size={26} color={DARK} />
       </View>
       <View style={styles.statPill}>
         <Text style={styles.statText}>{item.stat}</Text>
@@ -139,10 +140,9 @@ const SlideCard = ({ item, index, total }) => (
         <Text style={styles.cardValue}>{item.category}</Text>
       </View>
       <Text style={styles.cardCount}>
-        {String(index + 1).padStart(2, '0')}<Text style={{ color: 'rgba(255,255,255,0.35)' }}> / {String(total).padStart(2, '0')}</Text>
+        {String(index + 1).padStart(2, '0')}<Text style={{ fontFamily: F.bodySemi }}> / {String(total).padStart(2, '0')}</Text>
       </Text>
     </View>
-    <View style={styles.cardGlow} />
   </View>
 );
 
@@ -225,7 +225,7 @@ export default function Splash({ navigation }) {
             tdc<Text style={{ color: GOLD }}>.</Text>
           </Text>
           {!last ? (
-            <TouchableOpacity onPress={complete} style={styles.skipBtn} activeOpacity={0.7} hitSlop={10}>
+            <TouchableOpacity onPress={complete} style={styles.skipBtn} activeOpacity={0.7} hitSlop={10} accessibilityRole="button" accessibilityLabel="skip intro">
               <Text style={styles.skipText}>skip</Text>
             </TouchableOpacity>
           ) : (
@@ -255,7 +255,7 @@ export default function Splash({ navigation }) {
 
         {/* text for the current card */}
         <View style={styles.textBlock}>
-          <Text style={styles.title}>{item.title}</Text>
+          <Text style={styles.title} accessibilityRole="header">{item.title}<Text style={{ color: GOLD }}>.</Text></Text>
           <Text style={styles.desc}>{item.description}</Text>
         </View>
 
@@ -266,7 +266,7 @@ export default function Splash({ navigation }) {
               <View key={s.id} style={[styles.bar, i <= index && styles.barOn, i === index && styles.barCurrent]} />
             ))}
           </View>
-          <TouchableOpacity style={styles.button} onPress={next} activeOpacity={0.88}>
+          <TouchableOpacity style={styles.button} onPress={next} activeOpacity={0.88} accessibilityRole="button">
             <Text style={styles.buttonText}>{last ? 'get started' : 'next'}</Text>
             <Ionicons name={last ? 'checkmark' : 'arrow-forward'} size={18} color={GOLD} />
           </TouchableOpacity>
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   videoWrap: { flex: 1, backgroundColor: T.ink },
   video: { position: 'absolute', top: 0, left: 0, width, height },
 
-  container: { flex: 1, backgroundColor: T.card },
+  container: { flex: 1, backgroundColor: T.paper },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -294,10 +294,10 @@ const styles = StyleSheet.create({
   },
   brand: { fontSize: 24, fontFamily: F.heading, color: DARK, letterSpacing: -0.6 },
   skipBtn: {
-    height: 34,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    backgroundColor: T.sand,
+    height: 36,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    backgroundColor: T.card,
     borderWidth: 1,
     borderColor: T.line,
     justifyContent: 'center',
@@ -316,31 +316,31 @@ const styles = StyleSheet.create({
   },
   cardGlow: {
     position: 'absolute',
-    right: -70,
-    top: -70,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: T.yellowSoft,
+    right: -60,
+    bottom: -60,
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: GOLD,
   },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 1 },
   cardIcon: {
     width: 58,
     height: 58,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 29,
+    backgroundColor: GOLD,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  statPill: { backgroundColor: GOLD, paddingHorizontal: 12, height: 30, borderRadius: 15, justifyContent: 'center' },
-  statText: { color: DARK, fontSize: 12.5, fontFamily: F.bodyBold },
+  statPill: { backgroundColor: T.inkSoft, borderWidth: 1, borderColor: T.inkLine, paddingHorizontal: 12, height: 30, borderRadius: 15, justifyContent: 'center' },
+  statText: { color: GOLD, fontSize: 12.5, fontFamily: F.bodyBold },
   cardMid: { zIndex: 1 },
-  cardKicker: { color: 'rgba(255,255,255,0.55)', fontSize: 12, fontFamily: F.bodyBold, letterSpacing: 1, textTransform: 'none' },
+  cardKicker: { color: T.onInkMuted, fontSize: 12.5, fontFamily: F.bodyBold, letterSpacing: 0.5 },
   cardBig: { color: T.white, fontSize: 34, fontFamily: F.heading, letterSpacing: -1, marginTop: 6 },
   cardBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', zIndex: 1 },
-  cardLabel: { color: 'rgba(255,255,255,0.45)', fontSize: 10.5, fontFamily: F.bodyBold, letterSpacing: 1, textTransform: 'none' },
+  cardLabel: { color: T.onInkMuted, fontSize: 11.5, fontFamily: F.bodyBold, letterSpacing: 0.5 },
   cardValue: { color: T.white, fontSize: 14, fontFamily: F.bodyBold, marginTop: 3 },
-  cardCount: { color: T.white, fontSize: 14, fontFamily: F.bodyBold },
+  cardCount: { color: DARK, fontSize: 15, fontFamily: F.heading },
 
   textBlock: { paddingHorizontal: 28, paddingTop: 26, flex: 1 },
   title: { fontSize: 28, fontFamily: F.heading, color: DARK, letterSpacing: -0.8 },
@@ -349,11 +349,11 @@ const styles = StyleSheet.create({
   footer: { paddingHorizontal: 24, paddingBottom: 12 },
   bars: { flexDirection: 'row', gap: 6, marginBottom: 18 },
   bar: { flex: 1, height: 4, borderRadius: 2, backgroundColor: T.sand },
-  barOn: { backgroundColor: '#cfcfcf' },
+  barOn: { backgroundColor: T.handle },
   barCurrent: { backgroundColor: DARK },
   button: {
     height: 56,
-    borderRadius: 16,
+    borderRadius: 28,
     backgroundColor: DARK,
     flexDirection: 'row',
     alignItems: 'center',
