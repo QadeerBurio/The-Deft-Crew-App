@@ -21,9 +21,6 @@ const DealCard = React.memo(function DealCard({ brand, onPress }) {
   const discount = Number(brand?.discount) || 0;
   const meta = metaFor(brand);
   const name = brand?.name || "";
-  // getBrandsFast: displayImage = first offer's image, else the brand logo.
-  // Logos are shown whole (contain) instead of cropped.
-  const isOfferImage = !!brand?.offers?.[0]?.image;
 
   return (
     <PressScale
@@ -32,24 +29,14 @@ const DealCard = React.memo(function DealCard({ brand, onPress }) {
       style={styles.card}
     >
       <View style={styles.imageWrap}>
+        {/* Offer image or logo: always shown whole, never cropped */}
         {!imageFailed && brand?.displayImage ? (
-          isOfferImage ? (
-            <Image
-              source={{ uri: brand.displayImage }}
-              style={styles.image}
-              resizeMode="cover"
-              onError={() => setImageFailed(true)}
-            />
-          ) : (
-            <View style={styles.logoWrap}>
-              <Image
-                source={{ uri: brand.displayImage }}
-                style={styles.image}
-                resizeMode="contain"
-                onError={() => setImageFailed(true)}
-              />
-            </View>
-          )
+          <Image
+            source={{ uri: brand.displayImage }}
+            style={styles.image}
+            resizeMode="contain"
+            onError={() => setImageFailed(true)}
+          />
         ) : (
           <View style={styles.fallback}>
             {!!brand?.logo && <Image source={{ uri: brand.logo }} style={styles.logo} resizeMode="contain" />}
@@ -138,11 +125,11 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.deal - 1,
     borderTopRightRadius: radius.deal - 1,
     overflow: "hidden",
-    backgroundColor: color.sand,
+    padding: 12,
+    backgroundColor: color.card,
   },
   image: { width: "100%", height: "100%" },
-  logoWrap: { flex: 1, padding: 16, backgroundColor: color.sand },
-  fallback: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: color.sand },
+  fallback: { flex: 1, alignItems: "center", justifyContent: "center" },
   logo: { width: 48, height: 48 },
   offPill: {
     position: "absolute",

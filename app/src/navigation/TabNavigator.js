@@ -266,13 +266,16 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
             </View>
           </Animated.View>
           <View style={styles.iconSpacer} />
-          <Text
-            style={[styles.tabLabel, styles.centerLabel]}
-            numberOfLines={1}
-            maxFontSizeMultiplier={LABEL_SCALE}
-          >
-            social
-          </Text>
+          {/* Drawn in front of the circle's white border ring (Android needs elevation) */}
+          <View style={styles.centerLabelWrap}>
+            <Text
+              style={[styles.tabLabel, styles.centerLabel]}
+              numberOfLines={1}
+              maxFontSizeMultiplier={LABEL_SCALE}
+            >
+              social
+            </Text>
+          </View>
           <View style={styles.tabDot} />
         </Pressable>
 
@@ -373,11 +376,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
   },
   // icon 23 · 3 · label · 3 · dot 5 — fits inside TAB_HEIGHT
+  // Top-anchored so all 5 labels share one line just under the raised
+  // circle's black disc (disc ends 40 below the bar's top edge):
+  // icon 15–38 · label from 41 · dot below
   tabItem: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: "flex-start",
     alignItems: "center",
     height: TAB_HEIGHT,
+    paddingTop: 15,
     gap: 3,
   },
   // ✅ Small wrapper so measureInWindow measures just the icon
@@ -410,6 +417,7 @@ const styles = StyleSheet.create({
   },
   // Takes the icon's place in the column so the label lines up
   iconSpacer: { height: 23 },
+  centerLabelWrap: { zIndex: 12, elevation: 7 },
   centerButton: {
     width: 58,
     height: 58,
