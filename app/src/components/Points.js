@@ -642,7 +642,8 @@ const PointsScreen = () => {
     refresh: refreshReferrals,
   } = useReferrals();
 
-  const [loading, setLoading] = useState(true);
+  // Show at once when engagement data is already loaded; refresh quietly
+  const [loading, setLoading] = useState(!me);
   const [refreshing, setRefreshing] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;

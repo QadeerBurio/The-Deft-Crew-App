@@ -35,6 +35,10 @@ import {
 } from "./app/src/utils/pushNotifications";
 
 import GlobalNotificationLayer from "./app/src/components/GlobalNotificationLayer";
+import AppAlertHost, { installAppAlert } from "./app/src/components/AppAlert";
+
+// Every Alert.alert in the app now shows the tdc styled popup
+installAppAlert();
 import { navigationRef } from "./app/src/navigation/navigationRef";
 export { navigationRef };
 
@@ -325,6 +329,7 @@ export default function App() {
               </TourProvider>
             </EngagementProvider>
           </AuthProvider>
+          <AppAlertHost />
         </SafeAreaProvider>
       </KeyboardProvider>
     </QueryClientProvider>

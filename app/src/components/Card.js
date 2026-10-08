@@ -124,12 +124,30 @@ export default function PremiumMemberCard() {
     }
   }, [loading]);
 
+  // Show the card at once from the signed-in user, then refresh from the server
+  useEffect(() => {
+    if (user && user.name) {
+      applyUser(user);
+      setLoading(false);
+    }
+  }, []);
+
   const fetchUserData = async () => {
     try {
       const res = await api.get("/auth/profile/me", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = res.data;
+      applyUser(res.data);
+    } catch (error) {
+      console.error("Fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyUser = (data) => {
+    if (!data) return;
+    {
       const isVipActive =
         data.isVip === true || data.paymentStatus === "Verified";
       setIsVip(isVipActive);
@@ -153,10 +171,6 @@ export default function PremiumMemberCard() {
         website: data.instagram ? `@${data.instagram}` : "www.tdc.co",
         cardNumber: formatCardNumber(data._id),
       });
-    } catch (error) {
-      console.error("Fetch error:", error);
-    } finally {
-      setLoading(false);
     }
   };
 

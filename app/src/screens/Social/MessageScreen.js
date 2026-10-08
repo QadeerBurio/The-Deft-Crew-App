@@ -1,1404 +1,750 @@
-// MessagesScreen.js - Complete with Block Filtering
+// app/src/screens/Social/MessageScreen.js
+// Chats inbox. tdc style (white, black, gold).
+// - Opens instantly from the last loaded inbox (kept in memory per user),
+//   then refreshes in the background. Skeleton only on the very first load.
+// - Blocked users and inbox load together.
+// - Socket updates are batched so a burst of messages = one refresh.
 
-import React, { useState, useEffect, useContext, useCallback, useRef } from "react";
+import React, { useState, useEffect, useContext, useCallback, useRef, useMemo } from "react";
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity, Image,
-  StatusBar, Platform, ActivityIndicator, TextInput, Animated,
-  Alert, Modal, Pressable, Dimensions, LayoutAnimation, UIManager,
-  BackHandler, RefreshControl
+  StatusBar, Platform, TextInput, Animated, Alert, Modal, Pressable,
+  BackHandler, RefreshControl,
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
-import { useNavigation, useFocusEffect, useIsFocused, CommonActions } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, CommonActions } from '@react-navigation/native';
 import { AuthContext } from "../../context/AuthContext";
 import io from "socket.io-client";
-
-// Enable LayoutAnimation for Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 const socket = io("https://the-deft-crew-production.up.railway.app");
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
-
-const { width, height } = Dimensions.get('window');
-
-const COLORS = {
-  primary: '#f9c349',
-  primaryDark: '#e6b800',
-  primaryLight: '#fef9f0',
+const C = {
+  gold: '#f9c349',
+  goldSoft: '#fff8e6',
+  dark: '#1a1a1a',
   white: '#ffffff',
-  black: '#1a1a1a',
-  dark: '#0f1419',
-  gray: '#666666',
-  lightGray: '#f5f6f8',
-  border: '#eef0f2',
-  danger: '#ff4757',
-  success: '#4CAF50',
-  text: '#1a1a1a',
-  textSecondary: '#71767b',
-  textLight: '#8899a6',
-  shadow: 'rgba(0,0,0,0.05)',
-  blocked: '#e74c3c',
-  blockedBg: '#fef0f0',
+  bg: '#ffffff',
+  soft: '#F7F9F8',
+  border: '#E8E8E8',
+  line: '#f2f2f2',
+  muted: '#8a8a8a',
+  text2: '#5f5f5f',
+  danger: '#e11d48',
+  dangerSoft: '#fdecef',
+  online: '#22c55e',
 };
 
-// Format date properly
+// Last inbox per user, so coming back to Chats shows it at once
+const inboxCache = { userId: null, conversations: null, blocked: [] };
+
+// ─── helpers ───────────────────────────────────────────────────
 const formatMessageDate = (dateString) => {
-  if (!dateString) return 'Just now';
+  if (!dateString) return '';
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
   const now = new Date();
-  if (isNaN(date.getTime())) return 'Just now';
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const dateToCheck = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  if (dateToCheck.getTime() === today.getTime()) {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  } else if (dateToCheck.getTime() === yesterday.getTime()) {
-    return 'Yesterday';
-  } else if (now.getTime() - date.getTime() < 7 * 24 * 60 * 60 * 1000) {
-    return date.toLocaleDateString('en-US', { weekday: 'short' });
-  } else {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }
+  const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.round((today - day) / 86400000);
+  if (diffDays === 0) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return date.toLocaleDateString('en-US', { weekday: 'short' });
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
-// Skeleton Component with Shimmer Effect
-const MessagesSkeleton = () => {
-  const shimmerAnim = useRef(new Animated.Value(0)).current;
+const sortByLatest = (list) =>
+  [...list].sort((a, b) => {
+    const da = new Date(a.lastMessageTime || a.updatedAt || a.createdAt);
+    const db = new Date(b.lastMessageTime || b.updatedAt || b.createdAt);
+    return db - da;
+  });
 
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmerAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-        Animated.timing(shimmerAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
-      ])
-    ).start();
-  }, []);
+const otherOf = (conv, me) => conv?.participants?.find((p) => p?._id !== me?._id);
 
-  const opacity = shimmerAnim.interpolate({ inputRange: [0, 1], outputRange: [0.2, 0.6] });
-
-  return (
-    <View style={styles.skeletonContainer}>
-      {[1, 2, 3, 4, 5, 6].map((i) => (
-        <View key={i} style={styles.skeletonItem}>
-          <Animated.View style={[styles.skeletonAvatar, { opacity }]} />
-          <View style={styles.skeletonContent}>
-            <Animated.View style={[styles.skeletonLine, { width: '55%', height: 14, opacity }]} />
-            <Animated.View style={[styles.skeletonLine, { width: '75%', height: 10, marginTop: 6, opacity }]} />
-          </View>
+// ─── Skeleton (first load only, static, no shimmer loop) ───────
+const MessagesSkeleton = () => (
+  <View style={styles.skeletonWrap}>
+    {[0, 1, 2, 3, 4, 5].map((i) => (
+      <View key={i} style={styles.skeletonRow}>
+        <View style={styles.skeletonAvatar} />
+        <View style={{ flex: 1 }}>
+          <View style={[styles.skeletonLine, { width: '45%' }]} />
+          <View style={[styles.skeletonLine, { width: '70%', height: 10, marginTop: 8 }]} />
         </View>
-      ))}
-    </View>
-  );
-};
+      </View>
+    ))}
+  </View>
+);
 
-// Chat Item Component with Block Check
-const ChatItem = React.memo(({ item, currentUser, navigation, index, onLongPress, markAsRead, isBlocked }) => {
-  const itemFade = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.92)).current;
-  const slideAnim = useRef(new Animated.Value(25)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const [isPressed, setIsPressed] = useState(false);
-
-  const otherUser = item.participants?.find(p => p._id !== currentUser?._id);
-  const recipientName = otherUser?.name || "User";
-  const lastMessage = item.lastMessage || "No messages yet";
-  const unreadCount = item.unreadCount || 0;
-  const updatedAt = item.lastMessageTime || item.updatedAt || item.createdAt;
-  const isOnline = otherUser?.online || false;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(itemFade, {
-        toValue: 1,
-        duration: 600,
-        delay: index * 80,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        delay: index * 80,
-        useNativeDriver: true,
-        tension: 70,
-        friction: 12,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        delay: index * 80,
-        useNativeDriver: true,
-        tension: 60,
-        friction: 10,
-      })
-    ]).start();
-
-    if (unreadCount > 0 && !isBlocked) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    }
-
-    return () => {
-      pulseAnim.stopAnimation();
-    };
-  }, [unreadCount, isBlocked]);
-
-  const handlePress = () => {
-    if (isBlocked) {
-      Alert.alert(
-        "User Blocked",
-        "You have blocked this user. Unblock them to continue messaging."
-      );
-      return;
-    }
-    
-    if (!item?._id || !otherUser?._id) {
-      console.warn('Invalid chat data, skipping navigation');
-      return;
-    }
-    
-    if (unreadCount > 0 && markAsRead) {
-      markAsRead(item._id);
-    }
-    
-    navigation.navigate('ChatDetailScreen', {
-      conversationId: item._id,
-      recipient: {
-        _id: otherUser._id,
-        name: otherUser.name || 'User',
-        profileImage: otherUser.profileImage || '',
-        online: otherUser.online || false
-      }
-    });
-  };
-
-  const getMessagePreview = (text) => {
-    if (!text) return "Start a conversation...";
-    if (isBlocked) return "🔒 User blocked - messages hidden";
-    if (text.length > 35) return text.substring(0, 35) + '...';
-    return text;
-  };
-
-  return (
-    <Animated.View style={{
-      opacity: itemFade,
-      transform: [
-        { scale: scaleAnim },
-        { translateX: slideAnim }
-      ]
-    }}>
-      <TouchableOpacity
+// ─── Avatar ────────────────────────────────────────────────────
+const Avatar = ({ uri, name, size = 52, dim, online }) => (
+  <View style={{ width: size, height: size }}>
+    {uri ? (
+      <Image
+        source={{ uri }}
+        style={[{ width: size, height: size, borderRadius: size / 2, backgroundColor: C.soft }, dim && { opacity: 0.45 }]}
+      />
+    ) : (
+      <View
         style={[
-          styles.chatCard, 
-          unreadCount > 0 && !isBlocked && styles.chatCardUnread,
-          isBlocked && styles.chatCardBlocked
+          styles.avatarFallback,
+          { width: size, height: size, borderRadius: size / 2 },
+          dim && { backgroundColor: '#e5e5e5' },
         ]}
-        onPress={handlePress}
-        onLongPress={() => !isBlocked && onLongPress && onLongPress(item._id)}
-        activeOpacity={0.6}
-        delayLongPress={400}
-        onPressIn={() => setIsPressed(true)}
-        onPressOut={() => setIsPressed(false)}
-        disabled={isBlocked}
       >
-        <View style={styles.avatarWrapper}>
-          <View style={styles.avatarContainer}>
-            {otherUser?.profileImage ? (
-              <Image 
-                source={{ uri: otherUser.profileImage }} 
-                style={[styles.profileImg, isBlocked && { opacity: 0.5 }]} 
-              />
-            ) : (
-              <LinearGradient
-                colors={isBlocked ? ['#ccc', '#bbb'] : [COLORS.primary, COLORS.primaryDark]}
-                style={styles.avatarPlaceholder}
-              >
-                <Text style={[styles.avatarInitial, isBlocked && { color: '#999' }]}>
-                  {recipientName.charAt(0).toUpperCase()}
-                </Text>
-              </LinearGradient>
-            )}
-            {isBlocked && (
-              <View style={styles.blockedBadge}>
-                <Ionicons name="ban" size={12} color="#fff" />
-              </View>
-            )}
-            {isOnline && !isBlocked && (
-              <Animated.View style={[
-                styles.onlineDot,
-                {
-                  transform: [{
-                    scale: pulseAnim.interpolate({
-                      inputRange: [1, 1.1],
-                      outputRange: [1, 1.2]
-                    })
-                  }]
-                }
-              ]} />
-            )}
-          </View>
-        </View>
+        <Text style={[styles.avatarInitial, { fontSize: size * 0.4 }, dim && { color: '#999' }]}>
+          {(name || 'U').charAt(0).toUpperCase()}
+        </Text>
+      </View>
+    )}
+    {online ? <View style={styles.onlineDot} /> : null}
+  </View>
+);
 
-        <View style={styles.chatContent}>
-          <View style={styles.chatRow}>
-            <Text style={[styles.chatName, unreadCount > 0 && !isBlocked && styles.chatNameUnread, isBlocked && styles.blockedText]} numberOfLines={1}>
-              {recipientName}
-              {isBlocked && " 🔒"}
-            </Text>
-            <View style={styles.timeContainer}>
-              <Text style={[styles.chatTime, isBlocked && styles.blockedText]}>
-                {isBlocked ? "Blocked" : formatMessageDate(updatedAt)}
-              </Text>
+// ─── Chat row ──────────────────────────────────────────────────
+const ChatItem = React.memo(({ item, currentUser, onOpen, onLongPress, isBlocked }) => {
+  const other = otherOf(item, currentUser);
+  const name = other?.name || 'User';
+  const unread = isBlocked ? 0 : item.unreadCount || 0;
+  const when = item.lastMessageTime || item.updatedAt || item.createdAt;
+  const preview = isBlocked
+    ? 'Blocked. Messages hidden'
+    : item.lastMessage || 'Say hi 👋';
+
+  return (
+    <TouchableOpacity
+      style={[styles.row, unread > 0 && styles.rowUnread]}
+      onPress={() => onOpen(item, isBlocked)}
+      onLongPress={() => onLongPress(item._id)}
+      delayLongPress={350}
+      activeOpacity={0.7}
+    >
+      <Avatar uri={other?.profileImage} name={name} dim={isBlocked} online={!isBlocked && other?.online} />
+
+      <View style={styles.rowBody}>
+        <View style={styles.rowTop}>
+          <Text style={[styles.name, unread > 0 && styles.nameUnread, isBlocked && styles.mutedText]} numberOfLines={1}>
+            {name}
+          </Text>
+          <Text style={[styles.time, unread > 0 && styles.timeUnread]}>
+            {isBlocked ? 'blocked' : formatMessageDate(when)}
+          </Text>
+        </View>
+        <View style={styles.rowBottom}>
+          {isBlocked ? <Ionicons name="lock-closed" size={12} color={C.muted} style={{ marginRight: 4 }} /> : null}
+          <Text style={[styles.preview, unread > 0 && styles.previewUnread]} numberOfLines={1}>
+            {preview}
+          </Text>
+          {unread > 0 ? (
+            <View style={styles.unreadPill}>
+              <Text style={styles.unreadText}>{unread > 99 ? '99+' : unread}</Text>
             </View>
-          </View>
-          <View style={styles.lastMsgRow}>
-            <Text style={[
-              styles.chatMessage,
-              unreadCount > 0 && !isBlocked && styles.chatMessageUnread,
-              isBlocked && styles.blockedText
-            ]} numberOfLines={1}>
-              {getMessagePreview(lastMessage)}
-            </Text>
-            {unreadCount > 0 && !isBlocked && (
-              <Animated.View style={[styles.unreadBadge, { transform: [{ scale: pulseAnim }] }]}>
-                <Text style={styles.unreadText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
-              </Animated.View>
-            )}
-          </View>
+          ) : null}
+          {item.muted ? <Ionicons name="notifications-off" size={13} color={C.muted} style={{ marginLeft: 6 }} /> : null}
         </View>
-
-        <View style={styles.chatChevron}>
-          <Ionicons 
-            name={isBlocked ? "ban-outline" : "chevron-forward"} 
-            size={16} 
-            color={isBlocked ? COLORS.danger : "#ddd"} 
-          />
-        </View>
-      </TouchableOpacity>
-    </Animated.View>
+      </View>
+    </TouchableOpacity>
   );
 });
 
-// Action Modal
-const ActionModal = ({ visible, onClose, onAction, recipientName, recipientId, navigation, isBlocked }) => {
-  const slideAnim = useRef(new Animated.Value(400)).current;
-  const backdropAnim = useRef(new Animated.Value(0)).current;
+// ─── Action sheet ──────────────────────────────────────────────
+const ActionSheet = ({ visible, onClose, onAction, name, image, isBlocked }) => {
+  const slide = useRef(new Animated.Value(300)).current;
+  const fade = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
+      slide.setValue(300);
+      fade.setValue(0);
       Animated.parallel([
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          friction: 8,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-        Animated.timing(backdropAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        })
+        Animated.timing(fade, { toValue: 1, duration: 160, useNativeDriver: true }),
+        Animated.spring(slide, { toValue: 0, friction: 9, tension: 80, useNativeDriver: true }),
       ]).start();
-    } else {
-      slideAnim.setValue(400);
-      backdropAnim.setValue(0);
     }
   }, [visible]);
 
-  const handleClose = () => {
+  const close = (after) => {
     Animated.parallel([
-      Animated.spring(slideAnim, {
-        toValue: 400,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.timing(backdropAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      })
-    ]).start(() => onClose());
+      Animated.timing(fade, { toValue: 0, duration: 140, useNativeDriver: true }),
+      Animated.timing(slide, { toValue: 300, duration: 160, useNativeDriver: true }),
+    ]).start(() => {
+      onClose();
+      if (after) setTimeout(after, 50);
+    });
   };
 
+  const Option = ({ icon, label, color = C.dark, bg = C.soft, onPress }) => (
+    <TouchableOpacity style={styles.sheetOption} onPress={onPress} activeOpacity={0.7}>
+      <View style={[styles.sheetIcon, { backgroundColor: bg }]}>
+        <Ionicons name={icon} size={19} color={color} />
+      </View>
+      <Text style={[styles.sheetText, { color }]}>{label}</Text>
+      <Ionicons name="chevron-forward" size={16} color="#c4c4c4" />
+    </TouchableOpacity>
+  );
+
   return (
-    <Modal
-      transparent
-      visible={visible}
-      animationType="none"
-      onRequestClose={handleClose}
-    >
-      <Animated.View style={[styles.modalOverlay, { opacity: backdropAnim }]}>
-        <Pressable style={styles.modalOverlayPress} onPress={handleClose}>
-          <Animated.View style={[styles.modalContent, { transform: [{ translateY: slideAnim }] }]}>
-            <View style={styles.modalHandle} />
+    <Modal transparent visible={visible} animationType="none" statusBarTranslucent onRequestClose={() => close()}>
+      <Animated.View style={[styles.sheetBackdrop, { opacity: fade }]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => close()} />
+      </Animated.View>
+      <Animated.View style={[styles.sheet, { transform: [{ translateY: slide }] }]}>
+        <View style={styles.sheetHandle} />
+        <View style={styles.sheetHeader}>
+          <Avatar uri={image} name={name} size={44} dim={isBlocked} />
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={styles.sheetName} numberOfLines={1}>{name || 'User'}</Text>
+            <Text style={styles.sheetSub}>{isBlocked ? 'blocked' : 'chat options'}</Text>
+          </View>
+        </View>
 
-            <View style={styles.modalHeader}>
-              <View style={styles.modalHeaderLeft}>
-                <LinearGradient 
-                  colors={isBlocked ? ['#ccc', '#bbb'] : [COLORS.primary, COLORS.primaryDark]} 
-                  style={styles.modalAvatar}
-                >
-                  <Text style={[styles.modalAvatarText, isBlocked && { color: '#999' }]}>
-                    {recipientName?.charAt(0)?.toUpperCase() || '?'}
-                  </Text>
-                </LinearGradient>
-                <Text style={[styles.modalTitle, isBlocked && styles.blockedText]}>
-                  {recipientName || 'User'}
-                  {isBlocked && " (Blocked)"}
-                </Text>
-              </View>
-              <TouchableOpacity onPress={handleClose} style={styles.modalClose}>
-                <Ionicons name="close" size={24} color={COLORS.black} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalDivider} />
-
-            <TouchableOpacity
-              style={styles.modalOption}
-              onPress={() => {
-                handleClose();
-                setTimeout(() => {
-                  navigation.navigate('UserProfile', { userId: recipientId });
-                }, 300);
-              }}
-            >
-              <View style={[styles.modalOptionIcon, { backgroundColor: '#fef9f0' }]}>
-                <Ionicons name="person-outline" size={22} color={COLORS.primary} />
-              </View>
-              <Text style={styles.modalOptionText}>View Profile</Text>
-              <Ionicons name="chevron-forward" size={18} color={COLORS.textLight} />
-            </TouchableOpacity>
-
-            {!isBlocked && (
-              <TouchableOpacity
-                style={styles.modalOption}
-                onPress={() => {
-                  handleClose();
-                  setTimeout(() => onAction('mute'), 300);
-                }}
-              >
-                <View style={[styles.modalOptionIcon, { backgroundColor: '#fef9f0' }]}>
-                  <Ionicons name="notifications-off-outline" size={22} color={COLORS.primary} />
-                </View>
-                <Text style={styles.modalOptionText}>Mute Notifications</Text>
-                <Ionicons name="chevron-forward" size={18} color={COLORS.textLight} />
-              </TouchableOpacity>
-            )}
-
-            {isBlocked && (
-              <TouchableOpacity
-                style={styles.modalOption}
-                onPress={() => {
-                  handleClose();
-                  setTimeout(() => onAction('unblock'), 300);
-                }}
-              >
-                <View style={[styles.modalOptionIcon, { backgroundColor: '#f0faf0' }]}>
-                  <Ionicons name="person-add" size={22} color={COLORS.success} />
-                </View>
-                <Text style={[styles.modalOptionText, { color: COLORS.success }]}>Unblock User</Text>
-                <Ionicons name="chevron-forward" size={18} color={COLORS.textLight} />
-              </TouchableOpacity>
-            )}
-
-            
-
-            <TouchableOpacity
-              style={[styles.modalOption, styles.modalOptionDanger]}
-              onPress={() => {
-                handleClose();
-                setTimeout(() => onAction('delete'), 300);
-              }}
-            >
-              <View style={[styles.modalOptionIcon, { backgroundColor: '#fff5f5' }]}>
-                <Ionicons name="trash-outline" size={22} color={COLORS.danger} />
-              </View>
-              <Text style={[styles.modalOptionText, styles.modalOptionDangerText]}>Delete Conversation</Text>
-              <Ionicons name="chevron-forward" size={18} color={COLORS.textLight} />
-            </TouchableOpacity>
-          </Animated.View>
-        </Pressable>
+        <Option icon="person-outline" label="View profile" onPress={() => close(() => onAction('profile'))} />
+        {isBlocked ? (
+          <Option icon="lock-open-outline" label="Unblock" color="#16a34a" bg="#e9f8ef" onPress={() => close(() => onAction('unblock'))} />
+        ) : (
+          <Option icon="notifications-off-outline" label="Mute notifications" onPress={() => close(() => onAction('mute'))} />
+        )}
+        <Option icon="trash-outline" label="Delete conversation" color={C.danger} bg={C.dangerSoft} onPress={() => close(() => onAction('delete'))} />
       </Animated.View>
     </Modal>
   );
 };
 
+// ═══════════════════════════════════════════════════════════════
 export default function MessagesScreen() {
   const navigation = useNavigation();
   const { token, user: currentUser } = useContext(AuthContext);
-  const isFocused = useIsFocused();
+  const myId = currentUser?._id;
+  const cacheHit = inboxCache.userId === myId && Array.isArray(inboxCache.conversations);
 
-  const [conversations, setConversations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [actionModalVisible, setActionModalVisible] = useState(false);
-  const [selectedChat, setSelectedChat] = useState(null);
+  const [conversations, setConversations] = useState(cacheHit ? inboxCache.conversations : []);
+  const [blockedUserIds, setBlockedUserIds] = useState(cacheHit ? inboxCache.blocked : []);
+  const [loading, setLoading] = useState(!cacheHit);
   const [refreshing, setRefreshing] = useState(false);
-  const [isFirstLoad, setIsFirstLoad] = useState(true);
-  const [markingRead, setMarkingRead] = useState(false);
-  const [totalUnread, setTotalUnread] = useState(0);
-  const [isNavigating, setIsNavigating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [blockedUserIds, setBlockedUserIds] = useState([]);
-  const [isBlocked, setIsBlocked] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all'); // all | unread
+  const [selectedChat, setSelectedChat] = useState(null);
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const headerSlide = useRef(new Animated.Value(-30)).current;
-  const searchFade = useRef(new Animated.Value(0)).current;
-  const listFade = useRef(new Animated.Value(0)).current;
+  const focusedRef = useRef(false);
+  const refreshTimer = useRef(null);
+  const busyRef = useRef(false);
 
-  const config = { headers: { Authorization: `Bearer ${token}` } };
+  const config = useMemo(() => ({ headers: { Authorization: `Bearer ${token}` } }), [token]);
 
-  // Initial animations
-  useEffect(() => {
-    if (isFirstLoad) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
-        }),
-        Animated.spring(headerSlide, {
-          toValue: 0,
-          delay: 100,
-          friction: 8,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-        Animated.timing(searchFade, {
-          toValue: 1,
-          duration: 500,
-          delay: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(listFade, {
-          toValue: 1,
-          duration: 600,
-          delay: 400,
-          useNativeDriver: true,
-        })
-      ]).start();
-      setIsFirstLoad(false);
-    }
-  }, []);
-
-  // Load blocked users
-  const loadBlockedUsers = useCallback(async () => {
-    if (!token) return;
+  // One request round: inbox + blocked list together
+  const loadAll = useCallback(async () => {
+    if (!token || busyRef.current) return;
+    busyRef.current = true;
     try {
-      const res = await axios.get(`${API_URL}/user/blocked`, config);
-      const blocked = res.data.blockedUsers || [];
-      setBlockedUserIds(blocked.map(b => b._id));
-    } catch (err) {
-      console.error("Error loading blocked users:", err);
-    }
-  }, [token]);
-
-  // Handle hardware back button
-  useEffect(() => {
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (!isNavigating) {
-        setIsNavigating(true);
-        if (navigation.canGoBack()) {
-          navigation.goBack();
-        } else {
-          navigation.dispatch(
-            CommonActions.reset({
-              index: 0,
-              routes: [{ name: 'HomeTabs' }],
-            })
-          );
-        }
-        setTimeout(() => setIsNavigating(false), 500);
-        return true;
+      const [inboxRes, blockedRes] = await Promise.allSettled([
+        axios.get(`${API_URL}/inbox`, config),
+        axios.get(`${API_URL}/user/blocked`, config),
+      ]);
+      let blocked = inboxCache.userId === myId ? inboxCache.blocked : [];
+      if (blockedRes.status === 'fulfilled') {
+        blocked = (blockedRes.value.data?.blockedUsers || []).map((b) => b._id);
+        setBlockedUserIds(blocked);
       }
-      return false;
-    });
-
-    return () => backHandler.remove();
-  }, [navigation, isNavigating]);
-
-  // Fetch inbox when screen is focused
-  useFocusEffect(
-    useCallback(() => {
-      if (isFocused) {
-        loadBlockedUsers();
-        fetchInbox();
+      if (inboxRes.status === 'fulfilled') {
+        const list = Array.isArray(inboxRes.value.data) ? inboxRes.value.data : [];
+        const sorted = sortByLatest(list);
+        setConversations(sorted);
+        inboxCache.userId = myId;
+        inboxCache.conversations = sorted;
+        inboxCache.blocked = blocked;
+      } else {
+        console.log('[Chats] inbox failed', inboxRes.reason?.message);
       }
-      return () => {};
-    }, [isFocused])
-  );
-
-  // Socket listeners
-  useEffect(() => {
-    const handleInboxUpdate = () => {
-      if (isFocused) {
-        fetchInbox();
-      }
-    };
-
-    const handleNewMessage = (msg) => {
-      if (isFocused) {
-        fetchInbox();
-      }
-    };
-
-    const handleMessageDeleted = () => {
-      if (isFocused) {
-        fetchInbox();
-      }
-    };
-
-    const handleMessagesRead = ({ conversationId, userId }) => {
-      if (isFocused && userId !== currentUser?._id) {
-        setConversations(prev => 
-          prev.map(conv => 
-            conv._id === conversationId 
-              ? { ...conv, unreadCount: 0 } 
-              : conv
-          )
-        );
-      }
-    };
-
-    const handleConversationDeleted = ({ conversationId }) => {
-      if (isFocused) {
-        setConversations(prev => {
-          const updated = prev.filter(conv => conv._id !== conversationId);
-          const unread = updated.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
-          setTotalUnread(unread);
-          return updated;
-        });
-        
-        setActionModalVisible(false);
-        setSelectedChat(null);
-      }
-    };
-
-    socket.on('inbox_update', handleInboxUpdate);
-    socket.on('new_message', handleNewMessage);
-    socket.on('message_deleted', handleMessageDeleted);
-    socket.on('messages_read', handleMessagesRead);
-    socket.on('conversation_deleted', handleConversationDeleted);
-
-    return () => {
-      socket.off('inbox_update', handleInboxUpdate);
-      socket.off('new_message', handleNewMessage);
-      socket.off('message_deleted', handleMessageDeleted);
-      socket.off('messages_read', handleMessagesRead);
-      socket.off('conversation_deleted', handleConversationDeleted);
-    };
-  }, [isFocused]);
-
-  const fetchInbox = async () => {
-    try {
-      console.log('Fetching inbox...');
-      const res = await axios.get(`${API_URL}/inbox`, config);
-      console.log('Inbox response:', res.data);
-      
-      // Filter out conversations with blocked users
-      let filteredConversations = res.data;
-      if (blockedUserIds.length > 0) {
-        filteredConversations = res.data.filter(conv => {
-          const otherUser = conv.participants?.find(p => p._id !== currentUser?._id);
-          if (!otherUser) return true;
-          return !blockedUserIds.includes(otherUser._id);
-        });
-      }
-      
-      const sorted = filteredConversations.sort((a, b) => {
-        const dateA = new Date(a.lastMessageTime || a.updatedAt || a.createdAt);
-        const dateB = new Date(b.lastMessageTime || b.updatedAt || b.createdAt);
-        return dateB - dateA;
-      });
-      setConversations(sorted);
-      
-      const unread = sorted.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
-      setTotalUnread(unread);
-    } catch (err) {
-      console.error("Inbox fetch failed", err);
     } finally {
+      busyRef.current = false;
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [token, config, myId]);
 
-  // Check if a conversation is blocked
-  const isConversationBlocked = useCallback((conversation) => {
-    if (!conversation || !conversation.participants) return false;
-    const otherUser = conversation.participants.find(p => p._id !== currentUser?._id);
-    if (!otherUser) return false;
-    return blockedUserIds.includes(otherUser._id);
-  }, [blockedUserIds, currentUser]);
+  // Batch socket bursts into one refresh
+  const scheduleRefresh = useCallback(() => {
+    if (!focusedRef.current) return;
+    clearTimeout(refreshTimer.current);
+    refreshTimer.current = setTimeout(loadAll, 400);
+  }, [loadAll]);
 
-  // Mark messages as read when clicking on chat
-  const markMessagesAsRead = async (conversationId) => {
-    if (markingRead) return;
-    setMarkingRead(true);
-    
-    try {
-      socket.emit('mark_messages_read', {
-        conversationId,
-        userId: currentUser._id
+  useFocusEffect(
+    useCallback(() => {
+      focusedRef.current = true;
+      loadAll();
+      return () => {
+        focusedRef.current = false;
+        clearTimeout(refreshTimer.current);
+      };
+    }, [loadAll])
+  );
+
+  // Hardware back
+  const goBack = useCallback(() => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'HomeTabs' }] }));
+  }, [navigation]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        goBack();
+        return true;
       });
-      
-      await axios.post(`${API_URL}/messages/mark-read/${conversationId}`, {}, config);
-      
-      setConversations(prev => 
-        prev.map(conv => 
-          conv._id === conversationId 
-            ? { ...conv, unreadCount: 0 } 
-            : conv
-        )
-      );
-      
-      setTotalUnread(prev => {
-        const conv = conversations.find(c => c._id === conversationId);
-        const unread = conv?.unreadCount || 0;
-        return Math.max(0, prev - unread);
-      });
-    } catch (err) {
-      console.error('Mark read error:', err);
-    } finally {
-      setMarkingRead(false);
+      return () => sub.remove();
+    }, [goBack])
+  );
+
+  // Socket
+  useEffect(() => {
+    const onRead = ({ conversationId, userId }) => {
+      if (userId === myId) return;
+      setConversations((prev) => prev.map((c) => (c._id === conversationId ? { ...c, unreadCount: 0 } : c)));
+    };
+    const onDeleted = ({ conversationId }) => {
+      setConversations((prev) => prev.filter((c) => c._id !== conversationId));
+      setSelectedChat((s) => (s?._id === conversationId ? null : s));
+    };
+    socket.on('inbox_update', scheduleRefresh);
+    socket.on('new_message', scheduleRefresh);
+    socket.on('message_deleted', scheduleRefresh);
+    socket.on('messages_read', onRead);
+    socket.on('conversation_deleted', onDeleted);
+    return () => {
+      socket.off('inbox_update', scheduleRefresh);
+      socket.off('new_message', scheduleRefresh);
+      socket.off('message_deleted', scheduleRefresh);
+      socket.off('messages_read', onRead);
+      socket.off('conversation_deleted', onDeleted);
+    };
+  }, [scheduleRefresh, myId]);
+
+  // keep the cache in step with local edits
+  useEffect(() => {
+    if (myId && !loading) {
+      inboxCache.userId = myId;
+      inboxCache.conversations = conversations;
+      inboxCache.blocked = blockedUserIds;
     }
-  };
+  }, [conversations, blockedUserIds, myId, loading]);
 
-  const handleLongPress = (id) => {
-    const chat = conversations.find(c => c._id === id);
-    if (chat) {
-      const blocked = isConversationBlocked(chat);
-      setIsBlocked(blocked);
-      setSelectedChat(chat);
-      setActionModalVisible(true);
+  const blockedSet = useMemo(() => new Set(blockedUserIds), [blockedUserIds]);
+  const isBlockedConv = useCallback((c) => {
+    const o = otherOf(c, currentUser);
+    return !!o && blockedSet.has(o._id);
+  }, [blockedSet, currentUser]);
+
+  const markRead = useCallback(async (conversationId) => {
+    setConversations((prev) => prev.map((c) => (c._id === conversationId ? { ...c, unreadCount: 0 } : c)));
+    try {
+      socket.emit('mark_messages_read', { conversationId, userId: myId });
+      await axios.post(`${API_URL}/messages/mark-read/${conversationId}`, {}, config);
+    } catch (err) {
+      console.log('[Chats] mark read failed', err?.message);
+    }
+  }, [config, myId]);
+
+  const openChat = useCallback((item, blocked) => {
+    if (blocked) {
+      Alert.alert('User blocked', 'Unblock this user to send messages again.');
+      return;
+    }
+    const other = otherOf(item, currentUser);
+    if (!item?._id || !other?._id) return;
+    if ((item.unreadCount || 0) > 0) markRead(item._id);
+    navigation.navigate('ChatDetailScreen', {
+      conversationId: item._id,
+      recipient: {
+        _id: other._id,
+        name: other.name || 'User',
+        profileImage: other.profileImage || '',
+        online: other.online || false,
+      },
+    });
+  }, [currentUser, markRead, navigation]);
+
+  const onLongPress = useCallback((id) => {
+    const chat = conversations.find((c) => c._id === id);
+    if (chat) setSelectedChat(chat);
+  }, [conversations]);
+
+  const deleteConversation = async (id) => {
+    try {
+      const res = await axios.delete(`${API_URL}/conversations/${id}`, config);
+      if (res.data?.success) {
+        socket.emit('delete_conversation', { conversationId: id });
+        setConversations((prev) => prev.filter((c) => c._id !== id));
+        Alert.alert('Deleted', 'Conversation deleted.');
+      } else {
+        Alert.alert('Error', res.data?.error || 'Could not delete this conversation.');
+      }
+    } catch (err) {
+      Alert.alert('Error', err.response?.data?.error || (err.request ? 'Network error. Check your connection.' : 'Could not delete this conversation.'));
     }
   };
 
   const handleAction = (action) => {
-    if (!selectedChat) return;
+    const chat = selectedChat;
+    if (!chat) return;
+    const other = otherOf(chat, currentUser);
 
-    if (action === 'delete') {
-      Alert.alert(
-        "Delete Conversation",
-        "Are you sure you want to delete this conversation? This action cannot be undone.",
-        [
-          { text: "Cancel", style: "cancel" },
-          { 
-            text: "Delete", 
-            style: "destructive", 
-            onPress: () => handleDeleteSingle(selectedChat._id)
-          }
-        ]
-      );
+    if (action === 'profile' && other?._id) {
+      navigation.navigate('UserProfile', { userId: other._id });
     } else if (action === 'mute') {
-      handleMuteSingle(selectedChat._id);
-    } else if (action === 'unblock') {
-      handleUnblockUser(selectedChat);
-    }
-  };
-
-  const handleUnblockUser = async (chat) => {
-    const otherUser = chat.participants?.find(p => p._id !== currentUser?._id);
-    if (!otherUser) return;
-
-    Alert.alert(
-      "Unblock User",
-      `Are you sure you want to unblock ${otherUser.name}? They will be able to message you again.`,
-      [
-        { text: "Cancel", style: "cancel" },
+      axios.post(`${API_URL}/conversations/${chat._id}/mute`, {}, config)
+        .then(() => {
+          setConversations((prev) => prev.map((c) => (c._id === chat._id ? { ...c, muted: true } : c)));
+          Alert.alert('Muted', `You won't get alerts from ${other?.name || 'this chat'}.`);
+        })
+        .catch(() => Alert.alert('Error', 'Could not mute this conversation.'));
+    } else if (action === 'delete') {
+      Alert.alert('Delete conversation?', 'This removes the chat for you. It cannot be undone.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => deleteConversation(chat._id) },
+      ]);
+    } else if (action === 'unblock' && other?._id) {
+      Alert.alert('Unblock user', `${other.name} will be able to message you again.`, [
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: "Unblock",
+          text: 'Unblock',
           onPress: async () => {
             try {
-              await axios.post(`${API_URL}/user/unblock/${otherUser._id}`, {}, config);
-              Alert.alert("Success", `${otherUser.name} has been unblocked`);
-              
-              // Remove from blocked list
-              setBlockedUserIds(prev => prev.filter(id => id !== otherUser._id));
-              
-              // Refresh conversations
-              await fetchInbox();
-              
-              setActionModalVisible(false);
-              setSelectedChat(null);
-            } catch (err) {
-              console.error("Unblock error:", err);
-              Alert.alert("Error", "Failed to unblock user. Please try again.");
+              await axios.post(`${API_URL}/user/unblock/${other._id}`, {}, config);
+              setBlockedUserIds((prev) => prev.filter((id) => id !== other._id));
+              Alert.alert('Unblocked', `${other.name} has been unblocked.`);
+              loadAll();
+            } catch {
+              Alert.alert('Error', 'Could not unblock. Please try again.');
             }
-          }
-        }
-      ]
-    );
-  };
-
-  const handleMuteSingle = async (id) => {
-    try {
-      await axios.post(`${API_URL}/conversations/${id}/mute`, {}, config);
-      fetchInbox();
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    } catch (err) {
-      console.error('Mute error:', err);
-      Alert.alert('Error', 'Failed to mute conversation');
+          },
+        },
+      ]);
     }
   };
 
-  const handleDeleteSingle = async (id) => {
-    if (isDeleting) return;
-    setIsDeleting(true);
-    
-    try {
-      console.log('Deleting conversation:', id);
-      const response = await axios.delete(`${API_URL}/conversations/${id}`, config);
-      console.log('Delete response:', response.data);
-      
-      if (response.data.success) {
-        socket.emit('delete_conversation', { conversationId: id });
-        
-        setConversations(prev => {
-          const updated = prev.filter(conv => conv._id !== id);
-          const unread = updated.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
-          setTotalUnread(unread);
-          return updated;
-        });
-        
-        setActionModalVisible(false);
-        setSelectedChat(null);
-        
-        Alert.alert('Success', 'Conversation deleted successfully');
-      } else {
-        Alert.alert('Error', response.data?.error || 'Failed to delete conversation');
-      }
-    } catch (err) {
-      console.error('Delete error:', err);
-      if (err.response) {
-        Alert.alert('Error', err.response.data?.error || 'Failed to delete conversation');
-      } else if (err.request) {
-        Alert.alert('Error', 'Network error. Please check your connection.');
-      } else {
-        Alert.alert('Error', 'Failed to delete conversation. Please try again.');
-      }
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleRefresh = () => {
+  const onRefresh = () => {
     setRefreshing(true);
-    loadBlockedUsers();
-    fetchInbox();
+    loadAll();
   };
 
-  const handleBackPress = () => {
-    if (!isNavigating) {
-      setIsNavigating(true);
-      if (navigation.canGoBack()) {
-        navigation.goBack();
-      } else {
-        navigation.dispatch(
-          CommonActions.reset({
-            index: 0,
-            routes: [{ name: 'HomeTabs' }],
-          })
-        );
-      }
-      setTimeout(() => setIsNavigating(false), 500);
-    }
-  };
+  // Visible list (blocked users are hidden from the inbox, same as before)
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return conversations.filter((c) => {
+      const o = otherOf(c, currentUser);
+      if (!o) return false;
+      if (blockedSet.has(o._id)) return false;
+      if (filter === 'unread' && !(c.unreadCount > 0)) return false;
+      if (q && !(o.name || '').toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [conversations, currentUser, blockedSet, search, filter]);
 
-  const navigateToSocial = () => {
-    navigation.navigate('Search');
-  };
+  const totalUnread = useMemo(
+    () => conversations.reduce((s, c) => s + (isBlockedConv(c) ? 0 : c.unreadCount || 0), 0),
+    [conversations, isBlockedConv]
+  );
 
-  // Filter conversations by search and block status
-  const filteredConversations = conversations.filter(c => {
-    if (!c || !c.participants) return false;
-    // Already filtered blocked conversations, but double-check
-    const otherUser = c.participants.find(p => p._id !== currentUser?._id);
-    if (!otherUser) return false;
-    if (blockedUserIds.includes(otherUser._id)) return false;
-    
-    const matchesSearch = otherUser.name?.toLowerCase().includes(search.toLowerCase());
-    return matchesSearch;
-  });
+  const selectedOther = otherOf(selectedChat, currentUser);
 
-  const renderEmptyComponent = () => (
-    <Animated.View style={[styles.emptyContainer, { opacity: fadeAnim }]}>
-      <View style={styles.emptyIconWrapper}>
-        <LinearGradient colors={[COLORS.primaryLight, COLORS.white]} style={styles.emptyIcon}>
-          <Ionicons name="chatbubbles-outline" size={56} color={COLORS.primary} />
-        </LinearGradient>
+  const renderItem = useCallback(({ item }) => (
+    <ChatItem
+      item={item}
+      currentUser={currentUser}
+      onOpen={openChat}
+      onLongPress={onLongPress}
+      isBlocked={isBlockedConv(item)}
+    />
+  ), [currentUser, openChat, onLongPress, isBlockedConv]);
+
+  const Empty = () => (
+    <View style={styles.empty}>
+      <View style={styles.emptyIcon}>
+        <Ionicons name={search || filter === 'unread' ? 'search' : 'chatbubbles-outline'} size={34} color={C.dark} />
       </View>
-      <Text style={styles.emptyTitle}>No conversations yet</Text>
-      <Text style={styles.emptySubtitle}>Start a new conversation with someone</Text>
-      <TouchableOpacity
-        style={styles.emptyBtn}
-        onPress={navigateToSocial}
-        activeOpacity={0.7}
-      >
-        <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.emptyBtnGradient}>
-          <Ionicons name="people-outline" size={18} color={COLORS.black} />
-          <Text style={styles.emptyBtnText}>Find People</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-    </Animated.View>
+      <Text style={styles.emptyTitle}>
+        {search ? 'no chats found' : filter === 'unread' ? 'all caught up' : 'no chats yet'}
+      </Text>
+      <Text style={styles.emptySub}>
+        {search ? 'try a different name' : filter === 'unread' ? 'no unread messages right now' : 'find people from your campus and say hi'}
+      </Text>
+      {!search && filter === 'all' ? (
+        <TouchableOpacity style={styles.emptyBtn} onPress={() => navigation.navigate('Search')} activeOpacity={0.85}>
+          <Ionicons name="people-outline" size={17} color={C.gold} />
+          <Text style={styles.emptyBtnText}>find people</Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
   );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
+      <StatusBar barStyle="dark-content" backgroundColor={C.white} />
 
-      {/* Header with back button */}
-      <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: headerSlide }] }]}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity 
-            onPress={handleBackPress} 
-            style={styles.backButton}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="arrow-back" size={24} color={COLORS.black} />
-          </TouchableOpacity>
-          
-          <View style={styles.logoWrapper}>
-            <Text style={styles.logoText}>Chats</Text>
-            {totalUnread > 0 && (
-              <Animated.View style={[styles.headerBadge, {
-                transform: [{
-                  scale: fadeAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.5, 1]
-                  })
-                }]
-              }]}>
-                <Text style={styles.headerBadgeText}>{totalUnread > 99 ? '99+' : totalUnread}</Text>
-              </Animated.View>
-            )}
-          </View>
-        </View>
-        <TouchableOpacity
-          style={styles.headerBtn}
-          onPress={navigateToSocial}
-          activeOpacity={0.7}
-        >
-          <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.headerBtnGradient}>
-            <Ionicons name="create-outline" size={24} color={COLORS.black} />
-          </LinearGradient>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={goBack} style={styles.squareBtn} activeOpacity={0.7} hitSlop={10}>
+          <Ionicons name="chevron-back" size={22} color={C.dark} />
         </TouchableOpacity>
-      </Animated.View>
+        <View style={styles.titleWrap}>
+          <Text style={styles.title}>
+            chats<Text style={{ color: C.gold }}>.</Text>
+          </Text>
+          {totalUnread > 0 ? (
+            <View style={styles.titlePill}>
+              <Text style={styles.titlePillText}>{totalUnread > 99 ? '99+' : totalUnread}</Text>
+            </View>
+          ) : null}
+        </View>
+        <TouchableOpacity onPress={() => navigation.navigate('Search')} style={styles.newBtn} activeOpacity={0.8} hitSlop={10}>
+          <Ionicons name="create-outline" size={20} color={C.gold} />
+        </TouchableOpacity>
+      </View>
 
       {/* Search */}
-      <Animated.View style={[styles.searchContainer, { opacity: searchFade }]}>
-        <View style={[styles.searchWrapper, search.length > 0 && styles.searchWrapperActive]}>
-          <Ionicons name="search-outline" size={20} color={search.length > 0 ? COLORS.primary : COLORS.textLight} />
+      <View style={styles.searchWrap}>
+        <View style={[styles.search, search.length > 0 && styles.searchActive]}>
+          <Ionicons name="search" size={17} color={search ? C.dark : C.muted} />
           <TextInput
-            placeholder="Search messages..."
+            placeholder="search chats"
+            placeholderTextColor={C.muted}
             style={styles.searchInput}
             value={search}
             onChangeText={setSearch}
-            placeholderTextColor={COLORS.textLight}
+            returnKeyType="search"
           />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch('')} style={styles.searchClear}>
-              <Ionicons name="close-circle" size={20} color={COLORS.textLight} />
+          {search.length > 0 ? (
+            <TouchableOpacity onPress={() => setSearch('')} hitSlop={10}>
+              <Ionicons name="close-circle" size={18} color={C.muted} />
             </TouchableOpacity>
-          )}
+          ) : null}
         </View>
-      </Animated.View>
+      </View>
 
-      {/* Content */}
+      {/* Filter chips */}
+      <View style={styles.chips}>
+        {[
+          { key: 'all', label: 'all' },
+          { key: 'unread', label: totalUnread > 0 ? `unread · ${totalUnread}` : 'unread' },
+        ].map((c) => {
+          const on = filter === c.key;
+          return (
+            <TouchableOpacity
+              key={c.key}
+              onPress={() => setFilter(c.key)}
+              style={[styles.chip, on && styles.chipOn]}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.chipText, on && styles.chipTextOn]}>{c.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
       {loading ? (
         <MessagesSkeleton />
       ) : (
-        <Animated.View style={{ flex: 1, opacity: listFade }}>
-          <FlatList
-            data={filteredConversations}
-            keyExtractor={(item) => item._id}
-            renderItem={({ item, index }) => (
-              <ChatItem
-                item={item}
-                currentUser={currentUser}
-                navigation={navigation}
-                index={index}
-                onLongPress={handleLongPress}
-                markAsRead={markMessagesAsRead}
-                isBlocked={isConversationBlocked(item)}
-              />
-            )}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-                colors={[COLORS.primary]}
-                tintColor={COLORS.primary}
-              />
-            }
-            ListEmptyComponent={renderEmptyComponent}
-          />
-        </Animated.View>
+        <FlatList
+          data={visible}
+          keyExtractor={(item) => item._id}
+          renderItem={renderItem}
+          contentContainerStyle={[styles.listContent, visible.length === 0 && { flexGrow: 1 }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          initialNumToRender={12}
+          windowSize={7}
+          removeClippedSubviews={Platform.OS === 'android'}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.dark]} tintColor={C.dark} />
+          }
+          ListEmptyComponent={Empty}
+        />
       )}
 
-      {/* Action Modal */}
-      <ActionModal
-        visible={actionModalVisible}
-        onClose={() => {
-          setActionModalVisible(false);
-          setSelectedChat(null);
-          setIsBlocked(false);
-        }}
+      <ActionSheet
+        visible={!!selectedChat}
+        onClose={() => setSelectedChat(null)}
         onAction={handleAction}
-        recipientName={selectedChat?.participants?.find(p => p._id !== currentUser?._id)?.name || ''}
-        recipientId={selectedChat?.participants?.find(p => p._id !== currentUser?._id)?._id}
-        navigation={navigation}
-        isBlocked={isBlocked}
+        name={selectedOther?.name}
+        image={selectedOther?.profileImage}
+        isBlocked={selectedChat ? isBlockedConv(selectedChat) : false}
       />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fc'
-  },
+  container: { flex: 1, backgroundColor: C.bg },
+
+  // header
   header: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 0.5,
-    borderBottomColor: COLORS.border,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
+  squareBtn: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: COLORS.lightGray,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  logoWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logoText: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: COLORS.black,
-    letterSpacing: -0.5,
-  },
-  headerBadge: {
-    backgroundColor: COLORS.primary,
-    minWidth: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    marginLeft: 10,
-    borderWidth: 1.5,
-    borderColor: COLORS.primaryDark,
-  },
-  headerBadgeText: {
-    color: COLORS.black,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  headerBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: 'hidden',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  headerBtnGradient: {
-    width: '100%',
-    height: '100%',
+    backgroundColor: C.soft,
+    borderWidth: 1,
+    borderColor: C.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  searchContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  searchWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.white,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    height: 48,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  searchWrapperActive: {
-    borderColor: COLORS.primary,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 10,
-    fontSize: 15,
-    color: COLORS.black,
-    fontWeight: '400',
-  },
-  searchClear: {
-    padding: 4,
-  },
-  skeletonContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 12
-  },
-  skeletonItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 0.5,
-    borderBottomColor: COLORS.border,
-  },
-  skeletonAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#e8ecf0',
-    marginRight: 14
-  },
-  skeletonContent: {
-    flex: 1
-  },
-  skeletonLine: {
-    backgroundColor: '#e8ecf0',
-    borderRadius: 4
-  },
-  listContent: {
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    paddingTop: 4,
-  },
-  chatCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 0.5,
-    borderBottomColor: COLORS.border,
-    paddingHorizontal: 4,
-    borderRadius: 12,
-    backgroundColor: COLORS.white,
-    marginVertical: 1,
-  },
-  chatCardUnread: {
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: 12,
-    paddingHorizontal: 4,
-  },
-  chatCardBlocked: {
-    backgroundColor: COLORS.blockedBg,
-    opacity: 0.8,
-    borderRadius: 12,
-    paddingHorizontal: 4,
-  },
-  avatarWrapper: {
-    marginRight: 14,
-  },
-  avatarContainer: {
-    position: 'relative',
-    width: 56,
-    height: 56,
-  },
-  profileImg: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-  },
-  avatarPlaceholder: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.border,
-  },
-  avatarInitial: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: COLORS.black,
-  },
-  onlineDot: {
-    position: 'absolute',
-    bottom: 1,
-    right: 1,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: COLORS.success,
-    borderWidth: 3,
-    borderColor: COLORS.white,
-    shadowColor: COLORS.success,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  blockedBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    backgroundColor: COLORS.danger,
-    borderRadius: 10,
-    width: 22,
-    height: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.white,
-  },
-  chatContent: {
-    flex: 1,
-    marginLeft: 2,
-  },
-  chatRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 3,
-  },
-  chatName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.black,
-    flex: 1,
-  },
-  chatNameUnread: {
-    fontWeight: '700',
-  },
-  blockedText: {
-    color: COLORS.gray,
-  },
-  timeContainer: {
+  titleWrap: { flexDirection: 'row', alignItems: 'center' },
+  title: { fontSize: 20, fontWeight: '900', color: C.dark, letterSpacing: -0.3 },
+  titlePill: {
     marginLeft: 8,
-  },
-  chatTime: {
-    fontSize: 11,
-    color: COLORS.textLight,
-    fontWeight: '400',
-  },
-  lastMsgRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 2,
-  },
-  chatMessage: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    flex: 1,
-    fontWeight: '400',
-  },
-  chatMessageUnread: {
-    color: COLORS.black,
-    fontWeight: '500',
-  },
-  unreadBadge: {
-    backgroundColor: COLORS.primary,
     minWidth: 22,
     height: 22,
-    borderRadius: 11,
-    justifyContent: 'center',
-    alignItems: 'center',
     paddingHorizontal: 7,
-    borderWidth: 1.5,
-    borderColor: COLORS.primaryDark,
-  },
-  unreadText: {
-    color: COLORS.black,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  chatChevron: {
-    marginLeft: 4,
-    opacity: 0.3,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalOverlayPress: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: COLORS.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    paddingTop: 8,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 10,
-  },
-  modalHandle: {
-    width: 36,
-    height: 4,
-    backgroundColor: COLORS.border,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 12,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  modalHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  modalAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    borderRadius: 11,
+    backgroundColor: C.dark,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalAvatarText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.black,
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: COLORS.black,
-  },
-  modalClose: {
-    padding: 4,
-  },
-  modalDivider: {
-    height: 0.5,
-    backgroundColor: COLORS.border,
-    marginVertical: 4,
-  },
-  modalOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-    paddingHorizontal: 4,
-  },
-  modalOptionIcon: {
+  titlePillText: { color: C.gold, fontSize: 11, fontWeight: '800' },
+  newBtn: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 14,
-  },
-  modalOptionText: {
-    flex: 1,
-    fontSize: 15,
-    color: COLORS.black,
-    fontWeight: '500',
-  },
-  modalOptionDanger: {
-    marginTop: 4,
-    paddingTop: 14,
-  },
-  modalOptionDangerText: {
-    color: COLORS.danger,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 80,
-  },
-  emptyIconWrapper: {
-    marginBottom: 16,
-  },
-  emptyIcon: {
-    width: 100,
-    height: 100,
-    borderRadius: 30,
+    backgroundColor: C.dark,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.black,
-    marginBottom: 6,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    fontWeight: '400',
-  },
-  emptyBtn: {
-    marginTop: 24,
-    borderRadius: 14,
-    overflow: 'hidden',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  emptyBtnGradient: {
+
+  // search + chips
+  searchWrap: { paddingHorizontal: 16, paddingTop: 4 },
+  search: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
     gap: 8,
+    height: 46,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    backgroundColor: C.soft,
+    borderWidth: 1,
+    borderColor: C.border,
   },
-  emptyBtnText: {
-    color: COLORS.black,
-    fontWeight: '700',
-    fontSize: 14,
+  searchActive: { borderColor: C.dark, backgroundColor: C.white },
+  searchInput: { flex: 1, fontSize: 15, color: C.dark, paddingVertical: 0 },
+  chips: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 6 },
+  chip: {
+    paddingHorizontal: 14,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: C.soft,
+    borderWidth: 1,
+    borderColor: C.border,
+    justifyContent: 'center',
   },
+  chipOn: { backgroundColor: C.dark, borderColor: C.dark },
+  chipText: { fontSize: 13, fontWeight: '700', color: C.text2 },
+  chipTextOn: { color: C.gold },
+
+  // list
+  listContent: { paddingHorizontal: 10, paddingTop: 4, paddingBottom: 30 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 16,
+  },
+  rowUnread: { backgroundColor: C.goldSoft },
+  rowBody: { flex: 1, marginLeft: 12, borderBottomWidth: 0 },
+  rowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  rowBottom: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  name: { flex: 1, fontSize: 15.5, fontWeight: '700', color: C.dark, marginRight: 8 },
+  nameUnread: { fontWeight: '900' },
+  mutedText: { color: C.muted },
+  time: { fontSize: 11.5, color: C.muted, fontWeight: '600' },
+  timeUnread: { color: C.dark, fontWeight: '800' },
+  preview: { flex: 1, fontSize: 13.5, color: C.muted },
+  previewUnread: { color: C.dark, fontWeight: '600' },
+  unreadPill: {
+    marginLeft: 8,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 6,
+    borderRadius: 10,
+    backgroundColor: C.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  unreadText: { color: C.gold, fontSize: 11, fontWeight: '800' },
+
+  avatarFallback: { backgroundColor: C.gold, justifyContent: 'center', alignItems: 'center' },
+  avatarInitial: { fontWeight: '900', color: C.dark },
+  onlineDot: {
+    position: 'absolute',
+    right: 1,
+    bottom: 1,
+    width: 13,
+    height: 13,
+    borderRadius: 7,
+    backgroundColor: C.online,
+    borderWidth: 2.5,
+    borderColor: C.white,
+  },
+
+  // skeleton
+  skeletonWrap: { paddingHorizontal: 18, paddingTop: 8 },
+  skeletonRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
+  skeletonAvatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#f0f0f0', marginRight: 12 },
+  skeletonLine: { height: 13, borderRadius: 6, backgroundColor: '#f0f0f0' },
+
+  // empty
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingBottom: 60 },
+  emptyIcon: {
+    width: 76,
+    height: 76,
+    borderRadius: 24,
+    backgroundColor: C.goldSoft,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyTitle: { fontSize: 18, fontWeight: '900', color: C.dark },
+  emptySub: { fontSize: 13.5, color: C.muted, marginTop: 6, textAlign: 'center' },
+  emptyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 20,
+    backgroundColor: C.dark,
+    paddingHorizontal: 20,
+    height: 46,
+    borderRadius: 14,
+  },
+  emptyBtnText: { color: C.white, fontSize: 14, fontWeight: '800' },
+
+  // sheet
+  sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10,10,10,0.5)' },
+  sheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: C.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 22,
+  },
+  sheetHandle: { width: 38, height: 4, borderRadius: 2, backgroundColor: '#e2e2e2', alignSelf: 'center', marginBottom: 14 },
+  sheetHeader: { flexDirection: 'row', alignItems: 'center', paddingBottom: 14, marginBottom: 6, borderBottomWidth: 1, borderBottomColor: C.line },
+  sheetName: { fontSize: 16, fontWeight: '900', color: C.dark },
+  sheetSub: { fontSize: 12, color: C.muted, marginTop: 2 },
+  sheetOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11 },
+  sheetIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  sheetText: { flex: 1, fontSize: 15, fontWeight: '700' },
 });

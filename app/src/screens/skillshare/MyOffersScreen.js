@@ -158,7 +158,7 @@ export default function MyOffersScreen({ navigation }) {
           <Ionicons name="arrow-back" size={22} color={INK} />
         </TouchableOpacity>
         <Text style={styles.topHeaderTitle}>My Offers</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
+        <TouchableOpacity onPress={() => navigation.navigate('NotificationSkillshare')}>
           <Ionicons name="notifications-outline" size={22} color={INK} />
         </TouchableOpacity>
       </View>

@@ -1,1573 +1,383 @@
 // app/src/components/NotificationModal.js
-// Ultra Modern · detail slide-in · deep linking · clean animations
+// Bell on Home → app notifications (offers, jobs, events, system…).
+// Social and SkillShare notifications have their own screens, so they are
+// not mixed in here. Same design as those screens (components/notifications/NotifUI).
+//
+// - Opens instantly from the last loaded list, refreshes in the background
+// - Tap: opens the linked screen; if there's no link, expands the full text
 
-import React, { useState, useEffect, useContext, useRef, useCallback } from "react";
+import React, { useState, useEffect, useContext, useRef, useCallback, useMemo } from 'react';
 import {
   Modal,
   View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
   FlatList,
   Pressable,
-  ActivityIndicator,
   Dimensions,
-  ScrollView,
   RefreshControl,
   Alert,
   Animated,
-  StatusBar,
+  StyleSheet,
   Platform,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import axios from "axios";
-import * as Haptics from "expo-haptics";
-import { useNavigation } from "@react-navigation/native";
-import { soundPopupOpen, soundPopupClose, playSoundForNotification } from "../lib/tdcSounds";
-import { AuthContext } from "../context/AuthContext";
-import { BASE_URL } from "../api/api";
-import { navigationRef } from "../navigation/navigationRef";
+} from 'react-native';
+import axios from 'axios';
+import * as Haptics from 'expo-haptics';
+import { useNavigation } from '@react-navigation/native';
+import { soundPopupOpen, soundPopupClose } from '../lib/tdcSounds';
+import { AuthContext } from '../context/AuthContext';
+import { BASE_URL } from '../api/api';
+import { navigationRef } from '../navigation/navigationRef';
+import {
+  N,
+  timeAgo,
+  withSections,
+  NotifHeader,
+  NotifFilters,
+  NotifSection,
+  NotifRow,
+  NotifSkeleton,
+  NotifEmpty,
+} from './notifications/NotifUI';
 
-const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get("window");
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// ─── Theme ───
-const GOLD = "#f9c349";
-const GOLD_DARK = "#e0a82e";
-const GOLD_LIGHT = "#fffbee";
-const BLACK = "#0f0f0f";
-const WHITE = "#ffffff";
-const LIGHT = "#fafafa";
-const BORDER = "#ececec";
-const MUTED = "#888";
-const DANGER = "#ef4444";
-const SUCCESS = "#10b981";
+// Last loaded list per user (instant open)
+const cache = { userId: null, list: null };
 
-// ─── Social notification types ───
-const SOCIAL_TYPES = [
-  "like", "comment", "follow", "request", "connection_accepted",
-  "request_declined", "message", "Social", "social", "mention", "tag",
+// ── type → icon + tone ──
+const LOOK = {
+  Offer: ['pricetag', 'gold'],
+  Brand: ['storefront-outline', 'gold'],
+  Promotion: ['megaphone-outline', 'gold'],
+  Payment: ['wallet-outline', 'ok'],
+  Card: ['card-outline', 'dark'],
+  'Job Application': ['briefcase-outline', 'dark'],
+  'Job Posting': ['briefcase-outline', 'dark'],
+  Jobs: ['briefcase-outline', 'dark'],
+  'Application Status': ['checkmark-done-outline', 'ok'],
+  Interview: ['calendar-outline', 'blue'],
+  Event: ['calendar-outline', 'blue'],
+  Booking: ['ticket-outline', 'blue'],
+  Exchange: ['school-outline', 'blue'],
+  Scholarship: ['school-outline', 'blue'],
+  Course: ['book-outline', 'blue'],
+  Message: ['chatbubble-ellipses-outline', 'dark'],
+  Alert: ['alert-circle-outline', 'danger'],
+  Security: ['shield-checkmark-outline', 'danger'],
+  Reminder: ['alarm-outline', 'gold'],
+  Welcome: ['happy-outline', 'gold'],
+  Update: ['sparkles-outline', 'dark'],
+  System: ['notifications-outline', 'dark'],
+};
+const lookFor = (type) => LOOK[type] || LOOK.System;
+
+const GROUPS = {
+  offers: ['Offer', 'Brand', 'Promotion', 'Payment', 'Card'],
+  careers: ['Job Application', 'Job Posting', 'Jobs', 'Application Status', 'Interview', 'Exchange', 'Scholarship', 'Course'],
+  events: ['Event', 'Booking'],
+};
+
+const FILTERS = [
+  { key: 'all', label: 'all' },
+  { key: 'unread', label: 'unread' },
+  { key: 'offers', label: 'offers' },
+  { key: 'careers', label: 'careers' },
+  { key: 'events', label: 'events' },
+  { key: 'other', label: 'updates' },
 ];
 
-// ════════════════════════════════════════════
-// DEEP LINK HELPER
-// ════════════════════════════════════════════
-const openDeepLink = (item, navigation) => {
-  if (!item) return false;
-
-  const nav =
-    item.screenToOpen ||
-    item.metadata?.screenToOpen ||
-    item.metadata?.screen ||
-    item.metadata?.route;
-  const params = item.metadata?.params || item.params || {};
-
-  if (nav) {
-    try {
-      if (navigationRef.isReady()) {
-        navigationRef.navigate(nav, params);
-        return true;
-      } else if (navigation) {
-        navigation.navigate(nav, params);
-        return true;
-      }
-    } catch (e) {
-      console.log("[deepLink] structured nav failed:", e?.message);
-    }
-  }
-
-  const link = item.link || item.metadata?.link || item.url;
-  if (link && typeof link === "string") {
-    return handleLinkPath(link, navigation);
-  }
-
-  return false;
-};
-
-const handleLinkPath = (path, navigation) => {
+// ── deep links ──
+const go = (screen, params, navigation) => {
   try {
-    const navigateTo = (screen, params) => {
-      if (navigationRef.isReady()) {
-        navigationRef.navigate(screen, params);
-        return true;
-      }
-      return false;
-    };
-
-    const postMatch = path.match(/\/post\/([a-zA-Z0-9]+)/);
-    if (postMatch) {
-      return navigateTo("PostDetailScreen", { postId: postMatch[1] });
-    }
-
-    const profileMatch = path.match(/\/user\/([a-zA-Z0-9]+)/);
-    if (profileMatch) {
-      return navigateTo("UserProfile", { userId: profileMatch[1] });
-    }
-
-    if (path.includes("/offers") || path.includes("/offer") || path.includes("/brand")) {
-      return navigateTo("Brands");
-    }
-    if (path.includes("/jobs") || path.includes("/career")) {
-      return navigateTo("Career");
-    }
-    if (path.includes("/event")) {
-      return navigateTo("Events");
-    }
-    if (path.includes("/message") || path.includes("/chat")) {
-      return navigateTo("Messages");
-    }
-
-    return false;
+    if (navigationRef.isReady()) navigationRef.navigate(screen, params);
+    else navigation?.navigate(screen, params);
+    return true;
   } catch (e) {
-    console.log("[handleLinkPath] error:", e?.message);
+    console.log('[NotificationModal] nav failed', e?.message);
     return false;
   }
 };
 
-// ════════════════════════════════════════════
-// ICON MAP
-// ════════════════════════════════════════════
-const ICON_MAP = {
-  // System
-  Offers: "gift-outline",
-  Offer: "gift-outline",
-  Brand: "pricetag-outline",
-  System: "settings-outline",
-  system: "settings-outline",
-  "Application Status": "checkmark-circle-outline",
-  "Job Application": "briefcase-outline",
-  Interview: "calendar-outline",
-  "Job Posting": "megaphone-outline",
-  Welcome: "happy-outline",
+const targetOf = (item) => {
+  const m = item.metadata || {};
+  const screen = item.screenToOpen || m.screenToOpen || m.screen || m.route;
+  if (screen) return { screen, params: m.params || item.params || {} };
 
-  // Social
-  Social: "people-outline",
-  social: "people-outline",
-  like: "heart-outline",
-  comment: "chatbubble-outline",
-  follow: "person-add-outline",
-  request: "person-add-outline",
-  connection_accepted: "checkmark-circle-outline",
-  request_declined: "close-circle-outline",
-  mention: "at-outline",
-  tag: "pricetag-outline",
-
-  // SkillShare
-  new_offer: "briefcase-outline",
-  offer_accepted: "checkmark-done-outline",
-  offer_rejected: "close-circle-outline",
-  match_created: "handshake-outline",
-
-  // Messages
-  Message: "chatbubbles-outline",
-  message: "chatbubbles-outline",
-
-  Default: "notifications-outline",
+  const link = item.link || m.link || item.url;
+  if (!link || typeof link !== 'string') return null;
+  const post = link.match(/\/post\/([a-zA-Z0-9]+)/);
+  if (post) return { screen: 'PostDetailScreen', params: { postId: post[1] } };
+  const user = link.match(/\/user\/([a-zA-Z0-9]+)/);
+  if (user) return { screen: 'UserProfile', params: { userId: user[1] } };
+  if (/\/(offers?|brand)/.test(link)) return { screen: 'Brands', params: {} };
+  if (/\/(jobs|career)/.test(link)) return { screen: 'Career', params: {} };
+  if (/\/event/.test(link)) return { screen: 'Events', params: {} };
+  if (/\/(message|chat)/.test(link)) return { screen: 'Messages', params: {} };
+  return null;
 };
 
-const getIconName = (type) => {
-  if (!type) return ICON_MAP.Default;
-  return ICON_MAP[type] || ICON_MAP[type.toLowerCase()] || ICON_MAP.Default;
+const normalize = (n, i, myId) => {
+  let isRead = false;
+  if (typeof n.isRead === 'boolean') isRead = n.isRead;
+  else if (Array.isArray(n.readBy) && myId) isRead = n.readBy.some((id) => id?.toString() === myId);
+  return {
+    ...n,
+    _id: n._id?.toString() || `main-${i}`,
+    type: n.type || 'System',
+    description: n.description || n.text || n.message || '',
+    isRead,
+    createdAt: n.createdAt || new Date().toISOString(),
+  };
 };
 
-// ════════════════════════════════════════════
-// MAIN COMPONENT
-// ════════════════════════════════════════════
-const NotificationModal = ({ visible, onClose }) => {
+const NotificationModal = ({ visible: visibleProp, onClose: onCloseProp, navigation: navProp }) => {
   const { token, user, setUnreadCount, updateUnreadCount } = useContext(AuthContext);
-  const navigation = useNavigation();
+  const hookNav = useNavigation();
+  const navigation = navProp || hookNav;
 
-  const [filter, setFilter] = useState("All");
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(false);
+  // Also works when registered as a stack screen (no visible/onClose props)
+  const isScreen = visibleProp === undefined;
+  const visible = isScreen ? true : visibleProp;
+  const onClose = onCloseProp || (() => navigation?.canGoBack?.() && navigation.goBack());
+
+  const myId = user?._id?.toString();
+  const cached = cache.userId === myId ? cache.list : null;
+
+  const [filter, setFilter] = useState('all');
+  const [notifications, setNotifications] = useState(cached || []);
+  const [loading, setLoading] = useState(!cached);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedNotification, setSelectedNotification] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
 
-  // ── Animations ──
-  const sheetSlide = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
-  const backdropFade = useRef(new Animated.Value(0)).current;
-  const headerFade = useRef(new Animated.Value(0)).current;
-  const detailSlide = useRef(new Animated.Value(SCREEN_WIDTH)).current;
+  const sheetY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const backdrop = useRef(new Animated.Value(0)).current;
+  const [mounted, setMounted] = useState(visible);
 
-  // ── Open / Close ──
+  const headers = useMemo(() => ({ headers: { Authorization: `Bearer ${token}` } }), [token]);
+
+  const save = useCallback((list) => {
+    setNotifications(list);
+    cache.userId = myId;
+    cache.list = list;
+  }, [myId]);
+
+  const fetchNotifications = useCallback(async () => {
+    if (!token || !user) return;
+    try {
+      const res = await axios.get(`${BASE_URL}/notification/my-notifications`, headers);
+      const docs = Array.isArray(res.data) ? res.data : Array.isArray(res.data?.notifications) ? res.data.notifications : [];
+      const list = docs
+        .map((n, i) => normalize(n, i, myId))
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      save(list);
+      if (typeof setUnreadCount === 'function') setUnreadCount(list.filter((n) => !n.isRead).length);
+    } catch (err) {
+      console.log('[NotificationModal] fetch error', err?.response?.status, err?.message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [token, user, headers, myId, save, setUnreadCount]);
+
+  // open / close
   useEffect(() => {
     if (visible) {
-      sheetSlide.setValue(SCREEN_HEIGHT);
-      backdropFade.setValue(0);
-      headerFade.setValue(0);
-      detailSlide.setValue(SCREEN_WIDTH);
-      soundPopupOpen();
-
+      setMounted(true);
+      setExpandedId(null);
+      if (!isScreen) soundPopupOpen();
+      sheetY.setValue(SCREEN_HEIGHT);
+      backdrop.setValue(0);
       Animated.parallel([
-        Animated.spring(sheetSlide, {
-          toValue: 0,
-          friction: 9,
-          tension: 45,
-          useNativeDriver: true,
-        }),
-        Animated.timing(backdropFade, {
-          toValue: 1,
-          duration: 220,
-          useNativeDriver: true,
-        }),
-        Animated.timing(headerFade, {
-          toValue: 1,
-          duration: 320,
-          delay: 80,
-          useNativeDriver: true,
-        }),
+        Animated.spring(sheetY, { toValue: 0, friction: 10, tension: 70, useNativeDriver: true }),
+        Animated.timing(backdrop, { toValue: 1, duration: 180, useNativeDriver: true }),
       ]).start();
-
-      if (token && user) fetchNotifications();
-    } else {
+      // fresh user list into state (another account may have signed in)
+      if (cache.userId === myId && cache.list) setNotifications(cache.list);
+      else setLoading(true);
+      fetchNotifications();
+    } else if (mounted) {
       soundPopupClose();
       Animated.parallel([
-        Animated.timing(sheetSlide, {
-          toValue: SCREEN_HEIGHT,
-          duration: 220,
-          useNativeDriver: true,
-        }),
-        Animated.timing(backdropFade, {
-          toValue: 0,
-          duration: 220,
-          useNativeDriver: true,
-        }),
-      ]).start();
-      
+        Animated.timing(sheetY, { toValue: SCREEN_HEIGHT, duration: 200, useNativeDriver: true }),
+        Animated.timing(backdrop, { toValue: 0, duration: 200, useNativeDriver: true }),
+      ]).start(() => setMounted(false));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  // ── Detail push / pop ──
-  useEffect(() => {
-    if (selectedNotification) {
-      Animated.spring(detailSlide, {
-        toValue: 0,
-        friction: 10,
-        tension: 55,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(detailSlide, {
-        toValue: SCREEN_WIDTH,
-        duration: 240,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [selectedNotification]);
+  const handleClose = useCallback(() => {
+    updateUnreadCount?.(token);
+    onClose?.();
+  }, [onClose, token, updateUnreadCount]);
 
-  const getTimeAgo = (dateString) => {
-    if (!dateString) return "recently";
-    const now = new Date();
-    const past = new Date(dateString);
-    const diff = Math.floor((now - past) / 1000);
-    if (diff < 60) return "just now";
-    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-    if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
-    return past.toLocaleDateString([], { month: "short", day: "numeric" });
+  // ── actions ──
+  const markRead = (id) => {
+    save(notifications.map((n) => (n._id === id ? { ...n, isRead: true } : n)));
+    setUnreadCount?.((prev) => Math.max(0, (prev || 0) - 1));
+    axios.patch(`${BASE_URL}/notification/mark-read/${id}`, {}, headers).catch(() => {});
   };
 
-  // ════════════════════════════════════════════
-  // FETCH NOTIFICATIONS
-  // ════════════════════════════════════════════
-  const fetchNotifications = async () => {
-    if (!token || !user) return;
-    setLoading(true);
-
-    let mainDocs = [];
-    let socialDocs = [];
-
-    // ── Fetch main notifications (isolated try/catch) ──
-    try {
-      const mainRes = await axios.get(`${BASE_URL}/notification/my-notifications`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      mainDocs = Array.isArray(mainRes.data)
-        ? mainRes.data
-        : Array.isArray(mainRes.data?.notifications)
-        ? mainRes.data.notifications
-        : [];
-    } catch (err) {
-      console.log(
-        "[NotificationModal] main fetch error:",
-        err?.response?.status,
-        err?.message
-      );
-    }
-
-    // ── Fetch social notifications (isolated try/catch) ──
-    try {
-      const socialRes = await axios.get(`${BASE_URL}/social/notifications`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      socialDocs = Array.isArray(socialRes.data)
-        ? socialRes.data
-        : Array.isArray(socialRes.data?.notifications)
-        ? socialRes.data.notifications
-        : [];
-    } catch (err) {
-      console.log(
-        "[NotificationModal] social fetch error:",
-        err?.response?.status,
-        err?.message
-      );
-    }
-
-    // ── Debug logs ──
-    console.log("[NotificationModal] main:", mainDocs.length, "social:", socialDocs.length);
-    if (socialDocs.length > 0) {
-      console.log(
-        "[NotificationModal] sample social:",
-        JSON.stringify(socialDocs[0], null, 2)
-      );
-    }
-
-    const myId = user?._id?.toString();
-
-    const TITLE_MAP = {
-      like: "new like ❤️",
-      comment: "new comment 💬",
-      follow: "new follower 🌟",
-      request: "connection request 👤",
-      connection_accepted: "connection accepted 🎉",
-      request_declined: "request declined",
-      new_offer: "new offer 💼",
-      offer_accepted: "offer accepted 🎉",
-      offer_rejected: "offer declined",
-      match_created: "match created 🤝",
-      message: "new message 💬",
-      mention: "mentioned you 📣",
-      tag: "tagged you 🏷️",
-    };
-
-    // ── Normalize social notifications (safe) ──
-    const normalizedSocial = socialDocs
-      .map((n, i) => {
-        try {
-          const type = n.type || "Social";
-
-          // Safely determine isRead
-          let isRead = false;
-          if (typeof n.isRead === "boolean") {
-            isRead = n.isRead;
-          } else if (Array.isArray(n.readBy) && myId) {
-            isRead = n.readBy.some((id) => id?.toString() === myId);
-          }
-
-          // Build description from multiple possible fields
-          const description =
-            n.text ||
-            n.description ||
-            n.message ||
-            n.body ||
-            n.content ||
-            (n.sender?.name ? `${n.sender.name} interacted with you` : "") ||
-            "";
-
-          // Build deep-link target
-          const postId = n.postId || n.post?._id || n.post;
-          const userId =
-            n.userId ||
-            n.fromUserId ||
-            n.sender?._id ||
-            n.senderId ||
-            n.actor?._id;
-
-          let screenToOpen = n.screenToOpen || n.metadata?.screenToOpen || null;
-          let params = n.metadata?.params || {};
-
-          if (!screenToOpen) {
-            if ((type === "like" || type === "comment") && postId) {
-              screenToOpen = "PostDetailScreen";
-              params = { postId: postId.toString() };
-            } else if (
-              ["follow", "request", "connection_accepted", "request_declined"].includes(
-                type
-              ) &&
-              userId
-            ) {
-              screenToOpen = "UserProfile";
-              params = { userId: userId.toString() };
-            } else if (type === "message") {
-              screenToOpen = "Messages";
-              params = {
-                conversationId: n.conversationId,
-                userId: userId?.toString(),
-              };
-            } else if (
-              ["new_offer", "offer_accepted", "offer_rejected", "match_created"].includes(
-                type
-              )
-            ) {
-              screenToOpen = "Brands";
-              params = {};
-            }
-          }
-
-          return {
-            _id: n._id?.toString() || `social-${i}`,
-            title: TITLE_MAP[type] || n.title || "notification",
-            description,
-            type,
-            category: "Social",
-            mood: n.mood || "sorted",
-            iconUrl: n.iconUrl || null,
-            createdAt: n.createdAt || new Date().toISOString(),
-            isRead,
-            link: postId ? `/post/${postId}` : n.link || "",
-            metadata: {
-              ...(n.metadata || {}),
-              screenToOpen,
-              params,
-            },
-            screenToOpen,
-          };
-        } catch (e) {
-          console.log(
-            "[NotificationModal] normalize social item failed:",
-            e?.message,
-            n
-          );
-          return null;
-        }
-      })
-      .filter(Boolean);
-
-    // ── Normalize main notifications (safe) ──
-    const normalizedMain = mainDocs
-      .map((n, i) => {
-        try {
-          let isRead = false;
-          if (typeof n.isRead === "boolean") {
-            isRead = n.isRead;
-          } else if (Array.isArray(n.readBy) && myId) {
-            isRead = n.readBy.some((id) => id?.toString() === myId);
-          }
-          return {
-            ...n,
-            _id: n._id?.toString() || `main-${i}`,
-            category: n.category || "System",
-            description: n.description || n.text || n.message || "",
-            isRead,
-            createdAt: n.createdAt || new Date().toISOString(),
-          };
-        } catch (e) {
-          return null;
-        }
-      })
-      .filter(Boolean);
-
-    const merged = [...normalizedMain, ...normalizedSocial]
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .map((n) => ({ ...n, time: getTimeAgo(n.createdAt) }));
-
-    setNotifications(merged);
-
-    const unreadTotal = merged.filter((n) => !n.isRead).length;
-    if (typeof setUnreadCount === "function") {
-      setUnreadCount(unreadTotal);
-    }
-
-    setLoading(false);
-    setRefreshing(false);
+  const markAllRead = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    save(notifications.map((n) => ({ ...n, isRead: true })));
+    setUnreadCount?.(0);
+    axios.put(`${BASE_URL}/notification/mark-all-read`, {}, headers).catch(() => {});
   };
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    fetchNotifications();
-  }, [token, user]);
-
-  // ════════════════════════════════════════════
-  // ACTIONS
-  // ════════════════════════════════════════════
-  const markAsReadOnServer = async (id, type) => {
-    const isSocial = SOCIAL_TYPES.includes(type);
-
-    const socialEndpoints = [
-      `${BASE_URL}/social/notifications/${id}/read`,
-      `${BASE_URL}/social/notifications/mark-read/${id}`,
-      `${BASE_URL}/social/notification/${id}/read`,
-    ];
-    const mainEndpoints = [
-      `${BASE_URL}/notification/mark-read/${id}`,
-      `${BASE_URL}/notification/${id}/read`,
-    ];
-
-    const endpoints = isSocial
-      ? [...socialEndpoints, ...mainEndpoints]
-      : mainEndpoints;
-
-    // Optimistic update
-    setNotifications((prev) =>
-      prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
-    );
-    setUnreadCount((prev) => Math.max(0, prev - 1));
-
-    for (const url of endpoints) {
-      try {
-        await axios.patch(
-          url,
-          {},
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        return; // success
-      } catch (err) {
-        // try next endpoint
-      }
-    }
-    console.log("[markAsRead] all endpoints failed for", id);
+  const deleteOne = (item) => {
+    save(notifications.filter((n) => n._id !== item._id));
+    if (!item.isRead) setUnreadCount?.((prev) => Math.max(0, (prev || 0) - 1));
+    axios.delete(`${BASE_URL}/notification/delete/${item._id}`, headers).catch(() => {});
   };
 
-  const markAllRead = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    const calls = [
-      axios
-        .put(
-          `${BASE_URL}/notification/mark-all-read`,
-          {},
-          { headers: { Authorization: `Bearer ${token}` } }
-        )
-        .catch(() => null),
-      axios
-        .put(
-          `${BASE_URL}/social/notifications/mark-all-read`,
-          {},
-          { headers: { Authorization: `Bearer ${token}` } }
-        )
-        .catch(() => null),
-      axios
-        .patch(
-          `${BASE_URL}/social/notifications/read-all`,
-          {},
-          { headers: { Authorization: `Bearer ${token}` } }
-        )
-        .catch(() => null),
-    ];
-
-    await Promise.allSettled(calls);
-
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    setUnreadCount(0);
-  };
-
-  const deleteNotification = async (id, type) => {
-    const isSocial = SOCIAL_TYPES.includes(type);
-
-    const socialEndpoints = [
-      `${BASE_URL}/social/notifications/${id}`,
-      `${BASE_URL}/social/notification/${id}`,
-    ];
-    const mainEndpoints = [
-      `${BASE_URL}/notification/delete/${id}`,
-      `${BASE_URL}/notification/${id}`,
-    ];
-
-    const endpoints = isSocial
-      ? [...socialEndpoints, ...mainEndpoints]
-      : mainEndpoints;
-
-    // Optimistic remove
-    const deletedItem = notifications.find((n) => n._id === id);
-    setNotifications((prev) => prev.filter((n) => n._id !== id));
-    if (deletedItem && !deletedItem.isRead) {
-      setUnreadCount((prev) => Math.max(0, prev - 1));
-    }
-    if (selectedNotification?._id === id) {
-      setSelectedNotification(null);
-    }
-
-    for (const url of endpoints) {
-      try {
-        await axios.delete(url, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        return; // success
-      } catch (err) {
-        // try next
-      }
-    }
-    console.log("[delete] all endpoints failed for", id);
-  };
-
-  const clearAllNotifications = () => {
-    Alert.alert(
-      "clear all",
-      "are you sure you want to delete all notifications?",
-      [
-        { text: "cancel", style: "cancel" },
-        {
-          text: "clear all",
-          style: "destructive",
-          onPress: async () => {
-            const calls = [
-              axios
-                .delete(`${BASE_URL}/notification/clear-all`, {
-                  headers: { Authorization: `Bearer ${token}` },
-                })
-                .catch(() => null),
-              axios
-                .delete(`${BASE_URL}/social/notifications/clear-all`, {
-                  headers: { Authorization: `Bearer ${token}` },
-                })
-                .catch(() => null),
-            ];
-            await Promise.allSettled(calls);
-
-            setNotifications([]);
-            setUnreadCount(0);
-          },
+  const clearAll = () => {
+    Alert.alert('Clear all notifications?', 'This removes every notification in this list.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Clear all',
+        style: 'destructive',
+        onPress: () => {
+          save([]);
+          setUnreadCount?.(0);
+          axios.delete(`${BASE_URL}/notification/clear-all`, headers).catch(() => {});
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  const handleClose = () => {
-    updateUnreadCount(token);
-    setSelectedNotification(null);
-    onClose();
-  };
-
-  const handleOpenNotification = (item) => {
-  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  playSoundForNotification(item.type, item.mood);
-  setSelectedNotification(item);
-  if (!item.isRead) markAsReadOnServer(item._id, item.type);
-};
-
-  const handleGoToContent = () => {
-    if (!selectedNotification) return;
-    const opened = openDeepLink(selectedNotification, navigation);
-    if (opened) {
-      setTimeout(() => handleClose(), 250);
+  const onPressItem = (item) => {
+    Haptics.selectionAsync().catch(() => {});
+    if (!item.isRead) markRead(item._id);
+    const t = targetOf(item);
+    if (t) {
+      handleClose();
+      setTimeout(() => go(t.screen, t.params, navigation), isScreen ? 0 : 220);
     } else {
-      Alert.alert("no link", "this notification has no linked content.");
+      setExpandedId((id) => (id === item._id ? null : item._id));
     }
   };
 
-  // ════════════════════════════════════════════
-  // FILTER
-  // ════════════════════════════════════════════
-  const filteredData = notifications.filter((n) => {
-    if (filter === "All") return true;
-    if (filter === "Unread") return !n.isRead;
+  // ── list ──
+  const counts = useMemo(() => {
+    const c = { unread: 0, offers: 0, careers: 0, events: 0, other: 0 };
+    notifications.forEach((n) => {
+      if (!n.isRead) {
+        c.unread += 1;
+        const g = Object.keys(GROUPS).find((k) => GROUPS[k].includes(n.type)) || 'other';
+        c[g] += 1;
+      }
+    });
+    return c;
+  }, [notifications]);
 
-    if (filter === "Offers") {
-      return [
-        "new_offer",
-        "offer_accepted",
-        "offer_rejected",
-        "match_created",
-        "Offers",
-        "Offer",
-        "Brand",
-      ].includes(n.type);
-    }
+  const data = useMemo(() => {
+    const list = notifications.filter((n) => {
+      if (filter === 'all') return true;
+      if (filter === 'unread') return !n.isRead;
+      if (filter === 'other') return !Object.values(GROUPS).some((g) => g.includes(n.type));
+      return (GROUPS[filter] || []).includes(n.type);
+    });
+    return withSections(list);
+  }, [notifications, filter]);
 
-    if (filter === "System") {
-      return [
-        "System",
-        "system",
-        "Application Status",
-        "Job Application",
-        "Interview",
-        "Job Posting",
-        "Welcome",
-      ].includes(n.type);
-    }
-
-    if (filter === "Social") {
-      if (n.category === "Social") return true;
-      return SOCIAL_TYPES.includes(n.type);
-    }
-
-    return n.type === filter;
-  });
-
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
-
-  const canOpenContent = (item) =>
-    !!(
-      item.screenToOpen ||
-      item.metadata?.screen ||
-      item.metadata?.route ||
-      item.metadata?.screenToOpen ||
-      item.link ||
-      item.metadata?.link
+  const renderItem = ({ item }) => {
+    if (item._section) return <NotifSection label={item.label} />;
+    const [icon, tone] = lookFor(item.type);
+    const t = targetOf(item);
+    return (
+      <NotifRow
+        item={{
+          title: item.title || 'notification',
+          body: item.description,
+          time: timeAgo(item.createdAt),
+          unread: !item.isRead,
+          icon,
+          tone,
+          linkable: !!t,
+          expanded: expandedId === item._id,
+        }}
+        onPress={() => onPressItem(item)}
+        onDelete={() => deleteOne(item)}
+      />
     );
+  };
 
-  // ════════════════════════════════════════════
-  // HEADER
-  // ════════════════════════════════════════════
-  const Header = () => (
-    <Animated.View style={[styles.headerContainer, { opacity: headerFade }]}>
-      <View style={styles.dragHandle} />
-
-      <View style={styles.headerTop}>
-        <View style={styles.headerLeft}>
-          <View style={styles.headerTitleRow}>
-            <View style={styles.headerDot} />
-            <Text style={styles.headerTitle}>notifications</Text>
-            {unreadCount > 0 && (
-              <View style={styles.unreadBadge}>
-                <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        <TouchableOpacity
-          onPress={handleClose}
-          style={styles.closeBtn}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="close" size={22} color={BLACK} />
-        </TouchableOpacity>
+  const content = (
+    <>
+      <NotifHeader
+        unread={counts.unread}
+        onClose={handleClose}
+        onBack={null}
+        onMarkAll={notifications.length ? markAllRead : null}
+        onClear={notifications.length ? clearAll : null}
+        showHandle={!isScreen}
+      />
+      <View>
+        <NotifFilters filters={FILTERS} value={filter} onChange={setFilter} counts={counts} />
       </View>
-
-      {notifications.length > 0 && (
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            onPress={markAllRead}
-            style={styles.headerActionBtn}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="checkmark-done-outline" size={15} color={GOLD_DARK} />
-            <Text style={styles.actionTextGold}>mark all read</Text>
-          </TouchableOpacity>
-          <View style={styles.actionDot} />
-          <TouchableOpacity
-            onPress={clearAllNotifications}
-            style={styles.headerActionBtn}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="trash-outline" size={15} color={DANGER} />
-            <Text style={styles.actionTextRed}>clear all</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterScroll}
-      >
-        {["All", "Unread", "Offers", "System", "Social"].map((label) => {
-          const active = filter === label;
-          return (
-            <TouchableOpacity
-              key={label}
-              onPress={() => {
-                Haptics.selectionAsync();
-                setFilter(label);
+      {loading ? (
+        <NotifSkeleton />
+      ) : (
+        <FlatList
+          data={data}
+          keyExtractor={(item) => item._id}
+          renderItem={renderItem}
+          contentContainerStyle={[{ paddingBottom: 30 }, data.length === 0 && { flexGrow: 1 }]}
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={12}
+          windowSize={7}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                fetchNotifications();
               }}
-              style={[styles.filterChip, active && styles.filterChipActive]}
-              activeOpacity={0.75}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  active && styles.filterChipTextActive,
-                ]}
-              >
-                {label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-    </Animated.View>
+              colors={[N.dark]}
+              tintColor={N.dark}
+            />
+          }
+          ListEmptyComponent={
+            filter === 'all' ? (
+              <NotifEmpty />
+            ) : (
+              <NotifEmpty title="nothing here" sub="no notifications in this filter right now." icon="funnel-outline" />
+            )
+          }
+        />
+      )}
+    </>
   );
 
-  // ════════════════════════════════════════════
-  // NOTIFICATION CARD
-  // ════════════════════════════════════════════
-  const NotificationCard = ({ item, index }) => {
-    const cardFade = useRef(new Animated.Value(0)).current;
-    const cardSlide = useRef(new Animated.Value(16)).current;
-    const scale = useRef(new Animated.Value(1)).current;
+  if (isScreen) {
+    return <View style={[styles.screen, { paddingTop: Platform.OS === 'ios' ? 50 : 30 }]}>{content}</View>;
+  }
 
-    useEffect(() => {
-      Animated.parallel([
-        Animated.timing(cardFade, {
-          toValue: 1,
-          duration: 320,
-          delay: Math.min(index * 40, 400),
-          useNativeDriver: true,
-        }),
-        Animated.spring(cardSlide, {
-          toValue: 0,
-          friction: 8,
-          tension: 45,
-          delay: Math.min(index * 40, 400),
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }, []);
+  if (!mounted && !visible) return null;
 
-    const onPressIn = () =>
-      Animated.spring(scale, {
-        toValue: 0.98,
-        friction: 5,
-        useNativeDriver: true,
-      }).start();
-
-    const onPressOut = () =>
-      Animated.spring(scale, {
-        toValue: 1,
-        friction: 5,
-        useNativeDriver: true,
-      }).start();
-
-    const linkable = canOpenContent(item);
-    const unread = !item.isRead;
-
-    return (
-      <Animated.View
-        style={{
-          opacity: cardFade,
-          transform: [{ translateY: cardSlide }, { scale }],
-        }}
-      >
-        <TouchableOpacity
-          style={[styles.card, unread ? styles.cardUnread : styles.cardRead]}
-          onPress={() => handleOpenNotification(item)}
-          onPressIn={onPressIn}
-          onPressOut={onPressOut}
-          activeOpacity={0.9}
-        >
-          <LinearGradient
-            colors={unread ? [GOLD + "25", GOLD + "08"] : [LIGHT, LIGHT]}
-            style={styles.iconBox}
-          >
-            <Ionicons
-              name={getIconName(item.type)}
-              size={20}
-              color={unread ? GOLD_DARK : MUTED}
-            />
-          </LinearGradient>
-
-          <View style={styles.cardContent}>
-            <View style={styles.cardHeader}>
-              <Text
-                style={[styles.cardTitle, unread && styles.cardTitleUnread]}
-                numberOfLines={1}
-              >
-                {item.title}
-              </Text>
-              <Text style={styles.cardTime}>{item.time}</Text>
-            </View>
-            <Text style={styles.cardDesc} numberOfLines={2}>
-              {item.description || "no description"}
-            </Text>
-
-            {linkable && (
-              <View style={styles.cardLinkHint}>
-                <Text style={styles.cardLinkHintText}>tap to open</Text>
-                <Ionicons name="arrow-forward" size={11} color={GOLD_DARK} />
-              </View>
-            )}
-          </View>
-
-          <View style={styles.rightCol}>
-            {unread && <View style={styles.unreadDot} />}
-            <TouchableOpacity
-              style={styles.deleteBtn}
-              onPress={() => deleteNotification(item._id, item.type)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons name="close" size={16} color="#c5c5c5" />
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Animated.View>
-    );
-  };
-
-  // ════════════════════════════════════════════
-  // DETAIL VIEW
-  // ════════════════════════════════════════════
-  const DetailView = () => {
-    if (!selectedNotification) return null;
-    const linkable = canOpenContent(selectedNotification);
-
-    return (
-      <Animated.View
-        style={[
-          styles.detailWrapper,
-          { transform: [{ translateX: detailSlide }] },
-        ]}
-      >
-        <View style={styles.detailHeader}>
-          <TouchableOpacity
-            style={styles.detailBackBtn}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              setSelectedNotification(null);
-            }}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="chevron-back" size={22} color={BLACK} />
-          </TouchableOpacity>
-
-          <Text style={styles.detailHeaderTitle}>detail</Text>
-
-          <TouchableOpacity
-            style={styles.detailDeleteBtn}
-            onPress={() =>
-              deleteNotification(selectedNotification._id, selectedNotification.type)
-            }
-            activeOpacity={0.7}
-          >
-            <Ionicons name="trash-outline" size={18} color={DANGER} />
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView
-          contentContainerStyle={styles.detailScroll}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.detailDateBadge}>
-            <View style={styles.detailDateDot} />
-            <Text style={styles.detailDateText}>{selectedNotification.time}</Text>
-          </View>
-
-          <View style={styles.detailCard}>
-            <LinearGradient
-              colors={[GOLD + "30", GOLD + "08"]}
-              style={styles.detailIconWrap}
-            >
-              <Ionicons
-                name={getIconName(selectedNotification.type)}
-                size={30}
-                color={GOLD_DARK}
-              />
-            </LinearGradient>
-
-            <Text style={styles.detailTitle}>{selectedNotification.title}</Text>
-
-            <View style={styles.detailDivider} />
-
-            <Text style={styles.detailBody}>
-              {selectedNotification.description || "no description"}
-            </Text>
-
-            <View style={styles.detailFooter}>
-              <View style={styles.detailMetaRow}>
-                <View style={styles.detailMetaIconWrap}>
-                  <Ionicons name="time-outline" size={13} color={MUTED} />
-                </View>
-                <Text style={styles.detailMetaText}>
-                  {new Date(selectedNotification.createdAt).toLocaleString(
-                    "en-US",
-                    {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    }
-                  )}
-                </Text>
-              </View>
-
-              <View style={styles.detailMetaRow}>
-                <View
-                  style={[
-                    styles.detailMetaIconWrap,
-                    {
-                      backgroundColor: selectedNotification.isRead
-                        ? SUCCESS + "15"
-                        : GOLD + "20",
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name={
-                      selectedNotification.isRead ? "checkmark-circle" : "ellipse"
-                    }
-                    size={13}
-                    color={selectedNotification.isRead ? SUCCESS : GOLD_DARK}
-                  />
-                </View>
-                <Text
-                  style={[
-                    styles.detailMetaText,
-                    {
-                      color: selectedNotification.isRead ? SUCCESS : GOLD_DARK,
-                    },
-                  ]}
-                >
-                  {selectedNotification.isRead ? "read" : "unread"}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.detailTypeCard}>
-            <View style={styles.detailTypeLeft}>
-              <Text style={styles.detailTypeLabel}>category</Text>
-              <Text style={styles.detailTypeValue}>
-                {selectedNotification.category ||
-                  selectedNotification.type ||
-                  "system"}
-              </Text>
-            </View>
-            <View style={styles.detailTypePill}>
-              <Text style={styles.detailTypePillText}>
-                {(selectedNotification.type || "notification").toLowerCase()}
-              </Text>
-            </View>
-          </View>
-
-          {linkable && (
-            <TouchableOpacity
-              style={styles.openBtn}
-              onPress={handleGoToContent}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="open-outline" size={16} color={BLACK} />
-              <Text style={styles.openBtnText}>open notification</Text>
-              <View style={styles.openBtnArrow}>
-                <Ionicons name="arrow-forward" size={13} color={GOLD} />
-              </View>
-            </TouchableOpacity>
-          )}
-
-          <View style={{ height: 40 }} />
-        </ScrollView>
-      </Animated.View>
-    );
-  };
-
-  // ════════════════════════════════════════════
-  // MAIN RENDER
-  // ════════════════════════════════════════════
   return (
-    <Modal
-      visible={visible}
-      animationType="none"
-      transparent
-      onRequestClose={handleClose}
-      statusBarTranslucent
-    >
-      <StatusBar barStyle="dark-content" />
+    <Modal visible={mounted || visible} transparent animationType="none" onRequestClose={handleClose} statusBarTranslucent>
       <View style={styles.overlay}>
-        <Animated.View style={[styles.backdrop, { opacity: backdropFade }]}>
+        <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: backdrop }]}>
           <Pressable style={{ flex: 1 }} onPress={handleClose} />
         </Animated.View>
-
-        <Animated.View
-          style={[styles.sheet, { transform: [{ translateY: sheetSlide }] }]}
-        >
-          <View style={styles.listWrapper}>
-            <Header />
-            {loading && !refreshing ? (
-              <View style={styles.loaderContainer}>
-                <ActivityIndicator size="large" color={GOLD} />
-                <Text style={styles.loaderText}>loading...</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={filteredData}
-                keyExtractor={(item) => item._id}
-                renderItem={({ item, index }) => (
-                  <NotificationCard item={item} index={index} />
-                )}
-                refreshControl={
-                  <RefreshControl
-                    refreshing={refreshing}
-                    onRefresh={onRefresh}
-                    colors={[GOLD]}
-                    tintColor={GOLD}
-                    progressBackgroundColor={WHITE}
-                  />
-                }
-                contentContainerStyle={styles.listContainer}
-                showsVerticalScrollIndicator={false}
-                ListEmptyComponent={
-                  <View style={styles.emptyContainer}>
-                    <LinearGradient
-                      colors={[GOLD + "20", GOLD + "05"]}
-                      style={styles.emptyIcon}
-                    >
-                      <Ionicons
-                        name="notifications-off-outline"
-                        size={44}
-                        color={GOLD_DARK}
-                      />
-                    </LinearGradient>
-                    <Text style={styles.emptyLabel}>no notifications yet</Text>
-                    <Text style={styles.emptySubLabel}>
-                      we'll let you know when something arrives.
-                    </Text>
-                  </View>
-                }
-              />
-            )}
-          </View>
-
-          <DetailView />
-        </Animated.View>
+        <Animated.View style={[styles.sheet, { transform: [{ translateY: sheetY }] }]}>{content}</Animated.View>
       </View>
     </Modal>
   );
 };
 
-// ════════════════════════════════════════════
-// STYLES
-// ════════════════════════════════════════════
 const styles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: "flex-end" },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.55)",
-  },
+  overlay: { flex: 1, justifyContent: 'flex-end' },
+  backdrop: { backgroundColor: 'rgba(10,10,10,0.5)' },
   sheet: {
-    backgroundColor: WHITE,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    height: SCREEN_HEIGHT * 0.92,
-    width: "100%",
-    overflow: "hidden",
+    height: SCREEN_HEIGHT * 0.88,
+    backgroundColor: N.white,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    paddingTop: 10,
+    overflow: 'hidden',
   },
-  listWrapper: { flex: 1 },
-
-  // ─── Header ───
-  headerContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 14,
-    backgroundColor: WHITE,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-  },
-  dragHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: "#e0e0e0",
-    borderRadius: 2,
-    alignSelf: "center",
-    marginBottom: 14,
-  },
-  headerTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-  headerLeft: { flex: 1 },
-  headerTitleRow: { flexDirection: "row", alignItems: "center" },
-  headerDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: GOLD,
-    marginRight: 10,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: "900",
-    color: BLACK,
-    letterSpacing: -0.5,
-    textTransform: "lowercase",
-  },
-  unreadBadge: {
-    backgroundColor: GOLD,
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 7,
-    marginLeft: 10,
-  },
-  unreadBadgeText: { color: BLACK, fontSize: 11, fontWeight: "900" },
-  closeBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 14,
-    backgroundColor: LIGHT,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-    gap: 8,
-  },
-  headerActionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    backgroundColor: LIGHT,
-    gap: 5,
-  },
-  actionTextGold: {
-    color: GOLD_DARK,
-    fontWeight: "800",
-    fontSize: 11,
-    textTransform: "lowercase",
-  },
-  actionTextRed: {
-    color: DANGER,
-    fontWeight: "800",
-    fontSize: 11,
-    textTransform: "lowercase",
-  },
-  actionDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: BORDER },
-
-  filterScroll: { flexDirection: "row", gap: 8, paddingRight: 8 },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 12,
-    backgroundColor: LIGHT,
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-  filterChipActive: { backgroundColor: BLACK, borderColor: BLACK },
-  filterChipText: {
-    color: MUTED,
-    fontWeight: "800",
-    fontSize: 11.5,
-    textTransform: "lowercase",
-    letterSpacing: 0.2,
-  },
-  filterChipTextActive: { color: GOLD },
-
-  // ─── List ───
-  listContainer: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 40 },
-
-  // ─── Card ───
-  card: {
-    flexDirection: "row",
-    padding: 14,
-    borderRadius: 16,
-    marginBottom: 10,
-    alignItems: "flex-start",
-    borderWidth: 1,
-    backgroundColor: WHITE,
-  },
-  cardUnread: { backgroundColor: GOLD_LIGHT, borderColor: GOLD + "35" },
-  cardRead: { backgroundColor: WHITE, borderColor: BORDER },
-  iconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-  cardContent: { flex: 1 },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 3,
-  },
-  cardTitle: {
-    fontSize: 13.5,
-    fontWeight: "700",
-    color: BLACK,
-    flex: 1,
-    marginRight: 8,
-    textTransform: "lowercase",
-    letterSpacing: -0.1,
-  },
-  cardTitleUnread: { fontWeight: "900" },
-  cardTime: { fontSize: 10, color: MUTED, fontWeight: "600" },
-  cardDesc: { fontSize: 12, color: "#666", lineHeight: 17, fontWeight: "500" },
-  cardLinkHint: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 6,
-  },
-  cardLinkHintText: {
-    fontSize: 10,
-    color: GOLD_DARK,
-    fontWeight: "800",
-    textTransform: "lowercase",
-    letterSpacing: 0.2,
-  },
-
-  rightCol: {
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginLeft: 8,
-    alignSelf: "stretch",
-  },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: GOLD,
-    marginTop: 4,
-  },
-  deleteBtn: { padding: 4, marginTop: 4 },
-
-  // ════════════════════════════════════════════
-  // DETAIL — full-screen slide
-  // ════════════════════════════════════════════
-  detailWrapper: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: WHITE,
-    zIndex: 10,
-  },
-  detailHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-    backgroundColor: WHITE,
-  },
-  detailBackBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 14,
-    backgroundColor: LIGHT,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-  detailHeaderTitle: {
-    fontSize: 15,
-    fontWeight: "900",
-    color: BLACK,
-    textTransform: "lowercase",
-    letterSpacing: -0.2,
-  },
-  detailDeleteBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 14,
-    backgroundColor: "#fef2f2",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: DANGER + "30",
-  },
-
-  detailScroll: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
-  },
-  detailDateBadge: {
-    alignSelf: "center",
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: LIGHT,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 12,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: BORDER,
-    gap: 8,
-  },
-  detailDateDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: GOLD,
-  },
-  detailDateText: {
-    fontSize: 11,
-    color: MUTED,
-    fontWeight: "700",
-    letterSpacing: 0.4,
-    textTransform: "lowercase",
-  },
-
-  detailCard: {
-    backgroundColor: WHITE,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: BORDER,
-    padding: 24,
-    alignItems: "center",
-    marginBottom: 14,
-  },
-  detailIconWrap: {
-    width: 68,
-    height: 68,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 18,
-    borderWidth: 1,
-    borderColor: GOLD + "40",
-  },
-  detailTitle: {
-    fontSize: 20,
-    fontWeight: "900",
-    color: BLACK,
-    textAlign: "center",
-    marginBottom: 14,
-    textTransform: "lowercase",
-    letterSpacing: -0.3,
-  },
-  detailDivider: {
-    width: 44,
-    height: 2,
-    backgroundColor: GOLD,
-    borderRadius: 1,
-    marginBottom: 16,
-  },
-  detailBody: {
-    fontSize: 14.5,
-    color: "#444",
-    lineHeight: 23,
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  detailFooter: {
-    width: "100%",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  detailMetaRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  detailMetaIconWrap: {
-    width: 26,
-    height: 26,
-    borderRadius: 9,
-    backgroundColor: LIGHT,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  detailMetaText: {
-    fontSize: 11.5,
-    color: MUTED,
-    fontWeight: "700",
-    textTransform: "lowercase",
-  },
-
-  // Type card
-  detailTypeCard: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: LIGHT,
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: BORDER,
-    marginBottom: 14,
-  },
-  detailTypeLeft: {},
-  detailTypeLabel: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: MUTED,
-    textTransform: "lowercase",
-    letterSpacing: 0.4,
-    marginBottom: 2,
-  },
-  detailTypeValue: {
-    fontSize: 14,
-    fontWeight: "900",
-    color: BLACK,
-    textTransform: "lowercase",
-  },
-  detailTypePill: {
-    backgroundColor: GOLD,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 10,
-  },
-  detailTypePillText: {
-    fontSize: 10,
-    fontWeight: "900",
-    color: BLACK,
-    textTransform: "lowercase",
-    letterSpacing: 0.3,
-  },
-
-  // CTA
-  openBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: GOLD,
-    borderRadius: 16,
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    borderWidth: 1.5,
-    borderColor: BLACK,
-  },
-  openBtnText: {
-    color: BLACK,
-    fontSize: 13,
-    fontWeight: "900",
-    textTransform: "lowercase",
-    letterSpacing: 0.3,
-    flex: 1,
-  },
-  openBtnArrow: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: BLACK,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  // ─── States ───
-  loaderContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  loaderText: {
-    marginTop: 12,
-    fontSize: 13,
-    color: MUTED,
-    fontWeight: "600",
-    textTransform: "lowercase",
-  },
-  emptyContainer: { alignItems: "center", marginTop: 80 },
-  emptyIcon: {
-    width: 96,
-    height: 96,
-    borderRadius: 28,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: GOLD + "30",
-    marginBottom: 16,
-  },
-  emptyLabel: {
-    fontSize: 17,
-    fontWeight: "900",
-    color: BLACK,
-    textTransform: "lowercase",
-    letterSpacing: -0.2,
-  },
-  emptySubLabel: {
-    fontSize: 12.5,
-    color: MUTED,
-    fontWeight: "500",
-    marginTop: 6,
-    textAlign: "center",
-    paddingHorizontal: 40,
-  },
+  screen: { flex: 1, backgroundColor: N.white },
 });
 
 export default NotificationModal;

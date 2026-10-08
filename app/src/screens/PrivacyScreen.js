@@ -7,58 +7,133 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  SafeAreaView,
   Animated,
-  Dimensions,
+  LayoutAnimation,
   Platform,
+  UIManager,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const { width, height } = Dimensions.get('window');
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const C = {
+  bg: '#ffffff',
+  dark: '#1a1a1a',
+  gold: '#f9c349',
+  goldSoft: '#fff8e6',
+  surface: '#F7F9F8',
+  border: '#E8E8E8',
+  divider: '#f2f2f2',
+  muted: '#8a8a8a',
+  secondary: '#5f5f5f',
+};
+
+const STEPS = ['terms', 'guidelines', 'sign in'];
+
+const TERMS = [
+  { icon: 'checkmark-done-outline', title: 'Acceptance of Terms', text: 'By using tdc application, you agree to comply with and be bound by these Terms and Conditions. If you do not agree, please do not use our services.' },
+  { icon: 'person-outline', title: 'User Account', points: ['Must be 13+ years old', 'Maintain account confidentiality', 'Provide accurate information', 'Responsible for all account activity'] },
+  { icon: 'create-outline', title: 'User-Generated Content', points: ['You retain ownership of content', 'Grant tdc license to use content', 'No content violating guidelines', 'TDC may remove violating content'] },
+  { icon: 'ribbon-outline', title: 'Intellectual Property', points: ['Content protected by copyright', 'No reproduction without permission', 'tdc trademarks are property of The Deft Crew'] },
+  { icon: 'warning-outline', title: 'Limitation of Liability', text: 'tdc is provided "as is" without warranties. We are not liable for any damages arising from use of our services.' },
+  { icon: 'close-circle-outline', title: 'Termination', text: 'We reserve the right to terminate or suspend your account for violations of these terms or Community Guidelines.' },
+  { icon: 'refresh-outline', title: 'Changes to Terms', text: 'tdc may update these terms at any time. You will be notified of significant changes.' },
+  { icon: 'mail-outline', title: 'Contact', text: 'support@gettdc.pk\nPakistan' },
+  { icon: 'business-outline', title: 'Governing Law', text: 'These terms are governed by the laws of Pakistan. Disputes resolved in Karachi, Pakistan.' },
+];
+
+const PRIVACY = [
+  { icon: 'folder-open-outline', title: 'Information We Collect', points: ['Name, email, phone number', 'Profile information & preferences', 'Content you create or share', 'Device & usage data'] },
+  { icon: 'sparkles-outline', title: 'How We Use Data', points: ['Provide & improve services', 'Personalize experience', 'Send updates & promotions', 'Prevent fraud'] },
+  { icon: 'share-social-outline', title: 'Information Sharing', points: ['No selling of data', 'Shared with service providers', 'When required by law', 'With your consent'] },
+  { icon: 'lock-closed-outline', title: 'Data Security', text: 'We implement strong security measures to protect your data. However, no method is 100% secure.' },
+  { icon: 'hand-left-outline', title: 'Your Rights', points: ['Access & update data', 'Request deletion', 'Opt-out of marketing', 'Withdraw consent'] },
+  { icon: 'analytics-outline', title: 'Cookies', text: 'We use cookies to enhance experience, analyze usage, and deliver personalized content.' },
+  { icon: 'time-outline', title: 'Data Retention', text: 'We retain data as long as necessary for services, legal obligations, and dispute resolution.' },
+  { icon: 'happy-outline', title: "Children's Privacy", text: 'Services not for under 13. We do not knowingly collect data from children.' },
+  { icon: 'refresh-outline', title: 'Policy Changes', text: 'We may update this policy. Changes will be posted here with updated date.' },
+  { icon: 'mail-outline', title: 'Contact Us', text: 'privacy@thedeftcrew.com\nKarachi, Pakistan' },
+];
+
+const HIGHLIGHTS = {
+  terms: [
+    { icon: 'person-outline', text: 'You need to be 13 or older' },
+    { icon: 'create-outline', text: 'Your content stays yours' },
+  ],
+  privacy: [
+    { icon: 'shield-checkmark-outline', text: 'We never sell your data' },
+    { icon: 'trash-outline', text: 'You can ask us to delete it anytime' },
+  ],
+};
+
+function StepBar({ active }) {
+  return (
+    <View style={styles.steps}>
+      {STEPS.map((label, i) => {
+        const on = i <= active;
+        return (
+          <View key={label} style={styles.stepItem}>
+            <View style={[styles.stepBar, on && styles.stepBarOn]} />
+            <Text style={[styles.stepLabel, i === active && styles.stepLabelOn]}>{label}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function AccordionRow({ item, open, onToggle, last }) {
+  return (
+    <View style={[styles.row, last && styles.rowLast]}>
+      <TouchableOpacity style={styles.rowHead} onPress={onToggle} activeOpacity={0.7}>
+        <View style={styles.rowIcon}>
+          <Ionicons name={item.icon} size={14} color={C.gold} />
+        </View>
+        <Text style={styles.rowTitle}>{item.title}</Text>
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={C.muted} />
+      </TouchableOpacity>
+      {open && (
+        <View style={styles.rowBody}>
+          {item.text ? <Text style={styles.bodyText}>{item.text}</Text> : null}
+          {item.points
+            ? item.points.map((p) => (
+                <View key={p} style={styles.point}>
+                  <View style={styles.pointDot} />
+                  <Text style={styles.bodyText}>{p}</Text>
+                </View>
+              ))
+            : null}
+        </View>
+      )}
+    </View>
+  );
+}
 
 export default function TermsScreen({ navigation }) {
+  const [checking, setChecking] = useState(true);
   const [agreed, setAgreed] = useState(false);
   const [activeTab, setActiveTab] = useState('terms');
-  const [isFirstLaunch, setIsFirstLaunch] = useState(true);
-  const scrollY = useRef(new Animated.Value(0)).current;
-  
+  const [openIndex, setOpenIndex] = useState(0);
+  const [saving, setSaving] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
-  const checkboxScale = useRef(new Animated.Value(1)).current;
-  const buttonScale = useRef(new Animated.Value(1)).current;
-
-  const headerOpacity = scrollY.interpolate({
-    inputRange: [0, 60],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
 
   useEffect(() => {
     checkLaunchStatus();
-    
-    Animated.parallel([
+  }, []);
+
+  useEffect(() => {
+    if (!checking) {
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 600,
+        duration: 180,
         useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
+      }).start();
+    }
+  }, [checking]);
 
   const checkLaunchStatus = async () => {
     try {
@@ -73,582 +148,418 @@ export default function TermsScreen({ navigation }) {
           // Go to guidelines
           navigation.replace('CommunityGuidelines');
         }
+        return;
       }
     } catch (e) {
       console.log('Error checking launch status:', e);
     }
+    setChecking(false);
   };
 
-  const handleCheckboxPress = () => {
-    Animated.sequence([
-      Animated.timing(checkboxScale, {
-        toValue: 0.8,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.spring(checkboxScale, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    setAgreed(!agreed);
+  const switchTab = (tab) => {
+    if (tab === activeTab) return;
+    setActiveTab(tab);
+    setOpenIndex(0);
   };
 
-  const handleContinue = () => {
-    if (agreed) {
-      Animated.sequence([
-        Animated.timing(buttonScale, {
-          toValue: 0.95,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-        Animated.spring(buttonScale, {
-          toValue: 1,
-          tension: 50,
-          friction: 7,
-          useNativeDriver: true,
-        }),
-      ]).start(async () => {
-        try {
-          // Save that user accepted terms
-          await AsyncStorage.setItem("termsAccepted", "true");
-          // Navigate to Community Guidelines
-          navigation.replace('CommunityGuidelines');
-        } catch (e) {
-          console.log('Error saving terms status:', e);
-          navigation.replace('CommunityGuidelines');
-        }
-      });
+  const toggleRow = (i) => {
+    LayoutAnimation.configureNext(LayoutAnimation.create(160, 'easeInEaseOut', 'opacity'));
+    setOpenIndex((cur) => (cur === i ? -1 : i));
+  };
+
+  const handleContinue = async () => {
+    if (!agreed || saving) return;
+    setSaving(true);
+    try {
+      // Save that user accepted terms
+      await AsyncStorage.setItem("termsAccepted", "true");
+      // Navigate to Community Guidelines
+      navigation.replace('CommunityGuidelines');
+    } catch (e) {
+      console.log('Error saving terms status:', e);
+      navigation.replace('CommunityGuidelines');
     }
   };
 
-  const TermsContent = () => (
-    <>
-      {[
-        { num: '01', title: 'Acceptance of Terms', text: 'By using  tdc application, you agree to comply with and be bound by these Terms and Conditions. If you do not agree, please do not use our services.' },
-        { num: '02', title: 'User Account', text: '• Must be 13+ years old\n• Maintain account confidentiality\n• Provide accurate information\n• Responsible for all account activity' },
-        { num: '03', title: 'User-Generated Content', text: '• You retain ownership of content\n• Grant tdc license to use content\n• No content violating guidelines\n• TDC may remove violating content' },
-        { num: '04', title: 'Intellectual Property', text: '• Content protected by copyright\n• No reproduction without permission\n• tdc trademarks are property of The Deft Crew' },
-        { num: '05', title: 'Limitation of Liability', text: 'tdc is provided "as is" without warranties. We are not liable for any damages arising from use of our services.' },
-        { num: '06', title: 'Termination', text: 'We reserve the right to terminate or suspend your account for violations of these terms or Community Guidelines.' },
-        { num: '07', title: 'Changes to Terms', text: 'tdc may update these terms at any time. You will be notified of significant changes.' },
-        { num: '08', title: 'Contact', text: 'support@gettdc.pk\ Pakistan' },
-        { num: '09', title: 'Governing Law', text: 'These terms are governed by the laws of Pakistan. Disputes resolved in Karachi, Pakistan.' },
-      ].map((item, index) => (
-        <Animated.View 
-          key={index} 
-          style={[
-            styles.section,
-            {
-              opacity: fadeAnim,
-              transform: [
-                { 
-                  translateY: slideAnim.interpolate({
-                    inputRange: [0, 30],
-                    outputRange: [0, 30 * (index + 1) * 0.05],
-                  })
-                }
-              ]
-            }
-          ]}
-        >
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionNumber}>{item.num}</Text>
-            <View style={styles.sectionLine} />
-            <Text style={styles.sectionTitle}>{item.title}</Text>
-          </View>
-          <Text style={styles.sectionText}>{item.text}</Text>
-        </Animated.View>
-      ))}
-    </>
-  );
+  if (checking) {
+    return <View style={styles.blank} />;
+  }
 
-  const PrivacyContent = () => (
-    <>
-      {[
-        { num: '01', title: 'Information We Collect', text: '• Name, email, phone number\n• Profile information & preferences\n• Content you create or share\n• Device & usage data' },
-        { num: '02', title: 'How We Use Data', text: '• Provide & improve services\n• Personalize experience\n• Send updates & promotions\n• Prevent fraud' },
-        { num: '03', title: 'Information Sharing', text: '• No selling of data\n• Shared with service providers\n• When required by law\n• With your consent' },
-        { num: '04', title: 'Data Security', text: 'We implement strong security measures to protect your data. However, no method is 100% secure.' },
-        { num: '05', title: 'Your Rights', text: '• Access & update data\n• Request deletion\n• Opt-out of marketing\n• Withdraw consent' },
-        { num: '06', title: 'Cookies', text: 'We use cookies to enhance experience, analyze usage, and deliver personalized content.' },
-        { num: '07', title: 'Data Retention', text: 'We retain data as long as necessary for services, legal obligations, and dispute resolution.' },
-        { num: '08', title: 'Children\'s Privacy', text: 'Services not for under 13. We do not knowingly collect data from children.' },
-        { num: '09', title: 'Policy Changes', text: 'We may update this policy. Changes will be posted here with updated date.' },
-        { num: '10', title: 'Contact Us', text: 'privacy@thedeftcrew.com\nKarachi, Pakistan' },
-      ].map((item, index) => (
-        <Animated.View 
-          key={index} 
-          style={[
-            styles.section,
-            {
-              opacity: fadeAnim,
-              transform: [
-                { 
-                  translateY: slideAnim.interpolate({
-                    inputRange: [0, 30],
-                    outputRange: [0, 30 * (index + 1) * 0.05],
-                  })
-                }
-              ]
-            }
-          ]}
-        >
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionNumber}>{item.num}</Text>
-            <View style={styles.sectionLine} />
-            <Text style={styles.sectionTitle}>{item.title}</Text>
-          </View>
-          <Text style={styles.sectionText}>{item.text}</Text>
-        </Animated.View>
-      ))}
-    </>
-  );
+  const items = activeTab === 'terms' ? TERMS : PRIVACY;
+  const canGoBack = navigation.canGoBack && navigation.canGoBack();
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
-      
-      <LinearGradient
-        colors={['#000000', '#1a1a1a']}
-        style={styles.headerGradient}
-      >
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="chevron-back" size={28} color="#fff" />
-          </TouchableOpacity>
-          
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Legal</Text>
-          </View>
-          
-          <TouchableOpacity style={styles.headerRight}>
-            <Ionicons name="ellipsis-vertical" size={20} color="rgba(255,255,255,0.5)" />
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
+      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
 
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'terms' && styles.tabActive]}
-          onPress={() => setActiveTab('terms')}
-          activeOpacity={0.7}
-        >
-          <View style={styles.tabContent}>
-            <View style={[styles.tabIcon, activeTab === 'terms' && styles.tabIconActive]}>
-              <Ionicons 
-                name="document-text-outline" 
-                size={18} 
-                color={activeTab === 'terms' ? '#f9c349' : '#999'} 
-              />
-            </View>
-            <Text style={[styles.tabText, activeTab === 'terms' && styles.tabTextActive]}>
-              Terms & Conditions
-            </Text>
-          </View>
-          {activeTab === 'terms' && <View style={styles.tabIndicator} />}
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'privacy' && styles.tabActive]}
-          onPress={() => setActiveTab('privacy')}
-          activeOpacity={0.7}
-        >
-          <View style={styles.tabContent}>
-            <View style={[styles.tabIcon, activeTab === 'privacy' && styles.tabIconActive]}>
-              <Ionicons 
-                name="shield-outline" 
-                size={18} 
-                color={activeTab === 'privacy' ? '#f9c349' : '#999'} 
-              />
-            </View>
-            <Text style={[styles.tabText, activeTab === 'privacy' && styles.tabTextActive]}>
-              Privacy Policy
-            </Text>
-          </View>
-          {activeTab === 'privacy' && <View style={styles.tabIndicator} />}
-        </TouchableOpacity>
+      <View style={styles.header}>
+        {canGoBack ? (
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+            <Ionicons name="chevron-back" size={22} color={C.dark} />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerSpacer} />
+        )}
+        <Text style={styles.brand}>
+          tdc<Text style={styles.brandDot}>.</Text>
+        </Text>
+        <View style={styles.headerSpacer} />
       </View>
 
-      <Animated.ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
-        )}
-        scrollEventThrottle={16}
-      >
-        <Animated.View 
-          style={[
-            styles.heroSection,
-            {
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }]
-            }
-          ]}
+      <StepBar active={0} />
+
+      <Animated.View style={[styles.flex, { opacity: fadeAnim }]}>
+        <ScrollView
+          style={styles.flex}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.heroTitle}>
-            {activeTab === 'terms' ? 'Terms & Conditions' : 'Privacy Policy'}
+          <View style={styles.iconTile}>
+            <Ionicons name="document-text" size={26} color={C.gold} />
+          </View>
+          <Text style={styles.title}>the fine print</Text>
+          <Text style={styles.subtitle}>
+            A quick read on how tdc works and how we look after your data. Tap any section to open it.
           </Text>
-          <Text style={styles.heroSubtitle}>
-            {activeTab === 'terms' ? 'Please review before continuing' : 'Your data is safe with us'}
+
+          <View style={styles.segment}>
+            {[
+              { key: 'terms', label: 'terms', icon: 'document-text-outline' },
+              { key: 'privacy', label: 'privacy', icon: 'shield-outline' },
+            ].map((t) => {
+              const on = activeTab === t.key;
+              return (
+                <TouchableOpacity
+                  key={t.key}
+                  style={[styles.segmentBtn, on && styles.segmentBtnOn]}
+                  onPress={() => switchTab(t.key)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name={t.icon} size={16} color={on ? C.gold : C.muted} />
+                  <Text style={[styles.segmentText, on && styles.segmentTextOn]}>{t.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <View style={styles.highlights}>
+            {HIGHLIGHTS[activeTab].map((h) => (
+              <View key={h.text} style={styles.chip}>
+                <Ionicons name={h.icon} size={16} color={C.dark} />
+                <Text style={styles.chipText}>{h.text}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.card}>
+            {items.map((item, i) => (
+              <AccordionRow
+                key={`${activeTab}-${item.title}`}
+                item={item}
+                open={openIndex === i}
+                onToggle={() => toggleRow(i)}
+                last={i === items.length - 1}
+              />
+            ))}
+          </View>
+
+          <Text style={styles.version}>
+            v2.0 · updated {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
           </Text>
-          <View style={styles.heroDivider} />
-        </Animated.View>
-
-        <View style={styles.contentContainer}>
-          {activeTab === 'terms' ? <TermsContent /> : <PrivacyContent />}
-        </View>
-
-        <Animated.View 
-          style={[
-            styles.agreementWrapper,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }
-          ]}
-        >
-          <TouchableOpacity
-            style={styles.checkboxRow}
-            onPress={handleCheckboxPress}
-            activeOpacity={0.7}
-          >
-            <Animated.View 
-              style={[
-                styles.checkbox, 
-                agreed && styles.checkboxChecked,
-                { transform: [{ scale: checkboxScale }] }
-              ]}
-            >
-              {agreed && <Ionicons name="checkmark" size={16} color="#000" />}
-            </Animated.View>
-            <Text style={styles.agreementText}>
-              I agree to the{' '}
-              <Text style={styles.highlight}>Terms</Text>,{' '}
-              <Text style={styles.highlight}>Privacy</Text>, and{' '}
-              <Text style={styles.highlight}>Guidelines</Text>
-            </Text>
-          </TouchableOpacity>
-
-          <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
-            <TouchableOpacity
-              style={[styles.continueBtn, !agreed && styles.continueBtnDisabled]}
-              onPress={handleContinue}
-              disabled={!agreed}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={agreed ? ['#f9c349', '#f5a623'] : ['#e0e0e0', '#e0e0e0']}
-                style={styles.continueGradient}
-              >
-                <Text style={[styles.continueText, !agreed && styles.continueTextDisabled]}>
-                  Continue
-                </Text>
-                <Ionicons 
-                  name="arrow-forward" 
-                  size={20} 
-                  color={agreed ? "#000" : "#999"} 
-                />
-              </LinearGradient>
-            </TouchableOpacity>
-          </Animated.View>
-        </Animated.View>
-
-        <Text style={styles.version}>v2.0 • Updated {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</Text>
-      </Animated.ScrollView>
-
-      <Animated.View style={[styles.floatingHeader, { opacity: headerOpacity }]}>
-        <LinearGradient
-          colors={['#000', '#1a1a1a']}
-          style={styles.floatingHeaderGradient}
-        >
-          <Text style={styles.floatingHeaderTitle}>
-            {activeTab === 'terms' ? 'Terms & Conditions' : 'Privacy Policy'}
-          </Text>
-        </LinearGradient>
+        </ScrollView>
       </Animated.View>
+
+      <SafeAreaView edges={['bottom']} style={styles.bottomBar}>
+        <TouchableOpacity style={styles.checkRow} onPress={() => setAgreed(!agreed)} activeOpacity={0.7}>
+          <View style={[styles.checkbox, agreed && styles.checkboxOn]}>
+            {agreed && <Ionicons name="checkmark" size={15} color={C.gold} />}
+          </View>
+          <Text style={styles.checkText}>
+            I have read and agree to the <Text style={styles.bold}>Terms</Text>,{' '}
+            <Text style={styles.bold}>Privacy Policy</Text> and{' '}
+            <Text style={styles.bold}>Community Guidelines</Text>
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.primaryBtn, (!agreed || saving) && styles.primaryBtnDisabled]}
+          onPress={handleContinue}
+          disabled={!agreed || saving}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.primaryText}>Continue</Text>
+          <Ionicons name="arrow-forward" size={20} color={C.gold} />
+        </TouchableOpacity>
+      </SafeAreaView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  blank: {
+    flex: 1,
+    backgroundColor: C.bg,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: C.bg,
   },
-  headerGradient: {
-    paddingTop: Platform.OS === 'ios' ? 0 : StatusBar.currentHeight,
-    borderBottomWidth: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+  flex: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    minHeight: 50,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
-    letterSpacing: 0.5,
-  },
-  headerRight: {
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  floatingHeader: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-  },
-  floatingHeaderGradient: {
-    paddingTop: Platform.OS === 'ios' ? 50 : StatusBar.currentHeight + 10,
-    paddingBottom: 12,
-    paddingHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  floatingHeaderTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
-    textAlign: 'center',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  tab: {
-    flex: 1,
     paddingVertical: 10,
-    position: 'relative',
   },
-  tabActive: {},
-  tabContent: {
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: C.surface,
+    borderWidth: 1,
+    borderColor: C.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerSpacer: {
+    width: 40,
+    height: 40,
+  },
+  brand: {
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+    color: C.dark,
+  },
+  brandDot: {
+    color: C.gold,
+  },
+  steps: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
-  tabIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  tabIconActive: {
-    backgroundColor: 'rgba(249, 195, 73, 0.15)',
-  },
-  tabText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#999',
-    letterSpacing: 0.3,
-  },
-  tabTextActive: {
-    color: '#000',
-    fontWeight: '700',
-  },
-  tabIndicator: {
-    position: 'absolute',
-    bottom: -1,
-    left: '50%',
-    marginLeft: -12,
-    width: 24,
-    height: 3,
-    backgroundColor: '#f9c349',
-    borderRadius: 2,
-  },
-  scrollView: {
+  stepItem: {
     flex: 1,
+  },
+  stepBar: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#ededed',
+  },
+  stepBarOn: {
+    backgroundColor: C.dark,
+  },
+  stepLabel: {
+    marginTop: 6,
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#b0b0b0',
+  },
+  stepLabelOn: {
+    color: C.dark,
   },
   scrollContent: {
-    paddingBottom: 30,
-  },
-  heroSection: {
-    alignItems: 'center',
-    paddingVertical: 20,
-    paddingHorizontal: 20,
-    backgroundColor: '#fff',
-    marginBottom: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  heroTitle: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#000',
-    letterSpacing: 0.3,
-    marginBottom: 2,
-  },
-  heroSubtitle: {
-    fontSize: 12,
-    color: '#999',
-    textAlign: 'center',
-  },
-  heroDivider: {
-    width: 32,
-    height: 3,
-    backgroundColor: '#f9c349',
-    borderRadius: 2,
-    marginTop: 10,
-  },
-  contentContainer: {
     paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingTop: 16,
+    paddingBottom: 24,
   },
-  section: {
-    backgroundColor: '#fff',
+  iconTile: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: C.dark,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: '900',
+    letterSpacing: -0.6,
+    color: C.dark,
+  },
+  subtitle: {
+    marginTop: 6,
+    fontSize: 14.5,
+    color: C.secondary,
+    lineHeight: 21,
+  },
+  segment: {
+    flexDirection: 'row',
+    marginTop: 20,
+    padding: 4,
+    borderRadius: 14,
+    backgroundColor: C.surface,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  segmentBtn: {
+    flex: 1,
+    height: 40,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  segmentBtnOn: {
+    backgroundColor: C.dark,
+  },
+  segmentText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: C.muted,
+  },
+  segmentTextOn: {
+    color: '#ffffff',
+  },
+  highlights: {
+    marginTop: 14,
+    gap: 8,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: C.goldSoft,
     borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  chipText: {
+    flex: 1,
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: C.dark,
+  },
+  card: {
+    marginTop: 14,
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#efefef',
+    paddingHorizontal: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 1,
   },
-  sectionHeader: {
+  row: {
+    borderBottomWidth: 1,
+    borderBottomColor: C.divider,
+  },
+  rowLast: {
+    borderBottomWidth: 0,
+  },
+  rowHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    paddingVertical: 14,
+    gap: 12,
   },
-  sectionNumber: {
-    fontSize: 11,
+  rowIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    backgroundColor: C.dark,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowTitle: {
+    flex: 1,
+    fontSize: 15.5,
     fontWeight: '900',
-    color: '#f9c349',
-    letterSpacing: 0.5,
-    marginRight: 8,
+    color: C.dark,
   },
-  sectionLine: {
+  rowBody: {
+    paddingLeft: 40,
+    paddingBottom: 14,
+    gap: 6,
+  },
+  bodyText: {
     flex: 1,
-    height: 1,
-    backgroundColor: '#f0f0f0',
-    marginRight: 8,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#000',
-    letterSpacing: 0.3,
-  },
-  sectionText: {
-    fontSize: 12.5,
-    color: '#666',
-    lineHeight: 19,
-    paddingLeft: 20,
-  },
-  agreementWrapper: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 8,
-  },
-  checkboxRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingVertical: 2,
-    paddingHorizontal: 2,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: '#ddd',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-    backgroundColor: '#fff',
-  },
-  checkboxChecked: {
-    backgroundColor: '#f9c349',
-    borderColor: '#f9c349',
-  },
-  agreementText: {
-    flex: 1,
-    fontSize: 12.5,
-    color: '#444',
-    lineHeight: 18,
-  },
-  highlight: {
-    fontWeight: '700',
-    color: '#000',
-  },
-  continueBtn: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#f9c349',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  continueBtnDisabled: {
-    opacity: 0.5,
-    shadowOpacity: 0,
-  },
-  continueGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 13,
-    paddingHorizontal: 20,
-    gap: 8,
-  },
-  continueText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#000',
+    color: '#444',
+    lineHeight: 21,
   },
-  continueTextDisabled: {
-    color: '#999',
+  point: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  pointDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: C.gold,
+    marginTop: 8,
+    marginRight: 10,
   },
   version: {
     textAlign: 'center',
-    color: '#ccc',
-    fontSize: 10,
-    paddingTop: 10,
+    color: C.muted,
+    fontSize: 11,
+    marginTop: 18,
+  },
+  bottomBar: {
+    backgroundColor: C.bg,
+    borderTopWidth: 1,
+    borderTopColor: C.divider,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 16,
+  },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    borderWidth: 1.5,
+    borderColor: '#cfcfcf',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  checkboxOn: {
+    backgroundColor: C.dark,
+    borderColor: C.dark,
+  },
+  checkText: {
+    flex: 1,
+    fontSize: 13.5,
+    color: C.secondary,
+    lineHeight: 19,
+  },
+  bold: {
+    fontWeight: '800',
+    color: C.dark,
+  },
+  primaryBtn: {
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: C.dark,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  primaryBtnDisabled: {
+    opacity: 0.45,
+  },
+  primaryText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '800',
   },
 });

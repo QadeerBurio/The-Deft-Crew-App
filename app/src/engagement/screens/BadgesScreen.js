@@ -306,13 +306,16 @@ const GroupTab = ({ group, count, active, onPress }) => {
 };
 
 // ─── Main Screen ───────────────────────────────────────────────────────
+// Last loaded badge list, so the screen opens at once next time
+const badgesCache = { list: null };
+
 export default function BadgesScreen() {
   const navigation = useNavigation();
   const { missions } = useMissions();
   const { me, refresh: refreshEngagement } = useEngagement();
 
-  const [badges, setBadges] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [badges, setBadges] = useState(badgesCache.list || []);
+  const [loading, setLoading] = useState(!badgesCache.list);
   const [activeGroup, setActiveGroup] = useState('features');
 
   const heroScale = useRef(new Animated.Value(0.95)).current;
@@ -326,10 +329,13 @@ export default function BadgesScreen() {
 
     (async () => {
       try {
-        const list = await engagementApi.getBadges().catch(() => []);
-        if (!cancelled) setBadges(Array.isArray(list) ? list : []);
-
-        await refreshEngagement?.();
+        // points/streak refresh in the background, badges decide when we show
+        refreshEngagement?.();
+        const list = await engagementApi.getBadges().catch(() => null);
+        if (!cancelled && Array.isArray(list)) {
+          setBadges(list);
+          badgesCache.list = list;
+        }
       } finally {
         if (!cancelled) {
           setLoading(false);

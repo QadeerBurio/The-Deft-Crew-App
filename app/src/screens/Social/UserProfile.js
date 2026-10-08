@@ -290,30 +290,42 @@ export default function UserProfile({ route, navigation }) {
     }
   }, [targetId, config]);
 
-  // ============ FETCH PROFILE (FIXED) ============
+  // ============ FETCH PROFILE ============
+  // - me, block list and profile load in parallel (was 3 calls one after another)
+  // - skeleton only on the first load; later refreshes are silent
+  // - stable callback, so it no longer re-runs every time setUser() or a
+  //   connect/accept action changes state (that caused the reload loop)
+  const isActionLoadingRef = useRef(false);
+  isActionLoadingRef.current = isActionLoading;
+  const currentUserRef = useRef(currentUser);
+  currentUserRef.current = currentUser;
+  const hasProfileRef = useRef(false);
+  const fetchingRef = useRef(false);
+
   const fetchProfile = useCallback(async () => {
+    if (!targetId || fetchingRef.current) return;
+    fetchingRef.current = true;
     try {
-      setLoading(true);
+      if (!hasProfileRef.current) setLoading(true);
 
-      // ✅ STEP 1: Refresh current user FIRST so connection arrays are fresh
-      await refreshCurrentUser();
+      const [meRes, blockRes, profRes] = await Promise.allSettled([
+        refreshCurrentUser(),
+        checkBlockStatus(),
+        axios.get(`${API_URL}/profile/${targetId}`, config),
+      ]);
 
-      const isBlockedByCurrentUser = await checkBlockStatus();
-      if (isBlockedByCurrentUser) {
-        setLoading(false);
-        return;
-      }
+      if (blockRes.status === 'fulfilled' && blockRes.value) return; // I blocked them
+      if (profRes.status === 'rejected') throw profRes.reason;
 
-      const res = await axios.get(`${API_URL}/profile/${targetId}`, config);
-
+      const res = profRes.value;
       if (res.data.isBlockedByUser) {
         setIsBlockedByUser(true);
         setBlockStatus('blocked_by_user');
-        setLoading(false);
         return;
       }
 
       setProfileData(res.data.profile);
+      hasProfileRef.current = true;
 
       const posts = (res.data.posts || []).map(post => {
         const normalizedLikes = normalizeLikes(post.likes);
@@ -328,40 +340,52 @@ export default function UserProfile({ route, navigation }) {
       setUserPosts(posts);
       setConnections(res.data.connections || []);
 
-      // ✅ STEP 2: Use backend-computed connectionStatus directly
-      const status = res.data.profile?.connectionStatus || res.data.connectionStatus;
-
-      if (status && !isActionLoading) {
-        setIsConnected(status === 'connected' || status === 'self');
-        setIsPending(status === 'pending');
-        setIsReceived(status === 'received');
-      } else if (!isActionLoading) {
-        const states = checkConnectionStates(targetId);
-        setIsConnected(states.isConnected);
-        setIsPending(states.isPending);
-        setIsReceived(states.isReceived);
+      // Backend-computed connectionStatus first, local arrays as fallback
+      if (!isActionLoadingRef.current) {
+        const status = res.data.profile?.connectionStatus || res.data.connectionStatus;
+        if (status) {
+          setIsConnected(status === 'connected' || status === 'self');
+          setIsPending(status === 'pending');
+          setIsReceived(status === 'received');
+        } else {
+          const me = (meRes.status === 'fulfilled' && meRes.value) || currentUserRef.current;
+          const t = targetId.toString();
+          if (t === me?._id?.toString()) {
+            setIsConnected(true); setIsPending(false); setIsReceived(false);
+          } else {
+            setIsConnected((me?.connections || []).some(id => id?.toString() === t));
+            setIsPending((me?.sentRequests || []).some(id => id?.toString() === t));
+            setIsReceived((me?.receivedRequests || []).some(id => id?.toString() === t));
+          }
+        }
       }
 
       setIsBlocked(false);
       setBlockStatus('none');
     } catch (err) {
-      console.error("Fetch profile error:", err);
-      if (err.response?.data?.isBlocked) {
+      console.error("Fetch profile error:", err?.message);
+      if (err?.response?.data?.isBlocked) {
         setIsBlocked(true);
         setBlockStatus('blocked');
-        Alert.alert("Blocked", "You have blocked this user");
-      } else if (err.response?.data?.error?.includes('blocked')) {
+        if (!hasProfileRef.current) Alert.alert("Blocked", "You have blocked this user");
+      } else if (err?.response?.data?.error?.includes?.('blocked')) {
         setIsBlockedByUser(true);
         setBlockStatus('blocked_by_user');
-        Alert.alert("Blocked", "You have been blocked by this user");
-      } else {
+        if (!hasProfileRef.current) Alert.alert("Blocked", "You have been blocked by this user");
+      } else if (!hasProfileRef.current) {
         Alert.alert("Error", "Failed to load profile");
       }
     } finally {
+      fetchingRef.current = false;
       setLoading(false);
       setRefreshing(false);
     }
-  }, [targetId, config, checkBlockStatus, checkConnectionStates, refreshCurrentUser, isActionLoading]);
+  }, [targetId, config, checkBlockStatus, refreshCurrentUser]);
+
+  // opening another person's profile → show the skeleton again
+  useEffect(() => {
+    hasProfileRef.current = false;
+  }, [targetId]);
 
   useFocusEffect(
     useCallback(() => {

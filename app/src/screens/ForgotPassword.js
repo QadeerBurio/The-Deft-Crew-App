@@ -1,548 +1,128 @@
-import React, { useState, useRef, useEffect } from "react";
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  Alert, 
-  StyleSheet, 
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Animated,
-  StatusBar,
-  Dimensions,
-  Keyboard
-} from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import api from "../api/api";
+// app/src/screens/ForgotPassword.js
+// Step 1 of 3: email → code is sent → VerifyOTP.
 
-const { width } = Dimensions.get("window");
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Alert, Keyboard, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import api from '../api/api';
+import { AuthShell, AuthInput, AuthButton, AUTH } from '../components/AuthShell';
 
 export default function ForgotPassword({ navigation }) {
-  const [emailOrPhone, setEmailOrPhone] = useState("");
+  const [emailOrPhone, setEmailOrPhone] = useState('');
   const [loading, setLoading] = useState(false);
-  const [focusedInput, setFocusedInput] = useState(false);
-  const inputRef = useRef(null);
+  const [error, setError] = useState('');
 
-  // Animation Values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideUpAnim = useRef(new Animated.Value(50)).current;
-  const logoScale = useRef(new Animated.Value(0.5)).current;
-  const logoRotate = useRef(new Animated.Value(0)).current;
-  const buttonScale = useRef(new Animated.Value(1)).current;
-  const shakeAnim = useRef(new Animated.Value(0)).current;
-
-  const logoSpin = logoRotate.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
-  useEffect(() => {
-    // Entrance animations
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.spring(logoScale, {
-        toValue: 1,
-        friction: 4,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.timing(logoRotate, {
-        toValue: 1,
-        duration: 1200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideUpAnim, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Keyboard listeners
-    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
-      setFocusedInput(false);
-    });
-
-    return () => {
-      keyboardDidHideListener.remove();
-    };
-  }, []);
-
-  const handleShake = () => {
-    Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: 15, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -15, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 10, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -10, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 5, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
-    ]).start();
-  };
+  const goBack = () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Login'));
 
   const handleSendOTP = async () => {
-    // Dismiss keyboard first
     Keyboard.dismiss();
-
-    // Button press animation
-    Animated.sequence([
-      Animated.timing(buttonScale, {
-        toValue: 0.92,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.spring(buttonScale, {
-        toValue: 1,
-        friction: 3,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    if (!emailOrPhone || !emailOrPhone.trim()) {
-      handleShake();
-      return Alert.alert("Missing Information", "Please enter your registered email or phone number.");
+    const value = emailOrPhone.trim();
+    if (!value) {
+      setError('Enter the email or phone number on your account');
+      return;
     }
+    setError('');
 
     try {
       setLoading(true);
-
-      const res = await api.post(
-        "/auth/forgot-password",
-        { emailOrPhone: emailOrPhone.trim() },
-        { timeout: 25000 } // email sending can take a few seconds
-      );
+      const res = await api.post('/auth/forgot-password', { emailOrPhone: value }, { timeout: 25000 });
 
       if (!res.data?.userId) {
-        return Alert.alert("Error", "Something went wrong. Please try again.");
+        Alert.alert('Error', 'Something went wrong. Please try again.');
+        return;
       }
 
-      navigation.navigate("VerifyOTP", {
+      navigation.navigate('VerifyOTP', {
         userId: res.data.userId,
-        emailOrPhone: emailOrPhone.trim(),
+        emailOrPhone: value,
         sentTo: res.data.email || null,
       });
-
     } catch (err) {
-      handleShake();
-
-      // Already sent a code less than a minute ago: go enter that one
+      // Code already sent less than a minute ago: go enter that one
       if (err.response?.status === 429 && err.response.data?.userId) {
-        navigation.navigate("VerifyOTP", {
+        navigation.navigate('VerifyOTP', {
           userId: err.response.data.userId,
-          emailOrPhone: emailOrPhone.trim(),
+          emailOrPhone: value,
           retryAfter: err.response.data.retryAfter || 60,
         });
         return;
       }
 
-      let errorMessage = "Server not reachable. Please try again.";
-      if (err.response) {
-        errorMessage = err.response.data?.message || err.response.data?.error || "Server error occurred.";
-      } else if (err.code === "ECONNABORTED") {
-        errorMessage = "The server took too long. Please try again.";
-      } else if (err.request) {
-        errorMessage = "No internet connection. Please check and try again.";
-      }
+      let msg = 'Server not reachable. Please try again.';
+      if (err.response) msg = err.response.data?.message || err.response.data?.error || 'Server error occurred.';
+      else if (err.code === 'ECONNABORTED') msg = 'The server took too long. Please try again.';
+      else if (err.request) msg = 'No internet connection. Please check and try again.';
 
-      Alert.alert("Request Failed", errorMessage);
+      if (err.response?.status === 404) setError(msg);
+      else Alert.alert('Request failed', msg);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      
-      {/* Wrap everything in a TouchableWithoutFeedback to allow keyboard dismiss */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.keyboardView}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-      >
-        <ScrollView 
-          contentContainerStyle={styles.scrollContainer} 
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          bounces={false}
-        >
-          <Animated.View 
-            style={[
-              styles.card,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideUpAnim }],
-              },
-            ]}
-          >
-            {/* Header with Logo */}
-            <View style={styles.header}>
-              <Animated.View 
-                style={[
-                  styles.logoBadge,
-                  { 
-                    transform: [
-                      { scale: logoScale },
-                      { rotate: logoSpin },
-                    ] 
-                  }
-                ]}
-              >
-                <LinearGradient
-                  colors={['#1a1a1a', '#1a1a1a']}
-                  style={styles.logoGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Text style={styles.logoText}>tdc<Text style={{color:"#f9c349"}}>.</Text></Text>
-                </LinearGradient>
-              </Animated.View>
-              
-              <Text style={styles.title}>Reset Password</Text>
-              <Text style={styles.subtitle}>Enter your email or phone to receive a verification code</Text>
-              
-              {/* Decorative Line */}
-              <View style={styles.decorativeLine}>
-                <View style={styles.lineSegment} />
-                <View style={styles.diamond} />
-                <View style={styles.lineSegment} />
-              </View>
-            </View>
-
-            {/* Lock Icon */}
-            <View style={styles.iconContainer}>
-              <LinearGradient
-                colors={['#1a1a1a', '#1a1a1a']}
-                style={styles.iconGradient}
-              >
-                <Ionicons name="lock-open-outline" size={28} color="#f9c349" />
-              </LinearGradient>
-            </View>
-
-            {/* Input Field - Fixed auto-close issue */}
-            <TouchableOpacity 
-              activeOpacity={1} 
-              onPress={() => inputRef.current?.focus()}
-              style={[styles.inputWrapper, focusedInput && styles.inputFocused]}
-            >
-              <View style={styles.inputIconContainer}>
-                <Ionicons 
-                  name="mail-outline" 
-                  size={18} 
-                  color={focusedInput ? "#f9c349" : "#999"} 
-                />
-              </View>
-              <TextInput
-                ref={inputRef}
-                placeholder="Email or Phone Number"
-                placeholderTextColor="#999"
-                value={emailOrPhone}
-                onChangeText={setEmailOrPhone}
-                style={styles.input}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                onFocus={() => setFocusedInput(true)}
-                editable={!loading}
-                returnKeyType="done"
-                blurOnSubmit={false}
-                onSubmitEditing={() => Keyboard.dismiss()}
-              />
-              {emailOrPhone.length > 0 && (
-                <TouchableOpacity 
-                  onPress={() => {
-                    setEmailOrPhone('');
-                    inputRef.current?.focus();
-                  }} 
-                  style={styles.clearBtn}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Ionicons name="close-circle" size={18} color="#ccc" />
-                </TouchableOpacity>
-              )}
+    <AuthShell
+      step={1}
+      icon="lock-open-outline"
+      title="forgot password?"
+      subtitle="No stress. Enter your email or phone and we'll send you a 6-digit code."
+      onBack={goBack}
+      footer={
+        <View style={styles.footerRow}>
+          <Text style={styles.footerText}>remembered it? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Login')} hitSlop={8}>
+            <Text style={styles.footerLink}>sign in</Text>
+          </TouchableOpacity>
+        </View>
+      }
+    >
+      <AuthInput
+        label="Email or phone"
+        icon="mail-outline"
+        placeholder="you@university.edu.pk"
+        value={emailOrPhone}
+        onChangeText={(t) => {
+          setEmailOrPhone(t);
+          if (error) setError('');
+        }}
+        autoCapitalize="none"
+        autoCorrect={false}
+        keyboardType="email-address"
+        returnKeyType="send"
+        onSubmitEditing={handleSendOTP}
+        editable={!loading}
+        error={error}
+        right={
+          emailOrPhone.length > 0 && !loading ? (
+            <TouchableOpacity onPress={() => setEmailOrPhone('')} hitSlop={10}>
+              <Ionicons name="close-circle" size={18} color="#c4c4c4" />
             </TouchableOpacity>
+          ) : null
+        }
+      />
 
-            {/* Info Text */}
-            <Text style={styles.infoText}>
-              We'll send a 6-digit verification code to your registered email or phone number.
-            </Text>
+      <View style={styles.note}>
+        <Ionicons name="time-outline" size={15} color={AUTH.text2} />
+        <Text style={styles.noteText}>The code works for 10 minutes. Check spam if it's not in your inbox.</Text>
+      </View>
 
-            {/* Send OTP Button with Shake Animation */}
-            <Animated.View 
-              style={[
-                { 
-                  transform: [
-                    { translateX: shakeAnim }, 
-                    { scale: buttonScale },
-                  ] 
-                }
-              ]}
-            >
-              <TouchableOpacity 
-                style={styles.button} 
-                onPress={handleSendOTP} 
-                disabled={loading}
-                activeOpacity={0.9}
-              >
-                <LinearGradient
-                  colors={['#1a1a1a', '#1a1a1a']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.buttonGradient}
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#f9c349" size="small" />
-                  ) : (
-                    <>
-                      <Text style={styles.buttonText}>SEND OTP CODE</Text>
-                      <Ionicons name="arrow-forward" size={20} color="#f9c349" />
-                    </>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            </Animated.View>
-
-            {/* Footer Link */}
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Remember your password? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-                <Text style={styles.signinLink}>Sign In</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-
-          {/* Bottom Branding */}
-          <Animated.View style={[styles.brandingFooter, { opacity: fadeAnim }]}>
-            <Text style={styles.brandingText}>tdc<Text style={{color:'#f9c349'}}>.</Text> KARACHI • 2026</Text>
-          </Animated.View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      <AuthButton title="send code" onPress={handleSendOTP} loading={loading} disabled={!emailOrPhone.trim()} />
+    </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#ffffff",
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: "center",
-    padding: 0,
-  },
-
-  // Full Width Card
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 0,
-    padding: 30,
-    paddingTop: 40,
-    borderWidth: 0,
-    borderColor: 'transparent',
-    width: '100%',
-  },
-
-  // Header
-  header: { 
-    alignItems: "center", 
-    marginBottom: 25 
-  },
-  logoBadge: { 
-    marginBottom: 20,
-    borderRadius: 25,
-    overflow: 'hidden',
-    elevation: 10,
-    shadowColor: "#f9c349",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-  },
-  logoGradient: {
-    width: 80,
-    height: 80,
-    borderRadius: 25,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  logoText: { 
-    fontSize: 32, 
-    color: "#fff", 
-    fontWeight: "900",
-    letterSpacing: -1,
-  },
-  title: { 
-    fontSize: 26, 
-    fontWeight: "900", 
-    color: "#000",
-    letterSpacing: 0.5,
-  },
-  subtitle: { 
-    color: "#666", 
-    marginTop: 8,
-    fontSize: 14,
-    letterSpacing: 0.5,
-    textAlign: 'center',
-    lineHeight: 20,
-    paddingHorizontal: 20,
-  },
-  decorativeLine: {
+  note: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 18,
-  },
-  lineSegment: {
-    width: 30,
-    height: 2,
-    backgroundColor: '#f9c349',
-    borderRadius: 1,
-  },
-  diamond: {
-    width: 8,
-    height: 8,
-    backgroundColor: '#000',
-    transform: [{ rotate: '45deg' }],
-    marginHorizontal: 10,
-  },
-
-  // Lock Icon
-  iconContainer: {
-    alignItems: 'center',
-    marginBottom: 25,
-  },
-  iconGradient: {
-    width: 60,
-    height: 60,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-  },
-
-  // Input Styles
-  inputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f8f8f8",
-    borderWidth: 2,
-    borderColor: "transparent",
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    height: 56,
-    width: '100%',
-  },
-  inputFocused: { 
-    borderColor: "#f9c349", 
-    backgroundColor: "#fff",
-    shadowColor: "#f9c349",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  inputIconContainer: {
-    width: 36,
-    height: 36,
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: AUTH.goldSoft,
     borderRadius: 12,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
+    padding: 12,
+    marginBottom: 14,
   },
-  input: { 
-    flex: 1, 
-    paddingVertical: 8, 
-    fontSize: 15, 
-    color: "#000",
-    fontWeight: '500',
-  },
-  clearBtn: {
-    padding: 6,
-    marginLeft: 4,
-  },
-
-  // Info Text
-  infoText: {
-    fontSize: 12,
-    color: '#999',
-    textAlign: 'center',
-    marginBottom: 25,
-    paddingHorizontal: 20,
-    lineHeight: 18,
-    fontWeight: '500',
-  },
-
-  // Button Styles
-  button: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    elevation: 8,
-    shadowColor: "#f9c349",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    marginBottom: 10,
-    width: '100%',
-  },
-  buttonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 18,
-    width: '100%',
-  },
-  buttonText: { 
-    color: "#fff", 
-    fontSize: 16, 
-    fontWeight: "800",
-    letterSpacing: 2,
-    marginRight: 8,
-  },
-
-  // Footer
-  footer: { 
-    flexDirection: "row", 
-    justifyContent: "center", 
-    marginTop: 25,
-    width: '100%',
-  },
-  footerText: { 
-    color: "#999",
-    fontSize: 14,
-  },
-  signinLink: { 
-    color: "#000", 
-    fontWeight: "800",
-    fontSize: 14,
-    textDecorationLine: 'underline',
-  },
-
-  // Branding
-  brandingFooter: {
-    alignItems: 'center',
-    marginTop: 30,
-    marginBottom: 20,
-  },
-  brandingText: {
-    color: '#ccc',
-    fontSize: 11,
-    letterSpacing: 3,
-    fontWeight: '600',
-  },
+  noteText: { flex: 1, fontSize: 12.5, color: AUTH.text2, lineHeight: 18 },
+  footerRow: { flexDirection: 'row', alignItems: 'center' },
+  footerText: { color: AUTH.muted, fontSize: 14 },
+  footerLink: { color: AUTH.dark, fontSize: 14, fontWeight: '900' },
 });

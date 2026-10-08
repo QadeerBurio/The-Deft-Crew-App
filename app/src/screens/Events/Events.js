@@ -48,6 +48,9 @@ const { height, width } = Dimensions.get("window");
 const SHEET_HEIGHT = Math.round(height * 0.85);
 
 const API_BASE = "https://the-deft-crew-production.up.railway.app/api/events";
+
+// Last loaded events, so opening Events again shows them at once
+const eventsCache = { events: null };
 const SOCKET_URL = "https://the-deft-crew-production.up.railway.app";
 
 // ─── Event source detection ─────────────────────────────────────────────
@@ -418,8 +421,8 @@ export default function EventsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [events, setEvents] = useState(eventsCache.events || []);
+  const [loading, setLoading] = useState(!eventsCache.events);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [activeTab, setActiveTab] = useState("All");
@@ -671,17 +674,19 @@ export default function EventsScreen() {
     return () => sub.remove();
   }, [token]);
 
+  // Events list decides when the screen shows; categories and "registered"
+  // load alongside without holding the screen.
   const bootstrap = async () => {
-    setLoading(true);
+    const hadCache = !!eventsCache.events;
+    if (hadCache) runEntranceAnimations();
+    else setLoading(true);
+    fetchCategories();
+    fetchRegisteredEvents();
     try {
-      await Promise.all([
-        fetchEvents(true),
-        fetchCategories(),
-        fetchRegisteredEvents(),
-      ]);
-      runEntranceAnimations();
+      await fetchEvents(true);
     } finally {
       setLoading(false);
+      if (!hadCache) runEntranceAnimations();
     }
   };
 
@@ -693,20 +698,20 @@ export default function EventsScreen() {
     listOpacity.setValue(0);
 
     Animated.parallel([
-      Animated.timing(headerOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.timing(headerOpacity, { toValue: 1, duration: 220, useNativeDriver: true }),
       Animated.spring(headerTranslate, { toValue: 0, friction: 8, tension: 60, useNativeDriver: true }),
     ]).start();
 
     setTimeout(() => {
       Animated.parallel([
-        Animated.timing(filterOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(filterOpacity, { toValue: 1, duration: 220, useNativeDriver: true }),
         Animated.spring(filterTranslate, { toValue: 0, friction: 8, tension: 60, useNativeDriver: true }),
       ]).start();
-    }, 200);
+    }, 60);
 
     setTimeout(() => {
-      Animated.timing(listOpacity, { toValue: 1, duration: 300, useNativeDriver: true }).start();
-    }, 400);
+      Animated.timing(listOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    }, 100);
   };
 
   const fetchEvents = async (isInitial = false) => {
@@ -715,8 +720,9 @@ export default function EventsScreen() {
       const res = await axios.get(`${API_BASE}/feed`);
       const fetchedEvents = Array.isArray(res.data) ? res.data : res.data?.events || [];
       setEvents(fetchedEvents);
+      eventsCache.events = fetchedEvents;
     } catch (error) {
-      Alert.alert("Error", "Failed to fetch events");
+      if (!eventsCache.events) Alert.alert("Error", "Failed to fetch events");
     } finally {
       setRefreshing(false);
     }
