@@ -11,11 +11,12 @@ import {
   Platform
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Video, ResizeMode } from "expo-av";
 
+import { color as T, font as F } from "../theme/tokens";
 const { width, height } = Dimensions.get("window");
 
 export default function AboutScreen() {
@@ -117,7 +118,7 @@ export default function AboutScreen() {
   };
 
   const features = [
-    { title: "Student Deals", desc: "Discounts at 100+ brands", icon: "pricetag-outline", color: "#f9c349" },
+    { title: "Student Deals", desc: "Discounts at 100+ brands", icon: "pricetag-outline", color: T.yellow },
     { title: "Skills Share", desc: "Learn from other students", icon: "people-outline", color: "#a29bfe" },
     { title: "Premium Events", desc: "Workshops and meetups", icon: "calendar-outline", color: "#fd79a8" },
     { title: "Resume Builder", desc: "AI resumes that pass ATS", icon: "document-text-outline", color: "#00b894" },
@@ -164,7 +165,7 @@ export default function AboutScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa00" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerFade }]}>
@@ -173,9 +174,9 @@ export default function AboutScreen() {
           style={styles.headerBtn}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={22} color="#1a1a1a" />
+          <Ionicons name="arrow-back" size={22} color={T.ink} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>About</Text>
+        <Text style={styles.headerTitle}>about</Text>
         <View style={{ width: 34 }} />
       </Animated.View>
 
@@ -198,18 +199,18 @@ export default function AboutScreen() {
             ]}
           >
             <LinearGradient
-              colors={['#1a1a1a', '#2d2d2d']}
+              colors={[T.ink, T.ink]}
               style={styles.heroCard}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <Text style={styles.heroBrandName}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
+              <Text style={styles.heroBrandName}>tdc<Text style={{color:T.yellow}}>.</Text></Text>
               <View style={styles.heroTaglineBadge}>
-                <Text style={styles.heroTaglineText}>STUDENT ECOSYSTEM</Text>
+                <Text style={styles.heroTaglineText}>student ecosystem</Text>
               </View>
               <Text style={styles.heroDesc}>
                 Pakistan's {' '}
-                <Text style={{ fontWeight: '700', color: '#f9c349' }}>student & alumni community</Text>
+                <Text style={{ fontWeight: '700', color: T.yellow }}>student & alumni community</Text>
                 . for savings, careers and everything in between.
               </Text>
 
@@ -227,7 +228,7 @@ export default function AboutScreen() {
           <Animated.View style={[styles.aboutSection, { transform: [{ translateY: slideUpAnim }] }]}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionDot} />
-              <Text style={styles.sectionTitle}>About tdc App</Text>
+              <Text style={styles.sectionTitle}>about tdc app</Text>
               <View style={styles.sectionLine} />
             </View>
 
@@ -237,15 +238,15 @@ export default function AboutScreen() {
               </Text>
               <View style={styles.aboutHighlights}>
                 <View style={styles.highlightItem}>
-                  <Ionicons name="checkmark-circle" size={14} color="#f9c349" />
+                  <Ionicons name="checkmark-circle" size={14} color={T.yellow} />
                   <Text style={styles.highlightText}>100+ Partner Brands</Text>
                 </View>
                 <View style={styles.highlightItem}>
-                  <Ionicons name="checkmark-circle" size={14} color="#f9c349" />
+                  <Ionicons name="checkmark-circle" size={14} color={T.yellow} />
                   <Text style={styles.highlightText}>15+ Universities</Text>
                 </View>
                 <View style={styles.highlightItem}>
-                  <Ionicons name="checkmark-circle" size={14} color="#f9c349" />
+                  <Ionicons name="checkmark-circle" size={14} color={T.yellow} />
                   <Text style={styles.highlightText}>10,000+ Active Students</Text>
                 </View>
               </View>
@@ -256,7 +257,7 @@ export default function AboutScreen() {
           <Animated.View style={[styles.aboutSection, { transform: [{ translateY: slideUpAnim }] }]}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionDot} />
-              <Text style={styles.sectionTitle}>Our Story</Text>
+              <Text style={styles.sectionTitle}>our story</Text>
               <View style={styles.sectionLine} />
             </View>
 
@@ -270,19 +271,19 @@ The idea for tdc came in 2025. By early 2026, it was live. Student discounts at 
               </Text>
               <View style={styles.companyInfo}>
                 <View style={styles.companyItem}>
-                  <Ionicons name="location-outline" size={14} color="#94A3B8" />
-                  <Text style={styles.companyText}>Karachi, Pakistan</Text>
+                  <Ionicons name="location-outline" size={14} color={T.textFaint} />
+                  <Text style={styles.companyText}>karachi, pakistan</Text>
                 </View>
                 <View style={styles.companyItem}>
-                  <Ionicons name="calendar-outline" size={14} color="#94A3B8" />
+                  <Ionicons name="calendar-outline" size={14} color={T.textFaint} />
                   <Text style={styles.companyText}>Founded 2026</Text>
                 </View>
                 <View style={styles.companyItem}>
-                  <Ionicons name="people-outline" size={14} color="#94A3B8" />
+                  <Ionicons name="people-outline" size={14} color={T.textFaint} />
                   <Text style={styles.companyText}>Team of 25+</Text>
                 </View>
                 <View style={styles.companyItem}>
-                  <Ionicons name="globe-outline" size={14} color="#94A3B8" />
+                  <Ionicons name="globe-outline" size={14} color={T.textFaint} />
                   <Text style={styles.companyText}>gettdc.pk</Text>
                 </View>
               </View>
@@ -293,7 +294,7 @@ The idea for tdc came in 2025. By early 2026, it was live. Student discounts at 
           <View style={styles.pillarsSection}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionDot} />
-              <Text style={styles.sectionTitle}>Features</Text>
+              <Text style={styles.sectionTitle}>features</Text>
               <View style={styles.sectionLine} />
             </View>
             <View style={styles.grid}>
@@ -305,7 +306,7 @@ The idea for tdc came in 2025. By early 2026, it was live. Student discounts at 
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerLogo}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
+            <Text style={styles.footerLogo}>tdc<Text style={{color:T.yellow}}>.</Text></Text>
             <Text style={styles.footerText}>Making student life simpler and careers easier.</Text>
             <Text style={styles.footerSubText}>© 2026 The Deft Crew</Text>
           </View>
@@ -318,7 +319,7 @@ The idea for tdc came in 2025. By early 2026, it was live. Student discounts at 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: T.paper,
   },
 
   // Header
@@ -328,24 +329,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.04)',
+    borderBottomColor: T.line,
   },
   headerBtn: {
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
+    borderColor: T.line,
   },
   headerTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     letterSpacing: 0.3,
   },
   scrollContent: {
@@ -359,11 +360,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   heroCard: {
     padding: 20,
@@ -374,24 +375,24 @@ const styles = StyleSheet.create({
   },
   heroBrandName: {
     fontSize: 20,
-    fontWeight: "800",
-    color: "#fff",
+    fontFamily: F.heading,
+    color: T.white,
     marginBottom: 4,
     letterSpacing: 0.5,
   },
   heroTaglineBadge: {
-    backgroundColor: "rgba(249, 195, 73, 0.12)",
+    backgroundColor: T.yellowSoft,
     paddingHorizontal: 12,
     paddingVertical: 3,
     borderRadius: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: "rgba(249, 195, 73, 0.15)",
+    borderColor: T.line,
   },
   heroTaglineText: {
-    color: "#f9c349",
+    color: T.yellow,
     fontSize: 8,
-    fontWeight: "700",
+    fontFamily: F.bodyBold,
     letterSpacing: 1.5,
   },
   heroDesc: {
@@ -399,7 +400,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: "center",
     lineHeight: 18,
-    fontWeight: '400',
+    fontFamily: F.body,
     paddingHorizontal: 4,
   },
   decorLine: {
@@ -411,13 +412,13 @@ const styles = StyleSheet.create({
   decorSegment: {
     width: 20,
     height: 1.5,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     borderRadius: 1,
   },
   decorDiamond: {
     width: 5,
     height: 5,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     transform: [{ rotate: '45deg' }],
     marginHorizontal: 8,
   },
@@ -429,18 +430,18 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
-    shadowColor: '#000',
+    borderColor: T.line,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 2,
   },
   videoContainer: {
     height: 170,
     borderRadius: 14,
     overflow: 'hidden',
-    backgroundColor: '#000',
+    backgroundColor: T.ink,
   },
   video: {
     flex: 1,
@@ -453,11 +454,11 @@ const styles = StyleSheet.create({
   playBtn: {
     borderRadius: 22,
     overflow: 'hidden',
-    shadowColor: '#f9c349',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   playBtnGradient: {
     width: 44,
@@ -475,7 +476,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     backgroundColor: 'rgba(255,255,255,0.92)',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.04)',
+    borderTopColor: T.line,
   },
   progressSection: {
     flexDirection: "row",
@@ -485,20 +486,20 @@ const styles = StyleSheet.create({
   progressBarBase: {
     flex: 1,
     height: 2.5,
-    backgroundColor: "rgba(0,0,0,0.08)",
+    backgroundColor: T.sand,
     marginHorizontal: 6,
     borderRadius: 1.5,
     overflow: 'hidden'
   },
   progressBarFill: {
     height: "100%",
-    backgroundColor: "#f9c349",
+    backgroundColor: T.yellow,
     borderRadius: 1.5
   },
   timeLabel: {
-    color: "rgba(0,0,0,0.4)",
+    color: T.textMuted,
     fontSize: 9,
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
     width: 30,
     textAlign: "center"
   },
@@ -509,7 +510,7 @@ const styles = StyleSheet.create({
   },
   videoIconBtn: {
     padding: 4,
-    backgroundColor: 'rgba(0,0,0,0.04)',
+    backgroundColor: T.sand,
     borderRadius: 6,
     width: 28,
     height: 28,
@@ -532,28 +533,28 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     marginRight: 8,
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     letterSpacing: 0.3,
   },
   sectionLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(0,0,0,0.06)',
+    backgroundColor: T.sand,
     marginLeft: 10,
   },
   aboutCard: {
     borderRadius: 14,
     padding: 14,
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
-    shadowColor: '#000',
+    borderColor: T.line,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
@@ -561,9 +562,9 @@ const styles = StyleSheet.create({
   },
   aboutText: {
     fontSize: 12.5,
-    color: '#444',
+    color: T.textMuted,
     lineHeight: 20,
-    fontWeight: '400',
+    fontFamily: F.body,
   },
   aboutHighlights: {
     flexDirection: 'row',
@@ -575,15 +576,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(249, 195, 73, 0.06)',
+    backgroundColor: T.yellowSoft,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
   highlightText: {
     fontSize: 10,
-    color: '#555',
-    fontWeight: '500',
+    color: T.textMuted,
+    fontFamily: F.bodyMedium,
   },
   companyInfo: {
     flexDirection: 'row',
@@ -598,8 +599,8 @@ const styles = StyleSheet.create({
   },
   companyText: {
     fontSize: 11,
-    color: '#666',
-    fontWeight: '400',
+    color: T.textMuted,
+    fontFamily: F.body,
   },
 
   // Pillars
@@ -619,10 +620,10 @@ const styles = StyleSheet.create({
   featureBox: {
     borderRadius: 12,
     padding: 11,
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
-    shadowColor: '#000',
+    borderColor: T.line,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
@@ -638,16 +639,16 @@ const styles = StyleSheet.create({
   },
   featureTitle: {
     fontSize: 11,
-    fontWeight: "700",
-    color: "#1a1a1a",
+    fontFamily: F.bodyBold,
+    color: T.ink,
     marginBottom: 1,
     letterSpacing: 0.2,
   },
   featureDesc: {
     fontSize: 9.5,
-    color: "#94A3B8",
+    color: T.textFaint,
     lineHeight: 13,
-    fontWeight: '400',
+    fontFamily: F.body,
   },
 
   // Footer
@@ -658,23 +659,23 @@ const styles = StyleSheet.create({
   },
   footerLogo: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#1a1a1a',
+    fontFamily: F.heading,
+    color: T.ink,
     letterSpacing: 0.5,
   },
   footerText: {
     fontSize: 10,
-    color: 'rgba(0, 0, 0, 0.4)',
+    color: T.textMuted,
     marginTop: 4,
-    fontWeight: '400',
+    fontFamily: F.body,
     letterSpacing: 0.3,
     textAlign: 'center',
   },
   footerSubText: {
     fontSize: 9,
-    color: 'rgba(0, 0, 0, 0.2)',
+    color: T.textMuted,
     marginTop: 4,
-    fontWeight: '400',
+    fontFamily: F.body,
     letterSpacing: 0.3,
   },
 });

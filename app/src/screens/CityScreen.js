@@ -31,7 +31,7 @@ import {
   useNavigation,
   useRoute,
 } from "@react-navigation/native";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import api from "../api/brandApi";
 import { AuthContext } from "../context/AuthContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -45,6 +45,7 @@ import {
 } from "./OfferScreen";
 import { brandMatchesCity, setSelectedCity as saveSelectedCity } from "../utils/cityFilter";
 
+import { color as T, font as F } from "../theme/tokens";
 const { width } = Dimensions.get("window");
 const HORIZONTAL_PADDING = 16;
 
@@ -109,7 +110,7 @@ const FeaturedCityCard = memo(({ city, brandCount, onPress }) => {
         {/* Top-right brand count badge */}
         {brandCount > 0 && (
           <View style={styles.featuredCountBadge}>
-            <MaterialCommunityIcons name="store" size={11} color="#000" />
+            <MaterialCommunityIcons name="store" size={11} color={T.ink} />
             <Text style={styles.featuredCountText}>{brandCount}</Text>
           </View>
         )}
@@ -119,14 +120,14 @@ const FeaturedCityCard = memo(({ city, brandCount, onPress }) => {
           <Text style={styles.featuredTagline}>{city.tagline}</Text>
           <Text style={styles.featuredName}>{city.name}</Text>
           <View style={styles.featuredMetaRow}>
-            <MaterialCommunityIcons name="map-marker" size={11} color="#f9c349" />
+            <MaterialCommunityIcons name="map-marker" size={11} color={T.yellow} />
             <Text style={styles.featuredProvince}>{city.province}</Text>
           </View>
         </View>
 
         {/* Bottom-right arrow */}
         <View style={styles.featuredArrow}>
-          <Ionicons name="arrow-forward" size={16} color="#000" />
+          <Ionicons name="arrow-forward" size={16} color={T.ink} />
         </View>
       </ImageBackground>
     </TouchableOpacity>
@@ -187,7 +188,7 @@ const BrandRow = memo(({ brand, onPress }) => {
       </View>
 
       <View style={styles.brandChevron}>
-        <Ionicons name="chevron-forward" size={18} color="#ccc" />
+        <Ionicons name="chevron-forward" size={18} color={T.textFaint} />
       </View>
     </TouchableOpacity>
   );
@@ -404,7 +405,7 @@ export default function CityScreen() {
   const renderEmptyBrands = useCallback(
     () => (
       <View style={styles.emptyBox}>
-        <MaterialCommunityIcons name="store-off-outline" size={56} color="#ccc" />
+        <MaterialCommunityIcons name="store-off-outline" size={56} color={T.textFaint} />
         <Text style={styles.emptyTitle}>No brands in {selectedCity?.name}</Text>
         <Text style={styles.emptySub}>
           We're adding new brands every week. Check back soon!
@@ -414,8 +415,8 @@ export default function CityScreen() {
           onPress={handleBackToCities}
           activeOpacity={0.85}
         >
-          <Ionicons name="arrow-back" size={16} color="#000" />
-          <Text style={styles.emptyBtnText}>Back to cities</Text>
+          <Ionicons name="arrow-back" size={16} color={T.ink} />
+          <Text style={styles.emptyBtnText}>back to cities</Text>
         </TouchableOpacity>
       </View>
     ),
@@ -427,7 +428,7 @@ export default function CityScreen() {
     () => (
       <View style={styles.cityHeader}>
         <View style={styles.cityHeaderEmojiWrap}>
-          <MaterialCommunityIcons name="city-variant-outline" size={26} color="#000" />
+          <MaterialCommunityIcons name="city-variant-outline" size={26} color={T.ink} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.cityHeaderTitle}>{selectedCity.name}</Text>
@@ -443,7 +444,7 @@ export default function CityScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       {/* Header */}
       <View style={styles.header}>
@@ -456,7 +457,7 @@ export default function CityScreen() {
           <Ionicons
             name={Platform.OS === "ios" ? "chevron-back" : "arrow-back"}
             size={22}
-            color="#000"
+            color={T.ink}
           />
         </TouchableOpacity>
 
@@ -470,8 +471,8 @@ export default function CityScreen() {
       {/* Content */}
       {loading ? (
         <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color="#f9c349" />
-          <Text style={styles.loadingText}>Loading cities...</Text>
+          <ActivityIndicator size="large" color={T.yellow} />
+          <Text style={styles.loadingText}>loading cities...</Text>
         </View>
       ) : selectedCity ? (
         <FlatList
@@ -509,7 +510,7 @@ export default function CityScreen() {
 // STYLES
 // ═══════════════════════════════════════════════════════════
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: T.card },
 
   // Header
   header: {
@@ -519,21 +520,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-    backgroundColor: "#fff",
+    borderBottomColor: T.line,
+    backgroundColor: T.card,
   },
   headerBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: T.sand,
     justifyContent: "center",
     alignItems: "center",
   },
   headerTitle: {
     fontSize: 17,
-    fontWeight: "800",
-    color: "#000",
+    fontFamily: F.bodyBold,
+    color: T.ink,
     letterSpacing: -0.3,
   },
 
@@ -544,7 +545,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
   },
-  loadingText: { fontSize: 13, color: "#999", fontWeight: "600" },
+  loadingText: { fontSize: 13, color: T.textFaint, fontFamily: F.bodySemi },
 
   // ═══ Featured cards list ═══
   featuredListContent: {
@@ -558,16 +559,16 @@ const styles = StyleSheet.create({
     height: 190,
     borderRadius: 20,
     overflow: "hidden",
-    backgroundColor: "#000",
+    backgroundColor: T.ink,
     ...Platform.select({
       ios: {
-        shadowColor: "#000",
+        shadowColor: T.ink,
         shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.2,
-        shadowRadius: 14,
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 5,
+        elevation: 2,
       },
     }),
   },
@@ -587,15 +588,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "#f9c349",
+    backgroundColor: T.yellow,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 20,
   },
   featuredCountText: {
     fontSize: 11,
-    fontWeight: "900",
-    color: "#000",
+    fontFamily: F.bodyBold,
+    color: T.ink,
     letterSpacing: 0.2,
   },
 
@@ -606,16 +607,16 @@ const styles = StyleSheet.create({
   },
   featuredTagline: {
     fontSize: 10,
-    fontWeight: "900",
-    color: "#f9c349",
+    fontFamily: F.bodyBold,
+    color: T.yellow,
     letterSpacing: 1.4,
-    textTransform: "uppercase",
+    textTransform: 'none',
     marginBottom: 6,
   },
   featuredName: {
     fontSize: 30,
-    fontWeight: "900",
-    color: "#fff",
+    fontFamily: F.heading,
+    color: T.white,
     letterSpacing: -0.8,
     marginBottom: 6,
   },
@@ -626,7 +627,7 @@ const styles = StyleSheet.create({
   },
   featuredProvince: {
     fontSize: 12,
-    fontWeight: "700",
+    fontFamily: F.bodyBold,
     color: "rgba(255,255,255,0.85)",
     letterSpacing: 0.3,
   },
@@ -637,7 +638,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "#f9c349",
+    backgroundColor: T.yellow,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -661,18 +662,18 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f9c34922",
+    backgroundColor: T.yellowSoft,
   },
   cityHeaderTitle: {
     fontSize: 22,
-    fontWeight: "900",
-    color: "#000",
+    fontFamily: F.heading,
+    color: T.ink,
     letterSpacing: -0.5,
   },
   cityHeaderSub: {
     fontSize: 12,
-    color: "#888",
-    fontWeight: "600",
+    color: T.textFaint,
+    fontFamily: F.bodySemi,
     marginTop: 2,
   },
 
@@ -681,10 +682,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 12,
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#f0f0f0",
+    borderColor: T.line,
     marginBottom: 8,
     gap: 12,
   },
@@ -694,39 +695,39 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: "hidden",
     position: "relative",
-    backgroundColor: "#f8f8f8",
+    backgroundColor: T.sand,
   },
   brandImage: { width: "100%", height: "100%" },
   brandDiscountBadge: {
     position: "absolute",
     top: 4,
     right: 4,
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
     paddingHorizontal: 5,
     paddingVertical: 2,
     borderRadius: 6,
   },
-  brandDiscountText: { fontSize: 9, fontWeight: "900", color: "#f9c349" },
+  brandDiscountText: { fontSize: 9, fontFamily: F.bodyBold, color: T.yellow },
   brandInfo: { flex: 1 },
   brandName: {
     fontSize: 14,
-    fontWeight: "800",
-    color: "#000",
+    fontFamily: F.bodyBold,
+    color: T.ink,
     letterSpacing: -0.2,
   },
   brandCategory: {
     fontSize: 11,
-    color: "#888",
-    fontWeight: "600",
+    color: T.textFaint,
+    fontFamily: F.bodySemi,
     marginTop: 2,
   },
   brandStatus: {
     fontSize: 10.5,
-    color: "#bbb",
-    fontWeight: "600",
+    color: T.textFaint,
+    fontFamily: F.bodySemi,
     marginTop: 4,
   },
-  brandStatusClaimed: { color: "#f9c349", fontWeight: "800" },
+  brandStatusClaimed: { color: T.yellow, fontFamily: F.bodyBold },
   brandChevron: { padding: 4 },
 
   // Empty state
@@ -740,13 +741,13 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: "800",
-    color: "#333",
+    fontFamily: F.bodyBold,
+    color: T.ink,
     marginTop: 10,
   },
   emptySub: {
-    fontSize: 13,
-    color: "#999",
+    fontSize: 13, fontFamily: F.body,
+    color: T.textFaint,
     textAlign: "center",
     lineHeight: 18,
     marginTop: 4,
@@ -758,8 +759,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: "#f9c349",
+    backgroundColor: T.yellow,
     marginTop: 20,
   },
-  emptyBtnText: { fontSize: 13, fontWeight: "800", color: "#000" },
+  emptyBtnText: { fontSize: 13, fontFamily: F.bodyBold, color: T.ink },
 });

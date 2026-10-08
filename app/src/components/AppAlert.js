@@ -29,14 +29,15 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const DARK = '#1a1a1a';
+import { color as T, font as F } from "../theme/tokens";
+const DARK = T.ink;
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 const VARIANTS = {
-  success: { icon: 'checkmark', color: '#16a34a', bg: '#e9f8ef' },
-  error: { icon: 'close', color: '#e11d48', bg: '#fdecef' },
+  success: { icon: 'checkmark', color: T.success, bg: T.successBg },
+  error: { icon: 'close', color: T.danger, bg: T.dangerBg },
   warning: { icon: 'alert', color: '#b7791f', bg: '#fff6e0' },
-  danger: { icon: 'warning-outline', color: '#e11d48', bg: '#fdecef' },
+  danger: { icon: 'warning-outline', color: T.danger, bg: T.dangerBg },
   confirm: { icon: 'help', color: DARK, bg: '#fff6e0' },
   info: { icon: 'information', color: DARK, bg: '#fff6e0' },
 };
@@ -207,17 +208,17 @@ const styles = StyleSheet.create({
   },
   card: {
     width: Math.min(SCREEN_W - 48, 340),
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderRadius: 24,
     paddingTop: 24,
     paddingHorizontal: 20,
     paddingBottom: 18,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    elevation: 12,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   iconWrap: {
     width: 56,
@@ -229,19 +230,19 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '900',
+    fontFamily: F.heading,
     color: DARK,
     textAlign: 'center',
     letterSpacing: -0.3,
   },
   msgScroll: { maxHeight: SCREEN_H * 0.4, marginTop: 6, alignSelf: 'stretch' },
   message: {
-    fontSize: 14,
+    fontSize: 14, fontFamily: F.body,
     lineHeight: 20,
-    color: '#666',
+    color: T.textMuted,
     textAlign: 'center',
   },
-  messageOnly: { color: DARK, fontSize: 15, fontWeight: '600' },
+  messageOnly: { color: DARK, fontSize: 15, fontFamily: F.bodySemi },
   btnRow: { flexDirection: 'row', gap: 10, marginTop: 20, alignSelf: 'stretch' },
   btnCol: { flexDirection: 'column' },
   btn: {
@@ -252,10 +253,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   btnPrimary: { backgroundColor: DARK },
-  btnDanger: { backgroundColor: '#e11d48' },
-  btnGhost: { backgroundColor: '#f4f4f4', borderWidth: 1, borderColor: '#ececec' },
-  btnPrimaryText: { color: '#fff', fontSize: 15, fontWeight: '800' },
-  btnGhostText: { color: DARK, fontSize: 15, fontWeight: '700' },
+  btnDanger: { backgroundColor: T.danger },
+  btnGhost: { backgroundColor: T.sand, borderWidth: 1, borderColor: T.line },
+  btnPrimaryText: { color: T.white, fontSize: 15, fontFamily: F.bodyBold },
+  btnGhostText: { color: DARK, fontSize: 15, fontFamily: F.bodyBold },
 });
 
 export default AppAlertHost;

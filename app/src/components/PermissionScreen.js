@@ -9,12 +9,13 @@ import {
   Dimensions,
   Animated,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 
+import { color as T, font as F } from "../theme/tokens";
 const { width, height } = Dimensions.get('window');
 
 const PermissionScreen = ({ onPermissionsGranted, onSkip }) => {
@@ -196,7 +197,7 @@ const PermissionScreen = ({ onPermissionsGranted, onSkip }) => {
           {/* Icon Circle - Matching Luxury Style */}
           <View style={styles.iconWrapper}>
             <View style={styles.iconCircle}>
-              <Ionicons name={current.icon} size={32} color="#f9c349" />
+              <Ionicons name={current.icon} size={32} color={T.yellow} />
             </View>
           </View>
 
@@ -204,7 +205,7 @@ const PermissionScreen = ({ onPermissionsGranted, onSkip }) => {
           <View style={styles.contentContainer}>
             <View style={styles.titleAccent}>
               <View style={styles.accentDot} />
-              <Text style={styles.titlePrefix}>TDC PERMISSION</Text>
+              <Text style={styles.titlePrefix}>tdc permission</Text>
             </View>
 
             <Text style={styles.title}>{current.title}</Text>
@@ -235,13 +236,13 @@ const PermissionScreen = ({ onPermissionsGranted, onSkip }) => {
               activeOpacity={0.9}
             >
               <LinearGradient
-                colors={isGranted ? ['#f9c349', '#f9c349'] : ['#000', '#000']}
+                colors={isGranted ? [T.yellow, T.yellow] : [T.ink, T.ink]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.buttonGradient}
               >
                 {loading ? (
-                  <ActivityIndicator color="#fff" size="small" />
+                  <ActivityIndicator color={T.white} size="small" />
                 ) : (
                   <>
                     <Text style={[styles.buttonText, isGranted && styles.buttonTextGold]}>
@@ -250,7 +251,7 @@ const PermissionScreen = ({ onPermissionsGranted, onSkip }) => {
                     <Ionicons
                       name={isGranted ? (step === 2 ? 'checkmark-circle' : 'arrow-forward') : 'lock-open-outline'}
                       size={20}
-                      color={isGranted ? '#000' : '#f9c349'}
+                      color={isGranted ? T.ink : T.yellow}
                     />
                   </>
                 )}
@@ -281,25 +282,25 @@ const PermissionScreen = ({ onPermissionsGranted, onSkip }) => {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   modal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     borderRadius: 25,
     padding: 28,
     width: Math.min(width - 40, 340),
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.25,
-    shadowRadius: 40,
-    elevation: 10,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: T.line,
   },
   cardBorder: {
     position: 'absolute',
@@ -307,13 +308,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
   },
   cornerAccent: {
     position: 'absolute',
     width: 20,
     height: 20,
-    borderColor: '#f9c349',
+    borderColor: T.yellow,
   },
   topLeftAccent: {
     top: 10,
@@ -338,14 +339,14 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: T.sand,
   },
   activeDot: {
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     width: 28,
   },
   completedDot: {
-    backgroundColor: '#000',
+    backgroundColor: T.ink,
   },
   iconWrapper: {
     marginBottom: 16,
@@ -354,11 +355,11 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: '#000',
+    backgroundColor: T.ink,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#f9c349',
+    borderColor: T.yellow,
   },
   contentContainer: {
     width: '100%',
@@ -373,19 +374,19 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     marginRight: 8,
   },
   titlePrefix: {
     fontSize: 11,
-    color: '#f9c349',
-    fontWeight: '800',
+    color: T.yellow,
+    fontFamily: F.bodyBold,
     letterSpacing: 3,
   },
   title: {
     fontSize: 24,
-    fontWeight: '900',
-    color: '#000',
+    fontFamily: F.heading,
+    color: T.ink,
     textAlign: 'center',
     letterSpacing: -0.5,
     marginBottom: 4,
@@ -393,20 +394,20 @@ const styles = StyleSheet.create({
   titleUnderline: {
     width: 40,
     height: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     marginBottom: 16,
     borderRadius: 1.5,
   },
   description: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 16,
     paddingHorizontal: 10,
   },
   benefitContainer: {
-    backgroundColor: '#f9c34920',
+    backgroundColor: T.yellowSoft,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
@@ -414,12 +415,12 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#f9c34930',
+    borderColor: T.line,
   },
   benefitText: {
     fontSize: 13,
-    color: '#000',
-    fontWeight: '600',
+    color: T.ink,
+    fontFamily: F.bodySemi,
     textAlign: 'center',
   },
   statusBadge: {
@@ -433,31 +434,31 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   grantedBadge: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: T.sand,
     borderWidth: 1,
-    borderColor: '#000',
+    borderColor: T.ink,
   },
   deniedBadge: {
-    backgroundColor: '#FFF5F5',
+    backgroundColor: T.dangerBg,
     borderWidth: 1,
-    borderColor: '#FF3B30',
+    borderColor: T.danger,
   },
   statusDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     marginRight: 8,
   },
   statusText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
   },
   grantedText: {
-    color: '#000',
+    color: T.ink,
   },
   deniedText: {
-    color: '#FF3B30',
+    color: T.danger,
   },
   buttonContainer: {
     width: '100%',
@@ -467,16 +468,16 @@ const styles = StyleSheet.create({
   button: {
     borderRadius: 30,
     overflow: 'hidden',
-    elevation: 8,
-    shadowColor: '#000',
+    elevation: 2,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     width: '100%',
   },
   allowButton: {
-    shadowColor: '#f9c349',
-    shadowOpacity: 0.3,
+    shadowColor: T.ink,
+    shadowOpacity: 0.06,
   },
   buttonGradient: {
     flexDirection: 'row',
@@ -487,30 +488,30 @@ const styles = StyleSheet.create({
     minHeight: 54,
   },
   buttonText: {
-    color: '#fff',
+    color: T.white,
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     marginRight: 8,
     letterSpacing: 1,
   },
   buttonTextGold: {
-    color: '#000',
+    color: T.ink,
   },
   skipButton: {
     paddingVertical: 8,
     alignItems: 'center',
   },
   skipButtonText: {
-    color: '#999',
+    color: T.textFaint,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
     letterSpacing: 1,
   },
   counter: {
     marginTop: 12,
-    color: '#ccc',
+    color: T.textFaint,
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
     letterSpacing: 2,
   },
 });

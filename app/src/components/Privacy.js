@@ -13,9 +13,10 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { color as T, font as F } from "../theme/tokens";
 const { width, height } = Dimensions.get("window");
 
 export default function PrivacyScreen() {
@@ -115,7 +116,7 @@ export default function PrivacyScreen() {
       icon: "database-lock-outline",
       title: "Data Collection",
       content: "Only what we need, like your university ID, to verify you're a student.",
-      color: "#f9c349"
+      color: T.yellow
     },
     {
       icon: "eye-off-outline",
@@ -178,7 +179,7 @@ export default function PrivacyScreen() {
               colors={[color, color]}
               style={styles.privacyIconGradient}
             >
-              <MaterialCommunityIcons name={icon} size={18} color="#fff" />
+              <MaterialCommunityIcons name={icon} size={18} color={T.white} />
             </LinearGradient>
           </Animated.View>
           <View style={styles.privacyContent}>
@@ -193,7 +194,7 @@ export default function PrivacyScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa02" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       {/* Header - Compact */}
       <Animated.View style={[styles.header, { opacity: headerFade }]}>
@@ -202,7 +203,7 @@ export default function PrivacyScreen() {
           style={styles.headerBtn}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={22} color="#1a1a1a" />
+          <Ionicons name="arrow-back" size={22} color={T.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Privacy Center</Text>
         <View style={{ width: 34 }} />
@@ -227,7 +228,7 @@ export default function PrivacyScreen() {
             ]}
           >
             <LinearGradient
-              colors={['#1a1a1a', '#2d2d2d']}
+              colors={[T.ink, T.ink]}
               style={styles.heroCard}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -290,7 +291,7 @@ export default function PrivacyScreen() {
                         {
                           top: 10 + Math.random() * 80,
                           left: 10 + Math.random() * 80,
-                          backgroundColor: ['#f9c349', '#4ecdc4', '#6c5ce7', '#ff6b6b', '#a29bfe', '#fd79a8'][i % 6],
+                          backgroundColor: [T.yellow, '#4ecdc4', '#6c5ce7', T.danger, '#a29bfe', '#fd79a8'][i % 6],
                           transform: [{ translateY: particleTranslateY }],
                           opacity: particleAnim.interpolate({
                             inputRange: [0, 0.5, 1],
@@ -328,17 +329,17 @@ export default function PrivacyScreen() {
             ]}
           >
             <LinearGradient
-              colors={['#1a1a1a', '#2d2d2d']}
+              colors={[T.ink, T.ink]}
               style={styles.contactCard}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
               <View style={styles.contactIconBox}>
                 <LinearGradient
-                  colors={['#f9c349', '#e6b800']}
+                  colors={[T.yellow, '#e6b800']}
                   style={styles.contactIconGradient}
                 >
-                  <MaterialCommunityIcons name="email-outline" size={20} color="#1a1a1a" />
+                  <MaterialCommunityIcons name="email-outline" size={20} color={T.ink} />
                 </LinearGradient>
               </View>
               <View style={styles.contactContent}>
@@ -350,14 +351,14 @@ export default function PrivacyScreen() {
                 onPress={openEmail}
                 activeOpacity={0.7}
               >
-                <Ionicons name="arrow-forward" size={16} color="#f9c349" />
+                <Ionicons name="arrow-forward" size={16} color={T.yellow} />
               </TouchableOpacity>
             </LinearGradient>
           </Animated.View>
 
           {/* Footer - Compact */}
           <View style={styles.footer}>
-            <Text style={styles.footerLogo}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
+            <Text style={styles.footerLogo}>tdc<Text style={{color:T.yellow}}>.</Text></Text>
             <Text style={styles.footerText}>Building a Stronger Student Economy.</Text>
             <Text style={styles.footerSubText}>© 2026 tdc Privilege Program</Text>
           </View>
@@ -370,7 +371,7 @@ export default function PrivacyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: T.paper,
   },
   
   // Header - Compact
@@ -380,24 +381,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.04)',
+    borderBottomColor: T.line,
   },
   headerBtn: {
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
+    borderColor: T.line,
   },
   headerTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     letterSpacing: 0.3,
   },
   scrollContent: {
@@ -411,11 +412,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
     borderRadius: 18,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   heroCard: {
     padding: 20,
@@ -431,7 +432,7 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: 75,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     opacity: 0.3,
   },
   particlesContainer: {
@@ -458,31 +459,31 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#f9c349',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   heroBadge: {
-    backgroundColor: "rgba(249, 195, 73, 0.12)",
+    backgroundColor: T.yellowSoft,
     paddingHorizontal: 12,
     paddingVertical: 3,
     borderRadius: 12,
     marginBottom: 6,
     borderWidth: 1,
-    borderColor: "rgba(249, 195, 73, 0.15)",
+    borderColor: T.line,
   },
   heroBadgeText: {
-    color: "#f9c349",
+    color: T.yellow,
     fontSize: 8,
-    fontWeight: "800",
+    fontFamily: F.bodyBold,
     letterSpacing: 1.5,
   },
   heroTitle: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#fff',
+    fontFamily: F.heading,
+    color: T.white,
     marginBottom: 6,
     textAlign: 'center',
     letterSpacing: 0.3,
@@ -492,7 +493,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     textAlign: 'center',
     lineHeight: 18,
-    fontWeight: '400',
+    fontFamily: F.body,
     paddingHorizontal: 4,
   },
   decorLine: {
@@ -504,13 +505,13 @@ const styles = StyleSheet.create({
   decorSegment: {
     width: 20,
     height: 1.5,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     borderRadius: 1,
   },
   decorDiamond: {
     width: 5,
     height: 5,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     transform: [{ rotate: '45deg' }],
     marginHorizontal: 8,
   },
@@ -530,19 +531,19 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     marginRight: 8,
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     letterSpacing: 0.3,
   },
   sectionLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(0,0,0,0.06)',
+    backgroundColor: T.sand,
     marginLeft: 10,
   },
   privacyWrapper: {
@@ -553,10 +554,10 @@ const styles = StyleSheet.create({
     padding: 12,
     paddingHorizontal: 14,
     borderRadius: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
-    shadowColor: '#000',
+    borderColor: T.line,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
@@ -583,16 +584,16 @@ const styles = StyleSheet.create({
   },
   privacyTitle: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     marginBottom: 2,
     letterSpacing: 0.2,
   },
   privacyText: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: T.textFaint,
     lineHeight: 16,
-    fontWeight: '400',
+    fontFamily: F.body,
   },
   privacyLine: {
     height: 2,
@@ -608,11 +609,11 @@ const styles = StyleSheet.create({
     marginTop: 14,
     borderRadius: 14,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   contactCard: {
     flexDirection: 'row',
@@ -636,15 +637,15 @@ const styles = StyleSheet.create({
   },
   contactTitle: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#fff',
+    fontFamily: F.bodyBold,
+    color: T.white,
     marginBottom: 1,
     letterSpacing: 0.2,
   },
   contactText: {
     fontSize: 11,
     color: 'rgba(255,255,255,0.5)',
-    fontWeight: '400',
+    fontFamily: F.body,
   },
   contactArrow: {
     width: 34,
@@ -663,23 +664,23 @@ const styles = StyleSheet.create({
   },
   footerLogo: {
     fontSize: 16,
-    fontWeight: '800',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     letterSpacing: 0.5,
   },
   footerText: {
     fontSize: 10,
-    color: 'rgba(0, 0, 0, 0.4)',
+    color: T.textMuted,
     marginTop: 4,
-    fontWeight: '400',
+    fontFamily: F.body,
     letterSpacing: 0.3,
     textAlign: 'center',
   },
   footerSubText: {
     fontSize: 9,
-    color: 'rgba(0, 0, 0, 0.2)',
+    color: T.textMuted,
     marginTop: 4,
-    fontWeight: '400',
+    fontFamily: F.body,
     letterSpacing: 0.3,
   },
 });

@@ -17,13 +17,14 @@ import {
   StatusBar,
   Vibration,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Clipboard from "expo-clipboard";
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/api";
 
+import { color as T, font as F } from "../theme/tokens";
 const { width, height } = Dimensions.get("window");
 
 export default function PaymentScreen({ navigation }) {
@@ -220,7 +221,7 @@ export default function PaymentScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F6FA" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -248,11 +249,11 @@ export default function PaymentScreen({ navigation }) {
                   style={styles.backBtn}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="chevron-back" size={24} color="#1a1a1a" />
+                  <Ionicons name="chevron-back" size={24} color={T.ink} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Activate Card</Text>
                 <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
-                  <MaterialCommunityIcons name="crown" size={24} color="#f9c349" />
+                  <MaterialCommunityIcons name="crown" size={24} color={T.yellow} />
                 </Animated.View>
               </View>
             </View>
@@ -265,7 +266,7 @@ export default function PaymentScreen({ navigation }) {
               ]}
             >
               <LinearGradient
-                colors={["#f9c349", "#f5a623"]}
+                colors={[T.yellow, T.yellow]}
                 style={styles.priceGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -292,7 +293,7 @@ export default function PaymentScreen({ navigation }) {
               <View style={styles.bankCard}>
                 <View style={styles.bankHeader}>
                   <View style={styles.bankIconContainer}>
-                    <MaterialCommunityIcons name="bank" size={28} color="#f9c349" />
+                    <MaterialCommunityIcons name="bank" size={28} color={T.yellow} />
                   </View>
                   <Text style={styles.bankName}>{BANK_NAME}</Text>
                 </View>
@@ -307,7 +308,7 @@ export default function PaymentScreen({ navigation }) {
                         onPress={() => copyToClipboard(ACCOUNT_TITLE, "Account Title")}
                         style={styles.copySmallBtn}
                       >
-                        <Ionicons name="copy-outline" size={16} color="#f9c349" />
+                        <Ionicons name="copy-outline" size={16} color={T.yellow} />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -331,7 +332,7 @@ export default function PaymentScreen({ navigation }) {
                         onPress={() => copyToClipboard(ACCOUNT_NUMBER, "Account Number")}
                         style={styles.copySmallBtn}
                       >
-                      <Ionicons name="copy-outline" size={16} color="#f9c349" />
+                      <Ionicons name="copy-outline" size={16} color={T.yellow} />
                           
                         
                       </TouchableOpacity>
@@ -346,18 +347,18 @@ export default function PaymentScreen({ navigation }) {
                   activeOpacity={0.7}
                 >
                   <LinearGradient
-                    colors={["#f9c349", "#f5a623"]}
+                    colors={[T.yellow, T.yellow]}
                     style={styles.quickCopyGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                   >
-                    <Ionicons name="copy" size={18} color="#FFFFFF" />
+                    <Ionicons name="copy" size={18} color={T.white} />
                     <Text style={styles.quickCopyText}>Copy Full Account Number</Text>
                   </LinearGradient>
                 </TouchableOpacity>
 
                 <View style={styles.bankNote}>
-                  <Ionicons name="information-circle-outline" size={16} color="#888" />
+                  <Ionicons name="information-circle-outline" size={16} color={T.textFaint} />
                   <Text style={styles.noteText}>
                     Please use your name as reference when transferring
                   </Text>
@@ -382,13 +383,13 @@ export default function PaymentScreen({ navigation }) {
                       style={styles.previewImage}
                     />
                     <View style={styles.previewOverlay}>
-                      <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+                      <Ionicons name="checkmark-circle" size={24} color={T.success} />
                       <Text style={styles.previewText}>Receipt Uploaded</Text>
                     </View>
                   </View>
                 ) : (
                   <View style={styles.uploadPlaceholder}>
-                    <Ionicons name="cloud-upload-outline" size={40} color="#f9c349" />
+                    <Ionicons name="cloud-upload-outline" size={40} color={T.yellow} />
                     <Text style={styles.uploadTitle}>Upload Payment Receipt</Text>
                     <Text style={styles.uploadSubtext}>Tap to select from gallery</Text>
                   </View>
@@ -397,33 +398,33 @@ export default function PaymentScreen({ navigation }) {
 
               {/* Input Fields */}
               <View style={styles.inputGroup}>
-                <Ionicons name="location-outline" size={20} color="#f9c349" />
+                <Ionicons name="location-outline" size={20} color={T.yellow} />
                 <TextInput
                   style={styles.input}
                   placeholder="Complete Delivery Address"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={T.textFaint}
                   value={formData.address}
                   onChangeText={(t) => setFormData({ ...formData, address: t })}
                 />
               </View>
 
               <View style={styles.inputGroup}>
-                <Ionicons name="business-outline" size={20} color="#f9c349" />
+                <Ionicons name="business-outline" size={20} color={T.yellow} />
                 <TextInput
                   style={styles.input}
                   placeholder="City Name"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={T.textFaint}
                   value={formData.city}
                   onChangeText={(t) => setFormData({ ...formData, city: t })}
                 />
               </View>
 
               <View style={styles.inputGroup}>
-                <Ionicons name="call-outline" size={20} color="#f9c349" />
+                <Ionicons name="call-outline" size={20} color={T.yellow} />
                 <TextInput
                   style={styles.input}
                   placeholder="Phone Number"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={T.textFaint}
                   value={formData.phone}
                   onChangeText={(t) => setFormData({ ...formData, phone: t })}
                   keyboardType="phone-pad"
@@ -438,20 +439,20 @@ export default function PaymentScreen({ navigation }) {
                 activeOpacity={0.8}
               >
                 <LinearGradient
-                  colors={["#f9c349", "#f5a623"]}
+                  colors={[T.yellow, T.yellow]}
                   style={styles.gradientBtn}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                 >
                   {loading ? (
                     <View style={styles.loadingContainer}>
-                      <ActivityIndicator color="#FFFFFF" size="small" />
+                      <ActivityIndicator color={T.white} size="small" />
                       <Text style={styles.submitBtnText}>PROCESSING...</Text>
                     </View>
                   ) : (
                     <View style={styles.submitContent}>
                       <Text style={styles.submitBtnText}>ACTIVATE NOW</Text>
-                      <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                      <Ionicons name="arrow-forward" size={20} color={T.white} />
                     </View>
                   )}
                 </LinearGradient>
@@ -460,7 +461,7 @@ export default function PaymentScreen({ navigation }) {
               {/* Success Message */}
               {showSuccess && (
                 <Animated.View style={styles.successContainer}>
-                  <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+                  <Ionicons name="checkmark-circle" size={24} color={T.success} />
                   <Text style={styles.successText}>Submitted successfully! 🎉</Text>
                 </Animated.View>
               )}
@@ -482,11 +483,11 @@ export default function PaymentScreen({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F5F6FA",
+    backgroundColor: T.paper,
   },
   container: {
     flex: 1,
-    backgroundColor: "#F5F6FA",
+    backgroundColor: T.paper,
   },
   scrollContainer: {
     paddingBottom: 30,
@@ -500,7 +501,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 12,
     paddingBottom: 0,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: T.card,
     shadowOpacity: 0.04,
     elevation: 2,
     marginTop: 37,
@@ -515,14 +516,14 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 12,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: T.sand,
     justifyContent: "center",
     alignItems: "center",
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: "800",
-    color: "#1a1a1a",
+    fontFamily: F.heading,
+    color: T.ink,
     letterSpacing: -0.5,
     marginTop: 4,
   },
@@ -533,11 +534,11 @@ const styles = StyleSheet.create({
     marginTop: 20,
     borderRadius: 20,
     overflow: "hidden",
-    shadowColor: "#f9c349",
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   priceGradient: {
     padding: 20,
@@ -550,9 +551,9 @@ const styles = StyleSheet.create({
   priceLabel: {
     color: "rgba(255,255,255,0.8)",
     fontSize: 10,
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
     letterSpacing: 1.5,
-    textTransform: "uppercase",
+    textTransform: 'none',
   },
   priceRow: {
     flexDirection: "row",
@@ -560,14 +561,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   priceSymbol: {
-    color: "#FFFFFF",
+    color: T.white,
     fontSize: 18,
-    fontWeight: "600",
+    fontFamily: F.headingBold,
   },
   priceAmount: {
-    color: "#FFFFFF",
+    color: T.white,
     fontSize: 34,
-    fontWeight: "bold",
+    fontFamily: F.heading,
     letterSpacing: -1,
     marginLeft: 2,
   },
@@ -578,39 +579,39 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   priceBadgeText: {
-    color: "#FFFFFF",
+    color: T.white,
     fontSize: 10,
-    fontWeight: "700",
+    fontFamily: F.bodyBold,
     letterSpacing: 0.5,
   },
 
   // Payment Card
   paymentCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: T.card,
     marginHorizontal: 20,
     marginTop: 20,
     padding: 20,
     borderRadius: 20,
-    shadowColor: "#000",
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
-    shadowRadius: 12,
+    shadowRadius: 8,
     elevation: 2,
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: "700",
-    color: "#1a1a1a",
+    fontFamily: F.bodyBold,
+    color: T.ink,
     marginBottom: 16,
   },
 
   // Bank Card
   bankCard: {
-    backgroundColor: "#F8F9FA",
+    backgroundColor: T.sand,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#f9c34930",
+    borderColor: T.line,
   },
   bankHeader: {
     flexDirection: "row",
@@ -622,17 +623,17 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 14,
-    backgroundColor: "#FFF8E1",
+    backgroundColor: T.yellowSoft,
     justifyContent: "center",
     alignItems: "center",
   },
   bankName: {
     fontSize: 18,
-    fontWeight: "700",
-    color: "#1a1a1a",
+    fontFamily: F.headingBold,
+    color: T.ink,
   },
   bankDetails: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: T.card,
     borderRadius: 12,
     padding: 14,
   },
@@ -643,8 +644,8 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 12,
-    color: "#888",
-    fontWeight: "500",
+    color: T.textFaint,
+    fontFamily: F.bodyMedium,
     marginBottom: 8,
   },
   detailValueContainer: {
@@ -654,17 +655,17 @@ const styles = StyleSheet.create({
   },
   detailValue: {
     fontSize: 14,
-    color: "#1a1a1a",
-    fontWeight: "600",
+    color: T.ink,
+    fontFamily: F.bodySemi,
   },
   copySmallBtn: {
     padding: 6,
-    backgroundColor: "#FFF8E1",
+    backgroundColor: T.yellowSoft,
     borderRadius: 8,
   },
   detailDivider: {
     height: 1,
-    backgroundColor: "#F0F0F0",
+    backgroundColor: T.sand,
     marginVertical: 12,
   },
 
@@ -681,24 +682,24 @@ const styles = StyleSheet.create({
   accountNumberBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8F9FA",
+    backgroundColor: T.paper,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#f9c34930",
+    borderColor: T.line,
     flex: 1,
   },
   accountNumberPart: {
     fontSize: 15,
-    fontWeight: "700",
-    color: "#1a1a1a",
+    fontFamily: F.bodyBold,
+    color: T.ink,
     letterSpacing: 0.5,
   },
   accountNumberDash: {
     fontSize: 18,
-    fontWeight: "300",
-    color: "#999",
+    fontFamily: F.body,
+    color: T.textFaint,
     marginHorizontal: 3,
   },
   copyAccountBtn: {
@@ -713,9 +714,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   copyBtnText: {
-    color: "#FFFFFF",
+    color: T.white,
     fontSize: 12,
-    fontWeight: "700",
+    fontFamily: F.bodyBold,
     letterSpacing: 0.5,
   },
 
@@ -732,9 +733,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   quickCopyText: {
-    color: "#FFFFFF",
+    color: T.white,
     fontSize: 13,
-    fontWeight: "700",
+    fontFamily: F.bodyBold,
     letterSpacing: 0.5,
   },
   bankNote: {
@@ -743,39 +744,39 @@ const styles = StyleSheet.create({
     marginTop: 14,
     gap: 8,
     padding: 10,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: T.card,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#F0F0F0",
+    borderColor: T.line,
   },
   noteText: {
     flex: 1,
-    fontSize: 12,
-    color: "#888",
+    fontSize: 12, fontFamily: F.body,
+    color: T.textFaint,
     lineHeight: 16,
   },
 
   // Form Card
   formCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: T.card,
     marginHorizontal: 20,
     marginTop: 20,
     padding: 20,
     borderRadius: 20,
-    shadowColor: "#000",
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
-    shadowRadius: 12,
+    shadowRadius: 8,
     elevation: 2,
   },
 
   // Upload Box
   uploadBox: {
     height: 130,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: T.sand,
     borderRadius: 14,
     borderWidth: 2,
-    borderColor: "#f9c34930",
+    borderColor: T.line,
     borderStyle: "dashed",
     justifyContent: "center",
     alignItems: "center",
@@ -801,26 +802,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: T.overlay,
     paddingVertical: 8,
   },
   previewText: {
-    color: "#FFFFFF",
+    color: T.white,
     fontSize: 13,
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
   },
   uploadPlaceholder: {
     alignItems: "center",
   },
   uploadTitle: {
-    color: "#1a1a1a",
+    color: T.ink,
     fontSize: 14,
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
     marginTop: 8,
   },
   uploadSubtext: {
-    color: "#999",
-    fontSize: 12,
+    color: T.textFaint,
+    fontSize: 12, fontFamily: F.body,
     marginTop: 2,
   },
 
@@ -828,7 +829,7 @@ const styles = StyleSheet.create({
   inputGroup: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8F9FA",
+    backgroundColor: T.sand,
     borderRadius: 14,
     marginBottom: 12,
     paddingHorizontal: 14,
@@ -837,8 +838,8 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: "#1a1a1a",
-    fontSize: 14,
+    color: T.ink,
+    fontSize: 14, fontFamily: F.body,
     paddingVertical: 10,
   },
 
@@ -847,11 +848,11 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: "hidden",
     marginTop: 8,
-    shadowColor: "#f9c349",
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   gradientBtn: {
     height: 52,
@@ -864,8 +865,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   submitBtnText: {
-    color: "#FFFFFF",
-    fontWeight: "800",
+    color: T.white,
+    fontFamily: F.bodyBold,
     fontSize: 14,
     letterSpacing: 1.5,
   },
@@ -886,12 +887,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(76, 175, 80, 0.08)",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#4CAF50",
+    borderColor: T.success,
   },
   successText: {
     color: "#2E7D32",
     fontSize: 14,
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
   },
 
   // Footer
@@ -901,8 +902,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   footerText: {
-    color: "#999",
-    fontSize: 12,
+    color: T.textFaint,
+    fontSize: 12, fontFamily: F.body,
     textAlign: "center",
   },
 });

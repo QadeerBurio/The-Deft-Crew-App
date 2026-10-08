@@ -6,8 +6,9 @@ import {
   StyleSheet,
   StatusBar,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { color as T, font as F } from "../theme/tokens";
 import { useNavigation } from "@react-navigation/native"; // Import this
 
 export default function TDCFlow() {
@@ -45,7 +46,7 @@ export default function TDCFlow() {
     <View style={styles.flex}>
       <StatusBar barStyle="light-content" />
       <LinearGradient
-        colors={["#000000", "#1a1a1a", "#000000"]} // Subtle gradient for depth
+        colors={[T.ink, T.ink, T.ink]} // Subtle gradient for depth
         style={styles.center}
       >
         <Animated.View
@@ -58,7 +59,7 @@ export default function TDCFlow() {
         </Animated.View>
 
         <Animated.Text style={[styles.splashTitle, { opacity: fadeAnim }]}>
-          THE DEFT CREW
+          the deft crew
         </Animated.Text>
 
         <View style={styles.splashFooter}>
@@ -76,24 +77,24 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: "#ffffff",
+    backgroundColor: T.card,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 10,
-    shadowColor: "#fff", // Added for iOS visibility
+    elevation: 2,
+    shadowColor: T.ink, // Added for iOS visibility
     shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
   },
   splashLogoText: {
     fontSize: 50,
-    fontWeight: "900",
-    color: "#000000",
+    fontFamily: F.heading,
+    color: T.ink,
   },
   splashTitle: {
-    color: "#fff",
+    color: T.white,
     fontSize: 20,
-    fontWeight: "bold",
+    fontFamily: F.headingBold,
     marginTop: 25,
     letterSpacing: 4,
   },
@@ -102,8 +103,8 @@ const styles = StyleSheet.create({
     bottom: 50,
   },
   footerBrandText: {
-    color: "#666",
-    fontSize: 12,
+    color: T.textMuted,
+    fontSize: 12, fontFamily: F.body,
     letterSpacing: 2,
   },
 });

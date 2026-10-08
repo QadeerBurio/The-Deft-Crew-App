@@ -7,6 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
+import { color as T, font as F } from "../theme/tokens";
 // --- SUB-COMPONENTS (Defined outside to prevent re-render lag) ---
 const SectionHeader = ({ title, icon, color }) => (
 
@@ -133,17 +134,17 @@ const ApplicationForm = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
+      <StatusBar barStyle="light-content" backgroundColor={T.paper} />
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
         style={{ flex: 1 }}
       >
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.reset({ index: 0, routes: [{ name: "Exchange" }] })} style={styles.backButton}>
-            <FontAwesome5 name="chevron-left" size={18} color="#FFF" />
+            <FontAwesome5 name="chevron-left" size={18} color={T.white} />
           </TouchableOpacity>
           <View>
-            <Text style={styles.headerTitle}>Application Form</Text>
+            <Text style={styles.headerTitle}>application form</Text>
             <Text style={styles.headerSubtitle}>{program.university}</Text>
           </View>
         </View>
@@ -236,7 +237,7 @@ const ApplicationForm = ({ route, navigation }) => {
             <SectionHeader title="Work Experience" icon="briefcase" color={program.color} />
             <TouchableOpacity style={styles.addBtn} onPress={addExperience}>
               <FontAwesome5 name="plus" size={10} color="#4F46E5" />
-              <Text style={styles.addBtnText}> Add Exp</Text>
+              <Text style={styles.addBtnText}> add exp</Text>
             </TouchableOpacity>
           </View>
 
@@ -245,7 +246,7 @@ const ApplicationForm = ({ route, navigation }) => {
               <View style={styles.expCardHeader}>
                 <Text style={styles.expCountText}>Experience #{index + 1}</Text>
                 <TouchableOpacity onPress={() => setExperiences(experiences.filter(e => e.id !== exp.id))}>
-                  <FontAwesome5 name="times-circle" size={18} color="#EF4444" />
+                  <FontAwesome5 name="times-circle" size={18} color={T.danger} />
                 </TouchableOpacity>
               </View>
               <InputField placeholder="Role (e.g. Intern)" icon="user-tie" value={exp.role} onChangeText={(txt) => updateExperience(exp.id, 'role', txt)} />
@@ -277,8 +278,8 @@ const ApplicationForm = ({ route, navigation }) => {
           <InputField label="Extra Curricular" icon="trophy" placeholder="Sports, Voluteering..." multiline value={formData.extraActivities} onChangeText={(txt) => updateField('extraActivities', txt)} />
 
           <TouchableOpacity style={[styles.submitButton, { backgroundColor: program.color }]} onPress={handleApply}>
-            <Text style={styles.submitButtonText}>Submit Application</Text>
-            <FontAwesome5 name="paper-plane" size={16} color="#FFF" style={{marginLeft: 12}} />
+            <Text style={styles.submitButtonText}>submit application</Text>
+            <FontAwesome5 name="paper-plane" size={16} color={T.white} style={{marginLeft: 12}} />
           </TouchableOpacity>
           
           <View style={{ height: 100 }} />
@@ -289,42 +290,42 @@ const ApplicationForm = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: { flex: 1, backgroundColor: T.paper },
   header: { 
-    backgroundColor: '#000', paddingHorizontal: 25, paddingTop: Platform.OS === 'ios' ? 20 : 50, paddingBottom: 25, 
+    backgroundColor: T.ink, paddingHorizontal: 25, paddingTop: Platform.OS === 'ios' ? 20 : 50, paddingBottom: 25, 
     flexDirection: 'row', alignItems: 'center', borderBottomLeftRadius: 40,
   },
   backButton: { marginRight: 20 },
-  headerTitle: { color: '#FFF', fontSize: 22, fontWeight: '900' },
-  headerSubtitle: { color: '#94A3B8', fontSize: 13 },
+  headerTitle: { color: T.white, fontSize: 22, fontFamily: F.heading },
+  headerSubtitle: { color: T.textFaint, fontSize: 13, fontFamily: F.body },
   scrollContent: { padding: 20 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, marginTop: 25 },
-  sectionTitle: { fontSize: 12, fontWeight: '800', color: '#1E293B', marginLeft: 10, textTransform: 'uppercase', letterSpacing: 1 },
+  sectionTitle: { fontSize: 12, fontFamily: F.bodyBold, color: '#1E293B', marginLeft: 10, textTransform: 'none', letterSpacing: 1 },
   expHeaderContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   addBtn: { backgroundColor: '#E0E7FF', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 10 },
-  addBtnText: { fontSize: 11, fontWeight: '800', color: '#4F46E5' },
-  experienceCard: { backgroundColor: '#F1F5F9', padding: 15, borderRadius: 20, marginTop: 15, borderWidth: 1, borderColor: '#E2E8F0' },
+  addBtnText: { fontSize: 11, fontFamily: F.bodyBold, color: '#4F46E5' },
+  experienceCard: { backgroundColor: T.sand, padding: 15, borderRadius: 20, marginTop: 15, borderWidth: 1, borderColor: T.line },
   expCardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  expCountText: { fontSize: 11, fontWeight: 'bold', color: '#475569' },
-  emergencyBox: { marginTop: 15, backgroundColor: '#FEF2F2', padding: 15, borderRadius: 20, borderStyle: 'dashed', borderWidth: 1, borderColor: '#FCA5A5' },
-  emergencyLabel: { fontSize: 11, fontWeight: '800', color: '#B91C1C', marginBottom: 10, marginLeft: 5 },
+  expCountText: { fontSize: 11, fontFamily: F.bodyBold, color: '#475569' },
+  emergencyBox: { marginTop: 15, backgroundColor: T.dangerBg, padding: 15, borderRadius: 20, borderStyle: 'dashed', borderWidth: 1, borderColor: '#FCA5A5' },
+  emergencyLabel: { fontSize: 11, fontFamily: F.bodyBold, color: T.danger, marginBottom: 10, marginLeft: 5 },
   inputGroup: { marginBottom: 16 },
-  label: { fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 6, marginLeft: 4 },
+  label: { fontSize: 11, fontFamily: F.bodyBold, color: T.textMuted, marginBottom: 6, marginLeft: 4 },
   inputContainer: { 
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', 
-    borderRadius: 15, paddingHorizontal: 15, borderWidth: 1, borderColor: '#E2E8F0'
+    flexDirection: 'row', alignItems: 'center', backgroundColor: T.card, 
+    borderRadius: 15, paddingHorizontal: 15, borderWidth: 1, borderColor: T.line
   },
   inputIcon: { marginRight: 12, width: 18, textAlign: 'center' },
-  input: { flex: 1, height: 48, fontSize: 14, color: '#0F172A', fontWeight: '500' },
+  input: { flex: 1, height: 48, fontSize: 14, color: '#0F172A', fontFamily: F.bodyMedium },
   textAreaContainer: { alignItems: 'flex-start', paddingTop: 14 },
   textArea: { height: 110, textAlignVertical: 'top' },
   row: { flexDirection: 'row' },
   submitButton: { 
     height: 60, borderRadius: 20, flexDirection: 'row', 
-    justifyContent: 'center', alignItems: 'center', marginTop: 30, elevation: 8,
-    shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10
+    justifyContent: 'center', alignItems: 'center', marginTop: 30, elevation: 2,
+    shadowColor: T.ink, shadowOpacity: 0.06, shadowRadius: 8
   },
-  submitButtonText: { color: '#FFF', fontSize: 17, fontWeight: '800' }
+  submitButtonText: { color: T.white, fontSize: 17, fontFamily: F.bodyBold }
 });
 
 export default ApplicationForm;

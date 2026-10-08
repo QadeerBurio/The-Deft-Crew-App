@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, Modal, StyleSheet, TouchableOpacity, Image, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { color as T, font as F } from "../theme/tokens";
 export default function CallModal({ 
   visible, status, user, timer, onAccept, onReject, 
   isMuted, toggleMute, isSpeaker, toggleSpeaker 
@@ -109,9 +110,9 @@ export default function CallModal({
                 <Ionicons 
                   name={isMuted ? "mic-off" : "mic"} 
                   size={28} 
-                  color={isMuted ? "#FFF" : "#6C63FF"} 
+                  color={isMuted ? T.white : "#6C63FF"} 
                 />
-                <Text style={styles.controlLabel}>Mute</Text>
+                <Text style={styles.controlLabel}>mute</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
@@ -121,9 +122,9 @@ export default function CallModal({
                 <Ionicons 
                   name={isSpeaker ? "volume-high" : "volume-medium"} 
                   size={28} 
-                  color={isSpeaker ? "#FFF" : "#6C63FF"} 
+                  color={isSpeaker ? T.white : "#6C63FF"} 
                 />
-                <Text style={styles.controlLabel}>Speaker</Text>
+                <Text style={styles.controlLabel}>speaker</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -133,15 +134,15 @@ export default function CallModal({
             {status === "Incoming Call..." ? (
               <>
                 <TouchableOpacity onPress={onReject} style={[styles.btn, styles.decline]}>
-                  <Ionicons name="close" size={35} color="#FFF" />
+                  <Ionicons name="close" size={35} color={T.white} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={onAccept} style={[styles.btn, styles.accept]}>
-                  <Ionicons name="call" size={35} color="#FFF" />
+                  <Ionicons name="call" size={35} color={T.white} />
                 </TouchableOpacity>
               </>
             ) : (
               <TouchableOpacity onPress={onReject} style={[styles.btn, styles.decline]}>
-                <Ionicons name="call" size={35} color="#FFF" />
+                <Ionicons name="call" size={35} color={T.white} />
               </TouchableOpacity>
             )}
           </View>
@@ -154,7 +155,7 @@ export default function CallModal({
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: 'rgba(0,0,0,0.95)', 
+    backgroundColor: T.overlay, 
     justifyContent: 'center', 
     alignItems: 'center' 
   },
@@ -171,16 +172,16 @@ const styles = StyleSheet.create({
     borderColor: '#6C63FF' 
   },
   name: { 
-    color: '#FFF', 
+    color: T.white, 
     fontSize: 28, 
-    fontWeight: 'bold', 
+    fontFamily: F.heading, 
     marginBottom: 8 
   },
   status: { 
     color: '#6C63FF', 
     fontSize: 18, 
     marginTop: 8, 
-    fontWeight: '600' 
+    fontFamily: F.headingBold 
   },
   controlsRow: { 
     flexDirection: 'row', 
@@ -192,15 +193,15 @@ const styles = StyleSheet.create({
     alignItems: 'center', 
     padding: 12, 
     borderRadius: 12, 
-    backgroundColor: '#1F1F1F', 
+    backgroundColor: T.ink, 
     width: 80 
   },
   activeControl: { 
     backgroundColor: '#6C63FF' 
   },
   controlLabel: { 
-    color: '#FFF', 
-    fontSize: 11, 
+    color: T.white, 
+    fontSize: 11, fontFamily: F.body, 
     marginTop: 6 
   },
   btnRow: { 
@@ -218,9 +219,9 @@ const styles = StyleSheet.create({
     alignItems: 'center' 
   },
   accept: { 
-    backgroundColor: '#4CAF50' 
+    backgroundColor: T.success 
   },
   decline: { 
-    backgroundColor: '#FF3B30' 
+    backgroundColor: T.danger 
   }
 });

@@ -14,9 +14,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { useNavigation } from "@react-navigation/native";
 
+import { color as T, font as F } from "../theme/tokens";
 const { width, height } = Dimensions.get("window");
 
 // Enable LayoutAnimation on Android
@@ -28,8 +29,8 @@ const FAQ_DATA = [
   {
     category: "Offers & Rewards",
     icon: "gift-outline",
-    color: "#f9c349",
-    gradient: ['#f9c349', '#f5a623'],
+    color: T.yellow,
+    gradient: [T.yellow, T.yellow],
     questions: [
       { q: "How do I redeem an offer?", a: "Open the offer details and tap the 'Redeem' button to claim your rewards instantly." },
       { q: "Do points from multiple offers accumulate?", a: "Yes, points from all eligible transactions are cumulative and reflected in your account dashboard." },
@@ -87,7 +88,7 @@ const FAQ_DATA = [
     category: "Scholarships",
     icon: "school-outline",
     color: "#ffa502",
-    gradient: ['#ffa502', '#f9a825'],
+    gradient: ['#ffa502', T.yellow],
     questions: [
       { q: "What scholarships are available?", a: "We list internal grants, external scholarships like Erasmus+, Fulbright, and partner university scholarships." },
       { q: "How do I apply for a scholarship?", a: "Navigate to the Scholarships section, review eligibility criteria, and apply directly through the app." },
@@ -247,7 +248,7 @@ export default function FAQScreen() {
             </Text>
           </View>
           <Animated.View style={[styles.chevronCircle, { transform: [{ rotate: chevronSpin }] }]}>
-            <Ionicons name="chevron-down" size={16} color={isExpanded ? color : "#ccc"} />
+            <Ionicons name="chevron-down" size={16} color={isExpanded ? color : T.textFaint} />
           </Animated.View>
         </TouchableOpacity>
         {isExpanded && (
@@ -262,7 +263,7 @@ export default function FAQScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerFade }]}>
@@ -271,11 +272,11 @@ export default function FAQScreen() {
           style={styles.headerBtn}
           activeOpacity={0.7}
         >
-          <Ionicons name="chevron-back" size={24} color="#1a1a1a" />
+          <Ionicons name="chevron-back" size={24} color={T.ink} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Help Center</Text>
+        <Text style={styles.headerTitle}>help center</Text>
         <TouchableOpacity style={styles.headerBtn} activeOpacity={0.7}>
-          <Ionicons name="search-outline" size={22} color="#1a1a1a" />
+          <Ionicons name="search-outline" size={22} color={T.ink} />
         </TouchableOpacity>
       </Animated.View>
 
@@ -299,7 +300,7 @@ export default function FAQScreen() {
             ]}
           >
             <LinearGradient
-              colors={['#1a1a1a', '#2d2d2d', '#1a1a1a']}
+              colors={[T.ink, T.ink, T.ink]}
               style={styles.heroCard}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -313,16 +314,16 @@ export default function FAQScreen() {
               
               <Animated.View style={[styles.heroIconCircle, { transform: [{ rotate: spin }] }]}>
                 <LinearGradient
-                  colors={['#f9c349', '#f5a623']}
+                  colors={[T.yellow, T.yellow]}
                   style={styles.heroIconGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 >
-                  <MaterialCommunityIcons name="frequently-asked-questions" size={40} color="#fff" />
+                  <MaterialCommunityIcons name="frequently-asked-questions" size={40} color={T.white} />
                 </LinearGradient>
               </Animated.View>
               
-              <Text style={styles.heroTitle}>Frequently Asked Questions</Text>
+              <Text style={styles.heroTitle}>frequently asked questions</Text>
               <Text style={styles.heroSubtitle}>
                 Find answers to common questions about tdc's features, rewards, and services.
               </Text>
@@ -368,7 +369,7 @@ export default function FAQScreen() {
                         {
                           top: 10 + Math.random() * 80,
                           left: 10 + Math.random() * 80,
-                          backgroundColor: ['#f9c349', '#4ecdc4', '#6c5ce7', '#ff6b6b', '#a29bfe', '#fd79a8'][i % 6],
+                          backgroundColor: [T.yellow, '#4ecdc4', '#6c5ce7', T.danger, '#a29bfe', '#fd79a8'][i % 6],
                           transform: [{ translateY: particleTranslateY }],
                           opacity: particleAnim.interpolate({
                             inputRange: [0, 0.5, 1],
@@ -450,30 +451,30 @@ export default function FAQScreen() {
             ]}
           >
             <LinearGradient
-              colors={['#1a1a1a', '#2d2d2d']}
+              colors={[T.ink, T.ink]}
               style={styles.supportCard}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
               <View style={styles.supportIconBox}>
                 <LinearGradient
-                  colors={['#f9c349', '#f5a623']}
+                  colors={[T.yellow, T.yellow]}
                   style={styles.supportIconGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 >
-                  <Ionicons name="chatbubbles-outline" size={24} color="#fff" />
+                  <Ionicons name="chatbubbles-outline" size={24} color={T.white} />
                 </LinearGradient>
               </View>
               <View style={styles.supportContent}>
-                <Text style={styles.supportTitle}>Still need help?</Text>
+                <Text style={styles.supportTitle}>still need help?</Text>
                 <Text style={styles.supportDesc}>Contact our support team for personalized assistance</Text>
               </View>
               <TouchableOpacity 
                 style={styles.supportArrow}
                 onPress={() => navigation.navigate("ContactUs")}
               >
-                <Ionicons name="arrow-forward" size={20} color="#f9c349" />
+                <Ionicons name="arrow-forward" size={20} color={T.yellow} />
               </TouchableOpacity>
             </LinearGradient>
           </Animated.View>
@@ -489,7 +490,7 @@ export default function FAQScreen() {
             ]}
           >
             <LinearGradient
-              colors={['#f8f9fa', '#f8f9fa']}
+              colors={[T.sand, T.sand]}
               style={styles.footerGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -497,7 +498,7 @@ export default function FAQScreen() {
               <Text style={styles.footerLogo}>
                 tdc<Text style={styles.footerLogoAccent}>.</Text>
               </Text>
-              <Text style={styles.footerText}>Building a Stronger Student Economy.</Text>
+              <Text style={styles.footerText}>building a stronger student economy.</Text>
               <View style={styles.footerLine} />
               
               
@@ -513,7 +514,7 @@ export default function FAQScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: T.paper,
   },
   
   // Header
@@ -523,18 +524,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
+    borderBottomColor: T.line,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: T.ink,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
-        shadowRadius: 10,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 4,
+        elevation: 2,
       },
     }),
   },
@@ -542,16 +543,16 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    borderColor: T.line,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#1a1a1a',
+    fontFamily: F.heading,
+    color: T.ink,
     letterSpacing: 0.5,
   },
   scrollContent: {
@@ -567,13 +568,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: '#f9c349',
+        shadowColor: T.ink,
         shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.2,
-        shadowRadius: 30,
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 20,
+        elevation: 2,
       },
     }),
   },
@@ -591,7 +592,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     opacity: 0.3,
   },
   particlesContainer: {
@@ -620,20 +621,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...Platform.select({
       ios: {
-        shadowColor: '#f9c349',
+        shadowColor: T.ink,
         shadowOffset: { width: 0, height: 5 },
-        shadowOpacity: 0.3,
-        shadowRadius: 15,
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 10,
+        elevation: 2,
       },
     }),
   },
   heroTitle: {
     fontSize: 24,
-    fontWeight: '900',
-    color: '#fff',
+    fontFamily: F.heading,
+    color: T.white,
     marginBottom: 10,
     textAlign: 'center',
     letterSpacing: 0.5,
@@ -643,7 +644,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
     lineHeight: 22,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
     paddingHorizontal: 5,
   },
   decorLine: {
@@ -655,13 +656,13 @@ const styles = StyleSheet.create({
   decorSegment: {
     width: 30,
     height: 2,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     borderRadius: 1,
   },
   decorDiamond: {
     width: 8,
     height: 8,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     transform: [{ rotate: '45deg' }],
     marginHorizontal: 10,
   },
@@ -679,13 +680,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: T.ink,
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.06,
         shadowRadius: 8,
       },
       android: {
-        elevation: 4,
+        elevation: 2,
       },
     }),
   },
@@ -695,15 +696,15 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     fontSize: 18,
-    fontWeight: '900',
-    color: '#1a1a1a',
+    fontFamily: F.heading,
+    color: T.ink,
   },
   statLabel: {
     fontSize: 9,
-    fontWeight: '600',
-    color: 'rgba(0,0,0,0.6)',
+    fontFamily: F.bodySemi,
+    color: T.ink,
     marginTop: 2,
-    textTransform: 'uppercase',
+    textTransform: 'none',
     letterSpacing: 0.5,
   },
   
@@ -729,8 +730,8 @@ const styles = StyleSheet.create({
   },
   categoryTitle: {
     fontSize: 15,
-    fontWeight: '800',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     flex: 1,
     letterSpacing: 0.5,
   },
@@ -741,20 +742,20 @@ const styles = StyleSheet.create({
   },
   categoryCountText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
   },
   
   // Q&A
   qaContainer: {
     marginBottom: 8,
     borderRadius: 12,
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
+    borderColor: T.line,
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: T.ink,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 8,
@@ -783,9 +784,9 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   question: {
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
     fontSize: 13,
-    color: "#1a1a1a",
+    color: T.ink,
     flex: 1,
     letterSpacing: 0.3,
   },
@@ -793,7 +794,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 8,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -811,10 +812,10 @@ const styles = StyleSheet.create({
   },
   answer: {
     fontSize: 12,
-    color: "#666",
+    color: T.textMuted,
     lineHeight: 20,
     flex: 1,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
   
   // Support CTA
@@ -825,13 +826,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: T.ink,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 8,
+        elevation: 2,
       },
     }),
   },
@@ -857,15 +858,15 @@ const styles = StyleSheet.create({
   },
   supportTitle: {
     fontSize: 14,
-    fontWeight: '800',
-    color: '#fff',
+    fontFamily: F.bodyBold,
+    color: T.white,
     marginBottom: 2,
     letterSpacing: 0.3,
   },
   supportDesc: {
     fontSize: 11,
     color: 'rgba(255,255,255,0.6)',
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
   supportArrow: {
     width: 40,
@@ -884,10 +885,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: T.ink,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
       },
       android: {
         elevation: 0,
@@ -901,25 +902,25 @@ const styles = StyleSheet.create({
   },
   footerLogo: {
     fontSize: 22,
-    fontWeight: '900',
-    color: '#000000',
+    fontFamily: F.heading,
+    color: T.ink,
     letterSpacing: 1,
   },
   footerLogoAccent: {
-    color: '#f9c349',
+    color: T.yellow,
   },
   footerText: {
     fontSize: 12,
-    color: 'rgba(0, 0, 0, 0.6)',
+    color: T.ink,
     marginTop: 6,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
     letterSpacing: 0.5,
     textAlign: 'center',
   },
   footerLine: {
     width: 40,
     height: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    backgroundColor: T.sand,
     marginTop: 12,
   },
   
@@ -927,16 +928,16 @@ const styles = StyleSheet.create({
   footerStatDivider: {
     width: 1,
     height: 30,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    backgroundColor: T.sand,
   },
   
   
   
   footerSubText: {
     fontSize: 10,
-    color: 'rgba(0, 0, 0, 0.3)',
+    color: T.textMuted,
     marginTop: 12,
-    fontWeight: '400',
+    fontFamily: F.body,
     letterSpacing: 0.5,
   },
 });

@@ -15,7 +15,8 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { LinearGradient } from "expo-linear-gradient";
+import { color as T, font as F } from "../theme/tokens";
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 
 const { width, height } = Dimensions.get("window");
 
@@ -141,7 +142,7 @@ const BrandDetailModal = ({
 
               {activeTab === "gift" && (
                 <View style={styles.tabContentWrapper}>
-                  <Text style={styles.tabContentTitle}>Offer Details</Text>
+                  <Text style={styles.tabContentTitle}>offer details</Text>
                   <Text style={styles.tabContentText}>
                     {currentOffer?.description || "Explore this iconic destination. Get exclusive student discounts on your favorite products and services."}
                   </Text>
@@ -154,12 +155,12 @@ const BrandDetailModal = ({
                         setTimeout(() => navigation.navigate('Login'), 300);
                       }}
                     >
-                      <MaterialCommunityIcons name="account-plus" size={24} color="#f9c349" />
+                      <MaterialCommunityIcons name="account-plus" size={24} color={T.yellow} />
                       <View style={{ flex: 1, marginLeft: 12 }}>
-                        <Text style={styles.guestPromptTitle}>Unlock Full Benefits</Text>
+                        <Text style={styles.guestPromptTitle}>unlock full benefits</Text>
                         <Text style={styles.guestPromptText}>Sign in to claim offers and get student discounts!</Text>
                       </View>
-                      <MaterialCommunityIcons name="chevron-forward" size={20} color="#f9c349" />
+                      <MaterialCommunityIcons name="chevron-forward" size={20} color={T.yellow} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -168,8 +169,8 @@ const BrandDetailModal = ({
               {activeTab === "redeem" && (
                 <View style={styles.tabContentWrapper}>
                   <View style={styles.instructionHeader}>
-                    <MaterialCommunityIcons name="ticket-confirmation-outline" size={24} color="#000000" />
-                    <Text style={styles.instructionTitle}>How to Redeem</Text>
+                    <MaterialCommunityIcons name="ticket-confirmation-outline" size={24} color={T.ink} />
+                    <Text style={styles.instructionTitle}>how to redeem</Text>
                   </View>
                   <Text style={styles.tabContentText}>
                     {currentOffer?.redeemInstructions ||
@@ -181,7 +182,7 @@ const BrandDetailModal = ({
               {activeTab === "location" && (
                 <View style={styles.tabContentWrapper}>
                   <View style={styles.locationInfoRow}>
-                    <MaterialCommunityIcons name="map-marker-radius" size={24} color="#000000" />
+                    <MaterialCommunityIcons name="map-marker-radius" size={24} color={T.ink} />
                     <Text style={styles.locationAddressText}>
                       {currentOffer?.location || "Address not specified"}
                     </Text>
@@ -191,8 +192,8 @@ const BrandDetailModal = ({
                     style={styles.mapButton}
                     onPress={() => onOpenMap(currentOffer?.location || selectedBrand.name)}
                   >
-                    <MaterialCommunityIcons name="directions" size={18} color="#fff" />
-                    <Text style={styles.mapButtonText}>Open in Maps</Text>
+                    <MaterialCommunityIcons name="directions" size={18} color={T.white} />
+                    <Text style={styles.mapButtonText}>open in maps</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -201,7 +202,7 @@ const BrandDetailModal = ({
             {/* Modal Action Row */}
             <View style={styles.modalActionRow}>
               <TouchableOpacity style={styles.closeBtn} onPress={handleClose}>
-                <Text style={styles.closeBtnText}>Close</Text>
+                <Text style={styles.closeBtnText}>close</Text>
               </TouchableOpacity>
               {currentOffer ? (
                 <TouchableOpacity
@@ -214,7 +215,7 @@ const BrandDetailModal = ({
                   onPress={() => onClaim(currentOffer._id)}
                 >
                   <LinearGradient
-                    colors={currentOffer.isClaimed ? ['#ccc', '#bbb'] : ['#f9c349', '#f5a623']}
+                    colors={currentOffer.isClaimed ? [T.textFaint, T.textFaint] : [T.yellow, T.yellow]}
                     style={styles.claimGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
@@ -222,7 +223,7 @@ const BrandDetailModal = ({
                     <MaterialCommunityIcons 
                       name={currentOffer.isClaimed ? "check-circle" : "gift"} 
                       size={20} 
-                      color="#fff" 
+                      color={T.white} 
                       style={styles.claimIcon}
                     />
                     <Text style={styles.buyBtnText}>
@@ -230,7 +231,7 @@ const BrandDetailModal = ({
                     </Text>
                     {!currentOffer.isClaimed && (
                       <View style={styles.claimArrowContainer}>
-                        <MaterialCommunityIcons name="arrow-right" size={16} color="#fff" />
+                        <MaterialCommunityIcons name="arrow-right" size={16} color={T.white} />
                       </View>
                     )}
                   </LinearGradient>
@@ -241,7 +242,7 @@ const BrandDetailModal = ({
                   disabled={true}
                 >
                   <Text style={styles.buyBtnText}>
-                    No Offers Available
+                    no offers available
                   </Text>
                 </TouchableOpacity>
               )}
@@ -268,8 +269,8 @@ const BrandDetailModal = ({
                   activeOpacity={0.7}
                   style={styles.myDiscountTouchable}
                 >
-                  <MaterialCommunityIcons name="ticket-percent" size={20} color="#f9c349" />
-                  <Text style={styles.myDiscountIndicatorText}>My Discounts</Text>
+                  <MaterialCommunityIcons name="ticket-percent" size={20} color={T.yellow} />
+                  <Text style={styles.myDiscountIndicatorText}>my discounts</Text>
                 </TouchableOpacity>
               </Animated.View>
             )}
@@ -283,12 +284,12 @@ const BrandDetailModal = ({
 const styles = StyleSheet.create({
   modalOverlay: { 
     flex: 1, 
-    backgroundColor: "rgba(0,0,0,0.6)", 
+    backgroundColor: T.overlay, 
     justifyContent: "flex-end" 
   },
   modalContainerFixed: { 
     height: "88%", 
-    backgroundColor: "#fff", 
+    backgroundColor: T.card, 
     borderTopLeftRadius: 35, 
     borderTopRightRadius: 35,
   },
@@ -305,7 +306,7 @@ const styles = StyleSheet.create({
   modalIndicator: { 
     width: 45, 
     height: 5, 
-    backgroundColor: "#E0E0E0", 
+    backgroundColor: T.sand, 
     borderRadius: 10, 
     alignSelf: "center", 
     marginBottom: 25 
@@ -318,7 +319,7 @@ const styles = StyleSheet.create({
     width: "100%", 
     height: 150, 
     borderRadius: 20, 
-    backgroundColor: "#F7F9F8", 
+    backgroundColor: T.sand, 
     overflow: "hidden", 
     justifyContent: "center", 
     alignItems: "center" 
@@ -330,15 +331,15 @@ const styles = StyleSheet.create({
   },
   modalTitle: { 
     fontSize: 24, 
-    fontWeight: "900", 
-    color: "#000000", 
+    fontFamily: F.heading, 
+    color: T.ink, 
     marginTop: 15, 
     textAlign: "center" 
   },
   modalCategoryBadge: { 
     flexDirection: "row", 
     alignItems: "center", 
-    backgroundColor: "#f5f5f5", 
+    backgroundColor: T.sand, 
     paddingHorizontal: 14, 
     paddingVertical: 6, 
     borderRadius: 20, 
@@ -346,9 +347,9 @@ const styles = StyleSheet.create({
   },
   modalCategoryText: { 
     fontSize: 10, 
-    color: "#000000", 
-    fontWeight: "700", 
-    textTransform: "uppercase", 
+    color: T.ink, 
+    fontFamily: F.bodyBold, 
+    textTransform: 'none', 
     letterSpacing: 1.2, 
     marginLeft: 6 
   },
@@ -367,22 +368,22 @@ const styles = StyleSheet.create({
     borderRadius: 14 
   },
   activeTabCard: { 
-    backgroundColor: "#fff", 
-    elevation: 3, 
-    shadowColor: "#000", 
+    backgroundColor: T.card, 
+    elevation: 2, 
+    shadowColor: T.ink, 
     shadowOffset: { width: 0, height: 2 }, 
-    shadowOpacity: 0.1, 
+    shadowOpacity: 0.06, 
     shadowRadius: 4 
   },
   tabText: { 
     fontSize: 13, 
-    color: "#999", 
-    fontWeight: "700", 
-    textTransform: "uppercase", 
+    color: T.textFaint, 
+    fontFamily: F.bodyBold, 
+    textTransform: 'none', 
     letterSpacing: 0.5 
   },
   activeTabText: { 
-    color: "#000000" 
+    color: T.ink 
   },
   tabContentWrapper: {
     marginTop: 15,
@@ -390,13 +391,13 @@ const styles = StyleSheet.create({
   },
   tabContentTitle: { 
     fontSize: 18, 
-    fontWeight: "bold", 
-    color: "#000000", 
+    fontFamily: F.headingBold, 
+    color: T.ink, 
     marginBottom: 10 
   },
   tabContentText: { 
-    fontSize: 14, 
-    color: "#666", 
+    fontSize: 14, fontFamily: F.body, 
+    color: T.textMuted, 
     lineHeight: 20 
   },
   instructionHeader: { 
@@ -407,8 +408,8 @@ const styles = StyleSheet.create({
   },
   instructionTitle: { 
     fontSize: 18, 
-    fontWeight: "bold", 
-    color: "#000000" 
+    fontFamily: F.headingBold, 
+    color: T.ink 
   },
   locationInfoRow: { 
     flexDirection: "row", 
@@ -416,14 +417,14 @@ const styles = StyleSheet.create({
     marginBottom: 20 
   },
   locationAddressText: { 
-    fontSize: 15, 
-    color: "#333", 
+    fontSize: 15, fontFamily: F.body, 
+    color: T.ink, 
     marginLeft: 10, 
     flexShrink: 1 
   },
   mapButton: { 
     flexDirection: "row", 
-    backgroundColor: "#000000", 
+    backgroundColor: T.ink, 
     paddingVertical: 12, 
     paddingHorizontal: 20, 
     borderRadius: 15, 
@@ -432,8 +433,8 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start" 
   },
   mapButtonText: { 
-    color: "#fff", 
-    fontWeight: "700", 
+    color: T.white, 
+    fontFamily: F.bodyBold, 
     marginLeft: 8, 
     fontSize: 14 
   },
@@ -448,21 +449,21 @@ const styles = StyleSheet.create({
     flex: 0.4, 
     paddingVertical: 16, 
     borderRadius: 20, 
-    backgroundColor: "#F2F2F2", 
+    backgroundColor: T.sand, 
     alignItems: "center" 
   },
   closeBtnText: { 
-    color: "#777", 
-    fontWeight: "700" 
+    color: T.textMuted, 
+    fontFamily: F.bodyBold 
   },
   buyBtn: { 
     flex: 0.6, 
     borderRadius: 20, 
     overflow: 'hidden',
-    elevation: 4,
-    shadowColor: '#f9c349',
+    elevation: 2,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
   },
   diagonalClaimBtn: {
@@ -486,34 +487,34 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   claimedBtn: { 
-    backgroundColor: "#ccc",
+    backgroundColor: T.sand,
     elevation: 0,
     shadowOpacity: 0,
   },
   buyBtnText: { 
-    color: "#fff", 
-    fontWeight: "800", 
+    color: T.white, 
+    fontFamily: F.bodyBold, 
     fontSize: 14 
   },
   guestPromptCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fafafa',
+    backgroundColor: T.sand,
     padding: 16,
     borderRadius: 16,
     marginTop: 20,
     borderWidth: 1,
-    borderColor: '#f0f0f0'
+    borderColor: T.line
   },
   guestPromptTitle: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     marginBottom: 2
   },
   guestPromptText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textMuted,
     lineHeight: 16
   },
   myDiscountIndicator: {
@@ -522,16 +523,16 @@ const styles = StyleSheet.create({
     right: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(249, 195, 73, 0.15)',
+    backgroundColor: T.yellowSoft,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(249, 195, 73, 0.3)',
+    borderColor: T.line,
     zIndex: 10,
-    shadowColor: '#f9c349',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 2,
     overflow: 'hidden',
@@ -543,8 +544,8 @@ const styles = StyleSheet.create({
   },
   myDiscountIndicatorText: {
     fontSize: 10,
-    fontWeight: '600',
-    color: '#f9c349',
+    fontFamily: F.bodySemi,
+    color: T.yellow,
     marginLeft: 4,
   },
 });

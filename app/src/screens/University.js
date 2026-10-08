@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { AuthContext } from "../context/AuthContext";
 
+import { color as T, font as F } from "../theme/tokens";
 export default function University() {
   const { user } = useContext(AuthContext);
 const navigation = useNavigation();
@@ -28,12 +29,12 @@ const navigation = useNavigation();
 {/* Header with back arrow */}
       <View style={styles.headerContainer}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={28} color="#08634f" />
+          <Ionicons name="chevron-back" size={28} color={T.success} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My University</Text>
+        <Text style={styles.headerTitle}>my university</Text>
       </View>
     <View style={styles.container}>
-      <Text style={styles.title}>My University</Text>
+      <Text style={styles.title}>my university</Text>
 
       <View style={styles.card}>
         {/* University Icon */}
@@ -47,7 +48,7 @@ const navigation = useNavigation();
         </Text>
 
         {/* Status */}
-        <Text style={styles.status}>Verified Student</Text>
+        <Text style={styles.status}>verified student</Text>
       </View>
     </View>
     </>
@@ -67,35 +68,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingTop: 10,
     paddingBottom: 10,
-    backgroundColor: "#ffffff",
+    backgroundColor: T.card,
   },
   backButton: {
     marginRight: 10,
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: "bold",
-    color: "#08634f",
+    fontFamily: F.heading,
+    color: T.success,
   },
 
   title: {
     fontSize: 28,
-    fontWeight: "bold",
+    fontFamily: F.heading,
     textAlign: "center",
     marginBottom: 30,
     color: "#1e2a78",
   },
 
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
     borderRadius: 20,
     padding: 30,
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
 
   iconContainer: {
@@ -109,21 +110,21 @@ const styles = StyleSheet.create({
   },
 
   iconText: {
-    fontSize: 40,
+    fontSize: 40, fontFamily: F.body,
   },
 
   uniName: {
     fontSize: 22,
-    fontWeight: "700",
-    color: "#333",
+    fontFamily: F.heading,
+    color: T.ink,
     textAlign: "center",
   },
 
   status: {
     marginTop: 10,
     fontSize: 14,
-    color: "#28a745",
-    fontWeight: "600",
+    color: T.success,
+    fontFamily: F.bodySemi,
   },
 
   loadingContainer: {
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingTop: 10,
     paddingBottom: 10,
-    backgroundColor: "#ffffff",
+    backgroundColor: T.card,
     marginTop:40
   },
   backButton: {
@@ -145,7 +146,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: "bold",
-    color: "#08634f",
+    fontFamily: F.heading,
+    color: T.success,
   },
 });

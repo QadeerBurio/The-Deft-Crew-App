@@ -12,9 +12,10 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { color as T, font as F } from "../theme/tokens";
 const { width, height } = Dimensions.get("window");
 
 export default function TermsScreen() {
@@ -112,7 +113,7 @@ export default function TermsScreen() {
       icon: "account-check-outline",
       title: "Student Eligibility",
       content: "tdc is only for verified university students & alumni. You'll need valid student credentials.",
-      color: "#f9c349"
+      color: T.yellow
     },
     {
       icon: "briefcase-search-outline",
@@ -142,7 +143,7 @@ export default function TermsScreen() {
       icon: "gavel",
       title: "Governing Law",
       content: "These terms follow Pakistani law. Disputes go to Pakistani courts",
-      color: "#ff6b6b"
+      color: T.danger
     },
   ];
 
@@ -181,7 +182,7 @@ export default function TermsScreen() {
               colors={[color, color]}
               style={styles.termIconGradient}
             >
-              <MaterialCommunityIcons name={icon} size={18} color="#fff" />
+              <MaterialCommunityIcons name={icon} size={18} color={T.white} />
             </LinearGradient>
           </Animated.View>
           <View style={styles.termContent}>
@@ -196,7 +197,7 @@ export default function TermsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa03" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       {/* Header - Compact */}
       <Animated.View style={[styles.header, { opacity: headerFade }]}>
@@ -205,7 +206,7 @@ export default function TermsScreen() {
           style={styles.headerBtn}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={22} color="#1a1a1a" />
+          <Ionicons name="arrow-back" size={22} color={T.ink} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle}>Terms of Service</Text>
@@ -233,7 +234,7 @@ export default function TermsScreen() {
             ]}
           >
             <LinearGradient
-              colors={['#1a1a1a', '#2d2d2d']}
+              colors={[T.ink, T.ink]}
               style={styles.heroCard}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -294,7 +295,7 @@ export default function TermsScreen() {
                         {
                           top: 10 + Math.random() * 80,
                           left: 10 + Math.random() * 80,
-                          backgroundColor: ['#f9c349', '#4ecdc4', '#6c5ce7', '#ff6b6b', '#a29bfe', '#fd79a8'][i % 6],
+                          backgroundColor: [T.yellow, '#4ecdc4', '#6c5ce7', T.danger, '#a29bfe', '#fd79a8'][i % 6],
                           transform: [{ translateY: particleTranslateY }],
                           opacity: particleAnim.interpolate({
                             inputRange: [0, 0.5, 1],
@@ -325,7 +326,7 @@ export default function TermsScreen() {
 
           {/* Footer - Compact */}
           <View style={styles.footer}>
-            <Text style={styles.footerLogo}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
+            <Text style={styles.footerLogo}>tdc<Text style={{color:T.yellow}}>.</Text></Text>
             <Text style={styles.footerText}>Building a Stronger Student Economy.</Text>
             <Text style={styles.footerSubText}>© 2026 tdc Privilege Program</Text>
           </View>
@@ -338,7 +339,7 @@ export default function TermsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: T.paper,
   },
   
   // Header - Compact
@@ -348,19 +349,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.04)',
+    borderBottomColor: T.line,
   },
   headerBtn: {
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
+    borderColor: T.line,
   },
   headerTitleContainer: {
     flex: 1,
@@ -368,15 +369,15 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     letterSpacing: 0.3,
   },
   headerSubtitle: {
     fontSize: 9,
-    color: '#94A3B8',
+    color: T.textFaint,
     marginTop: 1,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
   scrollContent: {
     paddingBottom: 30,
@@ -389,11 +390,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
     borderRadius: 18,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   heroCard: {
     padding: 20,
@@ -409,7 +410,7 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: 75,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     opacity: 0.3,
   },
   particlesContainer: {
@@ -436,41 +437,41 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#f9c349',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   heroBadge: {
-    backgroundColor: "rgba(249, 195, 73, 0.12)",
+    backgroundColor: T.yellowSoft,
     paddingHorizontal: 12,
     paddingVertical: 3,
     borderRadius: 12,
     marginBottom: 6,
     borderWidth: 1,
-    borderColor: "rgba(249, 195, 73, 0.15)",
+    borderColor: T.line,
   },
   heroBadgeText: {
-    color: "#f9c349",
+    color: T.yellow,
     fontSize: 14,
-    fontWeight: "800",
+    fontFamily: F.bodyBold,
     letterSpacing: 1.5,
   },
   heroTitle: {
     fontSize: 25,
-    fontWeight: '800',
-    color: '#fff',
+    fontFamily: F.heading,
+    color: T.white,
     marginBottom: 6,
     textAlign: 'center',
     letterSpacing: 0.3,
   },
   heroSubtitle: {
     fontSize: 12,
-    color: '#f9c349',
+    color: T.yellow,
     textAlign: 'center',
     lineHeight: 18,
-    fontWeight: '400',
+    fontFamily: F.body,
     paddingHorizontal: 4,
   },
   decorLine: {
@@ -482,13 +483,13 @@ const styles = StyleSheet.create({
   decorSegment: {
     width: 20,
     height: 1.5,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     borderRadius: 1,
   },
   decorDiamond: {
     width: 5,
     height: 5,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     transform: [{ rotate: '45deg' }],
     marginHorizontal: 8,
   },
@@ -508,19 +509,19 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     marginRight: 8,
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     letterSpacing: 0.3,
   },
   sectionLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(0,0,0,0.06)',
+    backgroundColor: T.sand,
     marginLeft: 10,
   },
   termWrapper: {
@@ -531,10 +532,10 @@ const styles = StyleSheet.create({
     padding: 12,
     paddingHorizontal: 14,
     borderRadius: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
-    shadowColor: '#000',
+    borderColor: T.line,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
@@ -561,16 +562,16 @@ const styles = StyleSheet.create({
   },
   termTitle: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     marginBottom: 2,
     letterSpacing: 0.2,
   },
   termText: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: T.textFaint,
     lineHeight: 16,
-    fontWeight: '400',
+    fontFamily: F.body,
   },
   termLine: {
     height: 2,
@@ -586,11 +587,11 @@ const styles = StyleSheet.create({
     marginTop: 14,
     borderRadius: 14,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   noticeCard: {
     padding: 18,
@@ -610,8 +611,8 @@ const styles = StyleSheet.create({
   },
   noticeTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
+    fontFamily: F.bodyBold,
+    color: T.white,
     marginBottom: 4,
     letterSpacing: 0.3,
   },
@@ -620,23 +621,23 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     textAlign: 'center',
     lineHeight: 18,
-    fontWeight: '400',
+    fontFamily: F.body,
     marginBottom: 10,
   },
   noticeCheckRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(249,195,73,0.08)',
+    backgroundColor: T.yellowSoft,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(249,195,73,0.12)',
+    borderColor: T.line,
   },
   noticeCheckText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#fff',
+    fontFamily: F.bodySemi,
+    color: T.white,
     marginLeft: 6,
   },
   
@@ -648,23 +649,23 @@ const styles = StyleSheet.create({
   },
   footerLogo: {
     fontSize: 16,
-    fontWeight: '800',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     letterSpacing: 0.5,
   },
   footerText: {
     fontSize: 10,
-    color: 'rgba(0, 0, 0, 0.4)',
+    color: T.textMuted,
     marginTop: 4,
-    fontWeight: '400',
+    fontFamily: F.body,
     letterSpacing: 0.3,
     textAlign: 'center',
   },
   footerSubText: {
     fontSize: 9,
-    color: 'rgba(0, 0, 0, 0.2)',
+    color: T.textMuted,
     marginTop: 4,
-    fontWeight: '400',
+    fontFamily: F.body,
     letterSpacing: 0.3,
   },
 });

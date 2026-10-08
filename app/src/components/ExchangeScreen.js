@@ -25,9 +25,10 @@ import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 import api, { publicAPI } from "../api/api";
 import { WebView } from 'react-native-webview';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { engagementBus, ENGAGEMENT_EVENTS } from '../engagement/engagementBus';
 
+import { color as T, font as F } from "../theme/tokens";
 const { width, height } = Dimensions.get('window');
 
 // ─── DATE FORMATTER ───────────────────────────────────────────────────
@@ -124,9 +125,9 @@ const ExchangeScreen = ({ navigation }) => {
 
   const getDegreeStyle = (degree) => {
     switch (degree) {
-      case 'Masters': return { color: '#C0392B', bg: '#FDE8E8' };
+      case 'Masters': return { color: T.danger, bg: T.dangerBg };
       case 'PhD': return { color: '#D4AF37', bg: '#FDF5E6' };
-      default: return { color: '#1B1B1B', bg: '#E8E8E8' };
+      default: return { color: '#1B1B1B', bg: T.sand };
     }
   };
 
@@ -385,16 +386,16 @@ const ExchangeScreen = ({ navigation }) => {
                     {item.title || 'Program'}
                   </Text>
                   <View style={styles.universityRow}>
-                    <FontAwesome5 name="university" size={12} color="#6B7280" />
+                    <FontAwesome5 name="university" size={12} color={T.textMuted} />
                     <Text style={styles.universityName} numberOfLines={1}>
                       {item.university || 'University'}
                     </Text>
                   </View>
                   <View style={styles.locationRow}>
-                    <Ionicons name="location-outline" size={14} color="#6B7280" />
+                    <Ionicons name="location-outline" size={14} color={T.textMuted} />
                     <Text style={styles.locationText}>{item.location || 'Location'}</Text>
                     <View style={styles.dotSeparator} />
-                    <Ionicons name="time-outline" size={14} color="#6B7280" />
+                    <Ionicons name="time-outline" size={14} color={T.textMuted} />
                     <Text style={styles.locationText}>{item.duration || 'Duration'}</Text>
                   </View>
                 </View>
@@ -406,16 +407,16 @@ const ExchangeScreen = ({ navigation }) => {
               <View style={styles.dateContainer}>
                 <View style={styles.dateBox}>
                   <Text style={styles.dateLabel}>
-                    <FontAwesome5 name="calendar-alt" size={10} color="#9CA3AF" /> OPENS
+                    <FontAwesome5 name="calendar-alt" size={10} color={T.textFaint} /> opens
                   </Text>
                   <Text style={styles.dateValue}>{formattedAppStart}</Text>
                 </View>
                 <View style={styles.dateDivider} />
                 <View style={styles.dateBox}>
-                  <Text style={[styles.dateLabel, { color: '#EF4444' }]}>
-                    <FontAwesome5 name="clock" size={10} color="#EF4444" /> DEADLINE
+                  <Text style={[styles.dateLabel, { color: T.danger }]}>
+                    <FontAwesome5 name="clock" size={10} color={T.danger} /> deadline
                   </Text>
-                  <Text style={[styles.dateValue, { color: '#EF4444' }]}>{formattedDeadline}</Text>
+                  <Text style={[styles.dateValue, { color: T.danger }]}>{formattedDeadline}</Text>
                 </View>
               </View>
 
@@ -424,8 +425,8 @@ const ExchangeScreen = ({ navigation }) => {
                 onPress={() => handleViewDetails(item)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.detailsBtnText}>View Details</Text>
-                <Ionicons name="arrow-forward" size={16} color="#4B5563" />
+                <Text style={styles.detailsBtnText}>view details</Text>
+                <Ionicons name="arrow-forward" size={16} color={T.textMuted} />
               </TouchableOpacity>
             </View>
           </View>
@@ -450,11 +451,11 @@ const ExchangeScreen = ({ navigation }) => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={50} color="#EF4444" />
-          <Text style={styles.errorTitle}>Oops! Something went wrong</Text>
+          <Ionicons name="alert-circle-outline" size={50} color={T.danger} />
+          <Text style={styles.errorTitle}>oops! something went wrong</Text>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchPrograms}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
+            <Text style={styles.retryButtonText}>try again</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -475,12 +476,12 @@ const ExchangeScreen = ({ navigation }) => {
             onPress={() => navigation.goBack()}
             activeOpacity={0.8}
           >
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={24} color={T.white} />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerSubtitle}>🌍 Global Education</Text>
-            <Text style={styles.headerTitle}>Study Abroad</Text>
+            <Text style={styles.headerTitle}>study abroad</Text>
           </View>
 
           <TouchableOpacity
@@ -488,22 +489,22 @@ const ExchangeScreen = ({ navigation }) => {
             onPress={handleProfile}
             activeOpacity={0.8}
           >
-            <FontAwesome5 name="user-graduate" size={18} color="#FFF" />
+            <FontAwesome5 name="user-graduate" size={18} color={T.white} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.searchBarContainer}>
-          <Ionicons name="search-outline" size={20} color="#9CA3AF" />
+          <Ionicons name="search-outline" size={20} color={T.textFaint} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search universities, countries..."
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={T.textFaint}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+              <Ionicons name="close-circle" size={20} color={T.textFaint} />
             </TouchableOpacity>
           )}
         </View>
@@ -517,7 +518,7 @@ const ExchangeScreen = ({ navigation }) => {
           <View style={styles.guestBannerContent}>
             <Ionicons name="information-circle" size={20} color="#D97706" />
             <Text style={styles.guestBannerText}>
-              Browsing as guest. <Text style={styles.guestBannerLink}>Sign in</Text> to apply!
+              browsing as guest. <Text style={styles.guestBannerLink}>sign in</Text> to apply!
             </Text>
           </View>
         </Animated.View>
@@ -545,12 +546,12 @@ const ExchangeScreen = ({ navigation }) => {
                   onPress={() => setSelectedDegree(degree)}
                   style={[
                     styles.chip,
-                    isActive ? { backgroundColor: color, borderColor: color } : { backgroundColor: '#FFF', borderColor: '#E5E7EB' }
+                    isActive ? { backgroundColor: color, borderColor: color } : { backgroundColor: T.card, borderColor: T.line }
                   ]}
                   activeOpacity={0.7}
                 >
                   <Text
-                    style={[styles.chipText, isActive ? { color: '#FFF' } : { color: '#4B5563' }]}
+                    style={[styles.chipText, isActive ? { color: T.white } : { color: T.textMuted }]}
                   >
                     {degree}
                   </Text>
@@ -563,7 +564,7 @@ const ExchangeScreen = ({ navigation }) => {
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#1B1B1B" />
-            <Text style={styles.loadingText}>Loading programs...</Text>
+            <Text style={styles.loadingText}>loading programs...</Text>
           </View>
         ) : (
           <FlatList
@@ -578,9 +579,9 @@ const ExchangeScreen = ({ navigation }) => {
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <View style={styles.emptyIconContainer}>
-                  <FontAwesome5 name="search-location" size={50} color="#D1D5DB" />
+                  <FontAwesome5 name="search-location" size={50} color={T.textFaint} />
                 </View>
-                <Text style={styles.emptyTitle}>No programs found</Text>
+                <Text style={styles.emptyTitle}>no programs found</Text>
                 <Text style={styles.emptyText}>
                   {searchQuery ? 'Try adjusting your search' : 'Check back later for new opportunities'}
                 </Text>
@@ -590,8 +591,8 @@ const ExchangeScreen = ({ navigation }) => {
                     onPress={() => navigation.navigate('Login')}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.signUpButtonText}>Create Account</Text>
-                    <Ionicons name="arrow-forward" size={18} color="#FFF" />
+                    <Text style={styles.signUpButtonText}>create account</Text>
+                    <Ionicons name="arrow-forward" size={18} color={T.white} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -620,7 +621,7 @@ const ExchangeScreen = ({ navigation }) => {
 
             <View style={styles.modalHeader}>
               <View style={styles.modalHeaderLeft}>
-                <Text style={styles.modalTitle}>Program Details</Text>
+                <Text style={styles.modalTitle}>program details</Text>
                 {selectedProgram && (
                   <View style={[styles.modalDegreeBadge, { backgroundColor: getDegreeStyle(selectedProgram.degree || 'Bachelors').bg, borderColor: getDegreeStyle(selectedProgram.degree || 'Bachelors').color }]}>
                     <Text style={[styles.modalDegreeText, { color: getDegreeStyle(selectedProgram.degree || 'Bachelors').color }]}>
@@ -644,14 +645,14 @@ const ExchangeScreen = ({ navigation }) => {
                   <View style={styles.modalProgramInfo}>
                     <Text style={styles.modalProgramTitle}>{selectedProgram.title || 'Program'}</Text>
                     <View style={styles.modalUniversityRow}>
-                      <FontAwesome5 name="university" size={14} color="#6B7280" />
+                      <FontAwesome5 name="university" size={14} color={T.textMuted} />
                       <Text style={styles.modalUniversity}>{selectedProgram.university || 'University'}</Text>
                     </View>
                     <View style={styles.modalLocationRow}>
-                      <Ionicons name="location-outline" size={16} color="#6B7280" />
+                      <Ionicons name="location-outline" size={16} color={T.textMuted} />
                       <Text style={styles.modalLocation}>{selectedProgram.location || 'Location'}</Text>
                       <View style={styles.modalDot} />
-                      <Ionicons name="time-outline" size={16} color="#6B7280" />
+                      <Ionicons name="time-outline" size={16} color={T.textMuted} />
                       <Text style={styles.modalDuration}>{selectedProgram.duration || 'Duration'}</Text>
                     </View>
                   </View>
@@ -659,7 +660,7 @@ const ExchangeScreen = ({ navigation }) => {
                   <View style={styles.modalDivider} />
 
                   <Text style={styles.detailHeading}>
-                    <Ionicons name="globe-outline" size={16} color="#6B7280" /> University Website
+                    <Ionicons name="globe-outline" size={16} color={T.textMuted} /> university website
                   </Text>
                   <TouchableOpacity
                     onPress={() => {
@@ -676,38 +677,38 @@ const ExchangeScreen = ({ navigation }) => {
                     <Text style={styles.linkText} numberOfLines={1}>
                       {selectedProgram?.link || 'No link provided'}
                     </Text>
-                    <Ionicons name="open-outline" size={16} color="#2563EB" />
+                    <Ionicons name="open-outline" size={16} color={T.ink} />
                   </TouchableOpacity>
 
                   <Text style={[styles.detailHeading, { marginTop: 24 }]}>
-                    <Ionicons name="checkmark-circle-outline" size={16} color="#6B7280" /> Requirements
+                    <Ionicons name="checkmark-circle-outline" size={16} color={T.textMuted} /> requirements
                   </Text>
                   {selectedProgram?.requirements && selectedProgram.requirements.length > 0 ? (
                     <View style={styles.requirementsList}>
                       {selectedProgram.requirements.map((req, index) => (
                         <View key={index} style={styles.reqItem}>
                           <View style={styles.reqIcon}>
-                            <Ionicons name="checkmark" size={12} color="#10B981" />
+                            <Ionicons name="checkmark" size={12} color={T.success} />
                           </View>
                           <Text style={styles.reqText}>{req}</Text>
                         </View>
                       ))}
                     </View>
                   ) : (
-                    <Text style={styles.emptyTextSmall}>No specific requirements listed.</Text>
+                    <Text style={styles.emptyTextSmall}>no specific requirements listed.</Text>
                   )}
 
                   <View style={styles.modalDateInfo}>
                     <View style={styles.modalDateBox}>
-                      <Text style={styles.modalDateLabel}>Application Opens</Text>
+                      <Text style={styles.modalDateLabel}>application opens</Text>
                       <Text style={styles.modalDateValue}>
                         {formatDate(selectedProgram.appStart)}
                       </Text>
                     </View>
                     <View style={styles.modalDateDivider} />
                     <View style={styles.modalDateBox}>
-                      <Text style={[styles.modalDateLabel, { color: '#EF4444' }]}>Deadline</Text>
-                      <Text style={[styles.modalDateValue, { color: '#EF4444' }]}>
+                      <Text style={[styles.modalDateLabel, { color: T.danger }]}>deadline</Text>
+                      <Text style={[styles.modalDateValue, { color: T.danger }]}>
                         {formatDate(selectedProgram.deadline)}
                       </Text>
                     </View>
@@ -733,7 +734,7 @@ const ExchangeScreen = ({ navigation }) => {
               <Ionicons
                 name={isGuest ? 'person-add-outline' : 'arrow-forward'}
                 size={20}
-                color="#FFF"
+                color={T.white}
               />
             </TouchableOpacity>
           </Animated.View>
@@ -758,18 +759,18 @@ const ExchangeScreen = ({ navigation }) => {
             {/* WebView Header */}
             <View style={styles.webViewHeader}>
               <TouchableOpacity onPress={closeWebView} style={styles.webViewHeaderBtn} activeOpacity={0.7}>
-                <Ionicons name="close" size={24} color="#1a1a1a" />
+                <Ionicons name="close" size={24} color={T.ink} />
               </TouchableOpacity>
 
               <View style={styles.webViewHeaderCenter}>
-                <Text style={styles.webViewHeaderTitle}>University Website</Text>
+                <Text style={styles.webViewHeaderTitle}>university website</Text>
                 <Text style={styles.webViewHeaderSubtitle} numberOfLines={1}>
                   {selectedProgram?.university || 'Loading...'}
                 </Text>
               </View>
 
               <TouchableOpacity onPress={openInBrowser} style={styles.webViewHeaderBtn} activeOpacity={0.7}>
-                <Ionicons name="open-outline" size={22} color="#f9c349" />
+                <Ionicons name="open-outline" size={22} color={T.yellow} />
               </TouchableOpacity>
             </View>
 
@@ -777,7 +778,7 @@ const ExchangeScreen = ({ navigation }) => {
             {webViewLoading && (
               <View style={styles.webViewProgressContainer}>
                 <Animated.View style={[styles.webViewProgressBar, { width: progressWidthInterpolated }]}>
-                  <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.webViewProgressGradient} />
+                  <LinearGradient colors={[T.yellow, T.ink]} style={styles.webViewProgressGradient} />
                 </Animated.View>
               </View>
             )}
@@ -802,25 +803,25 @@ const ExchangeScreen = ({ navigation }) => {
               {/* Loading Overlay */}
               {webViewLoading && (
                 <Animated.View style={[styles.webViewLoaderContainer, { opacity: webViewFade }]}>
-                  <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.webViewLoaderIcon}>
-                    <Ionicons name="school" size={40} color="#fff" />
+                  <LinearGradient colors={[T.yellow, T.ink]} style={styles.webViewLoaderIcon}>
+                    <Ionicons name="school" size={40} color={T.white} />
                   </LinearGradient>
-                  <Text style={styles.webViewLoadingTitle}>Loading University Website</Text>
-                  <Text style={styles.webViewLoadingSubtitle}>Fetching program details...</Text>
-                  <ActivityIndicator size="small" color="#f9c349" style={{ marginTop: 16 }} />
+                  <Text style={styles.webViewLoadingTitle}>loading university website</Text>
+                  <Text style={styles.webViewLoadingSubtitle}>fetching program details...</Text>
+                  <ActivityIndicator size="small" color={T.yellow} style={{ marginTop: 16 }} />
                 </Animated.View>
               )}
 
               {/* Bottom Toolbar */}
               <Animated.View style={[styles.webViewBottomBar, { opacity: webViewFade }]}>
                 <TouchableOpacity style={styles.webViewToolbarBtn} onPress={closeWebView} activeOpacity={0.7}>
-                  <Ionicons name="close-circle" size={24} color="#666" />
+                  <Ionicons name="close-circle" size={24} color={T.textMuted} />
                 </TouchableOpacity>
 
                 <View style={{ flex: 1 }} />
 
                 <TouchableOpacity style={styles.webViewToolbarBtn} onPress={openInBrowser} activeOpacity={0.7}>
-                  <Ionicons name="compass-outline" size={22} color="#f9c349" />
+                  <Ionicons name="compass-outline" size={22} color={T.yellow} />
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.webViewToolbarBtn} onPress={() => {
@@ -835,7 +836,7 @@ const ExchangeScreen = ({ navigation }) => {
                     );
                   }
                 }} activeOpacity={0.7}>
-                  <Ionicons name="share-outline" size={22} color="#f9c349" />
+                  <Ionicons name="share-outline" size={22} color={T.yellow} />
                 </TouchableOpacity>
               </Animated.View>
             </View>
@@ -847,17 +848,17 @@ const ExchangeScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: { flex: 1, backgroundColor: T.paper },
   header: {
-    backgroundColor: '#000000',
+    backgroundColor: T.ink,
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 24,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12 },
-      android: { elevation: 8 },
+      ios: { shadowColor: T.ink, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 8 },
+      android: { elevation: 2 },
     }),
   },
   headerTop: {
@@ -873,8 +874,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
   },
   headerCenter: { flex: 1, alignItems: 'center' },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#FFF', letterSpacing: 0.5, textAlign: 'center' },
-  headerSubtitle: { fontSize: 10, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 2, textAlign: 'center' },
+  headerTitle: { fontSize: 22, fontFamily: F.heading, color: T.white, letterSpacing: 0.5, textAlign: 'center' },
+  headerSubtitle: { fontSize: 10, fontFamily: F.body, color: T.textFaint, textTransform: 'none', letterSpacing: 1.5, marginBottom: 2, textAlign: 'center' },
   avatarCircle: {
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.1)',
@@ -883,146 +884,146 @@ const styles = StyleSheet.create({
   },
   searchBarContainer: {
     flexDirection: 'row',
-    backgroundColor: '#FFF',
+    backgroundColor: T.card,
     borderRadius: 16,
     paddingHorizontal: 16, paddingVertical: 12,
     alignItems: 'center', gap: 12,
   },
-  searchInput: { flex: 1, fontSize: 15, color: '#1A1C1E', padding: 0 },
+  searchInput: { flex: 1, fontSize: 15, fontFamily: F.body, color: '#1A1C1E', padding: 0 },
   guestBanner: {
     marginHorizontal: 20, marginTop: 16,
-    backgroundColor: '#FEF3C7', borderRadius: 12,
+    backgroundColor: T.yellowSoft, borderRadius: 12,
     paddingHorizontal: 16, paddingVertical: 12,
     borderWidth: 1, borderColor: '#F59E0B20',
   },
   guestBannerContent: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center' },
-  guestBannerText: { flex: 1, fontSize: 13, color: '#92400E', fontWeight: '500', textAlign: 'center' },
-  guestBannerLink: { fontWeight: '700', textDecorationLine: 'underline' },
+  guestBannerText: { flex: 1, fontSize: 13, color: '#92400E', fontFamily: F.bodyMedium, textAlign: 'center' },
+  guestBannerLink: { fontFamily: F.bodyBold, textDecorationLine: 'underline' },
   content: { flex: 1, paddingHorizontal: 20 },
   filterWrapper: { paddingTop: 20, paddingBottom: 8 },
   filterHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  filterLabel: { fontSize: 14, fontWeight: '700', color: '#1F2937' },
-  filterCount: { fontSize: 12, color: '#6B7280', fontWeight: '500' },
+  filterLabel: { fontSize: 14, fontFamily: F.bodyBold, color: '#1F2937' },
+  filterCount: { fontSize: 12, color: T.textMuted, fontFamily: F.bodyMedium },
   chipContainer: { paddingVertical: 4, gap: 8 },
   chip: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 24, borderWidth: 1.5, marginRight: 10 },
-  chipText: { fontWeight: '600', fontSize: 14 },
+  chipText: { fontFamily: F.bodySemi, fontSize: 14 },
   cardWrapper: { marginBottom: 16 },
   card: {
-    backgroundColor: '#FFF', borderRadius: 20, overflow: 'hidden',
+    backgroundColor: T.card, borderRadius: 20, overflow: 'hidden',
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
-      android: { elevation: 4 },
+      ios: { shadowColor: T.ink, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
+      android: { elevation: 2 },
     }),
   },
   cardGradient: { height: 4, width: '100%' },
   cardBody: { padding: 20 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   titleArea: { flex: 1, marginRight: 12 },
-  programTitle: { fontSize: 17, fontWeight: '700', color: '#1A1C1E', letterSpacing: -0.3 },
+  programTitle: { fontSize: 17, fontFamily: F.bodyBold, color: '#1A1C1E', letterSpacing: -0.3 },
   universityRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
-  universityName: { fontSize: 14, color: '#6B7280', fontWeight: '500' },
+  universityName: { fontSize: 14, color: T.textMuted, fontFamily: F.bodyMedium },
   locationRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 6 },
-  locationText: { fontSize: 12, color: '#6B7280', fontWeight: '500' },
-  dotSeparator: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#D1D5DB' },
+  locationText: { fontSize: 12, color: T.textMuted, fontFamily: F.bodyMedium },
+  dotSeparator: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: T.sand },
   degreeBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
-  degreeText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
+  degreeText: { fontSize: 10, fontFamily: F.bodyBold, textTransform: 'none', letterSpacing: 0.5 },
   dateContainer: {
-    flexDirection: 'row', backgroundColor: '#F8FAFC',
+    flexDirection: 'row', backgroundColor: T.sand,
     borderRadius: 14, padding: 14, marginTop: 14, marginBottom: 14,
   },
   dateBox: { flex: 1, alignItems: 'center' },
-  dateDivider: { width: 1, backgroundColor: '#E5E7EB' },
-  dateLabel: { fontSize: 9, fontWeight: '700', color: '#9CA3AF', marginBottom: 4, letterSpacing: 0.5 },
-  dateValue: { fontSize: 13, fontWeight: '700', color: '#1F2937' },
+  dateDivider: { width: 1, backgroundColor: T.sand },
+  dateLabel: { fontSize: 9, fontFamily: F.bodyBold, color: T.textFaint, marginBottom: 4, letterSpacing: 0.5 },
+  dateValue: { fontSize: 13, fontFamily: F.bodyBold, color: '#1F2937' },
   detailsBtn: {
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
-    paddingVertical: 14, borderRadius: 14, backgroundColor: '#F1F5F9', gap: 8,
+    paddingVertical: 14, borderRadius: 14, backgroundColor: T.sand, gap: 8,
   },
-  detailsBtnText: { color: '#4B5563', fontWeight: '700', fontSize: 14 },
+  detailsBtnText: { color: T.textMuted, fontFamily: F.bodyBold, fontSize: 14 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  loadingText: { fontSize: 14, color: '#6B7280', fontWeight: '500' },
+  loadingText: { fontSize: 14, color: T.textMuted, fontFamily: F.bodyMedium },
   listContent: { paddingBottom: 30 },
   emptyContainer: { alignItems: 'center', marginTop: 60, paddingHorizontal: 40 },
   emptyIconContainer: {
     width: 100, height: 100, borderRadius: 50,
-    backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center', marginBottom: 24,
+    backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center', marginBottom: 24,
   },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#1F2937', marginBottom: 8 },
-  emptyText: { textAlign: 'center', color: '#6B7280', fontSize: 14, marginBottom: 24 },
+  emptyTitle: { fontSize: 18, fontFamily: F.headingBold, color: '#1F2937', marginBottom: 8 },
+  emptyText: { textAlign: 'center', color: T.textMuted, fontSize: 14, fontFamily: F.body, marginBottom: 24 },
   signUpButton: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#000000', paddingHorizontal: 24, paddingVertical: 14,
+    backgroundColor: T.ink, paddingHorizontal: 24, paddingVertical: 14,
     borderRadius: 14, gap: 10,
   },
-  signUpButtonText: { color: '#FFF', fontWeight: '700', fontSize: 15 },
+  signUpButtonText: { color: T.white, fontFamily: F.bodyBold, fontSize: 15 },
   modalOverlay: { flex: 1, justifyContent: 'flex-end' },
-  modalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)' },
+  modalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: T.overlay },
   modalContent: {
-    backgroundColor: '#FFF',
+    backgroundColor: T.card,
     borderTopLeftRadius: 32, borderTopRightRadius: 32,
     paddingHorizontal: 24, paddingTop: 8,
     paddingBottom: Platform.OS === 'ios' ? 34 : 24,
     maxHeight: '85%',
   },
-  modalHandle: { width: 40, height: 4, backgroundColor: '#E5E7EB', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
+  modalHandle: { width: 40, height: 4, backgroundColor: T.sand, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalHeaderLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  modalTitle: { fontSize: 20, fontWeight: '800', color: '#1F2937' },
+  modalTitle: { fontSize: 20, fontFamily: F.heading, color: '#1F2937' },
   modalDegreeBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
-  modalDegreeText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
+  modalDegreeText: { fontSize: 10, fontFamily: F.bodyBold, textTransform: 'none', letterSpacing: 0.5 },
   modalCloseBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center',
   },
   modalBody: { paddingBottom: 20 },
   modalProgramInfo: { marginBottom: 20 },
-  modalProgramTitle: { fontSize: 22, fontWeight: '800', color: '#1F2937', marginBottom: 6 },
+  modalProgramTitle: { fontSize: 22, fontFamily: F.heading, color: '#1F2937', marginBottom: 6 },
   modalUniversityRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  modalUniversity: { fontSize: 15, color: '#6B7280', fontWeight: '500' },
+  modalUniversity: { fontSize: 15, color: T.textMuted, fontFamily: F.bodyMedium },
   modalLocationRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
-  modalLocation: { fontSize: 14, color: '#6B7280' },
-  modalDuration: { fontSize: 14, color: '#6B7280' },
-  modalDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB' },
-  modalDivider: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 16 },
-  detailHeading: { fontSize: 13, fontWeight: '700', color: '#4B5563', marginBottom: 10, gap: 6 },
+  modalLocation: { fontSize: 14, fontFamily: F.body, color: T.textMuted },
+  modalDuration: { fontSize: 14, fontFamily: F.body, color: T.textMuted },
+  modalDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: T.sand },
+  modalDivider: { height: 1, backgroundColor: T.sand, marginVertical: 16 },
+  detailHeading: { fontSize: 13, fontFamily: F.bodyBold, color: T.textMuted, marginBottom: 10, gap: 6 },
   linkContainer: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    padding: 12, backgroundColor: '#F8FAFC', borderRadius: 12,
-    borderWidth: 1, borderColor: '#E5E7EB',
+    padding: 12, backgroundColor: T.sand, borderRadius: 12,
+    borderWidth: 1, borderColor: T.line,
   },
-  linkText: { flex: 1, color: '#2563EB', fontSize: 14, fontWeight: '600', textDecorationLine: 'underline' },
+  linkText: { flex: 1, color: T.ink, fontSize: 14, fontFamily: F.bodySemi, textDecorationLine: 'underline' },
   requirementsList: { gap: 8 },
   reqItem: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingVertical: 8, paddingHorizontal: 12,
-    backgroundColor: '#F8FAFC', borderRadius: 10,
+    backgroundColor: T.sand, borderRadius: 10,
   },
   reqIcon: {
     width: 20, height: 20, borderRadius: 10,
     backgroundColor: '#D1FAE5', justifyContent: 'center', alignItems: 'center',
   },
-  reqText: { fontSize: 14, color: '#1F2937', fontWeight: '500', flex: 1 },
-  emptyTextSmall: { fontSize: 14, color: '#9CA3AF', paddingVertical: 12 },
-  modalDateInfo: { flexDirection: 'row', backgroundColor: '#F8FAFC', borderRadius: 14, padding: 16, marginTop: 20 },
+  reqText: { fontSize: 14, color: '#1F2937', fontFamily: F.bodyMedium, flex: 1 },
+  emptyTextSmall: { fontSize: 14, fontFamily: F.body, color: T.textFaint, paddingVertical: 12 },
+  modalDateInfo: { flexDirection: 'row', backgroundColor: T.sand, borderRadius: 14, padding: 16, marginTop: 20 },
   modalDateBox: { flex: 1, alignItems: 'center' },
-  modalDateDivider: { width: 1, backgroundColor: '#E5E7EB' },
-  modalDateLabel: { fontSize: 10, fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
-  modalDateValue: { fontSize: 15, fontWeight: '700', color: '#1F2937' },
+  modalDateDivider: { width: 1, backgroundColor: T.sand },
+  modalDateLabel: { fontSize: 10, fontFamily: F.bodyBold, color: T.textFaint, textTransform: 'none', letterSpacing: 0.5, marginBottom: 4 },
+  modalDateValue: { fontSize: 15, fontFamily: F.bodyBold, color: '#1F2937' },
   applyModalBtn: {
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
-    backgroundColor: '#000000', padding: 16, borderRadius: 16, gap: 10, marginTop: 20,
+    backgroundColor: T.ink, padding: 16, borderRadius: 16, gap: 10, marginTop: 20,
   },
-  applyModalBtnText: { color: '#FFF', fontWeight: '800', fontSize: 16 },
+  applyModalBtnText: { color: T.white, fontFamily: F.bodyBold, fontSize: 16 },
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
-  errorTitle: { fontSize: 20, fontWeight: '700', color: '#1F2937', marginTop: 16, marginBottom: 8 },
-  errorText: { textAlign: 'center', color: '#6B7280', fontSize: 14, marginBottom: 24 },
-  retryButton: { backgroundColor: '#000000', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 14 },
-  retryButtonText: { color: '#FFF', fontWeight: '700', fontSize: 16 },
+  errorTitle: { fontSize: 20, fontFamily: F.headingBold, color: '#1F2937', marginTop: 16, marginBottom: 8 },
+  errorText: { textAlign: 'center', color: T.textMuted, fontSize: 14, fontFamily: F.body, marginBottom: 24 },
+  retryButton: { backgroundColor: T.ink, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 14 },
+  retryButtonText: { color: T.white, fontFamily: F.bodyBold, fontSize: 16 },
 
   // WebView Styles - FULL SCREEN
-  webViewFullScreen: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
+  webViewFullScreen: { flex: 1, backgroundColor: T.overlay },
   webViewContainer: {
-    flex: 1, backgroundColor: '#FFF',
+    flex: 1, backgroundColor: T.card,
     position: 'absolute', top: 37, left: 0, right: 0, bottom: 0,
   },
   webViewHeader: {
@@ -1030,37 +1031,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'ios' ? 50 : 12,
     paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fff', zIndex: 10,
+    borderBottomWidth: 1, borderBottomColor: T.line,
+    backgroundColor: T.card, zIndex: 10,
   },
   webViewHeaderBtn: {
     width: 40, height: 40, borderRadius: 12,
-    backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center',
   },
   webViewHeaderCenter: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
-  webViewHeaderTitle: { fontSize: 16, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.3 },
-  webViewHeaderSubtitle: { fontSize: 11, color: '#999', fontWeight: '500', marginTop: 2, maxWidth: width * 0.6 },
-  webViewProgressContainer: { height: 3, backgroundColor: '#f0f0f0', overflow: 'hidden', zIndex: 10 },
+  webViewHeaderTitle: { fontSize: 16, fontFamily: F.bodyBold, color: T.ink, letterSpacing: 0.3 },
+  webViewHeaderSubtitle: { fontSize: 11, color: T.textFaint, fontFamily: F.bodyMedium, marginTop: 2, maxWidth: width * 0.6 },
+  webViewProgressContainer: { height: 3, backgroundColor: T.sand, overflow: 'hidden', zIndex: 10 },
   webViewProgressBar: { height: '100%' },
   webViewProgressGradient: { width: '100%', height: '100%' },
-  webViewWrapper: { flex: 1, backgroundColor: '#fff' },
+  webViewWrapper: { flex: 1, backgroundColor: T.card },
   webView: { flex: 1 },
   webViewLoaderContainer: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     justifyContent: 'center', alignItems: 'center',
-    backgroundColor: '#fff', zIndex: 5,
+    backgroundColor: T.card, zIndex: 5,
   },
   webViewLoaderIcon: {
     width: 80, height: 80, borderRadius: 20,
     justifyContent: 'center', alignItems: 'center', marginBottom: 16,
   },
-  webViewLoadingTitle: { fontSize: 18, fontWeight: '800', color: '#1a1a1a' },
-  webViewLoadingSubtitle: { fontSize: 13, color: '#999', marginTop: 6, fontWeight: '500' },
+  webViewLoadingTitle: { fontSize: 18, fontFamily: F.heading, color: T.ink },
+  webViewLoadingSubtitle: { fontSize: 13, color: T.textFaint, marginTop: 6, fontFamily: F.bodyMedium },
   webViewBottomBar: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingVertical: 8,
-    borderTopWidth: 1, borderTopColor: '#f0f0f0',
-    backgroundColor: '#fff',
+    borderTopWidth: 1, borderTopColor: T.line,
+    backgroundColor: T.card,
     paddingBottom: Platform.OS === 'ios' ? 30 : 8,
     zIndex: 10,
   },

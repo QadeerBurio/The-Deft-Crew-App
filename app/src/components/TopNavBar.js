@@ -14,11 +14,12 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
-const BRAND = '#f9c349';
-const BRAND_DARK = '#f5a623';
-const INK = '#1C1C1E';
-const MUTED = '#8E8E93';
-const BORDER = '#F0F0F0';
+import { color as T, font as F } from "../theme/tokens";
+const BRAND = T.yellow;
+const BRAND_DARK = T.yellow;
+const INK = T.ink;
+const MUTED = T.textMuted;
+const BORDER = T.line;
 
 // ---------- Header ----------
 export function TopNavBar({
@@ -47,7 +48,7 @@ export function TopNavBar({
         ) : (
           <View style={styles.logoRow}>
             <View style={styles.logoBadge}>
-              <MaterialCommunityIcons name="handshake" size={16} color="#000" />
+              <MaterialCommunityIcons name="handshake" size={16} color={T.ink} />
             </View>
           </View>
         )}
@@ -144,7 +145,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
     borderBottomColor: BORDER,
     marginTop: Platform.OS === 'android' ? 34 : 0,
@@ -155,7 +156,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
     color: INK,
     letterSpacing: -0.3,
   },
@@ -163,7 +164,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
@@ -186,15 +187,15 @@ const styles = StyleSheet.create({
     minWidth: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: '#FF3B30',
+    backgroundColor: T.danger,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 3,
   },
-  badgeDotText: { color: '#fff', fontSize: 9, fontWeight: '700' },
+  badgeDotText: { color: T.white, fontSize: 9, fontFamily: F.bodyBold },
   tabStrip: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
     borderBottomColor: BORDER,
     paddingTop: 6,
@@ -208,7 +209,7 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: 10,
     color: MUTED,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
   tabActiveBar: {
     position: 'absolute',

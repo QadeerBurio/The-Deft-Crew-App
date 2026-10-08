@@ -5,9 +5,10 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { MaterialIcons, FontAwesome5, Entypo, Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import BaseScreen from "./BaseScreen";
 
+import { color as T, font as F } from "../theme/tokens";
 const { width } = Dimensions.get("window");
 
 export default function WhyEduBoost() {
@@ -63,9 +64,9 @@ export default function WhyEduBoost() {
       <View style={styles.headerContainer}>
         {/* Back Arrow */}
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={28} color="#08634f" />
+          <Ionicons name="chevron-back" size={28} color={T.success} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Why EduBoost</Text>
+        <Text style={styles.headerTitle}>why eduboost</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.container}>
@@ -117,15 +118,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingTop: 10,
     paddingBottom: 10,
-    backgroundColor: "#ffffff",
+    backgroundColor: T.card,
   },
   backButton: {
     marginRight: 10,
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: "bold",
-    color: "#08634f",
+    fontFamily: F.heading,
+    color: T.success,
   },
   container: {
     paddingVertical: 15,
@@ -134,8 +135,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   introText: {
-    fontSize: 16,
-    color: "#555",
+    fontSize: 16, fontFamily: F.body,
+    color: T.textMuted,
     lineHeight: 24,
     textAlign: "center",
     marginBottom: 20,
@@ -146,11 +147,11 @@ const styles = StyleSheet.create({
     padding: 22,
     borderRadius: 25,
     marginVertical: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
+    shadowColor: T.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 6 },
-    elevation: 7,
+    elevation: 2,
   },
   iconContainer: {
     alignItems: "center",
@@ -165,13 +166,13 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 20,
-    fontWeight: "700",
-    color: "#fff",
+    fontFamily: F.headingBold,
+    color: T.white,
     marginBottom: 8,
     textAlign: "center",
   },
   cardDescription: {
-    fontSize: 16,
+    fontSize: 16, fontFamily: F.body,
     color: "#f5f5f5",
     lineHeight: 22,
     textAlign: "center",

@@ -14,9 +14,10 @@ import { useTour } from './TourProvider';
 import { TOUR_STEPS } from './tourSteps';
 import { pop } from '../utils/haptics';
 
+import { color as T, font as F } from "../../theme/tokens";
 const { width, height } = Dimensions.get('window');
-const GOLD = '#f9c349';
-const DARK = '#1a1a1a';
+const GOLD = T.yellow;
+const DARK = T.ink;
 const DIM = 'rgba(0,0,0,0.75)';
 
 // Height of the tab bar (keep in sync with TabNavigator.js)
@@ -170,7 +171,7 @@ export default function TourOverlay() {
                 {stepIdx + 1} of {total}
               </Text>
               <TouchableOpacity onPress={onSkip} hitSlop={12}>
-                <Text style={styles.skipText}>Skip</Text>
+                <Text style={styles.skipText}>skip</Text>
               </TouchableOpacity>
             </View>
 
@@ -224,7 +225,7 @@ const styles = StyleSheet.create({
   //   borderRadius: 16,
   //   borderWidth: 2.5,
   //   borderColor: GOLD,
-  //   backgroundColor: 'rgba(249,195,73,0.12)',
+  //   backgroundColor: T.yellowSoft,
   // },
   // ── Sheet wrapper: absolutely positioned above the tab bar
   sheetWrap: {
@@ -246,18 +247,18 @@ const styles = StyleSheet.create({
     borderTopWidth: ARROW_H,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: '#ffffff',
+    borderTopColor: T.white,
   },
   sheetInner: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderRadius: 20,
     paddingHorizontal: 20,
     paddingVertical: 18,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
-    elevation: 12,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   headerRow: {
     flexDirection: 'row',
@@ -267,18 +268,18 @@ const styles = StyleSheet.create({
   },
   counter: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#9A9A9A',
+    fontFamily: F.bodyBold,
+    color: T.textFaint,
     letterSpacing: 0.3,
   },
   skipText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#9A9A9A',
+    fontFamily: F.bodySemi,
+    color: T.textFaint,
   },
   line: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: DARK,
     lineHeight: 22,
     marginBottom: 20,
@@ -297,7 +298,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: T.sand,
   },
   dotIndicatorActive: {
     backgroundColor: GOLD,
@@ -315,7 +316,7 @@ const styles = StyleSheet.create({
   },
   nextText: {
     fontSize: 14,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: DARK,
     letterSpacing: 0.3,
   },

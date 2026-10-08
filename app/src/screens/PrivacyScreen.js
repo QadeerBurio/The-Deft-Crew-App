@@ -16,20 +16,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { color as T, font as F } from "../theme/tokens";
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 const C = {
-  bg: '#ffffff',
-  dark: '#1a1a1a',
-  gold: '#f9c349',
-  goldSoft: '#fff8e6',
-  surface: '#F7F9F8',
-  border: '#E8E8E8',
-  divider: '#f2f2f2',
-  muted: '#8a8a8a',
-  secondary: '#5f5f5f',
+  bg: T.white,
+  dark: T.ink,
+  gold: T.yellow,
+  goldSoft: T.yellowSoft,
+  surface: T.sand,
+  border: T.line,
+  divider: T.line,
+  muted: T.textFaint,
+  secondary: T.textMuted,
 };
 
 const STEPS = ['terms', 'guidelines', 'sign in'];
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
   },
   brand: {
     fontSize: 22,
-    fontWeight: '900',
+    fontFamily: F.heading,
     letterSpacing: -0.5,
     color: C.dark,
   },
@@ -350,7 +351,7 @@ const styles = StyleSheet.create({
   stepBar: {
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#ededed',
+    backgroundColor: T.sand,
   },
   stepBarOn: {
     backgroundColor: C.dark,
@@ -358,8 +359,8 @@ const styles = StyleSheet.create({
   stepLabel: {
     marginTop: 6,
     fontSize: 11,
-    fontWeight: '700',
-    color: '#b0b0b0',
+    fontFamily: F.bodyBold,
+    color: T.textFaint,
   },
   stepLabelOn: {
     color: C.dark,
@@ -380,13 +381,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 26,
-    fontWeight: '900',
+    fontFamily: F.heading,
     letterSpacing: -0.6,
     color: C.dark,
   },
   subtitle: {
     marginTop: 6,
-    fontSize: 14.5,
+    fontSize: 14.5, fontFamily: F.body,
     color: C.secondary,
     lineHeight: 21,
   },
@@ -413,11 +414,11 @@ const styles = StyleSheet.create({
   },
   segmentText: {
     fontSize: 14,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: C.muted,
   },
   segmentTextOn: {
-    color: '#ffffff',
+    color: T.white,
   },
   highlights: {
     marginTop: 14,
@@ -435,17 +436,17 @@ const styles = StyleSheet.create({
   chipText: {
     flex: 1,
     fontSize: 13.5,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
     color: C.dark,
   },
   card: {
     marginTop: 14,
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#efefef',
+    borderColor: T.line,
     paddingHorizontal: 16,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -475,7 +476,7 @@ const styles = StyleSheet.create({
   rowTitle: {
     flex: 1,
     fontSize: 15.5,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: C.dark,
   },
   rowBody: {
@@ -485,8 +486,8 @@ const styles = StyleSheet.create({
   },
   bodyText: {
     flex: 1,
-    fontSize: 14,
-    color: '#444',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
     lineHeight: 21,
   },
   point: {
@@ -504,7 +505,7 @@ const styles = StyleSheet.create({
   version: {
     textAlign: 'center',
     color: C.muted,
-    fontSize: 11,
+    fontSize: 11, fontFamily: F.body,
     marginTop: 18,
   },
   bottomBar: {
@@ -526,7 +527,7 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     borderWidth: 1.5,
     borderColor: '#cfcfcf',
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -537,12 +538,12 @@ const styles = StyleSheet.create({
   },
   checkText: {
     flex: 1,
-    fontSize: 13.5,
+    fontSize: 13.5, fontFamily: F.body,
     color: C.secondary,
     lineHeight: 19,
   },
   bold: {
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: C.dark,
   },
   primaryBtn: {
@@ -558,8 +559,8 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   primaryText: {
-    color: '#ffffff',
+    color: T.white,
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
   },
 });

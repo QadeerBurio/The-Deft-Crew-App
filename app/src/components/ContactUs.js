@@ -13,9 +13,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { useNavigation } from "@react-navigation/native";
 
+import { color as T, font as F } from "../theme/tokens";
 const { width, height } = Dimensions.get("window");
 
 export default function ContactUsScreen() {
@@ -204,7 +205,7 @@ export default function ContactUsScreen() {
           activeOpacity={0.8}
         >
           <LinearGradient
-            colors={['#ffffff', '#fafafa']}
+            colors={[T.white, T.sand]}
             style={styles.socialGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -220,7 +221,7 @@ export default function ContactUsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerFade }]}>
@@ -229,11 +230,11 @@ export default function ContactUsScreen() {
           style={styles.headerBtn}
           activeOpacity={0.7}
         >
-          <Ionicons name="chevron-back" size={24} color="#1a1a1a" />
+          <Ionicons name="chevron-back" size={24} color={T.ink} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Help & Support</Text>
+        <Text style={styles.headerTitle}>help & support</Text>
         <TouchableOpacity style={styles.headerBtn} activeOpacity={0.7}>
-          <Ionicons name="chatbubble-outline" size={22} color="#1a1a1a" />
+          <Ionicons name="chatbubble-outline" size={22} color={T.ink} />
         </TouchableOpacity>
       </Animated.View>
 
@@ -257,7 +258,7 @@ export default function ContactUsScreen() {
             ]}
           >
             <LinearGradient
-              colors={['#1a1a1a', '#2d2d2d', '#1a1a1a']}
+              colors={[T.ink, T.ink, T.ink]}
               style={styles.heroCard}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -271,16 +272,16 @@ export default function ContactUsScreen() {
               
               <Animated.View style={[styles.heroIconCircle, { transform: [{ rotate: spin }] }]}>
                 <LinearGradient
-                  colors={['#f9c349', '#f5a623']}
+                  colors={[T.yellow, T.yellow]}
                   style={styles.heroIconGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 >
-                  <MaterialCommunityIcons name="headset-outline" size={40} color="#fff" />
+                  <MaterialCommunityIcons name="headset-outline" size={40} color={T.white} />
                 </LinearGradient>
               </Animated.View>
               
-              <Text style={styles.heroTitle}>Get in Touch</Text>
+              <Text style={styles.heroTitle}>get in touch</Text>
               <Text style={styles.heroSubtitle}>
                 Our team at tdc is ready to assist you with any student offer queries.
               </Text>
@@ -326,7 +327,7 @@ export default function ContactUsScreen() {
                         {
                           top: 10 + Math.random() * 80,
                           left: 10 + Math.random() * 80,
-                          backgroundColor: ['#f9c349', '#4ecdc4', '#6c5ce7', '#ff6b6b'][i % 4],
+                          backgroundColor: [T.yellow, '#4ecdc4', '#6c5ce7', T.danger][i % 4],
                           transform: [{ translateY: particleTranslateY }],
                           opacity: particleAnim.interpolate({
                             inputRange: [0, 0.5, 1],
@@ -347,26 +348,26 @@ export default function ContactUsScreen() {
           <View style={styles.contactSection}>
             <View style={styles.sectionHeader}>
               <LinearGradient
-                colors={['#f9c349', '#f5a623']}
+                colors={[T.yellow, T.yellow]}
                 style={styles.sectionDot}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               />
-              <Text style={styles.sectionTitle}>Contact Methods</Text>
+              <Text style={styles.sectionTitle}>contact methods</Text>
               <View style={styles.sectionLine} />
             </View>
 
             <View style={styles.contactCard}>
               <ContactItem 
-                icon={<Ionicons name="call-outline" size={22} color="#fff" />}
+                icon={<Ionicons name="call-outline" size={22} color={T.white} />}
                 label="Customer Care"
                 value="+92 322 2969595"
                 onPress={openDial}
-                color="#f9c349"
+                color={T.yellow}
                 index={0}
               />
               <ContactItem 
-                icon={<MaterialCommunityIcons name="email-outline" size={22} color="#fff" />}
+                icon={<MaterialCommunityIcons name="email-outline" size={22} color={T.white} />}
                 label="Official Email"
                 value="hello@thedeftcrew.com"
                 onPress={openEmail}
@@ -374,7 +375,7 @@ export default function ContactUsScreen() {
                 index={1}
               />
               <ContactItem 
-                icon={<FontAwesome5 name="whatsapp" size={22} color="#fff" />}
+                icon={<FontAwesome5 name="whatsapp" size={22} color={T.white} />}
                 label="WhatsApp Support"
                 value="+92 322 2969595"
                 onPress={openWhatsApp}
@@ -397,14 +398,14 @@ export default function ContactUsScreen() {
           >
             <View style={styles.separatorContainer}>
               <View style={styles.line} />
-              <Text style={styles.socialText}>Connect With Us</Text>
+              <Text style={styles.socialText}>connect with us</Text>
               <View style={styles.line} />
             </View>
 
             <View style={styles.socialRow}>
               <SocialButton 
                 icon="facebook-f" 
-                color="#1877F2" 
+                color={T.ink} 
                 url="https://www.facebook.com/share/1CijYDto1b/"
                 index={0}
               />
@@ -422,7 +423,7 @@ export default function ContactUsScreen() {
               />
               <SocialButton 
                 icon="globe" 
-                color="#f9c349" 
+                color={T.yellow} 
                 url="https://thedeftcrew.com"
                 index={3}
               />
@@ -442,7 +443,7 @@ export default function ContactUsScreen() {
             ]}
           >
             <LinearGradient
-              colors={['#f8f9fa', '#f8f9fa']}
+              colors={[T.sand, T.sand]}
               style={styles.footerGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -450,7 +451,7 @@ export default function ContactUsScreen() {
               <Text style={styles.footerLogo}>
                 tdc<Text style={styles.footerLogoAccent}>.</Text>
               </Text>
-              <Text style={styles.footerText}>Building a Stronger Student Economy.</Text>
+              <Text style={styles.footerText}>building a stronger student economy.</Text>
               <View style={styles.footerLine} />
               
               <Text style={styles.footerSubText}>© 2026 tdc Privilege Program</Text>
@@ -465,7 +466,7 @@ export default function ContactUsScreen() {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: "#f8f9fa",
+    backgroundColor: T.paper,
   },
   
   // Header
@@ -475,18 +476,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16, 
     paddingVertical: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
+    borderBottomColor: T.line,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: T.ink,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
-        shadowRadius: 10,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 4,
+        elevation: 2,
       },
     }),
   },
@@ -494,16 +495,16 @@ const styles = StyleSheet.create({
     width: 40, 
     height: 40, 
     borderRadius: 12, 
-    backgroundColor: '#f8f9fa',
+    backgroundColor: T.sand,
     justifyContent: 'center', 
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    borderColor: T.line,
   },
   headerTitle: { 
     fontSize: 18, 
-    fontWeight: '800', 
-    color: '#1a1a1a', 
+    fontFamily: F.heading, 
+    color: T.ink, 
     letterSpacing: 0.5,
   },
   scrollContent: { 
@@ -519,13 +520,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: '#f9c349',
+        shadowColor: T.ink,
         shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.2,
-        shadowRadius: 30,
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 20,
+        elevation: 2,
       },
     }),
   },
@@ -543,7 +544,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     opacity: 0.3,
   },
   particlesContainer: {
@@ -572,20 +573,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...Platform.select({
       ios: {
-        shadowColor: '#f9c349',
+        shadowColor: T.ink,
         shadowOffset: { width: 0, height: 5 },
-        shadowOpacity: 0.3,
-        shadowRadius: 15,
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 10,
+        elevation: 2,
       },
     }),
   },
   heroTitle: { 
     fontSize: 24, 
-    fontWeight: '900', 
-    color: '#fff', 
+    fontFamily: F.heading, 
+    color: T.white, 
     marginBottom: 10, 
     textAlign: 'center',
     letterSpacing: 0.5,
@@ -595,7 +596,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)', 
     textAlign: 'center', 
     lineHeight: 22, 
-    fontWeight: '500', 
+    fontFamily: F.bodyMedium, 
     paddingHorizontal: 5,
   },
   decorLine: { 
@@ -607,13 +608,13 @@ const styles = StyleSheet.create({
   decorSegment: { 
     width: 30, 
     height: 2, 
-    backgroundColor: '#f9c349', 
+    backgroundColor: T.yellow, 
     borderRadius: 1,
   },
   decorDiamond: { 
     width: 8, 
     height: 8, 
-    backgroundColor: '#f9c349', 
+    backgroundColor: T.yellow, 
     transform: [{ rotate: '45deg' }], 
     marginHorizontal: 10,
   },
@@ -631,13 +632,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: T.ink,
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.06,
         shadowRadius: 8,
       },
       android: {
-        elevation: 4,
+        elevation: 2,
       },
     }),
   },
@@ -650,9 +651,9 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 9,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    textTransform: 'uppercase',
+    fontFamily: F.bodyBold,
+    color: T.ink,
+    textTransform: 'none',
     letterSpacing: 0.5,
   },
   
@@ -675,31 +676,31 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { 
     fontSize: 16, 
-    fontWeight: '800', 
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold, 
+    color: T.ink,
     letterSpacing: 0.5,
   },
   sectionLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(0,0,0,0.08)',
+    backgroundColor: T.sand,
     marginLeft: 12,
   },
   contactCard: { 
-    backgroundColor: '#fff', 
+    backgroundColor: T.card, 
     borderRadius: 16, 
     paddingHorizontal: 4,
     borderWidth: 1, 
-    borderColor: 'rgba(0,0,0,0.06)',
+    borderColor: T.line,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: T.ink,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
-        shadowRadius: 12,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 4,
+        elevation: 2,
       },
     }),
   },
@@ -713,7 +714,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 12,
     borderBottomWidth: 1, 
-    borderBottomColor: 'rgba(0,0,0,0.05)',
+    borderBottomColor: T.line,
   },
   contactLeft: { 
     flexDirection: 'row', 
@@ -739,16 +740,16 @@ const styles = StyleSheet.create({
   },
   contactLabel: { 
     fontSize: 11, 
-    fontWeight: '700', 
-    color: '#999', 
-    textTransform: 'uppercase', 
+    fontFamily: F.bodyBold, 
+    color: T.textFaint, 
+    textTransform: 'none', 
     letterSpacing: 0.5, 
     marginBottom: 2,
   },
   contactValue: { 
     fontSize: 14, 
-    fontWeight: '700', 
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold, 
+    color: T.ink,
   },
   arrowCircle: { 
     width: 32, 
@@ -771,13 +772,13 @@ const styles = StyleSheet.create({
   line: { 
     flex: 1, 
     height: 1, 
-    backgroundColor: 'rgba(0,0,0,0.08)',
+    backgroundColor: T.sand,
   },
   socialText: { 
     marginHorizontal: 15, 
-    color: '#999', 
+    color: T.textFaint, 
     fontSize: 12, 
-    fontWeight: '800', 
+    fontFamily: F.bodyBold, 
     letterSpacing: 1,
   },
   socialRow: { 
@@ -799,13 +800,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: T.ink,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 4,
+        elevation: 2,
       },
     }),
   },
@@ -824,13 +825,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: T.ink,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 8,
+        elevation: 2,
       },
     }),
   },
@@ -840,14 +841,14 @@ const styles = StyleSheet.create({
   },
   ctaTitle: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#fff',
+    fontFamily: F.heading,
+    color: T.white,
     marginTop: 12,
     textAlign: 'center',
     letterSpacing: 0.5,
   },
   ctaDesc: {
-    fontSize: 13,
+    fontSize: 13, fontFamily: F.body,
     color: 'rgba(255,255,255,0.7)',
     textAlign: 'center',
     marginTop: 8,
@@ -868,8 +869,8 @@ const styles = StyleSheet.create({
   },
   ctaButtonText: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     marginRight: 8,
   },
   
@@ -881,10 +882,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: T.ink,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
       },
       android: {
         elevation: 0,
@@ -898,25 +899,25 @@ const styles = StyleSheet.create({
   },
   footerLogo: { 
     fontSize: 22, 
-    fontWeight: '900', 
-    color: '#000000',
+    fontFamily: F.heading, 
+    color: T.ink,
     letterSpacing: 1,
   },
   footerLogoAccent: {
-    color: '#f9c349',
+    color: T.yellow,
   },
   footerText: { 
     fontSize: 12, 
-    color: 'rgba(0, 0, 0, 0.6)', 
+    color: T.ink, 
     marginTop: 6, 
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
     letterSpacing: 0.5,
     textAlign: 'center',
   },
   footerLine: {
     width: 40,
     height: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    backgroundColor: T.sand,
     marginTop: 12,
   },
 
@@ -924,13 +925,13 @@ const styles = StyleSheet.create({
   footerStatDivider: {
     width: 1,
     height: 30,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    backgroundColor: T.sand,
   },
   footerSubText: {
     fontSize: 10,
-    color: 'rgba(0, 0, 0, 0.3)',
+    color: T.textMuted,
     marginTop: 12,
-    fontWeight: '400',
+    fontFamily: F.body,
     letterSpacing: 0.5,
   },
 });

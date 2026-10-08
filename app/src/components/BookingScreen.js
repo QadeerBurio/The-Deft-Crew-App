@@ -16,12 +16,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { useNavigation, useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
+import { color as T, font as F } from "../theme/tokens";
 const { width } = Dimensions.get("window");
 
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/bookings';
@@ -459,7 +460,7 @@ const BookingScreen = () => {
 
   return (
     <View style={styles.rootContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
       <SafeAreaView style={styles.topSafeArea} edges={['top']} />
       
       <KeyboardAvoidingView 
@@ -482,7 +483,7 @@ const BookingScreen = () => {
           >
             <LinearGradient
               colors={notification.type === 'success' 
-                ? ['#fff', '#fff'] 
+                ? [T.white, T.white] 
                 : ['#a09c9c', '#b5b0b0']
               }
               start={{ x: 0, y: 0 }}
@@ -505,13 +506,13 @@ const BookingScreen = () => {
                     <Ionicons 
                       name={notification.type === 'success' ? "checkmark-circle" : "alert-circle"} 
                       size={24} 
-                      color={notification.type === 'success' ? "#1a1a1a" : "#f9c349"} 
+                      color={notification.type === 'success' ? T.ink : T.yellow} 
                     />
                   </Animated.View>
                   <View style={styles.notificationTextContainer}>
                     <Text style={[
                       styles.notificationTitle,
-                      { color: notification.type === 'success' ? '#1a1a1a' : '#f9c349' }
+                      { color: notification.type === 'success' ? T.ink : T.yellow }
                     ]}>
                       {notification.title}
                     </Text>
@@ -523,7 +524,7 @@ const BookingScreen = () => {
                 
                 {notification.type === 'error' && (
                   <TouchableOpacity onPress={hideNotification} style={styles.notificationClose}>
-                    <Ionicons name="close" size={20} color="#f9c349" />
+                    <Ionicons name="close" size={20} color={T.yellow} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -547,7 +548,7 @@ const BookingScreen = () => {
         {/* Loading Overlay */}
         {showLoading && (
           <Animated.View style={[styles.loadingOverlay, { opacity: overlayOpacity }]}>
-            <ActivityIndicator size="large" color="#f9c349" />
+            <ActivityIndicator size="large" color={T.yellow} />
             <Text style={styles.loadingText}>Submitting Booking...</Text>
             
             <View style={styles.loadingProgressContainer}>
@@ -558,7 +559,7 @@ const BookingScreen = () => {
                 ]}
               >
                 <LinearGradient
-                  colors={['#f9c349', '#f7b733']}
+                  colors={[T.yellow, '#f7b733']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.progressGradientFill}
@@ -577,7 +578,7 @@ const BookingScreen = () => {
           {/* Header */}
           <Animated.View style={[styles.header, { opacity: headerFade }]}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
-              <Ionicons name="chevron-back" size={24} color="#1a1a1a" />
+              <Ionicons name="chevron-back" size={24} color={T.ink} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Book Your Trip</Text>
             <View style={styles.headerRight} />
@@ -595,7 +596,7 @@ const BookingScreen = () => {
               }
             ]}>
               <LinearGradient
-                colors={['#1a1a1a', '#1a1a1a']}
+                colors={[T.ink, T.ink]}
                 style={styles.packageCardGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -605,7 +606,7 @@ const BookingScreen = () => {
                 
                 <View style={styles.packageCardTop}>
                   <View style={styles.packageIconContainer}>
-                    <Ionicons name="airplane" size={24} color="#1a1a1a" />
+                    <Ionicons name="airplane" size={24} color={T.ink} />
                   </View>
                   <View style={styles.priceTag}>
                     <Text style={styles.priceCurrency}>PKR</Text>
@@ -618,15 +619,15 @@ const BookingScreen = () => {
                 
                 <View style={styles.packageDetails}>
                   <View style={styles.detailChip}>
-                    <Ionicons name="location-outline" size={14} color="#f9c349" />
+                    <Ionicons name="location-outline" size={14} color={T.yellow} />
                     <Text style={styles.detailChipText}>{item.location}</Text>
                   </View>
                   <View style={styles.detailChip}>
-                    <MaterialCommunityIcons name="clock-outline" size={14} color="#f9c349" />
+                    <MaterialCommunityIcons name="clock-outline" size={14} color={T.yellow} />
                     <Text style={styles.detailChipText}>Flexible</Text>
                   </View>
                   <View style={styles.detailChip}>
-                    <Ionicons name="star" size={14} color="#f9c349" />
+                    <Ionicons name="star" size={14} color={T.yellow} />
                     <Text style={styles.detailChipText}>Premium</Text>
                   </View>
                 </View>
@@ -637,7 +638,7 @@ const BookingScreen = () => {
             <Animated.View style={[styles.formContainer, { transform: [{ translateY: slideUpAnim }] }]}>
               <View style={styles.sectionHeader}>
                 <LinearGradient
-                  colors={['#f9c349', '#f9c349']}
+                  colors={[T.yellow, T.yellow]}
                   style={styles.sectionDot}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -657,12 +658,12 @@ const BookingScreen = () => {
                   ]}
                 >
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="person-outline" size={18} color={focusedInput === 'fullName' ? "#f9c349" : "#999"} />
+                    <Ionicons name="person-outline" size={18} color={focusedInput === 'fullName' ? T.yellow : T.textFaint} />
                   </View>
                   <TextInput
                     style={styles.input}
                     placeholder="Enter your full name"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={T.textFaint}
                     value={formData.fullName}
                     onChangeText={(text) => handleInputChange('fullName', text)}
                     onFocus={() => handleInputFocus('fullName')}
@@ -671,7 +672,7 @@ const BookingScreen = () => {
                     returnKeyType="next"
                   />
                   {formData.fullName.length > 0 && !errors.fullName && (
-                    <Ionicons name="checkmark-circle" size={20} color="#f9c349" />
+                    <Ionicons name="checkmark-circle" size={20} color={T.yellow} />
                   )}
                 </View>
                 {errors.fullName && touched.fullName && <Text style={styles.errorText}>{errors.fullName}</Text>}
@@ -689,12 +690,12 @@ const BookingScreen = () => {
                   ]}
                 >
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="mail-outline" size={18} color={focusedInput === 'email' ? "#f9c349" : "#999"} />
+                    <Ionicons name="mail-outline" size={18} color={focusedInput === 'email' ? T.yellow : T.textFaint} />
                   </View>
                   <TextInput
                     style={styles.input}
                     placeholder="Enter your email"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={T.textFaint}
                     value={formData.email}
                     onChangeText={(text) => handleInputChange('email', text)}
                     keyboardType="email-address"
@@ -705,7 +706,7 @@ const BookingScreen = () => {
                     returnKeyType="next"
                   />
                   {formData.email.length > 0 && !errors.email && /\S+@\S+\.\S+/.test(formData.email) && (
-                    <Ionicons name="checkmark-circle" size={20} color="#f9c349" />
+                    <Ionicons name="checkmark-circle" size={20} color={T.yellow} />
                   )}
                 </View>
                 {errors.email && touched.email && <Text style={styles.errorText}>{errors.email}</Text>}
@@ -723,12 +724,12 @@ const BookingScreen = () => {
                   ]}
                 >
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="call-outline" size={18} color={focusedInput === 'phone' ? "#f9c349" : "#999"} />
+                    <Ionicons name="call-outline" size={18} color={focusedInput === 'phone' ? T.yellow : T.textFaint} />
                   </View>
                   <TextInput
                     style={styles.input}
                     placeholder="Enter your phone number"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={T.textFaint}
                     value={formData.phone}
                     onChangeText={(text) => handleInputChange('phone', text)}
                     keyboardType="phone-pad"
@@ -743,7 +744,7 @@ const BookingScreen = () => {
 
               <View style={styles.sectionHeader}>
                 <LinearGradient
-                  colors={['#f9c349', '#f9c349']}
+                  colors={[T.yellow, T.yellow]}
                   style={styles.sectionDot}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -762,11 +763,11 @@ const BookingScreen = () => {
                   activeOpacity={0.7}
                 >
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="calendar-outline" size={18} color="#f9c349" />
+                    <Ionicons name="calendar-outline" size={18} color={T.yellow} />
                   </View>
                   <Text style={styles.dateText}>{formatDate(formData.travelDate)}</Text>
                   <View style={styles.chevronContainer}>
-                    <Ionicons name="chevron-down" size={18} color="#f9c349" />
+                    <Ionicons name="chevron-down" size={18} color={T.yellow} />
                   </View>
                 </TouchableOpacity>
                 {errors.travelDate && touched.travelDate && <Text style={styles.errorText}>{errors.travelDate}</Text>}
@@ -786,7 +787,7 @@ const BookingScreen = () => {
                     disabled={loading}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="remove" size={20} color="#1a1a1a" />
+                    <Ionicons name="remove" size={20} color={T.ink} />
                   </TouchableOpacity>
                   <View style={styles.travelerCountContainer}>
                     <Text style={styles.travelerCount}>{formData.numberOfTravelers}</Text>
@@ -802,7 +803,7 @@ const BookingScreen = () => {
                     disabled={loading}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="add" size={20} color="#1a1a1a" />
+                    <Ionicons name="add" size={20} color={T.ink} />
                   </TouchableOpacity>
                 </View>
                 {errors.numberOfTravelers && touched.numberOfTravelers && <Text style={styles.errorText}>{errors.numberOfTravelers}</Text>}
@@ -830,7 +831,7 @@ const BookingScreen = () => {
                         <Ionicons 
                           name={method.icon} 
                           size={24} 
-                          color={formData.paymentMethod === method.id ? '#f9c349' : '#666'} 
+                          color={formData.paymentMethod === method.id ? T.yellow : T.textMuted} 
                         />
                       </View>
                       <Text style={[
@@ -841,7 +842,7 @@ const BookingScreen = () => {
                       </Text>
                       {formData.paymentMethod === method.id && (
                         <View style={styles.paymentCheckmark}>
-                          <Ionicons name="checkmark-circle" size={20} color="#f9c349" />
+                          <Ionicons name="checkmark-circle" size={20} color={T.yellow} />
                         </View>
                       )}
                     </TouchableOpacity>
@@ -859,7 +860,7 @@ const BookingScreen = () => {
                   <TextInput
                     style={[styles.input, styles.textArea]}
                     placeholder="Any special requirements or preferences?"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={T.textFaint}
                     value={formData.specialRequests}
                     onChangeText={(text) => handleInputChange('specialRequests', text)}
                     multiline
@@ -874,7 +875,7 @@ const BookingScreen = () => {
               {/* Price Summary - Updated with PKR */}
               <View style={styles.summaryCard}>
                 <View style={styles.summaryHeader}>
-                  <Ionicons name="receipt-outline" size={20} color="#1a1a1a" />
+                  <Ionicons name="receipt-outline" size={20} color={T.ink} />
                   <Text style={styles.summaryTitle}>Price Summary</Text>
                 </View>
                 <View style={styles.summaryDivider} />
@@ -914,18 +915,18 @@ const BookingScreen = () => {
                   activeOpacity={0.9}
                 >
                   <LinearGradient
-                    colors={['#1a1a1a', '#1a1a1a']}
+                    colors={[T.ink, T.ink]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.submitBtnGradient}
                   >
                     {loading ? (
-                      <ActivityIndicator color="#fff" />
+                      <ActivityIndicator color={T.white} />
                     ) : (
                       <>
                         <Text style={styles.submitBtnText}>SUBMIT BOOKING</Text>
                         <View style={styles.submitIconContainer}>
-                          <Ionicons name="arrow-forward" size={20} color="#fff" />
+                          <Ionicons name="arrow-forward" size={20} color={T.white} />
                         </View>
                       </>
                     )}
@@ -958,17 +959,17 @@ const BookingScreen = () => {
 const styles = StyleSheet.create({
   rootContainer: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
   },
   topSafeArea: {
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
   },
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
   },
   bottomSafeArea: {
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
   },
   scrollContent: {
     paddingBottom: 20,
@@ -982,11 +983,11 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 1000,
     overflow: 'hidden',
-    elevation: 20,
-    shadowColor: "#000",
+    elevation: 2,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
   },
   notificationGradient: {
     width: '100%',
@@ -1008,45 +1009,45 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
     borderWidth: 2,
-    borderColor: '#f9c349',
+    borderColor: T.yellow,
   },
   notificationTextContainer: {
     flex: 1,
   },
   notificationTitle: {
     fontSize: 15,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     marginBottom: 1,
     letterSpacing: 0.5,
   },
   notificationMessage: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 12, fontFamily: F.body,
+    color: T.textMuted,
     lineHeight: 16,
   },
   notificationClose: {
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 10,
   },
   notificationProgressBar: {
     height: 3,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: T.sand,
     width: '100%',
     overflow: 'hidden',
   },
   notificationProgress: {
     height: '100%',
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     transform: [{ scaleX: 0 }],
     flex: 1,
   },
@@ -1058,15 +1059,15 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: T.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 999,
   },
   loadingText: {
-    color: '#f9c349',
+    color: T.yellow,
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: F.heading,
     marginTop: 15,
     marginBottom: 15,
     letterSpacing: 1,
@@ -1083,7 +1084,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     transform: [{ scaleX: 0 }],
     width: '100%',
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
   },
   progressGradientFill: {
     width: '100%',
@@ -1097,22 +1098,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 10,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: T.line,
   },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#1a1a1a',
+    fontFamily: F.heading,
+    color: T.ink,
     letterSpacing: 1,
   },
   headerRight: {
@@ -1126,11 +1127,11 @@ const styles = StyleSheet.create({
     marginTop: 20,
     borderRadius: 24,
     overflow: 'hidden',
-    elevation: 15,
-    shadowColor: "#f9c349",
+    elevation: 2,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
   },
   packageCardGradient: {
     padding: 22,
@@ -1167,7 +1168,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 15,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1176,26 +1177,26 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
   },
   priceCurrency: {
-    color: '#fff',
+    color: T.white,
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
     marginRight: 2,
   },
   priceTagText: {
-    color: '#fff',
+    color: T.white,
     fontSize: 28,
-    fontWeight: '900',
+    fontFamily: F.heading,
   },
   priceTagSub: {
     color: 'rgba(255,255,255,0.7)',
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
     marginLeft: 2,
   },
   packageName: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#fff',
+    fontFamily: F.heading,
+    color: T.white,
     marginBottom: 12,
     letterSpacing: 0.5,
   },
@@ -1214,9 +1215,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   detailChipText: {
-    color: '#fff',
+    color: T.white,
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
   },
 
   // Form
@@ -1237,24 +1238,24 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#1a1a1a',
+    fontFamily: F.heading,
+    color: T.ink,
   },
   inputGroup: {
     marginBottom: 18,
   },
   label: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#666',
+    fontFamily: F.bodyBold,
+    color: T.textMuted,
     marginBottom: 8,
     letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    textTransform: 'none',
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f8f8',
+    backgroundColor: T.sand,
     borderRadius: 16,
     borderWidth: 2,
     borderColor: 'transparent',
@@ -1267,13 +1268,13 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   inputFocused: {
-    borderColor: '#f9c349',
-    backgroundColor: '#fff',
-    shadowColor: "#f9c349",
+    borderColor: T.yellow,
+    backgroundColor: T.card,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   inputError: {
     borderColor: '#F56565',
@@ -1282,7 +1283,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
@@ -1290,8 +1291,8 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 15,
-    color: '#1a1a1a',
-    fontWeight: '500',
+    color: T.ink,
+    fontFamily: F.bodyMedium,
     paddingVertical: 8,
   },
   textArea: {
@@ -1302,15 +1303,15 @@ const styles = StyleSheet.create({
   dateText: {
     flex: 1,
     fontSize: 15,
-    color: '#1a1a1a',
-    fontWeight: '500',
+    color: T.ink,
+    fontFamily: F.bodyMedium,
     paddingVertical: 8,
   },
   chevronContainer: {
     width: 30,
     height: 30,
     borderRadius: 10,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1318,7 +1319,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#f8f8f8',
+    backgroundColor: T.sand,
     borderRadius: 16,
     borderWidth: 2,
     borderColor: 'transparent',
@@ -1329,25 +1330,25 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
   },
   travelerBtnAdd: {
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
   },
   travelerCountContainer: {
     alignItems: 'center',
   },
   travelerCount: {
     fontSize: 22,
-    fontWeight: '900',
-    color: '#1a1a1a',
+    fontFamily: F.heading,
+    color: T.ink,
   },
   travelerLabel: {
     fontSize: 10,
-    color: '#999',
-    fontWeight: '600',
+    color: T.textFaint,
+    fontFamily: F.bodySemi,
     letterSpacing: 0.5,
   },
 
@@ -1361,7 +1362,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: (width - 60) / 3 - 10,
     maxWidth: (width - 60) / 3 - 10,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: T.paper,
     borderRadius: 16,
     padding: 12,
     alignItems: 'center',
@@ -1372,37 +1373,37 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   paymentGridItemActive: {
-    backgroundColor: '#1a1a1a',
-    borderColor: '#f9c349',
-    elevation: 5,
-    shadowColor: "#f9c349",
+    backgroundColor: T.ink,
+    borderColor: T.yellow,
+    elevation: 2,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
   },
   paymentIconContainer: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
   },
   paymentIconContainerActive: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: T.ink,
     borderWidth: 1,
-    borderColor: '#f9c349',
+    borderColor: T.yellow,
   },
   paymentGridLabel: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#666',
+    fontFamily: F.bodySemi,
+    color: T.textMuted,
     textAlign: 'center',
     lineHeight: 14,
   },
   paymentGridLabelActive: {
-    color: '#f9c349',
+    color: T.yellow,
   },
   paymentCheckmark: {
     position: 'absolute',
@@ -1412,13 +1413,13 @@ const styles = StyleSheet.create({
 
   // Price Summary
   summaryCard: {
-    backgroundColor: '#f8f8f8',
+    backgroundColor: T.sand,
     borderRadius: 16,
     padding: 20,
     marginTop: 10,
     marginBottom: 20,
     borderWidth: 2,
-    borderColor: '#f0f0f0',
+    borderColor: T.line,
   },
   summaryHeader: {
     flexDirection: 'row',
@@ -1428,12 +1429,12 @@ const styles = StyleSheet.create({
   },
   summaryTitle: {
     fontSize: 16,
-    fontWeight: '800',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
   },
   summaryDivider: {
     height: 1,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: T.sand,
     marginVertical: 12,
   },
   summaryRow: {
@@ -1444,27 +1445,27 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
+    color: T.textMuted,
+    fontFamily: F.bodyMedium,
   },
   summaryValue: {
     fontSize: 14,
-    color: '#1a1a1a',
-    fontWeight: '600',
+    color: T.ink,
+    fontFamily: F.bodySemi,
   },
   summaryValueIncluded: {
     fontSize: 12,
-    color: '#4caf50',
-    fontWeight: '700',
-    backgroundColor: '#e8f5e9',
+    color: T.success,
+    fontFamily: F.bodyBold,
+    backgroundColor: T.successBg,
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 10,
   },
   totalLabel: {
     fontSize: 16,
-    fontWeight: '800',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
   },
   totalAmountContainer: {
     flexDirection: 'row',
@@ -1472,25 +1473,25 @@ const styles = StyleSheet.create({
   },
   totalCurrency: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#f9c349',
+    fontFamily: F.bodyBold,
+    color: T.yellow,
     marginRight: 2,
   },
   totalAmount: {
     fontSize: 24,
-    fontWeight: '900',
-    color: '#f9c349',
+    fontFamily: F.heading,
+    color: T.yellow,
   },
 
   // Submit Button
   submitBtn: {
     borderRadius: 16,
     overflow: 'hidden',
-    elevation: 10,
-    shadowColor: "#f9c349",
+    elevation: 2,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.4,
-    shadowRadius: 15,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     marginTop: 10,
   },
   submitBtnGradient: {
@@ -1500,9 +1501,9 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   submitBtnText: {
-    color: '#fff',
+    color: T.white,
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     letterSpacing: 2,
     marginRight: 10,
   },
@@ -1516,7 +1517,7 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#F56565',
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
     marginTop: 5,
     marginLeft: 5,
   },

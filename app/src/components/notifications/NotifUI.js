@@ -9,21 +9,22 @@ import React, { memo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { color as T, font as F } from "../../theme/tokens";
 export const N = {
-  gold: '#f9c349',
-  goldSoft: '#fff8e6',
-  dark: '#1a1a1a',
-  white: '#ffffff',
-  soft: '#F7F9F8',
-  border: '#E8E8E8',
-  line: '#f2f2f2',
-  muted: '#8a8a8a',
-  text2: '#5f5f5f',
-  danger: '#e11d48',
-  dangerSoft: '#fdecef',
-  ok: '#16a34a',
-  okSoft: '#e9f8ef',
-  blue: '#2563eb',
+  gold: T.yellow,
+  goldSoft: T.yellowSoft,
+  dark: T.ink,
+  white: T.white,
+  soft: T.sand,
+  border: T.line,
+  line: T.line,
+  muted: T.textFaint,
+  text2: T.textMuted,
+  danger: T.danger,
+  dangerSoft: T.dangerBg,
+  ok: T.success,
+  okSoft: T.successBg,
+  blue: T.ink,
   blueSoft: '#eaf1ff',
 };
 
@@ -93,8 +94,8 @@ export function NotifHeader({ title = 'notifications', unread = 0, onBack, onClo
         <View style={s.actions}>
           {onMarkAll ? (
             <TouchableOpacity onPress={onMarkAll} style={s.actionBtn} activeOpacity={0.75} disabled={!unread}>
-              <Ionicons name="checkmark-done" size={15} color={unread ? N.dark : '#bdbdbd'} />
-              <Text style={[s.actionText, !unread && { color: '#bdbdbd' }]}>mark all read</Text>
+              <Ionicons name="checkmark-done" size={15} color={unread ? N.dark : T.textFaint} />
+              <Text style={[s.actionText, !unread && { color: T.textFaint }]}>mark all read</Text>
             </TouchableOpacity>
           ) : null}
           {onClear ? (
@@ -223,7 +224,7 @@ export const NotifRow = memo(function NotifRow({ item, onPress, onDelete, childr
         {item.unread ? <View style={s.dot} /> : <View style={{ height: 8 }} />}
         {onDelete ? (
           <TouchableOpacity onPress={onDelete} hitSlop={10} style={s.del}>
-            <Ionicons name="close" size={15} color="#c4c4c4" />
+            <Ionicons name="close" size={15} color={T.textFaint} />
           </TouchableOpacity>
         ) : null}
       </View>
@@ -283,7 +284,7 @@ export function NotifEmpty({ title = 'all caught up', sub = "we'll ping you when
 
 const s = StyleSheet.create({
   header: { paddingHorizontal: 16, paddingTop: 6, paddingBottom: 4, backgroundColor: N.white },
-  handle: { width: 38, height: 4, borderRadius: 2, backgroundColor: '#e2e2e2', alignSelf: 'center', marginBottom: 10 },
+  handle: { width: 38, height: 4, borderRadius: 2, backgroundColor: T.sand, alignSelf: 'center', marginBottom: 10 },
   headerRow: { flexDirection: 'row', alignItems: 'center', minHeight: 44 },
   squareBtn: {
     width: 40,
@@ -296,7 +297,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   titleWrap: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  title: { fontSize: 22, fontWeight: '900', color: N.dark, letterSpacing: -0.5, flexShrink: 1 },
+  title: { fontSize: 22, fontFamily: F.heading, color: N.dark, letterSpacing: -0.5, flexShrink: 1 },
   titlePill: {
     marginLeft: 8,
     minWidth: 22,
@@ -307,7 +308,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  titlePillText: { color: N.gold, fontSize: 11, fontWeight: '800' },
+  titlePillText: { color: N.gold, fontSize: 11, fontFamily: F.bodyBold },
   actions: { flexDirection: 'row', gap: 8, marginTop: 10 },
   actionBtn: {
     flexDirection: 'row',
@@ -320,7 +321,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: N.border,
   },
-  actionText: { fontSize: 12.5, fontWeight: '800', color: N.dark },
+  actionText: { fontSize: 12.5, fontFamily: F.bodyBold, color: N.dark },
 
   chips: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
   chip: {
@@ -335,18 +336,18 @@ const s = StyleSheet.create({
     borderColor: N.border,
   },
   chipOn: { backgroundColor: N.dark, borderColor: N.dark },
-  chipText: { fontSize: 13, fontWeight: '700', color: N.text2 },
+  chipText: { fontSize: 13, fontFamily: F.bodyBold, color: N.text2 },
   chipTextOn: { color: N.gold },
   chipCount: { minWidth: 18, height: 18, paddingHorizontal: 5, borderRadius: 9, backgroundColor: N.dark, justifyContent: 'center', alignItems: 'center' },
   chipCountOn: { backgroundColor: N.gold },
-  chipCountText: { fontSize: 10, fontWeight: '800', color: N.gold },
+  chipCountText: { fontSize: 10, fontFamily: F.bodyBold, color: N.gold },
   chipCountTextOn: { color: N.dark },
 
   section: {
     fontSize: 12,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: N.muted,
-    textTransform: 'uppercase',
+    textTransform: 'none',
     letterSpacing: 0.8,
     marginTop: 14,
     marginBottom: 6,
@@ -365,7 +366,7 @@ const s = StyleSheet.create({
   leading: { width: 46, height: 46, marginRight: 12 },
   avatar: { width: 46, height: 46, borderRadius: 23, backgroundColor: N.soft },
   avatarFallback: { backgroundColor: N.gold, justifyContent: 'center', alignItems: 'center' },
-  avatarInitial: { fontSize: 18, fontWeight: '900', color: N.dark },
+  avatarInitial: { fontSize: 18, fontFamily: F.heading, color: N.dark },
   iconTile: { width: 46, height: 46, borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
   badge: {
     position: 'absolute',
@@ -381,18 +382,18 @@ const s = StyleSheet.create({
   },
   body: { flex: 1 },
   topLine: { flexDirection: 'row', alignItems: 'flex-start' },
-  rowTitle: { flex: 1, fontSize: 14.5, color: N.dark, fontWeight: '600', lineHeight: 20 },
-  rowTitleUnread: { fontWeight: '800' },
-  rowName: { fontWeight: '900', color: N.dark },
-  time: { fontSize: 11.5, color: N.muted, fontWeight: '600', marginLeft: 8, marginTop: 2 },
-  timeUnread: { color: N.dark, fontWeight: '800' },
-  rowBody: { fontSize: 13.5, color: N.text2, lineHeight: 19, marginTop: 3 },
+  rowTitle: { flex: 1, fontSize: 14.5, color: N.dark, fontFamily: F.bodySemi, lineHeight: 20 },
+  rowTitleUnread: { fontFamily: F.bodyBold },
+  rowName: { fontFamily: F.bodyBold, color: N.dark },
+  time: { fontSize: 11.5, color: N.muted, fontFamily: F.bodySemi, marginLeft: 8, marginTop: 2 },
+  timeUnread: { color: N.dark, fontFamily: F.bodyBold },
+  rowBody: { fontSize: 13.5, fontFamily: F.body, color: N.text2, lineHeight: 19, marginTop: 3 },
   preview: { marginTop: 8, backgroundColor: N.white, borderRadius: 12, borderWidth: 1, borderColor: N.line, paddingHorizontal: 12, paddingVertical: 9 },
-  previewText: { fontSize: 13, color: '#444', lineHeight: 18 },
+  previewText: { fontSize: 13, fontFamily: F.body, color: T.textMuted, lineHeight: 18 },
   status: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 5, marginTop: 8, paddingHorizontal: 10, height: 26, borderRadius: 13 },
-  statusText: { fontSize: 12, fontWeight: '800' },
+  statusText: { fontSize: 12, fontFamily: F.bodyBold },
   openHint: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
-  openHintText: { fontSize: 12, fontWeight: '800', color: N.dark },
+  openHintText: { fontSize: 12, fontFamily: F.bodyBold, color: N.dark },
   trailing: { alignItems: 'center', marginLeft: 6, width: 22 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: N.gold, marginTop: 6 },
   del: { marginTop: 10 },
@@ -400,16 +401,16 @@ const s = StyleSheet.create({
   reqRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
   reqBtn: { flex: 1, height: 38, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   reqAccept: { backgroundColor: N.dark },
-  reqAcceptText: { color: N.white, fontSize: 13.5, fontWeight: '800' },
+  reqAcceptText: { color: N.white, fontSize: 13.5, fontFamily: F.bodyBold },
   reqDecline: { backgroundColor: N.soft, borderWidth: 1, borderColor: N.border },
-  reqDeclineText: { color: N.dark, fontSize: 13.5, fontWeight: '700' },
+  reqDeclineText: { color: N.dark, fontSize: 13.5, fontFamily: F.bodyBold },
 
   skRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
-  skIcon: { width: 46, height: 46, borderRadius: 15, backgroundColor: '#f0f0f0', marginRight: 12 },
-  skLine: { height: 13, borderRadius: 6, backgroundColor: '#f0f0f0' },
+  skIcon: { width: 46, height: 46, borderRadius: 15, backgroundColor: T.sand, marginRight: 12 },
+  skLine: { height: 13, borderRadius: 6, backgroundColor: T.sand },
 
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingVertical: 60 },
   emptyIcon: { width: 72, height: 72, borderRadius: 22, backgroundColor: N.goldSoft, justifyContent: 'center', alignItems: 'center', marginBottom: 14 },
-  emptyTitle: { fontSize: 18, fontWeight: '900', color: N.dark },
-  emptySub: { fontSize: 13.5, color: N.muted, marginTop: 6, textAlign: 'center', lineHeight: 19 },
+  emptyTitle: { fontSize: 18, fontFamily: F.heading, color: N.dark },
+  emptySub: { fontSize: 13.5, fontFamily: F.body, color: N.muted, marginTop: 6, textAlign: 'center', lineHeight: 19 },
 });

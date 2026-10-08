@@ -30,6 +30,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import GuestGuard from "./GuestGuard";
 import { BASE_URL } from "../api/api";
 
+import { color as T, font as F } from "../theme/tokens";
 const { width, height } = Dimensions.get("window");
 
 // const getBaseURL = () => {
@@ -43,15 +44,15 @@ const COLORS = {
   surface: "#161616",
   card: "#1c1c1c",
   line: "#272727",
-  primary: "#ffffff",
-  accent: "#f9c349",
+  primary: T.white,
+  accent: T.yellow,
   accentSoft: "#f9c34915",
-  muted: "#666",
-  body: "#aaa",
-  error: "#ef4444",
-  success: "#10b981",
+  muted: T.textMuted,
+  body: T.textFaint,
+  error: T.danger,
+  success: T.success,
   warning: "#f59e0b",
-  info: "#3b82f6",
+  info: T.ink,
   purple: "#8b5cf6",
 };
 
@@ -86,13 +87,13 @@ const TDCCareerCard = React.memo(({ item, index, onPress, hasApplied }) => {
       {/* TDC Badge */}
       <View style={styles.tdcBadgeRow}>
         <View style={styles.tdcBadge}>
-          <MaterialCommunityIcons name="star-circle" size={12} color="#f9c349" />
-          <Text style={styles.tdcBadgeText}>The Deft Crew</Text>
+          <MaterialCommunityIcons name="star-circle" size={12} color={T.yellow} />
+          <Text style={styles.tdcBadgeText}>the deft crew</Text>
         </View>
         {hasApplied && (
           <View style={styles.appliedBadge}>
-            <Ionicons name="checkmark-circle" size={12} color="#10b981" />
-            <Text style={styles.appliedBadgeText}>Applied</Text>
+            <Ionicons name="checkmark-circle" size={12} color={T.success} />
+            <Text style={styles.appliedBadgeText}>applied</Text>
           </View>
         )}
       </View>
@@ -104,7 +105,7 @@ const TDCCareerCard = React.memo(({ item, index, onPress, hasApplied }) => {
       {/* Badges */}
       <View style={styles.badgeRow}>
         <View style={styles.typeBadge}>
-          <Ionicons name="briefcase-outline" size={11} color="#f9c349" />
+          <Ionicons name="briefcase-outline" size={11} color={T.yellow} />
           <Text style={styles.typeBadgeText}>{item.type || "Full-time"}</Text>
         </View>
         {item.experienceLevel && (
@@ -115,7 +116,7 @@ const TDCCareerCard = React.memo(({ item, index, onPress, hasApplied }) => {
         )}
         {item.locationType && (
           <View style={styles.locTypeBadge}>
-            <Ionicons name={item.locationType === "Remote" ? "laptop-outline" : "business-outline"} size={11} color="#10b981" />
+            <Ionicons name={item.locationType === "Remote" ? "laptop-outline" : "business-outline"} size={11} color={T.success} />
             <Text style={styles.locTypeBadgeText}>{item.locationType}</Text>
           </View>
         )}
@@ -124,11 +125,11 @@ const TDCCareerCard = React.memo(({ item, index, onPress, hasApplied }) => {
       {/* Meta */}
       <View style={styles.infoRow}>
         <View style={styles.metaItem}>
-          <Ionicons name="location-sharp" size={14} color="#f9c349" />
+          <Ionicons name="location-sharp" size={14} color={T.yellow} />
           <Text style={styles.metaText} numberOfLines={1}>{item.location}</Text>
         </View>
         <View style={styles.metaItem}>
-          <Ionicons name="cash-outline" size={14} color="#f9c349" />
+          <Ionicons name="cash-outline" size={14} color={T.yellow} />
           <Text style={styles.metaText} numberOfLines={1}>{item.salary || "Competitive"}</Text>
         </View>
       </View>
@@ -157,7 +158,7 @@ const TDCCareerCard = React.memo(({ item, index, onPress, hasApplied }) => {
         <Ionicons
           name={hasApplied ? "eye-outline" : "arrow-forward-circle"}
           size={22}
-          color="#f9c349"
+          color={T.yellow}
         />
       </View>
     </AnimatedTouchable>
@@ -179,12 +180,12 @@ const FilterModal = React.memo(({ visible, filters, setFilters, onClose, onClear
       <View style={styles.filterModalContent}>
         <View style={styles.modalDragHandle} />
         <TouchableOpacity style={styles.closeXButton} onPress={onClose}>
-          <Ionicons name="close" size={24} color="#fff" />
+          <Ionicons name="close" size={24} color={T.white} />
         </TouchableOpacity>
-        <Text style={styles.filterModalTitle}>Filter Openings</Text>
+        <Text style={styles.filterModalTitle}>filter openings</Text>
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Date Posted</Text>
+            <Text style={styles.filterLabel}>date posted</Text>
             <View style={styles.filterOptions}>
               {[{ label: "Any Time", value: "all" }, { label: "Past 24 Hours", value: "24h" }, { label: "Past Week", value: "week" }, { label: "Past Month", value: "month" }].map(o => (
                 <TouchableOpacity 
@@ -200,7 +201,7 @@ const FilterModal = React.memo(({ visible, filters, setFilters, onClose, onClear
             </View>
           </View>
           <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Job Type</Text>
+            <Text style={styles.filterLabel}>job type</Text>
             <View style={styles.filterOptions}>
               {["Full-time", "Part-time", "Contract", "Internship"].map(t => (
                 <TouchableOpacity 
@@ -216,7 +217,7 @@ const FilterModal = React.memo(({ visible, filters, setFilters, onClose, onClear
             </View>
           </View>
           <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Work Location</Text>
+            <Text style={styles.filterLabel}>work location</Text>
             <View style={styles.filterOptions}>
               {["Remote", "On-site", "Hybrid"].map(lt => (
                 <TouchableOpacity 
@@ -233,7 +234,7 @@ const FilterModal = React.memo(({ visible, filters, setFilters, onClose, onClear
           </View>
         </ScrollView>
         <TouchableOpacity style={styles.clearFiltersBtn} onPress={onClear}>
-          <Text style={styles.clearFiltersBtnText}>Clear All Filters</Text>
+          <Text style={styles.clearFiltersBtnText}>clear all filters</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -628,7 +629,7 @@ const TDCCareers = ({ navigation }) => {
       shortlisted: COLORS.success, 
       interview: COLORS.purple, 
       rejected: COLORS.error, 
-      hired: "#059669" 
+      hired: T.success 
     }[s?.toLowerCase()] || COLORS.muted);
     const getStatusLabel = (s) => ({ 
       pending: "Pending Review", 
@@ -652,15 +653,15 @@ const TDCCareers = ({ navigation }) => {
           <View style={styles.detailModalContent}>
             <View style={styles.modalDragHandle} />
             <TouchableOpacity style={styles.closeXButton} onPress={() => setShowDetailModal(false)}>
-              <Ionicons name="close" size={24} color="#fff" />
+              <Ionicons name="close" size={24} color={T.white} />
             </TouchableOpacity>
             <Text style={styles.detailModalTitle}>{detailJob?.title}</Text>
-            <Text style={styles.detailModalCompany}>The Deft Crew</Text>
+            <Text style={styles.detailModalCompany}>the deft crew</Text>
             {myApp && (
               <View style={[styles.statusBanner, { backgroundColor: getStatusColor(myApp.status) + "25", borderColor: getStatusColor(myApp.status) + "40" }]}>
                 <View style={[styles.statusDot, { backgroundColor: getStatusColor(myApp.status) }]} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.statusBannerTitle}>Application Status</Text>
+                  <Text style={styles.statusBannerTitle}>application status</Text>
                   <Text style={[styles.statusBannerStatus, { color: getStatusColor(myApp.status) }]}>
                     {getStatusLabel(myApp.status)}
                   </Text>
@@ -686,7 +687,7 @@ const TDCCareers = ({ navigation }) => {
               )}
             </ScrollView>
             <TouchableOpacity style={styles.closeBtn} onPress={() => setShowDetailModal(false)}>
-              <Text style={styles.closeBtnText}>Close</Text>
+              <Text style={styles.closeBtnText}>close</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -714,9 +715,9 @@ const TDCCareers = ({ navigation }) => {
                 <View style={styles.formModalContent}>
                   <View style={styles.modalDragHandle} />
                   <TouchableOpacity style={styles.closeXButton} onPress={handleModalClose}>
-                    <Ionicons name="close" size={24} color="#fff" />
+                    <Ionicons name="close" size={24} color={T.white} />
                   </TouchableOpacity>
-                  <Text style={styles.formModalTitle}>Apply to TDC</Text>
+                  <Text style={styles.formModalTitle}>apply to tdc</Text>
                   <Text style={styles.formModalSubtitle}>{selectedJob?.title}</Text>
                   
                   <ScrollView 
@@ -732,7 +733,7 @@ const TDCCareers = ({ navigation }) => {
                     <TextInput 
                       style={[styles.formInput, validationErrors.fullName && styles.formInputError]} 
                       placeholder="Your full name" 
-                      placeholderTextColor="#555" 
+                      placeholderTextColor={T.textMuted} 
                       value={applicationForm.fullName} 
                       onChangeText={v => handleInputChange("fullName", v)}
                       editable={!submitting}
@@ -743,7 +744,7 @@ const TDCCareers = ({ navigation }) => {
                     <TextInput 
                       style={[styles.formInput, validationErrors.email && styles.formInputError]} 
                       placeholder="your@email.com" 
-                      placeholderTextColor="#555" 
+                      placeholderTextColor={T.textMuted} 
                       value={applicationForm.email} 
                       onChangeText={v => handleInputChange("email", v)} 
                       keyboardType="email-address" 
@@ -756,7 +757,7 @@ const TDCCareers = ({ navigation }) => {
                     <TextInput 
                       style={[styles.formInput, validationErrors.phone && styles.formInputError]} 
                       placeholder="+92 300 1234567" 
-                      placeholderTextColor="#555" 
+                      placeholderTextColor={T.textMuted} 
                       value={applicationForm.phone} 
                       onChangeText={v => handleInputChange("phone", v)} 
                       keyboardType="phone-pad"
@@ -766,22 +767,22 @@ const TDCCareers = ({ navigation }) => {
 
                     <View style={styles.formRow}>
                       <View style={styles.formHalf}>
-                        <Text style={styles.formLabel}>City</Text>
+                        <Text style={styles.formLabel}>city</Text>
                         <TextInput 
                           style={styles.formInput} 
                           placeholder="Karachi" 
-                          placeholderTextColor="#555" 
+                          placeholderTextColor={T.textMuted} 
                           value={applicationForm.city} 
                           onChangeText={v => handleInputChange("city", v)}
                           editable={!submitting}
                         />
                       </View>
                       <View style={styles.formHalf}>
-                        <Text style={styles.formLabel}>Country</Text>
+                        <Text style={styles.formLabel}>country</Text>
                         <TextInput 
                           style={styles.formInput} 
                           placeholder="Pakistan" 
-                          placeholderTextColor="#555" 
+                          placeholderTextColor={T.textMuted} 
                           value={applicationForm.country} 
                           onChangeText={v => handleInputChange("country", v)}
                           editable={!submitting}
@@ -789,11 +790,11 @@ const TDCCareers = ({ navigation }) => {
                       </View>
                     </View>
 
-                    <Text style={styles.formLabel}>LinkedIn Profile</Text>
+                    <Text style={styles.formLabel}>linkedin profile</Text>
                     <TextInput 
                       style={styles.formInput} 
                       placeholder="linkedin.com/in/yourprofile" 
-                      placeholderTextColor="#555" 
+                      placeholderTextColor={T.textMuted} 
                       value={applicationForm.linkedInUrl} 
                       onChangeText={v => handleInputChange("linkedInUrl", v)} 
                       autoCapitalize="none"
@@ -804,7 +805,7 @@ const TDCCareers = ({ navigation }) => {
                     <TextInput 
                       style={styles.formInput} 
                       placeholder="github.com/yourprofile" 
-                      placeholderTextColor="#555" 
+                      placeholderTextColor={T.textMuted} 
                       value={applicationForm.portfolioUrl} 
                       onChangeText={v => handleInputChange("portfolioUrl", v)} 
                       autoCapitalize="none"
@@ -813,11 +814,11 @@ const TDCCareers = ({ navigation }) => {
 
                     <View style={styles.formRow}>
                       <View style={styles.formHalf}>
-                        <Text style={styles.formLabel}>Years of Experience</Text>
+                        <Text style={styles.formLabel}>years of experience</Text>
                         <TextInput 
                           style={styles.formInput} 
                           placeholder="3" 
-                          placeholderTextColor="#555" 
+                          placeholderTextColor={T.textMuted} 
                           value={applicationForm.yearsOfExperience} 
                           onChangeText={v => handleInputChange("yearsOfExperience", v)} 
                           keyboardType="numeric"
@@ -825,11 +826,11 @@ const TDCCareers = ({ navigation }) => {
                         />
                       </View>
                       <View style={styles.formHalf}>
-                        <Text style={styles.formLabel}>Expected Salary</Text>
+                        <Text style={styles.formLabel}>expected salary</Text>
                         <TextInput 
                           style={styles.formInput} 
                           placeholder="PKR 100,000" 
-                          placeholderTextColor="#555" 
+                          placeholderTextColor={T.textMuted} 
                           value={applicationForm.expectedSalary} 
                           onChangeText={v => handleInputChange("expectedSalary", v)}
                           editable={!submitting}
@@ -841,7 +842,7 @@ const TDCCareers = ({ navigation }) => {
                     <TextInput 
                       style={[styles.formInput, styles.formTextArea, validationErrors.coverLetter && styles.formInputError]} 
                       placeholder="Tell us why you're a great fit for this role at TDC..." 
-                      placeholderTextColor="#555" 
+                      placeholderTextColor={T.textMuted} 
                       value={applicationForm.coverLetter} 
                       onChangeText={v => handleInputChange("coverLetter", v)} 
                       multiline 
@@ -858,8 +859,8 @@ const TDCCareers = ({ navigation }) => {
                       onPress={pickResume}
                       disabled={submitting}
                     >
-                      <Ionicons name={selectedResume ? "document-text" : "cloud-upload-outline"} size={20} color={selectedResume ? "#f9c349" : "#555"} />
-                      <Text style={[styles.resumeBtnText, selectedResume && { color: "#f9c349" }]}>
+                      <Ionicons name={selectedResume ? "document-text" : "cloud-upload-outline"} size={20} color={selectedResume ? T.yellow : T.textMuted} />
+                      <Text style={[styles.resumeBtnText, selectedResume && { color: T.yellow }]}>
                         {selectedResume ? selectedResume.name : "Upload Resume (PDF/DOC)"}
                       </Text>
                     </TouchableOpacity>
@@ -882,7 +883,7 @@ const TDCCareers = ({ navigation }) => {
                         {submitting ? <ActivityIndicator color="#0d0d0d" /> : (
                           <>
                             <Ionicons name="send" size={16} color="#0d0d0d" />
-                            <Text style={styles.submitBtnText}>Submit Application</Text>
+                            <Text style={styles.submitBtnText}>submit application</Text>
                           </>
                         )}
                       </View>
@@ -908,24 +909,24 @@ const TDCCareers = ({ navigation }) => {
   return (
     <GuestGuard navigation={navigation}>
       <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-        <StatusBar barStyle="light-content" backgroundColor="#0d0d0d" />
+        <StatusBar barStyle="light-content" backgroundColor={T.paper} />
 
         {/* HEADER */}
         <Animated.View style={[styles.header, headerAnimatedStyle]}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
-            <Ionicons name="chevron-back" size={22} color="#fff" />
+            <Ionicons name="chevron-back" size={22} color={T.white} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>
-              Careers at <Text style={{ color: "#f9c349" }}>TDC</Text>
+              careers at <Text style={{ color: T.yellow }}>tdc</Text>
             </Text>
-            <Text style={styles.headerSub}>Join the Deft Crew</Text>
+            <Text style={styles.headerSub}>join the deft crew</Text>
           </View>
           <TouchableOpacity style={styles.headerBtn} onPress={() => {
             if (!token) { Alert.alert("Login Required", "Please login"); return; }
             setShowApplicationsModal(true);
           }}>
-            <Ionicons name="document-text-outline" size={22} color="#f9c349" />
+            <Ionicons name="document-text-outline" size={22} color={T.yellow} />
             {myApplications.length > 0 && (
               <View style={styles.headerBadge}>
                 <Text style={styles.headerBadgeText}>{myApplications.length}</Text>
@@ -936,7 +937,7 @@ const TDCCareers = ({ navigation }) => {
 
         {/* TDC Banner */}
         <View style={styles.tdcBanner}>
-          <MaterialCommunityIcons name="star-circle" size={18} color="#f9c349" />
+          <MaterialCommunityIcons name="star-circle" size={18} color={T.yellow} />
           <Text style={styles.tdcBannerText}>
             {totalJobsCount > 0 ? `${totalJobsCount} opening${totalJobsCount !== 1 ? "s" : ""} available` : "Internal openings at The Deft Crew"}
           </Text>
@@ -945,21 +946,21 @@ const TDCCareers = ({ navigation }) => {
         {/* SEARCH */}
         <View style={styles.searchWrapper}>
           <View style={styles.searchBar}>
-            <Ionicons name="search" size={18} color="#555" />
+            <Ionicons name="search" size={18} color={T.textMuted} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search TDC roles..."
-              placeholderTextColor="#555"
+              placeholderTextColor={T.textMuted}
               value={search}
               onChangeText={setSearch}
             />
             {search.length > 0 && (
               <TouchableOpacity onPress={() => setSearch("")}>
-                <Ionicons name="close-circle" size={18} color="#555" />
+                <Ionicons name="close-circle" size={18} color={T.textMuted} />
               </TouchableOpacity>
             )}
             <TouchableOpacity onPress={() => setShowFilters(true)} style={styles.filterIcon}>
-              <Ionicons name="options-outline" size={20} color="#f9c349" />
+              <Ionicons name="options-outline" size={20} color={T.yellow} />
               {Object.values(filters).some(v => v && v !== "all") && <View style={styles.filterDot} />}
             </TouchableOpacity>
           </View>
@@ -968,21 +969,21 @@ const TDCCareers = ({ navigation }) => {
         {/* CONTENT */}
         {loading ? (
           <View style={styles.centerSection}>
-            <ActivityIndicator size="large" color="#f9c349" />
-            <Text style={styles.loadingText}>Loading TDC openings...</Text>
+            <ActivityIndicator size="large" color={T.yellow} />
+            <Text style={styles.loadingText}>loading tdc openings...</Text>
           </View>
         ) : error ? (
           <View style={styles.centerSection}>
-            <MaterialCommunityIcons name="wifi-off" size={50} color="#333" />
-            <Text style={styles.errorTitle}>Connection Error</Text>
+            <MaterialCommunityIcons name="wifi-off" size={50} color={T.ink} />
+            <Text style={styles.errorTitle}>connection error</Text>
             <TouchableOpacity style={styles.retryBtn} onPress={() => fetchJobs(1, false)}>
-              <View style={styles.retryGradient}><Text style={styles.retryText}>Retry</Text></View>
+              <View style={styles.retryGradient}><Text style={styles.retryText}>retry</Text></View>
             </TouchableOpacity>
           </View>
         ) : jobs.length === 0 ? (
           <View style={styles.centerSection}>
             <MaterialCommunityIcons name="briefcase-search" size={60} color="#2a2a2a" />
-            <Text style={styles.emptyTitle}>No Openings Found</Text>
+            <Text style={styles.emptyTitle}>no openings found</Text>
             <Text style={styles.emptySubtitle}>
               {search ? `No TDC roles match "${search}"` : "No open positions right now. Check back soon!"}
             </Text>
@@ -1001,11 +1002,11 @@ const TDCCareers = ({ navigation }) => {
             )}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f9c349" />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.yellow} />}
             onEndReached={loadMore}
             onEndReachedThreshold={0.3}
             onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
-            ListFooterComponent={loadingMore ? <ActivityIndicator color="#f9c349" style={{ marginVertical: 20 }} /> : null}
+            ListFooterComponent={loadingMore ? <ActivityIndicator color={T.yellow} style={{ marginVertical: 20 }} /> : null}
           />
         )}
 
@@ -1036,19 +1037,19 @@ const TDCCareers = ({ navigation }) => {
             <View style={styles.appsModalContent}>
               <View style={styles.modalDragHandle} />
               <TouchableOpacity style={styles.closeXButton} onPress={() => setShowApplicationsModal(false)}>
-                <Ionicons name="close" size={24} color="#fff" />
+                <Ionicons name="close" size={24} color={T.white} />
               </TouchableOpacity>
-              <Text style={styles.appsModalTitle}>My TDC Applications</Text>
+              <Text style={styles.appsModalTitle}>my tdc applications</Text>
               <Text style={styles.appsModalCount}>{myApplications.length} applications</Text>
               {myApplications.length === 0 ? (
                 <View style={styles.emptyState}>
                   <MaterialCommunityIcons name="briefcase-search" size={50} color="#2a2a2a" />
-                  <Text style={styles.emptyStateText}>No applications yet</Text>
+                  <Text style={styles.emptyStateText}>no applications yet</Text>
                 </View>
               ) : (
                 <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: height * 0.6 }}>
                   {myApplications.map(app => {
-                    const statusColors = { pending: COLORS.warning, reviewed: COLORS.info, shortlisted: COLORS.success, interview: COLORS.purple, rejected: COLORS.error, hired: "#059669" };
+                    const statusColors = { pending: COLORS.warning, reviewed: COLORS.info, shortlisted: COLORS.success, interview: COLORS.purple, rejected: COLORS.error, hired: T.success };
                     const statusLabels = { pending: "Pending", reviewed: "Reviewed", shortlisted: "Shortlisted", interview: "Interview", rejected: "Not Selected", hired: "Hired! 🎉" };
                     const sc = statusColors[app.status?.toLowerCase()] || COLORS.muted;
                     return (
@@ -1056,7 +1057,7 @@ const TDCCareers = ({ navigation }) => {
                         <View style={styles.appHeader}>
                           <View style={{ flex: 1 }}>
                             <Text style={styles.appJobTitle}>{app.jobId?.title}</Text>
-                            <Text style={styles.appCompany}>The Deft Crew</Text>
+                            <Text style={styles.appCompany}>the deft crew</Text>
                           </View>
                           <View style={[styles.appStatus, { backgroundColor: sc + "25" }]}>
                             <Text style={[styles.appStatusText, { color: sc }]}>
@@ -1071,7 +1072,7 @@ const TDCCareers = ({ navigation }) => {
                 </ScrollView>
               )}
               <TouchableOpacity style={styles.closeBtn} onPress={() => setShowApplicationsModal(false)}>
-                <Text style={styles.closeBtnText}>Close</Text>
+                <Text style={styles.closeBtnText}>close</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1086,121 +1087,121 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14, backgroundColor: COLORS.page, borderBottomWidth: 1, borderBottomColor: COLORS.line },
   headerBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: "center", alignItems: "center", backgroundColor: COLORS.surface },
   headerCenter: { flex: 1, alignItems: "center" },
-  headerTitle: { fontSize: 18, fontWeight: "900", color: COLORS.primary, letterSpacing: -0.5 },
-  headerSub: { fontSize: 11, color: COLORS.muted, marginTop: 1 },
+  headerTitle: { fontSize: 18, fontFamily: F.heading, color: COLORS.primary, letterSpacing: -0.5 },
+  headerSub: { fontSize: 11, fontFamily: F.body, color: COLORS.muted, marginTop: 1 },
   headerBadge: { position: "absolute", top: -4, right: -4, backgroundColor: COLORS.accent, borderRadius: 8, minWidth: 16, height: 16, justifyContent: "center", alignItems: "center" },
-  headerBadgeText: { fontSize: 9, fontWeight: "800", color: "#0d0d0d" },
+  headerBadgeText: { fontSize: 9, fontFamily: F.bodyBold, color: "#0d0d0d" },
   // TDC Banner
-  tdcBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#f9c34910", paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#f9c34920" },
-  tdcBannerText: { fontSize: 12, color: "#f9c349", fontWeight: "700" },
+  tdcBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: T.yellowSoft, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: T.line },
+  tdcBannerText: { fontSize: 12, color: T.yellow, fontFamily: F.bodyBold },
   // Search
   searchWrapper: { paddingHorizontal: 16, paddingVertical: 10 },
   searchBar: { flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surface, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1, borderColor: COLORS.line, gap: 10 },
-  searchInput: { flex: 1, fontSize: 14, color: COLORS.primary },
+  searchInput: { flex: 1, fontSize: 14, fontFamily: F.body, color: COLORS.primary },
   filterIcon: { padding: 4, position: "relative" },
   filterDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.accent, position: "absolute", top: 0, right: 0 },
   listContent: { padding: 16, gap: 12, paddingBottom: 60 },
   centerSection: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12, paddingHorizontal: 32 },
-  loadingText: { color: COLORS.muted, fontSize: 14 },
-  errorTitle: { fontSize: 16, fontWeight: "800", color: COLORS.primary, marginTop: 8 },
-  emptyTitle: { fontSize: 18, fontWeight: "800", color: COLORS.primary },
-  emptySubtitle: { fontSize: 13, color: COLORS.muted, textAlign: "center", lineHeight: 18 },
+  loadingText: { color: COLORS.muted, fontSize: 14, fontFamily: F.body },
+  errorTitle: { fontSize: 16, fontFamily: F.bodyBold, color: COLORS.primary, marginTop: 8 },
+  emptyTitle: { fontSize: 18, fontFamily: F.heading, color: COLORS.primary },
+  emptySubtitle: { fontSize: 13, fontFamily: F.body, color: COLORS.muted, textAlign: "center", lineHeight: 18 },
   retryBtn: { marginTop: 8 },
   retryGradient: { backgroundColor: COLORS.accent, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 24 },
-  retryText: { fontWeight: "800", color: "#0d0d0d" },
+  retryText: { fontFamily: F.bodyBold, color: "#0d0d0d" },
   // Card
   card: { backgroundColor: COLORS.card, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: COLORS.line },
   tdcBadgeRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
-  tdcBadge: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "#f9c34915", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: "#f9c34930" },
-  tdcBadgeText: { fontSize: 10, color: "#f9c349", fontWeight: "700" },
-  appliedBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#10b98115", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: "#10b98130" },
-  appliedBadgeText: { fontSize: 10, color: "#10b981", fontWeight: "700" },
-  jobTitle: { fontSize: 17, fontWeight: "900", color: COLORS.primary, marginBottom: 4, lineHeight: 22 },
-  departmentText: { fontSize: 12, color: COLORS.muted, marginBottom: 10 },
+  tdcBadge: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: T.yellowSoft, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: T.line },
+  tdcBadgeText: { fontSize: 10, color: T.yellow, fontFamily: F.bodyBold },
+  appliedBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: T.successBg, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: T.success },
+  appliedBadgeText: { fontSize: 10, color: T.success, fontFamily: F.bodyBold },
+  jobTitle: { fontSize: 17, fontFamily: F.bodyBold, color: COLORS.primary, marginBottom: 4, lineHeight: 22 },
+  departmentText: { fontSize: 12, fontFamily: F.body, color: COLORS.muted, marginBottom: 10 },
   badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 },
-  typeBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#f9c34910", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  typeBadgeText: { fontSize: 10, color: "#f9c349", fontWeight: "700" },
+  typeBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: T.yellowSoft, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  typeBadgeText: { fontSize: 10, color: T.yellow, fontFamily: F.bodyBold },
   expBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#8b5cf610", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  expBadgeText: { fontSize: 10, color: "#8b5cf6", fontWeight: "700" },
-  locTypeBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#10b98110", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  locTypeBadgeText: { fontSize: 10, color: "#10b981", fontWeight: "700" },
+  expBadgeText: { fontSize: 10, color: "#8b5cf6", fontFamily: F.bodyBold },
+  locTypeBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: T.successBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  locTypeBadgeText: { fontSize: 10, color: T.success, fontFamily: F.bodyBold },
   infoRow: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 10 },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
-  metaText: { fontSize: 12, color: COLORS.body, maxWidth: width * 0.4 },
+  metaText: { fontSize: 12, fontFamily: F.body, color: COLORS.body, maxWidth: width * 0.4 },
   skillsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 },
-  skillBadge: { backgroundColor: "#1f1f1f", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: "#2a2a2a" },
-  skillText: { fontSize: 10, color: COLORS.muted, fontWeight: "600" },
+  skillBadge: { backgroundColor: T.ink, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: "#2a2a2a" },
+  skillText: { fontSize: 10, color: COLORS.muted, fontFamily: F.bodySemi },
   cardFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 10, borderTopWidth: 1, borderTopColor: COLORS.line },
-  viewDetailsLabel: { fontSize: 12, fontWeight: "700", color: "#f9c349" },
+  viewDetailsLabel: { fontSize: 12, fontFamily: F.bodyBold, color: T.yellow },
   // Filter Modal
-  filterModalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.7)" },
+  filterModalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: T.overlay },
   filterModalContent: { backgroundColor: COLORS.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: height * 0.75 },
-  filterModalTitle: { fontSize: 18, fontWeight: "900", color: COLORS.primary, marginBottom: 20, textAlign: "center" },
+  filterModalTitle: { fontSize: 18, fontFamily: F.heading, color: COLORS.primary, marginBottom: 20, textAlign: "center" },
   filterGroup: { marginBottom: 20 },
-  filterLabel: { fontSize: 13, fontWeight: "800", color: COLORS.primary, marginBottom: 10 },
+  filterLabel: { fontSize: 13, fontFamily: F.bodyBold, color: COLORS.primary, marginBottom: 10 },
   filterOptions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: COLORS.line, backgroundColor: COLORS.surface },
   filterChipActive: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
-  filterChipText: { fontSize: 12, color: COLORS.muted, fontWeight: "600" },
-  filterChipTextActive: { color: "#0d0d0d", fontWeight: "800" },
+  filterChipText: { fontSize: 12, color: COLORS.muted, fontFamily: F.bodySemi },
+  filterChipTextActive: { color: "#0d0d0d", fontFamily: F.bodyBold },
   clearFiltersBtn: { backgroundColor: COLORS.surface, padding: 14, borderRadius: 14, alignItems: "center", marginTop: 8, borderWidth: 1, borderColor: COLORS.line },
-  clearFiltersBtnText: { fontSize: 14, color: COLORS.muted, fontWeight: "700" },
+  clearFiltersBtnText: { fontSize: 14, color: COLORS.muted, fontFamily: F.bodyBold },
   // Modals shared
-  modalDragHandle: { width: 40, height: 4, backgroundColor: "#333", borderRadius: 2, alignSelf: "center", marginBottom: 16 },
+  modalDragHandle: { width: 40, height: 4, backgroundColor: T.ink, borderRadius: 2, alignSelf: "center", marginBottom: 16 },
   closeXButton: { position: "absolute", top: 16, right: 16, zIndex: 10, width: 32, height: 32, borderRadius: 16, backgroundColor: "#2a2a2a", justifyContent: "center", alignItems: "center" },
   closeBtn: { backgroundColor: COLORS.surface, padding: 14, borderRadius: 14, alignItems: "center", marginTop: 12, borderWidth: 1, borderColor: COLORS.line },
-  closeBtnText: { fontSize: 14, fontWeight: "700", color: COLORS.muted },
+  closeBtnText: { fontSize: 14, fontFamily: F.bodyBold, color: COLORS.muted },
   // Detail Modal
-  detailModalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.8)" },
+  detailModalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: T.overlay },
   detailModalContent: { backgroundColor: COLORS.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: height * 0.85 },
-  detailModalTitle: { fontSize: 20, fontWeight: "900", color: COLORS.primary, marginTop: 16, marginBottom: 4 },
-  detailModalCompany: { fontSize: 13, color: "#f9c349", fontWeight: "700", marginBottom: 16 },
+  detailModalTitle: { fontSize: 20, fontFamily: F.heading, color: COLORS.primary, marginTop: 16, marginBottom: 4 },
+  detailModalCompany: { fontSize: 13, color: T.yellow, fontFamily: F.bodyBold, marginBottom: 16 },
   statusBanner: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14, borderRadius: 14, marginBottom: 16, borderWidth: 1 },
   statusDot: { width: 10, height: 10, borderRadius: 5 },
-  statusBannerTitle: { fontSize: 11, color: COLORS.muted, fontWeight: "600" },
-  statusBannerStatus: { fontSize: 14, fontWeight: "800" },
+  statusBannerTitle: { fontSize: 11, color: COLORS.muted, fontFamily: F.bodySemi },
+  statusBannerStatus: { fontSize: 14, fontFamily: F.bodyBold },
   detailSection: { marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: COLORS.line },
-  sectionHeading: { fontSize: 14, fontWeight: "800", color: COLORS.primary, marginBottom: 10 },
-  descriptionText: { fontSize: 13, color: COLORS.body, lineHeight: 20 },
+  sectionHeading: { fontSize: 14, fontFamily: F.bodyBold, color: COLORS.primary, marginBottom: 10 },
+  descriptionText: { fontSize: 13, fontFamily: F.body, color: COLORS.body, lineHeight: 20 },
   skillsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   skillBadgeLarge: { backgroundColor: COLORS.surface, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: COLORS.line },
-  skillBadgeLargeText: { fontSize: 11, color: COLORS.body, fontWeight: "600" },
+  skillBadgeLargeText: { fontSize: 11, color: COLORS.body, fontFamily: F.bodySemi },
   // Form Modal
-  formModalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.85)" },
+  formModalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: T.overlay },
   formModalContent: { backgroundColor: COLORS.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: height * 0.92 },
-  formModalTitle: { fontSize: 20, fontWeight: "900", color: COLORS.primary, marginTop: 16, marginBottom: 2 },
-  formModalSubtitle: { fontSize: 13, color: "#f9c349", fontWeight: "700", marginBottom: 16 },
-  formRequiredNote: { fontSize: 11, color: COLORS.error, fontWeight: "600", marginBottom: 12 },
+  formModalTitle: { fontSize: 20, fontFamily: F.heading, color: COLORS.primary, marginTop: 16, marginBottom: 2 },
+  formModalSubtitle: { fontSize: 13, color: T.yellow, fontFamily: F.bodyBold, marginBottom: 16 },
+  formRequiredNote: { fontSize: 11, color: COLORS.error, fontFamily: F.bodySemi, marginBottom: 12 },
   formScrollContent: { paddingBottom: 20 },
-  formLabel: { fontSize: 12, fontWeight: "700", color: COLORS.primary, marginBottom: 5, marginTop: 8 },
-  formInput: { borderWidth: 1, borderColor: COLORS.line, borderRadius: 12, padding: 12, fontSize: 13, marginBottom: 4, backgroundColor: COLORS.surface, color: COLORS.primary },
+  formLabel: { fontSize: 12, fontFamily: F.bodyBold, color: COLORS.primary, marginBottom: 5, marginTop: 8 },
+  formInput: { borderWidth: 1, borderColor: COLORS.line, borderRadius: 12, padding: 12, fontSize: 13, fontFamily: F.body, marginBottom: 4, backgroundColor: COLORS.surface, color: COLORS.primary },
   formInputError: { borderColor: COLORS.error, backgroundColor: "#1a0000" },
   formTextArea: { height: 100, textAlignVertical: "top" },
   formRow: { flexDirection: "row", gap: 10 },
   formHalf: { flex: 1 },
-  errorText: { fontSize: 10, color: COLORS.error, fontWeight: "600", marginBottom: 6, marginLeft: 4 },
+  errorText: { fontSize: 10, color: COLORS.error, fontFamily: F.bodySemi, marginBottom: 6, marginLeft: 4 },
   resumeBtn: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14, borderRadius: 12, borderWidth: 1.5, borderColor: COLORS.line, borderStyle: "dashed", marginBottom: 4, backgroundColor: COLORS.surface },
   resumeBtnError: { borderColor: COLORS.error },
-  resumeBtnText: { fontSize: 13, color: COLORS.muted, fontWeight: "500", flex: 1 },
+  resumeBtnText: { fontSize: 13, color: COLORS.muted, fontFamily: F.bodyMedium, flex: 1 },
   progressBar: { height: 4, backgroundColor: COLORS.line, borderRadius: 2, marginBottom: 10, overflow: "hidden" },
   progressFill: { height: "100%", backgroundColor: COLORS.accent, borderRadius: 2 },
   submitBtn: { borderRadius: 14, overflow: "hidden", marginBottom: 10, marginTop: 8 },
   submitBtnGradient: { height: 52, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, backgroundColor: COLORS.accent },
-  submitBtnText: { color: "#0d0d0d", fontSize: 15, fontWeight: "900" },
+  submitBtnText: { color: "#0d0d0d", fontSize: 15, fontFamily: F.bodyBold },
   // My Apps Modal
-  appsModalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.8)" },
+  appsModalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: T.overlay },
   appsModalContent: { backgroundColor: COLORS.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: height * 0.8 },
-  appsModalTitle: { fontSize: 18, fontWeight: "900", color: COLORS.primary, marginTop: 16, marginBottom: 4 },
-  appsModalCount: { fontSize: 12, color: COLORS.muted, marginBottom: 16 },
+  appsModalTitle: { fontSize: 18, fontFamily: F.heading, color: COLORS.primary, marginTop: 16, marginBottom: 4 },
+  appsModalCount: { fontSize: 12, fontFamily: F.body, color: COLORS.muted, marginBottom: 16 },
   appCard: { backgroundColor: COLORS.surface, borderRadius: 16, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: COLORS.line },
   appHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 6 },
-  appJobTitle: { fontSize: 14, fontWeight: "800", color: COLORS.primary },
-  appCompany: { fontSize: 11, color: "#f9c349", fontWeight: "600" },
+  appJobTitle: { fontSize: 14, fontFamily: F.bodyBold, color: COLORS.primary },
+  appCompany: { fontSize: 11, color: T.yellow, fontFamily: F.bodySemi },
   appStatus: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-  appStatusText: { fontSize: 10, fontWeight: "700" },
-  appDate: { fontSize: 11, color: COLORS.muted },
+  appStatusText: { fontSize: 10, fontFamily: F.bodyBold },
+  appDate: { fontSize: 11, fontFamily: F.body, color: COLORS.muted },
   emptyState: { alignItems: "center", paddingVertical: 40, gap: 10 },
-  emptyStateText: { fontSize: 14, color: COLORS.muted, fontWeight: "600" },
+  emptyStateText: { fontSize: 14, color: COLORS.muted, fontFamily: F.bodySemi },
 });
 
 export default TDCCareers;

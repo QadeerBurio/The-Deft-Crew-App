@@ -20,12 +20,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
 
+import { color as T, font as F } from "../theme/tokens";
 const { width, height } = Dimensions.get('window');
 
-const GOLD = '#f9c349';
-const DARK = '#1a1a1a';
-const MUTED = '#8a8a8a';
-const TEXT2 = '#5f5f5f';
+const GOLD = T.yellow;
+const DARK = T.ink;
+const MUTED = T.textFaint;
+const TEXT2 = T.textMuted;
 
 const SLIDES = [
   {
@@ -99,7 +100,7 @@ async function nextRoute() {
 // Stable component, so the video never remounts
 const VideoSplash = React.memo(({ onDone }) => (
   <View style={styles.videoWrap}>
-    <StatusBar barStyle="light-content" backgroundColor="#000" />
+    <StatusBar barStyle="light-content" backgroundColor={T.paper} />
     <Video
       source={require('../../../assets/tdc.mp4')}
       style={styles.video}
@@ -216,7 +217,7 @@ export default function Splash({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
       <Animated.View style={{ flex: 1, opacity: fade }}>
         {/* top bar */}
         <View style={styles.topBar}>
@@ -279,10 +280,10 @@ const CARD_W = width - 48;
 const CARD_H = Math.min(height * 0.42, 360);
 
 const styles = StyleSheet.create({
-  videoWrap: { flex: 1, backgroundColor: '#000' },
+  videoWrap: { flex: 1, backgroundColor: T.ink },
   video: { position: 'absolute', top: 0, left: 0, width, height },
 
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: T.card },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -291,17 +292,17 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 14,
   },
-  brand: { fontSize: 24, fontWeight: '900', color: DARK, letterSpacing: -0.6 },
+  brand: { fontSize: 24, fontFamily: F.heading, color: DARK, letterSpacing: -0.6 },
   skipBtn: {
     height: 34,
     paddingHorizontal: 14,
     borderRadius: 12,
-    backgroundColor: '#F7F9F8',
+    backgroundColor: T.sand,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: T.line,
     justifyContent: 'center',
   },
-  skipText: { fontSize: 13, fontWeight: '800', color: DARK },
+  skipText: { fontSize: 13, fontFamily: F.bodyBold, color: DARK },
 
   page: { width, alignItems: 'center' },
   card: {
@@ -320,7 +321,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: 'rgba(249,195,73,0.12)',
+    backgroundColor: T.yellowSoft,
   },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 1 },
   cardIcon: {
@@ -332,22 +333,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statPill: { backgroundColor: GOLD, paddingHorizontal: 12, height: 30, borderRadius: 15, justifyContent: 'center' },
-  statText: { color: DARK, fontSize: 12.5, fontWeight: '900' },
+  statText: { color: DARK, fontSize: 12.5, fontFamily: F.bodyBold },
   cardMid: { zIndex: 1 },
-  cardKicker: { color: 'rgba(255,255,255,0.55)', fontSize: 12, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase' },
-  cardBig: { color: '#fff', fontSize: 34, fontWeight: '900', letterSpacing: -1, marginTop: 6 },
+  cardKicker: { color: 'rgba(255,255,255,0.55)', fontSize: 12, fontFamily: F.bodyBold, letterSpacing: 1, textTransform: 'none' },
+  cardBig: { color: T.white, fontSize: 34, fontFamily: F.heading, letterSpacing: -1, marginTop: 6 },
   cardBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', zIndex: 1 },
-  cardLabel: { color: 'rgba(255,255,255,0.45)', fontSize: 10.5, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase' },
-  cardValue: { color: '#fff', fontSize: 14, fontWeight: '800', marginTop: 3 },
-  cardCount: { color: '#fff', fontSize: 14, fontWeight: '900' },
+  cardLabel: { color: 'rgba(255,255,255,0.45)', fontSize: 10.5, fontFamily: F.bodyBold, letterSpacing: 1, textTransform: 'none' },
+  cardValue: { color: T.white, fontSize: 14, fontFamily: F.bodyBold, marginTop: 3 },
+  cardCount: { color: T.white, fontSize: 14, fontFamily: F.bodyBold },
 
   textBlock: { paddingHorizontal: 28, paddingTop: 26, flex: 1 },
-  title: { fontSize: 28, fontWeight: '900', color: DARK, letterSpacing: -0.8 },
-  desc: { fontSize: 15, color: TEXT2, lineHeight: 22, marginTop: 10 },
+  title: { fontSize: 28, fontFamily: F.heading, color: DARK, letterSpacing: -0.8 },
+  desc: { fontSize: 15, fontFamily: F.body, color: TEXT2, lineHeight: 22, marginTop: 10 },
 
   footer: { paddingHorizontal: 24, paddingBottom: 12 },
   bars: { flexDirection: 'row', gap: 6, marginBottom: 18 },
-  bar: { flex: 1, height: 4, borderRadius: 2, backgroundColor: '#ededed' },
+  bar: { flex: 1, height: 4, borderRadius: 2, backgroundColor: T.sand },
   barOn: { backgroundColor: '#cfcfcf' },
   barCurrent: { backgroundColor: DARK },
   button: {
@@ -359,5 +360,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  buttonText: { color: T.white, fontSize: 16, fontFamily: F.bodyBold },
 });

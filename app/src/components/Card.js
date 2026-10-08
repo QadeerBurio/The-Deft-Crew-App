@@ -20,7 +20,7 @@ import {
   ImageBackground,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { Ionicons } from "@expo/vector-icons";
 import ViewShot from "react-native-view-shot";
 import * as FileSystem from "expo-file-system";
@@ -32,6 +32,7 @@ import { AuthContext } from "../context/AuthContext";
 import api from "../api/api";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 
+import { color as T, font as F } from "../theme/tokens";
 const { width } = Dimensions.get("window");
 const CARD_W = width - 32;
 const CARD_H = 216;
@@ -39,17 +40,17 @@ const CHIP_IMAGE = require("../../../assets/images/chip.png");
 const BACKGROUND_IMAGE = require("../../../assets/images/background.jpeg");
 
 // ─── Theme ───
-const GOLD = "#f9c349";
-const GOLD_DARK = "#e0a82e";
-const GOLD_LIGHT = "#fffbee";
-const BLACK = "#0f0f0f";
-const CARD_BASE = "#0a0a0a";
+const GOLD = T.yellow;
+const GOLD_DARK = T.yellow;
+const GOLD_LIGHT = T.yellowSoft;
+const BLACK = T.ink;
+const CARD_BASE = T.ink;
 const CARD_MID = "#141414";
-const WHITE = "#ffffff";
-const LIGHT = "#fafafa";
-const BORDER = "#ececec";
-const MUTED = "#888";
-const SUCCESS = "#10b981";
+const WHITE = T.white;
+const LIGHT = T.sand;
+const BORDER = T.line;
+const MUTED = T.textFaint;
+const SUCCESS = T.success;
 
 export default function PremiumMemberCard() {
   const { user, token } = useContext(AuthContext);
@@ -305,7 +306,7 @@ export default function PremiumMemberCard() {
     <View style={styles.full}>
       {/* Deep dark base */}
       <LinearGradient
-        colors={[CARD_MID, CARD_BASE, "#000000"]}
+        colors={[CARD_MID, CARD_BASE, T.ink]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
@@ -366,7 +367,7 @@ export default function PremiumMemberCard() {
         </View>
 
         <View style={styles.cardNumberBlock}>
-          <Text style={styles.cardNumberLabel}>CARD NUMBER</Text>
+          <Text style={styles.cardNumberLabel}>card number</Text>
           <Text
             style={styles.cardNumberValue}
             numberOfLines={1}
@@ -379,14 +380,14 @@ export default function PremiumMemberCard() {
 
         <View style={styles.bottomRow}>
           <View style={styles.bottomLeft}>
-            <Text style={styles.miniLabel}>MEMBER</Text>
+            <Text style={styles.miniLabel}>member</Text>
             <Text style={styles.miniValue} numberOfLines={1}>
               {userData.id}
             </Text>
           </View>
 
           <View style={styles.bottomRight}>
-            <Text style={styles.miniLabelGold}>VALID THRU</Text>
+            <Text style={styles.miniLabelGold}>valid thru</Text>
             <Text style={styles.miniValue}>{expiryDate}</Text>
           </View>
 
@@ -407,7 +408,7 @@ export default function PremiumMemberCard() {
   const BackContent = ({ vip }) => (
     <View style={styles.full}>
       <LinearGradient
-        colors={[CARD_MID, CARD_BASE, "#000000"]}
+        colors={[CARD_MID, CARD_BASE, T.ink]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
@@ -445,7 +446,7 @@ export default function PremiumMemberCard() {
         <View style={styles.magStripe} />
 
         <View style={styles.backContactBlock}>
-          <Text style={styles.miniLabel}>MEMBER NAME</Text>
+          <Text style={styles.miniLabel}>member name</Text>
           <Text
             style={styles.backNameValue}
             numberOfLines={1}
@@ -457,7 +458,7 @@ export default function PremiumMemberCard() {
 
           <View style={styles.backDivider} />
 
-          <Text style={styles.miniLabel}>REGISTERED MOBILE</Text>
+          <Text style={styles.miniLabel}>registered mobile</Text>
           <Text style={styles.backPhoneValue} numberOfLines={1}>
             {userData.phone}
           </Text>
@@ -690,7 +691,7 @@ const styles = StyleSheet.create({
   loadingText: {
     color: MUTED,
     marginTop: 12,
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
     fontSize: 13,
   },
 
@@ -718,7 +719,7 @@ const styles = StyleSheet.create({
   headerCenter: { alignItems: "center" },
   headerTitle: {
     fontSize: 15,
-    fontWeight: "900",
+    fontFamily: F.bodyBold,
     color: BLACK,
     letterSpacing: -0.2,
     textTransform: "lowercase",
@@ -726,7 +727,7 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 11,
     color: MUTED,
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
     marginTop: 2,
   },
 
@@ -822,12 +823,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(249,195,73,0.35)",
+    borderColor: T.line,
   },
   logoText: {
     color: WHITE,
     fontSize: 15,
-    fontWeight: "900",
+    fontFamily: F.bodyBold,
     letterSpacing: -0.4,
   },
   logoDot: { color: GOLD },
@@ -843,20 +844,17 @@ const styles = StyleSheet.create({
   cardNumberLabel: {
     color: "rgba(255,255,255,0.5)",
     fontSize: 9,
-    fontWeight: "800",
+    fontFamily: F.bodyBold,
     letterSpacing: 2.2,
     marginBottom: 6,
-    textTransform: "uppercase",
+    textTransform: 'none',
   },
   cardNumberValue: {
     color: WHITE,
     fontSize: 21,
-    fontWeight: "800",
+    fontFamily: F.heading,
     letterSpacing: 2.2,
-    textShadowColor: "rgba(0,0,0,0.6)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
+    },
 
   // ─── Front bottom row ───
   bottomRow: {
@@ -873,29 +871,26 @@ const styles = StyleSheet.create({
   miniLabel: {
     color: "rgba(255,255,255,0.5)",
     fontSize: 8,
-    fontWeight: "800",
+    fontFamily: F.bodyBold,
     letterSpacing: 1.6,
     marginBottom: 4,
-    textTransform: "uppercase",
+    textTransform: 'none',
   },
   miniLabelGold: {
     color: GOLD,
     fontSize: 8,
-    fontWeight: "900",
+    fontFamily: F.bodyBold,
     letterSpacing: 1.6,
     marginBottom: 4,
     textAlign: "right",
-    textTransform: "uppercase",
+    textTransform: 'none',
   },
   miniValue: {
     color: WHITE,
     fontSize: 13,
-    fontWeight: "800",
+    fontFamily: F.bodyBold,
     letterSpacing: 1,
-    textShadowColor: "rgba(0,0,0,0.6)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
+    },
 
   // ─── Network mark ───
   networkMark: {
@@ -929,12 +924,12 @@ const styles = StyleSheet.create({
   // ─── Back card ───
   magStripe: {
     height: 34,
-    backgroundColor: "#000",
+    backgroundColor: T.ink,
     marginHorizontal: -22,
     marginTop: -20,
     marginBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(249,195,73,0.2)",
+    borderBottomColor: T.line,
   },
   backContactBlock: {
     alignItems: "flex-start",
@@ -944,12 +939,9 @@ const styles = StyleSheet.create({
   backNameValue: {
     color: WHITE,
     fontSize: 19,
-    fontWeight: "800",
+    fontFamily: F.heading,
     letterSpacing: 1,
-    textShadowColor: "rgba(0,0,0,0.6)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
+    },
   backDivider: {
     width: 44,
     height: 2,
@@ -961,12 +953,9 @@ const styles = StyleSheet.create({
   backPhoneValue: {
     color: WHITE,
     fontSize: 15,
-    fontWeight: "800",
+    fontFamily: F.bodyBold,
     letterSpacing: 1,
-    textShadowColor: "rgba(0,0,0,0.6)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
+    },
 
   backFooter: {
     flexDirection: "row",
@@ -979,14 +968,14 @@ const styles = StyleSheet.create({
   footerSmall: {
     color: "rgba(255,255,255,0.5)",
     fontSize: 10,
-    fontWeight: "700",
+    fontFamily: F.bodyBold,
     letterSpacing: 0.6,
   },
 
   goldBorder: {
     ...StyleSheet.absoluteFillObject,
     borderWidth: 1.5,
-    borderColor: "rgba(249,195,73,0.4)",
+    borderColor: T.line,
     borderRadius: 22,
   },
 
@@ -1001,7 +990,7 @@ const styles = StyleSheet.create({
   flipHintText: {
     color: MUTED,
     fontSize: 12,
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
     textTransform: "lowercase",
   },
 
@@ -1025,7 +1014,7 @@ const styles = StyleSheet.create({
   },
   statusTitle: {
     fontSize: 13,
-    fontWeight: "900",
+    fontFamily: F.bodyBold,
     color: SUCCESS,
     textTransform: "lowercase",
     letterSpacing: 0.3,
@@ -1033,7 +1022,7 @@ const styles = StyleSheet.create({
   statusSub: {
     fontSize: 11,
     color: MUTED,
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
     marginTop: 2,
     textTransform: "lowercase",
   },
@@ -1051,7 +1040,7 @@ const styles = StyleSheet.create({
   },
   statusPendingText: {
     fontSize: 13,
-    fontWeight: "900",
+    fontFamily: F.bodyBold,
     color: GOLD_DARK,
     textTransform: "lowercase",
     letterSpacing: 0.3,
@@ -1072,7 +1061,7 @@ const styles = StyleSheet.create({
   activateBtnText: {
     color: BLACK,
     fontSize: 13,
-    fontWeight: "900",
+    fontFamily: F.bodyBold,
     letterSpacing: -0.1,
     textTransform: "lowercase",
   },
@@ -1101,9 +1090,9 @@ const styles = StyleSheet.create({
     flex: 1,
     color: BLACK,
     fontSize: 13,
-    fontWeight: "700",
+    fontFamily: F.bodyBold,
     letterSpacing: 1,
-    textTransform: "uppercase",
+    textTransform: 'none',
   },
   promoApplyBtn: {
     backgroundColor: BLACK,
@@ -1116,7 +1105,7 @@ const styles = StyleSheet.create({
   promoApplyText: {
     color: GOLD,
     fontSize: 13,
-    fontWeight: "900",
+    fontFamily: F.bodyBold,
     textTransform: "lowercase",
     letterSpacing: 0.3,
   },
@@ -1149,13 +1138,13 @@ const styles = StyleSheet.create({
   actionBtnText: {
     color: BLACK,
     fontSize: 13,
-    fontWeight: "900",
+    fontFamily: F.bodyBold,
     textTransform: "lowercase",
     letterSpacing: 0.2,
   },
   actionBtnTextDisabled: {
     color: MUTED,
-    fontWeight: "700",
+    fontFamily: F.bodyBold,
   },
 
   // ─── Footer ───
@@ -1166,7 +1155,7 @@ const styles = StyleSheet.create({
   },
   footerLogo: {
     fontSize: 20,
-    fontWeight: "900",
+    fontFamily: F.heading,
     color: BLACK,
     letterSpacing: -0.5,
   },
@@ -1174,7 +1163,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: MUTED,
     marginTop: 4,
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
     textTransform: "lowercase",
     letterSpacing: 0.3,
   },

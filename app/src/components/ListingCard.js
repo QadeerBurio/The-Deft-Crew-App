@@ -3,9 +3,10 @@ import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const BRAND = '#f9c349';
-const INK = '#1a1a1a';
-const MUTED = '#8E8E93';
+import { color as T, font as F } from "../theme/tokens";
+const BRAND = T.yellow;
+const INK = T.ink;
+const MUTED = T.textMuted;
 
 function OwnerRow({ owner, size = 28 }) {
   const name = owner?.name || 'Unknown User';
@@ -46,16 +47,16 @@ export function PaidListingCard({ item, onPress, showOwner = true, ctaLabel = 'V
           <Image source={{ uri: image }} style={styles.paidImage} />
         ) : (
           <View style={[styles.paidImage, styles.paidImageFallback]}>
-            <Ionicons name="image-outline" size={30} color="#ccc" />
+            <Ionicons name="image-outline" size={30} color={T.textFaint} />
           </View>
         )}
         <View style={styles.paidBadgeLeft}>
-          <Ionicons name="pricetag" size={11} color="#fff" />
-          <Text style={styles.paidBadgeLeftText}>Paid</Text>
+          <Ionicons name="pricetag" size={11} color={T.white} />
+          <Text style={styles.paidBadgeLeftText}>paid</Text>
         </View>
         {item.status === 'matched' && (
           <View style={styles.paidBadgeRight}>
-            <Text style={styles.paidBadgeRightText}>Active</Text>
+            <Text style={styles.paidBadgeRightText}>active</Text>
           </View>
         )}
       </View>
@@ -76,7 +77,7 @@ export function PaidListingCard({ item, onPress, showOwner = true, ctaLabel = 'V
 
         <View style={styles.paidBottomRow}>
           <View>
-            <Text style={styles.paidStartingLabel}>Starting at</Text>
+            <Text style={styles.paidStartingLabel}>starting at</Text>
             <Text style={styles.paidPrice}>Rs. {item.price?.toLocaleString?.() ?? item.price ?? 0}</Text>
           </View>
           <View style={styles.pillBtn}>
@@ -98,19 +99,19 @@ export function BarterListingCard({ item, onPress, onPropose, showOwner = true, 
         {showOwner ? <OwnerRow owner={owner} /> : <View />}
         <View style={styles.badge}>
           <Ionicons name="swap-horizontal" size={12} color={INK} />
-          <Text style={styles.badgeText}>Exchange</Text>
+          <Text style={styles.badgeText}>exchange</Text>
         </View>
       </View>
 
       <View style={styles.barterBlock}>
-        <Text style={styles.barterBlockLabel}>I'LL DO</Text>
+        <Text style={styles.barterBlockLabel}>i'll do</Text>
         <Text style={styles.barterBlockValue} numberOfLines={2}>
           {item.skillOffered?.skillName || item.title}
         </Text>
       </View>
 
       <View style={styles.barterBlock}>
-        <Text style={styles.barterBlockLabel}>IN RETURN</Text>
+        <Text style={styles.barterBlockLabel}>in return</Text>
         <Text style={styles.barterBlockValue} numberOfLines={2}>
           {item.skillWanted?.skillName || 'Open to offers'}
         </Text>
@@ -133,7 +134,7 @@ export function HireListingCard({ item, onPress, showOwner = true, ctaLabel = 'V
         {showOwner ? <OwnerRow owner={owner} /> : <View />}
         <View style={styles.badge}>
           <Ionicons name="briefcase" size={12} color={INK} />
-          <Text style={styles.badgeText}>Hire</Text>
+          <Text style={styles.badgeText}>hire</Text>
         </View>
       </View>
 
@@ -146,7 +147,7 @@ export function HireListingCard({ item, onPress, showOwner = true, ctaLabel = 'V
 
       <View style={styles.paidBottomRow}>
         <View>
-          <Text style={styles.paidStartingLabel}>Budget</Text>
+          <Text style={styles.paidStartingLabel}>budget</Text>
           <Text style={styles.paidPrice}>Rs. {item.budget?.toLocaleString?.() ?? item.budget ?? 0}</Text>
         </View>
         <View style={styles.pillBtn}>
@@ -172,56 +173,56 @@ const styles = StyleSheet.create({
   ownerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
   ownerAvatar: {},
   ownerAvatarFallback: { backgroundColor: BRAND, justifyContent: 'center', alignItems: 'center' },
-  ownerAvatarInitial: { fontSize: 12, fontWeight: '800', color: '#4A3B10' },
-  ownerName: { fontSize: 13, fontWeight: '700', color: INK },
+  ownerAvatarInitial: { fontSize: 12, fontFamily: F.bodyBold, color: '#4A3B10' },
+  ownerName: { fontSize: 13, fontFamily: F.bodyBold, color: INK },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 1 },
-  ratingText: { fontSize: 11, color: MUTED, fontWeight: '600' },
+  ratingText: { fontSize: 11, color: MUTED, fontFamily: F.bodySemi },
 
   badge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#F0F0F0', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
+    backgroundColor: T.sand, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
   },
-  badgeText: { fontSize: 11, fontWeight: '700', color: INK },
+  badgeText: { fontSize: 11, fontFamily: F.bodyBold, color: INK },
 
   paidCard: {
-    backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden', marginBottom: 16,
-    borderWidth: 1, borderColor: '#eee',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
+    backgroundColor: T.card, borderRadius: 18, overflow: 'hidden', marginBottom: 16,
+    borderWidth: 1, borderColor: T.line,
+    shadowColor: T.ink, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
-  paidImageWrap: { width: '100%', height: 160, backgroundColor: '#f0f0f0' },
+  paidImageWrap: { width: '100%', height: 160, backgroundColor: T.sand },
   paidImage: { width: '100%', height: '100%' },
   paidImageFallback: { justifyContent: 'center', alignItems: 'center' },
   paidBadgeLeft: {
     position: 'absolute', top: 10, left: 10, flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: 'rgba(26,26,26,0.85)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
   },
-  paidBadgeLeftText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+  paidBadgeLeftText: { fontSize: 11, fontFamily: F.bodyBold, color: T.white },
   paidBadgeRight: {
     position: 'absolute', top: 10, right: 10,
     backgroundColor: '#E8F0FE', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
   },
-  paidBadgeRightText: { fontSize: 11, fontWeight: '700', color: '#3b82f6' },
+  paidBadgeRightText: { fontSize: 11, fontFamily: F.bodyBold, color: T.ink },
   paidBody: { padding: 14 },
-  paidTitle: { fontSize: 16, fontWeight: '800', color: INK, marginTop: 10, marginBottom: 4 },
+  paidTitle: { fontSize: 16, fontFamily: F.bodyBold, color: INK, marginTop: 10, marginBottom: 4 },
   paidMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  paidMetaText: { fontSize: 12, color: MUTED, fontWeight: '600' },
-  paidDivider: { height: 1, backgroundColor: '#eee', marginVertical: 12 },
+  paidMetaText: { fontSize: 12, color: MUTED, fontFamily: F.bodySemi },
+  paidDivider: { height: 1, backgroundColor: T.sand, marginVertical: 12 },
   paidBottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  paidStartingLabel: { fontSize: 11, color: MUTED },
-  paidPrice: { fontSize: 16, fontWeight: '800', color: INK, marginTop: 1 },
+  paidStartingLabel: { fontSize: 11, fontFamily: F.body, color: MUTED },
+  paidPrice: { fontSize: 16, fontFamily: F.bodyBold, color: INK, marginTop: 1 },
   pillBtn: { backgroundColor: BRAND, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20 },
-  pillBtnText: { fontSize: 12, fontWeight: '800', color: INK },
+  pillBtnText: { fontSize: 12, fontFamily: F.bodyBold, color: INK },
 
   barterCard: {
-    backgroundColor: '#fff', borderRadius: 18, padding: 16, marginBottom: 16,
-    borderWidth: 1, borderColor: '#eee',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
+    backgroundColor: T.card, borderRadius: 18, padding: 16, marginBottom: 16,
+    borderWidth: 1, borderColor: T.line,
+    shadowColor: T.ink, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
   barterTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  barterBlock: { backgroundColor: '#F8F8F8', borderRadius: 12, padding: 12, marginBottom: 10 },
-  barterBlockLabel: { fontSize: 10, fontWeight: '800', color: MUTED, letterSpacing: 0.6, marginBottom: 4 },
-  barterBlockValue: { fontSize: 15, fontWeight: '700', color: INK, lineHeight: 20 },
+  barterBlock: { backgroundColor: T.sand, borderRadius: 12, padding: 12, marginBottom: 10 },
+  barterBlockLabel: { fontSize: 10, fontFamily: F.bodyBold, color: MUTED, letterSpacing: 0.6, marginBottom: 4 },
+  barterBlockValue: { fontSize: 15, fontFamily: F.bodyBold, color: INK, lineHeight: 20 },
   proposeBtn: { backgroundColor: BRAND, borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginTop: 2 },
-  proposeBtnText: { fontSize: 14, fontWeight: '800', color: INK },
-  hireSkills: { fontSize: 13, color: MUTED, fontWeight: '600', marginBottom: 4 },
+  proposeBtnText: { fontSize: 14, fontFamily: F.bodyBold, color: INK },
+  hireSkills: { fontSize: 13, color: MUTED, fontFamily: F.bodySemi, marginBottom: 4 },
 });

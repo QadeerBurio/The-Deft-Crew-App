@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Linking } from "react-native";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 
+import { color as T, font as F } from "../theme/tokens";
 export default function WhatsApp() {
 
   const openWhatsApp = async () => {
@@ -33,11 +34,11 @@ export default function WhatsApp() {
             <FontAwesome name="whatsapp" size={22} color="#25D366" />
           </View>
           <View style={styles.textContainer}>
-            <Text style={styles.label}>Chat on WhatsApp</Text>
+            <Text style={styles.label}>chat on whatsapp</Text>
             <Text style={styles.value}>+923222969595</Text>
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#aaa" />
+        <Ionicons name="chevron-forward" size={20} color={T.textFaint} />
       </TouchableOpacity>
     </View>
   );
@@ -47,20 +48,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
   },
   item: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     padding: 15,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: T.sand,
     borderRadius: 10,
     marginVertical: 10,
     elevation: 2, // for Android shadow
-    shadowColor: "#000", // for iOS shadow
+    shadowColor: T.ink, // for iOS shadow
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.06,
     shadowRadius: 5,
   },
   left: {
@@ -80,12 +81,12 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
+    fontFamily: F.bodyBold,
+    color: T.ink,
   },
   value: {
-    fontSize: 14,
-    color: "#555",
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
     marginTop: 2,
   },
 });

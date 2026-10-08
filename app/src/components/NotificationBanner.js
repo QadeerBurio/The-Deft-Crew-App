@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getMoodMeta } from '../utils/notificationIcon';
 import { navigationRef } from '../navigation/navigationRef';
 
+import { color as T, font as F } from "../theme/tokens";
 const NotificationBanner = ({
   visible,
   notification,
@@ -141,7 +142,7 @@ const NotificationBanner = ({
         <View
           style={[
             styles.iconBox,
-            { backgroundColor: '#000', borderColor: '#000' },
+            { backgroundColor: T.ink, borderColor: T.ink },
           ]}
         >
           {iconSource ? (
@@ -165,7 +166,7 @@ const NotificationBanner = ({
           onPress={handleDismiss}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="close" size={18} color="#999" />
+          <Ionicons name="close" size={18} color={T.textFaint} />
         </TouchableOpacity>
       </TouchableOpacity>
     </Animated.View>
@@ -175,14 +176,14 @@ const NotificationBanner = ({
 // ══════ styles unchanged ══════
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute', left: 12, right: 12, zIndex: 9999, elevation: 20,
+    position: 'absolute', left: 12, right: 12, zIndex: 9999, elevation: 2,
   },
   card: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#ffffff', borderRadius: 16, padding: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15, shadowRadius: 12, elevation: 8,
-    borderWidth: 1, borderColor: '#f0f0f0',
+    backgroundColor: T.card, borderRadius: 16, padding: 12,
+    shadowColor: T.ink, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+    borderWidth: 1, borderColor: T.line,
   },
   iconBox: {
     width: 46, height: 46, borderRadius: 14,
@@ -191,13 +192,13 @@ const styles = StyleSheet.create({
   },
   iconImage: { width: 34, height: 34 },
   emoji: {
-    fontSize: 26, lineHeight: 30, textAlign: 'center', includeFontPadding: false,
+    fontSize: 26, fontFamily: F.body, lineHeight: 30, textAlign: 'center', includeFontPadding: false,
   },
   content: { flex: 1, minWidth: 0 },
   title: {
-    fontSize: 14, fontWeight: '700', color: '#1a1a1a', marginBottom: 2,
+    fontSize: 14, fontFamily: F.bodyBold, color: T.ink, marginBottom: 2,
   },
-  description: { fontSize: 12, color: '#666', lineHeight: 16 },
+  description: { fontSize: 12, fontFamily: F.body, color: T.textMuted, lineHeight: 16 },
   closeBtn: { padding: 4, marginLeft: 8 },
 });
 
