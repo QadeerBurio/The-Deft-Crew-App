@@ -47,7 +47,7 @@ const COLORS = {
   dark: T.ink,
   gray: T.textMuted,
   lightGray: T.sand,
-  border: T.sand,
+  border: T.line,
   danger: T.danger,
   success: T.success,
   mention: T.ink,

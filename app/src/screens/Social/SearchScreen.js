@@ -52,7 +52,7 @@ const COLORS = {
   grayLight: T.textFaint,
   grayLighter: T.sand,
   lightGray: T.sand,
-  border: T.sand,
+  border: T.line,
   danger: T.danger,
   success: T.success,
   shadow: "rgba(0,0,0,0.08)",
