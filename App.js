@@ -6,6 +6,14 @@ import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import * as TaskManager from "expo-task-manager";
 import * as Linking from "expo-linking";
+import * as Font from "expo-font";
+import { Outfit_700Bold, Outfit_800ExtraBold } from "@expo-google-fonts/outfit";
+import {
+  DMSans_400Regular,
+  DMSans_500Medium,
+  DMSans_600SemiBold,
+  DMSans_700Bold,
+} from "@expo-google-fonts/dm-sans";
 
 import { NavigationContainer, DarkTheme } from "@react-navigation/native";
 import AuthProvider, { AuthContext } from "./app/src/context/AuthContext";
@@ -271,6 +279,20 @@ export default function App() {
   useEffect(() => {
     async function prepare() {
       try {
+        // 0. Fonts for the new Home + tab bar (falls back to system font)
+        try {
+          await Font.loadAsync({
+            Outfit_700Bold,
+            Outfit_800ExtraBold,
+            DMSans_400Regular,
+            DMSans_500Medium,
+            DMSans_600SemiBold,
+            DMSans_700Bold,
+          });
+        } catch (e) {
+          console.warn("[App] font load error:", e);
+        }
+
         // 1. Init audio mode + preload hot sounds BEFORE splash hides
         await configureAudio();
         await preloadSounds([

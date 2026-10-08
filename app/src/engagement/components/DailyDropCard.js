@@ -23,6 +23,7 @@ import { useEngagement } from '../hooks/useEngagement';
 import engagementApi from '../api/engagementApi';
 import { pop, success } from '../utils/haptics';
 import { navigationRef } from '../../navigation/navigationRef';
+import { color as T, font as F, MAX_FONT_SCALE } from '../../theme/tokens';
 
 const GOLD = '#f9c349';
 const GOLD_DARK = '#e0a82e';
@@ -33,7 +34,10 @@ const WHITE = '#ffffff';
 const BORDER = '#ececec';
 const BLACK = '#0f0f0f';
 
-export default function DailyDropCard() {
+// variant="home" → the new Home look. No variant → exactly as before
+// (Explore and StudentDashboard use the default).
+export default function DailyDropCard({ variant } = {}) {
+  const isHome = variant === 'home';
   const { drop, refresh, isLoading } = useDailyDrop();
   const { celebrate } = useEngagement();
   const navigation = useNavigation();
@@ -42,6 +46,8 @@ export default function DailyDropCard() {
   const [votedChoice, setVotedChoice] = useState(null);
   const [localCounts, setLocalCounts] = useState(null);
   const [target, setTarget] = useState(null);
+  // Points from the vote response (only shown by the home variant)
+  const [pointsAwarded, setPointsAwarded] = useState(0);
 
   // Animations
   const fadeIn = useRef(new Animated.Value(0)).current;
@@ -120,6 +126,7 @@ export default function DailyDropCard() {
       setVotedChoice(null);
       setLocalCounts(null);
       setTarget(drop?.target || null);
+      setPointsAwarded(0);
     }
   }, [dropKey, drop?.target]);
 
@@ -129,6 +136,19 @@ export default function DailyDropCard() {
   }, [drop?.counts]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // First load: same-size placeholder so the home screen doesn't jump
+  if (!drop && isLoading && isHome) {
+    return (
+      <View style={[homeStyles.card, homeStyles.placeholderCard]}>
+        <View style={[homeStyles.phBlock, { width: 90, height: 12 }]} />
+        <View style={[homeStyles.phBlock, { width: '85%', height: 18, marginTop: 10 }]} />
+        <View style={homeStyles.phRow}>
+          <View style={[homeStyles.phBlock, homeStyles.phOption]} />
+          <View style={[homeStyles.phBlock, homeStyles.phOption]} />
+          <View style={[homeStyles.phBlock, homeStyles.phOption]} />
+        </View>
+      </View>
+    );
+  }
   if (!drop && isLoading) {
     return (
       <View style={[styles.card, styles.placeholderCard]}>
@@ -180,6 +200,7 @@ export default function DailyDropCard() {
       if (res?.myChoice) setVotedChoice(res.myChoice);
       if (res?.counts) setLocalCounts(res.counts);
       if (res?.target) setTarget(res.target);
+      setPointsAwarded(Number(res?.engagement?.pointsAwarded) || 0);
       if (res?.engagement) {
         try { celebrate(res.engagement); } catch (e) {}
       }
@@ -240,6 +261,105 @@ export default function DailyDropCard() {
       default: return 'open';
     }
   })();
+
+  if (isHome) {
+    const others = (counts[myChoice] || 0) - 1;
+    let helper = 'vote to see what campus thinks.';
+    if (hasVoted) {
+      helper = others > 0
+        ? `you and ${others} ${others === 1 ? 'other' : 'others'} picked this.`
+        : 'you picked this.';
+      if (pointsAwarded > 0) helper += ` +${pointsAwarded} points.`;
+    }
+
+    return (
+      <Animated.View
+        style={[
+          homeStyles.card,
+          {
+            opacity: fadeIn,
+            transform: [{ translateY: slideUp }, { scale: scaleAnim }],
+          },
+        ]}
+      >
+        <View style={homeStyles.topRow}>
+          <Dot mood={drop.mood || 'cheeky'} size={18} animated={false} />
+          <Text style={homeStyles.label} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            {"today's drop"}
+          </Text>
+        </View>
+
+        {/* Question (tap → open the drop's content) */}
+        <TouchableOpacity
+          activeOpacity={target?.route ? 0.7 : 1}
+          disabled={!target?.route}
+          onPress={handleOpenTarget}
+          accessibilityRole={target?.route ? 'button' : undefined}
+        >
+          <Text style={homeStyles.question} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            {drop.title}
+          </Text>
+          {!!drop.body && (
+            <Text style={homeStyles.body} numberOfLines={2}>
+              {drop.body}
+            </Text>
+          )}
+        </TouchableOpacity>
+
+        <View style={homeStyles.optionsWrap}>
+          {options.map((option) => {
+            const count = counts[option] || 0;
+            const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+            const chosen = myChoice === option;
+
+            return (
+              <TouchableOpacity
+                key={option}
+                style={[homeStyles.option, chosen && homeStyles.optionChosen]}
+                onPress={() => onVote(option)}
+                disabled={busy || hasVoted}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel={hasVoted ? `${option}, ${pct}%${chosen ? ', your pick' : ''}` : `vote ${option}`}
+                accessibilityState={{ disabled: busy || hasVoted, selected: chosen }}
+              >
+                {hasVoted && (
+                  <View
+                    style={[
+                      homeStyles.fill,
+                      { width: `${pct}%`, backgroundColor: chosen ? T.yellow : T.sand },
+                    ]}
+                  />
+                )}
+                <Text style={homeStyles.optionText} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                  {hasVoted ? `${option} ${pct}%` : option}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <View style={homeStyles.helperRow}>
+          <Text style={homeStyles.helper} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            {helper}
+          </Text>
+          {target?.route && ctaLabel && (
+            <TouchableOpacity
+              onPress={handleOpenTarget}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={ctaLabel}
+              hitSlop={{ top: 14, bottom: 14, left: 10, right: 10 }}
+            >
+              <Text style={homeStyles.link} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                {ctaLabel}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </Animated.View>
+    );
+  }
 
   return (
     <Animated.View
@@ -660,5 +780,77 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     flex: 1,
     textAlign: 'center',
+  },
+});
+// ── variant="home" (new Home design) ─────────────────────────────────
+const homeStyles = StyleSheet.create({
+  // Section spacing lives on the card so "no drop" leaves no gap on Home
+  card: {
+    marginTop: 16,
+    marginHorizontal: 16,
+    backgroundColor: T.yellowSoft,
+    borderRadius: 22,
+    padding: 16,
+  },
+  placeholderCard: { minHeight: 150 },
+  phRow: { flexDirection: 'row', gap: 6, marginTop: 12 },
+  phBlock: { backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: 8 },
+  phOption: { flex: 1, height: 44, borderRadius: 12 },
+
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  label: { fontFamily: F.bodyBold, fontSize: 13, color: T.ink },
+
+  question: {
+    marginTop: 6,
+    fontFamily: F.headingBold,
+    fontSize: 18,
+    lineHeight: 22.5,
+    color: T.ink,
+  },
+  body: {
+    marginTop: 4,
+    fontFamily: F.body,
+    fontSize: 14,
+    color: T.textMuted,
+  },
+
+  optionsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 12,
+  },
+  // 3 per row; a 4th+ option wraps to a second row
+  option: {
+    flexGrow: 1,
+    flexBasis: '30%',
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: T.line,
+    backgroundColor: T.card,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  optionChosen: { borderColor: T.ink },
+  fill: { position: 'absolute', left: 0, top: 0, bottom: 0 },
+  optionText: { fontFamily: F.bodyBold, fontSize: 13, color: T.ink, textAlign: 'center' },
+
+  helperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginTop: 10,
+  },
+  helper: { flex: 1, fontFamily: F.body, fontSize: 12, color: T.textMuted },
+  link: {
+    fontFamily: F.bodySemi,
+    fontSize: 13,
+    color: T.ink,
+    textDecorationLine: 'underline',
+    textAlign: 'right',
   },
 });

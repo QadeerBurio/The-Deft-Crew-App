@@ -1,13 +1,13 @@
 // app/src/screens/Home.js
+// Wires data + section order. Sections live in ./home/ (see tdc-ui-handoff/HOME_SPEC.md).
 import React, {
   useState, useCallback, useRef, useEffect, useContext, useMemo,
 } from "react";
 import {
-  ScrollView, StyleSheet, View, TouchableOpacity, Modal, Text,
-  RefreshControl, Animated, StatusBar, Dimensions, Easing, Alert, AppState,
+  ScrollView, StyleSheet, View, Modal,
+  RefreshControl, Animated, StatusBar, Easing, AppState, AccessibilityInfo,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthContext } from "../context/AuthContext";
 import ChatBotInterface from "./ChatBotInterface";
@@ -15,58 +15,73 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import api from "../api/api";
 import Slider from "../screens/Slider";
+import { navigationRef } from "../navigation/navigationRef";
 
 // 🆕 engagement
-import MissionStack from "../engagement/components/MissionStack";
+// MissionStack is no longer rendered on Home (file kept, import kept)
+import MissionStack from "../engagement/components/MissionStack"; // eslint-disable-line no-unused-vars
 import DailyDropCard from "../engagement/components/DailyDropCard";
 import StreakSheet from "../engagement/components/StreakSheet";
-import FeatureDot from "../engagement/components/FeatureDot";
 import { useEngagement } from "../engagement/hooks/useEngagement";
 import { useMissions } from "../engagement/hooks/useMissions";
+import { useStreak } from "../engagement/hooks/useStreak";
 import { FEATURE_ID_TO_MISSION } from "../engagement/utils/mood";
 
-const { width } = Dimensions.get("window");
+// 🆕 home sections
+import HomeHello from "./home/HomeHello";
+import HomeCampus from "./home/HomeCampus";
+import HomeTools from "./home/HomeTools";
+import HomeDeals from "./home/HomeDeals";
+import AiFab, { AI_FAB_BOTTOM } from "./home/AiFab";
+import {
+  LATEST_CONFESSION_KEY, DEALS_KEY, fetchLatestConfession, fetchDeals, devLogOnce,
+} from "./home/homeData";
+import { color } from "../theme/tokens";
 
-const GOLD = "#f9c349";
-const GOLD_DARK = "#e0a82e";
-const DARK = "#1a1a1a";
-const WHITE = "#ffffff";
-const MUTED = "#888888";
-const LIGHT = "#fafafa";
-const BORDER = "#f0f0f0";
-
+// ids + screens unchanged; labels and colours per HOME_SPEC §2.5
 const FEATURES = [
-  { id: "discount",  title: "Discounts",       icon: "pricetag-outline",      desc: "Save at top brands",  screen: "Brands",     gradient: ["#FF6B6B", "#FF8E53"] },
-  { id: "traveling", title: "Travelling",      icon: "airplane",              desc: "Plan trips with AI",    screen: "Travelling", gradient: ["#4FC3F7", "#29B6F6"] },
-  { id: "dashboard", title: "SkillsShare",     icon: "people-circle",         desc: "Learn from peers",         screen: "Dashboard",  gradient: ["#81C784", "#4CAF50"] },
-  { id: "events",    title: "Events",          icon: "calendar",              desc: "What's on near you",        screen: "Events",     gradient: ["#CE93D8", "#AB47BC"] },
-  { id: "resume",    title: "Resume",          icon: "document-text-outline", desc: "Build yours in minutes",   screen: "Resume",     gradient: ["#FFA726", "#FF9800"] },
-  { id: "jobs",      title: "Jobs",            icon: "briefcase",             desc: "Internships, & jobs",       screen: "Career",     gradient: ["#EF5350", "#D32F2F"] },
-  { id: "scholar",   title: "Scholarships",    icon: "school-outline",        desc: "Find Scholarships",     screen: "Exchange",   gradient: ["#42A5F5", "#1A237E"] },
-  { id: "social",    title: "Social Activity", icon: "globe",                 desc: "Post, Confess, & Connect",        screen: "Social",     gradient: ["#EC407A", "#AD1457"] },
+  { id: "discount",  label: "discounts",    icon: "pricetag-outline",      screen: "Brands",     well: "#FDE3E1", stroke: "#D9443F" },
+  { id: "traveling", label: "travel",       icon: "airplane-outline",      screen: "Travelling", well: "#DDF0F8", stroke: "#1F86C4" },
+  { id: "dashboard", label: "skillsshare",  icon: "people-circle-outline", screen: "Dashboard",  well: "#E2F3E4", stroke: "#2E8B3E" },
+  { id: "events",    label: "events",       icon: "calendar-outline",      screen: "Events",     well: "#F1E6F5", stroke: "#8E44AD" },
+  { id: "resume",    label: "resume",       icon: "document-text-outline", screen: "Resume",     well: "#FFF0DC", stroke: "#C77700" },
+  { id: "jobs",      label: "jobs",         icon: "briefcase-outline",     screen: "Career",     well: "#FDE6E2", stroke: "#D1383D" },
+  { id: "scholar",   label: "scholarships", icon: "school-outline",        screen: "Exchange",   well: "#E1F1FA", stroke: "#2B7FC0" },
+  { id: "social",    label: "social",       icon: "globe-outline",         screen: "Social",     well: "#FCE4EC", stroke: "#C2185B" },
 ];
 
-import * as Notifications from "expo-notifications";
+import * as Notifications from "expo-notifications"; // eslint-disable-line no-unused-vars
 
 // ─── FadeInView ─────────────────────────────────────────────────────────
-const FadeInView = React.memo(({ delay = 0, children, style }) => {
+// Fades up once on mount (450 ms, from 10 below). Skipped with "reduce motion".
+const FadeInView = React.memo(function FadeInView({ delay = 0, children, style }) {
   const anim = useRef(new Animated.Value(0)).current;
-  const slide = useRef(new Animated.Value(15)).current;
+  const slide = useRef(new Animated.Value(10)).current;
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(anim, { toValue: 1, duration: 400, useNativeDriver: true }),
-        Animated.timing(slide, {
-          toValue: 0,
-          duration: 400,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }, delay);
-    return () => clearTimeout(timeout);
-  }, [delay]);
+    let cancelled = false;
+    let timeout;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .catch(() => false)
+      .then((reduce) => {
+        if (cancelled) return;
+        if (reduce) {
+          anim.setValue(1);
+          slide.setValue(0);
+          return;
+        }
+        timeout = setTimeout(() => {
+          Animated.parallel([
+            Animated.timing(anim, { toValue: 1, duration: 450, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+            Animated.timing(slide, { toValue: 0, duration: 450, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+          ]).start();
+        }, delay);
+      });
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [delay, anim, slide]);
 
   return (
     <Animated.View style={[{ opacity: anim, transform: [{ translateY: slide }] }, style]}>
@@ -75,208 +90,27 @@ const FadeInView = React.memo(({ delay = 0, children, style }) => {
   );
 });
 
-// ─── FeatureCard with "sorted." pill ────────────────────────────────────
-const FeatureCard = React.memo(({ feature, onPress, sorted }) => {
-  const gradientColors = feature.gradient || [GOLD, GOLD];
-  const missionKey = FEATURE_ID_TO_MISSION[feature.id];
-
-  // Pop animation for the "sorted." pill
-  const pillScale = useRef(new Animated.Value(sorted ? 1 : 0)).current;
-  const pillFade = useRef(new Animated.Value(sorted ? 1 : 0)).current;
-
-  useEffect(() => {
-    if (sorted) {
-      Animated.parallel([
-        Animated.spring(pillScale, {
-          toValue: 1,
-          friction: 6,
-          tension: 50,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pillFade, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(pillScale, { toValue: 0, duration: 200, useNativeDriver: true }),
-        Animated.timing(pillFade, { toValue: 0, duration: 200, useNativeDriver: true }),
-      ]).start();
-    }
-  }, [sorted]);
-
-  return (
-    <TouchableOpacity
-      style={[
-        styles.featureCard,
-        sorted && styles.featureCardSorted,
-      ]}
-      activeOpacity={0.7}
-      onPress={onPress}
-    >
-      <View
-        style={[
-          styles.featureIcon,
-          {
-            backgroundColor: gradientColors[0] + "18",
-            borderColor: gradientColors[0] + "30",
-          },
-        ]}
-      >
-        <Ionicons name={feature.icon} size={22} color={gradientColors[0]} />
-        {missionKey && (
-          <View style={styles.moodDotWrap}>
-            <FeatureDot missionKey={missionKey} sorted={sorted} />
-          </View>
-        )}
-      </View>
-
-      <Text style={styles.featureTitle}>{feature.title}</Text>
-      <Text style={styles.featureDesc} numberOfLines={1}>{feature.desc}</Text>
-
-      {/* "sorted." pill inside the card, bottom-right */}
-      {sorted && (
-        <Animated.View
-          style={[
-            styles.sortedPill,
-            {
-              opacity: pillFade,
-              transform: [{ scale: pillScale }],
-            },
-          ]}
-        >
-          <Text style={styles.sortedPillText}>
-            sorted<Text style={styles.sortedPillDot}>.</Text>
-          </Text>
-        </Animated.View>
-      )}
-    </TouchableOpacity>
-  );
-});
-
-const SectionHeader = React.memo(({ title, sub, onViewAll }) => (
-  <View style={sectionStyles.row}>
-    <View style={sectionStyles.left}>
-      <View style={sectionStyles.accentBar} />
-      <View>
-        <Text style={sectionStyles.title}>{title}</Text>
-        {!!sub && <Text style={sectionStyles.sub}>{sub}</Text>}
-      </View>
-    </View>
-    {onViewAll && (
-      <TouchableOpacity onPress={onViewAll} style={sectionStyles.linkWrap}>
-        <Text style={sectionStyles.link}>View all</Text>
-        <Ionicons name="arrow-forward" size={12} color={GOLD} />
-      </TouchableOpacity>
-    )}
-  </View>
-));
-
-const sectionStyles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 22,
-    marginBottom: 14,
-  },
-  left: { flexDirection: "row", alignItems: "center", gap: 10 },
-  accentBar: {
-    width: 3,
-    height: 26,
-    borderRadius: 2,
-    backgroundColor: GOLD,
-  },
-  title: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: DARK,
-    letterSpacing: -0.3,
-  },
-  sub: { fontSize: 11, color: MUTED, marginTop: 1, fontWeight: "500" },
-  linkWrap: { flexDirection: "row", alignItems: "center", gap: 4 },
-  link: { fontSize: 12, color: GOLD, fontWeight: "700" },
-});
-
 // ─── Main Screen ────────────────────────────────────────────────────────
 export default function Home({ navigation }) {
   const [isChatVisible, setChatVisible] = useState(false);
   const [streakSheetVisible, setStreakSheetVisible] = useState(false);
-  const { isGuest, user } = useContext(AuthContext);
+  const { isGuest, user, token } = useContext(AuthContext);
   const queryClient = useQueryClient();
 
   // ── user-scoped id, used for cache keys & the Slider
   const userId = user?._id || user?.id || (isGuest ? "guest" : "anon");
 
   // 🆕 engagement
-  const { flags } = useEngagement();
-  const { missions, sortedCount, isFullySorted } = useMissions();
-  const showMissions = flags?.missions && !isFullySorted;
+  const { flags, me } = useEngagement();
+  const { missions } = useMissions();
+  const { count: streakCount, enabled: streakEnabled } = useStreak();
 
-  const floatAnim = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const sparkleAnim = useRef(new Animated.Value(0)).current;
-  const badgeAnim = useRef(new Animated.Value(0)).current;
   const headerFade = useRef(new Animated.Value(0)).current;
-
   const parentNavigation = navigation.getParent();
 
   useEffect(() => {
     Animated.timing(headerFade, { toValue: 1, duration: 400, useNativeDriver: true }).start();
-
-    const animations = [
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(floatAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
-          Animated.timing(floatAnim, { toValue: 0, duration: 2000, useNativeDriver: true }),
-        ])
-      ),
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 1.08, duration: 1500, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
-        ])
-      ),
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(sparkleAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
-          Animated.timing(sparkleAnim, { toValue: 0, duration: 2000, useNativeDriver: true }),
-        ])
-      ),
-    ];
-
-    animations.forEach((anim) => anim.start());
-
-    Animated.timing(badgeAnim, {
-      toValue: 1,
-      duration: 400,
-      delay: 1000,
-      useNativeDriver: true,
-    }).start();
-
-    return () => animations.forEach((anim) => anim.stop());
-  }, []);
-
-  const floatY = floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -8] });
-  const sparkleOp = sparkleAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.2, 1, 0.2] });
-
-  const handlePressIn = () => {
-    Animated.spring(scaleAnim, { toValue: 0.88, friction: 5, useNativeDriver: true }).start();
-  };
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, { toValue: 1, friction: 5, useNativeDriver: true }).start();
-  };
-
-  const handleChatOpen = () => {
-    Animated.sequence([
-      Animated.timing(scaleAnim, { toValue: 0.8, duration: 100, useNativeDriver: true }),
-      Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }),
-    ]).start();
-    setChatVisible(true);
-  };
+  }, [headerFade]);
 
   // ── Engagement home query (user-scoped, abort-safe)
   const { refetch: refetchEngagement } = useQuery({
@@ -302,7 +136,44 @@ export default function Home({ navigation }) {
     refetchOnWindowFocus: false,
   });
 
-  // Pull to refresh: missions, streak, daily drop, everything engagement
+  // ── Latest confession + deals (signed-in only; failures hide the section)
+  const signedIn = !isGuest && !!token;
+
+  const { data: latestConfession, refetch: refetchConfession } = useQuery({
+    queryKey: LATEST_CONFESSION_KEY(userId),
+    queryFn: async ({ signal }) => {
+      try {
+        return await fetchLatestConfession(token, signal);
+      } catch (e) {
+        devLogOnce("latest confession", e);
+        return null;
+      }
+    },
+    enabled: signedIn,
+    staleTime: 1000 * 60 * 5,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  const { data: deals, isLoading: dealsLoading } = useQuery({
+    queryKey: DEALS_KEY(userId),
+    queryFn: async () => {
+      try {
+        return await fetchDeals(token, userId);
+      } catch (e) {
+        devLogOnce("deals", e);
+        return [];
+      }
+    },
+    enabled: signedIn,
+    staleTime: 60 * 1000,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  // Pull to refresh: missions, streak, daily drop, everything engagement,
+  // plus the confession and deals sections
   const [pullRefreshing, setPullRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
     setPullRefreshing(true);
@@ -310,11 +181,17 @@ export default function Home({ navigation }) {
       await Promise.all([
         refetchEngagement(),
         queryClient.invalidateQueries({ queryKey: ["engagement"] }),
+        signedIn ? refetchConfession() : null,
+        signedIn
+          ? fetchDeals(token, userId, true)
+              .then((fresh) => queryClient.setQueryData(DEALS_KEY(userId), fresh))
+              .catch((e) => devLogOnce("deals refresh", e))
+          : null,
       ]);
     } finally {
       setPullRefreshing(false);
     }
-  }, [refetchEngagement, queryClient]);
+  }, [refetchEngagement, queryClient, signedIn, refetchConfession, token, userId]);
 
   // Auto refresh whenever Home is opened again (max once every 15s), so a
   // new drop / finished mission shows without pulling down
@@ -363,15 +240,47 @@ export default function Home({ navigation }) {
     [navigation, parentNavigation]
   );
 
-  const handleViewAll = useCallback(() => {
-    Alert.alert("Coming Soon", "More features are on their way!", [{ text: "OK" }]);
-  }, []);
+  // Confessions feed: same route + params the Daily Drop uses
+  const openFeedScreen = useCallback(
+    (params) => {
+      try {
+        if (navigationRef.isReady()) navigationRef.navigate("FeedScreen", params);
+        else navigation.navigate("FeedScreen", params);
+      } catch (e) {
+        if (__DEV__) console.log("[Home] open feed error:", e?.message);
+      }
+    },
+    [navigation]
+  );
+  const openLatestConfession = useCallback(() => {
+    if (latestConfession?._id) openFeedScreen({ postId: latestConfession._id });
+  }, [latestConfession?._id, openFeedScreen]);
+  const openConfessionFeed = useCallback(() => openFeedScreen({ tab: "Confession" }), [openFeedScreen]);
+
+  const openDeal = useCallback(
+    (brand) => navigation.navigate("OfferScreen", { brand }),
+    [navigation]
+  );
+  const openAllDeals = useCallback(() => handleFeaturePress("Brands"), [handleFeaturePress]);
+
+  // ── Derived copy
+  const displayName = user?.name || user?.fullName || user?.username || "";
+  const firstName = isGuest ? "" : String(displayName).trim().split(/\s+/)[0] || "";
+
+  const sortedCount = FEATURES.filter((f) => sortedFeatureIds.has(FEATURE_ID_TO_MISSION[f.id])).length;
+  const sortedLabel = !isGuest && flags?.missions ? `${sortedCount} of ${FEATURES.length} sorted` : null;
+
+  const totalSaved = Number(me?.stats?.totalSaved) || 0;
+  const savedLabel =
+    flags?.savingsCounter && totalSaved > 0
+      ? `rs ${Math.round(totalSaved).toLocaleString()} saved · see all`
+      : "see all";
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="dark-content" backgroundColor={WHITE} />
+      <StatusBar barStyle="dark-content" backgroundColor={color.white} />
 
-      <View style={{ flex: 1, backgroundColor: WHITE }}>
+      <View style={styles.container}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
@@ -379,129 +288,67 @@ export default function Home({ navigation }) {
             <RefreshControl
               refreshing={pullRefreshing}
               onRefresh={onRefresh}
-              colors={[GOLD]}
-              tintColor={GOLD}
-              progressBackgroundColor={WHITE}
+              colors={[color.yellow]}
+              tintColor={color.yellow}
+              progressBackgroundColor={color.white}
             />
           }
         >
-          {/* Slider — self-fetching, user-scoped */}
-          <Animated.View style={{ opacity: headerFade }}>
+          {/* Slider — self-fetching, user-scoped (Slider adds 8 more on top) */}
+          <Animated.View style={[styles.sliderWrap, { opacity: headerFade }]}>
             <Slider userId={userId} isGuest={isGuest} />
           </Animated.View>
 
-          <View style={styles.content}>
-            {/* 🆕 Mission Stack */}
-            {showMissions && (
-              <FadeInView delay={100}>
-                <MissionStack />
-              </FadeInView>
-            )}
+          <FadeInView delay={0}>
+            <HomeHello
+              name={firstName}
+              streakCount={streakCount}
+              showStreak={!isGuest && streakEnabled}
+              onStreakPress={() => setStreakSheetVisible(true)}
+            />
+          </FadeInView>
 
-            {/* 🆕 Fully sorted — modern bordered celebration card */}
-            {isFullySorted && flags?.missions && (
-              <FadeInView delay={100}>
-                <View style={styles.fullySortedCard}>
-                  <View style={styles.fullySortedAccent} />
+          {/* 🆕 Daily Drop */}
+          {flags?.dailyDrop && (
+            <FadeInView delay={50}>
+              <DailyDropCard variant="home" />
+            </FadeInView>
+          )}
 
-                  <View style={styles.fullySortedInner}>
-                    <View style={styles.fullySortedIconWrap}>
-                      <MaterialCommunityIcons name="check-decagram" size={20} color={GOLD} />
-                    </View>
-
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.fullySortedEyebrow}>ALL DONE</Text>
-                      <Text style={styles.fullySortedTitle}>
-                        fully sorted<Text style={styles.fullySortedDot}>.</Text>
-                      </Text>
-                      <Text style={styles.fullySortedSub}>
-                        all 8 missions. every card checked.
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.fullySortedBar}>
-                    <View style={[styles.fullySortedBarFill, { width: '100%' }]} />
-                  </View>
-                </View>
-              </FadeInView>
-            )}
-
-            {/* 🆕 Daily Drop */}
-            {flags?.dailyDrop && (
-              <FadeInView delay={150}>
-                <DailyDropCard />
-              </FadeInView>
-            )}
-
-            {/* Section Header */}
-            <FadeInView delay={200}>
-              <SectionHeader
-                title="Explore Features"
-                sub="Everything you need, one app"
-                onViewAll={handleViewAll}
+          {signedIn && !!latestConfession && (
+            <FadeInView delay={100}>
+              <HomeCampus
+                confession={latestConfession}
+                onOpenPost={openLatestConfession}
+                onOpenFeed={openConfessionFeed}
               />
             </FadeInView>
+          )}
 
-            {/* Features Grid */}
-            <View style={styles.featuresGrid}>
-              {FEATURES.map((feat) => {
-                const missionKey = FEATURE_ID_TO_MISSION[feat.id];
-                const isSorted = missionKey && sortedFeatureIds.has(missionKey);
-                return (
-                  <FeatureCard
-                    key={feat.id}
-                    feature={feat}
-                    sorted={isSorted}
-                    onPress={() => handleFeaturePress(feat.screen)}
-                  />
-                );
-              })}
-            </View>
-            
+          <FadeInView delay={150}>
+            <HomeTools
+              features={FEATURES}
+              sortedFeatureIds={sortedFeatureIds}
+              sortedLabel={sortedLabel}
+              onFeaturePress={handleFeaturePress}
+            />
+          </FadeInView>
 
-            <View style={styles.bottomSpacer} />
-          </View>
+          {signedIn && (dealsLoading || (deals && deals.length > 0)) && (
+            <FadeInView delay={200}>
+              <HomeDeals
+                deals={deals}
+                loading={dealsLoading}
+                savedLabel={savedLabel}
+                onSeeAll={openAllDeals}
+                onOpenDeal={openDeal}
+              />
+            </FadeInView>
+          )}
         </ScrollView>
       </View>
 
-      {/* FAB */}
-      <Animated.View
-        style={[styles.fab, { transform: [{ translateY: floatY }, { scale: pulseAnim }] }]}
-        pointerEvents="box-none"
-      >
-        <View style={styles.ring1} />
-        <View style={styles.ring2} />
-
-        {[
-          { top: -12, right: 6, size: 8 },
-          { top: 10, left: -10, size: 6 },
-          { bottom: -2, right: -6, size: 10 },
-        ].map((sp, i) => (
-          <Animated.View key={i} style={[styles.sparkle, sp, { opacity: sparkleOp }]}>
-            <MaterialCommunityIcons name="star-four-points" size={sp.size} color={GOLD} />
-          </Animated.View>
-        ))}
-
-        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-          <TouchableOpacity
-            style={styles.fabBtn}
-            onPress={handleChatOpen}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-            activeOpacity={0.9}
-          >
-            <MaterialCommunityIcons name="robot-outline" size={26} color={GOLD} />
-          </TouchableOpacity>
-        </Animated.View>
-
-        <Animated.View
-          style={[styles.aiBadge, { opacity: badgeAnim, transform: [{ scale: badgeAnim }] }]}
-        >
-          <View style={styles.greenDot} />
-          <Text style={styles.aiText}>AI</Text>
-        </Animated.View>
-      </Animated.View>
+      <AiFab onPress={() => setChatVisible(true)} />
 
       {/* Streak sheet */}
       <StreakSheet
@@ -515,7 +362,7 @@ export default function Home({ navigation }) {
         onRequestClose={() => setChatVisible(false)}
         presentationStyle="pageSheet"
       >
-        <View style={{ flex: 1, backgroundColor: WHITE }}>
+        <View style={{ flex: 1, backgroundColor: color.white }}>
           <ChatBotInterface onClose={() => setChatVisible(false)} />
         </View>
       </Modal>
@@ -524,223 +371,9 @@ export default function Home({ navigation }) {
 }
 
 // ─── Styles ─────────────────────────────────────────────────────────────
-const CARD_GAP = 10;
-const H_PADDING = 16;
-const CARD_WIDTH = (width - H_PADDING * 2 - CARD_GAP * 2) / 3;
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: WHITE },
-  scrollContent: { paddingBottom: 20 },
-  content: { paddingHorizontal: H_PADDING },
-  bottomSpacer: { height: 100 },
-
-  // ── Feature grid ─────────────────────────────────────
-  featuresGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: CARD_GAP,
-    justifyContent: "flex-start",
-  },
-  featureCard: {
-    width: CARD_WIDTH,
-    alignItems: "center",
-    paddingTop: 16,
-    paddingBottom: 26,
-    paddingHorizontal: 6,
-    borderRadius: 16,
-    backgroundColor: WHITE,
-    borderWidth: 1,
-    borderColor: BORDER,
-    position: "relative",
-    overflow: "visible",
-
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  featureCardSorted: {
-    backgroundColor: "#fffdf5",
-    borderColor: GOLD + "55",
-    shadowColor: GOLD,
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  featureIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 10,
-    position: "relative",
-    borderWidth: 1.5,
-  },
-  moodDotWrap: {
-    position: "absolute",
-    top: -6,
-    right: -6,
-    width: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  featureTitle: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: DARK,
-    textAlign: "center",
-    letterSpacing: -0.2,
-  },
-  featureDesc: {
-    fontSize: 9,
-    color: MUTED,
-    textAlign: "center",
-    marginTop: 3,
-    fontWeight: "500",
-    paddingHorizontal: 2,
-  },
-
-  // ── "sorted." pill ────────────────────────────────────
-  sortedPill: {
-    position: "absolute",
-    bottom: 6,
-    right: 6,
-    backgroundColor: DARK,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    shadowColor: DARK,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  sortedPillText: {
-    fontSize: 8,
-    fontWeight: "900",
-    color: WHITE,
-    letterSpacing: 0.4,
-    textTransform: "lowercase",
-  },
-  sortedPillDot: {
-    color: GOLD,
-    fontWeight: "900",
-  },
-
-  // ── Fully sorted — bordered card ─────────────────────
-  fullySortedCard: {
-    marginTop: 16,
-    marginBottom: 4,
-    borderRadius: 18,
-    backgroundColor: "#fffbee",
-    borderWidth: 1.5,
-    borderColor: GOLD + "66",
-    overflow: "hidden",
-    position: "relative",
-    shadowColor: GOLD,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  fullySortedAccent: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 3,
-    backgroundColor: GOLD,
-  },
-  fullySortedInner: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingLeft: 18,
-    paddingRight: 14,
-    gap: 12,
-  },
-  fullySortedIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: GOLD + "20",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: GOLD + "50",
-  },
-  fullySortedEyebrow: {
-    fontSize: 9,
-    fontWeight: "900",
-    color: GOLD_DARK,
-    letterSpacing: 1.6,
-    marginBottom: 1,
-  },
-  fullySortedTitle: {
-    fontSize: 16,
-    fontWeight: "900",
-    color: DARK,
-    letterSpacing: -0.3,
-  },
-  fullySortedDot: {
-    color: GOLD,
-    fontWeight: "900",
-  },
-  fullySortedSub: {
-    fontSize: 11,
-    color: MUTED,
-    fontWeight: "500",
-    marginTop: 2,
-    letterSpacing: -0.1,
-  },
-  fullySortedBar: {
-    height: 3,
-    backgroundColor: GOLD + "25",
-  },
-  fullySortedBarFill: {
-    height: "100%",
-    backgroundColor: GOLD,
-  },
-
-  // ── FAB ──────────────────────────────────────────────
-  fab: { position: "absolute", bottom: 30, right: 16 },
-  ring1: {
-    position: "absolute",
-    width: 68, height: 68, borderRadius: 34,
-    backgroundColor: "rgba(249,195,73,0.10)",
-    top: -6, left: -6,
-  },
-  ring2: {
-    position: "absolute",
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: "rgba(249,195,73,0.05)",
-    top: -12, left: -12,
-  },
-  sparkle: { position: "absolute", zIndex: 2 },
-  fabBtn: {
-    width: 54, height: 54, borderRadius: 27,
-    backgroundColor: DARK,
-    justifyContent: "center", alignItems: "center",
-    shadowColor: GOLD,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 8,
-    elevation: 8,
-    borderWidth: 1.5, borderColor: GOLD + "33",
-    marginBottom: 40,
-  },
-  aiBadge: {
-    position: "absolute",
-    top: -24, right: -4,
-    backgroundColor: DARK,
-    borderRadius: 10,
-    paddingHorizontal: 5, paddingVertical: 2,
-    flexDirection: "row", alignItems: "center", gap: 3,
-    borderWidth: 1.5, borderColor: WHITE,
-    elevation: 5,
-  },
-  greenDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: "#4CAF50" },
-  aiText: { fontSize: 7, fontWeight: "900", color: WHITE, letterSpacing: 0.5 },
+  container: { flex: 1, backgroundColor: color.paper },
+  // room below the last section for the AI button + the tab bar it sits above
+  scrollContent: { paddingBottom: AI_FAB_BOTTOM + 48 + 24 },
+  sliderWrap: { paddingTop: 8 },
 });

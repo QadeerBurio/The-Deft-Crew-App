@@ -1,12 +1,17 @@
 // app/src/navigation/TabNavigator.js
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState, useCallback, useContext } from "react";
 import {
   View,
+  Text,
   StyleSheet,
   TouchableOpacity,
+  Pressable,
+  Animated,
+  AppState,
   Dimensions,
   StatusBar,
 } from "react-native";
+import axios from "axios";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import {
   Octicons,
@@ -24,10 +29,16 @@ import ProfileScreen from "../screens/ProfileScreen";
 
 // 🆕 tour
 import { useTour } from "../engagement/tour/TourProvider";
+import { AuthContext } from "../context/AuthContext";
+import { color, font } from "../theme/tokens";
 
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get("window");
 const TAB_HEIGHT = 55;
+
+// Same value Social.js uses for GET /inbox (unread badge on the social button)
+const SOCIAL_API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
+const LABEL_SCALE = 1.2; // labels must fit TAB_HEIGHT at big system fonts
 
 // ============================================================
 // EXPORTED — screens that hide BOTH tab bar AND TDC header
@@ -91,6 +102,52 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
     return () => clearTimeout(t);
   }, [registerTarget]);
 
+  // Unread messages badge: same GET /inbox as Social.js. Fetched on mount,
+  // when the active tab changes and when the app comes back. No polling.
+  const { token, isGuest } = useContext(AuthContext);
+  const [unread, setUnread] = useState(0);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const fetchUnread = useCallback(async () => {
+    if (!token || isGuest) {
+      setUnread(0);
+      return;
+    }
+    try {
+      const res = await axios.get(`${SOCIAL_API_URL}/inbox`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!mountedRef.current || !Array.isArray(res?.data)) return;
+      setUnread(res.data.reduce((sum, c) => sum + (c?.unreadCount || 0), 0));
+    } catch (e) {
+      if (__DEV__) console.log("[TabBar] unread fetch failed:", e?.message);
+    }
+  }, [token, isGuest]);
+
+  useEffect(() => {
+    fetchUnread();
+  }, [fetchUnread, state.index]);
+
+  useEffect(() => {
+    let prev = AppState.currentState;
+    const sub = AppState.addEventListener("change", (next) => {
+      if (prev.match(/inactive|background/) && next === "active") fetchUnread();
+      prev = next;
+    });
+    return () => sub.remove();
+  }, [fetchUnread]);
+
+  // Centre button press scale
+  const socialScale = useRef(new Animated.Value(1)).current;
+  const scaleSocial = (value) =>
+    Animated.spring(socialScale, { toValue: value, friction: 6, tension: 120, useNativeDriver: true }).start();
+
   // --- Derived values (no hooks below this line) ---
   const focusedRoute = state.routes[state.index];
   const deepestRouteName = getDeepestRouteName(focusedRoute);
@@ -112,6 +169,36 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
   const campusIndex = state.routes.findIndex((r) => r.name === "Campus");
   const profileIndex = state.routes.findIndex((r) => r.name === "Profile");
 
+  // Side tab: icon (inside the tour ref box, if any) + label + active dot
+  const renderSideTab = ({ label, selected, onPress, tourRef, renderIcon }) => {
+    const tint = selected ? color.ink : color.textFaint;
+    return (
+      <TouchableOpacity
+        style={styles.tabItem}
+        onPress={onPress}
+        activeOpacity={0.7}
+        accessibilityRole="tab"
+        accessibilityState={{ selected }}
+        accessibilityLabel={label}
+      >
+        {/* ✅ Native View with ref — measureInWindow works on this */}
+        <View ref={tourRef} collapsable={false} style={styles.refBox}>
+          {renderIcon(tint)}
+        </View>
+        <Text
+          style={[styles.tabLabel, { color: tint }, selected && styles.tabLabelActive]}
+          numberOfLines={1}
+          maxFontSizeMultiplier={LABEL_SCALE}
+        >
+          {label}
+        </Text>
+        <View style={[styles.tabDot, selected && styles.tabDotActive]} />
+      </TouchableOpacity>
+    );
+  };
+
+  const badgeText = unread > 99 ? "99+" : String(unread);
+
   return (
     <View
       style={[
@@ -132,82 +219,80 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
         ]}
       >
         {/* ─── Home tab ─────────────────────────────────────────── */}
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() =>
-            navigation.navigate("Home", { screen: "HomeStackMain" })
-          }
-          activeOpacity={0.7}
-        >
-          {/* ✅ Native View with ref — measureInWindow works on this */}
-          <View ref={homeRef} collapsable={false} style={styles.refBox}>
-            <Octicons
-              name="home"
-              size={26}
-              color={state.index === homeIndex ? "#f9c349" : "#9AA0A6"}
-            />
-          </View>
-        </TouchableOpacity>
+        {renderSideTab({
+          label: "home",
+          selected: state.index === homeIndex,
+          onPress: () => navigation.navigate("Home", { screen: "HomeStackMain" }),
+          tourRef: homeRef,
+          renderIcon: (tint) => <Octicons name="home" size={23} color={tint} />,
+        })}
 
         {/* ─── Explore tab ──────────────────────────────────────── */}
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => navigation.navigate("Explore")}
-          activeOpacity={0.7}
-        >
-          <View ref={exploreRef} collapsable={false} style={styles.refBox}>
-            <MaterialIcons
-              name="explore"
-              size={26}
-              color={state.index === exploreIndex ? "#f9c349" : "#9AA0A6"}
-            />
-          </View>
-        </TouchableOpacity>
+        {renderSideTab({
+          label: "explore",
+          selected: state.index === exploreIndex,
+          onPress: () => navigation.navigate("Explore"),
+          tourRef: exploreRef,
+          renderIcon: (tint) => <MaterialIcons name="explore" size={23} color={tint} />,
+        })}
 
         {/* ─── Social (center) ──────────────────────────────────── */}
-        <TouchableOpacity
-          style={styles.centerButtonContainer}
+        {/* Same column as the side tabs (spacer · label · dot) so "social"
+            shares their baseline; the circle floats above, raised */}
+        <Pressable
+          style={styles.tabItem}
           onPress={handleSocialPress}
-          activeOpacity={0.9}
+          onPressIn={() => scaleSocial(0.95)}
+          onPressOut={() => scaleSocial(1)}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: false }}
+          accessibilityLabel={unread > 0 ? `social, ${unread} unread` : "social"}
         >
-          <View ref={socialRef} collapsable={false} style={styles.refBox}>
-            <View style={styles.centerButton}>
-              <Foundation
-                name="social-skillshare"
-                size={32}
-                color={"#f9c349"}
-              />
+          <Animated.View
+            pointerEvents="box-none"
+            style={[styles.centerRaised, { transform: [{ scale: socialScale }] }]}
+          >
+            <View ref={socialRef} collapsable={false} style={styles.refBox}>
+              <View style={styles.centerButton}>
+                <Foundation name="social-skillshare" size={28} color={color.yellow} />
+              </View>
+              {unread > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText} maxFontSizeMultiplier={LABEL_SCALE}>
+                    {badgeText}
+                  </Text>
+                </View>
+              )}
             </View>
-          </View>
-        </TouchableOpacity>
+          </Animated.View>
+          <View style={styles.iconSpacer} />
+          <Text
+            style={[styles.tabLabel, styles.centerLabel]}
+            numberOfLines={1}
+            maxFontSizeMultiplier={LABEL_SCALE}
+          >
+            social
+          </Text>
+          <View style={styles.tabDot} />
+        </Pressable>
 
         {/* ─── Campus tab ───────────────────────────────────────── */}
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => navigation.navigate("Campus")}
-          activeOpacity={0.7}
-        >
-          <View ref={campusRef} collapsable={false} style={styles.refBox}>
-            <MaterialCommunityIcons
-              name="school-outline"
-              size={26}
-              color={state.index === campusIndex ? "#f9c349" : "#9AA0A6"}
-            />
-          </View>
-        </TouchableOpacity>
+        {renderSideTab({
+          label: "campus",
+          selected: state.index === campusIndex,
+          onPress: () => navigation.navigate("Campus"),
+          tourRef: campusRef,
+          renderIcon: (tint) => <MaterialCommunityIcons name="school-outline" size={23} color={tint} />,
+        })}
 
         {/* ─── Profile tab ──────────────────────────────────────── */}
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => navigation.navigate("Profile")}
-          activeOpacity={0.7}
-        >
-          <MaterialCommunityIcons
-            name="account-circle"
-            size={26}
-            color={state.index === profileIndex ? "#f9c349" : "#9AA0A6"}
-          />
-        </TouchableOpacity>
+        {renderSideTab({
+          label: "profile",
+          selected: state.index === profileIndex,
+          onPress: () => navigation.navigate("Profile"),
+          tourRef: undefined,
+          renderIcon: (tint) => <MaterialCommunityIcons name="account-circle" size={23} color={tint} />,
+        })}
       </View>
     </View>
   );
@@ -275,14 +360,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     width: width,
-    backgroundColor: "#ffffff",
+    backgroundColor: color.white,
     borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.08)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 20,
+    borderTopColor: color.line,
   },
   contentContainer: {
     flexDirection: "row",
@@ -292,39 +372,84 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     paddingHorizontal: 9,
   },
+  // icon 23 · 3 · label · 3 · dot 5 — fits inside TAB_HEIGHT
   tabItem: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     height: TAB_HEIGHT,
+    gap: 3,
   },
   // ✅ Small wrapper so measureInWindow measures just the icon
   refBox: {
     alignItems: "center",
     justifyContent: "center",
   },
-  centerButtonContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    height: TAB_HEIGHT,
-    marginTop: -5,
+  tabLabel: {
+    fontFamily: font.bodyMedium,
+    fontSize: 11,
   },
+  tabLabelActive: { fontFamily: font.bodyBold },
+  // Inactive dot is transparent but keeps its space so nothing shifts
+  tabDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: "transparent",
+  },
+  tabDotActive: { backgroundColor: color.yellow },
+
+  // Raised like the design: circle starts 14 above the bar's top edge
+  centerRaised: {
+    position: "absolute",
+    top: -14,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: 10,
+  },
+  // Takes the icon's place in the column so the label lines up
+  iconSpacer: { height: 23 },
   centerButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 45,
-    backgroundColor: "#FFFFFF",
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: color.ink,
+    borderWidth: 4,
+    borderColor: color.white,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 2.5,
-    borderColor: "#f9c349",
-    elevation: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
+    shadowColor: color.ink,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 6,
     zIndex: 10,
-    marginTop: -15,
+  },
+  centerLabel: {
+    fontFamily: font.bodyBold,
+    color: color.ink,
+  },
+  badge: {
+    position: "absolute",
+    top: 0,
+    right: -4,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 5,
+    borderRadius: 10,
+    backgroundColor: color.yellow,
+    borderWidth: 2,
+    borderColor: color.white,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 11,
+    elevation: 7,
+  },
+  // Spec asks for DM Sans 800; only 400–700 are loaded (FONTS.md), so 700
+  badgeText: {
+    fontFamily: font.bodyBold,
+    fontSize: 10.5,
+    color: color.ink,
   },
 });
