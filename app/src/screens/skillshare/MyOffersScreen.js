@@ -11,6 +11,7 @@ import { AuthContext } from '../../context/AuthContext';
 import { goToAuth } from '../../utils/goToAuth';
 
 import { color as T, font as F } from "../../theme/tokens";
+import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
 const BRAND = T.yellow;
 const INK = T.ink;
 const MUTED = T.textMuted;
@@ -37,12 +38,12 @@ const OfferCard = memo(function OfferCard({ item, onWithdraw, onPress }) {
   const ownerName = listing.ownerId?.name || 'User';
 
   const statusPill = isAccepted
-    ? { bg: T.successBg, color: '#2e7d32', label: 'Accepted' }
+    ? { bg: T.successBg, color: T.success, label: 'Accepted' }
     : isRejected
-    ? { bg: T.dangerBg, color: '#c62828', label: 'Rejected' }
+    ? { bg: T.dangerBg, color: T.danger, label: 'Rejected' }
     : isWithdrawn
     ? { bg: T.sand, color: T.textFaint, label: 'Withdrawn' }
-    : { bg: '#FFF3D6', color: '#8a6d1d', label: 'Pending' };
+    : { bg: T.yellowSoft, color: T.ink, label: 'Pending' };
 
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={() => onPress(item, isAccepted ? 'chat' : undefined)}>
@@ -195,15 +196,7 @@ export default function MyOffersScreen({ navigation }) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
-      <View style={styles.topHeader}>
-        <TouchableOpacity onPress={goBack} hitSlop={10}>
-          <Ionicons name="arrow-back" size={22} color={INK} />
-        </TouchableOpacity>
-        <Text style={styles.topHeaderTitle}>my offers</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('NotificationSkillshare')}>
-          <Ionicons name="notifications-outline" size={22} color={INK} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader title="my offers" onBack={goBack} right={<HeaderIconButton icon="notifications-outline" label="notifications" onPress={() => navigation.navigate('NotificationSkillshare')} />} />
 
       {loading && offers.length === 0 ? (
         <View style={styles.centerFill}><ActivityIndicator size="large" color={BRAND} /></View>
@@ -298,7 +291,7 @@ const styles = StyleSheet.create({
   toText: { fontSize: 12, color: MUTED, fontFamily: F.bodySemi },
   cardDivider: { height: 1, backgroundColor: T.sand, marginVertical: 10 },
   actionRow: { flexDirection: 'row', justifyContent: 'flex-end' },
-  withdrawText: { fontSize: 13, fontFamily: F.bodyBold, color: '#c62828' },
+  withdrawText: { fontSize: 13, fontFamily: F.bodyBold, color: T.danger },
   chatBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: BRAND, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20 },
   chatBtnText: { fontSize: 13, fontFamily: F.bodyBold, color: INK },
 

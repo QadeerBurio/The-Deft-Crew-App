@@ -8,6 +8,7 @@ import { getMyListings } from '../../api/api';
 import ListingCard from '../../components/ListingCard';
 
 import { color as T, font as F } from "../../theme/tokens";
+import ScreenHeader from "../../ui/ScreenHeader";
 const BRAND = T.yellow;
 const INK = T.ink;
 const MUTED = T.textMuted;
@@ -107,18 +108,16 @@ export default function MyPostsByType({ route, navigation }) {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
-      <View style={styles.topHeader}>
-        <TouchableOpacity onPress={goBack} hitSlop={10}>
-          <Ionicons name="arrow-back" size={22} color={BRAND} />
-        </TouchableOpacity>
-        <Text style={styles.topHeaderTitle}>{title}</Text>
-        <TouchableOpacity
+      <ScreenHeader title={title} onBack={goBack} right={
+          <>
+            <TouchableOpacity
           onPress={goCreate}
           hitSlop={10}
         >
           <Text style={styles.createLink}>+ Create</Text>
         </TouchableOpacity>
-      </View>
+          </>
+        } />
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsRow}>
         {tabs.map((t, i) => {
@@ -169,15 +168,15 @@ const styles = StyleSheet.create({
   typePill: { backgroundColor: T.sand, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
   typePillText: { fontSize: 11, fontFamily: F.bodyBold, color: T.textMuted },
   statusPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
-  statusActive: { backgroundColor: '#FFF3D6' },
-  statusClosed: { backgroundColor: '#fde2e1' },
-  statusPillText: { fontSize: 11, fontFamily: F.bodyBold, color: '#8a6d1d' },
+  statusActive: { backgroundColor: T.yellowSoft },
+  statusClosed: { backgroundColor: T.dangerBg },
+  statusPillText: { fontSize: 11, fontFamily: F.bodyBold, color: T.ink },
   cardTitle: { fontSize: 17, fontFamily: F.bodyBold, color: INK, marginBottom: 4 },
   cardDesc: { fontSize: 13, fontFamily: F.body, color: T.textMuted, lineHeight: 18 },
   divider: { height: 1, backgroundColor: T.sand, marginVertical: 10 },
   bottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   budgetValue: { fontSize: 15, fontFamily: F.bodyBold, color: INK },
   budgetLabel: { fontSize: 11, fontFamily: F.body, color: MUTED },
-  countText: { fontSize: 13, fontFamily: F.bodyBold, color: '#8a6d1d' },
+  countText: { fontSize: 13, fontFamily: F.bodyBold, color: T.ink },
   emptyText: { textAlign: 'center', color: T.textFaint, marginTop: 40 },
 });

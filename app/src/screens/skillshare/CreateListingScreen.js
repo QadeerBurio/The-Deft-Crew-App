@@ -25,6 +25,7 @@ import * as ImagePicker from 'expo-image-picker';
 import useMyProfessionalProfile from '../../hooks/useMyProfessionalProfile';
 
 import { color as T, font as F } from "../../theme/tokens";
+import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
 const BRAND = T.yellow;
 const INK = T.ink;
 const MUTED = T.textMuted;
@@ -683,7 +684,7 @@ export default function CreateListingScreen({ route, navigation }) {
         </View>
 
         <View style={styles.warningBox}>
-          <Ionicons name="warning" size={13} color="#C62828" style={{ marginTop: 1 }} />
+          <Ionicons name="warning" size={13} color={T.danger} style={{ marginTop: 1 }} />
           <Text style={styles.warningText}>
             Only attach work that belongs to you or is included in your professional portfolio link
             provided below to build customer trust
@@ -802,19 +803,7 @@ export default function CreateListingScreen({ route, navigation }) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('DashboardMain'))}
-          style={styles.headerBtn}
-          hitSlop={10}
-        >
-          <Ionicons name="chevron-back" size={22} color={INK} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{headerTitle}</Text>
-        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('NotificationSkillshare')} hitSlop={10}>
-          <Ionicons name="notifications-outline" size={20} color={INK} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader title={headerTitle} onBack={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('DashboardMain'))} right={<HeaderIconButton icon="notifications-outline" label="notifications" onPress={() => navigation.navigate('NotificationSkillshare')} />} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -930,9 +919,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     gap: 8,
     borderWidth: 1,
-    borderColor: '#FFCDD2',
+    borderColor: T.dangerBg,
   },
-  errorBannerText: { color: '#C62828', fontFamily: F.bodyMedium, fontSize: 13, flex: 1 },
+  errorBannerText: { color: T.danger, fontFamily: F.bodyMedium, fontSize: 13, flex: 1 },
 
   section: {
     backgroundColor: T.card,
@@ -969,7 +958,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: T.line,
     borderRadius: 10,
     backgroundColor: T.card,
     minHeight: 46,
@@ -977,7 +966,7 @@ const styles = StyleSheet.create({
   },
   textArea: {
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: T.line,
     borderRadius: 10,
     backgroundColor: T.card,
     minHeight: 90,
@@ -987,7 +976,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: T.line,
     borderRadius: 10,
     backgroundColor: T.card,
     paddingLeft: 12,
@@ -1004,7 +993,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: T.card,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: T.line,
   },
   chipActive: { backgroundColor: T.ink, borderColor: T.ink },
   chipHint: { backgroundColor: T.ink, borderColor: T.ink },
@@ -1020,7 +1009,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: T.card,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: T.line,
     alignItems: 'center',
   },
   levelGridBtnActive: { backgroundColor: T.ink, borderColor: T.ink },
@@ -1054,15 +1043,15 @@ const styles = StyleSheet.create({
 
   // Paid: previous work
   warningBox: { flexDirection: 'row', gap: 6, marginBottom: 12 },
-  warningText: { flex: 1, fontSize: 11.5, fontFamily: F.body, color: '#C62828', lineHeight: 16 },
+  warningText: { flex: 1, fontSize: 11.5, fontFamily: F.body, color: T.danger, lineHeight: 16 },
   uploadBox: {
     borderWidth: 1.5,
-    borderColor: '#D8D8DC',
+    borderColor: T.line,
     borderStyle: 'dashed',
     borderRadius: 12,
     paddingVertical: 26,
     alignItems: 'center',
-    backgroundColor: '#FAFAFC',
+    backgroundColor: T.sand,
   },
   uploadTitle: { fontSize: 13, fontFamily: F.bodySemi, color: T.textMuted, marginTop: 8 },
   uploadSubtitle: { fontSize: 11, fontFamily: F.body, color: MUTED, marginTop: 2 },

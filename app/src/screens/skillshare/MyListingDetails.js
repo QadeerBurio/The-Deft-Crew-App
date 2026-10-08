@@ -13,6 +13,7 @@ import { timeAgo } from '../../utils/time';
 import { goToAuth } from '../../utils/goToAuth';
 
 import { color as T, font as F } from "../../theme/tokens";
+import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
 const BRAND = T.yellow;
 const INK = T.ink;
 const MUTED = T.textMuted;
@@ -40,7 +41,7 @@ const ListingCard = memo(function ListingCard({ item, onClose, onPress }) {
         </View>
         <View style={[styles.statusPill, isOpen ? styles.statusPillOpen : styles.statusPillClosed]}>
           {isOpen && <View style={styles.statusDot} />}
-          <Text style={[styles.statusPillText2, { color: isOpen ? '#2e7d32' : T.textFaint }]}>
+          <Text style={[styles.statusPillText2, { color: isOpen ? T.success : T.textFaint }]}>
             {isOpen ? 'Active' : 'Closed'}
           </Text>
         </View>
@@ -63,7 +64,7 @@ const ListingCard = memo(function ListingCard({ item, onClose, onPress }) {
 
       {item.type === 'paid' && item.price != null && (
         <View style={styles.detailRow}>
-          <Ionicons name="cash-outline" size={16} color="#2e7d32" />
+          <Ionicons name="cash-outline" size={16} color={T.success} />
           <Text style={styles.detailText}>
             <Text style={styles.detailLabel}>price: </Text>
             <Text style={[styles.detailValue, styles.priceValue]}>${item.price}</Text>
@@ -73,7 +74,7 @@ const ListingCard = memo(function ListingCard({ item, onClose, onPress }) {
 
       {item.type === 'job' && item.budget != null && (
         <View style={styles.detailRow}>
-          <Ionicons name="cash-outline" size={16} color="#2e7d32" />
+          <Ionicons name="cash-outline" size={16} color={T.success} />
           <Text style={styles.detailText}>
             <Text style={styles.detailLabel}>budget: </Text>
             <Text style={[styles.detailValue, styles.priceValue]}>${item.budget}</Text>
@@ -100,7 +101,7 @@ const ListingCard = memo(function ListingCard({ item, onClose, onPress }) {
         </View>
         {isOpen && (
           <TouchableOpacity style={styles.closeBtn} onPress={() => onClose(item._id)} hitSlop={6}>
-            <Ionicons name="close" size={13} color="#c62828" />
+            <Ionicons name="close" size={13} color={T.danger} />
             <Text style={styles.closeBtnText}>close</Text>
           </TouchableOpacity>
         )}
@@ -209,19 +210,7 @@ export default function MyListingsScreen({ navigation }) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
-      <View style={styles.topHeader}>
-        <TouchableOpacity onPress={goBack} style={styles.headerBtn} hitSlop={8}>
-          <Ionicons name="arrow-back" size={22} color={INK} />
-        </TouchableOpacity>
-        <Text style={styles.topHeaderTitle}>my listings</Text>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => navigation.navigate('SelectListingTypeScreen')}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="add" size={22} color={INK} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader title="my listings" onBack={goBack} right={<HeaderIconButton icon="add" label="add" onPress={() => navigation.navigate('SelectListingTypeScreen')} />} />
 
       {loading && listings.length === 0 ? (
         <View style={styles.centerFill}><ActivityIndicator size="large" color={BRAND} /></View>
@@ -321,7 +310,7 @@ const styles = StyleSheet.create({
     width: 36, height: 36, borderRadius: 18, backgroundColor: T.sand,
     justifyContent: 'center', alignItems: 'center',
   },
-  topHeaderTitle: { fontSize: 18, fontFamily: F.heading, color: '#8a6d1d' },
+  topHeaderTitle: { fontSize: 18, fontFamily: F.heading, color: T.ink },
   addBtn: {
     width: 36, height: 36, borderRadius: 18, backgroundColor: BRAND,
     justifyContent: 'center', alignItems: 'center',
@@ -331,10 +320,10 @@ const styles = StyleSheet.create({
 
   statsCard: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: T.card,
-    borderWidth: 1, borderColor: '#e8d9a8', borderRadius: 16, padding: 14, marginBottom: 16,
+    borderWidth: 1, borderColor: T.line, borderRadius: 16, padding: 14, marginBottom: 16,
   },
   statsIconBox: {
-    width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFF3D6',
+    width: 40, height: 40, borderRadius: 12, backgroundColor: T.yellowSoft,
     justifyContent: 'center', alignItems: 'center', marginRight: 12,
   },
   statsMain: { marginRight: 'auto' },
@@ -361,13 +350,13 @@ const styles = StyleSheet.create({
   cardTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   typePill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#FFF3D6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12,
+    backgroundColor: T.yellowSoft, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12,
   },
-  typePillText: { fontSize: 12, fontFamily: F.bodyBold, color: '#8a6d1d' },
+  typePillText: { fontSize: 12, fontFamily: F.bodyBold, color: T.ink },
   statusPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
   statusPillOpen: { backgroundColor: T.successBg },
   statusPillClosed: { backgroundColor: T.sand },
-  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#2e7d32' },
+  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: T.success },
   statusPillText2: { fontSize: 12, fontFamily: F.bodyBold },
 
   cardTitle: { fontSize: 20, fontFamily: F.heading, color: INK, marginBottom: 12 },
@@ -377,7 +366,7 @@ const styles = StyleSheet.create({
   detailLabel: { color: MUTED, fontFamily: F.bodySemi },
   detailValue: { color: INK, fontFamily: F.bodyBold },
   detailLevel: { color: MUTED, fontFamily: F.bodyMedium },
-  priceValue: { color: '#2e7d32', fontFamily: F.bodyBold },
+  priceValue: { color: T.success, fontFamily: F.bodyBold },
 
   cardDivider: { height: 1, backgroundColor: T.sand, marginVertical: 10 },
 
@@ -388,7 +377,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: T.dangerBg, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16,
   },
-  closeBtnText: { fontSize: 13, fontFamily: F.bodyBold, color: '#c62828' },
+  closeBtnText: { fontSize: 13, fontFamily: F.bodyBold, color: T.danger },
 
   emptyState: { alignItems: 'center', paddingVertical: 60 },
   emptyTitle: { fontSize: 18, fontFamily: F.heading, color: INK, marginTop: 12 },

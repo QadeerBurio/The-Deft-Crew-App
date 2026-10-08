@@ -282,7 +282,7 @@ export default function ChatMatch({ route, navigation }) {
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <LinearGradient
-        colors={['#f9c34920', '#f5a62320']}
+        colors={[T.yellowSoft, T.yellowSoft]}
         style={styles.emptyIcon}
       >
         <Ionicons name="chatbubbles-outline" size={48} color={T.yellow} />
@@ -365,7 +365,7 @@ export default function ChatMatch({ route, navigation }) {
                 activeOpacity={0.8}
               >
                 <LinearGradient
-                  colors={newMessage.trim() ? [T.yellow, T.yellow] : ['#E5E5EA', '#E5E5EA']}
+                  colors={newMessage.trim() ? [T.yellow, T.yellow] : [T.line, T.line]}
                   style={styles.sendGradient}
                 >
                   {sending ? (
@@ -374,7 +374,7 @@ export default function ChatMatch({ route, navigation }) {
                     <Ionicons
                       name="send"
                       size={20}
-                      color={newMessage.trim() ? T.white : '#C7C7CC'}
+                      color={newMessage.trim() ? T.white : T.textFaint}
                     />
                   )}
                 </LinearGradient>
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
   },
   messageTimeOther: {
-    color: '#C7C7CC',
+    color: T.textFaint,
   },
   emptyContainer: {
     flex: 1,
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.paper,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: T.line,
     paddingHorizontal: 16,
     paddingVertical: Platform.OS === 'ios' ? 8 : 4,
     maxHeight: 100,

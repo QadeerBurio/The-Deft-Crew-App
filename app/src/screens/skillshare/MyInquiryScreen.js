@@ -21,6 +21,7 @@ import { timeAgo } from '../../utils/time';
 import { goToAuth } from '../../utils/goToAuth';
 
 import { color as T, font as F } from "../../theme/tokens";
+import ScreenHeader from "../../ui/ScreenHeader";
 // last inquiries per user, so returning to this screen is instant
 const inquiriesCache = new Map();
 
@@ -39,7 +40,7 @@ const InquiryItem = memo(function InquiryItem({ item, onPress }) {
       activeOpacity={0.8}
     >
       <LinearGradient
-        colors={[T.white, isActive ? '#FFF8F0' : T.white]}
+        colors={[T.white, isActive ? T.yellowSoft : T.white]}
         style={styles.cardGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -91,7 +92,7 @@ const InquiryItem = memo(function InquiryItem({ item, onPress }) {
           activeOpacity={0.7}
         >
           <LinearGradient
-            colors={[T.yellow, '#f7b731']}
+            colors={[T.yellow, T.yellow]}
             style={styles.chatGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -190,7 +191,7 @@ export default function MyInquiriesScreen({ navigation }) {
     return (
       <SafeAreaView style={styles.centerContainer} edges={['top']}>
         <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
-        <Ionicons name="person-outline" size={64} color="#C7C7CC" />
+        <Ionicons name="person-outline" size={64} color={T.textFaint} />
         <Text style={styles.emptyTitle}>login required</Text>
         <Text style={styles.emptySubtext}>login to see your inquiries</Text>
         <TouchableOpacity
@@ -198,7 +199,7 @@ export default function MyInquiriesScreen({ navigation }) {
           onPress={() => goToAuth(setIsGuest)}
         >
           <LinearGradient
-            colors={[T.yellow, '#f7b731']}
+            colors={[T.yellow, T.yellow]}
             style={styles.loginGradient}
           >
             <Text style={styles.loginButtonText}>login</Text>
@@ -222,22 +223,7 @@ export default function MyInquiriesScreen({ navigation }) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
-      <View style={styles.headerBar}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={goBack}
-          activeOpacity={0.7}
-          hitSlop={8}
-        >
-          <Ionicons
-            name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'}
-            size={24}
-            color={T.ink}
-          />
-        </TouchableOpacity>
-        <Text style={styles.headerBarTitle}>my inquiries</Text>
-        <View style={styles.headerPlaceholder} />
-      </View>
+      <ScreenHeader title="my inquiries" onBack={goBack} />
 
       <View style={styles.statsContainer}>
         <View style={styles.statsRow}>
@@ -250,7 +236,7 @@ export default function MyInquiriesScreen({ navigation }) {
           </LinearGradient>
 
           <LinearGradient
-            colors={[T.white, '#F0FFF4']}
+            colors={[T.white, T.successBg]}
             style={[styles.statCard, styles.statCardActive]}
           >
             <Text style={[styles.statNumber, { color: T.success }]}>{counts.active}</Text>
@@ -260,15 +246,15 @@ export default function MyInquiriesScreen({ navigation }) {
 
         <View style={styles.statsRow}>
           <LinearGradient
-            colors={[T.white, '#F8F0FF']}
+            colors={[T.white, T.sand]}
             style={[styles.statCard, styles.statCardResolved]}
           >
-            <Text style={[styles.statNumber, { color: '#AF52DE' }]}>{counts.resolved}</Text>
+            <Text style={[styles.statNumber, { color: T.ink }]}>{counts.resolved}</Text>
             <Text style={styles.statLabel}>resolved</Text>
           </LinearGradient>
 
           <LinearGradient
-            colors={[T.white, '#FFF8F0']}
+            colors={[T.white, T.yellowSoft]}
             style={[styles.statCard, styles.statCardBrowse]}
           >
             <TouchableOpacity
@@ -303,7 +289,7 @@ export default function MyInquiriesScreen({ navigation }) {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <LinearGradient
-                colors={['#f9c34920', '#f7b73120']}
+                colors={[T.yellowSoft, T.yellowSoft]}
                 style={styles.emptyIconContainer}
               >
                 <Ionicons name="chatbubbles-outline" size={64} color={T.yellow} />
@@ -317,7 +303,7 @@ export default function MyInquiriesScreen({ navigation }) {
                 onPress={goBrowse}
               >
                 <LinearGradient
-                  colors={[T.yellow, '#f7b731']}
+                  colors={[T.yellow, T.yellow]}
                   style={styles.emptyButtonGradient}
                 >
                   <Ionicons name="search-outline" size={20} color={T.white} />
@@ -398,7 +384,7 @@ const styles = StyleSheet.create({
   },
   statCardResolved: {
     borderWidth: 1,
-    borderColor: '#AF52DE30',
+    borderColor: T.sand,
   },
   statCardBrowse: {
     borderWidth: 1,
@@ -525,7 +511,7 @@ const styles = StyleSheet.create({
   },
   lastMessage: {
     fontSize: 14, fontFamily: F.body,
-    color: '#3A3A3C',
+    color: T.textMuted,
     lineHeight: 20,
     flex: 1,
   },

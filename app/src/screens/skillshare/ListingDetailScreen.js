@@ -15,6 +15,7 @@ import { goToAuth } from '../../utils/goToAuth';
 import useMyProfessionalProfile from '../../hooks/useMyProfessionalProfile';
 
 import { color as T, font as F } from "../../theme/tokens";
+import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
 const { width } = Dimensions.get('window');
 const HERO_WIDTH = width - 40; // matches the ScrollView's 20px content padding on each side
 
@@ -213,15 +214,7 @@ export default function ListingDetailScreen({ route, navigation }) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
-      <View style={styles.topHeader}>
-        <TouchableOpacity onPress={goBack} hitSlop={10}>
-          <Ionicons name="arrow-back" size={22} color={INK} />
-        </TouchableOpacity>
-        <Text style={styles.topHeaderTitle}>details</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('NotificationSkillshare')} hitSlop={10}>
-          <Ionicons name="notifications-outline" size={22} color={INK} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader title="details" onBack={goBack} right={<HeaderIconButton icon="notifications-outline" label="notifications" onPress={() => navigation.navigate('NotificationSkillshare')} />} />
 
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: 40 + insets.bottom }]}
@@ -585,9 +578,9 @@ const styles = StyleSheet.create({
 
   pill: {
     flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start',
-    backgroundColor: '#FFF3D6', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12, marginBottom: 10,
+    backgroundColor: T.yellowSoft, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12, marginBottom: 10,
   },
-  pillText: { fontSize: 12, fontFamily: F.bodyBold, color: '#8a6d1d' },
+  pillText: { fontSize: 12, fontFamily: F.bodyBold, color: T.ink },
 
   paidTopRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
   statusInlineRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
@@ -627,7 +620,7 @@ const styles = StyleSheet.create({
     padding: 16, marginBottom: 14,
   },
   divider: { height: 1, backgroundColor: T.sand, marginVertical: 12 },
-  bodyText: { fontSize: 14, fontFamily: F.body, color: '#3a3a3c', lineHeight: 21 },
+  bodyText: { fontSize: 14, fontFamily: F.body, color: T.textMuted, lineHeight: 21 },
 
   sectionTitle: { fontSize: 16, fontFamily: F.bodyBold, color: INK, marginBottom: 12 },
   sectionLabelSmall: { fontSize: 11, fontFamily: F.bodyBold, color: MUTED, letterSpacing: 0.6, marginBottom: 8, marginLeft: 2 },
@@ -644,7 +637,7 @@ const styles = StyleSheet.create({
   roadmapRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },
   roadmapDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: T.sand, marginTop: 5 },
   roadmapDotActive: { backgroundColor: BRAND },
-  roadmapText: { flex: 1, fontSize: 13, fontFamily: F.body, color: '#3a3a3c', lineHeight: 19 },
+  roadmapText: { flex: 1, fontSize: 13, fontFamily: F.body, color: T.textMuted, lineHeight: 19 },
 
   priceCard: { backgroundColor: T.card, borderRadius: 16, borderWidth: 1, borderColor: BORDER, padding: 18, marginBottom: 14, alignItems: 'center' },
   priceValue: { fontSize: 28, fontFamily: F.heading, color: INK },
@@ -670,7 +663,7 @@ const styles = StyleSheet.create({
 
   modalOverlay: { flex: 1, backgroundColor: T.overlay, justifyContent: 'flex-end' },
   modalContent: { backgroundColor: T.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
-  modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E5EA', alignSelf: 'center', marginBottom: 16 },
+  modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: T.sand, alignSelf: 'center', marginBottom: 16 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   modalTitle: { fontSize: 19, fontFamily: F.heading, color: INK },
   modalSubtitle: { fontSize: 13, fontFamily: F.body, color: MUTED, marginTop: 4, marginBottom: 14 },

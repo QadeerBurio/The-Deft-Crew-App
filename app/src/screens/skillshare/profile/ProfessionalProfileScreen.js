@@ -14,6 +14,7 @@ import { getMyListings, getMySkillOffers, getMyMatches } from '../../../api/api'
 import { goToAuth } from '../../../utils/goToAuth';
 
 import { color as T, font as F } from "../../../theme/tokens";
+import ScreenHeader, { HeaderIconButton } from "../../../ui/ScreenHeader";
 // Last loaded data per user, so coming back shows it instantly.
 const profileCache = {};
 
@@ -36,23 +37,7 @@ const NAV_ITEMS = [
 function SkillShareHeader({ navigation, goTo }) {
   return (
     <>
-      <View style={styles.topHeader}>
-        <TouchableOpacity
-          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('DashboardMain'))}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="arrow-back" size={22} color={INK} />
-        </TouchableOpacity>
-        <Text style={styles.topHeaderTitle}>
-          skill<Text style={{ color: BRAND }}>share</Text>
-        </Text>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('NotificationSkillshare')}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="notifications-outline" size={22} color={INK} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader title="skillsshare" onBack={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('DashboardMain'))} right={<HeaderIconButton icon="notifications-outline" label="notifications" onPress={() => navigation.navigate('NotificationSkillshare')} />} />
 
       <View style={styles.navRow}>
         {NAV_ITEMS.map((item) => {
@@ -272,8 +257,8 @@ export default function ProfessionalProfileScreen({ navigation }) {
             <Text style={styles.actionLabel}>listings</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('MyOffers')}>
-            <View style={[styles.actionIcon, { backgroundColor: '#FF950015' }]}>
-              <Ionicons name="git-pull-request-outline" size={22} color="#FF9500" />
+            <View style={[styles.actionIcon, { backgroundColor: T.yellowSoft }]}>
+              <Ionicons name="git-pull-request-outline" size={22} color={T.ink} />
             </View>
             <Text style={styles.actionLabel}>offers</Text>
           </TouchableOpacity>
@@ -380,31 +365,31 @@ navUnderline: { marginTop: 4, height: 2, width: 24, backgroundColor: BRAND, bord
   emptyButtonText: { color: T.ink, fontFamily: F.bodyBold, fontSize: 15 },
   avatarWrap: { marginTop: 0, marginBottom: 12 },
   avatar: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center' },
-  avatarText: { fontSize: 36, fontFamily: F.heading, color: '#4A3B10' },
+  avatarText: { fontSize: 36, fontFamily: F.heading, color: T.ink },
   name: { fontSize: 22, fontFamily: F.heading, color: INK },
   headline: { fontSize: 14, fontFamily: F.body, color: MUTED, marginTop: 2, marginBottom: 16, textAlign: 'center' },
   quickStatsRow: {
     flexDirection: 'row', width: '100%', backgroundColor: T.card, borderRadius: 16,
-    borderWidth: 1, borderColor: '#EFE3C0', paddingVertical: 14, marginBottom: 14, justifyContent: 'space-around',
+    borderWidth: 1, borderColor: T.line, paddingVertical: 14, marginBottom: 14, justifyContent: 'space-around',
   },
   quickStat: { alignItems: 'center' },
   quickStatNumber: { fontSize: 18, fontFamily: F.heading, color: INK },
   quickStatLabel: { fontSize: 11, fontFamily: F.body, color: MUTED, marginTop: 2 },
-  quickStatDivider: { width: 1, backgroundColor: '#EFE3C0' },
+  quickStatDivider: { width: 1, backgroundColor: T.yellowSoft },
   actionsGrid: { flexDirection: 'row', gap: 10, width: '100%', marginBottom: 14 },
   actionCard: {
     flex: 1, backgroundColor: T.card, borderRadius: 14, paddingVertical: 14,
-    alignItems: 'center', borderWidth: 1, borderColor: '#EFE3C0',
+    alignItems: 'center', borderWidth: 1, borderColor: T.line,
   },
   actionIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   actionLabel: { fontSize: 11, color: INK, marginTop: 6, fontFamily: F.bodySemi },
   section: {
     width: '100%', backgroundColor: T.card, borderRadius: 16,
-    borderWidth: 1, borderColor: '#EFE3C0', padding: 16, marginBottom: 14,
+    borderWidth: 1, borderColor: T.line, padding: 16, marginBottom: 14,
   },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   sectionTitle: { fontSize: 15, fontFamily: F.bodyBold, color: INK },
-  sectionText: { fontSize: 13, fontFamily: F.body, color: '#3A3A3C', lineHeight: 20 },
+  sectionText: { fontSize: 13, fontFamily: F.body, color: T.textMuted, lineHeight: 20 },
   pillWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pill: { backgroundColor: T.sand, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6 },
   pillText: { fontSize: 12, fontFamily: F.bodySemi, color: INK },

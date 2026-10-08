@@ -15,7 +15,7 @@ import { color as T, font as F } from "../../../theme/tokens";
 import { LinearGradient } from "../../../ui/FlatGradient"; // flat fills, no gradients (design system)
 
 const BRAND = T.yellow;
-const BRAND_DARK = '#efa52e';
+const BRAND_DARK = T.ink;
 
 // Local hero illustration — replace with your own asset at this path.
 const HERO_IMAGE = require('../../../../../assets/images/welcome_hero.png');
@@ -76,7 +76,7 @@ export default function ProfileWelcomeScreen({ navigation }) {
 
       <View style={styles.content}>
         <View style={styles.pill}>
-          <Ionicons name="school-outline" size={14} color="#8A6D1D" />
+          <Ionicons name="school-outline" size={14} color={T.ink} />
           <Text style={styles.pillText}>welcome to skillshare</Text>
         </View>
 
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     backgroundColor: T.sand,
     borderWidth: 1,
-    borderColor: '#EFE3C0',
+    borderColor: T.line,
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   pillText: {
     fontSize: 11,
     fontFamily: F.bodyBold,
-    color: '#8A6D1D',
+    color: T.ink,
     letterSpacing: 0.5,
   },
 
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
 
   subtitle: {
     fontSize: 15, fontFamily: F.body,
-    color: '#6B6B70',
+    color: T.textMuted,
     lineHeight: 22,
     marginTop: 14,
     marginBottom: 28,
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: T.line,
     marginTop: 12,
   },
 

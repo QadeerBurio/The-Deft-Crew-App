@@ -10,6 +10,7 @@ import { AuthContext } from '../../context/AuthContext';
 import useMyProfessionalProfile from '../../hooks/useMyProfessionalProfile';
 
 import { color as T, font as F } from "../../theme/tokens";
+import ScreenHeader from "../../ui/ScreenHeader";
 const BRAND = T.yellow;
 const INK = T.ink;
 const MUTED = T.textMuted;
@@ -96,12 +97,9 @@ export default function SelectListingTypeScreen({ navigation }) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
-      <View style={styles.topHeader}>
-        <TouchableOpacity onPress={goBack} hitSlop={10}>
-          <Ionicons name="arrow-back" size={22} color={INK} />
-        </TouchableOpacity>
-        <Text style={styles.topHeaderTitle}>skill<Text style={{ color: BRAND }}>share</Text></Text>
-        <TouchableOpacity onPress={() => navigation.navigate('SkillProfile')} hitSlop={10}>
+      <ScreenHeader title="skillsshare" onBack={goBack} right={
+          <>
+            <TouchableOpacity onPress={() => navigation.navigate('SkillProfile')} hitSlop={10}>
           {myPhoto ? (
             <Image source={{ uri: myPhoto }} style={styles.headerAvatar} />
           ) : (
@@ -110,7 +108,8 @@ export default function SelectListingTypeScreen({ navigation }) {
             </View>
           )}
         </TouchableOpacity>
-      </View>
+          </>
+        } />
 
       <View style={styles.navRow}>
         {NAV_ITEMS.map((item) => {

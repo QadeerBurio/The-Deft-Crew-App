@@ -10,6 +10,7 @@ import { getOffersForListing, updateOfferStatus } from '../../api/api';
 import { timeAgo } from '../../utils/time';
 
 import { color as T, font as F } from "../../theme/tokens";
+import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
 const BRAND = T.yellow;
 const INK = T.ink;
 const MUTED = T.textMuted;
@@ -25,10 +26,10 @@ const OfferCard = memo(function OfferCard({ item, isBarter, busy, onAction, onOp
   const offeror = item.offerorId || {};
 
   const statusPill = isAccepted
-    ? { bg: T.successBg, color: '#2e7d32', label: 'Accepted', icon: 'checkmark-circle' }
+    ? { bg: T.successBg, color: T.success, label: 'Accepted', icon: 'checkmark-circle' }
     : isRejected
-    ? { bg: T.dangerBg, color: '#c62828', label: 'Rejected', icon: 'close-circle' }
-    : { bg: '#FFF3D6', color: '#8a6d1d', label: 'Pending', icon: 'time' };
+    ? { bg: T.dangerBg, color: T.danger, label: 'Rejected', icon: 'close-circle' }
+    : { bg: T.yellowSoft, color: T.ink, label: 'Pending', icon: 'time' };
 
   return (
     <View style={styles.card}>
@@ -242,15 +243,7 @@ export default function ManageOffersScreen({ route, navigation }) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
-      <View style={styles.topHeader}>
-        <TouchableOpacity onPress={goBack} hitSlop={10}>
-          <Ionicons name="arrow-back" size={22} color={INK} />
-        </TouchableOpacity>
-        <Text style={styles.topHeaderTitle}>manage offers</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('NotificationSkillshare')}>
-          <Ionicons name="notifications-outline" size={22} color={INK} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader title="manage offers" onBack={goBack} right={<HeaderIconButton icon="notifications-outline" label="notifications" onPress={() => navigation.navigate('NotificationSkillshare')} />} />
 
       <FlatList
         data={filtered}
@@ -351,13 +344,13 @@ const styles = StyleSheet.create({
   detailValue: { color: INK, fontFamily: F.bodyBold },
 
   messageBox: { backgroundColor: T.sand, borderRadius: 10, padding: 12, marginTop: 6, marginBottom: 4 },
-  messageText: { fontSize: 13, fontFamily: F.body, color: '#3a3a3c', fontStyle: 'italic', lineHeight: 18 },
+  messageText: { fontSize: 13, fontFamily: F.body, color: T.textMuted, fontStyle: 'italic', lineHeight: 18 },
 
   actionRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
   acceptBtn: { flex: 1, backgroundColor: BRAND, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
   acceptBtnText: { fontSize: 14, fontFamily: F.bodyBold, color: INK },
   rejectBtn: { flex: 1, borderWidth: 1, borderColor: BORDER, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
-  rejectBtnText: { fontSize: 14, fontFamily: F.bodyBold, color: '#c62828' },
+  rejectBtnText: { fontSize: 14, fontFamily: F.bodyBold, color: T.danger },
   outlineBtn: { flex: 1, borderWidth: 1, borderColor: BORDER, borderRadius: 12, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
   outlineBtnText: { fontSize: 13, fontFamily: F.bodyBold, color: INK, textAlign: 'center' },
   chatBtn: { flex: 1.5, flexDirection: 'row', gap: 6, backgroundColor: BRAND, borderRadius: 12, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },

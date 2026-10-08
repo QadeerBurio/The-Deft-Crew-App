@@ -97,9 +97,9 @@ const OFFER_META = {
 
 const STATUS_STYLE = {
   active: { bg: C.dark, fg: C.gold },
-  completed: { bg: '#e7f6ec', fg: C.ok },
-  cancelled: { bg: '#fde8ed', fg: C.danger },
-  closed: { bg: '#fde8ed', fg: C.danger },
+  completed: { bg: T.successBg, fg: C.ok },
+  cancelled: { bg: T.dangerBg, fg: C.danger },
+  closed: { bg: T.dangerBg, fg: C.danger },
 };
 
 const senderOf = (m) => m?.sender?._id || m?.sender;
@@ -904,7 +904,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 22,
-    backgroundColor: '#fde8ed',
+    backgroundColor: T.dangerBg,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -961,7 +961,7 @@ const styles = StyleSheet.create({
     width: 11,
     height: 11,
     borderRadius: 6,
-    backgroundColor: '#cfcfcf',
+    backgroundColor: T.line,
     borderWidth: 2,
     borderColor: C.white,
   },
@@ -1056,7 +1056,7 @@ const styles = StyleSheet.create({
     width: IMAGE_W,
     height: Math.round(IMAGE_W * 0.62),
     borderRadius: 14,
-    backgroundColor: '#2a2a2a',
+    backgroundColor: T.inkSoft,
     justifyContent: 'center',
     alignItems: 'center',
   },

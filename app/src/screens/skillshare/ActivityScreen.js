@@ -22,6 +22,7 @@ import { timeAgo } from '../../utils/time';
 import { goToAuth } from '../../utils/goToAuth';
 
 import { color as T, font as F } from "../../theme/tokens";
+import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
 // Last loaded activity per user, so coming back shows it instantly.
 const activityCache = {};
 
@@ -37,9 +38,9 @@ const ActivityItem = React.memo(({ item, onPress }) => {
   const getIconColor = (type) => {
     switch (type) {
       case 'listing': return T.yellow;
-      case 'offer': return '#FF9500';
+      case 'offer': return T.ink;
       case 'match': return T.success;
-      case 'inquiry': return '#AF52DE';
+      case 'inquiry': return T.ink;
       default: return T.textMuted;
     }
   };
@@ -65,7 +66,7 @@ const ActivityItem = React.memo(({ item, onPress }) => {
         activeOpacity={0.7}
       >
         <LinearGradient
-          colors={[T.white, '#FFF8F0']}
+          colors={[T.white, T.yellowSoft]}
           style={styles.cardGradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -78,12 +79,12 @@ const ActivityItem = React.memo(({ item, onPress }) => {
               <Text style={styles.activityTitle}>{item.title}</Text>
               <Text style={styles.activitySubtitle}>{item.subtitle}</Text>
               <View style={styles.activityTimeContainer}>
-                <Ionicons name="time-outline" size={12} color="#C7C7CC" />
+                <Ionicons name="time-outline" size={12} color={T.textFaint} />
                 <Text style={styles.activityTime}>{timeAgo(item.timestamp)}</Text>
               </View>
             </View>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+          <Ionicons name="chevron-forward" size={20} color={T.textFaint} />
         </LinearGradient>
       </TouchableOpacity>
     </View>
@@ -296,7 +297,7 @@ export default function ActivityScreen({ navigation }) {
     return (
       <SafeAreaView style={styles.centerContainer} edges={['top']}>
         <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
-        <Ionicons name="lock-closed-outline" size={64} color="#C7C7CC" />
+        <Ionicons name="lock-closed-outline" size={64} color={T.textFaint} />
         <Text style={styles.emptyTitle}>login required</Text>
         <Text style={styles.emptySubtext}>login to see your activity</Text>
         <TouchableOpacity
@@ -304,7 +305,7 @@ export default function ActivityScreen({ navigation }) {
           onPress={() => goToAuth(setIsGuest)}
         >
           <LinearGradient
-            colors={[T.yellow, '#f7b731']}
+            colors={[T.yellow, T.yellow]}
             style={styles.loginGradient}
           >
             <Text style={styles.loginButtonText}>login</Text>
@@ -319,28 +320,7 @@ export default function ActivityScreen({ navigation }) {
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       {/* Modern Header */}
-      <View style={styles.headerBar}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={handleBack}
-          activeOpacity={0.7}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons 
-            name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'} 
-            size={24} 
-            color={T.ink} 
-          />
-        </TouchableOpacity>
-        <Text style={styles.headerBarTitle}>activity</Text>
-        <TouchableOpacity 
-          style={styles.headerAction}
-          onPress={handleRefresh}
-          disabled={refreshing}
-        >
-          <Ionicons name="refresh-outline" size={22} color={T.yellow} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader title="activity" onBack={handleBack} right={<HeaderIconButton icon="refresh-outline" label="refresh" onPress={handleRefresh} />} />
 
       {/* Stats Summary */}
       <View style={styles.statsContainer}>
@@ -355,7 +335,7 @@ export default function ActivityScreen({ navigation }) {
               <Text style={styles.statLabel}>listings</Text>
             </View>
             <View style={[styles.statItem, styles.statItemOffers]}>
-              <Text style={[styles.statNumber, { color: '#FF9500' }]}>{stats.offers}</Text>
+              <Text style={[styles.statNumber, { color: T.ink }]}>{stats.offers}</Text>
               <Text style={styles.statLabel}>offers</Text>
             </View>
             <View style={[styles.statItem, styles.statItemMatches]}>
@@ -363,7 +343,7 @@ export default function ActivityScreen({ navigation }) {
               <Text style={styles.statLabel}>matches</Text>
             </View>
             <View style={[styles.statItem, styles.statItemInquiries]}>
-              <Text style={[styles.statNumber, { color: '#AF52DE' }]}>{stats.inquiries}</Text>
+              <Text style={[styles.statNumber, { color: T.ink }]}>{stats.inquiries}</Text>
               <Text style={styles.statLabel}>inquiries</Text>
             </View>
           </View>
@@ -407,7 +387,7 @@ export default function ActivityScreen({ navigation }) {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <LinearGradient
-                colors={['#f9c34920', '#f7b73120']}
+                colors={[T.yellowSoft, T.yellowSoft]}
                 style={styles.emptyIconContainer}
               >
                 <Ionicons name="time-outline" size={48} color={T.yellow} />
@@ -461,7 +441,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FFF8F0',
+    backgroundColor: T.yellowSoft,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -504,16 +484,16 @@ const styles = StyleSheet.create({
     backgroundColor: T.sand,
   },
   statItemListings: {
-    backgroundColor: '#FFF8F0',
+    backgroundColor: T.yellowSoft,
   },
   statItemOffers: {
-    backgroundColor: '#FFF8F0',
+    backgroundColor: T.yellowSoft,
   },
   statItemMatches: {
-    backgroundColor: '#F0FFF4',
+    backgroundColor: T.successBg,
   },
   statItemInquiries: {
-    backgroundColor: '#F8F0FF',
+    backgroundColor: T.sand,
   },
   statNumber: {
     fontSize: 20,
@@ -633,7 +613,7 @@ const styles = StyleSheet.create({
   },
   activityTime: {
     fontSize: 12, fontFamily: F.body,
-    color: '#C7C7CC',
+    color: T.textFaint,
   },
   emptyContainer: {
     padding: 60,
@@ -656,7 +636,7 @@ const styles = StyleSheet.create({
   },
   emptySubtext: {
     fontSize: 14, fontFamily: F.body,
-    color: '#C7C7CC',
+    color: T.textFaint,
     marginTop: 4,
     textAlign: 'center',
   },

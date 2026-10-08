@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
   avatarWrap: { position: 'relative', marginRight: 14 },
   avatar: { width: 52, height: 52, borderRadius: 26 },
   avatarFallback: { backgroundColor: BRAND, justifyContent: 'center', alignItems: 'center' },
-  avatarInitial: { fontSize: 20, fontFamily: F.heading, color: '#4A3B10' },
+  avatarInitial: { fontSize: 20, fontFamily: F.heading, color: T.ink },
   typeBadge: {
     position: 'absolute',
     top: -2,
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
   previewTextUnread: { color: INK, fontFamily: F.bodyBold },
 
   rowRight: { alignItems: 'flex-end', gap: 6 },
-  timeText: { fontSize: 12, color: '#8a6d1d', fontFamily: F.bodySemi },
+  timeText: { fontSize: 12, color: T.ink, fontFamily: F.bodySemi },
   unreadBadge: {
     backgroundColor: BRAND,
     borderRadius: 10,

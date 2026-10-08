@@ -11,6 +11,7 @@ import { AuthContext } from '../../context/AuthContext';
 import ListingCard from '../../components/ListingCard';
 
 import { color as T, font as F } from "../../theme/tokens";
+import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
 const BRAND = T.yellow;
 const INK = T.ink;
 const MUTED = T.textMuted;
@@ -158,17 +159,7 @@ export default function Explore({ navigation }) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
-      <View style={styles.topHeader}>
-        <TouchableOpacity onPress={goBack} hitSlop={10}>
-          <Ionicons name="arrow-back" size={22} color={INK} />
-        </TouchableOpacity>
-        <Text style={styles.topHeaderTitle}>
-          skill<Text style={{ color: BRAND }}>share</Text>
-        </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('NotificationSkillshare')} hitSlop={10}>
-          <Ionicons name="notifications-outline" size={22} color={INK} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader title="skillsshare" onBack={goBack} right={<HeaderIconButton icon="notifications-outline" label="notifications" onPress={() => navigation.navigate('NotificationSkillshare')} />} />
 
       <View style={styles.navRow}>
         {NAV_ITEMS.map((item) => {

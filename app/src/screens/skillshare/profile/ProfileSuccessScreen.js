@@ -170,16 +170,16 @@ const styles = StyleSheet.create({
   strengthText: { fontSize: 14, color: MUTED, fontFamily: F.bodySemi },
   previewCard: {
     flexDirection: 'row', alignItems: 'center', width: '100%',
-    backgroundColor: T.card, borderRadius: 16, borderWidth: 1, borderColor: '#EFE3C0',
+    backgroundColor: T.card, borderRadius: 16, borderWidth: 1, borderColor: T.line,
     padding: 16, marginBottom: 12,
   },
   avatar: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center' },
-  avatarText: { color: '#4A3B10', fontSize: 22, fontFamily: F.heading },
+  avatarText: { color: T.ink, fontSize: 22, fontFamily: F.heading },
   previewName: { fontSize: 16, fontFamily: F.bodyBold, color: INK },
   previewHeadline: { fontSize: 12, fontFamily: F.body, color: MUTED, marginTop: 2 },
   skillCard: {
     width: '100%', backgroundColor: T.card, borderRadius: 16,
-    borderWidth: 1, borderColor: '#EFE3C0', padding: 16, marginBottom: 30,
+    borderWidth: 1, borderColor: T.line, padding: 16, marginBottom: 30,
   },
   skillCardLabel: { fontSize: 10, fontFamily: F.bodyBold, color: MUTED, letterSpacing: 0.5, marginBottom: 8 },
   skillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   primaryText: { fontSize: 15, fontFamily: F.bodyBold, color: INK },
   secondaryButton: {
     width: '100%', alignItems: 'center', paddingVertical: 16, marginTop: 12,
-    borderRadius: 14, borderWidth: 1, borderColor: '#E5E5EA',
+    borderRadius: 14, borderWidth: 1, borderColor: T.line,
   },
   secondaryText: { fontSize: 15, fontFamily: F.bodySemi, color: INK },
 });

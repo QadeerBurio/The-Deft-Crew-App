@@ -20,6 +20,7 @@ import { AuthContext } from '../../context/AuthContext';
 import { goToAuth } from '../../utils/goToAuth';
 
 import { color as T, font as F } from "../../theme/tokens";
+import ScreenHeader from "../../ui/ScreenHeader";
 const BRAND = T.yellow;
 const INK = T.ink;
 const MUTED = T.textMuted;
@@ -154,13 +155,7 @@ export default function CreateOfferScreen({ route, navigation }) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
-      <View style={styles.topHeader}>
-        <TouchableOpacity onPress={goBack} hitSlop={10}>
-          <Ionicons name="arrow-back" size={22} color={INK} />
-        </TouchableOpacity>
-        <Text style={styles.topHeaderTitle}>submit offer</Text>
-        <View style={{ width: 22 }} />
-      </View>
+      <ScreenHeader title="submit offer" onBack={goBack} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -307,10 +302,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   typePill: {
-    alignSelf: 'flex-start', backgroundColor: '#FFF3D6',
+    alignSelf: 'flex-start', backgroundColor: T.yellowSoft,
     paddingHorizontal: 12, paddingVertical: 4, borderRadius: 10, marginBottom: 6,
   },
-  typePillText: { fontSize: 12, fontFamily: F.bodyBold, color: '#8a6d1d' },
+  typePillText: { fontSize: 12, fontFamily: F.bodyBold, color: T.ink },
   listingTitle: { fontSize: 19, fontFamily: F.heading, color: INK, lineHeight: 24 },
   listingSubtext: { fontSize: 13, fontFamily: F.body, color: MUTED, marginTop: 12 },
 

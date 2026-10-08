@@ -30,15 +30,16 @@ import { timeAgo } from '../../utils/time';
 import { goToAuth } from '../../utils/goToAuth';
 
 import { color as T, font as F } from "../../theme/tokens";
+import ScreenHeader from "../../ui/ScreenHeader";
 // Last loaded stats + activity per user, so coming back is instant.
 const statsCache = {};
 
 const ICON_CONFIGS = {
-  listing: { icon: 'document-text-outline', color: T.yellow, bg: '#f9c34915' },
-  offer: { icon: 'git-pull-request-outline', color: '#FF9500', bg: '#FF950015' },
-  match: { icon: 'people-outline', color: T.success, bg: '#34C75915' },
-  inquiry: { icon: 'chatbubble-outline', color: '#AF52DE', bg: '#AF52DE15' },
-  default: { icon: 'time-outline', color: T.textMuted, bg: '#8E8E9315' }
+  listing: { icon: 'document-text-outline', color: T.yellow, bg: T.yellowSoft },
+  offer: { icon: 'git-pull-request-outline', color: T.ink, bg: T.yellowSoft },
+  match: { icon: 'people-outline', color: T.success, bg: T.successBg },
+  inquiry: { icon: 'chatbubble-outline', color: T.ink, bg: T.sand },
+  default: { icon: 'time-outline', color: T.textMuted, bg: T.sand }
 };
 
 const capitalize = (v) => {
@@ -64,12 +65,12 @@ const ActivityItem = React.memo(({ item, onPress }) => {
           <Text style={styles.activityTitle}>{item.title}</Text>
           <Text style={styles.activitySubtitle}>{item.subtitle}</Text>
           <View style={styles.activityTimeContainer}>
-            <Ionicons name="time-outline" size={12} color="#C7C7CC" />
+            <Ionicons name="time-outline" size={12} color={T.textFaint} />
             <Text style={styles.activityTime}>{timeAgo(item.timestamp)}</Text>
           </View>
         </View>
         <View style={styles.activityArrow}>
-          <Ionicons name="chevron-forward" size={18} color="#C7C7CC" />
+          <Ionicons name="chevron-forward" size={18} color={T.textFaint} />
         </View>
       </TouchableOpacity>
     </View>
@@ -302,7 +303,7 @@ export default function SkillProfile({ navigation }) {
         <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <View style={styles.guestContainer}>
           <LinearGradient
-            colors={['#FFF8F0', T.white]}
+            colors={[T.yellowSoft, T.white]}
             style={styles.guestCard}
           >
             <View style={styles.guestIconContainer}>
@@ -316,7 +317,7 @@ export default function SkillProfile({ navigation }) {
               activeOpacity={0.8}
             >
               <LinearGradient
-                colors={[T.yellow, '#f7b731']}
+                colors={[T.yellow, T.yellow]}
                 style={styles.loginGradient}
               >
                 <Text style={styles.loginButtonText}>login</Text>
@@ -334,28 +335,17 @@ export default function SkillProfile({ navigation }) {
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       {/* Modern Header */}
-      <View style={styles.headerBar}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={handleBack}
-          activeOpacity={0.7}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons 
-            name="chevron-back"
-            size={24} 
-            color={T.ink} 
-          />
-        </TouchableOpacity>
-        <Text style={styles.headerBarTitle}>my stats</Text>
-        <TouchableOpacity 
+      <ScreenHeader title="my stats" onBack={handleBack} right={
+          <>
+            <TouchableOpacity 
           style={styles.headerActionButton}
           onPress={handleLogout}
           activeOpacity={0.7}
         >
           <Feather name="log-out" size={22} color={T.textMuted} />
         </TouchableOpacity>
-      </View>
+          </>
+        } />
 
       <ScrollView
         refreshControl={
@@ -383,7 +373,7 @@ export default function SkillProfile({ navigation }) {
                   <Image source={{ uri: userImage }} style={styles.avatar} />
                 ) : (
                   <LinearGradient
-                    colors={[T.yellow, '#f7b731']}
+                    colors={[T.yellow, T.yellow]}
                     style={styles.avatar}
                   >
                     <Text style={styles.avatarText}>{userInitial}</Text>
@@ -438,7 +428,7 @@ export default function SkillProfile({ navigation }) {
               activeOpacity={0.7}
             >
               <LinearGradient
-                colors={[T.yellow, '#f7b731']}
+                colors={[T.yellow, T.yellow]}
                 style={styles.actionIconGradient}
               >
                 <Ionicons name="add-outline" size={24} color={T.white} />
@@ -462,8 +452,8 @@ export default function SkillProfile({ navigation }) {
               onPress={() => navigation.navigate('MyOffers')}
               activeOpacity={0.7}
             >
-              <View style={[styles.actionIcon, { backgroundColor: '#FF950015' }]}>
-                <Ionicons name="git-pull-request-outline" size={24} color="#FF9500" />
+              <View style={[styles.actionIcon, { backgroundColor: T.yellowSoft }]}>
+                <Ionicons name="git-pull-request-outline" size={24} color={T.ink} />
               </View>
               <Text style={styles.actionLabel}>offers</Text>
             </TouchableOpacity>
@@ -502,7 +492,7 @@ export default function SkillProfile({ navigation }) {
           ) : (
             <View style={styles.emptyActivity}>
               <View style={styles.emptyIconContainer}>
-                <Ionicons name="time-outline" size={48} color="#C7C7CC" />
+                <Ionicons name="time-outline" size={48} color={T.textFaint} />
               </View>
               <Text style={styles.emptyActivityText}>no activity yet</Text>
               <Text style={styles.emptyActivitySubtext}>
@@ -898,7 +888,7 @@ const styles = StyleSheet.create({
   },
   activityTime: {
     fontSize: 11, fontFamily: F.body,
-    color: '#C7C7CC',
+    color: T.textFaint,
   },
   activityArrow: {
     width: 28,
@@ -937,7 +927,7 @@ const styles = StyleSheet.create({
   },
   emptyActivitySubtext: {
     fontSize: 13, fontFamily: F.body,
-    color: '#C7C7CC',
+    color: T.textFaint,
     marginTop: 4,
     textAlign: 'center',
   },

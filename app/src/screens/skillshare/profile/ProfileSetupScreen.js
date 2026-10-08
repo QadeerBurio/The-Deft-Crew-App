@@ -31,7 +31,7 @@ const BRAND = T.yellow;
 const BRAND_DARK = T.yellow;
 const INK = T.ink;
 const MUTED = T.textMuted;
-const BORDER = '#E5E5EA';
+const BORDER = T.line;
 
 const TOTAL_STEPS = 5;
 const SUGGESTED_SKILLS = ['UI Design', 'JavaScript', 'Copywriting', 'Data Analysis', 'Marketing'];
@@ -454,7 +454,7 @@ function StepBasicInfo({
       <TextInput
         style={[styles.input, styles.textArea]}
         placeholder="Tell other students about your background, interests, and what kind of projects you're looking for..."
-        placeholderTextColor="#B0B0B5"
+        placeholderTextColor={T.textFaint}
         multiline
         maxLength={500}
         value={bio}
@@ -478,7 +478,7 @@ function StepSkills({ skillInput, setSkillInput, skills, addSkill, removeSkill }
         <TextInput
           style={styles.searchInput}
           placeholder="Search or add a skill (e.g. Graphic Design)"
-          placeholderTextColor="#B0B0B5"
+          placeholderTextColor={T.textFaint}
           value={skillInput}
           onChangeText={setSkillInput}
           onSubmitEditing={() => addSkill(skillInput)}
@@ -499,7 +499,7 @@ function StepSkills({ skillInput, setSkillInput, skills, addSkill, removeSkill }
           <View key={skill} style={styles.skillChip}>
             <Text style={styles.skillChipText}>{skill}</Text>
             <TouchableOpacity onPress={() => removeSkill(skill)}>
-              <Ionicons name="close" size={14} color="#8A6D1D" />
+              <Ionicons name="close" size={14} color={T.ink} />
             </TouchableOpacity>
           </View>
         ))}
@@ -608,7 +608,7 @@ function StepAvailability({
           <TextInput
             style={styles.searchInput}
             placeholder="Type a custom service..."
-            placeholderTextColor="#B0B0B5"
+            placeholderTextColor={T.textFaint}
             value={customServiceInput}
             onChangeText={setCustomServiceInput}
             onSubmitEditing={addCustomService}
@@ -627,7 +627,7 @@ function StepAvailability({
         <TextInput
           style={styles.rateInput}
           placeholder="2500"
-          placeholderTextColor="#B0B0B5"
+          placeholderTextColor={T.textFaint}
           keyboardType="numeric"
           value={startingRate}
           onChangeText={setStartingRate}
@@ -678,7 +678,7 @@ function Field({ label, ...inputProps }) {
   return (
     <View style={{ marginBottom: 14 }}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput style={styles.input} placeholderTextColor="#B0B0B5" {...inputProps} />
+      <TextInput style={styles.input} placeholderTextColor={T.textFaint} {...inputProps} />
     </View>
   );
 }
@@ -700,7 +700,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.card,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#EFE3C0',
+    borderColor: T.line,
     padding: 20,
   },
   progressRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
@@ -735,7 +735,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: BRAND, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 8,
   },
-  skillChipText: { color: '#4A3B10', fontFamily: F.bodyBold, fontSize: 13 },
+  skillChipText: { color: T.ink, fontFamily: F.bodyBold, fontSize: 13 },
   sectionLabel: { fontSize: 11, fontFamily: F.bodyBold, color: MUTED, letterSpacing: 0.5, marginBottom: 8 },
   suggestChip: {
     borderWidth: 1, borderColor: BORDER, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 8,
@@ -748,7 +748,7 @@ const styles = StyleSheet.create({
   },
   serviceChipActive: { backgroundColor: BRAND, borderColor: BRAND },
   serviceChipText: { color: INK, fontFamily: F.bodySemi, fontSize: 13 },
-  serviceChipTextActive: { color: '#4A3B10' },
+  serviceChipTextActive: { color: T.ink },
   addCustomChip: {
     borderWidth: 1, borderColor: BORDER, borderStyle: 'dashed', borderRadius: 20,
     paddingHorizontal: 16, paddingVertical: 9,
