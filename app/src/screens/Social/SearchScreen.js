@@ -6,7 +6,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   FlatList,
   ActivityIndicator,
   Image,
@@ -19,9 +18,9 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { ScreenHeader, Input, Chip, EmptyState, SkeletonBlock } from "../../ui";
 import {
   Ionicons,
-  MaterialCommunityIcons,
   Feather,
 } from "@expo/vector-icons";
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
@@ -43,7 +42,7 @@ const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 // Enhanced Color Palette
 const COLORS = {
   primary: T.yellow,
-  primaryDark: "#e6b800",
+  primaryDark: T.yellow,
   primaryLight: T.yellowSoft,
   primaryGradient: [T.yellow, T.yellow],
   white: T.white,
@@ -57,7 +56,7 @@ const COLORS = {
   success: T.success,
   shadow: "rgba(0,0,0,0.08)",
   blocked: T.danger,
-  student: "#4a90d9",
+  student: T.ink,
 };
 
 const RECENT_SEARCHES_KEY = "@recent_people";
@@ -183,7 +182,7 @@ const UserResultItem = React.memo(
         <Animated.View style={[styles.userResultWrapper, animatedStyle]}>
           <View style={[styles.userResultItem, styles.blockedItem]}>
             <LinearGradient
-              colors={[T.dangerBg, "#fdf0f0"]}
+              colors={[T.dangerBg, T.dangerBg]}
               style={styles.userResultGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -222,7 +221,7 @@ const UserResultItem = React.memo(
                   style={[styles.userSubtitle, styles.blockedText]}
                   numberOfLines={1}
                 >
-                  Blocked User
+                  blocked
                 </Text>
               </View>
 
@@ -245,9 +244,11 @@ const UserResultItem = React.memo(
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
           activeOpacity={1}
+          accessibilityRole="button"
+          accessibilityLabel={`${item.name}${isGuest ? ', sign in to view' : ', open profile'}`}
         >
           <LinearGradient
-            colors={[T.white, T.sand]}
+            colors={[T.white, T.white]}
             style={styles.userResultGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -297,9 +298,11 @@ const UserResultItem = React.memo(
                   />
                 )}
               </View>
-              <Text style={styles.userSubtitle} numberOfLines={1}>
-                {item.headline || item.university?.name || "TDC Member"}
-              </Text>
+              {!!(item.headline || item.university?.name) && (
+                <Text style={styles.userSubtitle} numberOfLines={1}>
+                  {item.headline || item.university?.name}
+                </Text>
+              )}
               {(item.followers > 0 || item.mutualFriends > 0) && (
                 <View style={styles.userMeta}>
                   {item.followers > 0 && (
@@ -331,16 +334,13 @@ const UserResultItem = React.memo(
             </View>
 
             <View style={styles.userAction}>
-              <LinearGradient
-                colors={COLORS.primaryGradient}
-                style={styles.actionButton}
-              >
+              <View style={styles.actionButton}>
                 <Ionicons
                   name={isGuest ? "lock-closed" : "chevron-forward"}
                   size={16}
-                  color={COLORS.white}
+                  color={T.textMuted}
                 />
-              </LinearGradient>
+              </View>
             </View>
           </LinearGradient>
         </TouchableOpacity>
@@ -422,6 +422,8 @@ const RecentPeopleItem = React.memo(
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
           activeOpacity={1}
+          accessibilityRole="button"
+          accessibilityLabel={isBlocked ? `${item.name}, blocked` : `${item.name}, open profile`}
         >
           <View style={styles.recentAvatarContainer}>
             {item.profileImage ? (
@@ -464,17 +466,17 @@ const RecentPeopleItem = React.memo(
             >
               {item.name}
             </Text>
-            <Text
-              style={[
-                styles.recentUserSubtitle,
-                isBlocked && styles.blockedText,
-              ]}
-              numberOfLines={1}
-            >
-              {isBlocked
-                ? "Blocked User"
-                : item.headline || item.university?.name || "TDC Member"}
-            </Text>
+            {!!(isBlocked || item.headline || item.university?.name) && (
+              <Text
+                style={[
+                  styles.recentUserSubtitle,
+                  isBlocked && styles.blockedText,
+                ]}
+                numberOfLines={1}
+              >
+                {isBlocked ? "blocked" : item.headline || item.university?.name}
+              </Text>
+            )}
           </View>
 
           {!isBlocked && (
@@ -482,6 +484,8 @@ const RecentPeopleItem = React.memo(
               style={styles.recentActionButton}
               onPress={() => onRemove?.(item.userId)}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityRole="button"
+              accessibilityLabel={`remove ${item.name} from recent`}
             >
               <Ionicons
                 name="close"
@@ -994,7 +998,7 @@ export default function SearchScreen({ navigation }) {
       return (
         <View style={styles.searchFooterEnd}>
           <View style={styles.footerDivider} />
-          <Text style={styles.searchFooterEndText}>✨ All students loaded</Text>
+          <Text style={styles.searchFooterEndText}>{"that's everyone"}</Text>
           <View style={styles.footerDivider} />
         </View>
       );
@@ -1006,44 +1010,22 @@ export default function SearchScreen({ navigation }) {
     <Animated.View
       style={[styles.searchEmptyContainer, { opacity: emptyOpacity }]}
     >
-      <View style={styles.searchEmptyIconWrapper}>
-        <LinearGradient
-          colors={["rgba(249,195,73,0.12)", "rgba(249,195,73,0.04)"]}
-          style={styles.searchEmptyIconGradient}
-        >
-          <MaterialCommunityIcons
-            name="account-search-outline"
-            size={60}
-            color={COLORS.primary}
-          />
-        </LinearGradient>
-      </View>
-      <Text style={styles.searchEmptyText}>no students found</Text>
-      <Text style={styles.searchEmptySubText}>
-        try a different search term
-      </Text>
+      <EmptyState mood="sus" title="no students found." line="try a different name." />
       {searchHistory.length > 0 && !isGuest && (
         <View style={styles.searchHistoryContainer}>
           <Text style={styles.searchHistoryTitle}>recent searches</Text>
           <View style={styles.searchHistoryChips}>
             {searchHistory.slice(0, 5).map((query, index) => (
-              <TouchableOpacity
+              <Chip
                 key={index}
-                style={styles.searchHistoryChip}
+                label={query}
+                icon={(fg) => <Ionicons name="time-outline" size={14} color={fg} />}
                 onPress={() => {
                   setSearchQuery(query);
                   searchUsers(query, 1, false);
                   setShowRecentPeople(false);
                 }}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name="time-outline"
-                  size={14}
-                  color={COLORS.gray}
-                />
-                <Text style={styles.searchHistoryChipText}>{query}</Text>
-              </TouchableOpacity>
+              />
             ))}
           </View>
         </View>
@@ -1068,14 +1050,9 @@ export default function SearchScreen({ navigation }) {
       >
         <View style={styles.recentHeader}>
           <View style={styles.recentHeaderLeft}>
-            <View style={styles.recentHeaderIcon}>
-              <Ionicons
-                name="time-outline"
-                size={16}
-                color={COLORS.primary}
-              />
-            </View>
-            <Text style={styles.recentTitle}>recent students</Text>
+            <Text style={styles.recentTitle} accessibilityRole="header">
+              recent<Text style={{ color: T.yellow }}>.</Text>
+            </Text>
             {filteredRecent.length > 0 && (
               <View style={styles.recentCountBadge}>
                 <Text style={styles.recentCountText}>
@@ -1088,6 +1065,9 @@ export default function SearchScreen({ navigation }) {
             <TouchableOpacity
               onPress={clearRecentPeople}
               activeOpacity={0.7}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="clear all recent"
             >
               <Text style={styles.clearText}>clear all</Text>
             </TouchableOpacity>
@@ -1111,39 +1091,7 @@ export default function SearchScreen({ navigation }) {
 
         {filteredRecent.length === 0 && (
           <View style={styles.emptyRecentContainer}>
-            <Animated.View
-              style={[
-                styles.emptyRecentIconWrapper,
-                {
-                  transform: [
-                    {
-                      scale: shimmerAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [1, 1.05],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <LinearGradient
-                colors={[
-                  "rgba(249,195,73,0.12)",
-                  "rgba(249,195,73,0.04)",
-                ]}
-                style={styles.emptyRecentIconGradient}
-              >
-                <Ionicons
-                  name="people-outline"
-                  size={40}
-                  color={COLORS.primary}
-                />
-              </LinearGradient>
-            </Animated.View>
-            <Text style={styles.emptyRecentText}>no recent students</Text>
-            <Text style={styles.emptyRecentSubText}>
-              Students you view will appear here
-            </Text>
+            <EmptyState mood="sleepy" title="no recent students." line="students you view will show up here." />
           </View>
         )}
       </Animated.View>
@@ -1152,76 +1100,59 @@ export default function SearchScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       {/* Search Header */}
-      <Animated.View
-        style={[styles.searchHeader, { transform: [{ scale: headerScale }] }]}
-      >
-        <TouchableOpacity
-          onPress={handleBackPress}
-          style={styles.backButton}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="arrow-back" size={22} color={COLORS.black} />
-        </TouchableOpacity>
-
-        <Animated.View
-          style={[
-            styles.searchInputWrapper,
-            isFocusedInput && styles.searchInputFocused,
-          ]}
-        >
-          <Ionicons
-            name="search"
-            size={19}
-            color={isFocusedInput ? COLORS.primary : COLORS.grayLight}
-          />
-          <TextInput
-            ref={searchInputRef}
-            style={styles.searchInput}
-            placeholder="Search students..."
-            placeholderTextColor={COLORS.grayLight}
-            value={searchQuery}
-            onChangeText={handleSearchTextChange}
-            returnKeyType="search"
-            autoCapitalize="none"
-            onFocus={() => {
-              setIsFocusedInput(true);
-              if (searchQuery.length === 0) {
-                setShowRecentPeople(true);
-              }
-            }}
-            onBlur={() => setIsFocusedInput(false)}
-            onSubmitEditing={handleSearchSubmit}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity
-              onPress={clearSearch}
-              activeOpacity={0.7}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons
-                name="close-circle"
-                size={20}
-                color={COLORS.grayLight}
-              />
-            </TouchableOpacity>
-          )}
-        </Animated.View>
+      <ScreenHeader title="search" onBack={handleBackPress} />
+      <Animated.View style={[styles.searchHeader, { transform: [{ scale: headerScale }] }]}>
+        <Input
+          ref={searchInputRef}
+          style={{ flex: 1 }}
+          placeholder="search students"
+          accessibilityLabel="search students"
+          value={searchQuery}
+          onChangeText={handleSearchTextChange}
+          returnKeyType="search"
+          autoCapitalize="none"
+          onFocus={() => {
+            setIsFocusedInput(true);
+            if (searchQuery.length === 0) {
+              setShowRecentPeople(true);
+            }
+          }}
+          onBlur={() => setIsFocusedInput(false)}
+          onSubmitEditing={handleSearchSubmit}
+          left={
+            <Ionicons
+              name="search"
+              size={18}
+              color={isFocusedInput ? COLORS.black : COLORS.grayLight}
+              style={{ marginRight: 8 }}
+            />
+          }
+          right={
+            searchQuery.length > 0 ? (
+              <TouchableOpacity
+                onPress={clearSearch}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel="clear search"
+              >
+                <Ionicons name="close-circle" size={20} color={COLORS.grayLight} />
+              </TouchableOpacity>
+            ) : null
+          }
+        />
       </Animated.View>
 
       {/* Results Header */}
       {searchQuery.length > 0 && searchResults.length > 0 && (
         <Animated.View style={[styles.resultsHeader, { opacity: fadeAnim }]}>
           <View style={styles.resultsHeaderContent}>
-            <LinearGradient
-              colors={COLORS.primaryGradient}
-              style={styles.resultsHeaderIcon}
-            >
-              <Ionicons name="school" size={14} color={COLORS.white} />
-            </LinearGradient>
-            <Text style={styles.resultsTitle}>student results</Text>
+            <Text style={styles.resultsTitle} accessibilityRole="header">
+              students<Text style={{ color: T.yellow }}>.</Text>
+            </Text>
           </View>
           <View style={styles.resultsBadge}>
             <Text style={styles.resultsBadgeText}>
@@ -1237,9 +1168,16 @@ export default function SearchScreen({ navigation }) {
       {searchQuery.length === 0 && showRecentPeople ? (
         renderRecentPeople()
       ) : isSearching && searchResults.length === 0 ? (
-        <View style={styles.searchLoadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.searchLoadingText}>searching students...</Text>
+        <View style={styles.searchLoadingContainer} accessibilityLabel="searching students">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <View key={i} style={styles.skeletonRow}>
+              <SkeletonBlock width={48} height={48} radius={24} />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <SkeletonBlock width="50%" height={13} />
+                <SkeletonBlock width="70%" height={10} style={{ marginTop: 8 }} />
+              </View>
+            </View>
+          ))}
         </View>
       ) : (
         <Animated.View style={{ flex: 1, opacity: listOpacity }}>
@@ -1281,7 +1219,7 @@ export default function SearchScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: T.paper,
   },
 
   // Search Header
@@ -1289,12 +1227,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    gap: 10,
+    paddingBottom: 8,
+    backgroundColor: T.paper,
   },
+  skeletonRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10 },
   backButton: {
     width: 42,
     height: 42,
@@ -1336,13 +1272,11 @@ const styles = StyleSheet.create({
   // Results Header
   resultsHeader: {
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingTop: 10,
+    paddingBottom: 4,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: COLORS.lightGray,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   resultsHeaderContent: {
     flexDirection: "row",
@@ -1357,8 +1291,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   resultsTitle: {
-    fontSize: 15,
-    fontFamily: F.bodyBold,
+    fontSize: 19,
+    fontFamily: F.heading,
     color: COLORS.black,
   },
   resultsBadge: {
@@ -1377,7 +1311,8 @@ const styles = StyleSheet.create({
 
   // Recent People
   recentContainer: {
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingTop: 12,
     flex: 1,
   },
   recentHeader: {
@@ -1400,8 +1335,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   recentTitle: {
-    fontSize: 16,
-    fontFamily: F.bodyBold,
+    fontSize: 19,
+    fontFamily: F.heading,
     color: COLORS.black,
   },
   recentCountBadge: {
@@ -1413,7 +1348,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   recentCountText: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: F.bodySemi,
     color: COLORS.gray,
   },
@@ -1426,6 +1361,12 @@ const styles = StyleSheet.create({
   // Recent People Section
   recentPeopleSection: {
     marginBottom: 16,
+    backgroundColor: T.card,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: T.line,
+    paddingHorizontal: 14,
+    overflow: "hidden",
   },
   recentUserItemWrapper: {
     marginBottom: 2,
@@ -1433,9 +1374,10 @@ const styles = StyleSheet.create({
   recentUserItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 10,
+    minHeight: 60,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: T.lineSoft,
   },
   recentBlockedItem: {
     opacity: 0.6,
@@ -1446,12 +1388,12 @@ const styles = StyleSheet.create({
   recentUserAvatar: {
     width: 44,
     height: 44,
-    borderRadius: 14,
+    borderRadius: 22,
   },
   recentUserAvatarPlaceholder: {
     width: 44,
     height: 44,
-    borderRadius: 14,
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1483,14 +1425,14 @@ const styles = StyleSheet.create({
     color: COLORS.black,
   },
   recentUserSubtitle: {
-    fontSize: 12, fontFamily: F.body,
-    color: COLORS.grayLight,
+    fontSize: 12.5, fontFamily: F.body,
+    color: COLORS.gray,
     marginTop: 2,
   },
   recentActionButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: COLORS.lightGray,
     justifyContent: "center",
     alignItems: "center",
@@ -1499,9 +1441,7 @@ const styles = StyleSheet.create({
   // Empty Recent
   emptyRecentContainer: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 60,
+    paddingTop: 40,
     width: "100%",
   },
   emptyRecentIconWrapper: {
@@ -1542,17 +1482,12 @@ const styles = StyleSheet.create({
   userResultGradient: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 14,
-    paddingHorizontal: 16,
-    borderRadius: 16,
+    padding: 12,
+    paddingHorizontal: 14,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.white,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    borderColor: T.line,
+    backgroundColor: T.card,
   },
   avatarContainer: {
     position: "relative",
@@ -1560,7 +1495,7 @@ const styles = StyleSheet.create({
   avatarRing: {
     width: 52,
     height: 52,
-    borderRadius: 16,
+    borderRadius: 26,
     borderWidth: 2,
     borderColor: "transparent",
     overflow: "hidden",
@@ -1569,14 +1504,14 @@ const styles = StyleSheet.create({
     borderColor: COLORS.danger,
   },
   avatarImg: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   avatarPlaceholder: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1620,7 +1555,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   userName: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: F.bodyBold,
     color: COLORS.black,
   },
@@ -1630,7 +1565,7 @@ const styles = StyleSheet.create({
   studentBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(74, 144, 217, 0.12)",
+    backgroundColor: T.sand,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
@@ -1638,13 +1573,13 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   studentBadgeText: {
-    fontSize: 9,
+    fontSize: 10.5,
     fontFamily: F.bodySemi,
     color: COLORS.student,
   },
   userSubtitle: {
-    fontSize: 12,
-    color: COLORS.grayLight,
+    fontSize: 12.5,
+    color: COLORS.gray,
     marginTop: 2,
     fontFamily: F.bodyMedium,
   },
@@ -1660,7 +1595,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   userFollowersText: {
-    fontSize: 11,
+    fontSize: 12,
     color: COLORS.grayLight,
     fontFamily: F.body,
   },
@@ -1668,9 +1603,10 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   actionButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: T.sand,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1690,8 +1626,7 @@ const styles = StyleSheet.create({
 
   // Search Empty
   searchEmptyContainer: {
-    alignItems: "center",
-    paddingTop: 60,
+    paddingTop: 40,
   },
   searchEmptyIconWrapper: {
     marginBottom: 16,
@@ -1718,7 +1653,7 @@ const styles = StyleSheet.create({
   searchHistoryContainer: {
     marginTop: 24,
     width: "100%",
-    paddingHorizontal: 20,
+    paddingHorizontal: 4,
   },
   searchHistoryTitle: {
     fontSize: 14,
@@ -1751,9 +1686,8 @@ const styles = StyleSheet.create({
   // Search Loading
   searchLoadingContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingTop: 12,
   },
   searchLoadingText: {
     marginTop: 12,
