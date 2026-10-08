@@ -16,7 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { color as T, font as F } from "../theme/tokens";
 const C = {
-  bg: T.white,
+  bg: T.paper,
   dark: T.ink,
   gold: T.yellow,
   goldSoft: T.yellowSoft,
@@ -179,7 +179,7 @@ export default function CommunityGuidelinesScreen({ navigation }) {
           </View>
 
           <Text style={styles.version}>
-            v1.0 · {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+            v1.0
           </Text>
         </ScrollView>
       </Animated.View>
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   backBtn: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 20,
     backgroundColor: C.surface,
     borderWidth: 1,
     borderColor: C.border,
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     backgroundColor: C.goldSoft,
-    borderRadius: 12,
+    borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   card: {
     marginTop: 14,
     backgroundColor: T.card,
-    borderRadius: 18,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: T.line,
     padding: 16,
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 7,
     borderWidth: 1.5,
-    borderColor: '#cfcfcf',
+    borderColor: T.textFaint,
     backgroundColor: T.card,
     alignItems: 'center',
     justifyContent: 'center',
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
   },
   primaryBtn: {
     height: 56,
-    borderRadius: 16,
+    borderRadius: 28,
     backgroundColor: C.dark,
     flexDirection: 'row',
     alignItems: 'center',

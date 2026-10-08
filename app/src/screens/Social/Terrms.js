@@ -1,292 +1,42 @@
-// screens/TermsScreen.js
-import React, { useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  StatusBar,
-  Animated,
-  Platform,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { color as T } from "../../theme/tokens";
-import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
+// screens/Social/Terrms.js — Terms & Conditions (Social settings). Wording unchanged; design system layout.
+import React from 'react';
+import { Text, StyleSheet } from 'react-native';
+import { DocScreen, DocHero, DocCard } from '../../ui/DocPage';
+import { color as T, font as F } from '../../theme/tokens';
+
+const termsData = [
+  { num: '01', title: 'Acceptance of Terms', text: 'By using The Deft Crew (TDC) application, you agree to comply with and be bound by these Terms and Conditions. If you do not agree, please do not use our services.' },
+  { num: '02', title: 'User Account', text: '• Must be 13+ years old\n• Maintain account confidentiality\n• Provide accurate information\n• Responsible for all account activity' },
+  { num: '03', title: 'User-Generated Content', text: '• You retain ownership of content\n• Grant TDC license to use content\n• No content violating guidelines\n• TDC may remove violating content' },
+  { num: '04', title: 'Intellectual Property', text: '• Content protected by copyright\n• No reproduction without permission\n• TDC trademarks are property of The Deft Crew' },
+  { num: '05', title: 'Limitation of Liability', text: 'TDC is provided "as is" without warranties. We are not liable for any damages arising from use of our services.' },
+  { num: '06', title: 'Termination', text: 'We reserve the right to terminate or suspend your account for violations of these terms or Community Guidelines.' },
+  { num: '07', title: 'Changes to Terms', text: 'TDC may update these terms at any time. You will be notified of significant changes.' },
+  { num: '08', title: 'Contact', text: 'support@thedeftcrew.com\nKarachi, Pakistan' },
+  { num: '09', title: 'Governing Law', text: 'These terms are governed by the laws of Pakistan. Disputes resolved in Karachi, Pakistan.' },
+];
 
 export default function TermsScreen({ navigation }) {
-  const insets = useSafeAreaInsets();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  const termsData = [
-    { num: '01', title: 'Acceptance of Terms', text: 'By using The Deft Crew (TDC) application, you agree to comply with and be bound by these Terms and Conditions. If you do not agree, please do not use our services.' },
-    { num: '02', title: 'User Account', text: '• Must be 13+ years old\n• Maintain account confidentiality\n• Provide accurate information\n• Responsible for all account activity' },
-    { num: '03', title: 'User-Generated Content', text: '• You retain ownership of content\n• Grant TDC license to use content\n• No content violating guidelines\n• TDC may remove violating content' },
-    { num: '04', title: 'Intellectual Property', text: '• Content protected by copyright\n• No reproduction without permission\n• TDC trademarks are property of The Deft Crew' },
-    { num: '05', title: 'Limitation of Liability', text: 'TDC is provided "as is" without warranties. We are not liable for any damages arising from use of our services.' },
-    { num: '06', title: 'Termination', text: 'We reserve the right to terminate or suspend your account for violations of these terms or Community Guidelines.' },
-    { num: '07', title: 'Changes to Terms', text: 'TDC may update these terms at any time. You will be notified of significant changes.' },
-    { num: '08', title: 'Contact', text: 'support@thedeftcrew.com\nKarachi, Pakistan' },
-    { num: '09', title: 'Governing Law', text: 'These terms are governed by the laws of Pakistan. Disputes resolved in Karachi, Pakistan.' },
-  ];
-
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={T.paper} translucent={false} />
-
-      {/* Header wrapped in SafeAreaView (top only) */}
-      <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeHeader}>
-        <LinearGradient colors={[T.white, T.white]} style={styles.headerGradient}>
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="chevron-back" size={28} color={T.ink} />
-            </TouchableOpacity>
-
-            <View style={styles.headerCenter}>
-              <Text style={styles.headerTitle}>Terms & Conditions</Text>
-              <View style={styles.headerHandle} />
-            </View>
-
-            <View style={styles.headerRight} />
-          </View>
-        </LinearGradient>
-      </SafeAreaView>
-
-      {/* Content */}
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.scrollContent,
-          {
-            // Ensure bottom content clears home indicator / gesture bar
-            paddingBottom: Math.max(insets.bottom, 20) + 30,
-          },
-        ]}
-      >
-        <Animated.View
-          style={[
-            styles.heroSection,
-            {
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
-        >
-          <Text style={styles.heroTitle}>Terms & Conditions</Text>
-          <Text style={styles.heroSubtitle}>Please review before continuing</Text>
-          <View style={styles.heroDivider} />
-        </Animated.View>
-
-        <View style={styles.contentContainer}>
-          {termsData.map((item, index) => (
-            <Animated.View
-              key={index}
-              style={[
-                styles.section,
-                {
-                  opacity: fadeAnim,
-                  transform: [
-                    {
-                      translateY: slideAnim.interpolate({
-                        inputRange: [0, 30],
-                        outputRange: [0, 30 * (index + 1) * 0.05],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionNumber}>{item.num}</Text>
-                <View style={styles.sectionLine} />
-                <Text style={styles.sectionTitle}>{item.title}</Text>
-              </View>
-              <Text style={styles.sectionText}>{item.text}</Text>
-            </Animated.View>
-          ))}
-        </View>
-
-        <Text style={styles.version}>
-          v2.0 • Updated{' '}
-          {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-        </Text>
-      </ScrollView>
-    </View>
+    <DocScreen title="Terms & Conditions" onBack={() => navigation.goBack()}>
+      <DocHero title="Terms & Conditions" line="Please review before continuing" />
+      <Text style={styles.spacer} />
+      {termsData.map((item) => (
+        <DocCard
+          key={item.num}
+          iconNode={<Text style={styles.num}>{item.num}</Text>}
+          title={item.title}
+          body={item.text}
+        />
+      ))}
+      {/* the old "updated <today>" date was generated from the phone clock, so only the version is shown */}
+      <Text style={styles.version}>v2.0</Text>
+    </DocScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: T.sand,
-  },
-  safeHeader: {
-    backgroundColor: T.card,
-    // Shadow stays on the header container so it's visible over content
-    ...Platform.select({
-      ios: {
-        shadowColor: T.ink,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  headerGradient: {
-    backgroundColor: T.card,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    minHeight: 50,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: T.ink,
-    letterSpacing: 0.5,
-  },
-  headerHandle: {
-    width: 24,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: T.yellow,
-    marginTop: 4,
-  },
-  headerRight: {
-    width: 40,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    // paddingBottom is set dynamically using insets
-  },
-  heroSection: {
-    alignItems: 'center',
-    paddingVertical: 20,
-    paddingHorizontal: 20,
-    backgroundColor: T.card,
-    marginBottom: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: T.line,
-  },
-  heroTitle: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: T.ink,
-    letterSpacing: 0.3,
-    marginBottom: 2,
-  },
-  heroSubtitle: {
-    fontSize: 12,
-    color: T.textFaint,
-    textAlign: 'center',
-  },
-  heroDivider: {
-    width: 32,
-    height: 3,
-    backgroundColor: T.yellow,
-    borderRadius: 2,
-    marginTop: 10,
-  },
-  contentContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-  },
-  section: {
-    backgroundColor: T.card,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
-    shadowColor: T.ink,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  sectionNumber: {
-    fontSize: 11,
-    fontWeight: '900',
-    color: T.yellow,
-    letterSpacing: 0.5,
-    marginRight: 8,
-  },
-  sectionLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: T.sand,
-    marginRight: 8,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: T.ink,
-    letterSpacing: 0.3,
-  },
-  sectionText: {
-    fontSize: 12.5,
-    color: T.textMuted,
-    lineHeight: 19,
-    paddingLeft: 20,
-  },
-  version: {
-    textAlign: 'center',
-    color: T.textFaint,
-    fontSize: 10,
-    paddingTop: 20,
-  },
+  spacer: { height: 12 },
+  num: { fontFamily: F.heading, fontSize: 15, color: T.ink },
+  version: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, textAlign: 'center', marginTop: 20 },
 });
