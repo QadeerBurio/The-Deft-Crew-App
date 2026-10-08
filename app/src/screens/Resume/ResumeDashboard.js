@@ -29,9 +29,41 @@ import * as Sharing from 'expo-sharing';
 import { renderResumeHTML } from '../../services/templateService';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { color as T, font as F } from "../../theme/tokens";
+import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
+import Svg, { Circle } from 'react-native-svg';
 const { width } = Dimensions.get('window');
 const MAX_CREATIONS = 2;
+
+// Score ring (Resume design) — draws a real value only
+const ScoreRing = ({ value, label }) => {
+  const size = 84;
+  const stroke = 8;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(100, Number(value) || 0));
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
+        <Circle cx={size / 2} cy={size / 2} r={r} stroke={T.inkLine} strokeWidth={stroke} fill="none" />
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke={T.yellow}
+          strokeWidth={stroke}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={`${c} ${c}`}
+          strokeDashoffset={c * (1 - pct / 100)}
+        />
+      </Svg>
+      <Text style={{ fontFamily: F.heading, fontSize: 24, color: T.white }} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+        {Math.round(pct)}
+      </Text>
+      <Text style={{ fontFamily: F.bodyBold, fontSize: 10.5, color: T.onInkMuted, marginTop: -2 }}>{label}</Text>
+    </View>
+  );
+};
 
 const ResumeDashboardScreen = ({ navigation }) => {
   const { user, isGuest } = useContext(AuthContext);
@@ -595,121 +627,113 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
       );
     }
     return recommendations.map((job, index) => {
-      const matchColor =
-        job.matchPercentage >= 80 ? T.success : job.matchPercentage >= 60 ? T.yellow : T.danger;
+      const hasMatch = typeof job.matchPercentage === 'number';
+      const details = [
+        { icon: 'business-outline', text: job.department },
+        { icon: 'location-outline', text: job.location },
+        { icon: 'cash-outline', text: job.salary },
+        { icon: 'time-outline', text: job.type },
+      ].filter((d) => !!d.text);
+      const company = job.companyName || job.company;
       return (
         <Animated.View
           key={job._id || index}
-          style={[styles.jobCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
+          style={[RD.job, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
         >
-          {job.urgent && (
-            <View style={styles.urgentBadge}>
-              <Text style={styles.urgentBadgeText}>urgent</Text>
+          <View style={RD.jobTop}>
+            <View style={{ flex: 1 }}>
+              <Text style={RD.jobTitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>{job.title}</Text>
+              {!!company && <Text style={RD.jobCompany}>{company}</Text>}
+            </View>
+            {hasMatch && (
+              <View style={RD.matchPill}>
+                <Text style={RD.matchText}>{job.matchPercentage}% match</Text>
+              </View>
+            )}
+          </View>
+          {(job.urgent || job.featured) && (
+            <View style={RD.flagRow}>
+              {job.urgent && (
+                <View style={[RD.flag, { backgroundColor: T.dangerBg }]}>
+                  <Text style={[RD.flagText, { color: T.danger }]}>urgent</Text>
+                </View>
+              )}
+              {job.featured && (
+                <View style={[RD.flag, { backgroundColor: T.yellowSoft }]}>
+                  <Text style={RD.flagText}>featured</Text>
+                </View>
+              )}
             </View>
           )}
-          {job.featured && (
-            <View style={styles.featuredBadge}>
-              <Text style={styles.featuredBadgeText}>featured</Text>
-            </View>
-          )}
-          <View style={styles.jobHeader}>
-            <View style={styles.jobTitleContainer}>
-              <Text style={styles.jobTitle}>{job.title}</Text>
-              <View style={[styles.matchBadge, { backgroundColor: matchColor }]}>
-                <Text style={styles.matchText}>{job.matchPercentage}% Match</Text>
-              </View>
-            </View>
-            <Text style={styles.jobCompany}>{job.companyName || job.company || 'Company'}</Text>
-          </View>
-          <View style={styles.jobDetails}>
-            <View style={styles.jobDetailItem}>
-              <Ionicons name="business-outline" size={16} color={T.textMuted} />
-              <Text style={styles.jobDetailText}>{job.department || 'Technology'}</Text>
-            </View>
-            <View style={styles.jobDetailItem}>
-              <Ionicons name="location-outline" size={16} color={T.textMuted} />
-              <Text style={styles.jobDetailText}>{job.location || 'Remote'}</Text>
-            </View>
-            <View style={styles.jobDetailItem}>
-              <Ionicons name="cash-outline" size={16} color={T.textMuted} />
-              <Text style={styles.jobDetailText}>{job.salary || 'Competitive'}</Text>
-            </View>
-            <View style={styles.jobDetailItem}>
-              <Ionicons name="time-outline" size={16} color={T.textMuted} />
-              <Text style={styles.jobDetailText}>{job.type || 'Full-time'}</Text>
-            </View>
-          </View>
-          {job.matchedSkills && job.matchedSkills.length > 0 && (
-            <View style={styles.matchedSkillsContainer}>
-              <Text style={styles.matchedSkillsLabel}>matched skills:</Text>
-              <View style={styles.matchedSkillsList}>
-                {job.matchedSkills.slice(0, 4).map((skill, idx) => (
-                  <View key={idx} style={styles.matchedSkillTag}>
-                    <Text style={styles.matchedSkillText}>{skill}</Text>
-                  </View>
-                ))}
-                {job.matchedSkills.length > 4 && (
-                  <Text style={styles.moreSkillsText}>+{job.matchedSkills.length - 4} more</Text>
-                )}
-              </View>
+          {details.length > 0 && (
+            <View style={RD.detailRow}>
+              {details.map((d) => (
+                <View key={d.icon} style={RD.detailItem}>
+                  <Ionicons name={d.icon} size={14} color={T.textMuted} />
+                  <Text style={RD.detailText}>{d.text}</Text>
+                </View>
+              ))}
             </View>
           )}
           {job.matchReasons && job.matchReasons.length > 0 && (
-            <View style={styles.matchReasonsContainer}>
-              <Text style={styles.matchReasonsLabel}>why this matches:</Text>
-              <View style={styles.matchReasonsList}>
-                {job.matchReasons.slice(0, 3).map((reason, idx) => (
-                  <View key={idx} style={styles.matchReasonTag}>
-                    <Ionicons name="checkmark-circle" size={12} color={T.success} />
-                    <Text style={styles.matchReasonText}>{reason}</Text>
-                  </View>
-                ))}
-              </View>
+            <Text style={RD.why}>
+              <Text style={RD.whyLabel}>why: </Text>
+              {job.matchReasons.slice(0, 3).join(' · ')}
+            </Text>
+          )}
+          {job.matchedSkills && job.matchedSkills.length > 0 && (
+            <View style={RD.kwWrap}>
+              {job.matchedSkills.slice(0, 4).map((skill, idx) => (
+                <View key={idx} style={RD.kw}>
+                  <Text style={RD.kwText}>{skill}</Text>
+                </View>
+              ))}
+              {job.matchedSkills.length > 4 && (
+                <Text style={RD.more}>+{job.matchedSkills.length - 4} more</Text>
+              )}
             </View>
           )}
-          <TouchableOpacity onPress={() => setExpandedJobId(expandedJobId === job._id ? null : job._id)}>
-            <Text
-              style={styles.jobDescription}
-              numberOfLines={expandedJobId === job._id ? undefined : 3}
+          {!!job.description && (
+            <TouchableOpacity onPress={() => setExpandedJobId(expandedJobId === job._id ? null : job._id)}>
+              <Text style={RD.desc} numberOfLines={expandedJobId === job._id ? undefined : 3}>
+                {job.description}
+              </Text>
+              <Text style={RD.descToggle}>
+                {expandedJobId === job._id ? 'show less' : 'read full description'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          <View style={RD.jobActions}>
+            <TouchableOpacity
+              style={[RD.btnYellow, { flex: 1 }]}
+              onPress={() => handleApplyToJob(job)}
+              accessibilityRole="button"
             >
-              {job.description || 'Great opportunity to join our team and grow your career.'}
-            </Text>
-            <Text
-              style={{
-                color: T.yellow,
-                fontSize: 12,
-                fontWeight: '600',
-                marginTop: 2,
-                marginBottom: 6,
-              }}
-            >
-              {expandedJobId === job._id ? 'Show Less ▲' : 'Read Full Description ▼'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.optimizeButton, { backgroundColor: T.yellow }]}
-            onPress={() => handleApplyToJob(job)}
-          >
-            <Text style={[styles.optimizeButtonText, { color: T.ink }]}>apply now</Text>
-            <Ionicons name="arrow-forward" size={16} color={T.ink} style={{ marginLeft: 4 }} />
-          </TouchableOpacity>
-          <View style={styles.jobActions}>
-            <TouchableOpacity style={styles.applyButton} onPress={() => handleOptimizeResumeFlow(job)}>
-              <Ionicons name="sparkles" size={14} color={T.yellow} style={{ marginRight: 4 }} />
-              <Text style={styles.applyButtonText}>optimize resume</Text>
+              <Text style={RD.btnYellowText}>apply now</Text>
+              <Ionicons name="arrow-forward" size={15} color={T.ink} />
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.saveJobButton}
+              style={RD.btnLight}
+              onPress={() => handleOptimizeResumeFlow(job)}
+              accessibilityRole="button"
+            >
+              <Ionicons name="sparkles" size={14} color={T.ink} />
+              <Text style={RD.btnLightText}>optimize</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={RD.saveBtn}
               onPress={() => handleSaveJob(job)}
               disabled={savingJobId === job._id}
+              accessibilityRole="button"
+              accessibilityLabel={savedJobIds.has(job._id) ? 'saved job' : 'save job'}
             >
               {savingJobId === job._id ? (
-                <ActivityIndicator size="small" color={T.yellow} />
+                <ActivityIndicator size="small" color={T.ink} />
               ) : (
                 <Ionicons
                   name={savedJobIds.has(job._id) ? 'bookmark' : 'bookmark-outline'}
-                  size={20}
-                  color={savedJobIds.has(job._id) ? T.yellow : T.textMuted}
+                  size={19}
+                  color={T.ink}
                 />
               )}
             </TouchableOpacity>
@@ -821,6 +845,11 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
   }
 
   const hasResumes = safeResumes.length > 0;
+  const atsScore = selectedResume?.careerProfile?.atsScore;
+  const hasAts = typeof atsScore === 'number' && atsScore > 0;
+  const atsKeywords = Array.isArray(selectedResume?.careerProfile?.atsKeywords)
+    ? selectedResume.careerProfile.atsKeywords
+    : [];
   const limitReached = totalCreationsUsed >= MAX_CREATIONS;
 
   // ============================================================
@@ -836,17 +865,23 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
           { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
         ]}
       >
-        {/* ==================== HEADER ==================== */}
-        <View style={[styles.header, { paddingTop: 16 }]}>
+        {/* ==================== HEADER (Resume design) ==================== */}
+        <View style={RD.header}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.greeting}>hello,</Text>
-            <Text style={styles.userName}>{isGuest ? 'Guest User' : user?.name || 'User'}</Text>
-            <Text style={styles.creationCounter}>
-              Resumes: {totalCreationsUsed} / {MAX_CREATIONS}
+            <Text style={RD.hello} maxFontSizeMultiplier={MAX_FONT_SCALE} numberOfLines={1}>
+              hello, {isGuest ? 'guest' : (user?.name || 'there').split(' ')[0].toLowerCase()}
+            </Text>
+            <Text style={RD.title} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+              resume<Text style={{ color: T.yellow }}>.</Text>
+            </Text>
+            <Text style={RD.counter}>
+              {totalCreationsUsed} / {MAX_CREATIONS} resumes used
             </Text>
           </View>
           <TouchableOpacity
-            style={[styles.newResumeButton, limitReached && { opacity: 0.5 }]}
+            style={[RD.newBtn, limitReached && { opacity: 0.5 }]}
+            accessibilityRole="button"
+            accessibilityLabel="new resume"
             onPress={() => {
               if (limitReached) {
                 Alert.alert(
@@ -858,9 +893,19 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
               navigation.navigate('ResumeBuilder');
             }}
           >
-            <Ionicons name="add" size={20} color={T.ink} />
-            <Text style={styles.newResumeButtonText}>new</Text>
+            <Ionicons name="add" size={18} color={T.ink} />
+            <Text style={RD.newBtnText}>new</Text>
           </TouchableOpacity>
+          {selectedResume && (
+            <TouchableOpacity
+              style={RD.iconBtn}
+              onPress={() => handleSettings(selectedResume)}
+              accessibilityRole="button"
+              accessibilityLabel="resume settings"
+            >
+              <Ionicons name="settings-outline" size={19} color={T.ink} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* ==================== SCROLL CONTENT ==================== */}
@@ -871,187 +916,143 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
         >
           {hasResumes ? (
             <>
-              {/* Resume Selector */}
-              <View style={styles.resumeSelector}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {(searchQuery.trim() ? filteredResumes : safeResumes).map((resume, index) => (
-                    <TouchableOpacity
-                      key={resume._id || `resume-${index}`}
-                      style={[
-                        styles.resumeTab,
-                        selectedResume?._id === resume._id && styles.resumeTabActive,
-                      ]}
-                      onPress={() => handleSelectResume(resume)}
-                    >
-                      <Text
-                        style={[
-                          styles.resumeTabText,
-                          selectedResume?._id === resume._id && styles.resumeTabTextActive,
-                        ]}
+              {/* Resume selector (only when there is more than one to pick) */}
+              {safeResumes.length > 1 && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={RD.chips}
+                >
+                  {(searchQuery.trim() ? filteredResumes : safeResumes).map((resume, index) => {
+                    const on = selectedResume?._id === resume._id;
+                    return (
+                      <TouchableOpacity
+                        key={resume._id || `resume-${index}`}
+                        style={[RD.chip, on && RD.chipOn]}
+                        onPress={() => handleSelectResume(resume)}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: on }}
                       >
-                        {resume?.personalInfo?.firstName || 'Resume'}
-                      </Text>
-                      <View
-                        style={[
-                          styles.resumeTabBadge,
-                          { backgroundColor: getStatusColor(resume?.completionPercentage || 0) },
-                        ]}
-                      >
-                        <Text style={styles.resumeTabBadgeText}>
+                        <Text style={[RD.chipText, on && RD.chipTextOn]}>
+                          {(resume?.personalInfo?.firstName || 'resume').toLowerCase()}
+                        </Text>
+                        <Text style={[RD.chipPct, on && RD.chipTextOn]}>
                           {resume?.completionPercentage || 0}%
                         </Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
+                      </TouchableOpacity>
+                    );
+                  })}
                 </ScrollView>
-                {safeResumes.length > 1 && (
-                  <TouchableOpacity
-                    style={styles.viewAllButton}
-                    onPress={() => setShowAllResumes(!showAllResumes)}
-                  >
-                    <Text style={styles.viewAllText}>
-                      {showAllResumes ? 'Show Less' : `+${safeResumes.length - 1} more`}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+              )}
 
               {selectedResume ? (
                 <>
-                  {/* Stats Card */}
-                  <View style={styles.statsCard}>
-                    <LinearGradient
-                      colors={[T.ink, T.ink, T.yellow]}
-                      style={styles.statsGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <View style={styles.statsContent}>
-                        <View style={styles.statsLeft}>
-                          <Text style={styles.resumeName}>
-                            {selectedResume?.personalInfo?.firstName || 'Untitled'}{' '}
+                  {/* Dark card: score ring + actions */}
+                  <View style={RD.section}>
+                    <View style={RD.dark}>
+                      <View style={RD.darkTop}>
+                        <ScoreRing
+                          value={hasAts ? atsScore : selectedResume?.completionPercentage || 0}
+                          label={hasAts ? 'ats' : 'done'}
+                        />
+                        <View style={{ flex: 1 }}>
+                          <Text style={RD.darkLabel}>
+                            {hasAts ? 'ats compatibility score' : 'resume completion'}
+                          </Text>
+                          <Text style={RD.darkName} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                            {selectedResume?.personalInfo?.firstName || 'untitled'}{' '}
                             {selectedResume?.personalInfo?.lastName || ''}
                           </Text>
-                          <Text style={styles.resumeTitle}>
-                            {selectedResume?.professionalSummary?.title || 'No title set'}
-                          </Text>
-                          <View style={styles.statusContainer}>
+                          {!!selectedResume?.professionalSummary?.title && (
+                            <Text style={RD.darkSub} numberOfLines={1}>
+                              {selectedResume.professionalSummary.title}
+                            </Text>
+                          )}
+                          <View style={RD.statusRow}>
                             <View
                               style={[
-                                styles.statusDot,
-                                {
-                                  backgroundColor: getStatusColor(
-                                    selectedResume?.completionPercentage || 0
-                                  ),
-                                },
+                                RD.statusDot,
+                                { backgroundColor: getStatusColor(selectedResume?.completionPercentage || 0) },
                               ]}
                             />
-                            <Text style={styles.statusText}>
-                              {getStatusText(selectedResume?.completionPercentage || 0)}
+                            <Text style={RD.darkSub}>
+                              {getStatusText(selectedResume?.completionPercentage || 0).toLowerCase()}
+                              {hasAts ? ` · ${selectedResume?.completionPercentage || 0}% complete` : ''}
                             </Text>
                           </View>
                         </View>
-                        <View style={styles.statsRight}>
-                          <Text style={styles.percentageText}>
-                            {selectedResume?.completionPercentage || 0}%
-                          </Text>
-                          <Text style={styles.percentageLabel}>complete</Text>
-                        </View>
                       </View>
-                    </LinearGradient>
-                  </View>
 
-                  {/* Resume Stats */}
-                  <View style={styles.resumeStats}>
-                    <View style={styles.resumeStatItem}>
-                      <Ionicons name="eye-outline" size={18} color={T.yellow} />
-                      <Text style={styles.resumeStatText}>
-                        {selectedResume.viewCount || 0} views
-                      </Text>
-                    </View>
-                    <View style={styles.resumeStatItem}>
-                      <Ionicons name="download-outline" size={18} color={T.yellow} />
-                      <Text style={styles.resumeStatText}>
-                        {selectedResume.downloadCount || 0} downloads
-                      </Text>
-                    </View>
-                    <View style={styles.resumeStatItem}>
-                      <Ionicons name="share-outline" size={18} color={T.yellow} />
-                      <Text style={styles.resumeStatText}>
-                        {selectedResume.shareCount || 0} shares
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Action Row */}
-                  <View style={styles.simplifiedActionRow}>
-                    <TouchableOpacity
-                      style={styles.actionBtnPrimary}
-                      onPress={() => handleViewResume(selectedResume)}
-                    >
-                      <Ionicons name="document-text-outline" size={18} color={T.ink} />
-                      <Text style={styles.actionBtnTextPrimary}>view & download</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.actionBtnSecondary}
-                      onPress={() => handleEditResume(selectedResume)}
-                    >
-                      <Ionicons name="create-outline" size={18} color={T.yellow} />
-                      <Text style={styles.actionBtnTextSecondary}>edit details</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.actionBtnDanger}
-                      onPress={() => handleDeleteResume(selectedResume._id)}
-                    >
-                      <Ionicons name="trash-outline" size={18} color={T.danger} />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* ATS Score Card */}
-                  <View style={styles.atsScoreCard}>
-                    <View style={styles.atsScoreHeader}>
-                      <View>
-                        <Text style={styles.atsScoreTitle}>ats compatibility score</Text>
-                        <Text style={styles.atsScoreSubtitle}>
-                          Based on AI career profile analysis
+                      <View style={RD.statsRow}>
+                        <Text style={RD.stat}>
+                          <Text style={RD.statN}>{selectedResume.viewCount || 0}</Text> views
+                        </Text>
+                        <Text style={RD.stat}>
+                          <Text style={RD.statN}>{selectedResume.downloadCount || 0}</Text> downloads
+                        </Text>
+                        <Text style={RD.stat}>
+                          <Text style={RD.statN}>{selectedResume.shareCount || 0}</Text> shares
                         </Text>
                       </View>
-                      <View style={styles.atsScoreBadgeContainer}>
-                        <Text style={styles.atsScoreValue}>
-                          {selectedResume.careerProfile?.atsScore || 0}
-                        </Text>
-                        <Text style={styles.atsScoreMax}>/100</Text>
+
+                      <View style={RD.btnRow}>
+                        <TouchableOpacity
+                          style={RD.btnYellow}
+                          onPress={() => handleViewResume(selectedResume)}
+                          accessibilityRole="button"
+                        >
+                          <Ionicons name="document-text-outline" size={17} color={T.ink} />
+                          <Text style={RD.btnYellowText}>view & download</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={RD.btnOutline}
+                          onPress={() => handleEditResume(selectedResume)}
+                          accessibilityRole="button"
+                        >
+                          <Ionicons name="create-outline" size={17} color={T.white} />
+                          <Text style={RD.btnOutlineText}>edit</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={RD.btnDelete}
+                          onPress={() => handleDeleteResume(selectedResume._id)}
+                          accessibilityRole="button"
+                          accessibilityLabel="delete resume"
+                        >
+                          <Ionicons name="trash-outline" size={17} color={T.danger} />
+                        </TouchableOpacity>
                       </View>
                     </View>
-                    {selectedResume.careerProfile?.atsKeywords &&
-                    selectedResume.careerProfile.atsKeywords.length > 0 ? (
-                      <View style={styles.atsKeywordsSection}>
-                        <Text style={styles.atsKeywordsTitle}>extracted ats keywords</Text>
-                        <View style={styles.atsKeywordsList}>
-                          {selectedResume.careerProfile.atsKeywords.slice(0, 10).map((kw, idx) => (
-                            <View key={idx} style={styles.atsKeywordTag}>
-                              <Text style={styles.atsKeywordText}>{kw}</Text>
+                  </View>
+
+                  {/* Keywords found (real ATS keywords only) */}
+                  <View style={RD.section}>
+                    {atsKeywords.length > 0 ? (
+                      <>
+                        <Text style={RD.h2} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                          keywords found<Text style={{ color: T.yellow }}>.</Text>
+                        </Text>
+                        <View style={RD.kwWrap}>
+                          {atsKeywords.slice(0, 10).map((kw, idx) => (
+                            <View key={idx} style={RD.kw}>
+                              <Text style={RD.kwText}>{kw}</Text>
                             </View>
                           ))}
                         </View>
-                      </View>
+                      </>
                     ) : (
-                      <View style={styles.atsPendingContainer}>
-                        <ActivityIndicator size="small" color={T.yellow} />
-                        <Text style={styles.atsPendingText}>ai profile enrichment in progress...</Text>
+                      <View style={RD.pending}>
+                        <ActivityIndicator size="small" color={T.ink} />
+                        <Text style={RD.pendingText}>ai profile enrichment in progress...</Text>
                       </View>
                     )}
                   </View>
 
-                  {/* Recommendations */}
-                  <View style={styles.recommendationsSection}>
-                    <View style={styles.sectionHeader}>
-                      <Text style={styles.sectionTitle}>recommended jobs</Text>
-                      <TouchableOpacity>
-                        <Text style={styles.seeAllText}>see all</Text>
-                      </TouchableOpacity>
-                    </View>
-                    {renderRecommendations()}
+                  {/* Recommended jobs */}
+                  <View style={RD.section}>
+                    <Text style={RD.h2} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                      recommended jobs<Text style={{ color: T.yellow }}>.</Text>
+                    </Text>
+                    <View style={{ marginTop: 10 }}>{renderRecommendations()}</View>
                   </View>
                 </>
               ) : (
@@ -1072,7 +1073,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                 Create your first resume to get started with your job search.
               </Text>
               <TouchableOpacity
-                style={[styles.createButton, limitReached && { opacity: 0.5 }]}
+                style={[RD.btnYellow, RD.createBtn, limitReached && { opacity: 0.5 }]}
                 onPress={() => {
                   if (limitReached) {
                     Alert.alert(
@@ -1084,14 +1085,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                   navigation.navigate('ResumeBuilder');
                 }}
               >
-                <LinearGradient
-                  colors={[T.ink, T.yellow]}
-                  style={styles.createButtonGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Text style={styles.createButtonText}>create resume</Text>
-                </LinearGradient>
+                <Text style={RD.btnYellowText}>create resume</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -1185,9 +1179,9 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
 // STYLES
 // ============================================================
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: T.card },
+  safeArea: { flex: 1, backgroundColor: T.paper },
   container: { flex: 1, backgroundColor: T.card },
-  contentContainer: { flex: 1, backgroundColor: T.card },
+  contentContainer: { flex: 1, backgroundColor: T.paper },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
@@ -1743,3 +1737,70 @@ const styles = StyleSheet.create({
 });
 
 export default ResumeDashboardScreen;
+
+// ─── Resume dashboard design layout ──────────────────────────────────
+const RD = StyleSheet.create({
+  header: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6, backgroundColor: T.paper },
+  hello: { fontFamily: F.bodySemi, fontSize: 13.5, color: T.textMuted },
+  title: { fontFamily: F.heading, fontSize: 24, color: T.ink },
+  counter: { fontFamily: F.body, fontSize: 12, color: T.textMuted, marginTop: 1 },
+  newBtn: { height: 40, paddingHorizontal: 14, borderRadius: 20, backgroundColor: T.yellow, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  newBtnText: { fontFamily: F.bodyBold, fontSize: 13.5, color: T.ink },
+  iconBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: T.card, borderWidth: 1, borderColor: T.line, alignItems: 'center', justifyContent: 'center' },
+
+  section: { paddingHorizontal: 16, paddingTop: 14 },
+  h2: { fontFamily: F.heading, fontSize: 17, color: T.ink },
+
+  chips: { paddingHorizontal: 16, paddingTop: 10, gap: 8 },
+  chip: { height: 36, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1, borderColor: T.line, backgroundColor: T.card, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  chipOn: { backgroundColor: T.ink, borderColor: T.ink },
+  chipText: { fontFamily: F.bodySemi, fontSize: 13, color: T.ink },
+  chipPct: { fontFamily: F.bodyBold, fontSize: 12, color: T.textMuted },
+  chipTextOn: { color: T.white },
+
+  dark: { borderRadius: 28, backgroundColor: T.ink, padding: 18 },
+  darkTop: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  darkLabel: { fontFamily: F.bodyBold, fontSize: 11.5, color: T.onInkMuted },
+  darkName: { fontFamily: F.heading, fontSize: 20, color: T.white, marginTop: 2 },
+  darkSub: { fontFamily: F.body, fontSize: 12.5, color: T.onInkMuted },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  statsRow: { flexDirection: 'row', gap: 14, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: T.inkLine },
+  stat: { fontFamily: F.body, fontSize: 12.5, color: T.onInkMuted },
+  statN: { fontFamily: F.bodyBold, color: T.white },
+  btnRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
+  btnYellow: { flex: 1, height: 44, borderRadius: 22, backgroundColor: T.yellow, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 12 },
+  btnYellowText: { fontFamily: F.bodyBold, fontSize: 14, color: T.ink },
+  btnOutline: { height: 44, paddingHorizontal: 16, borderRadius: 22, borderWidth: 1, borderColor: T.inkLine, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  btnOutlineText: { fontFamily: F.bodyBold, fontSize: 14, color: T.white },
+  btnDelete: { width: 44, height: 44, borderRadius: 22, backgroundColor: T.inkSoft, alignItems: 'center', justifyContent: 'center' },
+  createBtn: { flex: 0, alignSelf: 'center', paddingHorizontal: 24, marginTop: 16 },
+
+  kwWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
+  kw: { height: 30, paddingHorizontal: 12, borderRadius: 15, backgroundColor: T.card, borderWidth: 1, borderColor: T.line, justifyContent: 'center' },
+  kwText: { fontFamily: F.bodySemi, fontSize: 12.5, color: T.ink },
+  more: { fontFamily: F.bodySemi, fontSize: 12, color: T.textMuted, alignSelf: 'center' },
+  pending: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 14, borderRadius: 18, backgroundColor: T.card, borderWidth: 1, borderColor: T.line },
+  pendingText: { fontFamily: F.body, fontSize: 13, color: T.textMuted },
+
+  job: { borderRadius: 22, backgroundColor: T.card, borderWidth: 1, borderColor: T.line, padding: 14, marginBottom: 10 },
+  jobTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  jobTitle: { fontFamily: F.headingBold, fontSize: 16, color: T.ink },
+  jobCompany: { fontFamily: F.body, fontSize: 13, color: T.textMuted, marginTop: 2 },
+  matchPill: { height: 26, paddingHorizontal: 10, borderRadius: 13, backgroundColor: T.ink, justifyContent: 'center' },
+  matchText: { fontFamily: F.bodyBold, fontSize: 12, color: T.yellow },
+  flagRow: { flexDirection: 'row', gap: 6, marginTop: 8 },
+  flag: { height: 22, paddingHorizontal: 8, borderRadius: 11, justifyContent: 'center' },
+  flagText: { fontFamily: F.bodyBold, fontSize: 11, color: T.ink },
+  detailRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 10 },
+  detailItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  detailText: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted },
+  why: { fontFamily: F.body, fontSize: 13, lineHeight: 18, color: T.textMuted, marginTop: 10 },
+  whyLabel: { fontFamily: F.bodyBold, color: T.ink },
+  desc: { fontFamily: F.body, fontSize: 13, lineHeight: 19, color: T.ink, marginTop: 10 },
+  descToggle: { fontFamily: F.bodySemi, fontSize: 12.5, color: T.textMuted, marginTop: 4 },
+  jobActions: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  btnLight: { height: 44, paddingHorizontal: 14, borderRadius: 22, backgroundColor: T.sand, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  btnLightText: { fontFamily: F.bodyBold, fontSize: 13.5, color: T.ink },
+  saveBtn: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: T.line, alignItems: 'center', justifyContent: 'center' },
+});
