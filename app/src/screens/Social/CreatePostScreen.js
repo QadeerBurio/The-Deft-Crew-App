@@ -1,4 +1,4 @@
-// CreatePostScreen.js - Optimized skeleton + fast animations
+// CreatePostScreen.js - Bottom Sheet Modal (TDC Modern Light)
 import React, { useState, useContext, useEffect, useRef } from "react";
 import {
   View,
@@ -15,72 +15,62 @@ import {
   Dimensions,
   StatusBar,
   Image,
-  Keyboard
+  Keyboard,
+  Modal,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from "../../context/AuthContext";
-// 🆕 engagement
 import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus';
-const { width, height } = Dimensions.get('window');
 
-// ✅ Same API URL as FeedScreen/PostCard
+const { width, height } = Dimensions.get('window');
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
 
-// Skeleton Loading Component — optimized & lightweight
-const CreatePostSkeleton = () => {
-  const shimmerAnim = useRef(new Animated.Value(0)).current;
+// ============================================================
+// INLINE SKELETON — shown briefly while sheet content warms up
+// ============================================================
+const SheetSkeleton = () => {
+  const shimmer = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const animation = Animated.loop(
+    const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(shimmerAnim, {
-          toValue: 1,
-          duration: 700,
-          useNativeDriver: true,
-        }),
-        Animated.timing(shimmerAnim, {
-          toValue: 0,
-          duration: 700,
-          useNativeDriver: true,
-        }),
+        Animated.timing(shimmer, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(shimmer, { toValue: 0, duration: 700, useNativeDriver: true }),
       ])
     );
-    animation.start();
-    return () => animation.stop();
+    loop.start();
+    return () => loop.stop();
   }, []);
 
-  const shimmerOpacity = shimmerAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.35, 0.75],
-  });
+  const op = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.75] });
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.skeletonHeader}>
-        <Animated.View style={[styles.skeletonCircle, { opacity: shimmerOpacity }]} />
-        <Animated.View style={[styles.skeletonLine, { width: 150, height: 22, opacity: shimmerOpacity }]} />
-        <Animated.View style={[styles.skeletonLine, { width: 70, height: 36, opacity: shimmerOpacity, marginLeft: 'auto', borderRadius: 20 }]} />
-      </View>
-      <View style={styles.skeletonContent}>
-        <View style={styles.skeletonUserRow}>
-          <Animated.View style={[styles.skeletonAvatar, { opacity: shimmerOpacity }]} />
-          <View style={{ flex: 1 }}>
-            <Animated.View style={[styles.skeletonLine, { width: 140, height: 18, opacity: shimmerOpacity }]} />
-            <Animated.View style={[styles.skeletonLine, { width: 100, height: 14, marginTop: 8, opacity: shimmerOpacity }]} />
-          </View>
+    <View style={{ paddingTop: 8 }}>
+      <View style={styles.skUserRow}>
+        <Animated.View style={[styles.skAvatar, { opacity: op }]} />
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Animated.View style={[styles.skLine, { width: 120, height: 14, opacity: op }]} />
+          <Animated.View style={[styles.skLine, { width: 80, height: 11, marginTop: 6, opacity: op }]} />
         </View>
-        <Animated.View style={[styles.skeletonLine, { width: '100%', height: 16, marginTop: 24, opacity: shimmerOpacity }]} />
-        <Animated.View style={[styles.skeletonLine, { width: '85%', height: 16, marginTop: 12, opacity: shimmerOpacity }]} />
-        <Animated.View style={[styles.skeletonLine, { width: '60%', height: 16, marginTop: 12, opacity: shimmerOpacity }]} />
       </View>
-    </SafeAreaView>
+      <Animated.View style={[styles.skCard, { opacity: op }]} />
+    </View>
   );
 };
 
-export default function CreatePostScreen({ navigation }) {
+// ============================================================
+// MAIN — Bottom Sheet Modal
+// ============================================================
+export default function CreatePostScreen({ navigation, route }) {
   const { token, user } = useContext(AuthContext);
+
+  // Modal is visible by default when this component is mounted.
+  // If used as a screen, `visible` can be controlled from outside via route.params.
+  const [visible, setVisible] = useState(true);
+
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [isReady, setIsReady] = useState(false);
@@ -88,77 +78,103 @@ export default function CreatePostScreen({ navigation }) {
   const [isFocused, setIsFocused] = useState(false);
 
   // Animations
+  const slideAnim = useRef(new Animated.Value(height)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideUpAnim = useRef(new Animated.Value(20)).current;
-  const headerAnim = useRef(new Animated.Value(-60)).current;
-  const charCountAnim = useRef(new Animated.Value(0)).current;
-  const publishBtnScale = useRef(new Animated.Value(1)).current;
-  const borderAnim = useRef(new Animated.Value(0)).current;
+  const btnScale = useRef(new Animated.Value(1)).current;
+  const focusGlow = useRef(new Animated.Value(0)).current;
+  const statsFade = useRef(new Animated.Value(0)).current;
 
-  const mountedRef = useRef(true);
+  const inputRef = useRef(null);
+  const mounted = useRef(true);
 
+  // ---------- Open / close animation ----------
   useEffect(() => {
-    mountedRef.current = true;
+    mounted.current = true;
 
-    // ✅ Faster entrance animations (300ms)
-    Animated.parallel([
-      Animated.spring(headerAnim, {
-        toValue: 0,
-        friction: 8,
-        tension: 60,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideUpAnim, {
-        toValue: 0,
-        friction: 8,
-        tension: 60,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    if (visible) {
+      // Slide sheet up
+      Animated.parallel([
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          friction: 9,
+          tension: 55,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+      ]).start();
 
-    // ✅ Max skeleton time = 600ms. Never longer.
-    const skeletonTimer = setTimeout(() => {
-      if (mountedRef.current) setIsReady(true);
-    }, 600);
+      const t = setTimeout(() => {
+        if (mounted.current) {
+          setIsReady(true);
+          inputRef.current?.focus();
+        }
+      }, 320);
 
-    return () => {
-      mountedRef.current = false;
-      clearTimeout(skeletonTimer);
-    };
-  }, []);
+      return () => {
+        mounted.current = false;
+        clearTimeout(t);
+      };
+    } else {
+      // Slide down + close
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: height,
+          duration: 240,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        if (mounted.current) {
+          setVisible(false);
+          navigation?.goBack?.();
+        }
+      });
+    }
+  }, [visible]);
 
+  // ---------- Track text / focus ----------
   useEffect(() => {
-    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-    setWordCount(words);
+    const w = text.trim() ? text.trim().split(/\s+/).length : 0;
+    setWordCount(w);
 
-    Animated.spring(charCountAnim, {
+    Animated.spring(statsFade, {
       toValue: text.length > 0 ? 1 : 0,
-      friction: 6,
+      friction: 7,
       tension: 60,
       useNativeDriver: true,
     }).start();
 
-    Animated.timing(borderAnim, {
+    Animated.timing(focusGlow, {
       toValue: isFocused ? 1 : 0,
-      duration: 150,
+      duration: 220,
       useNativeDriver: false,
     }).start();
   }, [text, isFocused]);
 
+  // ---------- Close handler ----------
+  const closeSheet = () => {
+    Keyboard.dismiss();
+    setVisible(false);
+  };
+
+  // ---------- Post ----------
   const handlePost = async () => {
     Keyboard.dismiss();
 
     if (!text.trim()) {
       Animated.sequence([
-        Animated.timing(slideUpAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
-        Animated.timing(slideUpAnim, { toValue: 8, duration: 60, useNativeDriver: true }),
-        Animated.timing(slideUpAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
-        Animated.timing(slideUpAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: -8, duration: 55, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 8, duration: 55, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: -8, duration: 55, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 55, useNativeDriver: true }),
       ]).start();
 
       return Alert.alert(
@@ -169,8 +185,8 @@ export default function CreatePostScreen({ navigation }) {
     }
 
     Animated.sequence([
-      Animated.timing(publishBtnScale, { toValue: 0.95, duration: 80, useNativeDriver: true }),
-      Animated.spring(publishBtnScale, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }),
+      Animated.timing(btnScale, { toValue: 0.94, duration: 80, useNativeDriver: true }),
+      Animated.spring(btnScale, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }),
     ]).start();
 
     setLoading(true);
@@ -193,11 +209,6 @@ export default function CreatePostScreen({ navigation }) {
       const result = await response.json();
 
       if (response.ok) {
-        Animated.sequence([
-          Animated.timing(fadeAnim, { toValue: 0.6, duration: 120, useNativeDriver: true }),
-          Animated.timing(fadeAnim, { toValue: 1, duration: 120, useNativeDriver: true }),
-        ]).start();
-// 🆕 engagement: queue any popups the backend returned
         if (result?.engagement?.popups?.length) {
           engagementBus.emit(
             ENGAGEMENT_EVENTS.POPUPS_QUEUED,
@@ -207,21 +218,28 @@ export default function CreatePostScreen({ navigation }) {
         setText("");
         setWordCount(0);
 
-        Alert.alert(
-          "✨ Posted!",
-          "Your thoughts have been shared with the community.",
-          [
-            {
-              text: "View Feed",
-              onPress: () => {
-                // ✅ Tell FeedScreen to refresh immediately
-                navigation.navigate('Feed', { refreshFeed: Date.now() });
+        // Close sheet, then alert
+        Keyboard.dismiss();
+        setVisible(false);
+
+        setTimeout(() => {
+          Alert.alert(
+            "✨ Posted!",
+            "Your thoughts have been shared with the community.",
+            [
+              {
+                text: "View Feed",
+                onPress: () =>
+                  navigation?.navigate?.('FeedScreen', { refreshFeed: Date.now() }),
               },
-            },
-          ]
-        );
+            ]
+          );
+        }, 280);
       } else {
-        Alert.alert("❌ Failed", result.error || "Something went wrong. Please try again.");
+        Alert.alert(
+          "❌ Failed",
+          result.error || "Something went wrong. Please try again."
+        );
       }
     } catch (err) {
       console.error("Submit Error:", err);
@@ -234,407 +252,659 @@ export default function CreatePostScreen({ navigation }) {
     }
   };
 
-  const borderColor = borderAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['#E5E5E5', '#f9c349'],
-  });
+  const charProgress = Math.min((text.length / 2000) * 100, 100);
+  const nearLimit = text.length > 1800;
+  const canPost = text.trim().length > 0 && !loading;
 
-  // ✅ Only show skeleton until isReady (max 600ms)
-  if (!isReady) return <CreatePostSkeleton />;
+  // Don't render Modal at all if not visible (avoids overlays)
+  if (!visible) return null;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={closeSheet}
+    >
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
+      {/* Dark overlay */}
+      <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
+        <TouchableWithoutFeedback onPress={closeSheet}>
+          <View style={StyleSheet.absoluteFill} />
+        </TouchableWithoutFeedback>
+      </Animated.View>
+
+      {/* Keyboard-avoiding bottom sheet */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.kavWrapper}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
-        {/* Animated Header */}
-        <Animated.View style={[styles.header, { transform: [{ translateY: headerAnim }] }]}>
-          <View style={styles.headerContent}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={styles.backButton}
-              activeOpacity={0.7}
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.sheetWrap}>
+            <Animated.View
+              style={[
+                styles.sheet,
+                { transform: [{ translateY: slideAnim }] },
+              ]}
             >
-              <Ionicons name="arrow-back" size={24} color="#000000" />
-            </TouchableOpacity>
+              {/* Drag handle */}
+              <View style={styles.dragHandle} />
 
-            <View style={styles.headerCenter}>
-              <Text style={styles.headerTitle}>New Post</Text>
-              <View style={styles.headerDot} />
-            </View>
-
-            <TouchableOpacity
-              style={[styles.publishButton, (!text.trim() || loading) && styles.publishButtonDisabled]}
-              onPress={handlePost}
-              disabled={!text.trim() || loading}
-              activeOpacity={0.8}
-            >
-              <Animated.View style={{ transform: [{ scale: publishBtnScale }] }}>
-                <LinearGradient
-                  colors={!text.trim() || loading ? ['#E5E5E5', '#D4D4D4'] : ['#f9c349', '#f5a623']}
-                  style={styles.publishGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
+              {/* ---------- HEADER ---------- */}
+              <View style={styles.header}>
+                <TouchableOpacity
+                  onPress={closeSheet}
+                  style={styles.iconBtn}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  {loading ? (
-                    <ActivityIndicator color="#000000" size="small" />
-                  ) : (
-                    <View style={styles.publishContent}>
-                      <Text style={styles.publishText}>Publish</Text>
-                      <Ionicons name="send" size={16} color="#000000" />
-                    </View>
-                  )}
-                </LinearGradient>
-              </Animated.View>
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
+                  <Ionicons name="close" size={20} color="#111111" />
+                </TouchableOpacity>
 
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* User Card */}
-          <Animated.View style={[styles.userCard, { opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }]}>
-            <View style={styles.userCardContent}>
-              <View style={styles.userRow}>
-                <View style={styles.avatarContainer}>
-                  <LinearGradient
-                    colors={['#f9c349', '#f5a623']}
-                    style={styles.avatar}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    {user?.profileImage ? (
-                      <Image source={{ uri: user.profileImage }} style={styles.avatarImg} />
-                    ) : (
-                      <View style={styles.avatarPlaceholder}>
-                        <Text style={styles.avatarText}>
-                          {user?.name?.charAt(0).toUpperCase() || "U"}
+                <View style={styles.headerCenter}>
+                  <View style={styles.headerTitleRow}>
+                    <Text style={styles.headerTitle}>New Post</Text>
+                    <View style={styles.headerDot} />
+                  </View>
+                  <Text style={styles.headerSub}>Compose your story</Text>
+                </View>
+
+                <TouchableOpacity
+                  onPress={handlePost}
+                  disabled={!canPost}
+                  activeOpacity={0.85}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Animated.View style={{ transform: [{ scale: btnScale }] }}>
+                    <LinearGradient
+                      colors={canPost ? ['#f9c349', '#f5a623'] : ['#F5F5F5', '#EFEFEF']}
+                      style={styles.headerBtn}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      {loading ? (
+                        <ActivityIndicator color="#111111" size="small" />
+                      ) : (
+                        <>
+                          <Ionicons
+                            name="arrow-up"
+                            size={15}
+                            color={canPost ? "#111111" : "#BBBBBB"}
+                            style={{ marginRight: 4 }}
+                          />
+                          <Text
+                            style={[
+                              styles.headerBtnText,
+                              !canPost && { color: '#BBBBBB' },
+                            ]}
+                          >
+                            Post
+                          </Text>
+                        </>
+                      )}
+                    </LinearGradient>
+                  </Animated.View>
+                </TouchableOpacity>
+              </View>
+
+              {/* ---------- BODY ---------- */}
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.body}
+                keyboardShouldPersistTaps="handled"
+                bounces={false}
+              >
+                {!isReady ? (
+                  <SheetSkeleton />
+                ) : (
+                  <>
+                    {/* Author row */}
+                    <View style={styles.authorRow}>
+                      <View style={styles.avatarWrap}>
+                        <LinearGradient
+                          colors={['#f9c349', '#f5a623']}
+                          style={styles.avatarGradient}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                        >
+                          <View style={styles.avatarMask}>
+                            {user?.profileImage ? (
+                              <Image
+                                source={{ uri: user.profileImage }}
+                                style={styles.avatarImg}
+                              />
+                            ) : (
+                              <Text style={styles.avatarLetter}>
+                                {user?.name?.charAt(0).toUpperCase() || "U"}
+                              </Text>
+                            )}
+                          </View>
+                        </LinearGradient>
+                        <View style={styles.onlineBadge}>
+                          <View style={styles.onlineInner} />
+                        </View>
+                      </View>
+
+                      <View style={styles.authorText}>
+                        <Text style={styles.authorName} numberOfLines={1}>
+                          {user?.name || "Community Member"}
                         </Text>
+                        <View style={styles.authorSub}>
+                          <Ionicons name="location-sharp" size={11} color="#f5a623" />
+                          <Text style={styles.authorLoc} numberOfLines={1}>
+                            {user?.location || "Karachi"}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.visibilityPill}>
+                        <Ionicons name="globe-outline" size={12} color="#666666" />
+                        <Text style={styles.visibilityText}>Public</Text>
+                      </View>
+                    </View>
+
+                    {/* Composer */}
+                    <View style={styles.composerWrap}>
+                      <Animated.View
+                        style={[
+                          styles.composerGlow,
+                          {
+                            opacity: focusGlow.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0, 0.18],
+                            }),
+                          },
+                        ]}
+                      />
+
+                      <View style={styles.composer}>
+                        <Animated.View
+                          style={[
+                            styles.composerBorder,
+                            {
+                              borderColor: focusGlow.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: ['#EFEFEF', '#f9c349'],
+                              }),
+                            },
+                          ]}
+                        />
+
+                        <TextInput
+                          ref={inputRef}
+                          placeholder="What's on your mind today?"
+                          placeholderTextColor="#B5B5B5"
+                          multiline
+                          value={text}
+                          onChangeText={setText}
+                          style={styles.composerInput}
+                          maxLength={2000}
+                          onFocus={() => setIsFocused(true)}
+                          onBlur={() => setIsFocused(false)}
+                          selectionColor="#f5a623"
+                          scrollEnabled
+                        />
+                      </View>
+
+                      {/* Stats */}
+                      <Animated.View style={[styles.statsBar, { opacity: statsFade }]}>
+                        <View style={styles.statsGroup}>
+                          <View style={styles.statPill}>
+                            <Ionicons name="pencil-outline" size={12} color="#666666" />
+                            <Text style={styles.statPillText}>{text.length}</Text>
+                          </View>
+                          <View style={styles.statPill}>
+                            <Ionicons name="reader-outline" size={12} color="#666666" />
+                            <Text style={styles.statPillText}>{wordCount}w</Text>
+                          </View>
+                        </View>
+
+                        <View style={styles.statRight}>
+                          <View style={styles.progressTrack}>
+                            <View
+                              style={[
+                                styles.progressFill,
+                                {
+                                  width: `${charProgress}%`,
+                                  backgroundColor: nearLimit ? '#EF4444' : '#f9c349',
+                                },
+                              ]}
+                            />
+                          </View>
+                          <Text
+                            style={[
+                              styles.progressLabel,
+                              nearLimit && { color: '#EF4444' },
+                            ]}
+                          >
+                            {text.length}/2000
+                          </Text>
+                        </View>
+                      </Animated.View>
+                    </View>
+
+                    {/* Quick ideas — only when empty */}
+                    {text.length === 0 && (
+                      <View style={styles.tipsWrap}>
+                        <View style={styles.tipsHeaderRow}>
+                          <View style={styles.tipsAccent} />
+                          <Text style={styles.tipsHeaderText}>Quick ideas</Text>
+                        </View>
+
+                        <View style={styles.tipsGrid}>
+                          <TouchableOpacity
+                            style={styles.ideaCard}
+                            activeOpacity={0.75}
+                            onPress={() => setText("Today I want to share... ")}
+                          >
+                            <View style={[styles.ideaIcon, { backgroundColor: '#FFF4D6' }]}>
+                              <Ionicons
+                                name="chatbubble-ellipses-outline"
+                                size={16}
+                                color="#f5a623"
+                              />
+                            </View>
+                            <Text style={styles.ideaText}>Share a thought</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={styles.ideaCard}
+                            activeOpacity={0.75}
+                            onPress={() => setText("Quick question for the community: ")}
+                          >
+                            <View style={[styles.ideaIcon, { backgroundColor: '#E8F5E9' }]}>
+                              <Ionicons
+                                name="help-circle-outline"
+                                size={16}
+                                color="#22C55E"
+                              />
+                            </View>
+                            <Text style={styles.ideaText}>Ask a question</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={styles.ideaCard}
+                            activeOpacity={0.75}
+                            onPress={() => setText("Small win worth celebrating: ")}
+                          >
+                            <View style={[styles.ideaIcon, { backgroundColor: '#FDE8E8' }]}>
+                              <Ionicons
+                                name="trophy-outline"
+                                size={16}
+                                color="#EF4444"
+                              />
+                            </View>
+                            <Text style={styles.ideaText}>Celebrate a win</Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
                     )}
-                  </LinearGradient>
-                </View>
 
-                <View style={styles.userInfo}>
-                  <Text style={styles.userName}>{user?.name || "Community Member"}</Text>
-                  <View style={styles.userBadge}>
-                    <View style={styles.userBadgeDot} />
-                    <Ionicons name="location-outline" size={12} color="#666666" />
-                    <Text style={styles.userLocation}>
-                      {user?.location || "Karachi"}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </Animated.View>
+                    {/* Action bar — only when typing */}
+                    {text.length > 0 && (
+                      <View style={styles.actionBar}>
+                        <TouchableOpacity
+                          style={styles.actionBtn}
+                          onPress={() => setText('')}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons
+                            name="close-circle-outline"
+                            size={18}
+                            color="#EF4444"
+                          />
+                          <Text style={[styles.actionBtnText, { color: '#EF4444' }]}>
+                            Clear
+                          </Text>
+                        </TouchableOpacity>
 
-          {/* Text Input */}
-          <Animated.View style={[styles.inputSection, { opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }]}>
-            <Animated.View style={[styles.inputWrapper, { borderColor }]}>
-              <TextInput
-                placeholder="What's on your mind?"
-                placeholderTextColor="#999999"
-                multiline
-                value={text}
-                onChangeText={setText}
-                style={styles.input}
-                maxLength={2000}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                autoFocus={true}
-              />
+                        <View style={styles.actionDivider} />
 
-              <Animated.View
-                style={[
-                  styles.inputAccent,
-                  {
-                    opacity: borderAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.3, 1],
-                    }),
-                  },
-                ]}
-              />
+                        <TouchableOpacity
+                          style={styles.actionBtn}
+                          onPress={handlePost}
+                          activeOpacity={0.7}
+                          disabled={loading}
+                        >
+                          <Ionicons name="send" size={16} color="#22C55E" />
+                          <Text style={[styles.actionBtnText, { color: '#22C55E' }]}>
+                            {loading ? 'Publishing...' : 'Publish'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+
+                    {/* Footer hint */}
+                    <View style={styles.footerHint}>
+                      <Ionicons
+                        name="shield-checkmark-outline"
+                        size={13}
+                        color="#BBBBBB"
+                      />
+                      <Text style={styles.footerHintText}>
+                        Be kind. Be authentic. Community guidelines apply.
+                      </Text>
+                    </View>
+
+                    <View style={{ height: Platform.OS === 'ios' ? 24 : 12 }} />
+                  </>
+                )}
+              </ScrollView>
             </Animated.View>
-
-            <Animated.View style={[styles.statsContainer, { opacity: charCountAnim }]}>
-              <View style={styles.statsLeft}>
-                <View style={styles.statItem}>
-                  <Ionicons name="text-outline" size={14} color="#666666" />
-                  <Text style={styles.statText}>{text.length} chars</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                  <Ionicons name="stats-chart-outline" size={14} color="#666666" />
-                  <Text style={styles.statText}>{wordCount} words</Text>
-                </View>
-              </View>
-              <View style={styles.charLimitContainer}>
-                <View style={styles.charProgress}>
-                  <View
-                    style={[
-                      styles.charProgressBar,
-                      {
-                        width: `${(text.length / 2000) * 100}%`,
-                        backgroundColor: text.length > 1800 ? '#EF4444' : '#f9c349',
-                      },
-                    ]}
-                  />
-                </View>
-                <Text style={[styles.charLimit, text.length > 1800 && styles.charLimitWarning]}>
-                  {text.length}/2000
-                </Text>
-              </View>
-            </Animated.View>
-          </Animated.View>
-
-          {/* Tips */}
-          {!text.trim() && (
-            <Animated.View style={[styles.tipsContainer, { opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }]}>
-              <View style={styles.tipsGradient}>
-                <View style={styles.tipsHeader}>
-                  <View style={styles.tipsIconContainer}>
-                    <Ionicons name="bulb-outline" size={22} color="#f9c349" />
-                  </View>
-                  <View style={styles.tipsHeaderText}>
-                    <Text style={styles.tipsTitle}>Share something with the community</Text>
-                    <Text style={styles.tipsSubtitle}>Your voice matters. Start typing!</Text>
-                  </View>
-                </View>
-                <View style={styles.tipsList}>
-                  <View style={styles.tipItem}>
-                    <View style={[styles.tipDot, { backgroundColor: '#f9c349' }]} />
-                    <Text style={styles.tipText}>Share your thoughts or experiences</Text>
-                  </View>
-                  <View style={styles.tipItem}>
-                    <View style={[styles.tipDot, { backgroundColor: '#f9c349' }]} />
-                    <Text style={styles.tipText}>Ask questions or seek advice</Text>
-                  </View>
-                  <View style={styles.tipItem}>
-                    <View style={[styles.tipDot, { backgroundColor: '#f9c349' }]} />
-                    <Text style={styles.tipText}>Celebrate achievements and milestones</Text>
-                  </View>
-                </View>
-              </View>
-            </Animated.View>
-          )}
-
-          {/* Quick Actions */}
-          {text.length > 0 && (
-            <Animated.View style={[styles.quickActions, { opacity: fadeAnim }]}>
-              <TouchableOpacity
-                style={styles.quickActionButton}
-                onPress={() => setText('')}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="trash-outline" size={18} color="#EF4444" />
-                <Text style={styles.quickActionText}>Clear</Text>
-              </TouchableOpacity>
-              <View style={styles.quickActionDivider} />
-              <TouchableOpacity
-                style={styles.quickActionButton}
-                onPress={handlePost}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="checkmark-circle-outline" size={18} color="#22C55E" />
-                <Text style={[styles.quickActionText, { color: '#22C55E' }]}>Submit</Text>
-              </TouchableOpacity>
-            </Animated.View>
-          )}
-        </ScrollView>
+          </View>
+        </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </Modal>
   );
 }
 
+// ============================================================
+// STYLES
+// ============================================================
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
-
-  // Skeleton
-  skeletonHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
-    gap: 12,
+  // ---------- Modal shell ----------
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
-  skeletonCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F5F5F5' },
-  skeletonContent: { padding: 20 },
-  skeletonUserRow: { flexDirection: 'row', alignItems: 'center' },
-  skeletonAvatar: {
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: '#F5F5F5', marginRight: 14,
+  kavWrapper: {
+    flex: 1,
+    justifyContent: 'flex-end',
   },
-  skeletonLine: { backgroundColor: '#F5F5F5', borderRadius: 6, height: 14 },
-
-  // Header
-  header: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
+  sheetWrap: {
+    width: '100%',
+  },
+  sheet: {
     backgroundColor: '#FFFFFF',
-    paddingTop: 8,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    maxHeight: height * 0.88,
+    paddingBottom: Platform.OS === 'ios' ? 12 : 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 20,
   },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  backButton: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#000000', letterSpacing: -0.3 },
-  headerDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#f9c349' },
-
-  publishButton: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#f9c349',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  publishButtonDisabled: { shadowOpacity: 0, elevation: 0 },
-  publishGradient: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
-  publishContent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  publishText: { color: '#000000', fontWeight: '600', fontSize: 14 },
-
-  // User Card
-  userCard: { marginBottom: 24 },
-  userCardContent: {
-    borderRadius: 16,
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  userRow: { flexDirection: 'row', alignItems: 'center' },
-  avatarContainer: { marginRight: 14 },
-  avatar: {
-    width: 56, height: 56, borderRadius: 28, overflow: 'hidden',
-    shadowColor: '#f9c349',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
-  },
-  avatarPlaceholder: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
-  avatarImg: { width: '100%', height: '100%' },
-  avatarText: { color: '#000000', fontWeight: '700', fontSize: 20 },
-  userInfo: { flex: 1 },
-  userName: { fontSize: 16, fontWeight: '600', color: '#000000', marginBottom: 4 },
-  userBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  userBadgeDot: {
-    width: 4, height: 4, borderRadius: 2,
-    backgroundColor: '#22C55E', marginRight: 4,
-  },
-  userLocation: { fontSize: 12, color: '#666666', fontWeight: '500' },
-
-  // Input
-  inputSection: { marginBottom: 20 },
-  inputWrapper: {
-    position: 'relative',
-    backgroundColor: '#FAFAFA',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#E5E5E5',
-    minHeight: 200,
-    padding: 16,
-  },
-  input: {
-    fontSize: 16,
-    color: '#000000',
-    lineHeight: 24,
-    textAlignVertical: 'top',
-    minHeight: 180,
-    paddingTop: 4,
-  },
-  inputAccent: {
-    position: 'absolute',
-    bottom: -2, left: 0, right: 0, height: 3,
-    backgroundColor: '#f9c349',
+  dragHandle: {
+    width: 42,
+    height: 4,
     borderRadius: 2,
+    backgroundColor: '#E0E0E0',
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 4,
   },
 
-  statsContainer: {
+  // ---------- Skeleton ----------
+  skUserRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 16,
+  },
+  skAvatar: {
+    width: 50, height: 50, borderRadius: 25, backgroundColor: '#F0F0F0',
+  },
+  skLine: { backgroundColor: '#F0F0F0', borderRadius: 6 },
+  skCard: {
+    width: '100%',
+    height: 180,
+    borderRadius: 22,
+    backgroundColor: '#F5F5F5',
+  },
+
+  // ---------- Header ----------
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  iconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#F7F7F7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerCenter: { flex: 1, marginLeft: 12 },
+  headerTitleRow: { flexDirection: 'row', alignItems: 'center' },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111111',
+    letterSpacing: -0.3,
+  },
+  headerDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#f9c349',
+    marginLeft: 6,
+    marginTop: 1,
+  },
+  headerSub: {
+    fontSize: 11.5,
+    color: '#9A9A9A',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  headerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 20,
+    minWidth: 78,
+    justifyContent: 'center',
+  },
+  headerBtnText: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#111111',
+    letterSpacing: -0.2,
+  },
+
+  // ---------- Body / scroll ----------
+  body: {
+    paddingHorizontal: 18,
+    paddingTop: 6,
+    paddingBottom: 12,
+  },
+
+  // ---------- Author ----------
+  authorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#F2F2F2',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
+    marginBottom: 16,
+  },
+  avatarWrap: { position: 'relative' },
+  avatarGradient: {
+    width: 48, height: 48, borderRadius: 24, padding: 2,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  avatarMask: {
+    width: '100%', height: '100%', borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImg: { width: '100%', height: '100%' },
+  avatarLetter: { fontSize: 17, fontWeight: '800', color: '#111111' },
+  onlineBadge: {
+    position: 'absolute',
+    bottom: -2, right: -2,
+    width: 15, height: 15, borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  onlineInner: {
+    width: 9, height: 9, borderRadius: 5,
+    backgroundColor: '#22C55E',
+  },
+  authorText: { flex: 1, marginLeft: 12, marginRight: 8 },
+  authorName: {
+    fontSize: 14.5, fontWeight: '700', color: '#111111',
+    letterSpacing: -0.2,
+  },
+  authorSub: { flexDirection: 'row', alignItems: 'center', marginTop: 3, gap: 3 },
+  authorLoc: {
+    fontSize: 11.5, color: '#888888', fontWeight: '500', marginLeft: 2,
+  },
+  visibilityPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: 12,
+  },
+  visibilityText: {
+    fontSize: 11, color: '#666666', fontWeight: '600',
+  },
+
+  // ---------- Composer ----------
+  composerWrap: { position: 'relative', marginBottom: 18 },
+  composerGlow: {
+    position: 'absolute',
+    top: -6, left: -6, right: -6, bottom: -6,
+    backgroundColor: '#f9c349',
+    borderRadius: 26,
+  },
+  composer: {
+    backgroundColor: '#FCFCFC',
+    borderRadius: 22,
+    minHeight: 170,
+    padding: 16,
+    overflow: 'hidden',
+  },
+  composerBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 22,
+    borderWidth: 1.5,
+  },
+  composerInput: {
+    fontSize: 16,
+    color: '#111111',
+    lineHeight: 25,
+    textAlignVertical: 'top',
+    minHeight: 140,
+    paddingTop: 2,
+    fontWeight: '400',
+  },
+
+  // Stats
+  statsBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: 12,
     paddingHorizontal: 4,
   },
-  statsLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  statItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  statDivider: { width: 1, height: 14, backgroundColor: '#E5E5E5' },
-  statText: { fontSize: 11, color: '#666666', fontWeight: '500' },
-  charLimitContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  charProgress: {
-    width: 40, height: 3, backgroundColor: '#E5E5E5',
-    borderRadius: 2, overflow: 'hidden',
+  statsGroup: { flexDirection: 'row', gap: 8 },
+  statPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 10,
   },
-  charProgressBar: { height: '100%', borderRadius: 2 },
-  charLimit: { fontSize: 11, color: '#666666', fontWeight: '500' },
-  charLimitWarning: { color: '#EF4444' },
+  statPillText: {
+    fontSize: 11.5, color: '#555555', fontWeight: '700',
+  },
+  statRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  progressTrack: {
+    width: 50, height: 4,
+    backgroundColor: '#EDEDED', borderRadius: 2, overflow: 'hidden',
+  },
+  progressFill: { height: '100%', borderRadius: 2 },
+  progressLabel: {
+    fontSize: 11.5, color: '#9A9A9A', fontWeight: '600',
+    minWidth: 52, textAlign: 'right',
+  },
 
-  // Tips
-  tipsContainer: { marginTop: 8 },
-  tipsGradient: {
+  // ---------- Tips ----------
+  tipsWrap: { marginBottom: 16 },
+  tipsHeaderRow: {
+    flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8,
+  },
+  tipsAccent: {
+    width: 3, height: 14, borderRadius: 2, backgroundColor: '#f9c349',
+  },
+  tipsHeaderText: {
+    fontSize: 12.5, fontWeight: '700', color: '#111111',
+    letterSpacing: -0.2, textTransform: 'uppercase',
+  },
+  tipsGrid: { flexDirection: 'row', gap: 10 },
+  ideaCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 20,
-    backgroundColor: '#FAFAFA',
+    padding: 12,
     borderWidth: 1,
     borderColor: '#F0F0F0',
+    alignItems: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
   },
-  tipsHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
-  tipsIconContainer: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#FFF8E1',
-    justifyContent: 'center', alignItems: 'center',
+  ideaIcon: {
+    width: 32, height: 32, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 8,
   },
-  tipsHeaderText: { flex: 1 },
-  tipsTitle: { fontSize: 15, fontWeight: '600', color: '#000000', marginBottom: 2 },
-  tipsSubtitle: { fontSize: 12, color: '#666666', fontWeight: '400' },
-  tipsList: { gap: 12 },
-  tipItem: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  tipDot: { width: 6, height: 6, borderRadius: 3 },
-  tipText: { fontSize: 13, color: '#444444', lineHeight: 20, fontWeight: '400' },
+  ideaText: {
+    fontSize: 12, fontWeight: '600', color: '#333333', lineHeight: 16,
+  },
 
-  // Quick Actions
-  quickActions: {
+  // ---------- Action bar ----------
+  actionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FAFAFA',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    paddingVertical: 4,
+    marginTop: 4,
+  },
+  actionBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 12,
-    paddingVertical: 8,
-    backgroundColor: '#FAFAFA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
+    gap: 7,
+    paddingVertical: 13,
   },
-  quickActionButton: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: 6, paddingHorizontal: 20, paddingVertical: 6,
-  },
-  quickActionText: { fontSize: 13, color: '#666666', fontWeight: '500' },
-  quickActionDivider: { width: 1, height: 20, backgroundColor: '#E5E5E5' },
+  actionBtnText: { fontSize: 13.5, fontWeight: '700' },
+  actionDivider: { width: 1, height: 22, backgroundColor: '#E8E8E8' },
 
-  // Scroll
-  scrollContent: { padding: 20, paddingBottom: 40 },
+  // ---------- Footer ----------
+  footerHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 20,
+    paddingHorizontal: 20,
+  },
+  footerHintText: {
+    fontSize: 11,
+    color: '#BBBBBB',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
 });
