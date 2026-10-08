@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 import { color as T, font as F } from "../theme/tokens";
+import ScreenHeader from "../ui/ScreenHeader";
 // --- SUB-COMPONENTS (Defined outside to prevent re-render lag) ---
 const SectionHeader = ({ title, icon, color }) => (
 
@@ -19,13 +20,13 @@ const SectionHeader = ({ title, icon, color }) => (
 
 const InputField = ({ label, icon, placeholder, value, onChangeText, keyboardType = 'default', multiline = false, required = false }) => (
   <View style={styles.inputGroup}>
-    {label ? <Text style={styles.label}>{label}{required && <Text style={{color: '#E35B5B'}}> *</Text>}</Text> : null}
+    {label ? <Text style={styles.label}>{label}{required && <Text style={{color: T.danger}}> *</Text>}</Text> : null}
     <View style={[styles.inputContainer, multiline && styles.textAreaContainer]}>
-      <FontAwesome5 name={icon} size={13} color="#9DA8B7" style={styles.inputIcon} />
+      <FontAwesome5 name={icon} size={13} color={T.textFaint} style={styles.inputIcon} />
       <TextInput
         style={[styles.input, multiline && styles.textArea]}
         placeholder={placeholder}
-        placeholderTextColor="#BDC3C7"
+        placeholderTextColor={T.textFaint}
         value={value}
         onChangeText={onChangeText}
         keyboardType={keyboardType}
@@ -42,7 +43,7 @@ const ApplicationForm = ({ route, navigation }) => {
     const { token, user } = useContext(AuthContext);
     const [loading, setLoading] = useState(false);
   const { program } = route.params || { 
-    program: { title: 'Program', university: 'University', color: '#6366F1' } 
+    program: { title: 'Program', university: 'University', color: T.ink } 
   };
 
   // --- Complete State Management ---
@@ -140,13 +141,15 @@ const ApplicationForm = ({ route, navigation }) => {
         style={{ flex: 1 }}
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.reset({ index: 0, routes: [{ name: "Exchange" }] })} style={styles.backButton}>
-            <FontAwesome5 name="chevron-left" size={18} color={T.white} />
-          </TouchableOpacity>
-          <View>
-            <Text style={styles.headerTitle}>application form</Text>
+          <ScreenHeader
+            dark
+            title="application form"
+            onBack={() => navigation.reset({ index: 0, routes: [{ name: "Exchange" }] })}
+            style={{ paddingHorizontal: 0 }}
+          />
+          {!!program.university && program.university !== 'University' && (
             <Text style={styles.headerSubtitle}>{program.university}</Text>
-          </View>
+          )}
         </View>
 
         <ScrollView 
@@ -236,7 +239,7 @@ const ApplicationForm = ({ route, navigation }) => {
           <View style={styles.expHeaderContainer}>
             <SectionHeader title="Work Experience" icon="briefcase" color={program.color} />
             <TouchableOpacity style={styles.addBtn} onPress={addExperience}>
-              <FontAwesome5 name="plus" size={10} color="#4F46E5" />
+              <FontAwesome5 name="plus" size={10} color={T.ink} />
               <Text style={styles.addBtnText}> add exp</Text>
             </TouchableOpacity>
           </View>
@@ -292,22 +295,22 @@ const ApplicationForm = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: T.paper },
   header: { 
-    backgroundColor: T.ink, paddingHorizontal: 25, paddingTop: Platform.OS === 'ios' ? 20 : 50, paddingBottom: 25, 
-    flexDirection: 'row', alignItems: 'center', borderBottomLeftRadius: 40,
+    backgroundColor: T.ink, paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 8 : 40, paddingBottom: 18, 
+    borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
   },
   backButton: { marginRight: 20 },
   headerTitle: { color: T.white, fontSize: 22, fontFamily: F.heading },
-  headerSubtitle: { color: T.textFaint, fontSize: 13, fontFamily: F.body },
+  headerSubtitle: { color: T.onInkMuted, fontSize: 13, fontFamily: F.body, paddingHorizontal: 4 },
   scrollContent: { padding: 20 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, marginTop: 25 },
-  sectionTitle: { fontSize: 12, fontFamily: F.bodyBold, color: '#1E293B', marginLeft: 10, textTransform: 'none', letterSpacing: 1 },
+  sectionTitle: { fontSize: 12, fontFamily: F.bodyBold, color: T.ink, marginLeft: 10, textTransform: 'none', letterSpacing: 1 },
   expHeaderContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  addBtn: { backgroundColor: '#E0E7FF', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 10 },
-  addBtnText: { fontSize: 11, fontFamily: F.bodyBold, color: '#4F46E5' },
+  addBtn: { backgroundColor: T.sand, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 10 },
+  addBtnText: { fontSize: 11, fontFamily: F.bodyBold, color: T.ink },
   experienceCard: { backgroundColor: T.sand, padding: 15, borderRadius: 20, marginTop: 15, borderWidth: 1, borderColor: T.line },
   expCardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  expCountText: { fontSize: 11, fontFamily: F.bodyBold, color: '#475569' },
-  emergencyBox: { marginTop: 15, backgroundColor: T.dangerBg, padding: 15, borderRadius: 20, borderStyle: 'dashed', borderWidth: 1, borderColor: '#FCA5A5' },
+  expCountText: { fontSize: 11, fontFamily: F.bodyBold, color: T.textMuted },
+  emergencyBox: { marginTop: 15, backgroundColor: T.dangerBg, padding: 15, borderRadius: 20, borderStyle: 'dashed', borderWidth: 1, borderColor: T.dangerBg },
   emergencyLabel: { fontSize: 11, fontFamily: F.bodyBold, color: T.danger, marginBottom: 10, marginLeft: 5 },
   inputGroup: { marginBottom: 16 },
   label: { fontSize: 11, fontFamily: F.bodyBold, color: T.textMuted, marginBottom: 6, marginLeft: 4 },
@@ -316,7 +319,7 @@ const styles = StyleSheet.create({
     borderRadius: 15, paddingHorizontal: 15, borderWidth: 1, borderColor: T.line
   },
   inputIcon: { marginRight: 12, width: 18, textAlign: 'center' },
-  input: { flex: 1, height: 48, fontSize: 14, color: '#0F172A', fontFamily: F.bodyMedium },
+  input: { flex: 1, height: 48, fontSize: 14, color: T.ink, fontFamily: F.bodyMedium },
   textAreaContainer: { alignItems: 'flex-start', paddingTop: 14 },
   textArea: { height: 110, textAlignVertical: 'top' },
   row: { flexDirection: 'row' },

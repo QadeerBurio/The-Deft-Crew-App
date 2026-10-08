@@ -174,7 +174,7 @@ const CareerCard = React.memo(({ item, index, onPress, onLocationPress, hasAppli
         </View>
         {item.experienceLevel && (
           <View style={styles.expBadge}>
-            <Ionicons name="trending-up-outline" size={11} color="#8b5cf6" />
+            <Ionicons name="trending-up-outline" size={11} color={T.ink} />
             <Text style={styles.expBadgeText}>{item.experienceLevel}</Text>
           </View>
         )}
@@ -218,7 +218,7 @@ const CareerCard = React.memo(({ item, index, onPress, onLocationPress, hasAppli
         )}
         {item.minExperience > 0 && (
           <View style={styles.metaItem}>
-            <Ionicons name="time-outline" size={14} color="#6f6f6f" />
+            <Ionicons name="time-outline" size={14} color={T.textMuted} />
             <Text style={styles.metaText}>{item.minExperience}+ yrs exp</Text>
           </View>
         )}
@@ -580,7 +580,7 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
                   <Text style={styles.applyModalMetaText}>{job?.type}</Text>
                 </View>
                 <View style={styles.applyModalMetaBadge}>
-                  <Ionicons name="trending-up-outline" size={12} color="#8b5cf6" />
+                  <Ionicons name="trending-up-outline" size={12} color={T.ink} />
                   <Text style={styles.applyModalMetaText}>{job?.experienceLevel}</Text>
                 </View>
                 <View style={styles.applyModalMetaBadge}>
@@ -1531,7 +1531,7 @@ const Career = ({ navigation }) => {
               loadingMore ? (
                 <View style={{ paddingVertical: 20, alignItems: 'center' }}>
                   <ActivityIndicator size="small" color={T.yellow} />
-                  <Text style={{ marginTop: 8, fontSize: 13, color: T.textMuted, fontWeight: '600' }}>loading more listings...</Text>
+                  <Text style={{ marginTop: 8, fontSize: 13, color: T.textMuted, fontFamily: F.bodySemi }}>loading more listings...</Text>
                 </View>
               ) : (hasMore && filteredData.length > 0) ? (
                 <TouchableOpacity
@@ -1597,7 +1597,7 @@ const Career = ({ navigation }) => {
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
           <View style={{ backgroundColor: T.card, padding: 24, borderRadius: 16, alignItems: 'center', width: width * 0.8 }}>
             <ActivityIndicator size="large" color={T.yellow} />
-            <Text style={{ marginTop: 16, fontSize: 16, fontWeight: '700', color: T.ink }}>optimizing resume...</Text>
+            <Text style={{ marginTop: 16, fontSize: 16, fontFamily: F.bodyBold, color: T.ink }}>optimizing resume...</Text>
             <Text style={{ marginTop: 6, fontSize: 12, color: T.textFaint, textAlign: 'center' }}>AI is customizing your resume achievements & profile for this role.</Text>
           </View>
         </View>
@@ -1609,19 +1609,19 @@ const Career = ({ navigation }) => {
           <View style={{ backgroundColor: T.card, borderRadius: 20, width: '100%', maxWidth: 360, overflow: 'hidden', borderWidth: 1.5, borderColor: T.yellow }}>
             <View style={{ backgroundColor: T.ink, paddingVertical: 20, alignItems: 'center', justifyContent: 'center' }}>
               <MaterialCommunityIcons name="alert-decagram" size={48} color={T.yellow} />
-              <Text style={{ color: T.white, fontSize: 18, fontWeight: '800', marginTop: 8 }}>skill gap warning</Text>
+              <Text style={{ color: T.white, fontSize: 18, fontFamily: F.heading, marginTop: 8 }}>skill gap warning</Text>
             </View>
             <View style={{ padding: 24 }}>
               <Text style={{ fontSize: 14, color: T.ink, lineHeight: 22, textAlign: 'center', marginBottom: 16 }}>
                 your expertise are not that much for this role to apply this role you need to enhance your skills{' '}
-                <Text style={{ fontWeight: '800', color: T.ink }}>{skillGapData.missingSkills.join(', ') || 'key required skills'}</Text>
+                <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>{skillGapData.missingSkills.join(', ') || 'key required skills'}</Text>
                 {' '}and then your chances of selection could increase
               </Text>
               <TouchableOpacity
                 style={{ backgroundColor: T.yellow, paddingVertical: 12, borderRadius: 12, alignItems: 'center', marginTop: 8 }}
                 onPress={() => setSkillGapVisible(false)}
               >
-                <Text style={{ color: T.ink, fontWeight: '800', fontSize: 14 }}>i will enhance them!</Text>
+                <Text style={{ color: T.ink, fontFamily: F.bodyBold, fontSize: 14 }}>i will enhance them!</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1667,7 +1667,7 @@ const Career = ({ navigation }) => {
                     <Text style={styles.applyModalMetaText}>{selectedJob?.type}</Text>
                   </View>
                   <View style={styles.applyModalMetaBadge}>
-                    <Ionicons name="trending-up-outline" size={12} color="#8b5cf6" />
+                    <Ionicons name="trending-up-outline" size={12} color={T.ink} />
                     <Text style={styles.applyModalMetaText}>{selectedJob?.experienceLevel}</Text>
                   </View>
                   <View style={styles.applyModalMetaBadge}>
@@ -1952,12 +1952,12 @@ const webViewStyles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 24,
-    backgroundColor: '#fff8e7',
+    backgroundColor: T.yellowSoft,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
     borderWidth: 2,
-    borderColor: '#fdebd0',
+    borderColor: T.line,
   },
   errorTitle: { fontSize: 20, fontFamily: F.heading, color: T.ink, marginBottom: 6 },
   errorSubtitle: { fontSize: 13, fontFamily: F.body, color: T.textFaint, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
@@ -2023,8 +2023,8 @@ const styles = StyleSheet.create({
   externalBadgeText: { fontSize: 9, color: T.ink, fontFamily: F.bodyBold },
   typeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: T.yellowSoft, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: T.line },
   typeBadgeText: { fontSize: 10, color: T.ink, fontFamily: F.bodyBold },
-  expBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#8b5cf615', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#8b5cf630' },
-  expBadgeText: { fontSize: 10, color: '#8b5cf6', fontFamily: F.bodyBold },
+  expBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: T.sand, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: T.sand },
+  expBadgeText: { fontSize: 10, color: T.ink, fontFamily: F.bodyBold },
   locTypeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: T.successBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: T.success },
   locTypeBadgeText: { fontSize: 10, color: T.success, fontFamily: F.bodyBold },
   infoRow: { flexDirection: 'row', marginBottom: 6, flexWrap: 'wrap', gap: 14 },
@@ -2130,7 +2130,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#fff8e7',
+    backgroundColor: T.yellowSoft,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
@@ -2215,7 +2215,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff8e7',
+    backgroundColor: T.yellowSoft,
     borderWidth: 1,
     borderColor: T.yellow,
     paddingVertical: 8,

@@ -40,20 +40,20 @@ const { width, height } = Dimensions.get("window");
 const API_URL = `${BASE_URL}/jobs`;
 
 const COLORS = {
-  page: "#0d0d0d",
-  surface: "#161616",
-  card: "#1c1c1c",
-  line: "#272727",
+  page: T.ink,
+  surface: T.inkSoft,
+  card: T.inkSoft,
+  line: T.inkLine,
   primary: T.white,
   accent: T.yellow,
-  accentSoft: "#f9c34915",
-  muted: T.textMuted,
-  body: T.textFaint,
+  accentSoft: "rgba(249,195,73,0.10)", // T.yellow at 10% on ink
+  muted: T.onInkMuted,
+  body: T.onInkMuted,
   error: T.danger,
   success: T.success,
-  warning: "#f59e0b",
+  warning: T.yellow,
   info: T.ink,
-  purple: "#8b5cf6",
+  purple: T.yellow,
 };
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
@@ -110,7 +110,7 @@ const TDCCareerCard = React.memo(({ item, index, onPress, hasApplied }) => {
         </View>
         {item.experienceLevel && (
           <View style={styles.expBadge}>
-            <Ionicons name="trending-up-outline" size={11} color="#8b5cf6" />
+            <Ionicons name="trending-up-outline" size={11} color={T.ink} />
             <Text style={styles.expBadgeText}>{item.experienceLevel}</Text>
           </View>
         )}
@@ -880,9 +880,9 @@ const TDCCareers = ({ navigation }) => {
                       activeOpacity={0.85}
                     >
                       <View style={styles.submitBtnGradient}>
-                        {submitting ? <ActivityIndicator color="#0d0d0d" /> : (
+                        {submitting ? <ActivityIndicator color={T.ink} /> : (
                           <>
-                            <Ionicons name="send" size={16} color="#0d0d0d" />
+                            <Ionicons name="send" size={16} color={T.ink} />
                             <Text style={styles.submitBtnText}>submit application</Text>
                           </>
                         )}
@@ -982,7 +982,7 @@ const TDCCareers = ({ navigation }) => {
           </View>
         ) : jobs.length === 0 ? (
           <View style={styles.centerSection}>
-            <MaterialCommunityIcons name="briefcase-search" size={60} color="#2a2a2a" />
+            <MaterialCommunityIcons name="briefcase-search" size={60} color={T.ink} />
             <Text style={styles.emptyTitle}>no openings found</Text>
             <Text style={styles.emptySubtitle}>
               {search ? `No TDC roles match "${search}"` : "No open positions right now. Check back soon!"}
@@ -1043,7 +1043,7 @@ const TDCCareers = ({ navigation }) => {
               <Text style={styles.appsModalCount}>{myApplications.length} applications</Text>
               {myApplications.length === 0 ? (
                 <View style={styles.emptyState}>
-                  <MaterialCommunityIcons name="briefcase-search" size={50} color="#2a2a2a" />
+                  <MaterialCommunityIcons name="briefcase-search" size={50} color={T.ink} />
                   <Text style={styles.emptyStateText}>no applications yet</Text>
                 </View>
               ) : (
@@ -1090,7 +1090,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontFamily: F.heading, color: COLORS.primary, letterSpacing: -0.5 },
   headerSub: { fontSize: 11, fontFamily: F.body, color: COLORS.muted, marginTop: 1 },
   headerBadge: { position: "absolute", top: -4, right: -4, backgroundColor: COLORS.accent, borderRadius: 8, minWidth: 16, height: 16, justifyContent: "center", alignItems: "center" },
-  headerBadgeText: { fontSize: 9, fontFamily: F.bodyBold, color: "#0d0d0d" },
+  headerBadgeText: { fontSize: 9, fontFamily: F.bodyBold, color: T.ink },
   // TDC Banner
   tdcBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: T.yellowSoft, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: T.line },
   tdcBannerText: { fontSize: 12, color: T.yellow, fontFamily: F.bodyBold },
@@ -1108,7 +1108,7 @@ const styles = StyleSheet.create({
   emptySubtitle: { fontSize: 13, fontFamily: F.body, color: COLORS.muted, textAlign: "center", lineHeight: 18 },
   retryBtn: { marginTop: 8 },
   retryGradient: { backgroundColor: COLORS.accent, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 24 },
-  retryText: { fontFamily: F.bodyBold, color: "#0d0d0d" },
+  retryText: { fontFamily: F.bodyBold, color: T.ink },
   // Card
   card: { backgroundColor: COLORS.card, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: COLORS.line },
   tdcBadgeRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
@@ -1121,15 +1121,15 @@ const styles = StyleSheet.create({
   badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 },
   typeBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: T.yellowSoft, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   typeBadgeText: { fontSize: 10, color: T.yellow, fontFamily: F.bodyBold },
-  expBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#8b5cf610", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  expBadgeText: { fontSize: 10, color: "#8b5cf6", fontFamily: F.bodyBold },
+  expBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: T.sand, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  expBadgeText: { fontSize: 10, color: T.ink, fontFamily: F.bodyBold },
   locTypeBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: T.successBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   locTypeBadgeText: { fontSize: 10, color: T.success, fontFamily: F.bodyBold },
   infoRow: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 10 },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   metaText: { fontSize: 12, fontFamily: F.body, color: COLORS.body, maxWidth: width * 0.4 },
   skillsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 },
-  skillBadge: { backgroundColor: T.ink, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: "#2a2a2a" },
+  skillBadge: { backgroundColor: T.ink, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: T.inkLine },
   skillText: { fontSize: 10, color: COLORS.muted, fontFamily: F.bodySemi },
   cardFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 10, borderTopWidth: 1, borderTopColor: COLORS.line },
   viewDetailsLabel: { fontSize: 12, fontFamily: F.bodyBold, color: T.yellow },
@@ -1143,12 +1143,12 @@ const styles = StyleSheet.create({
   filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: COLORS.line, backgroundColor: COLORS.surface },
   filterChipActive: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
   filterChipText: { fontSize: 12, color: COLORS.muted, fontFamily: F.bodySemi },
-  filterChipTextActive: { color: "#0d0d0d", fontFamily: F.bodyBold },
+  filterChipTextActive: { color: T.ink, fontFamily: F.bodyBold },
   clearFiltersBtn: { backgroundColor: COLORS.surface, padding: 14, borderRadius: 14, alignItems: "center", marginTop: 8, borderWidth: 1, borderColor: COLORS.line },
   clearFiltersBtnText: { fontSize: 14, color: COLORS.muted, fontFamily: F.bodyBold },
   // Modals shared
   modalDragHandle: { width: 40, height: 4, backgroundColor: T.ink, borderRadius: 2, alignSelf: "center", marginBottom: 16 },
-  closeXButton: { position: "absolute", top: 16, right: 16, zIndex: 10, width: 32, height: 32, borderRadius: 16, backgroundColor: "#2a2a2a", justifyContent: "center", alignItems: "center" },
+  closeXButton: { position: "absolute", top: 16, right: 16, zIndex: 10, width: 32, height: 32, borderRadius: 16, backgroundColor: T.inkSoft, justifyContent: "center", alignItems: "center" },
   closeBtn: { backgroundColor: COLORS.surface, padding: 14, borderRadius: 14, alignItems: "center", marginTop: 12, borderWidth: 1, borderColor: COLORS.line },
   closeBtnText: { fontSize: 14, fontFamily: F.bodyBold, color: COLORS.muted },
   // Detail Modal
@@ -1175,7 +1175,7 @@ const styles = StyleSheet.create({
   formScrollContent: { paddingBottom: 20 },
   formLabel: { fontSize: 12, fontFamily: F.bodyBold, color: COLORS.primary, marginBottom: 5, marginTop: 8 },
   formInput: { borderWidth: 1, borderColor: COLORS.line, borderRadius: 12, padding: 12, fontSize: 13, fontFamily: F.body, marginBottom: 4, backgroundColor: COLORS.surface, color: COLORS.primary },
-  formInputError: { borderColor: COLORS.error, backgroundColor: "#1a0000" },
+  formInputError: { borderColor: COLORS.error, backgroundColor: T.ink },
   formTextArea: { height: 100, textAlignVertical: "top" },
   formRow: { flexDirection: "row", gap: 10 },
   formHalf: { flex: 1 },
@@ -1187,7 +1187,7 @@ const styles = StyleSheet.create({
   progressFill: { height: "100%", backgroundColor: COLORS.accent, borderRadius: 2 },
   submitBtn: { borderRadius: 14, overflow: "hidden", marginBottom: 10, marginTop: 8 },
   submitBtnGradient: { height: 52, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, backgroundColor: COLORS.accent },
-  submitBtnText: { color: "#0d0d0d", fontSize: 15, fontFamily: F.bodyBold },
+  submitBtnText: { color: T.ink, fontSize: 15, fontFamily: F.bodyBold },
   // My Apps Modal
   appsModalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: T.overlay },
   appsModalContent: { backgroundColor: COLORS.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: height * 0.8 },
