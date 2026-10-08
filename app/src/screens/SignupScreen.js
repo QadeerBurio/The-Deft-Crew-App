@@ -211,9 +211,9 @@ const RULES = [
 ];
 
 const STRENGTH = [
-  { label: "too short", color: "#e5e5e5" },
+  { label: "too short", color: AUTH.border },
   { label: "weak", color: AUTH.danger },
-  { label: "okay", color: "#f59e0b" },
+  { label: "okay", color: AUTH.gold },
   { label: "strong", color: AUTH.ok },
 ];
 
@@ -302,7 +302,7 @@ function PickerSheet({ visible, title, options, selected, onSelect, onClose, sea
               <TextInput
                 style={styles.searchInput}
                 placeholder={searchPlaceholder || "search"}
-                placeholderTextColor="#a8a8a8"
+                placeholderTextColor={AUTH.placeholder}
                 value={query}
                 onChangeText={setQuery}
                 autoCorrect={false}
@@ -780,7 +780,7 @@ export default function SignupScreen({ navigation }) {
         <>
           <View style={styles.meterRow}>
             {[1, 2, 3].map((i) => (
-              <View key={i} style={[styles.meter, { backgroundColor: level >= i ? strength.color : "#ededed" }]} />
+              <View key={i} style={[styles.meter, { backgroundColor: level >= i ? strength.color : AUTH.border }]} />
             ))}
             <Text style={[styles.meterLabel, { color: level ? strength.color : AUTH.muted }]}>{strength.label}</Text>
           </View>
@@ -789,7 +789,7 @@ export default function SignupScreen({ navigation }) {
               const ok = r.test(password);
               return (
                 <View key={r.key} style={styles.rule}>
-                  <Ionicons name={ok ? "checkmark-circle" : "ellipse-outline"} size={15} color={ok ? AUTH.ok : "#c4c4c4"} />
+                  <Ionicons name={ok ? "checkmark-circle" : "ellipse-outline"} size={15} color={ok ? AUTH.ok : AUTH.muted} />
                   <Text style={[styles.ruleText, ok && { color: AUTH.dark }]}>{r.label}</Text>
                 </View>
               );
@@ -858,26 +858,26 @@ export default function SignupScreen({ navigation }) {
 const styles = StyleSheet.create({
   section: {
     fontSize: 12,
-    fontWeight: "800",
+    fontFamily: 'DMSans_700Bold',
     color: AUTH.muted,
     textTransform: "uppercase",
     letterSpacing: 0.8,
     marginTop: 10,
     marginBottom: 12,
   },
-  fieldLabel: { fontSize: 12.5, fontWeight: "800", color: AUTH.dark, marginBottom: 8 },
-  errorText: { color: AUTH.danger, fontSize: 12, fontWeight: "600", marginTop: 6, marginLeft: 4 },
+  fieldLabel: { fontSize: 12.5, fontFamily: 'DMSans_700Bold', color: AUTH.dark, marginBottom: 8 },
+  errorText: { color: AUTH.danger, fontSize: 12, fontFamily: 'DMSans_600SemiBold', marginTop: 6, marginLeft: 4 },
 
   banner: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 10,
-    backgroundColor: "#fdecef",
+    backgroundColor: "rgba(255,143,133,0.12)",
     borderRadius: 14,
     padding: 12,
     marginBottom: 16,
   },
-  bannerTitle: { fontSize: 13.5, fontWeight: "800", color: AUTH.dark },
+  bannerTitle: { fontSize: 13.5, fontFamily: 'DMSans_700Bold', color: AUTH.dark },
   bannerText: { fontSize: 12.5, color: AUTH.text2, marginTop: 2, lineHeight: 18 },
 
   segment: {
@@ -899,9 +899,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
   },
-  segmentPillOn: { backgroundColor: AUTH.dark },
-  segmentText: { fontSize: 14.5, fontWeight: "800", color: AUTH.text2 },
-  segmentTextOn: { color: AUTH.gold },
+  segmentPillOn: { backgroundColor: AUTH.gold },
+  segmentText: { fontSize: 14.5, fontFamily: 'DMSans_700Bold', color: AUTH.text2 },
+  segmentTextOn: { color: "#111111" },
 
   picker: {
     flexDirection: "row",
@@ -914,17 +914,17 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: AUTH.border,
   },
-  pickerOn: { borderColor: AUTH.dark, backgroundColor: "#fff" },
-  pickerError: { borderColor: AUTH.danger, backgroundColor: "#fff" },
-  pickerText: { flex: 1, fontSize: 15.5, color: AUTH.dark, fontWeight: "600" },
-  pickerPlaceholder: { color: "#a8a8a8" },
+  pickerOn: { borderColor: AUTH.gold },
+  pickerError: { borderColor: AUTH.danger },
+  pickerText: { flex: 1, fontSize: 15.5, color: AUTH.dark, fontFamily: 'DMSans_600SemiBold' },
+  pickerPlaceholder: { color: AUTH.placeholder },
 
   meterRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: -4, marginBottom: 10 },
   meter: { flex: 1, height: 4, borderRadius: 2 },
-  meterLabel: { fontSize: 11.5, fontWeight: "800", marginLeft: 6, minWidth: 54, textAlign: "right" },
+  meterLabel: { fontSize: 11.5, fontFamily: 'DMSans_700Bold', marginLeft: 6, minWidth: 54, textAlign: "right" },
   rules: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 16 },
   rule: { flexDirection: "row", alignItems: "center", gap: 5 },
-  ruleText: { fontSize: 12, color: AUTH.muted, fontWeight: "600" },
+  ruleText: { fontSize: 12, color: AUTH.muted, fontFamily: 'DMSans_600SemiBold' },
 
   terms: {
     fontSize: 11.5,
@@ -937,13 +937,13 @@ const styles = StyleSheet.create({
 
   footerRow: { flexDirection: "row", alignItems: "center" },
   footerText: { color: AUTH.muted, fontSize: 14 },
-  footerLink: { color: AUTH.dark, fontSize: 14, fontWeight: "900" },
+  footerLink: { color: AUTH.dark, fontSize: 14, fontFamily: 'DMSans_700Bold' },
 
   // bottom sheet
   sheetWrap: { flex: 1, justifyContent: "flex-end" },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.4)" },
   sheet: {
-    backgroundColor: "#fff",
+    backgroundColor: AUTH.bg,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
@@ -956,7 +956,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 5,
     borderRadius: 3,
-    backgroundColor: "#e2e2e2",
+    backgroundColor: AUTH.border,
     marginBottom: 12,
   },
   sheetHead: {
@@ -965,7 +965,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 12,
   },
-  sheetTitle: { fontSize: 19, fontWeight: "900", color: AUTH.dark, letterSpacing: -0.4 },
+  sheetTitle: { fontSize: 19, fontFamily: 'DMSans_700Bold', color: AUTH.dark, letterSpacing: -0.4 },
   sheetClose: {
     width: 34,
     height: 34,
@@ -988,7 +988,7 @@ const styles = StyleSheet.create({
     borderColor: AUTH.border,
     marginBottom: 8,
   },
-  searchInput: { flex: 1, fontSize: 15, color: AUTH.dark, fontWeight: "600", paddingVertical: 0 },
+  searchInput: { flex: 1, fontSize: 15, color: AUTH.dark, fontFamily: 'DMSans_600SemiBold', paddingVertical: 0 },
   row: {
     minHeight: 50,
     flexDirection: "row",
@@ -1000,7 +1000,7 @@ const styles = StyleSheet.create({
     marginVertical: 1,
   },
   rowOn: { backgroundColor: AUTH.goldSoft },
-  rowText: { flex: 1, fontSize: 15, color: AUTH.dark, fontWeight: "600" },
-  rowTextOn: { fontWeight: "800" },
+  rowText: { flex: 1, fontSize: 15, color: AUTH.dark, fontFamily: 'DMSans_600SemiBold' },
+  rowTextOn: { fontFamily: 'DMSans_700Bold' },
   empty: { textAlign: "center", color: AUTH.muted, fontSize: 13.5, paddingVertical: 24 },
 });

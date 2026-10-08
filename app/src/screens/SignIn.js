@@ -25,9 +25,12 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import api, { injectSessionErrorHandler } from "../api/api";
 import { AuthContext } from "../context/AuthContext";
+import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 
-const GOLD = "#f9c349";
-const DARK = "#1a1a1a";
+// Dark sign-in (SignIn design). DARK = primary text on ink.
+const GOLD = T.yellow;
+const DARK = "#F5F2EA";
+const ERR = "#FF8F85"; // red that reads on ink
 
 const validateEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim().toLowerCase());
 
@@ -197,7 +200,7 @@ export default function SignIn({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="light-content" backgroundColor={T.ink} />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.keyboardView}
@@ -224,7 +227,7 @@ export default function SignIn({ navigation }) {
                 ) : null}
               </View>
               <TouchableOpacity onPress={hideNotification} style={styles.notificationClose} hitSlop={8}>
-                <Ionicons name="close" size={18} color="#666" />
+                <Ionicons name="close" size={18} color={T.textMuted} />
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -239,16 +242,14 @@ export default function SignIn({ navigation }) {
           <Animated.View style={[styles.card, { opacity: fadeAnim }]}>
             {/* Header with logo */}
             <View style={styles.header}>
-              <View style={styles.logoBadge}>
-                <Text style={styles.logoText}>tdc<Text style={{ color: GOLD }}>.</Text></Text>
-              </View>
-              <Text style={styles.title}>The Deft Crew</Text>
-              <Text style={styles.subtitle}>Sign in to manage your account</Text>
-              <View style={styles.decorativeLine}>
-                <View style={styles.lineSegment} />
-                <View style={styles.diamond} />
-                <View style={styles.lineSegment} />
-              </View>
+              <Text style={styles.logoText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                tdc<Text style={{ color: GOLD }}>.</Text>
+              </Text>
+              <Text style={styles.title} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                student life is noise<Text style={{ color: GOLD }}>.</Text>
+                {"\n"}{"let's sort it."}
+              </Text>
+              <Text style={styles.subtitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>free for every student. forever.</Text>
             </View>
 
             {/* Email */}
@@ -263,12 +264,13 @@ export default function SignIn({ navigation }) {
                 <Ionicons
                   name="mail-outline"
                   size={17}
-                  color={errors.email ? "#ff4444" : focusedInput === 'email' ? GOLD : "#999"}
+                  color={errors.email ? ERR : focusedInput === 'email' ? GOLD : T.onInkMuted}
                 />
               </View>
               <TextInput
-                placeholder="Email Address"
-                placeholderTextColor={errors.email ? "#ff8a8a" : "#999"}
+                placeholder="email"
+                placeholderTextColor={errors.email ? ERR : "#8C877C"}
+                accessibilityLabel="email"
                 value={email}
                 onChangeText={(text) => {
                   setEmail(text);
@@ -287,7 +289,7 @@ export default function SignIn({ navigation }) {
                 editable={!loading}
               />
               {emailOk && <Ionicons name="checkmark-circle" size={20} color={GOLD} style={styles.checkmarkContainer} />}
-              {errors.email && <Ionicons name="alert-circle" size={20} color="#ff4444" style={styles.checkmarkContainer} />}
+              {errors.email && <Ionicons name="alert-circle" size={20} color={ERR} style={styles.checkmarkContainer} />}
             </View>
 
             {/* Password */}
@@ -302,13 +304,14 @@ export default function SignIn({ navigation }) {
                 <Ionicons
                   name="lock-closed-outline"
                   size={17}
-                  color={errors.password ? "#ff4444" : focusedInput === 'password' ? GOLD : "#999"}
+                  color={errors.password ? ERR : focusedInput === 'password' ? GOLD : T.onInkMuted}
                 />
               </View>
               <TextInput
                 ref={passwordRef}
-                placeholder="Password"
-                placeholderTextColor={errors.password ? "#ff8a8a" : "#999"}
+                placeholder="password"
+                placeholderTextColor={errors.password ? ERR : "#8C877C"}
+                accessibilityLabel="password"
                 value={password}
                 onChangeText={(text) => {
                   setPassword(text);
@@ -326,11 +329,17 @@ export default function SignIn({ navigation }) {
                 onSubmitEditing={handleLogin}
                 editable={!loading}
               />
-              <TouchableOpacity onPress={() => setShowPassword((v) => !v)} style={styles.eyeButton} hitSlop={8}>
+              <TouchableOpacity
+                onPress={() => setShowPassword((v) => !v)}
+                style={styles.eyeButton}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={showPassword ? "hide password" : "show password"}
+              >
                 <Ionicons
                   name={showPassword ? "eye-off-outline" : "eye-outline"}
                   size={18}
-                  color={errors.password ? "#ff4444" : "#999"}
+                  color={errors.password ? ERR : T.onInkMuted}
                 />
               </TouchableOpacity>
             </View>
@@ -342,8 +351,7 @@ export default function SignIn({ navigation }) {
               activeOpacity={0.7}
               hitSlop={8}
             >
-              <Text style={styles.forgotText}>Forgot Password?</Text>
-              <Ionicons name="arrow-forward" size={14} color={GOLD} style={{ marginLeft: 4 }} />
+              <Text style={styles.forgotText}>forgot password?</Text>
             </TouchableOpacity>
 
             {/* Sign in */}
@@ -355,12 +363,9 @@ export default function SignIn({ navigation }) {
                 activeOpacity={0.85}
               >
                 {loading ? (
-                  <ActivityIndicator color={GOLD} size="small" />
+                  <ActivityIndicator color={T.ink} size="small" />
                 ) : (
-                  <>
-                    <Text style={styles.buttonText}>SIGN IN</Text>
-                    <Ionicons name="log-in-outline" size={18} color={GOLD} />
-                  </>
+                  <Text style={styles.buttonText} maxFontSizeMultiplier={MAX_FONT_SCALE}>sign in</Text>
                 )}
               </TouchableOpacity>
             </Animated.View>
@@ -377,16 +382,16 @@ export default function SignIn({ navigation }) {
               ) : (
                 <>
                   <Ionicons name="globe-outline" size={18} color={DARK} style={{ marginRight: 8 }} />
-                  <Text style={styles.guestButtonText}>Browse as Guest</Text>
+                  <Text style={styles.guestButtonText} maxFontSizeMultiplier={MAX_FONT_SCALE}>browse as guest</Text>
                 </>
               )}
             </TouchableOpacity>
 
             {/* Footer */}
             <View style={styles.footer}>
-              <Text style={styles.footerText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate("Signup")} hitSlop={8}>
-                <Text style={styles.signupLink}>Create Account</Text>
+              <Text style={styles.footerText}>{"new here? "}</Text>
+              <TouchableOpacity onPress={() => navigation.navigate("Signup")} hitSlop={8} accessibilityRole="button" accessibilityLabel="create account">
+                <Text style={styles.signupLink}>create account</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -394,8 +399,8 @@ export default function SignIn({ navigation }) {
           {/* Bottom branding */}
           <View style={styles.brandingFooter}>
             <Text style={styles.brandingText}>
-              <Text style={{ fontSize: 14 }}>tdc</Text>
-              <Text style={{ color: GOLD, fontSize: 20 }}>.</Text> PAKISTAN
+              <Text>tdc</Text>
+              <Text style={{ color: GOLD }}>.</Text> pakistan
             </Text>
           </View>
         </ScrollView>
@@ -405,139 +410,112 @@ export default function SignIn({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#ffffff" },
+  safeArea: { flex: 1, backgroundColor: T.ink },
   keyboardView: { flex: 1 },
   scrollContainer: { flexGrow: 1, justifyContent: "center" },
 
+  // Top notification (light card so error copy stays easy to read)
   notificationContainer: {
     position: 'absolute',
     top: 8,
     left: 16,
     right: 16,
     zIndex: 1000,
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: T.card,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#f1f1f1',
-    elevation: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 14,
+    borderColor: T.line,
   },
   notificationContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12 },
   notificationIconCircle: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: DARK,
+    backgroundColor: T.ink,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
   },
   notificationTextContainer: { flex: 1 },
-  notificationTitle: { fontSize: 14.5, fontWeight: '800', color: DARK },
-  notificationMessage: { fontSize: 12.5, color: '#666', lineHeight: 17, marginTop: 1 },
+  notificationTitle: { fontFamily: F.bodyBold, fontSize: 14.5, color: T.ink },
+  notificationMessage: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, lineHeight: 17, marginTop: 1 },
   notificationClose: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
   },
 
-  card: { backgroundColor: "#fff", paddingHorizontal: 24, paddingVertical: 16, width: '100%', maxWidth: 440, alignSelf: 'center' },
-  header: { alignItems: "center", marginBottom: 24 },
-  logoBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: DARK,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 14,
-    elevation: 8,
-    shadowColor: GOLD,
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-  },
-  logoText: { fontSize: 25, color: "#fff", fontWeight: "900", letterSpacing: -1 },
-  title: { fontSize: 23, fontWeight: "900", color: DARK, letterSpacing: 0.3 },
-  subtitle: { color: "#777", marginTop: 4, fontSize: 13.5 },
-  decorativeLine: { flexDirection: 'row', alignItems: 'center', marginTop: 12 },
-  lineSegment: { width: 25, height: 2, backgroundColor: GOLD, borderRadius: 1 },
-  diamond: { width: 7, height: 7, backgroundColor: DARK, transform: [{ rotate: '45deg' }], marginHorizontal: 8 },
+  card: { paddingHorizontal: 24, paddingVertical: 16, width: '100%', maxWidth: 440, alignSelf: 'center' },
+  header: { marginBottom: 28 },
+  logoText: { fontFamily: F.heading, fontSize: 40, color: T.white },
+  title: { fontFamily: F.heading, fontSize: 36, lineHeight: 38, letterSpacing: -1.2, color: DARK, marginTop: 24 },
+  subtitle: { fontFamily: F.body, color: T.onInkMuted, marginTop: 12, fontSize: 15 },
 
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8f8f8",
-    borderWidth: 2,
-    borderColor: "transparent",
-    borderRadius: 14,
+    backgroundColor: T.inkSoft,
+    borderWidth: 1,
+    borderColor: T.inkLine,
+    borderRadius: 18,
     paddingHorizontal: 12,
-    marginBottom: 12,
-    height: 52,
+    marginBottom: 10,
+    height: 54,
     width: '100%',
   },
-  inputFocused: { borderColor: GOLD, backgroundColor: "#fff" },
-  inputError: { borderColor: "#ff4444", backgroundColor: "#fff5f5" },
+  inputFocused: { borderColor: GOLD, borderWidth: 1.5 },
+  inputError: { borderColor: ERR, borderWidth: 1.5 },
   inputIconContainer: {
     width: 32,
     height: 32,
-    borderRadius: 10,
-    backgroundColor: '#f0f0f0',
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 6,
   },
-  inputIconError: { backgroundColor: '#ffebee' },
-  input: { flex: 1, paddingVertical: 6, fontSize: 14.5, color: DARK, fontWeight: '500' },
-  inputTextError: { color: '#ff4444' },
+  inputIconError: {},
+  input: { flex: 1, paddingVertical: 6, fontFamily: F.body, fontSize: 15, color: DARK },
+  inputTextError: { color: ERR },
   eyeButton: { padding: 8, marginLeft: 4 },
   checkmarkContainer: { marginLeft: 4 },
 
-  forgotBtn: { alignSelf: "flex-end", marginBottom: 18, marginTop: 2, flexDirection: 'row', alignItems: 'center' },
-  forgotText: { color: GOLD, fontWeight: "700", fontSize: 13, letterSpacing: 0.5 },
+  forgotBtn: { alignSelf: "flex-end", marginBottom: 18, marginTop: 2, minHeight: 32, justifyContent: 'center' },
+  forgotText: { fontFamily: F.bodySemi, color: GOLD, fontSize: 13 },
 
   button: {
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: DARK,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: GOLD,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
     width: '100%',
-    elevation: 4,
-    shadowColor: DARK,
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
   },
   buttonBusy: { opacity: 0.85 },
-  buttonText: { color: GOLD, fontSize: 15, fontWeight: "800", letterSpacing: 1.5, marginRight: 8 },
+  buttonText: { fontFamily: F.heading, color: T.ink, fontSize: 16 },
 
   guestButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 50,
+    height: 56,
     marginBottom: 6,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: DARK,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: T.inkLine,
     backgroundColor: 'transparent',
   },
-  guestButtonText: { color: DARK, fontSize: 15, fontWeight: '700' },
+  guestButtonText: { fontFamily: F.bodyBold, color: DARK, fontSize: 15 },
 
-  footer: { flexDirection: "row", justifyContent: "center", marginTop: 14, marginBottom: 6 },
-  footerText: { color: "#999", fontSize: 13.5 },
-  signupLink: { color: DARK, fontWeight: "800", fontSize: 13.5, textDecorationLine: 'underline' },
+  footer: { flexDirection: "row", justifyContent: "center", alignItems: 'center', marginTop: 14, marginBottom: 6, minHeight: 44 },
+  footerText: { fontFamily: F.body, color: T.onInkMuted, fontSize: 14 },
+  signupLink: { fontFamily: F.bodyBold, color: DARK, fontSize: 14 },
 
   brandingFooter: { alignItems: 'center', marginTop: 4, marginBottom: 14 },
-  brandingText: { color: '#ccc', fontSize: 11, letterSpacing: 3, fontWeight: '600' },
+  brandingText: { fontFamily: F.bodySemi, color: T.textMuted, fontSize: 12, letterSpacing: 2 },
 });

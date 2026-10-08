@@ -17,17 +17,22 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { color as T, font as F, MAX_FONT_SCALE } from '../theme/tokens';
 
+// Auth screens are dark (SignIn design). Same keys as before so every screen
+// that reads AUTH.* follows: "dark" is the primary TEXT colour (light on ink).
 export const AUTH = {
-  gold: '#f9c349',
-  goldSoft: '#fff8e6',
-  dark: '#1a1a1a',
-  soft: '#F7F9F8',
-  border: '#E8E8E8',
-  muted: '#8a8a8a',
-  text2: '#5f5f5f',
-  danger: '#e11d48',
-  ok: '#16a34a',
+  gold: T.yellow,
+  goldSoft: T.inkSoft,
+  dark: '#F5F2EA',
+  soft: T.inkSoft,
+  border: T.inkLine,
+  muted: T.onInkMuted,
+  text2: T.onInkMuted,
+  danger: '#FF8F85', // red that reads on ink (≥ 4.5:1)
+  ok: '#6BD49A', // green that reads on ink
+  bg: T.ink,
+  placeholder: '#8C877C',
 };
 
 const STEPS = ['email', 'code', 'new password'];
@@ -35,17 +40,17 @@ const STEPS = ['email', 'code', 'new password'];
 export function AuthShell({ step = 1, icon, title, subtitle, onBack, children, footer, top }) {
   return (
     <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="light-content" backgroundColor={T.ink} />
 
       <View style={s.header}>
         {onBack ? (
-          <TouchableOpacity onPress={onBack} style={s.backBtn} activeOpacity={0.7} hitSlop={10}>
+          <TouchableOpacity onPress={onBack} style={s.backBtn} activeOpacity={0.7} hitSlop={10} accessibilityRole="button" accessibilityLabel="back">
             <Ionicons name="chevron-back" size={22} color={AUTH.dark} />
           </TouchableOpacity>
         ) : (
           <View style={{ width: 40 }} />
         )}
-        <Text style={s.brand}>
+        <Text style={s.brand} maxFontSizeMultiplier={MAX_FONT_SCALE}>
           tdc<Text style={{ color: AUTH.gold }}>.</Text>
         </Text>
         <View style={{ width: 40 }} />
@@ -83,7 +88,7 @@ export function AuthShell({ step = 1, icon, title, subtitle, onBack, children, f
               <Ionicons name={icon} size={26} color={AUTH.gold} />
             </View>
           ) : null}
-          <Text style={s.title}>{title}</Text>
+          <Text style={s.title} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>{title}</Text>
           {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
 
           <View style={{ marginTop: 26 }}>{children}</View>
@@ -109,7 +114,7 @@ export const AuthInput = forwardRef(function AuthInput(
         <TextInput
           ref={ref}
           style={s.inputText}
-          placeholderTextColor="#a8a8a8"
+          placeholderTextColor={AUTH.placeholder}
           secureTextEntry={secure && !show}
           {...props}
           onFocus={(e) => {
@@ -141,13 +146,16 @@ export function AuthButton({ title, onPress, loading, disabled, icon = 'arrow-fo
       onPress={onPress}
       disabled={off}
       activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={typeof title === 'string' ? title : undefined}
+      accessibilityState={{ disabled: !!off, busy: !!loading }}
     >
       {loading ? (
-        <ActivityIndicator color={AUTH.gold} />
+        <ActivityIndicator color={T.ink} />
       ) : (
         <>
-          <Text style={s.btnText}>{title}</Text>
-          {icon ? <Ionicons name={icon} size={18} color={AUTH.gold} /> : null}
+          <Text style={s.btnText} maxFontSizeMultiplier={MAX_FONT_SCALE}>{title}</Text>
+          {icon ? <Ionicons name={icon} size={18} color={T.ink} /> : null}
         </>
       )}
     </TouchableOpacity>
@@ -155,7 +163,7 @@ export function AuthButton({ title, onPress, loading, disabled, icon = 'arrow-fo
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
+  safe: { flex: 1, backgroundColor: AUTH.bg },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -164,23 +172,21 @@ const s = StyleSheet.create({
     paddingVertical: 10,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: AUTH.soft,
-    borderWidth: 1,
-    borderColor: AUTH.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  brand: { fontSize: 22, fontWeight: '900', color: AUTH.dark, letterSpacing: -0.5 },
+  brand: { fontFamily: F.heading, fontSize: 24, color: AUTH.dark },
   scroll: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 8, paddingBottom: 30 },
 
   steps: { flexDirection: 'row', gap: 8, marginBottom: 30 },
   stepItem: { flex: 1 },
-  stepBar: { height: 4, borderRadius: 2, backgroundColor: '#ededed' },
-  stepBarOn: { backgroundColor: AUTH.dark },
-  stepLabel: { fontSize: 11, color: '#b0b0b0', fontWeight: '700', marginTop: 6 },
+  stepBar: { height: 4, borderRadius: 2, backgroundColor: AUTH.border },
+  stepBarOn: { backgroundColor: AUTH.gold },
+  stepLabel: { fontFamily: F.bodyBold, fontSize: 11, color: AUTH.muted, marginTop: 6 },
   stepLabelOn: { color: AUTH.dark },
   stepLabelDone: { color: AUTH.text2 },
 
@@ -188,35 +194,35 @@ const s = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 18,
-    backgroundColor: AUTH.dark,
+    backgroundColor: AUTH.soft,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 18,
   },
-  title: { fontSize: 26, fontWeight: '900', color: AUTH.dark, letterSpacing: -0.6 },
-  subtitle: { fontSize: 14.5, color: AUTH.text2, marginTop: 8, lineHeight: 21 },
+  title: { fontFamily: F.heading, fontSize: 30, lineHeight: 33, letterSpacing: -0.8, color: AUTH.dark },
+  subtitle: { fontFamily: F.body, fontSize: 15, color: AUTH.text2, marginTop: 8, lineHeight: 21 },
 
-  inputLabel: { fontSize: 12.5, fontWeight: '800', color: AUTH.dark, marginBottom: 8 },
+  inputLabel: { fontFamily: F.bodySemi, fontSize: 12.5, color: AUTH.muted, marginBottom: 6 },
   input: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     height: 54,
-    borderRadius: 16,
+    borderRadius: 18,
     paddingHorizontal: 16,
     backgroundColor: AUTH.soft,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: AUTH.border,
   },
-  inputFocus: { borderColor: AUTH.dark, backgroundColor: '#fff' },
-  inputError: { borderColor: AUTH.danger, backgroundColor: '#fff' },
-  inputText: { flex: 1, fontSize: 15.5, color: AUTH.dark, fontWeight: '600', paddingVertical: 0 },
-  errorText: { color: AUTH.danger, fontSize: 12, fontWeight: '600', marginTop: 6, marginLeft: 4 },
+  inputFocus: { borderColor: AUTH.gold, borderWidth: 1.5 },
+  inputError: { borderColor: AUTH.danger, borderWidth: 1.5 },
+  inputText: { flex: 1, fontFamily: F.body, fontSize: 15, color: AUTH.dark, paddingVertical: 0 },
+  errorText: { fontFamily: F.bodyMedium, color: AUTH.danger, fontSize: 12.5, marginTop: 6, marginLeft: 4 },
 
   btn: {
     height: 56,
-    borderRadius: 16,
-    backgroundColor: AUTH.dark,
+    borderRadius: 28,
+    backgroundColor: AUTH.gold,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -224,7 +230,7 @@ const s = StyleSheet.create({
     marginTop: 8,
   },
   btnOff: { opacity: 0.45 },
-  btnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  btnText: { fontFamily: F.heading, color: T.ink, fontSize: 16 },
 
   footer: { marginTop: 'auto', paddingTop: 30, alignItems: 'center' },
 });

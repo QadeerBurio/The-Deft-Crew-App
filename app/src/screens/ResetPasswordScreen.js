@@ -15,9 +15,9 @@ const RULES = [
 ];
 
 const STRENGTH = [
-  { label: 'too short', color: '#e5e5e5' },
+  { label: 'too short', color: AUTH.border },
   { label: 'weak', color: AUTH.danger },
-  { label: 'okay', color: '#f59e0b' },
+  { label: 'okay', color: AUTH.gold },
   { label: 'strong', color: AUTH.ok },
 ];
 
@@ -93,7 +93,7 @@ export default function ResetPassword({ route, navigation }) {
       {/* strength */}
       <View style={styles.meterRow}>
         {[1, 2, 3].map((i) => (
-          <View key={i} style={[styles.meter, { backgroundColor: level >= i ? strength.color : '#ededed' }]} />
+          <View key={i} style={[styles.meter, { backgroundColor: level >= i ? strength.color : AUTH.border }]} />
         ))}
         <Text style={[styles.meterLabel, { color: level ? strength.color : AUTH.muted }]}>{strength.label}</Text>
       </View>
@@ -102,7 +102,7 @@ export default function ResetPassword({ route, navigation }) {
           const ok = r.test(password);
           return (
             <View key={r.key} style={styles.rule}>
-              <Ionicons name={ok ? 'checkmark-circle' : 'ellipse-outline'} size={15} color={ok ? AUTH.ok : '#c4c4c4'} />
+              <Ionicons name={ok ? 'checkmark-circle' : 'ellipse-outline'} size={15} color={ok ? AUTH.ok : AUTH.muted} />
               <Text style={[styles.ruleText, ok && { color: AUTH.dark }]}>{r.label}</Text>
             </View>
           );
@@ -132,8 +132,8 @@ export default function ResetPassword({ route, navigation }) {
 const styles = StyleSheet.create({
   meterRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -4, marginBottom: 10 },
   meter: { flex: 1, height: 4, borderRadius: 2 },
-  meterLabel: { fontSize: 11.5, fontWeight: '800', marginLeft: 6, minWidth: 54, textAlign: 'right' },
+  meterLabel: { fontSize: 11.5, fontFamily: 'DMSans_700Bold', marginLeft: 6, minWidth: 54, textAlign: 'right' },
   rules: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 18 },
   rule: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  ruleText: { fontSize: 12, color: AUTH.muted, fontWeight: '600' },
+  ruleText: { fontSize: 12, color: AUTH.muted, fontFamily: 'DMSans_600SemiBold' },
 });

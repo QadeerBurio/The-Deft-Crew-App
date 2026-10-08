@@ -99,13 +99,13 @@ export default function VerificationScreen({ navigation }) {
         <Image source={{ uri: docs[field] }} style={styles.previewImage} />
       ) : (
         <View style={styles.cardContent}>
-          <Ionicons name={icon} size={32} color="#666" />
+          <Ionicons name={icon} size={30} color="#B8B2A5" />
           <Text style={styles.cardLabel}>{label}</Text>
         </View>
       )}
       {docs[field] && (
         <View style={styles.checkBadge}>
-          <Ionicons name="checkmark-circle" size={20} color="#08634f" />
+          <Ionicons name="checkmark-circle" size={20} color="#6BD49A" />
         </View>
       )}
     </TouchableOpacity>
@@ -113,14 +113,14 @@ export default function VerificationScreen({ navigation }) {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Identity Verification</Text>
-      <Text style={styles.subtitle}>Upload your documents to join the community.</Text>
+      <Text style={styles.title} accessibilityRole="header">identity verification<Text style={{ color: "#F9C349" }}>.</Text></Text>
+      <Text style={styles.subtitle}>upload your documents to join the community.</Text>
 
       <View style={styles.grid}>
-        <DocCard label="Profile Picture" field="profileImage" icon="person-outline" />
-        <DocCard label="CNIC Front" field="cnicFront" icon="card-outline" />
-        <DocCard label="CNIC Back" field="cnicBack" icon="card-outline" />
-        <DocCard label="Student ID Card" field="studentIdCard" icon="school-outline" />
+        <DocCard label="profile picture" field="profileImage" icon="person-outline" />
+        <DocCard label="CNIC front" field="cnicFront" icon="card-outline" />
+        <DocCard label="CNIC back" field="cnicBack" icon="card-outline" />
+        <DocCard label="student id card" field="studentIdCard" icon="school-outline" />
       </View>
 
       <TouchableOpacity
@@ -128,26 +128,26 @@ export default function VerificationScreen({ navigation }) {
         onPress={handleSubmit}
         disabled={loading}
       >
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Save & Complete</Text>}
+        {loading ? <ActivityIndicator color="#111111" /> : <Text style={styles.submitText}>save & complete</Text>}
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 25, backgroundColor: "#fff", flexGrow: 1, paddingTop: 60 },
-  title: { fontSize: 28, fontWeight: "900", color: "#000" },
-  subtitle: { fontSize: 15, color: "#7a7a7a", marginBottom: 30 },
+  container: { padding: 24, backgroundColor: "#111111", flexGrow: 1, paddingTop: 60 },
+  title: { fontFamily: "Outfit_800ExtraBold", fontSize: 30, letterSpacing: -0.8, color: "#F5F2EA" },
+  subtitle: { fontFamily: "DMSans_400Regular", fontSize: 15, color: "#B8B2A5", marginTop: 6, marginBottom: 28 },
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
   docCard: {
-    width: "48%", height: 160, backgroundColor: "#f9f9f9", borderRadius: 20,
-    borderWidth: 1, borderColor: "#eee", marginBottom: 15, overflow: "hidden"
+    width: "48%", height: 160, backgroundColor: "#1C1B19", borderRadius: 22,
+    borderWidth: 1, borderColor: "#2A2925", marginBottom: 14, overflow: "hidden"
   },
-  docCardActive: { borderColor: "#000", borderWidth: 2 },
-  cardContent: { flex: 1, justifyContent: "center", alignItems: "center" },
-  cardLabel: { fontSize: 13, fontWeight: "600", color: "#666", marginTop: 10 },
-  previewImage: { width: "100%", height: "100%", resizeMode: "cover" },
-  checkBadge: { position: "absolute", top: 10, right: 10, backgroundColor: "#fff", borderRadius: 10 },
-  submitButton: { backgroundColor: "#000", padding: 20, borderRadius: 15, alignItems: "center", marginTop: 20 },
-  submitText: { color: "#fff", fontSize: 16, fontWeight: "800" }
+  docCardActive: { borderColor: "#F9C349", borderWidth: 1.5 },
+  cardContent: { flex: 1, justifyContent: "center", alignItems: "center", padding: 10 },
+  cardLabel: { fontFamily: "DMSans_600SemiBold", fontSize: 13, color: "#B8B2A5", marginTop: 10, textAlign: "center" },
+  previewImage: { width: "100%", height: "100%" },
+  checkBadge: { position: "absolute", top: 10, right: 10, backgroundColor: "#111111", borderRadius: 10 },
+  submitButton: { backgroundColor: "#F9C349", height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", marginTop: 20 },
+  submitText: { fontFamily: "Outfit_800ExtraBold", color: "#111111", fontSize: 16 },
 });

@@ -232,7 +232,7 @@ export default function SignupVerifyScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  email: { color: AUTH.dark, fontWeight: "800" },
+  email: { color: AUTH.dark, fontFamily: 'DMSans_700Bold' },
 
   note: {
     flexDirection: "row",
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 18,
   },
-  noteText: { flex: 1, fontSize: 13, color: AUTH.text2, lineHeight: 19, fontWeight: "600" },
+  noteText: { flex: 1, fontSize: 13, color: AUTH.text2, lineHeight: 19, fontFamily: 'DMSans_600SemiBold' },
 
   boxes: { flexDirection: "row", justifyContent: "space-between" },
   box: {
@@ -258,21 +258,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  boxFilled: { backgroundColor: "#fff", borderColor: "#cfcfcf" },
-  boxActive: { borderColor: AUTH.dark, backgroundColor: "#fff" },
+  boxFilled: { backgroundColor: AUTH.soft, borderColor: AUTH.muted },
+  boxActive: { borderColor: AUTH.dark, backgroundColor: AUTH.soft },
   boxError: { borderColor: AUTH.danger },
-  boxOk: { borderColor: AUTH.ok, backgroundColor: "#fff" },
-  boxText: { fontSize: 22, fontWeight: "900", color: AUTH.dark },
+  boxOk: { borderColor: AUTH.ok, backgroundColor: AUTH.soft },
+  boxText: { fontSize: 22, fontFamily: 'DMSans_700Bold', color: AUTH.dark },
   caret: { width: 2, height: 22, backgroundColor: AUTH.gold, borderRadius: 1 },
   hiddenInput: { position: "absolute", width: 1, height: 1, opacity: 0 },
 
-  error: { color: AUTH.danger, fontSize: 12.5, fontWeight: "600", marginTop: 10, marginBottom: 4, textAlign: "center" },
-  success: { color: AUTH.ok, fontSize: 12.5, fontWeight: "700", marginTop: 10, marginBottom: 4, textAlign: "center" },
+  error: { color: AUTH.danger, fontSize: 12.5, fontFamily: 'DMSans_600SemiBold', marginTop: 10, marginBottom: 4, textAlign: "center" },
+  success: { color: AUTH.ok, fontSize: 12.5, fontFamily: 'DMSans_700Bold', marginTop: 10, marginBottom: 4, textAlign: "center" },
 
   resendRow: { flexDirection: "row", alignItems: "center" },
   resendText: { color: AUTH.muted, fontSize: 14 },
-  resendLink: { color: AUTH.dark, fontSize: 14, fontWeight: "900" },
-  resendOff: { color: "#b5b5b5", fontWeight: "700" },
+  resendLink: { color: AUTH.dark, fontSize: 14, fontFamily: 'DMSans_700Bold' },
+  resendOff: { color: AUTH.muted, fontFamily: 'DMSans_700Bold' },
   changeEmail: { marginTop: 14 },
-  changeEmailText: { color: AUTH.muted, fontSize: 12.5, fontWeight: "600" },
+  changeEmailText: { color: AUTH.muted, fontSize: 12.5, fontFamily: 'DMSans_600SemiBold' },
 });

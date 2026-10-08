@@ -95,7 +95,7 @@ export default function ForgotPassword({ navigation }) {
         right={
           emailOrPhone.length > 0 && !loading ? (
             <TouchableOpacity onPress={() => setEmailOrPhone('')} hitSlop={10}>
-              <Ionicons name="close-circle" size={18} color="#c4c4c4" />
+              <Ionicons name="close-circle" size={18} color={AUTH.muted} />
             </TouchableOpacity>
           ) : null
         }
@@ -124,5 +124,5 @@ const styles = StyleSheet.create({
   noteText: { flex: 1, fontSize: 12.5, color: AUTH.text2, lineHeight: 18 },
   footerRow: { flexDirection: 'row', alignItems: 'center' },
   footerText: { color: AUTH.muted, fontSize: 14 },
-  footerLink: { color: AUTH.dark, fontSize: 14, fontWeight: '900' },
+  footerLink: { color: AUTH.dark, fontSize: 14, fontFamily: 'DMSans_700Bold' },
 });
