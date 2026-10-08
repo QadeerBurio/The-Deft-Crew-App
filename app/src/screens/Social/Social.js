@@ -4,7 +4,8 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Platform, View, StyleSheet, Animated, TouchableOpacity, Dimensions, Text, StatusBar, Alert } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills (design system)
+import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 import { AuthContext } from "../../context/AuthContext";
 import axios from "axios";
 
@@ -18,7 +19,7 @@ const { width } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
 // ============ MODERN TAB BAR BUTTON ============
-const ModernTabBarButton = ({ children, onPress, focused }) => {
+const ModernTabBarButton = ({ children, onPress, onLongPress, focused, label }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const translateY = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(0)).current;
@@ -93,10 +94,14 @@ const ModernTabBarButton = ({ children, onPress, focused }) => {
   return (
     <TouchableOpacity
       onPress={onPress}
+      onLongPress={onLongPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       activeOpacity={0.7}
       style={styles.tabButtonWrapper}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: !!focused }}
+      accessibilityLabel={label}
     >
       <Animated.View style={[
         styles.tabButtonContainer,
@@ -134,13 +139,13 @@ const TabIcon = ({ name, focused, badge }) => {
     <View style={styles.iconWrapper}>
       <Ionicons 
         name={iconNames[name] || name} 
-        size={24} 
-        color={focused ? "#f9c349" : "#8e8e8e"} 
+        size={23} 
+        color={focused ? T.yellow : T.onInkMuted} 
       />
       {badge > 0 && (
         <View style={styles.badge}>
           <LinearGradient
-            colors={['#f9c349', '#f9c349']}
+            colors={[T.yellow]}
             style={styles.badgeGradient}
           >
             <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
@@ -162,7 +167,7 @@ const ProfileIcon = ({ focused }) => {
         <Ionicons 
           name={focused ? "person" : "person-outline"} 
           size={20} 
-          color={focused ? "#f9c349" : "#8e8e8e"} 
+          color={focused ? T.yellow : T.onInkMuted} 
         />
       </View>
     </View>
@@ -240,19 +245,16 @@ const CreateButton = ({ onPress, navigation, isGuest }) => {
         onPressOut={handlePressOut}
         activeOpacity={0.9}
         style={styles.createButtonTouchable}
+        accessibilityRole="button"
+        accessibilityLabel="create post"
       >
         <Animated.View style={[
           styles.createButtonContainer,
           { transform: [{ scale: scaleAnim }] }
         ]}>
-          <LinearGradient
-            colors={['#f9c349', '#e6b800']}
-            style={styles.createButtonGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
+          <LinearGradient colors={[T.yellow]} style={styles.createButtonGradient}>
             <Animated.View style={{ transform: [{ rotate: rotation }] }}>
-              <Ionicons name="add" size={32} color="#1a1a1a" />
+              <Ionicons name="add" size={28} color={T.ink} />
             </Animated.View>
           </LinearGradient>
         </Animated.View>
@@ -275,6 +277,7 @@ function CustomTabBar({ state, descriptors, navigation }) {
     if (!route) return null;
     
     const { options } = descriptors[route.key];
+    const labelText = typeof options.tabBarLabel === 'string' ? options.tabBarLabel : route.name;
     const isFocused = state.index === state.routes.findIndex(r => r.name === routeName);
 
     const onPress = () => {
@@ -302,13 +305,17 @@ function CustomTabBar({ state, descriptors, navigation }) {
         onPress={onPress}
         onLongPress={onLongPress}
         focused={isFocused}
+        label={labelText}
       >
         {options.tabBarIcon ? options.tabBarIcon({ focused: isFocused }) : null}
         {options.tabBarLabel && (
-          <Text style={[
-            styles.tabBarLabel,
-            { color: isFocused ? '#f9c349' : '#8e8e8e' }
-          ]}>
+          <Text
+            style={[
+              styles.tabBarLabel,
+              { color: isFocused ? T.yellow : T.onInkMuted }
+            ]}
+            maxFontSizeMultiplier={MAX_FONT_SCALE}
+          >
             {typeof options.tabBarLabel === 'function' 
               ? options.tabBarLabel({ focused: isFocused }) 
               : options.tabBarLabel}
@@ -376,15 +383,15 @@ export default function Social() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
       <View style={styles.content}>
         <Tab.Navigator
           initialRouteName="Feed"
           tabBar={(props) => <CustomTabBar {...props} />}
           screenOptions={{
             headerShown: false,
-            tabBarActiveTintColor: "#f9c349",
-            tabBarInactiveTintColor: "#8e8e8e",
+            tabBarActiveTintColor: T.yellow,
+            tabBarInactiveTintColor: T.onInkMuted,
           }}
         >
           <Tab.Screen
@@ -394,7 +401,7 @@ export default function Social() {
               tabBarIcon: ({ focused }) => (
                 <TabIcon name="home" focused={focused} />
               ),
-              tabBarLabel: "Home",
+              tabBarLabel: "feed",
             }}
           />
 
@@ -405,7 +412,7 @@ export default function Social() {
               tabBarIcon: ({ focused }) => (
                 <TabIcon name="search" focused={focused} />
               ),
-              tabBarLabel: "Search",
+              tabBarLabel: "search",
             }}
           />
 
@@ -416,7 +423,7 @@ export default function Social() {
               tabBarIcon: ({ focused }) => (
                 <TabIcon name="chatbubbles" focused={focused} badge={totalUnread} />
               ),
-              tabBarLabel: "Messages",
+              tabBarLabel: "messages",
             }}
           />
 
@@ -428,7 +435,7 @@ export default function Social() {
               tabBarIcon: ({ focused }) => (
                 <ProfileIcon focused={focused} />
               ),
-              tabBarLabel: "Profile",
+              tabBarLabel: "profile",
             }}
           />
         </Tab.Navigator>
@@ -438,32 +445,17 @@ export default function Social() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  
-  content: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
+  container: { flex: 1, backgroundColor: T.paper },
+  content: { flex: 1, backgroundColor: T.paper },
 
-  // Tab Bar Container
+  // Inner tab bar (dark, Social design)
   tabBarContainer: {
-    backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.06)',
+    backgroundColor: T.ink,
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 8,
   },
-  
   tabBarInner: {
     flex: 1,
     flexDirection: 'row',
@@ -471,94 +463,51 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     paddingHorizontal: 4,
   },
-
-  // Modern Tab Button
   tabButtonWrapper: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     height: '100%',
+    minHeight: 44,
     paddingVertical: 4,
   },
-  
   tabButtonContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 2,
     paddingHorizontal: 6,
-    borderRadius: 12,
     position: 'relative',
     minWidth: 45,
   },
-  
-  pulseEffect: {
-    position: 'absolute',
-    top: -3,
-    left: -3,
-    right: -3,
-    bottom: -3,
-    borderRadius: 50,
-    backgroundColor: '#f9c349',
-  },
-  
-  iconWrapper: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  
-  tabBarLabel: {
-    fontSize: 9,
-    fontWeight: '500',
-    marginTop: 2,
-    letterSpacing: 0.2,
-    fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'sans-serif',
-  },
-  
-  // Badge
+  pulseEffect: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'transparent' },
+  iconWrapper: { position: 'relative', alignItems: 'center', justifyContent: 'center' },
+  tabBarLabel: { fontFamily: F.bodySemi, fontSize: 10.5, marginTop: 3 },
+
+  // Unread badge
   badge: {
     position: 'absolute',
-    top: -8,
+    top: -7,
     right: -12,
     minWidth: 18,
     height: 18,
     borderRadius: 9,
     overflow: 'hidden',
     borderWidth: 2,
-    borderColor: '#ffffff',
+    borderColor: T.ink,
   },
-  
-  badgeGradient: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-  
-  badgeText: {
-    color: '#000000',
-    fontSize: 9,
-    fontWeight: '700',
-    fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'sans-serif',
-  },
-  
-  // Active Indicator
+  badgeGradient: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  badgeText: { fontFamily: F.bodyBold, fontSize: 9.5, color: T.ink },
+
   activeIndicator: {
     position: 'absolute',
-    bottom: -6,
-    width: 16,
-    height: 2.5,
-    borderRadius: 1.5,
-    backgroundColor: '#f9c349',
+    bottom: -7,
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: T.yellow,
   },
-  
-  // Profile Icon
-  profileIconWrapper: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  
+
+  profileIconWrapper: { position: 'relative', alignItems: 'center', justifyContent: 'center' },
   profileBorder: {
     position: 'absolute',
     top: -3,
@@ -567,9 +516,8 @@ const styles = StyleSheet.create({
     bottom: -3,
     borderRadius: 26,
     borderWidth: 2,
-    borderColor: '#f9c349',
+    borderColor: T.yellow,
   },
-  
   profileImageContainer: {
     width: 24,
     height: 24,
@@ -579,7 +527,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
 
-  // ============ CENTER CREATE BUTTON STYLES ============
+  // Center create button (yellow, the action)
   createButtonWrapper: {
     flex: 1,
     justifyContent: 'center',
@@ -587,33 +535,13 @@ const styles = StyleSheet.create({
     height: '100%',
     paddingVertical: 4,
   },
-
-  createButtonTouchable: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
+  createButtonTouchable: { alignItems: 'center', justifyContent: 'center' },
   createButtonContainer: {
     width: 52,
     height: 52,
     borderRadius: 26,
     overflow: 'hidden',
-    // Elevation for the button to pop out
-    shadowColor: '#f9c349',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-    // Lift it above the tab bar
-    marginTop: -20,
-    borderWidth: 3,
-    borderColor: '#ffffff',
+    marginTop: -4,
   },
-
-  createButtonGradient: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  createButtonGradient: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
 });

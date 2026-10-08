@@ -10,9 +10,10 @@ import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from "../../context/AuthContext";
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { BlurView } from 'expo-blur';
 
+import { color as T, font as F } from "../../theme/tokens";
 const { width, height } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
@@ -31,12 +32,12 @@ const formatTimeAgo = (dateString) => {
 const GradientStoryRing = ({ children, hasUnseen, style }) => {
   if (hasUnseen) {
     return (
-      <LinearGradient colors={['#f9c349', '#1a1a1a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[style, { padding: 3 }]}>
+      <LinearGradient colors={[T.yellow, T.ink]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[style, { padding: 3 }]}>
         <View style={styles.innerWhiteBorder}>{children}</View>
       </LinearGradient>
     );
   }
-  return <View style={[style, { borderColor: '#f0f0f0', borderWidth: 2, padding: 2 }]}>{children}</View>;
+  return <View style={[style, { borderColor: T.line, borderWidth: 2, padding: 2 }]}>{children}</View>;
 };
 
 // Skeleton loading component
@@ -447,16 +448,16 @@ export default function StoriesSection() {
                 activeOpacity={0.7}
               >
                 <LinearGradient 
-                  colors={['#1a1a1a', '#1a1a1a']} 
+                  colors={[T.ink, T.ink]} 
                   style={hasStory ? styles.addIconGradientSmall : styles.addIconGradientLarge}
                 >
-                  <Ionicons name="add" size={hasStory ? 14 : 24} color="#f9c349" />
+                  <Ionicons name="add" size={hasStory ? 14 : 24} color={T.yellow} />
                 </LinearGradient>
               </TouchableOpacity>
             </View>
           </GradientStoryRing>
         </View>
-        <Text style={styles.storyUsername} numberOfLines={1}>Your Story</Text>
+        <Text style={styles.storyUsername} numberOfLines={1}>your story</Text>
       </View>
     );
   };
@@ -490,8 +491,8 @@ export default function StoriesSection() {
             renderItem={({ item }) => renderOtherStoryCircle(item)}
             ListEmptyComponent={
               <View style={styles.emptyStoriesContainer}>
-                <Ionicons name="people-outline" size={28} color="#ccc" />
-                <Text style={styles.emptyStoriesText}>Waiting for stories...</Text>
+                <Ionicons name="people-outline" size={28} color={T.textFaint} />
+                <Text style={styles.emptyStoriesText}>waiting for stories...</Text>
               </View>
             }
             contentContainerStyle={styles.storiesListContent}
@@ -506,9 +507,9 @@ export default function StoriesSection() {
           <SafeAreaView style={styles.safeArea}>
             <View style={styles.previewHeader}>
               <TouchableOpacity onPress={cancelUpload} style={styles.closeIconButton}>
-                <Ionicons name="close" size={24} color="#fff" />
+                <Ionicons name="close" size={24} color={T.white} />
               </TouchableOpacity>
-              <Text style={styles.previewTitle}>New Story</Text>
+              <Text style={styles.previewTitle}>new story</Text>
               <View style={{width: 28}} />
             </View>
           </SafeAreaView>
@@ -519,7 +520,7 @@ export default function StoriesSection() {
             <TextInput 
               style={styles.captionInput} 
               placeholder="Write a caption..." 
-              placeholderTextColor="#999" 
+              placeholderTextColor={T.textFaint} 
               value={storyCaption} 
               onChangeText={setStoryCaption} 
               multiline 
@@ -531,8 +532,8 @@ export default function StoriesSection() {
               disabled={isUploading} 
               activeOpacity={0.8}
             >
-              <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.shareButtonGradient}>
-                {isUploading ? <ActivityIndicator color="#fff" /> : <Text style={styles.shareText}>Share to Story</Text>}
+              <LinearGradient colors={[T.yellow, T.ink]} style={styles.shareButtonGradient}>
+                {isUploading ? <ActivityIndicator color={T.white} /> : <Text style={styles.shareText}>share to story</Text>}
               </LinearGradient>
             </TouchableOpacity>
           </KeyboardAvoidingView>
@@ -567,15 +568,15 @@ export default function StoriesSection() {
                 <View style={styles.viewerHeaderRight}>
                   {selectedStory?.isMe && (
                     <TouchableOpacity style={styles.viewsPill} onPress={() => fetchViewers(selectedStory.images[currentImageIndex]._id)}>
-                      <Ionicons name="eye-outline" size={14} color="#fff" />
+                      <Ionicons name="eye-outline" size={14} color={T.white} />
                       <Text style={styles.viewsPillText}>{selectedStory.images[currentImageIndex]?.viewCount || 0}</Text>
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity onPress={handleShareStoryExternal} style={styles.headerIconBtn}>
-                    <Ionicons name="share-outline" size={20} color="#fff" />
+                    <Ionicons name="share-outline" size={20} color={T.white} />
                   </TouchableOpacity>
                   <TouchableOpacity onPress={closeViewer} style={styles.closeViewerBtn}>
-                    <Ionicons name="close" size={24} color="#fff" />
+                    <Ionicons name="close" size={24} color={T.white} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -587,7 +588,7 @@ export default function StoriesSection() {
                 </Animated.View>
                 <Animated.View style={[styles.pauseOverlay, { opacity: pauseOpacity }]}>
                   <View style={styles.pauseIconContainer}>
-                    <Ionicons name="pause" size={40} color="#f9c349" />
+                    <Ionicons name="pause" size={40} color={T.yellow} />
                   </View>
                 </Animated.View>
                 {selectedStory?.images?.[currentImageIndex]?.caption ? (
@@ -605,17 +606,17 @@ export default function StoriesSection() {
                 <View style={styles.footerActions}>
                   <TouchableOpacity style={styles.actionButton} onPress={() => handleLike(selectedStory?.images?.[currentImageIndex]?._id)}>
                     <Animated.View style={{ transform: [{ scale: likeScale }] }}>
-                      <Ionicons name={isLiked ? "heart" : "heart-outline"} size={26} color={isLiked ? "red" : "#fff"} />
+                      <Ionicons name={isLiked ? "heart" : "heart-outline"} size={26} color={isLiked ? T.yellow : T.white} />
                     </Animated.View>
                     <Text style={styles.actionText}>{selectedStory?.images?.[currentImageIndex]?.likeCount || 0}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.actionButton} onPress={openComments}>
-                    <Ionicons name="chatbubble-outline" size={22} color="#fff" />
+                    <Ionicons name="chatbubble-outline" size={22} color={T.white} />
                     <Text style={styles.actionText}>{selectedStory?.images?.[currentImageIndex]?.comments?.length || 0}</Text>
                   </TouchableOpacity>
                   <View style={{ flex: 1 }} />
                   <TouchableOpacity style={styles.actionButton} onPress={handleShareStoryExternal}>
-                    <Ionicons name="paper-plane-outline" size={22} color="#fff" />
+                    <Ionicons name="paper-plane-outline" size={22} color={T.white} />
                   </TouchableOpacity>
                   {selectedStory?.isMe && (
                     <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(selectedStory.images[currentImageIndex]._id)}>
@@ -634,9 +635,9 @@ export default function StoriesSection() {
         <View style={styles.commentModalContainer}>
           <View style={styles.commentModalContent}>
             <View style={styles.commentModalHeader}>
-              <Text style={styles.commentModalTitle}>Comments</Text>
+              <Text style={styles.commentModalTitle}>comments</Text>
               <TouchableOpacity onPress={() => setIsCommentVisible(false)}>
-                <Ionicons name="close" size={24} color="#1a1a1a" />
+                <Ionicons name="close" size={24} color={T.ink} />
               </TouchableOpacity>
             </View>
             <FlatList
@@ -653,7 +654,7 @@ export default function StoriesSection() {
               )}
               ListEmptyComponent={
                 <View style={styles.noCommentsContainer}>
-                  <Text style={styles.noCommentsText}>No comments yet</Text>
+                  <Text style={styles.noCommentsText}>no comments yet</Text>
                 </View>
               }
             />
@@ -670,8 +671,8 @@ export default function StoriesSection() {
                 onPress={handlePostComment} 
                 disabled={isCommenting || !commentText.trim()}
               >
-                <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.commentSendGradient}>
-                  {isCommenting ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="send" size={20} color="#fff" />}
+                <LinearGradient colors={[T.yellow, T.ink]} style={styles.commentSendGradient}>
+                  {isCommenting ? <ActivityIndicator color={T.white} size="small" /> : <Ionicons name="send" size={20} color={T.white} />}
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -684,9 +685,9 @@ export default function StoriesSection() {
         <View style={styles.commentModalContainer}>
           <View style={styles.commentModalContent}>
             <View style={styles.commentModalHeader}>
-              <Text style={styles.commentModalTitle}>Story Views</Text>
+              <Text style={styles.commentModalTitle}>story views</Text>
               <TouchableOpacity onPress={() => setIsViewersModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#1a1a1a" />
+                <Ionicons name="close" size={24} color={T.ink} />
               </TouchableOpacity>
             </View>
             <FlatList
@@ -706,7 +707,7 @@ export default function StoriesSection() {
               )}
               ListEmptyComponent={
                 <View style={styles.noCommentsContainer}>
-                  <Text style={styles.noCommentsText}>No viewers yet</Text>
+                  <Text style={styles.noCommentsText}>no viewers yet</Text>
                 </View>
               }
             />
@@ -718,7 +719,7 @@ export default function StoriesSection() {
 }
 
 const styles = StyleSheet.create({
-  wrapper: { backgroundColor: '#ffffff' },
+  wrapper: { backgroundColor: T.card },
   storiesContainer: { 
     flexDirection: 'row', 
     alignItems: 'center', 
@@ -747,7 +748,7 @@ const styles = StyleSheet.create({
     height: 66, 
     borderRadius: 33, 
     borderWidth: 2, 
-    borderColor: '#f0f0f0', 
+    borderColor: T.line, 
     padding: 2, 
     justifyContent: 'center', 
     alignItems: 'center' 
@@ -756,13 +757,13 @@ const styles = StyleSheet.create({
     width: 58, 
     height: 58, 
     borderRadius: 29, 
-    backgroundColor: '#e8e8e8' 
+    backgroundColor: T.sand 
   },
   skeletonName: { 
     width: 50, 
     height: 8, 
     borderRadius: 4, 
-    backgroundColor: '#e8e8e8', 
+    backgroundColor: T.sand, 
     marginTop: 6 
   },
   
@@ -784,7 +785,7 @@ const styles = StyleSheet.create({
     width: '100%', 
     height: '100%', 
     borderRadius: 33, 
-    backgroundColor: '#fff', 
+    backgroundColor: T.card, 
     justifyContent: 'center', 
     alignItems: 'center' 
   },
@@ -792,7 +793,7 @@ const styles = StyleSheet.create({
     width: 58, 
     height: 58, 
     borderRadius: 29, 
-    backgroundColor: '#f5f5f5' 
+    backgroundColor: T.sand 
   },
   myStoryContainer: { 
     position: 'relative' 
@@ -803,7 +804,7 @@ const styles = StyleSheet.create({
     right: -3, 
     borderRadius: 10, 
     borderWidth: 2, 
-    borderColor: '#fff', 
+    borderColor: T.white, 
     overflow: 'hidden', 
     zIndex: 10 
   },
@@ -820,7 +821,7 @@ const styles = StyleSheet.create({
     right: -5, 
     borderRadius: 14, 
     borderWidth: 3, 
-    borderColor: '#fff', 
+    borderColor: T.white, 
     overflow: 'hidden', 
     zIndex: 10 
   },
@@ -833,8 +834,8 @@ const styles = StyleSheet.create({
   },
   storyUsername: { 
     fontSize: 11, 
-    color: '#1a1a1a', 
-    fontWeight: '600', 
+    color: T.ink, 
+    fontFamily: F.bodySemi, 
     textAlign: 'center', 
     maxWidth: 68, 
     marginTop: 4 
@@ -842,7 +843,7 @@ const styles = StyleSheet.create({
   storySeparator: { 
     width: 1, 
     height: 45, 
-    backgroundColor: '#f0f0f0', 
+    backgroundColor: T.sand, 
     marginHorizontal: 6 
   },
   emptyStoriesContainer: { 
@@ -853,16 +854,16 @@ const styles = StyleSheet.create({
   },
   emptyStoriesText: { 
     fontSize: 13, 
-    color: '#999', 
-    fontWeight: '500' 
+    color: T.textFaint, 
+    fontFamily: F.bodyMedium 
   },
   
   previewContainer: { 
     flex: 1, 
-    backgroundColor: '#1a1a1a' 
+    backgroundColor: T.ink 
   },
   safeArea: { 
-    backgroundColor: 'rgba(0,0,0,0.9)' 
+    backgroundColor: T.overlay 
   },
   previewHeader: { 
     flexDirection: 'row', 
@@ -879,9 +880,9 @@ const styles = StyleSheet.create({
     alignItems: 'center' 
   },
   previewTitle: { 
-    color: '#fff', 
+    color: T.white, 
     fontSize: 17, 
-    fontWeight: '800' 
+    fontFamily: F.bodyBold 
   },
   previewImageWrapper: { 
     flex: 1, 
@@ -894,15 +895,15 @@ const styles = StyleSheet.create({
   },
   previewFooter: { 
     padding: 18, 
-    backgroundColor: '#1a1a1a', 
+    backgroundColor: T.ink, 
     paddingBottom: Platform.OS === 'ios' ? 38 : 18 
   },
   captionInput: { 
     backgroundColor: 'rgba(255,255,255,0.1)', 
     borderRadius: 14, 
     padding: 14, 
-    color: '#fff', 
-    fontSize: 15, 
+    color: T.white, 
+    fontSize: 15, fontFamily: F.body, 
     marginBottom: 14, 
     borderWidth: 1, 
     borderColor: 'rgba(255,255,255,0.1)' 
@@ -910,7 +911,7 @@ const styles = StyleSheet.create({
   shareButton: { 
     borderRadius: 14, 
     overflow: 'hidden', 
-    elevation: 8 
+    elevation: 2 
   },
   shareButtonGradient: { 
     height: 54, 
@@ -919,15 +920,15 @@ const styles = StyleSheet.create({
     borderRadius: 14 
   },
   shareText: { 
-    color: '#fff', 
-    fontWeight: '800', 
+    color: T.white, 
+    fontFamily: F.bodyBold, 
     fontSize: 16, 
     letterSpacing: 0.5 
   },
   
   viewerContainer: { 
     flex: 1, 
-    backgroundColor: '#1a1a1a' 
+    backgroundColor: T.ink 
   },
   fullStory: { 
     flex: 1 
@@ -947,7 +948,7 @@ const styles = StyleSheet.create({
   },
   progressBarFill: { 
     height: '100%', 
-    backgroundColor: '#f9c349', 
+    backgroundColor: T.yellow, 
     borderRadius: 2 
   },
   viewerHeader: { 
@@ -967,20 +968,20 @@ const styles = StyleSheet.create({
     height: 40, 
     borderRadius: 12, 
     borderWidth: 2, 
-    borderColor: '#f9c349', 
+    borderColor: T.yellow, 
     marginRight: 10 
   },
   viewerUserInfo: { 
     flex: 1 
   },
   viewerUsername: { 
-    color: '#fff', 
-    fontWeight: '700', 
+    color: T.white, 
+    fontFamily: F.bodyBold, 
     fontSize: 14 
   },
   viewerTimeAgo: { 
     color: 'rgba(255,255,255,0.6)', 
-    fontSize: 11, 
+    fontSize: 11, fontFamily: F.body, 
     marginTop: 1 
   },
   viewerHeaderRight: { 
@@ -998,9 +999,9 @@ const styles = StyleSheet.create({
     gap: 4 
   },
   viewsPillText: { 
-    color: '#fff', 
+    color: T.white, 
     fontSize: 11, 
-    fontWeight: '600' 
+    fontFamily: F.bodySemi 
   },
   headerIconBtn: { 
     width: 36, 
@@ -1052,10 +1053,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden' 
   },
   captionTextMain: { 
-    color: '#fff', 
+    color: T.white, 
     textAlign: 'center', 
     fontSize: 14, 
-    fontWeight: '500' 
+    fontFamily: F.bodyMedium 
   },
   touchNavigationOverlay: { 
     ...StyleSheet.absoluteFillObject, 
@@ -1083,29 +1084,29 @@ const styles = StyleSheet.create({
     gap: 6 
   },
   actionText: { 
-    color: '#fff', 
-    fontWeight: '600', 
+    color: T.white, 
+    fontFamily: F.bodySemi, 
     fontSize: 13 
   },
   deleteButton: { 
     width: 36, 
     height: 36, 
     borderRadius: 10, 
-    backgroundColor: 'rgba(249,195,73,0.1)', 
+    backgroundColor: T.yellowSoft, 
     justifyContent: 'center', 
     alignItems: 'center', 
     borderWidth: 1, 
-    borderColor: 'rgba(249,195,73,0.2)' 
+    borderColor: T.line 
   },
 
   // Comment Modal Styles
   commentModalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: T.overlay,
     justifyContent: 'flex-end',
   },
   commentModalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: height * 0.7,
@@ -1117,18 +1118,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: T.line,
   },
   commentModalTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.headingBold,
+    color: T.ink,
   },
   commentItem: {
     flexDirection: 'row',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f5',
+    borderBottomColor: T.line,
   },
   commentAvatar: {
     width: 36,
@@ -1141,13 +1142,13 @@ const styles = StyleSheet.create({
   },
   commentUsername: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
     marginBottom: 2,
   },
   commentText: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: 14, fontFamily: F.body,
+    color: T.ink,
     lineHeight: 20,
   },
   commentInputContainer: {
@@ -1156,15 +1157,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: T.line,
   },
   commentInput: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: T.paper,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    fontSize: 14,
+    fontSize: 14, fontFamily: F.body,
     maxHeight: 80,
   },
   commentSendButton: {
@@ -1183,8 +1184,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   noCommentsText: {
-    color: '#999',
-    fontSize: 14,
+    color: T.textFaint,
+    fontSize: 14, fontFamily: F.body,
   },
 
   // Viewers Modal Styles
@@ -1193,7 +1194,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f5',
+    borderBottomColor: T.line,
   },
   viewerAvatar: {
     width: 40,
@@ -1203,7 +1204,7 @@ const styles = StyleSheet.create({
   },
   viewerName: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontFamily: F.bodySemi,
+    color: T.ink,
   },
 });

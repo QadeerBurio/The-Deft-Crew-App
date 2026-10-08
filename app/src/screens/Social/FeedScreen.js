@@ -1,8 +1,8 @@
 // FeedScreen.js - Complete with back icon on header left, tdc logo centered
 
 import React, { useState, useEffect, useRef, useCallback, useContext, useMemo } from "react";
-import { 
-  View, Text, StyleSheet, StatusBar, 
+import {
+  View, Text, StyleSheet, StatusBar,
   FlatList, TouchableOpacity, Platform, TextInput,
   LayoutAnimation, ActivityIndicator, RefreshControl, Keyboard,
   Image, Animated, Dimensions, Alert, AppState
@@ -11,7 +11,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useOpenFromParams } from '../../engagement/hooks/useOpenFromParams';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills (design system)
+import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
+import EmptyState from "../../ui/EmptyState";
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 import PostCard, { PostCardSkeleton } from "./PostCard";
@@ -53,16 +55,16 @@ const postsChanged = (oldPosts, newPosts) => {
 
 export default function FeedScreen({ navigation }) {
   const { user, isGuest, unreadCount, updateUnreadCount, token } = useContext(AuthContext);
-  
+
   const [activeTab, setActiveTab] = useState("Feed");
-  
+
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  
+
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -107,8 +109,8 @@ export default function FeedScreen({ navigation }) {
       `Sign up to ${action}!`,
       [
         { text: 'Not Now', style: 'cancel' },
-        { 
-          text: 'Sign Up', 
+        {
+          text: 'Sign Up',
           onPress: () => navigation.navigate('Login')
         }
       ]
@@ -136,30 +138,30 @@ export default function FeedScreen({ navigation }) {
       } else if (!refreshing && !silent) {
         setLoading(true);
       }
-      
+
       let url = `${API_URL}/feed?category=${category}&search=${search}&limit=10`;
       if (loadMore && lastPostRef.current) {
         url += `&before=${lastPostRef.current}`;
       }
-      
+
       const headers = (!isGuest && token) ? { Authorization: `Bearer ${token}` } : {};
       const res = await axios.get(url, { headers });
 
       if (!isMountedRef.current) return;
-      
+
       let newPosts = res.data.posts || res.data;
       const moreAvailable = res.data.hasMore !== undefined ? res.data.hasMore : newPosts.length === 10;
-      
+
       if (blockedPostIds.length > 0) {
         newPosts = newPosts.filter(post => !blockedPostIds.includes(post._id));
       }
-      
+
       if (loadMore) {
         setPosts(prev => [...prev, ...newPosts]);
         setHasMore(moreAvailable);
       } else {
-        const filteredPosts = isGuest 
-          ? newPosts 
+        const filteredPosts = isGuest
+          ? newPosts
           : newPosts.filter(post => post.author?._id !== user?._id);
 
         setPosts(prev => {
@@ -171,13 +173,13 @@ export default function FeedScreen({ navigation }) {
 
         setHasMore(moreAvailable);
       }
-      
+
       if (newPosts.length > 0 && loadMore) {
         lastPostRef.current = newPosts[newPosts.length - 1].createdAt;
       } else if (newPosts.length > 0 && !loadMore) {
         lastPostRef.current = newPosts[newPosts.length - 1].createdAt;
       }
-      
+
       if (!isGuest && !silent) {
         updateUnreadCount();
       }
@@ -198,14 +200,14 @@ export default function FeedScreen({ navigation }) {
   }, [token, user, isGuest, updateUnreadCount, blockedPostIds, refreshing]);
 
   const handleBlock = useCallback((blockedUserId) => {
-    setPosts(prevPosts => 
+    setPosts(prevPosts =>
       prevPosts.filter(post => post.author?._id !== blockedUserId)
     );
     const blockedPostIdsToRemove = posts
       .filter(post => post.author?._id === blockedUserId)
       .map(post => post._id);
     setBlockedPostIds(prev => [...prev, ...blockedPostIdsToRemove]);
-    
+
     Alert.alert(
       "User Blocked",
       "Content from this user has been removed from your feed."
@@ -251,20 +253,20 @@ export default function FeedScreen({ navigation }) {
 
   const searchUsers = async (query, page = 1, loadMore = false) => {
     if (!query.trim() || query.trim().length < 2) return;
-    
+
     if (!loadMore) {
       setIsSearchingUsers(true);
     } else {
       setSearchLoadingMore(true);
     }
-    
+
     try {
       const headers = (!isGuest && token) ? { Authorization: `Bearer ${token}` } : {};
       const res = await axios.get(`${API_URL}/users/search?q=${query}&page=${page}&limit=20`, { headers });
-      
+
       const newUsers = res.data.users || res.data;
       const moreAvailable = res.data.hasMore !== undefined ? res.data.hasMore : newUsers.length === 20;
-      
+
       if (loadMore) {
         setSearchResults(prev => [...prev, ...newUsers]);
         setHasMoreSearch(moreAvailable);
@@ -411,7 +413,7 @@ export default function FeedScreen({ navigation }) {
   }, []);
 
   const renderUserSearchResult = ({ item }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.userResultItem}
       onPress={() => handleUserPress(item._id)}
       activeOpacity={0.7}
@@ -430,35 +432,30 @@ export default function FeedScreen({ navigation }) {
         </Text>
       </View>
       <View style={styles.userArrow}>
-        <Ionicons name={isGuest ? "lock-closed" : "chevron-forward"} size={16} color="#f9c349" />
+        <Ionicons name={isGuest ? "lock-closed" : "chevron-forward"} size={16} color={T.textFaint} />
       </View>
     </TouchableOpacity>
   );
 
   const renderFooter = () => {
-    if (!isLoadingMore) return <View style={styles.footerEnd}><Text style={styles.footerEndText}>— End of feed —</Text></View>;
+    if (!isLoadingMore) return <View style={styles.footerEnd}><Text style={styles.footerEndText}>{"you're all caught up"}<Text style={{ color: T.yellow }}>.</Text></Text></View>;
     return (
       <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color="#f9c349" />
-        <Text style={styles.loadingText}>Loading more...</Text>
+        <ActivityIndicator size="small" color={T.ink} />
+        <Text style={styles.loadingText}>loading more…</Text>
       </View>
     );
   };
 
   const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
-      <View style={styles.emptyIconCircle}>
-        <Ionicons name="newspaper-outline" size={50} color="#ccc" />
-      </View>
-      <Text style={styles.emptyText}>No posts available</Text>
-      <Text style={styles.emptySubText}>Check back later for updates!</Text>
-      <TouchableOpacity style={styles.retryBtn} onPress={onRefresh} activeOpacity={0.7}>
-        <LinearGradient colors={['#f9c349', '#1a1a1a']} style={styles.retryGradient}>
-          <Ionicons name="refresh" size={18} color="#fff" />
-          <Text style={styles.retryText}>Refresh Feed</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-    </View>
+    <EmptyState
+      mood="sleepy"
+      title="no posts yet"
+      line="check back later, or be the first to post."
+      actionLabel="refresh feed"
+      onAction={onRefresh}
+      style={styles.emptyContainer}
+    />
   );
 
   const renderFeed = () => (
@@ -470,18 +467,18 @@ export default function FeedScreen({ navigation }) {
           data={posts}
           keyExtractor={(item) => item._id}
           refreshControl={
-            <RefreshControl 
-              refreshing={refreshing} 
-              onRefresh={onRefresh} 
-              tintColor="#f9c349"
-              colors={["#f9c349"]}
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={T.ink}
+              colors={[T.ink]}
             />
           }
           renderItem={({ item }) => (
-            <PostCard 
-              post={item} 
-              onRefresh={onRefresh} 
-              navigation={navigation} 
+            <PostCard
+              post={item}
+              onRefresh={onRefresh}
+              navigation={navigation}
               isGuest={isGuest}
               onBlock={handleBlock}
               onReport={handleReport}
@@ -517,56 +514,65 @@ export default function FeedScreen({ navigation }) {
     return true;
   });
 
+  // Confessions tab is dark (Confessions design) → header follows
+  const dark = activeTab === "Confession";
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      
+    <SafeAreaView style={[styles.container, dark && styles.containerDark]} edges={['top']}>
+      <StatusBar barStyle={dark ? "light-content" : "dark-content"} backgroundColor={dark ? T.ink : T.paper} />
+
       {/* Guest Banner */}
       {isGuest && (
         <View style={styles.guestBanner}>
-          <Ionicons name="information-circle" size={18} color="#1a1a1a" />
+          <Ionicons name="information-circle-outline" size={18} color={T.ink} />
           <Text style={styles.guestBannerText}>
-            Browsing as guest
+            browsing as guest
           </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.signInButton}
             onPress={() => navigation.navigate('Login')}
+            accessibilityRole="button"
+            accessibilityLabel="sign in"
           >
-            <Text style={styles.signInText}>Sign In</Text>
+            <Text style={styles.signInText}>sign in</Text>
           </TouchableOpacity>
         </View>
       )}
-      
+
       {/* HEADER */}
-      <View style={styles.header}>
+      <View style={[styles.header, dark && styles.headerDark]}>
         <View style={styles.topBar}>
           {!isSearching ? (
             <>
               {/* Back Icon - Left Side */}
-              <TouchableOpacity 
-                style={styles.backButton} 
+              <TouchableOpacity
+                style={[styles.backButton, dark && styles.iconBtnDark]} 
                 onPress={handleBackPress}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="back to home"
               >
-                <Ionicons 
-                  name={Platform.OS === 'ios' ? 'chevron-back' : 'chevron-back'} 
-                  size={24} 
-                  color="#1a1a1a" 
-                />
+                <Ionicons name="chevron-back" size={19} color={dark ? T.white : T.ink} />
               </TouchableOpacity>
 
-              {/* TDC Logo - Center */}
-              <View style={styles.centerLogoContainer}>
-                <Animated.View style={{ transform: [{ scale: headerScale }] }}>
-                  <Text style={styles.logoText}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
-                </Animated.View>
-              </View>
+              {/* Title */}
+              <Animated.View style={[styles.centerLogoContainer, { transform: [{ scale: headerScale }] }]}>
+                <Text style={[styles.logoText, dark && { color: T.white }]} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                  social<Text style={{ color: T.yellow }}>.</Text>
+                </Text>
+              </Animated.View>
 
               {/* Notification Icon - Right Side */}
               <View style={styles.topIcons}>
-                <TouchableOpacity style={styles.iconBtn} onPress={handleNotifications} activeOpacity={0.7}>
+                <TouchableOpacity
+                  style={[styles.iconBtn, dark && styles.iconBtnDark]}
+                  onPress={handleNotifications}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={!isGuest && unreadCount > 0 ? "notifications, new" : "notifications"}
+                >
                   <View style={styles.badgeContainer}>
-                    <Ionicons name="notifications-outline" size={22} color="#1a1a1a" />
+                    <Ionicons name="notifications-outline" size={19} color={dark ? T.white : T.ink} />
                     {!isGuest && unreadCount > 0 && <View style={styles.redBadge} />}
                   </View>
                 </TouchableOpacity>
@@ -575,18 +581,18 @@ export default function FeedScreen({ navigation }) {
           ) : (
             <View style={styles.searchContainer}>
               <View style={styles.searchInputWrapper}>
-                <Ionicons name="search" size={18} color="#999" style={{marginRight: 8}} />
+                <Ionicons name="search-outline" size={18} color={T.textFaint} style={{marginRight: 8}} />
                 <TextInput
                   ref={searchInputRef}
                   autoFocus
                   style={styles.searchInput}
-                  placeholder="Search people..."
-                  placeholderTextColor="#999"
+                  placeholder="search people"
+                  placeholderTextColor={T.textFaint}
                   value={searchQuery}
                   onChangeText={handleSearchTextChange}
-                  onSubmitEditing={() => { 
-                    setIsSearching(false); 
-                    fetchPosts(selectedCategory, searchQuery, false, false); 
+                  onSubmitEditing={() => {
+                    setIsSearching(false);
+                    fetchPosts(selectedCategory, searchQuery, false, false);
                   }}
                 />
                 {searchQuery.length > 0 && (
@@ -594,40 +600,46 @@ export default function FeedScreen({ navigation }) {
                     setSearchQuery("");
                     setSearchResults([]);
                   }}>
-                    <Ionicons name="close-circle" size={18} color="#ccc" />
+                    <Ionicons name="close-circle" size={18} color={T.textFaint} />
                   </TouchableOpacity>
                 )}
               </View>
               <TouchableOpacity onPress={toggleSearch} style={styles.cancelBtn}>
-                <Text style={styles.cancelText}>Cancel</Text>
+                <Text style={styles.cancelText}>cancel</Text>
               </TouchableOpacity>
             </View>
           )}
         </View>
 
-        {/* Tabs */}
+        {/* Feed / confessions segmented tabs */}
         <View style={styles.tabsContainer}>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === "Feed" && styles.activeTab]}
-            onPress={() => handleTabSwitch("Feed")}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.tabText, activeTab === "Feed" && styles.activeTabText]}>
-              Feed
-            </Text>
-            {activeTab === "Feed" && <View style={styles.activeTabIndicator} />}
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === "Confession" && styles.activeTab]}
-            onPress={() => handleTabSwitch("Confession")}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.tabText, activeTab === "Confession" && styles.activeTabText]}>
-              Confession
-            </Text>
-            {activeTab === "Confession" && <View style={styles.activeTabIndicator} />}
-          </TouchableOpacity>
+          <View style={[styles.tabsTrack, dark && styles.tabsTrackDark]}>
+            {[["Feed", "feed"], ["Confession", "confessions"]].map(([key, label]) => {
+              const on = activeTab === key;
+              return (
+                <TouchableOpacity
+                  key={key}
+                  style={[styles.tab, on && (dark ? styles.activeTabDark : styles.activeTab)]}
+                  onPress={() => handleTabSwitch(key)}
+                  activeOpacity={0.8}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: on }}
+                  accessibilityLabel={label}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      dark && styles.tabTextDark,
+                      on && (dark ? styles.activeTabTextDark : styles.activeTabText),
+                    ]}
+                    maxFontSizeMultiplier={MAX_FONT_SCALE}
+                  >
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
       </View>
 
@@ -648,146 +660,128 @@ export default function FeedScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffff" },
-  
-  contentContainer: {
-    flex: 1,
-    backgroundColor: "#f8f9fa",
-  },
-  
+  container: { flex: 1, backgroundColor: T.paper },
+  contentContainer: { flex: 1, backgroundColor: T.paper },
+
   guestBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF9E6',
+    backgroundColor: T.yellowSoft,
     paddingHorizontal: 16,
     paddingVertical: 10,
     gap: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f9c34930'
   },
-  guestBannerText: {
-    flex: 1,
-    fontSize: 12,
-    color: '#1a1a1a',
-    fontWeight: '500'
-  },
-  signInButton: {
-    backgroundColor: '#f9c349',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8
-  },
-  signInText: {
-    color: '#1a1a1a',
-    fontWeight: '700',
-    fontSize: 11
-  },
-  
+  guestBannerText: { flex: 1, fontFamily: F.bodyMedium, fontSize: 13, color: T.ink },
+  signInButton: { backgroundColor: T.ink, height: 32, paddingHorizontal: 14, borderRadius: 16, justifyContent: 'center' },
+  signInText: { fontFamily: F.bodyBold, fontSize: 12.5, color: T.white },
+
   skeletonContainer: { paddingTop: 8 },
-  
-  header: {
-    backgroundColor: "#ffffff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-    zIndex: 10,
-  },
+
+  header: { backgroundColor: T.paper, zIndex: 10 },
   topBar: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 10,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    height: 52,
+    paddingTop: 8,
+    minHeight: 56,
   },
-  
   backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: '#f8f8f8',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
-  centerLogoContainer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
+  centerLogoContainer: { flex: 1 },
+  logoText: { fontFamily: F.heading, fontSize: 28, letterSpacing: -0.8, color: T.ink },
+  topIcons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  iconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
     justifyContent: 'center',
-    pointerEvents: 'none',
+    alignItems: 'center',
   },
-  
-  logoText: { fontSize: 28, fontWeight: '900', color: '#1a1a1a', letterSpacing: -1 },
-  topIcons: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  iconBtn: { 
-    width: 38, height: 38, borderRadius: 12, backgroundColor: '#f8f8f8', 
-    justifyContent: 'center', alignItems: 'center',
-  },
-  
+
   searchContainer: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   searchInputWrapper: {
-    flex: 1, flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#f8f8f8', borderRadius: 12, paddingHorizontal: 12,
-    height: 40, borderWidth: 2, borderColor: '#f0f0f0',
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: T.card,
+    borderRadius: 24,
+    paddingHorizontal: 14,
+    height: 48,
+    borderWidth: 1,
+    borderColor: T.line,
   },
-  searchInput: { flex: 1, fontSize: 14, color: '#1a1a1a', fontWeight: '500' },
-  cancelBtn: { marginLeft: 12 },
-  cancelText: { color: '#f9c349', fontSize: 15, fontWeight: '700' },
-  
+  searchInput: { flex: 1, fontFamily: F.body, fontSize: 15, color: T.ink },
+  cancelBtn: { marginLeft: 12, minHeight: 44, justifyContent: 'center' },
+  cancelText: { fontFamily: F.bodyBold, fontSize: 14, color: T.ink },
+
   userResultItem: {
-    flexDirection: 'row', alignItems: 'center', padding: 14, paddingHorizontal: 20,
-    borderBottomWidth: 1, borderBottomColor: '#f5f5f5',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: T.lineSoft,
   },
-  avatarImg: { width: 48, height: 48, borderRadius: 14 },
-  avatarPlaceholder: { 
-    width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center',
-    backgroundColor: '#f9c349',
+  avatarImg: { width: 44, height: 44, borderRadius: 22 },
+  avatarPlaceholder: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: T.yellowSoft,
   },
-  avatarText: { color: '#1a1a1a', fontWeight: '900', fontSize: 20 },
+  avatarText: { fontFamily: F.heading, fontSize: 17, color: T.ink },
   userInfo: { flex: 1, marginLeft: 12 },
-  userName: { fontSize: 15, fontWeight: '700', color: '#1a1a1a' },
-  userSubtitle: { fontSize: 12, color: '#999', marginTop: 2, fontWeight: '500' },
-  userArrow: {
-    width: 30, height: 30, borderRadius: 10, backgroundColor: '#f8f8f8',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  
+  userName: { fontFamily: F.bodyBold, fontSize: 15, color: T.ink },
+  userSubtitle: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, marginTop: 2 },
+  userArrow: { width: 30, height: 30, justifyContent: 'center', alignItems: 'center' },
+
   badgeContainer: { position: 'relative' },
   redBadge: {
-    position: 'absolute', top: 2, right: 2, width: 8, height: 8, borderRadius: 4,
-    backgroundColor: '#f9c349', borderWidth: 1.5, borderColor: '#fff',
+    position: 'absolute',
+    top: -1,
+    right: -1,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: T.yellow,
+    borderWidth: 2,
+    borderColor: T.white,
   },
-  
-  emptyContainer: { alignItems: 'center', marginTop: 80, paddingHorizontal: 40 },
-  emptyIconCircle: {
-    width: 80, height: 80, borderRadius: 20,
-    backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center',
-    borderWidth: 2, borderColor: '#f0f0f0', marginBottom: 16,
-  },
-  emptyText: { color: '#999', fontSize: 18, fontWeight: '700' },
-  emptySubText: { color: '#ccc', fontSize: 14, marginTop: 6, textAlign: 'center', fontWeight: '500' },
-  retryBtn: { marginTop: 20, borderRadius: 12, overflow: 'hidden', elevation: 5 },
-  retryGradient: { flexDirection: 'row', paddingHorizontal: 20, paddingVertical: 12, alignItems: 'center', gap: 8 },
-  retryText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  
-  footerLoader: { paddingVertical: 20, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
-  loadingText: { color: '#999', fontSize: 13, fontWeight: '500' },
-  footerEnd: { paddingVertical: 24, alignItems: 'center' },
-  footerEndText: { color: '#ccc', fontSize: 12, fontWeight: '500' },
 
-  tabsContainer: {
-    flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8,
-    backgroundColor: '#ffffff', borderTopWidth: 1, borderTopColor: '#f0f0f0',
-  },
-  tab: {
-    flex: 1, paddingVertical: 10, alignItems: 'center', position: 'relative',
-  },
-  activeTab: {},
-  tabText: { fontSize: 15, fontWeight: '600', color: '#999' },
-  activeTabText: { color: '#1a1a1a', fontWeight: '700' },
-  activeTabIndicator: {
-    position: 'absolute', bottom: -1, left: '30%', right: '30%',
-    height: 3, backgroundColor: '#f9c349', borderRadius: 2,
-  },
+  emptyContainer: { marginTop: 40 },
+
+  footerLoader: { paddingVertical: 20, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
+  loadingText: { fontFamily: F.body, fontSize: 13, color: T.textMuted },
+  footerEnd: { paddingVertical: 24, alignItems: 'center' },
+  footerEndText: { fontFamily: F.bodySemi, fontSize: 12.5, color: T.textMuted },
+
+  tabsContainer: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 },
+  tabsTrack: { flexDirection: 'row', gap: 4, padding: 4, borderRadius: 24, backgroundColor: T.lineSoft },
+  tab: { flex: 1, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  activeTab: { backgroundColor: T.ink },
+  tabText: { fontFamily: F.bodySemi, fontSize: 14, color: T.ink },
+  activeTabText: { fontFamily: F.bodyBold, color: T.white },
+
+  // Confessions tab (dark)
+  containerDark: { backgroundColor: T.ink },
+  headerDark: { backgroundColor: T.ink },
+  iconBtnDark: { backgroundColor: T.inkSoft, borderColor: T.inkSoft },
+  tabsTrackDark: { backgroundColor: T.inkSoft },
+  activeTabDark: { backgroundColor: T.yellow },
+  tabTextDark: { color: T.onInkMuted },
+  activeTabTextDark: { fontFamily: F.heading, color: T.ink },
 });

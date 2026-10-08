@@ -8,7 +8,7 @@ import {
   Keyboard, AppState
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import axios from "axios";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -34,6 +34,7 @@ import {
 
 import BadgePip from '../../engagement/components/BadgePip';
 
+import { color as T, font as F } from "../../theme/tokens";
 const { width, height } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
@@ -408,9 +409,9 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
 
   const getStatusDisplay = () => {
     if (isOwnPost) return null;
-    if (connectionStatus === 'connected') return { text: 'Connected', color: '#f9c349' };
-    if (connectionStatus === 'pending') return { text: 'Request Sent', color: '#f9c349' };
-    if (connectionStatus === 'received') return { text: 'Request Received', color: '#4CAF50' };
+    if (connectionStatus === 'connected') return { text: 'connected', color: T.ink };
+    if (connectionStatus === 'pending') return { text: 'request sent', color: T.ink };
+    if (connectionStatus === 'received') return { text: 'request received', color: T.success };
     return null;
   };
   const statusDisplay = getStatusDisplay();
@@ -877,7 +878,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
             {item.user?.profileImage ? (
               <Image source={{ uri: item.user.profileImage }} style={styles.avatarLg} />
             ) : (
-              <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.avatarLgPlaceholder}>
+              <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.avatarLgPlaceholder}>
                 <Text style={styles.avatarLgText}>
                   {item.user?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </Text>
@@ -897,7 +898,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                 <>
                   <Text style={styles.metaDot}>·</Text>
                   <TouchableOpacity onPress={() => onReplyPress(item, item._id)}>
-                    <Text style={styles.replyBtn}>Reply</Text>
+                    <Text style={styles.replyBtn}>reply</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -905,7 +906,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                 <>
                   <Text style={styles.metaDot}>·</Text>
                   <TouchableOpacity onPress={() => handleDeleteComment(item._id)}>
-                    <Text style={[styles.replyBtn, styles.deleteBtnText]}>Delete</Text>
+                    <Text style={[styles.replyBtn, styles.deleteBtnText]}>delete</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -925,7 +926,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
               <Ionicons
                 name={isCollapsed ? "chevron-down" : "chevron-up"}
                 size={14}
-                color="#1a1a1a"
+                color={T.ink}
               />
               <Text style={styles.viewRepliesText}>
                 {isCollapsed
@@ -959,7 +960,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                     {reply.user?.profileImage ? (
                       <Image source={{ uri: reply.user.profileImage }} style={styles.avatarSm} />
                     ) : (
-                      <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.avatarSmPlaceholder}>
+                      <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.avatarSmPlaceholder}>
                         <Text style={styles.avatarSmText}>
                           {replyAuthorName.charAt(0).toUpperCase()}
                         </Text>
@@ -984,7 +985,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                         <>
                           <Text style={styles.metaDot}>·</Text>
                           <TouchableOpacity onPress={() => onReplyPress(reply, item._id)}>
-                            <Text style={styles.replyBtnSm}>Reply</Text>
+                            <Text style={styles.replyBtnSm}>reply</Text>
                           </TouchableOpacity>
                         </>
                       )}
@@ -992,7 +993,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                         <>
                           <Text style={styles.metaDot}>·</Text>
                           <TouchableOpacity onPress={() => handleDeleteComment(reply._id)}>
-                            <Text style={[styles.replyBtnSm, styles.deleteBtnText]}>Delete</Text>
+                            <Text style={[styles.replyBtnSm, styles.deleteBtnText]}>delete</Text>
                           </TouchableOpacity>
                         </>
                       )}
@@ -1023,7 +1024,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
             {post.author?.profileImage ? (
               <Image source={{ uri: post.author.profileImage }} style={styles.avatarImg} />
             ) : (
-              <LinearGradient colors={['#2d2d2d', '#1a1a1a']} style={styles.avatarPlaceholder}>
+              <LinearGradient colors={[T.ink, T.ink]} style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarText}>{post.author?.name?.charAt(0)?.toUpperCase()}</Text>
               </LinearGradient>
             )}
@@ -1033,15 +1034,15 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                 onPress={handleAcceptRequest}
                 disabled={isConnecting}
               >
-                <LinearGradient colors={['#4CAF50', '#45a049']} style={styles.plusBadgeGradient}>
-                  {isConnecting ? <ActivityIndicator size={10} color="#fff" /> : <Ionicons name="checkmark" size={14} color="#fff" />}
+                <LinearGradient colors={[T.success, '#45a049']} style={styles.plusBadgeGradient}>
+                  {isConnecting ? <ActivityIndicator size={10} color={T.white} /> : <Ionicons name="checkmark" size={14} color={T.white} />}
                 </LinearGradient>
               </TouchableOpacity>
             )}
             {showConnectButton && (
               <TouchableOpacity style={styles.plusBadge} onPress={handleConnect} disabled={isConnecting}>
-                <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.plusBadgeGradient}>
-                  {isConnecting ? <ActivityIndicator size={10} color="#fff" /> : <Ionicons name="add" size={14} color="#fff" />}
+                <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.plusBadgeGradient}>
+                  {isConnecting ? <ActivityIndicator size={10} color={T.white} /> : <Ionicons name="add" size={14} color={T.white} />}
                 </LinearGradient>
               </TouchableOpacity>
             )}
@@ -1070,7 +1071,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
             onPress={() => { soundTap(); setShowMenu(true); }}
             style={styles.menuBtn}
           >
-            <Ionicons name="ellipsis-vertical" size={20} color="#666" />
+            <Ionicons name="ellipsis-vertical" size={20} color={T.textMuted} />
           </TouchableOpacity>
         )}
       </View>
@@ -1097,7 +1098,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
           <View style={styles.imageContainer}>
             {!imageLoaded && (
               <View style={styles.imageLoading}>
-                <ActivityIndicator color="#f9c349" />
+                <ActivityIndicator color={T.yellow} />
               </View>
             )}
             <Image
@@ -1122,7 +1123,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
               <Ionicons
                 name={isLiked ? "heart" : "heart-outline"}
                 size={20}
-                color={isLiked ? "#f9c349" : "#666"}
+                color={isLiked ? T.yellow : T.ink}
               />
             </Animated.View>
             <Text style={[styles.actionCount, isLiked && styles.actionCountActive]}>
@@ -1131,12 +1132,12 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionBtn} onPress={openComments} activeOpacity={0.7}>
-            <Ionicons name="chatbubble-outline" size={20} color="#666" />
+            <Ionicons name="chatbubble-outline" size={20} color={T.textMuted} />
             <Text style={styles.actionCount}>{totalCommentsCount}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionBtn} onPress={handleShare} activeOpacity={0.7}>
-            <Ionicons name="share-social-outline" size={20} color="#666" />
+            <Ionicons name="share-social-outline" size={20} color={T.textMuted} />
           </TouchableOpacity>
         </View>
         {isLoggedIn && (
@@ -1149,7 +1150,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
               <Ionicons
                 name={isSaved ? "bookmark" : "bookmark-outline"}
                 size={20}
-                color={isSaved ? "#f9c349" : "#666"}
+                color={isSaved ? T.yellow : T.textMuted}
               />
             </TouchableOpacity>
           </Animated.View>
@@ -1182,14 +1183,14 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
             <View style={styles.dragHandle} />
             <View style={styles.modalHeader}>
               <View style={styles.modalHeaderLeft}>
-                <Ionicons name="chatbubbles" size={20} color="#f9c349" />
-                <Text style={styles.modalTitle}>Comments</Text>
+                <Ionicons name="chatbubbles" size={20} color={T.yellow} />
+                <Text style={styles.modalTitle}>comments</Text>
                 <View style={styles.commentCountBadge}>
                   <Text style={styles.commentCountBadgeText}>{totalCommentsCount}</Text>
                 </View>
               </View>
               <TouchableOpacity onPress={closeComments} style={styles.closeBtn}>
-                <Ionicons name="close" size={22} color="#1a1a1a" />
+                <Ionicons name="close" size={22} color={T.ink} />
               </TouchableOpacity>
             </View>
 
@@ -1204,10 +1205,10 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
               ListEmptyComponent={
                 <View style={styles.emptyComments}>
                   <View style={styles.emptyIconCircle}>
-                    <Ionicons name="chatbubble-outline" size={40} color="#ccc" />
+                    <Ionicons name="chatbubble-outline" size={40} color={T.textFaint} />
                   </View>
-                  <Text style={styles.emptyText}>No comments yet</Text>
-                  <Text style={styles.emptySubtext}>Be the first to comment!</Text>
+                  <Text style={styles.emptyText}>no comments yet</Text>
+                  <Text style={styles.emptySubtext}>be the first to comment!</Text>
                 </View>
               }
             />
@@ -1220,9 +1221,9 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                 {replyTo && (
                   <View style={styles.replyNotifier}>
                     <View style={styles.replyNotifierLeft}>
-                      <Ionicons name="return-down-forward" size={14} color="#f9c349" />
+                      <Ionicons name="return-down-forward" size={14} color={T.yellow} />
                       <Text style={styles.replyNotifierText}>
-                        Replying to <Text style={styles.replyNotifierName}>{replyTo.userName}</Text>
+                        replying to <Text style={styles.replyNotifierName}>{replyTo.userName}</Text>
                       </Text>
                     </View>
                     <TouchableOpacity
@@ -1233,7 +1234,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                         setSelectedMentions([]);
                       }}
                     >
-                      <Ionicons name="close-circle" size={18} color="#999" />
+                      <Ionicons name="close-circle" size={18} color={T.textFaint} />
                     </TouchableOpacity>
                   </View>
                 )}
@@ -1253,7 +1254,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                           {item.profileImage ? (
                             <Image source={{ uri: item.profileImage }} style={styles.mentionAvatar} />
                           ) : (
-                            <LinearGradient colors={['#f9c349', '#e6b800']} style={styles.mentionAvatarPlaceholder}>
+                            <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.mentionAvatarPlaceholder}>
                               <Text style={styles.mentionAvatarText}>
                                 {item.name?.charAt(0)?.toUpperCase()}
                               </Text>
@@ -1265,7 +1266,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                               <Text style={styles.mentionUsername}>@{item.username}</Text>
                             )}
                           </View>
-                          <Ionicons name="at" size={18} color="#1877f2" />
+                          <Ionicons name="at" size={18} color={T.ink} />
                         </TouchableOpacity>
                       )}
                     />
@@ -1277,7 +1278,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                     ref={inputRef}
                     style={styles.commentInput}
                     placeholder={isLoggedIn ? "Write a comment... Use @ to mention" : "Sign in to comment"}
-                    placeholderTextColor="#999"
+                    placeholderTextColor={T.textFaint}
                     value={commentText}
                     onChangeText={handleCommentTextChange}
                     multiline
@@ -1291,13 +1292,13 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                       style={[styles.postBtn, !commentText.trim() && styles.postBtnDisabled]}
                     >
                       <LinearGradient
-                        colors={commentText.trim() ? ['#f9c349', '#e6b800'] : ['#e0e0e0', '#e0e0e0']}
+                        colors={commentText.trim() ? [T.yellow, '#e6b800'] : [T.sand, T.sand]}
                         style={styles.postBtnGradient}
                       >
                         {isSubmitting ? (
-                          <ActivityIndicator size="small" color="#fff" />
+                          <ActivityIndicator size="small" color={T.white} />
                         ) : (
-                          <Ionicons name="send" size={16} color="#fff" />
+                          <Ionicons name="send" size={16} color={T.white} />
                         )}
                       </LinearGradient>
                     </TouchableOpacity>
@@ -1315,7 +1316,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
           <View style={styles.modalOverlay}>
             <Animated.View style={[styles.menuBox, { transform: [{ translateY: menuSlide }] }]}>
               <View style={styles.menuHeader}>
-                <Text style={styles.menuHeaderText}>Post Options</Text>
+                <Text style={styles.menuHeaderText}>post options</Text>
               </View>
 
               <TouchableOpacity style={styles.menuItem} onPress={handleSave}>
@@ -1323,7 +1324,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                   <Ionicons
                     name={isSaved ? "bookmark" : "bookmark-outline"}
                     size={20}
-                    color={isSaved ? "#f9c349" : "#1a1a1a"}
+                    color={T.ink}
                   />
                 </View>
                 <Text style={styles.menuText}>{isSaved ? "Remove from Saved" : "Save Post"}</Text>
@@ -1331,26 +1332,26 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
 
               <TouchableOpacity style={styles.menuItem} onPress={handleShare}>
                 <View style={styles.menuIconCircle}>
-                  <Ionicons name="share-social-outline" size={20} color="#1a1a1a" />
+                  <Ionicons name="share-social-outline" size={20} color={T.ink} />
                 </View>
-                <Text style={styles.menuText}>Share Post</Text>
+                <Text style={styles.menuText}>share post</Text>
               </TouchableOpacity>
 
               {!isOwnPost && (
                 <TouchableOpacity style={styles.menuItem} onPress={handleReportPost}>
                   <View style={[styles.menuIconCircle, styles.menuReportCircle]}>
-                    <Ionicons name="flag-outline" size={20} color="#e74c3c" />
+                    <Ionicons name="flag-outline" size={20} color={T.danger} />
                   </View>
-                  <Text style={[styles.menuText, styles.menuBlockText]}>Report Post</Text>
+                  <Text style={[styles.menuText, styles.menuBlockText]}>report post</Text>
                 </TouchableOpacity>
               )}
 
               {!isOwnPost && (
                 <TouchableOpacity style={styles.menuItem} onPress={handleBlockUser}>
                   <View style={[styles.menuIconCircle, styles.menuBlockCircle]}>
-                    <Ionicons name="ban-outline" size={20} color="#e74c3c" />
+                    <Ionicons name="ban-outline" size={20} color={T.danger} />
                   </View>
-                  <Text style={[styles.menuText, styles.menuBlockText]}>Block User</Text>
+                  <Text style={[styles.menuText, styles.menuBlockText]}>block user</Text>
                 </TouchableOpacity>
               )}
 
@@ -1361,9 +1362,9 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                 onPress={() => { soundTap(); setShowMenu(false); }}
               >
                 <View style={[styles.menuIconCircle, styles.menuCancelCircle]}>
-                  <Ionicons name="close-outline" size={20} color="#999" />
+                  <Ionicons name="close-outline" size={20} color={T.textFaint} />
                 </View>
-                <Text style={[styles.menuText, styles.menuCancelText]}>Cancel</Text>
+                <Text style={[styles.menuText, styles.menuCancelText]}>cancel</Text>
               </TouchableOpacity>
             </Animated.View>
           </View>
@@ -1388,75 +1389,69 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
 // ============ STYLES ============
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#fff",
-    marginBottom: 10,
-    paddingVertical: 16,
-    borderRadius: 16,
-    marginHorizontal: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: "#f0f0f0",
+    backgroundColor: T.card,
+    marginHorizontal: 16,
     marginTop: 10,
+    paddingVertical: 14,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: T.line,
   },
   skeletonCard: {
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
     marginBottom: 10,
     paddingVertical: 16,
     borderRadius: 16,
     marginHorizontal: 12,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: "#f0f0f0",
+    borderColor: T.line,
   },
   skeletonHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  skeletonAvatar: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#e8e8e8' },
+  skeletonAvatar: { width: 44, height: 44, borderRadius: 14, backgroundColor: T.sand },
   skeletonHeaderText: { marginLeft: 12, flex: 1 },
-  skeletonLine: { backgroundColor: '#e8e8e8', borderRadius: 4 },
-  skeletonFooter: { flexDirection: 'row', marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#f0f0f0', gap: 24 },
-  skeletonAction: { width: 60, height: 20, backgroundColor: '#e8e8e8', borderRadius: 10 },
+  skeletonLine: { backgroundColor: T.sand, borderRadius: 4 },
+  skeletonFooter: { flexDirection: 'row', marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: T.line, gap: 24 },
+  skeletonAction: { width: 60, height: 20, backgroundColor: T.sand, borderRadius: 10 },
 
   headerRow: { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 16, alignItems: "center" },
   userInfo: { flexDirection: "row", alignItems: "center", flex: 1 },
   avatarContainer: { position: "relative" },
-  avatarImg: { width: 44, height: 44, borderRadius: 14 },
-  avatarPlaceholder: { width: 44, height: 44, borderRadius: 14, justifyContent: "center", alignItems: "center" },
-  avatarText: { color: "#fff", fontWeight: "800", fontSize: 18 },
-  plusBadge: { position: "absolute", bottom: -3, right: -3, borderRadius: 9, overflow: 'hidden', borderWidth: 2, borderColor: '#fff' },
+  avatarImg: { width: 38, height: 38, borderRadius: 19 },
+  avatarPlaceholder: { width: 38, height: 38, borderRadius: 19, justifyContent: "center", alignItems: "center" },
+  avatarText: { color: T.white, fontFamily: F.heading, fontSize: 18 },
+  plusBadge: { position: "absolute", bottom: -3, right: -3, borderRadius: 9, overflow: 'hidden', borderWidth: 2, borderColor: T.white },
   acceptBadge: { bottom: -3, right: -3 },
   plusBadgeGradient: { width: 20, height: 20, borderRadius: 9, justifyContent: 'center', alignItems: 'center' },
   userMeta: { marginLeft: 12, flex: 1 },
   userNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  userName: { fontWeight: "700", fontSize: 15, color: "#1a1a1a" },
+  userName: { fontFamily: F.bodyBold, fontSize: 15, color: T.ink },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  statusText: { fontSize: 10, fontWeight: "600" },
-  subText: { fontSize: 11, color: "#999", marginTop: 2, fontWeight: '500' },
-  menuBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center', marginLeft: 4 },
+  statusText: { fontSize: 10, fontFamily: F.bodySemi },
+  subText: { fontSize: 11, color: T.textFaint, marginTop: 2, fontFamily: F.bodyMedium },
+  menuBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'transparent', justifyContent: 'center', alignItems: 'center', marginLeft: 4 },
 
   contentContainer: { paddingHorizontal: 16, marginTop: 10 },
-  postText: { fontSize: 15, color: "#1a1a1a", lineHeight: 22, fontWeight: '400' },
-  showMoreText: { fontSize: 14, color: '#f9c349', fontWeight: '700', marginTop: 4, paddingVertical: 4 },
-  imageContainer: { marginTop: 12, borderRadius: 14, overflow: 'hidden', backgroundColor: '#f8f8f8', position: 'relative' },
+  postText: { fontSize: 15, color: T.ink, lineHeight: 22, fontFamily: F.body },
+  showMoreText: { fontSize: 14, color: T.yellow, fontFamily: F.bodyBold, marginTop: 4, paddingVertical: 4 },
+  imageContainer: { marginTop: 12, borderRadius: 14, overflow: 'hidden', backgroundColor: T.sand, position: 'relative' },
   imageLoading: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: 1 },
   postImage: { width: "100%", height: 280, borderRadius: 14 },
 
-  actionBar: { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 16, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: "#f5f5f5" },
-  leftActions: { flexDirection: "row", alignItems: "center", gap: 4 },
-  actionBtn: { flexDirection: "row", alignItems: "center", paddingVertical: 6, paddingHorizontal: 10, borderRadius: 20, gap: 5 },
-  actionBtnActive: { backgroundColor: '#fef9f0' },
-  actionCount: { fontSize: 13, color: "#666", fontWeight: "600" },
-  actionCountActive: { color: "#f9c349" },
+  actionBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, marginTop: 12 },
+  leftActions: { flexDirection: "row", alignItems: "center", gap: 6 },
+  actionBtn: { flexDirection: "row", alignItems: "center", height: 34, paddingHorizontal: 12, borderRadius: 17, borderWidth: 1, borderColor: T.line, gap: 6 },
+  actionBtnActive: { backgroundColor: T.yellowSoft, borderColor: T.yellow },
+  actionCount: { fontSize: 13, color: T.ink, fontFamily: F.bodyBold },
+  actionCountActive: { color: T.yellow },
   saveBtn: { padding: 6, borderRadius: 20 },
-  saveBtnActive: { backgroundColor: '#fef9f0' },
+  saveBtnActive: { backgroundColor: T.yellowSoft },
 
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  modalOverlay: { flex: 1, backgroundColor: T.overlay, justifyContent: "flex-end" },
   modalBackdrop: { ...StyleSheet.absoluteFillObject },
 
   commentSheet: {
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
@@ -1465,21 +1460,21 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
-  dragHandle: { width: 40, height: 4, backgroundColor: '#e0e0e0', borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
+  dragHandle: { width: 40, height: 4, backgroundColor: T.handle, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: T.line,
     alignItems: "center",
   },
   modalHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  modalTitle: { fontSize: 18, fontWeight: "700", color: "#1a1a1a" },
-  commentCountBadge: { backgroundColor: '#f8f8f8', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
-  commentCountBadgeText: { fontSize: 12, fontWeight: "600", color: '#666' },
-  closeBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center' },
+  modalTitle: { fontSize: 18, fontFamily: F.headingBold, color: T.ink },
+  commentCountBadge: { backgroundColor: T.sand, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+  commentCountBadgeText: { fontSize: 12, fontFamily: F.bodySemi, color: T.textMuted },
+  closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: T.card, borderWidth: 1, borderColor: T.line, justifyContent: 'center', alignItems: 'center' },
   commentListContent: { padding: 16, paddingBottom: 20, flexGrow: 1 },
 
   threadContainer: { marginBottom: 20 },
@@ -1487,10 +1482,10 @@ const styles = StyleSheet.create({
   parentRow: { flexDirection: "row", alignItems: "flex-start" },
   avatarLg: { width: 38, height: 38, borderRadius: 19 },
   avatarLgPlaceholder: { width: 38, height: 38, borderRadius: 19, justifyContent: "center", alignItems: "center" },
-  avatarLgText: { fontWeight: "700", color: "#1a1a1a", fontSize: 14 },
+  avatarLgText: { fontFamily: F.bodyBold, color: T.ink, fontSize: 14 },
   parentContent: { flex: 1, marginLeft: 10 },
   bubbleLg: {
-    backgroundColor: "#f0f2f5",
+    backgroundColor: T.sand,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 18,
@@ -1498,13 +1493,13 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     maxWidth: '100%',
   },
-  authorNameLg: { fontWeight: "700", fontSize: 13, marginBottom: 3, color: '#1a1a1a' },
-  commentText: { fontSize: 14, color: "#1a1a1a", lineHeight: 20 },
+  authorNameLg: { fontFamily: F.bodyBold, fontSize: 13, marginBottom: 3, color: T.ink },
+  commentText: { fontSize: 14, fontFamily: F.body, color: T.ink, lineHeight: 20 },
   metaRowLg: { flexDirection: 'row', marginTop: 5, marginLeft: 14, alignItems: 'center' },
-  metaText: { fontSize: 11, color: '#65676b', fontWeight: '500' },
-  metaDot: { fontSize: 11, color: '#65676b', marginHorizontal: 6 },
-  replyBtn: { fontSize: 12, color: '#1a1a1a', fontWeight: '700' },
-  deleteBtnText: { color: '#e74c3c' },
+  metaText: { fontSize: 11, color: T.textMuted, fontFamily: F.bodyMedium },
+  metaDot: { fontSize: 11, fontFamily: F.body, color: T.textMuted, marginHorizontal: 6 },
+  replyBtn: { fontSize: 12, color: T.ink, fontFamily: F.bodyBold },
+  deleteBtnText: { color: T.danger },
 
   treeWrapper: {
     marginTop: 4,
@@ -1518,7 +1513,7 @@ const styles = StyleSheet.create({
     top: -8,
     bottom: 18,
     width: 2,
-    backgroundColor: '#d0d4d9',
+    backgroundColor: T.handle,
     borderRadius: 1,
   },
   viewRepliesBtn: {
@@ -1528,12 +1523,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 14,
-    backgroundColor: '#f0f2f5',
+    backgroundColor: T.sand,
     alignSelf: 'flex-start',
     marginBottom: 12,
     marginLeft: -4,
   },
-  viewRepliesText: { fontSize: 12, color: '#1a1a1a', fontWeight: '700' },
+  viewRepliesText: { fontSize: 12, color: T.ink, fontFamily: F.bodyBold },
 
   treeBranch: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12, position: 'relative' },
   branchConnector: {
@@ -1544,7 +1539,7 @@ const styles = StyleSheet.create({
     height: 15,
     borderLeftWidth: 2,
     borderBottomWidth: 2,
-    borderColor: '#d0d4d9',
+    borderColor: T.line,
     borderBottomLeftRadius: 10,
   },
   branchConnectorLast: {},
@@ -1552,10 +1547,10 @@ const styles = StyleSheet.create({
   replyAvatarWrap: { marginRight: 8 },
   avatarSm: { width: 30, height: 30, borderRadius: 15 },
   avatarSmPlaceholder: { width: 30, height: 30, borderRadius: 15, justifyContent: "center", alignItems: "center" },
-  avatarSmText: { fontWeight: "700", color: "#1a1a1a", fontSize: 12 },
+  avatarSmText: { fontFamily: F.bodyBold, color: T.ink, fontSize: 12 },
   replyContent: { flex: 1 },
   bubbleSm: {
-    backgroundColor: "#f0f2f5",
+    backgroundColor: T.sand,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 16,
@@ -1563,41 +1558,41 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     maxWidth: '100%',
   },
-  authorNameSm: { fontWeight: "700", fontSize: 12, marginBottom: 2, color: '#1a1a1a' },
-  replyTextContent: { fontSize: 13, color: "#1a1a1a", lineHeight: 18 },
-  mentionText: { color: '#1877f2', fontWeight: '600' },
+  authorNameSm: { fontFamily: F.bodyBold, fontSize: 12, marginBottom: 2, color: T.ink },
+  replyTextContent: { fontSize: 13, fontFamily: F.body, color: T.ink, lineHeight: 18 },
+  mentionText: { color: T.ink, fontFamily: F.bodySemi },
   metaRowSm: { flexDirection: 'row', marginTop: 4, marginLeft: 12, alignItems: 'center' },
-  metaTextSm: { fontSize: 10, color: '#65676b', fontWeight: '500' },
-  replyBtnSm: { fontSize: 11, color: '#1a1a1a', fontWeight: '700' },
+  metaTextSm: { fontSize: 10, color: T.textMuted, fontFamily: F.bodyMedium },
+  replyBtnSm: { fontSize: 11, color: T.ink, fontFamily: F.bodyBold },
 
   emptyComments: { alignItems: 'center', paddingVertical: 60, flex: 1, justifyContent: 'center' },
-  emptyIconCircle: { width: 70, height: 70, borderRadius: 20, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  emptyText: { fontSize: 16, fontWeight: '700', color: '#999', marginTop: 4 },
-  emptySubtext: { fontSize: 13, color: '#ccc', marginTop: 2 },
+  emptyIconCircle: { width: 70, height: 70, borderRadius: 20, backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  emptyText: { fontSize: 16, fontFamily: F.bodyBold, color: T.textFaint, marginTop: 4 },
+  emptySubtext: { fontSize: 13, fontFamily: F.body, color: T.textMuted, marginTop: 2 },
 
-  inputWrapper: { borderTopWidth: 1, borderTopColor: '#f0f0f0', backgroundColor: '#fff', marginBottom: 20 },
+  inputWrapper: { borderTopWidth: 1, borderTopColor: T.line, backgroundColor: T.card, marginBottom: 20 },
   replyNotifier: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#fef9f0',
+    backgroundColor: T.yellowSoft,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: T.line,
   },
   replyNotifierLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  replyNotifierText: { fontSize: 12, color: '#666' },
-  replyNotifierName: { fontWeight: '700', color: '#f9c349' },
+  replyNotifierText: { fontSize: 12, fontFamily: F.body, color: T.textMuted },
+  replyNotifierName: { fontFamily: F.bodyBold, color: T.yellow },
   inputArea: { flexDirection: "row", paddingHorizontal: 12, paddingVertical: 10, alignItems: "flex-end", gap: 8 },
   commentInput: {
     flex: 1,
-    backgroundColor: "#f0f2f5",
+    backgroundColor: T.paper,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    fontSize: 14,
-    color: '#1a1a1a',
+    fontSize: 14, fontFamily: F.body,
+    color: T.ink,
     maxHeight: 100,
     minHeight: 40,
   },
@@ -1606,9 +1601,9 @@ const styles = StyleSheet.create({
   postBtnDisabled: { opacity: 0.5 },
 
   mentionSuggestions: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: T.line,
     maxHeight: 200,
   },
   mentionItem: {
@@ -1618,7 +1613,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f8f8f8',
+    borderBottomColor: T.line,
   },
   mentionAvatar: { width: 32, height: 32, borderRadius: 16 },
   mentionAvatarPlaceholder: {
@@ -1628,39 +1623,39 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  mentionAvatarText: { color: '#1a1a1a', fontWeight: '700', fontSize: 13 },
-  mentionName: { fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
-  mentionUsername: { fontSize: 12, color: '#999', marginTop: 1 },
+  mentionAvatarText: { color: T.ink, fontFamily: F.bodyBold, fontSize: 13 },
+  mentionName: { fontSize: 14, fontFamily: F.bodySemi, color: T.ink },
+  mentionUsername: { fontSize: 12, fontFamily: F.body, color: T.textFaint, marginTop: 1 },
 
   menuBox: {
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    shadowColor: "#000",
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 10,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  menuHeader: { borderBottomWidth: 1, borderBottomColor: '#f0f0f0', paddingBottom: 12, marginBottom: 4 },
-  menuHeaderText: { fontSize: 13, color: '#999', fontWeight: '600', textAlign: 'center', letterSpacing: 0.5 },
+  menuHeader: { borderBottomWidth: 1, borderBottomColor: T.line, paddingBottom: 12, marginBottom: 4 },
+  menuHeaderText: { fontSize: 13, color: T.textFaint, fontFamily: F.bodySemi, textAlign: 'center', letterSpacing: 0.5 },
   menuItem: { flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 4 },
   menuIconCircle: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  menuBlockCircle: { backgroundColor: '#fef0f0' },
-  menuReportCircle: { backgroundColor: '#fef0f0' },
-  menuCancelCircle: { backgroundColor: '#f8f8f8' },
-  menuText: { fontSize: 15, color: "#1a1a1a", fontWeight: '500', flex: 1 },
-  menuBlockText: { color: '#e74c3c' },
-  menuCancelText: { color: '#999', fontWeight: '400' },
-  menuDivider: { height: 1, backgroundColor: '#f0f0f0', marginVertical: 4 },
+  menuBlockCircle: { backgroundColor: T.dangerBg },
+  menuReportCircle: { backgroundColor: T.dangerBg },
+  menuCancelCircle: { backgroundColor: T.sand },
+  menuText: { fontSize: 15, color: T.ink, fontFamily: F.bodyMedium, flex: 1 },
+  menuBlockText: { color: T.danger },
+  menuCancelText: { color: T.textFaint, fontFamily: F.body },
+  menuDivider: { height: 1, backgroundColor: T.sand, marginVertical: 4 },
 });
