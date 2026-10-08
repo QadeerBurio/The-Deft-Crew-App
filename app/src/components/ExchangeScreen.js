@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   StatusBar,
   ScrollView,
-  TextInput,
   ActivityIndicator,
   RefreshControl,
   Alert,
@@ -28,7 +27,11 @@ import { WebView } from 'react-native-webview';
 import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { engagementBus, ENGAGEMENT_EVENTS } from '../engagement/engagementBus';
 
-import { color as T, font as F } from "../theme/tokens";
+import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
+import { ScreenHeader, HeaderIconButton, Input, Chip, EmptyState, Skeleton } from "../ui";
+
+// empty date fields are hidden, never shown as a placeholder
+const isBlank = (v) => v === null || v === undefined || v === '';
 const { width, height } = Dimensions.get('window');
 
 // ─── DATE FORMATTER ───────────────────────────────────────────────────
@@ -125,9 +128,9 @@ const ExchangeScreen = ({ navigation }) => {
 
   const getDegreeStyle = (degree) => {
     switch (degree) {
-      case 'Masters': return { color: T.danger, bg: T.dangerBg };
-      case 'PhD': return { color: '#D4AF37', bg: '#FDF5E6' };
-      default: return { color: '#1B1B1B', bg: T.sand };
+      case 'Masters': return { color: T.ink, bg: T.yellowSoft };
+      case 'PhD': return { color: T.yellow, bg: T.ink };
+      default: return { color: T.ink, bg: T.sand };
     }
   };
 
@@ -347,25 +350,26 @@ const ExchangeScreen = ({ navigation }) => {
   // Card Item Component with Animation
   const CardItem = ({ item, index }) => {
     const { color, bg } = getDegreeStyle(item.degree || 'Bachelors');
-    const scaleAnim = useRef(new Animated.Value(0.95)).current;
+    const scaleAnim = useRef(new Animated.Value(0.97)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
 
-    const formattedAppStart = formatDate(item.appStart);
-    const formattedDeadline = formatDate(item.deadline);
+    const hasAppStart = !isBlank(item.appStart);
+    const hasDeadline = !isBlank(item.deadline);
+    const meta = [item.location, item.duration].filter(Boolean).join(' · ');
 
     useEffect(() => {
       Animated.parallel([
         Animated.spring(scaleAnim, {
           toValue: 1,
-          delay: Math.min(index * 80, 400),
+          delay: Math.min(index * 60, 300),
           useNativeDriver: true,
           friction: 8,
           tension: 40,
         }),
         Animated.timing(opacityAnim, {
           toValue: 1,
-          duration: 400,
-          delay: Math.min(index * 80, 400),
+          duration: 350,
+          delay: Math.min(index * 60, 300),
           useNativeDriver: true,
         })
       ]).start();
@@ -373,62 +377,55 @@ const ExchangeScreen = ({ navigation }) => {
 
     return (
       <Animated.View
-        style={[styles.cardWrapper, { opacity: opacityAnim, transform: [{ scale: scaleAnim }] }]}
+        style={[EX.cardWrap, { opacity: opacityAnim, transform: [{ scale: scaleAnim }] }]}
       >
-        <TouchableOpacity activeOpacity={0.9} onPress={() => handleViewDetails(item)}>
-          <View style={styles.card}>
-            <View style={[styles.cardGradient, { backgroundColor: color }]} />
-
-            <View style={styles.cardBody}>
-              <View style={styles.cardHeader}>
-                <View style={styles.titleArea}>
-                  <Text style={styles.programTitle} numberOfLines={1}>
-                    {item.title || 'Program'}
-                  </Text>
-                  <View style={styles.universityRow}>
-                    <FontAwesome5 name="university" size={12} color={T.textMuted} />
-                    <Text style={styles.universityName} numberOfLines={1}>
-                      {item.university || 'University'}
-                    </Text>
-                  </View>
-                  <View style={styles.locationRow}>
-                    <Ionicons name="location-outline" size={14} color={T.textMuted} />
-                    <Text style={styles.locationText}>{item.location || 'Location'}</Text>
-                    <View style={styles.dotSeparator} />
-                    <Ionicons name="time-outline" size={14} color={T.textMuted} />
-                    <Text style={styles.locationText}>{item.duration || 'Duration'}</Text>
-                  </View>
-                </View>
-                <View style={[styles.degreeBadge, { backgroundColor: bg, borderColor: color }]}>
-                  <Text style={[styles.degreeText, { color: color }]}>{item.degree || 'N/A'}</Text>
-                </View>
-              </View>
-
-              <View style={styles.dateContainer}>
-                <View style={styles.dateBox}>
-                  <Text style={styles.dateLabel}>
-                    <FontAwesome5 name="calendar-alt" size={10} color={T.textFaint} /> opens
-                  </Text>
-                  <Text style={styles.dateValue}>{formattedAppStart}</Text>
-                </View>
-                <View style={styles.dateDivider} />
-                <View style={styles.dateBox}>
-                  <Text style={[styles.dateLabel, { color: T.danger }]}>
-                    <FontAwesome5 name="clock" size={10} color={T.danger} /> deadline
-                  </Text>
-                  <Text style={[styles.dateValue, { color: T.danger }]}>{formattedDeadline}</Text>
-                </View>
-              </View>
-
-              <TouchableOpacity
-                style={styles.detailsBtn}
-                onPress={() => handleViewDetails(item)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.detailsBtnText}>view details</Text>
-                <Ionicons name="arrow-forward" size={16} color={T.textMuted} />
-              </TouchableOpacity>
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => handleViewDetails(item)}
+          style={EX.card}
+          accessibilityRole="button"
+          accessibilityLabel={`${item.title || 'program'}${item.university ? `, ${item.university}` : ''}, view details`}
+        >
+          <View style={EX.cardTop}>
+            <View style={EX.cardIcon}>
+              <FontAwesome5 name="university" size={16} color={T.ink} />
             </View>
+            <View style={{ flex: 1 }}>
+              <Text style={EX.cardTitle} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                {item.title || item.university || 'program'}
+              </Text>
+              {!!item.university && !!item.title && (
+                <Text style={EX.cardSub} numberOfLines={1}>{item.university}</Text>
+              )}
+              {!!meta && <Text style={EX.cardMeta} numberOfLines={1}>{meta}</Text>}
+            </View>
+            {!!item.degree && (
+              <View style={[EX.degreePill, { backgroundColor: bg }]}>
+                <Text style={[EX.degreeText, { color }]}>{String(item.degree).toLowerCase()}</Text>
+              </View>
+            )}
+          </View>
+
+          {(hasAppStart || hasDeadline) && (
+            <View style={EX.dates}>
+              {hasAppStart && (
+                <View style={{ flex: 1 }}>
+                  <Text style={EX.dateLabel}>opens</Text>
+                  <Text style={EX.dateValue}>{formatDate(item.appStart).toLowerCase()}</Text>
+                </View>
+              )}
+              {hasDeadline && (
+                <View style={{ flex: 1 }}>
+                  <Text style={[EX.dateLabel, { color: T.danger }]}>deadline</Text>
+                  <Text style={[EX.dateValue, { color: T.danger }]}>{formatDate(item.deadline).toLowerCase()}</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          <View style={EX.cardFoot}>
+            <Text style={EX.cardFootText}>view details</Text>
+            <Ionicons name="arrow-forward" size={16} color={T.ink} />
           </View>
         </TouchableOpacity>
       </Animated.View>
@@ -449,122 +446,83 @@ const ExchangeScreen = ({ navigation }) => {
 
   if (error) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={50} color={T.danger} />
-          <Text style={styles.errorTitle}>oops! something went wrong</Text>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchPrograms}>
-            <Text style={styles.retryButtonText}>try again</Text>
-          </TouchableOpacity>
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
+        <ScreenHeader title="study abroad" />
+        <View style={EX.center}>
+          <EmptyState mood="panic" title="something went wrong." line={String(error).toLowerCase()} actionLabel="try again" onAction={fetchPrograms} />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
-      {/* Modern Header */}
-      <Animated.View
-        style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
-      >
-        <View style={styles.headerTop}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="arrow-back" size={24} color={T.white} />
-          </TouchableOpacity>
+      {/* Header */}
+      <ScreenHeader
+        title="study abroad"
+        right={<HeaderIconButton icon="person-outline" label="your profile" onPress={handleProfile} />}
+      />
 
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerSubtitle}>🌍 Global Education</Text>
-            <Text style={styles.headerTitle}>study abroad</Text>
-          </View>
+      <Animated.View style={[EX.top, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <Text style={EX.lead} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+          programs, deadlines and university links in one place.
+        </Text>
+        <Input
+          placeholder="search universities, countries…"
+          accessibilityLabel="search programs"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          returnKeyType="search"
+          style={{ marginTop: 12 }}
+          left={<Ionicons name="search-outline" size={18} color={T.textMuted} style={{ marginRight: 8 }} />}
+          right={
+            searchQuery.length > 0 ? (
+              <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={10} accessibilityRole="button" accessibilityLabel="clear search">
+                <Ionicons name="close-circle" size={20} color={T.textFaint} />
+              </TouchableOpacity>
+            ) : null
+          }
+        />
 
-          <TouchableOpacity
-            style={styles.avatarCircle}
-            onPress={handleProfile}
-            activeOpacity={0.8}
-          >
-            <FontAwesome5 name="user-graduate" size={18} color={T.white} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.searchBarContainer}>
-          <Ionicons name="search-outline" size={20} color={T.textFaint} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search universities, countries..."
-            placeholderTextColor={T.textFaint}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color={T.textFaint} />
-            </TouchableOpacity>
-          )}
-        </View>
-      </Animated.View>
-
-      {/* Guest Banner */}
-      {isGuest && (
-        <Animated.View
-          style={[styles.guestBanner, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
-        >
-          <View style={styles.guestBannerContent}>
-            <Ionicons name="information-circle" size={20} color="#D97706" />
-            <Text style={styles.guestBannerText}>
-              browsing as guest. <Text style={styles.guestBannerLink}>sign in</Text> to apply!
+        {/* Guest note */}
+        {isGuest && (
+          <View style={EX.guest}>
+            <Ionicons name="information-circle-outline" size={18} color={T.ink} />
+            <Text style={EX.guestText}>
+              browsing as guest. <Text style={EX.guestLink}>sign in</Text> to apply.
             </Text>
           </View>
-        </Animated.View>
-      )}
+        )}
+
+        <View style={EX.filterHead}>
+          <Text style={EX.h2} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            degree<Text style={{ color: T.yellow }}>.</Text>
+          </Text>
+          {!loading && (
+            <Text style={EX.count}>
+              {filteredPrograms.length} {filteredPrograms.length === 1 ? 'program' : 'programs'}
+            </Text>
+          )}
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={EX.chips}>
+          {degrees.map((degree) => (
+            <Chip
+              key={degree}
+              label={degree.toLowerCase()}
+              selected={selectedDegree === degree}
+              onPress={() => setSelectedDegree(degree)}
+            />
+          ))}
+        </ScrollView>
+      </Animated.View>
 
       <View style={styles.content}>
-        <Animated.View
-          style={[styles.filterWrapper, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
-        >
-          <View style={styles.filterHeader}>
-            <Text style={styles.filterLabel}>🎯 Degree Level</Text>
-            <Text style={styles.filterCount}>{filteredPrograms.length} programs</Text>
-          </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipContainer}
-          >
-            {degrees.map((degree) => {
-              const isActive = selectedDegree === degree;
-              const { color } = getDegreeStyle(degree);
-              return (
-                <TouchableOpacity
-                  key={degree}
-                  onPress={() => setSelectedDegree(degree)}
-                  style={[
-                    styles.chip,
-                    isActive ? { backgroundColor: color, borderColor: color } : { backgroundColor: T.card, borderColor: T.line }
-                  ]}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[styles.chipText, isActive ? { color: T.white } : { color: T.textMuted }]}
-                  >
-                    {degree}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </Animated.View>
-
         {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#1B1B1B" />
-            <Text style={styles.loadingText}>loading programs...</Text>
+          <View style={{ paddingTop: 4 }} accessibilityLabel="loading programs">
+            <Skeleton rows={3} height={150} />
           </View>
         ) : (
           <FlatList
@@ -572,29 +530,19 @@ const ExchangeScreen = ({ navigation }) => {
             keyExtractor={item => item._id || Math.random().toString()}
             renderItem={renderItem}
             refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1B1B1B" colors={['#1B1B1B']} />
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.ink} colors={[T.ink]} />
             }
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <View style={styles.emptyIconContainer}>
-                  <FontAwesome5 name="search-location" size={50} color={T.textFaint} />
-                </View>
-                <Text style={styles.emptyTitle}>no programs found</Text>
-                <Text style={styles.emptyText}>
-                  {searchQuery ? 'Try adjusting your search' : 'Check back later for new opportunities'}
-                </Text>
-                {isGuest && (
-                  <TouchableOpacity
-                    style={styles.signUpButton}
-                    onPress={() => navigation.navigate('Login')}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.signUpButtonText}>create account</Text>
-                    <Ionicons name="arrow-forward" size={18} color={T.white} />
-                  </TouchableOpacity>
-                )}
+              <View style={{ paddingTop: 30 }}>
+                <EmptyState
+                  mood="sleepy"
+                  title="no programs found."
+                  line={searchQuery ? 'try a different search.' : 'check back soon for new programs.'}
+                  actionLabel={isGuest ? 'create account' : undefined}
+                  onAction={isGuest ? () => navigation.navigate('Login') : undefined}
+                />
               </View>
             }
           />
@@ -621,21 +569,25 @@ const ExchangeScreen = ({ navigation }) => {
 
             <View style={styles.modalHeader}>
               <View style={styles.modalHeaderLeft}>
-                <Text style={styles.modalTitle}>program details</Text>
+                <Text style={styles.modalTitle} accessibilityRole="header">program details<Text style={{ color: T.yellow }}>.</Text></Text>
                 {selectedProgram && (
-                  <View style={[styles.modalDegreeBadge, { backgroundColor: getDegreeStyle(selectedProgram.degree || 'Bachelors').bg, borderColor: getDegreeStyle(selectedProgram.degree || 'Bachelors').color }]}>
-                    <Text style={[styles.modalDegreeText, { color: getDegreeStyle(selectedProgram.degree || 'Bachelors').color }]}>
-                      {selectedProgram.degree || 'N/A'}
-                    </Text>
-                  </View>
+                  !!selectedProgram.degree && (
+                    <View style={[styles.modalDegreeBadge, { backgroundColor: getDegreeStyle(selectedProgram.degree).bg }]}>
+                      <Text style={[styles.modalDegreeText, { color: getDegreeStyle(selectedProgram.degree).color }]}>
+                        {String(selectedProgram.degree).toLowerCase()}
+                      </Text>
+                    </View>
+                  )
                 )}
               </View>
               <TouchableOpacity
                 onPress={() => setDetailsVisible(false)}
                 style={styles.modalCloseBtn}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="close"
               >
-                <Ionicons name="close" size={24} color="#1F2937" />
+                <Ionicons name="close" size={22} color={T.ink} />
               </TouchableOpacity>
             </View>
 
@@ -643,18 +595,30 @@ const ExchangeScreen = ({ navigation }) => {
               {selectedProgram && (
                 <>
                   <View style={styles.modalProgramInfo}>
-                    <Text style={styles.modalProgramTitle}>{selectedProgram.title || 'Program'}</Text>
-                    <View style={styles.modalUniversityRow}>
-                      <FontAwesome5 name="university" size={14} color={T.textMuted} />
-                      <Text style={styles.modalUniversity}>{selectedProgram.university || 'University'}</Text>
-                    </View>
-                    <View style={styles.modalLocationRow}>
-                      <Ionicons name="location-outline" size={16} color={T.textMuted} />
-                      <Text style={styles.modalLocation}>{selectedProgram.location || 'Location'}</Text>
-                      <View style={styles.modalDot} />
-                      <Ionicons name="time-outline" size={16} color={T.textMuted} />
-                      <Text style={styles.modalDuration}>{selectedProgram.duration || 'Duration'}</Text>
-                    </View>
+                    <Text style={styles.modalProgramTitle}>{selectedProgram.title || selectedProgram.university || 'program'}</Text>
+                    {!!selectedProgram.university && (
+                      <View style={styles.modalUniversityRow}>
+                        <FontAwesome5 name="university" size={14} color={T.textMuted} />
+                        <Text style={styles.modalUniversity}>{selectedProgram.university}</Text>
+                      </View>
+                    )}
+                    {!!(selectedProgram.location || selectedProgram.duration) && (
+                      <View style={styles.modalLocationRow}>
+                        {!!selectedProgram.location && (
+                          <>
+                            <Ionicons name="location-outline" size={16} color={T.textMuted} />
+                            <Text style={styles.modalLocation}>{selectedProgram.location}</Text>
+                          </>
+                        )}
+                        {!!selectedProgram.location && !!selectedProgram.duration && <View style={styles.modalDot} />}
+                        {!!selectedProgram.duration && (
+                          <>
+                            <Ionicons name="time-outline" size={16} color={T.textMuted} />
+                            <Text style={styles.modalDuration}>{selectedProgram.duration}</Text>
+                          </>
+                        )}
+                      </View>
+                    )}
                   </View>
 
                   <View style={styles.modalDivider} />
@@ -675,7 +639,7 @@ const ExchangeScreen = ({ navigation }) => {
                     activeOpacity={0.7}
                   >
                     <Text style={styles.linkText} numberOfLines={1}>
-                      {selectedProgram?.link || 'No link provided'}
+                      {selectedProgram?.link || 'no link provided'}
                     </Text>
                     <Ionicons name="open-outline" size={16} color={T.ink} />
                   </TouchableOpacity>
@@ -698,21 +662,26 @@ const ExchangeScreen = ({ navigation }) => {
                     <Text style={styles.emptyTextSmall}>no specific requirements listed.</Text>
                   )}
 
-                  <View style={styles.modalDateInfo}>
-                    <View style={styles.modalDateBox}>
-                      <Text style={styles.modalDateLabel}>application opens</Text>
-                      <Text style={styles.modalDateValue}>
-                        {formatDate(selectedProgram.appStart)}
-                      </Text>
+                  {(!isBlank(selectedProgram.appStart) || !isBlank(selectedProgram.deadline)) && (
+                    <View style={styles.modalDateInfo}>
+                      {!isBlank(selectedProgram.appStart) && (
+                        <View style={styles.modalDateBox}>
+                          <Text style={styles.modalDateLabel}>application opens</Text>
+                          <Text style={styles.modalDateValue}>
+                            {formatDate(selectedProgram.appStart).toLowerCase()}
+                          </Text>
+                        </View>
+                      )}
+                      {!isBlank(selectedProgram.deadline) && (
+                        <View style={styles.modalDateBox}>
+                          <Text style={[styles.modalDateLabel, { color: T.danger }]}>deadline</Text>
+                          <Text style={[styles.modalDateValue, { color: T.danger }]}>
+                            {formatDate(selectedProgram.deadline).toLowerCase()}
+                          </Text>
+                        </View>
+                      )}
                     </View>
-                    <View style={styles.modalDateDivider} />
-                    <View style={styles.modalDateBox}>
-                      <Text style={[styles.modalDateLabel, { color: T.danger }]}>deadline</Text>
-                      <Text style={[styles.modalDateValue, { color: T.danger }]}>
-                        {formatDate(selectedProgram.deadline)}
-                      </Text>
-                    </View>
-                  </View>
+                  )}
                 </>
               )}
             </ScrollView>
@@ -729,12 +698,12 @@ const ExchangeScreen = ({ navigation }) => {
               activeOpacity={0.8}
             >
               <Text style={styles.applyModalBtnText}>
-                {isGuest ? 'Sign Up to Apply' : 'Apply Now (+50 pts)'}
+                {isGuest ? 'sign up to apply' : 'apply now · +50 pts'}
               </Text>
               <Ionicons
                 name={isGuest ? 'person-add-outline' : 'arrow-forward'}
                 size={20}
-                color={T.white}
+                color={T.ink}
               />
             </TouchableOpacity>
           </Animated.View>
@@ -758,19 +727,19 @@ const ExchangeScreen = ({ navigation }) => {
           >
             {/* WebView Header */}
             <View style={styles.webViewHeader}>
-              <TouchableOpacity onPress={closeWebView} style={styles.webViewHeaderBtn} activeOpacity={0.7}>
+              <TouchableOpacity onPress={closeWebView} style={styles.webViewHeaderBtn} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="close website">
                 <Ionicons name="close" size={24} color={T.ink} />
               </TouchableOpacity>
 
               <View style={styles.webViewHeaderCenter}>
                 <Text style={styles.webViewHeaderTitle}>university website</Text>
                 <Text style={styles.webViewHeaderSubtitle} numberOfLines={1}>
-                  {selectedProgram?.university || 'Loading...'}
+                  {selectedProgram?.university || 'loading…'}
                 </Text>
               </View>
 
-              <TouchableOpacity onPress={openInBrowser} style={styles.webViewHeaderBtn} activeOpacity={0.7}>
-                <Ionicons name="open-outline" size={22} color={T.yellow} />
+              <TouchableOpacity onPress={openInBrowser} style={styles.webViewHeaderBtn} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="open in browser">
+                <Ionicons name="open-outline" size={22} color={T.ink} />
               </TouchableOpacity>
             </View>
 
@@ -778,7 +747,7 @@ const ExchangeScreen = ({ navigation }) => {
             {webViewLoading && (
               <View style={styles.webViewProgressContainer}>
                 <Animated.View style={[styles.webViewProgressBar, { width: progressWidthInterpolated }]}>
-                  <LinearGradient colors={[T.yellow, T.ink]} style={styles.webViewProgressGradient} />
+                  <LinearGradient colors={[T.ink, T.ink]} style={styles.webViewProgressGradient} />
                 </Animated.View>
               </View>
             )}
@@ -803,12 +772,12 @@ const ExchangeScreen = ({ navigation }) => {
               {/* Loading Overlay */}
               {webViewLoading && (
                 <Animated.View style={[styles.webViewLoaderContainer, { opacity: webViewFade }]}>
-                  <LinearGradient colors={[T.yellow, T.ink]} style={styles.webViewLoaderIcon}>
-                    <Ionicons name="school" size={40} color={T.white} />
+                  <LinearGradient colors={[T.ink, T.ink]} style={styles.webViewLoaderIcon}>
+                    <Ionicons name="school" size={36} color={T.yellow} />
                   </LinearGradient>
                   <Text style={styles.webViewLoadingTitle}>loading university website</Text>
                   <Text style={styles.webViewLoadingSubtitle}>fetching program details...</Text>
-                  <ActivityIndicator size="small" color={T.yellow} style={{ marginTop: 16 }} />
+                  <ActivityIndicator size="small" color={T.ink} style={{ marginTop: 16 }} />
                 </Animated.View>
               )}
 
@@ -821,7 +790,7 @@ const ExchangeScreen = ({ navigation }) => {
                 <View style={{ flex: 1 }} />
 
                 <TouchableOpacity style={styles.webViewToolbarBtn} onPress={openInBrowser} activeOpacity={0.7}>
-                  <Ionicons name="compass-outline" size={22} color={T.yellow} />
+                  <Ionicons name="compass-outline" size={22} color={T.ink} />
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.webViewToolbarBtn} onPress={() => {
@@ -836,7 +805,7 @@ const ExchangeScreen = ({ navigation }) => {
                     );
                   }
                 }} activeOpacity={0.7}>
-                  <Ionicons name="share-outline" size={22} color={T.yellow} />
+                  <Ionicons name="share-outline" size={22} color={T.ink} />
                 </TouchableOpacity>
               </Animated.View>
             </View>
@@ -889,20 +858,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12,
     alignItems: 'center', gap: 12,
   },
-  searchInput: { flex: 1, fontSize: 15, fontFamily: F.body, color: '#1A1C1E', padding: 0 },
+  searchInput: { flex: 1, fontSize: 15, fontFamily: F.body, color: T.ink, padding: 0 },
   guestBanner: {
     marginHorizontal: 20, marginTop: 16,
     backgroundColor: T.yellowSoft, borderRadius: 12,
     paddingHorizontal: 16, paddingVertical: 12,
-    borderWidth: 1, borderColor: '#F59E0B20',
+    borderWidth: 1, borderColor: T.line,
   },
   guestBannerContent: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center' },
-  guestBannerText: { flex: 1, fontSize: 13, color: '#92400E', fontFamily: F.bodyMedium, textAlign: 'center' },
+  guestBannerText: { flex: 1, fontSize: 13, color: T.ink, fontFamily: F.bodyMedium, textAlign: 'center' },
   guestBannerLink: { fontFamily: F.bodyBold, textDecorationLine: 'underline' },
-  content: { flex: 1, paddingHorizontal: 20 },
+  content: { flex: 1, paddingHorizontal: 16 },
   filterWrapper: { paddingTop: 20, paddingBottom: 8 },
   filterHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  filterLabel: { fontSize: 14, fontFamily: F.bodyBold, color: '#1F2937' },
+  filterLabel: { fontSize: 14, fontFamily: F.bodyBold, color: T.ink },
   filterCount: { fontSize: 12, color: T.textMuted, fontFamily: F.bodyMedium },
   chipContainer: { paddingVertical: 4, gap: 8 },
   chip: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 24, borderWidth: 1.5, marginRight: 10 },
@@ -919,7 +888,7 @@ const styles = StyleSheet.create({
   cardBody: { padding: 20 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   titleArea: { flex: 1, marginRight: 12 },
-  programTitle: { fontSize: 17, fontFamily: F.bodyBold, color: '#1A1C1E', letterSpacing: -0.3 },
+  programTitle: { fontSize: 17, fontFamily: F.bodyBold, color: T.ink, letterSpacing: -0.3 },
   universityRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
   universityName: { fontSize: 14, color: T.textMuted, fontFamily: F.bodyMedium },
   locationRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 6 },
@@ -934,7 +903,7 @@ const styles = StyleSheet.create({
   dateBox: { flex: 1, alignItems: 'center' },
   dateDivider: { width: 1, backgroundColor: T.sand },
   dateLabel: { fontSize: 9, fontFamily: F.bodyBold, color: T.textFaint, marginBottom: 4, letterSpacing: 0.5 },
-  dateValue: { fontSize: 13, fontFamily: F.bodyBold, color: '#1F2937' },
+  dateValue: { fontSize: 13, fontFamily: F.bodyBold, color: T.ink },
   detailsBtn: {
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
     paddingVertical: 14, borderRadius: 14, backgroundColor: T.sand, gap: 8,
@@ -948,7 +917,7 @@ const styles = StyleSheet.create({
     width: 100, height: 100, borderRadius: 50,
     backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center', marginBottom: 24,
   },
-  emptyTitle: { fontSize: 18, fontFamily: F.headingBold, color: '#1F2937', marginBottom: 8 },
+  emptyTitle: { fontSize: 18, fontFamily: F.headingBold, color: T.ink, marginBottom: 8 },
   emptyText: { textAlign: 'center', color: T.textMuted, fontSize: 14, fontFamily: F.body, marginBottom: 24 },
   signUpButton: {
     flexDirection: 'row', alignItems: 'center',
@@ -960,24 +929,24 @@ const styles = StyleSheet.create({
   modalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: T.overlay },
   modalContent: {
     backgroundColor: T.card,
-    borderTopLeftRadius: 32, borderTopRightRadius: 32,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
     paddingHorizontal: 24, paddingTop: 8,
     paddingBottom: Platform.OS === 'ios' ? 34 : 24,
     maxHeight: '85%',
   },
-  modalHandle: { width: 40, height: 4, backgroundColor: T.sand, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
+  modalHandle: { width: 40, height: 4, backgroundColor: T.handle, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalHeaderLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  modalTitle: { fontSize: 20, fontFamily: F.heading, color: '#1F2937' },
-  modalDegreeBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
-  modalDegreeText: { fontSize: 10, fontFamily: F.bodyBold, textTransform: 'none', letterSpacing: 0.5 },
+  modalTitle: { fontSize: 20, fontFamily: F.heading, color: T.ink },
+  modalDegreeBadge: { paddingHorizontal: 10, height: 26, justifyContent: 'center', borderRadius: 13 },
+  modalDegreeText: { fontSize: 12, fontFamily: F.bodyBold },
   modalCloseBtn: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center',
   },
   modalBody: { paddingBottom: 20 },
   modalProgramInfo: { marginBottom: 20 },
-  modalProgramTitle: { fontSize: 22, fontFamily: F.heading, color: '#1F2937', marginBottom: 6 },
+  modalProgramTitle: { fontSize: 22, fontFamily: F.heading, color: T.ink, marginBottom: 6 },
   modalUniversityRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   modalUniversity: { fontSize: 15, color: T.textMuted, fontFamily: F.bodyMedium },
   modalLocationRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
@@ -1000,22 +969,22 @@ const styles = StyleSheet.create({
   },
   reqIcon: {
     width: 20, height: 20, borderRadius: 10,
-    backgroundColor: '#D1FAE5', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: T.successBg, justifyContent: 'center', alignItems: 'center',
   },
-  reqText: { fontSize: 14, color: '#1F2937', fontFamily: F.bodyMedium, flex: 1 },
+  reqText: { fontSize: 14, color: T.ink, fontFamily: F.bodyMedium, flex: 1 },
   emptyTextSmall: { fontSize: 14, fontFamily: F.body, color: T.textFaint, paddingVertical: 12 },
   modalDateInfo: { flexDirection: 'row', backgroundColor: T.sand, borderRadius: 14, padding: 16, marginTop: 20 },
   modalDateBox: { flex: 1, alignItems: 'center' },
   modalDateDivider: { width: 1, backgroundColor: T.sand },
-  modalDateLabel: { fontSize: 10, fontFamily: F.bodyBold, color: T.textFaint, textTransform: 'none', letterSpacing: 0.5, marginBottom: 4 },
-  modalDateValue: { fontSize: 15, fontFamily: F.bodyBold, color: '#1F2937' },
+  modalDateLabel: { fontSize: 12, fontFamily: F.bodyBold, color: T.textMuted, marginBottom: 4 },
+  modalDateValue: { fontSize: 15, fontFamily: F.bodyBold, color: T.ink },
   applyModalBtn: {
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
-    backgroundColor: T.ink, padding: 16, borderRadius: 16, gap: 10, marginTop: 20,
+    backgroundColor: T.yellow, height: 54, borderRadius: 27, gap: 10, marginTop: 20,
   },
-  applyModalBtnText: { color: T.white, fontFamily: F.bodyBold, fontSize: 16 },
+  applyModalBtnText: { color: T.ink, fontFamily: F.bodyBold, fontSize: 16 },
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
-  errorTitle: { fontSize: 20, fontFamily: F.headingBold, color: '#1F2937', marginTop: 16, marginBottom: 8 },
+  errorTitle: { fontSize: 20, fontFamily: F.headingBold, color: T.ink, marginTop: 16, marginBottom: 8 },
   errorText: { textAlign: 'center', color: T.textMuted, fontSize: 14, fontFamily: F.body, marginBottom: 24 },
   retryButton: { backgroundColor: T.ink, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 14 },
   retryButtonText: { color: T.white, fontFamily: F.bodyBold, fontSize: 16 },
@@ -1035,7 +1004,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.card, zIndex: 10,
   },
   webViewHeaderBtn: {
-    width: 40, height: 40, borderRadius: 12,
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center',
   },
   webViewHeaderCenter: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
@@ -1069,3 +1038,35 @@ const styles = StyleSheet.create({
 });
 
 export default ExchangeScreen;
+
+// ─── Scholarships design layout ─────────────────────────────────────
+const EX = StyleSheet.create({
+  center: { flex: 1, justifyContent: 'center', paddingHorizontal: 16 },
+  top: { paddingHorizontal: 16 },
+  lead: { fontFamily: F.body, fontSize: 14, lineHeight: 20, color: T.textMuted },
+  guest: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12,
+    paddingHorizontal: 14, paddingVertical: 12, borderRadius: 18, backgroundColor: T.yellowSoft,
+  },
+  guestText: { flex: 1, fontFamily: F.bodyMedium, fontSize: 13, color: T.ink },
+  guestLink: { fontFamily: F.bodyBold, textDecorationLine: 'underline' },
+  filterHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 20 },
+  h2: { fontFamily: F.heading, fontSize: 19, color: T.ink },
+  count: { fontFamily: F.bodySemi, fontSize: 12.5, color: T.textMuted },
+  chips: { gap: 8, paddingTop: 10, paddingBottom: 12 },
+
+  cardWrap: { marginBottom: 12 },
+  card: { borderRadius: 22, backgroundColor: T.card, borderWidth: 1, borderColor: T.line, padding: 16 },
+  cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  cardIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: T.yellowSoft, alignItems: 'center', justifyContent: 'center' },
+  cardTitle: { fontFamily: F.headingBold, fontSize: 17, lineHeight: 21, color: T.ink },
+  cardSub: { fontFamily: F.bodyMedium, fontSize: 13.5, color: T.textMuted, marginTop: 2 },
+  cardMeta: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, marginTop: 2 },
+  degreePill: { height: 26, paddingHorizontal: 10, borderRadius: 13, justifyContent: 'center' },
+  degreeText: { fontFamily: F.bodyBold, fontSize: 12 },
+  dates: { flexDirection: 'row', gap: 12, marginTop: 14, padding: 12, borderRadius: 16, backgroundColor: T.sand },
+  dateLabel: { fontFamily: F.bodyBold, fontSize: 11.5, color: T.textMuted },
+  dateValue: { fontFamily: F.bodyBold, fontSize: 14, color: T.ink, marginTop: 2 },
+  cardFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: T.lineSoft },
+  cardFootText: { fontFamily: F.bodyBold, fontSize: 14, color: T.ink },
+});
