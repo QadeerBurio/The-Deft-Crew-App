@@ -26,7 +26,7 @@ import engagementApi from '../api/engagementApi';
 import { useEngagement } from '../hooks/useEngagement';
 import { success as hapticSuccess, warn, pop } from '../utils/haptics';
 
-import { color as T, font as F } from "../../theme/tokens";
+import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 const GOLD = T.yellow;
 const BLACK = T.ink;
 const WHITE = T.white;
@@ -392,368 +392,201 @@ export default function RewardsScreen() {
             />
           }
         >
-          {/* HERO */}
-          <View style={styles.hero}>
-            <View style={styles.heroOrb1} />
-            <View style={styles.heroOrb2} />
-
-            <View style={styles.heroTopRow}>
-              <Text style={styles.heroLabel}>your balance</Text>
-              <View style={styles.levelChip}>
-                <Ionicons name="sparkles" size={11} color={GOLD} />
-                <Text style={styles.levelChipText}>{currentLevel.label}</Text>
+          {/* BALANCE (yellow, Rewards design) */}
+          <View style={R.section}>
+            <View style={R.balance}>
+              <View style={{ flex: 1 }}>
+                <Text style={R.balanceLabel} maxFontSizeMultiplier={MAX_FONT_SCALE}>your balance</Text>
+                <Text style={R.balanceValue} maxFontSizeMultiplier={MAX_FONT_SCALE}>{balance.toLocaleString()}</Text>
+                <Text style={R.balanceSub} maxFontSizeMultiplier={MAX_FONT_SCALE}>points ready to spend</Text>
+                <Text style={R.balanceMeta} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                  {currentLevel.label} · lifetime {lifetime.toLocaleString()} pts
+                </Text>
+              </View>
+              <View style={R.balanceIcon}>
+                <MaterialCommunityIcons name="gift-outline" size={30} color={GOLD} />
               </View>
             </View>
-
-            <View style={styles.heroAmountRow}>
-              <MaterialCommunityIcons name="circle-multiple" size={38} color={GOLD} />
-              <Text style={styles.heroAmount}>{balance.toLocaleString()}</Text>
-            </View>
-
-            <View style={styles.heroLifetimeRow}>
-              <MaterialCommunityIcons
-                name="circle-multiple"
-                size={11}
-                color={WHITE}
-                style={{ opacity: 0.55 }}
-              />
-              <Text style={styles.heroLifetime}>
-                lifetime · {lifetime.toLocaleString()} pts earned
-              </Text>
-            </View>
-
             {nextLevel ? (
-              <View style={styles.progressWrap}>
-                <View style={styles.progressBar}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      { width: `${Math.round(progressPct * 100)}%` },
-                    ]}
-                  />
+              <View style={R.progressWrap}>
+                <View style={R.progressBar}>
+                  <View style={[R.progressFill, { width: `${Math.round(progressPct * 100)}%` }]} />
                 </View>
-                <Text style={styles.progressText}>
-                  {pointsToNext.toLocaleString()} pts to{' '}
-                  <Text style={styles.progressTextBold}>{nextLevel.label}</Text>
+                <Text style={R.progressText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                  {pointsToNext.toLocaleString()} pts to <Text style={R.bold}>{nextLevel.label}</Text>
                 </Text>
               </View>
             ) : (
-              <Text style={styles.maxLevelText}>you've hit the top. legend.</Text>
+              <Text style={R.progressText}>{"you've hit the top. legend."}</Text>
             )}
           </View>
 
-          {/* HOW YOU EARNED */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>how you earned</Text>
-            <View style={styles.sectionUnderline} />
+          {/* SPEND YOUR POINTS */}
+          <View style={R.section}>
+            <Text style={R.h2} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+              spend your points<Text style={{ color: GOLD }}>.</Text>
+            </Text>
           </View>
-
-          {!ledgerLoaded ? (
-            <View style={styles.emptyBox}>
-              <ActivityIndicator color={GOLD} />
-            </View>
-          ) : breakdownRows.length === 0 ? (
-            <View style={styles.emptyBox}>
-              <MaterialCommunityIcons
-                name="chart-timeline-variant"
-                size={40}
-                color={BLACK}
-              />
-              <Text style={styles.empty}>no earnings yet.</Text>
-              <Text style={styles.emptySub}>
-                sort your first mission to start earning.
-              </Text>
+          {rewards.length === 0 ? (
+            <View style={[R.section, { paddingTop: 10 }]}>
+              <View style={R.emptyCard}>
+                <Text style={R.emptyTitle}>no rewards yet.</Text>
+                <Text style={R.emptySub}>keep earning — new drops every week.</Text>
+              </View>
             </View>
           ) : (
-            <View style={styles.earnCard}>
-              {breakdownRows.map((row, i) => {
-                const isReferral = row.reason.startsWith('referral');
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={R.perkRail}>
+              {rewards.map((r) => {
+                const affordable = balance >= r.costPoints;
+                const busyThis = busy === r._id;
+                const stockLeft = typeof r.stockLeft === 'number' ? r.stockLeft : null;
+                const soldOut = stockLeft !== null && stockLeft <= 0;
+                const disabled = !affordable || busyThis || soldOut;
                 return (
-                  <View
-                    key={row.reason}
-                    style={[
-                      styles.earnRow,
-                      i === breakdownRows.length - 1 && styles.earnRowLast,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.earnIconWrap,
-                        isReferral && styles.earnIconWrapReferral,
-                      ]}
+                  <View key={r._id} style={R.perk}>
+                    <View style={R.perkImage}>
+                      {r.image ? (
+                        <Image source={{ uri: r.image }} style={R.perkImg} resizeMode="cover" />
+                      ) : (
+                        <MaterialCommunityIcons name="gift-outline" size={24} color={T.textMuted} />
+                      )}
+                    </View>
+                    {!!r.brand?.name && (
+                      <Text style={R.perkBrand} numberOfLines={1}>{r.brand.name}</Text>
+                    )}
+                    <Text style={R.perkTitle} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_SCALE}>{r.title}</Text>
+                    <View style={R.perkMeta}>
+                      <View style={R.costPill}>
+                        <Text style={R.costPillText}>{r.costPoints.toLocaleString()} pts</Text>
+                      </View>
+                      {stockLeft !== null && (
+                        <Text style={R.stock}>{soldOut ? 'sold out' : `${stockLeft} left`}</Text>
+                      )}
+                    </View>
+                    <TouchableOpacity
+                      style={[R.redeem, (!affordable || soldOut) && R.redeemOff]}
+                      disabled={disabled}
+                      onPress={() => onRedeem(r)}
+                      activeOpacity={0.85}
+                      accessibilityRole="button"
+                      accessibilityLabel={soldOut ? 'sold out' : affordable ? `redeem ${r.title}` : 'locked, not enough points'}
                     >
-                      <Ionicons name={row.meta.icon} size={16} color={BLACK} />
-                    </View>
-
-                    <View style={styles.earnTextWrap}>
-                      <Text style={styles.earnLabel}>{row.meta.label}</Text>
-                      <Text style={styles.earnDetail} numberOfLines={1}>
-                        {row.count} {row.count === 1 ? 'time' : 'times'}
-                        {row.meta.detail ? ` · ${row.meta.detail}` : ''}
-                      </Text>
-                    </View>
-
-                    <View style={styles.earnPointsPill}>
-                      <MaterialCommunityIcons
-                        name="circle-multiple"
-                        size={11}
-                        color={GOLD}
-                      />
-                      <Text style={styles.earnPointsText}>+{row.total}</Text>
-                    </View>
+                      {busyThis ? (
+                        <ActivityIndicator size="small" color={T.ink} />
+                      ) : (
+                        <Text style={[R.redeemText, (!affordable || soldOut) && R.redeemTextOff]}>
+                          {soldOut ? 'sold out' : affordable ? 'redeem' : 'locked'}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
                   </View>
                 );
               })}
-            </View>
-          )}
-
-          {/* NET TOTAL */}
-          {breakdownRows.length > 0 && (
-            <View style={styles.totalCard}>
-              <View style={styles.totalLeft}>
-                <Text style={styles.totalLabel}>net total</Text>
-                <Text style={styles.totalSub}>
-                  earned {totalEarned} · spent {totalSpent}
-                </Text>
-              </View>
-              <View style={styles.totalPill}>
-                <MaterialCommunityIcons
-                  name="circle-multiple"
-                  size={14}
-                  color={BLACK}
-                />
-                <Text style={styles.totalText}>
-                  {(totalEarned - totalSpent).toLocaleString()}
-                </Text>
-              </View>
-            </View>
+            </ScrollView>
           )}
 
           {/* RECENT ACTIVITY */}
           {recentLedger.length > 0 && (
-            <>
-              <View style={styles.sectionHeaderWithAction}>
-                <View>
-                  <Text style={styles.sectionTitle}>recent activity</Text>
-                  <View style={styles.sectionUnderline} />
-                </View>
-
-                <TouchableOpacity
-                  style={styles.viewAllBtn}
-                  onPress={openViewAll}
-                  activeOpacity={0.85}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Text style={styles.viewAllText}>view all</Text>
-                  <Ionicons name="chevron-forward" size={14} color={GOLD} />
+            <View style={R.section}>
+              <View style={R.rowBetween}>
+                <Text style={R.h2} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                  recent activity<Text style={{ color: GOLD }}>.</Text>
+                </Text>
+                <TouchableOpacity onPress={openViewAll} hitSlop={10} accessibilityRole="button" accessibilityLabel="view all transactions">
+                  <Text style={R.link}>view all</Text>
                 </TouchableOpacity>
               </View>
-
-              <View style={styles.ledgerCard}>
+              <View style={R.list}>
                 {recentLedger.map((t, i) => {
                   const meta = getReasonMeta(t.reason);
                   const isSpend = Number(t.delta) < 0;
                   return (
-                    <View
-                      key={t._id || i}
-                      style={[
-                        styles.ledgerRow,
-                        i === recentLedger.length - 1 && styles.ledgerRowLast,
-                      ]}
-                    >
-                      <View style={styles.ledgerIconWrap}>
-                        <Ionicons
-                          name={isSpend ? 'gift-outline' : meta.icon}
-                          size={14}
-                          color={BLACK}
-                        />
+                    <View key={t._id || i} style={[R.txRow, i > 0 && R.txLine]}>
+                      <View style={R.txIcon}>
+                        <Ionicons name={isSpend ? 'gift-outline' : meta.icon} size={15} color={T.ink} />
                       </View>
-
-                      <View style={styles.ledgerTextWrap}>
-                        <Text style={styles.ledgerLabel} numberOfLines={1}>
-                          {isSpend ? 'reward redeemed' : meta.label}
-                        </Text>
-                        <Text style={styles.ledgerDate}>
-                          {new Date(t.createdAt).toLocaleDateString(undefined, {
-                            month: 'short',
-                            day: 'numeric',
-                          })}
+                      <View style={{ flex: 1 }}>
+                        <Text style={R.txLabel} numberOfLines={1}>{isSpend ? 'reward redeemed' : meta.label}</Text>
+                        <Text style={R.txWhen}>
+                          {new Date(t.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                         </Text>
                       </View>
-
-                      <View style={styles.ledgerDeltaWrap}>
-                        <MaterialCommunityIcons
-                          name="circle-multiple"
-                          size={11}
-                          color={BLACK}
-                          style={isSpend && { opacity: 0.4 }}
-                        />
-                        <Text
-                          style={[
-                            styles.ledgerDelta,
-                            isSpend && styles.ledgerDeltaSpend,
-                          ]}
-                        >
-                          {t.delta >= 0 ? `+${t.delta}` : t.delta}
-                        </Text>
-                      </View>
+                      <Text style={[R.txPts, { color: isSpend ? T.ink : T.success }]}>
+                        {t.delta >= 0 ? `+${t.delta}` : t.delta}
+                      </Text>
                     </View>
                   );
                 })}
               </View>
-
-              <TouchableOpacity
-                style={styles.viewAllFullBtn}
-                onPress={openViewAll}
-                activeOpacity={0.85}
-              >
-                <MaterialCommunityIcons
-                  name="format-list-bulleted"
-                  size={16}
-                  color={BLACK}
-                />
-                <Text style={styles.viewAllFullText}>view all transactions</Text>
-                <Ionicons name="arrow-forward" size={14} color={BLACK} />
+              <TouchableOpacity onPress={exportCsv} style={R.export} accessibilityRole="button" accessibilityLabel="export csv or excel">
+                <Text style={R.exportText}>export csv / excel</Text>
               </TouchableOpacity>
-            </>
-          )}
-
-          {/* SPEND YOUR POINTS */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>spend your points</Text>
-            <View style={styles.sectionUnderline} />
-          </View>
-
-          {rewards.length === 0 ? (
-            <View style={styles.emptyBox}>
-              <MaterialCommunityIcons
-                name="gift-off-outline"
-                size={40}
-                color={BLACK}
-              />
-              <Text style={styles.empty}>no rewards yet.</Text>
-              <Text style={styles.emptySub}>
-                keep earning — new drops every week.
-              </Text>
             </View>
-          ) : (
-            rewards.map((r) => {
-              const affordable = balance >= r.costPoints;
-              const busyThis = busy === r._id;
-              const stockLeft =
-                typeof r.stockLeft === 'number' ? r.stockLeft : null;
-              const soldOut = stockLeft !== null && stockLeft <= 0;
-
-              return (
-                <View key={r._id} style={styles.rewardCard}>
-                  <View style={styles.rewardImageWrap}>
-                    {r.image ? (
-                      <Image
-                        source={{ uri: r.image }}
-                        style={styles.rewardImage}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <View style={styles.rewardImageFallback}>
-                        <MaterialCommunityIcons
-                          name="gift-outline"
-                          size={26}
-                          color={GOLD}
-                        />
-                      </View>
-                    )}
-                  </View>
-
-                  <View style={styles.rewardBody}>
-                    {!!r.brand?.name && (
-                      <Text style={styles.rewardBrand} numberOfLines={1}>
-                        {r.brand.name}
-                      </Text>
-                    )}
-                    <Text style={styles.rewardTitle} numberOfLines={2}>
-                      {r.title}
-                    </Text>
-                    {!!r.description && (
-                      <Text style={styles.rewardDesc} numberOfLines={2}>
-                        {r.description}
-                      </Text>
-                    )}
-
-                    <View style={styles.rewardMeta}>
-                      <View style={styles.costPill}>
-                        <MaterialCommunityIcons
-                          name="circle-multiple"
-                          size={11}
-                          color={GOLD}
-                        />
-                        <Text style={styles.costPillText}>
-                          {r.costPoints.toLocaleString()}
-                        </Text>
-                      </View>
-                      {stockLeft !== null && (
-                        <Text style={styles.stockText}>
-                          {soldOut ? 'sold out' : `${stockLeft} left`}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.redeemBtn,
-                      (!affordable || soldOut) && styles.redeemBtnDisabled,
-                    ]}
-                    disabled={!affordable || busyThis || soldOut}
-                    onPress={() => onRedeem(r)}
-                    activeOpacity={0.85}
-                  >
-                    {busyThis ? (
-                      <ActivityIndicator size="small" color={BLACK} />
-                    ) : (
-                      <Text
-                        style={[
-                          styles.redeemText,
-                          (!affordable || soldOut) && styles.redeemTextDisabled,
-                        ]}
-                      >
-                        {soldOut ? 'sold out' : affordable ? 'redeem' : 'locked'}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              );
-            })
           )}
+
+          {/* HOW YOU EARNED */}
+          <View style={R.section}>
+            <Text style={R.h2} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+              how you earned<Text style={{ color: GOLD }}>.</Text>
+            </Text>
+            {!ledgerLoaded ? (
+              <View style={R.emptyCard}><ActivityIndicator color={T.ink} /></View>
+            ) : breakdownRows.length === 0 ? (
+              <View style={R.emptyCard}>
+                <Text style={R.emptyTitle}>no earnings yet.</Text>
+                <Text style={R.emptySub}>sort your first mission to start earning.</Text>
+              </View>
+            ) : (
+              <View style={R.list}>
+                {breakdownRows.map((row, i) => (
+                  <View key={row.reason} style={[R.txRow, i > 0 && R.txLine]}>
+                    <View style={[R.txIcon, row.reason.startsWith('referral') && { backgroundColor: T.yellowSoft }]}>
+                      <Ionicons name={row.meta.icon} size={15} color={T.ink} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={R.txLabel} numberOfLines={1}>{row.meta.label}</Text>
+                      <Text style={R.txWhen} numberOfLines={1}>
+                        {row.count} {row.count === 1 ? 'time' : 'times'}
+                        {row.meta.detail ? ` · ${row.meta.detail}` : ''}
+                      </Text>
+                    </View>
+                    <Text style={[R.txPts, { color: T.success }]}>+{row.total}</Text>
+                  </View>
+                ))}
+                <View style={[R.txRow, R.txLine]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={R.txLabel}>net total</Text>
+                    <Text style={R.txWhen}>earned {totalEarned} · spent {totalSpent}</Text>
+                  </View>
+                  <Text style={R.txPts}>{(totalEarned - totalSpent).toLocaleString()}</Text>
+                </View>
+              </View>
+            )}
+          </View>
 
           {/* MY REWARDS */}
           {myRedemptions.length > 0 && (
-            <>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>my rewards</Text>
-                <View style={styles.sectionUnderline} />
-              </View>
-
-              {myRedemptions.map((item) => (
-                <View key={item._id} style={styles.myRewardCard}>
-                  <View style={styles.myRewardLeft}>
-                    <MaterialCommunityIcons
-                      name="ticket-percent-outline"
-                      size={22}
-                      color={BLACK}
-                    />
-                    <View style={{ marginLeft: 12, flex: 1 }}>
-                      <Text style={styles.myRewardTitle} numberOfLines={1}>
-                        {item.reward?.title || 'reward'}
-                      </Text>
-                      <Text style={styles.myRewardCode}>{item.code}</Text>
+            <View style={R.section}>
+              <Text style={R.h2} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                my rewards<Text style={{ color: GOLD }}>.</Text>
+              </Text>
+              <View style={R.list}>
+                {myRedemptions.map((item, i) => (
+                  <View key={item._id} style={[R.txRow, i > 0 && R.txLine]}>
+                    <View style={R.txIcon}>
+                      <MaterialCommunityIcons name="ticket-percent-outline" size={16} color={T.ink} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={R.txLabel} numberOfLines={1}>{item.reward?.title || 'reward'}</Text>
+                      <Text style={R.code}>{item.code}</Text>
+                    </View>
+                    <View style={R.statusPill}>
+                      <Text style={R.statusText}>{item.status}</Text>
                     </View>
                   </View>
-                  <View style={styles.myRewardStatusPill}>
-                    <Text style={styles.myRewardStatus}>{item.status}</Text>
-                  </View>
-                </View>
-              ))}
-            </>
+                ))}
+              </View>
+            </View>
           )}
 
           <View style={{ height: 40 }} />
@@ -1501,4 +1334,113 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     letterSpacing: 2,
   },
+});
+
+// ─── Rewards design layout ───────────────────────────────────────────
+const R = StyleSheet.create({
+  section: { paddingHorizontal: 16, paddingTop: 16 },
+  h2: { fontFamily: F.heading, fontSize: 17, color: T.ink },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  link: { fontFamily: F.bodySemi, fontSize: 13, color: T.textMuted },
+  bold: { fontFamily: F.bodyBold, color: T.ink },
+
+  balance: {
+    borderRadius: 28,
+    backgroundColor: T.yellow,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  balanceLabel: { fontFamily: F.bodyBold, fontSize: 11.5, color: T.ink },
+  balanceValue: { fontFamily: F.heading, fontSize: 44, lineHeight: 48, letterSpacing: -1.4, color: T.ink },
+  balanceSub: { fontFamily: F.bodySemi, fontSize: 13, color: T.ink },
+  balanceMeta: { fontFamily: F.body, fontSize: 12, color: T.ink, marginTop: 6 },
+  balanceIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: T.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressWrap: { marginTop: 12 },
+  progressBar: { height: 6, borderRadius: 3, backgroundColor: T.sand, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: T.ink, borderRadius: 3 },
+  progressText: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, marginTop: 6 },
+
+  perkRail: { paddingHorizontal: 16, paddingTop: 10, gap: 10 },
+  perk: {
+    width: 160,
+    borderRadius: 22,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
+    padding: 12,
+  },
+  perkImage: {
+    height: 64,
+    borderRadius: 14,
+    backgroundColor: T.lineSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  perkImg: { width: '100%', height: '100%' },
+  perkBrand: { fontFamily: F.bodySemi, fontSize: 11.5, color: T.textMuted, marginTop: 8 },
+  perkTitle: { fontFamily: F.bodyBold, fontSize: 14, color: T.ink, marginTop: 2, minHeight: 36 },
+  perkMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  costPill: { height: 24, paddingHorizontal: 8, borderRadius: 12, backgroundColor: T.ink, justifyContent: 'center' },
+  costPillText: { fontFamily: F.bodyBold, fontSize: 11.5, color: T.yellow },
+  stock: { fontFamily: F.body, fontSize: 11.5, color: T.textMuted },
+  redeem: {
+    marginTop: 10,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: T.yellow,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  redeemOff: { backgroundColor: T.sand },
+  redeemText: { fontFamily: F.bodyBold, fontSize: 13, color: T.ink },
+  redeemTextOff: { color: T.textFaint },
+
+  list: {
+    marginTop: 10,
+    borderRadius: 22,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
+    overflow: 'hidden',
+  },
+  txRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 58, paddingHorizontal: 14, paddingVertical: 8 },
+  txLine: { borderTopWidth: 1, borderTopColor: T.lineSoft },
+  txIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: T.sand,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  txLabel: { fontFamily: F.bodyBold, fontSize: 14, color: T.ink },
+  txWhen: { fontFamily: F.body, fontSize: 12, color: T.textMuted, marginTop: 1 },
+  txPts: { fontFamily: F.heading, fontSize: 16, color: T.ink },
+  code: { fontFamily: F.bodyBold, fontSize: 12.5, color: T.ink, letterSpacing: 1, marginTop: 1 },
+  statusPill: { height: 24, paddingHorizontal: 9, borderRadius: 12, backgroundColor: T.yellowSoft, justifyContent: 'center' },
+  statusText: { fontFamily: F.bodyBold, fontSize: 11.5, color: T.ink },
+  export: { alignSelf: 'center', paddingVertical: 12, paddingHorizontal: 16, minHeight: 44, justifyContent: 'center' },
+  exportText: { fontFamily: F.bodySemi, fontSize: 13, color: T.textMuted },
+
+  emptyCard: {
+    marginTop: 10,
+    borderRadius: 22,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
+    padding: 18,
+    alignItems: 'center',
+  },
+  emptyTitle: { fontFamily: F.headingBold, fontSize: 16, color: T.ink },
+  emptySub: { fontFamily: F.body, fontSize: 13, color: T.textMuted, marginTop: 4, textAlign: 'center' },
 });
