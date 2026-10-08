@@ -32,9 +32,10 @@ import StreakSheet from "../engagement/components/StreakSheet";
 import { useEngagement } from "../engagement/hooks/useEngagement";
 
 import { color as T, font as F } from "../theme/tokens";
+import { ScreenHeader, HeaderIconButton } from "../ui";
 // ─── Theme ───
 const GOLD = T.yellow;
-const GOLD_DARK = "#d9a21f";
+const GOLD_DARK = T.ink; // was a darker gold; ink keeps the accent readable on white
 const GOLD_SOFT = T.yellowSoft;
 const DARK = T.ink;
 const WHITE = T.white;
@@ -44,7 +45,7 @@ const LINE = T.line;
 const MUTED = T.textFaint;
 const DANGER = T.danger;
 const SUCCESS = T.success;
-const WARNING = "#d97706";
+const WARNING = T.ink;
 
 const toProfile = (d = {}) => ({
   name: d.name || "",
@@ -194,24 +195,17 @@ export default function ProfileDetailsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="dark-content" backgroundColor={WHITE} />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
-      {/* Top bar */}
-      <View style={styles.topBar}>
-        <TouchableOpacity style={styles.iconBtn} onPress={goBack} activeOpacity={0.7} hitSlop={10}>
-          <Ionicons name="chevron-back" size={22} color={DARK} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          profile<Text style={{ color: GOLD }}>.</Text>
-        </Text>
-        {profile.referralCode ? (
-          <TouchableOpacity style={styles.iconBtn} onPress={handleShareReferral} activeOpacity={0.7} hitSlop={10}>
-            <Ionicons name="share-social-outline" size={18} color={DARK} />
-          </TouchableOpacity>
-        ) : (
-          <View style={{ width: 40 }} />
-        )}
-      </View>
+      <ScreenHeader
+        title="profile"
+        onBack={goBack}
+        right={
+          profile.referralCode ? (
+            <HeaderIconButton icon="share-social-outline" label="share your referral code" onPress={handleShareReferral} />
+          ) : null
+        }
+      />
 
       <Animated.ScrollView
         style={{ opacity: fade }}
@@ -253,9 +247,9 @@ export default function ProfileDetailsScreen({ navigation }) {
           </View>
 
           <View style={styles.pillRow}>
-            <View style={[styles.pill, { backgroundColor: st.color + "22" }]}>
-              <Ionicons name={st.icon} size={11} color={st.color === DANGER ? "#fb7185" : st.color === SUCCESS ? "#4ade80" : T.yellow} />
-              <Text style={[styles.pillText, { color: st.color === DANGER ? "#fb7185" : st.color === SUCCESS ? "#4ade80" : T.yellow }]}>
+            <View style={[styles.pill, { backgroundColor: T.inkSoft }]}>
+              <Ionicons name={st.icon} size={12} color={T.yellow} />
+              <Text style={[styles.pillText, { color: T.white }]}>
                 {profile.status}
               </Text>
             </View>
@@ -379,7 +373,7 @@ const card = {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: WHITE },
+  container: { flex: 1, backgroundColor: T.paper },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 40 },
 
   topBar: {

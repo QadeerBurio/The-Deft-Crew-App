@@ -26,6 +26,7 @@ import { useStreak } from "../engagement/hooks/useStreak";
 import { useTour } from "../engagement/tour/TourProvider";
 
 import { color as T, font as F } from "../theme/tokens";
+import { ScreenHeader, ListRow } from "../ui";
 export default function SettingsScreen({ navigation }) {
   const { user, token, logout } = useContext(AuthContext);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -193,7 +194,7 @@ export default function SettingsScreen({ navigation }) {
       icon: "help-circle-outline",
       title: "Help & Support",
       subtitle: "Get help with your account",
-      color: "#FF9800",
+      color: T.ink,
       onPress: () => navigation.navigate("HelpSupport"),
     },
     {
@@ -201,28 +202,16 @@ export default function SettingsScreen({ navigation }) {
       icon: "information-circle-outline",
       title: "About tdc",
       subtitle: "Learn more about the app",
-      color: "#9C27B0",
+      color: T.ink,
       onPress: () => navigation.navigate("About"),
     },
   ];
 
   // ── Render ─────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
-
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.headerBtn}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="chevron-back" size={24} color={T.ink} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>settings</Text>
-        <View style={{ width: 38 }} />
-      </View>
+      <ScreenHeader title="settings" onBack={() => navigation.goBack()} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -236,48 +225,37 @@ export default function SettingsScreen({ navigation }) {
             </Text>
           </View>
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>{user?.name || "User"}</Text>
-            <Text style={styles.userEmail}>{user?.email || "No email"}</Text>
+            <Text style={styles.userName}>{user?.name || "your account"}</Text>
+            {!!user?.email && <Text style={styles.userEmail}>{user.email}</Text>}
           </View>
           <View style={styles.userBadge}>
             <Text style={styles.userBadgeText}>
-              {user?.isAlumni ? "Alumni" : "Student"}
+              {user?.isAlumni ? "alumni" : "student"}
             </Text>
           </View>
         </View>
 
         {/* Settings Options */}
         <View style={styles.settingsSection}>
-          {settingsOptions.map((option) => (
-            <TouchableOpacity
+          {settingsOptions.map((option, i) => (
+            <ListRow
               key={option.id}
-              style={styles.settingItem}
+              icon={option.icon}
+              title={String(option.title).toLowerCase()}
+              meta={option.subtitle}
+              divider={i < settingsOptions.length - 1}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 option.onPress();
               }}
-              activeOpacity={0.7}
-            >
-              <View
-                style={[
-                  styles.settingIcon,
-                  { backgroundColor: option.color + "15" },
-                ]}
-              >
-                <Ionicons name={option.icon} size={22} color={option.color} />
-              </View>
-              <View style={styles.settingContent}>
-                <Text style={styles.settingTitle}>{option.title}</Text>
-                <Text style={styles.settingSubtitle}>{option.subtitle}</Text>
-              </View>
-              {option.badge ? (
-                <View style={styles.badgePill}>
-                  <Text style={styles.badgePillText}>{option.badge}</Text>
-                </View>
-              ) : (
-                <Ionicons name="chevron-forward" size={20} color={T.textFaint} />
-              )}
-            </TouchableOpacity>
+              right={
+                option.badge ? (
+                  <View style={styles.badgePill}>
+                    <Text style={styles.badgePillText}>{String(option.badge).toLowerCase()}</Text>
+                  </View>
+                ) : undefined
+              }
+            />
           ))}
         </View>
 
@@ -423,7 +401,7 @@ export default function SettingsScreen({ navigation }) {
                     <MaterialCommunityIcons
                       name="pause-circle"
                       size={40}
-                      color="#FF9800"
+                      color={T.ink}
                     />
                   </View>
                   <Text style={styles.modalTitle}>wait! before you go</Text>
@@ -605,9 +583,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: T.card,
     marginHorizontal: 16,
-    marginTop: 16,
+    marginTop: 4,
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: T.line,
   },
@@ -638,8 +616,8 @@ const styles = StyleSheet.create({
     backgroundColor: T.card,
     marginHorizontal: 16,
     marginTop: 20,
-    borderRadius: 16,
-    padding: 4,
+    borderRadius: 22,
+    overflow: "hidden",
     borderWidth: 1,
     borderColor: T.line,
   },
@@ -672,7 +650,7 @@ const styles = StyleSheet.create({
   badgePillText: {
     fontSize: 11,
     fontFamily: F.bodyBold,
-    color: "#b8860b",
+    color: T.ink,
   },
 
   // Danger Zone

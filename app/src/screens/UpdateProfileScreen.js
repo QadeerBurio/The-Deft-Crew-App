@@ -26,6 +26,7 @@ import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients
 import * as Haptics from "expo-haptics";
 
 import { color as T, font as F } from "../theme/tokens";
+import { ScreenHeader, HeaderIconButton } from "../ui";
 const { width, height } = Dimensions.get("window");
 
 export default function UpdateProfileScreen({ navigation, route }) {
@@ -363,29 +364,25 @@ export default function UpdateProfileScreen({ navigation, route }) {
               bounces={true}
             >
               {/* Header */}
-              <Animated.View style={[styles.header, { opacity: headerOpacity }]}>
-                <TouchableOpacity
-                  style={styles.backButton}
-                  onPress={() => {
+              <Animated.View style={{ opacity: headerOpacity, marginHorizontal: -16 }}>
+                <ScreenHeader
+                  title="edit profile"
+                  onBack={() => {
                     dismissKeyboard();
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     navigation.goBack();
                   }}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="arrow-back" size={24} color={T.ink} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>edit profile</Text>
-                <TouchableOpacity
-                  style={styles.refreshButton}
-                  onPress={() => {
-                    dismissKeyboard();
-                    fetchProfileData();
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="refresh-outline" size={22} color={T.yellow} />
-                </TouchableOpacity>
+                  right={
+                    <HeaderIconButton
+                      icon="refresh-outline"
+                      label="reload profile"
+                      onPress={() => {
+                        dismissKeyboard();
+                        fetchProfileData();
+                      }}
+                    />
+                  }
+                />
               </Animated.View>
 
               {/* Personal Information Card */}
@@ -584,7 +581,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
                   activeOpacity={0.85}
                 >
                   <LinearGradient
-                    colors={[T.yellow, T.yellow, "#FFA000"]}
+                    colors={[T.yellow, T.yellow]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.saveButtonGradient}
@@ -799,7 +796,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   saveButton: {
-    borderRadius: 16,
+    borderRadius: 28,
     overflow: "hidden",
     shadowColor: T.ink,
     shadowOffset: { width: 0, height: 6 },

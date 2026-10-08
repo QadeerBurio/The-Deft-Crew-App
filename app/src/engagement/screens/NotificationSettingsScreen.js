@@ -26,6 +26,7 @@ import {
 } from '../../utils/pushNotifications';
 
 import { color as T, font as F } from "../../theme/tokens";
+import { ScreenHeader, Skeleton } from "../../ui";
 // Re-saves this device's push token, then asks the server to push to it.
 // Shows exactly what is wrong if the push can't be delivered.
 async function runPushTest(setTesting) {
@@ -79,21 +80,21 @@ const ROWS = [
     label: 'deals',
     sub: 'new discounts near you',
     mood: 'broke',
-    color: '#F97316',
+    color: T.yellow,
   },
   {
     key: 'jobsScholarships',
     label: 'jobs & scholarships',
     sub: 'matched to your cv',
     mood: 'shook',
-    color: '#06B6D4',
+    color: T.yellow,
   },
   {
     key: 'social',
     label: 'social',
     sub: 'likes, comments, mentions',
     mood: 'sus',
-    color: '#8B5CF6',
+    color: T.yellow,
   },
 ];
 
@@ -150,9 +151,10 @@ const PrefRow = ({ row, value, onToggle, index }) => {
       <Switch
         value={value}
         onValueChange={onToggle}
-        trackColor={{ false: T.sand, true: GOLD }}
-        thumbColor={Platform.OS === 'android' ? (value ? WHITE : '#f4f3f4') : undefined}
-        ios_backgroundColor={T.sand}
+        trackColor={{ false: T.line, true: T.ink }}
+        thumbColor={Platform.OS === 'android' ? (value ? GOLD : WHITE) : undefined}
+        ios_backgroundColor={T.line}
+        accessibilityLabel={`${row.label} notifications`}
       />
     </Animated.View>
   );
@@ -196,22 +198,11 @@ export default function NotificationSettingsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          style={styles.headerBtn}
-        >
-          <Ionicons name="chevron-back" size={22} color={DARK} />
-        </TouchableOpacity>
-        <Text style={styles.title}>notifications</Text>
-        <View style={{ width: 34 }} />
-      </View>
+      <ScreenHeader title="notifications" onBack={() => navigation.goBack()} />
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={GOLD} />
-          <Text style={styles.loadingText}>loading…</Text>
+        <View style={{ padding: 16 }} accessibilityLabel="loading">
+          <Skeleton rows={4} height={64} />
         </View>
       ) : (
         <ScrollView
@@ -429,20 +420,20 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: T.dangerBg,
   },
   permissionIconWrap: {
     width: 34,
     height: 34,
     borderRadius: 12,
-    backgroundColor: '#fde2e2',
+    backgroundColor: T.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   permissionTitle: {
     fontSize: 13,
     fontFamily: F.bodyBold,
-    color: '#991b1b',
+    color: T.danger,
     letterSpacing: -0.1,
   },
   permissionText: {
