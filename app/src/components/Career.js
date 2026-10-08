@@ -40,20 +40,22 @@ import { BASE_URL } from '../api/api';
 const { width, height } = Dimensions.get("window");
 const API_URL = `${BASE_URL}/jobs`;
 
+import { color as T, font as F } from "../theme/tokens";
+// Design system tokens (tdc-full-redesign/DESIGN_SYSTEM.md)
 const COLORS = {
-  page: "#ffffff",
-  surface: "#fafafa",
-  line: "#f0f0f0",
-  primary: "#1a1a1a",
-  accent: "#f9c349",
-  accentSoft: "#fff8e7",
-  muted: "#999",
-  body: "#666",
-  error: "#ef4444",
-  success: "#10b981",
-  warning: "#f59e0b",
-  info: "#3b82f6",
-  purple: "#8b5cf6",
+  page: T.paper,
+  surface: T.sand,
+  line: T.line,
+  primary: T.ink,
+  accent: T.yellow,
+  accentSoft: T.yellowSoft,
+  muted: T.textFaint,
+  body: T.textMuted,
+  error: T.danger,
+  success: T.success,
+  warning: T.textMuted,
+  info: T.ink,
+  purple: T.ink,
 };
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
@@ -126,13 +128,13 @@ const CareerCard = React.memo(({ item, index, onPress, onLocationPress, hasAppli
     >
       {isExpired ? (
         <View style={styles.expiredBanner}>
-          <Ionicons name="time-outline" size={12} color="#ef4444" />
-          <Text style={styles.expiredBannerText}>EXPIRED</Text>
+          <Ionicons name="time-outline" size={12} color={T.danger} />
+          <Text style={styles.expiredBannerText}>expired</Text>
         </View>
       ) : hasApplied ? (
         <View style={styles.appliedBanner}>
-          <Ionicons name="checkmark-circle" size={14} color="#10b981" />
-          <Text style={styles.appliedBannerText}>You've Applied</Text>
+          <Ionicons name="checkmark-circle" size={14} color={T.success} />
+          <Text style={styles.appliedBannerText}>you've applied</Text>
         </View>
       ) : null}
 
@@ -148,20 +150,26 @@ const CareerCard = React.memo(({ item, index, onPress, onLocationPress, hasAppli
       </View>
 
       <View style={styles.badgeRow}>
+        {/* Real match score from the jobs API (Career design "86% match") */}
+        {typeof item.matchPercentage === "number" && item.matchPercentage > 0 && (
+          <View style={styles.matchBadge}>
+            <Text style={styles.matchBadgeText}>{Math.round(item.matchPercentage)}% match</Text>
+          </View>
+        )}
         {isTDC && !isExternal && (
           <View style={styles.tdcBadge}>
-            <Ionicons name="sparkles" size={11} color="#f9c349" />
-            <Text style={styles.tdcBadgeText}>Easy Apply</Text>
+            <Ionicons name="sparkles" size={11} color={T.yellow} />
+            <Text style={styles.tdcBadgeText}>easy apply</Text>
           </View>
         )}
         {isExternal && (
           <View style={styles.externalBadge}>
-            <Ionicons name="open-outline" size={11} color="#3b82f6" />
-            <Text style={styles.externalBadgeText}>External</Text>
+            <Ionicons name="open-outline" size={11} color={T.ink} />
+            <Text style={styles.externalBadgeText}>external</Text>
           </View>
         )}
         <View style={styles.typeBadge}>
-          <Ionicons name="briefcase-outline" size={11} color="#f9c349" />
+          <Ionicons name="briefcase-outline" size={11} color={T.yellow} />
           <Text style={styles.typeBadgeText}>{item.type || "Full-time"}</Text>
         </View>
         {item.experienceLevel && (
@@ -172,7 +180,7 @@ const CareerCard = React.memo(({ item, index, onPress, onLocationPress, hasAppli
         )}
         {item.locationType && (
           <View style={styles.locTypeBadge}>
-            <Ionicons name={item.locationType === "Remote" ? "laptop-outline" : item.locationType === "Hybrid" ? "git-branch-outline" : "business-outline"} size={11} color="#10b981" />
+            <Ionicons name={item.locationType === "Remote" ? "laptop-outline" : item.locationType === "Hybrid" ? "git-branch-outline" : "business-outline"} size={11} color={T.success} />
             <Text style={styles.locTypeBadgeText}>{item.locationType}</Text>
           </View>
         )}
@@ -189,14 +197,14 @@ const CareerCard = React.memo(({ item, index, onPress, onLocationPress, hasAppli
           activeOpacity={0.6}
           hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
         >
-          <Ionicons name="location-sharp" size={14} color="#f9c349" />
+          <Ionicons name="location-sharp" size={14} color={T.yellow} />
           <Text style={[styles.metaText, styles.metaTextLink]} numberOfLines={1}>
             {item.location}
           </Text>
-          <Ionicons name="open-outline" size={11} color="#f9c349" />
+          <Ionicons name="open-outline" size={11} color={T.yellow} />
         </TouchableOpacity>
         <View style={styles.metaItem}>
-          <Ionicons name="cash-outline" size={14} color="#1a1a1a" />
+          <Ionicons name="cash-outline" size={14} color={T.ink} />
           <Text style={styles.metaText} numberOfLines={1}>{item.salary || "Competitive"}</Text>
         </View>
       </View>
@@ -204,7 +212,7 @@ const CareerCard = React.memo(({ item, index, onPress, onLocationPress, hasAppli
       <View style={styles.infoRow}>
         {item.education && (
           <View style={styles.metaItem}>
-            <Ionicons name="school-outline" size={14} color="#3b82f6" />
+            <Ionicons name="school-outline" size={14} color={T.ink} />
             <Text style={styles.metaText}>{item.education}</Text>
           </View>
         )}
@@ -235,14 +243,14 @@ const CareerCard = React.memo(({ item, index, onPress, onLocationPress, hasAppli
         <View style={styles.tagRow}>
           {item.urgent && (
             <View style={styles.urgentBadge}>
-              <Ionicons name="flash" size={10} color="#ef4444" />
-              <Text style={styles.urgentText}>Urgent Hiring</Text>
+              <Ionicons name="flash" size={10} color={T.danger} />
+              <Text style={styles.urgentText}>urgent hiring</Text>
             </View>
           )}
           {item.featured && (
             <View style={styles.featuredBadge}>
-              <MaterialCommunityIcons name="star" size={10} color="#f9c349" />
-              <Text style={styles.featuredText}>Featured</Text>
+              <MaterialCommunityIcons name="star" size={10} color={T.yellow} />
+              <Text style={styles.featuredText}>featured</Text>
             </View>
           )}
         </View>
@@ -256,19 +264,19 @@ const CareerCard = React.memo(({ item, index, onPress, onLocationPress, hasAppli
             onOptimizePress();
           }}
         >
-          <Ionicons name="sparkles" size={14} color="#000" />
-          <Text style={styles.optimizeCardBtnText}>Optimize Resume</Text>
+          <Ionicons name="sparkles" size={14} color={T.ink} />
+          <Text style={styles.optimizeCardBtnText}>optimize resume</Text>
         </TouchableOpacity>
       )}
 
       <View style={styles.cardFooter}>
-        <Text style={[styles.viewDetailsLabel, isExpired && { color: '#ef4444' }]}>
+        <Text style={[styles.viewDetailsLabel, isExpired && { color: T.danger }]}>
           {isExpired ? "Opportunity Expired" : hasApplied ? "✓ View Details" : isTDC && !isExternal ? "Apply Now" : "Apply on Company Site"}
         </Text>
         <Ionicons
           name={isExpired ? "close-circle-outline" : hasApplied ? "eye-outline" : isTDC && !isExternal ? "arrow-forward-circle" : "open-outline"}
           size={22}
-          color={isExpired ? "#ef4444" : hasApplied ? "#10b981" : isTDC && !isExternal ? "#f9c349" : "#3b82f6"}
+          color={isExpired ? T.danger : hasApplied ? T.success : isTDC && !isExternal ? T.yellow : T.ink}
         />
       </View>
     </AnimatedTouchable>
@@ -334,12 +342,12 @@ const WebViewModal = ({ visible, url, title, onClose }) => {
       presentationStyle="pageSheet"
     >
       <SafeAreaView style={webViewStyles.container} edges={['top', 'bottom']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
         {/* Header */}
         <View style={webViewStyles.header}>
           <TouchableOpacity onPress={onClose} style={webViewStyles.headerBtn}>
-            <Ionicons name="close" size={22} color="#1a1a1a" />
+            <Ionicons name="close" size={22} color={T.ink} />
           </TouchableOpacity>
 
           <View style={webViewStyles.headerCenter}>
@@ -357,14 +365,14 @@ const WebViewModal = ({ visible, url, title, onClose }) => {
                 onPress={() => webViewRef.current?.goBack()}
                 style={webViewStyles.headerBtn}
               >
-                <Ionicons name="arrow-back" size={20} color="#1a1a1a" />
+                <Ionicons name="arrow-back" size={20} color={T.ink} />
               </TouchableOpacity>
             )}
             <TouchableOpacity
               onPress={handleOpenInBrowser}
               style={webViewStyles.headerBtn}
             >
-              <Ionicons name="open-outline" size={20} color="#1a1a1a" />
+              <Ionicons name="open-outline" size={20} color={T.ink} />
             </TouchableOpacity>
           </View>
         </View>
@@ -380,20 +388,20 @@ const WebViewModal = ({ visible, url, title, onClose }) => {
         {error ? (
           <View style={webViewStyles.errorContainer}>
             <View style={webViewStyles.errorIconCircle}>
-              <MaterialCommunityIcons name="wifi-off" size={48} color="#f9c349" />
+              <MaterialCommunityIcons name="wifi-off" size={48} color={T.yellow} />
             </View>
-            <Text style={webViewStyles.errorTitle}>Couldn't load page</Text>
+            <Text style={webViewStyles.errorTitle}>couldn't load page</Text>
             <Text style={webViewStyles.errorSubtitle}>
               {error.message || "Please check your internet connection and try again."}
             </Text>
             <View style={webViewStyles.errorActions}>
               <TouchableOpacity style={webViewStyles.retryBtn} onPress={handleRetry}>
-                <Ionicons name="refresh" size={16} color="#1a1a1a" />
-                <Text style={webViewStyles.retryText}>Retry</Text>
+                <Ionicons name="refresh" size={16} color={T.ink} />
+                <Text style={webViewStyles.retryText}>retry</Text>
               </TouchableOpacity>
               <TouchableOpacity style={webViewStyles.openBrowserBtn} onPress={handleOpenInBrowser}>
-                <Ionicons name="open-outline" size={16} color="#fff" />
-                <Text style={webViewStyles.openBrowserText}>Open in Browser</Text>
+                <Ionicons name="open-outline" size={16} color={T.white} />
+                <Text style={webViewStyles.openBrowserText}>open in browser</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -442,8 +450,8 @@ const WebViewModal = ({ visible, url, title, onClose }) => {
             }
             renderLoading={() => (
               <View style={webViewStyles.loadingOverlay}>
-                <ActivityIndicator size="large" color="#f9c349" />
-                <Text style={webViewStyles.loadingText}>Loading application...</Text>
+                <ActivityIndicator size="large" color={T.yellow} />
+                <Text style={webViewStyles.loadingText}>loading application...</Text>
               </View>
             )}
           />
@@ -479,7 +487,7 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
       case "shortlisted": return COLORS.success;
       case "interview": return COLORS.purple;
       case "rejected": return COLORS.error;
-      case "hired": return "#059669";
+      case "hired": return T.success;
       default: return COLORS.muted;
     }
   };
@@ -509,14 +517,14 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
           <View style={styles.modalDragHandle} />
 
           <TouchableOpacity style={styles.closeXButton} onPress={onClose}>
-            <Ionicons name="close" size={24} color="#1a1a1a" />
+            <Ionicons name="close" size={24} color={T.ink} />
           </TouchableOpacity>
 
           {myApplication && (
             <View style={[styles.statusBanner, { backgroundColor: getStatusColor(myApplication.status) + "15" }]}>
               <View style={[styles.statusDot, { backgroundColor: getStatusColor(myApplication.status) }]} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.statusBannerTitle}>Application Status</Text>
+                <Text style={styles.statusBannerTitle}>application status</Text>
                 <Text style={[styles.statusBannerStatus, { color: getStatusColor(myApplication.status) }]}>
                   {getStatusLabel(myApplication.status)}
                 </Text>
@@ -535,10 +543,10 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
               onPress={onClose}
             >
               <View style={styles.interviewBannerIcon}>
-                <Ionicons name="calendar" size={20} color="#f9c349" />
+                <Ionicons name="calendar" size={20} color={T.yellow} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.interviewBannerTitle}>Interview Scheduled</Text>
+                <Text style={styles.interviewBannerTitle}>interview scheduled</Text>
                 <Text style={styles.interviewBannerDate}>
                   {new Date(myApplication.interviewDate).toLocaleDateString('en-US', {
                     weekday: 'long',
@@ -549,7 +557,7 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
                   })}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#f9c349" />
+              <Ionicons name="chevron-forward" size={20} color={T.yellow} />
             </TouchableOpacity>
           )}
 
@@ -561,14 +569,14 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
 
               {/* Tappable location chip */}
               <TouchableOpacity style={styles.locationChip} onPress={openLocation} activeOpacity={0.7}>
-                <Ionicons name="location-sharp" size={14} color="#f9c349" />
+                <Ionicons name="location-sharp" size={14} color={T.yellow} />
                 <Text style={styles.locationChipText} numberOfLines={1}>{job?.location || 'View on Map'}</Text>
-                <Ionicons name="open-outline" size={12} color="#f9c349" />
+                <Ionicons name="open-outline" size={12} color={T.yellow} />
               </TouchableOpacity>
 
               <View style={styles.applyModalMetaRow}>
                 <View style={styles.applyModalMetaBadge}>
-                  <Ionicons name="briefcase-outline" size={12} color="#f9c349" />
+                  <Ionicons name="briefcase-outline" size={12} color={T.yellow} />
                   <Text style={styles.applyModalMetaText}>{job?.type}</Text>
                 </View>
                 <View style={styles.applyModalMetaBadge}>
@@ -576,7 +584,7 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
                   <Text style={styles.applyModalMetaText}>{job?.experienceLevel}</Text>
                 </View>
                 <View style={styles.applyModalMetaBadge}>
-                  <Ionicons name="school-outline" size={12} color="#3b82f6" />
+                  <Ionicons name="school-outline" size={12} color={T.ink} />
                   <Text style={styles.applyModalMetaText}>{job?.education || "Bachelor's"}</Text>
                 </View>
               </View>
@@ -588,7 +596,7 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
 
               {job?.locationType && (
                 <View style={styles.locTypeRow}>
-                  <Ionicons name={job.locationType === "Remote" ? "laptop-outline" : "business-outline"} size={14} color="#f9c349" />
+                  <Ionicons name={job.locationType === "Remote" ? "laptop-outline" : "business-outline"} size={14} color={T.yellow} />
                   <Text style={styles.locTypeText}>{job.locationType}</Text>
                 </View>
               )}
@@ -596,14 +604,14 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
               {myApplication && (
                 <View style={styles.applicationInfoBox}>
                   <View style={styles.applicationInfoRow}>
-                    <Ionicons name="calendar-outline" size={14} color="#666" />
+                    <Ionicons name="calendar-outline" size={14} color={T.textMuted} />
                     <Text style={styles.applicationInfoText}>
                       Applied: {new Date(myApplication.appliedAt).toLocaleDateString()}
                     </Text>
                   </View>
                   {myApplication.coverLetter && (
                     <View style={styles.applicationInfoRow}>
-                      <Ionicons name="document-text-outline" size={14} color="#666" />
+                      <Ionicons name="document-text-outline" size={14} color={T.textMuted} />
                       <Text style={styles.applicationInfoText} numberOfLines={2}>
                         Cover Letter: {myApplication.coverLetter}
                       </Text>
@@ -625,7 +633,7 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
                 <Text style={styles.sectionHeading}>✅ Requirements</Text>
                 {job.requirements.map((req, i) => (
                   <View key={i} style={styles.detailItem}>
-                    <Ionicons name="checkmark-circle" size={16} color="#10b981" />
+                    <Ionicons name="checkmark-circle" size={16} color={T.success} />
                     <Text style={styles.detailItemText}>{req}</Text>
                   </View>
                 ))}
@@ -637,7 +645,7 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
                 <Text style={styles.sectionHeading}>🎯 Responsibilities</Text>
                 {job.responsibilities.map((resp, i) => (
                   <View key={i} style={styles.detailItem}>
-                    <Ionicons name="flag-outline" size={16} color="#f9c349" />
+                    <Ionicons name="flag-outline" size={16} color={T.yellow} />
                     <Text style={styles.detailItemText}>{resp}</Text>
                   </View>
                 ))}
@@ -650,7 +658,7 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
                 <View style={styles.benefitsGrid}>
                   {job.benefits.map((benefit, i) => (
                     <View key={i} style={styles.benefitItem}>
-                      <Ionicons name="star" size={14} color="#f9c349" />
+                      <Ionicons name="star" size={14} color={T.yellow} />
                       <Text style={styles.benefitItemText}>{benefit}</Text>
                     </View>
                   ))}
@@ -687,11 +695,11 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
               <TouchableOpacity style={styles.shareBtn} onPress={() => {
                 Share.share({ message: `🚀 Career Opportunity!\n\n${job.title}\n${job.companyName || job.department}\n${job.location}\nSalary: ${job.salary}\n\nApply via TDC App!` });
               }}>
-                <Ionicons name="share-social-outline" size={18} color="#1a1a1a" />
-                <Text style={styles.shareBtnText}>Share</Text>
+                <Ionicons name="share-social-outline" size={18} color={T.ink} />
+                <Text style={styles.shareBtnText}>share</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
-                <Text style={styles.cancelBtnText}>Close</Text>
+                <Text style={styles.cancelBtnText}>close</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -764,65 +772,65 @@ const InterviewDetailsModal = ({ visible, interview, onClose }) => {
           <View style={styles.interviewModalHandle} />
 
           <TouchableOpacity style={styles.closeXButton} onPress={onClose}>
-            <Ionicons name="close" size={24} color="#1a1a1a" />
+            <Ionicons name="close" size={24} color={T.ink} />
           </TouchableOpacity>
 
           <View style={styles.interviewModalHeader}>
             <View style={styles.interviewModalIcon}>
-              <MaterialCommunityIcons name="calendar-clock" size={28} color="#f9c349" />
+              <MaterialCommunityIcons name="calendar-clock" size={28} color={T.yellow} />
             </View>
-            <Text style={styles.interviewModalTitle}>Interview Scheduled</Text>
+            <Text style={styles.interviewModalTitle}>interview scheduled</Text>
             <Text style={styles.interviewModalSubtitle}>{interview.jobId?.companyName || interview.jobId?.department}</Text>
           </View>
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.interviewDetailCard}>
               <View style={styles.interviewDetailRow}>
-                <View style={styles.interviewDetailIcon}><Ionicons name="briefcase-outline" size={18} color="#f9c349" /></View>
-                <View style={{ flex: 1 }}><Text style={styles.interviewDetailLabel}>Position</Text><Text style={styles.interviewDetailValue}>{interview.jobId?.title}</Text></View>
+                <View style={styles.interviewDetailIcon}><Ionicons name="briefcase-outline" size={18} color={T.yellow} /></View>
+                <View style={{ flex: 1 }}><Text style={styles.interviewDetailLabel}>position</Text><Text style={styles.interviewDetailValue}>{interview.jobId?.title}</Text></View>
               </View>
               <View style={styles.interviewDetailRow}>
-                <View style={styles.interviewDetailIcon}><Ionicons name="calendar-outline" size={18} color="#f9c349" /></View>
+                <View style={styles.interviewDetailIcon}><Ionicons name="calendar-outline" size={18} color={T.yellow} /></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.interviewDetailLabel}>Date & Time</Text>
+                  <Text style={styles.interviewDetailLabel}>date & time</Text>
                   <Text style={styles.interviewDetailValue}>{new Date(interview.interviewDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</Text>
                 </View>
               </View>
               <View style={styles.interviewDetailRow}>
-                <View style={styles.interviewDetailIcon}><Ionicons name="videocam-outline" size={18} color="#f9c349" /></View>
+                <View style={styles.interviewDetailIcon}><Ionicons name="videocam-outline" size={18} color={T.yellow} /></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.interviewDetailLabel}>Meeting Platform</Text>
+                  <Text style={styles.interviewDetailLabel}>meeting platform</Text>
                   <Text style={styles.interviewDetailValue}>{getMeetingPlatform()}</Text>
                   {interview.meetingLink && (
                     <TouchableOpacity onPress={copyMeetingLink} style={styles.copyLinkBtn}>
                       <Text style={styles.interviewLink} numberOfLines={1}>{interview.meetingLink}</Text>
-                      <Ionicons name="copy-outline" size={14} color="#f9c349" />
+                      <Ionicons name="copy-outline" size={14} color={T.yellow} />
                     </TouchableOpacity>
                   )}
                 </View>
               </View>
               {interview.interviewNotes && (
                 <View style={styles.interviewDetailRow}>
-                  <View style={styles.interviewDetailIcon}><Ionicons name="document-text-outline" size={18} color="#f9c349" /></View>
-                  <View style={{ flex: 1 }}><Text style={styles.interviewDetailLabel}>Notes</Text><Text style={styles.interviewNotes}>{interview.interviewNotes}</Text></View>
+                  <View style={styles.interviewDetailIcon}><Ionicons name="document-text-outline" size={18} color={T.yellow} /></View>
+                  <View style={{ flex: 1 }}><Text style={styles.interviewDetailLabel}>notes</Text><Text style={styles.interviewNotes}>{interview.interviewNotes}</Text></View>
                 </View>
               )}
             </View>
             <View style={styles.interviewActions}>
               <TouchableOpacity style={styles.interviewActionBtn} onPress={addToCalendar}>
                 <View style={styles.interviewActionGradient}>
-                  <Ionicons name="calendar" size={18} color="#f9c349" />
-                  <Text style={styles.interviewActionText}>Calendar</Text>
+                  <Ionicons name="calendar" size={18} color={T.yellow} />
+                  <Text style={styles.interviewActionText}>calendar</Text>
                 </View>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.interviewJoinBtn, !interview.meetingLink && styles.interviewJoinBtnDisabled]} onPress={joinMeeting}>
                 <View style={[styles.interviewJoinGradient, !interview.meetingLink && styles.interviewJoinGradientDisabled]}>
-                  <Ionicons name="videocam" size={18} color={interview.meetingLink ? "#fff" : "#999"} />
-                  <Text style={[styles.interviewJoinText, !interview.meetingLink && styles.interviewJoinTextDisabled]}>Join</Text>
+                  <Ionicons name="videocam" size={18} color={interview.meetingLink ? T.white : T.textFaint} />
+                  <Text style={[styles.interviewJoinText, !interview.meetingLink && styles.interviewJoinTextDisabled]}>join</Text>
                 </View>
               </TouchableOpacity>
             </View>
           </ScrollView>
-          <TouchableOpacity style={styles.interviewCloseBtn} onPress={onClose}><Text style={styles.interviewCloseText}>Close</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.interviewCloseBtn} onPress={onClose}><Text style={styles.interviewCloseText}>close</Text></TouchableOpacity>
         </Animated.View>
       </View>
     </Modal>
@@ -838,7 +846,7 @@ const ApplicationsModal = ({ visible, applications, onClose, onInterviewPress })
       case "shortlisted": return COLORS.success;
       case "interview": return COLORS.purple;
       case "rejected": return COLORS.error;
-      case "hired": return "#059669";
+      case "hired": return T.success;
       default: return COLORS.muted;
     }
   };
@@ -863,13 +871,13 @@ const ApplicationsModal = ({ visible, applications, onClose, onInterviewPress })
           <View style={styles.modalDragHandle} />
 
           <TouchableOpacity style={styles.closeXButton} onPress={onClose}>
-            <Ionicons name="close" size={24} color="#1a1a1a" />
+            <Ionicons name="close" size={24} color={T.ink} />
           </TouchableOpacity>
 
-          <Text style={styles.applicationsModalTitle}>My Applications</Text>
+          <Text style={styles.applicationsModalTitle}>my applications</Text>
           <Text style={styles.applicationsModalCount}>{applications.length} applications</Text>
           {applications.length === 0 ? (
-            <View style={styles.emptyState}><MaterialCommunityIcons name="briefcase-search" size={50} color="#ddd" /><Text style={styles.emptyStateText}>No applications yet</Text></View>
+            <View style={styles.emptyState}><MaterialCommunityIcons name="briefcase-search" size={50} color={T.textFaint} /><Text style={styles.emptyStateText}>no applications yet</Text></View>
           ) : (
             <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: height * 0.6 }}>
               {applications.map((app) => (
@@ -892,9 +900,9 @@ const ApplicationsModal = ({ visible, applications, onClose, onInterviewPress })
                     {app.interviewDate && (
                       <View style={styles.interviewInfo}>
                         <View style={styles.interviewInfoInner}>
-                          <Ionicons name="calendar" size={14} color="#f9c349" />
+                          <Ionicons name="calendar" size={14} color={T.yellow} />
                           <Text style={styles.interviewText}>Interview: {new Date(app.interviewDate).toLocaleDateString()} at {new Date(app.interviewDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
-                          <Ionicons name="chevron-forward" size={14} color="#f9c349" />
+                          <Ionicons name="chevron-forward" size={14} color={T.yellow} />
                         </View>
                       </View>
                     )}
@@ -903,7 +911,7 @@ const ApplicationsModal = ({ visible, applications, onClose, onInterviewPress })
               ))}
             </ScrollView>
           )}
-          <TouchableOpacity style={styles.applicationsCloseBtn} onPress={onClose}><Text style={styles.applicationsCloseText}>Close</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.applicationsCloseBtn} onPress={onClose}><Text style={styles.applicationsCloseText}>close</Text></TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -919,13 +927,13 @@ const FilterModal = React.memo(({ visible, filters, setFilters, onClose, onApply
         <View style={styles.modalDragHandle} />
 
         <TouchableOpacity style={styles.closeXButton} onPress={onClose}>
-          <Ionicons name="close" size={24} color="#1a1a1a" />
+          <Ionicons name="close" size={24} color={T.ink} />
         </TouchableOpacity>
 
-        <Text style={styles.filterModalTitle}>Filter Jobs</Text>
+        <Text style={styles.filterModalTitle}>filter jobs</Text>
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Date Posted</Text>
+            <Text style={styles.filterLabel}>date posted</Text>
             <View style={styles.filterOptions}>
               {[{ label: "Any Time", value: "all" }, { label: "Past 24 Hours", value: "24h" }, { label: "Past Week", value: "week" }, { label: "Past Month", value: "month" }].map(o => (
                 <TouchableOpacity key={o.value} style={[styles.filterChip, filters.datePosted === o.value && styles.filterChipActive]} onPress={() => setFilters(p => ({ ...p, datePosted: o.value }))}>
@@ -935,7 +943,7 @@ const FilterModal = React.memo(({ visible, filters, setFilters, onClose, onApply
             </View>
           </View>
           <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Job Type</Text>
+            <Text style={styles.filterLabel}>job type</Text>
             <View style={styles.filterOptions}>
               {["Full-time", "Part-time", "Contract", "Internship"].map(t => (
                 <TouchableOpacity key={t} style={[styles.filterChip, filters.type === t && styles.filterChipActive]} onPress={() => setFilters(p => ({ ...p, type: p.type === t ? "" : t }))}>
@@ -945,7 +953,7 @@ const FilterModal = React.memo(({ visible, filters, setFilters, onClose, onApply
             </View>
           </View>
           <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Location</Text>
+            <Text style={styles.filterLabel}>location</Text>
             <View style={styles.filterOptions}>
               {["Remote", "On-site", "Hybrid"].map(t => (
                 <TouchableOpacity key={t} style={[styles.filterChip, filters.locationType === t && styles.filterChipActive]} onPress={() => setFilters(p => ({ ...p, locationType: p.locationType === t ? "" : t }))}>
@@ -955,7 +963,7 @@ const FilterModal = React.memo(({ visible, filters, setFilters, onClose, onApply
             </View>
           </View>
           <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Experience</Text>
+            <Text style={styles.filterLabel}>experience</Text>
             <View style={styles.filterOptions}>
               {["Entry Level", "Mid Level", "Senior Level", "Executive"].map(t => (
                 <TouchableOpacity key={t} style={[styles.filterChip, filters.experienceLevel === t && styles.filterChipActive]} onPress={() => setFilters(p => ({ ...p, experienceLevel: p.experienceLevel === t ? "" : t }))}>
@@ -966,8 +974,8 @@ const FilterModal = React.memo(({ visible, filters, setFilters, onClose, onApply
           </View>
         </ScrollView>
         <View style={styles.filterActions}>
-          <TouchableOpacity style={styles.clearFiltersBtn} onPress={onClear}><Text style={styles.clearFiltersText}>Clear All</Text></TouchableOpacity>
-          <TouchableOpacity style={styles.applyFiltersBtn} onPress={onApply}><View style={styles.applyFiltersGradient}><Text style={styles.applyFiltersText}>Apply Filters</Text></View></TouchableOpacity>
+          <TouchableOpacity style={styles.clearFiltersBtn} onPress={onClear}><Text style={styles.clearFiltersText}>clear all</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.applyFiltersBtn} onPress={onApply}><View style={styles.applyFiltersGradient}><Text style={styles.applyFiltersText}>apply filters</Text></View></TouchableOpacity>
         </View>
       </View>
     </View>
@@ -1432,22 +1440,22 @@ const Career = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       {/* ===== HEADER ===== */}
       <Animated.View style={[styles.header, headerAnimatedStyle]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
-          <Ionicons name="chevron-back" size={22} color="#1a1a1a" />
+          <Ionicons name="chevron-back" size={22} color={T.ink} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>tdc<Text style={{color:'#f9c349'}}>.</Text> Careers</Text>
-          <Text style={styles.headerSub}>Find Your Dream Job</Text>
+          <Text style={styles.headerTitle} accessibilityRole="header">jobs<Text style={{ color: T.yellow }}>.</Text></Text>
+          <Text style={styles.headerSub}>careers, internships and easy apply</Text>
         </View>
         <TouchableOpacity style={styles.headerBtn} onPress={() => {
           if (!token) { Alert.alert("Login Required", "Please login"); return; }
           setShowApplicationsModal(true);
         }}>
-          <Ionicons name="document-text-outline" size={22} color="#f9c349" />
+          <Ionicons name="document-text-outline" size={22} color={T.yellow} />
           {myApplications.length > 0 && <View style={styles.headerBadge}><Text style={styles.headerBadgeText}>{myApplications.length}</Text></View>}
         </TouchableOpacity>
       </Animated.View>
@@ -1455,11 +1463,11 @@ const Career = ({ navigation }) => {
       {/* ===== SEARCH BAR ===== */}
       <View style={styles.searchWrapper}>
         <View style={styles.searchBar}>
-          <Ionicons name="search" size={18} color="#999" />
-          <TextInput style={styles.searchInput} placeholder="Search jobs, skills, companies..." placeholderTextColor="#999" value={search} onChangeText={setSearch} />
-          {search.length > 0 && <TouchableOpacity onPress={() => setSearch("")}><Ionicons name="close-circle" size={18} color="#999" /></TouchableOpacity>}
+          <Ionicons name="search" size={18} color={T.textFaint} />
+          <TextInput style={styles.searchInput} placeholder="Search jobs, skills, companies..." placeholderTextColor={T.textFaint} value={search} onChangeText={setSearch} />
+          {search.length > 0 && <TouchableOpacity onPress={() => setSearch("")}><Ionicons name="close-circle" size={18} color={T.textFaint} /></TouchableOpacity>}
           <TouchableOpacity onPress={() => setShowFilters(true)} style={styles.filterIcon}>
-            <Ionicons name="options-outline" size={20} color="#1a1a1a" />
+            <Ionicons name="options-outline" size={20} color={T.ink} />
             {Object.values(filters).some(v => v && v !== "all" && v !== false) && <View style={styles.filterDot} />}
           </TouchableOpacity>
         </View>
@@ -1472,28 +1480,28 @@ const Career = ({ navigation }) => {
             style={[styles.topTabChip, !filters.isTdc && styles.topTabChipActive]}
             onPress={() => setFilters(prev => ({ ...prev, isTdc: false }))}
           >
-            <Ionicons name="grid-outline" size={13} color={!filters.isTdc ? "#1a1a1a" : "#666"} />
-            <Text style={[styles.topTabChipText, !filters.isTdc && styles.topTabChipTextActive]}>All Listings</Text>
+            <Ionicons name="grid-outline" size={13} color={!filters.isTdc ? T.ink : T.textMuted} />
+            <Text style={[styles.topTabChipText, !filters.isTdc && styles.topTabChipTextActive]}>all listings</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.topTabChip, filters.isTdc && styles.topTabChipTdcActive]}
             onPress={() => setFilters(prev => ({ ...prev, isTdc: true }))}
           >
-            <Ionicons name="sparkles" size={14} color={filters.isTdc ? "#1a1a1a" : "#f9c349"} />
-            <Text style={[styles.topTabChipText, filters.isTdc && styles.topTabChipTdcTextActive]}> Easy Apply</Text>
+            <Ionicons name="sparkles" size={14} color={filters.isTdc ? T.ink : T.yellow} />
+            <Text style={[styles.topTabChipText, filters.isTdc && styles.topTabChipTdcTextActive]}> easy apply</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* ===== CONTENT ===== */}
       {loading ? (
-        <View style={styles.centerSection}><ActivityIndicator size="large" color="#f9c349" /><Text style={styles.loadingText}>Loading jobs...</Text></View>
+        <View style={styles.centerSection}><ActivityIndicator size="large" color={T.yellow} /><Text style={styles.loadingText}>loading jobs...</Text></View>
       ) : error ? (
         <View style={styles.centerSection}>
-          <MaterialCommunityIcons name="wifi-off" size={50} color="#ddd" />
-          <Text style={styles.errorTitle}>Connection Error</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => fetchJobs(1, false)}><View style={styles.retryGradient}><Text style={styles.retryText}>Retry</Text></View></TouchableOpacity>
+          <MaterialCommunityIcons name="wifi-off" size={50} color={T.textFaint} />
+          <Text style={styles.errorTitle}>connection error</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => fetchJobs(1, false)}><View style={styles.retryGradient}><Text style={styles.retryText}>retry</Text></View></TouchableOpacity>
         </View>
       ) : (
         <Animated.View style={[styles.listWrap, { opacity: entranceOpacity, transform: [{ translateY: entranceTranslate }] }]}>
@@ -1514,7 +1522,7 @@ const Career = ({ navigation }) => {
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}
             onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#f9c349"]} tintColor="#f9c349" />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[T.yellow]} tintColor={T.yellow} />}
             initialNumToRender={10}
             maxToRenderPerBatch={15}
             windowSize={5}
@@ -1522,8 +1530,8 @@ const Career = ({ navigation }) => {
             ListFooterComponent={
               loadingMore ? (
                 <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-                  <ActivityIndicator size="small" color="#f9c349" />
-                  <Text style={{ marginTop: 8, fontSize: 13, color: '#666', fontWeight: '600' }}>Loading more listings...</Text>
+                  <ActivityIndicator size="small" color={T.yellow} />
+                  <Text style={{ marginTop: 8, fontSize: 13, color: T.textMuted, fontWeight: '600' }}>loading more listings...</Text>
                 </View>
               ) : (hasMore && filteredData.length > 0) ? (
                 <TouchableOpacity
@@ -1531,11 +1539,11 @@ const Career = ({ navigation }) => {
                   onPress={() => fetchJobs(page + 1, true)}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="sparkles" size={16} color="#1a1a1a" />
+                  <Ionicons name="sparkles" size={16} color={T.ink} />
                   <Text style={styles.showMoreButtonText}>
                     Show All Listings ({totalJobsCount - filteredData.length} remaining)
                   </Text>
-                  <Ionicons name="chevron-down" size={16} color="#1a1a1a" />
+                  <Ionicons name="chevron-down" size={16} color={T.ink} />
                 </TouchableOpacity>
               ) : null
             }
@@ -1546,7 +1554,7 @@ const Career = ({ navigation }) => {
               </View>
             )}
             ListEmptyComponent={
-              <View style={styles.emptyState}><MaterialCommunityIcons name="briefcase-search-outline" size={60} color="#ddd" /><Text style={styles.emptyStateText}>No jobs found</Text></View>
+              <View style={styles.emptyState}><MaterialCommunityIcons name="briefcase-search-outline" size={60} color={T.textFaint} /><Text style={styles.emptyStateText}>no jobs found</Text></View>
             }
           />
         </Animated.View>
@@ -1587,10 +1595,10 @@ const Career = ({ navigation }) => {
       {/* Optimizing Overlay Modal */}
       <Modal visible={optimizing} transparent animationType="fade">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ backgroundColor: '#fff', padding: 24, borderRadius: 16, alignItems: 'center', width: width * 0.8 }}>
-            <ActivityIndicator size="large" color="#f9c349" />
-            <Text style={{ marginTop: 16, fontSize: 16, fontWeight: '700', color: '#1a1a1a' }}>Optimizing Resume...</Text>
-            <Text style={{ marginTop: 6, fontSize: 12, color: '#999', textAlign: 'center' }}>AI is customizing your resume achievements & profile for this role.</Text>
+          <View style={{ backgroundColor: T.card, padding: 24, borderRadius: 16, alignItems: 'center', width: width * 0.8 }}>
+            <ActivityIndicator size="large" color={T.yellow} />
+            <Text style={{ marginTop: 16, fontSize: 16, fontWeight: '700', color: T.ink }}>optimizing resume...</Text>
+            <Text style={{ marginTop: 6, fontSize: 12, color: T.textFaint, textAlign: 'center' }}>AI is customizing your resume achievements & profile for this role.</Text>
           </View>
         </View>
       </Modal>
@@ -1598,22 +1606,22 @@ const Career = ({ navigation }) => {
       {/* Skill Gap Custom Alert Modal */}
       <Modal visible={skillGapVisible} transparent animationType="fade" onRequestClose={() => setSkillGapVisible(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <View style={{ backgroundColor: '#ffffff', borderRadius: 20, width: '100%', maxWidth: 360, overflow: 'hidden', borderWidth: 1.5, borderColor: '#f9c349' }}>
-            <View style={{ backgroundColor: '#1a1a1a', paddingVertical: 20, alignItems: 'center', justifyContent: 'center' }}>
-              <MaterialCommunityIcons name="alert-decagram" size={48} color="#f9c349" />
-              <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: '800', marginTop: 8 }}>Skill Gap Warning</Text>
+          <View style={{ backgroundColor: T.card, borderRadius: 20, width: '100%', maxWidth: 360, overflow: 'hidden', borderWidth: 1.5, borderColor: T.yellow }}>
+            <View style={{ backgroundColor: T.ink, paddingVertical: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <MaterialCommunityIcons name="alert-decagram" size={48} color={T.yellow} />
+              <Text style={{ color: T.white, fontSize: 18, fontWeight: '800', marginTop: 8 }}>skill gap warning</Text>
             </View>
             <View style={{ padding: 24 }}>
-              <Text style={{ fontSize: 14, color: '#333333', lineHeight: 22, textAlign: 'center', marginBottom: 16 }}>
+              <Text style={{ fontSize: 14, color: T.ink, lineHeight: 22, textAlign: 'center', marginBottom: 16 }}>
                 your expertise are not that much for this role to apply this role you need to enhance your skills{' '}
-                <Text style={{ fontWeight: '800', color: '#1a1a1a' }}>{skillGapData.missingSkills.join(', ') || 'key required skills'}</Text>
+                <Text style={{ fontWeight: '800', color: T.ink }}>{skillGapData.missingSkills.join(', ') || 'key required skills'}</Text>
                 {' '}and then your chances of selection could increase
               </Text>
               <TouchableOpacity
-                style={{ backgroundColor: '#f9c349', paddingVertical: 12, borderRadius: 12, alignItems: 'center', marginTop: 8 }}
+                style={{ backgroundColor: T.yellow, paddingVertical: 12, borderRadius: 12, alignItems: 'center', marginTop: 8 }}
                 onPress={() => setSkillGapVisible(false)}
               >
-                <Text style={{ color: '#1a1a1a', fontWeight: '800', fontSize: 14 }}>I will enhance them!</Text>
+                <Text style={{ color: T.ink, fontWeight: '800', fontSize: 14 }}>i will enhance them!</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1636,7 +1644,7 @@ const Career = ({ navigation }) => {
             <View style={styles.modalDragHandle} />
 
             <TouchableOpacity style={styles.closeXButton} onPress={() => setModalVisible(false)}>
-              <Ionicons name="close" size={24} color="#1a1a1a" />
+              <Ionicons name="close" size={24} color={T.ink} />
             </TouchableOpacity>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 30 }}>
@@ -1648,14 +1656,14 @@ const Career = ({ navigation }) => {
 
                 {/* Tappable location */}
                 <TouchableOpacity style={styles.locationChip} onPress={() => handleLocationPress(selectedJob)} activeOpacity={0.7}>
-                  <Ionicons name="location-sharp" size={14} color="#f9c349" />
+                  <Ionicons name="location-sharp" size={14} color={T.yellow} />
                   <Text style={styles.locationChipText} numberOfLines={1}>{selectedJob?.location || 'View on Map'}</Text>
-                  <Ionicons name="open-outline" size={12} color="#f9c349" />
+                  <Ionicons name="open-outline" size={12} color={T.yellow} />
                 </TouchableOpacity>
 
                 <View style={styles.applyModalMetaRow}>
                   <View style={styles.applyModalMetaBadge}>
-                    <Ionicons name="briefcase-outline" size={12} color="#f9c349" />
+                    <Ionicons name="briefcase-outline" size={12} color={T.yellow} />
                     <Text style={styles.applyModalMetaText}>{selectedJob?.type}</Text>
                   </View>
                   <View style={styles.applyModalMetaBadge}>
@@ -1663,7 +1671,7 @@ const Career = ({ navigation }) => {
                     <Text style={styles.applyModalMetaText}>{selectedJob?.experienceLevel}</Text>
                   </View>
                   <View style={styles.applyModalMetaBadge}>
-                    <Ionicons name="school-outline" size={12} color="#3b82f6" />
+                    <Ionicons name="school-outline" size={12} color={T.ink} />
                     <Text style={styles.applyModalMetaText}>{selectedJob?.education || "Bachelor's"}</Text>
                   </View>
                 </View>
@@ -1675,7 +1683,7 @@ const Career = ({ navigation }) => {
 
                 {selectedJob?.locationType && (
                   <View style={styles.locTypeRow}>
-                    <Ionicons name={selectedJob.locationType === "Remote" ? "laptop-outline" : "business-outline"} size={14} color="#f9c349" />
+                    <Ionicons name={selectedJob.locationType === "Remote" ? "laptop-outline" : "business-outline"} size={14} color={T.yellow} />
                     <Text style={styles.locTypeText}>{selectedJob.locationType}</Text>
                   </View>
                 )}
@@ -1693,7 +1701,7 @@ const Career = ({ navigation }) => {
                   <Text style={styles.sectionHeading}>✅ Requirements</Text>
                   {selectedJob.requirements.map((req, i) => (
                     <View key={i} style={styles.detailItem}>
-                      <Ionicons name="checkmark-circle" size={16} color="#10b981" />
+                      <Ionicons name="checkmark-circle" size={16} color={T.success} />
                       <Text style={styles.detailItemText}>{req}</Text>
                     </View>
                   ))}
@@ -1705,7 +1713,7 @@ const Career = ({ navigation }) => {
                   <Text style={styles.sectionHeading}>🎯 Responsibilities</Text>
                   {selectedJob.responsibilities.map((resp, i) => (
                     <View key={i} style={styles.detailItem}>
-                      <Ionicons name="flag-outline" size={16} color="#f9c349" />
+                      <Ionicons name="flag-outline" size={16} color={T.yellow} />
                       <Text style={styles.detailItemText}>{resp}</Text>
                     </View>
                   ))}
@@ -1718,7 +1726,7 @@ const Career = ({ navigation }) => {
                   <View style={styles.benefitsGrid}>
                     {selectedJob.benefits.map((benefit, i) => (
                       <View key={i} style={styles.benefitItem}>
-                        <Ionicons name="star" size={14} color="#f9c349" />
+                        <Ionicons name="star" size={14} color={T.yellow} />
                         <Text style={styles.benefitItemText}>{benefit}</Text>
                       </View>
                     ))}
@@ -1760,7 +1768,7 @@ const Career = ({ navigation }) => {
                 <TextInput
                   style={[styles.formInput, validationErrors.fullName && styles.formInputError]}
                   placeholder="Enter your full name"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={T.textFaint}
                   value={applicationForm.fullName}
                   onChangeText={t => handleInputChange("fullName", t)}
                 />
@@ -1770,7 +1778,7 @@ const Career = ({ navigation }) => {
                 <TextInput
                   style={[styles.formInput, validationErrors.email && styles.formInputError]}
                   placeholder="Enter your email"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={T.textFaint}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   value={applicationForm.email}
@@ -1782,47 +1790,47 @@ const Career = ({ navigation }) => {
                 <TextInput
                   style={[styles.formInput, validationErrors.phone && styles.formInputError]}
                   placeholder="Enter your phone number"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={T.textFaint}
                   keyboardType="phone-pad"
                   value={applicationForm.phone}
                   onChangeText={t => handleInputChange("phone", t)}
                 />
                 {validationErrors.phone && <Text style={styles.errorText}>{validationErrors.phone}</Text>}
 
-                <Text style={styles.formLabel}>Address</Text>
-                <TextInput style={styles.formInput} placeholder="Street address" placeholderTextColor="#999" value={applicationForm.address} onChangeText={t => handleInputChange("address", t)} />
+                <Text style={styles.formLabel}>address</Text>
+                <TextInput style={styles.formInput} placeholder="Street address" placeholderTextColor={T.textFaint} value={applicationForm.address} onChangeText={t => handleInputChange("address", t)} />
 
                 <View style={styles.formRow}>
                   <View style={styles.formHalf}>
-                    <Text style={styles.formLabel}>City</Text>
-                    <TextInput style={styles.formInput} placeholder="City" placeholderTextColor="#999" value={applicationForm.city} onChangeText={t => handleInputChange("city", t)} />
+                    <Text style={styles.formLabel}>city</Text>
+                    <TextInput style={styles.formInput} placeholder="City" placeholderTextColor={T.textFaint} value={applicationForm.city} onChangeText={t => handleInputChange("city", t)} />
                   </View>
                   <View style={styles.formHalf}>
-                    <Text style={styles.formLabel}>Country</Text>
-                    <TextInput style={styles.formInput} placeholder="Country" placeholderTextColor="#999" value={applicationForm.country} onChangeText={t => handleInputChange("country", t)} />
+                    <Text style={styles.formLabel}>country</Text>
+                    <TextInput style={styles.formInput} placeholder="Country" placeholderTextColor={T.textFaint} value={applicationForm.country} onChangeText={t => handleInputChange("country", t)} />
                   </View>
                 </View>
 
-                <Text style={styles.formLabel}>Current Company</Text>
-                <TextInput style={styles.formInput} placeholder="Your current employer" placeholderTextColor="#999" value={applicationForm.currentCompany} onChangeText={t => handleInputChange("currentCompany", t)} />
+                <Text style={styles.formLabel}>current company</Text>
+                <TextInput style={styles.formInput} placeholder="Your current employer" placeholderTextColor={T.textFaint} value={applicationForm.currentCompany} onChangeText={t => handleInputChange("currentCompany", t)} />
 
-                <Text style={styles.formLabel}>Current Position</Text>
-                <TextInput style={styles.formInput} placeholder="Your current role" placeholderTextColor="#999" value={applicationForm.currentPosition} onChangeText={t => handleInputChange("currentPosition", t)} />
+                <Text style={styles.formLabel}>current position</Text>
+                <TextInput style={styles.formInput} placeholder="Your current role" placeholderTextColor={T.textFaint} value={applicationForm.currentPosition} onChangeText={t => handleInputChange("currentPosition", t)} />
 
-                <Text style={styles.formLabel}>Years of Experience</Text>
-                <TextInput style={styles.formInput} placeholder="e.g., 5" placeholderTextColor="#999" keyboardType="numeric" value={applicationForm.yearsOfExperience} onChangeText={t => handleInputChange("yearsOfExperience", t)} />
+                <Text style={styles.formLabel}>years of experience</Text>
+                <TextInput style={styles.formInput} placeholder="e.g., 5" placeholderTextColor={T.textFaint} keyboardType="numeric" value={applicationForm.yearsOfExperience} onChangeText={t => handleInputChange("yearsOfExperience", t)} />
 
-                <Text style={styles.formLabel}>Expected Salary</Text>
-                <TextInput style={styles.formInput} placeholder="e.g., $80,000 - $100,000" placeholderTextColor="#999" value={applicationForm.expectedSalary} onChangeText={t => handleInputChange("expectedSalary", t)} />
+                <Text style={styles.formLabel}>expected salary</Text>
+                <TextInput style={styles.formInput} placeholder="e.g., $80,000 - $100,000" placeholderTextColor={T.textFaint} value={applicationForm.expectedSalary} onChangeText={t => handleInputChange("expectedSalary", t)} />
 
-                <Text style={styles.formLabel}>Notice Period</Text>
-                <TextInput style={styles.formInput} placeholder="e.g., 2 weeks" placeholderTextColor="#999" value={applicationForm.noticePeriod} onChangeText={t => handleInputChange("noticePeriod", t)} />
+                <Text style={styles.formLabel}>notice period</Text>
+                <TextInput style={styles.formInput} placeholder="e.g., 2 weeks" placeholderTextColor={T.textFaint} value={applicationForm.noticePeriod} onChangeText={t => handleInputChange("noticePeriod", t)} />
 
                 <Text style={styles.formLabel}>Cover Letter *</Text>
                 <TextInput
                   style={[styles.formInput, styles.formTextArea, validationErrors.coverLetter && styles.formInputError]}
                   placeholder="Why are you a good fit for this role?"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={T.textFaint}
                   multiline
                   numberOfLines={5}
                   value={applicationForm.coverLetter}
@@ -1830,25 +1838,25 @@ const Career = ({ navigation }) => {
                 />
                 {validationErrors.coverLetter && <Text style={styles.errorText}>{validationErrors.coverLetter}</Text>}
 
-                <Text style={styles.formLabel}>LinkedIn URL</Text>
-                <TextInput style={styles.formInput} placeholder="https://linkedin.com/in/yourprofile" placeholderTextColor="#999" autoCapitalize="none" value={applicationForm.linkedInUrl} onChangeText={t => handleInputChange("linkedInUrl", t)} />
+                <Text style={styles.formLabel}>linkedin url</Text>
+                <TextInput style={styles.formInput} placeholder="https://linkedin.com/in/yourprofile" placeholderTextColor={T.textFaint} autoCapitalize="none" value={applicationForm.linkedInUrl} onChangeText={t => handleInputChange("linkedInUrl", t)} />
 
                 <Text style={styles.formLabel}>Resume *</Text>
                 <TouchableOpacity
                   style={[styles.resumeBtn, validationErrors.resume && styles.resumeBtnError]}
                   onPress={pickResume}
                 >
-                  <Ionicons name="document-attach-outline" size={20} color={validationErrors.resume ? "#ef4444" : "#f9c349"} />
+                  <Ionicons name="document-attach-outline" size={20} color={validationErrors.resume ? T.danger : T.yellow} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.resumeBtnText}>{selectedResume ? selectedResume.name : "Upload Resume (PDF/DOC/DOCX)"}</Text>
                     {selectedResume && <Text style={styles.resumeSize}>{(selectedResume.size / 1024).toFixed(1)} KB</Text>}
                   </View>
                   {selectedResume ? (
                     <TouchableOpacity onPress={() => setSelectedResume(null)}>
-                      <Ionicons name="close-circle" size={18} color="#ef4444" />
+                      <Ionicons name="close-circle" size={18} color={T.danger} />
                     </TouchableOpacity>
                   ) : (
-                    <Ionicons name="cloud-upload-outline" size={18} color="#999" />
+                    <Ionicons name="cloud-upload-outline" size={18} color={T.textFaint} />
                   )}
                 </TouchableOpacity>
                 {validationErrors.resume && <Text style={styles.errorText}>{validationErrors.resume}</Text>}
@@ -1863,11 +1871,11 @@ const Career = ({ navigation }) => {
                 <TouchableOpacity style={styles.submitBtn} onPress={handleApply} disabled={submitting}>
                   <View style={styles.submitBtnGradient}>
                     {submitting ? (
-                      <ActivityIndicator color="#fff" size="small" />
+                      <ActivityIndicator color={T.white} size="small" />
                     ) : (
                       <>
-                        <Text style={styles.submitBtnText}>Submit Application</Text>
-                        <Ionicons name="paper-plane" size={16} color="#fff" />
+                        <Text style={styles.submitBtnText}>submit application</Text>
+                        <Ionicons name="paper-plane" size={16} color={T.white} />
                       </>
                     )}
                   </View>
@@ -1875,11 +1883,11 @@ const Career = ({ navigation }) => {
 
                 <View style={styles.modalButtonRow}>
                   <TouchableOpacity style={styles.shareBtn} onPress={() => shareJob(selectedJob)}>
-                    <Ionicons name="share-social-outline" size={18} color="#1a1a1a" />
-                    <Text style={styles.shareBtnText}>Share</Text>
+                    <Ionicons name="share-social-outline" size={18} color={T.ink} />
+                    <Text style={styles.shareBtnText}>share</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
-                    <Text style={styles.cancelBtnText}>Cancel</Text>
+                    <Text style={styles.cancelBtnText}>cancel</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1893,52 +1901,52 @@ const Career = ({ navigation }) => {
 
 // ==================== WEBVIEW STYLES ====================
 const webViewStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff' },
+  container: { flex: 1, backgroundColor: T.card },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#ffffff',
+    borderBottomColor: T.line,
+    backgroundColor: T.card,
     gap: 6,
   },
   headerBtn: {
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerCenter: { flex: 1, alignItems: 'center', paddingHorizontal: 4 },
-  headerTitle: { fontSize: 14, fontWeight: '800', color: '#1a1a1a' },
-  headerUrl: { fontSize: 10, color: '#999', fontWeight: '500', marginTop: 1 },
+  headerTitle: { fontSize: 14, fontFamily: F.bodyBold, color: T.ink },
+  headerUrl: { fontSize: 10, color: T.textFaint, fontFamily: F.bodyMedium, marginTop: 1 },
   headerActions: { flexDirection: 'row', gap: 4 },
   progressTrack: {
     height: 3,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: T.sand,
     width: '100%',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
   },
-  webview: { flex: 1, backgroundColor: '#ffffff' },
+  webview: { flex: 1, backgroundColor: T.card },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
   },
-  loadingText: { marginTop: 12, fontSize: 13, color: '#999', fontWeight: '500' },
+  loadingText: { marginTop: 12, fontSize: 13, color: T.textFaint, fontFamily: F.bodyMedium },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
   },
   errorIconCircle: {
     width: 90,
@@ -1951,8 +1959,8 @@ const webViewStyles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#fdebd0',
   },
-  errorTitle: { fontSize: 20, fontWeight: '800', color: '#1a1a1a', marginBottom: 6 },
-  errorSubtitle: { fontSize: 13, color: '#999', textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  errorTitle: { fontSize: 20, fontFamily: F.heading, color: T.ink, marginBottom: 6 },
+  errorSubtitle: { fontSize: 13, fontFamily: F.body, color: T.textFaint, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
   errorActions: { flexDirection: 'row', gap: 10 },
   retryBtn: {
     flexDirection: 'row',
@@ -1961,11 +1969,11 @@ const webViewStyles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 11,
     borderRadius: 12,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: T.sand,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: T.line,
   },
-  retryText: { fontWeight: '700', color: '#1a1a1a', fontSize: 13 },
+  retryText: { fontFamily: F.bodyBold, color: T.ink, fontSize: 13 },
   openBrowserBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1973,151 +1981,151 @@ const webViewStyles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 11,
     borderRadius: 12,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: T.ink,
   },
-  openBrowserText: { fontWeight: '700', color: '#fff', fontSize: 13 },
+  openBrowserText: { fontFamily: F.bodyBold, color: T.white, fontSize: 13 },
 });
 
 // ==================== COMPLETE STYLES ====================
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffff" },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f0f0f0', backgroundColor: '#fff' },
-  headerBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center', position: 'relative' },
+  container: { flex: 1, backgroundColor: T.paper },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: T.paper },
+  headerBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: T.card, borderWidth: 1, borderColor: T.line, justifyContent: 'center', alignItems: 'center', position: 'relative' },
   headerCenter: { alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#1a1a1a' },
-  headerSub: { fontSize: 11, color: '#999', fontWeight: '500', marginTop: -2 },
-  headerBadge: { position: 'absolute', top: -4, right: -4, backgroundColor: '#f9c349', width: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center' },
-  headerBadgeText: { color: '#1a1a1a', fontSize: 9, fontWeight: '900' },
+  headerTitle: { fontSize: 26, fontFamily: F.heading, letterSpacing: -0.6, color: T.ink },
+  headerSub: { fontSize: 12.5, color: T.textMuted, fontFamily: F.body, marginTop: 0 },
+  headerBadge: { position: 'absolute', top: -4, right: -4, backgroundColor: T.yellow, width: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center' },
+  headerBadgeText: { color: T.ink, fontSize: 9, fontFamily: F.bodyBold },
   searchWrapper: { paddingHorizontal: 14, marginTop: 8, marginBottom: 4 },
-  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8f8f8', borderRadius: 14, paddingHorizontal: 14, height: 46, borderWidth: 1, borderColor: '#f0f0f0' },
-  searchInput: { flex: 1, marginLeft: 8, fontSize: 14, color: '#1a1a1a' },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: T.sand, borderRadius: 14, paddingHorizontal: 14, height: 46, borderWidth: 1, borderColor: T.line },
+  searchInput: { flex: 1, marginLeft: 8, fontSize: 14, fontFamily: F.body, color: T.ink },
   filterIcon: { padding: 6, position: 'relative' },
-  filterDot: { position: 'absolute', top: 3, right: 3, width: 7, height: 7, borderRadius: 4, backgroundColor: '#f9c349' },
+  filterDot: { position: 'absolute', top: 3, right: 3, width: 7, height: 7, borderRadius: 4, backgroundColor: T.yellow },
   listWrap: { flex: 1 },
   listContainer: { padding: 14, paddingBottom: 30 },
   listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, paddingHorizontal: 4 },
-  resultCount: { fontSize: 12, color: '#999', fontWeight: '500' },
-  activeFilterBadge: { backgroundColor: '#f9c34920', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
-  activeFilterText: { fontSize: 10, color: '#f9c349', fontWeight: '600' },
-  card: { backgroundColor: '#fff', borderRadius: 20, padding: 18, marginBottom: 14, borderWidth: 2, borderColor: '#f0f0f0', position: 'relative' },
-  appliedBanner: { position: 'absolute', top: 12, right: 12, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#10b98115', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, zIndex: 1, borderWidth: 1, borderColor: '#10b98130' },
-  appliedBannerText: { fontSize: 10, fontWeight: '700', color: '#10b981' },
+  resultCount: { fontSize: 12, color: T.textFaint, fontFamily: F.bodyMedium },
+  activeFilterBadge: { backgroundColor: T.yellowSoft, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
+  activeFilterText: { fontSize: 10, color: T.yellow, fontFamily: F.bodySemi },
+  card: { backgroundColor: T.card, borderRadius: 20, padding: 18, marginBottom: 14, borderWidth: 2, borderColor: T.line, position: 'relative' },
+  appliedBanner: { position: 'absolute', top: 12, right: 12, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: T.successBg, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, zIndex: 1, borderWidth: 1, borderColor: T.success },
+  appliedBannerText: { fontSize: 10, fontFamily: F.bodyBold, color: T.success },
   cardCompHeader: { marginBottom: 10, marginTop: 4 },
   companyNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  companyDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#f9c349' },
-  companyNameText: { fontSize: 13, fontWeight: '700', color: '#f9c349' },
-  jobTitle: { fontSize: 17, fontWeight: '800', color: '#1a1a1a', lineHeight: 22 },
-  departmentText: { fontSize: 12, color: '#999', fontWeight: '600', marginTop: 2 },
+  companyDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: T.yellow },
+  companyNameText: { fontSize: 13, fontFamily: F.bodyBold, color: T.yellow },
+  jobTitle: { fontSize: 17, fontFamily: F.bodyBold, color: T.ink, lineHeight: 22 },
+  departmentText: { fontSize: 12, color: T.textFaint, fontFamily: F.bodySemi, marginTop: 2 },
   badgeRow: { flexDirection: 'row', gap: 8, marginBottom: 10, flexWrap: 'wrap' },
-  tdcBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#1a1a1a', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
-  tdcBadgeText: { fontSize: 9, color: '#f9c349', fontWeight: '800' },
-  externalBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#3b82f615', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: '#3b82f630' },
-  externalBadgeText: { fontSize: 9, color: '#3b82f6', fontWeight: '800' },
-  typeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#f9c34915', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#f9c34930' },
-  typeBadgeText: { fontSize: 10, color: '#1a1a1a', fontWeight: '700' },
+  tdcBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: T.ink, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
+  tdcBadgeText: { fontSize: 9, color: T.yellow, fontFamily: F.bodyBold },
+  externalBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: T.sand, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: T.ink },
+  externalBadgeText: { fontSize: 9, color: T.ink, fontFamily: F.bodyBold },
+  typeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: T.yellowSoft, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: T.line },
+  typeBadgeText: { fontSize: 10, color: T.ink, fontFamily: F.bodyBold },
   expBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#8b5cf615', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#8b5cf630' },
-  expBadgeText: { fontSize: 10, color: '#8b5cf6', fontWeight: '700' },
-  locTypeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#10b98115', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#10b98130' },
-  locTypeBadgeText: { fontSize: 10, color: '#10b981', fontWeight: '700' },
+  expBadgeText: { fontSize: 10, color: '#8b5cf6', fontFamily: F.bodyBold },
+  locTypeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: T.successBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: T.success },
+  locTypeBadgeText: { fontSize: 10, color: T.success, fontFamily: F.bodyBold },
   infoRow: { flexDirection: 'row', marginBottom: 6, flexWrap: 'wrap', gap: 14 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1 },
-  metaText: { fontSize: 12, color: '#666', fontWeight: '500', flexShrink: 1 },
-  metaTextLink: { color: '#f9c349', fontWeight: '700', textDecorationLine: 'underline' },
+  metaText: { fontSize: 12, color: T.textMuted, fontFamily: F.bodyMedium, flexShrink: 1 },
+  metaTextLink: { color: T.yellow, fontFamily: F.bodyBold, textDecorationLine: 'underline' },
   skillsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8, marginBottom: 8 },
-  skillBadge: { backgroundColor: '#f8f8f8', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#f0f0f0' },
-  skillText: { fontSize: 10, color: '#666', fontWeight: '600' },
+  skillBadge: { backgroundColor: T.sand, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: T.line },
+  skillText: { fontSize: 10, color: T.textMuted, fontFamily: F.bodySemi },
   tagRow: { flexDirection: 'row', gap: 6, marginTop: 6 },
-  urgentBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ef444415', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  urgentText: { fontSize: 9, fontWeight: '700', color: '#ef4444' },
-  featuredBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#f9c34920', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  featuredText: { fontSize: 9, fontWeight: '700', color: '#f9c349' },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingTop: 10, marginTop: 8 },
-  viewDetailsLabel: { fontSize: 12, fontWeight: '800', color: '#1a1a1a' },
+  urgentBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: T.dangerBg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  urgentText: { fontSize: 9, fontFamily: F.bodyBold, color: T.danger },
+  featuredBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: T.yellowSoft, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  featuredText: { fontSize: 9, fontFamily: F.bodyBold, color: T.yellow },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: T.line, paddingTop: 10, marginTop: 8 },
+  viewDetailsLabel: { fontSize: 12, fontFamily: F.bodyBold, color: T.ink },
   centerSection: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
-  loadingText: { marginTop: 10, fontSize: 13, color: '#999' },
-  errorTitle: { marginTop: 10, fontSize: 16, fontWeight: '700', color: '#1a1a1a' },
+  loadingText: { marginTop: 10, fontSize: 13, fontFamily: F.body, color: T.textFaint },
+  errorTitle: { marginTop: 10, fontSize: 16, fontFamily: F.bodyBold, color: T.ink },
   retryBtn: { marginTop: 16, borderRadius: 12, overflow: 'hidden' },
-  retryGradient: { paddingHorizontal: 24, paddingVertical: 10, backgroundColor: '#1a1a1a' },
-  retryText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  retryGradient: { paddingHorizontal: 24, paddingVertical: 10, backgroundColor: T.ink },
+  retryText: { color: T.white, fontFamily: F.bodyBold, fontSize: 13 },
   emptyState: { alignItems: 'center', paddingVertical: 40 },
-  emptyStateText: { fontSize: 14, fontWeight: '600', color: '#1a1a1a', marginTop: 8 },
-  filterModalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-  filterModalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: height * 0.7 },
-  modalDragHandle: { width: 40, height: 5, backgroundColor: '#e0e0e0', borderRadius: 3, alignSelf: 'center', marginBottom: 16 },
-  closeXButton: { position: 'absolute', top: 12, right: 16, zIndex: 10, width: 36, height: 36, borderRadius: 18, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center' },
-  filterModalTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a', marginBottom: 16 },
+  emptyStateText: { fontSize: 14, fontFamily: F.bodySemi, color: T.ink, marginTop: 8 },
+  filterModalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: T.overlay },
+  filterModalContent: { backgroundColor: T.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: height * 0.7 },
+  modalDragHandle: { width: 40, height: 5, backgroundColor: T.sand, borderRadius: 3, alignSelf: 'center', marginBottom: 16 },
+  closeXButton: { position: 'absolute', top: 12, right: 16, zIndex: 10, width: 36, height: 36, borderRadius: 18, backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center' },
+  filterModalTitle: { fontSize: 18, fontFamily: F.headingBold, color: T.ink, marginBottom: 16 },
   filterGroup: { marginBottom: 16 },
-  filterLabel: { fontSize: 13, fontWeight: '700', color: '#1a1a1a', marginBottom: 8 },
+  filterLabel: { fontSize: 13, fontFamily: F.bodyBold, color: T.ink, marginBottom: 8 },
   filterOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, borderWidth: 1, borderColor: '#f0f0f0', backgroundColor: '#fafafa' },
-  filterChipActive: { backgroundColor: '#f9c349', borderColor: '#f9c349' },
-  filterChipText: { fontSize: 12, color: '#666', fontWeight: '500' },
-  filterChipTextActive: { color: '#1a1a1a', fontWeight: '700' },
-  filterActions: { flexDirection: 'row', gap: 10, marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
-  clearFiltersBtn: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#f0f0f0' },
-  clearFiltersText: { fontWeight: '600', color: '#999', fontSize: 13 },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, borderWidth: 1, borderColor: T.line, backgroundColor: T.sand },
+  filterChipActive: { backgroundColor: T.yellow, borderColor: T.yellow },
+  filterChipText: { fontSize: 12, color: T.textMuted, fontFamily: F.bodyMedium },
+  filterChipTextActive: { color: T.ink, fontFamily: F.bodyBold },
+  filterActions: { flexDirection: 'row', gap: 10, marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: T.line },
+  clearFiltersBtn: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: T.line },
+  clearFiltersText: { fontFamily: F.bodySemi, color: T.textFaint, fontSize: 13 },
   applyFiltersBtn: { flex: 1, borderRadius: 12, overflow: 'hidden' },
-  applyFiltersGradient: { paddingVertical: 12, alignItems: 'center', backgroundColor: '#1a1a1a' },
-  applyFiltersText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  applicationsModalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-  applicationsModalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: height * 0.8 },
-  applicationsModalTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a', marginBottom: 2 },
-  applicationsModalCount: { fontSize: 11, color: '#999', marginBottom: 16 },
-  applicationCard: { backgroundColor: '#fafafa', borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#f0f0f0' },
+  applyFiltersGradient: { paddingVertical: 12, alignItems: 'center', backgroundColor: T.ink },
+  applyFiltersText: { color: T.white, fontFamily: F.bodyBold, fontSize: 13 },
+  applicationsModalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: T.overlay },
+  applicationsModalContent: { backgroundColor: T.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: height * 0.8 },
+  applicationsModalTitle: { fontSize: 18, fontFamily: F.headingBold, color: T.ink, marginBottom: 2 },
+  applicationsModalCount: { fontSize: 11, fontFamily: F.body, color: T.textFaint, marginBottom: 16 },
+  applicationCard: { backgroundColor: T.sand, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: T.line },
   appHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  appJobTitle: { fontSize: 14, fontWeight: '700', color: '#1a1a1a' },
-  appCompany: { fontSize: 11, color: '#999', marginTop: 2 },
+  appJobTitle: { fontSize: 14, fontFamily: F.bodyBold, color: T.ink },
+  appCompany: { fontSize: 11, fontFamily: F.body, color: T.textFaint, marginTop: 2 },
   appStatus: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  appStatusText: { fontSize: 9, fontWeight: '700' },
+  appStatusText: { fontSize: 9, fontFamily: F.bodyBold },
   appDetails: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  appDetail: { fontSize: 11, color: '#666' },
-  appDate: { fontSize: 10, color: '#999' },
-  interviewInfo: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
-  interviewInfoInner: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#f9c34910', padding: 8, borderRadius: 8 },
-  interviewText: { fontSize: 11, color: '#f9c349', fontWeight: '600', flex: 1 },
-  applicationsCloseBtn: { paddingVertical: 12, alignItems: 'center', borderTopWidth: 1, borderTopColor: '#f0f0f0', marginTop: 10 },
-  applicationsCloseText: { fontWeight: '600', color: '#999', fontSize: 14 },
-  interviewModalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
+  appDetail: { fontSize: 11, fontFamily: F.body, color: T.textMuted },
+  appDate: { fontSize: 10, fontFamily: F.body, color: T.textFaint },
+  interviewInfo: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: T.line },
+  interviewInfoInner: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: T.yellowSoft, padding: 8, borderRadius: 8 },
+  interviewText: { fontSize: 11, color: T.yellow, fontFamily: F.bodySemi, flex: 1 },
+  applicationsCloseBtn: { paddingVertical: 12, alignItems: 'center', borderTopWidth: 1, borderTopColor: T.line, marginTop: 10 },
+  applicationsCloseText: { fontFamily: F.bodySemi, color: T.textFaint, fontSize: 14 },
+  interviewModalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: T.overlay },
   interviewModalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  interviewModalContent: { backgroundColor: '#fff', borderRadius: 24, padding: 20, width: '90%', maxWidth: 400, maxHeight: '80%' },
-  interviewModalHandle: { width: 40, height: 5, backgroundColor: '#e0e0e0', borderRadius: 3, alignSelf: 'center', marginBottom: 16 },
+  interviewModalContent: { backgroundColor: T.card, borderRadius: 24, padding: 20, width: '90%', maxWidth: 400, maxHeight: '80%' },
+  interviewModalHandle: { width: 40, height: 5, backgroundColor: T.sand, borderRadius: 3, alignSelf: 'center', marginBottom: 16 },
   interviewModalHeader: { alignItems: 'center', marginBottom: 16 },
-  interviewModalIcon: { width: 56, height: 56, borderRadius: 20, backgroundColor: '#f9c34915', justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  interviewModalTitle: { fontSize: 18, fontWeight: '800', color: '#1a1a1a' },
-  interviewModalSubtitle: { fontSize: 12, color: '#999', marginTop: 2 },
-  interviewDetailCard: { backgroundColor: '#fafafa', borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#f0f0f0' },
+  interviewModalIcon: { width: 56, height: 56, borderRadius: 20, backgroundColor: T.yellowSoft, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  interviewModalTitle: { fontSize: 18, fontFamily: F.heading, color: T.ink },
+  interviewModalSubtitle: { fontSize: 12, fontFamily: F.body, color: T.textFaint, marginTop: 2 },
+  interviewDetailCard: { backgroundColor: T.sand, borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: T.line },
   interviewDetailRow: { flexDirection: 'row', marginBottom: 12, alignItems: 'flex-start' },
-  interviewDetailIcon: { width: 34, height: 34, borderRadius: 12, backgroundColor: '#f9c34910', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-  interviewDetailLabel: { fontSize: 10, color: '#999', fontWeight: '600', marginBottom: 2 },
-  interviewDetailValue: { fontSize: 13, color: '#1a1a1a', fontWeight: '500' },
+  interviewDetailIcon: { width: 34, height: 34, borderRadius: 12, backgroundColor: T.yellowSoft, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
+  interviewDetailLabel: { fontSize: 10, color: T.textFaint, fontFamily: F.bodySemi, marginBottom: 2 },
+  interviewDetailValue: { fontSize: 13, color: T.ink, fontFamily: F.bodyMedium },
   copyLinkBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  interviewLink: { fontSize: 11, color: '#f9c349', textDecorationLine: 'underline', flex: 1 },
-  interviewNotes: { fontSize: 12, color: '#666', lineHeight: 16 },
+  interviewLink: { fontSize: 11, fontFamily: F.body, color: T.yellow, textDecorationLine: 'underline', flex: 1 },
+  interviewNotes: { fontSize: 12, fontFamily: F.body, color: T.textMuted, lineHeight: 16 },
   interviewActions: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   interviewActionBtn: { flex: 1, borderRadius: 12, overflow: 'hidden' },
-  interviewActionGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, backgroundColor: '#f9c34915', borderRadius: 12, borderWidth: 1, borderColor: '#f9c34930' },
-  interviewActionText: { fontWeight: '600', color: '#f9c349', fontSize: 12 },
+  interviewActionGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, backgroundColor: T.yellowSoft, borderRadius: 12, borderWidth: 1, borderColor: T.line },
+  interviewActionText: { fontFamily: F.bodySemi, color: T.yellow, fontSize: 12 },
   interviewJoinBtn: { flex: 1, borderRadius: 12, overflow: 'hidden' },
   interviewJoinBtnDisabled: { opacity: 0.5 },
-  interviewJoinGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, backgroundColor: '#f9c349', borderRadius: 12 },
-  interviewJoinGradientDisabled: { backgroundColor: '#e0e0e0' },
-  interviewJoinText: { fontWeight: '600', color: '#fff', fontSize: 12 },
-  interviewJoinTextDisabled: { color: '#999' },
-  interviewCloseBtn: { paddingVertical: 10, alignItems: 'center', borderTopWidth: 1, borderTopColor: '#f0f0f0' },
-  interviewCloseText: { fontWeight: '600', color: '#999', fontSize: 13 },
-  applyModalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-  applyModalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: height * 0.9, paddingTop: 8 },
+  interviewJoinGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, backgroundColor: T.yellow, borderRadius: 12 },
+  interviewJoinGradientDisabled: { backgroundColor: T.sand },
+  interviewJoinText: { fontFamily: F.bodySemi, color: T.white, fontSize: 12 },
+  interviewJoinTextDisabled: { color: T.textFaint },
+  interviewCloseBtn: { paddingVertical: 10, alignItems: 'center', borderTopWidth: 1, borderTopColor: T.line },
+  interviewCloseText: { fontFamily: F.bodySemi, color: T.textFaint, fontSize: 13 },
+  applyModalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: T.overlay },
+  applyModalContent: { backgroundColor: T.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: height * 0.9, paddingTop: 8 },
   applyModalHeader: { alignItems: 'center', marginBottom: 16, paddingTop: 8 },
-  applyModalCompany: { fontSize: 13, fontWeight: '700', color: '#f9c349', marginBottom: 4 },
-  applyModalJobTitle: { fontSize: 20, fontWeight: '800', color: '#1a1a1a', textAlign: 'center', lineHeight: 26 },
-  applyModalJobMeta: { fontSize: 13, color: '#999', fontWeight: '600', marginTop: 4 },
+  applyModalCompany: { fontSize: 13, fontFamily: F.bodyBold, color: T.yellow, marginBottom: 4 },
+  applyModalJobTitle: { fontSize: 20, fontFamily: F.heading, color: T.ink, textAlign: 'center', lineHeight: 26 },
+  applyModalJobMeta: { fontSize: 13, color: T.textFaint, fontFamily: F.bodySemi, marginTop: 4 },
   applyModalMetaRow: { flexDirection: 'row', gap: 8, marginTop: 8, flexWrap: 'wrap', justifyContent: 'center' },
-  applyModalMetaBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#fafafa', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: '#f0f0f0' },
-  applyModalMetaText: { fontSize: 11, color: '#666', fontWeight: '600' },
-  applyModalSalary: { fontSize: 14, color: '#f9c349', fontWeight: '700', marginTop: 6 },
-  applyModalExp: { fontSize: 13, color: '#666', fontWeight: '600', marginTop: 6, marginLeft: 12 },
+  applyModalMetaBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: T.sand, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: T.line },
+  applyModalMetaText: { fontSize: 11, color: T.textMuted, fontFamily: F.bodySemi },
+  applyModalSalary: { fontSize: 14, color: T.yellow, fontFamily: F.bodyBold, marginTop: 6 },
+  applyModalExp: { fontSize: 13, color: T.textMuted, fontFamily: F.bodySemi, marginTop: 6, marginLeft: 12 },
   locTypeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
-  locTypeText: { fontSize: 12, color: '#f9c349', fontWeight: '600' },
+  locTypeText: { fontSize: 12, color: T.yellow, fontFamily: F.bodySemi },
   locationChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2127,66 +2135,66 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#f9c34940',
+    borderColor: T.line,
     marginTop: 10,
     maxWidth: '100%',
   },
   locationChipText: {
     fontSize: 12,
-    color: '#1a1a1a',
-    fontWeight: '700',
+    color: T.ink,
+    fontFamily: F.bodyBold,
     flexShrink: 1,
   },
-  statusBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 14, marginBottom: 12, marginHorizontal: 20, borderWidth: 1, borderColor: '#f0f0f0' },
+  statusBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 14, marginBottom: 12, marginHorizontal: 20, borderWidth: 1, borderColor: T.line },
   statusDot: { width: 10, height: 10, borderRadius: 5 },
-  statusBannerTitle: { fontSize: 11, color: '#999', fontWeight: '600' },
-  statusBannerStatus: { fontSize: 14, fontWeight: '800' },
+  statusBannerTitle: { fontSize: 11, color: T.textFaint, fontFamily: F.bodySemi },
+  statusBannerStatus: { fontSize: 14, fontFamily: F.bodyBold },
   statusBadgeLarge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  statusBadgeLargeText: { fontSize: 11, fontWeight: '700' },
-  interviewBanner: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#f9c34910', padding: 14, borderRadius: 14, marginBottom: 12, marginHorizontal: 20, borderWidth: 1, borderColor: '#f9c34920' },
-  interviewBannerIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#f9c34920', justifyContent: 'center', alignItems: 'center' },
-  interviewBannerTitle: { fontSize: 12, fontWeight: '700', color: '#1a1a1a' },
-  interviewBannerDate: { fontSize: 11, color: '#f9c349', fontWeight: '600', marginTop: 2 },
-  applicationInfoBox: { backgroundColor: '#fafafa', padding: 12, borderRadius: 12, marginTop: 10, width: '100%', borderWidth: 1, borderColor: '#f0f0f0' },
+  statusBadgeLargeText: { fontSize: 11, fontFamily: F.bodyBold },
+  interviewBanner: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: T.yellowSoft, padding: 14, borderRadius: 14, marginBottom: 12, marginHorizontal: 20, borderWidth: 1, borderColor: T.line },
+  interviewBannerIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: T.yellowSoft, justifyContent: 'center', alignItems: 'center' },
+  interviewBannerTitle: { fontSize: 12, fontFamily: F.bodyBold, color: T.ink },
+  interviewBannerDate: { fontSize: 11, color: T.yellow, fontFamily: F.bodySemi, marginTop: 2 },
+  applicationInfoBox: { backgroundColor: T.sand, padding: 12, borderRadius: 12, marginTop: 10, width: '100%', borderWidth: 1, borderColor: T.line },
   applicationInfoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 6 },
-  applicationInfoText: { fontSize: 12, color: '#666', flex: 1, lineHeight: 18 },
-  detailSection: { marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  sectionHeading: { fontSize: 14, fontWeight: '800', color: '#1a1a1a', marginBottom: 10 },
-  descriptionText: { fontSize: 13, color: '#666', lineHeight: 20 },
+  applicationInfoText: { fontSize: 12, fontFamily: F.body, color: T.textMuted, flex: 1, lineHeight: 18 },
+  detailSection: { marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: T.line },
+  sectionHeading: { fontSize: 14, fontFamily: F.bodyBold, color: T.ink, marginBottom: 10 },
+  descriptionText: { fontSize: 13, fontFamily: F.body, color: T.textMuted, lineHeight: 20 },
   detailItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8 },
-  detailItemText: { fontSize: 13, color: '#666', flex: 1, lineHeight: 18 },
+  detailItemText: { fontSize: 13, fontFamily: F.body, color: T.textMuted, flex: 1, lineHeight: 18 },
   benefitsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  benefitItem: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#f9c34910', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: '#f9c34920' },
-  benefitItemText: { fontSize: 11, color: '#666', fontWeight: '600' },
+  benefitItem: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: T.yellowSoft, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: T.line },
+  benefitItemText: { fontSize: 11, color: T.textMuted, fontFamily: F.bodySemi },
   skillsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  skillBadgeLarge: { backgroundColor: '#f8f8f8', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: '#f0f0f0' },
-  skillBadgeLargeText: { fontSize: 11, color: '#666', fontWeight: '600' },
-  companyInfoText: { fontSize: 13, color: '#1a1a1a', fontWeight: '600', marginBottom: 4 },
-  companyLink: { fontSize: 12, color: '#3b82f6', textDecorationLine: 'underline' },
+  skillBadgeLarge: { backgroundColor: T.sand, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: T.line },
+  skillBadgeLargeText: { fontSize: 11, color: T.textMuted, fontFamily: F.bodySemi },
+  companyInfoText: { fontSize: 13, color: T.ink, fontFamily: F.bodySemi, marginBottom: 4 },
+  companyLink: { fontSize: 12, fontFamily: F.body, color: T.ink, textDecorationLine: 'underline' },
   formSection: { marginTop: 8 },
-  formRequiredNote: { fontSize: 11, color: '#ef4444', fontWeight: '600', marginBottom: 12 },
-  formLabel: { fontSize: 12, fontWeight: '700', color: '#1a1a1a', marginBottom: 5, marginTop: 8 },
-  formInput: { borderWidth: 1, borderColor: '#f0f0f0', borderRadius: 12, padding: 12, fontSize: 13, marginBottom: 4, backgroundColor: '#fafafa', color: '#1a1a1a' },
-  formInputError: { borderColor: '#ef4444', backgroundColor: '#fef2f2' },
+  formRequiredNote: { fontSize: 11, color: T.danger, fontFamily: F.bodySemi, marginBottom: 12 },
+  formLabel: { fontSize: 12, fontFamily: F.bodyBold, color: T.ink, marginBottom: 5, marginTop: 8 },
+  formInput: { borderWidth: 1, borderColor: T.line, borderRadius: 12, padding: 12, fontSize: 13, fontFamily: F.body, marginBottom: 4, backgroundColor: T.sand, color: T.ink },
+  formInputError: { borderColor: T.danger, backgroundColor: T.dangerBg },
   formTextArea: { height: 100, textAlignVertical: 'top' },
   formRow: { flexDirection: 'row', gap: 10 },
   formHalf: { flex: 1 },
-  errorText: { fontSize: 10, color: '#ef4444', fontWeight: '600', marginBottom: 6, marginLeft: 4 },
-  resumeBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1.5, borderColor: '#f0f0f0', borderStyle: 'dashed', marginBottom: 4, backgroundColor: '#fafafa' },
-  resumeBtnError: { borderColor: '#ef4444', backgroundColor: '#fef2f2' },
-  resumeBtnText: { fontSize: 13, color: '#666', fontWeight: '500', flex: 1 },
-  resumeSize: { fontSize: 10, color: '#999', marginTop: 2 },
-  progressBar: { height: 4, backgroundColor: '#f0f0f0', borderRadius: 2, marginBottom: 10, overflow: 'hidden', position: 'relative' },
-  progressFill: { height: '100%', backgroundColor: '#f9c349', borderRadius: 2 },
-  progressText: { position: 'absolute', top: -16, right: 0, fontSize: 10, color: '#999' },
+  errorText: { fontSize: 10, color: T.danger, fontFamily: F.bodySemi, marginBottom: 6, marginLeft: 4 },
+  resumeBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1.5, borderColor: T.line, borderStyle: 'dashed', marginBottom: 4, backgroundColor: T.sand },
+  resumeBtnError: { borderColor: T.danger, backgroundColor: T.dangerBg },
+  resumeBtnText: { fontSize: 13, color: T.textMuted, fontFamily: F.bodyMedium, flex: 1 },
+  resumeSize: { fontSize: 10, fontFamily: F.body, color: T.textFaint, marginTop: 2 },
+  progressBar: { height: 4, backgroundColor: T.sand, borderRadius: 2, marginBottom: 10, overflow: 'hidden', position: 'relative' },
+  progressFill: { height: '100%', backgroundColor: T.yellow, borderRadius: 2 },
+  progressText: { position: 'absolute', top: -16, right: 0, fontSize: 10, fontFamily: F.body, color: T.textFaint },
   submitBtn: { borderRadius: 14, overflow: 'hidden', marginBottom: 10, marginTop: 8 },
-  submitBtnGradient: { height: 50, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, backgroundColor: '#1a1a1a' },
-  submitBtnText: { color: '#fff', fontSize: 14, fontWeight: '800' },
+  submitBtnGradient: { height: 50, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, backgroundColor: T.ink },
+  submitBtnText: { color: T.white, fontSize: 14, fontFamily: F.bodyBold },
   modalButtonRow: { flexDirection: 'row', gap: 10, marginTop: 8 },
-  shareBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 44, borderRadius: 12, borderWidth: 1, borderColor: '#f0f0f0', gap: 6 },
-  shareBtnText: { fontWeight: '700', color: '#1a1a1a', fontSize: 13 },
-  cancelBtn: { flex: 1, height: 44, borderRadius: 12, backgroundColor: '#f8f8f8', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#f0f0f0' },
-  cancelBtnText: { fontWeight: '700', color: '#999', fontSize: 13 },
+  shareBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 44, borderRadius: 12, borderWidth: 1, borderColor: T.line, gap: 6 },
+  shareBtnText: { fontFamily: F.bodyBold, color: T.ink, fontSize: 13 },
+  cancelBtn: { flex: 1, height: 44, borderRadius: 12, backgroundColor: T.paper, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: T.line },
+  cancelBtnText: { fontFamily: F.bodyBold, color: T.textFaint, fontSize: 13 },
   expiredBanner: {
     position: 'absolute',
     top: 10,
@@ -2194,39 +2202,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#fef2f2',
+    backgroundColor: T.dangerBg,
     borderWidth: 1,
-    borderColor: '#ef4444',
+    borderColor: T.danger,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 12,
     zIndex: 10,
   },
-  expiredBannerText: { color: '#ef4444', fontSize: 10, fontWeight: '800' },
+  expiredBannerText: { color: T.danger, fontSize: 10, fontFamily: F.bodyBold },
   optimizeCardBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fff8e7',
     borderWidth: 1,
-    borderColor: '#f9c349',
+    borderColor: T.yellow,
     paddingVertical: 8,
     borderRadius: 10,
     marginTop: 10,
     marginBottom: 4,
     marginHorizontal: 4,
   },
-  optimizeCardBtnText: { color: '#1a1a1a', fontSize: 12, fontWeight: '700', marginLeft: 6 },
-  topTabsWrapper: {
-    paddingVertical: 6,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f5',
-  },
+  optimizeCardBtnText: { color: T.ink, fontSize: 12, fontFamily: F.bodyBold, marginLeft: 6 },
+  matchBadge: { height: 24, paddingHorizontal: 9, borderRadius: 12, backgroundColor: T.yellowSoft, justifyContent: 'center' },
+  matchBadgeText: { fontFamily: F.bodyBold, fontSize: 11.5, color: T.ink },
+
+  // Segmented control (Career design)
+  topTabsWrapper: { paddingVertical: 10, paddingHorizontal: 16, backgroundColor: T.paper },
   topTabsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 10,
+    gap: 4,
+    padding: 4,
+    borderRadius: 24,
+    backgroundColor: T.lineSoft,
     alignItems: 'center',
   },
   topTabChip: {
@@ -2235,36 +2244,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 9,
-    borderRadius: 22,
-    backgroundColor: '#f8f8f8',
-    borderWidth: 1,
-    borderColor: '#eee',
+    height: 40,
+    borderRadius: 20,
   },
-  topTabChipActive: { backgroundColor: '#f9c349', borderColor: '#f9c349' },
-  topTabChipTdcActive: { backgroundColor: '#f9c349', borderColor: '#1a1a1a' },
-  topTabChipText: { fontSize: 12, fontWeight: '600', color: '#666' },
-  topTabChipTextActive: { color: '#1a1a1a', fontWeight: '800' },
-  topTabChipTdcTextActive: { color: '#1a1a1a', fontWeight: '900' },
+  topTabChipActive: { backgroundColor: T.ink },
+  topTabChipTdcActive: { backgroundColor: T.ink },
+  topTabChipText: { fontSize: 14, fontFamily: F.bodySemi, color: T.ink },
+  topTabChipTextActive: { color: T.white, fontFamily: F.bodyBold },
+  topTabChipTdcTextActive: { color: T.white, fontFamily: F.bodyBold },
   showMoreButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 14,
     marginHorizontal: 16,
     marginTop: 12,
     marginBottom: 28,
-    shadowColor: '#f9c349',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 2,
   },
-  showMoreButtonText: { color: '#1a1a1a', fontSize: 14, fontWeight: '800', letterSpacing: 0.3 },
+  showMoreButtonText: { color: T.ink, fontSize: 14, fontFamily: F.bodyBold, letterSpacing: 0.3 },
 });
 
 export default Career;

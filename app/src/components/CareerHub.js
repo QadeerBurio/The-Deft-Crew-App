@@ -15,11 +15,12 @@ import {
   Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import axios from 'axios';
 
+import { color as T, font as F } from "../theme/tokens";
 const { width, height } = Dimensions.get('window');
 
 // API Configuration
@@ -35,7 +36,7 @@ const ParticleBackground = () => {
     opacity: new Animated.Value(0),
     duration: 2500 + Math.random() * 3500,
     delay: Math.random() * 3000,
-    color: ['#f9c349', '#1e3a8a', '#6366f1', '#10b981', '#f43f5e'][Math.floor(Math.random() * 5)],
+    color: [T.yellow, '#1e3a8a', '#6366f1', T.success, '#f43f5e'][Math.floor(Math.random() * 5)],
   }))).current;
 
   useEffect(() => {
@@ -293,13 +294,13 @@ const ErrorState = ({ error, onRetry }) => {
       <Animated.View style={[styles.errorContainer, { opacity: opacityAnim, transform: [{ scale: scaleAnim }] }]}>
         <View style={styles.errorIconContainer}>
           <LinearGradient
-            colors={['#FEE2E2', '#FECACA']}
+            colors={[T.dangerBg, '#FECACA']}
             style={styles.errorIconBg}
           >
-            <MaterialCommunityIcons name="cloud-off-outline" size={48} color="#EF4444" />
+            <MaterialCommunityIcons name="cloud-off-outline" size={48} color={T.danger} />
           </LinearGradient>
         </View>
-        <Text style={styles.errorTitle}>Connection Error</Text>
+        <Text style={styles.errorTitle}>connection error</Text>
         <Text style={styles.errorMessage}>{error || "Failed to load opportunities. Please check your internet connection."}</Text>
         <TouchableOpacity 
           style={styles.retryButton} 
@@ -307,13 +308,13 @@ const ErrorState = ({ error, onRetry }) => {
           activeOpacity={0.8}
         >
           <LinearGradient
-            colors={['#f9c349', '#f8c14a']}
+            colors={[T.yellow, '#f8c14a']}
             style={styles.retryGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
-            <Ionicons name="refresh" size={18} color="#000" style={{ marginRight: 8 }} />
-            <Text style={styles.retryText}>Try Again</Text>
+            <Ionicons name="refresh" size={18} color={T.ink} style={{ marginRight: 8 }} />
+            <Text style={styles.retryText}>try again</Text>
           </LinearGradient>
         </TouchableOpacity>
       </Animated.View>
@@ -324,6 +325,8 @@ const ErrorState = ({ error, onRetry }) => {
 // ─── Main Career Hub ──────────────────────────────────────────────────
 const CareerHub = ({ navigation }) => {
   const [recentJobs, setRecentJobs] = useState([]);
+  // Real count from /jobs/public/all ("total"); null → the number is hidden
+  const [jobsTotal, setJobsTotal] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -441,6 +444,7 @@ const CareerHub = ({ navigation }) => {
       }
       
       setRecentJobs(jobs.slice(0, 3));
+      setJobsTotal(typeof response.data?.total === 'number' ? response.data.total : null);
       setDataLoaded(true);
       setError(null);
       setLoading(false);
@@ -515,12 +519,12 @@ const CareerHub = ({ navigation }) => {
   // Helper function to get job type color
   const getJobTypeColor = (type) => {
     const typeLower = type?.toLowerCase() || '';
-    if (typeLower.includes('full') || typeLower.includes('full-time')) return '#f9c349';
-    if (typeLower.includes('part') || typeLower.includes('part-time')) return '#3b82f6';
+    if (typeLower.includes('full') || typeLower.includes('full-time')) return T.yellow;
+    if (typeLower.includes('part') || typeLower.includes('part-time')) return T.ink;
     if (typeLower.includes('contract')) return '#8b5cf6';
-    if (typeLower.includes('intern')) return '#10b981';
+    if (typeLower.includes('intern')) return T.success;
     if (typeLower.includes('remote')) return '#f43f5e';
-    return '#64748B';
+    return T.textMuted;
   };
 
   // Helper function to get job type display name
@@ -573,8 +577,8 @@ const CareerHub = ({ navigation }) => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor="#f9c349"
-            colors={['#f9c349']}
+            tintColor={T.yellow}
+            colors={[T.yellow]}
             progressViewOffset={20}
           />
         }
@@ -591,7 +595,7 @@ const CareerHub = ({ navigation }) => {
             <View style={styles.headerTop}>
               <View style={styles.headerBadge}>
                 <LinearGradient
-                  colors={['#f9c349', '#f8c14a']}
+                  colors={[T.yellow, '#f8c14a']}
                   style={styles.headerBadgeGradient}
                 >
                   <Text style={styles.headerBadgeText}>tdc</Text>
@@ -600,9 +604,9 @@ const CareerHub = ({ navigation }) => {
               
             </View>
             
-            <Text style={styles.welcomeText}>Welcome to </Text>
+            <Text style={styles.welcomeText}>welcome to </Text>
             <Text style={styles.mainTitle}>
-              Career<Text style={styles.titleAccent}>Hub</Text>
+              career<Text style={styles.titleAccent}>hub</Text>
             </Text>
             <Text style={styles.subtitle}>
               Discover opportunities that match your ambition
@@ -617,19 +621,19 @@ const CareerHub = ({ navigation }) => {
               onPress={() => handleCardPress('Career')}
             >
               <LinearGradient
-                colors={['#FFFFFF', '#F8FAFC']}
+                colors={[T.white, T.sand]}
                 style={styles.bigCard}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
                 <View style={[styles.iconCircle, styles.iconYellow]}>
-                  <MaterialCommunityIcons name="briefcase-search" size={24} color="#FFF" />
+                  <MaterialCommunityIcons name="briefcase-search" size={24} color={T.white} />
                 </View>
-                <Text style={styles.cardTitle}>Find Jobs</Text>
-                <Text style={styles.cardSub}>Browse 50+ Roles</Text>
+                <Text style={styles.cardTitle}>find jobs</Text>
+                <Text style={styles.cardSub}>{jobsTotal ? `browse ${jobsTotal} roles` : 'browse open roles'}</Text>
                 <View style={styles.cardAccent}>
-                  <Ionicons name="trending-up" size={14} color="#f9c349" />
-                  <Text style={styles.cardAccentText}>Active Hiring</Text>
+                  <Ionicons name="trending-up" size={14} color={T.yellow} />
+                  <Text style={styles.cardAccentText}>active hiring</Text>
                 </View>
               </LinearGradient>
             </AnimatedCard>
@@ -640,19 +644,19 @@ const CareerHub = ({ navigation }) => {
               onPress={() => handleCardPress('Exchange')}
             >
               <LinearGradient
-                colors={['#FFFFFF', '#F8FAFC']}
+                colors={[T.white, T.sand]}
                 style={styles.bigCard}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
                 <View style={[styles.iconCircle, styles.iconBlack]}>
-                  <FontAwesome5 name="globe-americas" size={20} color="#FFF" />
+                  <FontAwesome5 name="globe-americas" size={20} color={T.white} />
                 </View>
-                <Text style={styles.cardTitle}>Study Abroad</Text>
-                <Text style={styles.cardSub}>Global Programs</Text>
+                <Text style={styles.cardTitle}>study abroad</Text>
+                <Text style={styles.cardSub}>global programs</Text>
                 <View style={styles.cardAccent}>
-                  <Ionicons name="airplane" size={14} color="#000" />
-                  <Text style={styles.cardAccentText}>Explore Now</Text>
+                  <Ionicons name="airplane" size={14} color={T.ink} />
+                  <Text style={styles.cardAccentText}>explore now</Text>
                 </View>
               </LinearGradient>
             </AnimatedCard>
@@ -663,10 +667,10 @@ const CareerHub = ({ navigation }) => {
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
                 <View style={styles.sectionDot} />
-                <Text style={styles.sectionTitle}>Featured Program</Text>
+                <Text style={styles.sectionTitle}>featured program</Text>
               </View>
               <View style={styles.sectionBadge}>
-                <Text style={styles.sectionBadgeText}>HOT</Text>
+                <Text style={styles.sectionBadgeText}>hot</Text>
               </View>
             </View>
             
@@ -695,11 +699,11 @@ const CareerHub = ({ navigation }) => {
                   <View style={styles.bannerContent}>
                     <View style={styles.tag}>
                       <LinearGradient
-                        colors={['#f9c349', '#f8c14a']}
+                        colors={[T.yellow, '#f8c14a']}
                         style={styles.tagGradient}
                       >
-                        <Ionicons name="earth" size={12} color="#000" style={{ marginRight: 4 }} />
-                        <Text style={styles.tagText}>GLOBAL</Text>
+                        <Ionicons name="earth" size={12} color={T.ink} style={{ marginRight: 4 }} />
+                        <Text style={styles.tagText}>global</Text>
                       </LinearGradient>
                     </View>
                     <Text style={styles.bannerTitle}>Erasmus+</Text>
@@ -711,7 +715,7 @@ const CareerHub = ({ navigation }) => {
                       colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.05)']}
                       style={styles.bannerIconCircle}
                     >
-                      <Ionicons name="chevron-forward-circle" size={32} color="#FFF" />
+                      <Ionicons name="chevron-forward-circle" size={32} color={T.white} />
                     </LinearGradient>
                   </View>
                 </LinearGradient>
@@ -723,23 +727,23 @@ const CareerHub = ({ navigation }) => {
           <Animated.View style={{ opacity: headerFade }}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
-                <View style={[styles.sectionDot, { backgroundColor: '#f9c349' }]} />
-                <Text style={styles.sectionTitle}>Recent Opportunities</Text>
+                <View style={[styles.sectionDot, { backgroundColor: T.yellow }]} />
+                <Text style={styles.sectionTitle}>recent opportunities</Text>
               </View>
               <TouchableOpacity 
                 style={styles.seeAllButton}
                 onPress={() => handleCardPress('Career')}
               >
-                <Text style={styles.seeAll}>See All</Text>
-                <Ionicons name="chevron-forward" size={16} color="#f9c349" />
+                <Text style={styles.seeAll}>see all</Text>
+                <Ionicons name="chevron-forward" size={16} color={T.yellow} />
               </TouchableOpacity>
             </View>
 
             {recentJobs.length === 0 ? (
               <AnimatedCard delay={400}>
                 <View style={styles.emptyState}>
-                  <MaterialCommunityIcons name="briefcase-outline" size={48} color="#CBD5E1" />
-                  <Text style={styles.emptyText}>No opportunities available yet</Text>
+                  <MaterialCommunityIcons name="briefcase-outline" size={48} color={T.textFaint} />
+                  <Text style={styles.emptyText}>no opportunities available yet</Text>
                   <Text style={styles.emptySubText}>Check back soon for new positions</Text>
                 </View>
               </AnimatedCard>
@@ -760,7 +764,7 @@ const CareerHub = ({ navigation }) => {
                       fromDirection={index % 2 === 0 ? 'up' : 'left'}
                     >
                       <LinearGradient
-                        colors={['#FFFFFF', '#F8FAFC']}
+                        colors={[T.white, T.sand]}
                         style={styles.recentJobCard}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
@@ -788,14 +792,14 @@ const CareerHub = ({ navigation }) => {
                         {/* Department & Location */}
                         <View style={styles.jobMetaRow}>
                           <View style={styles.metaItem}>
-                            <Ionicons name={deptIcon} size={13} color="#64748B" />
+                            <Ionicons name={deptIcon} size={13} color={T.textMuted} />
                             <Text style={styles.metaText} numberOfLines={1}>
                               {job.department || 'General'}
                             </Text>
                           </View>
                           <View style={styles.metaDivider} />
                           <View style={styles.metaItem}>
-                            <Ionicons name="location-outline" size={13} color="#64748B" />
+                            <Ionicons name="location-outline" size={13} color={T.textMuted} />
                             <Text style={styles.metaText} numberOfLines={1}>
                               {job.location || 'Remote'}
                             </Text>
@@ -804,7 +808,7 @@ const CareerHub = ({ navigation }) => {
                             <>
                               <View style={styles.metaDivider} />
                               <View style={styles.metaItem}>
-                                <Ionicons name="cash-outline" size={13} color="#10b981" />
+                                <Ionicons name="cash-outline" size={13} color={T.success} />
                                 <Text style={[styles.metaText, styles.salaryText]} numberOfLines={1}>
                                   {job.salary}
                                 </Text>
@@ -832,7 +836,7 @@ const CareerHub = ({ navigation }) => {
                         {/* Footer */}
                         <View style={styles.jobFooter}>
                           <View style={styles.jobDate}>
-                            <Ionicons name="time-outline" size={11} color="#94A3B8" />
+                            <Ionicons name="time-outline" size={11} color={T.textFaint} />
                             <Text style={styles.jobDateText}>
                               {job.createdAt ? new Date(job.createdAt).toLocaleDateString('en-US', { 
                                 month: 'short', 
@@ -841,7 +845,7 @@ const CareerHub = ({ navigation }) => {
                             </Text>
                           </View>
                           <View style={styles.jobActionArrow}>
-                            <Ionicons name="arrow-forward" size={14} color="#FFF" />
+                            <Ionicons name="arrow-forward" size={14} color={T.white} />
                           </View>
                         </View>
                       </LinearGradient>
@@ -852,30 +856,17 @@ const CareerHub = ({ navigation }) => {
             )}
           </Animated.View>
 
-          {/* ── Stats ── */}
-          <AnimatedCard delay={700} style={{ marginHorizontal: 20, marginTop: 30 }}>
-            <LinearGradient
-              colors={['#F8FAFC', '#F1F5F9']}
-              style={styles.statsContainer}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>50+</Text>
-                <Text style={styles.statLabel}>Active Jobs</Text>
+          {/* ── Stats: only real numbers (no fixed "20+ countries / 100+ hired") ── */}
+          {jobsTotal > 0 && (
+            <AnimatedCard delay={700} style={{ marginHorizontal: 16, marginTop: 24 }}>
+              <View style={styles.statsContainer}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>{jobsTotal}</Text>
+                  <Text style={styles.statLabel}>active jobs</Text>
+                </View>
               </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>20+</Text>
-                <Text style={styles.statLabel}>Countries</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>100+</Text>
-                <Text style={styles.statLabel}>Hired</Text>
-              </View>
-            </LinearGradient>
-          </AnimatedCard>
+            </AnimatedCard>
+          )}
         </Animated.View>
       </ScrollView>
     </SafeAreaView>
@@ -886,7 +877,7 @@ const CareerHub = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
   },
   centerContent: {
     justifyContent: 'center',
@@ -905,7 +896,7 @@ const styles = StyleSheet.create({
     width: 350,
     height: 350,
     borderRadius: 175,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
   },
   glowBottom: {
     position: 'absolute',
@@ -943,8 +934,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   headerBadgeText: {
-    color: '#000',
-    fontWeight: '900',
+    color: T.ink,
+    fontFamily: F.heading,
     fontSize: 22,
     letterSpacing: 2,
   },
@@ -952,7 +943,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -965,29 +956,29 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#f43f5e',
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: T.white,
   },
   welcomeText: { 
     fontSize: 14, 
-    color: '#64748B', 
-    fontWeight: '600', 
+    color: T.textMuted, 
+    fontFamily: F.bodySemi, 
     letterSpacing: 0.5,
     marginBottom: 4,
   },
   mainTitle: { 
     fontSize: 36, 
-    fontWeight: '800', 
+    fontFamily: F.heading, 
     color: '#0F172A',
     letterSpacing: -1,
   },
   titleAccent: {
-    color: '#f9c349',
+    color: T.yellow,
   },
   subtitle: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: T.textFaint,
     marginTop: 6,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
   },
 
   // Navigation Grid
@@ -1007,11 +998,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E8EDF2',
     minHeight: 170,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowRadius: 8,
+    elevation: 2,
   },
   iconCircle: { 
     width: 48, 
@@ -1023,19 +1014,19 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   iconYellow: {
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
   },
   iconBlack: {
     backgroundColor: '#0F172A',
   },
   cardTitle: { 
     fontSize: 17, 
-    fontWeight: '700', 
+    fontFamily: F.bodyBold, 
     color: '#1E293B' 
   },
   cardSub: { 
-    fontSize: 12, 
-    color: '#64748B', 
+    fontSize: 12, fontFamily: F.body, 
+    color: T.textMuted, 
     marginTop: 4 
   },
   cardAccent: {
@@ -1044,12 +1035,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: T.line,
   },
   cardAccentText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#64748B',
+    fontFamily: F.bodySemi,
+    color: T.textMuted,
     marginLeft: 6,
   },
 
@@ -1074,19 +1065,19 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { 
     fontSize: 19, 
-    fontWeight: '800', 
+    fontFamily: F.heading, 
     color: '#0F172A' 
   },
   sectionBadge: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: T.dangerBg,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
   },
   sectionBadgeText: {
-    color: '#f9c349',
+    color: T.yellow,
     fontSize: 10,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     letterSpacing: 1,
   },
   seeAllButton: {
@@ -1095,7 +1086,7 @@ const styles = StyleSheet.create({
   },
   seeAll: { 
     color: '#0F172A', 
-    fontWeight: '700', 
+    fontFamily: F.bodyBold, 
     fontSize: 14,
     marginRight: 4,
   },
@@ -1105,11 +1096,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     borderRadius: 24, 
     overflow: 'hidden',
-    shadowColor: '#f9c349',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 10,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   bannerGradient: {
     padding: 28,
@@ -1146,20 +1137,20 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   tagText: { 
-    color: '#000', 
+    color: T.ink, 
     fontSize: 10, 
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     letterSpacing: 1,
   },
   bannerTitle: { 
-    color: '#FFF', 
+    color: T.white, 
     fontSize: 26, 
-    fontWeight: '800',
+    fontFamily: F.heading,
     letterSpacing: -0.5,
   },
   bannerSub: { 
     color: 'rgba(255,255,255,0.7)', 
-    fontSize: 13, 
+    fontSize: 13, fontFamily: F.body, 
     marginTop: 6,
     lineHeight: 18,
   },
@@ -1184,7 +1175,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E8EDF2',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -1206,13 +1197,13 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#f9c349',
+    backgroundColor: T.yellow,
     marginRight: 8,
   },
   companyNameText: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#f9c349',
+    fontFamily: F.bodyBold,
+    color: T.yellow,
     flex: 1,
   },
   jobTypeBadge: {
@@ -1226,11 +1217,11 @@ const styles = StyleSheet.create({
   },
   jobTypeText: {
     fontSize: 9,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
   },
   jobTitleText: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: '#0F172A',
     marginBottom: 6,
     lineHeight: 22,
@@ -1249,18 +1240,18 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 12,
-    color: '#64748B',
-    fontWeight: '500',
+    color: T.textMuted,
+    fontFamily: F.bodyMedium,
   },
   salaryText: {
-    color: '#10b981',
-    fontWeight: '600',
+    color: T.success,
+    fontFamily: F.bodySemi,
   },
   metaDivider: {
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: '#CBD5E1',
+    backgroundColor: T.sand,
   },
   skillsPreview: {
     flexDirection: 'row',
@@ -1269,7 +1260,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   skillChip: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: T.sand,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
@@ -1278,15 +1269,15 @@ const styles = StyleSheet.create({
   },
   skillChipText: {
     fontSize: 10,
-    color: '#64748B',
-    fontWeight: '600',
+    color: T.textMuted,
+    fontFamily: F.bodySemi,
   },
   jobFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: T.line,
     paddingTop: 10,
   },
   jobDate: {
@@ -1296,8 +1287,8 @@ const styles = StyleSheet.create({
   },
   jobDateText: {
     fontSize: 11,
-    color: '#94A3B8',
-    fontWeight: '500',
+    color: T.textFaint,
+    fontFamily: F.bodyMedium,
   },
   jobActionArrow: {
     width: 28,
@@ -1324,19 +1315,19 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     fontSize: 22,
-    fontWeight: '800',
+    fontFamily: F.heading,
     color: '#0F172A',
   },
   statLabel: {
     fontSize: 11,
-    color: '#64748B',
+    color: T.textMuted,
     marginTop: 4,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
   },
   statDivider: {
     width: 1,
     height: 40,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: T.sand,
   },
 
   // Empty State
@@ -1344,20 +1335,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 40,
     marginHorizontal: 20,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: T.sand,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E8EDF2',
   },
   emptyText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#94A3B8',
+    fontFamily: F.bodySemi,
+    color: T.textFaint,
     marginTop: 12,
   },
   emptySubText: {
-    fontSize: 13,
-    color: '#CBD5E1',
+    fontSize: 13, fontFamily: F.body,
+    color: T.textFaint,
     marginTop: 4,
   },
 
@@ -1378,13 +1369,13 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     fontSize: 20,
-    fontWeight: '800',
+    fontFamily: F.heading,
     color: '#0F172A',
     marginTop: 16,
   },
   errorMessage: {
-    fontSize: 14,
-    color: '#64748B',
+    fontSize: 14, fontFamily: F.body,
+    color: T.textMuted,
     textAlign: 'center',
     marginTop: 8,
     marginBottom: 24,
@@ -1394,11 +1385,11 @@ const styles = StyleSheet.create({
   retryButton: {
     borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#f9c349',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   retryGradient: {
     flexDirection: 'row',
@@ -1408,8 +1399,8 @@ const styles = StyleSheet.create({
   },
   retryText: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#000',
+    fontFamily: F.bodyBold,
+    color: T.ink,
   },
 });
 
