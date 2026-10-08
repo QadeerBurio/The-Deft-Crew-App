@@ -256,7 +256,7 @@ const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel, fe
       accessibilityLabel={`registered for ${item.title}, tap to cancel`}
     >
       <Ionicons name="checkmark-circle" size={featured ? 17 : 14} color={T.success} />
-      <Text style={[EV.regText, !featured && EV.regTextSmall]}>{featured ? "registered. sorted." : "registered"}</Text>
+      <Text style={[EV.regText, !featured && EV.regTextSmall]} numberOfLines={2}>registered · tap to cancel</Text>
     </TouchableOpacity>
   ) : (
     <TouchableOpacity
@@ -2317,9 +2317,9 @@ const EV = StyleSheet.create({
 
   regBtn: { height: 46, borderRadius: 23, backgroundColor: T.yellow, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: 16 },
   regBtnDone: { backgroundColor: T.card, borderWidth: 1, borderColor: T.line },
-  regBtnSmall: { height: 36, borderRadius: 18, paddingHorizontal: 12 },
+  regBtnSmall: { height: undefined, minHeight: 36, maxWidth: 132, borderRadius: 18, paddingHorizontal: 12, paddingVertical: 6 },
   regText: { fontFamily: F.bodyBold, fontSize: 14.5, color: T.ink },
-  regTextSmall: { fontSize: 12.5 },
+  regTextSmall: { fontSize: 12, textAlign: "center", flexShrink: 1 },
 
   row: { flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderRadius: 20, backgroundColor: T.card, borderWidth: 1, borderColor: T.line, marginBottom: 8 },
   dateBlock: { width: 52, height: 58, borderRadius: 16, backgroundColor: T.yellowSoft, alignItems: "center", justifyContent: "center" },
