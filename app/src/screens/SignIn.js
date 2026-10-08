@@ -262,7 +262,7 @@ export default function SignIn({ navigation }) {
               <View style={[styles.inputIconContainer, errors.email && styles.inputIconError]}>
                 <Ionicons
                   name="mail-outline"
-                  size={18}
+                  size={17}
                   color={errors.email ? "#ff4444" : focusedInput === 'email' ? GOLD : "#999"}
                 />
               </View>
@@ -301,7 +301,7 @@ export default function SignIn({ navigation }) {
               <View style={[styles.inputIconContainer, errors.password && styles.inputIconError]}>
                 <Ionicons
                   name="lock-closed-outline"
-                  size={18}
+                  size={17}
                   color={errors.password ? "#ff4444" : focusedInput === 'password' ? GOLD : "#999"}
                 />
               </View>
@@ -359,7 +359,7 @@ export default function SignIn({ navigation }) {
                 ) : (
                   <>
                     <Text style={styles.buttonText}>SIGN IN</Text>
-                    <Ionicons name="log-in-outline" size={20} color={GOLD} />
+                    <Ionicons name="log-in-outline" size={18} color={GOLD} />
                   </>
                 )}
               </TouchableOpacity>
@@ -376,7 +376,7 @@ export default function SignIn({ navigation }) {
                 <ActivityIndicator color={DARK} size="small" />
               ) : (
                 <>
-                  <Ionicons name="globe-outline" size={20} color={DARK} style={{ marginRight: 8 }} />
+                  <Ionicons name="globe-outline" size={18} color={DARK} style={{ marginRight: 8 }} />
                   <Text style={styles.guestButtonText}>Browse as Guest</Text>
                 </>
               )}
@@ -448,26 +448,26 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 
-  card: { backgroundColor: "#fff", padding: 30, paddingTop: 40, width: '100%' },
-  header: { alignItems: "center", marginBottom: 30 },
+  card: { backgroundColor: "#fff", paddingHorizontal: 24, paddingVertical: 16, width: '100%', maxWidth: 440, alignSelf: 'center' },
+  header: { alignItems: "center", marginBottom: 24 },
   logoBadge: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: DARK,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 14,
     elevation: 8,
     shadowColor: GOLD,
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
   },
-  logoText: { fontSize: 32, color: "#fff", fontWeight: "900", letterSpacing: -1 },
-  title: { fontSize: 28, fontWeight: "900", color: DARK, letterSpacing: 1 },
-  subtitle: { color: "#666", marginTop: 6, fontSize: 14, letterSpacing: 0.5 },
-  decorativeLine: { flexDirection: 'row', alignItems: 'center', marginTop: 18 },
+  logoText: { fontSize: 25, color: "#fff", fontWeight: "900", letterSpacing: -1 },
+  title: { fontSize: 23, fontWeight: "900", color: DARK, letterSpacing: 0.3 },
+  subtitle: { color: "#777", marginTop: 4, fontSize: 13.5 },
+  decorativeLine: { flexDirection: 'row', alignItems: 'center', marginTop: 12 },
   lineSegment: { width: 25, height: 2, backgroundColor: GOLD, borderRadius: 1 },
   diamond: { width: 7, height: 7, backgroundColor: DARK, transform: [{ rotate: '45deg' }], marginHorizontal: 8 },
 
@@ -477,67 +477,67 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f8f8",
     borderWidth: 2,
     borderColor: "transparent",
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    marginBottom: 14,
-    height: 56,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    height: 52,
     width: '100%',
   },
   inputFocused: { borderColor: GOLD, backgroundColor: "#fff" },
   inputError: { borderColor: "#ff4444", backgroundColor: "#fff5f5" },
   inputIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
   },
   inputIconError: { backgroundColor: '#ffebee' },
-  input: { flex: 1, paddingVertical: 8, fontSize: 15, color: DARK, fontWeight: '500' },
+  input: { flex: 1, paddingVertical: 6, fontSize: 14.5, color: DARK, fontWeight: '500' },
   inputTextError: { color: '#ff4444' },
   eyeButton: { padding: 8, marginLeft: 4 },
   checkmarkContainer: { marginLeft: 4 },
 
-  forgotBtn: { alignSelf: "flex-end", marginBottom: 25, marginTop: 5, flexDirection: 'row', alignItems: 'center' },
+  forgotBtn: { alignSelf: "flex-end", marginBottom: 18, marginTop: 2, flexDirection: 'row', alignItems: 'center' },
   forgotText: { color: GOLD, fontWeight: "700", fontSize: 13, letterSpacing: 0.5 },
 
   button: {
-    height: 56,
-    borderRadius: 16,
+    height: 52,
+    borderRadius: 14,
     backgroundColor: DARK,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
     width: '100%',
-    elevation: 6,
+    elevation: 4,
     shadowColor: DARK,
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
   },
   buttonBusy: { opacity: 0.85 },
-  buttonText: { color: GOLD, fontSize: 16, fontWeight: "800", letterSpacing: 2, marginRight: 8 },
+  buttonText: { color: GOLD, fontSize: 15, fontWeight: "800", letterSpacing: 1.5, marginRight: 8 },
 
   guestButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 54,
-    marginBottom: 20,
-    borderRadius: 16,
+    height: 50,
+    marginBottom: 6,
+    borderRadius: 14,
     borderWidth: 1.5,
     borderColor: DARK,
     backgroundColor: 'transparent',
   },
-  guestButtonText: { color: DARK, fontSize: 16, fontWeight: '700' },
+  guestButtonText: { color: DARK, fontSize: 15, fontWeight: '700' },
 
-  footer: { flexDirection: "row", justifyContent: "center", marginTop: 20, marginBottom: 20 },
-  footerText: { color: "#999", fontSize: 14 },
-  signupLink: { color: DARK, fontWeight: "800", fontSize: 14, textDecorationLine: 'underline' },
+  footer: { flexDirection: "row", justifyContent: "center", marginTop: 14, marginBottom: 6 },
+  footerText: { color: "#999", fontSize: 13.5 },
+  signupLink: { color: DARK, fontWeight: "800", fontSize: 13.5, textDecorationLine: 'underline' },
 
-  brandingFooter: { alignItems: 'center', marginTop: 10, marginBottom: 20 },
+  brandingFooter: { alignItems: 'center', marginTop: 4, marginBottom: 14 },
   brandingText: { color: '#ccc', fontSize: 11, letterSpacing: 3, fontWeight: '600' },
 });
