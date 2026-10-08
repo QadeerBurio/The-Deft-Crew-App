@@ -8,6 +8,7 @@ import {
   AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScreenHeader, HeaderIconButton, EmptyState } from '../../ui';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
@@ -1020,7 +1021,7 @@ export default function UserProfile({ route, navigation }) {
             {item.user?.profileImage ? (
               <Image source={{ uri: item.user.profileImage }} style={styles.avatarLg} />
             ) : (
-              <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.avatarLgPlaceholder}>
+              <LinearGradient colors={[T.yellow, T.yellow]} style={styles.avatarLgPlaceholder}>
                 <Text style={styles.avatarLgText}>
                   {item.user?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </Text>
@@ -1101,7 +1102,7 @@ export default function UserProfile({ route, navigation }) {
                     {reply.user?.profileImage ? (
                       <Image source={{ uri: reply.user.profileImage }} style={styles.avatarSm} />
                     ) : (
-                      <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.avatarSmPlaceholder}>
+                      <LinearGradient colors={[T.yellow, T.yellow]} style={styles.avatarSmPlaceholder}>
                         <Text style={styles.avatarSmText}>
                           {replyAuthorName.charAt(0).toUpperCase()}
                         </Text>
@@ -1252,7 +1253,7 @@ export default function UserProfile({ route, navigation }) {
     if (!dateString) return "Member";
     const date = new Date(dateString);
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    return `Joined ${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+    return `joined ${monthNames[date.getMonth()].toLowerCase()} ${date.getFullYear()}`;
   };
 
   // ============ RENDER BUTTON ============
@@ -1367,12 +1368,7 @@ export default function UserProfile({ route, navigation }) {
     if (isBlocked) {
       return (
         <View style={styles.blockedContainer}>
-          <Ionicons name="ban-outline" size={60} color={T.danger} />
-          <Text style={styles.blockedTitle}>user blocked</Text>
-          <Text style={styles.blockedSubtext}>their content is hidden.</Text>
-          <TouchableOpacity style={styles.unblockBtn} onPress={handleBlockUser}>
-            <Text style={styles.unblockBtnText}>unblock user</Text>
-          </TouchableOpacity>
+          <EmptyState mood="sus" title="user blocked." line="their content is hidden." actionLabel="unblock user" onAction={handleBlockUser} />
         </View>
       );
     }
@@ -1498,7 +1494,7 @@ export default function UserProfile({ route, navigation }) {
           </Text>
           {isOwnProfile && (
             <TouchableOpacity onPress={() => handleDeletePost(item._id)} style={styles.deleteBtn}>
-              <Ionicons name="trash-outline" size={16} color={T.yellow} />
+              <Ionicons name="trash-outline" size={16} color={T.danger} />
             </TouchableOpacity>
           )}
         </View>
@@ -1510,7 +1506,7 @@ export default function UserProfile({ route, navigation }) {
             </Text>
             {textContent.length > 100 && (
               <TouchableOpacity onPress={() => toggleShowFullText(item._id)} style={styles.showMoreBtn}>
-                <Text style={styles.showMoreText}>{isExpanded ? 'Show less' : 'Show more'}</Text>
+                <Text style={styles.showMoreText}>{isExpanded ? 'show less' : 'show more'}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -1530,7 +1526,7 @@ export default function UserProfile({ route, navigation }) {
                 color={isLiked ? T.yellow : T.textMuted}
               />
             </Animated.View>
-            <Text style={[styles.actionText, isLiked && { color: T.yellow }]}>{likeCount}</Text>
+            <Text style={[styles.actionText, isLiked && { color: T.ink, fontFamily: F.bodyBold }]}>{likeCount}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionBtn} onPress={() => openComments(item)}>
@@ -1554,27 +1550,15 @@ export default function UserProfile({ route, navigation }) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
-        <View style={styles.topNav}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={T.ink} />
-          </TouchableOpacity>
-          <Text style={styles.navTitle}>blocked user</Text>
-          <View style={{ width: 40 }} />
-        </View>
+        <ScreenHeader title="blocked user" />
         <View style={styles.blockedFullContainer}>
-          <View style={styles.blockedIconContainer}>
-            <Ionicons name="ban-outline" size={80} color={T.danger} />
-          </View>
-          <Text style={styles.blockedFullTitle}>user blocked</Text>
-          <Text style={styles.blockedFullSubtext}>
-            You have blocked this user. They cannot interact with you.
-          </Text>
-          <TouchableOpacity style={styles.unblockFullBtn} onPress={handleUnblockUser}>
-            <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.unblockFullGradient}>
-              <Ionicons name="person-add" size={20} color={T.ink} />
-              <Text style={styles.unblockFullBtnText}>unblock user</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+          <EmptyState
+            mood="sus"
+            title="user blocked."
+            line="you blocked this user. they can't interact with you."
+            actionLabel="unblock user"
+            onAction={handleUnblockUser}
+          />
         </View>
       </SafeAreaView>
     );
@@ -1584,21 +1568,9 @@ export default function UserProfile({ route, navigation }) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
-        <View style={styles.topNav}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={T.ink} />
-          </TouchableOpacity>
-          <Text style={styles.navTitle}>blocked</Text>
-          <View style={{ width: 40 }} />
-        </View>
+        <ScreenHeader title="blocked" />
         <View style={styles.blockedFullContainer}>
-          <View style={styles.blockedIconContainer}>
-            <Ionicons name="ban-outline" size={80} color={T.danger} />
-          </View>
-          <Text style={styles.blockedFullTitle}>account blocked</Text>
-          <Text style={styles.blockedFullSubtext}>
-            You have been blocked by this user.
-          </Text>
+          <EmptyState mood="sus" title="not available." line="this user has blocked you." />
         </View>
       </SafeAreaView>
     );
@@ -1618,9 +1590,11 @@ export default function UserProfile({ route, navigation }) {
         ListEmptyComponent={
           activeTab === 'Posts' ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="document-text-outline" size={48} color={T.textFaint} />
-              <Text style={styles.emptyText}>no posts yet</Text>
-              <Text style={styles.emptySubText}>When they post, you'll see it here</Text>
+              <EmptyState
+                mood="sleepy"
+                title="no posts yet."
+                line={isOwnProfile ? "your posts will show up here." : "when they post, you'll see it here."}
+              />
             </View>
           ) : activeTab === 'About' ? renderAboutTab() : null
         }
@@ -1635,15 +1609,10 @@ export default function UserProfile({ route, navigation }) {
         ListHeaderComponent={
           <>
             <View style={styles.profileHeader}>
-              <View style={styles.topNav}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                  <Ionicons name="arrow-back" size={24} color={T.ink} />
-                </TouchableOpacity>
-                <Text style={styles.navTitle}>{profileData?.name}</Text>
-                <TouchableOpacity onPress={() => setShowMenu(true)} style={styles.menuBtn}>
-                  <Ionicons name="ellipsis-vertical" size={22} color={T.ink} />
-                </TouchableOpacity>
-              </View>
+              <ScreenHeader
+                title="profile"
+                right={<HeaderIconButton icon="ellipsis-horizontal" label="profile options" onPress={() => setShowMenu(true)} />}
+              />
 
               <View style={styles.profileContent}>
                 <View style={styles.avatarRow}>
@@ -1661,7 +1630,12 @@ export default function UserProfile({ route, navigation }) {
                 <Text style={styles.fullName}>{profileData?.name}</Text>
                 {profileData?.bio && <Text style={styles.bio}>{profileData.bio}</Text>}
 
-                <TouchableOpacity onPress={handleViewConnections} style={styles.connectionTouchable}>
+                <TouchableOpacity
+                  onPress={handleViewConnections}
+                  style={styles.connectionTouchable}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${connectionCount} connections, view all`}
+                >
                   <Text style={styles.connectionCount}>
                     <Text style={styles.connectionNum}>{connectionCount}</Text> connections
                   </Text>
@@ -1677,9 +1651,10 @@ export default function UserProfile({ route, navigation }) {
                   key={tab}
                   onPress={() => setActiveTab(tab)}
                   style={[styles.tabItem, activeTab === tab && styles.activeTab]}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: activeTab === tab }}
                 >
-                  <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
-                  {activeTab === tab && <View style={styles.tabIndicator} />}
+                  <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab.toLowerCase()}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -1892,7 +1867,7 @@ export default function UserProfile({ route, navigation }) {
                                 <Image source={{ uri: item.profileImage }} style={styles.mentionAvatar} />
                               ) : (
                                 <LinearGradient
-                                  colors={[T.yellow, '#e6b800']}
+                                  colors={[T.yellow, T.yellow]}
                                   style={styles.mentionAvatarPlaceholder}
                                 >
                                   <Text style={styles.mentionAvatarText}>
@@ -1930,7 +1905,7 @@ export default function UserProfile({ route, navigation }) {
                         style={[styles.postCommentBtn, !commentText.trim() && styles.postCommentBtnDisabled]}
                       >
                         <LinearGradient
-                          colors={commentText.trim() ? [T.yellow, '#e6b800'] : [T.textFaint, T.sand]}
+                          colors={commentText.trim() ? [T.yellow, T.yellow] : [T.textFaint, T.sand]}
                           style={styles.postCommentBtnGradient}
                         >
                           {isSubmittingComment ? (
@@ -1954,8 +1929,8 @@ export default function UserProfile({ route, navigation }) {
 
 // ============ STYLES ============
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: T.card },
-  skeletonContainer: { flex: 1, backgroundColor: T.card },
+  container: { flex: 1, backgroundColor: T.paper },
+  skeletonContainer: { flex: 1, backgroundColor: T.paper },
   skeletonTopNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   skeletonNavBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: T.sand },
   skeletonNavTitle: { width: 100, height: 20, borderRadius: 4, backgroundColor: T.sand },
@@ -1970,12 +1945,12 @@ const styles = StyleSheet.create({
   skeletonCardHeader: { flexDirection: 'row', alignItems: 'center' },
   skeletonCardAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: T.sand, marginRight: 12 },
 
-  profileHeader: { backgroundColor: T.card },
+  profileHeader: { backgroundColor: T.paper },
   topNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, paddingBottom: 20 },
   backBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   navTitle: { fontSize: 18, fontFamily: F.headingBold, color: T.ink, flex: 1, textAlign: 'center' },
   menuBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  profileContent: { paddingHorizontal: 16, paddingBottom: 12 },
+  profileContent: { marginHorizontal: 16, marginTop: 4, padding: 16, borderRadius: 22, backgroundColor: T.card, borderWidth: 1, borderColor: T.line },
   avatarRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   avatarContainer: { marginTop: -30 },
   avatar: { width: 72, height: 72, borderRadius: 36, borderWidth: 4, borderColor: T.white },
@@ -2007,14 +1982,14 @@ const styles = StyleSheet.create({
   blockedBtn: { flex: 1, borderRadius: 20, overflow: 'hidden' },
   blockedBtnText: { color: T.white, fontFamily: F.bodyBold, fontSize: 14 },
 
-  tabBar: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: T.line },
-  tabItem: { flex: 1, alignItems: 'center', paddingVertical: 14, position: 'relative' },
-  activeTab: { position: 'relative' },
-  tabText: { fontSize: 15, fontFamily: F.bodyMedium, color: T.textMuted },
-  activeTabText: { color: T.ink, fontFamily: F.bodyBold },
+  tabBar: { flexDirection: 'row', gap: 4, padding: 4, marginHorizontal: 16, marginTop: 16, marginBottom: 8, borderRadius: 24, backgroundColor: T.sand },
+  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', height: 40, borderRadius: 20 },
+  activeTab: { backgroundColor: T.ink },
+  tabText: { fontSize: 14, fontFamily: F.bodySemi, color: T.ink },
+  activeTabText: { color: T.white, fontFamily: F.bodyBold },
   tabIndicator: { position: 'absolute', bottom: 0, width: 56, height: 4, borderRadius: 2, backgroundColor: T.yellow },
-  tabContentContainer: { padding: 16 },
-  aboutSection: { flexDirection: 'row', marginBottom: 18, alignItems: 'flex-start' },
+  tabContentContainer: { margin: 16, marginTop: 8, padding: 16, borderRadius: 22, backgroundColor: T.card, borderWidth: 1, borderColor: T.line },
+  aboutSection: { flexDirection: 'row', marginBottom: 16, alignItems: 'flex-start' },
   aboutIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: T.sand, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   aboutContent: { flex: 1 },
   aboutLabel: { fontSize: 11, color: T.textMuted, fontFamily: F.bodySemi, textTransform: 'none', letterSpacing: 0.5, marginBottom: 2 },
@@ -2028,7 +2003,7 @@ const styles = StyleSheet.create({
   connectionSummaryLabel: { fontSize: 12, fontFamily: F.body, color: T.textMuted, marginTop: 2 },
   connectionDivider: { width: 1, backgroundColor: T.sand, marginHorizontal: 8 },
 
-  postCard: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: T.line },
+  postCard: { marginHorizontal: 16, marginBottom: 10, padding: 14, borderRadius: 22, backgroundColor: T.card, borderWidth: 1, borderColor: T.line },
   postHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   postAvatar: { width: 40, height: 40, borderRadius: 20 },
   postAvatarPlaceholder: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
@@ -2044,7 +2019,7 @@ const styles = StyleSheet.create({
   postActions: { flexDirection: 'row', marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: T.line, alignItems: 'center' },
   actionBtn: { flexDirection: 'row', alignItems: 'center', marginRight: 20, gap: 4 },
   actionText: { fontSize: 14, color: T.textMuted, fontFamily: F.body },
-  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
+  emptyContainer: { paddingVertical: 40, paddingHorizontal: 16 },
   emptyText: { fontSize: 17, fontFamily: F.bodyBold, color: T.ink, marginTop: 12 },
   emptySubText: { fontSize: 14, fontFamily: F.body, color: T.textMuted, marginTop: 4 },
 
@@ -2064,7 +2039,7 @@ const styles = StyleSheet.create({
   emptyConnections: { textAlign: 'center', color: T.textMuted, padding: 40 },
 
   blockedContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
-  blockedFullContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
+  blockedFullContainer: { flex: 1, justifyContent: 'center', padding: 16 },
   blockedIconContainer: { width: 120, height: 120, borderRadius: 60, backgroundColor: T.dangerBg, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   blockedFullTitle: { fontSize: 24, fontFamily: F.heading, color: T.ink, marginTop: 16 },
   blockedFullSubtext: { fontSize: 15, fontFamily: F.body, color: T.textMuted, textAlign: 'center', marginTop: 8, lineHeight: 22 },

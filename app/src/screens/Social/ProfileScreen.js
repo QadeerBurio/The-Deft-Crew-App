@@ -4,7 +4,7 @@ import React, { useState, useContext, useEffect, useRef, useCallback, useMemo } 
 import {
   View, Text, StyleSheet, Image, TouchableOpacity,
   FlatList, StatusBar, Dimensions, Platform,
-  ActivityIndicator, RefreshControl, Alert, Modal,
+  RefreshControl, Alert, Modal,
   TextInput, Animated, Share
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +14,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from "../../context/AuthContext";
 import { soundLike, soundTap } from "../../lib/tdcSounds";
 import { color as T, font as F } from "../../theme/tokens";
+import { ScreenHeader, HeaderIconButton, EmptyState, SkeletonBlock } from "../../ui";
 const { width } = Dimensions.get('window');
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
 
@@ -58,7 +59,7 @@ const PostItem = React.memo(({ item, index, isPublic, user, onLike, onComment, o
   const commentCount = item.comments?.length || 0;
 
   const avatarUri = useMemo(
-    () => user?.profileImage || `https://ui-avatars.com/api/?name=${user?.name}&background=1a1a1a&color=f9c349&size=64`,
+    () => user?.profileImage || `https://ui-avatars.com/api/?name=${user?.name}&background=111111&color=f9c349&size=64`,
     [user?.profileImage, user?.name]
   );
 
@@ -78,7 +79,7 @@ const PostItem = React.memo(({ item, index, isPublic, user, onLike, onComment, o
         </View>
         <View style={styles.cardHeaderText}>
           <View style={styles.cardNameRow}>
-            <Text style={styles.cardUserName}>{isPublic ? user?.name : "Anonymous"}</Text>
+            <Text style={styles.cardUserName}>{isPublic ? user?.name : "anonymous"}</Text>
             <Text style={styles.cardHandle}>@{isPublic ? user?.username || 'user' : 'anonymous'}</Text>
             <Text style={styles.cardTime}>· {new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
           </View>
@@ -89,7 +90,7 @@ const PostItem = React.memo(({ item, index, isPublic, user, onLike, onComment, o
             </View>
           )}
         </View>
-        <TouchableOpacity onPress={() => onOptions(item)} style={styles.menuBtn}>
+        <TouchableOpacity onPress={() => onOptions(item)} style={styles.menuBtn} accessibilityRole="button" accessibilityLabel="post options">
           <Ionicons name="ellipsis-horizontal" size={20} color={T.textMuted} />
         </TouchableOpacity>
       </View>
@@ -100,7 +101,7 @@ const PostItem = React.memo(({ item, index, isPublic, user, onLike, onComment, o
         </Text>
         {textContent.length > 100 && (
           <TouchableOpacity onPress={() => setShowFullText(!showFullText)} style={styles.showMoreBtn}>
-            <Text style={styles.showMoreText}>{showFullText ? 'Show less' : 'Show more'}</Text>
+            <Text style={styles.showMoreText}>{showFullText ? 'show less' : 'show more'}</Text>
           </TouchableOpacity>
         )}
         {item.image && (
@@ -115,7 +116,7 @@ const PostItem = React.memo(({ item, index, isPublic, user, onLike, onComment, o
           <Animated.View style={{ transform: [{ scale: likeScale }] }}>
             <Ionicons name={isLiked ? "heart" : "heart-outline"} size={18} color={isLiked ? T.yellow : T.textMuted} />
           </Animated.View>
-          <Text style={[styles.actionText, isLiked && { color: T.yellow }]}>{likeCount}</Text>
+          <Text style={[styles.actionText, isLiked && { color: T.ink, fontFamily: F.bodyBold }]}>{likeCount}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn} onPress={() => onComment(item, isPublic ? 'post' : 'confession')} activeOpacity={0.6}>
           <Ionicons name="chatbubble-outline" size={18} color={T.textMuted} />
@@ -131,8 +132,9 @@ const PostItem = React.memo(({ item, index, isPublic, user, onLike, onComment, o
 
 // ============ Inline Loader ============
 const InlineLoader = () => (
-  <View style={styles.inlineLoader}>
-    <ActivityIndicator size="small" color={T.yellow} />
+  <View style={styles.inlineLoader} accessibilityLabel="loading">
+    <SkeletonBlock height={120} radius={22} />
+    <SkeletonBlock height={120} radius={22} style={{ marginTop: 10 }} />
   </View>
 );
 
@@ -438,9 +440,7 @@ export default function ProfileScreen() {
       ListEmptyComponent={
         loading ? <InlineLoader /> : (
           <View style={styles.emptyContainer}>
-            <Ionicons name="document-text-outline" size={48} color={T.textFaint} />
-            <Text style={styles.emptyText}>no posts yet</Text>
-            <Text style={styles.emptySubText}>Share your thoughts with the community</Text>
+            <EmptyState mood="sleepy" title="no posts yet." line="share your thoughts with the community." />
           </View>
         )
       }
@@ -462,9 +462,7 @@ export default function ProfileScreen() {
       ListEmptyComponent={
         loading ? <InlineLoader /> : (
           <View style={styles.emptyContainer}>
-            <Ionicons name="lock-closed-outline" size={48} color={T.textFaint} />
-            <Text style={styles.emptyText}>no secrets yet</Text>
-            <Text style={styles.emptySubText}>share anonymously with the community</Text>
+            <EmptyState mood="cheeky" title="no secrets yet." line="share anonymously with the community." />
           </View>
         )
       }
@@ -482,36 +480,33 @@ export default function ProfileScreen() {
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       {/* Top Navigation */}
-      <View style={styles.topNav}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navBtn}>
-          <Ionicons name="arrow-back" size={24} color={T.ink} />
-        </TouchableOpacity>
-        <Text style={styles.navTitle}>profile</Text>
-        <TouchableOpacity onPress={() => navigation.navigate("SettingsScreen")} style={styles.navBtn}>
-          <Ionicons name="settings-outline" size={24} color={T.ink} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="profile"
+        right={<HeaderIconButton icon="settings-outline" label="settings" onPress={() => navigation.navigate("SettingsScreen")} />}
+      />
 
       {/* Profile Header */}
       <View style={styles.headerSection}>
         <View style={styles.headerRow}>
           <View style={styles.avatarContainer}>
             <Image
-              source={{ uri: user?.profileImage || `https://ui-avatars.com/api/?name=${user?.name}&background=1a1a1a&color=f9c349&size=128` }}
+              source={{ uri: user?.profileImage || `https://ui-avatars.com/api/?name=${user?.name}&background=111111&color=f9c349&size=128` }}
               style={styles.avatar}
             />
           </View>
           <View style={styles.headerRight}>
-            <Text style={styles.name}>{user?.name || "Student"}</Text>
+            <Text style={styles.name}>{user?.name || "you"}</Text>
             <Text style={styles.handle}>@{user?.username || 'student'}</Text>
             {user?.bio && <Text style={styles.bioText}>{user.bio}</Text>}
-            <Text style={styles.uniText}>
-              <Ionicons name="school-outline" size={14} color={T.textMuted} />
-              {" "}{user?.university?.name || user?.education?.[0]?.school || "TDC Student"}
-            </Text>
+            {!!(user?.university?.name || user?.education?.[0]?.school) && (
+              <Text style={styles.uniText}>
+                <Ionicons name="school-outline" size={14} color={T.textMuted} />
+                {" "}{user?.university?.name || user?.education?.[0]?.school}
+              </Text>
+            )}
 
             <View style={styles.statsRow}>
-              <TouchableOpacity style={styles.statBox} onPress={handleViewConnections} activeOpacity={0.7}>
+              <TouchableOpacity style={styles.statBox} onPress={handleViewConnections} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={`${connectionCount} connections`}>
                 <Text style={styles.statNum}>{connectionCount}</Text>
                 <Text style={styles.statLab}>connections</Text>
               </TouchableOpacity>
@@ -541,11 +536,12 @@ export default function ProfileScreen() {
               key={tab}
               style={[styles.tab, activeTab === tab && styles.activeTab]}
               onPress={() => setActiveTab(tab)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: activeTab === tab }}
             >
               <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-                {tab === 'posts' ? 'Posts' : 'Secrets'}
+                {tab}
               </Text>
-              {activeTab === tab && <View style={styles.tabIndicator} />}
             </TouchableOpacity>
           ))}
         </View>
@@ -573,7 +569,7 @@ export default function ProfileScreen() {
               keyExtractor={(item) => item._id}
               renderItem={({ item }) => (
                 <TouchableOpacity style={styles.likeUserItem} onPress={() => { setShowLikesModal(false); navigation.navigate("UserProfile", { userId: item._id }); }}>
-                  <Image source={{ uri: item.profileImage || `https://ui-avatars.com/api/?name=${item.name}&background=1a1a1a&color=f9c349` }} style={styles.likeUserAvatar} />
+                  <Image source={{ uri: item.profileImage || `https://ui-avatars.com/api/?name=${item.name}&background=111111&color=f9c349` }} style={styles.likeUserAvatar} />
                   <Text style={styles.likeUserName}>{item.name}</Text>
                   <Ionicons name="chevron-forward" size={18} color={T.textFaint} />
                 </TouchableOpacity>
@@ -600,7 +596,7 @@ export default function ProfileScreen() {
               keyExtractor={(item) => item._id}
               renderItem={({ item }) => (
                 <View style={styles.commentItem}>
-                  <Image source={{ uri: item.user?.profileImage || `https://ui-avatars.com/api/?name=${item.user?.name}&background=1a1a1a&color=f9c349` }} style={styles.commentAvatar} />
+                  <Image source={{ uri: item.user?.profileImage || `https://ui-avatars.com/api/?name=${item.user?.name}&background=111111&color=f9c349` }} style={styles.commentAvatar} />
                   <View style={styles.commentContent}>
                     <View style={styles.commentBubble}>
                       <Text style={styles.commentUserName}>{item.user?.name || 'Anonymous'}</Text>
@@ -660,7 +656,7 @@ export default function ProfileScreen() {
                     {item.profileImage ? (
                       <Image source={{ uri: item.profileImage }} style={styles.connectionModalAvatarImg} />
                     ) : (
-                      <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.connectionModalAvatarPlaceholder}>
+                      <LinearGradient colors={[T.yellow, T.yellow]} style={styles.connectionModalAvatarPlaceholder}>
                         <Text style={styles.connectionModalAvatarText}>
                           {item.name?.charAt(0)?.toUpperCase()}
                         </Text>
@@ -738,7 +734,7 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   campusOnlyTagText: { color: T.yellow, fontSize: 10, fontFamily: F.bodyBold },
-  container: { flex: 1, backgroundColor: T.card, paddingBottom: 20 },
+  container: { flex: 1, backgroundColor: T.paper, paddingBottom: 20 },
 
   inlineLoader: {
     paddingVertical: 60,
@@ -767,8 +763,8 @@ const styles = StyleSheet.create({
   navTitle: { fontSize: 20, fontFamily: F.headingBold, color: T.ink },
 
   // Header
-  headerSection: { backgroundColor: T.card },
-  headerRow: { flexDirection: 'row', padding: 10, paddingBottom: 2 },
+  headerSection: { backgroundColor: T.paper },
+  headerRow: { flexDirection: 'row', marginHorizontal: 16, marginTop: 4, padding: 16, borderRadius: 22, backgroundColor: T.card, borderWidth: 1, borderColor: T.line },
   avatarContainer: { marginRight: 16 },
   avatar: { width: 72, height: 72, borderRadius: 36, borderWidth: 3, borderColor: T.white },
   headerRight: { flex: 1 },
@@ -785,24 +781,30 @@ const styles = StyleSheet.create({
 
   // Edit Button
   editBtn: { marginTop: 12, alignSelf: 'flex-start' },
-  gradientBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20 },
+  gradientBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 18, height: 40, borderRadius: 20 },
   editBtnText: { color: T.yellow, fontFamily: F.bodyBold, fontSize: 14 },
 
   // Tabs
   tabWrapper: {
     flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: T.line,
-    marginTop: 4,
+    gap: 4,
+    padding: 4,
+    marginHorizontal: 16,
+    marginTop: 14,
+    marginBottom: 8,
+    borderRadius: 24,
+    backgroundColor: T.sand,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 16,
-    position: 'relative',
+    justifyContent: 'center',
+    height: 40,
+    borderRadius: 20,
   },
-  tabText: { fontSize: 15, fontFamily: F.bodyMedium, color: T.textMuted },
-  activeTabText: { color: T.ink, fontFamily: F.bodyBold },
+  activeTab: { backgroundColor: T.ink },
+  tabText: { fontSize: 14, fontFamily: F.bodySemi, color: T.ink },
+  activeTabText: { color: T.white, fontFamily: F.bodyBold },
   tabIndicator: {
     position: 'absolute',
     bottom: 0,
@@ -817,10 +819,12 @@ const styles = StyleSheet.create({
   // Post Card
   postCard: {
     backgroundColor: T.card,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: T.line,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    padding: 14,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: T.line,
   },
   cardUserHeader: { flexDirection: 'row', alignItems: 'center' },
   cardAvatarWrapper: { marginRight: 12 },
@@ -842,7 +846,7 @@ const styles = StyleSheet.create({
   actionText: { fontSize: 14, color: T.textMuted, fontFamily: F.body },
 
   // Empty State
-  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
+  emptyContainer: { paddingVertical: 40, paddingHorizontal: 16 },
   emptyText: { fontSize: 17, fontFamily: F.bodyBold, color: T.ink, marginTop: 12 },
   emptySubText: { fontSize: 14, fontFamily: F.body, color: T.textMuted, marginTop: 4 },
 
