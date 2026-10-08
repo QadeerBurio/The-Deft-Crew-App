@@ -23,6 +23,9 @@ import {
   Modal,
   Pressable,
   AppState,
+  Animated,
+  Easing,
+  AccessibilityInfo,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -33,7 +36,6 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -51,6 +53,10 @@ import {
   branchMatchesCity,
   buildCityOptions,
 } from "../utils/cityFilter";
+import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
+import { Button, SkeletonBlock } from "../ui";
+import Dot from "../engagement/components/Dot";
+import { formatDistance } from "../utils/distance";
 
 // ═══════════════════════════════════════════
 // TDC SOUND KIT
@@ -441,40 +447,76 @@ const buildActiveData = (brand, currentOffer, selectedBranch) => {
 };
 
 // ============================================================
-// CLAIM SUCCESS MODAL
+// CLAIM SUCCESS — the yellow "sorted." moment (BalancedDeal design)
+// Shown by the same state/timer as before (claimSuccessVisible).
 // ============================================================
-const ClaimSuccessModal = ({ visible, onClose, brandName, discount }) => {
+const ClaimSuccessModal = ({ visible, onClose, onDone, brandName, discount, isInStore }) => {
+  const pop = useRef(new Animated.Value(0)).current;
+  const rise = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!visible) return;
+    let cancelled = false;
+    pop.setValue(0);
+    rise.setValue(0);
+    AccessibilityInfo.isReduceMotionEnabled()
+      .catch(() => false)
+      .then((reduce) => {
+        if (cancelled) return;
+        if (reduce) {
+          pop.setValue(1);
+          rise.setValue(1);
+          return;
+        }
+        Animated.parallel([
+          Animated.spring(pop, { toValue: 1, friction: 5, tension: 70, useNativeDriver: true }),
+          Animated.timing(rise, {
+            toValue: 1,
+            duration: 450,
+            delay: 250,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, pop, rise]);
+
   if (!visible) return null;
+
+  const fadeUp = {
+    opacity: rise,
+    transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
+  };
+  const what = discount > 0 ? `${discount}% off at ${brandName || "this brand"}.` : `claimed at ${brandName || "this brand"}.`;
+  const where = isInStore ? " show this at the counter." : " find it in my discounts.";
+
   return (
-    <Modal transparent visible={visible} animationType="fade">
-      <Pressable style={styles.successOverlay} onPress={onClose}>
-        <View style={styles.successCard}>
-          <View style={styles.successIconCircle}>
-            <LinearGradient
-              colors={["#f9c349", "#f5a623"]}
-              style={styles.successIconGradient}
-            >
-              <MaterialCommunityIcons
-                name="check-decagram"
-                size={50}
-                color="#fff"
-              />
-            </LinearGradient>
-          </View>
-          <Text style={styles.successTitle}>🎉 Offer Claimed!</Text>
-          {brandName ? (
-            <Text style={styles.successBrandName}>{brandName}</Text>
-          ) : null}
-          {discount > 0 ? (
-            <View style={styles.successDiscountBadge}>
-              <Text style={styles.successDiscountText}>{discount}% OFF</Text>
-            </View>
-          ) : null}
-          <Text style={styles.successSubtext}>
-            Your student discount has been added to your wallet.
-          </Text>
+    <Modal transparent={false} visible={visible} animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+      <View style={styles.sortedRoot} accessibilityViewIsModal>
+        <StatusBar barStyle="dark-content" backgroundColor={T.yellow} />
+        <View style={styles.sortedCenter}>
+          <Animated.View style={{ transform: [{ scale: pop }] }}>
+            <Dot mood="sorted" size={140} animated={false} />
+          </Animated.View>
+          <Animated.Text
+            style={[styles.sortedTitle, fadeUp]}
+            accessibilityRole="header"
+            maxFontSizeMultiplier={MAX_FONT_SCALE}
+          >
+            sorted.
+          </Animated.Text>
+          <Animated.Text style={[styles.sortedLine, fadeUp]} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            {what}
+            {where}
+          </Animated.Text>
         </View>
-      </Pressable>
+        <Animated.View style={[styles.sortedActions, fadeUp]}>
+          <Button title="done" variant="secondary" onPress={onDone} style={styles.sortedDoneBtn} />
+        </Animated.View>
+      </View>
     </Modal>
   );
 };
@@ -504,52 +546,41 @@ const BranchDropdown = ({
   return (
     <View style={styles.branchDropdownWrap}>
       <TouchableOpacity
-        style={[
-          styles.branchDropdownHeader,
-          expanded && styles.branchDropdownHeaderOpen,
-        ]}
+        style={styles.branchDropdownHeader}
         onPress={() => {
           Haptics.selectionAsync();
           soundTap();           // 🔔 tap on dropdown toggle
           setExpanded(!expanded);
         }}
         activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        accessibilityLabel={selectedBranch ? `branch: ${selectedBranch.name}, change` : "select branch"}
       >
-        <View style={styles.branchDropdownHeaderLeft}>
-          <View style={styles.branchDropdownIconWrap}>
-            <MaterialCommunityIcons
-              name="store-marker"
-              size={18}
-              color="#f9c349"
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.branchDropdownLabel}>
-              {selectedBranch ? "Selected Branch" : "Select Branch"}
-            </Text>
-            <Text style={styles.branchDropdownValue} numberOfLines={1}>
-              {selectedBranch
-                ? selectedBranch.name
-                : `${branches.length} ${
-                    branches.length === 1 ? "branch" : "branches"
-                  } available`}
-            </Text>
-          </View>
+        <View style={styles.branchDropdownIconWrap}>
+          <MaterialCommunityIcons name="store-marker-outline" size={18} color={T.ink} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.branchDropdownLabel} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            {selectedBranch ? "selected branch" : "select branch"}
+          </Text>
+          <Text style={styles.branchDropdownValue} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            {selectedBranch
+              ? selectedBranch.name
+              : `${branches.length} ${branches.length === 1 ? "branch" : "branches"} available`}
+          </Text>
         </View>
         <MaterialCommunityIcons
           name={expanded ? "chevron-up" : "chevron-down"}
-          size={22}
-          color="#666"
+          size={20}
+          color={T.textFaint}
         />
       </TouchableOpacity>
 
       {expanded && (
         <View style={styles.branchDropdownList}>
           <TouchableOpacity
-            style={[
-              styles.branchDropdownItem,
-              !selectedBranch && styles.branchDropdownItemActive,
-            ]}
+            style={[styles.branchDropdownItem, !selectedBranch && styles.branchDropdownItemActive]}
             onPress={() => {
               Haptics.selectionAsync();
               soundTap();       // 🔔 tap on Original Offer select
@@ -557,29 +588,17 @@ const BranchDropdown = ({
               setExpanded(false);
             }}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityState={{ selected: !selectedBranch }}
           >
-            <View style={styles.branchDropdownItemRow}>
-              <MaterialCommunityIcons
-                name="tag-outline"
-                size={16}
-                color={!selectedBranch ? "#f9c349" : "#999"}
-              />
-              <Text
-                style={[
-                  styles.branchDropdownItemName,
-                  !selectedBranch && styles.branchDropdownItemNameActive,
-                ]}
-              >
-                Original Offer
-              </Text>
-              {!selectedBranch && (
-                <MaterialCommunityIcons
-                  name="check-circle"
-                  size={18}
-                  color="#f9c349"
-                />
-              )}
-            </View>
+            <MaterialCommunityIcons name="tag-outline" size={16} color={T.textFaint} />
+            <Text
+              style={[styles.branchDropdownItemName, !selectedBranch && styles.branchDropdownItemNameActive]}
+              maxFontSizeMultiplier={MAX_FONT_SCALE}
+            >
+              original offer
+            </Text>
+            {!selectedBranch && <MaterialCommunityIcons name="check" size={18} color={T.ink} />}
           </TouchableOpacity>
 
           {branches.map((branch, idx) => {
@@ -587,64 +606,106 @@ const BranchDropdown = ({
             return (
               <TouchableOpacity
                 key={branch._id || idx}
-                style={[
-                  styles.branchDropdownItem,
-                  isSelected && styles.branchDropdownItemActive,
-                ]}
+                style={[styles.branchDropdownItem, isSelected && styles.branchDropdownItemActive]}
                 onPress={() => handleSelect(branch)}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isSelected }}
+                accessibilityLabel={`${branch.name}${branch.city ? `, ${branch.city}` : ""}, ${branch.discountPercentage}% off`}
               >
-                <View style={styles.branchDropdownItemRow}>
-                  <MaterialCommunityIcons
-                    name={branch.isOnline ? "earth" : "storefront"}
-                    size={16}
-                    color={isSelected ? "#f9c349" : "#999"}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={[
-                        styles.branchDropdownItemName,
-                        isSelected && styles.branchDropdownItemNameActive,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {branch.name}
-                    </Text>
-                    {branch.city ? (
-                      <Text style={styles.branchDropdownItemCity}>
-                        {branch.city}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <View
-                    style={[
-                      styles.branchDropdownPill,
-                      isSelected && styles.branchDropdownPillActive,
-                    ]}
+                <MaterialCommunityIcons
+                  name={branch.isOnline ? "earth" : "storefront-outline"}
+                  size={16}
+                  color={T.textFaint}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={[styles.branchDropdownItemName, isSelected && styles.branchDropdownItemNameActive]}
+                    numberOfLines={1}
+                    maxFontSizeMultiplier={MAX_FONT_SCALE}
                   >
-                    <Text
-                      style={[
-                        styles.branchDropdownPillText,
-                        isSelected && styles.branchDropdownPillTextActive,
-                      ]}
-                    >
-                      {branch.discountPercentage}%
+                    {branch.name}
+                  </Text>
+                  {branch.city ? (
+                    <Text style={styles.branchDropdownItemCity} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                      {branch.city}
                     </Text>
-                  </View>
-                  {isSelected && (
-                    <MaterialCommunityIcons
-                      name="check-circle"
-                      size={18}
-                      color="#f9c349"
-                    />
-                  )}
+                  ) : null}
                 </View>
+                <View style={styles.branchDropdownPill}>
+                  <Text style={styles.branchDropdownPillText}>{branch.discountPercentage}%</Text>
+                </View>
+                {isSelected && <MaterialCommunityIcons name="check" size={18} color={T.ink} />}
               </TouchableOpacity>
             );
           })}
         </View>
       )}
     </View>
+  );
+};
+
+// ============================================================
+// HOLD TO CLAIM (BalancedDeal): press and hold 1 s → onComplete.
+// Screen readers: a double tap (activate) claims directly.
+// ============================================================
+const HOLD_MS = 1000;
+const HoldToClaim = ({ label, onComplete, disabled }) => {
+  const fill = useRef(new Animated.Value(0)).current;
+  const [holding, setHolding] = useState(false);
+  const doneRef = useRef(false);
+
+  const start = () => {
+    if (disabled) return;
+    doneRef.current = false;
+    setHolding(true);
+    Haptics.selectionAsync().catch(() => {});
+    Animated.timing(fill, {
+      toValue: 1,
+      duration: HOLD_MS,
+      easing: Easing.linear,
+      useNativeDriver: false,
+    }).start(({ finished }) => {
+      if (!finished) return;
+      doneRef.current = true;
+      setHolding(false);
+      fill.setValue(0);
+      onComplete();
+    });
+  };
+
+  const end = () => {
+    if (doneRef.current) return;
+    fill.stopAnimation();
+    setHolding(false);
+    Animated.timing(fill, { toValue: 0, duration: 200, useNativeDriver: false }).start();
+  };
+
+  const width = fill.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] });
+  const fg = holding ? T.ink : T.white;
+
+  return (
+    <Pressable
+      onPressIn={start}
+      onPressOut={end}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel="press and hold to claim"
+      accessibilityState={{ disabled: !!disabled }}
+      accessibilityActions={[{ name: "activate" }]}
+      onAccessibilityAction={(e) => {
+        if (e.nativeEvent.actionName === "activate" && !disabled) onComplete();
+      }}
+      style={[styles.holdBtn, holding && { transform: [{ scale: 0.98 }] }]}
+    >
+      <Animated.View style={[styles.holdFill, { width }]} />
+      <View style={styles.holdInner}>
+        <MaterialCommunityIcons name="gift-outline" size={20} color={fg} />
+        <Text style={[styles.holdText, { color: fg }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+          {holding ? "keep holding" : label}
+        </Text>
+      </View>
+    </Pressable>
   );
 };
 
@@ -1286,98 +1347,137 @@ export default function OfferScreen() {
   if (loading || !brand) {
     return (
       <SafeAreaView style={styles.mainSafeArea}>
-        <StatusBar barStyle="dark-content" />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#f9c349" />
-          <Text style={styles.loadingText}>Loading offer...</Text>
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
+        <View style={styles.loadingContainer} accessible accessibilityLabel="loading offer">
+          <SkeletonBlock height={236} radius={0} />
+          <View style={styles.skeletonCard}>
+            <SkeletonBlock width={52} height={52} radius={16} />
+            <SkeletonBlock width="60%" height={16} style={{ marginTop: 14 }} />
+            <SkeletonBlock width="40%" height={36} style={{ marginTop: 14 }} />
+          </View>
         </View>
       </SafeAreaView>
     );
   }
 
   const isClaimed = !!currentOffer?.isClaimed;
+  const brandName = brand.name || brand.brandName || "brand";
+  const claimedByCount = Array.isArray(currentOfferRaw?.claimedBy) ? currentOfferRaw.claimedBy.length : 0;
+  const steps = String(activeRedeemInstructions || "")
+    .split(/\n+/)
+    .map((t) => t.replace(/^\s*(\d+[.)]|[-•*])\s*/, "").trim())
+    .filter(Boolean);
+  const metaLine = [String(activeCategory || "").toLowerCase(), activeLocation].filter(Boolean).join(" · ");
+  // Distance only when this brand came from Home's "near me" (and no branch is picked)
+  const distanceText =
+    !hasSelectedBranch && typeof brand.distanceKm === "number" ? formatDistance(brand.distanceKm) : "";
+  const whereText =
+    activeIsOnline && activeIsInStore ? "online + in-store" : activeIsOnline ? "online" : activeIsInStore ? "in-store" : "";
+  const facts = [
+    claimedByCount > 0 && { k: "claimed by", v: `${claimedByCount} ${claimedByCount === 1 ? "student" : "students"}` },
+    whereText && { k: "where", v: whereText },
+    branches.length > 0 && { k: "branches", v: String(branches.length) },
+  ].filter(Boolean);
+  const mapTarget = activeLocation || activeBranchName || brand.name;
 
   return (
-    <SafeAreaView style={styles.mainSafeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerBtn}
-          onPress={() => {
-            soundTap();
-            navigation.goBack();
-          }}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={Platform.OS === "ios" ? "chevron-back" : "arrow-back"}
-            size={24}
-            color="#000"
-          />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Offer Details</Text>
-        <TouchableOpacity
-          style={styles.headerBtn}
-          onPress={() => {
-            Haptics.selectionAsync();
-            soundRefresh();   // 🔔 refresh whoosh
-            fetchAll({ silent: true, forceFresh: true });
-            fetchStatsOnly();
-          }}
-          activeOpacity={0.7}
-        >
-          {refreshing ? (
-            <ActivityIndicator size="small" color="#f9c349" />
-          ) : (
-            <MaterialCommunityIcons name="refresh" size={22} color="#000" />
-          )}
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={styles.mainSafeArea} edges={["top"]}>
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.brandDetailHeader}>
-          <View style={styles.logoCircle}>
-            <Image
-              source={{
-                uri:
-                  activeImage ||
-                  "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
-              }}
-              style={styles.brandImage}
-              resizeMode="contain"
-            />
-          </View>
-          <Text style={styles.brandTitle}>
-            {brand.name || brand.brandName || "Brand"}
-          </Text>
-          <View style={styles.categoryBadge}>
-            <MaterialIcons name="category" size={14} color="black" />
-            <Text style={styles.categoryText}>{activeCategory}</Text>
+        {/* Hero */}
+        <View style={styles.hero}>
+          <Image
+            source={{
+              uri: activeImage || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+            }}
+            style={styles.heroImage}
+            resizeMode="contain"
+            accessibilityIgnoresInvertColors
+          />
+          <TouchableOpacity
+            style={[styles.headerBtn, styles.heroBtnLeft]}
+            onPress={() => {
+              soundTap();
+              navigation.goBack();
+            }}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="back"
+          >
+            <Ionicons name="chevron-back" size={20} color={T.ink} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.headerBtn, styles.heroBtnRight]}
+            onPress={() => {
+              Haptics.selectionAsync();
+              soundRefresh();   // 🔔 refresh whoosh
+              fetchAll({ silent: true, forceFresh: true });
+              fetchStatsOnly();
+            }}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="refresh offer"
+          >
+            {refreshing ? (
+              <ActivityIndicator size="small" color={T.ink} />
+            ) : (
+              <MaterialCommunityIcons name="refresh" size={20} color={T.ink} />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Summary card */}
+        <View style={styles.summaryCard}>
+          <View style={styles.brandDetailHeader}>
+            <View style={styles.logoCircle}>
+              {brand.logo ? (
+                <Image source={{ uri: brand.logo }} style={styles.brandImage} resizeMode="contain" />
+              ) : (
+                <Text style={styles.logoInitial}>{brandName.charAt(0).toUpperCase()}</Text>
+              )}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.brandTitle} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_SCALE} accessibilityRole="header">
+                {brandName}
+              </Text>
+              {!!metaLine && (
+                <Text style={styles.brandMeta} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                  {metaLine}
+                </Text>
+              )}
+            </View>
           </View>
 
-          <View style={styles.availabilityRow}>
-            {activeIsOnline && (
-              <View style={styles.availabilityPill}>
-                <MaterialCommunityIcons name="earth" size={14} color="#f9c349" />
-                <Text style={styles.availabilityText}>Online</Text>
-              </View>
-            )}
-            {activeIsInStore && (
-              <View style={styles.availabilityPill}>
-                <MaterialCommunityIcons
-                  name="storefront"
-                  size={14}
-                  color="#f9c349"
-                />
-                <Text style={styles.availabilityText}>In-Store</Text>
-              </View>
-            )}
-          </View>
+          {activeDiscount > 0 && (
+            <Text style={styles.bigDiscount} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+              {activeDiscount}% off<Text style={{ color: T.yellow }}>.</Text>
+            </Text>
+          )}
+
+          {(activeIsInStore || activeIsOnline) && (
+            <View style={styles.availabilityRow}>
+              {activeIsInStore && (
+                <View style={[styles.availabilityPill, styles.availabilityPillOn]}>
+                  <Text style={[styles.availabilityText, { color: T.white }]} maxFontSizeMultiplier={MAX_FONT_SCALE}>in-store</Text>
+                </View>
+              )}
+              {activeIsOnline && (
+                <View style={[styles.availabilityPill, !activeIsInStore && styles.availabilityPillOn]}>
+                  <Text
+                    style={[styles.availabilityText, !activeIsInStore && { color: T.white }]}
+                    maxFontSizeMultiplier={MAX_FONT_SCALE}
+                  >
+                    online
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
 
         {cityOptions.length > 0 && (
@@ -1385,12 +1485,12 @@ export default function OfferScreen() {
             options={cityOptions}
             selected={cityOptions.some((o) => o.city === city) ? city : ALL_CITIES}
             onSelect={setCity}
-            style={{ marginTop: 16, marginBottom: 0, marginHorizontal: -20 }}
+            style={{ marginTop: 16, marginBottom: 0 }}
           />
         )}
         {noBranchesInCity && city !== ALL_CITIES && (
-          <Text style={styles.cityNotice}>
-            No branches in {city} yet. Showing all branches.
+          <Text style={styles.cityNotice} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            no branches in {city} yet. showing all branches.
           </Text>
         )}
 
@@ -1404,710 +1504,411 @@ export default function OfferScreen() {
           onClearSelection={() => setSelectedBranch(null)}
         />
 
-        <View style={styles.tabContainer}>
-          {["gift", "redeem", "location"].map((tab) => (
-            <Pressable
-              key={tab}
+        {facts.length > 0 && (
+          <View style={styles.factsRow}>
+            {facts.map((f) => (
+              <View key={f.k} style={styles.factTile}>
+                <Text style={styles.factKey} maxFontSizeMultiplier={MAX_FONT_SCALE}>{f.k}</Text>
+                <Text style={styles.factValue} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_SCALE}>{f.v}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Details */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            about this offer<Text style={{ color: T.yellow }}>.</Text>
+          </Text>
+          <Text style={styles.tabContentTitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>{activeTitle}</Text>
+          <Text style={styles.tabContentText}>{activeDescription}</Text>
+
+          {hasSelectedBranch && (
+            <View style={styles.branchInfoCard}>
+              <MaterialCommunityIcons name="store-marker-outline" size={20} color={T.ink} />
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={styles.branchInfoTitle}>{activeBranchName}</Text>
+                {selectedBranch.city ? (
+                  <Text style={styles.branchInfoText}>{selectedBranch.city}</Text>
+                ) : null}
+                {selectedBranch.address ? (
+                  <Text style={styles.branchInfoText}>{selectedBranch.address}</Text>
+                ) : null}
+              </View>
+            </View>
+          )}
+
+          {isGuest && (
+            <TouchableOpacity
+              style={styles.guestPromptCard}
               onPress={() => {
-                Haptics.selectionAsync();
-                soundTap();     // 🔔 tap when switching tabs
-                setActiveTab(tab);
+                soundTap();
+                navigation.navigate("Login");
               }}
-              style={[styles.tabItem, activeTab === tab && styles.activeTabCard]}
+              accessibilityRole="button"
+              accessibilityLabel="sign in to claim offers"
             >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === tab && styles.activeTabText,
-                ]}
-              >
-                {tab === "gift"
-                  ? "Details"
-                  : tab === "redeem"
-                  ? "Redeem"
-                  : "Locate"}
-              </Text>
-            </Pressable>
-          ))}
+              <MaterialCommunityIcons name="account-plus-outline" size={22} color={T.ink} />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.guestPromptTitle}>unlock full benefits</Text>
+                <Text style={styles.guestPromptText}>sign in to claim offers and get student discounts.</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={T.textFaint} />
+            </TouchableOpacity>
+          )}
         </View>
 
-        {activeTab === "gift" && (
-          <View style={styles.tabContentWrapper}>
-            <Text style={styles.tabContentTitle}>{activeTitle}</Text>
-            <Text style={styles.tabContentText}>{activeDescription}</Text>
-
-            {activeDiscount > 0 && (
-              <View style={styles.discountInfoRow}>
-                <MaterialCommunityIcons name="percent" size={20} color="#f9c349" />
-                <Text style={styles.discountInfoText}>
-                  {activeDiscount}% OFF for students
-                </Text>
-              </View>
-            )}
-
-            {hasSelectedBranch && (
-              <View style={styles.branchInfoCard}>
-                <MaterialCommunityIcons
-                  name="store-marker"
-                  size={20}
-                  color="#f9c349"
-                />
-                <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={styles.branchInfoTitle}>{activeBranchName}</Text>
-                  {selectedBranch.city ? (
-                    <Text style={styles.branchInfoText}>
-                      {selectedBranch.city}
-                    </Text>
-                  ) : null}
-                  {selectedBranch.address ? (
-                    <Text style={styles.branchInfoText}>
-                      {selectedBranch.address}
-                    </Text>
-                  ) : null}
+        {/* How to redeem */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            how to redeem<Text style={{ color: T.yellow }}>.</Text>
+          </Text>
+          <View style={styles.steps}>
+            {steps.map((text, i) => {
+              const last = i === steps.length - 1;
+              return (
+                <View key={i} style={styles.stepRow}>
+                  <View style={[styles.stepNum, last && styles.stepNumLast]}>
+                    <Text style={[styles.stepNumText, last && { color: T.ink }]}>{i + 1}</Text>
+                  </View>
+                  <Text style={styles.stepText}>{text}</Text>
                 </View>
-              </View>
-            )}
-
-            {isGuest && (
-              <TouchableOpacity
-                style={styles.guestPromptCard}
-                onPress={() => {
-                  soundTap();
-                  navigation.navigate("Login");
-                }}
-              >
-                <MaterialCommunityIcons
-                  name="account-plus"
-                  size={24}
-                  color="#f9c349"
-                />
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.guestPromptTitle}>
-                    Unlock Full Benefits
-                  </Text>
-                  <Text style={styles.guestPromptText}>
-                    Sign in to claim offers and get student discounts!
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color="#f9c349" />
-              </TouchableOpacity>
-            )}
+              );
+            })}
           </View>
-        )}
 
-        {activeTab === "redeem" && (
-          <View style={styles.tabContentWrapper}>
-            <View style={styles.instructionHeader}>
-              <MaterialCommunityIcons
-                name="ticket-confirmation-outline"
-                size={24}
-                color="#000000"
-              />
-              <Text style={styles.instructionTitle}>How to Redeem</Text>
-            </View>
-            <Text style={styles.tabContentText}>
-              {activeRedeemInstructions}
-            </Text>
-
-            {activeIsOnline && (
-              <View style={styles.redeemOnlineBadge}>
-                <MaterialCommunityIcons name="earth" size={16} color="#3b82f6" />
-                <Text style={styles.redeemOnlineText}>Available Online</Text>
-              </View>
-            )}
-            {activeIsInStore && (
-              <View style={styles.redeemStoreBadge}>
-                <MaterialCommunityIcons
-                  name="storefront"
-                  size={16}
-                  color="#ec4899"
-                />
-                <Text style={styles.redeemStoreText}>Available In-Store</Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {activeTab === "location" && (
-          <View style={styles.tabContentWrapper}>
-            <View style={styles.locationInfoRow}>
-              <MaterialCommunityIcons
-                name="map-marker-radius"
-                size={24}
-                color="#000000"
-              />
-              <Text style={styles.locationAddressText}>
-                {activeLocation || "Address not specified"}
+          {/* Locate */}
+          <TouchableOpacity
+            style={[styles.mapButton, !mapTarget && styles.mapButtonDisabled]}
+            onPress={() => openMap(mapTarget)}
+            disabled={!mapTarget}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`open in maps${activeLocation ? `, ${activeLocation}` : ""}`}
+          >
+            <MaterialCommunityIcons name="map-marker-outline" size={20} color={T.ink} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.mapButtonText} maxFontSizeMultiplier={MAX_FONT_SCALE}>open in maps</Text>
+              <Text style={styles.mapAddress} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                {activeLocation || "address not specified"}
               </Text>
             </View>
-
-            {hasSelectedBranch &&
-              (selectedBranch.city || selectedBranch.address) && (
-                <View style={styles.branchLocationCard}>
-                  <MaterialCommunityIcons
-                    name="storefront"
-                    size={18}
-                    color="#f9c349"
-                  />
-                  <View style={{ flex: 1, marginLeft: 10 }}>
-                    <Text style={styles.branchLocationTitle}>
-                      {activeBranchName}
-                    </Text>
-                    {selectedBranch.city ? (
-                      <Text style={styles.branchLocationText}>
-                        📍 {selectedBranch.city}
-                      </Text>
-                    ) : null}
-                    {selectedBranch.address ? (
-                      <Text style={styles.branchLocationText}>
-                        {selectedBranch.address}
-                      </Text>
-                    ) : null}
-                  </View>
-                </View>
-              )}
-
-            <TouchableOpacity
-              style={[
-                styles.mapButton,
-                !activeLocation && styles.mapButtonDisabled,
-              ]}
-              onPress={() =>
-                openMap(activeLocation || activeBranchName || brand.name)
-              }
-              disabled={!activeLocation && !activeBranchName && !brand.name}
-            >
-              <MaterialCommunityIcons name="directions" size={18} color="#fff" />
-              <Text style={styles.mapButtonText}>Open in Maps</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+            {!!distanceText && (
+              <Text style={styles.mapDistance} maxFontSizeMultiplier={MAX_FONT_SCALE}>{distanceText}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <TouchableOpacity
-          style={styles.closeBtn}
-          onPress={() => {
-            soundTap();
-            navigation.goBack();
-          }}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.closeBtnText}>Close</Text>
-        </TouchableOpacity>
-
         {currentOffer ? (
-          <TouchableOpacity
-            style={styles.claimBtnWrapper}
-            disabled={isClaimed || claiming}
-            onPress={() => claimOffer(currentOffer._id)}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={isClaimed ? ["#ccc", "#bbb"] : ["#f9c349", "#f5a623"]}
-              style={styles.claimGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              {claiming ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <>
-                  <MaterialCommunityIcons
-                    name={isClaimed ? "check-circle" : "gift"}
-                    size={20}
-                    color="#fff"
-                  />
-                  <Text style={styles.claimBtnText} numberOfLines={1}>
-                    {isClaimed ? "✓ Claimed" : `Claim ${activeDiscount}% OFF`}
-                  </Text>
-                </>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
+          isClaimed ? (
+            <Button
+              title="claimed. find it in my discounts"
+              variant="secondary"
+              icon={<MaterialCommunityIcons name="check-circle-outline" size={18} color={T.ink} />}
+              onPress={() => {
+                soundTap();
+                navigation.navigate("MyDiscountScreen");
+              }}
+            />
+          ) : isGuest ? (
+            <Button
+              title="sign in to claim"
+              loading={claiming}
+              onPress={() => claimOffer(currentOffer._id)}
+            />
+          ) : (
+            <>
+              <Text style={styles.holdHint} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                {claiming ? "claiming…" : "at the counter? press and hold"}
+              </Text>
+              <HoldToClaim
+                label={activeDiscount > 0 ? `hold to claim ${activeDiscount}% off` : "hold to claim"}
+                disabled={claiming}
+                onComplete={() => claimOffer(currentOffer._id)}
+              />
+            </>
+          )
         ) : (
-          <View style={[styles.claimBtnWrapper, styles.noOfferBtn]}>
-            <Text style={styles.noOfferText}>No Offers Available</Text>
-          </View>
+          <Button title="no offers available" disabled onPress={() => {}} />
         )}
       </View>
 
       <ClaimSuccessModal
         visible={claimSuccessVisible}
         onClose={() => setClaimSuccessVisible(false)}
+        onDone={() => {
+          setClaimSuccessVisible(false);
+          navigation.navigate("MyDiscountScreen");
+        }}
         brandName={claimedBrandName}
         discount={claimedDiscount}
+        isInStore={activeIsInStore}
       />
     </SafeAreaView>
   );
 }
 
 // ============================================================
-// STYLES (unchanged)
+// STYLES
 // ============================================================
 const styles = StyleSheet.create({
-  cityNotice: {
-    fontSize: 11.5,
-    color: "#8a6d1a",
-    backgroundColor: "#fff8e6",
-    marginTop: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  mainSafeArea: { flex: 1, backgroundColor: "#fff" },
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  loadingText: { marginTop: 12, color: "#999", fontSize: 14 },
-
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  headerBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#f5f5f5",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#000",
-    fontFamily: "Cardo",
-  },
-
-  scrollView: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 30 },
-
-  brandDetailHeader: { alignItems: "center", marginBottom: 10 },
-  logoCircle: {
-    width: "100%",
-    height: 170,
-    borderRadius: 20,
-    backgroundColor: "#F7F9F8",
-    overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  brandImage: { width: "75%", height: "75%" },
-  brandTitle: {
-    fontSize: 24,
-    fontWeight: "900",
-    color: "#000000",
-    marginTop: 15,
-    textAlign: "center",
-    fontFamily: "Cardo",
-  },
-  categoryBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f5f5f5",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginTop: 8,
-  },
-  categoryText: {
-    fontSize: 10,
-    color: "#000000",
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 1.2,
-    marginLeft: 6,
-  },
-  availabilityRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 12,
-    flexWrap: "wrap",
-    justifyContent: "center",
-  },
-  availabilityPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f9c34915",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+  mainSafeArea: { flex: 1, backgroundColor: T.paper },
+  loadingContainer: { flex: 1 },
+  skeletonCard: {
+    marginTop: -40,
+    marginHorizontal: 16,
+    padding: 18,
+    borderRadius: 26,
+    backgroundColor: T.card,
     borderWidth: 1,
-    borderColor: "#f9c34940",
-    gap: 4,
+    borderColor: T.line,
   },
-  availabilityText: { fontSize: 12, color: "#f9c349", fontWeight: "700" },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingBottom: 150 },
 
-  branchDropdownWrap: {
-    marginTop: 20,
-    borderRadius: 14,
+  // Hero
+  hero: { height: 236, backgroundColor: T.lineSoft, alignItems: "center", justifyContent: "center" },
+  heroImage: { width: "100%", height: "100%" },
+  headerBtn: {
+    position: "absolute",
+    top: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: T.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroBtnLeft: { left: 16 },
+  heroBtnRight: { right: 16 },
+
+  // Summary card
+  summaryCard: {
+    marginTop: -40,
+    marginHorizontal: 16,
+    padding: 18,
+    borderRadius: 26,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
+  },
+  brandDetailHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+  logoCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: T.lineSoft,
+    alignItems: "center",
+    justifyContent: "center",
     overflow: "hidden",
-    borderWidth: 1.5,
-    borderColor: "#f0f0f0",
-    backgroundColor: "#fff",
+  },
+  brandImage: { width: 44, height: 44 },
+  logoInitial: { fontFamily: F.heading, fontSize: 20, color: T.ink },
+  brandTitle: { fontFamily: F.bodyBold, fontSize: 17, color: T.ink },
+  brandMeta: { fontFamily: F.body, fontSize: 13, color: T.textMuted, marginTop: 2 },
+  bigDiscount: {
+    marginTop: 14,
+    fontFamily: F.heading,
+    fontSize: 44,
+    lineHeight: 48,
+    letterSpacing: -1.4,
+    color: T.ink,
+  },
+  availabilityRow: { flexDirection: "row", gap: 6, marginTop: 12 },
+  availabilityPill: {
+    height: 34,
+    paddingHorizontal: 14,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: T.line,
+    backgroundColor: T.card,
+    justifyContent: "center",
+  },
+  availabilityPillOn: { backgroundColor: T.ink, borderColor: T.ink },
+  availabilityText: { fontFamily: F.bodyBold, fontSize: 13, color: T.ink },
+
+  cityNotice: {
+    fontFamily: F.body,
+    fontSize: 12.5,
+    color: T.textMuted,
+    marginHorizontal: 20,
+    marginTop: 6,
+  },
+
+  // Branches
+  branchDropdownWrap: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 20,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
+    overflow: "hidden",
   },
   branchDropdownHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    backgroundColor: "#fff",
-  },
-  branchDropdownHeaderOpen: {
-    backgroundColor: "#fffdf5",
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  branchDropdownHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
     gap: 12,
-    flex: 1,
+    minHeight: 60,
+    paddingHorizontal: 14,
   },
   branchDropdownIconWrap: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#f9c34915",
+    backgroundColor: T.sand,
     alignItems: "center",
     justifyContent: "center",
   },
-  branchDropdownLabel: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#999",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-  },
-  branchDropdownValue: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#1a1a1a",
-    marginTop: 2,
-  },
-  branchDropdownList: { backgroundColor: "#fff" },
+  branchDropdownLabel: { fontFamily: F.bodySemi, fontSize: 12, color: T.textMuted },
+  branchDropdownValue: { fontFamily: F.bodyBold, fontSize: 15, color: T.ink, marginTop: 1 },
+  branchDropdownList: { borderTopWidth: 1, borderTopColor: T.lineSoft, paddingVertical: 4 },
   branchDropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    minHeight: 48,
     paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f5f5f5",
   },
-  branchDropdownItemActive: { backgroundColor: "#fffdf5" },
-  branchDropdownItemRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  branchDropdownItemName: { fontSize: 13.5, fontWeight: "600", color: "#333" },
-  branchDropdownItemNameActive: { color: "#000", fontWeight: "800" },
-  branchDropdownItemCity: { fontSize: 11, color: "#999", marginTop: 2 },
+  branchDropdownItemActive: { backgroundColor: T.yellowSoft },
+  branchDropdownItemName: { flex: 1, fontFamily: F.bodySemi, fontSize: 14, color: T.ink },
+  branchDropdownItemNameActive: { fontFamily: F.bodyBold },
+  branchDropdownItemCity: { fontFamily: F.body, fontSize: 12, color: T.textMuted },
   branchDropdownPill: {
-    backgroundColor: "#f0f0f0",
+    height: 24,
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    marginRight: 4,
+    borderRadius: 12,
+    backgroundColor: T.yellow,
+    justifyContent: "center",
   },
-  branchDropdownPillActive: { backgroundColor: "#f9c349" },
-  branchDropdownPillText: { fontSize: 11, fontWeight: "800", color: "#666" },
-  branchDropdownPillTextActive: { color: "#fff" },
+  branchDropdownPillText: { fontFamily: F.bodyBold, fontSize: 12, color: T.ink },
 
+  // Facts
+  factsRow: { flexDirection: "row", gap: 8, marginHorizontal: 16, marginTop: 12 },
+  factTile: {
+    flex: 1,
+    borderRadius: 16,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  factKey: { fontFamily: F.body, fontSize: 11.5, color: T.textMuted },
+  factValue: { fontFamily: F.bodyBold, fontSize: 14, color: T.ink, marginTop: 2 },
+
+  // Sections
+  section: { paddingHorizontal: 20, paddingTop: 24 },
+  sectionTitle: { fontFamily: F.heading, fontSize: 18, color: T.ink, marginBottom: 12 },
+  tabContentTitle: { fontFamily: F.headingBold, fontSize: 16, color: T.ink, marginBottom: 4 },
+  tabContentText: { fontFamily: F.body, fontSize: 15, lineHeight: 21, color: T.textMuted },
   branchInfoCard: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: "#fffdf5",
-    padding: 14,
-    borderRadius: 12,
+    alignItems: "center",
     marginTop: 14,
-    borderWidth: 1,
-    borderColor: "#f9c34930",
-  },
-  branchInfoTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#1a1a1a",
-    marginBottom: 4,
-  },
-  branchInfoText: { fontSize: 12, color: "#666", lineHeight: 18 },
-  branchLocationCard: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: "#f8f9fb",
     padding: 14,
-    borderRadius: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#f0f0f0",
-  },
-  branchLocationTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#1a1a1a",
-    marginBottom: 4,
-  },
-  branchLocationText: { fontSize: 12, color: "#666", lineHeight: 18, marginTop: 2 },
-
-  tabContainer: {
-    flexDirection: "row",
-    backgroundColor: "#F0F2F1",
     borderRadius: 18,
-    padding: 6,
-    marginBottom: 10,
-    marginTop: 20,
-  },
-  tabItem: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: "center",
-    borderRadius: 14,
-  },
-  activeTabCard: {
-    backgroundColor: "#fff",
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  tabText: {
-    fontSize: 13,
-    color: "#999",
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  activeTabText: { color: "#000000" },
-
-  tabContentWrapper: { marginTop: 15, paddingHorizontal: 5 },
-  tabContentTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#000000",
-    marginBottom: 10,
-    fontFamily: "Cardo",
-  },
-  tabContentText: { fontSize: 14, color: "#666", lineHeight: 22 },
-
-  discountInfoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f9c34915",
-    padding: 12,
-    borderRadius: 10,
-    marginTop: 12,
+    backgroundColor: T.card,
     borderWidth: 1,
-    borderColor: "#f9c34930",
+    borderColor: T.line,
   },
-  discountInfoText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#f9c349",
-    marginLeft: 10,
-  },
-
-  instructionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-    gap: 10,
-  },
-  instructionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#000000",
-    fontFamily: "Cardo",
-  },
-
-  redeemOnlineBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#e3f2fd",
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 12,
-  },
-  redeemOnlineText: {
-    fontSize: 13,
-    color: "#1565c0",
-    fontWeight: "600",
-    marginLeft: 8,
-  },
-  redeemStoreBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fce7f3",
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  redeemStoreText: {
-    fontSize: 13,
-    color: "#831843",
-    fontWeight: "600",
-    marginLeft: 8,
-  },
-
-  locationInfoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  locationAddressText: {
-    fontSize: 15,
-    color: "#333",
-    marginLeft: 10,
-    flexShrink: 1,
-  },
-  mapButton: {
-    flexDirection: "row",
-    backgroundColor: "#000000",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 15,
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "flex-start",
-  },
-  mapButtonDisabled: { backgroundColor: "#ccc", opacity: 0.6 },
-  mapButtonText: {
-    color: "#fff",
-    fontWeight: "700",
-    marginLeft: 8,
-    fontSize: 14,
-  },
-
+  branchInfoTitle: { fontFamily: F.bodyBold, fontSize: 14, color: T.ink },
+  branchInfoText: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, marginTop: 2 },
   guestPromptCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fafafa",
-    padding: 16,
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 18,
+    backgroundColor: T.yellowSoft,
+  },
+  guestPromptTitle: { fontFamily: F.bodyBold, fontSize: 14, color: T.ink },
+  guestPromptText: { fontFamily: F.body, fontSize: 12.5, color: T.ink, marginTop: 2 },
+
+  steps: { gap: 12 },
+  stepRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  stepNum: {
+    width: 32,
+    height: 32,
     borderRadius: 16,
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: "#f0f0f0",
+    backgroundColor: T.ink,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  guestPromptTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#1a1a1a",
-    marginBottom: 2,
-  },
-  guestPromptText: { fontSize: 12, color: "#666", lineHeight: 16 },
+  stepNumLast: { backgroundColor: T.yellow },
+  stepNumText: { fontFamily: F.bodyBold, fontSize: 14, color: T.white },
+  stepText: { flex: 1, fontFamily: F.body, fontSize: 15, lineHeight: 21, color: T.ink },
 
-  bottomBar: {
+  mapButton: {
+    marginTop: 16,
     flexDirection: "row",
-    paddingHorizontal: 20,
+    alignItems: "center",
+    gap: 10,
     paddingVertical: 12,
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
-    backgroundColor: "#fff",
-  },
-  closeBtn: {
-    flex: 0.4,
-    paddingVertical: 16,
-    borderRadius: 20,
-    backgroundColor: "#F2F2F2",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  closeBtnText: { color: "#777", fontWeight: "700", fontSize: 14 },
-
-  claimBtnWrapper: {
-    flex: 0.6,
-    borderRadius: 20,
-    overflow: "hidden",
-    elevation: 4,
-    shadowColor: "#f9c349",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  claimGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    gap: 8,
-  },
-  claimBtnText: { color: "#fff", fontWeight: "800", fontSize: 14 },
-
-  noOfferBtn: {
-    backgroundColor: "#ccc",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  noOfferText: { color: "#fff", fontWeight: "800", fontSize: 14 },
-
-  successOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  successCard: {
-    width: width * 0.85,
-    backgroundColor: "#fff",
-    borderRadius: 30,
-    padding: 30,
-    alignItems: "center",
-    elevation: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-  },
-  successIconCircle: {
-    marginBottom: 20,
-    shadowColor: "#f9c349",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-  },
-  successIconGradient: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  successTitle: {
-    fontSize: 24,
-    fontWeight: "900",
-    color: "#000",
-    marginBottom: 8,
-  },
-  successBrandName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  successDiscountBadge: {
-    backgroundColor: "#f9c34920",
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginBottom: 16,
+    paddingHorizontal: 14,
+    minHeight: 56,
+    borderRadius: 18,
+    backgroundColor: T.card,
     borderWidth: 1,
-    borderColor: "#f9c34940",
+    borderColor: T.line,
   },
-  successDiscountText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#f9c349",
+  mapButtonDisabled: { opacity: 0.5 },
+  mapButtonText: { fontFamily: F.bodySemi, fontSize: 14, color: T.ink },
+  mapAddress: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, marginTop: 1 },
+  mapDistance: { fontFamily: F.bodySemi, fontSize: 13, color: T.textMuted },
+
+  // Bottom bar
+  bottomBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 24,
+    backgroundColor: T.paper,
+    borderTopWidth: 1,
+    borderTopColor: T.line,
   },
-  successSubtext: {
-    fontSize: 14,
-    color: "#666",
+  holdHint: {
+    fontFamily: F.body,
+    fontSize: 12.5,
+    color: T.textMuted,
     textAlign: "center",
-    lineHeight: 20,
-    marginBottom: 20,
+    marginBottom: 10,
   },
+  holdBtn: {
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: T.ink,
+    overflow: "hidden",
+    justifyContent: "center",
+  },
+  holdFill: { position: "absolute", left: 0, top: 0, bottom: 0, backgroundColor: T.yellow },
+  holdInner: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
+  holdText: { fontFamily: F.bodyBold, fontSize: 16 },
+
+  // Sorted moment
+  sortedRoot: { flex: 1, backgroundColor: T.yellow, paddingHorizontal: 20 },
+  sortedCenter: { flex: 1, alignItems: "center", justifyContent: "center" },
+  sortedTitle: {
+    marginTop: 18,
+    fontFamily: F.heading,
+    fontSize: 64,
+    lineHeight: 68,
+    letterSpacing: -2.5,
+    color: T.ink,
+  },
+  sortedLine: {
+    marginTop: 8,
+    fontFamily: F.bodySemi,
+    fontSize: 16,
+    lineHeight: 22,
+    color: T.ink,
+    textAlign: "center",
+  },
+  sortedActions: { paddingBottom: 36 },
+  sortedDoneBtn: { backgroundColor: "transparent" },
 });
