@@ -6,6 +6,7 @@ import React from 'react';
 import { View, Image, StyleSheet } from 'react-native';
 import { MOOD_IMAGES, YELLOW_DOT, moodForFeature } from '../utils/mood';
 
+import { color as T } from "../../theme/tokens";
 const SIZE = 18; // visible face size (looks right at 12–20 on a 44px icon)
 
 export default function FeatureDot({ missionKey, sorted = false }) {
@@ -27,14 +28,14 @@ const styles = StyleSheet.create({
     width: SIZE + 4,
     height: SIZE + 4,
     borderRadius: (SIZE + 4) / 2,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: '#fff',
-    shadowColor: '#000',
+    borderColor: T.white,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.06,
     shadowRadius: 2,
     elevation: 2,
   },

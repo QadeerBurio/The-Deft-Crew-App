@@ -7,7 +7,8 @@ import Dot from './Dot';
 import engagementApi from '../api/engagementApi';
 import { useEngagement } from '../hooks/useEngagement';
 
-const MUTED = '#888';
+import { color as T, font as F } from "../../theme/tokens";
+const MUTED = T.textFaint;
 
 export default function BadgeShelf({ max = 6, compact = false, onSeeAll }) {
   const { flags } = useEngagement();
@@ -50,7 +51,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
   more: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
     color: MUTED,
     marginLeft: 4,
   },

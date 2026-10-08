@@ -7,8 +7,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEngagement } from '../hooks/useEngagement';
 import engagementApi from '../api/engagementApi';
 
-const GOLD = '#f9c349';
-const DARK = '#1a1a1a';
+import { color as T, font as F } from "../../theme/tokens";
+const GOLD = T.yellow;
+const DARK = T.ink;
 
 export default function Tooltip({ id, text, onClose }) {
   const { me, refresh } = useEngagement();
@@ -46,7 +47,7 @@ const styles = StyleSheet.create({
   wrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: T.ink,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 14,
@@ -55,9 +56,9 @@ const styles = StyleSheet.create({
   },
   text: {
     flex: 1,
-    color: '#fff',
+    color: T.white,
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
     lineHeight: 16,
   },
   btn: {
@@ -67,6 +68,6 @@ const styles = StyleSheet.create({
   btnText: {
     color: GOLD,
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
   },
 });

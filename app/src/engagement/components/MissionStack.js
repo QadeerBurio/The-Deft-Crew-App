@@ -9,6 +9,7 @@ import { useMissions } from '../hooks/useMissions';
 import { useEngagement } from '../hooks/useEngagement';
 import engagementApi from '../api/engagementApi';
 
+import { color as T } from "../../theme/tokens";
 export default function MissionStack({ onSnooze }) {
   const { missions, sortedCount, total, isLoading } = useMissions();
   const { refresh } = useEngagement();
@@ -69,12 +70,12 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#efefef',
+    borderColor: T.line,
     padding: 18,
     minHeight: 120,
   },
-  phBlock: { backgroundColor: '#f1f1f1', borderRadius: 8 },
+  phBlock: { backgroundColor: T.sand, borderRadius: 8 },
 });

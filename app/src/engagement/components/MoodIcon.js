@@ -10,25 +10,26 @@
 
 import React, { useState, useMemo } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { color as T } from "../../theme/tokens";
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 
 // ─── The 14 moods (§5.1) ───
 export const MOODS = {
-  sorted:   { emoji: '😌', color: '#10b981', label: 'sorted' },
-  panic:    { emoji: '😰', color: '#ef4444', label: 'panic' },
-  excited:  { emoji: '🤩', color: '#f9c349', label: 'excited' },
-  broke:    { emoji: '😔', color: '#94a3b8', label: 'broke' },
+  sorted:   { emoji: '😌', color: T.success, label: 'sorted' },
+  panic:    { emoji: '😰', color: T.danger, label: 'panic' },
+  excited:  { emoji: '🤩', color: T.yellow, label: 'excited' },
+  broke:    { emoji: '😔', color: T.textFaint, label: 'broke' },
   sleepy:   { emoji: '😴', color: '#8b5cf6', label: 'sleepy' },
   shook:    { emoji: '😳', color: '#a855f7', label: 'shook' },
   sus:      { emoji: '👀', color: '#f97316', label: 'sus' },
   cheeky:   { emoji: '😜', color: '#ec4899', label: 'cheeky' },
   hype:     { emoji: '🤩', color: '#f97316', label: 'hype' },
-  smug:     { emoji: '😏', color: '#3b82f6', label: 'smug' },
+  smug:     { emoji: '😏', color: T.ink, label: 'smug' },
   shock:    { emoji: '😮', color: '#eab308', label: 'shock' },
-  urgent:   { emoji: '🚨', color: '#ff6b6b', label: 'urgent' },
+  urgent:   { emoji: '🚨', color: T.danger, label: 'urgent' },
   money:    { emoji: '🤑', color: '#d4a373', label: 'money' },
-  ghost:    { emoji: '👻', color: '#94a3b8', label: 'ghost' },
-  default:  { emoji: '✨', color: '#f9c349', label: 'new' },
+  ghost:    { emoji: '👻', color: T.textFaint, label: 'ghost' },
+  default:  { emoji: '✨', color: T.yellow, label: 'new' },
 };
 
 // ─── Optional local PNGs ───

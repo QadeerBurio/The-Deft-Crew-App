@@ -29,7 +29,7 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api/api';
@@ -38,6 +38,7 @@ import Dot from '../engagement/components/Dot';
 import { useEngagement } from '../engagement/hooks/useEngagement';
 import { useReferrals } from '../engagement/hooks/useReferrals';
 
+import { color as T, font as F } from "../theme/tokens";
 const { width } = Dimensions.get('window');
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -140,7 +141,7 @@ const LEVELS = [
 // ═══════════════════════════════════════════════════════════════════════
 const SkeletonLoader = memo(() => (
   <SafeAreaView style={styles.container} edges={['top']}>
-    <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+    <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
     <View style={styles.header}>
       <View style={{ width: 38, height: 38, backgroundColor: '#E8ECF1', borderRadius: 12 }} />
       <View style={{ width: 100, height: 20, backgroundColor: '#E8ECF1', borderRadius: 6 }} />
@@ -180,7 +181,7 @@ const HeroPointsCard = memo(({ balance, lifetime, level, nextTier, pulse }) => {
   return (
     <Animated.View style={[styles.heroCard, { transform: [{ scale: pulse }] }]}>
       <LinearGradient
-        colors={['#1a1a1a', '#2d2d2d']}
+        colors={[T.ink, T.ink]}
         style={styles.heroGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -190,7 +191,7 @@ const HeroPointsCard = memo(({ balance, lifetime, level, nextTier, pulse }) => {
 
         <View style={styles.heroContent}>
           <View style={styles.heroHeader}>
-            <Text style={styles.heroLabel}>YOUR POINTS</Text>
+            <Text style={styles.heroLabel}>your points</Text>
             <View style={styles.levelBadge}>
               <Text style={styles.levelBadgeText}>{(level || 'member').toUpperCase()}</Text>
             </View>
@@ -246,7 +247,7 @@ const MembersCard = memo(({ referralCount, verifiedCount = 0, onShare }) => {
   const membersToShow = Math.min(referralCount, 5);
   const extras = Math.max(0, referralCount - 5);
   const pendingCount = Math.max(0, referralCount - verifiedCount);
-  const AVATAR_COLORS = ['#6C63FF', '#FF6B6B', '#FFD93D', '#10b981', '#FF6B35'];
+  const AVATAR_COLORS = ['#6C63FF', T.danger, '#FFD93D', T.success, '#FF6B35'];
 
   // ── Empty state ──
   if (referralCount === 0) {
@@ -254,7 +255,7 @@ const MembersCard = memo(({ referralCount, verifiedCount = 0, onShare }) => {
       <View style={styles.membersCard}>
         <View style={styles.membersTopRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.membersLabel}>YOUR CREW</Text>
+            <Text style={styles.membersLabel}>your crew</Text>
             <Text style={styles.membersCount}>
               0<Text style={styles.membersCountSub}> members</Text>
             </Text>
@@ -264,18 +265,18 @@ const MembersCard = memo(({ referralCount, verifiedCount = 0, onShare }) => {
           </View>
           <TouchableOpacity style={styles.inviteBtn} onPress={onShare} activeOpacity={0.85}>
             <LinearGradient
-              colors={['#f9c349', '#f5a623']}
+              colors={[T.yellow, T.yellow]}
               style={styles.inviteGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Ionicons name="share-social-outline" size={13} color="#1a1a1a" />
+              <Ionicons name="share-social-outline" size={13} color={T.ink} />
               <Text style={styles.inviteText}>invite</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
         <View style={styles.emptyMembersBox}>
-          <Ionicons name="people-outline" size={16} color="#999" />
+          <Ionicons name="people-outline" size={16} color={T.textFaint} />
           <Text style={styles.emptyMembersText}>
             no members yet. share your code to get started.
           </Text>
@@ -289,7 +290,7 @@ const MembersCard = memo(({ referralCount, verifiedCount = 0, onShare }) => {
     <View style={styles.membersCard}>
       <View style={styles.membersTopRow}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.membersLabel}>YOUR CREW</Text>
+          <Text style={styles.membersLabel}>your crew</Text>
           <Text style={styles.membersCount}>
             {referralCount}
             <Text style={styles.membersCountSub}>
@@ -300,14 +301,14 @@ const MembersCard = memo(({ referralCount, verifiedCount = 0, onShare }) => {
           {/* ── Always show verified vs pending breakdown ── */}
           <View style={styles.membersStatusRow}>
             <View style={styles.membersStatusPill}>
-              <View style={[styles.statusDot, { backgroundColor: '#10b981' }]} />
+              <View style={[styles.statusDot, { backgroundColor: T.success }]} />
               <Text style={styles.membersStatusText}>
                 {verifiedCount} verified
               </Text>
             </View>
             {pendingCount > 0 && (
               <View style={styles.membersStatusPill}>
-                <View style={[styles.statusDot, { backgroundColor: '#f9c349' }]} />
+                <View style={[styles.statusDot, { backgroundColor: T.yellow }]} />
                 <Text style={styles.membersStatusText}>
                   {pendingCount} pending sort
                 </Text>
@@ -328,12 +329,12 @@ const MembersCard = memo(({ referralCount, verifiedCount = 0, onShare }) => {
 
         <TouchableOpacity style={styles.inviteBtn} onPress={onShare} activeOpacity={0.85}>
           <LinearGradient
-            colors={['#f9c349', '#f5a623']}
+            colors={[T.yellow, T.yellow]}
             style={styles.inviteGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
-            <Ionicons name="share-social-outline" size={13} color="#1a1a1a" />
+            <Ionicons name="share-social-outline" size={13} color={T.ink} />
             <Text style={styles.inviteText}>invite</Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -352,7 +353,7 @@ const MembersCard = memo(({ referralCount, verifiedCount = 0, onShare }) => {
               },
             ]}
           >
-            <Ionicons name="person" size={14} color="#fff" />
+            <Ionicons name="person" size={14} color={T.white} />
           </View>
         ))}
         {extras > 0 && (
@@ -442,7 +443,7 @@ const LevelCard = memo(
           )}
 
           <LinearGradient
-            colors={isUnlocked ? level.gradient : ['#f0f0f0', '#e8e8e8']}
+            colors={isUnlocked ? level.gradient : [T.sand, T.sand]}
             style={styles.levelIconContainer}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -450,7 +451,7 @@ const LevelCard = memo(
             <MaterialCommunityIcons
               name={level.icon}
               size={26}
-              color={isUnlocked ? '#fff' : '#999'}
+              color={isUnlocked ? T.white : T.textFaint}
             />
           </LinearGradient>
 
@@ -459,12 +460,12 @@ const LevelCard = memo(
               <Text style={styles.levelName}>{level.name}</Text>
               {isUnlocked ? (
                 <View style={styles.unlockedBadge}>
-                  <Ionicons name="checkmark-circle" size={12} color="#fff" />
-                  <Text style={styles.unlockedText}>UNLOCKED</Text>
+                  <Ionicons name="checkmark-circle" size={12} color={T.white} />
+                  <Text style={styles.unlockedText}>unlocked</Text>
                 </View>
               ) : isNext ? (
                 <View style={styles.nextBadge}>
-                  <Text style={styles.nextText}>NEXT</Text>
+                  <Text style={styles.nextText}>next</Text>
                 </View>
               ) : null}
             </View>
@@ -505,7 +506,7 @@ const LevelCard = memo(
                   <Ionicons
                     name="checkmark-circle"
                     size={11}
-                    color={isUnlocked ? level.color : '#ccc'}
+                    color={isUnlocked ? level.color : T.textFaint}
                   />
                   <Text style={[styles.perkText, isUnlocked && styles.perkTextActive]}>{p}</Text>
                 </View>
@@ -539,7 +540,7 @@ const CondBar = ({ label, current, target, progress, color, locked, hideIfZero }
             styles.condFill,
             {
               width: `${Math.min(progress * 100, 100)}%`,
-              backgroundColor: locked ? '#ddd' : color,
+              backgroundColor: locked ? T.sand : color,
             },
           ]}
         />
@@ -553,14 +554,14 @@ const CondBar = ({ label, current, target, progress, color, locked, hideIfZero }
 // ═══════════════════════════════════════════════════════════════════════
 const FounderApplyBanner = memo(({ onApply }) => (
   <View style={styles.applyBanner}>
-    <MaterialCommunityIcons name="crown" size={28} color="#FFD700" />
+    <MaterialCommunityIcons name="crown" size={28} color={T.yellow} />
     <View style={{ flex: 1 }}>
       <Text style={styles.applyBannerTitle}>founder circle — you qualify</Text>
       <Text style={styles.applyBannerSub}>50 seats total. MSB reviews each personally.</Text>
     </View>
     <TouchableOpacity style={styles.applyBtn} onPress={onApply} activeOpacity={0.85}>
       <Text style={styles.applyBtnText}>apply</Text>
-      <Ionicons name="arrow-forward" size={14} color="#1a1a1a" />
+      <Ionicons name="arrow-forward" size={14} color={T.ink} />
     </TouchableOpacity>
   </View>
 ));
@@ -597,28 +598,28 @@ const DownloadCard = memo(({ referralCode }) => {
   return (
     <View style={styles.downloadCard}>
       <Text style={styles.downloadTitle}>
-        download tdc<Text style={{ color: '#f9c349' }}>.</Text>
+        download tdc<Text style={{ color: T.yellow }}>.</Text>
       </Text>
       <Text style={styles.downloadSub}>tell a friend. crew points come with them.</Text>
 
       <View style={styles.storesRow}>
         <TouchableOpacity style={styles.storeBtn} onPress={openIos} activeOpacity={0.85}>
           <View style={styles.storeIconBox}>
-            <Ionicons name="logo-apple" size={22} color="#fff" />
+            <Ionicons name="logo-apple" size={22} color={T.white} />
           </View>
           <View style={styles.storeTextCol}>
-            <Text style={styles.storeSmall}>Download on the</Text>
-            <Text style={styles.storeBig}>App Store</Text>
+            <Text style={styles.storeSmall}>download on the</Text>
+            <Text style={styles.storeBig}>app store</Text>
           </View>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.storeBtn} onPress={openAndroid} activeOpacity={0.85}>
           <View style={styles.storeIconBox}>
-            <Ionicons name="logo-google-playstore" size={22} color="#fff" />
+            <Ionicons name="logo-google-playstore" size={22} color={T.white} />
           </View>
           <View style={styles.storeTextCol}>
-            <Text style={styles.storeSmall}>GET IT ON</Text>
-            <Text style={styles.storeBig}>Google Play</Text>
+            <Text style={styles.storeSmall}>get it on</Text>
+            <Text style={styles.storeBig}>google play</Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -770,7 +771,7 @@ const PointsScreen = () => {
       message="Sign in to see your points, level, and referral code."
     >
       <SafeAreaView style={styles.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
         <Animated.View style={[styles.header, { opacity: headerFade }]}>
           <TouchableOpacity
@@ -779,10 +780,10 @@ const PointsScreen = () => {
             activeOpacity={0.7}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="chevron-back" size={24} color="#1a1a1a" />
+            <Ionicons name="chevron-back" size={24} color={T.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
-            the crew<Text style={{ color: '#f9c349' }}>.</Text>
+            the crew<Text style={{ color: T.yellow }}>.</Text>
           </Text>
           <View style={{ width: 38 }} />
         </Animated.View>
@@ -792,8 +793,8 @@ const PointsScreen = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#f9c349"
-              colors={['#f9c349']}
+              tintColor={T.yellow}
+              colors={[T.yellow]}
             />
           }
           contentContainerStyle={styles.scrollContent}
@@ -818,11 +819,11 @@ const PointsScreen = () => {
 
             {/* ── CODE CARD ── */}
             <View style={styles.codeCard}>
-              <Text style={styles.codeLabel}>YOUR CODE</Text>
+              <Text style={styles.codeLabel}>your code</Text>
               <View style={styles.codeRow}>
                 <Text style={styles.codeText}>{referralCode || '—'}</Text>
                 <TouchableOpacity onPress={copyCode} style={styles.copyBtn} activeOpacity={0.7}>
-                  <Ionicons name="copy-outline" size={18} color="#f9c349" />
+                  <Ionicons name="copy-outline" size={18} color={T.yellow} />
                 </TouchableOpacity>
               </View>
               <Text style={styles.codeHint}>
@@ -832,13 +833,13 @@ const PointsScreen = () => {
               <Animated.View style={{ transform: [{ scale: shareScale }] }}>
                 <TouchableOpacity onPress={onShare} style={styles.shareBtn} activeOpacity={0.85}>
                   <LinearGradient
-                    colors={['#f9c349', '#f5a623']}
+                    colors={[T.yellow, T.yellow]}
                     style={styles.shareGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                   >
-                    <Ionicons name="share-social-outline" size={18} color="#1a1a1a" />
-                    <Text style={styles.shareText}>Share My Code</Text>
+                    <Ionicons name="share-social-outline" size={18} color={T.ink} />
+                    <Text style={styles.shareText}>share my code</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               </Animated.View>
@@ -847,7 +848,7 @@ const PointsScreen = () => {
             {/* ── WAYS TO EARN ── */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>
-                ways to earn<Text style={{ color: '#f9c349' }}>.</Text>
+                ways to earn<Text style={{ color: T.yellow }}>.</Text>
               </Text>
               <Text style={styles.sectionSub}>only real use counts.</Text>
 
@@ -870,7 +871,7 @@ const PointsScreen = () => {
             {/* ── LEVELS ── */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>
-                levels<Text style={{ color: '#f9c349' }}>.</Text>
+                levels<Text style={{ color: T.yellow }}>.</Text>
               </Text>
               <Text style={styles.sectionSub}>
                 total points + real activity + verified referrals.
@@ -895,7 +896,7 @@ const PointsScreen = () => {
             <DownloadCard referralCode={referralCode} />
 
             <Text style={styles.footerNote}>
-              <Ionicons name="information-circle-outline" size={13} color="#f9c349" />{' '}
+              <Ionicons name="information-circle-outline" size={13} color={T.yellow} />{' '}
               crew points are earned by using the app. levels never drop, even when you spend.
             </Text>
           </Animated.View>
@@ -909,7 +910,7 @@ const PointsScreen = () => {
 // STYLES
 // ═══════════════════════════════════════════════════════════════════════
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fc' },
+  container: { flex: 1, backgroundColor: T.paper },
 
   header: {
     flexDirection: 'row',
@@ -918,21 +919,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fff',
+    borderBottomColor: T.line,
+    backgroundColor: T.card,
   },
   headerBtn: {
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: T.sand,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '900',
-    color: '#1a1a1a',
+    fontFamily: F.heading,
+    color: T.ink,
     letterSpacing: -0.6,
   },
   scrollContent: { paddingBottom: 40 },
@@ -942,19 +943,19 @@ const styles = StyleSheet.create({
     margin: 16,
     borderRadius: 24,
     overflow: 'hidden',
-    elevation: 12,
-    shadowColor: '#f9c349',
+    elevation: 2,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 16,
+    shadowRadius: 8,
   },
   heroGradient: { padding: 24, position: 'relative', overflow: 'hidden' },
   heroOrb1: {
     position: 'absolute', width: 220, height: 220, borderRadius: 110,
-    backgroundColor: 'rgba(249,195,73,0.05)', top: -90, right: -70,
+    backgroundColor: T.yellowSoft, top: -90, right: -70,
   },
   heroOrb2: {
     position: 'absolute', width: 160, height: 160, borderRadius: 80,
-    backgroundColor: 'rgba(249,195,73,0.03)', bottom: -50, left: -50,
+    backgroundColor: T.yellowSoft, bottom: -50, left: -50,
   },
   heroContent: { position: 'relative', zIndex: 1 },
   heroHeader: {
@@ -963,55 +964,55 @@ const styles = StyleSheet.create({
   },
   heroLabel: {
     color: 'rgba(255,255,255,0.55)', fontSize: 11,
-    fontWeight: '800', letterSpacing: 1.6,
+    fontFamily: F.bodyBold, letterSpacing: 1.6,
   },
   levelBadge: {
-    backgroundColor: '#f9c349', paddingHorizontal: 12,
+    backgroundColor: T.yellow, paddingHorizontal: 12,
     paddingVertical: 6, borderRadius: 20,
   },
-  levelBadgeText: { color: '#1a1a1a', fontSize: 10, fontWeight: '900', letterSpacing: 0.6 },
-  heroBalance: { color: '#fff', fontSize: 44, fontWeight: '900', letterSpacing: -1.4, marginTop: 2 },
-  heroSub: { color: 'rgba(255,255,255,0.55)', fontSize: 12, fontWeight: '600', marginTop: 2 },
+  levelBadgeText: { color: T.ink, fontSize: 10, fontFamily: F.bodyBold, letterSpacing: 0.6 },
+  heroBalance: { color: T.white, fontSize: 44, fontFamily: F.heading, letterSpacing: -1.4, marginTop: 2 },
+  heroSub: { color: 'rgba(255,255,255,0.55)', fontSize: 12, fontFamily: F.bodySemi, marginTop: 2 },
   progressRow: { flexDirection: 'row', alignItems: 'center', marginTop: 18, gap: 12 },
   progressTextWrap: { flex: 1 },
-  progressTitle: { color: '#fff', fontSize: 14, fontWeight: '800', marginBottom: 4 },
-  progressSub: { color: 'rgba(255,255,255,0.65)', fontSize: 11, fontWeight: '500', lineHeight: 16 },
+  progressTitle: { color: T.white, fontSize: 14, fontFamily: F.bodyBold, marginBottom: 4 },
+  progressSub: { color: 'rgba(255,255,255,0.65)', fontSize: 11, fontFamily: F.bodyMedium, lineHeight: 16 },
 
   // Members
   membersCard: {
     marginHorizontal: 16, marginTop: 4, padding: 16,
-    backgroundColor: '#fff', borderRadius: 20,
-    borderWidth: 1.5, borderColor: '#f0f0f0',
+    backgroundColor: T.card, borderRadius: 20,
+    borderWidth: 1.5, borderColor: T.line,
   },
   membersTopRow: {
     flexDirection: 'row', alignItems: 'flex-start',
     justifyContent: 'space-between', gap: 12,
   },
-  membersLabel: { fontSize: 10, color: '#888', fontWeight: '800', letterSpacing: 1.4, marginBottom: 4 },
-  membersCount: { fontSize: 26, fontWeight: '900', color: '#1a1a1a', letterSpacing: -0.5 },
-  membersCountSub: { fontSize: 14, fontWeight: '700', color: '#888' },
-  membersSub: { fontSize: 11, color: '#888', fontWeight: '500', marginTop: 6 },
+  membersLabel: { fontSize: 10, color: T.textFaint, fontFamily: F.bodyBold, letterSpacing: 1.4, marginBottom: 4 },
+  membersCount: { fontSize: 26, fontFamily: F.heading, color: T.ink, letterSpacing: -0.5 },
+  membersCountSub: { fontSize: 14, fontFamily: F.bodyBold, color: T.textFaint },
+  membersSub: { fontSize: 11, color: T.textFaint, fontFamily: F.bodyMedium, marginTop: 6 },
   inviteBtn: { borderRadius: 12, overflow: 'hidden' },
   inviteGradient: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 14, paddingVertical: 8, gap: 5,
   },
-  inviteText: { color: '#1a1a1a', fontSize: 12, fontWeight: '800' },
+  inviteText: { color: T.ink, fontSize: 12, fontFamily: F.bodyBold },
   avatarStackRow: { flexDirection: 'row', alignItems: 'center', marginTop: 14 },
   avatarCircle: {
     width: 32, height: 32, borderRadius: 16,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: '#fff',
+    borderWidth: 2, borderColor: T.white,
   },
-  avatarExtras: { backgroundColor: '#1a1a1a' },
-  avatarExtrasText: { color: '#f9c349', fontSize: 11, fontWeight: '900' },
-  avatarStackLabel: { marginLeft: 12, fontSize: 12, color: '#666', fontWeight: '600' },
+  avatarExtras: { backgroundColor: T.ink },
+  avatarExtrasText: { color: T.yellow, fontSize: 11, fontFamily: F.bodyBold },
+  avatarStackLabel: { marginLeft: 12, fontSize: 12, color: T.textMuted, fontFamily: F.bodySemi },
   emptyMembersBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingVertical: 10, paddingHorizontal: 12,
-    backgroundColor: '#f8f9fc', borderRadius: 12, marginTop: 12,
+    backgroundColor: T.sand, borderRadius: 12, marginTop: 12,
   },
-  emptyMembersText: { fontSize: 11, color: '#999', fontWeight: '500', flex: 1 },
+  emptyMembersText: { fontSize: 11, color: T.textFaint, fontFamily: F.bodyMedium, flex: 1 },
 
   // Members status pills (NEW)
   membersStatusRow: {
@@ -1024,7 +1025,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#f8f9fc',
+    backgroundColor: T.sand,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 10,
@@ -1036,66 +1037,66 @@ const styles = StyleSheet.create({
   },
   membersStatusText: {
     fontSize: 10,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold,
+    color: T.ink,
   },
 
   // Code
   codeCard: {
     marginHorizontal: 16, marginTop: 12, padding: 18,
-    backgroundColor: '#fff', borderRadius: 20,
-    borderWidth: 1.5, borderColor: '#f0f0f0',
+    backgroundColor: T.card, borderRadius: 20,
+    borderWidth: 1.5, borderColor: T.line,
   },
-  codeLabel: { fontSize: 11, color: '#888', fontWeight: '800', letterSpacing: 1.4, marginBottom: 8 },
+  codeLabel: { fontSize: 11, color: T.textFaint, fontFamily: F.bodyBold, letterSpacing: 1.4, marginBottom: 8 },
   codeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  codeText: { flex: 1, fontSize: 26, fontWeight: '900', color: '#f9c349', letterSpacing: 2 },
+  codeText: { flex: 1, fontSize: 26, fontFamily: F.heading, color: T.yellow, letterSpacing: 2 },
   copyBtn: {
     width: 38, height: 38, borderRadius: 12,
-    backgroundColor: '#FFF8E1', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: '#f9c34940',
+    backgroundColor: T.yellowSoft, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: T.line,
   },
-  codeHint: { fontSize: 12, color: '#666', fontWeight: '500', marginTop: 10, lineHeight: 17 },
+  codeHint: { fontSize: 12, color: T.textMuted, fontFamily: F.bodyMedium, marginTop: 10, lineHeight: 17 },
   shareBtn: { marginTop: 14, borderRadius: 14, overflow: 'hidden' },
   shareGradient: {
     flexDirection: 'row', paddingVertical: 14,
     alignItems: 'center', justifyContent: 'center', gap: 8,
   },
-  shareText: { color: '#1a1a1a', fontWeight: '800', fontSize: 14 },
+  shareText: { color: T.ink, fontFamily: F.bodyBold, fontSize: 14 },
 
   // Sections
   section: { paddingHorizontal: 16, marginTop: 22 },
-  sectionTitle: { fontSize: 20, fontWeight: '900', color: '#1a1a1a', letterSpacing: -0.5 },
+  sectionTitle: { fontSize: 20, fontFamily: F.heading, color: T.ink, letterSpacing: -0.5 },
   sectionSub: {
-    fontSize: 12, color: '#888', fontWeight: '500',
+    fontSize: 12, color: T.textFaint, fontFamily: F.bodyMedium,
     marginTop: 2, marginBottom: 12,
   },
 
   // Earn list
   earnList: {
-    backgroundColor: '#fff', borderRadius: 18,
-    borderWidth: 1.5, borderColor: '#f0f0f0', padding: 6,
+    backgroundColor: T.card, borderRadius: 18,
+    borderWidth: 1.5, borderColor: T.line, padding: 6,
   },
   earnRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: 10, paddingHorizontal: 10,
-    borderBottomWidth: 1, borderBottomColor: '#f5f5f5', gap: 12,
+    borderBottomWidth: 1, borderBottomColor: T.line, gap: 12,
   },
-  earnLabel: { flex: 1, fontSize: 13, fontWeight: '600', color: '#1a1a1a' },
-  earnValue: { fontSize: 13, fontWeight: '900', color: '#10b981' },
+  earnLabel: { flex: 1, fontSize: 13, fontFamily: F.bodySemi, color: T.ink },
+  earnValue: { fontSize: 13, fontFamily: F.bodyBold, color: T.success },
 
   // Level card
   levelCard: {
-    flexDirection: 'row', backgroundColor: '#fff',
+    flexDirection: 'row', backgroundColor: T.card,
     borderRadius: 18, padding: 14, marginBottom: 12,
-    borderWidth: 2, borderColor: '#f0f0f0',
+    borderWidth: 2, borderColor: T.line,
     alignItems: 'flex-start', position: 'relative', overflow: 'hidden',
   },
   levelCardUnlocked: {
-    borderColor: '#f9c349', backgroundColor: '#FFFDF5',
-    shadowColor: '#f9c349', shadowOpacity: 0.08,
-    shadowRadius: 10, elevation: 3,
+    borderColor: T.yellow, backgroundColor: T.yellowSoft,
+    shadowColor: T.ink, shadowOpacity: 0.06,
+    shadowRadius: 8, elevation: 2,
   },
-  levelCardNext: { borderColor: '#f9c349', borderStyle: 'dashed' },
+  levelCardNext: { borderColor: T.yellow, borderStyle: 'dashed' },
   levelShimmer: {
     position: 'absolute', top: 0, left: 0,
     width: 120, height: '100%',
@@ -1112,20 +1113,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', flexWrap: 'wrap', gap: 6,
   },
-  levelName: { fontSize: 13, fontWeight: '900', color: '#1a1a1a', letterSpacing: 0.3 },
+  levelName: { fontSize: 13, fontFamily: F.bodyBold, color: T.ink, letterSpacing: 0.3 },
   unlockedBadge: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#f9c349', paddingHorizontal: 9,
+    backgroundColor: T.yellow, paddingHorizontal: 9,
     paddingVertical: 3, borderRadius: 12, gap: 4,
   },
-  unlockedText: { color: '#1a1a1a', fontSize: 8, fontWeight: '900', letterSpacing: 0.5 },
+  unlockedText: { color: T.ink, fontSize: 8, fontFamily: F.bodyBold, letterSpacing: 0.5 },
   nextBadge: {
-    backgroundColor: '#f0f0f0', paddingHorizontal: 9,
+    backgroundColor: T.sand, paddingHorizontal: 9,
     paddingVertical: 3, borderRadius: 12,
   },
-  nextText: { color: '#666', fontSize: 8, fontWeight: '900', letterSpacing: 0.5 },
+  nextText: { color: T.textMuted, fontSize: 8, fontFamily: F.bodyBold, letterSpacing: 0.5 },
   levelReward: {
-    fontSize: 12, color: '#666', fontWeight: '500',
+    fontSize: 12, color: T.textMuted, fontFamily: F.bodyMedium,
     marginTop: 4, lineHeight: 16,
   },
 
@@ -1136,14 +1137,14 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginBottom: 3,
   },
   condLabel: {
-    fontSize: 10, fontWeight: '800', color: '#666',
+    fontSize: 10, fontFamily: F.bodyBold, color: T.textMuted,
     letterSpacing: 0.4, textTransform: 'lowercase',
   },
-  condLabelLocked: { color: '#bbb' },
-  condValue: { fontSize: 10, fontWeight: '800', color: '#1a1a1a' },
-  condValueLocked: { color: '#bbb' },
+  condLabelLocked: { color: T.textFaint },
+  condValue: { fontSize: 10, fontFamily: F.bodyBold, color: T.ink },
+  condValueLocked: { color: T.textFaint },
   condTrack: {
-    height: 4, backgroundColor: '#f0f0f0',
+    height: 4, backgroundColor: T.sand,
     borderRadius: 2, overflow: 'hidden',
   },
   condFill: { height: '100%', borderRadius: 2 },
@@ -1151,45 +1152,45 @@ const styles = StyleSheet.create({
   perksRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 10, gap: 6 },
   perkItem: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#f8f8f8', paddingHorizontal: 8,
+    backgroundColor: T.sand, paddingHorizontal: 8,
     paddingVertical: 4, borderRadius: 8, gap: 4,
   },
-  perkText: { fontSize: 10, color: '#999', fontWeight: '600' },
-  perkTextActive: { color: '#1a1a1a' },
+  perkText: { fontSize: 10, color: T.textFaint, fontFamily: F.bodySemi },
+  perkTextActive: { color: T.ink },
 
   // Apply banner
   applyBanner: {
     flexDirection: 'row', alignItems: 'center',
     marginHorizontal: 16, marginTop: 8, padding: 16,
-    borderRadius: 18, backgroundColor: '#1a1a1a', gap: 12,
+    borderRadius: 18, backgroundColor: T.ink, gap: 12,
   },
-  applyBannerTitle: { color: '#FFD700', fontSize: 13, fontWeight: '900', letterSpacing: 0.3 },
+  applyBannerTitle: { color: T.yellow, fontSize: 13, fontFamily: F.bodyBold, letterSpacing: 0.3 },
   applyBannerSub: {
     color: 'rgba(255,255,255,0.6)', fontSize: 11,
-    marginTop: 2, fontWeight: '500',
+    marginTop: 2, fontFamily: F.bodyMedium,
   },
   applyBtn: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#FFD700', paddingHorizontal: 14,
+    backgroundColor: T.yellow, paddingHorizontal: 14,
     paddingVertical: 9, borderRadius: 10, gap: 4,
   },
-  applyBtnText: { color: '#1a1a1a', fontWeight: '900', fontSize: 12 },
+  applyBtnText: { color: T.ink, fontFamily: F.bodyBold, fontSize: 12 },
 
   // Download
   downloadCard: {
     marginHorizontal: 16, marginTop: 22, padding: 18,
-    backgroundColor: '#fff', borderRadius: 20,
-    borderWidth: 1.5, borderColor: '#f0f0f0',
+    backgroundColor: T.card, borderRadius: 20,
+    borderWidth: 1.5, borderColor: T.line,
   },
-  downloadTitle: { fontSize: 18, fontWeight: '900', color: '#1a1a1a', letterSpacing: -0.4 },
+  downloadTitle: { fontSize: 18, fontFamily: F.heading, color: T.ink, letterSpacing: -0.4 },
   downloadSub: {
-    fontSize: 12, color: '#888', fontWeight: '500',
+    fontSize: 12, color: T.textFaint, fontFamily: F.bodyMedium,
     marginTop: 2, marginBottom: 14,
   },
   storesRow: { flexDirection: 'row', gap: 10 },
   storeBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#1a1a1a', paddingVertical: 12,
+    backgroundColor: T.ink, paddingVertical: 12,
     paddingHorizontal: 12, borderRadius: 14, gap: 10,
   },
   storeIconBox: {
@@ -1200,14 +1201,14 @@ const styles = StyleSheet.create({
   storeTextCol: { flex: 1 },
   storeSmall: {
     color: 'rgba(255,255,255,0.65)', fontSize: 9,
-    fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase',
+    fontFamily: F.bodyBold, letterSpacing: 0.5, textTransform: 'none',
   },
-  storeBig: { color: '#fff', fontSize: 13, fontWeight: '800', marginTop: 1 },
+  storeBig: { color: T.white, fontSize: 13, fontFamily: F.bodyBold, marginTop: 1 },
 
   footerNote: {
-    textAlign: 'center', color: '#999',
+    textAlign: 'center', color: T.textFaint,
     fontSize: 11, marginTop: 22,
-    paddingHorizontal: 24, fontWeight: '500',
+    paddingHorizontal: 24, fontFamily: F.bodyMedium,
   },
 });
 

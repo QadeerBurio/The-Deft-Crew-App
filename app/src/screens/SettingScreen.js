@@ -25,6 +25,7 @@ import StreakSheet from "../engagement/components/StreakSheet";
 import { useStreak } from "../engagement/hooks/useStreak";
 import { useTour } from "../engagement/tour/TourProvider";
 
+import { color as T, font as F } from "../theme/tokens";
 export default function SettingsScreen({ navigation }) {
   const { user, token, logout } = useContext(AuthContext);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -145,7 +146,7 @@ export default function SettingsScreen({ navigation }) {
       icon: "person-outline",
       title: "Edit Profile",
       subtitle: "Update your personal information",
-      color: "#f9c349",
+      color: T.yellow,
       onPress: () => navigation.navigate("EditProfile"),
     },
     {
@@ -153,7 +154,7 @@ export default function SettingsScreen({ navigation }) {
       icon: "shield-checkmark-outline",
       title: "Privacy & Security",
       subtitle: "Manage your account security",
-      color: "#4CAF50",
+      color: T.success,
       onPress: () => navigation.navigate("PrivacySecurity"),
     },
     {
@@ -161,7 +162,7 @@ export default function SettingsScreen({ navigation }) {
       icon: "notifications-outline",
       title: "Notifications",
       subtitle: "Configure your notification preferences",
-      color: "#2196F3",
+      color: T.ink,
       onPress: () => navigation.navigate("NotificationSettings"),
     },
     {
@@ -169,7 +170,7 @@ export default function SettingsScreen({ navigation }) {
       icon: "refresh-outline",
       title: "Replay the Tour",
       subtitle: "See the app walkthrough again",
-      color: "#2196F3",
+      color: T.ink,
       onPress: handleReplayTour,
     },
     {
@@ -180,7 +181,7 @@ export default function SettingsScreen({ navigation }) {
         examModeActive && examModeUntil
           ? `On until ${examModeUntil}`
           : "Your streak waits while you study",
-      color: "#f9c349",
+      color: T.yellow,
       badge: examModeActive ? "On" : "Off",
       onPress: () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -208,7 +209,7 @@ export default function SettingsScreen({ navigation }) {
   // ── Render ─────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       {/* Header */}
       <View style={styles.header}>
@@ -217,9 +218,9 @@ export default function SettingsScreen({ navigation }) {
           style={styles.headerBtn}
           activeOpacity={0.7}
         >
-          <Ionicons name="chevron-back" size={24} color="#1a1a1a" />
+          <Ionicons name="chevron-back" size={24} color={T.ink} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
+        <Text style={styles.headerTitle}>settings</Text>
         <View style={{ width: 38 }} />
       </View>
 
@@ -274,7 +275,7 @@ export default function SettingsScreen({ navigation }) {
                   <Text style={styles.badgePillText}>{option.badge}</Text>
                 </View>
               ) : (
-                <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                <Ionicons name="chevron-forward" size={20} color={T.textFaint} />
               )}
             </TouchableOpacity>
           ))}
@@ -282,7 +283,7 @@ export default function SettingsScreen({ navigation }) {
 
         {/* Danger Zone */}
         <View style={styles.dangerSection}>
-          <Text style={styles.dangerSectionTitle}>Account Actions</Text>
+          <Text style={styles.dangerSectionTitle}>account actions</Text>
 
           <TouchableOpacity
             style={styles.deleteAccountButton}
@@ -293,16 +294,16 @@ export default function SettingsScreen({ navigation }) {
               <MaterialCommunityIcons
                 name="delete-forever-outline"
                 size={22}
-                color="#FF5252"
+                color={T.danger}
               />
             </View>
             <View style={styles.settingContent}>
-              <Text style={styles.deleteTitle}>Delete Account</Text>
+              <Text style={styles.deleteTitle}>delete account</Text>
               <Text style={styles.deleteSubtitle}>
                 Permanently remove your account and all data
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#FF5252" />
+            <Ionicons name="chevron-forward" size={20} color={T.danger} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -317,11 +318,11 @@ export default function SettingsScreen({ navigation }) {
             activeOpacity={0.7}
           >
             <View style={styles.logoutIcon}>
-              <Ionicons name="log-out-outline" size={22} color="#666" />
+              <Ionicons name="log-out-outline" size={22} color={T.textMuted} />
             </View>
             <View style={styles.settingContent}>
-              <Text style={styles.logoutTitle}>Logout</Text>
-              <Text style={styles.settingSubtitle}>Sign out of your account</Text>
+              <Text style={styles.logoutTitle}>logout</Text>
+              <Text style={styles.settingSubtitle}>sign out of your account</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -359,10 +360,10 @@ export default function SettingsScreen({ navigation }) {
                     <MaterialCommunityIcons
                       name="alert-circle"
                       size={40}
-                      color="#FF5252"
+                      color={T.danger}
                     />
                   </View>
-                  <Text style={styles.modalTitle}>Delete Account?</Text>
+                  <Text style={styles.modalTitle}>delete account?</Text>
                   <Text style={styles.modalDescription}>
                     This action cannot be undone. All your data including your
                     profile, connections, and activity will be permanently
@@ -372,21 +373,21 @@ export default function SettingsScreen({ navigation }) {
 
                 <View style={styles.warningList}>
                   <View style={styles.warningItem}>
-                    <Ionicons name="close-circle" size={18} color="#FF5252" />
+                    <Ionicons name="close-circle" size={18} color={T.danger} />
                     <Text style={styles.warningText}>
-                      Your profile will be removed
+                      your profile will be removed
                     </Text>
                   </View>
                   <View style={styles.warningItem}>
-                    <Ionicons name="close-circle" size={18} color="#FF5252" />
+                    <Ionicons name="close-circle" size={18} color={T.danger} />
                     <Text style={styles.warningText}>
-                      All connections will be lost
+                      all connections will be lost
                     </Text>
                   </View>
                   <View style={styles.warningItem}>
-                    <Ionicons name="close-circle" size={18} color="#FF5252" />
+                    <Ionicons name="close-circle" size={18} color={T.danger} />
                     <Text style={styles.warningText}>
-                      Referral history will be deleted
+                      referral history will be deleted
                     </Text>
                   </View>
                 </View>
@@ -397,14 +398,14 @@ export default function SettingsScreen({ navigation }) {
                     onPress={closeDeleteModal}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                    <Text style={styles.cancelButtonText}>cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.continueButton}
                     onPress={handleNextStep}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.continueButtonText}>Continue</Text>
+                    <Text style={styles.continueButtonText}>continue</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -416,7 +417,7 @@ export default function SettingsScreen({ navigation }) {
                   <View
                     style={[
                       styles.modalIconContainer,
-                      { backgroundColor: "#FFF3E0" },
+                      { backgroundColor: T.yellowSoft },
                     ]}
                   >
                     <MaterialCommunityIcons
@@ -425,7 +426,7 @@ export default function SettingsScreen({ navigation }) {
                       color="#FF9800"
                     />
                   </View>
-                  <Text style={styles.modalTitle}>Wait! Before You Go</Text>
+                  <Text style={styles.modalTitle}>wait! before you go</Text>
                   <Text style={styles.modalDescription}>
                     Are you sure you want to delete your account? Consider
                     these options instead:
@@ -443,10 +444,10 @@ export default function SettingsScreen({ navigation }) {
                     <Ionicons
                       name="notifications-off-outline"
                       size={20}
-                      color="#f9c349"
+                      color={T.yellow}
                     />
                     <Text style={styles.alternativeText}>
-                      Turn off notifications
+                      turn off notifications
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -456,9 +457,9 @@ export default function SettingsScreen({ navigation }) {
                       navigation.navigate("EditProfile");
                     }}
                   >
-                    <Ionicons name="create-outline" size={20} color="#f9c349" />
+                    <Ionicons name="create-outline" size={20} color={T.yellow} />
                     <Text style={styles.alternativeText}>
-                      Update your profile
+                      update your profile
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -471,9 +472,9 @@ export default function SettingsScreen({ navigation }) {
                     <Ionicons
                       name="help-circle-outline"
                       size={20}
-                      color="#f9c349"
+                      color={T.yellow}
                     />
-                    <Text style={styles.alternativeText}>Contact support</Text>
+                    <Text style={styles.alternativeText}>contact support</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -483,14 +484,14 @@ export default function SettingsScreen({ navigation }) {
                     onPress={closeDeleteModal}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.cancelButtonText}>Keep Account</Text>
+                    <Text style={styles.cancelButtonText}>keep account</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.continueButton}
                     onPress={handleNextStep}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.continueButtonText}>Still Delete</Text>
+                    <Text style={styles.continueButtonText}>still delete</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -502,17 +503,17 @@ export default function SettingsScreen({ navigation }) {
                   <View
                     style={[
                       styles.modalIconContainer,
-                      { backgroundColor: "#FFEBEE" },
+                      { backgroundColor: T.dangerBg },
                     ]}
                   >
                     <MaterialCommunityIcons
                       name="delete-forever"
                       size={40}
-                      color="#FF5252"
+                      color={T.danger}
                     />
                   </View>
-                  <Text style={[styles.modalTitle, { color: "#FF5252" }]}>
-                    Final Confirmation
+                  <Text style={[styles.modalTitle, { color: T.danger }]}>
+                    final confirmation
                   </Text>
                   <Text style={styles.modalDescription}>
                     This is your last chance. Type "delete my account" below to
@@ -523,7 +524,7 @@ export default function SettingsScreen({ navigation }) {
                 <TextInput
                   style={styles.confirmInput}
                   placeholder='Type "delete my account"'
-                  placeholderTextColor="#999"
+                  placeholderTextColor={T.textFaint}
                   value={confirmText}
                   onChangeText={setConfirmText}
                   autoCapitalize="none"
@@ -538,7 +539,7 @@ export default function SettingsScreen({ navigation }) {
                     activeOpacity={0.7}
                     disabled={deleting}
                   >
-                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                    <Text style={styles.cancelButtonText}>cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
@@ -551,10 +552,10 @@ export default function SettingsScreen({ navigation }) {
                     disabled={deleting}
                   >
                     {deleting ? (
-                      <ActivityIndicator color="#fff" size="small" />
+                      <ActivityIndicator color={T.white} size="small" />
                     ) : (
                       <Text style={styles.deleteFinalButtonText}>
-                        Delete Permanently
+                        delete permanently
                       </Text>
                     )}
                   </TouchableOpacity>
@@ -569,7 +570,7 @@ export default function SettingsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8f9fa" },
+  container: { flex: 1, backgroundColor: T.paper },
 
   // Header
   header: {
@@ -579,21 +580,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-    backgroundColor: "#fff",
+    borderBottomColor: T.line,
+    backgroundColor: T.card,
   },
   headerBtn: {
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: T.sand,
     justifyContent: "center",
     alignItems: "center",
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "800",
-    color: "#1a1a1a",
+    fontFamily: F.heading,
+    color: T.ink,
     letterSpacing: 0.5,
   },
   scrollContent: { paddingBottom: 40 },
@@ -602,45 +603,45 @@ const styles = StyleSheet.create({
   userCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
     marginHorizontal: 16,
     marginTop: 16,
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#f0f0f0",
+    borderColor: T.line,
   },
   userAvatar: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: "#1a1a1a",
+    backgroundColor: T.ink,
     justifyContent: "center",
     alignItems: "center",
   },
-  userInitial: { fontSize: 22, fontWeight: "800", color: "#f9c349" },
+  userInitial: { fontSize: 22, fontFamily: F.heading, color: T.yellow },
   userInfo: { flex: 1, marginLeft: 12 },
-  userName: { fontSize: 16, fontWeight: "700", color: "#1a1a1a" },
-  userEmail: { fontSize: 12, color: "#999", marginTop: 2 },
+  userName: { fontSize: 16, fontFamily: F.bodyBold, color: T.ink },
+  userEmail: { fontSize: 12, fontFamily: F.body, color: T.textFaint, marginTop: 2 },
   userBadge: {
-    backgroundColor: "#f9c34915",
+    backgroundColor: T.yellowSoft,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#f9c34930",
+    borderColor: T.line,
   },
-  userBadgeText: { fontSize: 11, fontWeight: "700", color: "#f9c349" },
+  userBadgeText: { fontSize: 11, fontFamily: F.bodyBold, color: T.yellow },
 
   // Settings Section
   settingsSection: {
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
     marginHorizontal: 16,
     marginTop: 20,
     borderRadius: 16,
     padding: 4,
     borderWidth: 1,
-    borderColor: "#f0f0f0",
+    borderColor: T.line,
   },
   settingItem: {
     flexDirection: "row",
@@ -656,21 +657,21 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   settingContent: { flex: 1 },
-  settingTitle: { fontSize: 14, fontWeight: "600", color: "#1a1a1a" },
-  settingSubtitle: { fontSize: 11, color: "#999", marginTop: 2 },
+  settingTitle: { fontSize: 14, fontFamily: F.bodySemi, color: T.ink },
+  settingSubtitle: { fontSize: 11, fontFamily: F.body, color: T.textFaint, marginTop: 2 },
 
   // 🆕 badge pill
   badgePill: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
-    backgroundColor: "#f9c34920",
+    backgroundColor: T.yellowSoft,
     borderWidth: 1,
-    borderColor: "#f9c34955",
+    borderColor: T.line,
   },
   badgePillText: {
     fontSize: 11,
-    fontWeight: "800",
+    fontFamily: F.bodyBold,
     color: "#b8860b",
   },
 
@@ -678,72 +679,72 @@ const styles = StyleSheet.create({
   dangerSection: { marginHorizontal: 16, marginTop: 24 },
   dangerSectionTitle: {
     fontSize: 12,
-    fontWeight: "700",
-    color: "#FF5252",
+    fontFamily: F.bodyBold,
+    color: T.danger,
     marginBottom: 12,
     marginLeft: 4,
-    textTransform: "uppercase",
+    textTransform: 'none',
     letterSpacing: 1,
   },
   deleteAccountButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
     padding: 14,
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: "#FF525220",
+    borderColor: T.danger,
     marginBottom: 10,
   },
   deleteIcon: {
     width: 42,
     height: 42,
     borderRadius: 12,
-    backgroundColor: "#FF525215",
+    backgroundColor: T.dangerBg,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
   },
-  deleteTitle: { fontSize: 14, fontWeight: "600", color: "#FF5252" },
-  deleteSubtitle: { fontSize: 11, color: "#FF525280", marginTop: 2 },
+  deleteTitle: { fontSize: 14, fontFamily: F.bodySemi, color: T.danger },
+  deleteSubtitle: { fontSize: 11, fontFamily: F.body, color: T.danger, marginTop: 2 },
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
     padding: 14,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#f0f0f0",
+    borderColor: T.line,
   },
   logoutIcon: {
     width: 42,
     height: 42,
     borderRadius: 12,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: T.sand,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
   },
-  logoutTitle: { fontSize: 14, fontWeight: "600", color: "#1a1a1a" },
+  logoutTitle: { fontSize: 14, fontFamily: F.bodySemi, color: T.ink },
 
   versionText: {
     textAlign: "center",
-    color: "#ccc",
+    color: T.textFaint,
     fontSize: 11,
     marginTop: 30,
-    fontWeight: "500",
+    fontFamily: F.bodyMedium,
   },
 
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: T.overlay,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
   modalContent: {
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
     borderRadius: 24,
     padding: 24,
     width: "100%",
@@ -755,20 +756,20 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: "#FFEBEE",
+    backgroundColor: T.dangerBg,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: "800",
-    color: "#1a1a1a",
+    fontFamily: F.heading,
+    color: T.ink,
     marginBottom: 8,
   },
   modalDescription: {
-    fontSize: 13,
-    color: "#666",
+    fontSize: 13, fontFamily: F.body,
+    color: T.textMuted,
     textAlign: "center",
     lineHeight: 20,
   },
@@ -780,9 +781,9 @@ const styles = StyleSheet.create({
   },
   warningText: {
     fontSize: 13,
-    color: "#666",
+    color: T.textMuted,
     marginLeft: 10,
-    fontWeight: "500",
+    fontFamily: F.bodyMedium,
   },
   alternativeList: { marginBottom: 20 },
   alternativeItem: {
@@ -790,50 +791,50 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 12,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: T.sand,
     borderRadius: 12,
     marginBottom: 8,
   },
   alternativeText: {
     fontSize: 13,
-    color: "#1a1a1a",
+    color: T.ink,
     marginLeft: 12,
-    fontWeight: "500",
+    fontFamily: F.bodyMedium,
   },
   modalButtons: { flexDirection: "row", gap: 12 },
   cancelButton: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 14,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: T.sand,
     alignItems: "center",
   },
-  cancelButtonText: { fontSize: 14, fontWeight: "700", color: "#666" },
+  cancelButtonText: { fontSize: 14, fontFamily: F.bodyBold, color: T.textMuted },
   continueButton: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 14,
-    backgroundColor: "#FF5252",
+    backgroundColor: T.danger,
     alignItems: "center",
   },
-  continueButtonText: { fontSize: 14, fontWeight: "700", color: "#fff" },
+  continueButtonText: { fontSize: 14, fontFamily: F.bodyBold, color: T.white },
   confirmInput: {
     borderWidth: 2,
-    borderColor: "#f0f0f0",
+    borderColor: T.line,
     borderRadius: 14,
     padding: 14,
     fontSize: 14,
-    color: "#1a1a1a",
+    color: T.ink,
     marginBottom: 20,
-    fontWeight: "500",
+    fontFamily: F.bodyMedium,
   },
   deleteFinalButton: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 14,
-    backgroundColor: "#ccc",
+    backgroundColor: T.sand,
     alignItems: "center",
   },
-  deleteFinalButtonActive: { backgroundColor: "#FF5252" },
-  deleteFinalButtonText: { fontSize: 14, fontWeight: "700", color: "#fff" },
+  deleteFinalButtonActive: { backgroundColor: T.danger },
+  deleteFinalButtonText: { fontSize: 14, fontFamily: F.bodyBold, color: T.white },
 });

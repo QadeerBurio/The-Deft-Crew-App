@@ -14,9 +14,10 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { color as T, font as F } from "../theme/tokens";
 const DeftProScreen = () => {
   const navigation = useNavigation();
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -57,14 +58,14 @@ const DeftProScreen = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="light-content" backgroundColor="#FFD93D" />
+      <StatusBar barStyle="light-content" backgroundColor={T.paper} />
       
       <LinearGradient colors={["#FFD93D", "#F5C800"]} style={styles.headerGradient}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleGoBack} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={24} color="#1a1a1a" />
+            <Ionicons name="chevron-back" size={24} color={T.ink} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>DEFT PRO</Text>
+          <Text style={styles.headerTitle}>deft pro</Text>
           <View style={{ width: 40 }} />
         </View>
       </LinearGradient>
@@ -78,10 +79,10 @@ const DeftProScreen = () => {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <MaterialCommunityIcons name="crown" size={60} color="#1a1a1a" />
+              <MaterialCommunityIcons name="crown" size={60} color={T.ink} />
             </LinearGradient>
             <Text style={styles.heroTitle}>👑 DEFT PRO</Text>
-            <Text style={styles.heroSubtitle}>Premium Achievement Unlocked!</Text>
+            <Text style={styles.heroSubtitle}>premium achievement unlocked!</Text>
           </View>
 
           <View style={styles.rewardsContainer}>
@@ -102,7 +103,7 @@ const DeftProScreen = () => {
                 <Ionicons name="logo-instagram" size={28} color="#FFD93D" />
               </View>
               <View style={styles.rewardContent}>
-                <Text style={styles.rewardTitle}>Instagram Feature</Text>
+                <Text style={styles.rewardTitle}>instagram feature</Text>
                 <Text style={styles.rewardDesc}>Be featured on our official Instagram page</Text>
               </View>
             </View>
@@ -112,7 +113,7 @@ const DeftProScreen = () => {
                 <Ionicons name="school-outline" size={28} color="#FFD93D" />
               </View>
               <View style={styles.rewardContent}>
-                <Text style={styles.rewardTitle}>Internship Consideration</Text>
+                <Text style={styles.rewardTitle}>internship consideration</Text>
                 <Text style={styles.rewardDesc}>Priority consideration for internship programs</Text>
               </View>
             </View>
@@ -122,7 +123,7 @@ const DeftProScreen = () => {
                 <Ionicons name="people-outline" size={28} color="#FFD93D" />
               </View>
               <View style={styles.rewardContent}>
-                <Text style={styles.rewardTitle}>Leadership Mentorship</Text>
+                <Text style={styles.rewardTitle}>leadership mentorship</Text>
                 <Text style={styles.rewardDesc}>1-on-1 mentorship from industry leaders</Text>
               </View>
             </View>
@@ -132,7 +133,7 @@ const DeftProScreen = () => {
                 <Ionicons name="infinite-outline" size={28} color="#FFD93D" />
               </View>
               <View style={styles.rewardContent}>
-                <Text style={styles.rewardTitle}>Unlimited VIP Access</Text>
+                <Text style={styles.rewardTitle}>unlimited vip access</Text>
                 <Text style={styles.rewardDesc}>Unlimited access to all partner brands</Text>
               </View>
             </View>
@@ -145,7 +146,7 @@ const DeftProScreen = () => {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Ionicons name="logo-instagram" size={20} color="#1a1a1a" />
+              <Ionicons name="logo-instagram" size={20} color={T.ink} />
               <Text style={styles.instagramBtnText}>Follow @thedeftcrew</Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -157,8 +158,8 @@ const DeftProScreen = () => {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Ionicons name="share-social-outline" size={20} color="#1a1a1a" />
-              <Text style={styles.shareBtnText}>Share Achievement</Text>
+              <Ionicons name="share-social-outline" size={20} color={T.ink} />
+              <Text style={styles.shareBtnText}>share achievement</Text>
             </LinearGradient>
           </TouchableOpacity>
         </Animated.View>
@@ -170,7 +171,7 @@ const DeftProScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fc",
+    backgroundColor: T.paper,
   },
   headerGradient: {
     paddingTop: 8,
@@ -192,8 +193,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "800",
-    color: "#1a1a1a",
+    fontFamily: F.heading,
+    color: T.ink,
   },
   scrollContent: {
     paddingBottom: 40,
@@ -213,36 +214,36 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 12,
-    shadowColor: "#FFD93D",
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   heroTitle: {
     fontSize: 22,
-    fontWeight: "900",
-    color: "#1a1a1a",
+    fontFamily: F.heading,
+    color: T.ink,
     letterSpacing: 1,
   },
   heroSubtitle: {
     fontSize: 16,
     color: "#FFD93D",
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
     marginTop: 4,
   },
   rewardsContainer: {
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#f0f0f0",
+    borderColor: T.line,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "800",
-    color: "#1a1a1a",
+    fontFamily: F.heading,
+    color: T.ink,
     marginBottom: 16,
   },
   rewardCard: {
@@ -250,7 +251,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#f5f5f5",
+    borderBottomColor: T.line,
   },
   rewardIconContainer: {
     width: 48,
@@ -265,12 +266,12 @@ const styles = StyleSheet.create({
   },
   rewardTitle: {
     fontSize: 15,
-    fontWeight: "700",
-    color: "#1a1a1a",
+    fontFamily: F.bodyBold,
+    color: T.ink,
   },
   rewardDesc: {
-    fontSize: 12,
-    color: "#999",
+    fontSize: 12, fontFamily: F.body,
+    color: T.textFaint,
     marginTop: 2,
   },
   instagramBtn: {
@@ -286,8 +287,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   instagramBtnText: {
-    color: "#1a1a1a",
-    fontWeight: "700",
+    color: T.ink,
+    fontFamily: F.bodyBold,
     fontSize: 15,
   },
   shareBtn: {
@@ -302,8 +303,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   shareBtnText: {
-    color: "#1a1a1a",
-    fontWeight: "700",
+    color: T.ink,
+    fontFamily: F.bodyBold,
     fontSize: 15,
   },
 });

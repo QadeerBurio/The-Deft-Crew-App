@@ -9,9 +9,10 @@ import { useStreak } from '../hooks/useStreak';
 import { STREAK_HEALTH_TO_MOOD } from '../utils/mood';
 import { pop } from '../utils/haptics';
 
-const DARK = '#1a1a1a';
-const WHITE = '#ffffff';
-const GOLD = '#f9c349';
+import { color as T, font as F } from "../../theme/tokens";
+const DARK = T.ink;
+const WHITE = T.white;
+const GOLD = T.yellow;
 
 export default function StreakChip({ onPress }) {
   const { count, health, enabled } = useStreak();
@@ -46,10 +47,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: WHITE,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: T.line,
     gap: 6,
     // subtle shadow
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 3,
@@ -57,7 +58,7 @@ const styles = StyleSheet.create({
   },
   count: {
     fontSize: 14,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: DARK,
     minWidth: 14,
     textAlign: 'center',

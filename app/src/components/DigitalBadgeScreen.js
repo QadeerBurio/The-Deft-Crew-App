@@ -12,9 +12,10 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { color as T, font as F } from "../theme/tokens";
 const DigitalBadgeScreen = () => {
   const navigation = useNavigation();
   const badgeAnim = useRef(new Animated.Value(0)).current;
@@ -79,13 +80,13 @@ const DigitalBadgeScreen = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fc" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
       
       <View style={styles.header}>
         <TouchableOpacity onPress={handleGoBack} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color="#1a1a1a" />
+          <Ionicons name="chevron-back" size={24} color={T.ink} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Digital Badge</Text>
+        <Text style={styles.headerTitle}>digital badge</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -121,29 +122,29 @@ const DigitalBadgeScreen = () => {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <MaterialCommunityIcons name="shield-star" size={80} color="#fff" />
-              <Text style={styles.badgeTitle}>DEFT ROOKIE</Text>
-              <Text style={styles.badgeSubtitle}>Digital Badge</Text>
+              <MaterialCommunityIcons name="shield-star" size={80} color={T.white} />
+              <Text style={styles.badgeTitle}>deft rookie</Text>
+              <Text style={styles.badgeSubtitle}>digital badge</Text>
             </LinearGradient>
           </Animated.View>
         </Animated.View>
 
         <View style={styles.infoContainer}>
-          <Text style={styles.infoTitle}>Badge Details</Text>
+          <Text style={styles.infoTitle}>badge details</Text>
           
           <View style={styles.infoItem}>
             <Ionicons name="checkmark-circle" size={20} color="#6C63FF" />
-            <Text style={styles.infoText}>Verified Digital Achievement</Text>
+            <Text style={styles.infoText}>verified digital achievement</Text>
           </View>
           
           <View style={styles.infoItem}>
             <Ionicons name="checkmark-circle" size={20} color="#6C63FF" />
-            <Text style={styles.infoText}>Exclusive Community Access</Text>
+            <Text style={styles.infoText}>exclusive community access</Text>
           </View>
           
           <View style={styles.infoItem}>
             <Ionicons name="checkmark-circle" size={20} color="#6C63FF" />
-            <Text style={styles.infoText}>Partner Brand VIP Access</Text>
+            <Text style={styles.infoText}>partner brand vip access</Text>
           </View>
         </View>
 
@@ -154,8 +155,8 @@ const DigitalBadgeScreen = () => {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
-            <Ionicons name="share-social-outline" size={20} color="#fff" />
-            <Text style={styles.shareBtnText}>Share Your Badge</Text>
+            <Ionicons name="share-social-outline" size={20} color={T.white} />
+            <Text style={styles.shareBtnText}>share your badge</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -166,7 +167,7 @@ const DigitalBadgeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fc",
+    backgroundColor: T.paper,
   },
   header: {
     flexDirection: "row",
@@ -175,21 +176,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-    backgroundColor: "#fff",
+    borderBottomColor: T.line,
+    backgroundColor: T.card,
   },
   backBtn: {
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: T.sand,
     justifyContent: "center",
     alignItems: "center",
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "800",
-    color: "#1a1a1a",
+    fontFamily: F.heading,
+    color: T.ink,
   },
   content: {
     flex: 1,
@@ -228,30 +229,30 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   badgeTitle: {
-    color: "#fff",
+    color: T.white,
     fontSize: 14,
-    fontWeight: "800",
+    fontFamily: F.bodyBold,
     letterSpacing: 1,
     marginTop: 8,
   },
   badgeSubtitle: {
     color: "rgba(255,255,255,0.8)",
     fontSize: 11,
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
   },
   infoContainer: {
     width: "100%",
     marginTop: 30,
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: "#f0f0f0",
+    borderColor: T.line,
   },
   infoTitle: {
     fontSize: 16,
-    fontWeight: "700",
-    color: "#1a1a1a",
+    fontFamily: F.bodyBold,
+    color: T.ink,
     marginBottom: 16,
   },
   infoItem: {
@@ -262,8 +263,8 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 14,
-    color: "#333",
-    fontWeight: "500",
+    color: T.ink,
+    fontFamily: F.bodyMedium,
   },
   shareBtn: {
     width: "100%",
@@ -279,8 +280,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   shareBtnText: {
-    color: "#fff",
-    fontWeight: "700",
+    color: T.white,
+    fontFamily: F.bodyBold,
     fontSize: 15,
   },
 });

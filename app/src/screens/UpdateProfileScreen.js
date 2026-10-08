@@ -22,9 +22,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/api";
 import { Ionicons, MaterialCommunityIcons, Feather } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import * as Haptics from "expo-haptics";
 
+import { color as T, font as F } from "../theme/tokens";
 const { width, height } = Dimensions.get("window");
 
 export default function UpdateProfileScreen({ navigation, route }) {
@@ -300,7 +301,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
       <View style={[styles.inputWrapper, !editable && styles.inputDisabled]}>
         {icon && (
           <View style={styles.inputIcon}>
-            <Ionicons name={icon} size={20} color="#FFD700" />
+            <Ionicons name={icon} size={20} color={T.yellow} />
           </View>
         )}
         <TextInput
@@ -309,12 +310,12 @@ export default function UpdateProfileScreen({ navigation, route }) {
           value={value}
           onChangeText={onChange}
           placeholder={placeholder}
-          placeholderTextColor="#bbb"
+          placeholderTextColor={T.textFaint}
           keyboardType={keyboardType}
           multiline={multiline}
           numberOfLines={numberOfLines}
           editable={editable}
-          selectionColor="#FFD700"
+          selectionColor={T.yellow}
           returnKeyType={multiline ? "default" : returnKeyType}
           onSubmitEditing={onSubmitEditing}
           blurOnSubmit={blurOnSubmit}
@@ -326,10 +327,10 @@ export default function UpdateProfileScreen({ navigation, route }) {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FFD700" />
-          <Text style={styles.loadingText}>Loading profile...</Text>
+          <ActivityIndicator size="large" color={T.yellow} />
+          <Text style={styles.loadingText}>loading profile...</Text>
         </View>
       </SafeAreaView>
     );
@@ -337,7 +338,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <Animated.View
         style={[
@@ -372,9 +373,9 @@ export default function UpdateProfileScreen({ navigation, route }) {
                   }}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+                  <Ionicons name="arrow-back" size={24} color={T.ink} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Edit Profile</Text>
+                <Text style={styles.headerTitle}>edit profile</Text>
                 <TouchableOpacity
                   style={styles.refreshButton}
                   onPress={() => {
@@ -383,14 +384,14 @@ export default function UpdateProfileScreen({ navigation, route }) {
                   }}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="refresh-outline" size={22} color="#FFD700" />
+                  <Ionicons name="refresh-outline" size={22} color={T.yellow} />
                 </TouchableOpacity>
               </Animated.View>
 
               {/* Personal Information Card */}
               <Animated.View style={[styles.mainCard, { opacity: fadeAnim }]}>
                 <LinearGradient
-                  colors={['#FFD700', '#FFC107']}
+                  colors={[T.yellow, T.yellow]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.cardAccent}
@@ -398,9 +399,9 @@ export default function UpdateProfileScreen({ navigation, route }) {
                 
                 <View style={styles.cardHeader}>
                   <View style={styles.cardIconWrapper}>
-                    <Ionicons name="person-outline" size={22} color="#FFD700" />
+                    <Ionicons name="person-outline" size={22} color={T.yellow} />
                   </View>
-                  <Text style={styles.cardTitle}>Personal Information</Text>
+                  <Text style={styles.cardTitle}>personal information</Text>
                 </View>
 
                 <InputField
@@ -490,7 +491,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
               {/* Professional Details Card */}
               <Animated.View style={[styles.mainCard, { opacity: fadeAnim }]}>
                 <LinearGradient
-                  colors={['#FFD700', '#FFC107']}
+                  colors={[T.yellow, T.yellow]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.cardAccent}
@@ -498,9 +499,9 @@ export default function UpdateProfileScreen({ navigation, route }) {
                 
                 <View style={styles.cardHeader}>
                   <View style={styles.cardIconWrapper}>
-                    <Ionicons name="briefcase-outline" size={22} color="#FFD700" />
+                    <Ionicons name="briefcase-outline" size={22} color={T.yellow} />
                   </View>
-                  <Text style={styles.cardTitle}>Professional Details</Text>
+                  <Text style={styles.cardTitle}>professional details</Text>
                 </View>
 
                 <InputField
@@ -553,17 +554,17 @@ export default function UpdateProfileScreen({ navigation, route }) {
                     <MaterialCommunityIcons
                       name="school-outline"
                       size={20}
-                      color="#FFD700"
+                      color={T.yellow}
                     />
-                    <Text style={styles.switchLabel}>Alumni Status</Text>
+                    <Text style={styles.switchLabel}>alumni status</Text>
                   </View>
                   <View style={styles.switchContainer}>
                     <Switch
                       value={formData.isAlumni}
                       onValueChange={(val) => handleChange("isAlumni", val)}
-                      trackColor={{ false: "#e0e0e0", true: "#FFD700" }}
-                      thumbColor={formData.isAlumni ? "#1a1a1a" : "#fff"}
-                      ios_backgroundColor="#e0e0e0"
+                      trackColor={{ false: T.sand, true: T.yellow }}
+                      thumbColor={formData.isAlumni ? T.ink : T.white}
+                      ios_backgroundColor={T.sand}
                     />
                   </View>
                 </View>
@@ -583,22 +584,22 @@ export default function UpdateProfileScreen({ navigation, route }) {
                   activeOpacity={0.85}
                 >
                   <LinearGradient
-                    colors={["#FFD700", "#FFC107", "#FFA000"]}
+                    colors={[T.yellow, T.yellow, "#FFA000"]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.saveButtonGradient}
                   >
                     {saving ? (
                       <>
-                        <ActivityIndicator size="small" color="#1a1a1a" />
+                        <ActivityIndicator size="small" color={T.ink} />
                         <Text style={[styles.saveButtonText, { marginLeft: 10 }]}>
-                          Saving...
+                          saving...
                         </Text>
                       </>
                     ) : (
                       <>
-                        <Feather name="check" size={22} color="#1a1a1a" />
-                        <Text style={styles.saveButtonText}>Save Changes</Text>
+                        <Feather name="check" size={22} color={T.ink} />
+                        <Text style={styles.saveButtonText}>save changes</Text>
                       </>
                     )}
                   </LinearGradient>
@@ -620,7 +621,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f0f2f5",
+    backgroundColor: T.paper,
   },
   content: {
     flex: 1,
@@ -640,8 +641,8 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: "#666",
-    fontWeight: "500",
+    color: T.textMuted,
+    fontFamily: F.bodyMedium,
   },
   header: {
     flexDirection: "row",
@@ -655,10 +656,10 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "#ffffff",
+    backgroundColor: T.card,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -668,28 +669,28 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "#FFD70015",
+    backgroundColor: T.yellowSoft,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#FFD70020",
+    borderColor: T.line,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: "700",
-    color: "#1a1a1a",
+    fontFamily: F.headingBold,
+    color: T.ink,
     letterSpacing: -0.3,
   },
   mainCard: {
-    backgroundColor: "#ffffff",
+    backgroundColor: T.card,
     borderRadius: 20,
     marginBottom: 16,
     overflow: "hidden",
-    shadowColor: "#000",
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 4,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.5)",
   },
@@ -704,21 +705,21 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.04)",
+    borderBottomColor: T.line,
   },
   cardIconWrapper: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "#FFD70015",
+    backgroundColor: T.yellowSoft,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
   },
   cardTitle: {
     fontSize: 17,
-    fontWeight: "700",
-    color: "#1a1a1a",
+    fontFamily: F.bodyBold,
+    color: T.ink,
     letterSpacing: -0.3,
   },
   inputGroup: {
@@ -732,27 +733,27 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 13,
-    fontWeight: "600",
-    color: "#555",
+    fontFamily: F.bodySemi,
+    color: T.textMuted,
     letterSpacing: 0.2,
   },
   requiredStar: {
-    color: "#EF4444",
-    fontSize: 16,
+    color: T.danger,
+    fontSize: 16, fontFamily: F.body,
   },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8f9fa",
+    backgroundColor: T.sand,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: "rgba(0,0,0,0.04)",
+    borderColor: T.line,
     paddingHorizontal: 14,
     minHeight: 50,
   },
   inputDisabled: {
-    backgroundColor: "#f0f0f0",
-    borderColor: "rgba(0,0,0,0.02)",
+    backgroundColor: T.sand,
+    borderColor: T.line,
   },
   inputIcon: {
     marginRight: 12,
@@ -760,10 +761,10 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 15,
-    color: "#1a1a1a",
+    color: T.ink,
     paddingVertical: Platform.OS === "ios" ? 12 : 10,
     paddingHorizontal: 0,
-    fontWeight: "500",
+    fontFamily: F.bodyMedium,
   },
   inputMultiline: {
     minHeight: 80,
@@ -777,7 +778,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.04)",
+    borderTopColor: T.line,
     marginTop: 4,
   },
   switchLabelContainer: {
@@ -786,8 +787,8 @@ const styles = StyleSheet.create({
   },
   switchLabel: {
     fontSize: 15,
-    fontWeight: "500",
-    color: "#1a1a1a",
+    fontFamily: F.bodyMedium,
+    color: T.ink,
     marginLeft: 10,
   },
   switchContainer: {
@@ -800,11 +801,11 @@ const styles = StyleSheet.create({
   saveButton: {
     borderRadius: 16,
     overflow: "hidden",
-    shadowColor: "#FFD700",
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 6,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   saveButtonDisabled: {
     opacity: 0.6,
@@ -817,9 +818,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   saveButtonText: {
-    color: "#1a1a1a",
+    color: T.ink,
     fontSize: 17,
-    fontWeight: "700",
+    fontFamily: F.bodyBold,
     letterSpacing: -0.2,
   },
   bottomSpacer: {

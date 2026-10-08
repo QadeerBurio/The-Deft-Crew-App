@@ -10,11 +10,12 @@ import { useStreak } from '../hooks/useStreak';
 import { STREAK_HEALTH_TO_MOOD } from '../utils/mood';
 import { pop, success as hapticSuccess, warn as hapticWarn } from '../utils/haptics';
 
-const GOLD = '#f9c349';
-const DARK = '#1a1a1a';
-const MUTED = '#888';
-const LIGHT = '#fafafa';
-const BORDER = '#f0f0f0';
+import { color as T, font as F } from "../../theme/tokens";
+const GOLD = T.yellow;
+const DARK = T.ink;
+const MUTED = T.textFaint;
+const LIGHT = T.sand;
+const BORDER = T.line;
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -124,9 +125,9 @@ export default function StreakSheet({ visible, onClose }) {
       <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
         <Pressable style={styles.backdrop} onPress={onClose}>
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.headerTitle}>Streak</Text>
+            <Text style={styles.headerTitle}>streak</Text>
             <Text style={{ marginTop: 12, color: MUTED }}>
-              Streaks aren't available right now.
+              streaks aren't available right now.
             </Text>
           </Pressable>
         </Pressable>
@@ -148,7 +149,7 @@ export default function StreakSheet({ visible, onClose }) {
           <View style={styles.headerRow}>
             <View style={styles.headerLeft}>
               <View style={styles.headerDot} />
-              <Text style={styles.headerTitle}>Streak</Text>
+              <Text style={styles.headerTitle}>streak</Text>
             </View>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Ionicons name="close" size={22} color={DARK} />
@@ -191,7 +192,7 @@ export default function StreakSheet({ visible, onClose }) {
                 <MaterialCommunityIcons name="school-outline" size={20} color={DARK} />
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.examTitle}>Exam Mode</Text>
+                <Text style={styles.examTitle}>exam mode</Text>
                 <Text style={styles.examSub}>
                   {exam
                     ? examModeUntil
@@ -208,9 +209,9 @@ export default function StreakSheet({ visible, onClose }) {
               <Switch
                 value={exam}
                 onValueChange={onToggleExam}
-                trackColor={{ false: '#e5e5e5', true: GOLD }}
-                thumbColor="#fff"
-                ios_backgroundColor="#e5e5e5"
+                trackColor={{ false: T.sand, true: GOLD }}
+                thumbColor={T.white}
+                ios_backgroundColor={T.sand}
               />
             )}
           </View>
@@ -230,11 +231,11 @@ export default function StreakSheet({ visible, onClose }) {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: T.overlay,
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 22,
@@ -244,7 +245,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: T.sand,
     alignSelf: 'center',
     marginBottom: 16,
   },
@@ -256,10 +257,10 @@ const styles = StyleSheet.create({
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: GOLD },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: DARK, letterSpacing: -0.3 },
+  headerTitle: { fontSize: 20, fontFamily: F.heading, color: DARK, letterSpacing: -0.3 },
   countRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
-  bigCount: { fontSize: 22, fontWeight: '900', color: DARK, letterSpacing: -0.5 },
-  subCount: { fontSize: 13, color: MUTED, marginTop: 2 },
+  bigCount: { fontSize: 22, fontFamily: F.heading, color: DARK, letterSpacing: -0.5 },
+  subCount: { fontSize: 13, fontFamily: F.body, color: MUTED, marginTop: 2 },
   weekRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -267,10 +268,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   dayCol: { alignItems: 'center', gap: 8, flex: 1 },
-  dayLabel: { fontSize: 11, fontWeight: '600', color: MUTED },
+  dayLabel: { fontSize: 11, fontFamily: F.bodySemi, color: MUTED },
   dayDot: {
     width: 26, height: 26, borderRadius: 13,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: T.sand,
     alignItems: 'center', justifyContent: 'center',
   },
   dayDotActive: { backgroundColor: GOLD + '55' },
@@ -285,14 +286,14 @@ const styles = StyleSheet.create({
   examLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   examIconBox: {
     width: 36, height: 36, borderRadius: 12,
-    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: T.card, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: BORDER,
   },
-  examTitle: { fontSize: 15, fontWeight: '800', color: DARK, letterSpacing: -0.2 },
-  examSub: { fontSize: 11, color: MUTED, marginTop: 2, lineHeight: 15 },
+  examTitle: { fontSize: 15, fontFamily: F.bodyBold, color: DARK, letterSpacing: -0.2 },
+  examSub: { fontSize: 11, fontFamily: F.body, color: MUTED, marginTop: 2, lineHeight: 15 },
   infoRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 6, marginTop: 14,
   },
-  infoText: { fontSize: 11, color: MUTED },
+  infoText: { fontSize: 11, fontFamily: F.body, color: MUTED },
 });

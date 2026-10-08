@@ -6,6 +6,7 @@ import React, { useMemo } from 'react';
 import { View, Image, StyleSheet } from 'react-native';
 import { MOOD_IMAGES, getMoodColor, YELLOW_DOT } from '../utils/mood';
 
+import { color as T } from "../../theme/tokens";
 export default function Dot({ mood = 'sorted', size = 72, animated = false }) {
   const source = useMemo(() => {
     const img = MOOD_IMAGES[mood];
@@ -44,10 +45,10 @@ export default function Dot({ mood = 'sorted', size = 72, animated = false }) {
 
 const styles = StyleSheet.create({
   fallback: {
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.06,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
   },
 });

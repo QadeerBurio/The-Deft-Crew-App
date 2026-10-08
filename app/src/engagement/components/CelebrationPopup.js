@@ -14,9 +14,10 @@ import {
 import Dot from './Dot';
 import { pop, success as hapticSuccess } from '../utils/haptics';
 
-const GOLD = '#f9c349';
-const BLACK = '#0f0f0f';
-const WHITE = '#ffffff';
+import { color as T, font as F } from "../../theme/tokens";
+const GOLD = T.yellow;
+const BLACK = T.ink;
+const WHITE = T.white;
 const MUTED = '#8b8b8b';
 
 const AUTO_CLOSE_MS = 3000;
@@ -156,7 +157,7 @@ export default function CelebrationPopup({ popup, onClose, onNotNow, onClosed })
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: T.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -171,16 +172,16 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 360,
     borderWidth: 1,
-    borderColor: 'rgba(249,195,73,0.3)',
-    shadowColor: '#000',
-    shadowOpacity: 0.4,
-    shadowRadius: 24,
+    borderColor: T.line,
+    shadowColor: T.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 10 },
-    elevation: 16,
+    elevation: 2,
   },
   line: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: WHITE,
     textAlign: 'center',
     marginTop: 20,
@@ -198,7 +199,7 @@ const styles = StyleSheet.create({
   },
   ctaText: {
     fontSize: 15,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: BLACK,
     letterSpacing: 0.3,
     textTransform: 'lowercase',
@@ -210,7 +211,7 @@ const styles = StyleSheet.create({
   notNowText: {
     fontSize: 13,
     color: MUTED,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
     textTransform: 'lowercase',
   },
 });

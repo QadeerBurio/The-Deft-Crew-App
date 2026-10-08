@@ -5,9 +5,10 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { color as T, font as F } from "../theme/tokens";
 const { width, height } = Dimensions.get("window");
 
 export default function WhyPointsScreen() {
@@ -98,7 +99,7 @@ export default function WhyPointsScreen() {
   const benefits = [
     { 
       icon: "briefcase-check-outline", 
-      color: "#f9c349", 
+      color: T.yellow, 
       title: "Career Hub", 
       desc: "See top internships first and get direct referrals.",
       category: "Career"
@@ -119,14 +120,14 @@ export default function WhyPointsScreen() {
     },
     { 
       icon: "ticket-confirmation-outline", 
-      color: "#ff6b6b", 
+      color: T.danger, 
       title: "Boosted Discounts", 
       desc: "Bigger discounts at premium partner brands.",
       category: "Discounts"
     },
     { 
       icon: "shield-star-outline", 
-      color: "#f9c349", 
+      color: T.yellow, 
       title: "Campus Leadership", 
       desc: "Get verified as a campus leader and grow your network.",
       category: "Leadership"
@@ -209,7 +210,7 @@ export default function WhyPointsScreen() {
               colors={[color, color]}
               style={styles.iconGradient}
             >
-              <MaterialCommunityIcons name={icon} size={18} color="#fff" />
+              <MaterialCommunityIcons name={icon} size={18} color={T.white} />
             </LinearGradient>
           </Animated.View>
           <View style={styles.cardContent}>
@@ -228,7 +229,7 @@ export default function WhyPointsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa00" />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
       
       {/* Header - Compact */}
       <Animated.View style={[styles.header, { opacity: headerFade }]}>
@@ -237,7 +238,7 @@ export default function WhyPointsScreen() {
           style={styles.headerBtn}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={22} color="#1a1a1a" />
+          <Ionicons name="arrow-back" size={22} color={T.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>tdc Privilege</Text>
         <View style={{ width: 36 }} />
@@ -262,17 +263,17 @@ export default function WhyPointsScreen() {
             ]}
           >
             <LinearGradient
-              colors={['#1a1a1a', '#2d2d2d']}
+              colors={[T.ink, T.ink]}
               style={styles.heroCard}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
               <Animated.View style={[styles.heroIconCircle, { transform: [{ rotate: spin }] }]}>
                 <LinearGradient
-                  colors={['#f9c349', '#e6b800']}
+                  colors={[T.yellow, '#e6b800']}
                   style={styles.heroIconGradient}
                 >
-                  <MaterialCommunityIcons name="crown-outline" size={28} color="#1a1a1a" />
+                  <MaterialCommunityIcons name="crown-outline" size={28} color={T.ink} />
                 </LinearGradient>
               </Animated.View>
               
@@ -295,7 +296,7 @@ export default function WhyPointsScreen() {
           <View style={styles.benefitsSection}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionDot} />
-              <Text style={styles.sectionTitle}>Priviledge</Text>
+              <Text style={styles.sectionTitle}>priviledge</Text>
               <View style={styles.sectionLine} />
             </View>
             {benefits.map((item, i) => (
@@ -316,7 +317,7 @@ export default function WhyPointsScreen() {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: "#f8f9fa",
+    backgroundColor: T.paper,
   },
   
   // Header - Compact
@@ -326,24 +327,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16, 
     paddingVertical: 10,
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.04)',
+    borderBottomColor: T.line,
   },
   headerBtn: { 
     width: 34, 
     height: 34, 
     borderRadius: 10, 
-    backgroundColor: '#f8f9fa',
+    backgroundColor: T.sand,
     justifyContent: 'center', 
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
+    borderColor: T.line,
   },
   headerTitle: { 
     fontSize: 16, 
-    fontWeight: '700', 
-    color: '#1a1a1a', 
+    fontFamily: F.bodyBold, 
+    color: T.ink, 
     letterSpacing: 0.3,
   },
   scrollContent: { 
@@ -357,11 +358,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
     borderRadius: 18,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   heroCard: { 
     padding: 20, 
@@ -381,16 +382,16 @@ const styles = StyleSheet.create({
     borderRadius: 16, 
     justifyContent: 'center', 
     alignItems: 'center',
-    shadowColor: '#f9c349',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   heroTitle: { 
     fontSize: 18, 
-    fontWeight: '800', 
-    color: '#fff', 
+    fontFamily: F.heading, 
+    color: T.white, 
     marginBottom: 4, 
     textAlign: 'center',
     letterSpacing: 0.3,
@@ -400,7 +401,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)', 
     textAlign: 'center', 
     lineHeight: 18, 
-    fontWeight: '400', 
+    fontFamily: F.body, 
     paddingHorizontal: 8,
   },
   decorLine: { 
@@ -412,13 +413,13 @@ const styles = StyleSheet.create({
   decorSegment: { 
     width: 20, 
     height: 1.5, 
-    backgroundColor: '#f9c349', 
+    backgroundColor: T.yellow, 
     borderRadius: 1,
   },
   decorDiamond: { 
     width: 5, 
     height: 5, 
-    backgroundColor: '#f9c349', 
+    backgroundColor: T.yellow, 
     transform: [{ rotate: '45deg' }], 
     marginHorizontal: 8,
   },
@@ -429,14 +430,14 @@ const styles = StyleSheet.create({
     marginTop: 10,
     borderRadius: 14,
     overflow: 'hidden',
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
+    backgroundColor: T.card,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 2,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
+    borderColor: T.line,
   },
   statsCard: { 
     flexDirection: 'row', 
@@ -448,22 +449,22 @@ const styles = StyleSheet.create({
   },
   statNum: { 
     fontSize: 18, 
-    fontWeight: '800', 
-    color: '#1a1a1a',
+    fontFamily: F.heading, 
+    color: T.ink,
     letterSpacing: 0.5,
   },
   statLabel: { 
     fontSize: 9, 
-    color: '#94A3B8', 
-    fontWeight: '600', 
+    color: T.textFaint, 
+    fontFamily: F.bodySemi, 
     marginTop: 2, 
     textAlign: 'center',
-    textTransform: 'uppercase',
+    textTransform: 'none',
     letterSpacing: 0.5,
   },
   statDivider: { 
     width: 1, 
-    backgroundColor: 'rgba(0,0,0,0.06)', 
+    backgroundColor: T.sand, 
     height: '60%', 
     alignSelf: 'center',
   },
@@ -483,19 +484,19 @@ const styles = StyleSheet.create({
     width: 6, 
     height: 6, 
     borderRadius: 3, 
-    backgroundColor: '#f9c349', 
+    backgroundColor: T.yellow, 
     marginRight: 8,
   },
   sectionTitle: { 
     fontSize: 14, 
-    fontWeight: '700', 
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold, 
+    color: T.ink,
     letterSpacing: 0.3,
   },
   sectionLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(0,0,0,0.06)',
+    backgroundColor: T.sand,
     marginLeft: 10,
   },
   
@@ -507,10 +508,10 @@ const styles = StyleSheet.create({
     padding: 12,
     paddingHorizontal: 14,
     borderRadius: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: T.card,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
-    shadowColor: '#000',
+    borderColor: T.line,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
@@ -543,8 +544,8 @@ const styles = StyleSheet.create({
   },
   cardTitle: { 
     fontSize: 12, 
-    fontWeight: '700', 
-    color: '#1a1a1a',
+    fontFamily: F.bodyBold, 
+    color: T.ink,
     flex: 1,
     letterSpacing: 0.2,
   },
@@ -556,15 +557,15 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 8,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
     letterSpacing: 0.3,
-    textTransform: 'uppercase',
+    textTransform: 'none',
   },
   cardDesc: { 
     fontSize: 10.5, 
-    color: '#94A3B8', 
+    color: T.textFaint, 
     lineHeight: 15, 
-    fontWeight: '400',
+    fontFamily: F.body,
   },
   
   // Footer
@@ -575,8 +576,8 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 10,
-    color: '#CBD5E1',
-    fontWeight: '500',
+    color: T.textFaint,
+    fontFamily: F.bodyMedium,
     letterSpacing: 0.3,
   },
 });

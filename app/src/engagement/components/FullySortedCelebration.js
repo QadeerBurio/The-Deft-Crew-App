@@ -13,8 +13,9 @@ import {
 import Dot from './Dot';
 import { success as hapticSuccess } from '../utils/haptics';
 
-const GOLD = '#f9c349';
-const DARK = '#1a1a1a';
+import { color as T, font as F } from "../../theme/tokens";
+const GOLD = T.yellow;
+const DARK = T.ink;
 
 export default function FullySortedCelebration({ popup, onClose }) {
   const scale = useRef(new Animated.Value(0.6)).current;
@@ -58,8 +59,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 40,
-    fontWeight: '900',
-    color: '#fff',
+    fontFamily: F.heading,
+    color: T.white,
     marginTop: 20,
     letterSpacing: -1,
   },
@@ -67,7 +68,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: GOLD,
     marginTop: 4,
-    fontWeight: '700',
+    fontFamily: F.headingBold,
   },
   btn: {
     marginTop: 32,
@@ -78,7 +79,7 @@ const styles = StyleSheet.create({
   },
   btnText: {
     fontSize: 15,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: DARK,
     letterSpacing: 0.3,
   },

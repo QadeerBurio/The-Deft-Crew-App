@@ -8,11 +8,12 @@ import { Ionicons } from '@expo/vector-icons';
 import Dot from './Dot';
 import { useEngagement } from '../hooks/useEngagement';
 
-const GOLD = '#f9c349';
-const GOLD_DARK = '#e0a82e';
-const DARK = '#1a1a1a';
-const MUTED = '#888';
-const WHITE = '#ffffff';
+import { color as T, font as F } from "../../theme/tokens";
+const GOLD = T.yellow;
+const GOLD_DARK = T.yellow;
+const DARK = T.ink;
+const MUTED = T.textFaint;
+const WHITE = T.white;
 
 export default function SavingsCounter({ onShare, compact = false }) {
   const { me, flags } = useEngagement();
@@ -78,7 +79,7 @@ export default function SavingsCounter({ onShare, compact = false }) {
 
       {/* Text block */}
       <View style={styles.textCol}>
-        <Text style={styles.label}>You've saved</Text>
+        <Text style={styles.label}>you've saved</Text>
         <Text style={styles.amountRow} numberOfLines={1}>
           <Text style={styles.amount}>{formatted}</Text>
           <Text style={styles.suffix}> on tdc</Text>
@@ -95,7 +96,7 @@ export default function SavingsCounter({ onShare, compact = false }) {
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="share-outline" size={14} color={DARK} />
-          <Text style={styles.shareText}>Share</Text>
+          <Text style={styles.shareText}>share</Text>
         </TouchableOpacity>
       )}
     </Animated.View>
@@ -107,7 +108,7 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fffbee',
+    backgroundColor: T.yellowSoft,
     borderRadius: 16,
     borderWidth: 1.5,
     borderColor: GOLD + '55',
@@ -120,8 +121,8 @@ const styles = StyleSheet.create({
     // subtle lift
     shadowColor: GOLD,
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     elevation: 2,
   },
 
@@ -140,7 +141,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 11,
     color: MUTED,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
     letterSpacing: 0.2,
     marginBottom: 1,
   },
@@ -152,21 +153,21 @@ const styles = StyleSheet.create({
 
   amount: {
     fontSize: 16,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: DARK,
     letterSpacing: -0.3,
   },
 
   suffix: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
     color: DARK,
     letterSpacing: -0.2,
   },
 
   amountDot: {
     fontSize: 13,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: GOLD_DARK,
   },
 
@@ -184,7 +185,7 @@ const styles = StyleSheet.create({
 
   shareText: {
     fontSize: 11.5,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: DARK,
     letterSpacing: 0.1,
   },
@@ -196,16 +197,16 @@ const styles = StyleSheet.create({
   },
   compactText: {
     fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
+    color: T.textMuted,
+    fontFamily: F.bodyMedium,
     lineHeight: 18,
   },
   compactHighlight: {
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: DARK,
   },
   compactDot: {
     color: GOLD,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
   },
 });

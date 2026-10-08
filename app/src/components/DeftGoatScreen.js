@@ -13,9 +13,10 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { color as T, font as F } from "../theme/tokens";
 const DeftGoatScreen = () => {
   const navigation = useNavigation();
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -52,14 +53,14 @@ const DeftGoatScreen = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="light-content" backgroundColor="#FF6B35" />
+      <StatusBar barStyle="light-content" backgroundColor={T.paper} />
       
       <LinearGradient colors={["#FF6B35", "#E55A2A"]} style={styles.headerGradient}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleGoBack} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={24} color="#fff" />
+            <Ionicons name="chevron-back" size={24} color={T.white} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>DEFT GOAT</Text>
+          <Text style={styles.headerTitle}>deft goat</Text>
           <View style={{ width: 40 }} />
         </View>
       </LinearGradient>
@@ -73,10 +74,10 @@ const DeftGoatScreen = () => {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <MaterialCommunityIcons name="trophy" size={60} color="#fff" />
+              <MaterialCommunityIcons name="trophy" size={60} color={T.white} />
             </LinearGradient>
             <Text style={styles.heroTitle}>🐐 DEFT GOAT</Text>
-            <Text style={styles.heroSubtitle}>Greatest of All Time!</Text>
+            <Text style={styles.heroSubtitle}>greatest of all time!</Text>
           </View>
 
           <View style={styles.rewardsContainer}>
@@ -97,8 +98,8 @@ const DeftGoatScreen = () => {
                 <Ionicons name="briefcase-outline" size={28} color="#FF6B35" />
               </View>
               <View style={styles.rewardContent}>
-                <Text style={styles.rewardTitle}>Guaranteed Paid Internship</Text>
-                <Text style={styles.rewardDesc}>Confirmed paid internship opportunity</Text>
+                <Text style={styles.rewardTitle}>guaranteed paid internship</Text>
+                <Text style={styles.rewardDesc}>confirmed paid internship opportunity</Text>
               </View>
             </View>
 
@@ -107,8 +108,8 @@ const DeftGoatScreen = () => {
                 <Ionicons name="people-circle-outline" size={28} color="#FF6B35" />
               </View>
               <View style={styles.rewardContent}>
-                <Text style={styles.rewardTitle}>Expanded Leadership Access</Text>
-                <Text style={styles.rewardDesc}>Direct access to leadership team</Text>
+                <Text style={styles.rewardTitle}>expanded leadership access</Text>
+                <Text style={styles.rewardDesc}>direct access to leadership team</Text>
               </View>
             </View>
 
@@ -117,7 +118,7 @@ const DeftGoatScreen = () => {
                 <Ionicons name="megaphone-outline" size={28} color="#FF6B35" />
               </View>
               <View style={styles.rewardContent}>
-                <Text style={styles.rewardTitle}>TDC Ambassador Role</Text>
+                <Text style={styles.rewardTitle}>tdc ambassador role</Text>
                 <Text style={styles.rewardDesc}>Official ambassador of The Deft Crew</Text>
               </View>
             </View>
@@ -130,8 +131,8 @@ const DeftGoatScreen = () => {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Ionicons name="share-social-outline" size={20} color="#fff" />
-              <Text style={styles.shareBtnText}>Share GOAT Achievement</Text>
+              <Ionicons name="share-social-outline" size={20} color={T.white} />
+              <Text style={styles.shareBtnText}>share goat achievement</Text>
             </LinearGradient>
           </TouchableOpacity>
         </Animated.View>
@@ -143,7 +144,7 @@ const DeftGoatScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fc",
+    backgroundColor: T.paper,
   },
   headerGradient: {
     paddingTop: 8,
@@ -165,8 +166,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "800",
-    color: "#fff",
+    fontFamily: F.heading,
+    color: T.white,
   },
   scrollContent: {
     paddingBottom: 40,
@@ -186,36 +187,36 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 12,
-    shadowColor: "#FF6B35",
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   heroTitle: {
     fontSize: 22,
-    fontWeight: "900",
-    color: "#1a1a1a",
+    fontFamily: F.heading,
+    color: T.ink,
     letterSpacing: 1,
   },
   heroSubtitle: {
     fontSize: 16,
     color: "#FF6B35",
-    fontWeight: "600",
+    fontFamily: F.bodySemi,
     marginTop: 4,
   },
   rewardsContainer: {
-    backgroundColor: "#fff",
+    backgroundColor: T.card,
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#f0f0f0",
+    borderColor: T.line,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "800",
-    color: "#1a1a1a",
+    fontFamily: F.heading,
+    color: T.ink,
     marginBottom: 16,
   },
   rewardCard: {
@@ -223,7 +224,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#f5f5f5",
+    borderBottomColor: T.line,
   },
   rewardIconContainer: {
     width: 48,
@@ -238,12 +239,12 @@ const styles = StyleSheet.create({
   },
   rewardTitle: {
     fontSize: 15,
-    fontWeight: "700",
-    color: "#1a1a1a",
+    fontFamily: F.bodyBold,
+    color: T.ink,
   },
   rewardDesc: {
-    fontSize: 12,
-    color: "#999",
+    fontSize: 12, fontFamily: F.body,
+    color: T.textFaint,
     marginTop: 2,
   },
   shareBtn: {
@@ -259,8 +260,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   shareBtnText: {
-    color: "#fff",
-    fontWeight: "700",
+    color: T.white,
+    fontFamily: F.bodyBold,
     fontSize: 15,
   },
 });

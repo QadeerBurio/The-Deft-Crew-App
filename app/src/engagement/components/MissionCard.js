@@ -12,28 +12,29 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { useNavigation } from '@react-navigation/native';
 import Dot from './Dot';
 import { pop } from '../utils/haptics';
 
-const GOLD = '#f9c349';
-const GOLD_DARK = '#e0a82e';
-const DARK = '#1a1a1a';
-const WHITE = '#ffffff';
-const LIGHT = '#fafafa';
-const BORDER = '#f0f0f0';
-const MUTED = '#888';
+import { color as T } from "../../theme/tokens";
+const GOLD = T.yellow;
+const GOLD_DARK = T.yellow;
+const DARK = T.ink;
+const WHITE = T.white;
+const LIGHT = T.sand;
+const BORDER = T.line;
+const MUTED = T.textFaint;
 
 const FEATURE_META = {
-  discounts:   { icon: 'pricetag-outline',      color: '#f9c349' },
-  resume:      { icon: 'document-text-outline', color: '#f9c349' },
-  jobs:        { icon: 'briefcase-outline',     color: '#f9c349' },
-  social:      { icon: 'globe-outline',         color: '#f9c349' },
-  events:      { icon: 'calendar-outline',      color: '#f9c349' },
-  scholarship: { icon: 'school-outline',        color: '#f9c349' },
-  skillshare:  { icon: 'people-circle-outline', color: '#f9c349' },
-  traveling:   { icon: 'airplane-outline',      color: '#f9c349' },
+  discounts:   { icon: 'pricetag-outline',      color: T.yellow },
+  resume:      { icon: 'document-text-outline', color: T.yellow },
+  jobs:        { icon: 'briefcase-outline',     color: T.yellow },
+  social:      { icon: 'globe-outline',         color: T.yellow },
+  events:      { icon: 'calendar-outline',      color: T.yellow },
+  scholarship: { icon: 'school-outline',        color: T.yellow },
+  skillshare:  { icon: 'people-circle-outline', color: T.yellow },
+  traveling:   { icon: 'airplane-outline',      color: T.yellow },
 };
 
 export default function MissionCard({
@@ -167,7 +168,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: T.ink,
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.06,
         shadowRadius: 10,

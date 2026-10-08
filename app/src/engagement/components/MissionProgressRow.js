@@ -2,9 +2,10 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-const GOLD = '#f9c349';
-const MUTED = '#888';
-const EMPTY = '#e5e5e5';
+import { color as T, font as F } from "../../theme/tokens";
+const GOLD = T.yellow;
+const MUTED = T.textFaint;
+const EMPTY = T.sand;
 
 export default function MissionProgressRow({ sortedCount = 0, total = 8 }) {
   return (
@@ -46,7 +47,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: F.bodyBold,
     color: MUTED,
     letterSpacing: 0.3,
   },

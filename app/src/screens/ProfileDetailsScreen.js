@@ -31,18 +31,19 @@ import StreakChip from "../engagement/components/StreakChip";
 import StreakSheet from "../engagement/components/StreakSheet";
 import { useEngagement } from "../engagement/hooks/useEngagement";
 
+import { color as T, font as F } from "../theme/tokens";
 // ─── Theme ───
-const GOLD = "#f9c349";
+const GOLD = T.yellow;
 const GOLD_DARK = "#d9a21f";
-const GOLD_SOFT = "#fff8e6";
-const DARK = "#1a1a1a";
-const WHITE = "#ffffff";
-const SOFT = "#F7F9F8";
-const BORDER = "#E8E8E8";
-const LINE = "#f2f2f2";
-const MUTED = "#8a8a8a";
-const DANGER = "#e11d48";
-const SUCCESS = "#16a34a";
+const GOLD_SOFT = T.yellowSoft;
+const DARK = T.ink;
+const WHITE = T.white;
+const SOFT = T.sand;
+const BORDER = T.line;
+const LINE = T.line;
+const MUTED = T.textFaint;
+const DANGER = T.danger;
+const SUCCESS = T.success;
 const WARNING = "#d97706";
 
 const toProfile = (d = {}) => ({
@@ -253,8 +254,8 @@ export default function ProfileDetailsScreen({ navigation }) {
 
           <View style={styles.pillRow}>
             <View style={[styles.pill, { backgroundColor: st.color + "22" }]}>
-              <Ionicons name={st.icon} size={11} color={st.color === DANGER ? "#fb7185" : st.color === SUCCESS ? "#4ade80" : "#fbbf24"} />
-              <Text style={[styles.pillText, { color: st.color === DANGER ? "#fb7185" : st.color === SUCCESS ? "#4ade80" : "#fbbf24" }]}>
+              <Ionicons name={st.icon} size={11} color={st.color === DANGER ? "#fb7185" : st.color === SUCCESS ? "#4ade80" : T.yellow} />
+              <Text style={[styles.pillText, { color: st.color === DANGER ? "#fb7185" : st.color === SUCCESS ? "#4ade80" : T.yellow }]}>
                 {profile.status}
               </Text>
             </View>
@@ -369,8 +370,8 @@ const card = {
   backgroundColor: WHITE,
   borderRadius: 18,
   borderWidth: 1,
-  borderColor: "#efefef",
-  shadowColor: "#000",
+  borderColor: T.line,
+  shadowColor: T.ink,
   shadowOffset: { width: 0, height: 2 },
   shadowOpacity: 0.04,
   shadowRadius: 8,
@@ -398,7 +399,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  headerTitle: { fontSize: 20, fontWeight: "900", color: DARK, letterSpacing: -0.3 },
+  headerTitle: { fontSize: 20, fontFamily: F.heading, color: DARK, letterSpacing: -0.3 },
 
   // hero
   hero: { backgroundColor: DARK, borderRadius: 22, padding: 18, marginTop: 6 },
@@ -411,7 +412,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.12)",
   },
   avatarRingVip: { backgroundColor: GOLD },
-  avatarImage: { width: "100%", height: "100%", borderRadius: 35, backgroundColor: "#333" },
+  avatarImage: { width: "100%", height: "100%", borderRadius: 35, backgroundColor: T.ink },
   avatarFallback: {
     flex: 1,
     borderRadius: 35,
@@ -419,7 +420,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  avatarInitial: { fontSize: 28, fontWeight: "900", color: DARK },
+  avatarInitial: { fontSize: 28, fontFamily: F.heading, color: DARK },
   vipCrown: {
     position: "absolute",
     right: -2,
@@ -435,10 +436,10 @@ const styles = StyleSheet.create({
   },
   heroInfo: { flex: 1, marginLeft: 14 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  userName: { flexShrink: 1, fontSize: 20, fontWeight: "900", color: WHITE, letterSpacing: -0.3 },
-  headline: { fontSize: 13, color: "rgba(255,255,255,0.8)", marginTop: 3 },
+  userName: { flexShrink: 1, fontSize: 20, fontFamily: F.heading, color: WHITE, letterSpacing: -0.3 },
+  headline: { fontSize: 13, fontFamily: F.body, color: "rgba(255,255,255,0.8)", marginTop: 3 },
   uniRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 6 },
-  uniText: { flex: 1, fontSize: 12.5, color: "rgba(255,255,255,0.65)", fontWeight: "600" },
+  uniText: { flex: 1, fontSize: 12.5, color: "rgba(255,255,255,0.65)", fontFamily: F.bodySemi },
   pillRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 16 },
   pill: {
     flexDirection: "row",
@@ -449,7 +450,7 @@ const styles = StyleSheet.create({
     borderRadius: 13,
   },
   pillGold: { backgroundColor: GOLD },
-  pillText: { fontSize: 11.5, fontWeight: "800" },
+  pillText: { fontSize: 11.5, fontFamily: F.bodyBold },
 
   // stats
   statsRow: { flexDirection: "row", gap: 10, marginTop: 14 },
@@ -463,8 +464,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-  statValue: { fontSize: 15, fontWeight: "900", color: DARK },
-  statLabel: { fontSize: 11, color: MUTED, marginTop: 2, fontWeight: "600" },
+  statValue: { fontSize: 15, fontFamily: F.bodyBold, color: DARK },
+  statLabel: { fontSize: 11, color: MUTED, marginTop: 2, fontFamily: F.bodySemi },
 
   // cards
   card: { ...card, padding: 16, marginTop: 14 },
@@ -478,15 +479,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 10,
   },
-  sectionTitle: { flex: 1, fontSize: 15.5, fontWeight: "900", color: DARK },
+  sectionTitle: { flex: 1, fontSize: 15.5, fontFamily: F.bodyBold, color: DARK },
   countPill: { backgroundColor: GOLD_SOFT, paddingHorizontal: 10, height: 24, borderRadius: 12, justifyContent: "center" },
-  countText: { fontSize: 12, fontWeight: "800", color: GOLD_DARK },
+  countText: { fontSize: 12, fontFamily: F.bodyBold, color: GOLD_DARK },
 
-  progressTrack: { height: 6, borderRadius: 3, backgroundColor: "#f0f0f0", marginTop: 16, overflow: "hidden" },
+  progressTrack: { height: 6, borderRadius: 3, backgroundColor: T.sand, marginTop: 16, overflow: "hidden" },
   progressFill: { height: "100%", borderRadius: 3, backgroundColor: GOLD },
   progressMeta: { flexDirection: "row", justifyContent: "space-between", marginTop: 8 },
-  progressLabel: { fontSize: 12, fontWeight: "800", color: DARK },
-  progressHint: { fontSize: 12, color: MUTED, fontWeight: "600" },
+  progressLabel: { fontSize: 12, fontFamily: F.bodyBold, color: DARK },
+  progressHint: { fontSize: 12, color: MUTED, fontFamily: F.bodySemi },
 
   infoRow: { flexDirection: "row", alignItems: "center", paddingVertical: 12 },
   infoRowBorder: { borderBottomWidth: 1, borderBottomColor: LINE },
@@ -499,10 +500,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
-  infoLabel: { fontSize: 11.5, color: MUTED, fontWeight: "700" },
-  infoValue: { fontSize: 14.5, color: DARK, fontWeight: "700", marginTop: 2 },
+  infoLabel: { fontSize: 11.5, color: MUTED, fontFamily: F.bodyBold },
+  infoValue: { fontSize: 14.5, color: DARK, fontFamily: F.bodyBold, marginTop: 2 },
 
-  bioText: { fontSize: 14, color: "#444", lineHeight: 21, marginTop: 12 },
+  bioText: { fontSize: 14, fontFamily: F.body, color: T.textMuted, lineHeight: 21, marginTop: 12 },
 
   editBtn: {
     height: 54,
@@ -514,5 +515,5 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 18,
   },
-  editBtnText: { color: WHITE, fontSize: 15.5, fontWeight: "800" },
+  editBtnText: { color: WHITE, fontSize: 15.5, fontFamily: F.bodyBold },
 });

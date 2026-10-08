@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { useNavigation } from '@react-navigation/native';
 import Dot from '../components/Dot';
 import engagementApi from '../api/engagementApi';
@@ -25,6 +25,7 @@ import {
   savePushTokenToServer,
 } from '../../utils/pushNotifications';
 
+import { color as T, font as F } from "../../theme/tokens";
 // Re-saves this device's push token, then asks the server to push to it.
 // Shows exactly what is wrong if the push can't be delivered.
 async function runPushTest(setTesting) {
@@ -51,12 +52,12 @@ async function runPushTest(setTesting) {
   }
 }
 
-const GOLD = '#f9c349';
-const DARK = '#1a1a1a';
-const MUTED = '#888';
-const LIGHT = '#fafafa';
-const BORDER = '#f0f0f0';
-const WHITE = '#fff';
+const GOLD = T.yellow;
+const DARK = T.ink;
+const MUTED = T.textFaint;
+const LIGHT = T.sand;
+const BORDER = T.line;
+const WHITE = T.white;
 
 const ROWS = [
   {
@@ -64,14 +65,14 @@ const ROWS = [
     label: 'streaks',
     sub: 'your daily streak reminders',
     mood: 'sleepy',
-    color: '#94A3B8',
+    color: T.textFaint,
   },
   {
     key: 'dailyDrop',
     label: 'daily drop',
     sub: '7pm daily. one surprise.',
     mood: 'excited',
-    color: '#f9c349',
+    color: T.yellow,
   },
   {
     key: 'deals',
@@ -149,9 +150,9 @@ const PrefRow = ({ row, value, onToggle, index }) => {
       <Switch
         value={value}
         onValueChange={onToggle}
-        trackColor={{ false: '#e5e5e5', true: GOLD }}
+        trackColor={{ false: T.sand, true: GOLD }}
         thumbColor={Platform.OS === 'android' ? (value ? WHITE : '#f4f3f4') : undefined}
-        ios_backgroundColor="#e5e5e5"
+        ios_backgroundColor={T.sand}
       />
     </Animated.View>
   );
@@ -219,7 +220,7 @@ export default function NotificationSettingsScreen() {
         >
           {/* ── HERO ─────────────────────────────────────────── */}
           <LinearGradient
-            colors={['#1a1a1a', '#2d2d2d']}
+            colors={[T.ink, T.ink]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.hero}
@@ -253,7 +254,7 @@ export default function NotificationSettingsScreen() {
               activeOpacity={0.85}
             >
               <View style={styles.permissionIconWrap}>
-                <Ionicons name="alert-circle" size={20} color="#e74c3c" />
+                <Ionicons name="alert-circle" size={20} color={T.danger} />
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={styles.permissionTitle}>
@@ -263,7 +264,7 @@ export default function NotificationSettingsScreen() {
                   tap to enable them in settings.
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color="#e74c3c" />
+              <Ionicons name="chevron-forward" size={16} color={T.danger} />
             </TouchableOpacity>
           )}
 
@@ -333,7 +334,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
-  testBtnText: { color: DARK, fontWeight: '700', fontSize: 14 },
+  testBtnText: { color: DARK, fontFamily: F.bodyBold, fontSize: 14 },
   container: { flex: 1, backgroundColor: WHITE },
 
   header: {
@@ -355,7 +356,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 17,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: DARK,
     letterSpacing: -0.2,
   },
@@ -366,7 +367,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
   },
-  loadingText: { fontSize: 13, color: MUTED, fontWeight: '600' },
+  loadingText: { fontSize: 13, color: MUTED, fontFamily: F.bodySemi },
 
   scroll: { paddingBottom: 20 },
 
@@ -385,26 +386,26 @@ const styles = StyleSheet.create({
   heroLabel: {
     fontSize: 11,
     color: 'rgba(255,255,255,0.55)',
-    textTransform: 'uppercase',
+    textTransform: 'none',
     letterSpacing: 1.4,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
   },
   heroAmount: {
     fontSize: 42,
-    color: '#fff',
-    fontWeight: '900',
+    color: T.white,
+    fontFamily: F.heading,
     marginTop: 4,
     letterSpacing: -1.2,
   },
   heroSlash: {
     fontSize: 22,
     color: 'rgba(255,255,255,0.35)',
-    fontWeight: '700',
+    fontFamily: F.heading,
   },
   heroSub: {
     fontSize: 12,
     color: 'rgba(255,255,255,0.55)',
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
     marginTop: 2,
   },
   heroIconWrap: { marginTop: 2 },
@@ -422,7 +423,7 @@ const styles = StyleSheet.create({
   permissionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fef0f0',
+    backgroundColor: T.dangerBg,
     marginHorizontal: 16,
     marginBottom: 20,
     padding: 14,
@@ -440,14 +441,14 @@ const styles = StyleSheet.create({
   },
   permissionTitle: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: '#991b1b',
     letterSpacing: -0.1,
   },
   permissionText: {
     fontSize: 12,
-    color: '#b91c1c',
-    fontWeight: '500',
+    color: T.danger,
+    fontFamily: F.bodyMedium,
     marginTop: 1,
   },
 
@@ -459,7 +460,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 15,
-    fontWeight: '900',
+    fontFamily: F.bodyBold,
     color: DARK,
     letterSpacing: -0.2,
     textTransform: 'lowercase',
@@ -480,7 +481,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: BORDER,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -506,16 +507,16 @@ const styles = StyleSheet.create({
   rowBody: { flex: 1, marginRight: 10 },
   rowLabel: {
     fontSize: 14,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: DARK,
     letterSpacing: -0.1,
     textTransform: 'lowercase',
   },
-  rowLabelOff: { color: '#a0a0a0' },
+  rowLabelOff: { color: T.textFaint },
   rowSub: {
     fontSize: 11.5,
     color: MUTED,
-    fontWeight: '500',
+    fontFamily: F.bodyMedium,
     marginTop: 2,
   },
 
@@ -531,7 +532,7 @@ const styles = StyleSheet.create({
   noteText: {
     fontSize: 11.5,
     color: MUTED,
-    fontWeight: '600',
+    fontFamily: F.bodySemi,
     letterSpacing: 0.1,
   },
 });
