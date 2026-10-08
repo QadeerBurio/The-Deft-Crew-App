@@ -44,7 +44,7 @@ import GuestGuard from "../../components/GuestGuard";
 import io from "socket.io-client";
 import { engagementBus, ENGAGEMENT_EVENTS } from "../../engagement/engagementBus";
 
-import { color as T, font as F } from "../../theme/tokens";
+import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 const { height, width } = Dimensions.get("window");
 const SHEET_HEIGHT = Math.round(height * 0.85);
 
@@ -130,22 +130,22 @@ const FALLBACK_BANNER =
   "https://images.unsplash.com/photo-1523240715632-d984bb4b970e?w=1200";
 
 const COLORS = {
-  page: T.sand,
-  pageAlt: "#f0f2f6",
-  ink: "#1a1a2e",
-  body: "#2d2d44",
-  muted: "#6b6b8a",
-  line: "#e8ecf1",
+  page: T.paper,
+  pageAlt: T.sand,
+  ink: T.ink,
+  body: T.ink,
+  muted: T.textMuted,
+  line: T.line,
   card: T.white,
   surface: T.sand,
-  primary: "#1a1a2e",
+  primary: T.ink,
   secondary: T.yellow,
   accent: T.yellow,
   danger: T.danger,
-  goldSoft: "#fff5e0",
+  goldSoft: T.yellowSoft,
   overlayDark: "rgba(26, 26, 46, 0.85)",
-  gradientStart: "#1a1a2e",
-  gradientEnd: "#16213e",
+  gradientStart: T.ink,
+  gradientEnd: T.ink,
   success: T.success,
   warning: "#f59e0b",
 };
@@ -204,211 +204,205 @@ const SkeletonList = () => (
   </View>
 );
 
-// ─── Animated Event Card ──────────────────────────────────────────────────
-const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel }) => {
+// ─── Event date helpers (real dates only) ────────────────────────────────
+const parseEventDate = (raw) => {
+  if (!raw) return null;
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? null : d;
+};
+const eventWhen = (item) => {
+  const d = parseEventDate(item.date);
+  if (!d) return item.date || "";
+  return d
+    .toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })
+    .toLowerCase();
+};
+const eventMeta = (item) =>
+  [item.location || item.university, item.city, item.teamSize ? `teams of ${item.teamSize}` : null]
+    .filter(Boolean)
+    .join(" · ");
+
+// ─── Animated Event Card (featured = big banner card; otherwise a compact row)
+const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel, featured }) => {
   const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(50)).current;
-  const scale = useRef(new Animated.Value(0.92)).current;
+  const translateY = useRef(new Animated.Value(24)).current;
   const cardScale = useRef(new Animated.Value(1)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 600, delay: index * 80, useNativeDriver: true }),
-      Animated.spring(translateY, { toValue: 0, friction: 8, tension: 50, delay: index * 80, useNativeDriver: true }),
-      Animated.spring(scale, { toValue: 1, friction: 7, tension: 55, delay: index * 80, useNativeDriver: true }),
-      Animated.timing(glowAnim, { toValue: 1, duration: 800, delay: index * 80 + 200, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 450, delay: Math.min(index, 8) * 60, useNativeDriver: true }),
+      Animated.spring(translateY, { toValue: 0, friction: 8, tension: 50, delay: Math.min(index, 8) * 60, useNativeDriver: true }),
     ]).start();
   }, [index]);
 
   const animatePressIn = () => {
-    Animated.spring(cardScale, { toValue: 0.97, friction: 5, useNativeDriver: true }).start();
+    Animated.spring(cardScale, { toValue: 0.98, friction: 5, useNativeDriver: true }).start();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
   const animatePressOut = () => {
     Animated.spring(cardScale, { toValue: 1, friction: 5, useNativeDriver: true }).start();
   };
 
-  const glowOpacity = glowAnim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0, 0.15, 0],
-  });
-
-  const theme = getCategoryTheme(item.type);
   const imported = isImportedEvent(item);
+  const when = eventWhen(item);
+  const meta = eventMeta(item);
+
+  const action = isRegistered ? (
+    <TouchableOpacity
+      style={[EV.regBtn, EV.regBtnDone, !featured && EV.regBtnSmall]}
+      onPress={() => onCancel && onCancel(item)}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={`registered for ${item.title}, tap to cancel`}
+    >
+      <Ionicons name="checkmark-circle" size={featured ? 17 : 14} color={T.success} />
+      <Text style={[EV.regText, !featured && EV.regTextSmall]}>{featured ? "registered. sorted." : "registered"}</Text>
+    </TouchableOpacity>
+  ) : (
+    <TouchableOpacity
+      style={[EV.regBtn, !featured && EV.regBtnSmall]}
+      onPress={() => onRegister(item)}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={imported ? `open link for ${item.title}` : `register for ${item.title}`}
+    >
+      {imported && <Ionicons name="open-outline" size={featured ? 16 : 13} color={T.ink} />}
+      <Text style={[EV.regText, !featured && EV.regTextSmall]}>{imported ? "open link" : "register"}</Text>
+    </TouchableOpacity>
+  );
+
+  if (!featured) {
+    const d = parseEventDate(item.date);
+    return (
+      <AnimatedTouchable
+        activeOpacity={0.9}
+        onPress={() => onOpen(item)}
+        onPressIn={animatePressIn}
+        onPressOut={animatePressOut}
+        style={[EV.row, { opacity, transform: [{ translateY }, { scale: cardScale }] }]}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.title}${when ? `, ${when}` : ""}`}
+      >
+        <View style={EV.dateBlock}>
+          {d ? (
+            <>
+              <Text style={EV.dow}>{d.toLocaleDateString(undefined, { weekday: "short" }).toLowerCase()}</Text>
+              <Text style={EV.dayNum} maxFontSizeMultiplier={MAX_FONT_SCALE}>{d.getDate()}</Text>
+            </>
+          ) : (
+            <Ionicons name="calendar-outline" size={20} color={T.ink} />
+          )}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={EV.rowTitle} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_SCALE}>{item.title}</Text>
+          {!!(meta || (!d && when)) && (
+            <Text style={EV.rowMeta} numberOfLines={1}>{[!d ? when : null, meta].filter(Boolean).join(" · ")}</Text>
+          )}
+          <View style={EV.tagRow}>
+            {!!item.type && (
+              <View style={EV.tag}>
+                <Text style={EV.tagText} numberOfLines={1}>{String(item.type).toLowerCase()}</Text>
+              </View>
+            )}
+            {imported && (
+              <View style={[EV.tag, EV.tagDark]}>
+                <Text style={[EV.tagText, { color: T.yellow }]}>external</Text>
+              </View>
+            )}
+          </View>
+        </View>
+        {action}
+      </AnimatedTouchable>
+    );
+  }
 
   return (
     <AnimatedTouchable
-      activeOpacity={0.92}
+      activeOpacity={0.95}
       onPress={() => onOpen(item)}
       onPressIn={animatePressIn}
       onPressOut={animatePressOut}
-      style={[styles.card, { opacity, transform: [{ translateY }, { scale: cardScale }] }]}
+      style={[EV.featured, { opacity, transform: [{ translateY }, { scale: cardScale }] }]}
+      accessibilityRole="button"
+      accessibilityLabel={item.title}
     >
-      <LinearGradient
-        colors={[T.white, "#FAFBFF"]}
-        style={styles.cardGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <Animated.View style={[styles.glowEffect, { opacity: glowOpacity }]} />
-
-        <View style={styles.imageWrapper}>
-          <Image source={{ uri: item.image || FALLBACK_BANNER }} style={styles.cardImage} />
-          <LinearGradient colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.6)"]} style={styles.imageOverlay} />
-
-          <View style={[styles.categoryBadge, { backgroundColor: theme.bg }]}>
-            <Ionicons name={theme.icon} size={10} color={theme.color} />
-            <Text style={[styles.categoryBadgeText, { color: theme.color }]} numberOfLines={1}>
-              {item.type || "Event"}
-            </Text>
-          </View>
-
-          {imported && (
-            <View style={styles.importedPill}>
-              <Ionicons name="open-outline" size={10} color={T.white} />
-              <Text style={styles.importedPillText}>external</Text>
+      <View style={EV.banner}>
+        {item.image ? (
+          <Image source={{ uri: item.image }} style={EV.bannerImg} resizeMode="cover" />
+        ) : (
+          <MaterialCommunityIcons name="calendar-star" size={40} color={T.textFaint} />
+        )}
+        <View style={EV.bannerPills}>
+          {!!when && (
+            <View style={EV.pillLight}>
+              <Text style={EV.pillLightText}>{when}</Text>
             </View>
           )}
-
-          {isRegistered && (
-            <View style={styles.registeredBadge}>
-              <LinearGradient
-                colors={[T.success, T.success]}
-                style={styles.registeredBadgeGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Ionicons name="checkmark-circle" size={12} color={T.white} />
-                <Text style={styles.registeredBadgeText}>registered</Text>
-              </LinearGradient>
+          {!!item.prize && (
+            <View style={EV.pillDark}>
+              <Text style={EV.pillDarkText} numberOfLines={1}>prize pool {item.prize}</Text>
             </View>
           )}
-
-          <View style={styles.dateBadge}>
-            <LinearGradient colors={["rgba(0,0,0,0.7)", "rgba(0,0,0,0.5)"]} style={styles.dateBadgeGradient}>
-              <Text style={styles.dateBadgeText}>{item.date || "TBA"}</Text>
-            </LinearGradient>
-          </View>
         </View>
-
-        <View style={styles.contentWrapper}>
-          <View style={styles.headerRow}>
-            <View style={styles.orgContainer}>
-              <LinearGradient colors={[T.yellow, T.yellow]} style={styles.orgAvatar}>
-                <Ionicons name="location" size={16} color={T.white} />
-              </LinearGradient>
-              <Text style={styles.locationText} numberOfLines={1}>
-                {item.city || "City"}
-              </Text>
-            </View>
+        {imported && (
+          <View style={[EV.pillDark, EV.extPill]}>
+            <Text style={EV.pillDarkText}>external</Text>
           </View>
-
-          <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
-          <Text style={styles.description} numberOfLines={2}>
-            {item.description || "Join this exciting event and connect with fellow students."}
-          </Text>
-
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Ionicons name="calendar" size={14} color={COLORS.accent} />
-              <Text style={styles.statText}>{item.date || "TBA"}</Text>
-            </View>
-          </View>
-
-          <View style={styles.actionRow}>
-            {isRegistered ? (
-              <TouchableOpacity
-                style={styles.cancelActionButton}
-                onPress={() => onCancel && onCancel(item)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="close-circle" size={16} color={T.danger} />
-                <Text style={styles.cancelActionText}>cancel</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={styles.registerActionButton}
-                onPress={() => onRegister(item)}
-                activeOpacity={0.7}
-              >
-                <LinearGradient
-                  colors={imported ? ["#6366f1", "#4f46e5"] : [T.yellow, T.yellow]}
-                  style={styles.registerGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Ionicons name={imported ? "open-outline" : "add"} size={16} color={T.white} />
-                  <Text style={styles.registerActionText}>
-                    {imported ? "Open Link" : "Register"}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity style={styles.detailsActionButton} onPress={() => onOpen(item)} activeOpacity={0.7}>
-              <Text style={styles.detailsActionText}>view details</Text>
-              <Ionicons name="chevron-forward" size={14} color={COLORS.accent} />
-            </TouchableOpacity>
-          </View>
+        )}
+      </View>
+      <View style={EV.featuredBody}>
+        <Text style={EV.featuredTitle} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_SCALE}>{item.title}</Text>
+        {!!meta && <Text style={EV.featuredMeta} numberOfLines={1}>{meta}</Text>}
+        {!!item.description && (
+          <Text style={EV.featuredDesc} numberOfLines={2}>{item.description}</Text>
+        )}
+        <View style={EV.featuredActions}>
+          <View style={{ flex: 1 }}>{action}</View>
+          <TouchableOpacity
+            style={EV.detailsBtn}
+            onPress={() => onOpen(item)}
+            accessibilityRole="button"
+            accessibilityLabel="view details"
+          >
+            <Text style={EV.detailsText}>details</Text>
+          </TouchableOpacity>
         </View>
-      </LinearGradient>
+      </View>
     </AnimatedTouchable>
   );
 };
 
-// ─── Modern Header ────────────────────────────────────────────────────────
+// ─── Header (Events design) ───────────────────────────────────────────────
 const ModernHeader = ({ onBack, onMenuPress, showApplied, appliedCount }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(-20)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.spring(slideAnim, { toValue: 0, friction: 8, tension: 60, useNativeDriver: true }),
-    ]).start();
+    Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
   }, []);
 
   return (
-    <Animated.View style={[styles.modernHeader, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-      <View style={styles.headerLeft}>
-        <TouchableOpacity onPress={onBack} style={styles.headerBtn} activeOpacity={0.7}>
-          <Ionicons name="chevron-back" size={22} color={COLORS.primary} />
-        </TouchableOpacity>
-
-        <View style={styles.logoContainer}>
-          <LinearGradient
-            colors={[COLORS.accent, "#f7d44a"]}
-            style={styles.logoBadge}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <MaterialCommunityIcons name="calendar-star" size={16} color={T.ink} />
-          </LinearGradient>
-          <View>
-            <Text style={styles.headerTitle}>
-              {showApplied ? "my events" : "events"}<Text style={{ color: T.yellow }}>.</Text>
-            </Text>
-            <Text style={styles.headerSubtitle}>
-              {showApplied ? "your registrations" : "discover and connect"}
-            </Text>
-          </View>
-        </View>
-      </View>
-
+    <Animated.View style={[EV.header, { opacity: fadeAnim }]}>
+      <TouchableOpacity onPress={onBack} style={EV.headerBtn} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="back">
+        <Ionicons name="chevron-back" size={22} color={T.ink} />
+      </TouchableOpacity>
+      <Text style={EV.headerTitle} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+        {showApplied ? "my events" : "events"}<Text style={{ color: T.yellow }}>.</Text>
+      </Text>
       <TouchableOpacity
         onPress={onMenuPress}
-        style={[styles.headerBtn, showApplied && styles.headerBtnActive]}
-        activeOpacity={0.7}
+        style={[EV.myBtn, showApplied && EV.myBtnOn]}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityState={{ selected: showApplied }}
+        accessibilityLabel={showApplied ? "show all events" : `my events, ${appliedCount} registered`}
       >
-        <Ionicons
-          name={showApplied ? "checkmark-circle" : "apps"}
-          size={22}
-          color={showApplied ? COLORS.success : COLORS.primary}
-        />
+        <Ionicons name={showApplied ? "close" : "checkmark-circle-outline"} size={16} color={showApplied ? T.white : T.ink} />
+        <Text style={[EV.myBtnText, showApplied && { color: T.white }]}>
+          {showApplied ? "all" : "mine"}
+        </Text>
         {appliedCount > 0 && !showApplied && (
-          <View style={styles.headerBadge}>
-            <Text style={styles.headerBadgeText}>{appliedCount}</Text>
+          <View style={EV.myCount}>
+            <Text style={EV.myCountText}>{appliedCount}</Text>
           </View>
         )}
       </TouchableOpacity>
@@ -934,71 +928,28 @@ export default function EventsScreen() {
   const isEventRegistered = (eventId) => registeredEventIds.includes(eventId);
   const appliedCount = registeredEventIds.length;
 
-  // ✅ FIX: iterate dynamic `availableCategories`. Fixed-width chips, 2-line
-  // labels, and auto-shrink so long names never look like "one big + one small".
+  // Category chips (Events design: white pills, ink when active)
   const CategoryScroll = () => (
-    <Animated.View
-      style={[
-        styles.categoryScrollContainer,
-        { opacity: filterOpacity, transform: [{ translateY: filterTranslate }] },
-      ]}
-    >
+    <Animated.View style={{ opacity: filterOpacity, transform: [{ translateY: filterTranslate }] }}>
       {!showApplied && availableCategories.length > 1 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryScrollContent}
-        >
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={EV.chips}>
           {availableCategories.map((cat) => {
             const active = activeTab === cat;
-            const theme = getCategoryTheme(cat);
-            const isAll = cat === "All";
-            const bg = active
-              ? isAll
-                ? COLORS.primary
-                : theme.color
-              : isAll
-              ? COLORS.pageAlt
-              : theme.bg;
-            const fg = active ? T.white : isAll ? COLORS.primary : theme.color;
-
             return (
               <TouchableOpacity
                 key={cat}
-                style={[
-                  styles.categoryScrollItem,
-                  active && styles.categoryScrollItemActive,
-                  { backgroundColor: bg },
-                ]}
+                style={[EV.chip, active && EV.chipOn]}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   setActiveTab(cat);
                   setShowApplied(false);
                 }}
               >
-                <View
-                  style={[
-                    styles.categoryScrollIcon,
-                    active && { backgroundColor: "rgba(255,255,255,0.2)" },
-                  ]}
-                >
-                  <Ionicons
-                    name={isAll ? "apps-outline" : theme.icon}
-                    size={16}
-                    color={fg}
-                  />
-                </View>
-
-                <Text
-                  style={[styles.categoryScrollLabel, { color: fg }]}
-                  numberOfLines={2}
-                  ellipsizeMode="tail"
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.72}
-                  allowFontScaling={false}
-                >
-                  {formatCategoryLabel(cat)}
+                <Text style={[EV.chipText, active && EV.chipTextOn]} numberOfLines={1}>
+                  {formatCategoryLabel(cat).toLowerCase()}
                 </Text>
               </TouchableOpacity>
             );
@@ -1012,33 +963,25 @@ export default function EventsScreen() {
     if (availableCities.length <= 1) return null;
 
     return (
-      <Animated.View style={[styles.cityScrollContainer, { opacity: filterOpacity }]}>
-        <View style={styles.cityScrollHeader}>
-          <Ionicons name="location-outline" size={13} color={COLORS.muted} />
-          <Text style={styles.cityScrollHeaderText}>filter by city</Text>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.cityScrollContent}
-        >
+      <Animated.View style={{ opacity: filterOpacity }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[EV.chips, { paddingTop: 0 }]}>
           {availableCities.map((city) => {
             const active = activeCity === city;
             return (
               <TouchableOpacity
                 key={city}
-                style={[styles.cityChip, active && styles.cityChipActive]}
+                style={[EV.cityChip, active && EV.cityChipOn]}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   setActiveCity(city);
                 }}
               >
-                {active && (
-                  <Ionicons name="checkmark-circle" size={12} color={T.ink} style={{ marginRight: 4 }} />
-                )}
-                <Text style={[styles.cityChipText, active && styles.cityChipTextActive]}>
-                  {city}
+                <Ionicons name="location-outline" size={13} color={T.ink} />
+                <Text style={[EV.cityChipText, active && { fontFamily: F.bodyBold }]}>
+                  {city === "All" ? "all cities" : String(city).toLowerCase()}
                 </Text>
               </TouchableOpacity>
             );
@@ -1047,6 +990,7 @@ export default function EventsScreen() {
       </Animated.View>
     );
   };
+
 
   const handleMenuPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1118,14 +1062,22 @@ export default function EventsScreen() {
           data={filteredEvents}
           keyExtractor={(item) => item._id}
           renderItem={({ item, index }) => (
-            <EventCard
-              item={item}
-              index={index}
-              onOpen={setSelectedEvent}
-              onRegister={handleRegister}
-              isRegistered={isEventRegistered(item._id)}
-              onCancel={handleCancelRegistration}
-            />
+            <>
+              {index === 1 && !showApplied && (
+                <Text style={EV.h2} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                  coming up<Text style={{ color: T.yellow }}>.</Text>
+                </Text>
+              )}
+              <EventCard
+                item={item}
+                index={index}
+                featured={index === 0 && !showApplied}
+                onOpen={setSelectedEvent}
+                onRegister={handleRegister}
+                isRegistered={isEventRegistered(item._id)}
+                onCancel={handleCancelRegistration}
+              />
+            </>
           )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
@@ -2322,4 +2274,61 @@ const styles = StyleSheet.create({
     color: T.white, fontSize: 14, fontFamily: F.bodyBold, marginRight: 4,
   },
   formBottomSpacer: { height: Platform.OS === "ios" ? 30 : 20 },
+});
+
+// ─── Events design layout ───────────────────────────────────────────
+const EV = StyleSheet.create({
+  header: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 6, backgroundColor: T.paper },
+  headerBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: T.card, borderWidth: 1, borderColor: T.line, alignItems: "center", justifyContent: "center" },
+  headerTitle: { flex: 1, fontFamily: F.heading, fontSize: 24, color: T.ink },
+  myBtn: { height: 40, paddingHorizontal: 14, borderRadius: 20, backgroundColor: T.yellow, flexDirection: "row", alignItems: "center", gap: 6 },
+  myBtnOn: { backgroundColor: T.ink },
+  myBtnText: { fontFamily: F.bodyBold, fontSize: 13.5, color: T.ink },
+  myCount: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, backgroundColor: T.ink, alignItems: "center", justifyContent: "center" },
+  myCountText: { fontFamily: F.bodyBold, fontSize: 11, color: T.yellow },
+
+  chips: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
+  chip: { height: 36, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1, borderColor: T.line, backgroundColor: T.card, justifyContent: "center", maxWidth: 200 },
+  chipOn: { backgroundColor: T.ink, borderColor: T.ink },
+  chipText: { fontFamily: F.bodySemi, fontSize: 13.5, color: T.ink },
+  chipTextOn: { color: T.white, fontFamily: F.bodyBold },
+  cityChip: { height: 32, paddingHorizontal: 12, borderRadius: 16, backgroundColor: T.sand, flexDirection: "row", alignItems: "center", gap: 4, borderWidth: 1, borderColor: T.sand },
+  cityChipOn: { backgroundColor: T.card, borderColor: T.ink },
+  cityChipText: { fontFamily: F.bodySemi, fontSize: 12.5, color: T.ink },
+
+  h2: { fontFamily: F.heading, fontSize: 17, color: T.ink, marginTop: 6, marginBottom: 10, paddingHorizontal: 2 },
+
+  featured: { borderRadius: 26, backgroundColor: T.card, borderWidth: 1, borderColor: T.line, overflow: "hidden", marginBottom: 14 },
+  banner: { aspectRatio: 16 / 9, backgroundColor: T.sand, alignItems: "center", justifyContent: "center" },
+  bannerImg: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
+  bannerPills: { position: "absolute", left: 12, bottom: 12, right: 12, flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  pillLight: { height: 28, paddingHorizontal: 10, borderRadius: 14, backgroundColor: T.card, justifyContent: "center" },
+  pillLightText: { fontFamily: F.bodyBold, fontSize: 12, color: T.ink },
+  pillDark: { height: 28, paddingHorizontal: 10, borderRadius: 14, backgroundColor: T.ink, justifyContent: "center", maxWidth: 220 },
+  pillDarkText: { fontFamily: F.bodyBold, fontSize: 12, color: T.yellow },
+  extPill: { position: "absolute", top: 12, right: 12 },
+  featuredBody: { padding: 16 },
+  featuredTitle: { fontFamily: F.heading, fontSize: 20, lineHeight: 24, color: T.ink },
+  featuredMeta: { fontFamily: F.body, fontSize: 13, color: T.textMuted, marginTop: 4 },
+  featuredDesc: { fontFamily: F.body, fontSize: 13, lineHeight: 18, color: T.ink, marginTop: 8 },
+  featuredActions: { flexDirection: "row", gap: 8, marginTop: 14 },
+  detailsBtn: { height: 46, paddingHorizontal: 18, borderRadius: 23, borderWidth: 1, borderColor: T.line, justifyContent: "center" },
+  detailsText: { fontFamily: F.bodyBold, fontSize: 14, color: T.ink },
+
+  regBtn: { height: 46, borderRadius: 23, backgroundColor: T.yellow, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: 16 },
+  regBtnDone: { backgroundColor: T.card, borderWidth: 1, borderColor: T.line },
+  regBtnSmall: { height: 36, borderRadius: 18, paddingHorizontal: 12 },
+  regText: { fontFamily: F.bodyBold, fontSize: 14.5, color: T.ink },
+  regTextSmall: { fontSize: 12.5 },
+
+  row: { flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderRadius: 20, backgroundColor: T.card, borderWidth: 1, borderColor: T.line, marginBottom: 8 },
+  dateBlock: { width: 52, height: 58, borderRadius: 16, backgroundColor: T.yellowSoft, alignItems: "center", justifyContent: "center" },
+  dow: { fontFamily: F.bodyBold, fontSize: 11, color: T.ink },
+  dayNum: { fontFamily: F.heading, fontSize: 21, lineHeight: 24, color: T.ink },
+  rowTitle: { fontFamily: F.bodyBold, fontSize: 14.5, color: T.ink },
+  rowMeta: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, marginTop: 2 },
+  tagRow: { flexDirection: "row", gap: 6, marginTop: 6 },
+  tag: { height: 22, paddingHorizontal: 8, borderRadius: 11, backgroundColor: T.sand, justifyContent: "center", maxWidth: 140 },
+  tagDark: { backgroundColor: T.ink },
+  tagText: { fontFamily: F.bodyBold, fontSize: 11, color: T.ink },
 });
