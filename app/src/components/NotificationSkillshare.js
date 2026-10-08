@@ -236,7 +236,7 @@ const NotificationSkillshare = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={N.white} />
+      <StatusBar barStyle="dark-content" backgroundColor={N.paper} />
       <NotifHeader
         title="skillshare alerts"
         unread={counts.unread}
@@ -282,7 +282,7 @@ const NotificationSkillshare = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: N.white },
+  container: { flex: 1, backgroundColor: N.paper },
 });
 
 export default NotificationSkillshare;

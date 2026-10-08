@@ -368,16 +368,16 @@ const NotificationModal = ({ visible: visibleProp, onClose: onCloseProp, navigat
 
 const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { backgroundColor: 'rgba(10,10,10,0.5)' },
+  backdrop: { backgroundColor: 'rgba(17,17,17,0.5)' },
   sheet: {
     height: SCREEN_HEIGHT * 0.88,
-    backgroundColor: N.white,
+    backgroundColor: N.paper,
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
     paddingTop: 10,
     overflow: 'hidden',
   },
-  screen: { flex: 1, backgroundColor: N.white },
+  screen: { flex: 1, backgroundColor: N.paper },
 });
 
 export default NotificationModal;

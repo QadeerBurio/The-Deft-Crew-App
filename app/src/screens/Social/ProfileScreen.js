@@ -737,9 +737,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: T.paper, paddingBottom: 20 },
 
   inlineLoader: {
-    paddingVertical: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
   },
 
   // Top Nav

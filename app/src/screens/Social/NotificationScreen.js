@@ -12,6 +12,7 @@ import { View, FlatList, StatusBar, Alert, AppState, RefreshControl, StyleSheet 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
+import { color as T } from '../../theme/tokens';
 import { AuthContext } from '../../context/AuthContext';
 import {
   N,
@@ -312,7 +313,7 @@ export default function NotificationScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={N.white} />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
       <NotifHeader
         unread={counts.unread}
         onBack={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('HomeTabs'))}
@@ -359,5 +360,5 @@ export default function NotificationScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: N.white },
+  container: { flex: 1, backgroundColor: T.paper },
 });
