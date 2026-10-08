@@ -18,6 +18,7 @@ import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 
 import { color as T, font as F } from "../../theme/tokens";
+import { HeaderIconButton, EmptyState, SkeletonBlock } from "../../ui";
 const { width } = Dimensions.get('window');
 const socket = io("https://the-deft-crew-production.up.railway.app");
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
@@ -1062,9 +1063,13 @@ export default function ChatDetailScreen() {
   if (!conversationId || !recipient?._id) {
     return (
       <View style={styles.container}>
+        <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeHeader}>
+          <View style={styles.header}>
+            <HeaderIconButton icon="chevron-back" label="back" onPress={handleGoBack} />
+          </View>
+        </SafeAreaView>
         <View style={styles.center}>
-          <ActivityIndicator size="small" color={C.dark} />
-          <Text style={styles.loadingText}>invalid conversation</Text>
+          <EmptyState mood="sus" title="chat not found." line="go back and open the chat again." />
         </View>
       </View>
     );
@@ -1076,15 +1081,19 @@ export default function ChatDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.white} translucent={false} />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} translucent={false} />
 
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeHeader}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleGoBack} style={styles.squareBtn} activeOpacity={0.7}>
-            <Ionicons name="chevron-back" size={21} color={C.dark} />
-          </TouchableOpacity>
+          <HeaderIconButton icon="chevron-back" label="back" onPress={handleGoBack} />
 
-          <TouchableOpacity style={styles.headerInfo} onPress={navigateToProfile} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.headerInfo}
+            onPress={navigateToProfile}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`${recipientName}, ${statusLabel}, open profile`}
+          >
             <View style={styles.avatarWrap}>
               {recipient?.profileImage ? (
                 <Image source={{ uri: recipient.profileImage }} style={styles.avatar} />
@@ -1101,9 +1110,7 @@ export default function ChatDetailScreen() {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => setShowOptionsModal(true)} style={styles.squareBtn} activeOpacity={0.7}>
-            <Ionicons name="ellipsis-vertical" size={18} color={C.dark} />
-          </TouchableOpacity>
+          <HeaderIconButton icon="ellipsis-horizontal" label="chat options" onPress={() => setShowOptionsModal(true)} />
         </View>
       </SafeAreaView>
 
@@ -1115,9 +1122,11 @@ export default function ChatDetailScreen() {
       >
         <View style={styles.flex1}>
           {loading ? (
-            <View style={styles.center}>
-              <ActivityIndicator size="small" color={C.dark} />
-              <Text style={styles.loadingText}>loading messages…</Text>
+            <View style={styles.skeleton} accessibilityLabel="loading messages">
+              <SkeletonBlock width="55%" height={40} radius={18} />
+              <SkeletonBlock width="40%" height={40} radius={18} style={{ alignSelf: 'flex-end' }} />
+              <SkeletonBlock width="65%" height={56} radius={18} />
+              <SkeletonBlock width="35%" height={40} radius={18} style={{ alignSelf: 'flex-end' }} />
             </View>
           ) : (
             <FlatList
@@ -1145,18 +1154,20 @@ export default function ChatDetailScreen() {
               }
               ListEmptyComponent={
                 <View style={styles.emptyWrap}>
-                  <View style={styles.emptyIcon}>
-                    <Ionicons name="chatbubbles-outline" size={32} color={C.dark} />
-                  </View>
-                  <Text style={styles.emptyTitle}>say hi 👋</Text>
-                  <Text style={styles.emptySub}>send a message to start the chat with {recipientName}</Text>
+                  <EmptyState mood="excited" title="say hi." line={`send a message to start the chat with ${recipientName}.`} />
                 </View>
               }
             />
           )}
 
           {showScrollBtn ? (
-            <TouchableOpacity style={styles.scrollBtn} onPress={jumpToBottom} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={styles.scrollBtn}
+              onPress={jumpToBottom}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={newCount > 0 ? `${newCount} new messages, jump to latest` : 'jump to latest'}
+            >
               <Ionicons name="chevron-down" size={20} color={C.dark} />
               {newCount > 0 ? (
                 <View style={styles.scrollBadge}>
@@ -1178,10 +1189,10 @@ export default function ChatDetailScreen() {
               <View style={styles.recordingDot} />
               <Text style={styles.recordingTime}>{formatDuration(recordingDuration)}</Text>
               <Text style={styles.recordingLabel}>recording… release to send</Text>
-              <TouchableOpacity onPress={cancelRecording} style={styles.squareBtnSm} activeOpacity={0.7}>
+              <TouchableOpacity onPress={cancelRecording} style={styles.squareBtnSm} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="cancel recording">
                 <Ionicons name="close" size={18} color={C.text2} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => stopRecording(true)} style={styles.recordSendBtn} activeOpacity={0.8}>
+              <TouchableOpacity onPress={() => stopRecording(true)} style={styles.recordSendBtn} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="send voice note">
                 <Ionicons name="arrow-up" size={18} color={C.gold} />
               </TouchableOpacity>
             </View>
@@ -1189,7 +1200,13 @@ export default function ChatDetailScreen() {
         </View>
 
         <View style={[styles.inputArea, { paddingBottom: keyboardVisible ? 8 : Math.max(insets.bottom, 8) }]}>
-          <TouchableOpacity onPress={() => setShowImagePicker(true)} style={styles.squareBtn} activeOpacity={0.7}>
+          <TouchableOpacity
+            onPress={() => setShowImagePicker(true)}
+            style={styles.attachBtn}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="send a photo"
+          >
             <Ionicons name="add" size={22} color={C.dark} />
           </TouchableOpacity>
 
@@ -1198,6 +1215,7 @@ export default function ChatDetailScreen() {
             style={styles.input}
             placeholder="message…"
             placeholderTextColor={C.muted}
+            accessibilityLabel="message"
             value={inputText}
             onChangeText={handleInputChange}
             multiline
@@ -1211,8 +1229,10 @@ export default function ChatDetailScreen() {
               disabled={uploading}
               style={[styles.sendBtn, uploading && styles.sendBtnDisabled]}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="send"
             >
-              <Ionicons name="arrow-up" size={20} color={uploading ? T.textFaint : C.gold} />
+              <Ionicons name="arrow-up" size={20} color={uploading ? T.textFaint : C.white} />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -1225,8 +1245,10 @@ export default function ChatDetailScreen() {
               delayPressOut={0}
               activeOpacity={0.7}
               style={[styles.sendBtn, isRecording && styles.micActive]}
+              accessibilityRole="button"
+              accessibilityLabel="hold to record a voice note"
             >
-              <Ionicons name="mic" size={20} color={isRecording ? C.dark : C.gold} />
+              <Ionicons name="mic" size={20} color={isRecording ? C.dark : C.white} />
             </TouchableOpacity>
           )}
         </View>
@@ -1268,6 +1290,8 @@ export default function ChatDetailScreen() {
             style={[styles.closeFullscreen, { top: Math.max(insets.top, 20) + 10 }]}
             onPress={() => setIsImageFullscreen(false)}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="close image"
           >
             <Ionicons name="close" size={22} color={C.white} />
           </TouchableOpacity>
@@ -1278,18 +1302,23 @@ export default function ChatDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.white },
+  container: { flex: 1, backgroundColor: T.paper },
+  skeleton: { flex: 1, paddingHorizontal: 16, paddingTop: 16, gap: 12 },
+  attachBtn: {
+    width: 46, height: 46, borderRadius: 23,
+    backgroundColor: T.card, borderWidth: 1, borderColor: T.line,
+    justifyContent: 'center', alignItems: 'center',
+  },
   flex1: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 10, fontSize: 13, color: C.muted, fontFamily: F.bodySemi },
 
   // header
-  safeHeader: { backgroundColor: C.white },
+  safeHeader: { backgroundColor: T.paper },
   header: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 10,
-    borderBottomWidth: 1, borderBottomColor: C.divider,
-    backgroundColor: C.white,
+    paddingHorizontal: 16, height: 60,
+    backgroundColor: T.paper,
   },
   squareBtn: {
     width: 40, height: 40, borderRadius: 12,
@@ -1312,30 +1341,30 @@ const styles = StyleSheet.create({
     backgroundColor: C.online, borderWidth: 2.5, borderColor: C.white,
   },
   headerText: { marginLeft: 10, flex: 1 },
-  userName: { fontSize: 16, fontFamily: F.bodyBold, color: C.dark },
-  statusText: { fontSize: 11.5, color: C.muted, marginTop: 1, fontFamily: F.bodyMedium },
+  userName: { fontSize: 17, fontFamily: F.headingBold, color: C.dark },
+  statusText: { fontSize: 12, color: C.text2, marginTop: 1, fontFamily: F.bodyMedium },
   statusTyping: { color: C.dark, fontFamily: F.bodyBold },
 
   // list
-  listContent: { paddingHorizontal: 14, paddingTop: 6, paddingBottom: 4, flexGrow: 1 },
+  listContent: { paddingHorizontal: 16, paddingTop: 6, paddingBottom: 4, flexGrow: 1 },
   listFooterSpace: { height: 8 },
   datePillWrap: { alignItems: 'center', marginTop: 14, marginBottom: 4 },
   datePill: {
-    backgroundColor: C.soft, borderWidth: 1, borderColor: C.border,
-    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4,
+    backgroundColor: T.sand,
+    borderRadius: 12, paddingHorizontal: 10, height: 24, justifyContent: 'center',
   },
-  datePillText: { fontSize: 11.5, fontFamily: F.bodyBold, color: C.muted },
+  datePillText: { fontSize: 12, fontFamily: F.bodyBold, color: C.text2 },
 
   rowWrap: { maxWidth: '80%' },
   rowMe: { alignSelf: 'flex-end' },
   rowThem: { alignSelf: 'flex-start' },
 
-  bubble: { borderRadius: 18, paddingHorizontal: 13, paddingTop: 8, paddingBottom: 6 },
+  bubble: { borderRadius: 20, paddingHorizontal: 14, paddingTop: 9, paddingBottom: 6 },
   myBubble: { backgroundColor: C.dark, borderBottomRightRadius: 6 },
-  theirBubble: { backgroundColor: C.soft, borderBottomLeftRadius: 6 },
+  theirBubble: { backgroundColor: T.card, borderWidth: 1, borderColor: T.line, borderBottomLeftRadius: 6 },
   myCorner: { borderBottomRightRadius: 6 },
   theirCorner: { borderBottomLeftRadius: 6 },
-  msgText: { fontSize: 14.5, fontFamily: F.body, lineHeight: 20 },
+  msgText: { fontSize: 15, fontFamily: F.body, lineHeight: 21 },
   myText: { color: C.white },
   theirText: { color: C.dark },
 
@@ -1345,7 +1374,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.overlay, borderRadius: 8,
     paddingHorizontal: 6, paddingVertical: 2,
   },
-  metaTime: { fontSize: 10.5, fontFamily: F.body, color: C.muted },
+  metaTime: { fontSize: 11, fontFamily: F.body, color: C.muted },
   metaTimeLight: { color: C.metaLight },
   metaTick: { marginLeft: 3 },
 
@@ -1372,7 +1401,7 @@ const styles = StyleSheet.create({
   typingBubble: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 14 },
   typingDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.dark, marginHorizontal: 2 },
 
-  emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingVertical: 60 },
+  emptyWrap: { flex: 1, justifyContent: 'center', paddingVertical: 60 },
   emptyIcon: {
     width: 72, height: 72, borderRadius: 22,
     backgroundColor: C.goldSoft, justifyContent: 'center', alignItems: 'center', marginBottom: 14,
@@ -1381,8 +1410,8 @@ const styles = StyleSheet.create({
   emptySub: { fontSize: 13.5, fontFamily: F.body, color: C.muted, marginTop: 4, textAlign: 'center' },
 
   scrollBtn: {
-    position: 'absolute', right: 14, bottom: 12,
-    width: 40, height: 40, borderRadius: 20,
+    position: 'absolute', right: 16, bottom: 12,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: C.white, borderWidth: 1, borderColor: C.border,
     justifyContent: 'center', alignItems: 'center',
   },
@@ -1391,12 +1420,11 @@ const styles = StyleSheet.create({
     minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4,
     backgroundColor: C.gold, justifyContent: 'center', alignItems: 'center',
   },
-  scrollBadgeText: { fontSize: 10, fontFamily: F.bodyBold, color: C.dark },
+  scrollBadgeText: { fontSize: 11, fontFamily: F.bodyBold, color: C.dark },
 
   uploadBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 8, backgroundColor: C.soft,
-    borderTopWidth: 1, borderTopColor: C.divider,
+    paddingVertical: 8, backgroundColor: T.sand,
   },
   uploadText: { marginLeft: 8, fontSize: 12, color: C.text2, fontFamily: F.bodyBold },
 
@@ -1404,7 +1432,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: 8, paddingHorizontal: 14,
     backgroundColor: C.goldSoft,
-    borderTopWidth: 1, borderTopColor: C.divider,
   },
   recordingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: C.danger },
   recordingTime: { marginLeft: 8, fontSize: 14, fontFamily: F.bodyBold, color: C.dark },
@@ -1417,14 +1444,13 @@ const styles = StyleSheet.create({
   // input
   inputArea: {
     flexDirection: 'row', alignItems: 'flex-end',
-    paddingHorizontal: 12, paddingTop: 8,
-    borderTopWidth: 1, borderTopColor: C.divider,
-    backgroundColor: C.white,
+    paddingHorizontal: 16, paddingTop: 8,
+    backgroundColor: T.paper,
   },
   input: {
     flex: 1, minHeight: 46, maxHeight: 110,
     marginHorizontal: 8,
-    borderRadius: 23, backgroundColor: C.soft,
+    borderRadius: 23, backgroundColor: T.card,
     borderWidth: 1, borderColor: C.border,
     paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12,
     fontSize: 15, fontFamily: F.body, color: C.dark,
@@ -1443,9 +1469,9 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
     paddingHorizontal: 16, paddingTop: 10,
   },
-  sheetHandle: { width: 38, height: 4, borderRadius: 2, backgroundColor: T.sand, alignSelf: 'center', marginBottom: 12 },
-  sheetTitle: { fontSize: 13, fontFamily: F.bodyBold, color: C.muted, marginBottom: 4, marginLeft: 4 },
-  sheetRow: { flexDirection: 'row', alignItems: 'center', height: 52 },
+  sheetHandle: { width: 38, height: 4, borderRadius: 2, backgroundColor: T.handle, alignSelf: 'center', marginBottom: 12 },
+  sheetTitle: { fontSize: 17, fontFamily: F.headingBold, color: C.dark, marginBottom: 6, marginLeft: 4 },
+  sheetRow: { flexDirection: 'row', alignItems: 'center', height: 56 },
   sheetIcon: {
     width: 36, height: 36, borderRadius: 11,
     backgroundColor: C.soft, justifyContent: 'center', alignItems: 'center', marginRight: 12,
@@ -1460,8 +1486,8 @@ const styles = StyleSheet.create({
   fullscreenImage: { width: '100%', height: '100%' },
   closeFullscreen: {
     position: 'absolute', right: 16,
-    width: 40, height: 40, borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: T.inkSoft,
     justifyContent: 'center', alignItems: 'center',
   },
 });

@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useContext, useCallback, useRef, useMemo } from "react";
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity, Image,
-  StatusBar, Platform, TextInput, Animated, Alert, Modal, Pressable,
+  StatusBar, Platform, Animated, Alert, Modal, Pressable,
   BackHandler, RefreshControl,
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +19,7 @@ import { AuthContext } from "../../context/AuthContext";
 import io from "socket.io-client";
 
 import { color as T, font as F } from "../../theme/tokens";
+import { ScreenHeader, HeaderIconButton, Input, Chip, EmptyState, SkeletonBlock } from "../../ui";
 const socket = io("https://the-deft-crew-production.up.railway.app");
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
@@ -27,7 +28,7 @@ const C = {
   goldSoft: T.yellowSoft,
   dark: T.ink,
   white: T.white,
-  bg: T.white,
+  bg: T.paper,
   soft: T.sand,
   border: T.line,
   line: T.line,
@@ -51,9 +52,9 @@ const formatMessageDate = (dateString) => {
   const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const diffDays = Math.round((today - day) / 86400000);
   if (diffDays === 0) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return date.toLocaleDateString('en-US', { weekday: 'short' });
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays < 7) return date.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toLowerCase();
 };
 
 const sortByLatest = (list) =>
@@ -70,10 +71,10 @@ const MessagesSkeleton = () => (
   <View style={styles.skeletonWrap}>
     {[0, 1, 2, 3, 4, 5].map((i) => (
       <View key={i} style={styles.skeletonRow}>
-        <View style={styles.skeletonAvatar} />
+        <SkeletonBlock width={52} height={52} radius={26} style={{ marginRight: 12 }} />
         <View style={{ flex: 1 }}>
-          <View style={[styles.skeletonLine, { width: '45%' }]} />
-          <View style={[styles.skeletonLine, { width: '70%', height: 10, marginTop: 8 }]} />
+          <SkeletonBlock width="45%" height={13} />
+          <SkeletonBlock width="70%" height={10} style={{ marginTop: 8 }} />
         </View>
       </View>
     ))}
@@ -112,8 +113,8 @@ const ChatItem = React.memo(({ item, currentUser, onOpen, onLongPress, isBlocked
   const unread = isBlocked ? 0 : item.unreadCount || 0;
   const when = item.lastMessageTime || item.updatedAt || item.createdAt;
   const preview = isBlocked
-    ? 'Blocked. Messages hidden'
-    : item.lastMessage || 'Say hi 👋';
+    ? 'blocked. messages hidden'
+    : item.lastMessage || 'say hi';
 
   return (
     <TouchableOpacity
@@ -122,6 +123,9 @@ const ChatItem = React.memo(({ item, currentUser, onOpen, onLongPress, isBlocked
       onLongPress={() => onLongPress(item._id)}
       delayLongPress={350}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`${name}${unread > 0 ? `, ${unread} unread` : ''}`}
+      accessibilityHint="long press for options"
     >
       <Avatar uri={other?.profileImage} name={name} dim={isBlocked} online={!isBlocked && other?.online} />
 
@@ -202,13 +206,13 @@ const ActionSheet = ({ visible, onClose, onAction, name, image, isBlocked }) => 
           </View>
         </View>
 
-        <Option icon="person-outline" label="View profile" onPress={() => close(() => onAction('profile'))} />
+        <Option icon="person-outline" label="view profile" onPress={() => close(() => onAction('profile'))} />
         {isBlocked ? (
-          <Option icon="lock-open-outline" label="Unblock" color={T.success} bg={T.successBg} onPress={() => close(() => onAction('unblock'))} />
+          <Option icon="lock-open-outline" label="unblock" color={T.success} bg={T.successBg} onPress={() => close(() => onAction('unblock'))} />
         ) : (
-          <Option icon="notifications-off-outline" label="Mute notifications" onPress={() => close(() => onAction('mute'))} />
+          <Option icon="notifications-off-outline" label="mute notifications" onPress={() => close(() => onAction('mute'))} />
         )}
-        <Option icon="trash-outline" label="Delete conversation" color={C.danger} bg={C.dangerSoft} onPress={() => close(() => onAction('delete'))} />
+        <Option icon="trash-outline" label="delete conversation" color={C.danger} bg={C.dangerSoft} onPress={() => close(() => onAction('delete'))} />
       </Animated.View>
     </Modal>
   );
@@ -464,66 +468,53 @@ export default function MessagesScreen() {
 
   const Empty = () => (
     <View style={styles.empty}>
-      <View style={styles.emptyIcon}>
-        <Ionicons name={search || filter === 'unread' ? 'search' : 'chatbubbles-outline'} size={34} color={C.dark} />
-      </View>
-      <Text style={styles.emptyTitle}>
-        {search ? 'no chats found' : filter === 'unread' ? 'all caught up' : 'no chats yet'}
-      </Text>
-      <Text style={styles.emptySub}>
-        {search ? 'try a different name' : filter === 'unread' ? 'no unread messages right now' : 'find people from your campus and say hi'}
-      </Text>
-      {!search && filter === 'all' ? (
-        <TouchableOpacity style={styles.emptyBtn} onPress={() => navigation.navigate('Search')} activeOpacity={0.85}>
-          <Ionicons name="people-outline" size={17} color={C.gold} />
-          <Text style={styles.emptyBtnText}>find people</Text>
-        </TouchableOpacity>
-      ) : null}
+      <EmptyState
+        mood={search ? 'sus' : filter === 'unread' ? 'sorted' : 'sleepy'}
+        title={search ? 'no chats found.' : filter === 'unread' ? 'all caught up.' : 'no chats yet.'}
+        line={search ? 'try a different name.' : filter === 'unread' ? 'no unread messages right now.' : 'find people from your campus and say hi.'}
+        actionLabel={!search && filter === 'all' ? 'find people' : undefined}
+        onAction={!search && filter === 'all' ? () => navigation.navigate('Search') : undefined}
+      />
     </View>
   );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.white} />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={goBack} style={styles.squareBtn} activeOpacity={0.7} hitSlop={10}>
-          <Ionicons name="chevron-back" size={22} color={C.dark} />
-        </TouchableOpacity>
-        <View style={styles.titleWrap}>
-          <Text style={styles.title}>
-            chats<Text style={{ color: C.gold }}>.</Text>
-          </Text>
-          {totalUnread > 0 ? (
-            <View style={styles.titlePill}>
-              <Text style={styles.titlePillText}>{totalUnread > 99 ? '99+' : totalUnread}</Text>
-            </View>
-          ) : null}
-        </View>
-        <TouchableOpacity onPress={() => navigation.navigate('Search')} style={styles.newBtn} activeOpacity={0.8} hitSlop={10}>
-          <Ionicons name="create-outline" size={20} color={C.gold} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="chats"
+        onBack={goBack}
+        right={
+          <>
+            {totalUnread > 0 ? (
+              <View style={styles.titlePill} accessibilityLabel={`${totalUnread} unread`}>
+                <Text style={styles.titlePillText}>{totalUnread > 99 ? '99+' : totalUnread}</Text>
+              </View>
+            ) : null}
+            <HeaderIconButton dark icon="create-outline" label="new chat" onPress={() => navigation.navigate('Search')} />
+          </>
+        }
+      />
 
       {/* Search */}
       <View style={styles.searchWrap}>
-        <View style={[styles.search, search.length > 0 && styles.searchActive]}>
-          <Ionicons name="search" size={17} color={search ? C.dark : C.muted} />
-          <TextInput
-            placeholder="search chats"
-            placeholderTextColor={C.muted}
-            style={styles.searchInput}
-            value={search}
-            onChangeText={setSearch}
-            returnKeyType="search"
-          />
-          {search.length > 0 ? (
-            <TouchableOpacity onPress={() => setSearch('')} hitSlop={10}>
-              <Ionicons name="close-circle" size={18} color={C.muted} />
-            </TouchableOpacity>
-          ) : null}
-        </View>
+        <Input
+          placeholder="search chats"
+          accessibilityLabel="search chats"
+          value={search}
+          onChangeText={setSearch}
+          returnKeyType="search"
+          left={<Ionicons name="search" size={17} color={search ? C.dark : C.muted} style={{ marginRight: 8 }} />}
+          right={
+            search.length > 0 ? (
+              <TouchableOpacity onPress={() => setSearch('')} hitSlop={10} accessibilityRole="button" accessibilityLabel="clear search">
+                <Ionicons name="close-circle" size={18} color={C.muted} />
+              </TouchableOpacity>
+            ) : null
+          }
+        />
       </View>
 
       {/* Filter chips */}
@@ -533,16 +524,7 @@ export default function MessagesScreen() {
           { key: 'unread', label: totalUnread > 0 ? `unread · ${totalUnread}` : 'unread' },
         ].map((c) => {
           const on = filter === c.key;
-          return (
-            <TouchableOpacity
-              key={c.key}
-              onPress={() => setFilter(c.key)}
-              style={[styles.chip, on && styles.chipOn]}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.chipText, on && styles.chipTextOn]}>{c.label}</Text>
-            </TouchableOpacity>
-          );
+          return <Chip key={c.key} label={c.label} selected={on} onPress={() => setFilter(c.key)} />;
         })}
       </View>
 
@@ -602,16 +584,15 @@ const styles = StyleSheet.create({
   titleWrap: { flexDirection: 'row', alignItems: 'center' },
   title: { fontSize: 20, fontFamily: F.heading, color: C.dark, letterSpacing: -0.3 },
   titlePill: {
-    marginLeft: 8,
-    minWidth: 22,
-    height: 22,
-    paddingHorizontal: 7,
-    borderRadius: 11,
+    minWidth: 26,
+    height: 26,
+    paddingHorizontal: 8,
+    borderRadius: 13,
     backgroundColor: C.dark,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  titlePillText: { color: C.gold, fontSize: 11, fontFamily: F.bodyBold },
+  titlePillText: { color: C.gold, fontSize: 12, fontFamily: F.bodyBold },
   newBtn: {
     width: 40,
     height: 40,
@@ -622,7 +603,7 @@ const styles = StyleSheet.create({
   },
 
   // search + chips
-  searchWrap: { paddingHorizontal: 16, paddingTop: 4 },
+  searchWrap: { paddingHorizontal: 16, paddingTop: 2 },
   search: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -651,24 +632,27 @@ const styles = StyleSheet.create({
   chipTextOn: { color: C.gold },
 
   // list
-  listContent: { paddingHorizontal: 10, paddingTop: 4, paddingBottom: 30 },
+  listContent: { paddingHorizontal: 16, paddingTop: 6, paddingBottom: 30, gap: 8 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 16,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
   },
-  rowUnread: { backgroundColor: C.goldSoft },
+  rowUnread: { backgroundColor: C.goldSoft, borderColor: C.goldSoft },
   rowBody: { flex: 1, marginLeft: 12, borderBottomWidth: 0 },
   rowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   rowBottom: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   name: { flex: 1, fontSize: 15.5, fontFamily: F.bodyBold, color: C.dark, marginRight: 8 },
   nameUnread: { fontFamily: F.bodyBold },
   mutedText: { color: C.muted },
-  time: { fontSize: 11.5, color: C.muted, fontFamily: F.bodySemi },
+  time: { fontSize: 12, color: C.muted, fontFamily: F.bodySemi },
   timeUnread: { color: C.dark, fontFamily: F.bodyBold },
-  preview: { flex: 1, fontSize: 13.5, fontFamily: F.body, color: C.muted },
+  preview: { flex: 1, fontSize: 13.5, fontFamily: F.body, color: C.text2 },
   previewUnread: { color: C.dark, fontFamily: F.bodySemi },
   unreadPill: {
     marginLeft: 8,
@@ -697,13 +681,13 @@ const styles = StyleSheet.create({
   },
 
   // skeleton
-  skeletonWrap: { paddingHorizontal: 18, paddingTop: 8 },
+  skeletonWrap: { paddingHorizontal: 20, paddingTop: 8 },
   skeletonRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
   skeletonAvatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: T.sand, marginRight: 12 },
   skeletonLine: { height: 13, borderRadius: 6, backgroundColor: T.sand },
 
   // empty
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingBottom: 60 },
+  empty: { flex: 1, justifyContent: 'center', paddingHorizontal: 16, paddingBottom: 60 },
   emptyIcon: {
     width: 76,
     height: 76,
@@ -728,7 +712,7 @@ const styles = StyleSheet.create({
   emptyBtnText: { color: C.white, fontSize: 14, fontFamily: F.bodyBold },
 
   // sheet
-  sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10,10,10,0.5)' },
+  sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: T.overlay },
   sheet: {
     position: 'absolute',
     left: 0,
@@ -741,11 +725,11 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: Platform.OS === 'ios' ? 34 : 22,
   },
-  sheetHandle: { width: 38, height: 4, borderRadius: 2, backgroundColor: T.sand, alignSelf: 'center', marginBottom: 14 },
+  sheetHandle: { width: 38, height: 4, borderRadius: 2, backgroundColor: T.handle, alignSelf: 'center', marginBottom: 14 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', paddingBottom: 14, marginBottom: 6, borderBottomWidth: 1, borderBottomColor: C.line },
   sheetName: { fontSize: 16, fontFamily: F.bodyBold, color: C.dark },
   sheetSub: { fontSize: 12, fontFamily: F.body, color: C.muted, marginTop: 2 },
-  sheetOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11 },
+  sheetOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, minHeight: 56 },
   sheetIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   sheetText: { flex: 1, fontSize: 15, fontFamily: F.bodyBold },
 });
