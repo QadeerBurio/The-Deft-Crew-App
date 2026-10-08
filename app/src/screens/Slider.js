@@ -15,7 +15,10 @@ import {
   InteractionManager,
 } from "react-native";
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { color, font } from '../theme/tokens';
+
+const DOT_GREY = '#E2DCCF';
 
 const { width, height } = Dimensions.get("window");
 const ITEM_WIDTH = width * 0.95;
@@ -59,26 +62,22 @@ const FastSkeleton = React.memo(() => {
 
   return (
     <Animated.View style={[styles.container, { opacity }]}>
-      <View style={styles.skeletonCard}>
-        <View style={styles.skeletonImagePlaceholder}>
-          <Animated.View 
+      {/* Same place and shape as a real card, so nothing jumps when banners load */}
+      <View style={styles.cardTouchable}>
+        <View style={styles.skeletonCard}>
+          <Animated.View
             style={[
               styles.skeletonShimmer,
               { transform: [{ translateX }] }
-            ]} 
+            ]}
           />
-        </View>
-        <View style={styles.skeletonOverlay}>
-          <View style={styles.skeletonTitleRow}>
-            <View style={styles.skeletonTitle} />
-            <View style={styles.skeletonBadge} />
-          </View>
-          <View style={styles.skeletonSubtitle} />
         </View>
       </View>
       <View style={styles.dotContainer}>
         {[0, 1, 2].map((i) => (
-          <View key={i} style={[styles.skeletonDot, i === 1 && styles.skeletonDotActive]} />
+          <View key={i} style={styles.dotSlot}>
+            <View style={styles.dotGrey} />
+          </View>
         ))}
       </View>
     </Animated.View>
@@ -116,7 +115,10 @@ class FastCache {
   }
 }
 
-export default function Slider() {
+// Embedded on Home → no props from navigation. As the "Slider" route in
+// HomeStack → React Navigation passes `route`; only there do we keep the retry block.
+export default function Slider({ route } = {}) {
+  const isStandalone = !!route;
   const [data, setData] = useState(() => {
     // Load from cache instantly on mount
     const cached = FastCache.get('slider_data_cache');
@@ -340,37 +342,24 @@ export default function Slider() {
 
     return (
       <View style={{ width: ITEM_WIDTH, paddingHorizontal: 4 }}>
-        <TouchableOpacity 
-          activeOpacity={0.9} 
+        <TouchableOpacity
+          activeOpacity={0.9}
           onPress={() => handlePress(item)}
           style={styles.cardTouchable}
+          accessibilityRole="button"
+          accessibilityLabel={item?.title || "banner"}
         >
+          {/* Outer view carries the shadow, inner view clips the image
+              (overflow: hidden would clip the shadow on iOS) */}
           <Animated.View style={[styles.card, { transform: [{ scale }, { translateY }] }]}>
-            <Image 
-              source={{ uri: item.image }} 
-              style={styles.image}
-              resizeMode="cover"
-              loading="eager" // Load immediately
-              fadeDuration={0} // Remove fade animation
-            />
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.85)']}
-              style={styles.gradientOverlay}
-            />
-            <View style={styles.overlay}>
-              <View style={styles.titleRow}>
-                <Text style={styles.titleText} numberOfLines={1}>
-                  {item.title}
-                </Text>
-                <View style={[styles.badge, { backgroundColor: "#FFD700" }]}>
-                  <Text style={styles.badgeText}>
-                    {item.type?.toUpperCase() || "OFFER"}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.subText} numberOfLines={1}>
-                {item.description}
-              </Text>
+            <View style={styles.cardInner}>
+              <Image
+                source={{ uri: item.image }}
+                style={styles.image}
+                resizeMode="cover"
+                loading="eager" // Load immediately
+                fadeDuration={0} // Remove fade animation
+              />
             </View>
           </Animated.View>
         </TouchableOpacity>
@@ -394,24 +383,33 @@ export default function Slider() {
   // RENDER DOTS (Memoized)
   // ==========================================
   const renderDots = useMemo(() => {
+    // Native driver can't animate width, so each dot cross-fades a grey
+    // 6×6 circle with a black 18×6 pill that stretches in (scaleX 1/3 → 1)
     return data.map((_, i) => {
-      const scaleX = scrollX.interpolate({
-        inputRange: [(i - 1) * ITEM_WIDTH, i * ITEM_WIDTH, (i + 1) * ITEM_WIDTH],
-        outputRange: [0.6, 2, 0.6],
+      const inputRange = [(i - 1) * ITEM_WIDTH, i * ITEM_WIDTH, (i + 1) * ITEM_WIDTH];
+      const pillScaleX = scrollX.interpolate({
+        inputRange,
+        outputRange: [1 / 3, 1, 1 / 3],
         extrapolate: "clamp",
       });
-      
-      const opacity = scrollX.interpolate({
-        inputRange: [(i - 1) * ITEM_WIDTH, i * ITEM_WIDTH, (i + 1) * ITEM_WIDTH],
-        outputRange: [0.3, 1, 0.3],
+      const pillOpacity = scrollX.interpolate({
+        inputRange,
+        outputRange: [0, 1, 0],
         extrapolate: "clamp",
       });
-      
+      const greyOpacity = scrollX.interpolate({
+        inputRange,
+        outputRange: [1, 0, 1],
+        extrapolate: "clamp",
+      });
+
       return (
-        <Animated.View
-          key={i}
-          style={[styles.dot, { transform: [{ scaleX }], opacity }]}
-        />
+        <View key={i} style={styles.dotSlot}>
+          <Animated.View style={[styles.dotGrey, { opacity: greyOpacity }]} />
+          <Animated.View
+            style={[styles.dotPill, { opacity: pillOpacity, transform: [{ scaleX: pillScaleX }] }]}
+          />
+        </View>
       );
     });
   }, [data, scrollX]);
@@ -470,49 +468,62 @@ export default function Slider() {
                     <View style={styles.handleBar} />
                   </View>
                   
-                  <TouchableOpacity style={styles.closeBtn} onPress={closeModal} activeOpacity={0.7}>
-                    <Text style={styles.closeText}>✕</Text>
+                  <TouchableOpacity
+                    style={styles.closeBtn}
+                    onPress={closeModal}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="close"
+                    hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                  >
+                    <Ionicons name="close" size={18} color={color.ink} />
                   </TouchableOpacity>
-                  
+
                   {selectedOffer && (
-                    <ScrollView 
-                      showsVerticalScrollIndicator={false} 
+                    <ScrollView
+                      showsVerticalScrollIndicator={false}
                       contentContainerStyle={styles.detailsContainer}
                       bounces={false}
                     >
                       <View style={styles.imageContainer}>
-                        <Image 
-                          source={{ uri: selectedOffer.image }} 
+                        <Image
+                          source={{ uri: selectedOffer.image }}
                           style={styles.modalImage}
                           resizeMode="cover"
                           loading="eager"
                           fadeDuration={0}
                         />
-                        <LinearGradient
-                          colors={['rgba(0,0,0,0.4)', 'transparent']}
-                          style={styles.modalGradient}
-                        />
-                        <View style={[styles.modalBadge, { backgroundColor: "#f9c349" }]}>
-                          <Text style={styles.modalBadgeText}>
-                            {selectedOffer.type?.toUpperCase() || "OFFER"}
-                          </Text>
-                        </View>
+                        {/* Server types: 'slider' (default) | 'offer' → badge only for non-slider */}
+                        {!!selectedOffer.type && String(selectedOffer.type).toLowerCase() !== "slider" && (
+                          <View style={styles.modalBadge}>
+                            <Text style={styles.modalBadgeText}>
+                              {String(selectedOffer.type).toLowerCase()}
+                            </Text>
+                          </View>
+                        )}
                       </View>
-                      
-                      <Text style={styles.modalTitle}>{selectedOffer.title}</Text>
-                      
-                      <View style={styles.divider}>
-                        <View style={styles.dividerLine} />
-                      </View>
-                      
-                      <Text style={styles.modalDesc}>{selectedOffer.description}</Text>
-                      
-                      <TouchableOpacity 
-                        style={styles.bottomCloseBtn} 
+
+                      {!!selectedOffer.title && (
+                        <Text style={styles.modalTitle} accessibilityRole="header">
+                          {selectedOffer.title}
+                          {!/[.!?…]$/.test(String(selectedOffer.title).trim()) && (
+                            <Text style={styles.modalTitleDot}>.</Text>
+                          )}
+                        </Text>
+                      )}
+
+                      {!!selectedOffer.description && (
+                        <Text style={styles.modalDesc}>{selectedOffer.description}</Text>
+                      )}
+
+                      <TouchableOpacity
+                        style={styles.bottomCloseBtn}
                         onPress={closeModal}
-                        activeOpacity={0.6}
+                        activeOpacity={0.8}
+                        accessibilityRole="button"
+                        accessibilityLabel="close"
                       >
-                        <Text style={styles.bottomCloseBtnText}>Close</Text>
+                        <Text style={styles.bottomCloseBtnText}>close</Text>
                       </TouchableOpacity>
                     </ScrollView>
                   )}
@@ -530,13 +541,19 @@ export default function Slider() {
     return <FastSkeleton />;
   }
 
-  // Empty state
+  // Empty state: nothing on Home (it starts at the greeting);
+  // the standalone "Slider" route keeps a retry
+  if (!isStandalone) return null;
   return (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyEmoji}>📭</Text>
-      <Text style={styles.emptyText}>No Offers Available</Text>
-      <TouchableOpacity style={styles.retryBtn} onPress={onRefresh}>
-        <Text style={styles.retryBtnText}>Retry</Text>
+      <Text style={styles.emptyText}>no banners right now.</Text>
+      <TouchableOpacity
+        style={styles.retryBtn}
+        onPress={onRefresh}
+        accessibilityRole="button"
+        accessibilityLabel="retry"
+      >
+        <Text style={styles.retryBtnText}>retry</Text>
       </TouchableOpacity>
     </View>
   );
@@ -555,101 +572,62 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   
+  // Shadow layer (no overflow: hidden, so iOS draws the shadow)
   card: {
     height: ITEM_HEIGHT,
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    overflow: "hidden",
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,215,0,0.2)',
-    elevation: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-  },
-  
-  image: { 
-    width: "100%", 
-    height: "100%", 
-    resizeMode: "cover" 
-  },
-  
-  gradientOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: '55%',
-  },
-  
-  overlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  
-  titleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    width: "100%",
-  },
-  
-  titleText: { 
-    color: "#fff", 
-    fontSize: 18, 
-    fontWeight: "800", 
-    flex: 1, 
-    marginRight: 10,
-    letterSpacing: 0.3,
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
-  
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 22,
+    backgroundColor: color.sand,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: color.line,
+    elevation: 2,
+    shadowColor: color.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
   },
-  
-  badgeText: { 
-    fontSize: 9, 
-    fontWeight: "800", 
-    letterSpacing: 0.5,
-    color: "#000",
+  // Clip layer: sand shows while the image loads
+  cardInner: {
+    flex: 1,
+    borderRadius: 21,
+    overflow: "hidden",
+    backgroundColor: color.sand,
   },
-  
-  subText: { 
-    color: "rgba(255,255,255,0.95)", 
-    fontSize: 12, 
-    marginTop: 4,
-    fontWeight: "500",
-    textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+
+  image: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover"
   },
-  
+
+  // 10 from the card edge: 6 (cardTouchable bottom padding) + 4
   dotContainer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 14,
+    marginTop: 4,
     width: '100%',
   },
-  
-  dot: {
-    height: 6,
+
+  // 6-wide slot; the 18-wide pill overflows it into the 5px margins
+  dotSlot: {
     width: 6,
-    borderRadius: 3,
-    backgroundColor: "#f9c349",
+    height: 6,
     marginHorizontal: 5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dotGrey: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: DOT_GREY,
+  },
+  dotPill: {
+    position: "absolute",
+    width: 18,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: color.ink,
   },
   
   loadingContainer: {
@@ -673,18 +651,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 220,
   },
-  
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  
+
   emptyText: {
-    fontSize: 18,
-    color: '#666',
+    fontFamily: font.bodySemi,
+    fontSize: 15,
+    color: color.textMuted,
     textAlign: 'center',
-    fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: 14,
   },
   
   emptySubText: {
@@ -695,156 +668,118 @@ const styles = StyleSheet.create({
   },
   
   retryBtn: {
-    backgroundColor: '#f9c349',
+    backgroundColor: color.ink,
     paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 25,
+    height: 44,
+    justifyContent: 'center',
+    borderRadius: 22,
   },
-  
+
   retryBtnText: {
-    color: '#000',
-    fontWeight: '700',
+    fontFamily: font.bodyBold,
+    color: color.white,
     fontSize: 14,
   },
 
-  modalOverlay: { 
-    flex: 1, 
-    backgroundColor: "rgba(0,0,0,0.8)", 
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(17,17,17,0.5)",
     justifyContent: "flex-end",
   },
-  
+
   modalContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
+    backgroundColor: color.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     maxHeight: height * 0.8,
     paddingHorizontal: 20,
-    paddingBottom: Platform.OS === "ios" ? 20 : 20,
+    paddingBottom: 20,
     paddingTop: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,215,0,0.1)',
   },
-  
+
   dragHandle: {
     alignItems: 'center',
     marginBottom: 6,
   },
-  
-  handleBar: { 
-    width: 40, 
-    height: 4, 
-    backgroundColor: "#E0E0E0", 
+
+  handleBar: {
+    width: 40,
+    height: 4,
+    backgroundColor: DOT_GREY,
     borderRadius: 2,
   },
-  
+
   closeBtn: {
     position: 'absolute',
     top: 14,
     right: 18,
     zIndex: 10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: color.white,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: color.line,
   },
-  
-  closeText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  
-  detailsContainer: { 
-    alignItems: "center", 
+
+  detailsContainer: {
+    alignItems: "center",
     paddingTop: 8,
     paddingBottom: 10,
   },
-  
-  imageContainer: { 
-    width: "100%", 
-    height: 180, 
-    borderRadius: 20, 
-    overflow: "hidden", 
+
+  imageContainer: {
+    width: "100%",
+    height: 180,
+    borderRadius: 18,
+    overflow: "hidden",
     marginBottom: 16,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
     position: 'relative',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,215,0,0.2)',
+    backgroundColor: color.sand,
   },
-  
-  modalImage: { 
-    width: "100%", 
-    height: "100%", 
-    resizeMode: "cover" 
+
+  modalImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover"
   },
-  
-  modalGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '30%',
-  },
-  
-  modalBadge: { 
-    position: "absolute", 
-    top: 14, 
-    left: 14, 
-    paddingHorizontal: 14, 
-    paddingVertical: 5, 
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  
-  modalBadgeText: { 
-    fontWeight: "800", 
-    fontSize: 10, 
-    color: "#000",
-    letterSpacing: 0.5,
-  },
-  
-  modalTitle: { 
-    fontSize: 24, 
-    fontWeight: "900", 
-    color: "#1A1A1A", 
-    textAlign: "center", 
+
+  modalBadge: {
+    position: "absolute",
+    top: 12,
+    left: 12,
+    height: 24,
     paddingHorizontal: 10,
-    letterSpacing: -0.3,
-    marginBottom: 10,
+    borderRadius: 12,
+    backgroundColor: color.yellowSoft,
+    justifyContent: "center",
   },
-  
-  divider: {
-    marginVertical: 6,
-    alignItems: 'center',
+
+  modalBadgeText: {
+    fontFamily: font.bodyBold,
+    fontSize: 11,
+    color: color.ink,
   },
-  
-  dividerLine: {
-    width: 40,
-    height: 3,
-    backgroundColor: "#f9c349",
-    borderRadius: 2,
+
+  modalTitle: {
+    fontFamily: font.heading,
+    fontSize: 22,
+    color: color.ink,
+    textAlign: "center",
+    paddingHorizontal: 10,
+    marginBottom: 8,
   },
-  
-  modalDesc: { 
-    fontSize: 15, 
-    color: "#666", 
-    textAlign: "center", 
-    lineHeight: 22, 
-    marginBottom: 16,
+  modalTitleDot: { color: color.yellow },
+
+  modalDesc: {
+    fontFamily: font.body,
+    fontSize: 15,
+    color: color.textMuted,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 20,
     paddingHorizontal: 10,
   },
   
@@ -938,96 +873,40 @@ const styles = StyleSheet.create({
   
   bottomCloseBtn: {
     width: "100%",
-    paddingVertical: 10,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: color.ink,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 4,
   },
-  
+
   bottomCloseBtnText: {
-    color: '#999',
-    fontSize: 13,
-    fontWeight: '600',
+    fontFamily: font.bodyBold,
+    color: color.white,
+    fontSize: 15,
   },
 
   // SKELETON STYLES
+  // Same box as a real card: left = ITEM_SPACING, width = ITEM_WIDTH - 8
   skeletonCard: {
     height: ITEM_HEIGHT,
-    backgroundColor: "#E8E8E8",
-    borderRadius: 20,
-    overflow: "hidden",
-    marginHorizontal: ITEM_SPACING + 4,
-    width: ITEM_WIDTH,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-  },
-  
-  skeletonImagePlaceholder: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#D5D5D5",
-    position: "relative",
+    width: ITEM_WIDTH - 8,
+    marginLeft: ITEM_SPACING,
+    backgroundColor: color.sand,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: color.line,
     overflow: "hidden",
   },
-  
+
   skeletonShimmer: {
     position: "absolute",
     top: 0,
     left: 0,
     width: 80,
     height: "100%",
-    backgroundColor: "rgba(255,255,255,0.4)",
+    backgroundColor: "rgba(255,255,255,0.45)",
     transform: [{ skewX: '-20deg' }],
-  },
-  
-  skeletonOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  
-  skeletonTitleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    width: "100%",
-  },
-  
-  skeletonTitle: {
-    height: 18,
-    width: "55%",
-    backgroundColor: "rgba(255,255,255,0.3)",
-    borderRadius: 4,
-  },
-  
-  skeletonBadge: {
-    height: 20,
-    width: 50,
-    backgroundColor: "rgba(255,255,255,0.3)",
-    borderRadius: 6,
-  },
-  
-  skeletonSubtitle: {
-    height: 12,
-    width: "45%",
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 4,
-    marginTop: 8,
-  },
-  
-  skeletonDot: {
-    height: 6,
-    width: 6,
-    borderRadius: 3,
-    backgroundColor: "#D5D5D5",
-    marginHorizontal: 5,
-  },
-  
-  skeletonDotActive: {
-    backgroundColor: "#B8B8B8",
-    width: 16,
   },
 });
