@@ -18,7 +18,7 @@
       "bundleIdentifier": "com.aqkhan110.tdc",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "TDC uses the microphone to record and send voice messages in chats.",
-        "NSLocationWhenInUseUsageDescription": "TDC uses your location to share your current location in chats and provide location-based features.",
+        "NSLocationWhenInUseUsageDescription": "tdc uses your location to show deals near you and to share your location in chats. we never store where you are.",
         "NSPhotoLibraryUsageDescription": "TDC uses your photo library so you can select photos to upload to your profile and share with other users.",
         "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": [
@@ -156,7 +156,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "TDC uses your location to share your current location in chats and provide location-based features."
+          "locationWhenInUsePermission": "tdc uses your location to show deals near you and to share your location in chats. we never store where you are."
         }
       ],
       "expo-navigation-bar",
