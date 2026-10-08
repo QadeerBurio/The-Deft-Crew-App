@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
@@ -17,6 +17,7 @@ import api from '../api/api';
 import { AuthContext } from '../context/AuthContext';
 import { engagementBus, ENGAGEMENT_EVENTS } from '../engagement/engagementBus';
 
+import { color as T, font as F } from "../theme/tokens";
 const { width, height } = Dimensions.get('window');
 
 // ─── SUGGESTED PROMPT CHIPS ───────────────────────────────────────────
@@ -138,7 +139,7 @@ const MessageBubble = React.memo(({ item, onCopy, onShare, isLast }) => {
     >
       {!isUser && (
         <View style={msgStyles.avatarWrap}>
-          <LinearGradient colors={['#FFF9E6', '#FFFFFF']} style={msgStyles.avatar}>
+          <LinearGradient colors={[T.yellowSoft, T.white]} style={msgStyles.avatar}>
             <Image
               source={require('../../../assets/travel_mascot.png')}
               style={msgStyles.avatarImage}
@@ -147,7 +148,7 @@ const MessageBubble = React.memo(({ item, onCopy, onShare, isLast }) => {
           </LinearGradient>
           {isLast && item.content && !item.isStreaming && (
             <Animated.View style={msgStyles.responseIndicator}>
-              <Ionicons name="checkmark-done" size={12} color="#FFFFFF" />
+              <Ionicons name="checkmark-done" size={12} color={T.white} />
             </Animated.View>
           )}
         </View>
@@ -156,7 +157,7 @@ const MessageBubble = React.memo(({ item, onCopy, onShare, isLast }) => {
       {isUser ? (
         <View style={msgStyles.bubbleWrapper}>
           <LinearGradient
-            colors={['#f9c349', '#f0a500']}
+            colors={[T.yellow, '#f0a500']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[msgStyles.bubble, msgStyles.bubbleUser]}
@@ -184,8 +185,8 @@ const MessageBubble = React.memo(({ item, onCopy, onShare, isLast }) => {
                   }}
                   style={msgStyles.actionBtn}
                 >
-                  <Feather name="copy" size={12} color="#94A3B8" />
-                  <Text style={msgStyles.actionText}>Copy</Text>
+                  <Feather name="copy" size={12} color={T.textFaint} />
+                  <Text style={msgStyles.actionText}>copy</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => {
@@ -194,8 +195,8 @@ const MessageBubble = React.memo(({ item, onCopy, onShare, isLast }) => {
                   }}
                   style={msgStyles.actionBtn}
                 >
-                  <Feather name="share-2" size={12} color="#94A3B8" />
-                  <Text style={msgStyles.actionText}>Share</Text>
+                  <Feather name="share-2" size={12} color={T.textFaint} />
+                  <Text style={msgStyles.actionText}>share</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -229,7 +230,7 @@ const TypingIndicator = () => {
 
   return (
     <View style={msgStyles.typingRow}>
-      <LinearGradient colors={['#FFF9E6', '#FFFFFF']} style={msgStyles.avatar}>
+      <LinearGradient colors={[T.yellowSoft, T.white]} style={msgStyles.avatar}>
         <Image
           source={require('../../../assets/travel_mascot.png')}
           style={msgStyles.avatarImage}
@@ -241,7 +242,7 @@ const TypingIndicator = () => {
           {[dot1, dot2, dot3].map((dot, i) => (
             <Animated.View
               key={i}
-              style={[msgStyles.dot, { transform: [{ translateY: dot }], backgroundColor: '#f9c349' }]}
+              style={[msgStyles.dot, { transform: [{ translateY: dot }], backgroundColor: T.yellow }]}
             />
           ))}
         </View>
@@ -671,14 +672,14 @@ const TravelChatBot = forwardRef((props, ref) => {
             strokeWidth="2"
             strokeDasharray="5 7"
           />
-          <Circle cx="20" cy="110" r="4" fill="#f9c349" />
-          <Circle cx="260" cy="35" r="4" fill="#f9c349" />
+          <Circle cx="20" cy="110" r="4" fill={T.yellow} />
+          <Circle cx="260" cy="35" r="4" fill={T.yellow} />
         </Svg>
         <View style={styles.pinIcon1}>
-          <Ionicons name="location" size={16} color="#EF4444" />
+          <Ionicons name="location" size={16} color={T.danger} />
         </View>
         <Animated.View style={[styles.compassDecoration, { transform: [{ rotate: spinVal }] }]}>
-          <Ionicons name="compass" size={20} color="#f9c349" />
+          <Ionicons name="compass" size={20} color={T.yellow} />
         </Animated.View>
       </View>
 
@@ -692,12 +693,12 @@ const TravelChatBot = forwardRef((props, ref) => {
           resizeMode="contain"
         />
         <Animated.View style={[styles.sparklesOverlay, { transform: [{ rotate: spinVal }] }]}>
-          <Ionicons name="sparkles" size={22} color="#f9c349" style={styles.sparkle1} />
-          <Ionicons name="sparkles" size={14} color="#f9c349" style={styles.sparkle2} />
+          <Ionicons name="sparkles" size={22} color={T.yellow} style={styles.sparkle1} />
+          <Ionicons name="sparkles" size={14} color={T.yellow} style={styles.sparkle2} />
         </Animated.View>
       </View>
 
-      <Text style={styles.emptyTitle}>Where would you like to explore?</Text>
+      <Text style={styles.emptyTitle}>where would you like to explore?</Text>
       <Text style={styles.emptySubtitle}>
         I can plan detailed itineraries, estimate budgets, explain visa requirements, and build your complete travel plan.
       </Text>
@@ -724,7 +725,7 @@ const TravelChatBot = forwardRef((props, ref) => {
               resizeMode="contain"
             />
             <View style={styles.fabLabelWrap}>
-              <Text style={styles.fabLabel}>Travel Assist</Text>
+              <Text style={styles.fabLabel}>travel assist</Text>
             </View>
           </TouchableOpacity>
         </Animated.View>
@@ -755,15 +756,15 @@ const TravelChatBot = forwardRef((props, ref) => {
                     activeOpacity={0.7}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
-                    <Ionicons name="chevron-back" size={22} color="#1a1a1a" />
+                    <Ionicons name="chevron-back" size={22} color={T.ink} />
                   </TouchableOpacity>
 
                   <View style={styles.headerCenter}>
                     <View style={styles.headerTitleRow}>
-                      <LinearGradient colors={['#FFF9E6', '#FFFFFF']} style={styles.headerIconSmall}>
+                      <LinearGradient colors={[T.yellowSoft, T.white]} style={styles.headerIconSmall}>
                         {isStreaming ? (
                           <Animated.View style={{ transform: [{ rotate: compassSpinVal }] }}>
-                            <Ionicons name="compass" size={16} color="#f9c349" />
+                            <Ionicons name="compass" size={16} color={T.yellow} />
                           </Animated.View>
                         ) : (
                           <Image
@@ -774,7 +775,7 @@ const TravelChatBot = forwardRef((props, ref) => {
                         )}
                       </LinearGradient>
                       <Text style={styles.headerTitle} numberOfLines={1}>
-                        travel assist<Text style={{ color: '#f9c349' }}>.</Text>
+                        travel assist<Text style={{ color: T.yellow }}>.</Text>
                       </Text>
                     </View>
                     <View style={styles.statusRow}>
@@ -783,10 +784,10 @@ const TravelChatBot = forwardRef((props, ref) => {
                           styles.statusDot,
                           {
                             backgroundColor: isStreaming
-                              ? '#f9c349'
+                              ? T.yellow
                               : isOnline
-                              ? '#10B981'
-                              : '#EF4444',
+                              ? T.success
+                              : T.danger,
                           },
                         ]}
                       />
@@ -800,7 +801,7 @@ const TravelChatBot = forwardRef((props, ref) => {
                     {messages.length > 0 ? (
                       <TouchableOpacity onPress={startNewTrip} style={styles.newTripBtn} activeOpacity={0.7}>
                         <Ionicons name="refresh-outline" size={13} color="#d97706" />
-                        <Text style={styles.newTripText}>New</Text>
+                        <Text style={styles.newTripText}>new</Text>
                       </TouchableOpacity>
                     ) : (
                       <View style={styles.headerRightPlaceholder} />
@@ -811,13 +812,13 @@ const TravelChatBot = forwardRef((props, ref) => {
                 {/* Offline banner */}
                 {!isOnline && (
                   <View style={styles.offlineBanner}>
-                    <Ionicons name="cloud-offline" size={14} color="#EF4444" />
-                    <Text style={styles.offlineText}>No internet connection</Text>
+                    <Ionicons name="cloud-offline" size={14} color={T.danger} />
+                    <Text style={styles.offlineText}>no internet connection</Text>
                   </View>
                 )}
 
                 {/* Messages list */}
-                <LinearGradient colors={['#fafafa', '#fafafa', '#ffffff']} style={styles.flex}>
+                <LinearGradient colors={[T.sand, T.sand, T.white]} style={styles.flex}>
                   <FlatList
                     ref={flatListRef}
                     data={messages}
@@ -868,7 +869,7 @@ const TravelChatBot = forwardRef((props, ref) => {
                     <TextInput
                       style={styles.textInput}
                       placeholder="ask about a trip, budget or visa..."
-                      placeholderTextColor="#94A3B8"
+                      placeholderTextColor={T.textFaint}
                       value={inputText}
                       onChangeText={setInputText}
                       multiline
@@ -887,9 +888,9 @@ const TravelChatBot = forwardRef((props, ref) => {
                       activeOpacity={0.7}
                     >
                       {isStreaming ? (
-                        <ActivityIndicator size="small" color="#f9c349" />
+                        <ActivityIndicator size="small" color={T.yellow} />
                       ) : (
-                        <Ionicons name="arrow-up" size={18} color="#f9c349" />
+                        <Ionicons name="arrow-up" size={18} color={T.yellow} />
                       )}
                     </TouchableOpacity>
                   </View>
@@ -913,27 +914,27 @@ const msgStyles = StyleSheet.create({
     width: 42, height: 42, borderRadius: 21,
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1.5, borderColor: '#fde047',
-    shadowColor: '#f9c349',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12, shadowRadius: 4,
+    shadowOpacity: 0.06, shadowRadius: 4,
     elevation: 2,
   },
   avatarImage: { width: 34, height: 34 },
   responseIndicator: {
     position: 'absolute', bottom: -2, right: -2,
-    backgroundColor: '#10B981', borderRadius: 10,
+    backgroundColor: T.success, borderRadius: 10,
     width: 18, height: 18,
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 2, borderColor: '#FFFFFF',
-    shadowColor: '#10B981',
+    borderWidth: 2, borderColor: T.white,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3, shadowRadius: 3,
+    shadowOpacity: 0.06, shadowRadius: 3,
     elevation: 2,
   },
   bubbleWrapper: { maxWidth: '80%' },
   bubble: {
     padding: 13,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04, shadowRadius: 3,
     elevation: 1,
@@ -941,49 +942,49 @@ const msgStyles = StyleSheet.create({
   bubbleUser: {
     borderTopLeftRadius: 18, borderBottomLeftRadius: 18,
     borderTopRightRadius: 18, borderBottomRightRadius: 6,
-    shadowColor: '#f9c349', shadowOpacity: 0.2,
-    shadowRadius: 6, elevation: 3,
+    shadowColor: T.ink, shadowOpacity: 0.06,
+    shadowRadius: 6, elevation: 2,
   },
   bubbleAssistant: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     borderTopLeftRadius: 6, borderBottomLeftRadius: 20,
     borderTopRightRadius: 20, borderBottomRightRadius: 20,
-    borderWidth: 1, borderColor: '#eeeeee',
+    borderWidth: 1, borderColor: T.line,
   },
-  userText: { color: '#1a1a1a', fontSize: 14, lineHeight: 20, fontWeight: '600' },
-  normal: { color: '#333', fontSize: 13.8, lineHeight: 21 },
-  bold: { color: '#111', fontSize: 13.8, lineHeight: 21, fontWeight: '700' },
-  link: { color: '#2563EB', fontSize: 13.8, lineHeight: 21, textDecorationLine: 'underline', fontWeight: '600' },
-  h1: { color: '#1a1a1a', fontSize: 16, fontWeight: '700', marginTop: 6, marginBottom: 4 },
-  h2: { color: '#1a1a1a', fontSize: 14.5, fontWeight: '700', marginTop: 5, marginBottom: 3 },
-  h3: { color: '#1a1a1a', fontSize: 13.5, fontWeight: '700', marginTop: 4, marginBottom: 2 },
+  userText: { color: T.ink, fontSize: 14, lineHeight: 20, fontFamily: F.bodySemi },
+  normal: { color: T.ink, fontSize: 13.8, fontFamily: F.body, lineHeight: 21 },
+  bold: { color: T.ink, fontSize: 13.8, lineHeight: 21, fontFamily: F.bodyBold },
+  link: { color: T.ink, fontSize: 13.8, lineHeight: 21, textDecorationLine: 'underline', fontFamily: F.bodySemi },
+  h1: { color: T.ink, fontSize: 16, fontFamily: F.bodyBold, marginTop: 6, marginBottom: 4 },
+  h2: { color: T.ink, fontSize: 14.5, fontFamily: F.bodyBold, marginTop: 5, marginBottom: 3 },
+  h3: { color: T.ink, fontSize: 13.5, fontFamily: F.bodyBold, marginTop: 4, marginBottom: 2 },
   bulletRow: { flexDirection: 'row', marginTop: 3 },
-  bullet: { color: '#777', fontSize: 13, width: 14, fontWeight: '600' },
-  bulletText: { color: '#333', fontSize: 13.8, lineHeight: 21, flex: 1 },
+  bullet: { color: T.textMuted, fontSize: 13, width: 14, fontFamily: F.bodySemi },
+  bulletText: { color: T.ink, fontSize: 13.8, fontFamily: F.body, lineHeight: 21, flex: 1 },
   actions: {
     flexDirection: 'row', marginTop: 10, gap: 14,
     alignItems: 'center',
-    borderTopWidth: 1, borderTopColor: '#f4f4f4',
+    borderTopWidth: 1, borderTopColor: T.line,
     paddingTop: 8,
   },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  actionText: { fontSize: 11, color: '#999', fontWeight: '600' },
+  actionText: { fontSize: 11, color: T.textFaint, fontFamily: F.bodySemi },
   tagBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
     marginLeft: 'auto',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: T.successBg,
     paddingHorizontal: 7, paddingVertical: 3,
     borderRadius: 8,
   },
-  tagText: { fontSize: 9, color: '#10B981', fontWeight: '700' },
+  tagText: { fontSize: 9, color: T.success, fontFamily: F.bodyBold },
   typingRow: { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 14 },
   typingBubble: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: T.card,
     borderTopLeftRadius: 6, borderBottomLeftRadius: 20,
     borderTopRightRadius: 20, borderBottomRightRadius: 20,
     paddingHorizontal: 16, paddingVertical: 14,
-    borderWidth: 1, borderColor: '#eeeeee',
-    shadowColor: '#000',
+    borderWidth: 1, borderColor: T.line,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 1.5 },
     shadowOpacity: 0.04, shadowRadius: 2,
     elevation: 1,
@@ -1006,22 +1007,22 @@ const styles = StyleSheet.create({
   },
   fabBareMascotImage: { width: 95, height: 95 },
   fabLabelWrap: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: T.ink,
     paddingHorizontal: 10, paddingVertical: 3,
     borderRadius: 10, marginTop: -6,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1, shadowRadius: 3,
+    shadowOpacity: 0.06, shadowRadius: 3,
     elevation: 2,
   },
   fabLabel: {
-    fontSize: 10, fontWeight: '800',
-    color: '#f9c349', letterSpacing: 0.2,
+    fontSize: 10, fontFamily: F.bodyBold,
+    color: T.yellow, letterSpacing: 0.2,
   },
 
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
-  modalContainer: { flex: 1, backgroundColor: '#fafafa' },
-  safeArea: { flex: 1, backgroundColor: '#fafafa' },
+  modalBackdrop: { flex: 1, backgroundColor: T.overlay },
+  modalContainer: { flex: 1, backgroundColor: T.paper },
+  safeArea: { flex: 1, backgroundColor: T.paper },
 
   header: {
     flexDirection: 'row',
@@ -1029,13 +1030,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 8, paddingVertical: 8,
     minHeight: 56,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1, borderBottomColor: '#f4f4f4',
+    backgroundColor: T.card,
+    borderBottomWidth: 1, borderBottomColor: T.line,
   },
   headerLeftBtn: {
     width: 40, height: 40, borderRadius: 12,
-    backgroundColor: '#F7F9F8',
-    borderWidth: 1, borderColor: '#E8E8E8',
+    backgroundColor: T.sand,
+    borderWidth: 1, borderColor: T.line,
     justifyContent: 'center', alignItems: 'center',
     marginLeft: 8,
   },
@@ -1051,32 +1052,32 @@ const styles = StyleSheet.create({
   },
   headerMascotImageSmall: { width: 22, height: 22 },
   headerTitle: {
-    color: '#1a1a1a', fontSize: 16, fontWeight: '900',
+    color: T.ink, fontSize: 16, fontFamily: F.bodyBold,
     letterSpacing: -0.2,
   },
   statusRow: {
     flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2,
   },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { color: '#777', fontSize: 10, fontWeight: '600' },
+  statusText: { color: T.textMuted, fontSize: 10, fontFamily: F.bodySemi },
   headerRight: {
     width: 80, alignItems: 'flex-end', justifyContent: 'center',
   },
   headerRightPlaceholder: { width: 40 },
   newTripBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(249, 195, 73, 0.15)',
+    backgroundColor: T.yellowSoft,
     paddingHorizontal: 10, paddingVertical: 6,
     borderRadius: 20,
-    borderWidth: 1, borderColor: 'rgba(249, 195, 73, 0.3)',
+    borderWidth: 1, borderColor: T.line,
   },
-  newTripText: { color: '#d97706', fontSize: 10, fontWeight: '700' },
+  newTripText: { color: '#d97706', fontSize: 10, fontFamily: F.bodyBold },
 
   offlineBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#FEF2F2', paddingVertical: 6, gap: 6,
+    backgroundColor: T.dangerBg, paddingVertical: 6, gap: 6,
   },
-  offlineText: { color: '#EF4444', fontSize: 11.5, fontWeight: '600' },
+  offlineText: { color: T.danger, fontSize: 11.5, fontFamily: F.bodySemi },
 
   messageList: { paddingTop: 16, paddingBottom: 8 },
   messageListEmpty: { flexGrow: 1, justifyContent: 'center' },
@@ -1106,66 +1107,66 @@ const styles = StyleSheet.create({
   sparkle2: { position: 'absolute', bottom: 12, left: 12 },
 
   emptyTitle: {
-    fontSize: 19, fontWeight: '800',
-    color: '#1a1a1a', marginBottom: 8,
+    fontSize: 19, fontFamily: F.heading,
+    color: T.ink, marginBottom: 8,
     letterSpacing: 0.1, zIndex: 1,
     textAlign: 'center', paddingHorizontal: 10,
   },
   emptySubtitle: {
-    fontSize: 12.5, color: '#777',
+    fontSize: 12.5, color: T.textMuted,
     textAlign: 'center', lineHeight: 19,
     marginBottom: 10, paddingHorizontal: 15,
-    zIndex: 1, fontWeight: '500',
+    zIndex: 1, fontFamily: F.bodyMedium,
   },
 
   quickPromptsRow: {
-    borderTopWidth: 1, borderTopColor: '#f4f4f4',
-    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1, borderTopColor: T.line,
+    backgroundColor: T.card,
   },
   chipsScrollContainer: {
     paddingHorizontal: 16, paddingVertical: 10, gap: 8,
   },
   pillChip: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1, borderColor: '#eeeeee',
+    backgroundColor: T.card,
+    borderWidth: 1, borderColor: T.line,
     paddingHorizontal: 13, paddingVertical: 8,
     borderRadius: 14,
-    shadowColor: '#999',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06, shadowRadius: 4,
     elevation: 2, gap: 6, marginRight: 8,
   },
-  pillChipIcon: { fontSize: 13.5 },
-  pillChipTitle: { fontSize: 12, fontWeight: '700', color: '#333' },
+  pillChipIcon: { fontSize: 13.5, fontFamily: F.body },
+  pillChipTitle: { fontSize: 12, fontFamily: F.bodyBold, color: T.ink },
 
   inputBar: {
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1, borderTopColor: '#f4f4f4',
+    backgroundColor: T.card,
+    borderTopWidth: 1, borderTopColor: T.line,
     paddingHorizontal: 12, paddingTop: 10,
   },
   inputWrap: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#f6f6f6',
+    backgroundColor: T.sand,
     borderRadius: 18,
-    borderWidth: 1, borderColor: '#eeeeee',
+    borderWidth: 1, borderColor: T.line,
     paddingLeft: 6, paddingRight: 5, paddingVertical: 4,
   },
   textInput: {
-    flex: 1, fontSize: 14, color: '#333',
+    flex: 1, fontSize: 14, fontFamily: F.body, color: T.ink,
     maxHeight: 100,
     paddingLeft: 12, paddingRight: 8,
     paddingVertical: Platform.OS === 'ios' ? 10 : 8,
   },
   sendBtn: {
     width: 38, height: 38, borderRadius: 14,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: T.ink,
     justifyContent: 'center', alignItems: 'center',
     marginLeft: 4,
-    shadowColor: '#f9c349',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3, shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.06, shadowRadius: 4,
+    elevation: 2,
   },
   sendBtnDisabled: {
     backgroundColor: '#d6d6d6', shadowOpacity: 0,

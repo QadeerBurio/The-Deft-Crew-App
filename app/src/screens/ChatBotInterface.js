@@ -31,13 +31,14 @@ import * as ExpoClipboard from 'expo-clipboard';
 import { ChatContext } from '../context/ChatContext';
 import { ChatHistoryPanel } from './ChatHistoryScreen';
 
-const DARK = '#1a1a1a';
-const GOLD = '#f9c349';
-const GOLD_SOFT = '#fff8e6';
-const SOFT = '#F7F9F8';
-const BORDER = '#E8E8E8';
-const MUTED = '#8a8a8a';
-const TEXT2 = '#5f5f5f';
+import { color as T, font as F } from "../theme/tokens";
+const DARK = T.ink;
+const GOLD = T.yellow;
+const GOLD_SOFT = T.yellowSoft;
+const SOFT = T.sand;
+const BORDER = T.line;
+const MUTED = T.textFaint;
+const TEXT2 = T.textMuted;
 
 const STARTERS = [
   { icon: 'school-outline', title: 'study abroad', sub: 'masters, bachelors, phd', q: 'Study Abroad scholarship options and programs' },
@@ -315,8 +316,8 @@ const ChatBotInterface = ({ onClose }) => {
     const stillTyping = isStreaming && item._id === lastBotId;
     return (
       <View style={styles.botRow}>
-        <View style={[styles.botAvatar, isWarn && { backgroundColor: '#fdecef' }]}>
-          <Ionicons name={isWarn ? 'cloud-offline-outline' : 'sparkles'} size={13} color={isWarn ? '#e11d48' : GOLD} />
+        <View style={[styles.botAvatar, isWarn && { backgroundColor: T.dangerBg }]}>
+          <Ionicons name={isWarn ? 'cloud-offline-outline' : 'sparkles'} size={13} color={isWarn ? T.danger : GOLD} />
         </View>
         <View style={{ flex: 1 }}>
           <View style={[styles.bubble, styles.botBubble, isWarn && styles.warnBubble]}>
@@ -389,7 +390,7 @@ const ChatBotInterface = ({ onClose }) => {
             tdc assistant<Text style={{ color: GOLD }}>.</Text>
           </Text>
           <View style={styles.statusRow}>
-            <View style={[styles.statusDot, { backgroundColor: isOnline ? '#22c55e' : '#e11d48' }]} />
+            <View style={[styles.statusDot, { backgroundColor: isOnline ? T.success : T.danger }]} />
             <Text style={styles.statusText}>{isOnline ? (busy ? 'typing…' : 'online') : 'offline, messages will queue'}</Text>
           </View>
         </View>
@@ -461,15 +462,15 @@ const ChatBotInterface = ({ onClose }) => {
             disabled={!canSend}
             activeOpacity={0.85}
           >
-            <Ionicons name="arrow-up" size={20} color={canSend ? GOLD : '#9a9a9a'} />
+            <Ionicons name="arrow-up" size={20} color={canSend ? GOLD : T.textFaint} />
           </TouchableOpacity>
         </View>
-        <View style={{ height: bottomSpacer, backgroundColor: '#fff' }} />
+        <View style={{ height: bottomSpacer, backgroundColor: T.card }} />
       </View>
 
       {/* history inside the same sheet */}
       {showHistory ? (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: '#fff', paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: T.card, paddingTop: insets.top, paddingBottom: insets.bottom }]}>
           <ChatHistoryPanel onClose={() => setShowHistory(false)} onSelect={() => setShowHistory(false)} onNewChat={newChat} />
         </View>
       ) : null}
@@ -478,7 +479,7 @@ const ChatBotInterface = ({ onClose }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: T.card },
 
   header: {
     flexDirection: 'row',
@@ -486,7 +487,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f2f2f2',
+    borderBottomColor: T.line,
   },
   squareBtn: {
     width: 40,
@@ -501,10 +502,10 @@ const styles = StyleSheet.create({
   darkBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: DARK, justifyContent: 'center', alignItems: 'center' },
   headerMid: { flex: 1, marginLeft: 12 },
   headerRight: { flexDirection: 'row', gap: 8 },
-  title: { fontSize: 18, fontWeight: '900', color: DARK, letterSpacing: -0.3 },
+  title: { fontSize: 18, fontFamily: F.heading, color: DARK, letterSpacing: -0.3 },
   statusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
   statusDot: { width: 7, height: 7, borderRadius: 4, marginRight: 5 },
-  statusText: { fontSize: 11.5, color: MUTED, fontWeight: '600' },
+  statusText: { fontSize: 11.5, color: MUTED, fontFamily: F.bodySemi },
 
   list: { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 16 },
 
@@ -522,43 +523,43 @@ const styles = StyleSheet.create({
   },
   bubble: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18 },
   userBubble: { backgroundColor: DARK, borderBottomRightRadius: 6, maxWidth: '82%' },
-  userText: { color: '#fff', fontSize: 14.5, lineHeight: 20 },
-  queued: { fontSize: 11, color: MUTED, marginTop: 4, marginRight: 4 },
+  userText: { color: T.white, fontSize: 14.5, fontFamily: F.body, lineHeight: 20 },
+  queued: { fontSize: 11, fontFamily: F.body, color: MUTED, marginTop: 4, marginRight: 4 },
   botBubble: { backgroundColor: SOFT, borderBottomLeftRadius: 6, alignSelf: 'flex-start', maxWidth: '100%' },
-  warnBubble: { backgroundColor: '#fdecef' },
+  warnBubble: { backgroundColor: T.dangerBg },
 
   actions: { flexDirection: 'row', gap: 14, marginTop: 6, marginLeft: 6 },
   action: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  actionText: { fontSize: 11.5, color: MUTED, fontWeight: '700' },
+  actionText: { fontSize: 11.5, color: MUTED, fontFamily: F.bodyBold },
 
   dots: { flexDirection: 'row', gap: 5, paddingHorizontal: 2 },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: DARK },
 
   // markdown
-  mdLine: { fontSize: 14.5, color: '#222', lineHeight: 21 },
-  mdText: { color: '#222' },
-  mdBold: { fontWeight: '800', color: DARK },
-  link: { color: '#b7791f', fontWeight: '700', textDecorationLine: 'underline' },
-  h1: { fontSize: 17, fontWeight: '900', color: DARK, marginTop: 6, marginBottom: 4 },
-  h2: { fontSize: 15.5, fontWeight: '900', color: DARK, marginTop: 6, marginBottom: 3 },
-  h3: { fontSize: 14.5, fontWeight: '800', color: DARK, marginTop: 4, marginBottom: 2 },
+  mdLine: { fontSize: 14.5, fontFamily: F.body, color: T.ink, lineHeight: 21 },
+  mdText: { color: T.ink },
+  mdBold: { fontFamily: F.bodyBold, color: DARK },
+  link: { color: '#b7791f', fontFamily: F.bodyBold, textDecorationLine: 'underline' },
+  h1: { fontSize: 17, fontFamily: F.bodyBold, color: DARK, marginTop: 6, marginBottom: 4 },
+  h2: { fontSize: 15.5, fontFamily: F.bodyBold, color: DARK, marginTop: 6, marginBottom: 3 },
+  h3: { fontSize: 14.5, fontFamily: F.bodyBold, color: DARK, marginTop: 4, marginBottom: 2 },
   bulletRow: { flexDirection: 'row', marginVertical: 2, paddingRight: 4 },
-  bulletMark: { width: 18, fontSize: 14.5, color: DARK, fontWeight: '800', lineHeight: 21 },
-  code: { backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 10, padding: 10, marginVertical: 6 },
+  bulletMark: { width: 18, fontSize: 14.5, color: DARK, fontFamily: F.bodyBold, lineHeight: 21 },
+  code: { backgroundColor: T.card, borderWidth: 1, borderColor: BORDER, borderRadius: 10, padding: 10, marginVertical: 6 },
   codeText: { fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 12.5, color: DARK },
-  tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#e9e9e9', paddingVertical: 6 },
-  tableCell: { flex: 1, fontSize: 12.5, color: '#333', paddingHorizontal: 3 },
+  tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: T.line, paddingVertical: 6 },
+  tableCell: { flex: 1, fontSize: 12.5, fontFamily: F.body, color: T.ink, paddingHorizontal: 3 },
 
   // welcome
   welcome: { flex: 1, paddingTop: 18 },
   welcomeIcon: { width: 56, height: 56, borderRadius: 18, backgroundColor: DARK, justifyContent: 'center', alignItems: 'center' },
-  welcomeTitle: { fontSize: 26, fontWeight: '900', color: DARK, letterSpacing: -0.6, marginTop: 16 },
-  welcomeSub: { fontSize: 14.5, color: TEXT2, lineHeight: 21, marginTop: 6 },
+  welcomeTitle: { fontSize: 26, fontFamily: F.heading, color: DARK, letterSpacing: -0.6, marginTop: 16 },
+  welcomeSub: { fontSize: 14.5, fontFamily: F.body, color: TEXT2, lineHeight: 21, marginTop: 6 },
   sectionLabel: {
     fontSize: 12,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: MUTED,
-    textTransform: 'uppercase',
+    textTransform: 'none',
     letterSpacing: 0.8,
     marginTop: 24,
     marginBottom: 10,
@@ -566,20 +567,20 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
   starter: {
     width: '48.5%',
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#efefef',
+    borderColor: T.line,
     padding: 13,
-    shadowColor: '#000',
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 1,
   },
   starterIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: DARK, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  starterTitle: { fontSize: 13.5, fontWeight: '800', color: DARK },
-  starterSub: { fontSize: 11.5, color: MUTED, marginTop: 2 },
+  starterTitle: { fontSize: 13.5, fontFamily: F.bodyBold, color: DARK },
+  starterSub: { fontSize: 11.5, fontFamily: F.body, color: MUTED, marginTop: 2 },
 
   // suggestions + input
   suggestions: { paddingHorizontal: 14, paddingVertical: 8, gap: 8 },
@@ -593,7 +594,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     maxWidth: 260,
   },
-  chipText: { fontSize: 13, fontWeight: '700', color: DARK },
+  chipText: { fontSize: 13, fontFamily: F.bodyBold, color: DARK },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -601,9 +602,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 10,
-    backgroundColor: '#fff',
+    backgroundColor: T.card,
     borderTopWidth: 1,
-    borderTopColor: '#f2f2f2',
+    borderTopColor: T.line,
   },
   inputWrap: {
     flex: 1,
@@ -616,9 +617,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     justifyContent: 'center',
   },
-  input: { fontSize: 15, color: DARK, paddingTop: Platform.OS === 'ios' ? 12 : 8, paddingBottom: Platform.OS === 'ios' ? 12 : 8, maxHeight: 110 },
+  input: { fontSize: 15, fontFamily: F.body, color: DARK, paddingTop: Platform.OS === 'ios' ? 12 : 8, paddingBottom: Platform.OS === 'ios' ? 12 : 8, maxHeight: 110 },
   send: { width: 46, height: 46, borderRadius: 23, backgroundColor: DARK, justifyContent: 'center', alignItems: 'center' },
-  sendOff: { backgroundColor: '#e9e9e9' },
+  sendOff: { backgroundColor: T.sand },
 });
 
 export default ChatBotInterface;

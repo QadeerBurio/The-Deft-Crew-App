@@ -29,13 +29,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { ChatContext } from '../context/ChatContext';
 
-const DARK = '#1a1a1a';
-const GOLD = '#f9c349';
-const GOLD_SOFT = '#fff8e6';
-const SOFT = '#F7F9F8';
-const BORDER = '#E8E8E8';
-const MUTED = '#8a8a8a';
-const DANGER = '#e11d48';
+import { color as T, font as F } from "../theme/tokens";
+const DARK = T.ink;
+const GOLD = T.yellow;
+const GOLD_SOFT = T.yellowSoft;
+const SOFT = T.sand;
+const BORDER = T.line;
+const MUTED = T.textFaint;
+const DANGER = T.danger;
 
 const PINS_KEY = '@tdc_chat_pins';
 
@@ -168,10 +169,10 @@ export function ChatHistoryPanel({ onClose, onSelect, onNewChat, asScreen }) {
           </Text>
         </View>
         <TouchableOpacity onPress={() => togglePin(item.sessionId)} hitSlop={8} style={styles.iconBtn}>
-          <Ionicons name={item._pinned ? 'pin' : 'pin-outline'} size={17} color={item._pinned ? '#b7791f' : '#b5b5b5'} />
+          <Ionicons name={item._pinned ? 'pin' : 'pin-outline'} size={17} color={item._pinned ? '#b7791f' : T.textFaint} />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => remove(item)} hitSlop={8} style={styles.iconBtn}>
-          <Ionicons name="trash-outline" size={17} color="#c4c4c4" />
+          <Ionicons name="trash-outline" size={17} color={T.textFaint} />
         </TouchableOpacity>
       </TouchableOpacity>
     );
@@ -179,7 +180,7 @@ export function ChatHistoryPanel({ onClose, onSelect, onNewChat, asScreen }) {
 
   return (
     <View style={styles.panel}>
-      {asScreen ? <StatusBar barStyle="dark-content" backgroundColor="#fff" /> : null}
+      {asScreen ? <StatusBar barStyle="dark-content" backgroundColor={T.paper} /> : null}
       <View style={styles.header}>
         <TouchableOpacity onPress={onClose} style={styles.squareBtn} activeOpacity={0.7} hitSlop={10}>
           <Ionicons name={asScreen ? 'chevron-back' : 'close'} size={21} color={DARK} />
@@ -261,7 +262,7 @@ export default function ChatHistoryScreen() {
   const { startNewSession } = useContext(ChatContext);
   const back = () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('HomeTabs'));
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['top', 'bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: T.card }} edges={['top', 'bottom']}>
       <ChatHistoryPanel
         asScreen
         onClose={back}
@@ -276,7 +277,7 @@ export default function ChatHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  panel: { flex: 1, backgroundColor: '#fff' },
+  panel: { flex: 1, backgroundColor: T.card },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -295,7 +296,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   newBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: DARK, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 20, fontWeight: '900', color: DARK, letterSpacing: -0.3 },
+  title: { fontSize: 20, fontFamily: F.heading, color: DARK, letterSpacing: -0.3 },
 
   searchWrap: { paddingHorizontal: 16, paddingTop: 2, paddingBottom: 6 },
   search: {
@@ -309,15 +310,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: BORDER,
   },
-  searchOn: { borderColor: DARK, backgroundColor: '#fff' },
-  searchInput: { flex: 1, fontSize: 15, color: DARK, paddingVertical: 0 },
+  searchOn: { borderColor: DARK, backgroundColor: T.card },
+  searchInput: { flex: 1, fontSize: 15, fontFamily: F.body, color: DARK, paddingVertical: 0 },
 
   list: { paddingHorizontal: 10, paddingBottom: 30 },
   section: {
     fontSize: 12,
-    fontWeight: '800',
+    fontFamily: F.bodyBold,
     color: MUTED,
-    textTransform: 'uppercase',
+    textTransform: 'none',
     letterSpacing: 0.8,
     marginTop: 14,
     marginBottom: 4,
@@ -327,18 +328,18 @@ const styles = StyleSheet.create({
   rowActive: { backgroundColor: GOLD_SOFT },
   rowIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: SOFT, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   rowIconPinned: { backgroundColor: GOLD },
-  rowTitle: { fontSize: 14.5, fontWeight: '700', color: DARK },
-  rowMeta: { fontSize: 12, color: MUTED, marginTop: 3, fontWeight: '600' },
+  rowTitle: { fontSize: 14.5, fontFamily: F.bodyBold, color: DARK },
+  rowMeta: { fontSize: 12, color: MUTED, marginTop: 3, fontFamily: F.bodySemi },
   iconBtn: { padding: 6, marginLeft: 2 },
 
   skRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11 },
-  skIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: '#f0f0f0', marginRight: 12 },
-  skLine: { height: 13, borderRadius: 6, backgroundColor: '#f0f0f0' },
+  skIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: T.sand, marginRight: 12 },
+  skLine: { height: 13, borderRadius: 6, backgroundColor: T.sand },
 
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingBottom: 60 },
   emptyIcon: { width: 72, height: 72, borderRadius: 22, backgroundColor: GOLD_SOFT, justifyContent: 'center', alignItems: 'center', marginBottom: 14 },
-  emptyTitle: { fontSize: 18, fontWeight: '900', color: DARK },
-  emptySub: { fontSize: 13.5, color: MUTED, marginTop: 6, textAlign: 'center', lineHeight: 19 },
+  emptyTitle: { fontSize: 18, fontFamily: F.heading, color: DARK },
+  emptySub: { fontSize: 13.5, fontFamily: F.body, color: MUTED, marginTop: 6, textAlign: 'center', lineHeight: 19 },
   emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 18, backgroundColor: DARK, height: 44, paddingHorizontal: 18, borderRadius: 14 },
-  emptyBtnText: { color: '#fff', fontSize: 14, fontWeight: '800' },
+  emptyBtnText: { color: T.white, fontSize: 14, fontFamily: F.bodyBold },
 });
