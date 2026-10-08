@@ -14,7 +14,9 @@ import {
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "../ui/FlatGradient"; // flat fills (design system)
+import PressScale from "../ui/PressScale";
+import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { MaterialCommunityIcons, Ionicons, FontAwesome5, Feather, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
@@ -109,7 +111,7 @@ const DashboardSkeleton = () => {
     });
 
     return (
-      <View style={[style, { overflow: 'hidden', backgroundColor: '#F1F5F9' }]}>
+      <View style={[style, { overflow: 'hidden', backgroundColor: T.sand }]}>
         <Animated.View
           style={{
             position: 'absolute',
@@ -607,143 +609,133 @@ const Explore = () => {
 
   if (loading && showSkeleton) return <DashboardSkeleton />;
 
+  const go = (routeName) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    navigation.navigate(routeName);
+  };
+  const moodFor = (routeName) => {
+    const missionKey = getMissionKey(routeName);
+    return { missionKey, sorted: !!missionKey && sortedFeatureIds.has(missionKey) };
+  };
+  const brands = moodFor('Brands');
+  const events = moodFor('Events');
+  const travel = moodFor('Travelling');
+  const social = moodFor('Social');
+
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      <ParticleBackground />
-      <Animated.View style={[styles.glowTop, { opacity: glowTopOpacity }]} />
-      <Animated.View style={[styles.glowBottom, { opacity: glowBottomOpacity }]} />
+      <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: 110 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              tintColor="#f9c349"
-              colors={['#f9c349']}
+              tintColor={T.ink}
+              colors={[T.ink]}
               progressViewOffset={20}
             />
           }
         >
           {/* Header */}
           <Animated.View
-            style={[
-              styles.header,
-              { opacity: headerOpacity, transform: [{ translateY: headerSlide }] },
-            ]}
+            style={[styles.header, { opacity: headerOpacity, transform: [{ translateY: headerSlide }] }]}
           >
-            <View>
-              <View style={styles.brandRow}>
-                <Text style={styles.brandTitle}>tdc<Text style={{color:'#f9c349'}}>.</Text></Text>
-              </View>
-              <View style={styles.subBadge}>
-                <View style={styles.subBadgeDot} />
-                <Text style={styles.brandSubtitle}>STUDENT HUB</Text>
-              </View>
+            <Text style={styles.kicker} maxFontSizeMultiplier={MAX_FONT_SCALE}>student hub</Text>
+            <Text style={styles.title} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+              explore<Text style={{ color: T.yellow }}>.</Text>
+            </Text>
+          </Animated.View>
+
+          <Animated.View style={{ opacity: sectionFade }}>
+            {/* Discounts hero */}
+            <View style={styles.section}>
+              <PressScale
+                onPress={() => go('Brands')}
+                style={styles.hero}
+                accessibilityLabel="exclusive discounts, see brands"
+              >
+                <View style={styles.heroIconRow}>
+                  <View style={styles.heroIcon}>
+                    <FontAwesome5 name="tags" size={18} color={T.yellow} />
+                    {brands.missionKey && <FeatureDot missionKey={brands.missionKey} sorted={brands.sorted} />}
+                  </View>
+                </View>
+                <Text style={styles.heroKicker} maxFontSizeMultiplier={MAX_FONT_SCALE}>exclusive discounts</Text>
+                <Text style={styles.heroTitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                  always broke<Text style={{ color: T.yellow }}>?</Text>
+                </Text>
+                <Text style={styles.heroLine} maxFontSizeMultiplier={MAX_FONT_SCALE}>flat student off at partner brands.</Text>
+                <View style={styles.heroBtn}>
+                  <Text style={styles.heroBtnText} maxFontSizeMultiplier={MAX_FONT_SCALE}>see brands</Text>
+                </View>
+              </PressScale>
             </View>
-            <View style={styles.headerRight}>
-              <View style={styles.headerBadge}>
-                <Text style={styles.headerBadgeText}>🎓 STUDENT</Text>
-              </View>
+
+            {/* Events + travel tiles */}
+            <View style={styles.tiles}>
+              <PressScale
+                onPress={() => go('Events')}
+                containerStyle={styles.tileWrap}
+                style={styles.tile}
+                accessibilityLabel="events hub, what's on near you"
+              >
+                <View style={[styles.tileIcon, { backgroundColor: T.sand }]}>
+                  <Ionicons name="calendar-outline" size={22} color={T.ink} />
+                  {events.missionKey && <FeatureDot missionKey={events.missionKey} sorted={events.sorted} />}
+                </View>
+                <View>
+                  <Text style={styles.tileKicker} maxFontSizeMultiplier={MAX_FONT_SCALE}>events hub</Text>
+                  <Text style={styles.tileTitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                    {"what's on near you"}<Text style={{ color: T.yellow }}>.</Text>
+                  </Text>
+                </View>
+              </PressScale>
+
+              <PressScale
+                onPress={() => go('Travelling')}
+                containerStyle={styles.tileWrap}
+                style={[styles.tile, { backgroundColor: T.yellowSoft }]}
+                accessibilityLabel="travel, plan trips with ai"
+              >
+                <View style={[styles.tileIcon, { backgroundColor: T.card }]}>
+                  <MaterialIcons name="travel-explore" size={22} color={T.ink} />
+                  {travel.missionKey && <FeatureDot missionKey={travel.missionKey} sorted={travel.sorted} />}
+                </View>
+                <View>
+                  <Text style={styles.tileKicker} maxFontSizeMultiplier={MAX_FONT_SCALE}>travel</Text>
+                  <Text style={styles.tileTitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                    plan trips with ai<Text style={{ color: T.ink }}>.</Text>
+                  </Text>
+                </View>
+              </PressScale>
             </View>
           </Animated.View>
 
-          {/* Welcome Message */}
-          <Animated.View style={[styles.welcomeContainer, { opacity: sectionFade }]}>
-            <Text style={styles.welcomeSub}>Explore exclusive features designed just for you</Text>
-          </Animated.View>
-
-          {/* Section Label */}
+          {/* Social row */}
           <Animated.View
-            style={[styles.sectionLabelContainer, { opacity: sectionFade }]}
+            style={[styles.section, { paddingTop: 10, opacity: footerOpacity, transform: [{ translateY: footerSlide }] }]}
           >
-            <View style={styles.sectionLine} />
-            <Text style={styles.sectionLabel}>EXPLORE FEATURES</Text>
-            <View style={styles.sectionLine} />
-          </Animated.View>
-
-          {/* Grid */}
-          <View style={styles.gridContainer}>
-            <View style={styles.gridColumn}>
-              {menuItems
-                .filter((_, i) => i % 2 === 0)
-                .map((item, index) => {
-                  const missionKey = getMissionKey(item.routeName);
-                  const sorted = missionKey && sortedFeatureIds.has(missionKey);
-                  return (
-                    <AnimatedGridCard
-                      key={item.id}
-                      item={item}
-                      index={index * 2}
-                      navigation={navigation}
-                      missionKey={missionKey}
-                      sorted={sorted}
-                    />
-                  );
-                })}
-            </View>
-            <View style={[styles.gridColumn, { marginTop: 25 }]}>
-              {menuItems
-                .filter((_, i) => i % 2 !== 0)
-                .map((item, index) => {
-                  const missionKey = getMissionKey(item.routeName);
-                  const sorted = missionKey && sortedFeatureIds.has(missionKey);
-                  return (
-                    <AnimatedGridCard
-                      key={item.id}
-                      item={item}
-                      index={index * 2 + 1}
-                      navigation={navigation}
-                      missionKey={missionKey}
-                      sorted={sorted}
-                    />
-                  );
-                })}
-            </View>
-          </View>
-
-          {/* Quick Stats */}
-          <Animated.View
-            style={[
-              styles.statsContainer,
-              { opacity: footerOpacity, transform: [{ translateY: footerSlide }] },
-            ]}
-          >
-            <View style={styles.statItem}>
-              <LinearGradient
-                colors={['rgba(249, 195, 73, 0.12)', 'rgba(245, 158, 11, 0.12)']}
-                style={styles.statIconBox}
-              >
-                <FontAwesome5 name="tags" size={18} color="#f9c349" />
-              </LinearGradient>
-              <Text style={styles.statNumber}>100+</Text>
-              <Text style={styles.statLabel}>Discounts</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <LinearGradient
-                colors={['rgba(236, 72, 153, 0.12)', 'rgba(244, 63, 94, 0.12)']}
-                style={styles.statIconBox}
-              >
-                <Ionicons name="calendar" size={18} color="#ec4899" />
-              </LinearGradient>
-              <Text style={styles.statNumber}>25+</Text>
-              <Text style={styles.statLabel}>Events</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <LinearGradient
-                colors={['rgba(139, 92, 246, 0.12)', 'rgba(109, 40, 217, 0.12)']}
-                style={styles.statIconBox}
-              >
-                <MaterialCommunityIcons name="account-multiple" size={18} color="#8b5cf6" />
-              </LinearGradient>
-              <Text style={styles.statNumber}>500+</Text>
-              <Text style={styles.statLabel}>Connections</Text>
-            </View>
+            <PressScale
+              onPress={() => go('Social')}
+              style={styles.row}
+              accessibilityLabel="social connect, post, confess, connect"
+            >
+              <View style={[styles.tileIcon, { backgroundColor: T.sand }]}>
+                <MaterialCommunityIcons name="account-multiple-outline" size={22} color={T.ink} />
+                {social.missionKey && <FeatureDot missionKey={social.missionKey} sorted={social.sorted} />}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.tileKicker} maxFontSizeMultiplier={MAX_FONT_SCALE}>social connect</Text>
+                <Text style={styles.tileTitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                  post, confess, connect<Text style={{ color: T.yellow }}>.</Text>
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={T.textFaint} />
+            </PressScale>
           </Animated.View>
         </ScrollView>
       </SafeAreaView>
@@ -753,262 +745,87 @@ const Explore = () => {
 
 // ─── Styles ──────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: T.paper },
   particle: { position: 'absolute', borderRadius: 50 },
 
-  glowTop: {
-    position: 'absolute',
-    top: -150,
-    right: -50,
-    width: 400,
-    height: 350,
-    borderRadius: 200,
-    backgroundColor: '#f9c349',
-  },
-  glowBottom: {
-    position: 'absolute',
-    bottom: -100,
-    left: -100,
-    width: 400,
-    height: 370,
-    borderRadius: 200,
-    backgroundColor: '#f9c349',
-  },
+  // header
+  header: { paddingHorizontal: 20, paddingTop: 22 },
+  kicker: { fontFamily: F.bodyBold, fontSize: 12, color: T.textMuted },
+  title: { fontFamily: F.heading, fontSize: 32, letterSpacing: -1, color: T.ink, marginTop: 2 },
 
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'android' ? 18 : 12,
-    marginBottom: 8,
-  },
-  brandRow: { flexDirection: 'row', alignItems: 'baseline' },
-  brandTitle: {
-    fontSize: 36,
-    fontWeight: '900',
-    color: '#0F172A',
-    letterSpacing: -1.5,
-  },
-  subBadge: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  subBadgeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#f9c349',
-    marginRight: 8,
-  },
-  brandSubtitle: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#94A3B8',
-    letterSpacing: 2,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerBadge: {
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-  },
-  headerBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#D97706',
-    letterSpacing: 0.5,
-  },
+  section: { paddingHorizontal: 16, paddingTop: 16 },
 
-  welcomeContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 20,
-    marginTop: 4,
-  },
-  welcomeTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#0F172A',
-    letterSpacing: -0.5,
-  },
-  welcomeSub: {
-    fontSize: 13,
-    color: '#94A3B8',
-    marginTop: 4,
-    fontWeight: '500',
-  },
-
-  sectionLabelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  sectionLine: { flex: 1, height: 1, backgroundColor: '#E2E8F0' },
-  sectionLabel: {
-    color: '#94A3B8',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 2.5,
-    marginHorizontal: 15,
-  },
-
-  gridContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  gridColumn: { width: COLUMN_WIDTH },
-  gridItem: { width: '100%', marginBottom: 20 },
-  cardGlow: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    right: -8,
-    bottom: -8,
-    borderRadius: 32,
-    opacity: 0.1,
-    zIndex: -1,
-  },
-  whiteCard: {
-    flex: 1,
+  // hero (dark)
+  hero: {
+    minHeight: 176,
     borderRadius: 28,
+    backgroundColor: T.ink,
     padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#F1F5F9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 4,
-    position: 'relative',
     overflow: 'hidden',
   },
-  cardDecorLine: {
-    position: 'absolute',
-    top: 0,
-    left: 28,
-    right: 28,
-    height: 2.5,
-    borderRadius: 1.5,
-    overflow: 'hidden',
+  heroIconRow: { flexDirection: 'row', justifyContent: 'flex-end', position: 'absolute', top: 18, right: 18 },
+  heroIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: T.inkSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  decorLineInner: { width: '100%', height: '100%' },
-
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-  },
-  // 🆕 wrapper so the mood dot can absolutely position on the icon's top-right
-  iconCircleWrap: {
-    position: 'relative',
-    overflow: 'visible',
-  },
-  iconCircle: {
-    width: 52,
-    height: 52,
+  heroKicker: { fontFamily: F.bodyBold, fontSize: 11.5, color: T.yellow },
+  heroTitle: { fontFamily: F.heading, fontSize: 28, lineHeight: 30, color: T.white, marginTop: 8, maxWidth: 210 },
+  heroLine: { fontFamily: F.body, fontSize: 14, color: T.onInkMuted, marginTop: 6 },
+  heroBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 16,
+    height: 36,
+    paddingHorizontal: 14,
     borderRadius: 18,
+    backgroundColor: T.yellow,
     justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
   },
-  cardNumberBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#F8FAFC',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-  },
-  cardNumberText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#0F172A',
-    letterSpacing: 0.5,
-  },
-  cardInfo: { flex: 1, justifyContent: 'flex-end' },
-  cardMainText: {
-    color: '#0F172A',
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-  cardSubText: {
-    color: '#94A3B8',
-    fontSize: 13,
-    marginTop: 4,
-    fontWeight: '600',
-  },
-  plusIcon: {
-    position: 'absolute',
-    bottom: 5,
-    right: 2,
-    width: 34,
-    height: 34,
-    borderRadius: 12,
-    backgroundColor: '#F8FAFC',
-    justifyContent: 'center',
-    alignItems: 'center',
+  heroBtnText: { fontFamily: F.bodyBold, fontSize: 13, color: T.ink },
+
+  // tiles
+  tiles: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingTop: 10 },
+  tileWrap: { flex: 1 },
+  tile: {
+    minHeight: 168,
+    borderRadius: 26,
+    backgroundColor: T.card,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    overflow: 'hidden',
+    borderColor: T.line,
+    padding: 16,
+    justifyContent: 'space-between',
   },
-  plusGradient: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
-    justifyContent: 'center',
+  tileIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  tileKicker: { fontFamily: F.bodyBold, fontSize: 11.5, color: T.textMuted },
+  tileTitle: { fontFamily: F.heading, fontSize: 19, lineHeight: 21, color: T.ink, marginTop: 4 },
+
+  // social row
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 16,
+    borderRadius: 26,
+    backgroundColor: T.card,
+    borderWidth: 1,
+    borderColor: T.line,
   },
 
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginHorizontal: 24,
-    marginTop: 5,
-    marginBottom: 25,
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  statItem: { flex: 1, alignItems: 'center' },
-  statIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 2,
-  },
-  statLabel: { fontSize: 11, color: '#94A3B8', fontWeight: '600' },
-  statDivider: { width: 1, height: 45, backgroundColor: '#F1F5F9' },
+  // skeleton (DashboardSkeleton)
+  sectionLabelContainer: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, marginTop: 20, gap: 12 },
+  sectionLine: { flex: 1, height: 1, backgroundColor: T.line },
+  gridContainer: { flexDirection: 'row', paddingHorizontal: 20, gap: 20, marginTop: 20 },
+  gridColumn: { flex: 1 },
 });
 
 export default Explore;
