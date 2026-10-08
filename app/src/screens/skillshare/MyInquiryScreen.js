@@ -1,5 +1,5 @@
 // screens/MyInquiriesScreen.js
-import React, { useState, useEffect, useContext, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useContext, useCallback, useRef, useMemo, memo } from 'react';
 import {
   View,
   Text,
@@ -8,213 +8,164 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  SafeAreaView,
   StatusBar,
-  Animated,
-  Dimensions,
   Platform,
-  Alert
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../../context/AuthContext';
 import { getMyInquiries } from '../../api/api';
 import { timeAgo } from '../../utils/time';
+import { goToAuth } from '../../utils/goToAuth';
 
-const { width, height } = Dimensions.get('window');
+// last inquiries per user, so returning to this screen is instant
+const inquiriesCache = new Map();
 
-// Create a separate component for Inquiry Item with animations
-const InquiryItem = React.memo(({ item, index, onPress }) => {
-  const itemFadeAnim = useRef(new Animated.Value(0)).current;
-  const itemSlideAnim = useRef(new Animated.Value(20)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(itemFadeAnim, {
-        toValue: 1,
-        duration: 400,
-        delay: index * 80,
-        useNativeDriver: true,
-      }),
-      Animated.spring(itemSlideAnim, {
-        toValue: 0,
-        friction: 7,
-        tension: 35,
-        delay: index * 80,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 5,
-        tension: 40,
-        delay: index * 80,
-        useNativeDriver: true,
-      })
-    ]).start();
-  }, []);
-
+const InquiryItem = memo(function InquiryItem({ item, onPress }) {
   const isActive = item.status === 'active';
   const listing = item.listingId || {};
-  
-  const getStatusColor = () => {
-    if (isActive) return '#34C759';
-    return '#8E8E93';
-  };
-
-  const getStatusIcon = () => {
-    if (isActive) return 'chatbubble-ellipses-outline';
-    return 'checkmark-done-outline';
-  };
-
-  const getStatusLabel = () => {
-    if (isActive) return 'Active';
-    return 'Resolved';
-  };
+  const statusColor = isActive ? '#34C759' : '#8E8E93';
+  const statusIcon = isActive ? 'chatbubble-ellipses-outline' : 'checkmark-done-outline';
+  const statusLabel = isActive ? 'Active' : 'Resolved';
+  const open = () => onPress(item);
 
   return (
-    <Animated.View
-      style={{
-        opacity: itemFadeAnim,
-        transform: [{ translateY: itemSlideAnim }, { scale: scaleAnim }]
-      }}
+    <TouchableOpacity
+      style={styles.inquiryCard}
+      onPress={open}
+      activeOpacity={0.8}
     >
-      <TouchableOpacity
-        style={styles.inquiryCard}
-        onPress={() => onPress(item)}
-        activeOpacity={0.8}
+      <LinearGradient
+        colors={['#FFFFFF', isActive ? '#FFF8F0' : '#FFFFFF']}
+        style={styles.cardGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
       >
-        <LinearGradient
-          colors={['#FFFFFF', isActive ? '#FFF8F0' : '#FFFFFF']}
-          style={styles.cardGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+        <View style={styles.inquiryHeader}>
+          <View style={styles.inquiryTitleContainer}>
+            <Text style={styles.inquiryTitle} numberOfLines={1}>
+              {listing.title || 'Untitled Listing'}
+            </Text>
+            <View style={[styles.statusBadge, { backgroundColor: statusColor + '15' }]}>
+              <Ionicons name={statusIcon} size={12} color={statusColor} />
+              <Text style={[styles.statusText, { color: statusColor }]}>
+                {statusLabel}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.listingTypeContainer}>
+          <View style={styles.typeBadge}>
+            <Ionicons name="document-text-outline" size={12} color="#8E8E93" />
+            <Text style={styles.listingType}>
+              {listing.type ? listing.type.charAt(0).toUpperCase() + listing.type.slice(1) : 'Listing'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.inquiryDetails}>
+          <View style={styles.detailRow}>
+            <Ionicons name="time-outline" size={14} color="#8E8E93" />
+            <Text style={styles.inquiryInfo}>
+              Started: <Text style={styles.inquiryInfoValue}>{timeAgo(item.createdAt)}</Text>
+            </Text>
+          </View>
+
+          {!!item.lastMessage && (
+            <View style={styles.messageContainer}>
+              <Ionicons name="chatbubble-outline" size={14} color="#8E8E93" />
+              <Text style={styles.lastMessage} numberOfLines={2}>
+                {item.lastMessage}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={styles.chatButton}
+          onPress={open}
+          activeOpacity={0.7}
         >
-          <View style={styles.inquiryHeader}>
-            <View style={styles.inquiryTitleContainer}>
-              <Text style={styles.inquiryTitle} numberOfLines={1}>
-                {listing.title || 'Untitled Listing'}
-              </Text>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor() + '15' }]}>
-                <Ionicons name={getStatusIcon()} size={12} color={getStatusColor()} />
-                <Text style={[styles.statusText, { color: getStatusColor() }]}>
-                  {getStatusLabel()}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.listingTypeContainer}>
-            <View style={styles.typeBadge}>
-              <Ionicons name="document-text-outline" size={12} color="#8E8E93" />
-              <Text style={styles.listingType}>
-                {listing.type ? listing.type.charAt(0).toUpperCase() + listing.type.slice(1) : 'Listing'}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.inquiryDetails}>
-            <View style={styles.detailRow}>
-              <Ionicons name="time-outline" size={14} color="#8E8E93" />
-              <Text style={styles.inquiryInfo}>
-                Started: <Text style={styles.inquiryInfoValue}>{timeAgo(item.createdAt)}</Text>
-              </Text>
-            </View>
-
-            {item.lastMessage && (
-              <View style={styles.messageContainer}>
-                <Ionicons name="chatbubble-outline" size={14} color="#8E8E93" />
-                <Text style={styles.lastMessage} numberOfLines={2}>
-                  {item.lastMessage}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          <TouchableOpacity
-            style={styles.chatButton}
-            onPress={() => onPress(item)}
-            activeOpacity={0.7}
+          <LinearGradient
+            colors={['#f9c349', '#f7b731']}
+            style={styles.chatGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
           >
-            <LinearGradient
-              colors={['#f9c349', '#f7b731']}
-              style={styles.chatGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Ionicons name="chatbubble-ellipses-outline" size={18} color="#FFFFFF" />
-              <Text style={styles.chatButtonText}>Open Chat</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </LinearGradient>
-      </TouchableOpacity>
-    </Animated.View>
+            <Ionicons name="chatbubble-ellipses-outline" size={18} color="#FFFFFF" />
+            <Text style={styles.chatButtonText}>Open Chat</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </LinearGradient>
+    </TouchableOpacity>
   );
 });
 
 export default function MyInquiriesScreen({ navigation }) {
-  const { getCurrentUserId, isGuest } = useContext(AuthContext);
-  const [inquiries, setInquiries] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { getCurrentUserId, isGuest, setIsGuest } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
+  const userId = getCurrentUserId();
+  const cached = userId && !isGuest ? inquiriesCache.get(userId) : null;
+  const [inquiries, setInquiries] = useState(cached || []);
+  const [loading, setLoading] = useState(!cached);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const inFlightRef = useRef(false);
+  const mountedRef = useRef(true);
 
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
-
-  const userId = getCurrentUserId();
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      })
-    ]).start();
-  }, []);
+  useEffect(() => () => { mountedRef.current = false; }, []);
 
   const fetchInquiries = useCallback(async () => {
     if (!userId || isGuest) {
       setLoading(false);
+      setRefreshing(false);
       return;
     }
+    if (inFlightRef.current) { setRefreshing(false); return; }
+    inFlightRef.current = true;
 
     try {
       setError(null);
       const data = await getMyInquiries();
-      setInquiries(data.inquiries || []);
+      const list = data?.inquiries || [];
+      inquiriesCache.set(userId, list);
+      if (mountedRef.current) setInquiries(list);
     } catch (err) {
       console.error('Error fetching inquiries:', err);
-      setError(err.message || 'Failed to load inquiries');
+      if (mountedRef.current) setError(err.message || 'Failed to load inquiries');
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      inFlightRef.current = false;
+      if (mountedRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [userId, isGuest]);
 
-  useEffect(() => {
+  // cached list shows instantly; refresh quietly every time the screen is shown
+  useFocusEffect(
+    useCallback(() => {
+      fetchInquiries();
+    }, [fetchInquiries])
+  );
+
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
     fetchInquiries();
   }, [fetchInquiries]);
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchInquiries();
-  };
+  const goBack = useCallback(() => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('DashboardMain');
+  }, [navigation]);
 
-  const handleInquiryPress = (item) => {
+  // 'Dashboard' is a drawer screen outside skillshare; browse lives in this stack
+  const goBrowse = useCallback(() => navigation.navigate('BrowseListings'), [navigation]);
+
+  const handleInquiryPress = useCallback((item) => {
     const listing = item.listingId || {};
     navigation.navigate('InquiryChat', {
       threadId: item.conversationId,
@@ -222,36 +173,28 @@ export default function MyInquiriesScreen({ navigation }) {
       otherParticipantId: listing.ownerId,
       listingId: listing._id
     });
-  };
+  }, [navigation]);
 
-  const getStatusCounts = () => {
+  const renderItem = useCallback(({ item }) => (
+    <InquiryItem item={item} onPress={handleInquiryPress} />
+  ), [handleInquiryPress]);
+
+  const counts = useMemo(() => {
     const active = inquiries.filter(i => i.status === 'active').length;
     const resolved = inquiries.filter(i => i.status === 'resolved').length;
     return { active, resolved, total: inquiries.length };
-  };
-
-  const counts = getStatusCounts();
-
-  if (loading && !refreshing) {
-    return (
-      <SafeAreaView style={styles.centerContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-        <ActivityIndicator size="large" color="#f9c349" />
-        <Text style={styles.loadingText}>Loading your inquiries...</Text>
-      </SafeAreaView>
-    );
-  }
+  }, [inquiries]);
 
   if (isGuest) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
+      <SafeAreaView style={styles.centerContainer} edges={['top']}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <Ionicons name="person-outline" size={64} color="#C7C7CC" />
         <Text style={styles.emptyTitle}>Login Required</Text>
         <Text style={styles.emptySubtext}>Login to see your inquiries</Text>
         <TouchableOpacity
           style={styles.loginButton}
-          onPress={() => navigation.navigate('Login')}
+          onPress={() => goToAuth(setIsGuest)}
         >
           <LinearGradient
             colors={['#f9c349', '#f7b731']}
@@ -264,37 +207,38 @@ export default function MyInquiriesScreen({ navigation }) {
     );
   }
 
+  if (loading && inquiries.length === 0) {
+    return (
+      <SafeAreaView style={styles.centerContainer} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <ActivityIndicator size="large" color="#f9c349" />
+        <Text style={styles.loadingText}>Loading your inquiries...</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      
-      {/* Modern Header */}
+
       <View style={styles.headerBar}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={goBack}
           activeOpacity={0.7}
+          hitSlop={8}
         >
-          <Ionicons 
-            name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'} 
-            size={24} 
-            color="#1C1C1E" 
+          <Ionicons
+            name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'}
+            size={24}
+            color="#1C1C1E"
           />
         </TouchableOpacity>
         <Text style={styles.headerBarTitle}>My Inquiries</Text>
         <View style={styles.headerPlaceholder} />
       </View>
 
-      {/* Stats Cards */}
-      <Animated.View 
-        style={[
-          styles.statsContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }
-        ]}
-      >
+      <View style={styles.statsContainer}>
         <View style={styles.statsRow}>
           <LinearGradient
             colors={['#FFFFFF', '#F8F9FA']}
@@ -303,7 +247,7 @@ export default function MyInquiriesScreen({ navigation }) {
             <Text style={styles.statNumber}>{counts.total}</Text>
             <Text style={styles.statLabel}>Total Inquiries</Text>
           </LinearGradient>
-          
+
           <LinearGradient
             colors={['#FFFFFF', '#F0FFF4']}
             style={[styles.statCard, styles.statCardActive]}
@@ -321,51 +265,40 @@ export default function MyInquiriesScreen({ navigation }) {
             <Text style={[styles.statNumber, { color: '#AF52DE' }]}>{counts.resolved}</Text>
             <Text style={styles.statLabel}>Resolved</Text>
           </LinearGradient>
-          
+
           <LinearGradient
             colors={['#FFFFFF', '#FFF8F0']}
             style={[styles.statCard, styles.statCardBrowse]}
           >
             <TouchableOpacity
               style={styles.statCardButton}
-              onPress={() => navigation.navigate('Dashboard')}
+              onPress={goBrowse}
             >
               <Ionicons name="search-outline" size={32} color="#f9c349" />
               <Text style={styles.statCardButtonText}>Browse Listings</Text>
             </TouchableOpacity>
           </LinearGradient>
         </View>
-      </Animated.View>
+      </View>
 
-      {/* Inquiries List */}
-      <Animated.View 
-        style={[
-          styles.listContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }]
-          }
-        ]}
-      >
+      <View style={styles.listContainer}>
         <FlatList
           data={inquiries}
-          keyExtractor={(item) => item._id}
-          renderItem={({ item, index }) => (
-            <InquiryItem 
-              item={item} 
-              index={index} 
-              onPress={handleInquiryPress}
-            />
-          )}
-          contentContainerStyle={styles.listContent}
+          keyExtractor={(item, index) => String(item._id ?? item.conversationId ?? index)}
+          renderItem={renderItem}
+          contentContainerStyle={[styles.listContent, { paddingBottom: 20 + insets.bottom }]}
           refreshControl={
-            <RefreshControl 
-              refreshing={refreshing} 
+            <RefreshControl
+              refreshing={refreshing}
               onRefresh={handleRefresh}
               tintColor="#f9c349"
               colors={["#f9c349"]}
             />
           }
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={9}
+          removeClippedSubviews={Platform.OS === 'android'}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <LinearGradient
@@ -374,13 +307,13 @@ export default function MyInquiriesScreen({ navigation }) {
               >
                 <Ionicons name="chatbubbles-outline" size={64} color="#f9c349" />
               </LinearGradient>
-              <Text style={styles.emptyTitle}>No Inquiries Yet</Text>
+              <Text style={styles.emptyTitle}>{error ? 'could not load inquiries' : 'No Inquiries Yet'}</Text>
               <Text style={styles.emptySubtext}>
-                Browse listings and ask questions to start a conversation
+                {error ? 'pull down to try again' : 'Browse listings and ask questions to start a conversation'}
               </Text>
               <TouchableOpacity
                 style={styles.emptyButton}
-                onPress={() => navigation.navigate('Dashboard')}
+                onPress={goBrowse}
               >
                 <LinearGradient
                   colors={['#f9c349', '#f7b731']}
@@ -394,7 +327,7 @@ export default function MyInquiriesScreen({ navigation }) {
           }
           showsVerticalScrollIndicator={false}
         />
-      </Animated.View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -413,7 +346,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
-    marginTop:34
   },
   backButton: {
     width: 40,

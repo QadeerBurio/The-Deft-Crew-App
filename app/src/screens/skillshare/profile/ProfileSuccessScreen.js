@@ -1,15 +1,19 @@
 // screens/skillshare/profile/ProfileSuccessScreen.js
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Image,
-  SafeAreaView,
   StatusBar,
   ActivityIndicator,
+  ScrollView,
+  BackHandler,
+  Animated,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../../../context/AuthContext';
@@ -22,33 +26,70 @@ const MUTED = '#8E8E93';
 
 export default function ProfileSuccessScreen({ navigation }) {
   const { user } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const leavingRef = useRef(false);
+
+  // One-time, short pop-in for the check mark (stops on its own).
+  const pop = useRef(new Animated.Value(0.6)).current;
+  useEffect(() => {
+    if (loading) return;
+    Animated.spring(pop, { toValue: 1, friction: 6, tension: 120, useNativeDriver: true }).start();
+  }, [loading, pop]);
 
   useEffect(() => {
+    let alive = true;
     (async () => {
       try {
         const { profile } = await getMyProfessionalProfile();
-        setProfile(profile);
+        if (alive) setProfile(profile);
       } catch (err) {
         console.error('Failed to load completed profile:', err);
       } finally {
-        setLoading(false);
+        if (alive) setLoading(false);
       }
     })();
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  const goExplore = () => {
-    navigation.reset({ index: 0, routes: [{ name: 'DashboardMain' }] });
-  };
+  // The setup form is finished: no swiping or back-pressing into it again.
+  useEffect(() => {
+    navigation.setOptions({ gestureEnabled: false });
+  }, [navigation]);
 
-  const goViewProfile = () => {
-    navigation.navigate('ProfessionalProfile');
-  };
+  const goExplore = useCallback(() => {
+    if (leavingRef.current) return;
+    leavingRef.current = true;
+    navigation.reset({ index: 0, routes: [{ name: 'DashboardMain' }] });
+  }, [navigation]);
+
+  const goViewProfile = useCallback(() => {
+    if (leavingRef.current) return;
+    leavingRef.current = true;
+    // Dashboard stays underneath, so back from the profile lands there.
+    navigation.reset({
+      index: 1,
+      routes: [{ name: 'DashboardMain' }, { name: 'ProfessionalProfile' }],
+    });
+  }, [navigation]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        goExplore();
+        return true;
+      });
+      return () => sub.remove();
+    }, [goExplore])
+  );
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.center}>
+      <SafeAreaView style={styles.center} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FDF9F0" />
         <ActivityIndicator size="large" color={BRAND} />
       </SafeAreaView>
     );
@@ -58,12 +99,16 @@ export default function ProfileSuccessScreen({ navigation }) {
   const topSkills = (profile?.skills || []).slice(0, 3).map((s) => s.name || s);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FDF9F0" />
-      <View style={styles.content}>
-        <View style={styles.checkCircle}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 12) + 16 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View style={[styles.checkCircle, { transform: [{ scale: pop }] }]}>
           <Ionicons name="checkmark" size={36} color={INK} />
-        </View>
+        </Animated.View>
 
         <Text style={styles.title}>Your Professional{'\n'}Profile is Ready!</Text>
         <View style={styles.strengthRow}>
@@ -106,7 +151,7 @@ export default function ProfileSuccessScreen({ navigation }) {
         <TouchableOpacity style={styles.secondaryButton} onPress={goViewProfile} activeOpacity={0.7}>
           <Text style={styles.secondaryText}>View My Profile</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -114,7 +159,7 @@ export default function ProfileSuccessScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FDF9F0' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FDF9F0' },
-  content: { flex: 1, paddingHorizontal: 28, paddingTop: 60, alignItems: 'center' },
+  content: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 36, alignItems: 'center' },
   checkCircle: {
     width: 72, height: 72, borderRadius: 36, backgroundColor: BRAND,
     justifyContent: 'center', alignItems: 'center', marginBottom: 20,

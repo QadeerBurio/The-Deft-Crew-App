@@ -1,4 +1,4 @@
-// screens/MatchChat.js
+// screens/ChatMatch.js
 import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import {
   View,
@@ -7,16 +7,16 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   StatusBar,
-  Animated,
   Platform,
   Image,
   TextInput,
-  KeyboardAvoidingView,
   Keyboard,
   Dimensions
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+// works on Android edge-to-edge too (the app is wrapped in KeyboardProvider)
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getMatchConversation, getConversationMessages, markMessagesRead } from '../../api/api';
@@ -25,27 +25,18 @@ import { timeAgo } from '../../utils/time';
 
 const { width, height } = Dimensions.get('window');
 
-// Message Bubble Component - FIXED
+// last loaded thread per match, so reopening a chat is instant
+const threadCache = new Map();
+
+// Message Bubble Component
 const MessageBubble = React.memo(({ message, isOwn }) => {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    // Use useNativeDriver: false for opacity animations to avoid conflicts
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: false, // Changed to false
-    }).start();
-  }, []);
-
   const senderName = message.sender?.name || message.sender?.fullName || 'User';
 
   return (
-    <Animated.View
+    <View
       style={[
         styles.messageWrapper,
         isOwn ? styles.messageWrapperOwn : styles.messageWrapperOther,
-        { opacity: fadeAnim }
       ]}
     >
       {!isOwn && (
@@ -60,7 +51,7 @@ const MessageBubble = React.memo(({ message, isOwn }) => {
           </LinearGradient>
         </View>
       )}
-      
+
       <View style={[
         styles.messageBubble,
         isOwn ? styles.messageBubbleOwn : styles.messageBubbleOther
@@ -81,25 +72,27 @@ const MessageBubble = React.memo(({ message, isOwn }) => {
           {timeAgo(message.createdAt)}
         </Text>
       </View>
-    </Animated.View>
+    </View>
   );
 });
+
+const keyExtractor = (item, index) => String(item._id || item.id || `${item.createdAt}-${index}`);
 
 export default function ChatMatch({ route, navigation }) {
   const { getCurrentUserId } = useContext(AuthContext);
   const { matchId, listingId, otherUser, listing } = route.params || {};
-  
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const insets = useSafeAreaInsets();
+
+  const cached = matchId ? threadCache.get(matchId) : null;
+  const [messages, setMessages] = useState(cached?.messages || []);
+  const [loading, setLoading] = useState(!cached);
   const [sending, setSending] = useState(false);
   const [newMessage, setNewMessage] = useState('');
-  const [conversation, setConversation] = useState(null);
+  const [conversation, setConversation] = useState(cached?.conversation || null);
   const flatListRef = useRef(null);
   const inputRef = useRef(null);
-  
-  // FIXED: Use a different approach for send button animation
-  const sendScale = useRef(new Animated.Value(1)).current;
-  const isAnimating = useRef(false);
+  const sendingRef = useRef(false);
+  const mountedRef = useRef(true);
 
   const userId = getCurrentUserId();
 
@@ -108,35 +101,22 @@ export default function ChatMatch({ route, navigation }) {
   const displayImage = otherUser?.profileImage || null;
   const displayInitial = displayName.charAt(0).toUpperCase();
 
-  useEffect(() => {
-    fetchMessages();
-    
-    // Auto-scroll to bottom when keyboard appears
-    const keyboardDidShowListener = Keyboard.addListener(
-      'keyboardDidShow',
-      () => {
-        setTimeout(() => {
-          flatListRef.current?.scrollToEnd({ animated: true });
-        }, 100);
-      }
-    );
-    
-    return () => {
-      keyboardDidShowListener.remove();
-    };
+  useEffect(() => () => { mountedRef.current = false; }, []);
+
+  const scrollToEnd = useCallback((animated = true) => {
+    requestAnimationFrame(() => flatListRef.current?.scrollToEnd({ animated }));
   }, []);
 
   const fetchMessages = useCallback(async () => {
     try {
-      setLoading(true);
-      
-      let data;
       if (matchId) {
         // Fetch match conversation
-        data = await getMatchConversation(matchId);
+        const data = await getMatchConversation(matchId);
+        if (!mountedRef.current) return;
         setConversation(data.conversation);
         setMessages(data.messages || []);
-        
+        threadCache.set(matchId, { conversation: data.conversation, messages: data.messages || [] });
+
         // Mark messages as read
         if (data.messages && data.messages.length > 0) {
           const unreadMessages = data.messages
@@ -145,59 +125,57 @@ export default function ChatMatch({ route, navigation }) {
               return senderId !== userId && !m.isRead;
             })
             .map(m => m._id);
-          
+
           if (unreadMessages.length > 0 && data.conversation) {
-            await markMessagesRead(data.conversation._id, unreadMessages);
+            markMessagesRead(data.conversation._id, unreadMessages).catch(() => {});
           }
         }
       } else if (listingId) {
         // Alternative: fetch from listing
         // You might need to implement this endpoint
       }
-      
-      // Auto-scroll to bottom
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-      
+
+      scrollToEnd(false);
     } catch (err) {
       console.error('Error fetching messages:', err);
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
-  }, [matchId, listingId, userId]);
+  }, [matchId, listingId, userId, scrollToEnd]);
 
-  // FIXED: Simplified send button animation
-  const animateSendButton = () => {
-    if (isAnimating.current) return;
-    isAnimating.current = true;
-    
-    Animated.sequence([
-      Animated.timing(sendScale, {
-        toValue: 0.8,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.spring(sendScale, {
-        toValue: 1,
-        friction: 5,
-        tension: 40,
-        useNativeDriver: true,
-      })
-    ]).start(() => {
-      isAnimating.current = false;
+  useEffect(() => {
+    fetchMessages();
+  }, [fetchMessages]);
+
+  // Keep the latest message visible when the keyboard opens
+  useEffect(() => {
+    const keyboardShowListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setTimeout(() => scrollToEnd(true), 100)
+    );
+    return () => keyboardShowListener.remove();
+  }, [scrollToEnd]);
+
+  const goBack = useCallback(() => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('DashboardMain');
+  }, [navigation]);
+
+  const openProfile = useCallback(() => {
+    if (!otherUser?._id) return;
+    navigation.navigate('HomeTabs', {
+      screen: 'UserProfile',
+      params: { userId: otherUser._id },
     });
-  };
+  }, [navigation, otherUser?._id]);
 
   const handleSend = async () => {
-    if (!newMessage.trim() || sending) return;
+    if (!newMessage.trim() || sendingRef.current) return;
+    sendingRef.current = true;
 
     const messageText = newMessage.trim();
     setNewMessage('');
     setSending(true);
-
-    // Animate send button
-    animateSendButton();
 
     // Optimistically add message
     const tempMessage = {
@@ -209,18 +187,15 @@ export default function ChatMatch({ route, navigation }) {
       isRead: false,
       isTemp: true
     };
-    
+
     setMessages(prev => [...prev, tempMessage]);
-    
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 50);
+    scrollToEnd(true);
 
     try {
       // In a real app, you'd send via WebSocket or API
       // For now, simulate API call with a delay
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       // Update temp message with real data
       const realMessage = {
         ...tempMessage,
@@ -228,26 +203,28 @@ export default function ChatMatch({ route, navigation }) {
         isTemp: false,
         isRead: true
       };
-      
-      setMessages(prev => 
-        prev.map(msg => 
-          msg._id === tempMessage._id ? realMessage : msg
-        )
-      );
-      
+
+      if (mountedRef.current) {
+        setMessages(prev =>
+          prev.map(msg =>
+            msg._id === tempMessage._id ? realMessage : msg
+          )
+        );
+      }
     } catch (err) {
       // Remove temp message on error
-      setMessages(prev => prev.filter(msg => msg._id !== tempMessage._id));
+      if (mountedRef.current) setMessages(prev => prev.filter(msg => msg._id !== tempMessage._id));
       console.error('Error sending message:', err);
     } finally {
-      setSending(false);
+      sendingRef.current = false;
+      if (mountedRef.current) setSending(false);
     }
   };
 
-  const renderMessage = ({ item }) => {
+  const renderMessage = useCallback(({ item }) => {
     const isOwn = item.sender?._id === userId || item.sender === userId || item.isOwn;
     return <MessageBubble message={item} isOwn={isOwn} />;
-  };
+  }, [userId]);
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -256,17 +233,19 @@ export default function ChatMatch({ route, navigation }) {
         style={styles.headerGradient}
       >
         <View style={styles.headerContent}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
-            onPress={() => navigation.goBack()}
+            onPress={goBack}
             activeOpacity={0.7}
+            hitSlop={8}
           >
             <Ionicons name="chevron-back" size={24} color="#1C1C1E" />
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.headerUserInfo}
-            onPress={() => navigation.navigate('UserProfile', { userId: otherUser?._id })}
+            onPress={openProfile}
+            activeOpacity={0.7}
           >
             <View style={styles.headerAvatar}>
               {displayImage ? (
@@ -314,9 +293,9 @@ export default function ChatMatch({ route, navigation }) {
     </View>
   );
 
-  if (loading) {
+  if (loading && messages.length === 0) {
     return (
-      <SafeAreaView style={styles.loadingContainer}>
+      <SafeAreaView style={styles.loadingContainer} edges={['top']}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <ActivityIndicator size="large" color="#f9c349" />
         <Text style={styles.loadingText}>Loading conversation...</Text>
@@ -325,34 +304,39 @@ export default function ChatMatch({ route, navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      
+
       {renderHeader()}
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        behavior="padding"
+        keyboardVerticalOffset={0}
       >
         <FlatList
           ref={flatListRef}
           data={messages}
-          keyExtractor={(item) => item._id || item.id || String(item.createdAt)}
+          keyExtractor={keyExtractor}
           renderItem={renderMessage}
           contentContainerStyle={styles.messagesContainer}
           ListEmptyComponent={renderEmpty}
           onContentSizeChange={() => {
-            flatListRef.current?.scrollToEnd({ animated: true });
+            flatListRef.current?.scrollToEnd({ animated: false });
           }}
           showsVerticalScrollIndicator={false}
-          inverted={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          initialNumToRender={20}
+          maxToRenderPerBatch={15}
+          windowSize={10}
+          removeClippedSubviews={Platform.OS === 'android'}
         />
 
         <View style={styles.inputContainer}>
           <LinearGradient
             colors={['#FFFFFF', '#F8F9FA']}
-            style={styles.inputGradient}
+            style={[styles.inputGradient, { paddingBottom: Math.max(insets.bottom, 10) }]}
           >
             <View style={styles.inputWrapper}>
               <View style={styles.inputField}>
@@ -369,7 +353,7 @@ export default function ChatMatch({ route, navigation }) {
                   onSubmitEditing={handleSend}
                 />
               </View>
-              
+
               <TouchableOpacity
                 style={[
                   styles.sendButton,
@@ -379,22 +363,20 @@ export default function ChatMatch({ route, navigation }) {
                 disabled={!newMessage.trim() || sending}
                 activeOpacity={0.8}
               >
-                <Animated.View style={{ transform: [{ scale: sendScale }] }}>
-                  <LinearGradient
-                    colors={newMessage.trim() ? ['#f9c349', '#f5a623'] : ['#E5E5EA', '#E5E5EA']}
-                    style={styles.sendGradient}
-                  >
-                    {sending ? (
-                      <ActivityIndicator color="#FFFFFF" size="small" />
-                    ) : (
-                      <Ionicons 
-                        name="send" 
-                        size={20} 
-                        color={newMessage.trim() ? '#FFFFFF' : '#C7C7CC'} 
-                      />
-                    )}
-                  </LinearGradient>
-                </Animated.View>
+                <LinearGradient
+                  colors={newMessage.trim() ? ['#f9c349', '#f5a623'] : ['#E5E5EA', '#E5E5EA']}
+                  style={styles.sendGradient}
+                >
+                  {sending ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Ionicons
+                      name="send"
+                      size={20}
+                      color={newMessage.trim() ? '#FFFFFF' : '#C7C7CC'}
+                    />
+                  )}
+                </LinearGradient>
               </TouchableOpacity>
             </View>
           </LinearGradient>

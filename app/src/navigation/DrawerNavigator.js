@@ -284,26 +284,27 @@ const AnimatedDrawerItem = ({ label, icon, onPress, delay = 0, isActive = false 
   const scale = useRef(new Animated.Value(0.95)).current;
   const [isPressed, setIsPressed] = useState(false);
 
+  // quick, light entrance (was 450ms with a bounce per item)
   useEffect(() => {
     Animated.parallel([
       Animated.timing(translateX, {
         toValue: 0,
-        duration: 450,
-        delay,
-        easing: Easing.bezier(0.34, 1.56, 0.64, 1),
+        duration: 220,
+        delay: Math.min(delay, 160),
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 450,
-        delay,
+        duration: 220,
+        delay: Math.min(delay, 160),
         useNativeDriver: true,
       }),
       Animated.timing(scale, {
         toValue: 1,
-        duration: 450,
-        delay,
-        easing: Easing.bezier(0.34, 1.56, 0.64, 1),
+        duration: 220,
+        delay: Math.min(delay, 160),
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
     ]).start();
@@ -349,20 +350,19 @@ const DrawerHeader = ({ isGuest }) => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 600,
-        easing: Easing.bezier(0.22, 1, 0.36, 1),
+        duration: 220,
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 600,
-        easing: Easing.bezier(0.34, 1.56, 0.64, 1),
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(scaleAnim, {
         toValue: 1,
-        duration: 600,
-        easing: Easing.bezier(0.34, 1.56, 0.64, 1),
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
     ]).start();
@@ -430,16 +430,20 @@ function CustomDrawerContent(props) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [activeRoute, setActiveRoute] = useState('HomeTabs');
 
+  // Highlight the item for the screen that is really open
+  // (Points, About, etc. live inside the HomeTabs stack, so the drawer's own
+  // route name alone was always "HomeTabs")
   useEffect(() => {
-    const unsubscribe = props.navigation.addListener('state', (e) => {
-      const state = e.data.state;
-      if (state) {
-        const currentRoute = state.routes[state.index]?.name;
-        if (currentRoute) {
-          setActiveRoute(currentRoute);
-        }
-      }
-    });
+    const pick = (state) => {
+      if (!state) return;
+      const top = state.routes[state.index];
+      if (!top) return;
+      const deepest = getDeepestRouteName(top);
+      const match = DRAWER_ITEMS.find((i) => i.route === deepest || i.route === top.name && top.name !== 'HomeTabs');
+      setActiveRoute(match ? match.route : deepest === 'HomeTabs' || top.name === 'HomeTabs' ? 'HomeTabs' : deepest);
+    };
+    pick(props.state);
+    const unsubscribe = props.navigation.addListener('state', (e) => pick(e.data.state));
     return unsubscribe;
   }, [props.navigation]);
 
@@ -500,6 +504,7 @@ function CustomDrawerContent(props) {
     props.navigation.closeDrawer();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
+    // wait for the drawer to finish closing (no jump mid-animation)
     setTimeout(() => {
       try {
         // Home: hard reset
@@ -520,8 +525,14 @@ function CustomDrawerContent(props) {
           return;
         }
 
-        // Everything else
-        props.navigation.navigate(route);
+        // Screens that live inside the HomeTabs stack (Points, About, Terms…):
+        // React Navigation 7 needs the parent named, otherwise nothing opens
+        const drawerRoutes = props.state?.routeNames || [];
+        if (drawerRoutes.includes(route)) {
+          props.navigation.navigate(route);
+        } else {
+          props.navigation.navigate('HomeTabs', { screen: route });
+        }
       } catch (error) {
         console.error('Navigation error:', error);
         props.navigation.dispatch(
@@ -853,45 +864,21 @@ function CustomHeader({ navigation }) {
 // ============================================================
 // ANIMATION WRAPPER
 // ============================================================
+// Only a short fade. The old version also scaled the whole app from 0.96 and
+// slid it up; right after login/sign-up that animation could get stuck, which
+// left Home looking "zoomed out" with a white border.
 const AnimatedScreenWrapper = ({ children }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.96)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 500,
-        easing: Easing.bezier(0.22, 1, 0.36, 1),
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 500,
-        easing: Easing.bezier(0.22, 1, 0.36, 1),
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 500,
-        easing: Easing.bezier(0.22, 1, 0.36, 1),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [fadeAnim, scaleAnim, slideAnim]);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
+  }, [fadeAnim]);
 
-  return (
-    <Animated.View
-      style={{
-        flex: 1,
-        opacity: fadeAnim,
-        transform: [{ scale: scaleAnim }, { translateY: slideAnim }],
-      }}
-    >
-      {children}
-    </Animated.View>
-  );
+  return <Animated.View style={{ flex: 1, opacity: fadeAnim }}>{children}</Animated.View>;
 };
 
 // ============================================================
@@ -1072,7 +1059,7 @@ function DashboardStackNavigator() {
           name="InquiryChat"
           component={InquiryChatScreen}
           getId={({ params }) =>
-            `inquirychat-${params?.inquiryId ?? params?.id ?? 'default'}`
+            `inquirychat-${params?.threadId ?? params?.inquiryId ?? params?.id ?? 'default'}`
           }
         />
         <Stack.Screen

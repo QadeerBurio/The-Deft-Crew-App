@@ -11,14 +11,15 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   StatusBar,
   Animated,
   Image,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { createListing, uploadListingAttachment } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
+import { goToAuth } from '../../utils/goToAuth';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import useMyProfessionalProfile from '../../hooks/useMyProfessionalProfile';
@@ -30,9 +31,10 @@ const MUTED = '#8E8E93';
 const PROFICIENCY_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
 
 export default function CreateListingScreen({ route, navigation }) {
-   const { getCurrentUserId } = useContext(AuthContext);
+  const { getCurrentUserId, isGuest, setIsGuest } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
   const { fullName: myName, photoUrl: myPhoto } = useMyProfessionalProfile();
-  const { type } = route.params; // 'barter' | 'paid' | 'job'
+  const { type } = route.params || {}; // 'barter' | 'paid' | 'job'
   const isBarter = type === 'barter';
   const isJob = type === 'job';
   const isPaid = type === 'paid';
@@ -72,15 +74,13 @@ export default function CreateListingScreen({ route, navigation }) {
   const [error, setError] = useState(null);
   const [focusedInput, setFocusedInput] = useState(null);
 
+  const submittingRef = useRef(false); // hard guard against double taps
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(24)).current;
 
+  // one short fade in, nothing looping
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 450, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 450, useNativeDriver: true }),
-    ]).start();
-  }, []);
+    Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }).start();
+  }, [fadeAnim]);
 
   // ---------- Media picker (Paid) ----------
   // Uploads happen the moment a file is picked, not at final submit — so the
@@ -91,7 +91,7 @@ export default function CreateListingScreen({ route, navigation }) {
     if (!permission.granted) return;
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      mediaTypes: ['images', 'videos'],
       quality: 0.8,
     });
     if (result.canceled) return;
@@ -189,14 +189,19 @@ export default function CreateListingScreen({ route, navigation }) {
 
   // ---------- Submit ----------
   const handleSubmit = async () => {
+    if (submittingRef.current) return;
     if (!isFormValid()) return;
 
     const ownerId = getCurrentUserId();
-    if (!ownerId) {
-      Alert.alert('Authentication Required', 'Please log in to create a listing.');
+    if (!ownerId || isGuest) {
+      Alert.alert('Authentication Required', 'Please log in to create a listing.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Log in', onPress: () => goToAuth(setIsGuest) },
+      ]);
       return;
     }
 
+    submittingRef.current = true;
     setSubmitting(true);
     setError(null);
 
@@ -254,10 +259,14 @@ export default function CreateListingScreen({ route, navigation }) {
           {
             text: 'View Dashboard',
             onPress: () => {
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Dashboard', params: { refreshTimestamp: Date.now() } }],
-              });
+              // go back to the existing dashboard, dropping the post-type and form
+              // screens so they don't pile up; the dashboard refreshes on focus
+              const params = { refreshTimestamp: Date.now() };
+              if (typeof navigation.popTo === 'function') {
+                navigation.popTo('DashboardMain', params);
+              } else {
+                navigation.reset({ index: 0, routes: [{ name: 'DashboardMain', params }] });
+              }
             },
           },
         ],
@@ -266,6 +275,7 @@ export default function CreateListingScreen({ route, navigation }) {
     } catch (err) {
       const serverError = err.response?.data?.error || err.message || 'An unexpected error occurred';
       setError(serverError);
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -788,15 +798,19 @@ export default function CreateListingScreen({ route, navigation }) {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8F9FC" />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
+        <TouchableOpacity
+          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('DashboardMain'))}
+          style={styles.headerBtn}
+          hitSlop={10}
+        >
           <Ionicons name="chevron-back" size={22} color={INK} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{headerTitle}</Text>
-        <TouchableOpacity style={styles.headerBtn}>
+        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('NotificationSkillshare')} hitSlop={10}>
           <Ionicons name="notifications-outline" size={20} color={INK} />
         </TouchableOpacity>
       </View>
@@ -804,10 +818,13 @@ export default function CreateListingScreen({ route, navigation }) {
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 48 : 0}
       >
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+        <ScrollView
+          contentContainerStyle={[styles.content, { paddingBottom: 100 + insets.bottom }]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Animated.View style={{ opacity: fadeAnim }}>
   <View style={styles.postingAsRow}>
     {myPhoto ? (
       <Image source={{ uri: myPhoto }} style={styles.postingAsAvatar} />
@@ -843,7 +860,7 @@ export default function CreateListingScreen({ route, navigation }) {
           </Animated.View>
         </ScrollView>
 
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
           <TouchableOpacity
             style={[styles.submitButton, (!isFormValid() || submitting) && styles.submitButtonDisabled]}
             onPress={handleSubmit}
@@ -894,7 +911,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
-    marginTop: Platform.OS === 'android' ? 0 : 0,
   },
   headerBtn: { width: 32, alignItems: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '700', color: INK },

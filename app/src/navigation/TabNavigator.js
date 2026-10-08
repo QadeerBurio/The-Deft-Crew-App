@@ -230,7 +230,7 @@ export default function TabNavigator({ onTabChange, onRouteChange }) {
           lazy: false,
         }}
         initialRouteName="Home"
-        backBehavior="history"
+        backBehavior="initialRoute" // back always returns to Home (history sent you back to Profile)
         screenListeners={({ route }) => ({
           focus: () => {
             if (typeof onTabChange === "function") {

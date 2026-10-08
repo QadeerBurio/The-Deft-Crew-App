@@ -1,14 +1,20 @@
 // screens/skillshare/profile/ProfessionalProfileScreen.js
-import React, { useContext, useEffect, useState, useCallback } from 'react';
+import React, { useContext, useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, Image, ScrollView, TouchableOpacity,
-  ActivityIndicator, SafeAreaView, StatusBar, RefreshControl, Alert,
+  ActivityIndicator, StatusBar, RefreshControl, Alert,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../../../context/AuthContext';
 import { getMyProfessionalProfile } from '../../../api/profileApi';
 import { getMyListings, getMySkillOffers, getMyMatches } from '../../../api/api';
+import { goToAuth } from '../../../utils/goToAuth';
+
+// Last loaded data per user, so coming back shows it instantly.
+const profileCache = {};
 
 const BRAND = '#f9c349';
 const BRAND_DARK = '#f5a623';
@@ -30,13 +36,19 @@ function SkillShareHeader({ navigation, goTo }) {
   return (
     <>
       <View style={styles.topHeader}>
-       <TouchableOpacity onPress={() => navigation.getParent()?.navigate('HomeTabs')}>
+        <TouchableOpacity
+          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('DashboardMain'))}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <Ionicons name="arrow-back" size={22} color={INK} />
         </TouchableOpacity>
         <Text style={styles.topHeaderTitle}>
           Skill<Text style={{ color: BRAND }}>Share</Text>
         </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('NotificationSkillshare')}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('NotificationSkillshare')}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <Ionicons name="notifications-outline" size={22} color={INK} />
         </TouchableOpacity>
       </View>
@@ -58,25 +70,31 @@ function SkillShareHeader({ navigation, goTo }) {
 }
 
 export default function ProfessionalProfileScreen({ navigation }) {
-  const { user, isGuest, logout, getUserName } = useContext(AuthContext);
-  const [profile, setProfile] = useState(null);
-  const [hasProfile, setHasProfile] = useState(false);
-  const [stats, setStats] = useState({ listings: 0, offers: 0, matches: 0 });
-  const [loading, setLoading] = useState(true);
+  const { user, isGuest, logout, setIsGuest } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
+  const cacheKey = String(user?._id || user?.id || user?.email || 'me');
+  const cached = !isGuest ? profileCache[cacheKey] : null;
+
+  const [profile, setProfile] = useState(cached?.profile ?? null);
+  const [hasProfile, setHasProfile] = useState(cached?.hasProfile ?? false);
+  const [stats, setStats] = useState(cached?.stats ?? { listings: 0, offers: 0, matches: 0 });
+  const [loading, setLoading] = useState(!cached && !isGuest);
   const [refreshing, setRefreshing] = useState(false);
+  const inFlightRef = useRef(false);
 
-
-const goTo = (route) => {
-  if (route === 'SkillProfile') return;
-  navigation.navigate(route);
-};
-  
+  const goTo = (route) => {
+    if (route === 'SkillProfile') return;
+    navigation.navigate(route);
+  };
 
   const load = useCallback(async () => {
     if (isGuest) {
       setLoading(false);
+      setRefreshing(false);
       return;
     }
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     try {
       const res = await getMyProfessionalProfile();
       setProfile(res.profile);
@@ -87,22 +105,34 @@ const goTo = (route) => {
         getMySkillOffers().catch(() => ({ offers: [] })),
         getMyMatches().catch(() => ({ matches: [] })),
       ]);
-      setStats({
+      const nextStats = {
         listings: Array.isArray(listings) ? listings.length : 0,
         offers: (offersRes?.offers || []).length,
         matches: (matchesRes?.matches || []).length,
-      });
+      };
+      setStats(nextStats);
+      profileCache[cacheKey] = { profile: res.profile, hasProfile: !!res.hasProfile, stats: nextStats };
     } catch (err) {
       console.error('Failed to load professional profile:', err);
     } finally {
+      inFlightRef.current = false;
       setLoading(false);
       setRefreshing(false);
     }
-  }, [isGuest]);
+  }, [isGuest, cacheKey]);
 
-  useEffect(() => { load(); }, [load]);
+  // Refresh in the background every time the screen is shown (e.g. after editing).
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
-  const onRefresh = () => { setRefreshing(true); load(); };
+  const onRefresh = useCallback(() => {
+    if (inFlightRef.current) return;
+    setRefreshing(true);
+    load();
+  }, [load]);
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -113,7 +143,8 @@ const goTo = (route) => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.center}>
+      <SafeAreaView style={styles.center} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <ActivityIndicator size="large" color={BRAND} />
       </SafeAreaView>
     );
@@ -122,7 +153,7 @@ const goTo = (route) => {
   // --- GUEST: never call the profile API, just prompt to log in ---
   if (isGuest) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <SkillShareHeader navigation={navigation} goTo={goTo} />
         <View style={styles.emptyWrap}>
@@ -136,7 +167,7 @@ const goTo = (route) => {
           </Text>
           <TouchableOpacity
             style={styles.emptyButton}
-            onPress={() => navigation.getParent()?.navigate('Login')}
+            onPress={() => goToAuth(setIsGuest)}
             activeOpacity={0.85}
           >
             <Text style={styles.emptyButtonText}>Login</Text>
@@ -151,7 +182,7 @@ const goTo = (route) => {
   if (!isComplete) {
     const started = hasProfile && (profile?.lastCompletedStep || 0) > 0;
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
          <SkillShareHeader navigation={navigation} goTo={goTo} />
         <View style={styles.emptyWrap}>
@@ -163,7 +194,7 @@ const goTo = (route) => {
           </Text>
           <Text style={styles.emptySubtitle}>
             {started
-              ? "You're partway through — finish setting up your profile so other students can trust you before exchanging, buying, or hiring."
+              ? "You're partway through. Finish setting up your profile so other students can trust you before exchanging, buying, or hiring."
               : 'Create your professional profile so other students can see your skills and trust you before exchanging services, buying, or hiring you.'}
           </Text>
           <TouchableOpacity
@@ -184,12 +215,13 @@ const goTo = (route) => {
   const initial = (profile?.fullName || user?.name || 'U').charAt(0).toUpperCase();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <SkillShareHeader navigation={navigation} goTo={goTo} />
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 12) + 28 }]}
+        showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND} colors={[BRAND]} />}
       >
         <TouchableOpacity style={styles.logoutFloating} onPress={handleLogout}>

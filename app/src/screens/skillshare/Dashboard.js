@@ -1,5 +1,5 @@
 // screens/skillshare/Dashboard.js — "Home": shows only the current user's own listings
-import React, { useEffect, useState, useCallback, useContext } from 'react';
+import React, { useState, useCallback, useContext, useRef, useMemo, memo } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,12 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   RefreshControl,
-  SafeAreaView,
   StatusBar,
   ScrollView,
   Platform,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { getMyListings } from '../../api/api';
 import { timeAgo } from '../../utils/time';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -50,36 +51,78 @@ const NAV_ITEMS = [
 
 const OWN_CTA = { barter: 'Manage Offers', paid: 'Manage Requests', job: 'Manage Applicants' };
 
+// module-level cache so returning to the dashboard shows the last list instantly
+const MY_LISTINGS_CACHE = {};
+
+const OwnRow = memo(function OwnRow({ item, myPhoto, onOpen }) {
+  const open = () => onOpen(item._id);
+  return (
+    <ListingCard
+      item={item}
+      showOwner={true}
+      ownerOverride={{ name: 'You', profileImage: myPhoto }}
+      ctaLabel={OWN_CTA[item.type] || 'View Details'}
+      onPress={open}
+      onPropose={open}
+    />
+  );
+});
+
 export default function Dashboard({ navigation }) {
- const { getCurrentUserId } = useContext(AuthContext);
+  const { getCurrentUserId } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
+  const cacheKey = String(getCurrentUserId?.() || 'anon');
   const { fullName: myName, photoUrl: myPhoto } = useMyProfessionalProfile();
-  const [listings, setListings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const cached = MY_LISTINGS_CACHE[cacheKey];
+  const [listings, setListings] = useState(cached || []);
+  const [loading, setLoading] = useState(!cached);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [typeFilter, setTypeFilter] = useState('All');
   const [statusTab, setStatusTab] = useState('Open');
+  const inFlight = useRef(false);
 
   const fetchMyListings = useCallback(async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     try {
       setError(null);
       const data = await getMyListings();
-      setListings(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      MY_LISTINGS_CACHE[cacheKey] = list;
+      setListings(list);
     } catch (err) {
       console.error('Error fetching my listings:', err);
       setError('Failed to load your activities.');
     } finally {
+      inFlight.current = false;
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [cacheKey]);
 
-  useEffect(() => { fetchMyListings(); }, [fetchMyListings]);
+  // refresh in the background every time the screen comes into focus
+  // (e.g. after creating or editing a listing)
+  useFocusEffect(
+    useCallback(() => {
+      fetchMyListings();
+    }, [fetchMyListings])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchMyListings();
   };
+
+  const openListing = useCallback(
+    (id) => navigation.navigate('ListingDetail', { id }),
+    [navigation]
+  );
+
+  const renderItem = useCallback(
+    ({ item }) => <OwnRow item={item} myPhoto={myPhoto} onOpen={openListing} />,
+    [myPhoto, openListing]
+  );
 
   // ---- Stats ----
   const activeExchanges = listings.filter((l) => l.type === 'barter' && l.status === 'matched').length;
@@ -92,36 +135,44 @@ export default function Dashboard({ navigation }) {
   }, 0);
 
   // ---- Filtering ----
-  const byType = listings.filter((l) => typeFilter === 'All' || l.type === typeFilter);
- const byTab = byType.filter((l) => {
-  if (statusTab === 'Open') return l.status === 'open';
-  if (statusTab === 'Matched') return l.status === 'matched';
-  if (statusTab === 'Closed') return l.status === 'closed';
-  return true;
-});
+  const byTab = useMemo(() => {
+    const byType = listings.filter((l) => typeFilter === 'All' || l.type === typeFilter);
+    return byType.filter((l) => {
+      if (statusTab === 'Open') return l.status === 'open';
+      if (statusTab === 'Matched') return l.status === 'matched';
+      if (statusTab === 'Closed') return l.status === 'closed';
+      return true;
+    });
+  }, [listings, typeFilter, statusTab]);
 
   const goTo = (route) => {
-  if (route === 'DashboardMain') return;
-  navigation.navigate(route);
-};
+    if (route === 'DashboardMain') return;
+    navigation.navigate(route);
+  };
+
+  // dashboard is the root of the skillshare stack: back leaves skillshare
+  const goBack = () => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('HomeTabs');
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-    <View style={styles.topHeader}>
- <TouchableOpacity onPress={() => navigation.getParent()?.navigate('HomeTabs')}>
-  <Ionicons name="arrow-back" size={22} color={INK} />
-</TouchableOpacity>
+      <View style={styles.topHeader}>
+        <TouchableOpacity onPress={goBack} hitSlop={10}>
+          <Ionicons name="arrow-back" size={22} color={INK} />
+        </TouchableOpacity>
 
-  <Text style={styles.topHeaderTitle}>
-    Skill<Text style={{ color: BRAND }}>Share</Text>
-  </Text>
+        <Text style={styles.topHeaderTitle}>
+          Skill<Text style={{ color: BRAND }}>Share</Text>
+        </Text>
 
-  <TouchableOpacity onPress={() => navigation.navigate('NotificationSkillshare')}>
-    <Ionicons name="notifications-outline" size={22} color={INK} />
-  </TouchableOpacity>
-</View>
+        <TouchableOpacity onPress={() => navigation.navigate('NotificationSkillshare')} hitSlop={10}>
+          <Ionicons name="notifications-outline" size={22} color={INK} />
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.navRow}>
         {NAV_ITEMS.map((item) => {
@@ -143,19 +194,13 @@ export default function Dashboard({ navigation }) {
       ) : (
         <FlatList
           data={byTab}
-          keyExtractor={(item) => item._id}
-          contentContainerStyle={styles.listContent}
+          keyExtractor={(item, index) => String(item._id ?? index)}
+          contentContainerStyle={[styles.listContent, { paddingBottom: 24 + insets.bottom }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND} colors={[BRAND]} />}
-      renderItem={({ item }) => (
-  <ListingCard
-    item={item}
-    showOwner={true}
-    ownerOverride={{ name: 'You', profileImage: myPhoto }}
-    ctaLabel={OWN_CTA[item.type] || 'View Details'}
-    onPress={() => navigation.navigate('ListingDetail', { id: item._id })}
-    onPropose={() => navigation.navigate('ListingDetail', { id: item._id })}
-  />
-)}
+          renderItem={renderItem}
+          initialNumToRender={10}
+          windowSize={7}
+          removeClippedSubviews={Platform.OS === 'android'}
           ListHeaderComponent={
             <View>
               <Text style={styles.pageTitle}>Dashboard</Text>
@@ -213,7 +258,7 @@ export default function Dashboard({ navigation }) {
             <View style={styles.emptyState}>
               <MaterialCommunityIcons name="briefcase-search-outline" size={50} color="#ddd" />
               <Text style={styles.emptyText}>
-                {error || 'Nothing here yet — create your first listing!'}
+                {error || 'Nothing here yet. Create your first listing!'}
               </Text>
               <TouchableOpacity
                 style={styles.emptyButton}

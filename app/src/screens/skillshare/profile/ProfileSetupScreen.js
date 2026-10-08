@@ -1,5 +1,5 @@
 // screens/skillshare/profile/ProfileSetupScreen.js
-import React, { useContext, useEffect, useState, useCallback } from 'react';
+import React, { useContext, useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,9 +12,11 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   StatusBar,
+  BackHandler,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { AuthContext } from '../../../context/AuthContext';
@@ -39,6 +41,9 @@ const AVAILABILITY_OPTIONS = ['<10 hrs/week', '10-20 hrs/week', '20-30 hrs/week'
 export default function ProfileSetupScreen({ navigation, route }) {
   const { user, getUserName, getUserEmail } = useContext(AuthContext);
   const startStep = route?.params?.step || 1;
+  const insets = useSafeAreaInsets();
+  const busyRef = useRef(false);
+  const scrollRef = useRef(null);
 
   const [step, setStep] = useState(startStep);
   const [loading, setLoading] = useState(true);
@@ -102,8 +107,6 @@ setUniversity(defaultUniversity);
 
       try {
         const { profile } = await getMyProfessionalProfile();
-        // ...later, inside the try block where profile is loaded, change:
-setUniversity(profile.university || defaultUniversity || '');
         if (profile) {
           setPhotoUrl(profile.photoUrl || user?.profileImage || null);
           setFullName(profile.fullName || defaultName || '');
@@ -139,7 +142,7 @@ setUniversity(profile.university || defaultUniversity || '');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
@@ -221,38 +224,68 @@ setUniversity(profile.university || defaultUniversity || '');
       Alert.alert('Almost there', step === 2 ? 'Add at least 3 skills to continue.' : 'Please fill this step.');
       return;
     }
-    await saveProgress();
-    if (step < TOTAL_STEPS) {
-      setStep(step + 1);
-    } else {
-      try {
-        setSaving(true);
-        await completeProfessionalProfile();
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'ProfileSuccess' }],
-        });
-      } catch (err) {
-        Alert.alert('Error', 'Could not complete your profile. Please try again.');
-      } finally {
-        setSaving(false);
+    if (busyRef.current) return;
+    busyRef.current = true;
+    try {
+      await saveProgress();
+      if (step < TOTAL_STEPS) {
+        setStep(step + 1);
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
+      } else {
+        try {
+          setSaving(true);
+          await completeProfessionalProfile();
+          // Replace so the finished form can't be reached with back.
+          navigation.replace('ProfileSuccess');
+          return;
+        } catch (err) {
+          Alert.alert('Error', 'Could not complete your profile. Please try again.');
+        } finally {
+          setSaving(false);
+        }
       }
+    } finally {
+      busyRef.current = false;
     }
   };
 
-  const handleBack = () => {
-    if (step === 1) return navigation.goBack();
-    setStep(step - 1);
-  };
+  const handleBack = useCallback(() => {
+    if (busyRef.current) return;
+    if (step === 1) {
+      if (navigation.canGoBack()) navigation.goBack();
+      else navigation.navigate('DashboardMain');
+      return;
+    }
+    setStep((s) => Math.max(1, s - 1));
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [navigation, step]);
+
+  // Android back button steps back through the form before leaving it.
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        handleBack();
+        return true;
+      });
+      return () => sub.remove();
+    }, [handleBack])
+  );
 
   const handleSaveAndExit = async () => {
-    await saveProgress();
-    navigation.reset({ index: 0, routes: [{ name: 'DashboardMain' }] });
+    if (busyRef.current) return;
+    busyRef.current = true;
+    try {
+      await saveProgress();
+      navigation.reset({ index: 0, routes: [{ name: 'DashboardMain' }] });
+    } finally {
+      busyRef.current = false;
+    }
   };
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.center}>
+      <SafeAreaView style={styles.center} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FDF9F0" />
         <ActivityIndicator size="large" color={BRAND} />
       </SafeAreaView>
     );
@@ -261,21 +294,31 @@ setUniversity(profile.university || defaultUniversity || '');
   const progressPct = Math.round((step / TOTAL_STEPS) * 100);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FDF9F0" />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
       >
         <View style={styles.topBar}>
           <Text style={styles.brand}>SkillShare</Text>
-          <TouchableOpacity onPress={handleSaveAndExit} disabled={saving}>
+          <TouchableOpacity
+            onPress={handleSaveAndExit}
+            disabled={saving}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <Text style={styles.saveExit}>Save &amp; Exit</Text>
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom, 12) + 28 }]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.card}>
             <View style={styles.progressRow}>
               <Text style={styles.stepLabel}>STEP {step} OF {TOTAL_STEPS}</Text>
@@ -366,7 +409,7 @@ setUniversity(profile.university || defaultUniversity || '');
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.backLink} onPress={handleBack}>
+            <TouchableOpacity style={styles.backLink} onPress={handleBack} disabled={saving}>
               <Text style={styles.backLinkText}>Back</Text>
             </TouchableOpacity>
           </View>
@@ -482,7 +525,7 @@ function StepPortfolio({ portfolioLinks, updateLink, addLinkField }) {
     <View>
       <Text style={styles.title}>Portfolio & Links</Text>
       <Text style={styles.subtitle}>
-        Optional — share links to work samples, GitHub, Behance, or a personal site.
+        Optional. Share links to work samples, GitHub, Behance, or a personal site.
       </Text>
       {portfolioLinks.map((link, idx) => (
         <Field
@@ -648,7 +691,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 14,
-    marginTop: Platform.OS === 'android' ? 30 : 0,
   },
   brand: { fontSize: 18, fontWeight: '800', color: INK },
   saveExit: { fontSize: 13, color: MUTED, fontWeight: '500' },

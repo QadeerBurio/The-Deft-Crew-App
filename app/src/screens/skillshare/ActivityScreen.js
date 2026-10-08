@@ -1,5 +1,5 @@
 // screens/ActivityScreen.js
-import React, { useState, useEffect, useContext, useCallback, useRef } from 'react';
+import React, { useState, useContext, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,52 +8,31 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  SafeAreaView,
   StatusBar,
-  Animated,
-  Dimensions,
   Platform,
   ScrollView
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../../context/AuthContext';
 import { getMyListings, getMySkillOffers, getMyMatches, getMyInquiries } from '../../api/api';
 import { timeAgo } from '../../utils/time';
+import { goToAuth } from '../../utils/goToAuth';
 
-const { width, height } = Dimensions.get('window');
+// Last loaded activity per user, so coming back shows it instantly.
+const activityCache = {};
 
-// Activity Item Component with animations
-const ActivityItem = React.memo(({ item, index, onPress }) => {
-  const itemFadeAnim = useRef(new Animated.Value(0)).current;
-  const itemSlideAnim = useRef(new Animated.Value(20)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+const capitalize = (v) => {
+  const str = String(v || '');
+  return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+};
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(itemFadeAnim, {
-        toValue: 1,
-        duration: 400,
-        delay: index * 80,
-        useNativeDriver: true,
-      }),
-      Animated.spring(itemSlideAnim, {
-        toValue: 0,
-        friction: 7,
-        tension: 35,
-        delay: index * 80,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 5,
-        tension: 40,
-        delay: index * 80,
-        useNativeDriver: true,
-      })
-    ]).start();
-  }, []);
+const keyExtractor = (item) => item.id;
 
+// Activity Item Component
+const ActivityItem = React.memo(({ item, onPress }) => {
   const getIconColor = (type) => {
     switch (type) {
       case 'listing': return '#f9c349';
@@ -78,12 +57,7 @@ const ActivityItem = React.memo(({ item, index, onPress }) => {
   const iconName = getIconName(item.type);
 
   return (
-    <Animated.View
-      style={{
-        opacity: itemFadeAnim,
-        transform: [{ translateY: itemSlideAnim }, { scale: scaleAnim }]
-      }}
-    >
+    <View>
       <TouchableOpacity 
         style={styles.activityCard}
         onPress={() => onPress(item)}
@@ -111,58 +85,39 @@ const ActivityItem = React.memo(({ item, index, onPress }) => {
           <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
         </LinearGradient>
       </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
 });
 
 export default function ActivityScreen({ navigation }) {
-  const { getCurrentUserId, isGuest } = useContext(AuthContext);
-  
-  const [loading, setLoading] = useState(true);
+  const { getCurrentUserId, isGuest, setIsGuest } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
+
+  const userId = getCurrentUserId();
+  const cached = userId && !isGuest ? activityCache[userId] : null;
+
+  const [loading, setLoading] = useState(!cached);
   const [refreshing, setRefreshing] = useState(false);
-  const [activities, setActivities] = useState([]);
+  const [activities, setActivities] = useState(cached?.activities || []);
   const [filter, setFilter] = useState('all'); // all, listings, offers, matches, inquiries
   const [error, setError] = useState(null);
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState(cached?.stats || {
     total: 0,
     listings: 0,
     offers: 0,
     matches: 0,
     inquiries: 0
   });
-
-  const userId = getCurrentUserId();
-
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      })
-    ]).start();
-  }, []);
+  const inFlightRef = useRef(false);
 
   const fetchActivities = useCallback(async () => {
     if (!userId || isGuest) {
       setLoading(false);
+      setRefreshing(false);
       return;
     }
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
 
     try {
       setError(null);
@@ -187,7 +142,7 @@ export default function ActivityScreen({ navigation }) {
           id: `listing-${listing._id}`,
           type: 'listing',
           title: `📋 ${listing.title}`,
-          subtitle: `${listing.type.charAt(0).toUpperCase() + listing.type.slice(1)} • ${listing.status}`,
+          subtitle: `${capitalize(listing.type)} • ${listing.status}`,
           timestamp: listing.createdAt,
           data: listing,
         });
@@ -201,7 +156,7 @@ export default function ActivityScreen({ navigation }) {
         allActivities.push({
           id: `offer-${offer._id}`,
           type: 'offer',
-          title: `${statusEmoji} Offer ${offer.status.charAt(0).toUpperCase() + offer.status.slice(1)}`,
+          title: `${statusEmoji} Offer ${capitalize(offer.status)}`,
           subtitle: `For: ${offer.listingId?.title || 'Listing'}`,
           timestamp: offer.createdAt,
           data: offer,
@@ -238,38 +193,50 @@ export default function ActivityScreen({ navigation }) {
       setActivities(allActivities);
 
       // Update stats
-      setStats({
+      const nextStats = {
         total: allActivities.length,
         listings: listings.length,
         offers: offers.length,
         matches: matches.length,
         inquiries: inquiries.length
-      });
+      };
+      setStats(nextStats);
+      activityCache[userId] = { activities: allActivities, stats: nextStats };
 
     } catch (err) {
       console.error('Error fetching activities:', err);
       setError(err.message || 'Failed to load activities');
     } finally {
+      inFlightRef.current = false;
       setLoading(false);
       setRefreshing(false);
     }
   }, [userId, isGuest]);
 
-  useEffect(() => {
+  // Cached list shows instantly; refresh quietly each time the screen is shown.
+  useFocusEffect(
+    useCallback(() => {
+      fetchActivities();
+    }, [fetchActivities])
+  );
+
+  const handleRefresh = useCallback(() => {
+    if (inFlightRef.current) return;
+    setRefreshing(true);
     fetchActivities();
   }, [fetchActivities]);
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchActivities();
-  };
+  const handleBack = useCallback(() => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('DashboardMain');
+  }, [navigation]);
 
-  const getFilteredActivities = () => {
+  const filteredActivities = useMemo(() => {
     if (filter === 'all') return activities;
     return activities.filter(a => a.type === filter);
-  };
+  }, [activities, filter]);
 
-  const handleActivityPress = (item) => {
+  const handleActivityPress = useCallback((item) => {
     if (item.type === 'listing') {
       navigation.navigate('ListingDetail', { id: item.data._id });
     } else if (item.type === 'offer' && item.data.listingId) {
@@ -287,7 +254,12 @@ export default function ActivityScreen({ navigation }) {
         listingId: item.data.listingId?._id
       });
     }
-  };
+  }, [navigation]);
+
+  const renderItem = useCallback(
+    ({ item }) => <ActivityItem item={item} onPress={handleActivityPress} />,
+    [handleActivityPress]
+  );
 
   const renderFilterChip = (label, value, count) => {
     const isActive = filter === value;
@@ -309,11 +281,9 @@ export default function ActivityScreen({ navigation }) {
     );
   };
 
-  const filteredActivities = getFilteredActivities();
-
-  if (loading && !refreshing) {
+  if (loading && !refreshing && !isGuest) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
+      <SafeAreaView style={styles.centerContainer} edges={['top']}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <ActivityIndicator size="large" color="#f9c349" />
         <Text style={styles.loadingText}>Loading activity...</Text>
@@ -323,14 +293,14 @@ export default function ActivityScreen({ navigation }) {
 
   if (isGuest) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
+      <SafeAreaView style={styles.centerContainer} edges={['top']}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <Ionicons name="lock-closed-outline" size={64} color="#C7C7CC" />
         <Text style={styles.emptyTitle}>Login Required</Text>
         <Text style={styles.emptySubtext}>Login to see your activity</Text>
         <TouchableOpacity
           style={styles.loginButton}
-          onPress={() => navigation.navigate('Login')}
+          onPress={() => goToAuth(setIsGuest)}
         >
           <LinearGradient
             colors={['#f9c349', '#f7b731']}
@@ -344,15 +314,16 @@ export default function ActivityScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      
+
       {/* Modern Header */}
       <View style={styles.headerBar}>
         <TouchableOpacity 
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={handleBack}
           activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons 
             name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'} 
@@ -364,21 +335,14 @@ export default function ActivityScreen({ navigation }) {
         <TouchableOpacity 
           style={styles.headerAction}
           onPress={handleRefresh}
+          disabled={refreshing}
         >
           <Ionicons name="refresh-outline" size={22} color="#f9c349" />
         </TouchableOpacity>
       </View>
 
       {/* Stats Summary */}
-      <Animated.View 
-        style={[
-          styles.statsContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }
-        ]}
-      >
+      <View style={styles.statsContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.statsRow}>
             <View style={[styles.statItem, styles.statItemTotal]}>
@@ -403,18 +367,10 @@ export default function ActivityScreen({ navigation }) {
             </View>
           </View>
         </ScrollView>
-      </Animated.View>
+      </View>
 
       {/* Filter Chips */}
-      <Animated.View 
-        style={[
-          styles.filterContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }
-        ]}
-      >
+      <View style={styles.filterContainer}>
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false}
@@ -426,29 +382,19 @@ export default function ActivityScreen({ navigation }) {
           {renderFilterChip('Matches', 'match', stats.matches)}
           {renderFilterChip('Inquiries', 'inquiry', stats.inquiries)}
         </ScrollView>
-      </Animated.View>
+      </View>
 
       {/* Activity List */}
-      <Animated.View 
-        style={[
-          styles.listContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }]
-          }
-        ]}
-      >
+      <View style={styles.listContainer}>
         <FlatList
           data={filteredActivities}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item, index }) => (
-            <ActivityItem 
-              item={item} 
-              index={index} 
-              onPress={handleActivityPress}
-            />
-          )}
-          contentContainerStyle={styles.listContent}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={7}
+          removeClippedSubviews={Platform.OS === 'android'}
+          contentContainerStyle={[styles.listContent, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}
           refreshControl={
             <RefreshControl 
               refreshing={refreshing} 
@@ -473,7 +419,7 @@ export default function ActivityScreen({ navigation }) {
           }
           showsVerticalScrollIndicator={false}
         />
-      </Animated.View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -492,7 +438,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
-    marginTop:34
   },
   backButton: {
     width: 40,

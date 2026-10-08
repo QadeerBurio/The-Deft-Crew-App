@@ -28,6 +28,7 @@
     },
     "android": {
       "package": "com.aqkhan110.tdc",
+      "allowBackup": false,
       "versionCode": 82,
       "googleServicesFile": "./google-services.json",
       "permissions": [

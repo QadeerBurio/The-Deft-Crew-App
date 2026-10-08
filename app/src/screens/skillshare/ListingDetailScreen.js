@@ -1,17 +1,20 @@
 // screens/ListingDetailScreen.js
-import React, { useEffect, useState, useContext, useRef, useCallback } from 'react';
+import React, { useState, useContext, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView,
   Alert, Linking, Modal, TextInput, KeyboardAvoidingView, Platform,
-  SafeAreaView, StatusBar, RefreshControl, Image, Dimensions,
+  StatusBar, RefreshControl, Image, Dimensions,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getListingById, startInquiry, getInquiryForListing, getMyMatches } from '../../api/api';
 import { timeAgo } from '../../utils/time';
 import { AuthContext } from '../../context/AuthContext';
+import { goToAuth } from '../../utils/goToAuth';
 import useMyProfessionalProfile from '../../hooks/useMyProfessionalProfile';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 const HERO_WIDTH = width - 40; // matches the ScrollView's 20px content padding on each side
 
 const BRAND = '#f9c349';
@@ -19,17 +22,23 @@ const INK = '#1a1a1a';
 const MUTED = '#8E8E93';
 const BORDER = '#e5e5e5';
 
-export default function ListingDetailScreen({ route, navigation }) {
-const { getCurrentUserId, isGuest } = useContext(AuthContext);
-  const { fullName: myName, photoUrl: myPhoto } = useMyProfessionalProfile();
-  const { id } = route.params || {};
+// last loaded details per listing id (+ viewer), so reopening a listing is instant
+const LISTING_CACHE = {};
 
-  const [listing, setListing] = useState(null);
-  const [loading, setLoading] = useState(true);
+export default function ListingDetailScreen({ route, navigation }) {
+  const { getCurrentUserId, isGuest, setIsGuest } = useContext(AuthContext);
+  const { photoUrl: myPhoto } = useMyProfessionalProfile();
+  const insets = useSafeAreaInsets();
+  const { id } = route.params || {};
+  const cacheKey = `${id}:${getCurrentUserId?.() || 'anon'}`;
+  const cached = id ? LISTING_CACHE[cacheKey] : null;
+
+  const [listing, setListing] = useState(cached?.listing || null);
+  const [loading, setLoading] = useState(!cached);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
-  const [existingInquiryThread, setExistingInquiryThread] = useState(null);
-  const [hasActiveMatch, setHasActiveMatch] = useState(false);
+  const [existingInquiryThread, setExistingInquiryThread] = useState(cached?.thread || null);
+  const [hasActiveMatch, setHasActiveMatch] = useState(cached?.hasActiveMatch || false);
   const [activeAttachmentIndex, setActiveAttachmentIndex] = useState(0);
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -37,62 +46,75 @@ const { getCurrentUserId, isGuest } = useContext(AuthContext);
   const [submittingInquiry, setSubmittingInquiry] = useState(false);
 
   const isFetching = useRef(false);
-  const fetchCount = useRef(0);
   const isMounted = useRef(true);
 
-  const fetchListing = useCallback(async (isRefresh = false) => {
-    if (isFetching.current || !isMounted.current) return;
-    if (fetchCount.current > 3 && !isRefresh) return;
+  useEffect(() => {
+    isMounted.current = true;
+    return () => { isMounted.current = false; };
+  }, []);
+
+  const fetchListing = useCallback(async () => {
+    if (!id) { setLoading(false); setRefreshing(false); return; }
+    if (isFetching.current) { setRefreshing(false); return; }
+    isFetching.current = true;
 
     try {
-      isFetching.current = true;
-      if (!isRefresh) { fetchCount.current += 1; setLoading(true); } else setRefreshing(true);
       setError(null);
 
       const data = await getListingById(id);
       if (!isMounted.current) return;
       setListing(data);
 
+      let thread = null;
+      let activeMatch = false;
       const currentUserId = getCurrentUserId();
       const ownerId = data?.ownerId?._id || data?.ownerId;
       if (data && currentUserId && ownerId !== currentUserId && data.status === 'open') {
         try {
-          const thread = await getInquiryForListing(id, currentUserId);
-          if (isMounted.current) setExistingInquiryThread(thread);
-        } catch { if (isMounted.current) setExistingInquiryThread(null); }
+          thread = await getInquiryForListing(id, currentUserId);
+        } catch { thread = null; }
 
         try {
           const matches = await getMyMatches(currentUserId);
-          if (isMounted.current) {
-            const activeMatch = matches.data?.some(
-              (m) => m.listingId?._id === id && m.status === 'active'
-            );
-            setHasActiveMatch(activeMatch || false);
-          }
-        } catch { if (isMounted.current) setHasActiveMatch(false); }
+          activeMatch = !!matches.data?.some(
+            (m) => m.listingId?._id === id && m.status === 'active'
+          );
+        } catch { activeMatch = false; }
+
+        if (isMounted.current) {
+          setExistingInquiryThread(thread);
+          setHasActiveMatch(activeMatch);
+        }
       }
+
+      LISTING_CACHE[`${id}:${currentUserId || 'anon'}`] = { listing: data, thread, hasActiveMatch: activeMatch };
     } catch (err) {
       if (isMounted.current) setError(err.message || 'Failed to load listing details');
     } finally {
-      if (isMounted.current) { setLoading(false); setRefreshing(false); isFetching.current = false; }
+      isFetching.current = false;
+      if (isMounted.current) { setLoading(false); setRefreshing(false); }
     }
   }, [id, getCurrentUserId]);
 
-  const onRefresh = useCallback(() => fetchListing(true), [fetchListing]);
+  // cached details show instantly; refresh quietly every time the screen is shown
+  useFocusEffect(
+    useCallback(() => {
+      fetchListing();
+    }, [fetchListing])
+  );
 
-  useEffect(() => {
-    isMounted.current = true;
-    fetchCount.current = 0;
-    if (id) fetchListing();
-    return () => { isMounted.current = false; };
-  }, [id]);
+  const onRefresh = useCallback(() => {
+    if (isFetching.current) return;
+    setRefreshing(true);
+    fetchListing();
+  }, [fetchListing]);
 
-  useEffect(() => {
-    const unsub = navigation.addListener('focus', () => {
-      if (isMounted.current && id && !isFetching.current && fetchCount.current <= 3) fetchListing();
-    });
-    return unsub;
-  }, [navigation, id, fetchListing]);
+  const goBack = useCallback(() => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('DashboardMain');
+  }, [navigation]);
+
+  const goLogin = useCallback(() => goToAuth(setIsGuest), [setIsGuest]);
 
   const handleOpenLink = async (url) => {
     try {
@@ -108,7 +130,7 @@ const { getCurrentUserId, isGuest } = useContext(AuthContext);
     if (!currentUserId || isGuest) {
       Alert.alert('Login Required', 'Please login to ask a question.', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => navigation.navigate('Login') },
+        { text: 'Login', onPress: goLogin },
       ]);
       return;
     }
@@ -129,24 +151,25 @@ const { getCurrentUserId, isGuest } = useContext(AuthContext);
   };
 
   const getOwnerData = () => {
-  const currentUserId = getCurrentUserId();
-  const listingOwnerId = listing?.ownerId?._id || listing?.ownerId;
+    const currentUserId = getCurrentUserId();
+    const listingOwnerId = listing?.ownerId?._id || listing?.ownerId;
 
-  if (currentUserId && listingOwnerId === currentUserId) {
-    return { name: 'You', profileImage: myPhoto, ownerId: listingOwnerId };
-  }
+    if (currentUserId && listingOwnerId === currentUserId) {
+      return { name: 'You', profileImage: myPhoto, ownerId: listingOwnerId };
+    }
 
-  const owner = listing?.ownerId || {};
-  return {
-    name: owner.name || owner.fullName || owner.username || 'Anonymous',
-    profileImage: owner.profileImage || null,
-    ownerId: owner._id || listing?.ownerId,
+    const owner = listing?.ownerId || {};
+    return {
+      name: owner.name || owner.fullName || owner.username || 'Anonymous',
+      profileImage: owner.profileImage || null,
+      ownerId: owner._id || listing?.ownerId,
+    };
   };
-};
 
-  if (loading) {
+  // full-screen spinner only on the very first load (nothing cached yet)
+  if (loading && !listing) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
+      <SafeAreaView style={styles.centerContainer} edges={['top', 'bottom']}>
         <StatusBar barStyle="dark-content" backgroundColor="#fff" />
         <ActivityIndicator size="large" color={BRAND} />
         <Text style={styles.loadingText}>Loading...</Text>
@@ -156,11 +179,14 @@ const { getCurrentUserId, isGuest } = useContext(AuthContext);
 
   if (error || !listing) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
+      <SafeAreaView style={styles.centerContainer} edges={['top', 'bottom']}>
         <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <TouchableOpacity style={[styles.errorBack, { top: insets.top + 12 }]} onPress={goBack} hitSlop={10}>
+          <Ionicons name="arrow-back" size={22} color={INK} />
+        </TouchableOpacity>
         <Ionicons name="alert-circle" size={56} color="#FF3B30" />
         <Text style={styles.errorText}>{error || 'Listing not found'}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => { fetchCount.current = 0; fetchListing(); }}>
+        <TouchableOpacity style={styles.retryButton} onPress={() => { setLoading(true); fetchListing(); }}>
           <Text style={styles.retryButtonText}>Try Again</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -183,21 +209,21 @@ const { getCurrentUserId, isGuest } = useContext(AuthContext);
     .filter(Boolean);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.topHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={goBack} hitSlop={10}>
           <Ionicons name="arrow-back" size={22} color={INK} />
         </TouchableOpacity>
         <Text style={styles.topHeaderTitle}>Details</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('NotificationSkillshare')}>
+        <TouchableOpacity onPress={() => navigation.navigate('NotificationSkillshare')} hitSlop={10}>
           <Ionicons name="notifications-outline" size={22} color={INK} />
         </TouchableOpacity>
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: 40 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND} colors={[BRAND]} />}
       >
@@ -242,7 +268,7 @@ const { getCurrentUserId, isGuest } = useContext(AuthContext);
                   }}
                 >
                   {listing.attachments.map((att, i) => (
-                    <View key={i} style={styles.heroImageWrap}>
+                    <View key={att.url || String(i)} style={styles.heroImageWrap}>
                       {att.type === 'video' ? (
                         <View style={[styles.heroImage, styles.attachmentVideoFallback]}>
                           <Ionicons name="play-circle" size={44} color="#fff" />
@@ -301,7 +327,7 @@ const { getCurrentUserId, isGuest } = useContext(AuthContext);
                   <Text style={styles.ctaBtnText}>Manage Requests</Text>
                 </TouchableOpacity>
               ) : !currentUserId || isGuest ? (
-                <TouchableOpacity style={styles.ctaBtn} onPress={() => navigation.navigate('Login')}>
+                <TouchableOpacity style={styles.ctaBtn} onPress={goLogin}>
                   <Text style={styles.ctaBtnText}>Login to Request</Text>
                 </TouchableOpacity>
               ) : listing.status !== 'open' ? (
@@ -432,7 +458,7 @@ const { getCurrentUserId, isGuest } = useContext(AuthContext);
                   <Text style={styles.ctaBtnText}>{isBarter ? 'Manage Offers' : 'Manage Applications'}</Text>
                 </TouchableOpacity>
               ) : !currentUserId || isGuest ? (
-                <TouchableOpacity style={styles.ctaBtn} onPress={() => navigation.navigate('Login')}>
+                <TouchableOpacity style={styles.ctaBtn} onPress={goLogin}>
                   <Text style={styles.ctaBtnText}>Login to Continue</Text>
                   <Ionicons name="arrow-forward" size={16} color={INK} />
                 </TouchableOpacity>
@@ -481,7 +507,7 @@ const { getCurrentUserId, isGuest } = useContext(AuthContext);
           style={styles.modalOverlay}
         >
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setModalVisible(false)} />
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { paddingBottom: 24 + insets.bottom }]}>
             <View style={styles.modalHandle} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Ask Question</Text>
@@ -531,7 +557,7 @@ function SkillRow({ icon, label, value, valueStyle, onPress, last }) {
         <Ionicons name={icon} size={15} color={MUTED} />
         <Text style={styles.skillRowLabel}>{label}</Text>
       </View>
-      <Text style={[styles.skillRowValue, valueStyle]}>{value || '—'}</Text>
+      <Text style={[styles.skillRowValue, valueStyle]}>{value || '-'}</Text>
     </Wrapper>
   );
 }
@@ -545,10 +571,11 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 15, color: '#FF3B30', textAlign: 'center', marginVertical: 14 },
   retryButton: { backgroundColor: BRAND, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 },
   retryButtonText: { color: INK, fontWeight: '800', fontSize: 14 },
+  errorBack: { position: 'absolute', top: 12, left: 20, padding: 4 },
 
   topHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 3 : 3, paddingBottom: 10,
+    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10,
     backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee',
   },
   topHeaderTitle: { fontSize: 18, fontWeight: '800', color: BRAND },
@@ -641,7 +668,7 @@ const styles = StyleSheet.create({
   askRowText: { fontSize: 13, fontWeight: '700', color: INK },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 24 },
+  modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
   modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E5EA', alignSelf: 'center', marginBottom: 16 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   modalTitle: { fontSize: 19, fontWeight: '800', color: INK },

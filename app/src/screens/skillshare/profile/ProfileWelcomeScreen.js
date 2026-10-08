@@ -1,15 +1,15 @@
 // screens/skillshare/profile/ProfileWelcomeScreen.js
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   ImageBackground,
-  Platform,
+  ScrollView,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -20,16 +20,31 @@ const BRAND_DARK = '#efa52e';
 const HERO_IMAGE = require('../../../../../assets/images/welcome_hero.png');
 
 export default function ProfileWelcomeScreen({ navigation }) {
-  const goBuildProfile = () => navigation.navigate('ProfileSetup', { step: 1 });
+  const insets = useSafeAreaInsets();
+
+  const goBuildProfile = useCallback(() => navigation.navigate('ProfileSetup', { step: 1 }), [navigation]);
 
   // "Explore first" -> skip straight into the app, same as returning users
- const goExploreFirst = () => {
-  navigation.reset({ index: 0, routes: [{ name: 'DashboardMain' }] });
-};
+  const goExploreFirst = useCallback(() => {
+    navigation.reset({ index: 0, routes: [{ name: 'DashboardMain' }] });
+  }, [navigation]);
+
+  // Usually the stack root (the gate replaced itself), so fall back to Home.
+  const goBack = useCallback(() => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('HomeTabs');
+  }, [navigation]);
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.scroll, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
      <ImageBackground
   source={HERO_IMAGE}
   style={styles.hero}
@@ -46,6 +61,16 @@ export default function ProfileWelcomeScreen({ navigation }) {
     locations={[0.55, 0.72, 0.88, 1]}
     style={styles.heroFade}
   />
+  <TouchableOpacity
+    style={styles.backButton}
+    onPress={goBack}
+    activeOpacity={0.8}
+    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+    accessibilityRole="button"
+    accessibilityLabel="Go back"
+  >
+    <Ionicons name="arrow-back" size={22} color="#1C1C1E" />
+  </TouchableOpacity>
 </ImageBackground>
 
       <View style={styles.content}>
@@ -79,6 +104,7 @@ export default function ProfileWelcomeScreen({ navigation }) {
           <Text style={styles.secondaryText}>Explore first</Text>
         </TouchableOpacity>
       </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -88,10 +114,32 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
 
+  scroll: {
+    flexGrow: 1,
+  },
+
   hero: {
     width: '100%',
-    height: '46%',
+    aspectRatio: 1,
+    maxHeight: 420,
     overflow: 'hidden',
+  },
+
+  backButton: {
+    position: 'absolute',
+    top: 12,
+    left: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 3,
   },
 
   heroImage: {
@@ -111,7 +159,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 0,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
   },
 
   pill: {

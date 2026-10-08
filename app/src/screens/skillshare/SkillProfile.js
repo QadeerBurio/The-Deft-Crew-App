@@ -2,7 +2,7 @@
 
 
 //to be deleted if not used in other files
-import React, { useState, useEffect, useContext, useCallback, useRef } from 'react';
+import React, { useState, useContext, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,14 +11,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  SafeAreaView,
   Image,
   Alert,
-  Animated,
-  Dimensions,
   StatusBar,
-  Platform
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../../context/AuthContext';
@@ -29,52 +27,30 @@ import {
   getMyInquiries 
 } from '../../api/api';
 import { timeAgo } from '../../utils/time';
+import { goToAuth } from '../../utils/goToAuth';
 
-const { width, height } = Dimensions.get('window');
+// Last loaded stats + activity per user, so coming back is instant.
+const statsCache = {};
+
+const ICON_CONFIGS = {
+  listing: { icon: 'document-text-outline', color: '#f9c349', bg: '#f9c34915' },
+  offer: { icon: 'git-pull-request-outline', color: '#FF9500', bg: '#FF950015' },
+  match: { icon: 'people-outline', color: '#34C759', bg: '#34C75915' },
+  inquiry: { icon: 'chatbubble-outline', color: '#AF52DE', bg: '#AF52DE15' },
+  default: { icon: 'time-outline', color: '#8E8E93', bg: '#8E8E9315' }
+};
+
+const capitalize = (v) => {
+  const str = String(v || '');
+  return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+};
 
 // Create a separate component for Activity Item
-const ActivityItem = React.memo(({ item, index, onPress }) => {
-  const itemFadeAnim = useRef(new Animated.Value(0)).current;
-  const itemSlideAnim = useRef(new Animated.Value(20)).current;
-  
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(itemFadeAnim, {
-        toValue: 1,
-        duration: 400,
-        delay: index * 80,
-        useNativeDriver: true,
-      }),
-      Animated.spring(itemSlideAnim, {
-        toValue: 0,
-        friction: 7,
-        tension: 35,
-        delay: index * 80,
-        useNativeDriver: true,
-      })
-    ]).start();
-  }, []);
-
-  const getIconConfig = (type) => {
-    const configs = {
-      listing: { icon: 'document-text-outline', color: '#f9c349', bg: '#f9c34915' },
-      offer: { icon: 'git-pull-request-outline', color: '#FF9500', bg: '#FF950015' },
-      match: { icon: 'people-outline', color: '#34C759', bg: '#34C75915' },
-      inquiry: { icon: 'chatbubble-outline', color: '#AF52DE', bg: '#AF52DE15' },
-      default: { icon: 'time-outline', color: '#8E8E93', bg: '#8E8E9315' }
-    };
-    return configs[type] || configs.default;
-  };
-
-  const config = getIconConfig(item.type);
+const ActivityItem = React.memo(({ item, onPress }) => {
+  const config = ICON_CONFIGS[item.type] || ICON_CONFIGS.default;
 
   return (
-    <Animated.View
-      style={{
-        opacity: itemFadeAnim,
-        transform: [{ translateY: itemSlideAnim }]
-      }}
-    >
+    <View>
       <TouchableOpacity 
         style={styles.activityItem}
         onPress={() => onPress(item)}
@@ -95,30 +71,19 @@ const ActivityItem = React.memo(({ item, index, onPress }) => {
           <Ionicons name="chevron-forward" size={18} color="#C7C7CC" />
         </View>
       </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
 });
 
 // Stat Card Component
 const StatCard = React.memo(({ number, label, icon, gradient, onPress }) => {
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
-  
-  useEffect(() => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      friction: 5,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
   return (
     <TouchableOpacity 
       style={styles.statCardWrapper}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <View>
         <LinearGradient
           colors={gradient}
           style={styles.statCard}
@@ -131,17 +96,21 @@ const StatCard = React.memo(({ number, label, icon, gradient, onPress }) => {
           <Text style={styles.statNumber}>{number}</Text>
           <Text style={styles.statLabel}>{label}</Text>
         </LinearGradient>
-      </Animated.View>
+      </View>
     </TouchableOpacity>
   );
 });
 
 export default function SkillProfile({ navigation }) {
-  const { getCurrentUserId, user, isGuest, logout, getUserName, getUserEmail } = useContext(AuthContext);
-  
-  const [loading, setLoading] = useState(true);
+  const { getCurrentUserId, user, isGuest, logout, getUserName, getUserEmail, setIsGuest } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
+
+  const userId = getCurrentUserId();
+  const cached = userId && !isGuest ? statsCache[userId] : null;
+
+  const [loading, setLoading] = useState(!cached);
   const [refreshing, setRefreshing] = useState(false);
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState(cached?.stats || {
     listings: 0,
     offers: 0,
     matches: 0,
@@ -149,17 +118,9 @@ export default function SkillProfile({ navigation }) {
     inquiries: 0,
     activeInquiries: 0
   });
-  const [recentActivity, setRecentActivity] = useState([]);
+  const [recentActivity, setRecentActivity] = useState(cached?.recentActivity || []);
   const [error, setError] = useState(null);
-
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  const headerSlideAnim = useRef(new Animated.Value(-50)).current;
-  const avatarScaleAnim = useRef(new Animated.Value(0.8)).current;
-  const statsFadeAnim = useRef(new Animated.Value(0)).current;
-
-  const userId = getCurrentUserId();
+  const inFlightRef = useRef(false);
 
   // Get user data
   const userName = getUserName ? getUserName() : user?.name || user?.fullName || user?.username || 'User';
@@ -167,45 +128,14 @@ export default function SkillProfile({ navigation }) {
   const userImage = user?.profileImage || null;
   const userInitial = userName && userName !== 'Guest User' ? userName.charAt(0).toUpperCase() : 'U';
 
-  useEffect(() => {
-    // Entrance animations
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.spring(headerSlideAnim, {
-        toValue: 0,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-      Animated.spring(avatarScaleAnim, {
-        toValue: 1,
-        friction: 5,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.timing(statsFadeAnim, {
-        toValue: 1,
-        duration: 800,
-        delay: 300,
-        useNativeDriver: true,
-      })
-    ]).start();
-  }, []);
-
   const fetchProfileData = useCallback(async () => {
     if (!userId || isGuest) {
       setLoading(false);
+      setRefreshing(false);
       return;
     }
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
 
     try {
       setError(null);
@@ -225,14 +155,15 @@ export default function SkillProfile({ navigation }) {
       const pendingOffers = offers.filter(o => o.status === 'pending').length;
       const activeInquiries = inquiries.filter(i => i.status === 'active').length;
       
-      setStats({
+      const nextStats = {
         listings: listings.length,
         offers: offers.length,
         matches: matches.length,
         pendingOffers,
         inquiries: inquiries.length,
         activeInquiries
-      });
+      };
+      setStats(nextStats);
 
       const activities = [];
 
@@ -241,7 +172,7 @@ export default function SkillProfile({ navigation }) {
           id: `listing-${listing._id}`,
           type: 'listing',
           title: listing.title,
-          subtitle: `${listing.type.charAt(0).toUpperCase() + listing.type.slice(1)} • ${listing.status}`,
+          subtitle: `${capitalize(listing.type)} • ${listing.status}`,
           timestamp: listing.createdAt,
           data: listing,
         });
@@ -250,7 +181,7 @@ export default function SkillProfile({ navigation }) {
       offers.slice(0, 5).forEach(offer => {
         const statusEmoji = offer.status === 'pending' ? '⏳' : 
                            offer.status === 'accepted' ? '✅' : '❌';
-        const statusText = offer.status.charAt(0).toUpperCase() + offer.status.slice(1);
+        const statusText = capitalize(offer.status);
         activities.push({
           id: `offer-${offer._id}`,
           type: 'offer',
@@ -285,25 +216,37 @@ export default function SkillProfile({ navigation }) {
       });
 
       activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-      setRecentActivity(activities.slice(0, 15));
+      const nextActivity = activities.slice(0, 15);
+      setRecentActivity(nextActivity);
+      statsCache[userId] = { stats: nextStats, recentActivity: nextActivity };
 
     } catch (err) {
       console.error('Error fetching profile data:', err);
       setError(err.message || 'Failed to load profile');
     } finally {
+      inFlightRef.current = false;
       setLoading(false);
       setRefreshing(false);
     }
   }, [userId, isGuest]);
 
-  useEffect(() => {
+  // Show cached data right away, refresh quietly each time the screen is shown.
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfileData();
+    }, [fetchProfileData])
+  );
+
+  const handleRefresh = useCallback(() => {
+    if (inFlightRef.current) return;
+    setRefreshing(true);
     fetchProfileData();
   }, [fetchProfileData]);
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchProfileData();
-  };
+  const handleBack = useCallback(() => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('DashboardMain');
+  }, [navigation]);
 
   const handleLogout = () => {
     Alert.alert(
@@ -320,7 +263,7 @@ export default function SkillProfile({ navigation }) {
     );
   };
 
-  const handleActivityPress = (item) => {
+  const handleActivityPress = useCallback((item) => {
     if (item.type === 'listing') {
       navigation.navigate('ListingDetail', { id: item.data._id });
     } else if (item.type === 'offer' && item.data.listingId) {
@@ -338,11 +281,11 @@ export default function SkillProfile({ navigation }) {
         listingId: item.data.listingId?._id
       });
     }
-  };
+  }, [navigation]);
 
-  if (loading && !refreshing) {
+  if (loading && !refreshing && !isGuest) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
+      <SafeAreaView style={styles.centerContainer} edges={['top']}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#f9c349" />
@@ -354,7 +297,7 @@ export default function SkillProfile({ navigation }) {
 
   if (isGuest) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
+      <SafeAreaView style={styles.centerContainer} edges={['top']}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <View style={styles.guestContainer}>
           <LinearGradient
@@ -368,7 +311,7 @@ export default function SkillProfile({ navigation }) {
             <Text style={styles.emptySubtext}>Login to see your skill profile</Text>
             <TouchableOpacity
               style={styles.loginButton}
-              onPress={() => navigation.navigate('Login')}
+              onPress={() => goToAuth(setIsGuest)}
               activeOpacity={0.8}
             >
               <LinearGradient
@@ -386,18 +329,19 @@ export default function SkillProfile({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      
+
       {/* Modern Header */}
       <View style={styles.headerBar}>
         <TouchableOpacity 
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={handleBack}
           activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons 
-            name={Platform.OS === 'ios' ? 'chevron-back' : 'chevron-back'} 
+            name="chevron-back"
             size={24} 
             color="#1C1C1E" 
           />
@@ -421,19 +365,11 @@ export default function SkillProfile({ navigation }) {
             colors={["#f9c349"]}
           />
         }
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Profile Header - Modern Card */}
-        <Animated.View 
-          style={[
-            styles.profileCard,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: headerSlideAnim }]
-            }
-          ]}
-        >
+        <View style={styles.profileCard}>
           <LinearGradient
             colors={['#FFFFFF', '#FFFDF5']}
             style={styles.profileCardGradient}
@@ -441,12 +377,7 @@ export default function SkillProfile({ navigation }) {
             end={{ x: 1, y: 1 }}
           >
             <View style={styles.profileHeader}>
-              <Animated.View 
-                style={[
-                  styles.avatarWrapper,
-                  { transform: [{ scale: avatarScaleAnim }] }
-                ]}
-              >
+              <View style={styles.avatarWrapper}>
                 {userImage ? (
                   <Image source={{ uri: userImage }} style={styles.avatar} />
                 ) : (
@@ -460,7 +391,7 @@ export default function SkillProfile({ navigation }) {
                 <View style={styles.avatarBadge}>
                   <Ionicons name="checkmark-circle" size={16} color="#34C759" />
                 </View>
-              </Animated.View>
+              </View>
               
               <View style={styles.userInfo}>
                 <Text style={styles.userName}>{userName}</Text>
@@ -492,20 +423,12 @@ export default function SkillProfile({ navigation }) {
               
             </View>
           </LinearGradient>
-        </Animated.View>
+        </View>
 
         
 
         {/* Quick Actions */}
-        <Animated.View 
-          style={[
-            styles.quickActions,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }
-          ]}
-        >
+        <View style={styles.quickActions}>
           <Text style={styles.quickActionsTitle}>Quick Actions</Text>
           <View style={styles.actionsGrid}>
             <TouchableOpacity 
@@ -546,18 +469,10 @@ export default function SkillProfile({ navigation }) {
 
             
           </View>
-        </Animated.View>
+        </View>
 
         {/* Recent Activity */}
-        <Animated.View 
-          style={[
-            styles.activitySection,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }
-          ]}
-        >
+        <View style={styles.activitySection}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeaderLeft}>
               <Ionicons name="time-outline" size={20} color="#f9c349" />
@@ -575,11 +490,10 @@ export default function SkillProfile({ navigation }) {
 
           {recentActivity.length > 0 ? (
             <View style={styles.activityList}>
-              {recentActivity.map((item, index) => (
+              {recentActivity.map((item) => (
                 <ActivityItem 
                   key={item.id} 
                   item={item} 
-                  index={index} 
                   onPress={handleActivityPress}
                 />
               ))}
@@ -595,7 +509,7 @@ export default function SkillProfile({ navigation }) {
               </Text>
             </View>
           )}
-        </Animated.View>
+        </View>
 
         {/* Bottom Padding */}
         <View style={styles.bottomPadding} />
@@ -618,7 +532,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
-    marginTop: Platform.OS === 'android' ? 3 : 0,
   },
   backButton: {
     width: 40,

@@ -18,6 +18,37 @@ import { clearClaimedRegistry } from "../screens/OfferScreen";
 
 export const AuthContext = createContext();
 
+// ─────────────────────────────────────────────────────────
+// FRESH-INSTALL GUARD
+// Android "auto backup" restores app storage (including the saved login)
+// when the app is installed again on a phone with the same Google account.
+// That is why a new install opened already signed in to an old account.
+// We save the install time next to the login; if the app was installed
+// again, the times don't match and we start signed out.
+// (app.json also sets android.allowBackup = false for new builds.)
+// ─────────────────────────────────────────────────────────
+const INSTALL_KEY = "@tdc_install_stamp";
+
+async function isRestoredFromBackup() {
+  let installedAt = null;
+  try {
+    const Application = require("expo-application");
+    const d = await Application.getInstallationTimeAsync();
+    installedAt = d ? new Date(d).getTime() : null;
+  } catch (e) {
+    return false; // can't tell; keep the old behaviour
+  }
+  if (!installedAt) return false;
+
+  const stamp = await AsyncStorage.getItem(INSTALL_KEY);
+  await AsyncStorage.setItem(INSTALL_KEY, String(installedAt));
+
+  if (stamp) return stamp !== String(installedAt);
+  // First launch with this check: a saved login on an app installed in the
+  // last 15 minutes can only come from a restored backup.
+  return Date.now() - installedAt < 15 * 60 * 1000;
+}
+
 // Legacy key from pre-per-user builds — remove on any clear
 const LEGACY_CLAIM_KEY = "@tdc_claimed_offer_ids";
 
@@ -154,6 +185,16 @@ export function AuthProvider({ children }) {
   // ─────────────────────────────────────────────────────────
   const loadStorage = async () => {
     try {
+      // New install with restored storage → start signed out
+      try {
+        if (await isRestoredFromBackup()) {
+          console.log("[auth] restored backup on a fresh install, clearing saved login");
+          await AsyncStorage.multiRemove(["user", "token", "isGuest"]);
+        }
+      } catch (e) {
+        console.log("[auth] install check failed:", e?.message);
+      }
+
       const wasGuest = await AsyncStorage.getItem("isGuest");
       if (wasGuest === "true") {
         setIsGuest(true);

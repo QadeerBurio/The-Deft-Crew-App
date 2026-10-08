@@ -1,9 +1,10 @@
 // screens/ManageOffersScreen.js
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator,
-  Alert, RefreshControl, SafeAreaView, StatusBar, Platform, Image,
+  Alert, RefreshControl, StatusBar, Platform, Image,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getOffersForListing, updateOfferStatus } from '../../api/api';
 import { timeAgo } from '../../utils/time';
@@ -13,7 +14,10 @@ const INK = '#1a1a1a';
 const MUTED = '#8E8E93';
 const BORDER = '#e5e5e5';
 
-function OfferCard({ item, isBarter, onAction, onOpenChat, onViewDetails }) {
+// last offers per listing, so coming back shows the list instantly
+const offersCache = new Map();
+
+const OfferCard = memo(function OfferCard({ item, isBarter, busy, onAction, onOpenChat, onViewDetails }) {
   const isPending = item.status === 'pending';
   const isAccepted = item.status === 'accepted';
   const isRejected = item.status === 'rejected';
@@ -81,11 +85,19 @@ function OfferCard({ item, isBarter, onAction, onOpenChat, onViewDetails }) {
       <View style={styles.actionRow}>
         {isPending ? (
           <>
-            <TouchableOpacity style={styles.rejectBtn} onPress={() => onAction(item._id, 'reject')}>
+            <TouchableOpacity
+              style={[styles.rejectBtn, busy && styles.btnDisabled]}
+              disabled={busy}
+              onPress={() => onAction(item._id, 'reject')}
+            >
               <Text style={styles.rejectBtnText}>Reject</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.acceptBtn} onPress={() => onAction(item._id, 'accept')}>
-              <Text style={styles.acceptBtnText}>Accept</Text>
+            <TouchableOpacity
+              style={[styles.acceptBtn, busy && styles.btnDisabled]}
+              disabled={busy}
+              onPress={() => onAction(item._id, 'accept')}
+            >
+              {busy ? <ActivityIndicator size="small" color={INK} /> : <Text style={styles.acceptBtnText}>Accept</Text>}
             </TouchableOpacity>
           </>
         ) : (
@@ -104,30 +116,53 @@ function OfferCard({ item, isBarter, onAction, onOpenChat, onViewDetails }) {
       </View>
     </View>
   );
-}
+});
 
 export default function ManageOffersScreen({ route, navigation }) {
-  const { id, type } = route.params;
-  const [offers, setOffers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { id, type } = route.params || {};
+  const insets = useSafeAreaInsets();
+  const cached = offersCache.get(id);
+  const [offers, setOffers] = useState(cached || []);
+  const [loading, setLoading] = useState(!cached);
   const [refreshing, setRefreshing] = useState(false);
-  const [filterVisible, setFilterVisible] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [busyId, setBusyId] = useState(null);
+  const busyRef = useRef(false);
+  const fetchingRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => () => { mountedRef.current = false; }, []);
 
   const fetchOffers = useCallback(async () => {
+    if (!id || fetchingRef.current) {
+      setLoading(false); setRefreshing(false);
+      return;
+    }
+    fetchingRef.current = true;
     try {
       const data = await getOffersForListing(id);
-      setOffers(data.offers || []);
+      const list = data.offers || [];
+      offersCache.set(id, list);
+      if (mountedRef.current) setOffers(list);
     } catch (err) {
       console.error('Error fetching offers:', err);
-    } finally { setLoading(false); setRefreshing(false); }
+    } finally {
+      fetchingRef.current = false;
+      if (mountedRef.current) { setLoading(false); setRefreshing(false); }
+    }
   }, [id]);
 
   useEffect(() => { fetchOffers(); }, [fetchOffers]);
 
-  const onRefresh = () => { setRefreshing(true); fetchOffers(); };
+  const onRefresh = useCallback(() => { setRefreshing(true); fetchOffers(); }, [fetchOffers]);
 
-  const handleOfferAction = (offerId, action) => {
+  const goBack = useCallback(() => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('DashboardMain');
+  }, [navigation]);
+
+  const handleOfferAction = useCallback((offerId, action) => {
+    if (busyRef.current) return;
     const status = action === 'accept' ? 'accepted' : 'rejected';
     Alert.alert(
       action === 'accept' ? 'Accept Offer' : 'Reject Offer',
@@ -140,29 +175,41 @@ export default function ManageOffersScreen({ route, navigation }) {
           text: action === 'accept' ? 'Accept' : 'Reject',
           style: action === 'accept' ? 'default' : 'destructive',
           onPress: async () => {
+            if (busyRef.current) return;
+            busyRef.current = true;
+            setBusyId(offerId);
             try {
               await updateOfferStatus(offerId, status);
+              offersCache.delete(id);
               Alert.alert('Success', action === 'accept' ? 'Offer accepted! A match has been created.' : 'Offer rejected.');
-              if (action === 'accept') navigation.goBack(); else fetchOffers();
+              if (action === 'accept') goBack(); else fetchOffers();
             } catch (err) {
               Alert.alert('Error', err.response?.data?.error || err.message || 'Failed to update offer');
+            } finally {
+              busyRef.current = false;
+              if (mountedRef.current) setBusyId(null);
             }
           },
         },
       ]
     );
-  };
+  }, [id, goBack, fetchOffers]);
 
-  const handleOpenChat = (item) => {
-    navigation.navigate('MatchChat', { listingId: id, matchId: item.matchId?._id || item.matchId });
-  };
+  const handleOpenChat = useCallback((item) => {
+    const matchId = item.matchId?._id || item.matchId;
+    if (!matchId) {
+      Alert.alert('Chat not ready', 'This match is still being set up. Pull down to refresh and try again.');
+      return;
+    }
+    navigation.navigate('MatchChat', { listingId: id, matchId });
+  }, [navigation, id]);
 
-  const handleViewDetails = (item) => {
+  const handleViewDetails = useCallback((item) => {
     Alert.alert(
       item.offerorId?.name || 'Applicant',
       item.message || item.applicationNotes || 'No additional message provided.'
     );
-  };
+  }, []);
 
   const isBarter = type === 'barter';
   const pendingCount = offers.filter((o) => o.status === 'pending').length;
@@ -170,9 +217,20 @@ export default function ManageOffersScreen({ route, navigation }) {
 
   const filtered = statusFilter === 'all' ? offers : offers.filter((o) => o.status === statusFilter);
 
-  if (loading && !refreshing) {
+  const renderItem = useCallback(({ item }) => (
+    <OfferCard
+      item={item}
+      isBarter={isBarter}
+      busy={busyId === item._id}
+      onAction={handleOfferAction}
+      onOpenChat={handleOpenChat}
+      onViewDetails={handleViewDetails}
+    />
+  ), [isBarter, busyId, handleOfferAction, handleOpenChat, handleViewDetails]);
+
+  if (loading && !refreshing && offers.length === 0) {
     return (
-      <SafeAreaView style={styles.centerFillScreen}>
+      <SafeAreaView style={styles.centerFillScreen} edges={['top']}>
         <StatusBar barStyle="dark-content" backgroundColor="#fff" />
         <ActivityIndicator size="large" color={BRAND} />
       </SafeAreaView>
@@ -180,11 +238,11 @@ export default function ManageOffersScreen({ route, navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.topHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={goBack} hitSlop={10}>
           <Ionicons name="arrow-back" size={22} color={INK} />
         </TouchableOpacity>
         <Text style={styles.topHeaderTitle}>Manage Offers</Text>
@@ -195,18 +253,14 @@ export default function ManageOffersScreen({ route, navigation }) {
 
       <FlatList
         data={filtered}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.listContent}
+        keyExtractor={(item, index) => String(item._id ?? index)}
+        contentContainerStyle={[styles.listContent, { paddingBottom: 20 + insets.bottom }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND} colors={[BRAND]} />}
-        renderItem={({ item }) => (
-          <OfferCard
-            item={item}
-            isBarter={isBarter}
-            onAction={handleOfferAction}
-            onOpenChat={handleOpenChat}
-            onViewDetails={handleViewDetails}
-          />
-        )}
+        renderItem={renderItem}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={9}
+        removeClippedSubviews={Platform.OS === 'android'}
         ListHeaderComponent={
           <View style={styles.headerCard}>
             <View style={styles.statsRow}>
@@ -258,7 +312,7 @@ const styles = StyleSheet.create({
   centerFillScreen: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8f9fa' },
   topHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 3 : 8, paddingBottom: 10,
+    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10,
     backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee',
   },
   topHeaderTitle: { fontSize: 18, fontWeight: '800', color: INK },
@@ -307,6 +361,7 @@ const styles = StyleSheet.create({
   outlineBtnText: { fontSize: 13, fontWeight: '700', color: INK, textAlign: 'center' },
   chatBtn: { flex: 1.5, flexDirection: 'row', gap: 6, backgroundColor: BRAND, borderRadius: 12, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
   chatBtnText: { fontSize: 14, fontWeight: '800', color: INK },
+  btnDisabled: { opacity: 0.5 },
 
   emptyState: { alignItems: 'center', paddingVertical: 60 },
   emptyText: { fontSize: 18, fontWeight: '800', color: INK, marginTop: 14 },

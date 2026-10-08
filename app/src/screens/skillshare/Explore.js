@@ -1,9 +1,10 @@
 //backend/app/src/screens/skillshare/Explore.js
-import React, { useState, useEffect, useCallback, useContext } from 'react';
+import React, { useState, useEffect, useCallback, useContext, useRef, useMemo, memo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity,
-  ActivityIndicator, RefreshControl, SafeAreaView, StatusBar, ScrollView, Image,
+  ActivityIndicator, RefreshControl, StatusBar, ScrollView, Image, Platform,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { getListings } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
@@ -30,41 +31,69 @@ const NAV_ITEMS = [
   { key: 'Profile', label: 'Profile', icon: 'person-outline', route: 'SkillProfile' },
 ];
 
+// module-level cache: last result per user + filter + search, shown instantly on return
+const EXPLORE_CACHE = {};
+
+const ExploreRow = memo(function ExploreRow({ item, onOpen, onPropose }) {
+  return (
+    <ListingCard
+      item={item}
+      showOwner={true}
+      onPress={() => onOpen(item._id)}
+      onPropose={() => onPropose(item)}
+    />
+  );
+});
+
 export default function Explore({ navigation }) {
   const { getCurrentUserId } = useContext(AuthContext);
   const currentUserId = getCurrentUserId?.();
+  const insets = useSafeAreaInsets();
+  const userKey = String(currentUserId || 'anon');
+  const initialCache = EXPLORE_CACHE[`${userKey}|All|`];
 
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
-  const [listings, setListings] = useState([]);
-  const [initialLoading, setInitialLoading] = useState(true); // only true on very first load
+  const [listings, setListings] = useState(initialCache || []);
+  const [initialLoading, setInitialLoading] = useState(!initialCache); // only true on very first load
   const [searching, setSearching] = useState(false);           // true during any refetch after that
   const [refreshing, setRefreshing] = useState(false);
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(!!initialCache);
+  const requestId = useRef(0);
 
   const fetchListings = useCallback(async (searchTerm) => {
+    // only the latest request is allowed to update state (no out-of-order results)
+    const myId = ++requestId.current;
+    const key = `${userKey}|${typeFilter}|${searchTerm || ''}`;
     try {
       const res = await getListings({ type: typeFilter, search: searchTerm, limit: 50 });
       const others = (res || []).filter((l) => {
         const ownerId = l.ownerId?._id || l.ownerId;
         return !currentUserId || ownerId?.toString() !== currentUserId?.toString();
       });
+      EXPLORE_CACHE[key] = others;
+      if (myId !== requestId.current) return;
       setListings(others);
     } catch (err) {
       console.error('Error fetching explore listings:', err);
-      setListings([]);
+      if (myId !== requestId.current) return;
+      setListings(EXPLORE_CACHE[key] || []);
     } finally {
-      setInitialLoading(false);
-      setSearching(false);
-      setRefreshing(false);
-      setHasLoadedOnce(true);
+      if (myId === requestId.current) {
+        setInitialLoading(false);
+        setSearching(false);
+        setRefreshing(false);
+        setHasLoadedOnce(true);
+      }
     }
-  }, [typeFilter, currentUserId]);
+  }, [typeFilter, currentUserId, userKey]);
 
   // Debounced fetch — refetches 400ms after typing stops or the type filter changes.
   // Uses `searching` (not `initialLoading`) after the first load, so the search bar
   // and FlatList never unmount mid-typing — keeping keyboard focus intact.
   useEffect(() => {
+    const cachedNow = EXPLORE_CACHE[`${userKey}|${typeFilter}|${search.trim()}`];
+    if (cachedNow) setListings(cachedNow);
     if (hasLoadedOnce) setSearching(true);
     const timeout = setTimeout(() => {
       fetchListings(search.trim());
@@ -75,7 +104,7 @@ export default function Explore({ navigation }) {
   const onRefresh = () => { setRefreshing(true); fetchListings(search.trim()); };
 
   const searchLower = search.trim().toLowerCase();
-  const filtered = listings.filter((l) => {
+  const filtered = useMemo(() => listings.filter((l) => {
     if (!searchLower) return true;
     const haystack = [
       l.title,
@@ -85,21 +114,39 @@ export default function Explore({ navigation }) {
       l.ownerId?.name,
     ].filter(Boolean).join(' ').toLowerCase();
     return haystack.includes(searchLower);
-  });
+  }), [listings, searchLower]);
 
   const recommended = filtered.slice(0, 5);
   const rest = filtered.slice(0, 20);
 
+  const openListing = useCallback((id) => navigation.navigate('ListingDetail', { id }), [navigation]);
+  const proposeListing = useCallback((listing) => navigation.navigate('CreateOffer', { listing }), [navigation]);
+  const renderItem = useCallback(
+    ({ item }) => <ExploreRow item={item} onOpen={openListing} onPropose={proposeListing} />,
+    [openListing, proposeListing]
+  );
+
   const goTo = (route) => {
     if (route === 'BrowseListings') return;
+    if (route === 'DashboardMain') {
+      // go back to the existing dashboard instead of stacking a second one
+      if (typeof navigation.popTo === 'function') navigation.popTo('DashboardMain');
+      else navigation.navigate('DashboardMain');
+      return;
+    }
     navigation.replace(route);
+  };
+
+  const goBack = () => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('DashboardMain');
   };
 
   // Only show the full-page spinner before the very first successful load —
   // never again after that, so the search bar stays mounted while typing.
   if (initialLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <StatusBar barStyle="dark-content" backgroundColor="#fff" />
         <View style={styles.centerFill}><ActivityIndicator size="large" color={BRAND} /></View>
       </SafeAreaView>
@@ -107,17 +154,17 @@ export default function Explore({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.topHeader}>
-       <TouchableOpacity onPress={() => navigation.getParent()?.navigate('HomeTabs')}>
+        <TouchableOpacity onPress={goBack} hitSlop={10}>
           <Ionicons name="arrow-back" size={22} color={INK} />
         </TouchableOpacity>
         <Text style={styles.topHeaderTitle}>
           Skill<Text style={{ color: BRAND }}>Share</Text>
         </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('NotificationSkillshare')}>
+        <TouchableOpacity onPress={() => navigation.navigate('NotificationSkillshare')} hitSlop={10}>
           <Ionicons name="notifications-outline" size={22} color={INK} />
         </TouchableOpacity>
       </View>
@@ -137,18 +184,15 @@ export default function Explore({ navigation }) {
 
       <FlatList
         data={rest}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.listContent}
+        keyExtractor={(item, index) => String(item._id ?? index)}
+        contentContainerStyle={[styles.listContent, { paddingBottom: 24 + insets.bottom }]}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND} colors={[BRAND]} />}
-        renderItem={({ item }) => (
-          <ListingCard
-            item={item}
-            showOwner={true}
-            onPress={() => navigation.navigate('ListingDetail', { id: item._id })}
-            onPropose={() => navigation.navigate('CreateOffer', { listing: item })}
-          />
-        )}
+        renderItem={renderItem}
+        initialNumToRender={10}
+        windowSize={7}
+        removeClippedSubviews={Platform.OS === 'android'}
         ListHeaderComponent={
           <View>
             <View style={styles.searchBar}>
@@ -189,18 +233,13 @@ export default function Explore({ navigation }) {
                 <Text style={styles.sectionTitle}>Recommended For You</Text>
                 <FlatList
                   data={recommended}
-                  keyExtractor={(item) => `rec-${item._id}`}
+                  keyExtractor={(item, index) => `rec-${item._id ?? index}`}
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={{ paddingRight: 20 }}
                   renderItem={({ item }) => (
                     <View style={{ width: 280, marginRight: 12 }}>
-                      <ListingCard
-                        item={item}
-                        showOwner={true}
-                        onPress={() => navigation.navigate('ListingDetail', { id: item._id })}
-                        onPropose={() => navigation.navigate('CreateOffer', { listing: item })}
-                      />
+                      <ExploreRow item={item} onOpen={openListing} onPropose={proposeListing} />
                     </View>
                   )}
                 />

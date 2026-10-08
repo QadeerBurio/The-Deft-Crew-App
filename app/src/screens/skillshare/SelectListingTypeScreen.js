@@ -1,10 +1,12 @@
 
 //backend/app/arc/screens/skillshare/SelectListingTypeScreen.js
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback, useContext, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView, ActivityIndicator, Image } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getMyListings } from '../../api/api';
-import { Image } from 'react-native'; // add Image to existing react-native import
+import { AuthContext } from '../../context/AuthContext';
 import useMyProfessionalProfile from '../../hooks/useMyProfessionalProfile';
 
 const BRAND = '#f9c349';
@@ -25,33 +27,62 @@ const NAV_ITEMS = [
   { key: 'Profile', label: 'Profile', icon: 'person-outline', route: 'SkillProfile' },
 ];
 
+// module-level cache of post counts per user, shown instantly on return
+const COUNTS_CACHE = {};
+
 export default function SelectListingTypeScreen({ navigation }) {
-   const [counts, setCounts] = useState({ barter: 0, paid: 0, job: 0 });
-  const [loading, setLoading] = useState(true);
+  const { getCurrentUserId } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
+  const cacheKey = String(getCurrentUserId?.() || 'anon');
+  const cached = COUNTS_CACHE[cacheKey];
+  const [counts, setCounts] = useState(cached || { barter: 0, paid: 0, job: 0 });
+  const [loading, setLoading] = useState(!cached);
   const { fullName: myName, photoUrl: myPhoto } = useMyProfessionalProfile();
+  const inFlight = useRef(false);
 
   const load = useCallback(async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     try {
       const data = await getMyListings();
       const listings = Array.isArray(data) ? data : [];
       const open = listings.filter((l) => l.status !== 'closed');
-      setCounts({
+      const next = {
         barter: open.filter((l) => l.type === 'barter').length,
         paid: open.filter((l) => l.type === 'paid').length,
         job: open.filter((l) => l.type === 'job').length,
-      });
+      };
+      COUNTS_CACHE[cacheKey] = next;
+      setCounts(next);
     } catch (err) {
       console.error('Error loading post counts:', err);
     } finally {
+      inFlight.current = false;
       setLoading(false);
     }
-  }, []);
+  }, [cacheKey]);
 
-  useEffect(() => { load(); }, [load]);
+  // refresh counts on focus (e.g. after creating a listing)
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   const goTo = (route) => {
     if (route === 'SelectListingTypeScreen') return;
+    if (route === 'DashboardMain') {
+      // return to the existing dashboard instead of stacking a second one
+      if (typeof navigation.popTo === 'function') navigation.popTo('DashboardMain');
+      else navigation.navigate('DashboardMain');
+      return;
+    }
     navigation.navigate(route);
+  };
+
+  const goBack = () => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('DashboardMain');
   };
 
   const MY_POSTS = [
@@ -61,23 +92,23 @@ export default function SelectListingTypeScreen({ navigation }) {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.topHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={goBack} hitSlop={10}>
           <Ionicons name="arrow-back" size={22} color={INK} />
         </TouchableOpacity>
         <Text style={styles.topHeaderTitle}>Skill<Text style={{ color: BRAND }}>Share</Text></Text>
-         <TouchableOpacity onPress={() => navigation.navigate('SkillProfile')}>
-    {myPhoto ? (
-      <Image source={{ uri: myPhoto }} style={styles.headerAvatar} />
-    ) : (
-      <View style={[styles.headerAvatar, styles.headerAvatarFallback]}>
-        <Ionicons name="person" size={14} color="#999" />
-      </View>
-    )}
-  </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('SkillProfile')} hitSlop={10}>
+          {myPhoto ? (
+            <Image source={{ uri: myPhoto }} style={styles.headerAvatar} />
+          ) : (
+            <View style={[styles.headerAvatar, styles.headerAvatarFallback]}>
+              <Ionicons name="person" size={14} color="#999" />
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
       <View style={styles.navRow}>
@@ -93,7 +124,7 @@ export default function SelectListingTypeScreen({ navigation }) {
         })}
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 24 + insets.bottom }]}>
         <Text style={styles.pageTitle}>What do you want to post?</Text>
         <Text style={styles.pageSubtitle}>Select the type of opportunity you're creating.</Text>
 

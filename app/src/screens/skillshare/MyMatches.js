@@ -1,5 +1,5 @@
 // screens/MyMatches.js
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useCallback, useRef, memo } from 'react';
 import {
   View,
   Text,
@@ -8,15 +8,16 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  SafeAreaView,
   StatusBar,
   Platform,
   Image,
   TextInput,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getMyMatches } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
+import { goToAuth } from '../../utils/goToAuth';
 import { timeAgo } from '../../utils/time';
 
 const BRAND = '#f9c349';
@@ -29,7 +30,12 @@ const TYPE_META = {
   job: { label: 'Hire', icon: 'briefcase-outline' },
 };
 
-function MatchRow({ item, onPress }) {
+// last matches per user, so returning to this screen is instant
+const matchesCache = new Map();
+
+const Separator = () => <View style={styles.divider} />;
+
+const MatchRow = memo(function MatchRow({ item, onPress }) {
   const otherUser = item.otherUser;
   const userName = otherUser?.name || otherUser?.fullName || 'User';
   const userImage = otherUser?.profileImage;
@@ -87,23 +93,33 @@ function MatchRow({ item, onPress }) {
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 export default function MyMatches({ navigation }) {
-  const { getCurrentUserId, isGuest } = useContext(AuthContext);
-  const [matches, setMatches] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { getCurrentUserId, isGuest, setIsGuest } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
+  const currentUserId = getCurrentUserId();
+  const cached = currentUserId ? matchesCache.get(currentUserId) : null;
+  const [matches, setMatches] = useState(cached || []);
+  const [loading, setLoading] = useState(!cached);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const fetchingRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => () => { mountedRef.current = false; }, []);
 
   const fetchMatches = useCallback(async () => {
     const userId = getCurrentUserId();
     if (!userId || isGuest) {
       setLoading(false);
+      setRefreshing(false);
       return;
     }
+    if (fetchingRef.current) { setRefreshing(false); return; }
+    fetchingRef.current = true;
 
     try {
       setError(null);
@@ -123,30 +139,51 @@ export default function MyMatches({ navigation }) {
         return { ...match, otherUser: otherUser || match.offerorId || match.listingOwnerId };
       });
 
-      setMatches(processed);
+      matchesCache.set(userId, processed);
+      if (mountedRef.current) setMatches(processed);
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Failed to load matches');
+      if (mountedRef.current) setError(err.response?.data?.error || err.message || 'Failed to load matches');
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      fetchingRef.current = false;
+      if (mountedRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [getCurrentUserId, isGuest]);
 
   useEffect(() => { fetchMatches(); }, [fetchMatches]);
 
-  const handleRefresh = () => {
+  // refresh unread counts quietly when coming back from a chat
+  useEffect(() => {
+    const unsub = navigation.addListener('focus', () => { fetchMatches(); });
+    return unsub;
+  }, [navigation, fetchMatches]);
+
+  const handleRefresh = useCallback(() => {
     setRefreshing(true);
     fetchMatches();
-  };
+  }, [fetchMatches]);
 
-  const handleMatchPress = (match) => {
+  const goBack = useCallback(() => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('DashboardMain');
+  }, [navigation]);
+
+  const handleMatchPress = useCallback((match) => {
+    if (!match?._id) return;
     navigation.navigate('MatchChat', {
       matchId: match._id,
       listingId: match.listingId?._id || match.listingId,
       otherUser: match.otherUser,
       listing: match.listingId,
     });
-  };
+  }, [navigation]);
+
+  const renderItem = useCallback(
+    ({ item }) => <MatchRow item={item} onPress={handleMatchPress} />,
+    [handleMatchPress]
+  );
 
   const searchLower = searchQuery.trim().toLowerCase();
   const filteredMatches = !searchLower
@@ -157,9 +194,23 @@ export default function MyMatches({ navigation }) {
         return userName.includes(searchLower) || listingTitle.includes(searchLower);
       });
 
-  if (loading && !refreshing) {
+  if (isGuest) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
+      <SafeAreaView style={styles.centerContainer} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <Ionicons name="chatbubbles-outline" size={56} color="#ddd" />
+        <Text style={styles.emptyTitle}>Welcome Back!</Text>
+        <Text style={styles.emptySubtext}>Login to view your chats and connect with others</Text>
+        <TouchableOpacity style={styles.loginButton} onPress={() => goToAuth(setIsGuest)}>
+          <Text style={styles.loginButtonText}>Login</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
+  if (loading && !refreshing && matches.length === 0) {
+    return (
+      <SafeAreaView style={styles.centerContainer} edges={['top']}>
         <StatusBar barStyle="dark-content" backgroundColor="#fff" />
         <ActivityIndicator size="large" color={BRAND} />
         <Text style={styles.loadingText}>Loading your chats...</Text>
@@ -167,26 +218,12 @@ export default function MyMatches({ navigation }) {
     );
   }
 
-  if (isGuest) {
-    return (
-      <SafeAreaView style={styles.centerContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-        <Ionicons name="chatbubbles-outline" size={56} color="#ddd" />
-        <Text style={styles.emptyTitle}>Welcome Back!</Text>
-        <Text style={styles.emptySubtext}>Login to view your chats and connect with others</Text>
-        <TouchableOpacity style={styles.loginButton} onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.loginButtonText}>Login</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.header}>
-       <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.headerBtn} onPress={goBack} hitSlop={10}>
           <Ionicons name="chevron-back" size={22} color={INK} />
         </TouchableOpacity>
         {searchVisible ? (
@@ -215,9 +252,15 @@ export default function MyMatches({ navigation }) {
 
       <FlatList
         data={filteredMatches}
-        keyExtractor={(item) => item._id}
-        renderItem={({ item }) => <MatchRow item={item} onPress={handleMatchPress} />}
-        ItemSeparatorComponent={() => <View style={styles.divider} />}
+        keyExtractor={(item, index) => String(item._id ?? index)}
+        renderItem={renderItem}
+        ItemSeparatorComponent={Separator}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}
+        keyboardShouldPersistTaps="handled"
+        initialNumToRender={12}
+        maxToRenderPerBatch={10}
+        windowSize={9}
+        removeClippedSubviews={Platform.OS === 'android'}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={BRAND} colors={[BRAND]} />}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -247,7 +290,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
-    marginTop: Platform.OS === 'android' ? 0 : 0,
   },
   headerBtn: { width: 32, alignItems: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: INK, flex: 1, textAlign: 'center' },

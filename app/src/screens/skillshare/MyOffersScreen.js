@@ -1,12 +1,14 @@
 // screens/MyOffersScreen.js
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useCallback, useRef, memo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator,
-  Alert, RefreshControl, SafeAreaView, StatusBar, Platform,
+  Alert, RefreshControl, StatusBar, Platform,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getMySkillOffers, withdrawSkillOffer } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
+import { goToAuth } from '../../utils/goToAuth';
 
 const BRAND = '#f9c349';
 const INK = '#1a1a1a';
@@ -21,7 +23,10 @@ const TYPE_META = {
 
 const TABS = ['All', 'Pending', 'Accepted'];
 
-function OfferCard({ item, onWithdraw, onPress }) {
+// last offers per user, so returning to this screen is instant
+const offersCache = new Map();
+
+const OfferCard = memo(function OfferCard({ item, onWithdraw, onPress }) {
   const listing = item.listingId || {};
   const meta = TYPE_META[listing.type] || TYPE_META.barter;
   const isPending = item.status === 'pending';
@@ -39,7 +44,7 @@ function OfferCard({ item, onWithdraw, onPress }) {
     : { bg: '#FFF3D6', color: '#8a6d1d', label: 'Pending' };
 
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={() => onPress(listing._id, isAccepted ? 'chat' : undefined)}>
+    <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={() => onPress(item, isAccepted ? 'chat' : undefined)}>
       <View style={styles.cardTopRow}>
         <View style={styles.typeRow}>
           <Ionicons name={meta.icon} size={14} color={MUTED} />
@@ -66,7 +71,7 @@ function OfferCard({ item, onWithdraw, onPress }) {
           </TouchableOpacity>
         )}
         {isAccepted && item.matchId && (
-          <TouchableOpacity style={styles.chatBtn} onPress={() => onPress(listing._id, 'chat')}>
+          <TouchableOpacity style={styles.chatBtn} onPress={() => onPress(item, 'chat')}>
             <Ionicons name="chatbubble-ellipses-outline" size={14} color={INK} />
             <Text style={styles.chatBtnText}>Open Chat</Text>
           </TouchableOpacity>
@@ -75,53 +80,89 @@ function OfferCard({ item, onWithdraw, onPress }) {
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 export default function MyOffersScreen({ navigation }) {
-  const { getCurrentUserId, isGuest } = useContext(AuthContext);
-  const [offers, setOffers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { getCurrentUserId, isGuest, setIsGuest } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
+  const userId = getCurrentUserId();
+  const cached = userId ? offersCache.get(userId) : null;
+  const [offers, setOffers] = useState(cached || []);
+  const [loading, setLoading] = useState(!cached);
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState('All');
+  const fetchingRef = useRef(false);
+  const withdrawingRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => () => { mountedRef.current = false; }, []);
 
   const fetchOffers = useCallback(async () => {
-    const userId = getCurrentUserId();
-    if (!userId || isGuest) { setLoading(false); return; }
+    const uid = getCurrentUserId();
+    if (!uid || isGuest) { setLoading(false); setRefreshing(false); return; }
+    if (fetchingRef.current) { setRefreshing(false); return; }
+    fetchingRef.current = true;
     try {
       const response = await getMySkillOffers();
-      setOffers(response?.offers || response?.data?.offers || []);
+      const list = response?.offers || response?.data?.offers || [];
+      offersCache.set(uid, list);
+      if (mountedRef.current) setOffers(list);
     } catch (err) {
       console.error('Fetch offers error:', err);
-    } finally { setLoading(false); setRefreshing(false); }
+    } finally {
+      fetchingRef.current = false;
+      if (mountedRef.current) { setLoading(false); setRefreshing(false); }
+    }
   }, [getCurrentUserId, isGuest]);
 
   useEffect(() => { fetchOffers(); }, [fetchOffers]);
 
-  const onRefresh = () => { setRefreshing(true); fetchOffers(); };
+  // refresh quietly when coming back (e.g. after an offer was accepted)
+  useEffect(() => {
+    const unsub = navigation.addListener('focus', () => { fetchOffers(); });
+    return unsub;
+  }, [navigation, fetchOffers]);
 
-  const handleWithdraw = (offerId) => {
+  const onRefresh = useCallback(() => { setRefreshing(true); fetchOffers(); }, [fetchOffers]);
+
+  const goBack = useCallback(() => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('DashboardMain');
+  }, [navigation]);
+
+  const handleWithdraw = useCallback((offerId) => {
     Alert.alert('Withdraw Offer', 'Are you sure you want to withdraw this offer?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Withdraw', style: 'destructive',
         onPress: async () => {
+          if (withdrawingRef.current) return;
+          withdrawingRef.current = true;
           try { await withdrawSkillOffer(offerId); fetchOffers(); }
           catch (err) { Alert.alert('Error', err.response?.data?.error || err.message || 'Failed to withdraw'); }
+          finally { withdrawingRef.current = false; }
         },
       },
     ]);
-  };
+  }, [fetchOffers]);
 
-  const handlePress = (listingId, mode) => {
+  const handlePress = useCallback((item, mode) => {
+    const listingId = item?.listingId?._id;
     if (mode === 'chat') {
-      navigation.navigate('MatchChat', {
-        listingId,
-        matchId: offers.find((o) => o.listingId?._id === listingId)?.matchId?._id,
-      });
+      const matchId = item?.matchId?._id || item?.matchId;
+      if (!matchId) {
+        Alert.alert('Chat not ready', 'This match is still being set up. Pull down to refresh and try again.');
+        return;
+      }
+      navigation.navigate('MatchChat', { listingId, matchId });
     } else if (listingId) {
       navigation.navigate('ListingDetail', { id: listingId });
     }
-  };
+  }, [navigation]);
+
+  const renderItem = useCallback(({ item }) => (
+    <OfferCard item={item} onWithdraw={handleWithdraw} onPress={handlePress} />
+  ), [handleWithdraw, handlePress]);
 
   const counts = {
     total: offers.length,
@@ -137,12 +178,12 @@ export default function MyOffersScreen({ navigation }) {
 
   if (isGuest) {
     return (
-      <SafeAreaView style={styles.centerFillScreen}>
+      <SafeAreaView style={styles.centerFillScreen} edges={['top']}>
         <StatusBar barStyle="dark-content" backgroundColor="#fff" />
         <Ionicons name="person-outline" size={56} color="#ddd" />
         <Text style={styles.emptyTitle}>Login Required</Text>
         <Text style={styles.emptyText}>Login to view your offers</Text>
-        <TouchableOpacity style={styles.emptyButton} onPress={() => navigation.navigate('Login')}>
+        <TouchableOpacity style={styles.emptyButton} onPress={() => goToAuth(setIsGuest)}>
           <Text style={styles.emptyButtonText}>Login</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -150,11 +191,11 @@ export default function MyOffersScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f9c349" />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.topHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={goBack} hitSlop={10}>
           <Ionicons name="arrow-back" size={22} color={INK} />
         </TouchableOpacity>
         <Text style={styles.topHeaderTitle}>My Offers</Text>
@@ -163,17 +204,19 @@ export default function MyOffersScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {loading ? (
+      {loading && offers.length === 0 ? (
         <View style={styles.centerFill}><ActivityIndicator size="large" color={BRAND} /></View>
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={(item) => item._id}
-          contentContainerStyle={styles.listContent}
+          keyExtractor={(item, index) => String(item._id ?? index)}
+          contentContainerStyle={[styles.listContent, { paddingBottom: 20 + insets.bottom }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND} colors={[BRAND]} />}
-          renderItem={({ item }) => (
-            <OfferCard item={item} onWithdraw={handleWithdraw} onPress={handlePress} />
-          )}
+          renderItem={renderItem}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={9}
+          removeClippedSubviews={Platform.OS === 'android'}
           ListHeaderComponent={
             <View>
               <View style={styles.statsRow}>
@@ -222,7 +265,7 @@ const styles = StyleSheet.create({
   centerFillScreen: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8f9fa', padding: 20 },
   topHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 4 : 8, paddingBottom: 10,
+    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10,
     backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee',
   },
   topHeaderTitle: { fontSize: 18, fontWeight: '800', color: BRAND },

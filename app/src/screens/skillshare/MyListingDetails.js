@@ -1,13 +1,16 @@
 // screens/MyListingsScreen.js
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useCallback, useRef, useMemo, memo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator,
-  Alert, RefreshControl, SafeAreaView, StatusBar, Platform,
+  Alert, RefreshControl, StatusBar, Platform,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { getMyListings, closeListing } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
 import { timeAgo } from '../../utils/time';
+import { goToAuth } from '../../utils/goToAuth';
 
 const BRAND = '#f9c349';
 const INK = '#1a1a1a';
@@ -20,8 +23,10 @@ const TYPE_META = {
   job: { label: 'Hire Post', icon: 'briefcase-outline' },
 };
 
+// last listings per user, so returning to this screen is instant
+const listingsCache = new Map();
 
-function ListingCard({ item, onClose, onPress }) {
+const ListingCard = memo(function ListingCard({ item, onClose, onPress }) {
   const meta = TYPE_META[item.type] || TYPE_META.barter;
   const isOpen = item.status === 'open';
 
@@ -42,13 +47,13 @@ function ListingCard({ item, onClose, onPress }) {
 
       <Text style={styles.cardTitle}>{item.title}</Text>
 
-      {item.skillOffered?.skillName && (
+      {!!item.skillOffered?.skillName && (
         <View style={styles.detailRow}>
           <MaterialCommunityIcons name="lightbulb-on-outline" size={16} color={BRAND} />
           <Text style={styles.detailText}>
             <Text style={styles.detailLabel}>Offering: </Text>
             <Text style={styles.detailValue}>{item.skillOffered.skillName}</Text>
-            {item.skillOffered.proficiencyLevel && (
+            {!!item.skillOffered.proficiencyLevel && (
               <Text style={styles.detailLevel}> · {capitalize(item.skillOffered.proficiencyLevel)}</Text>
             )}
           </Text>
@@ -75,7 +80,7 @@ function ListingCard({ item, onClose, onPress }) {
         </View>
       )}
 
-      {item.type === 'barter' && item.skillWanted?.skillName && (
+      {item.type === 'barter' && !!item.skillWanted?.skillName && (
         <View style={styles.detailRow}>
           <MaterialCommunityIcons name="target" size={16} color={BRAND} />
           <Text style={styles.detailText}>
@@ -101,62 +106,98 @@ function ListingCard({ item, onClose, onPress }) {
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
 export default function MyListingsScreen({ navigation }) {
-  const { getCurrentUserId, isGuest } = useContext(AuthContext);
-  const [listings, setListings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { getCurrentUserId, isGuest, setIsGuest } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
+  const userId = getCurrentUserId();
+  const cached = userId && !isGuest ? listingsCache.get(userId) : null;
+  const [listings, setListings] = useState(cached || []);
+  const [loading, setLoading] = useState(!cached);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('all');
+  const fetchingRef = useRef(false);
+  const closingRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => () => { mountedRef.current = false; }, []);
 
   const fetchListings = useCallback(async () => {
-    const userId = getCurrentUserId();
-    if (!userId || isGuest) { setLoading(false); return; }
+    const uid = getCurrentUserId();
+    if (!uid || isGuest) { setLoading(false); setRefreshing(false); return; }
+    if (fetchingRef.current) { setRefreshing(false); return; }
+    fetchingRef.current = true;
     try {
       const data = await getMyListings();
-      setListings(Array.isArray(data) ? data : data.listings || []);
+      const list = Array.isArray(data) ? data : data?.listings || [];
+      listingsCache.set(uid, list);
+      if (mountedRef.current) setListings(list);
     } catch (err) {
       console.error('Fetch listings error:', err);
-    } finally { setLoading(false); setRefreshing(false); }
+    } finally {
+      fetchingRef.current = false;
+      if (mountedRef.current) { setLoading(false); setRefreshing(false); }
+    }
   }, [getCurrentUserId, isGuest]);
 
-  useEffect(() => { fetchListings(); }, [fetchListings]);
+  // cached list shows instantly; refresh quietly every time the screen is shown
+  useFocusEffect(
+    useCallback(() => {
+      fetchListings();
+    }, [fetchListings])
+  );
 
-  const onRefresh = () => { setRefreshing(true); fetchListings(); };
+  const onRefresh = useCallback(() => { setRefreshing(true); fetchListings(); }, [fetchListings]);
 
-  const handleClose = (listingId) => {
+  const goBack = useCallback(() => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('DashboardMain');
+  }, [navigation]);
+
+  const handleClose = useCallback((listingId) => {
     Alert.alert('Close Listing', 'Are you sure you want to close this listing? This action cannot be undone.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Close', style: 'destructive',
         onPress: async () => {
+          if (closingRef.current) return;
+          closingRef.current = true;
           try { await closeListing(listingId); fetchListings(); }
           catch (err) { Alert.alert('Error', err.response?.data?.error || err.message || 'Failed to close listing'); }
+          finally { closingRef.current = false; }
         },
       },
     ]);
-  };
+  }, [fetchListings]);
 
-  const counts = {
+  const openListing = useCallback((id) => navigation.navigate('ListingDetail', { id }), [navigation]);
+
+  const renderItem = useCallback(({ item }) => (
+    <ListingCard item={item} onClose={handleClose} onPress={openListing} />
+  ), [handleClose, openListing]);
+
+  const counts = useMemo(() => ({
     total: listings.length,
     open: listings.filter((l) => l.status === 'open').length,
     closed: listings.filter((l) => l.status === 'closed').length,
-  };
+  }), [listings]);
 
-  const filtered = filter === 'all' ? listings : listings.filter((l) => l.status === filter);
+  const filtered = useMemo(
+    () => (filter === 'all' ? listings : listings.filter((l) => l.status === filter)),
+    [listings, filter]
+  );
 
- 
   if (isGuest) {
     return (
-      <SafeAreaView style={styles.centerFillScreen}>
+      <SafeAreaView style={styles.centerFillScreen} edges={['top']}>
         <StatusBar barStyle="dark-content" backgroundColor="#fff" />
         <Ionicons name="person-outline" size={56} color="#ddd" />
         <Text style={styles.emptyTitle}>Welcome Back!</Text>
         <Text style={styles.emptyText}>Login to view and manage your listings</Text>
-        <TouchableOpacity style={styles.emptyButton} onPress={() => navigation.navigate('Login')}>
+        <TouchableOpacity style={styles.emptyButton} onPress={() => goToAuth(setIsGuest)}>
           <Text style={styles.emptyButtonText}>Login</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -164,11 +205,11 @@ export default function MyListingsScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.topHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
+        <TouchableOpacity onPress={goBack} style={styles.headerBtn} hitSlop={8}>
           <Ionicons name="arrow-back" size={22} color={INK} />
         </TouchableOpacity>
         <Text style={styles.topHeaderTitle}>My Listings</Text>
@@ -181,21 +222,19 @@ export default function MyListingsScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {loading ? (
+      {loading && listings.length === 0 ? (
         <View style={styles.centerFill}><ActivityIndicator size="large" color={BRAND} /></View>
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={(item) => item._id}
-          contentContainerStyle={styles.listContent}
+          keyExtractor={(item, index) => String(item._id ?? index)}
+          contentContainerStyle={[styles.listContent, { paddingBottom: 20 + insets.bottom }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND} colors={[BRAND]} />}
-          renderItem={({ item }) => (
-            <ListingCard
-              item={item}
-              onClose={handleClose}
-              onPress={(id) => navigation.navigate('ListingDetail', { id })}
-            />
-          )}
+          renderItem={renderItem}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={9}
+          removeClippedSubviews={Platform.OS === 'android'}
           ListHeaderComponent={
             <View>
               <View style={styles.statsCard}>
@@ -263,8 +302,6 @@ export default function MyListingsScreen({ navigation }) {
           }
         />
       )}
-
-      
     </SafeAreaView>
   );
 }
@@ -276,7 +313,7 @@ const styles = StyleSheet.create({
 
   topHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 4 : 8, paddingBottom: 10,
+    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10,
     backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee',
   },
   headerBtn: {
@@ -357,6 +394,4 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 14, color: '#666', textAlign: 'center', marginTop: 6, marginBottom: 16, paddingHorizontal: 20 },
   emptyButton: { backgroundColor: BRAND, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 },
   emptyButtonText: { color: INK, fontWeight: '800', fontSize: 14 },
-
- 
 });

@@ -1,5 +1,5 @@
 // screens/CreateOfferScreen.js
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,14 +9,15 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+// works on Android edge-to-edge too (the app is wrapped in KeyboardProvider)
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { createSkillOffer } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
+import { goToAuth } from '../../utils/goToAuth';
 
 const BRAND = '#f9c349';
 const INK = '#1a1a1a';
@@ -26,8 +27,10 @@ const BORDER = '#e5e5e5';
 const MESSAGE_MAX = 500;
 
 export default function CreateOfferScreen({ route, navigation }) {
-  const { getCurrentUserId, isGuest } = useContext(AuthContext);
-  const { listing } = route.params;
+  const { getCurrentUserId, isGuest, setIsGuest } = useContext(AuthContext);
+  const { listing = {} } = route.params || {};
+  const insets = useSafeAreaInsets();
+  const submittingRef = useRef(false);
 
   const [message, setMessage] = useState('');
   const [offeredSkillName, setOfferedSkillName] = useState('');
@@ -49,10 +52,19 @@ export default function CreateOfferScreen({ route, navigation }) {
     ? 'Any additional info you want to add...'
     : 'Write a message to the listing owner detailing your approach...';
 
+  const goBack = () => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('DashboardMain');
+  };
+
   const handleSubmit = async () => {
+    if (submittingRef.current) return;
     const userId = getCurrentUserId();
     if (!userId || isGuest) {
-      Alert.alert('Login Required', 'Please login to make an offer');
+      Alert.alert('Login Required', 'Please login to make an offer', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Login', onPress: () => goToAuth(setIsGuest) },
+      ]);
       return;
     }
 
@@ -71,6 +83,7 @@ export default function CreateOfferScreen({ route, navigation }) {
       return;
     }
 
+    submittingRef.current = true;
     setSubmitting(true);
 
     try {
@@ -88,7 +101,6 @@ export default function CreateOfferScreen({ route, navigation }) {
         const price = parseFloat(proposedPrice);
         if (isNaN(price) || price < 0) {
           Alert.alert('Error', 'Please enter a valid price');
-          setSubmitting(false);
           return;
         }
         payload.proposedPrice = price;
@@ -101,12 +113,13 @@ export default function CreateOfferScreen({ route, navigation }) {
       await createSkillOffer(payload);
 
       Alert.alert('Success!', 'Your offer has been submitted successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+        { text: 'OK', onPress: goBack },
+      ], { cancelable: false });
     } catch (err) {
       const errorMsg = err.response?.data?.error || err.message || 'Failed to submit offer';
       Alert.alert('Error', errorMsg);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -137,11 +150,11 @@ export default function CreateOfferScreen({ route, navigation }) {
 
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.topHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={goBack} hitSlop={10}>
           <Ionicons name="arrow-back" size={22} color={INK} />
         </TouchableOpacity>
         <Text style={styles.topHeaderTitle}>Submit Offer</Text>
@@ -150,10 +163,14 @@ export default function CreateOfferScreen({ route, navigation }) {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+        behavior="padding"
+        keyboardVerticalOffset={0}
       >
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={[styles.content, { paddingBottom: 30 + insets.bottom }]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+        >
           {/* Listing Info Card */}
           <View style={styles.card}>
             <View style={styles.listingRow}>
@@ -164,7 +181,7 @@ export default function CreateOfferScreen({ route, navigation }) {
                 <View style={styles.typePill}>
                   <Text style={styles.typePillText}>{typeLabel}</Text>
                 </View>
-                <Text style={styles.listingTitle}>{listing.title}</Text>
+                <Text style={styles.listingTitle}>{listing.title || 'Listing'}</Text>
               </View>
             </View>
             <Text style={styles.listingSubtext}>Responding to listing request</Text>
@@ -262,8 +279,6 @@ export default function CreateOfferScreen({ route, navigation }) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      
     </SafeAreaView>
   );
 }
@@ -273,7 +288,7 @@ const styles = StyleSheet.create({
 
   topHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 3 : 3, paddingBottom: 10,
+    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10,
     backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee',
   },
   topHeaderTitle: { fontSize: 20, fontWeight: '700', color: INK },
