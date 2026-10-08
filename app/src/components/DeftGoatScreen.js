@@ -17,6 +17,7 @@ import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { color as T, font as F } from "../theme/tokens";
+import ScreenHeader from "../ui/ScreenHeader";
 const DeftGoatScreen = () => {
   const navigation = useNavigation();
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -53,23 +54,17 @@ const DeftGoatScreen = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="light-content" backgroundColor={T.paper} />
+      <StatusBar barStyle="light-content" backgroundColor={T.ink} />
       
-      <LinearGradient colors={["#FF6B35", "#E55A2A"]} style={styles.headerGradient}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleGoBack} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={24} color={T.white} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>deft goat</Text>
-          <View style={{ width: 40 }} />
-        </View>
+      <LinearGradient colors={[T.ink, T.ink]} style={styles.headerGradient}>
+        <ScreenHeader dark title="deft goat" onBack={handleGoBack} />
       </LinearGradient>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ scale: bounceAnim }] }]}>
           <View style={styles.heroContainer}>
             <LinearGradient
-              colors={["#FF6B35", "#E55A2A"]}
+              colors={[T.ink, T.ink]}
               style={styles.heroIcon}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -85,7 +80,7 @@ const DeftGoatScreen = () => {
             
             <View style={styles.rewardCard}>
               <View style={[styles.rewardIconContainer, { backgroundColor: "rgba(255,107,53,0.15)" }]}>
-                <Ionicons name="cash-outline" size={28} color="#FF6B35" />
+                <Ionicons name="cash-outline" size={28} color={T.ink} />
               </View>
               <View style={styles.rewardContent}>
                 <Text style={styles.rewardTitle}>PKR 10,000 Cash</Text>
@@ -95,7 +90,7 @@ const DeftGoatScreen = () => {
 
             <View style={styles.rewardCard}>
               <View style={[styles.rewardIconContainer, { backgroundColor: "rgba(255,107,53,0.15)" }]}>
-                <Ionicons name="briefcase-outline" size={28} color="#FF6B35" />
+                <Ionicons name="briefcase-outline" size={28} color={T.ink} />
               </View>
               <View style={styles.rewardContent}>
                 <Text style={styles.rewardTitle}>guaranteed paid internship</Text>
@@ -105,7 +100,7 @@ const DeftGoatScreen = () => {
 
             <View style={styles.rewardCard}>
               <View style={[styles.rewardIconContainer, { backgroundColor: "rgba(255,107,53,0.15)" }]}>
-                <Ionicons name="people-circle-outline" size={28} color="#FF6B35" />
+                <Ionicons name="people-circle-outline" size={28} color={T.ink} />
               </View>
               <View style={styles.rewardContent}>
                 <Text style={styles.rewardTitle}>expanded leadership access</Text>
@@ -115,7 +110,7 @@ const DeftGoatScreen = () => {
 
             <View style={styles.rewardCard}>
               <View style={[styles.rewardIconContainer, { backgroundColor: "rgba(255,107,53,0.15)" }]}>
-                <Ionicons name="megaphone-outline" size={28} color="#FF6B35" />
+                <Ionicons name="megaphone-outline" size={28} color={T.ink} />
               </View>
               <View style={styles.rewardContent}>
                 <Text style={styles.rewardTitle}>tdc ambassador role</Text>
@@ -126,7 +121,7 @@ const DeftGoatScreen = () => {
 
           <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
             <LinearGradient
-              colors={["#FF6B35", "#E55A2A"]}
+              colors={[T.ink, T.ink]}
               style={styles.shareGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
@@ -201,7 +196,7 @@ const styles = StyleSheet.create({
   },
   heroSubtitle: {
     fontSize: 16,
-    color: "#FF6B35",
+    color: T.ink,
     fontFamily: F.bodySemi,
     marginTop: 4,
   },

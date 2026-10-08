@@ -18,6 +18,7 @@ import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { color as T, font as F } from "../theme/tokens";
+import ScreenHeader from "../ui/ScreenHeader";
 const FounderCircleScreen = () => {
   const navigation = useNavigation();
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -71,16 +72,10 @@ const FounderCircleScreen = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="light-content" backgroundColor={T.paper} />
+      <StatusBar barStyle="light-content" backgroundColor={T.ink} />
       
-      <LinearGradient colors={[T.yellow, "#FFC000"]} style={styles.headerGradient}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleGoBack} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={24} color={T.ink} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>founder circle</Text>
-          <View style={{ width: 40 }} />
-        </View>
+      <LinearGradient colors={[T.ink, T.ink]} style={styles.headerGradient}>
+        <ScreenHeader dark title="founder circle" onBack={handleGoBack} />
       </LinearGradient>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -88,12 +83,12 @@ const FounderCircleScreen = () => {
           <View style={styles.heroContainer}>
             <Animated.View style={[styles.glowEffect, { opacity: glowOpacity }]} />
             <LinearGradient
-              colors={[T.yellow, "#FFC000"]}
+              colors={[T.ink, T.ink]}
               style={styles.heroIcon}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <MaterialCommunityIcons name="crown-circle" size={60} color={T.ink} />
+              <MaterialCommunityIcons name="crown-circle" size={60} color={T.yellow} />
             </LinearGradient>
             <Text style={styles.heroTitle}>👑 FOUNDER CIRCLE</Text>
             <Text style={styles.heroSubtitle}>elite achievement unlocked!</Text>
@@ -104,7 +99,7 @@ const FounderCircleScreen = () => {
             
             <View style={styles.rewardCard}>
               <View style={[styles.rewardIconContainer, { backgroundColor: "rgba(255,215,0,0.15)" }]}>
-                <Ionicons name="cash-outline" size={28} color={T.yellow} />
+                <Ionicons name="cash-outline" size={28} color={T.ink} />
               </View>
               <View style={styles.rewardContent}>
                 <Text style={styles.rewardTitle}>PKR 15,000 Cash</Text>
@@ -114,7 +109,7 @@ const FounderCircleScreen = () => {
 
             <View style={styles.rewardCard}>
               <View style={[styles.rewardIconContainer, { backgroundColor: "rgba(255,215,0,0.15)" }]}>
-                <Ionicons name="document-text-outline" size={28} color={T.yellow} />
+                <Ionicons name="document-text-outline" size={28} color={T.ink} />
               </View>
               <View style={styles.rewardContent}>
                 <Text style={styles.rewardTitle}>founder job recommendation letter</Text>
@@ -124,7 +119,7 @@ const FounderCircleScreen = () => {
 
             <View style={styles.rewardCard}>
               <View style={[styles.rewardIconContainer, { backgroundColor: "rgba(255,215,0,0.15)" }]}>
-                <Ionicons name="logo-linkedin" size={28} color={T.yellow} />
+                <Ionicons name="logo-linkedin" size={28} color={T.ink} />
               </View>
               <View style={styles.rewardContent}>
                 <Text style={styles.rewardTitle}>founder linkedin recommendation</Text>
@@ -134,7 +129,7 @@ const FounderCircleScreen = () => {
 
             <View style={styles.rewardCard}>
               <View style={[styles.rewardIconContainer, { backgroundColor: "rgba(255,215,0,0.15)" }]}>
-                <Ionicons name="infinite-outline" size={28} color={T.yellow} />
+                <Ionicons name="infinite-outline" size={28} color={T.ink} />
               </View>
               <View style={styles.rewardContent}>
                 <Text style={styles.rewardTitle}>lifetime founder mentorship</Text>
@@ -146,31 +141,31 @@ const FounderCircleScreen = () => {
           <View style={styles.perksContainer}>
             <Text style={styles.sectionTitle}>✨ All Previous Perks</Text>
             <View style={styles.perkItem}>
-              <Ionicons name="checkmark-circle" size={20} color={T.yellow} />
+              <Ionicons name="checkmark-circle" size={20} color={T.ink} />
               <Text style={styles.perkText}>all rewards from previous tiers</Text>
             </View>
           </View>
 
           <TouchableOpacity style={styles.linkedinBtn} onPress={handleLinkedIn}>
             <LinearGradient
-              colors={[T.yellow, "#FFC000"]}
+              colors={[T.ink, T.ink]}
               style={styles.linkedinGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Ionicons name="logo-linkedin" size={20} color={T.ink} />
+              <Ionicons name="logo-linkedin" size={20} color={T.white} />
               <Text style={styles.linkedinBtnText}>connect on linkedin</Text>
             </LinearGradient>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
             <LinearGradient
-              colors={[T.yellow, "#FFC000"]}
+              colors={[T.ink, T.ink]}
               style={styles.shareGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Ionicons name="share-social-outline" size={20} color={T.ink} />
+              <Ionicons name="share-social-outline" size={20} color={T.white} />
               <Text style={styles.shareBtnText}>share founder circle</Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -251,7 +246,7 @@ const styles = StyleSheet.create({
   },
   heroSubtitle: {
     fontSize: 16,
-    color: T.yellow,
+    color: T.ink,
     fontFamily: F.bodySemi,
     marginTop: 4,
   },
@@ -329,7 +324,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   linkedinBtnText: {
-    color: T.ink,
+    color: T.white,
     fontFamily: F.bodyBold,
     fontSize: 15,
   },
@@ -346,7 +341,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   shareBtnText: {
-    color: T.ink,
+    color: T.white,
     fontFamily: F.bodyBold,
     fontSize: 15,
   },

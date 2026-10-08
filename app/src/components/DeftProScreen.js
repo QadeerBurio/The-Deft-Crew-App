@@ -18,6 +18,7 @@ import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { color as T, font as F } from "../theme/tokens";
+import ScreenHeader from "../ui/ScreenHeader";
 const DeftProScreen = () => {
   const navigation = useNavigation();
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -58,28 +59,22 @@ const DeftProScreen = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="light-content" backgroundColor={T.paper} />
+      <StatusBar barStyle="light-content" backgroundColor={T.ink} />
       
-      <LinearGradient colors={["#FFD93D", "#F5C800"]} style={styles.headerGradient}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleGoBack} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={24} color={T.ink} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>deft pro</Text>
-          <View style={{ width: 40 }} />
-        </View>
+      <LinearGradient colors={[T.ink, T.ink]} style={styles.headerGradient}>
+        <ScreenHeader dark title="deft pro" onBack={handleGoBack} />
       </LinearGradient>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
           <View style={styles.heroContainer}>
             <LinearGradient
-              colors={["#FFD93D", "#F5C800"]}
+              colors={[T.ink, T.ink]}
               style={styles.heroIcon}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <MaterialCommunityIcons name="crown" size={60} color={T.ink} />
+              <MaterialCommunityIcons name="crown" size={60} color={T.yellow} />
             </LinearGradient>
             <Text style={styles.heroTitle}>👑 DEFT PRO</Text>
             <Text style={styles.heroSubtitle}>premium achievement unlocked!</Text>
@@ -90,7 +85,7 @@ const DeftProScreen = () => {
             
             <View style={styles.rewardCard}>
               <View style={[styles.rewardIconContainer, { backgroundColor: "rgba(255,217,61,0.15)" }]}>
-                <Ionicons name="cash-outline" size={28} color="#FFD93D" />
+                <Ionicons name="cash-outline" size={28} color={T.ink} />
               </View>
               <View style={styles.rewardContent}>
                 <Text style={styles.rewardTitle}>PKR 5,000 Cash</Text>
@@ -100,7 +95,7 @@ const DeftProScreen = () => {
 
             <View style={styles.rewardCard}>
               <View style={[styles.rewardIconContainer, { backgroundColor: "rgba(255,217,61,0.15)" }]}>
-                <Ionicons name="logo-instagram" size={28} color="#FFD93D" />
+                <Ionicons name="logo-instagram" size={28} color={T.ink} />
               </View>
               <View style={styles.rewardContent}>
                 <Text style={styles.rewardTitle}>instagram feature</Text>
@@ -110,7 +105,7 @@ const DeftProScreen = () => {
 
             <View style={styles.rewardCard}>
               <View style={[styles.rewardIconContainer, { backgroundColor: "rgba(255,217,61,0.15)" }]}>
-                <Ionicons name="school-outline" size={28} color="#FFD93D" />
+                <Ionicons name="school-outline" size={28} color={T.ink} />
               </View>
               <View style={styles.rewardContent}>
                 <Text style={styles.rewardTitle}>internship consideration</Text>
@@ -120,7 +115,7 @@ const DeftProScreen = () => {
 
             <View style={styles.rewardCard}>
               <View style={[styles.rewardIconContainer, { backgroundColor: "rgba(255,217,61,0.15)" }]}>
-                <Ionicons name="people-outline" size={28} color="#FFD93D" />
+                <Ionicons name="people-outline" size={28} color={T.ink} />
               </View>
               <View style={styles.rewardContent}>
                 <Text style={styles.rewardTitle}>leadership mentorship</Text>
@@ -130,7 +125,7 @@ const DeftProScreen = () => {
 
             <View style={styles.rewardCard}>
               <View style={[styles.rewardIconContainer, { backgroundColor: "rgba(255,217,61,0.15)" }]}>
-                <Ionicons name="infinite-outline" size={28} color="#FFD93D" />
+                <Ionicons name="infinite-outline" size={28} color={T.ink} />
               </View>
               <View style={styles.rewardContent}>
                 <Text style={styles.rewardTitle}>unlimited vip access</Text>
@@ -141,24 +136,24 @@ const DeftProScreen = () => {
 
           <TouchableOpacity style={styles.instagramBtn} onPress={handleInstagram}>
             <LinearGradient
-              colors={["#FFD93D", "#F5C800"]}
+              colors={[T.ink, T.ink]}
               style={styles.instagramGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Ionicons name="logo-instagram" size={20} color={T.ink} />
+              <Ionicons name="logo-instagram" size={20} color={T.white} />
               <Text style={styles.instagramBtnText}>Follow @thedeftcrew</Text>
             </LinearGradient>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
             <LinearGradient
-              colors={["#FFD93D", "#F5C800"]}
+              colors={[T.ink, T.ink]}
               style={styles.shareGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Ionicons name="share-social-outline" size={20} color={T.ink} />
+              <Ionicons name="share-social-outline" size={20} color={T.white} />
               <Text style={styles.shareBtnText}>share achievement</Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -228,7 +223,7 @@ const styles = StyleSheet.create({
   },
   heroSubtitle: {
     fontSize: 16,
-    color: "#FFD93D",
+    color: T.ink,
     fontFamily: F.bodySemi,
     marginTop: 4,
   },
@@ -287,7 +282,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   instagramBtnText: {
-    color: T.ink,
+    color: T.white,
     fontFamily: F.bodyBold,
     fontSize: 15,
   },
@@ -303,7 +298,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   shareBtnText: {
-    color: T.ink,
+    color: T.white,
     fontFamily: F.bodyBold,
     fontSize: 15,
   },

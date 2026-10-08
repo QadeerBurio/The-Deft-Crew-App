@@ -17,6 +17,7 @@ import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { color as T, font as F } from "../theme/tokens";
+import ScreenHeader from "../ui/ScreenHeader";
 const MainCharacterScreen = () => {
   const navigation = useNavigation();
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -53,23 +54,17 @@ const MainCharacterScreen = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="light-content" backgroundColor={T.paper} />
+      <StatusBar barStyle="light-content" backgroundColor={T.ink} />
       
-      <LinearGradient colors={[T.danger, "#E55A5A"]} style={styles.headerGradient}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleGoBack} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={24} color={T.white} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>main character</Text>
-          <View style={{ width: 40 }} />
-        </View>
+      <LinearGradient colors={[T.ink, T.ink]} style={styles.headerGradient}>
+        <ScreenHeader dark title="main character" onBack={handleGoBack} />
       </LinearGradient>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
           <View style={styles.heroContainer}>
             <LinearGradient
-              colors={[T.danger, "#E55A5A"]}
+              colors={[T.ink, T.ink]}
               style={styles.heroIcon}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -85,7 +80,7 @@ const MainCharacterScreen = () => {
             
             <View style={styles.rewardCard}>
               <View style={styles.rewardIconContainer}>
-                <Ionicons name="cash-outline" size={28} color={T.danger} />
+                <Ionicons name="cash-outline" size={28} color={T.ink} />
               </View>
               <View style={styles.rewardContent}>
                 <Text style={styles.rewardTitle}>PKR 2,000 Cash</Text>
@@ -95,7 +90,7 @@ const MainCharacterScreen = () => {
 
             <View style={styles.rewardCard}>
               <View style={styles.rewardIconContainer}>
-                <Ionicons name="document-text-outline" size={28} color={T.danger} />
+                <Ionicons name="document-text-outline" size={28} color={T.ink} />
               </View>
               <View style={styles.rewardContent}>
                 <Text style={styles.rewardTitle}>experience certificate</Text>
@@ -105,7 +100,7 @@ const MainCharacterScreen = () => {
 
             <View style={styles.rewardCard}>
               <View style={styles.rewardIconContainer}>
-                <Ionicons name="mail-outline" size={28} color={T.danger} />
+                <Ionicons name="mail-outline" size={28} color={T.ink} />
               </View>
               <View style={styles.rewardContent}>
                 <Text style={styles.rewardTitle}>recommendation letter</Text>
@@ -115,7 +110,7 @@ const MainCharacterScreen = () => {
 
             <View style={styles.rewardCard}>
               <View style={styles.rewardIconContainer}>
-                <Ionicons name="star-outline" size={28} color={T.danger} />
+                <Ionicons name="star-outline" size={28} color={T.ink} />
               </View>
               <View style={styles.rewardContent}>
                 <Text style={styles.rewardTitle}>priority vip access</Text>
@@ -127,22 +122,22 @@ const MainCharacterScreen = () => {
           <View style={styles.perksContainer}>
             <Text style={styles.sectionTitle}>✨ All Previous Perks</Text>
             <View style={styles.perkItem}>
-              <Ionicons name="checkmark-circle" size={20} color={T.danger} />
+              <Ionicons name="checkmark-circle" size={20} color={T.ink} />
               <Text style={styles.perkText}>digital badge</Text>
             </View>
             <View style={styles.perkItem}>
-              <Ionicons name="checkmark-circle" size={20} color={T.danger} />
+              <Ionicons name="checkmark-circle" size={20} color={T.ink} />
               <Text style={styles.perkText}>vip access to partner brands</Text>
             </View>
             <View style={styles.perkItem}>
-              <Ionicons name="checkmark-circle" size={20} color={T.danger} />
+              <Ionicons name="checkmark-circle" size={20} color={T.ink} />
               <Text style={styles.perkText}>professional community access</Text>
             </View>
           </View>
 
           <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
             <LinearGradient
-              colors={[T.danger, "#E55A5A"]}
+              colors={[T.ink, T.ink]}
               style={styles.shareGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
@@ -217,7 +212,7 @@ const styles = StyleSheet.create({
   },
   heroSubtitle: {
     fontSize: 16,
-    color: T.danger,
+    color: T.ink,
     fontFamily: F.bodySemi,
     marginTop: 4,
   },

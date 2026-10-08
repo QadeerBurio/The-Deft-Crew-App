@@ -16,6 +16,7 @@ import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { color as T, font as F } from "../theme/tokens";
+import ScreenHeader from "../ui/ScreenHeader";
 const DigitalBadgeScreen = () => {
   const navigation = useNavigation();
   const badgeAnim = useRef(new Animated.Value(0)).current;
@@ -82,13 +83,7 @@ const DigitalBadgeScreen = () => {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
       
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleGoBack} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={T.ink} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>digital badge</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <ScreenHeader title="digital badge" onBack={handleGoBack} />
 
       <View style={styles.content}>
         <Animated.View 
@@ -117,7 +112,7 @@ const DigitalBadgeScreen = () => {
             ]}
           >
             <LinearGradient
-              colors={["#6C63FF", "#5A52D5"]}
+              colors={[T.ink, T.ink]}
               style={styles.badgeGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -133,24 +128,24 @@ const DigitalBadgeScreen = () => {
           <Text style={styles.infoTitle}>badge details</Text>
           
           <View style={styles.infoItem}>
-            <Ionicons name="checkmark-circle" size={20} color="#6C63FF" />
+            <Ionicons name="checkmark-circle" size={20} color={T.ink} />
             <Text style={styles.infoText}>verified digital achievement</Text>
           </View>
           
           <View style={styles.infoItem}>
-            <Ionicons name="checkmark-circle" size={20} color="#6C63FF" />
+            <Ionicons name="checkmark-circle" size={20} color={T.ink} />
             <Text style={styles.infoText}>exclusive community access</Text>
           </View>
           
           <View style={styles.infoItem}>
-            <Ionicons name="checkmark-circle" size={20} color="#6C63FF" />
+            <Ionicons name="checkmark-circle" size={20} color={T.ink} />
             <Text style={styles.infoText}>partner brand vip access</Text>
           </View>
         </View>
 
         <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
           <LinearGradient
-            colors={["#6C63FF", "#5A52D5"]}
+            colors={[T.ink, T.ink]}
             style={styles.shareGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
@@ -220,7 +215,7 @@ const styles = StyleSheet.create({
     height: 180,
     borderRadius: 90,
     overflow: "hidden",
-    backgroundColor: "#6C63FF",
+    backgroundColor: T.ink,
   },
   badgeGradient: {
     flex: 1,
