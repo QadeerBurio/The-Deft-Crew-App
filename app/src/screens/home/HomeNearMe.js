@@ -3,12 +3,15 @@
 //   guest              → hidden
 //   not asked yet      → permission card; only its button asks (never on app open)
 //   granted            → nearest brands from GET /brands/nearby, "1.2 km · food"
-//   granted, none near → "no partner deals near you yet." + selected-city deals
-//   denied             → selected-city deals + "turn on location… settings"
-//   endpoint missing / failing / no position → selected-city deals, titled
-//                      "in [city]" or "deals" (never "near me"), max 6
+//   granted, none near → "no partner deals near you yet." + "see all deals" (Brands);
+//                        a selected city's deals below it, never nationwide deals
+//   denied             → "turn on location… settings" + selected-city deals
+//                        (city "All": no deals, plus "see all deals")
+//   endpoint missing / failing / no position → selected-city deals titled "in [city]",
+//                        or for "All" a line + "see all deals" (never "near me"), max 6
 // "near me" is the title only while showing a real nearby list.
-// Location is read only on this phone; it's rounded and sent once per query, never stored.
+// Position: the cached one only if under 10 min old and within 1 km, else a fresh one;
+// anything less accurate than 2 km is not used. Rounded to 3 decimals, sent per query.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import * as Location from "expo-location";
@@ -26,6 +29,9 @@ import { holdTour, releaseTour } from "../../engagement/tour/tourGate";
 
 const LOCATION_TTL_MS = 10 * 60 * 1000; // refresh the position at most every 10 minutes
 const POSITION_TIMEOUT_MS = 6000;
+const CACHED_MAX_AGE_MS = 10 * 60 * 1000; // use the phone's cached position only if it is this fresh…
+const CACHED_MIN_ACCURACY_M = 1000;       // …and at least this accurate
+const QUERY_MIN_ACCURACY_M = 2000;        // never ask for nearby deals with a position worse than this
 const round3 = (n) => Math.round(n * 1000) / 1000;
 
 const withTimeout = (promise, ms) =>
@@ -71,18 +77,26 @@ export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, s
     return () => sub.remove();
   }, [signedIn, checkPermission]);
 
-  // Last known position first (instant), then a fresh one (6 s max)
+  // Cached position first (only if under 10 minutes old and within 1 km), then a
+  // fresh one (6 s max). A position less accurate than 2 km is never used.
   const readPosition = useCallback(async () => {
     lastLocAtRef.current = Date.now();
-    const apply = (pos) => {
+    const apply = (pos, { maxAgeMs, minAccuracyM }) => {
       if (!pos?.coords || !mountedRef.current) return false;
+      const acc = pos.coords.accuracy;
+      if (typeof acc === "number" && acc > minAccuracyM) return false;
+      if (maxAgeMs && typeof pos.timestamp === "number" && Date.now() - pos.timestamp > maxAgeMs) return false;
       setCoords({ lat: round3(pos.coords.latitude), lng: round3(pos.coords.longitude) });
       setPositionFailed(false);
       return true;
     };
     let got = false;
     try {
-      got = apply(await Location.getLastKnownPositionAsync());
+      const cached = await Location.getLastKnownPositionAsync({
+        maxAge: CACHED_MAX_AGE_MS,
+        requiredAccuracy: CACHED_MIN_ACCURACY_M,
+      });
+      got = apply(cached, { maxAgeMs: CACHED_MAX_AGE_MS, minAccuracyM: CACHED_MIN_ACCURACY_M });
     } catch (e) {
       devLogOnce("last known position", e);
     }
@@ -91,7 +105,7 @@ export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, s
         Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
         POSITION_TIMEOUT_MS
       );
-      got = apply(fresh) || got;
+      got = apply(fresh, { minAccuracyM: QUERY_MIN_ACCURACY_M }) || got;
     } catch (e) {
       devLogOnce("current position", e);
     }
@@ -122,11 +136,14 @@ export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, s
     if (nearby.error) devLogOnce("nearby", nearby.error);
   }, [nearby.error]);
 
-  // Selected city's deals (state 5): "All" → newest
+  // Selected city's deals for the fallback. With "All" there is no city to fall back
+  // to, so the slot shows a line and a "see all deals" link instead of nationwide deals.
   const cityDeals = useMemo(() => {
+    if (city === ALL_CITIES) return [];
     const list = Array.isArray(allDeals) ? allDeals : [];
     return list.filter((b) => brandMatchesCity(b, city)).slice(0, MAX_DEALS);
   }, [allDeals, city]);
+  const allCities = city === ALL_CITIES;
   const cityLabel = city === ALL_CITIES ? null : city;
 
   const allowLocation = useCallback(async () => {
@@ -187,6 +204,20 @@ export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, s
     );
   }
 
+  // "see all deals" → Brands (same as the section title link)
+  const seeAllLink = (
+    <Pressable
+      onPress={onSeeAll}
+      accessibilityRole="link"
+      accessibilityLabel="see all deals"
+      hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
+    >
+      <Text style={styles.noticeLink} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+        see all deals
+      </Text>
+    </Pressable>
+  );
+
   // 3. Granted and the endpoint answered with brands → nearest first
   if (perm === "granted" && !positionFailed) {
     const waiting = !coords || nearby.isLoading;
@@ -202,18 +233,22 @@ export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, s
         />
       );
     }
-    // 4. Granted, the endpoint answered but nothing within range → note + city deals
+    // 4. Granted, the endpoint answered but nothing within range → the line + "see all
+    //    deals"; the selected city's deals below it (never nationwide deals for "All")
     if (!nearby.isError && nearbyList && nearbyList.length === 0) {
       return (
         <HomeDeals
           {...common}
           deals={cityDeals}
-          loading={dealsLoading}
+          loading={!allCities && dealsLoading}
           hideWhenEmpty={false}
           notice={
-            <Text style={styles.notice} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-              no partner deals near you yet.{cityDeals.length ? (cityLabel ? ` here's what's in ${cityLabel}.` : " here are the newest.") : ""}
-            </Text>
+            <View style={styles.noticeRow}>
+              <Text style={styles.notice} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                no partner deals near you yet.{cityDeals.length && cityLabel ? ` here's what's in ${cityLabel}.` : ""}
+              </Text>
+              {seeAllLink}
+            </View>
           }
         />
       );
@@ -222,13 +257,33 @@ export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, s
     //    title, no "turn on location" row (location is already on)
   }
 
-  // 5. Denied (with a settings link) or 6. silent fallback
+  // 5. Denied (with a settings link) or 6. fallback. With "All" selected there are no
+  //    nationwide deals here: denied keeps its settings line, and both add "see all deals".
   const denied = perm === "denied";
+  if (allCities && !denied) {
+    return (
+      <HomeDeals
+        {...common}
+        deals={[]}
+        loading={false}
+        hideWhenEmpty={false}
+        notice={
+          <View style={styles.noticeRow}>
+            <Text style={styles.notice} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+              {"deals near you aren't available right now."}
+            </Text>
+            {seeAllLink}
+          </View>
+        }
+      />
+    );
+  }
   return (
     <HomeDeals
       {...common}
       deals={cityDeals}
-      loading={dealsLoading}
+      loading={!allCities && dealsLoading}
+      hideWhenEmpty={!allCities}
       notice={
         denied ? (
           <View style={styles.noticeRow}>
@@ -245,6 +300,7 @@ export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, s
                 settings
               </Text>
             </Pressable>
+            {allCities ? seeAllLink : null}
           </View>
         ) : null
       }
