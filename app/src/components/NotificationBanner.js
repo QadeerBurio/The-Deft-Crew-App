@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getMoodMeta } from '../utils/notificationIcon';
 import { navigationRef } from '../navigation/navigationRef';
 
-import { color as T, font as F } from "../theme/tokens";
+import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 const NotificationBanner = ({
   visible,
   notification,
@@ -148,7 +148,7 @@ const NotificationBanner = ({
           {iconSource ? (
             <Image source={iconSource} style={styles.iconImage} resizeMode="contain" />
           ) : (
-            <Text style={styles.emoji} allowFontScaling={false}>{emoji}</Text>
+            <Text style={styles.emoji} maxFontSizeMultiplier={MAX_FONT_SCALE}>{emoji}</Text>
           )}
         </View>
 

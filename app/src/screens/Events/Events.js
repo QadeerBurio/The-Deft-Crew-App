@@ -1508,7 +1508,7 @@ export default function EventsScreen() {
                                 ellipsizeMode="tail"
                                 adjustsFontSizeToFit
                                 minimumFontScale={0.7}
-                                allowFontScaling={false}
+                                maxFontSizeMultiplier={MAX_FONT_SCALE}
                               >
                                 {cat}
                               </Text>
