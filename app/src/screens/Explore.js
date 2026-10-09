@@ -28,65 +28,6 @@ import { useMissions } from '../engagement/hooks/useMissions';
 const { width } = Dimensions.get('window');
 const COLUMN_WIDTH = (width - 60) / 2;
 
-// ─── Particle Background ──────────────────────────────────────────────
-const ParticleBackground = () => {
-  const particles = useRef(
-    [...Array(25)].map(() => ({
-      x: Math.random() * width,
-      y: Math.random() * 900,
-      size: Math.random() * 6 + 2,
-      opacity: new Animated.Value(0),
-      duration: 4000 + Math.random() * 4000,
-      delay: Math.random() * 3000,
-      color: ['#f9c349', '#6366f1', '#a855f7', '#f43f5e', '#10b981', '#06b6d4', '#fb923c', '#8b5cf6', '#ec4899'][
-        Math.floor(Math.random() * 9)
-      ],
-    }))
-  ).current;
-
-  useEffect(() => {
-    particles.forEach((particle) => {
-      const animate = () => {
-        Animated.sequence([
-          Animated.delay(particle.delay),
-          Animated.timing(particle.opacity, {
-            toValue: 0.12,
-            duration: particle.duration,
-            useNativeDriver: true,
-          }),
-          Animated.timing(particle.opacity, {
-            toValue: 0,
-            duration: particle.duration,
-            useNativeDriver: true,
-          }),
-        ]).start(() => animate());
-      };
-      animate();
-    });
-  }, [particles]);
-
-  return (
-    <View style={StyleSheet.absoluteFill}>
-      {particles.map((particle, index) => (
-        <Animated.View
-          key={index}
-          style={[
-            styles.particle,
-            {
-              left: particle.x,
-              top: particle.y,
-              width: particle.size,
-              height: particle.size,
-              opacity: particle.opacity,
-              backgroundColor: particle.color,
-            },
-          ]}
-        />
-      ))}
-    </View>
-  );
-};
-
 // ─── Skeleton ──────────────────────────────────────────────────────────
 const DashboardSkeleton = () => {
   const shimmerAnim = useRef(new Animated.Value(0)).current;
@@ -281,7 +222,7 @@ const AnimatedGridCard = ({ item, index, navigation, missionKey, sorted }) => {
     if (item.iconComponent) {
       return item.iconComponent;
     }
-    return <MaterialCommunityIcons name={item.icon || 'star'} size={24} color="#FFF" />;
+    return <MaterialCommunityIcons name={item.icon || 'star'} size={24} color={T.white} />;
   };
 
   return (
@@ -373,7 +314,7 @@ const AnimatedGridCard = ({ item, index, navigation, missionKey, sorted }) => {
               end={{ x: 1, y: 1 }}
               style={styles.plusGradient}
             >
-              <MaterialCommunityIcons name="arrow-top-right" size={16} color="#FFF" />
+              <MaterialCommunityIcons name="arrow-top-right" size={16} color={T.white} />
             </LinearGradient>
           </View>
 
@@ -543,7 +484,7 @@ const Explore = () => {
       subStyle: { color: '#B45309' },
       plusStyle: { borderColor: '#FDE68A' },
       decorStyle: { left: 20, right: 20 },
-      iconComponent: <FontAwesome5 name="tags" size={24} color="#FFF" />,
+      iconComponent: <FontAwesome5 name="tags" size={24} color={T.white} />,
     },
     {
       id: 2,
@@ -563,7 +504,7 @@ const Explore = () => {
       subStyle: { color: '#9D174D' },
       plusStyle: { borderColor: '#FBCFE8' },
       decorStyle: { left: 20, right: 20 },
-      iconComponent: <Ionicons name="calendar" size={24} color="#FFF" />,
+      iconComponent: <Ionicons name="calendar" size={24} color={T.white} />,
     },
     {
       id: 3,
@@ -583,7 +524,7 @@ const Explore = () => {
       subStyle: { color: '#075985' },
       plusStyle: { borderColor: '#BAE6FD' },
       decorStyle: { left: 20, right: 20 },
-      iconComponent: <MaterialIcons name="travel-explore" size={24} color="#FFF" />,
+      iconComponent: <MaterialIcons name="travel-explore" size={24} color={T.white} />,
     },
     {
       id: 4,
@@ -603,7 +544,7 @@ const Explore = () => {
       subStyle: { color: '#5B21B6' },
       plusStyle: { borderColor: '#DDD6FE' },
       decorStyle: { left: 20, right: 20 },
-      iconComponent: <MaterialCommunityIcons name="account-multiple" size={24} color="#FFF" />,
+      iconComponent: <MaterialCommunityIcons name="account-multiple" size={24} color={T.white} />,
     },
   ];
 
@@ -746,7 +687,6 @@ const Explore = () => {
 // ─── Styles ──────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: T.paper },
-  particle: { position: 'absolute', borderRadius: 50 },
 
   // header
   header: { paddingHorizontal: 20, paddingTop: 22 },
