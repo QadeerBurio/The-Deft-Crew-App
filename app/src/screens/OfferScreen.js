@@ -54,7 +54,7 @@ import {
   buildCityOptions,
 } from "../utils/cityFilter";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
-import { Button, SkeletonBlock } from "../ui";
+import { Button, SkeletonBlock, ScreenHeader, HeaderIconButton } from "../ui";
 import Dot from "../engagement/components/Dot";
 import { formatDistance } from "../utils/distance";
 
@@ -1399,36 +1399,31 @@ export default function OfferScreen() {
             resizeMode="contain"
             accessibilityIgnoresInvertColors
           />
-          <TouchableOpacity
-            style={[styles.headerBtn, styles.heroBtnLeft]}
-            onPress={() => {
+          <ScreenHeader
+            title=""
+            style={styles.heroHeader}
+            onBack={() => {
               soundTap();
               navigation.goBack();
             }}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="back"
-          >
-            <Ionicons name="chevron-back" size={20} color={T.ink} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.headerBtn, styles.heroBtnRight]}
-            onPress={() => {
-              Haptics.selectionAsync();
-              soundRefresh();   // 🔔 refresh whoosh
-              fetchAll({ silent: true, forceFresh: true });
-              fetchStatsOnly();
-            }}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="refresh offer"
-          >
-            {refreshing ? (
-              <ActivityIndicator size="small" color={T.ink} />
-            ) : (
-              <MaterialCommunityIcons name="refresh" size={20} color={T.ink} />
-            )}
-          </TouchableOpacity>
+            right={
+              <HeaderIconButton
+                label="refresh offer"
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  soundRefresh();   // 🔔 refresh whoosh
+                  fetchAll({ silent: true, forceFresh: true });
+                  fetchStatsOnly();
+                }}
+              >
+                {refreshing ? (
+                  <ActivityIndicator size="small" color={T.ink} />
+                ) : (
+                  <MaterialCommunityIcons name="refresh" size={19} color={T.ink} />
+                )}
+              </HeaderIconButton>
+            }
+          />
         </View>
 
         {/* Summary card */}
@@ -1671,18 +1666,8 @@ const styles = StyleSheet.create({
   // Hero
   hero: { height: 236, backgroundColor: T.lineSoft, alignItems: "center", justifyContent: "center" },
   heroImage: { width: "100%", height: "100%" },
-  headerBtn: {
-    position: "absolute",
-    top: 16,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: T.card,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  heroBtnLeft: { left: 16 },
-  heroBtnRight: { right: 16 },
+  // ScreenHeader floated over the hero image (no title; back + refresh)
+  heroHeader: { position: "absolute", top: 10, left: 0, right: 0 },
 
   // Summary card
   summaryCard: {
