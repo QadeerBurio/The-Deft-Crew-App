@@ -193,7 +193,7 @@ export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, s
                   deals closest to you
                 </Text>
                 <Text style={styles.permLine} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-                  {"allow location and we'll show the nearest brands. we never store where you are."}
+                  {"allow location and we'll show the nearest brands."}
                 </Text>
               </View>
             </View>
