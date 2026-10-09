@@ -580,7 +580,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
     if (recommendationsLoading) {
       return (
         <View style={styles.recommendationsLoading}>
-          <ActivityIndicator size="large" color={T.yellow} />
+          <ActivityIndicator size="large" color={T.ink} />
           <Text style={styles.loadingText}>finding best matches...</Text>
         </View>
       );
@@ -769,7 +769,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
           </View>
           {downloading ? (
             <View style={styles.downloadProgressContainer}>
-              <ActivityIndicator size="large" color={T.yellow} />
+              <ActivityIndicator size="large" color={T.ink} />
               <Text style={styles.downloadProgressText}>{downloadProgress}% Complete</Text>
               <View style={styles.progressBar}>
                 <View style={[styles.progressFill, { width: `${downloadProgress}%` }]} />
@@ -837,7 +837,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
       <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={T.yellow} />
+          <ActivityIndicator size="large" color={T.ink} />
           <Text style={styles.loadingText}>loading your resumes...</Text>
         </View>
       </SafeAreaView>
@@ -1221,7 +1221,7 @@ const styles = StyleSheet.create({
   },
   creationCounter: {
     fontSize: 12,
-    color: T.yellow,
+    color: T.ink,
     fontFamily: F.bodyBold,
     marginTop: 2,
   },
@@ -1276,7 +1276,7 @@ const styles = StyleSheet.create({
   },
   resumeTabBadgeText: { fontSize: 10, color: T.white, fontFamily: F.bodySemi },
   viewAllButton: { paddingVertical: 6, paddingHorizontal: 12 },
-  viewAllText: { fontSize: 12, color: T.yellow, fontFamily: F.bodyMedium },
+  viewAllText: { fontSize: 12, color: T.ink, fontFamily: F.bodyMedium },
 
   // ========== STATS CARD ==========
   statsCard: {
@@ -1303,7 +1303,7 @@ const styles = StyleSheet.create({
   statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
   statusText: { fontSize: 12, color: 'rgba(255,255,255,0.9)', fontFamily: F.bodyMedium },
   statsRight: { alignItems: 'center' },
-  percentageText: { fontSize: 32, fontFamily: F.heading, color: T.yellow },
+  percentageText: { fontSize: 32, fontFamily: F.heading, color: T.ink },
   percentageLabel: { fontSize: 11, color: 'rgba(255,255,255,0.8)', fontFamily: F.bodyMedium },
 
   // ========== RESUME STATS ==========
@@ -1371,7 +1371,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   actionBtnTextSecondary: {
-    color: T.yellow,
+    color: T.ink,
     fontSize: 14,
     fontFamily: F.bodyBold,
     marginLeft: 6,
@@ -1419,7 +1419,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: T.line,
   },
-  atsScoreValue: { fontSize: 20, fontFamily: F.heading, color: T.yellow },
+  atsScoreValue: { fontSize: 20, fontFamily: F.heading, color: T.ink },
   atsScoreMax: { fontSize: 11, fontFamily: F.body, color: T.textFaint, marginLeft: 2 },
   atsKeywordsSection: { marginTop: 4 },
   atsKeywordsTitle: {
@@ -1461,7 +1461,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: { fontSize: 18, fontFamily: F.headingBold, color: '#0F172A' },
-  seeAllText: { fontSize: 13, color: T.yellow, fontFamily: F.bodyMedium },
+  seeAllText: { fontSize: 13, color: T.ink, fontFamily: F.bodyMedium },
   jobCard: {
     backgroundColor: T.card,
     borderRadius: 16,
