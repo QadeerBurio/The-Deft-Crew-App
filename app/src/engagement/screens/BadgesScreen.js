@@ -24,6 +24,7 @@ import { useEngagement } from '../hooks/useEngagement';
 import { useStreak } from '../hooks/useStreak';
 
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
+import { ScreenHeader } from "../../ui";
 const { width } = Dimensions.get('window');
 const CARD_GAP = 12;
 const CARD_WIDTH = (width - 32 - CARD_GAP) / 2;
@@ -412,17 +413,7 @@ export default function BadgesScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            style={styles.headerBtn}
-          >
-            <Ionicons name="chevron-back" size={22} color={BLACK} />
-          </TouchableOpacity>
-          <Text style={styles.title} accessibilityRole="header">badges<Text style={{ color: T.yellow }}>.</Text></Text>
-          <View style={{ width: 34 }} />
-        </View>
+        <ScreenHeader title="badges" onBack={() => navigation.goBack()} />
         <View style={styles.center}>
           <ActivityIndicator color={GOLD} />
           <Text style={styles.loadingText}>loading badges…</Text>
@@ -444,19 +435,15 @@ export default function BadgesScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          style={styles.headerBtn}
-        >
-          <Ionicons name="chevron-back" size={22} color={BLACK} />
-        </TouchableOpacity>
-        <Text style={styles.title} accessibilityRole="header">badges<Text style={{ color: T.yellow }}>.</Text></Text>
-        <Text style={B.headerCount} accessibilityLabel={`${earnedCount} of ${total} badges earned`}>
-          {earnedCount} / {total}
-        </Text>
-      </View>
+      <ScreenHeader
+        title="badges"
+        onBack={() => navigation.goBack()}
+        right={
+          <Text style={B.headerCount} accessibilityLabel={`${earnedCount} of ${total} badges earned`} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            {earnedCount} / {total}
+          </Text>
+        }
+      />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -629,31 +616,6 @@ export default function BadgesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: WHITE },
 
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: BLACK + '12',
-  },
-  headerBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: WHITE,
-    borderWidth: 1.5,
-    borderColor: BLACK + '15',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 17,
-    fontFamily: F.bodyBold,
-    color: BLACK,
-    letterSpacing: -0.3,
-  },
 
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
   loadingText: { fontSize: 13, color: BLACK, opacity: 0.55, fontFamily: F.bodySemi },
