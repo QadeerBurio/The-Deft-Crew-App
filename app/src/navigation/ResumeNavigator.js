@@ -1,9 +1,10 @@
 // app/src/navigation/ResumeStack.js
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { TouchableOpacity, Text, View, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { View, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScreenHeader } from "../ui";
+import { color as T } from "../theme/tokens";
 
 // Import Screens
 import ResumeBuilderScreen from "../screens/Resume/ResumeBuilder";
@@ -16,23 +17,12 @@ import ResumeShareScreen from "../screens/Resume/ResumeShare";
 
 const Stack = createNativeStackNavigator();
 
-// Custom Header
+// Stack header: the design-system ScreenHeader, below the status bar
 const CustomHeader = ({ title, showBack, onBack }) => {
-  const navigation = useNavigation();
-  
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.headerContainer}>
-      {showBack && (
-        <TouchableOpacity 
-          onPress={() => onBack ? onBack() : navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color="#2c3e50" />
-        </TouchableOpacity>
-      )}
-      <Text style={styles.headerTitle}>
-        {title || 'Resume'}
-      </Text>
+    <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
+      <ScreenHeader title={title || 'resume'} showBack={showBack} onBack={onBack} />
     </View>
   );
 };
@@ -54,7 +44,7 @@ export default function ResumeStack() {
       <Stack.Screen 
         name="ResumeDashboard" 
         component={ResumeDashboardScreen}
-        options={{ title: 'Build Resume' }}
+        options={{ title: 'build resume' }}
       />
       
       <Stack.Screen 
@@ -100,22 +90,5 @@ export default function ResumeStack() {
 }
 
 const styles = StyleSheet.create({
-  headerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    height: 60,
-  },
-  backButton: {
-    marginRight: 12,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-  },
+  headerContainer: { backgroundColor: T.paper },
 });
