@@ -14,6 +14,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills (design system)
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 import EmptyState from "../../ui/EmptyState";
+import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 import PostCard, { PostCardSkeleton } from "./PostCard";
@@ -77,7 +78,6 @@ export default function FeedScreen({ navigation }) {
 
   const searchInputRef = useRef(null);
   const lastPostRef = useRef(null);
-  const headerScale = useRef(new Animated.Value(1)).current;
   const searchFadeAnim = useRef(new Animated.Value(0)).current;
   const searchSlideAnim = useRef(new Animated.Value(-20)).current;
 
@@ -541,44 +541,26 @@ export default function FeedScreen({ navigation }) {
 
       {/* HEADER */}
       <View style={[styles.header, dark && styles.headerDark]}>
-        <View style={styles.topBar}>
-          {!isSearching ? (
-            <>
-              {/* Back Icon - Left Side */}
-              <TouchableOpacity
-                style={[styles.backButton, dark && styles.iconBtnDark]} 
-                onPress={handleBackPress}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="back to home"
+        {!isSearching ? (
+          <ScreenHeader
+            title="social"
+            dark={dark}
+            onBack={handleBackPress}
+            right={
+              <HeaderIconButton
+                dark={dark}
+                onPress={handleNotifications}
+                label={!isGuest && unreadCount > 0 ? "notifications, new" : "notifications"}
               >
-                <Ionicons name="chevron-back" size={19} color={dark ? T.white : T.ink} />
-              </TouchableOpacity>
-
-              {/* Title */}
-              <Animated.View style={[styles.centerLogoContainer, { transform: [{ scale: headerScale }] }]}>
-                <Text style={[styles.logoText, dark && { color: T.white }]} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
-                  social<Text style={{ color: T.yellow }}>.</Text>
-                </Text>
-              </Animated.View>
-
-              {/* Notification Icon - Right Side */}
-              <View style={styles.topIcons}>
-                <TouchableOpacity
-                  style={[styles.iconBtn, dark && styles.iconBtnDark]}
-                  onPress={handleNotifications}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityLabel={!isGuest && unreadCount > 0 ? "notifications, new" : "notifications"}
-                >
-                  <View style={styles.badgeContainer}>
-                    <Ionicons name="notifications-outline" size={19} color={dark ? T.white : T.ink} />
-                    {!isGuest && unreadCount > 0 && <View style={styles.redBadge} />}
-                  </View>
-                </TouchableOpacity>
-              </View>
-            </>
-          ) : (
+                <View style={styles.badgeContainer}>
+                  <Ionicons name="notifications-outline" size={19} color={dark ? T.white : T.ink} />
+                  {!isGuest && unreadCount > 0 && <View style={styles.redBadge} />}
+                </View>
+              </HeaderIconButton>
+            }
+          />
+        ) : (
+          <View style={styles.topBar}>
             <View style={styles.searchContainer}>
               <View style={styles.searchInputWrapper}>
                 <Ionicons name="search-outline" size={18} color={T.textFaint} style={{marginRight: 8}} />
@@ -608,8 +590,8 @@ export default function FeedScreen({ navigation }) {
                 <Text style={styles.cancelText}>cancel</Text>
               </TouchableOpacity>
             </View>
-          )}
-        </View>
+          </View>
+        )}
 
         {/* Feed / confessions segmented tabs */}
         <View style={styles.tabsContainer}>
@@ -686,30 +668,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     minHeight: 56,
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: T.card,
-    borderWidth: 1,
-    borderColor: T.line,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  centerLogoContainer: { flex: 1 },
-  logoText: { fontFamily: F.heading, fontSize: 28, letterSpacing: -0.8, color: T.ink },
-  topIcons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  iconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: T.card,
-    borderWidth: 1,
-    borderColor: T.line,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
   searchContainer: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   searchInputWrapper: {
     flex: 1,
@@ -779,7 +737,6 @@ const styles = StyleSheet.create({
   // Confessions tab (dark)
   containerDark: { backgroundColor: T.ink },
   headerDark: { backgroundColor: T.ink },
-  iconBtnDark: { backgroundColor: T.inkSoft, borderColor: T.inkSoft },
   tabsTrackDark: { backgroundColor: T.inkSoft },
   activeTabDark: { backgroundColor: T.yellow },
   tabTextDark: { color: T.onInkMuted },
