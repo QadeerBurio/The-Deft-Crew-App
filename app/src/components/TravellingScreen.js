@@ -20,6 +20,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import * as Haptics from 'expo-haptics';
 import TravelChatBot from './TravelChatBot';
+import { ScreenHeader } from "../ui";
 
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 const GOLD = T.yellow;
@@ -88,20 +89,7 @@ const TravelingScreen = () => {
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={goBack}
-          style={styles.backButton}
-          activeOpacity={0.7}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="chevron-back" size={22} color={DARK} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
-          travel<Text style={{ color: GOLD }}>.</Text>
-        </Text>
-        <View style={styles.headerRight} />
-      </View>
+      <ScreenHeader title="travel" onBack={goBack} />
 
       <Animated.ScrollView
         style={[styles.container, { opacity: fade }]}
@@ -193,26 +181,6 @@ const TravelingScreen = () => {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: T.paper },
 
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: T.paper,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: T.card,
-    borderWidth: 1,
-    borderColor: T.line,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: { fontSize: 24, fontFamily: F.heading, color: DARK, letterSpacing: -0.3 },
-  headerRight: { width: 44 },
 
   container: { flex: 1, backgroundColor: T.paper },
   content: { paddingHorizontal: 16, paddingBottom: 140 },
