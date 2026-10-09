@@ -84,7 +84,7 @@ const MIN_FETCH_GAP = 4000;
 
 // ── Categories ─────────────────────────────────────────
 const CATEGORIES = [
-  { id: "all", name: "All", icon: "apps", color: "#f9c349", bgColor: "#f9c34915" },
+  { id: "all", name: "All", icon: "apps", color: T.ink, bgColor: T.yellowSoft },
   { id: "restaurant", name: "Restaurant", icon: "silverware-fork-knife", color: "#FF6B6B", bgColor: "#FF6B6B15" },
   { id: "cafe", name: "Cafe & Coffee", icon: "coffee", color: "#A0522D", bgColor: "#A0522D15" },
   { id: "food", name: "Food & Drinks", icon: "food", color: "#FF8C00", bgColor: "#FF8C0015" },
