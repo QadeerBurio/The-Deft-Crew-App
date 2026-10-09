@@ -70,41 +70,41 @@ const isImportedEvent = (event) => {
 // (like cities) plus the backend /categories endpoint. Unknown categories
 // get a deterministic fallback theme derived from their name.
 const CATEGORY_THEME = {
-  Hackathons: { icon: "code-outline", color: T.ink, bg: "#dbeafe" },
-  Workshops: { icon: "construct-outline", color: "#7c3aed", bg: "#ede9fe" },
-  Conferences: { icon: "people-outline", color: T.danger, bg: T.dangerBg },
-  Competitions: { icon: "trophy-outline", color: "#d97706", bg: "#fffbeb" },
-  "Career Fairs": { icon: "briefcase-outline", color: T.success, bg: T.successBg },
-  Concerts: { icon: "musical-notes-outline", color: "#ec4899", bg: "#fce7f3" },
-  Poetry: { icon: "book-outline", color: "#8b5cf6", bg: "#f3e8ff" },
-  Classes: { icon: "school-outline", color: "#0891b2", bg: "#cffafe" },
-  "Classes & Workshops": { icon: "school-outline", color: "#0891b2", bg: "#cffafe" },
-  Theatre: { icon: "film-outline", color: "#7c2d12", bg: "#ffedd5" },
-  "Theatre, Arts & Culture": { icon: "film-outline", color: "#7c2d12", bg: "#ffedd5" },
-  "Arts & Crafts": { icon: "color-palette-outline", color: "#db2777", bg: "#fce7f3" },
-  "Festivals & Markets": { icon: "balloon-outline", color: "#ea580c", bg: "#ffedd5" },
-  "Fashion & Lifestyle": { icon: "shirt-outline", color: "#9333ea", bg: "#f3e8ff" },
-  "Food & Culinary": { icon: "restaurant-outline", color: T.danger, bg: T.dangerBg },
-  "Adventure & Tours": { icon: "trail-sign-outline", color: T.success, bg: T.successBg },
-  "Education & Business": { icon: "business-outline", color: "#0f766e", bg: "#ccfbf1" },
-  "Health,Wellness & Beauty": { icon: "heart-outline", color: T.danger, bg: "#ffe4e6" },
-  "Sports & Screenings": { icon: "football-outline", color: "#0284c7", bg: "#e0f2fe" },
-  "Movie Night": { icon: "videocam-outline", color: "#4338ca", bg: "#e0e7ff" },
-  Comedy: { icon: "happy-outline", color: "#ca8a04", bg: "#fef9c3" },
-  Automotive: { icon: "car-sport-outline", color: "#334155", bg: T.sand },
-  "Concerts & Live Music": { icon: "musical-notes-outline", color: "#ec4899", bg: "#fce7f3" },
+  Hackathons: { icon: "code-outline", color: T.ink, bg: T.yellowSoft },
+  Workshops: { icon: "construct-outline", color: T.ink, bg: T.yellowSoft },
+  Conferences: { icon: "people-outline", color: T.ink, bg: T.yellowSoft },
+  Competitions: { icon: "trophy-outline", color: T.ink, bg: T.yellowSoft },
+  "Career Fairs": { icon: "briefcase-outline", color: T.ink, bg: T.yellowSoft },
+  Concerts: { icon: "musical-notes-outline", color: T.ink, bg: T.yellowSoft },
+  Poetry: { icon: "book-outline", color: T.ink, bg: T.yellowSoft },
+  Classes: { icon: "school-outline", color: T.ink, bg: T.yellowSoft },
+  "Classes & Workshops": { icon: "school-outline", color: T.ink, bg: T.yellowSoft },
+  Theatre: { icon: "film-outline", color: T.ink, bg: T.yellowSoft },
+  "Theatre, Arts & Culture": { icon: "film-outline", color: T.ink, bg: T.yellowSoft },
+  "Arts & Crafts": { icon: "color-palette-outline", color: T.ink, bg: T.yellowSoft },
+  "Festivals & Markets": { icon: "balloon-outline", color: T.ink, bg: T.yellowSoft },
+  "Fashion & Lifestyle": { icon: "shirt-outline", color: T.ink, bg: T.yellowSoft },
+  "Food & Culinary": { icon: "restaurant-outline", color: T.ink, bg: T.yellowSoft },
+  "Adventure & Tours": { icon: "trail-sign-outline", color: T.ink, bg: T.yellowSoft },
+  "Education & Business": { icon: "business-outline", color: T.ink, bg: T.yellowSoft },
+  "Health,Wellness & Beauty": { icon: "heart-outline", color: T.ink, bg: T.yellowSoft },
+  "Sports & Screenings": { icon: "football-outline", color: T.ink, bg: T.yellowSoft },
+  "Movie Night": { icon: "videocam-outline", color: T.ink, bg: T.yellowSoft },
+  Comedy: { icon: "happy-outline", color: T.ink, bg: T.yellowSoft },
+  Automotive: { icon: "car-sport-outline", color: T.ink, bg: T.yellowSoft },
+  "Concerts & Live Music": { icon: "musical-notes-outline", color: T.ink, bg: T.yellowSoft },
 };
 
 // Deterministic fallback palette for categories we haven't themed yet
 const FALLBACK_PALETTE = [
-  { color: T.ink, bg: "#dbeafe", icon: "sparkles-outline" },
-  { color: "#7c3aed", bg: "#ede9fe", icon: "sparkles-outline" },
-  { color: T.danger, bg: T.dangerBg, icon: "sparkles-outline" },
-  { color: "#d97706", bg: "#fffbeb", icon: "sparkles-outline" },
-  { color: T.success, bg: T.successBg, icon: "sparkles-outline" },
-  { color: "#ec4899", bg: "#fce7f3", icon: "sparkles-outline" },
-  { color: "#0891b2", bg: "#cffafe", icon: "sparkles-outline" },
-  { color: "#7c2d12", bg: "#ffedd5", icon: "sparkles-outline" },
+  { color: T.ink, bg: T.yellowSoft, icon: "sparkles-outline" },
+  { color: T.ink, bg: T.yellowSoft, icon: "sparkles-outline" },
+  { color: T.ink, bg: T.yellowSoft, icon: "sparkles-outline" },
+  { color: T.ink, bg: T.yellowSoft, icon: "sparkles-outline" },
+  { color: T.ink, bg: T.yellowSoft, icon: "sparkles-outline" },
+  { color: T.ink, bg: T.yellowSoft, icon: "sparkles-outline" },
+  { color: T.ink, bg: T.yellowSoft, icon: "sparkles-outline" },
+  { color: T.ink, bg: T.yellowSoft, icon: "sparkles-outline" },
 ];
 
 const hashString = (s) => {
@@ -114,7 +114,7 @@ const hashString = (s) => {
 };
 
 const getCategoryTheme = (cat) => {
-  if (!cat) return { icon: "sparkles-outline", color: "#1a1a2e", bg: "#f0f2f6" };
+  if (!cat) return { icon: "sparkles-outline", color: T.ink, bg: T.yellowSoft };
   if (CATEGORY_THEME[cat]) return CATEGORY_THEME[cat];
 
   const lower = String(cat).toLowerCase();
@@ -141,11 +141,11 @@ const COLORS = {
   accent: T.yellow,
   danger: T.danger,
   goldSoft: T.yellowSoft,
-  overlayDark: "rgba(26, 26, 46, 0.85)",
+  overlayDark: "rgba(17, 17, 17, 0.85)", // T.ink at 85%
   gradientStart: T.ink,
   gradientEnd: T.ink,
   success: T.success,
-  warning: "#f59e0b",
+  warning: T.yellow,
 };
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
@@ -1088,7 +1088,7 @@ export default function EventsScreen() {
                   <Ionicons
                     name={showApplied ? "checkmark-circle" : "calendar"}
                     size={48}
-                    color={COLORS.accent}
+                    color={T.ink}
                   />
                 </View>
                 <Text style={styles.emptyTitle}>
@@ -1152,6 +1152,8 @@ export default function EventsScreen() {
                       activeOpacity={0.7}
                       style={styles.sheetHeaderBtn}
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      accessibilityRole="button"
+                      accessibilityLabel="back to events"
                     >
                       <Ionicons name="arrow-back" size={20} color={COLORS.primary} />
                     </TouchableOpacity>
@@ -1165,6 +1167,8 @@ export default function EventsScreen() {
                       activeOpacity={0.7}
                       style={styles.sheetHeaderBtn}
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      accessibilityRole="button"
+                      accessibilityLabel="close event details"
                     >
                       <Ionicons name="close" size={20} color={COLORS.primary} />
                     </TouchableOpacity>
@@ -1193,7 +1197,7 @@ export default function EventsScreen() {
                       </View>
                     )}
                     <LinearGradient
-                      colors={["rgba(0,0,0,0.05)", "rgba(0,0,0,0.55)"]}
+                      colors={["rgba(17,17,17,0.05)", "rgba(17,17,17,0.55)"]}
                       style={styles.sheetBannerOverlay}
                     />
                     {isEventRegistered(selectedEvent._id) && (
@@ -1228,7 +1232,7 @@ export default function EventsScreen() {
                         </Text>
                       </View>
                       {isEventRegistered(selectedEvent._id) && (
-                        <View style={[styles.detailTag, { backgroundColor: "#d1fae5" }]}>
+                        <View style={[styles.detailTag, { backgroundColor: T.successBg }]}>
                           <Ionicons name="checkmark-circle" size={12} color={COLORS.success} />
                           <Text style={[styles.detailTagText, { color: COLORS.success }]}>
                             registered
@@ -1255,7 +1259,7 @@ export default function EventsScreen() {
                       {!!selectedEvent.date && (
                         <View style={styles.specCard}>
                           <View style={styles.specIcon}>
-                            <Ionicons name="calendar" size={18} color={COLORS.accent} />
+                            <Ionicons name="calendar" size={18} color={T.ink} />
                           </View>
                           <Text style={styles.specTitle}>date</Text>
                           <Text style={styles.specText}>{selectedEvent.date}</Text>
@@ -1264,7 +1268,7 @@ export default function EventsScreen() {
 
                       <View style={styles.specCard}>
                         <View style={styles.specIcon}>
-                          <Ionicons name="hourglass" size={18} color={COLORS.accent} />
+                          <Ionicons name="hourglass" size={18} color={T.ink} />
                         </View>
                         <Text style={styles.specTitle}>deadline</Text>
                         <Text style={styles.specText}>{selectedEvent.deadline || "Open"}</Text>
@@ -1272,7 +1276,7 @@ export default function EventsScreen() {
 
                       <View style={[styles.specCard, styles.specCardLast]}>
                         <View style={styles.specIcon}>
-                          <Ionicons name="people" size={18} color={COLORS.accent} />
+                          <Ionicons name="people" size={18} color={T.ink} />
                         </View>
                         <Text style={styles.specTitle}>team</Text>
                         <Text style={styles.specText}>{selectedEvent.teamSize || "Any"}</Text>
@@ -1289,7 +1293,7 @@ export default function EventsScreen() {
                     <View style={styles.sectionCard}>
                       <Text style={styles.sectionCardTitle}>location</Text>
                       <Text style={styles.sectionCardBody}>
-                        <Ionicons name="location" size={14} color={COLORS.accent} />{" "}
+                        <Ionicons name="location" size={14} color={T.ink} />{" "}
                         {selectedEvent.location || "Online event"}
                       </Text>
                     </View>
@@ -1298,7 +1302,7 @@ export default function EventsScreen() {
                       <View style={styles.sectionCard}>
                         <Text style={styles.sectionCardTitle}>university</Text>
                         <Text style={styles.sectionCardBody}>
-                          <Ionicons name="school" size={14} color={COLORS.accent} />{" "}
+                          <Ionicons name="school" size={14} color={T.ink} />{" "}
                           {selectedEvent.university}
                         </Text>
                       </View>
@@ -1308,7 +1312,7 @@ export default function EventsScreen() {
                       <View style={styles.sectionCard}>
                         <Text style={styles.sectionCardTitle}>prize pool</Text>
                         <Text style={styles.sectionCardBody}>
-                          <Ionicons name="trophy" size={14} color={COLORS.accent} />{" "}
+                          <Ionicons name="trophy" size={14} color={T.ink} />{" "}
                           {selectedEvent.prize}
                         </Text>
                       </View>
@@ -1318,7 +1322,7 @@ export default function EventsScreen() {
                       <View style={styles.sectionCard}>
                         <Text style={styles.sectionCardTitle}>contact</Text>
                         <Text style={styles.sectionCardBody}>
-                          <Ionicons name="call" size={14} color={COLORS.accent} />{" "}
+                          <Ionicons name="call" size={14} color={T.ink} />{" "}
                           {selectedEvent.contact}
                         </Text>
                       </View>
@@ -1354,7 +1358,7 @@ export default function EventsScreen() {
                       <LinearGradient
                         colors={
                           isImportedEvent(selectedEvent)
-                            ? ["#6366f1", "#4f46e5"]
+                            ? [T.ink, T.ink]
                             : [COLORS.primary, COLORS.gradientEnd]
                         }
                         start={{ x: 0, y: 0 }}
@@ -1362,7 +1366,7 @@ export default function EventsScreen() {
                         style={styles.stickyButton}
                       >
                         <Text style={styles.stickyButtonText}>
-                          {isImportedEvent(selectedEvent) ? "Open Link" : "Register Now"}
+                          {isImportedEvent(selectedEvent) ? "open link" : "register now"}
                         </Text>
                         <Ionicons
                           name={isImportedEvent(selectedEvent) ? "open-outline" : "arrow-forward"}
@@ -1406,6 +1410,8 @@ export default function EventsScreen() {
                     style={styles.modalClose}
                     onPress={() => setModalVisible(false)}
                     activeOpacity={0.86}
+                    accessibilityRole="button"
+                    accessibilityLabel="close create event"
                   >
                     <Ionicons name="close" size={25} color={COLORS.accent} />
                   </TouchableOpacity>
@@ -1675,8 +1681,8 @@ export default function EventsScreen() {
       {/* REGISTRATION MODAL — only for manual/admin events */}
       {/* ═══════════════════════════════════════════════════════════ */}
       <GuestGuard
-        title="View Your Discounts"
-        message="Sign in to see your claimed offers and discounts."
+        title="view your discounts"
+        message="sign in to see your claimed offers and discounts."
       >
         <Modal
           visible={!!registerEvent}
@@ -1703,6 +1709,8 @@ export default function EventsScreen() {
                         style={styles.modalClose}
                         onPress={() => setRegisterEvent(null)}
                         activeOpacity={0.86}
+                        accessibilityRole="button"
+                        accessibilityLabel="close registration"
                       >
                         <Ionicons name="close" size={22} color={COLORS.accent} />
                       </TouchableOpacity>
@@ -1820,12 +1828,12 @@ const styles = StyleSheet.create({
   },
   headerLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
   headerBtn: {
-    width: 34, height: 34, borderRadius: 10,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: COLORS.surface,
     justifyContent: "center", alignItems: "center", position: "relative",
   },
   headerBtnActive: {
-    backgroundColor: "#d1fae5", borderWidth: 1, borderColor: COLORS.success,
+    backgroundColor: T.successBg, borderWidth: 1, borderColor: COLORS.success,
   },
   headerBadge: {
     position: "absolute", top: -3, right: -3, minWidth: 16, height: 16,
@@ -1837,7 +1845,7 @@ const styles = StyleSheet.create({
   logoBadge: {
     width: 32, height: 32, borderRadius: 8,
     justifyContent: "center", alignItems: "center",
-    shadowColor: COLORS.accent,
+    shadowColor: T.ink,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
   },
@@ -1929,26 +1937,26 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
     borderWidth: 1, borderColor: COLORS.line,
   },
-  skeletonImage: { width: "100%", height: 140, backgroundColor: "#e8ecf1", overflow: "hidden" },
+  skeletonImage: { width: "100%", height: 140, backgroundColor: T.sand, overflow: "hidden" },
   shimmerOverlay: {
     position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: "rgba(255,255,255,0.4)",
+    backgroundColor: T.paper,
   },
   skeletonContent: { padding: 12 },
   skeletonTitle: {
-    height: 18, width: "75%", backgroundColor: "#e8ecf1",
+    height: 18, width: "75%", backgroundColor: T.sand,
     borderRadius: 6, marginBottom: 6,
   },
   skeletonText: {
-    height: 11, width: "90%", backgroundColor: "#e8ecf1",
+    height: 11, width: "90%", backgroundColor: T.sand,
     borderRadius: 4, marginBottom: 4,
   },
   skeletonTextShort: {
-    height: 11, width: "55%", backgroundColor: "#e8ecf1",
+    height: 11, width: "55%", backgroundColor: T.sand,
     borderRadius: 4, marginBottom: 8, marginTop: 4,
   },
   skeletonButton: {
-    width: 80, height: 32, backgroundColor: "#e8ecf1", borderRadius: 10,
+    width: 80, height: 32, backgroundColor: T.sand, borderRadius: 10,
   },
   skeletonFooter: { flexDirection: "row" },
 
@@ -1978,7 +1986,7 @@ const styles = StyleSheet.create({
     position: "absolute", top: 10, left: 10,
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
-    backgroundColor: "rgba(99,102,241,0.85)",
+    backgroundColor: T.ink,
   },
   importedPillText: {
     fontSize: 9, fontFamily: F.bodyBold, color: T.white, marginLeft: 3,
@@ -2042,7 +2050,7 @@ const styles = StyleSheet.create({
   },
   detailsActionButton: { flexDirection: "row", alignItems: "center" },
   detailsActionText: {
-    fontSize: 11, color: COLORS.accent, fontFamily: F.bodySemi, marginRight: 2,
+    fontSize: 11, color: T.ink, fontFamily: F.bodySemi, marginRight: 2,
   },
 
   emptyState: { alignItems: "center", justifyContent: "center", paddingTop: 40, paddingBottom: 20 },
@@ -2088,14 +2096,14 @@ const styles = StyleSheet.create({
   },
   sheetGrabber: {
     width: 40, height: 4, borderRadius: 2,
-    backgroundColor: "#d0d5dd", alignSelf: "center", marginBottom: 8,
+    backgroundColor: T.handle, alignSelf: "center", marginBottom: 8,
   },
   sheetHeaderRow: {
     flexDirection: "row", alignItems: "center",
     justifyContent: "space-between", paddingHorizontal: 14,
   },
   sheetHeaderBtn: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: COLORS.surface,
     alignItems: "center", justifyContent: "center",
   },
@@ -2119,7 +2127,7 @@ const styles = StyleSheet.create({
     position: "absolute", bottom: 12, right: 12,
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
     flexDirection: "row", alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.95)",
+    backgroundColor: T.card,
   },
   sheetRegisteredText: {
     color: COLORS.success, fontSize: 11, fontFamily: F.bodyBold, marginLeft: 3,
@@ -2211,12 +2219,12 @@ const styles = StyleSheet.create({
     color: T.white, fontSize: 18, fontFamily: F.heading, marginLeft: 6,
   },
   modalClose: {
-    width: 30, height: 30, borderRadius: 15,
+    width: 44, height: 44, borderRadius: 22,
     justifyContent: "center", alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: T.inkSoft,
   },
   modalHeroSubtitle: {
-    marginTop: 4, color: "rgba(255,255,255,0.85)",
+    marginTop: 4, color: T.onInkMuted,
     fontSize: 12, fontFamily: F.bodySemi,
   },
   formScrollView: { flex: 1, paddingHorizontal: 14 },
