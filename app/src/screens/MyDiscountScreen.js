@@ -25,6 +25,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { color as T, font as F, MAX_FONT_SCALE } from '../theme/tokens';
 import { SheetHandle } from '../ui/Sheet';
+import { ScreenHeader, SkeletonBlock } from '../ui';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
@@ -89,26 +90,11 @@ const offerImageUrl = (img) => {
 
 const { width, height } = Dimensions.get('window');
 
-// Design system: no gradients. Same <LinearGradient colors=…> call sites, drawn as one
-// flat token colour picked from the first stop.
-const FLAT = {
-  '#f9c349': T.yellow,
-  '#1a1a1a': T.ink,
-  '#ffffff': T.card,
-  '#fff': T.card,
-  '#f0f0f0': T.sand,
-  '#cccccc': T.sand,
-  'rgba(16,185,129,0.9)': T.success,
-  'rgba(156,163,175,0.9)': T.textFaint,
-  'rgba(249,195,73,0.92)': T.yellow,
-  'rgba(16,185,129,0.92)': T.card,
-  'rgba(16,185,129,0.3)': 'rgba(17,17,17,0.10)',
-  'rgba(255,255,255,0.2)': 'rgba(17,17,17,0.08)',
-  'rgba(255,255,255,0.15)': 'rgba(17,17,17,0.08)',
-  transparent: 'transparent',
-};
+// Design system: no gradients. Same <LinearGradient colors=…> call sites (all tokens now),
+// drawn as one flat colour: the first stop.
+const INK_TINT = 'rgba(17,17,17,0.08)'; // T.ink at 8%, for buttons on the card back
 const LinearGradient = ({ colors = [], style, children }) => (
-  <View style={[{ backgroundColor: FLAT[String(colors[0])] ?? colors[0] }, style]}>{children}</View>
+  <View style={[{ backgroundColor: colors[0] }, style]}>{children}</View>
 );
 
 // Modern Color Palette
@@ -375,7 +361,7 @@ const PromoCodeModal = React.memo(({
               <View style={[styles.promoCodeDisplay, { backgroundColor: T.successBg, borderColor: T.successBg }]}>
                 <Text style={[styles.promoCodeDisplayText, { color: T.success, letterSpacing: 1 }]}>code used</Text>
                 <View style={styles.promoCodeCopyButton}>
-                  <LinearGradient colors={['rgba(16,185,129,0.9)', 'rgba(5,150,105,0.9)']} style={styles.promoCodeCopyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                  <LinearGradient colors={[T.success]} style={styles.promoCodeCopyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                     <Ionicons name="checkmark-done-circle" size={20} color={T.white} />
                     <Text style={styles.promoCodeCopyText}>used</Text>
                   </LinearGradient>
@@ -385,7 +371,7 @@ const PromoCodeModal = React.memo(({
               <View style={[styles.promoCodeDisplay, { backgroundColor: T.sand, borderColor: T.line }]}>
                 <Text style={[styles.promoCodeDisplayText, { color: T.textMuted, letterSpacing: 1 }]}>expired</Text>
                 <View style={styles.promoCodeCopyButton}>
-                  <LinearGradient colors={['rgba(156,163,175,0.9)', 'rgba(107,114,128,0.9)']} style={styles.promoCodeCopyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                  <LinearGradient colors={[T.textFaint]} style={styles.promoCodeCopyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                     <Ionicons name="time" size={20} color={T.white} />
                     <Text style={styles.promoCodeCopyText}>expired</Text>
                   </LinearGradient>
@@ -591,7 +577,7 @@ const DiscountCard = React.memo(({
 
               {item?.isInStore && canRedeem && (
                 <TouchableOpacity style={styles.scanQrButton} onPress={handleScanPress} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="scan qr">
-                  <LinearGradient colors={['rgba(249,195,73,0.92)', 'rgba(245,166,35,0.92)']} style={styles.scanQrButtonGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                  <LinearGradient colors={[T.yellow]} style={styles.scanQrButtonGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                     <Ionicons name="qr-code-outline" size={18} color={T.ink} />
                     <Text style={styles.scanQrButtonText}>scan qr</Text>
                   </LinearGradient>
@@ -604,9 +590,7 @@ const DiscountCard = React.memo(({
                   activeOpacity={0.85}
                 >
                   <LinearGradient
-                    colors={item.promoStatus === 'active'
-                      ? ['rgba(16,185,129,0.92)', 'rgba(5,150,105,0.92)']
-                      : ['rgba(249,195,73,0.92)', 'rgba(245,166,35,0.92)']}
+                    colors={item.promoStatus === 'active' ? [T.card] : [T.yellow]}
                     style={styles.scanQrButtonGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                   >
                     <Ionicons name={item.promoStatus === 'active' ? "checkmark-circle" : "code-outline"} size={18} color={T.ink} />
@@ -692,7 +676,7 @@ const DiscountCard = React.memo(({
                     onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onScan(item); }}
                     activeOpacity={0.8}
                   >
-                    <LinearGradient colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.05)']} style={styles.cardBackScanGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                    <LinearGradient colors={[INK_TINT]} style={styles.cardBackScanGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                       <Ionicons name="qr-code-outline" size={18} color={T.ink} />
                       <Text style={styles.cardBackScanText}>scan qr</Text>
                     </LinearGradient>
@@ -705,9 +689,7 @@ const DiscountCard = React.memo(({
                     activeOpacity={0.8}
                   >
                     <LinearGradient
-                      colors={item.promoStatus === 'active'
-                        ? ['rgba(16,185,129,0.3)', 'rgba(5,150,105,0.2)']
-                        : ['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.05)']}
+                      colors={item.promoStatus === 'active' ? ['rgba(17,17,17,0.10)'] : [INK_TINT]}
                       style={styles.cardBackPromoGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                     >
                       <Ionicons name={item.promoStatus === 'active' ? "checkmark-circle" : "code-outline"} size={18} color={T.ink} />
@@ -718,7 +700,7 @@ const DiscountCard = React.memo(({
               </View>
 
               <TouchableOpacity style={styles.unclaimButton} onPress={handleUnclaim} activeOpacity={0.7}>
-                <LinearGradient colors={['rgba(255,255,255,0.15)', 'rgba(255,255,255,0.05)']} style={styles.unclaimButtonGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                <LinearGradient colors={[INK_TINT]} style={styles.unclaimButtonGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                   <Ionicons name="trash-outline" size={14} color={T.ink} />
                   <Text style={styles.unclaimButtonText}>remove discount</Text>
                 </LinearGradient>
@@ -875,7 +857,7 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
           <View style={styles.scannerModalContent}>
             <View style={styles.scannerHeader}>
               <Text style={styles.scannerHeaderTitle}>scan qr code</Text>
-              <TouchableOpacity onPress={onClose} style={styles.scannerCloseBtn}>
+              <TouchableOpacity onPress={onClose} style={styles.scannerCloseBtn} accessibilityRole="button" accessibilityLabel="close scanner">
                 <Ionicons name="close" size={24} color={T.white} />
               </TouchableOpacity>
             </View>
@@ -896,7 +878,7 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
           <View style={styles.scannerModalContent}>
             <View style={styles.scannerHeader}>
               <Text style={styles.scannerHeaderTitle}>scan qr code</Text>
-              <TouchableOpacity onPress={onClose} style={styles.scannerCloseBtn}>
+              <TouchableOpacity onPress={onClose} style={styles.scannerCloseBtn} accessibilityRole="button" accessibilityLabel="close scanner">
                 <Ionicons name="close" size={24} color={T.white} />
               </TouchableOpacity>
             </View>
@@ -923,10 +905,10 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
           <View style={styles.scannerHeader}>
             <Text style={styles.scannerHeaderTitle}>scan qr code</Text>
             <View style={styles.scannerHeaderActions}>
-              <TouchableOpacity onPress={toggleTorch} style={styles.scannerTorchBtn}>
+              <TouchableOpacity onPress={toggleTorch} style={styles.scannerTorchBtn} accessibilityRole="button" accessibilityLabel={torchOn ? "turn torch off" : "turn torch on"}>
                 <Ionicons name={torchOn ? "flashlight" : "flashlight-outline"} size={22} color={T.white} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={onClose} style={styles.scannerCloseBtn}>
+              <TouchableOpacity onPress={onClose} style={styles.scannerCloseBtn} accessibilityRole="button" accessibilityLabel="close scanner">
                 <Ionicons name="close" size={24} color={T.white} />
               </TouchableOpacity>
             </View>
@@ -1817,7 +1799,16 @@ export default function MyDiscountScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-        <LoadingOverlay visible={true} message="Loading your discounts..." />
+        <ScreenHeader title="my discounts" onBack={() => { soundTap(); navigation.goBack(); }} />
+        <View style={styles.skeletonWrap} accessibilityLabel="loading your discounts">
+          <View style={styles.skeletonStats}>
+            <SkeletonBlock height={72} radius={20} style={{ flex: 1 }} />
+            <SkeletonBlock height={72} radius={20} style={{ flex: 1 }} />
+            <SkeletonBlock height={72} radius={20} style={{ flex: 1 }} />
+          </View>
+          <SkeletonBlock height={200} radius={22} style={{ marginTop: 16 }} />
+          <SkeletonBlock height={200} radius={22} style={{ marginTop: 12 }} />
+        </View>
       </SafeAreaView>
     );
   }
@@ -1830,17 +1821,11 @@ export default function MyDiscountScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
-      <Animated.View style={[styles.header, { opacity: headerAnim, transform: [{ translateY: headerTranslateY }] }]}>
-        <TouchableOpacity
-          onPress={() => { soundTap(); navigation.goBack(); }}
-          style={styles.backBtn}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="back"
-        >
-          <Ionicons name="chevron-back" size={19} color={T.ink} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>my discounts<Text style={{ color: T.yellow }}>.</Text></Text>
+      <Animated.View style={{ opacity: headerAnim, transform: [{ translateY: headerTranslateY }] }}>
+        <ScreenHeader
+          title="my discounts"
+          onBack={() => { soundTap(); navigation.goBack(); }}
+          right={
         <TouchableOpacity onPress={handleRefresh} style={styles.headerBadge} activeOpacity={0.7} disabled={refreshing} accessibilityRole="button" accessibilityLabel={`${stats.activeCount} active, refresh`}>
           {refreshing ? (
             <ActivityIndicator size="small" color={T.ink} />
@@ -1851,6 +1836,8 @@ export default function MyDiscountScreen() {
             </>
           )}
         </TouchableOpacity>
+          }
+        />
       </Animated.View>
 
       {cityOptions.length > 1 && (
@@ -1897,12 +1884,12 @@ export default function MyDiscountScreen() {
         }
         ListHeaderComponent={
           <View style={styles.statsContainer}>
-            <StatCard title="active" value={stats.activeCount} icon="pricetag-outline" gradientColors={['#f9c349', '#f5a623']} delay={200} />
+            <StatCard title="active" value={stats.activeCount} icon="pricetag-outline" gradientColors={[T.yellow]} delay={200} />
             {stats.onlineCount > 0 && (
-              <StatCard title="online" value={stats.onlineCount} icon="globe-outline" gradientColors={['#3b82f6', '#2563eb']} delay={300} />
+              <StatCard title="online" value={stats.onlineCount} icon="globe-outline" gradientColors={[T.ink]} delay={300} />
             )}
             {stats.promoCount > 0 && (
-              <StatCard title="codes ready" value={stats.promoCount} icon="code-outline" gradientColors={['#10b981', '#059669']} delay={400} />
+              <StatCard title="codes ready" value={stats.promoCount} icon="code-outline" gradientColors={[T.success]} delay={400} />
             )}
           </View>
         }
@@ -1978,6 +1965,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: T.paper },
 
   // Header
+  skeletonWrap: { paddingHorizontal: 16, paddingTop: 8 },
+  skeletonStats: { flexDirection: 'row', gap: 10 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
