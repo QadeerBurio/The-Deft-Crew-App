@@ -46,6 +46,7 @@ import {
 import { brandMatchesCity, setSelectedCity as saveSelectedCity } from "../utils/cityFilter";
 
 import { color as T, font as F } from "../theme/tokens";
+import { ScreenHeader } from "../ui";
 const { width } = Dimensions.get("window");
 const HORIZONTAL_PADDING = 16;
 
@@ -447,26 +448,10 @@ export default function CityScreen() {
       <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
 
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerBtn}
-          onPress={selectedCity ? handleBackToCities : () => navigation.goBack()}
-          activeOpacity={0.7}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons
-            name={Platform.OS === "ios" ? "chevron-back" : "arrow-back"}
-            size={22}
-            color={T.ink}
-          />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>
-          {selectedCity ? selectedCity.name : "Cities"}
-        </Text>
-
-        <View style={{ width: 40 }} />
-      </View>
+      <ScreenHeader
+        title={selectedCity ? selectedCity.name : "cities"}
+        onBack={selectedCity ? handleBackToCities : () => navigation.goBack()}
+      />
 
       {/* Content */}
       {loading ? (
@@ -513,30 +498,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: T.card },
 
   // Header
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: T.line,
-    backgroundColor: T.card,
-  },
-  headerBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: T.sand,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontFamily: F.bodyBold,
-    color: T.ink,
-    letterSpacing: -0.3,
-  },
 
   // Loading
   loadingBox: {
