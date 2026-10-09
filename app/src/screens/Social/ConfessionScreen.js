@@ -1110,7 +1110,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
                   style={[styles.scopeTab, active && styles.scopeTabActive]}
                   onPress={() => switchScope(t.key)}
                   activeOpacity={0.8}
-                >
+                hitSlop={{ top: 2, bottom: 2 }}>
                   <Ionicons name={t.icon} size={14} color={active ? T.ink : T.onInkMuted} />
                   <Text style={[styles.scopeTabText, active && styles.scopeTabTextActive]} numberOfLines={1}>
                     {t.key === 'campus' && myUniName && active ? myUniName : t.label}
@@ -1203,7 +1203,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
                 <View style={styles.dragHandle} />
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>share confession</Text>
-                  <TouchableOpacity onPress={resetForm} style={styles.closeBtn}>
+                  <TouchableOpacity onPress={resetForm} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="close" hitSlop={8}>
                     <Ionicons name="close" size={22} color={T.ink} />
                   </TouchableOpacity>
                 </View>
@@ -1316,7 +1316,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
                       <Text style={styles.commentCountBadgeText}>{selectedPost?.comments?.length || 0}</Text>
                     </View>
                   </View>
-                  <TouchableOpacity onPress={closeComments} style={styles.closeBtn}>
+                  <TouchableOpacity onPress={closeComments} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="close comments" hitSlop={8}>
                     <Ionicons name="close" size={22} color={T.ink} />
                   </TouchableOpacity>
                 </View>
@@ -1360,7 +1360,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
                           setReplyTo(null);
                           setCommentText("");
                           setSelectedMentions([]);
-                        }}>
+                        }} accessibilityRole="button" accessibilityLabel="cancel reply" hitSlop={8}>
                           <Ionicons name="close-circle" size={18} color={T.textFaint} />
                         </TouchableOpacity>
                       </View>

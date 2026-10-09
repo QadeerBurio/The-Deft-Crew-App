@@ -1070,7 +1070,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
           <TouchableOpacity
             onPress={() => { soundTap(); setShowMenu(true); }}
             style={styles.menuBtn}
-          >
+           accessibilityRole="button" accessibilityLabel="post options" hitSlop={8}>
             <Ionicons name="ellipsis-vertical" size={20} color={T.textMuted} />
           </TouchableOpacity>
         )}
@@ -1118,7 +1118,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
             style={[styles.actionBtn, isLiked && styles.actionBtnActive]}
             onPress={handleLike}
             activeOpacity={0.7}
-          >
+          hitSlop={{ top: 5, bottom: 5 }}>
             <Animated.View style={{ transform: [{ scale: likeScale }] }}>
               <Ionicons
                 name={isLiked ? "heart" : "heart-outline"}
@@ -1131,12 +1131,12 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionBtn} onPress={openComments} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.actionBtn} onPress={openComments} activeOpacity={0.7} hitSlop={{ top: 5, bottom: 5 }}>
             <Ionicons name="chatbubble-outline" size={20} color={T.textMuted} />
             <Text style={styles.actionCount}>{totalCommentsCount}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionBtn} onPress={handleShare} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.actionBtn} onPress={handleShare} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="share post" hitSlop={8}>
             <Ionicons name="share-social-outline" size={20} color={T.textMuted} />
           </TouchableOpacity>
         </View>
@@ -1146,7 +1146,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
               onPress={handleSave}
               activeOpacity={0.7}
               style={[styles.saveBtn, isSaved && styles.saveBtnActive]}
-            >
+             accessibilityRole="button" accessibilityLabel={isSaved ? "unsave post" : "save post"} hitSlop={8}>
               <Ionicons
                 name={isSaved ? "bookmark" : "bookmark-outline"}
                 size={20}
@@ -1189,7 +1189,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                   <Text style={styles.commentCountBadgeText}>{totalCommentsCount}</Text>
                 </View>
               </View>
-              <TouchableOpacity onPress={closeComments} style={styles.closeBtn}>
+              <TouchableOpacity onPress={closeComments} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="close comments" hitSlop={8}>
                 <Ionicons name="close" size={22} color={T.ink} />
               </TouchableOpacity>
             </View>
@@ -1233,7 +1233,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                         setCommentText("");
                         setSelectedMentions([]);
                       }}
-                    >
+                     accessibilityRole="button" accessibilityLabel="cancel reply" hitSlop={8}>
                       <Ionicons name="close-circle" size={18} color={T.textFaint} />
                     </TouchableOpacity>
                   </View>

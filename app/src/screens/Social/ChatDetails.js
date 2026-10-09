@@ -149,7 +149,7 @@ const AudioContent = React.memo(({ item, isMe, isPlaying, onPlay }) => {
         onPress={handlePlay}
         activeOpacity={0.8}
         style={[styles.playBtn, { backgroundColor: isMe ? C.gold : C.dark }]}
-      >
+       accessibilityRole="button" accessibilityLabel={isPlaying ? "pause voice note" : "play voice note"} hitSlop={8}>
         <Ionicons name={isPlaying ? "pause" : "play"} size={16} color={isMe ? C.dark : C.gold} style={!isPlaying && styles.playIconNudge} />
       </TouchableOpacity>
       <View style={styles.audioBody}>
@@ -1189,10 +1189,10 @@ export default function ChatDetailScreen() {
               <View style={styles.recordingDot} />
               <Text style={styles.recordingTime}>{formatDuration(recordingDuration)}</Text>
               <Text style={styles.recordingLabel}>recording… release to send</Text>
-              <TouchableOpacity onPress={cancelRecording} style={styles.squareBtnSm} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="cancel recording">
+              <TouchableOpacity onPress={cancelRecording} style={styles.squareBtnSm} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="cancel recording" hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}>
                 <Ionicons name="close" size={18} color={C.text2} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => stopRecording(true)} style={styles.recordSendBtn} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="send voice note">
+              <TouchableOpacity onPress={() => stopRecording(true)} style={styles.recordSendBtn} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="send voice note" hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}>
                 <Ionicons name="arrow-up" size={18} color={C.gold} />
               </TouchableOpacity>
             </View>

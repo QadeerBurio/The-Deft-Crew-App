@@ -1303,7 +1303,7 @@ export default function UserProfile({ route, navigation }) {
               <Text style={styles.connectedBtnText}>connected</Text>
             </LinearGradient>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.msgBtn} onPress={handleMessagePress}>
+          <TouchableOpacity style={styles.msgBtn} onPress={handleMessagePress} hitSlop={{ top: 2, bottom: 2 }}>
             <Ionicons name="chatbubble-outline" size={16} color={T.yellow} />
             <Text style={styles.msgBtnText}>message</Text>
           </TouchableOpacity>
@@ -1320,7 +1320,7 @@ export default function UserProfile({ route, navigation }) {
               <Text style={styles.acceptBtnText}>accept request</Text>
             </LinearGradient>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.declineBtn} onPress={handleRejectRequest}>
+          <TouchableOpacity style={styles.declineBtn} onPress={handleRejectRequest} hitSlop={{ top: 2, bottom: 2 }}>
             <Ionicons name="close" size={16} color={T.danger} />
             <Text style={styles.declineBtnText}>decline</Text>
           </TouchableOpacity>
@@ -1337,7 +1337,7 @@ export default function UserProfile({ route, navigation }) {
               <Text style={styles.pendingBtnText}>request sent</Text>
             </LinearGradient>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.msgBtnDisabled} disabled>
+          <TouchableOpacity style={styles.msgBtnDisabled} disabled hitSlop={{ top: 2, bottom: 2 }}>
             <Ionicons name="chatbubble-outline" size={16} color={T.textFaint} />
             <Text style={styles.msgBtnDisabledText}>message</Text>
           </TouchableOpacity>
@@ -1353,7 +1353,7 @@ export default function UserProfile({ route, navigation }) {
             <Text style={styles.connectedBtnText}>connect</Text>
           </LinearGradient>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.msgBtn} onPress={handleMessagePress}>
+        <TouchableOpacity style={styles.msgBtn} onPress={handleMessagePress} hitSlop={{ top: 2, bottom: 2 }}>
           <Ionicons name="chatbubble-outline" size={16} color={T.yellow} />
           <Text style={styles.msgBtnText}>message</Text>
         </TouchableOpacity>
@@ -1493,7 +1493,7 @@ export default function UserProfile({ route, navigation }) {
             {new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </Text>
           {isOwnProfile && (
-            <TouchableOpacity onPress={() => handleDeletePost(item._id)} style={styles.deleteBtn}>
+            <TouchableOpacity onPress={() => handleDeletePost(item._id)} style={styles.deleteBtn} accessibilityRole="button" accessibilityLabel="delete post" hitSlop={8}>
               <Ionicons name="trash-outline" size={16} color={T.danger} />
             </TouchableOpacity>
           )}
@@ -1534,7 +1534,7 @@ export default function UserProfile({ route, navigation }) {
             <Text style={styles.actionText}>{commentsCount}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionBtn}>
+          <TouchableOpacity style={styles.actionBtn} accessibilityRole="button" accessibilityLabel="share post" hitSlop={8}>
             <Ionicons name="paper-plane-outline" size={18} color={T.textMuted} />
           </TouchableOpacity>
         </View>
@@ -1653,7 +1653,7 @@ export default function UserProfile({ route, navigation }) {
                   style={[styles.tabItem, activeTab === tab && styles.activeTab]}
                   accessibilityRole="tab"
                   accessibilityState={{ selected: activeTab === tab }}
-                >
+                hitSlop={{ top: 2, bottom: 2 }}>
                   <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab.toLowerCase()}</Text>
                 </TouchableOpacity>
               ))}
@@ -1732,7 +1732,7 @@ export default function UserProfile({ route, navigation }) {
               <Text style={styles.modalTitle}>
                 Connections ({connectionsList.length})
               </Text>
-              <TouchableOpacity onPress={() => setShowConnectionsModal(false)} style={styles.modalCloseBtn}>
+              <TouchableOpacity onPress={() => setShowConnectionsModal(false)} style={styles.modalCloseBtn} accessibilityRole="button" accessibilityLabel="close connections" hitSlop={8}>
                 <Ionicons name="close" size={22} color={T.ink} />
               </TouchableOpacity>
             </View>
@@ -1792,7 +1792,7 @@ export default function UserProfile({ route, navigation }) {
                       <Text style={styles.commentCountBadgeText}>{commentsList.length}</Text>
                     </View>
                   </View>
-                  <TouchableOpacity onPress={closeComments} style={styles.modalCloseBtn}>
+                  <TouchableOpacity onPress={closeComments} style={styles.modalCloseBtn} accessibilityRole="button" accessibilityLabel="close comments" hitSlop={8}>
                     <Ionicons name="close" size={22} color={T.ink} />
                   </TouchableOpacity>
                 </View>
@@ -1846,7 +1846,7 @@ export default function UserProfile({ route, navigation }) {
                             setCommentText("");
                             setSelectedMentions([]);
                           }}
-                        >
+                         accessibilityRole="button" accessibilityLabel="cancel reply" hitSlop={8}>
                           <Ionicons name="close-circle" size={18} color={T.textFaint} />
                         </TouchableOpacity>
                       </View>

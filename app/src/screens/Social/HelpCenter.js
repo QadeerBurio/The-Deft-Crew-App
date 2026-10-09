@@ -103,17 +103,17 @@ export default function HelpCenter({ navigation }) {
 
         {/* Bottom Toolbar */}
         <Animated.View style={[styles.bottomBar, { opacity: fadeAnim }]}>
-          <TouchableOpacity style={styles.toolbarBtn} onPress={() => {}} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.toolbarBtn} onPress={() => {}} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="back" hitSlop={8}>
             <Ionicons name="chevron-back" size={20} color={T.textFaint} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.toolbarBtn} onPress={() => {}} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.toolbarBtn} onPress={() => {}} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="forward" hitSlop={8}>
             <Ionicons name="chevron-forward" size={20} color={T.textFaint} />
           </TouchableOpacity>
           <View style={{ flex: 1 }} />
-          <TouchableOpacity style={styles.toolbarBtn} onPress={openInBrowser} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.toolbarBtn} onPress={openInBrowser} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="open in browser" hitSlop={8}>
             <Ionicons name="compass-outline" size={20} color={T.ink} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.toolbarBtn} onPress={() => {}} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.toolbarBtn} onPress={() => {}} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="share" hitSlop={8}>
             <Ionicons name="share-outline" size={20} color={T.ink} />
           </TouchableOpacity>
         </Animated.View>
