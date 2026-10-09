@@ -27,6 +27,7 @@ import { useEngagement } from '../hooks/useEngagement';
 import { success as hapticSuccess, warn, pop } from '../utils/haptics';
 
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
+import { ScreenHeader, HeaderIconButton } from "../../ui";
 const GOLD = T.yellow;
 const BLACK = T.ink;
 const WHITE = T.white;
@@ -352,31 +353,23 @@ export default function RewardsScreen() {
   // ─── Render ──────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          style={styles.headerBtn}
-        >
-          <Ionicons name="chevron-back" size={22} color={BLACK} />
-        </TouchableOpacity>
-        <Text style={styles.title} accessibilityRole="header">rewards<Text style={{ color: T.yellow }}>.</Text></Text>
-        <TouchableOpacity
-          onPress={onRefresh}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          style={styles.headerBtn}
-        >
-          {refreshing ? (
-            <ActivityIndicator size="small" color={GOLD} />
-          ) : (
-            <Ionicons name="refresh" size={20} color={BLACK} />
-          )}
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="rewards"
+        onBack={() => navigation.goBack()}
+        right={
+          <HeaderIconButton label="refresh rewards" onPress={onRefresh}>
+            {refreshing ? (
+              <ActivityIndicator size="small" color={T.ink} />
+            ) : (
+              <Ionicons name="refresh" size={19} color={T.ink} />
+            )}
+          </HeaderIconButton>
+        }
+      />
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={GOLD} />
+          <ActivityIndicator color={T.ink} />
           <Text style={styles.loadingText}>loading rewards…</Text>
         </View>
       ) : (
@@ -387,8 +380,8 @@ export default function RewardsScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={GOLD}
-              colors={[GOLD]}
+              tintColor={T.ink}
+              colors={[T.ink]}
             />
           }
         >
@@ -606,14 +599,18 @@ export default function RewardsScreen() {
               onPress={() => setShowAllModal(false)}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               style={styles.headerBtn}
+              accessibilityRole="button"
+              accessibilityLabel="close transactions"
             >
               <Ionicons name="close" size={22} color={BLACK} />
             </TouchableOpacity>
-            <Text style={styles.title}>all transactions</Text>
+            <Text style={styles.title} accessibilityRole="header">all transactions</Text>
             <TouchableOpacity
               onPress={exportCsv}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               style={styles.headerBtn}
+              accessibilityRole="button"
+              accessibilityLabel="export transactions as csv"
             >
               <MaterialCommunityIcons
                 name="microsoft-excel"
@@ -625,7 +622,7 @@ export default function RewardsScreen() {
 
           {ledgerFullLoading && (ledgerFull || []).length === 0 ? (
             <View style={styles.center}>
-              <ActivityIndicator color={GOLD} />
+              <ActivityIndicator color={T.ink} />
               <Text style={styles.loadingText}>loading transactions…</Text>
             </View>
           ) : (
@@ -654,7 +651,7 @@ export default function RewardsScreen() {
                 ListFooterComponent={
                   ledgerFullLoading && (ledgerFull || []).length > 0 ? (
                     <ActivityIndicator
-                      color={GOLD}
+                      color={T.ink}
                       style={{ paddingVertical: 16 }}
                     />
                   ) : !ledgerFullCursor && (ledgerFull || []).length > 0 ? (
@@ -735,15 +732,6 @@ export default function RewardsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: WHITE },
 
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: BLACK + '12',
-  },
   headerBtn: {
     width: 36,
     height: 36,
@@ -801,7 +789,7 @@ const styles = StyleSheet.create({
   },
   heroLabel: {
     fontSize: 10,
-    color: GOLD,
+    color: BLACK,
     textTransform: 'none',
     letterSpacing: 2,
     fontFamily: F.bodyBold,
@@ -820,7 +808,7 @@ const styles = StyleSheet.create({
   levelChipText: {
     fontSize: 10,
     fontFamily: F.bodyBold,
-    color: GOLD,
+    color: BLACK,
     letterSpacing: 0.4,
     textTransform: 'none',
   },
@@ -867,11 +855,11 @@ const styles = StyleSheet.create({
     opacity: 0.65,
     fontFamily: F.bodySemi,
   },
-  progressTextBold: { color: GOLD, fontFamily: F.bodyBold },
+  progressTextBold: { color: BLACK, fontFamily: F.bodyBold },
   maxLevelText: {
     marginTop: 16,
     fontSize: 12,
-    color: GOLD,
+    color: BLACK,
     fontFamily: F.bodyBold,
     fontStyle: 'italic',
     position: 'relative',
@@ -909,7 +897,7 @@ const styles = StyleSheet.create({
   viewAllText: {
     fontSize: 12,
     fontFamily: F.bodyBold,
-    color: GOLD,
+    color: BLACK,
     letterSpacing: 0.2,
     textTransform: 'lowercase',
   },
@@ -1226,7 +1214,7 @@ const styles = StyleSheet.create({
   myRewardStatus: {
     fontSize: 10,
     fontFamily: F.bodyBold,
-    color: GOLD,
+    color: BLACK,
     letterSpacing: 0.6,
     textTransform: 'none',
   },
