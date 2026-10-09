@@ -33,6 +33,7 @@ import api from "../api/api";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 
 import { color as T, font as F } from "../theme/tokens";
+import { ScreenHeader } from "../ui";
 const { width } = Dimensions.get("window");
 const CARD_W = width - 32;
 const CARD_H = 216;
@@ -495,21 +496,16 @@ export default function PremiumMemberCard() {
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <StatusBar barStyle="dark-content" backgroundColor={WHITE} />
 
-      <Animated.View style={[styles.headerNav, { opacity: headerFade }]}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backBtn}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="chevron-back" size={22} color={BLACK} />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>membership card</Text>
-          <Text style={styles.headerSubtitle}>
-            @{user?.name?.toLowerCase()?.replace(/\s/g, "") || "member"}
-          </Text>
-        </View>
-        <View style={{ width: 38 }} />
+      <Animated.View style={{ opacity: headerFade }}>
+        <ScreenHeader
+          title="membership card"
+          onBack={() => navigation.goBack()}
+          right={
+            <Text style={styles.headerSubtitle} numberOfLines={1}>
+              @{user?.name?.toLowerCase()?.replace(/\s/g, "") || "member"}
+            </Text>
+          }
+        />
       </Animated.View>
 
       <ScrollView
@@ -696,39 +692,11 @@ const styles = StyleSheet.create({
   },
 
   // ─── Header ───
-  headerNav: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: Platform.OS === "ios" ? 8 : 12,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-    backgroundColor: WHITE,
-  },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: LIGHT,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-  headerCenter: { alignItems: "center" },
-  headerTitle: {
-    fontSize: 15,
-    fontFamily: F.bodyBold,
-    color: BLACK,
-    letterSpacing: -0.2,
-    textTransform: "lowercase",
-  },
   headerSubtitle: {
     fontSize: 11,
     color: MUTED,
     fontFamily: F.bodySemi,
-    marginTop: 2,
+    maxWidth: 140, // sits in the header's right slot
   },
 
   // ─── Scroll ───
