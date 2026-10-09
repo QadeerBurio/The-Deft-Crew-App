@@ -34,6 +34,7 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
+import { SkeletonBlock } from "../ui/Skeleton";
 import * as Haptics from "expo-haptics";
 
 // 🆕 engagement
@@ -142,6 +143,7 @@ export default function ProfileScreen() {
   const [ecardModalVisible, setEcardModalVisible] = useState(false);
   const [totalSaved, setTotalSaved] = useState(0);
   const [redemptionCount, setRedemptionCount] = useState(0);
+  const [statsLoaded, setStatsLoaded] = useState(false); // first savings fetch done (skeleton until then)
 
   // 🆕 engagement state
   const { me, refresh } = useEngagement();
@@ -227,6 +229,8 @@ export default function ProfileScreen() {
       console.log("Error fetching profile data:", err);
       setTotalSaved(0);
       setRedemptionCount(0);
+    } finally {
+      setStatsLoaded(true);
     }
   }, [token]);
 
@@ -635,10 +639,14 @@ export default function ProfileScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={P.savingsLabel} maxFontSizeMultiplier={MAX_FONT_SCALE}>my tdc savings</Text>
-            <Text style={P.savingsValue} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-              rs {Math.round(totalSaved || 0).toLocaleString()}
-              <Text style={{ color: T.yellow }}>.</Text>
-            </Text>
+            {statsLoaded ? (
+              <Text style={P.savingsValue} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                rs {Math.round(totalSaved || 0).toLocaleString()}
+                <Text style={{ color: T.yellow }}>.</Text>
+              </Text>
+            ) : (
+              <SkeletonBlock width={120} height={26} radius={8} style={{ marginTop: 4 }} />
+            )}
           </View>
           {totalSaved > 0 && (
             <TouchableOpacity
@@ -669,7 +677,7 @@ export default function ProfileScreen() {
           {[
             { n: (me?.points?.balance || 0).toLocaleString(), label: "crew points", go: "Rewards" },
             { n: String(me?.badges?.earned || 0), label: "badges", go: "Badges" },
-            { n: String(claimedOffers.length || 0), label: "discounts", go: "MyDiscountScreen" },
+            { n: String(claimedOffers.length || 0), label: "discounts", go: "MyDiscountScreen", pending: !statsLoaded },
           ].map((t) => (
             <TouchableOpacity
               key={t.label}
@@ -681,9 +689,13 @@ export default function ProfileScreen() {
                 else navigation.navigate(t.go);
               }}
               accessibilityRole="button"
-              accessibilityLabel={`${t.n} ${t.label}`}
+              accessibilityLabel={t.pending ? `${t.label}, loading` : `${t.n} ${t.label}`}
             >
-              <Text style={P.tileN} maxFontSizeMultiplier={MAX_FONT_SCALE}>{t.n}</Text>
+              {t.pending ? (
+                <SkeletonBlock width={36} height={22} radius={6} style={{ marginVertical: 3 }} />
+              ) : (
+                <Text style={P.tileN} maxFontSizeMultiplier={MAX_FONT_SCALE}>{t.n}</Text>
+              )}
               <Text style={P.tileLabel} maxFontSizeMultiplier={MAX_FONT_SCALE}>{t.label}</Text>
             </TouchableOpacity>
           ))}
