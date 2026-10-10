@@ -2,7 +2,8 @@
 // Data helpers for the Home sections. Existing endpoints only:
 //   • latest confession → GET {social}/confessions/feed?scope=all (same as ConfessionScreen)
 //   • deals            → optimizedAPI.getBrandsFast (same as Brands)
-import api, { optimizedAPI, SERVER_URL } from "../../api/brandApi";
+import api, { optimizedAPI } from "../../api/brandApi";
+import { imageUrl, brandLogoUrl, withFixedImages, FALLBACK_IMAGE } from "../../utils/imageUrl";
 
 // Same value ConfessionScreen.js hard-codes
 const SOCIAL_API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
@@ -47,20 +48,12 @@ export async function fetchLatestConfession(token, signal) {
 // filters by city and takes the first MAX_DEALS.
 export async function fetchDeals(token, userId, forceRefresh = false) {
   const brands = await optimizedAPI.getBrandsFast(token, userId, { forceRefresh });
-  return (Array.isArray(brands) ? brands : []).filter((b) => b?.hasOffer === true);
+  // getBrandsFast builds logo URLs with the old /uploads/brands/ rule: repair them
+  return (Array.isArray(brands) ? brands : []).filter((b) => b?.hasOffer === true).map(withFixedImages);
 }
 
-// Same image rules as getBrandsFast (brandApi formatImg, not exported there)
-const DEFAULT_IMAGE = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
-function formatImg(path, type = "offer") {
-  if (!path) return null;
-  if (path.startsWith("http")) return path;
-  const clean = path.replace(/^\/+/, "");
-  if (type === "brand") {
-    return clean.startsWith("uploads/brands/") ? `${SERVER_URL}/${clean}` : `${SERVER_URL}/uploads/brands/${clean}`;
-  }
-  return `${SERVER_URL}/${clean}`;
-}
+// Image URLs: shared rule (utils/imageUrl), same as Brands and OfferScreen
+const DEFAULT_IMAGE = FALLBACK_IMAGE;
 
 // GET /brands/nearby → brands mapped exactly like getBrandsFast, plus distanceKm and
 // nearestBranch. Throws on any failure (the section then falls back to city deals).
@@ -73,13 +66,13 @@ export async function fetchNearby(lat, lng, userId, signal) {
   if (!Array.isArray(res.data)) throw new Error("bad nearby response");
   const me = userId ? String(userId) : null;
   return res.data.map((brand) => {
-    const logo = formatImg(brand.logo, "brand");
+    const logo = brandLogoUrl(brand.logo);
     const offers = (brand.offers || []).map((o) => {
       const claimed = !!me && (o.claimedBy || []).some((id) => String(id) === me);
       return {
         ...o,
-        image: formatImg(o.image, "offer"),
-        displayImage: formatImg(o.image, "offer"),
+        image: imageUrl(o.image),
+        displayImage: imageUrl(o.image),
         isClaimed: claimed,
         serverClaimed: claimed,
         discountPercentage: o.discountPercentage || 0,

@@ -57,6 +57,7 @@ import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { Button, SkeletonBlock, ScreenHeader, HeaderIconButton } from "../ui";
 import { useGuestGate } from "../guest/GuestGate";
 import { isSignedInNow } from "../guest/accountRoutes";
+import { imageUrl, brandLogoUrl, fixLegacyImageUrl } from "../utils/imageUrl";
 import Dot from "../engagement/components/Dot";
 import { formatDistance } from "../utils/distance";
 
@@ -75,7 +76,6 @@ import {
 } from "../lib/tdcSounds";
 
 const { width } = Dimensions.get("window");
-const BASE_URL = "https://the-deft-crew-production.up.railway.app";
 
 const OFFER_STATS_CACHE_PREFIX = "@offer_stats_cache:";
 const CACHE_DURATION = 5 * 60 * 1000;
@@ -796,13 +796,8 @@ export default function OfferScreen() {
       : null;
   }, [initialBrand?._id, token, isGuest]);
 
-  const formatImageUrl = useCallback((imagePath) => {
-    if (!imagePath) return null;
-    if (imagePath.startsWith("http://") || imagePath.startsWith("https://"))
-      return imagePath;
-    const cleanPath = imagePath.replace(/^\/+/, "");
-    return `${BASE_URL}/${cleanPath}`;
-  }, []);
+  // shared rule (utils/imageUrl)
+  const formatImageUrl = useCallback((imagePath) => imageUrl(imagePath), []);
 
   const saveStatsCache = useCallback(
     async (computedStats) => {
@@ -1006,8 +1001,8 @@ export default function OfferScreen() {
           location: brandData.location || brandData.address || initialBrand?.location || "",
           address: brandData.address || brandData.location || initialBrand?.address || "",
           category: brandData.category || initialBrand?.category || "General",
-          logo: formatImageUrl(brandData.logo) || initialBrand?.logo || null,
-          displayImage: formatImageUrl(brandData.logo) || initialBrand?.displayImage || null,
+          logo: brandLogoUrl(brandData.logo) || fixLegacyImageUrl(initialBrand?.logo) || null,
+          displayImage: brandLogoUrl(brandData.logo) || fixLegacyImageUrl(initialBrand?.displayImage) || null,
           isOnline: brandData.isOnline ?? initialBrand?.isOnline ?? false,
           isInStore: brandData.isInStore ?? initialBrand?.isInStore ?? false,
           offers: freshOffers.length > 0 ? freshOffers : (initialBrand?.offers || []),

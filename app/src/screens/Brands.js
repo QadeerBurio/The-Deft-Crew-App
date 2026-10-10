@@ -59,6 +59,7 @@ import {
   resolveCity,
 } from "../utils/cityFilter";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
+import { imageUrl, brandLogoUrl, fixLegacyImageUrl, FALLBACK_IMAGE } from "../utils/imageUrl";
 import { Button, Chip, EmptyState, HeaderIconButton, PressScale, SectionTitle, SheetHandle, SkeletonBlock } from "../ui";
 
 const { width, height } = Dimensions.get("window");
@@ -66,7 +67,6 @@ const NUM_COLUMNS = 2;
 const GRID_SIDE = 16; // side padding
 const GRID_GAP = 12; // between cards, both directions
 
-const BASE_URL = "https://the-deft-crew-production.up.railway.app";
 // Per-user keys (v2 = includes brand cities). The old shared key showed one
 // user's claimed offers to the next user on the same phone.
 const CACHE_PREFIX = "@brands_cache:v2:";
@@ -111,17 +111,12 @@ const CATEGORIES = [
 const CATEGORY_BY_ID = new Map(CATEGORIES.map((c) => [c.id, c]));
 const CATEGORY_BY_NAME = new Map(CATEGORIES.map((c) => [c.name, c]));
 
-// ── Brand image URLs ──
-// OfferScreen shows a brand's logo as BASE_URL/<stored path>. This screen used to
-// put every relative logo under /uploads/brands/, so logos stored as
-// "uploads/logos/…" or "/uploads/…" became dead links (only bare file names
-// really live in /uploads/brands/). getBrandsFast (api/brandApi.js) still builds
-// them the old way, so its URLs are repaired here. The generic flaticon fallback
-// is not a brand image: those cards get the sand placeholder instead.
-const FALLBACK_IMG = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+// ── Brand image URLs (rule in utils/imageUrl) ──
+// getBrandsFast still builds old-rule URLs, so they're repaired here. The generic
+// flaticon fallback is not a brand image: those cards get the sand placeholder.
 const repairImageUrl = (url) => {
-  if (!url || url === FALLBACK_IMG) return null;
-  return String(url).replace("/uploads/brands/uploads/", "/uploads/");
+  if (!url || url === FALLBACK_IMAGE) return null;
+  return fixLegacyImageUrl(String(url));
 };
 // brand logo first (what OfferScreen shows), else the first offer's image
 const brandImageOf = (b) => repairImageUrl(b?.logo) || repairImageUrl(b?.displayImage);
@@ -478,18 +473,11 @@ export default function BrandsScreen() {
   // ── City filter (Karachi default, shared with Offer + My Discounts) ──
   const [savedCity, setSelectedCity] = useSelectedCity();
 
-  const formatImageUrl = useCallback((imagePath, type = "offer") => {
-    if (!imagePath) return null;
-    if (imagePath.startsWith("http://") || imagePath.startsWith("https://"))
-      return imagePath;
-    const clean = imagePath.replace(/^\/+/, "");
-    // a stored path ("uploads/logos/x.png") is used as is, like OfferScreen;
-    // only a bare file name lives in /uploads/brands/
-    if (type === "brand" && !clean.includes("/")) {
-      return `${BASE_URL}/uploads/brands/${clean}`;
-    }
-    return `${BASE_URL}/${clean}`;
-  }, []);
+  // shared rule (utils/imageUrl): stored path as is, bare logo file → /uploads/brands/
+  const formatImageUrl = useCallback(
+    (imagePath, type = "offer") => (type === "brand" ? brandLogoUrl(imagePath) : imageUrl(imagePath)),
+    []
+  );
 
   const preloadImage = useCallback((url) => {
     if (!url || preloadedImages.has(url)) return;
