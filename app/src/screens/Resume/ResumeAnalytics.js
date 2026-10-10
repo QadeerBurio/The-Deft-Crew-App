@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ResumeContext } from '../../context/ResumeContext';
 import { AuthContext } from '../../context/AuthContext';
+import { useGuestGate } from '../../guest/GuestGate';
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { LineChart, PieChart } from 'react-native-chart-kit';
 
@@ -31,6 +32,7 @@ const ResumeAnalyticsScreen = () => {
   const route = useRoute();
   const { resumeId } = route.params || {};
   const { user, isGuest } = useContext(AuthContext);
+  const { requireAccount } = useGuestGate();
   const { resumes, currentResume, loading, getAnalytics, updateResume } = useContext(ResumeContext);
 
   const [resume, setResume] = useState(null);
@@ -265,6 +267,7 @@ const ResumeAnalyticsScreen = () => {
   );
 
   const handleExportReport = async () => {
+    if (!requireAccount()) return;
     try {
       const reportData = `
 📊 Resume Analytics Report

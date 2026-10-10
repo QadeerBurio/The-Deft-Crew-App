@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../../context/AuthContext';
+import { useGuestGate } from '../../guest/GuestGate';
 import { ResumeContext } from '../../context/ResumeContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
@@ -138,6 +139,7 @@ const SYSTEM_TEMPLATES = [
 
 const ResumeBuilderScreen = () => {
   const { user } = useContext(AuthContext);
+  const { requireAccount, isGuest: guestMode } = useGuestGate();
   const {
     currentResume,
     resumes = [],
@@ -375,6 +377,11 @@ const ResumeBuilderScreen = () => {
       if (resumeId) {
         await fetchResumes();
       } else {
+        if (guestMode) {
+          requireAccount();
+          navigation.goBack();
+          return;
+        }
         try {
           setPName(user?.name || '');
           setPTitle(user?.headline || 'Software Engineer');
@@ -449,6 +456,7 @@ const ResumeBuilderScreen = () => {
 
   // Upload and parse helper
   const handleAutoFillUpload = async () => {
+    if (!requireAccount()) return; // uploads to the server to parse
     if (creationsUsed >= 2) {
       Alert.alert(
         'Resume Limit Reached ⚠️',
@@ -1004,6 +1012,7 @@ const ResumeBuilderScreen = () => {
     };
 
     const handleAIEnhanceWork = async () => {
+      if (!requireAccount()) return;
       if (!workDesc.trim()) {
         Alert.alert('Empty', 'Please type in your responsibilities first before enhancing.');
         return;
@@ -1181,6 +1190,7 @@ const ResumeBuilderScreen = () => {
     };
 
     const handleAIEnhanceProj = async () => {
+      if (!requireAccount()) return;
       if (!projDesc.trim()) {
         Alert.alert('Empty', 'Please describe your project first.');
         return;
@@ -1451,6 +1461,7 @@ const ResumeBuilderScreen = () => {
     };
 
     const handleAIGenerateSummary = async () => {
+      if (!requireAccount()) return;
       const jobTitle = getTargetRoleFallback();
       if (!jobTitle || selectedRoles.length === 0) {
         Alert.alert('Required', 'Please select at least one target role first.');
@@ -1642,6 +1653,7 @@ const ResumeBuilderScreen = () => {
         <TouchableOpacity 
           style={[styles.yellowButton, { marginTop: 24 }]}
           onPress={async () => {
+            if (!requireAccount()) return;
             try {
               const items = currentResume?.skills || [];
               const targetRole = getTargetRoleFallback();

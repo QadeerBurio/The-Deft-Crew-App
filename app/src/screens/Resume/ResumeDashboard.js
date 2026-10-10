@@ -21,6 +21,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../../context/AuthContext';
+import { useGuestGate } from '../../guest/GuestGate';
 import { ResumeContext } from '../../context/ResumeContext';
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import * as Print from 'expo-print';
@@ -67,6 +68,7 @@ const ScoreRing = ({ value, label }) => {
 
 const ResumeDashboardScreen = ({ navigation }) => {
   const { user, isGuest } = useContext(AuthContext);
+  const { requireAccount } = useGuestGate();
   const insets = useSafeAreaInsets();
   const {
     resumes = [],
@@ -267,6 +269,7 @@ const ResumeDashboardScreen = ({ navigation }) => {
   // Download / share / optimize handlers (unchanged)
   // ============================================================
   const handleDownloadResume = async (resume, format = 'pdf') => {
+    if (!requireAccount()) return;
     if (!resume) return Alert.alert('Error', 'No resume selected');
     try {
       setDownloading(true);
@@ -312,6 +315,7 @@ const ResumeDashboardScreen = ({ navigation }) => {
   };
 
   const handleDownloadHTML = async (resume) => {
+    if (!requireAccount()) return;
     if (!resume) return Alert.alert('Error', 'No resume selected');
     try {
       setDownloading(true);
@@ -348,6 +352,7 @@ const ResumeDashboardScreen = ({ navigation }) => {
   };
 
   const handleDownloadJSON = async (resume) => {
+    if (!requireAccount()) return;
     if (!resume) return Alert.alert('Error', 'No resume selected');
     try {
       setDownloading(true);
@@ -384,6 +389,7 @@ const ResumeDashboardScreen = ({ navigation }) => {
   };
 
   const handleShareResume = async (resume) => {
+    if (!requireAccount()) return;
     try {
       if (!resume) return Alert.alert('Error', 'No resume selected');
       const shareMessage = `
@@ -419,7 +425,7 @@ ${resume?.completionPercentage || 0}% Complete
   // Optimize resume flow
   // ============================================================
   const handleOptimizeResumeFlow = async (job) => {
-    if (isGuest) return Alert.alert('Login Required', 'Please log in to optimize your resume.');
+    if (isGuest) return requireAccount();
     if (!selectedResume || !selectedResume._id) {
       return Alert.alert('No Resume Found', 'Please create or upload a resume first.');
     }
@@ -490,7 +496,7 @@ ${resume?.completionPercentage || 0}% Complete
   };
 
   const handleSaveJob = async (job) => {
-    if (isGuest) return Alert.alert('Login Required', 'Please log in to save jobs.');
+    if (isGuest) return requireAccount();
     if (!job?._id || savingJobId === job._id) return;
     try {
       setSavingJobId(job._id);
@@ -542,6 +548,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
     navigation.navigate('ResumeSettings', { resumeId: resume._id });
   };
   const handleDuplicateResume = async (resumeId) => {
+    if (!requireAccount()) return;
     try {
       setIsLoading(true);
       const duplicated = await duplicateResume(resumeId);
@@ -612,12 +619,14 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
           </Text>
           <TouchableOpacity
             style={styles.buildResumeButton}
-            onPress={() =>
+            onPress={() => {
+              // no resume yet = a new one (needs an account)
+              if (!selectedResume && !requireAccount()) return;
               navigation.navigate(
                 'ResumeBuilder',
                 selectedResume ? { resumeId: selectedResume._id } : undefined
-              )
-            }
+              );
+            }}
           >
             <Text style={styles.buildResumeButtonText}>
               {selectedResume ? 'Update Your Resume' : 'Build Your Resume'}
@@ -883,6 +892,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
             accessibilityRole="button"
             accessibilityLabel="new resume"
             onPress={() => {
+              if (!requireAccount()) return;
               if (limitReached) {
                 Alert.alert(
                   'Resume Limit Reached',
@@ -1075,6 +1085,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
               <TouchableOpacity
                 style={[RD.btnYellow, RD.createBtn, limitReached && { opacity: 0.5 }]}
                 onPress={() => {
+                  if (!requireAccount()) return;
                   if (limitReached) {
                     Alert.alert(
                       'Resume Limit Reached',

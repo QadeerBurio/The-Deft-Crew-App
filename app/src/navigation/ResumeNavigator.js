@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenHeader } from "../ui";
+import { accountOnly } from "../guest";
 import { color as T } from "../theme/tokens";
 
 // Import Screens
@@ -13,7 +14,8 @@ import ResumeViewScreen from "../screens/Resume/ViewResume";
 import ResumeTemplateScreen from "../screens/Resume/ResumeTemplate";
 import ResumeSettingsScreen from "../screens/Resume/ResumeSetting";
 import ResumeAnalyticsScreen from "../screens/Resume/ResumeAnalytics";
-import ResumeShareScreen from "../screens/Resume/ResumeShare";
+import ResumeShareScreenBase from "../screens/Resume/ResumeShare";
+const ResumeShareScreen = accountOnly(ResumeShareScreenBase, { title: "share resume" });
 
 const Stack = createNativeStackNavigator();
 

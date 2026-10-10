@@ -21,6 +21,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { useContext } from 'react';
 import { ResumeContext } from '../../context/ResumeContext';
 import { AuthContext } from '../../context/AuthContext';
+import { useGuestGate } from '../../guest/GuestGate';
 import { renderResumeHTML } from '../../services/templateService';
 import resumeApi from '../../api/resumeApi';
 import * as Print from 'expo-print';
@@ -38,6 +39,7 @@ const ResumeViewScreen = () => {
   const navigation = useNavigation();
   const { resumeId } = route.params || {};
   const { user } = useContext(AuthContext);
+  const { requireAccount, isGuest: guestMode } = useGuestGate();
   const { resumes, currentResume, loadResume, loading, updateResume } = useContext(ResumeContext);
   const [resume, setResume] = useState(null);
   const [showWebView, setShowWebView] = useState(false);
@@ -68,14 +70,17 @@ const ResumeViewScreen = () => {
     let isMounted = true;
     const fetchFresh = async () => {
       if (resumeId) {
-        try {
-          const res = await resumeApi.getResume(resumeId, true);
-          if (isMounted && res?.success && res?.data) {
-            setResume(res.data);
-            return;
+        // guest resumes live on the device only: no server call for them
+        if (!guestMode) {
+          try {
+            const res = await resumeApi.getResume(resumeId, true);
+            if (isMounted && res?.success && res?.data) {
+              setResume(res.data);
+              return;
+            }
+          } catch (err) {
+            console.log('Error fetching fresh resume in ViewResume:', err);
           }
-        } catch (err) {
-          console.log('Error fetching fresh resume in ViewResume:', err);
         }
         const found = loadResume(resumeId) || (Array.isArray(resumes) ? resumes.find(r => r._id === resumeId) : null);
         if (isMounted && found) {
@@ -87,7 +92,7 @@ const ResumeViewScreen = () => {
     };
     fetchFresh();
     return () => { isMounted = false; };
-  }, [resumeId, resumes]);
+  }, [resumeId, resumes, guestMode]);
 
   const generateHTML = (isPrinting = false) => {
     if (!resume) return '';
@@ -95,6 +100,7 @@ const ResumeViewScreen = () => {
   };
 
   const handleShare = async () => {
+    if (!requireAccount()) return;
     try {
       setIsExporting(true);
       const html = generateHTML(true);
@@ -132,6 +138,7 @@ const ResumeViewScreen = () => {
   };
 
   const handleExportPDF = async () => {
+    if (!requireAccount()) return;
     try {
       setIsExporting(true);
       const html = generateHTML(true);

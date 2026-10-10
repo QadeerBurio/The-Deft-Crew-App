@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ResumeContext } from '../../context/ResumeContext';
 import { AuthContext } from '../../context/AuthContext';
+import { useGuestGate } from '../../guest/GuestGate';
 import * as DocumentPicker from 'expo-document-picker';
 
 import { color as T, font as F } from "../../theme/tokens";
@@ -25,6 +26,7 @@ const EnhanceCareer = () => {
   const route = useRoute();
   const { jobId, job } = route.params || {};
   const { user } = useContext(AuthContext);
+  const { requireAccount } = useGuestGate();
   const { applyToJob, loading } = useContext(ResumeContext);
 
   const [formData, setFormData] = useState({
@@ -41,6 +43,7 @@ const EnhanceCareer = () => {
   };
 
   const handleResumeUpload = async () => {
+    if (!requireAccount()) return;
     try {
       setUploading(true);
       const result = await DocumentPicker.getDocumentAsync({
@@ -89,6 +92,7 @@ const EnhanceCareer = () => {
   };
 
   const handleSubmit = async () => {
+    if (!requireAccount()) return;
     if (!formData.fullName.trim()) {
       Alert.alert('Error', 'Please enter your full name');
       return;
