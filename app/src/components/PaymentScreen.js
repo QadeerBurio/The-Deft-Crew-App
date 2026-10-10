@@ -20,13 +20,13 @@ import {
 import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import * as Clipboard from "expo-clipboard";
 import { AuthContext } from "../context/AuthContext";
 import { useGuestGate } from '../guest/GuestGate';
 import api from "../api/api";
 
 import { color as T, font as F } from "../theme/tokens";
 import { plainError } from "../utils/plainError";
+import { copyToClipboard as copyText } from "../utils/clipboard";
 const { width, height } = Dimensions.get("window");
 
 export default function PaymentScreen({ navigation }) {
@@ -131,9 +131,7 @@ export default function PaymentScreen({ navigation }) {
   });
 
   const copyToClipboard = async (text, type) => {
-    await Clipboard.setStringAsync(text);
-    Vibration.vibrate(50);
-    Alert.alert("✨ Copied!", `${type} copied to clipboard.`);
+    if (await copyText(text, { title: "✨ Copied!", message: `${type} copied to clipboard.` })) Vibration.vibrate(50);
   };
 
   const pickReceipt = async () => {

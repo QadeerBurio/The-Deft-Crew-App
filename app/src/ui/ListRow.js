@@ -4,6 +4,7 @@ import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { color, font, MAX_FONT_SCALE } from "../theme/tokens";
+import { soundTap } from "../lib/tdcSounds";
 
 export default function ListRow({
   icon,
@@ -18,6 +19,7 @@ export default function ListRow({
   divider = true,
   style,
   accessibilityLabel,
+  sound = true, // tap sound on press
 }) {
   const content = (
     <>
@@ -45,7 +47,10 @@ export default function ListRow({
   if (!onPress) return <View style={rowStyle}>{content}</View>;
   return (
     <Pressable
-      onPress={onPress}
+      onPress={(e) => {
+        if (sound) soundTap();
+        onPress(e);
+      }}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel || title}
       style={({ pressed }) => [rowStyle, pressed && { backgroundColor: color.paper }]}

@@ -28,7 +28,6 @@ import { SheetHandle } from '../ui/Sheet';
 import { ScreenHeader, SkeletonBlock } from '../ui';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import * as Clipboard from 'expo-clipboard';
 import { Camera, CameraView } from 'expo-camera';
 import axios from 'axios';
 import api, {
@@ -43,8 +42,7 @@ import { AuthContext } from '../context/AuthContext';
 // TDC SOUND KIT
 // ═══════════════════════════════════════════
 import {
-  soundCopy,
-  soundDealClaimed,
+    soundDealClaimed,
   soundSuccess,
   soundError,
   soundNope,
@@ -57,7 +55,7 @@ import {
   soundPopupOpen,
   soundPopupClose,
   soundSheetUp,
-  soundSheetDown,
+  soundSheetDown
 } from '../lib/tdcSounds';
 
 // ✅ IMPORT shared claim registry from OfferScreen
@@ -81,6 +79,7 @@ import Dot from '../engagement/components/Dot';
 import useMySavings from '../hooks/useMySavings';
 import { claimedBrands } from '../utils/claimedBrands';
 import { plainError, plainText } from "../utils/plainError";
+import { copyToClipboard } from '../utils/clipboard';
 
 const SERVER_URL = 'https://the-deft-crew-production.up.railway.app';
 
@@ -300,13 +299,10 @@ const PromoCodeModal = React.memo(({
   }, [visible]);
 
   const handleCopy = async () => {
-    // 🔔 copy sound
-    soundCopy();
+    // copy sound comes from copyToClipboard (here or in onCopy): once
     if (onCopy) onCopy(promoCode);
-    else {
-      await Clipboard.setStringAsync(promoCode);
+    else if (await copyToClipboard(promoCode, { title: 'Copied!', message: 'Promo code copied to clipboard' })) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Copied!', 'Promo code copied to clipboard');
     }
   };
 
@@ -538,7 +534,7 @@ const DiscountCard = React.memo(({
       'Remove Discount',
       `Are you sure you want to remove "${item?.title}" from your discounts?`,
       [
-        { text: 'Cancel', style: 'cancel', onPress: () => soundTap() },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove', style: 'destructive',
           onPress: () => {
@@ -1583,7 +1579,7 @@ export default function MyDiscountScreen() {
       if (err.response?.status === 403) {
         soundNope();
         Alert.alert('Claim First', 'You need to claim this discount first. Would you like to claim it now?', [
-          { text: 'Cancel', style: 'cancel', onPress: () => soundTap() },
+          { text: 'Cancel', style: 'cancel' },
           {
             text: 'Claim & Generate',
             onPress: async () => {
@@ -1614,11 +1610,10 @@ export default function MyDiscountScreen() {
 
   const copyPromoCode = useCallback(async (code) => {
     try {
-      // 🔔 copy sound fires immediately
-      soundCopy();
-      await Clipboard.setStringAsync(code);
+      if (!(await copyToClipboard(code, { title: 'Copied!', message: 'Promo code copied to clipboard' }))) {
+        throw new Error('copy failed');
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Copied!', 'Promo code copied to clipboard');
     } catch (err) {
       soundError();
       Alert.alert('Error', 'Failed to copy promo code');
@@ -1650,7 +1645,7 @@ export default function MyDiscountScreen() {
 
   const cancelPromoCode = useCallback(async (code) => {
     Alert.alert('Cancel Promo Code', 'Are you sure you want to cancel this promo code? This action cannot be undone.', [
-      { text: 'Keep', style: 'cancel', onPress: () => soundTap() },
+      { text: 'Keep', style: 'cancel' },
       {
         text: 'Cancel Code', style: 'destructive',
         onPress: async () => {
@@ -1818,7 +1813,7 @@ export default function MyDiscountScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-        <ScreenHeader title="my discounts" onBack={() => { soundTap(); navigation.goBack(); }} />
+        <ScreenHeader title="my discounts" onBack={() => navigation.goBack()} />
         <View style={styles.skeletonWrap} accessibilityLabel="loading your discounts">
           <View style={styles.skeletonStats}>
             <SkeletonBlock height={72} radius={20} style={{ flex: 1 }} />
@@ -1843,7 +1838,7 @@ export default function MyDiscountScreen() {
       <Animated.View style={{ opacity: headerAnim, transform: [{ translateY: headerTranslateY }] }}>
         <ScreenHeader
           title="my discounts"
-          onBack={() => { soundTap(); navigation.goBack(); }}
+          onBack={() => navigation.goBack()}
           right={
         <TouchableOpacity onPress={handleRefresh} style={styles.headerBadge} activeOpacity={0.7} disabled={refreshing} accessibilityRole="button" accessibilityLabel={`${stats.activeCount} active, refresh`}>
           {refreshing ? (

@@ -26,7 +26,6 @@ import {
   Platform,
   Linking,
 } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -44,6 +43,7 @@ import ScreenHeader from "../ui/ScreenHeader";
 import PressScale from "../ui/PressScale";
 import AmbassadorForm, { isAllowed as isAmbassadorFormUrl } from "./AmbassadorForm";
 import { plainError } from "../utils/plainError";
+import { copyToClipboard } from '../utils/clipboard';
 const { width } = Dimensions.get('window');
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -820,8 +820,7 @@ const PointsScreen = () => {
 
   const copyCode = useCallback(async () => {
     if (!referralCode) return;
-    await Clipboard.setStringAsync(referralCode);
-    Alert.alert('Copied!', `Your code ${referralCode} is in your clipboard.`);
+    await copyToClipboard(referralCode, { title: 'Copied!', message: `Your code ${referralCode} is in your clipboard.` });
   }, [referralCode]);
 
   const handleGoBack = useCallback(() => navigation.goBack(), [navigation]);

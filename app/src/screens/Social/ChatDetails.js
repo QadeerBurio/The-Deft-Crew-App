@@ -15,11 +15,11 @@ import { io } from "socket.io-client";
 import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from 'expo-haptics';
-import * as Clipboard from 'expo-clipboard';
 
 import { color as T, font as F } from "../../theme/tokens";
 import { HeaderIconButton, EmptyState, SkeletonBlock } from "../../ui";
 import { plainText } from "../../utils/plainError";
+import { copyToClipboard } from '../../utils/clipboard';
 const { width } = Dimensions.get('window');
 const socket = io("https://the-deft-crew-production.up.railway.app");
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
@@ -946,7 +946,7 @@ export default function ChatDetailScreen() {
     closeMsgSheet();
     if (!text) return;
     try {
-      await Clipboard.setStringAsync(text);
+      if (!(await copyToClipboard(text))) return;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e) {
       console.log('Copy failed:', e?.message);

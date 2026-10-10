@@ -1399,10 +1399,7 @@ export default function OfferScreen() {
           <ScreenHeader
             title=""
             style={styles.heroHeader}
-            onBack={() => {
-              soundTap();
-              navigation.goBack();
-            }}
+            onBack={() => navigation.goBack()}
             right={
               <HeaderIconButton
                 label="refresh offer"
@@ -1599,10 +1596,7 @@ export default function OfferScreen() {
               title="claimed. find it in my discounts"
               variant="secondary"
               icon={<MaterialCommunityIcons name="check-circle-outline" size={18} color={T.ink} />}
-              onPress={() => {
-                soundTap();
-                navigation.navigate("MyDiscountScreen");
-              }}
+              onPress={() => navigation.navigate("MyDiscountScreen")}
             />
           ) : isGuest ? (
             <Button

@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect, useCallback, useContext, forwardRef
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
   FlatList, Modal, KeyboardAvoidingView, Platform,
-  Dimensions, Animated, ActivityIndicator, Clipboard,
+  Dimensions, Animated, ActivityIndicator,
   Share, Keyboard, Linking, Image, Easing, ScrollView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +18,7 @@ import { useGuestGate } from '../guest/GuestGate';
 import { engagementBus, ENGAGEMENT_EVENTS } from '../engagement/engagementBus';
 
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
+import { copyToClipboard } from '../utils/clipboard';
 const { width, height } = Dimensions.get('window');
 
 // ─── SUGGESTED PROMPT CHIPS ───────────────────────────────────────────
@@ -375,7 +376,7 @@ const TravelChatBot = forwardRef((props, ref) => {
   }, []);
 
   const handleCopy = useCallback((text) => {
-    Clipboard.setString(text);
+    copyToClipboard(text); // old react-native Clipboard is deprecated
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }, []);
 

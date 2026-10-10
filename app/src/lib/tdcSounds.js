@@ -6,9 +6,11 @@ import { playSound } from "./soundManager";
 // ═══════════════════════════════════════════
 // UI SOUNDS
 // ═══════════════════════════════════════════
-export const soundTap              = () => playSound("tdc_tap");
-export const soundPopupOpen        = () => playSound("tdc_popup_open");
-export const soundPopupClose       = () => playSound("tdc_popup_close");
+// Taps, popups and copy play on almost every press, so they are kept quiet.
+const UI_QUIET = { volume: 0.5 };
+export const soundTap              = () => playSound("tdc_tap", UI_QUIET);
+export const soundPopupOpen        = () => playSound("tdc_popup_open", UI_QUIET);
+export const soundPopupClose       = () => playSound("tdc_popup_close", UI_QUIET);
 export const soundSheetUp          = () => playSound("tdc_sheet_up");
 export const soundSheetDown        = () => playSound("tdc_sheet_down");
 export const soundToast            = () => playSound("tdc_toast");
@@ -20,7 +22,7 @@ export const soundSwipe            = () => playSound("tdc_swipe");
 export const soundRefresh          = () => playSound("tdc_refresh");
 export const soundLike             = () => playSound("tdc_like");
 export const soundSend             = () => playSound("tdc_send");
-export const soundCopy             = () => playSound("tdc_copy");
+export const soundCopy             = () => playSound("tdc_copy", UI_QUIET);
 export const soundDealClaimed      = () => playSound("tdc_deal_claimed");
 export const soundQrScanSuccess    = () => playSound("tdc_qr_scan_success");
 export const soundBadgeUnlock      = () => playSound("tdc_badge_unlock");

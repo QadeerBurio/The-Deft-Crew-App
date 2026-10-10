@@ -11,8 +11,7 @@ import {
   Alert,
   TextInput,
   ActivityIndicator,
-  Clipboard,
-  Linking,
+    Linking
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -26,6 +25,7 @@ import QRCode from 'react-native-qrcode-svg';
 
 import { color as T, font as F } from "../../theme/tokens";
 import ScreenHeader from "../../ui/ScreenHeader";
+import { copyToClipboard } from '../../utils/clipboard';
 const ResumeShareScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -129,8 +129,7 @@ View full resume: ${shareLink}
   };
 
   const handleCopyLink = () => {
-    Clipboard.setString(shareLink);
-    Alert.alert('Success', 'Link copied to clipboard');
+    copyToClipboard(shareLink, { title: 'Success', message: 'Link copied to clipboard' });
   };
 
   const handleEmailShare = () => {

@@ -7,6 +7,7 @@ import { Modal, View, Text, Pressable, StyleSheet, ScrollView } from "react-nati
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { color, font, MAX_FONT_SCALE } from "../theme/tokens";
+import { soundTap } from "../lib/tdcSounds";
 
 export function SheetHandle({ style }) {
   return (
@@ -34,7 +35,21 @@ export default function Sheet({ visible, onClose, title, children, scroll = true
   const insets = useSafeAreaInsets();
   const Body = scroll ? ScrollView : View;
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      // Android back closes the sheet with the back sound
+      onRequestClose={
+        onClose
+          ? () => {
+              soundTap();
+              onClose();
+            }
+          : undefined
+      }
+      statusBarTranslucent
+    >
       <View style={sheetStyles.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="close" />
         <View style={[sheetStyles.sheet, { maxHeight, paddingBottom: Math.max(16, insets.bottom + 8) }]}>

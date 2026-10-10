@@ -713,7 +713,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
       "Delete Comment",
       "Are you sure? All replies to this comment will also be deleted.",
       [
-        { text: "Cancel", style: "cancel", onPress: () => soundTap() },
+        { text: "Cancel", style: "cancel" },
         {
           text: "Delete",
           style: "destructive",
@@ -860,7 +860,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     Alert.alert("Add Image", "Choose an option", [
       { text: "Camera", onPress: takePhoto },
       { text: "Gallery", onPress: pickImage },
-      { text: "Cancel", style: "cancel", onPress: () => soundTap() }
+      { text: "Cancel", style: "cancel" }
     ]);
   }, []);
 

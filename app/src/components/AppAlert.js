@@ -13,6 +13,10 @@
 //   danger  → any button with style 'destructive'
 //   confirm → 2+ buttons
 //   info    → everything else
+//
+// Sound: open plays soundPopupOpen once (skipped if another sound started < 250 ms ago,
+// e.g. an error sound right before an error popup); any close plays soundPopupClose once.
+// Alert.alert(title, message, buttons, { sound: false }) shows it silently (copy popup).
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
@@ -31,6 +35,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { holdTour, releaseTour } from "../engagement/tour/tourGate";
+import { soundPopupOpen, soundPopupClose } from "../lib/tdcSounds";
+import { msSinceLastSound } from "../lib/soundManager";
 const DARK = T.ink;
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -107,6 +113,8 @@ export function AppAlertHost() {
   const fade = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.94)).current;
   const busyRef = useRef(false);
+  const currentRef = useRef(null);
+  currentRef.current = current;
 
   useEffect(() => {
     pushAlert = (a) => setQueue((q) => [...q, a]);
@@ -118,6 +126,7 @@ export function AppAlertHost() {
   useEffect(() => {
     if (!current) return;
     busyRef.current = false;
+    if (current.options?.sound !== false && msSinceLastSound() > 250) soundPopupOpen();
     fade.setValue(0);
     scale.setValue(0.94);
     Animated.parallel([
@@ -130,6 +139,7 @@ export function AppAlertHost() {
     (cb) => {
       if (busyRef.current) return;
       busyRef.current = true;
+      if (currentRef.current?.options?.sound !== false) soundPopupClose();
       Animated.timing(fade, { toValue: 0, duration: 110, useNativeDriver: true }).start(() => {
         setQueue((q) => q.slice(1));
         // run after the popup is gone, so a follow-up Alert or navigation works

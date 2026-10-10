@@ -21,7 +21,6 @@ import {
   Animated,
 } from "react-native";
 import { WebView } from "react-native-webview";
-import * as Clipboard from "expo-clipboard";
 import * as DocumentPicker from "expo-document-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -42,6 +41,7 @@ const API_URL = `${BASE_URL}/jobs`;
 import { color as T, font as F } from "../theme/tokens";
 import { useGuestGate } from '../guest/GuestGate';
 import { plainError } from "../utils/plainError";
+import { copyToClipboard } from "../utils/clipboard";
 // Design system tokens (tdc-full-redesign/DESIGN_SYSTEM.md)
 const COLORS = {
   page: T.paper,
@@ -751,8 +751,7 @@ const InterviewDetailsModal = ({ visible, interview, onClose }) => {
 
   const copyMeetingLink = async () => {
     if (interview.meetingLink) {
-      await Clipboard.setStringAsync(interview.meetingLink);
-      Alert.alert("Copied!", "Meeting link copied to clipboard");
+      await copyToClipboard(interview.meetingLink, { title: "Copied!", message: "Meeting link copied to clipboard" });
     }
   };
 

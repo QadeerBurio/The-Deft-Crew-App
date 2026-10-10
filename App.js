@@ -46,9 +46,11 @@ import {
 
 import GlobalNotificationLayer from "./app/src/components/GlobalNotificationLayer";
 import AppAlertHost, { installAppAlert } from "./app/src/components/AppAlert";
+import { installBackSound } from "./app/src/lib/backSound";
 
 // Every Alert.alert in the app now shows the tdc styled popup
 installAppAlert();
+installBackSound(); // before NavigationContainer registers its back listener
 import { navigationRef } from "./app/src/navigation/navigationRef";
 export { navigationRef };
 

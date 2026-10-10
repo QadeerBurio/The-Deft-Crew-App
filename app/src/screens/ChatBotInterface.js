@@ -27,11 +27,11 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
-import * as ExpoClipboard from 'expo-clipboard';
 import { ChatContext } from '../context/ChatContext';
 import { ChatHistoryPanel } from './ChatHistoryScreen';
 
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
+import { copyToClipboard } from '../utils/clipboard';
 const DARK = T.ink;
 const GOLD = T.yellow;
 const SOFT = T.sand;
@@ -269,7 +269,7 @@ const ChatBotInterface = ({ onClose }) => {
 
   const copy = async (id, text) => {
     try {
-      await ExpoClipboard.setStringAsync(text || '');
+      if (!(await copyToClipboard(text || ''))) return; // inline "copied" label below is the feedback
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setCopiedId(id);
       setTimeout(() => setCopiedId((c) => (c === id ? null : c)), 1500);

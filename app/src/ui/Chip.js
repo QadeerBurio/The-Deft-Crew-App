@@ -3,15 +3,23 @@
 import React from "react";
 import { Text, Pressable, StyleSheet, View } from "react-native";
 import { color, font, MAX_FONT_SCALE } from "../theme/tokens";
+import { soundTap } from "../lib/tdcSounds";
 
-export default function Chip({ label, selected = false, onPress, icon, style, textStyle, dark = false, count }) {
+export default function Chip({ label, selected = false, onPress, icon, style, textStyle, dark = false, count, sound = true }) {
   const on = selected;
   const bg = on ? (dark ? color.yellow : color.ink) : dark ? "transparent" : color.card;
   const fg = on ? (dark ? color.ink : color.white) : dark ? color.white : color.ink;
   const border = on ? bg : dark ? color.inkLine : color.line;
   return (
     <Pressable
-      onPress={onPress}
+      onPress={
+        onPress
+          ? (e) => {
+              if (sound) soundTap();
+              onPress(e);
+            }
+          : undefined
+      }
       accessibilityRole="button"
       accessibilityState={{ selected: on }}
       accessibilityLabel={label}

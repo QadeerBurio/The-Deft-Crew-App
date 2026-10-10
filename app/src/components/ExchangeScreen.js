@@ -30,6 +30,7 @@ import { engagementBus, ENGAGEMENT_EVENTS } from '../engagement/engagementBus';
 
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { ScreenHeader, HeaderIconButton, Input, Chip, EmptyState, Skeleton } from "../ui";
+import { copyToClipboard } from '../utils/clipboard';
 
 // empty date fields are hidden, never shown as a placeholder
 const isBlank = (v) => v === null || v === undefined || v === '';
@@ -796,7 +797,7 @@ const ExchangeScreen = ({ navigation }) => {
                       `Share this university website link: ${webViewUrl}`,
                       [
                         { text: 'Cancel', style: 'cancel' },
-                        { text: 'Copy Link', onPress: () => Alert.alert('Copied!', 'Link copied to clipboard') }
+                        { text: 'Copy Link', onPress: () => copyToClipboard(webViewUrl, { title: 'Copied!', message: 'Link copied to clipboard' }) }
                       ]
                     );
                   }

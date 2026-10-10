@@ -62,6 +62,10 @@ export const SOUNDS = {
 
 const soundCache = {};
 let soundEnabled = true;
+let lastSoundAt = 0;
+
+// ms since the last sound started (AppAlert skips its open sound right after another one)
+export const msSinceLastSound = () => Date.now() - lastSoundAt;
 let hapticsEnabled = true;
 
 const HAPTIC_MAP = {
@@ -145,6 +149,7 @@ export const preloadSounds = async (ids) => {
 
 export const playSound = async (id, options = {}) => {
   if (!soundEnabled) return;
+  lastSoundAt = Date.now();
 
   const { withHaptic = true, volume = 1.0, rate = 1.0 } = options;
 
@@ -157,7 +162,9 @@ export const playSound = async (id, options = {}) => {
       else if (type === "heavy") await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       else if (type === "success") await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       else if (type === "error") await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } catch {}
+    } catch (e) {
+      warn("haptic error:", id, e?.message);
+    }
   }
 
   try {

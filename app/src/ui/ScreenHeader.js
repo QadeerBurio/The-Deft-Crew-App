@@ -5,11 +5,20 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { color, font, MAX_FONT_SCALE } from "../theme/tokens";
+import { soundTap } from "../lib/tdcSounds";
 
-export function HeaderIconButton({ icon, onPress, label, dark = false, children, style }) {
+// Plays the tap sound once per press (the back button too); sound={false} turns it off.
+export function HeaderIconButton({ icon, onPress, label, dark = false, children, style, sound = true }) {
   return (
     <Pressable
-      onPress={onPress}
+      onPress={
+        onPress
+          ? (e) => {
+              if (sound) soundTap();
+              onPress(e);
+            }
+          : undefined
+      }
       accessibilityRole="button"
       accessibilityLabel={label}
       hitSlop={4}

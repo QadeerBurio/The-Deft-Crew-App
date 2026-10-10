@@ -529,7 +529,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
       "Block User",
       `Are you sure you want to block ${post.author?.name || 'this user'}?`,
       [
-        { text: "Cancel", style: "cancel", onPress: () => soundTap() },
+        { text: "Cancel", style: "cancel" },
         { text: "Block", style: "destructive", onPress: performBlock },
       ]
     );
@@ -731,7 +731,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
       "Delete Comment",
       "Are you sure? All replies to this comment will also be deleted.",
       [
-        { text: "Cancel", style: "cancel", onPress: () => soundTap() },
+        { text: "Cancel", style: "cancel" },
         {
           text: "Delete",
           style: "destructive",
