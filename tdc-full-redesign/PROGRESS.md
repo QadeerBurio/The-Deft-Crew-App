@@ -238,4 +238,5 @@ Cause: production /api/brands/nearby returned [] for every location (0 of 7 bran
 - 531874e File system + media: legacy API, save-only permission, offline avatars
 - fe66b21 Release: no placeholder links, Android back on every modal, quiet console
 - 5607bbb Release fixes 6/6: alert popup design, no toasts, no raw error text
+- 3c1fb5e Remove unused expo-audio
 
