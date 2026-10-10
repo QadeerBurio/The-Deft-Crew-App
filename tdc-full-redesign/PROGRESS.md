@@ -212,4 +212,6 @@ Cause: production /api/brands/nearby returned [] for every location (0 of 7 bran
 - 76a7cd7 Guest: profile, rewards, badges, settings
 - 1ebb168 Signup: terms and privacy line with links
 - a80a288 Guest: resume (option b)
+- 627ad6b Guest: no claimed state without a signed-in student
+- ec0c1fe Brands: 2-column grid, brand images fixed
 
