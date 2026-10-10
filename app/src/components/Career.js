@@ -1592,7 +1592,8 @@ const Career = ({ navigation }) => {
       />
 
       {/* Optimizing Overlay Modal */}
-      <Modal visible={optimizing} transparent animationType="fade">
+      {/* progress overlay, no close button: back does nothing while it runs */}
+      <Modal visible={optimizing} transparent animationType="fade" onRequestClose={() => {}}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
           <View style={{ backgroundColor: T.card, padding: 24, borderRadius: 16, alignItems: 'center', width: width * 0.8 }}>
             <ActivityIndicator size="large" color={T.yellow} />

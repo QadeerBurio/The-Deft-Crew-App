@@ -73,6 +73,10 @@ const ResumeShareScreen = () => {
     }
   };
 
+  // The resume link is still a placeholder (yourdomain.com): every option that shares
+  // the link is hidden until a real one is set. PDF sharing doesn't need it.
+  const linkReady = !!shareLink && !/yourdomain\.com/i.test(shareLink) && /^https:\/\//i.test(shareLink);
+
   const handleShare = async () => {
     try {
       if (!resume) {
@@ -274,7 +278,8 @@ View full resume: ${shareLink}
           </View>
         </View>
 
-        {/* QR Code */}
+        {/* QR Code (only with a real link) */}
+        {linkReady && (
         <View style={styles.qrContainer}>
           <Text style={styles.qrTitle}>scan to view resume</Text>
           <View style={styles.qrCode}>
@@ -293,16 +298,19 @@ View full resume: ${shareLink}
             {shareLink}
           </Text>
         </View>
+        )}
 
         {/* Share Options */}
         <View style={styles.optionsContainer}>
           <Text style={styles.optionsTitle}>share options</Text>
+          {linkReady && (
           <ShareOption
             icon="link-outline"
             label="Share Link"
             value={shareOptions.shareLink}
             onValueChange={(val) => setShareOptions({ ...shareOptions, shareLink: val })}
           />
+          )}
           <ShareOption
             icon="document-text-outline"
             label="Share as PDF"
@@ -350,42 +358,48 @@ View full resume: ${shareLink}
         <View style={styles.shareButtonsContainer}>
           <Text style={styles.shareButtonsTitle}>share via</Text>
           <View style={styles.shareButtonsGrid}>
+            {linkReady && (
             <ShareButton
               icon="share-social-outline"
               label="Share"
               onPress={handleShare}
               color={T.ink}
             />
+            )}
             <ShareButton
               icon="document-text-outline"
               label="PDF"
               onPress={handleSharePDF}
               color={T.success}
             />
-            <ShareButton
-              icon="mail-outline"
-              label="Email"
-              onPress={handleEmailShare}
-              color={T.danger}
-            />
-            <ShareButton
-              icon="logo-linkedin"
-              label="LinkedIn"
-              onPress={handleLinkedInShare}
-              color={T.ink}
-            />
-            <ShareButton
-              icon="logo-twitter"
-              label="Twitter"
-              onPress={handleTwitterShare}
-              color={T.ink}
-            />
-            <ShareButton
-              icon="copy-outline"
-              label="Copy Link"
-              onPress={handleCopyLink}
-              color={T.ink}
-            />
+            {linkReady && (
+              <>
+                <ShareButton
+                  icon="mail-outline"
+                  label="Email"
+                  onPress={handleEmailShare}
+                  color={T.danger}
+                />
+                <ShareButton
+                  icon="logo-linkedin"
+                  label="LinkedIn"
+                  onPress={handleLinkedInShare}
+                  color={T.ink}
+                />
+                <ShareButton
+                  icon="logo-twitter"
+                  label="Twitter"
+                  onPress={handleTwitterShare}
+                  color={T.ink}
+                />
+                <ShareButton
+                  icon="copy-outline"
+                  label="Copy Link"
+                  onPress={handleCopyLink}
+                  color={T.ink}
+                />
+              </>
+            )}
           </View>
         </View>
       </ScrollView>

@@ -323,10 +323,6 @@ export default function InquiryChatScreen({ route, navigation }) {
     navigation.navigate('ListingDetail', { id: listingId });
   }, [navigation, listingId]);
 
-  const handleAttachPress = useCallback(() => {
-    Alert.alert('Coming Soon', 'File attachment will be available soon');
-  }, []);
-
   const handleInputChange = useCallback((text) => {
     setInputText(text);
 
@@ -498,15 +494,6 @@ export default function InquiryChatScreen({ route, navigation }) {
 
         {/* Input bar */}
         <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-          <TouchableOpacity
-            style={styles.attachBtn}
-            onPress={handleAttachPress}
-            disabled={!inputEditable}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="add" size={22} color={C.dark} />
-          </TouchableOpacity>
-
           <TextInput
             ref={inputRef}
             style={styles.input}

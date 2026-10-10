@@ -80,7 +80,7 @@ export default function CallModal({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onReject}>
       <View style={styles.container}>
         <View style={styles.content}>
           <Animated.View style={{ transform: [{ scale: pulseAnimation }] }}>

@@ -133,7 +133,8 @@ export async function registerForPushNotificationsAsync() {
 
   try {
     const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
-    console.log('[push] token:', data);
+    // the token itself is never printed (any build)
+    console.log('[push] token received');
     return data;
   } catch (err) {
     // Most common cause on Android: FCM V1 credentials not uploaded to EAS

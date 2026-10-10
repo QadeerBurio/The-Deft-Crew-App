@@ -1879,7 +1879,8 @@ const ResumeBuilderScreen = () => {
       </Modal>
 
       {/* AI Processing / Generation Modal */}
-      <Modal visible={aiGeneratingVisible} transparent={true} animationType="fade">
+      {/* progress overlay, no close button: back does nothing while it runs */}
+      <Modal visible={aiGeneratingVisible} transparent={true} animationType="fade" onRequestClose={() => {}}>
         <View style={styles.aiModalOverlay}>
           <View style={styles.aiModalContent}>
             <ActivityIndicator size="large" color={T.yellow} style={{ marginBottom: 16 }} />

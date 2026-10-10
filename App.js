@@ -1,6 +1,9 @@
 // The-Deft-Crew-App/App.js
 // FIXED: Push registration, cold-start deep link, external deep link, in-app sounds
 
+// Release builds: no console.log / info / debug output (warn and error stay).
+if (!__DEV__) { console.log = () => {}; console.info = () => {}; console.debug = () => {}; }
+
 import React, { useEffect, useState, useRef, useContext } from "react";
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";

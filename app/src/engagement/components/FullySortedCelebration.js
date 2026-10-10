@@ -33,7 +33,7 @@ export default function FullySortedCelebration({ popup, onClose }) {
   if (!popup) return null;
 
   return (
-    <Modal visible transparent animationType="fade" statusBarTranslucent>
+    <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
       <View style={styles.wrap}>
         <Animated.View style={{ opacity, transform: [{ scale }], alignItems: 'center' }}>
           <Dot mood="excited" size={180} />

@@ -40,7 +40,7 @@ const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const formatDate = (value) => {
-  if (value === null || value === undefined || value === '') return 'TBD';
+  if (value === null || value === undefined || value === '') return ''; // hidden, not "TBD"
 
   // If it's already a formatted string (contains letters), return as-is
   if (typeof value === 'string' && /[a-zA-Z]/.test(value)) {
@@ -94,7 +94,7 @@ const formatDate = (value) => {
     if (value.length <= 20) return value;
   }
 
-  return 'TBD';
+  return ''; // unreadable date: hidden, not "TBD"
 };
 
 const ExchangeScreen = ({ navigation }) => {
@@ -349,8 +349,8 @@ const ExchangeScreen = ({ navigation }) => {
     const scaleAnim = useRef(new Animated.Value(0.97)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
 
-    const hasAppStart = !isBlank(item.appStart);
-    const hasDeadline = !isBlank(item.deadline);
+    const hasAppStart = !!formatDate(item.appStart);
+    const hasDeadline = !!formatDate(item.deadline);
     const meta = [item.location, item.duration].filter(Boolean).join(' · ');
 
     useEffect(() => {
@@ -459,7 +459,7 @@ const ExchangeScreen = ({ navigation }) => {
       {/* Header */}
       <ScreenHeader
         title="study abroad"
-        right={<HeaderIconButton icon="person-outline" label="your profile" onPress={handleProfile} />}
+        
       />
 
       <Animated.View style={[EX.top, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
@@ -658,9 +658,9 @@ const ExchangeScreen = ({ navigation }) => {
                     <Text style={styles.emptyTextSmall}>no specific requirements listed.</Text>
                   )}
 
-                  {(!isBlank(selectedProgram.appStart) || !isBlank(selectedProgram.deadline)) && (
+                  {(!!formatDate(selectedProgram.appStart) || !!formatDate(selectedProgram.deadline)) && (
                     <View style={styles.modalDateInfo}>
-                      {!isBlank(selectedProgram.appStart) && (
+                      {!!formatDate(selectedProgram.appStart) && (
                         <View style={styles.modalDateBox}>
                           <Text style={styles.modalDateLabel}>application opens</Text>
                           <Text style={styles.modalDateValue}>
@@ -668,7 +668,7 @@ const ExchangeScreen = ({ navigation }) => {
                           </Text>
                         </View>
                       )}
-                      {!isBlank(selectedProgram.deadline) && (
+                      {!!formatDate(selectedProgram.deadline) && (
                         <View style={styles.modalDateBox}>
                           <Text style={[styles.modalDateLabel, { color: T.danger }]}>deadline</Text>
                           <Text style={[styles.modalDateValue, { color: T.danger }]}>
