@@ -84,6 +84,11 @@ const HAPTIC_MAP = {
   tdc_sheet_down:      "light",
 };
 
+// console.warn, not console.log: release builds silence console.log (App.js), and a
+// failing sound should still show up in logcat (adb logcat -s ReactNativeJS).
+// Only the sound id and the error text are logged.
+const warn = (...args) => console.warn("[sound]", ...args);
+
 export const configureAudio = async () => {
   try {
     await Audio.setAudioModeAsync({
@@ -93,7 +98,7 @@ export const configureAudio = async () => {
       playThroughEarpieceAndroid: false,
     });
   } catch (e) {
-    console.log("[sound] configureAudio error:", e?.message);
+    warn("configureAudio error:", e?.message);
   }
 };
 
@@ -101,7 +106,7 @@ const loadSound = async (id) => {
   if (soundCache[id]) return soundCache[id];
   const source = SOUNDS[id];
   if (!source) {
-    console.log("[sound] unknown id:", id);
+    warn("unknown id:", id);
     return null;
   }
   try {
@@ -112,9 +117,26 @@ const loadSound = async (id) => {
     soundCache[id] = sound;
     return sound;
   } catch (e) {
-    console.log("[sound] load error:", id, e?.message);
+    warn("load error:", id, e?.message);
     return null;
   }
+};
+
+// A cached player can stop working (e.g. after the app was in the background).
+// Before, it stayed in the cache, so that sound was silent until the app restarted.
+const dropSound = (id) => {
+  const sound = soundCache[id];
+  delete soundCache[id];
+  if (sound) sound.unloadAsync().catch(() => {});
+};
+
+const replay = async (id, volume, rate) => {
+  const sound = await loadSound(id);
+  if (!sound) return false;
+  await sound.setVolumeAsync(volume);
+  await sound.setRateAsync(rate, true);
+  await sound.replayAsync();
+  return true;
 };
 
 export const preloadSounds = async (ids) => {
@@ -139,13 +161,17 @@ export const playSound = async (id, options = {}) => {
   }
 
   try {
-    const sound = await loadSound(id);
-    if (!sound) return;
-    await sound.setVolumeAsync(volume);
-    await sound.setRateAsync(rate, true);
-    await sound.replayAsync();
+    await replay(id, volume, rate);
   } catch (e) {
-    console.log("[sound] play error:", id, e?.message);
+    // drop the broken player and try once more with a fresh one
+    warn("play error, reloading:", id, e?.message);
+    dropSound(id);
+    try {
+      await replay(id, volume, rate);
+    } catch (e2) {
+      warn("play error:", id, e2?.message);
+      dropSound(id);
+    }
   }
 };
 
