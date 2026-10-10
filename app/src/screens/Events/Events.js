@@ -158,7 +158,7 @@ const formatCategoryLabel = (cat) => (cat === "All" ? "All" : cat);
 const SkeletonList = () => (
   <View style={styles.listContent} accessible accessibilityLabel="loading events">
     <View style={[EV.featured, { backgroundColor: T.sand }]}>
-      <View style={[EV.featuredBanner, { backgroundColor: T.lineSoft }]} />
+      <View style={[EV.media, { backgroundColor: T.lineSoft }]} />
       <View style={EV.featuredBody}>
         <SkeletonBlock width="75%" height={20} />
         <SkeletonBlock width="50%" height={12} style={{ marginTop: 10 }} />
@@ -167,7 +167,7 @@ const SkeletonList = () => (
     </View>
     {[1, 2].map((k) => (
       <View key={k} style={EV.card}>
-        <SkeletonBlock height={LIST_BANNER_H} radius={0} />
+        <View style={EV.media} />
         <View style={EV.cardBody}>
           <SkeletonBlock width="80%" height={16} />
           <SkeletonBlock width="55%" height={12} style={{ marginTop: 10 }} />
@@ -206,39 +206,117 @@ const parseEventDate = (raw) => {
   const d = new Date(raw);
   return isNaN(d.getTime()) ? null : d;
 };
-// parsedDate (server) first, then the date string
-const eventDate = (item) => parseEventDate(item?.parsedDate) || parseEventDate(real(item, "date"));
-// "sat 11 oct · 7 pm" (time only when the date has one), else the real date text
-const eventWhen = (item) => {
-  const d = eventDate(item);
-  if (!d) return real(item, "date") || "";
-  const day = d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }).toLowerCase();
-  const hasTime = d.getHours() !== 0 || d.getMinutes() !== 0;
-  if (!hasTime) return day;
-  const time = d
-    .toLocaleTimeString(undefined, { hour: "numeric", minute: d.getMinutes() ? "2-digit" : undefined })
-    .toLowerCase()
-    .replace(/\s/g, " ");
-  return `${day} · ${time}`;
+
+// ── Dates ──
+// Days come from the date text (so a day never shifts with the time zone):
+//   "2027-04-01"                       → sat, apr 1 (year only when not this year)
+//   "2027-04-01 to 2027-04-08 (20:00)" → apr 1 – apr 8, 2027 · 8 pm
+//   "Dec 26, 2026 5:00 PM"             → sat, dec 26 · 5 pm
+// A time is shown only when the text has one. parsedDate (stored as midnight UTC)
+// is used for the day only when the text has no date; it never gives a time.
+// A placeholder ("TBA") or text that isn't a date → nothing (the pill is hidden).
+const DOW = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+const MON = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+const ISO_DAY = /(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{1,2}):(\d{2}))?/g;
+const MONTH_WORD = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i;
+const timeIn = (text) => {
+  const m = String(text || "").match(/\b(\d{1,2}):(\d{2})\s*(am|pm)?\b|\b(\d{1,2})\s*(am|pm)\b/i);
+  if (!m) return null;
+  let h = Number(m[1] != null ? m[1] : m[4]);
+  const min = Number(m[1] != null ? m[2] : 0);
+  const ap = String((m[1] != null ? m[3] : m[5]) || "").toLowerCase();
+  if (ap) {
+    if (h === 12) h = 0;
+    if (ap === "pm") h += 12;
+  }
+  return h <= 23 && min <= 59 ? { h, min } : null;
 };
-const eventMeta = (item) =>
-  [
-    real(item, "location") || real(item, "university"),
-    real(item, "city"),
-    real(item, "teamSize") ? `teams of ${real(item, "teamSize")}` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-// an event that has already happened (real date only)
-const isPastEvent = (item) => {
-  const d = eventDate(item);
-  if (!d) return false;
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  return d.getTime() < startOfToday.getTime();
+const sameDay = (x, y) =>
+  x.getFullYear() === y.getFullYear() && x.getMonth() === y.getMonth() && x.getDate() === y.getDate();
+
+// { start, end (range only), time } from a date text, or null
+const datesFromText = (text) => {
+  const raw = String(text || "").trim();
+  if (!raw) return null;
+  const isos = [...raw.matchAll(ISO_DAY)];
+  if (isos.length) {
+    const day = (m) => new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    const start = day(isos[0]);
+    if (isNaN(start.getTime())) return null;
+    const endRaw = isos[1] ? day(isos[1]) : null;
+    const end = endRaw && !isNaN(endRaw.getTime()) && !sameDay(endRaw, start) ? endRaw : null;
+    // time: on either date ("…-03 10:30"), or written after them ("(20:00)");
+    // 00:00 is a timestamp's midnight, not a real start time
+    const isoTime = isos.map((m) => (m[4] != null ? { h: Number(m[4]), min: Number(m[5]) } : null)).find(Boolean);
+    const found = isoTime || timeIn(raw.replace(ISO_DAY, " "));
+    const time = found && (found.h || found.min) ? found : null;
+    return { start, end, time };
+  }
+  if (!MONTH_WORD.test(raw)) return null; // free text, not a date
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return null;
+  return { start: new Date(d.getFullYear(), d.getMonth(), d.getDate()), end: null, time: timeIn(raw) };
 };
 
-const LIST_BANNER_H = 112;
+const eventDates = (item) => {
+  const text = String(item?.date ?? "").trim();
+  if (text) {
+    if (!real(item, "date")) return null; // placeholder
+    const fromText = datesFromText(text);
+    if (fromText) return fromText;
+  }
+  const p = parseEventDate(item?.parsedDate);
+  if (!p) return null;
+  return { start: new Date(p.getUTCFullYear(), p.getUTCMonth(), p.getUTCDate()), end: null, time: null };
+};
+
+const fmtTime = ({ h, min }) => {
+  const ap = h >= 12 ? "pm" : "am";
+  const h12 = h % 12 || 12;
+  return min ? `${h12}:${String(min).padStart(2, "0")} ${ap}` : `${h12} ${ap}`;
+};
+const formatDates = (d) => {
+  if (!d) return "";
+  const thisYear = new Date().getFullYear();
+  const t = d.time ? ` · ${fmtTime(d.time)}` : "";
+  const { start, end } = d;
+  if (!end) {
+    const y = start.getFullYear() !== thisYear ? `, ${start.getFullYear()}` : "";
+    return `${DOW[start.getDay()]}, ${MON[start.getMonth()]} ${start.getDate()}${y}${t}`;
+  }
+  const sameYear = start.getFullYear() === end.getFullYear();
+  const startY = sameYear ? "" : `, ${start.getFullYear()}`;
+  const endY = !sameYear || end.getFullYear() !== thisYear ? `, ${end.getFullYear()}` : "";
+  return `${MON[start.getMonth()]} ${start.getDate()}${startY} – ${MON[end.getMonth()]} ${end.getDate()}${endY}${t}`;
+};
+
+const eventWhen = (item) => formatDates(eventDates(item));
+// a date-like text field (deadline): formatted like the event date, else the real text
+const dateText = (item, field) => {
+  const v = real(item, field);
+  if (!v) return null;
+  const d = datesFromText(v);
+  return d ? formatDates(d) : v;
+};
+const teamLabel = (item) => {
+  const t = real(item, "teamSize");
+  if (!t) return null;
+  return /member|people|person|solo|team|individual/i.test(t) ? t.toLowerCase() : `teams of ${t}`;
+};
+const eventMeta = (item) =>
+  [real(item, "location") || real(item, "university"), real(item, "city"), teamLabel(item)]
+    .filter(Boolean)
+    .join(" · ");
+// an event that has already happened (its last day is before today)
+const isPastEvent = (item) => {
+  const d = eventDates(item);
+  if (!d) return false;
+  const last = d.end || d.start;
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  return last.getTime() < startOfToday.getTime();
+};
+
 
 // Save / unsave: bookmark, filled when saved, 44 px, PressScale + light haptic
 const SaveButton = ({ saved, onPress, dark = false }) => (
@@ -309,26 +387,28 @@ const EventCard = ({ item, onOpen, onRegister, isRegistered, onCancel, featured,
       style={featured ? EV.featured : EV.card}
       accessibilityLabel={[item.title, when, meta].filter(Boolean).join(", ")}
     >
-      <View style={featured ? EV.featuredBanner : EV.cardBanner}>
+      {/* poster: whole image (posters carry text), never cropped */}
+      <View style={EV.media}>
         {showImg ? (
           <Image
             source={{ uri: img }}
-            style={EV.bannerImg}
-            resizeMode="cover"
+            style={EV.mediaImg}
+            resizeMode="contain"
             onError={() => setImgFailed(true)}
             accessibilityIgnoresInvertColors
           />
         ) : (
-          <MaterialCommunityIcons name="calendar-star" size={featured ? 36 : 28} color={featured ? T.onInkMuted : T.textFaint} />
-        )}
-        {!!when && (
-          <View style={[EV.datePill, EV.pillLeft]}>
-            <Text style={EV.datePillText} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>{when}</Text>
-          </View>
+          <MaterialCommunityIcons name="calendar-star" size={featured ? 36 : 28} color={T.textFaint} />
         )}
         {!!prize && (
-          <View style={[EV.prizePill, EV.pillRight]}>
-            <Text style={EV.prizePillText} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>prize pool {prize}</Text>
+          <View style={[EV.prizePill, EV.pillTopRight]}>
+            <Text style={EV.prizePillText} maxFontSizeMultiplier={MAX_FONT_SCALE}>prize pool {prize}</Text>
+          </View>
+        )}
+        {/* bottom-left so it covers the poster's headline as little as possible; wraps, never cut */}
+        {!!when && (
+          <View style={[EV.datePill, EV.pillBottomLeft]}>
+            <Text style={EV.datePillText} maxFontSizeMultiplier={MAX_FONT_SCALE}>{when}</Text>
           </View>
         )}
       </View>
@@ -341,23 +421,27 @@ const EventCard = ({ item, onOpen, onRegister, isRegistered, onCancel, featured,
         >
           {item.title}
         </Text>
-        <Text style={featured ? EV.featuredMeta : EV.cardMeta} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-          {meta}
-        </Text>
-        <View style={EV.tagRow}>
-          {!!type && (
-            <View style={[EV.tag, featured && EV.tagOnInk]}>
-              <Text style={[EV.tagText, featured && { color: T.white }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-                {type.toLowerCase()}
-              </Text>
-            </View>
-          )}
-          {imported && (
-            <View style={[EV.tag, featured ? EV.tagOnInk : EV.tagDark]}>
-              <Text style={[EV.tagText, { color: featured ? T.white : T.yellow }]} maxFontSizeMultiplier={MAX_FONT_SCALE}>external</Text>
-            </View>
-          )}
-        </View>
+        {!!meta && (
+          <Text style={featured ? EV.featuredMeta : EV.cardMeta} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            {meta}
+          </Text>
+        )}
+        {!!(type || imported) && (
+          <View style={EV.tagRow}>
+            {!!type && (
+              <View style={[EV.tag, featured && EV.tagOnInk]}>
+                <Text style={[EV.tagText, featured && { color: T.white }]} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                  {type.toLowerCase()}
+                </Text>
+              </View>
+            )}
+            {imported && (
+              <View style={[EV.tag, featured ? EV.tagOnInk : EV.tagDark]}>
+                <Text style={[EV.tagText, { color: featured ? T.white : T.yellow }]} maxFontSizeMultiplier={MAX_FONT_SCALE}>external</Text>
+              </View>
+            )}
+          </View>
+        )}
         <View style={EV.actions}>
           <View style={{ flex: 1 }}>{action}</View>
           {side}
@@ -1348,7 +1432,7 @@ export default function EventsScreen() {
                           <Ionicons name="hourglass" size={18} color={T.ink} />
                         </View>
                         <Text style={styles.specTitle}>deadline</Text>
-                        <Text style={styles.specText}>{real(selectedEvent, "deadline")}</Text>
+                        <Text style={styles.specText}>{dateText(selectedEvent, "deadline")}</Text>
                       </View>
                       )}
 
@@ -1429,7 +1513,7 @@ export default function EventsScreen() {
                         <>
                           <Text style={styles.stickyLabel}>register before</Text>
                           <Text style={styles.stickyValue} numberOfLines={1}>
-                            {real(selectedEvent, "deadline")}
+                            {dateText(selectedEvent, "deadline")}
                           </Text>
                         </>
                       ) : null}
@@ -2406,27 +2490,29 @@ const EV = StyleSheet.create({
 
   // featured (top event): dark card from the Events design
   featured: { borderRadius: 28, backgroundColor: T.ink, overflow: "hidden", marginBottom: 12 },
-  featuredBanner: { height: 140, backgroundColor: T.inkSoft, alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  featuredBody: { padding: 16 },
-  featuredTitle: { fontFamily: F.heading, fontSize: 22, lineHeight: 27, minHeight: 54, color: T.white },
-  featuredMeta: { fontFamily: F.body, fontSize: 13.5, lineHeight: 18, minHeight: 18, color: T.onInkMuted, marginTop: 4 },
+  featuredBody: { padding: 16, paddingTop: 14 },
+  featuredTitle: { fontFamily: F.heading, fontSize: 22, lineHeight: 27, color: T.white },
+  featuredMeta: { fontFamily: F.body, fontSize: 13.5, lineHeight: 18, color: T.onInkMuted, marginTop: 4 },
 
   // list size: same parts, white with a 1 px line border
   card: { borderRadius: 22, backgroundColor: T.card, borderWidth: 1, borderColor: T.line, overflow: "hidden", marginBottom: 12 },
-  cardBanner: { height: LIST_BANNER_H, backgroundColor: T.sand, alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  cardBody: { padding: 14 },
-  cardTitle: { fontFamily: F.headingBold, fontSize: 17, lineHeight: 22, minHeight: 44, color: T.ink },
-  cardMeta: { fontFamily: F.body, fontSize: 12.5, lineHeight: 17, minHeight: 17, color: T.textMuted, marginTop: 2 },
+  cardBody: { padding: 14, paddingTop: 12 },
+  cardTitle: { fontFamily: F.headingBold, fontSize: 17, lineHeight: 22, color: T.ink },
+  cardMeta: { fontFamily: F.body, fontSize: 12.5, lineHeight: 17, color: T.textMuted, marginTop: 4 },
 
-  bannerImg: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
-  datePill: { height: 28, paddingHorizontal: 10, borderRadius: 14, backgroundColor: T.yellow, justifyContent: "center", maxWidth: "62%" },
-  datePillText: { fontFamily: F.bodyBold, fontSize: 12, color: T.ink },
-  prizePill: { height: 28, paddingHorizontal: 10, borderRadius: 14, backgroundColor: T.card, justifyContent: "center", maxWidth: "45%" },
-  prizePillText: { fontFamily: F.bodyBold, fontSize: 12, color: T.ink },
-  pillLeft: { position: "absolute", left: 12, top: 12 },
-  pillRight: { position: "absolute", right: 12, top: 12 },
+  // poster area (both sizes): fixed 16:9, sand, radius 18, whole image (contain)
+  media: { aspectRatio: 16 / 9, margin: 8, marginBottom: 0, borderRadius: 18, backgroundColor: T.sand, overflow: "hidden", alignItems: "center", justifyContent: "center" },
+  mediaImg: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
 
-  actions: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12 },
+  // pills wrap instead of cutting the value; small so the poster stays readable
+  datePill: { minHeight: 24, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 12, backgroundColor: T.yellow, justifyContent: "center", maxWidth: "62%" },
+  datePillText: { fontFamily: F.bodyBold, fontSize: 11.5, lineHeight: 15, color: T.ink },
+  prizePill: { minHeight: 24, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 12, backgroundColor: T.card, justifyContent: "center", maxWidth: "45%" },
+  prizePillText: { fontFamily: F.bodyBold, fontSize: 11.5, lineHeight: 15, color: T.ink },
+  pillBottomLeft: { position: "absolute", left: 8, bottom: 8 },
+  pillTopRight: { position: "absolute", right: 8, top: 8 },
+
+  actions: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 14 },
   regBtn: { height: 46, borderRadius: 23, backgroundColor: T.yellow, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: 16 },
   regBtnDone: { backgroundColor: T.card, borderWidth: 1, borderColor: T.line },
   regBtnList: { height: 44, borderRadius: 22, paddingHorizontal: 12 },
@@ -2434,8 +2520,8 @@ const EV = StyleSheet.create({
   regTextList: { fontSize: 13.5, flexShrink: 1 },
 
   // tags (always reserve the row so cards keep the same height)
-  tagRow: { flexDirection: "row", gap: 6, marginTop: 8, height: 22 },
-  tag: { height: 22, paddingHorizontal: 8, borderRadius: 11, backgroundColor: T.sand, justifyContent: "center", maxWidth: 160 },
+  tagRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 10 },
+  tag: { minHeight: 22, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 11, backgroundColor: T.sand, justifyContent: "center" },
   tagOnInk: { backgroundColor: T.inkSoft },
   tagDark: { backgroundColor: T.ink },
 
