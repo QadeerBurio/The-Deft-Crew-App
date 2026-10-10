@@ -3,12 +3,13 @@ import React, { useContext, useRef, useEffect, useState } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar,
   Platform, Alert, Animated, Image, Dimensions, Switch, Modal,
-  ActivityIndicator, TextInput, Linking,
+  ActivityIndicator, TextInput, Linking, KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthContext } from '../../context/AuthContext';
+import api from '../../api/api';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 // 🆕 engagement — Tour + Streak
@@ -166,7 +167,7 @@ const PrivacyAndSafetyScreen = ({ navigation }) => {
 // MAIN SETTINGS SCREEN
 // ══════════════════════════════════════════════════════════════════════════
 export default function SettingsScreen({ navigation }) {
-  const { logout, user, deleteAccount } = useContext(AuthContext);
+  const { logout, user, token } = useContext(AuthContext);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -287,15 +288,22 @@ export default function SettingsScreen({ navigation }) {
     }
     try {
       setDeleting(true);
-      await deleteAccount();
+      // same call as SettingScreen.js (AuthContext has no deleteAccount)
+      await api.delete("/auth/delete-account", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       closeDeleteModal();
       setDeleting(false);
-      Alert.alert("Account Deleted", "Your account has been permanently deleted.", [
-        { text: "OK", onPress: () => navigation.navigate("Login") },
-      ]);
+      // the popup lives above the navigator, so it stays while logout() resets the app
+      // to the signed-out stack (fresh guest Home)
+      Alert.alert("account deleted", "your account has been permanently deleted.");
+      await logout();
     } catch (error) {
       setDeleting(false);
-      Alert.alert("Error", "Failed to delete account. Please try again.");
+      Alert.alert(
+        "couldn't delete your account",
+        "please check your connection and try again. if it keeps failing, contact support."
+      );
     }
   };
 
@@ -479,7 +487,8 @@ export default function SettingsScreen({ navigation }) {
 
       {/* Delete Account Modal */}
       <Modal visible={showDeleteModal} transparent animationType="none" onRequestClose={closeDeleteModal}>
-        <View style={styles.deleteModalOverlay}>
+        {/* padding keeps the "delete my account" box above the keyboard (edge-to-edge too) */}
+        <KeyboardAvoidingView style={styles.deleteModalOverlay} behavior="padding">
           <Animated.View
             style={[
               styles.deleteModalContent,
@@ -607,7 +616,7 @@ export default function SettingsScreen({ navigation }) {
               </>
             )}
           </Animated.View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
