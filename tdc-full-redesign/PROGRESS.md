@@ -230,4 +230,5 @@ Cause: production /api/brands/nearby returned [] for every location (0 of 7 bran
 - 8af8556 Crew: join as ambassador button + in-app form
 - cd97102 Crew: ambassador applied state per student
 - 2f88dff Crew: ambassador form link
+- 98e2a74 Crew: display names for memo components
 
