@@ -29,6 +29,8 @@ import {
 } from "./accountRoutes";
 import { clearStoredClaimedData } from "./clearClaimedData";
 import { clearPublicDealsCache } from "../screens/home/homeData";
+import { TourContext } from "../engagement/tour/TourProvider";
+import { holdTour, releaseTour } from "../engagement/tour/tourGate";
 
 const GuestGateContext = createContext({ isGuest: false, requireAccount: () => true });
 
@@ -54,6 +56,15 @@ export function GuestGateProvider({ children }) {
   const signedIn = !!(user && token && !isGuest);
   const guest = !!isGuest && !signedIn;
   const [sheetOpen, setSheetOpen] = useState(false);
+  const tour = useContext(TourContext);
+  const tourRunning = !!tour?.running;
+
+  // the sign-up sheet holds the app tour while it is open
+  useEffect(() => {
+    if (!sheetOpen) return undefined;
+    holdTour("guest-sheet");
+    return () => releaseTour("guest-sheet");
+  }, [sheetOpen]);
 
   setAuthSnapshot({ signedIn, isGuest: guest });
 
@@ -96,9 +107,10 @@ export function GuestGateProvider({ children }) {
 
   const requireAccount = useCallback(() => {
     if (!guest) return true;
+    if (tourRunning) return false; // during the tour a locked item does nothing (no sheet)
     setSheetOpen(true);
     return false;
-  }, [guest]);
+  }, [guest, tourRunning]);
 
   const value = useMemo(() => ({ isGuest: guest, requireAccount }), [guest, requireAccount]);
 

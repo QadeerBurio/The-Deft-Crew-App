@@ -1,12 +1,14 @@
 // app/src/engagement/tour/tourSteps.js
 // 5 steps, one per tab. ids = tab bar targets registered in TabNavigator.js.
+// Every line says what the tab is for and works for a guest (no points, daily drop
+// or missions, which guests don't have).
 
 export const TOUR_STEPS = [
   {
     id: 'tab_home',
     mood: 'excited',
     title: 'home.',
-    line: "your daily drop, deals and what's new on campus.",
+    line: "student deals, top discounts and what's new on campus.",
   },
   {
     id: 'tab_explore',
@@ -18,7 +20,7 @@ export const TOUR_STEPS = [
     id: 'tab_social',
     mood: 'cheeky',
     title: 'social.',
-    line: 'your campus feed and anonymous confessions. say hi.',
+    line: 'the campus feed and anonymous confessions from students.',
   },
   {
     id: 'tab_campus',
@@ -30,6 +32,6 @@ export const TOUR_STEPS = [
     id: 'tab_profile',
     mood: 'sorted',
     title: 'profile.',
-    line: "your points, badges and savings. that's the tour. sorted.",
+    line: "your account, student card and saved discounts. that's the tour. sorted.",
   },
 ];

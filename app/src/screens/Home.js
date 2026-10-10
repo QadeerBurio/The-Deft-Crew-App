@@ -277,8 +277,10 @@ export default function Home({ navigation }) {
     }, [])
   );
   useEffect(() => {
-    setHomeLoaded(homeFocused && signedIn && !dealsLoading && !isChatVisible && !streakSheetVisible);
-  }, [setHomeLoaded, homeFocused, signedIn, dealsLoading, isChatVisible, streakSheetVisible]);
+    // guests too (fresh-install tour); signed in waits for its deals as before
+    const loaded = signedIn ? !dealsLoading : !!isGuest;
+    setHomeLoaded(homeFocused && loaded && !isChatVisible && !streakSheetVisible);
+  }, [setHomeLoaded, homeFocused, signedIn, isGuest, dealsLoading, isChatVisible, streakSheetVisible]);
   useEffect(() => () => setHomeLoaded(false), [setHomeLoaded]);
 
   const sortedFeatureIds = useMemo(() => {

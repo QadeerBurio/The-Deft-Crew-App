@@ -23,6 +23,7 @@ import { Video, ResizeMode } from 'expo-av';
 import { color as T, font as F } from "../theme/tokens";
 import { AuthContext } from "../context/AuthContext";
 import { hasSeenIntro, markIntroSeen } from "../guest/firstRun";
+import { markTourPendingForNewInstall } from "../engagement/tour/TourProvider";
 const { width, height } = Dimensions.get('window');
 
 const GOLD = T.yellow;
@@ -189,6 +190,8 @@ export default function Splash() {
 
   const complete = useCallback(async () => {
     await markIntroSeen();
+    // fresh install: the app tour runs once on Home (guests too)
+    await markTourPendingForNewInstall();
     enterApp();
   }, [enterApp]);
 
