@@ -240,4 +240,5 @@ Cause: production /api/brands/nearby returned [] for every location (0 of 7 bran
 - 5607bbb Release fixes 6/6: alert popup design, no toasts, no raw error text
 - 3c1fb5e Remove unused expo-audio
 - a691bac Sounds: reload a broken cached player, log sound errors in release
+- 8c91f3c Sounds across the app: popup, tap, back, copy (existing sound kit)
 
