@@ -211,4 +211,5 @@ Cause: production /api/brands/nearby returned [] for every location (0 of 7 bran
 - 4856602 Guest: skillshare
 - 76a7cd7 Guest: profile, rewards, badges, settings
 - 1ebb168 Signup: terms and privacy line with links
+- a80a288 Guest: resume (option b)
 
