@@ -226,4 +226,5 @@ Cause: production /api/brands/nearby returned [] for every location (0 of 7 bran
 - 03f4ec6 Events: featured + list cards from the design, real data only
 - f70adab Events: save events, mine shows registered + saved
 - 0da310f Events: readable dates, whole posters, no blank rows
+- 72a5b4e Events: midnight means no time
 
