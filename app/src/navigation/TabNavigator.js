@@ -93,7 +93,8 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
   const campusRef = useRef(null);
   const profileRef = useRef(null);
   const socialRef = useRef(null);
-  const barRef = useRef(null); // whole tab bar: the tour keeps its arrow above the bar top
+  const barRef = useRef(null); // whole tab bar wrapper
+  const surfaceRef = useRef(null); // the visible white bar (1 px top border): the tour dims down to its top
 
   // Register targets once mounted
   useEffect(() => {
@@ -104,6 +105,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
       if (socialRef.current) registerTarget("tab_social", socialRef.current);
       if (profileRef.current) registerTarget("tab_profile", profileRef.current);
       if (barRef.current) registerTarget("tab_bar", barRef.current);
+      if (surfaceRef.current) registerTarget("tab_bar_surface", surfaceRef.current);
     }, 100);
     return () => clearTimeout(t);
   }, [registerTarget]);
@@ -215,6 +217,8 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
       ]}
     >
       <View
+        ref={surfaceRef}
+        collapsable={false}
         style={[
           styles.tabBarBackground,
           { height: TAB_HEIGHT + insets.bottom + 10 },

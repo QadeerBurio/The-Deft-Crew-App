@@ -7,17 +7,21 @@
 //
 // Geometry, all from real layout (no hard-coded tab positions), in the overlay's own
 // coordinates:
-//   • measureInWindow of three views, on every step change and overlay size change,
-//     retried until all have a size: the overlay root, the step's icon box
-//     (TabNavigator refBox) and the tab bar ("tab_bar", whose height already includes
-//     the bottom safe area for home-indicator, gesture and 3-button phones)
-//   • icon and bar = their measurement minus the overlay root's measurement.
-//     Android's measureInWindow subtracts the visible display frame (below the
-//     status bar), while the status-bar-translucent modal draws from the top of the
-//     screen; measuring the root the same way cancels that out on every device.
+//   • measure() (pageX / pageY) of three views, on every step change and overlay size
+//     change, retried until all have a size: the overlay root, the step's icon box
+//     (TabNavigator refBox) and the visible white tab bar ("tab_bar_surface"; its
+//     height includes the bottom safe area for home-indicator, gesture and 3-button
+//     phones, and its top is the bar's 1 px border line)
+//   • pageX / pageY are relative to each view's own React root view, which starts at
+//     the top of the screen both in the app and in the status-bar-translucent modal
+//     (edge-to-edge). measureInWindow was not used: on Android it subtracts the
+//     window's visible display frame (below the status bar), which put everything one
+//     status-bar height too high. The overlay root's own pageX / pageY is still
+//     subtracted, so any remaining origin difference cancels out.
 //   • arrow centre x = icon centre x, kept inside the card's straight bottom edge
-//   • arrow tip y = min(bar top, icon top) - TIP_GAP (raised social button included)
-//   • dim = one rectangle from the top of the overlay down to the bar top
+//   • arrow tip y = surface top - TIP_GAP; for the raised social button (icon above the
+//     surface top) icon top - TIP_GAP
+//   • dim = one rectangle from the top of the overlay down to the surface top
 //   • card: max 420 wide, centred on the icon, clamped 16 px from the screen edges;
 //     its bottom edge is the arrow's base, so a bigger font grows it upwards
 //   • not measured yet: whole screen dimmed, card above the bottom inset, no arrow
@@ -40,7 +44,7 @@ import { color as T, font as F, MAX_FONT_SCALE } from '../../theme/tokens';
 
 const DIM = 'rgba(17,17,17,0.72)'; // ink at 72%
 const ARROW = 10; // arrow half-width = height
-const TIP_GAP = 6; // space between the arrow tip and the tab bar (or raised icon)
+const TIP_GAP = 4; // space between the arrow tip and the tab bar (or the raised icon)
 const EDGE = 16; // card distance from the screen edges
 const CARD_MAX = 420;
 const CARD_RADIUS = 24;
@@ -50,12 +54,15 @@ const MEASURE_EVERY_MS = 150;
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
-const measure = (node, needsSize = true) =>
+// pageX / pageY: relative to the view's React root (see the header)
+const measure = (node) =>
   new Promise((resolve) => {
-    if (!node?.measureInWindow) return resolve(null);
+    if (!node?.measure) return resolve(null);
     try {
-      node.measureInWindow((x, y, w, h) =>
-        resolve(!needsSize || (w > 0 && h > 0) ? { x, y, width: w, height: h } : null)
+      node.measure((x, y, w, h, pageX, pageY) =>
+        resolve(w > 0 && h > 0 && Number.isFinite(pageX) && Number.isFinite(pageY)
+          ? { x: pageX, y: pageY, width: w, height: h }
+          : null)
       );
     } catch {
       resolve(null);
@@ -72,7 +79,7 @@ export default function TourOverlay() {
   const [stepIdx, setStepIdx] = useState(0);
   const [size, setSize] = useState(null); // overlay { width, height }
   const [icon, setIcon] = useState(null); // overlay coordinates
-  const [bar, setBar] = useState(null); // overlay coordinates
+  const [bar, setBar] = useState(null); // visible tab bar surface, overlay coordinates
   const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
@@ -91,7 +98,7 @@ export default function TourOverlay() {
     if (running) setStepIdx(0);
   }, [running]);
 
-  // Measure the overlay root, the step's icon and the tab bar (again on rotation / resize)
+  // Measure the overlay root, the step's icon and the tab bar surface (again on rotation / resize)
   useEffect(() => {
     if (!running) {
       setIcon(null);
@@ -114,7 +121,7 @@ export default function TourOverlay() {
       const [root, i, b] = await Promise.all([
         measure(rootRef.current),
         measure(targets.get(step.id)),
-        measure(targets.get('tab_bar')),
+        measure(targets.get('tab_bar_surface')),
       ]);
       if (cancelled) return;
       const ri = relativeTo(i, root);
@@ -180,7 +187,7 @@ export default function TourOverlay() {
         {/* Catches every touch outside the card, the tab bar included */}
         <Pressable style={StyleSheet.absoluteFill} accessible={false} />
 
-        {/* Dim: down to the tab bar's top edge (bar stays bright), or everything until measured */}
+        {/* Dim: down to the visible tab bar's top edge (bar stays bright), or everything until measured */}
         <View
           pointerEvents="none"
           style={[s.dim, g ? { top: 0, left: 0, right: 0, height: g.dimHeight } : StyleSheet.absoluteFillObject]}
@@ -259,7 +266,7 @@ export default function TourOverlay() {
           </View>
         )}
 
-        {/* arrow: on the card's bottom edge, tip just above the tab */}
+        {/* arrow: on the card's bottom edge, tip 4 above the tab bar (or the raised social button) */}
         {g && <View pointerEvents="none" style={[s.arrow, { left: g.arrowLeft, top: g.arrowTop }]} />}
       </View>
     </Modal>
@@ -271,14 +278,16 @@ function retryDelay(tries) {
   return tries < 3 ? MEASURE_EVERY_MS : MEASURE_EVERY_MS * 2;
 }
 
-// Pure layout maths. icon and bar in the overlay's own coordinates; W = overlay width.
+// Pure layout maths. icon and bar (= visible tab bar surface) in the overlay's own
+// coordinates; W = overlay width.
 export function geometry({ icon, bar, W }) {
   const iconCx = icon.x + icon.width / 2;
   const cardW = Math.min(W - EDGE * 2, CARD_MAX);
   const cardLeft = clamp(iconCx - cardW / 2, EDGE, W - EDGE - cardW);
   // arrow centre on the icon, but its base kept on the card's bottom edge
   const cx = clamp(iconCx, cardLeft + ARROW + ARROW_MIN_INSET, cardLeft + cardW - ARROW - ARROW_MIN_INSET);
-  const tipY = Math.min(bar.y, icon.y) - TIP_GAP; // above the bar, or above a raised icon
+  const raised = icon.y < bar.y; // only the social button sits above the bar's top edge
+  const tipY = (raised ? icon.y : bar.y) - TIP_GAP;
   const arrowTop = tipY - ARROW; // the triangle's top edge = the card's bottom edge
   const arrowLeft = cx - ARROW;
   // near a card corner, round that corner less so the arrow sits on a straight edge
@@ -295,6 +304,7 @@ export function geometry({ icon, bar, W }) {
     cardBottomY: arrowTop,
     radiusLeft,
     radiusRight,
+    raised,
     dimHeight: Math.max(0, bar.y),
   };
 }
