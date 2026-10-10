@@ -21,6 +21,7 @@ import * as DocumentPicker from 'expo-document-picker';
 
 import { color as T, font as F } from "../../theme/tokens";
 import ScreenHeader from "../../ui/ScreenHeader";
+import { plainError } from "../../utils/plainError";
 const EnhanceCareer = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -139,7 +140,7 @@ const EnhanceCareer = () => {
         );
       }
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to submit application');
+      Alert.alert('Error', plainError(error, "Failed to submit application."));
     }
   };
 

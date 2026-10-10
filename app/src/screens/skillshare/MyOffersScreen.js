@@ -12,6 +12,7 @@ import { goToAuth } from '../../utils/goToAuth';
 
 import { color as T, font as F } from "../../theme/tokens";
 import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
+import { plainError } from "../../utils/plainError";
 const BRAND = T.yellow;
 const INK = T.ink;
 const MUTED = T.textMuted;
@@ -141,7 +142,7 @@ export default function MyOffersScreen({ navigation }) {
           if (withdrawingRef.current) return;
           withdrawingRef.current = true;
           try { await withdrawSkillOffer(offerId); fetchOffers(); }
-          catch (err) { Alert.alert('Error', err.response?.data?.error || err.message || 'Failed to withdraw'); }
+          catch (err) { Alert.alert('Error', plainError(err, "Failed to withdraw.")); }
           finally { withdrawingRef.current = false; }
         },
       },

@@ -24,6 +24,7 @@ import { WebView } from 'react-native-webview';
 
 import { color as T, font as F } from "../../theme/tokens";
 import ScreenHeader from "../../ui/ScreenHeader";
+import { plainError } from "../../utils/plainError";
 const { width, height } = Dimensions.get('window');
 
 const ResumeTemplateScreen = () => {
@@ -139,7 +140,7 @@ const ResumeTemplateScreen = () => {
         Alert.alert('Error', 'Failed to apply template');
       }
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to apply template');
+      Alert.alert('Error', plainError(error, "Failed to apply template."));
     } finally {
       setIsApplying(false);
     }
@@ -252,7 +253,7 @@ const ResumeTemplateScreen = () => {
       setPreviewHTML(html);
     } catch (error) {
       console.error('Error generating preview:', error);
-      Alert.alert('Error', 'Failed to generate template preview: ' + error.message);
+      Alert.alert('Error', plainError(error, "Failed to generate template preview. Please try again."));
     } finally {
       setIsGeneratingPreview(false);
     }

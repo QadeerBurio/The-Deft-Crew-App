@@ -34,6 +34,7 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 
 import { color as T, font as F } from "../theme/tokens";
 import { ScreenHeader } from "../ui";
+import { plainError } from "../utils/plainError";
 const { width } = Dimensions.get("window");
 const CARD_W = width - 32;
 const CARD_H = 216;
@@ -245,7 +246,7 @@ export default function PremiumMemberCard() {
         `Your TDC Card has been saved to the "${albumName}" album.`
       );
     } catch (error) {
-      Alert.alert("Error", error.message || "Could not save image.");
+      Alert.alert("Error", plainError(error, "Could not save image."));
     } finally {
       setDownloading(false);
     }

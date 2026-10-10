@@ -22,6 +22,7 @@ import { AuthContext } from '../../context/AuthContext';
 
 import { color as T, font as F } from "../../theme/tokens";
 import { ScreenHeader } from "../../ui";
+import { plainText } from "../../utils/plainError";
 const { width } = Dimensions.get('window');
 
 // IMPORTANT: Define your API URL here or import from config
@@ -107,7 +108,7 @@ export default function ChangePassword({ navigation }) {
         ]
       );
     } else {
-      Alert.alert("Error", response.data.message || "Failed to change password");
+      Alert.alert("Error", plainText(response.data.message, "Failed to change password."));
     }
   } catch (error) {
     console.error("Change password error:", error);

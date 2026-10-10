@@ -11,6 +11,7 @@ import { timeAgo } from '../../utils/time';
 
 import { color as T, font as F } from "../../theme/tokens";
 import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
+import { plainError } from "../../utils/plainError";
 const BRAND = T.yellow;
 const INK = T.ink;
 const MUTED = T.textMuted;
@@ -186,7 +187,7 @@ export default function ManageOffersScreen({ route, navigation }) {
               Alert.alert('Success', action === 'accept' ? 'Offer accepted! A match has been created.' : 'Offer rejected.');
               if (action === 'accept') goBack(); else fetchOffers();
             } catch (err) {
-              Alert.alert('Error', err.response?.data?.error || err.message || 'Failed to update offer');
+              Alert.alert('Error', plainError(err, "Failed to update offer."));
             } finally {
               busyRef.current = false;
               if (mountedRef.current) setBusyId(null);

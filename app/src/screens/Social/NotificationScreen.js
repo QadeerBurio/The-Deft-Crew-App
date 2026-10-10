@@ -26,6 +26,7 @@ import {
   NotifSkeleton,
   NotifEmpty,
 } from '../../components/notifications/NotifUI';
+import { plainError } from "../../utils/plainError";
 
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
 const POLL_MS = 20000;
@@ -237,7 +238,7 @@ export default function NotificationScreen({ navigation }) {
         );
       }
     } catch (err) {
-      Alert.alert('Error', err.response?.data?.error || 'Could not process request.');
+      Alert.alert('Error', plainError(err, "Could not process request."));
       fetchNotifications();
     } finally {
       setBusy((b) => ({ ...b, [item._id]: false }));

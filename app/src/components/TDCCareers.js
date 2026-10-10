@@ -11,7 +11,6 @@ import {
   Dimensions,
   Alert,
   Platform,
-  ToastAndroid,
   ScrollView,
   ActivityIndicator,
   RefreshControl,
@@ -32,6 +31,7 @@ import { BASE_URL } from "../api/api";
 
 import { color as T, font as F } from "../theme/tokens";
 import { useGuestGate } from '../guest/GuestGate';
+import { plainError } from "../utils/plainError";
 const { width, height } = Dimensions.get("window");
 
 // const getBaseURL = () => {
@@ -548,11 +548,7 @@ const TDCCareers = ({ navigation }) => {
       });
       
       // Success notification
-      if (Platform.OS === "android") {
-        ToastAndroid.show("Application Submitted! 🎉", ToastAndroid.LONG);
-      } else {
-        Alert.alert("Success!", "Your application has been submitted to The Deft Crew team.");
-      }
+      Alert.alert("Submitted!", "Your application has been submitted to The Deft Crew team.");
       
       // FIXED: Properly close modal and reset form
       setModalVisible(false);
@@ -570,7 +566,7 @@ const TDCCareers = ({ navigation }) => {
       console.error("Application error:", err);
       Alert.alert(
         "Error", 
-        err.response?.data?.error || err.message || "Failed to submit application"
+        plainError(err, "Failed to submit application.")
       );
     } finally {
       setSubmitting(false);

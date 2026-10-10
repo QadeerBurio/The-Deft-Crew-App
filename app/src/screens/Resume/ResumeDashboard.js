@@ -32,6 +32,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 import Svg, { Circle } from 'react-native-svg';
+import { plainError } from "../../utils/plainError";
 const { width } = Dimensions.get('window');
 const MAX_CREATIONS = 2;
 
@@ -257,7 +258,7 @@ const ResumeDashboardScreen = ({ navigation }) => {
               await fetchResumes(true);
               Alert.alert('✅ Success', 'Resume deleted successfully');
             } catch (error) {
-              Alert.alert('❌ Error', error?.message || 'Failed to delete resume');
+              Alert.alert('❌ Error', plainError(error, "Failed to delete resume."));
             }
           },
         },
@@ -310,7 +311,7 @@ const ResumeDashboardScreen = ({ navigation }) => {
       setDownloading(false);
       setDownloadModalVisible(false);
       setDownloadProgress(0);
-      Alert.alert('❌ Error', 'Failed to download resume: ' + error.message);
+      Alert.alert('❌ Error', plainError(error, "Failed to download resume. Please try again."));
     }
   };
 
@@ -483,7 +484,7 @@ ${resume?.completionPercentage || 0}% Complete
       setDownloading(false);
       setDownloadModalVisible(false);
       setDownloadProgress(0);
-      Alert.alert('❌ Error', 'Failed to optimize resume: ' + error.message);
+      Alert.alert('❌ Error', plainError(error, "Failed to optimize resume. Please try again."));
     }
   };
 
@@ -558,7 +559,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
         Alert.alert('✅ Success', 'Resume duplicated successfully!');
       }
     } catch (error) {
-      Alert.alert('❌ Error', 'Failed to duplicate resume: ' + error.message);
+      Alert.alert('❌ Error', plainError(error, "Failed to duplicate resume. Please try again."));
     } finally {
       setIsLoading(false);
     }

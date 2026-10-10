@@ -32,6 +32,7 @@ import { AuthContext } from '../../context/AuthContext';
 import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus';
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 import { ScreenHeader, Card, EmptyState, Skeleton } from "../../ui";
+import { plainError } from "../../utils/plainError";
 const { width, height } = Dimensions.get('window');
 
 // ✅ FIXED: Correct API URL (no duplicate /api)
@@ -479,7 +480,7 @@ export default function PostDetailScreen({ route, navigation }) {
       }
     } catch (error) {
       console.error("Comment error:", error);
-      Alert.alert("Error", error.response?.data?.error || "Failed to add comment");
+      Alert.alert("Error", plainError(error, "Failed to add comment."));
     } finally {
       setSubmitting(false);
     }
@@ -510,7 +511,7 @@ export default function PostDetailScreen({ route, navigation }) {
                 setCommentsList(normalizeComments(res.data.comments));
               }
             } catch (err) {
-              Alert.alert("Error", err.response?.data?.error || "Could not delete comment");
+              Alert.alert("Error", plainError(err, "Could not delete comment."));
             }
           }
         }

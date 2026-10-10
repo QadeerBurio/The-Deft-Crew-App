@@ -10,8 +10,6 @@ import {
   Alert,
   SafeAreaView,
   ActivityIndicator,
-  Platform,
-  ToastAndroid,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -93,11 +91,7 @@ const ResumeSettingsScreen = () => {
           settings: settings
         });
         
-        if (Platform.OS === 'android') {
-          ToastAndroid.show('Settings saved successfully', ToastAndroid.SHORT);
-        } else {
-          Alert.alert('Success', 'Settings saved successfully');
-        }
+        Alert.alert('Saved', 'Your resume settings are saved.');
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to save settings');

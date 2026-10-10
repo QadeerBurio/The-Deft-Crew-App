@@ -19,6 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { color as T, font as F } from "../theme/tokens";
 import ScreenHeader from "../ui/ScreenHeader";
+import { plainError } from "../utils/plainError";
 const DeftProScreen = () => {
   const navigation = useNavigation();
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -49,7 +50,7 @@ const DeftProScreen = () => {
         title: "TDC Pro Achievement",
       });
     } catch (error) {
-      Alert.alert("Error", error.message);
+      Alert.alert("Error", plainError(error, "Something went wrong. Please try again."));
     }
   };
 

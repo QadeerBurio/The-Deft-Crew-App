@@ -80,6 +80,7 @@ import {
 import Dot from '../engagement/components/Dot';
 import useMySavings from '../hooks/useMySavings';
 import { claimedBrands } from '../utils/claimedBrands';
+import { plainError, plainText } from "../utils/plainError";
 
 const SERVER_URL = 'https://the-deft-crew-production.up.railway.app';
 
@@ -820,7 +821,7 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
             ]);
           } else {
             soundError();
-            Alert.alert('Verification Failed', response.data.message || 'Student verification failed. Please try again.', [
+            Alert.alert('Verification Failed', plainText(response.data.message, "Student verification failed. Please try again."), [
               { text: 'Try Again', onPress: () => { setScanned(false); setLoading(false); } }
             ]);
             setLoading(false);
@@ -828,7 +829,7 @@ const QRScannerModal = React.memo(({ visible, onClose, onScanComplete, offer }) 
         } catch (apiError) {
           if (!isCanceledError(apiError)) console.error('API Error:', apiError);
           soundError();
-          Alert.alert('Error', apiError.response?.data?.message || 'Failed to verify student. Please try again.', [
+          Alert.alert('Error', plainError(apiError, "Failed to verify student. Please try again."), [
             { text: 'Try Again', onPress: () => { setScanned(false); setLoading(false); } }
           ]);
           setLoading(false);
@@ -1604,7 +1605,7 @@ export default function MyDiscountScreen() {
         return null;
       }
       soundError();
-      Alert.alert('Error', err.response?.data?.message || err.message || 'Failed to generate promo code.');
+      Alert.alert('Error', plainError(err, "Failed to generate promo code."));
       return null;
     } finally {
       setGeneratingPromo(false);
@@ -1794,7 +1795,7 @@ export default function MyDiscountScreen() {
       if (isCanceledError(err)) return;
       console.error('Error unclaiming offer:', err);
       soundError();
-      Alert.alert('Error', err.response?.data?.message || 'Failed to remove discount. Please try again.');
+      Alert.alert('Error', plainError(err, "Failed to remove discount. Please try again."));
     }
   }, [token, refreshStatsOnly, userId]);
 

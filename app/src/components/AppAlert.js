@@ -29,7 +29,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { color as T, font as F } from "../theme/tokens";
+import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { holdTour, releaseTour } from "../engagement/tour/tourGate";
 const DARK = T.ink;
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
@@ -37,10 +37,10 @@ const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const VARIANTS = {
   success: { icon: 'checkmark', color: T.success, bg: T.successBg },
   error: { icon: 'close', color: T.danger, bg: T.dangerBg },
-  warning: { icon: 'alert', color: '#b7791f', bg: '#fff6e0' },
+  warning: { icon: 'alert', color: DARK, bg: T.yellowSoft },
   danger: { icon: 'warning-outline', color: T.danger, bg: T.dangerBg },
-  confirm: { icon: 'help', color: DARK, bg: '#fff6e0' },
-  info: { icon: 'information', color: DARK, bg: '#fff6e0' },
+  confirm: { icon: 'help', color: DARK, bg: T.yellowSoft },
+  info: { icon: 'information', color: DARK, bg: T.yellowSoft },
 };
 
 const nativeAlert = Alert.alert.bind(Alert);
@@ -53,6 +53,14 @@ function cleanTitle(t) {
   if (t == null) return '';
   const s = String(t).replace(EDGE_EMOJI, '').trim();
   return s || String(t).trim();
+}
+
+// tdc voice: headings are lowercase and end with a yellow "." (a "?" or "!" stays).
+// Only the title and button labels are lowercased; messages keep names / acronyms.
+function splitTitle(t) {
+  const s = String(t).toLowerCase().trim();
+  if (/[?!]$/.test(s)) return { text: s, dot: false };
+  return { text: s.replace(/\.+$/, ''), dot: true };
 }
 
 function pickVariant(title, buttons) {
@@ -142,6 +150,17 @@ export function AppAlertHost() {
     if (options.cancelable) return finish(options.onDismiss);
   }, [current, finish]);
 
+  // Android back always closes the popup: the cancel action if there is one,
+  // otherwise it just dismisses (no other button's action runs).
+  const onBack = useCallback(() => {
+    if (!current) return;
+    const { buttons, options } = current;
+    const cancelBtn = buttons.find((b) => b.style === 'cancel');
+    if (cancelBtn) return finish(cancelBtn.onPress);
+    if (buttons.length === 1) return finish(buttons[0].onPress);
+    return finish(options.onDismiss);
+  }, [current, finish]);
+
   if (!current) return null;
 
   const v = VARIANTS[current.variant] || VARIANTS.info;
@@ -152,6 +171,7 @@ export function AppAlertHost() {
     ? buttons
     : [...buttons.filter((b) => b.style === 'cancel'), ...buttons.filter((b) => b.style !== 'cancel')];
   const hasTitle = !!current.title;
+  const title = hasTitle ? splitTitle(current.title) : null;
 
   return (
     <Modal
@@ -159,7 +179,7 @@ export function AppAlertHost() {
       transparent
       animationType="none"
       statusBarTranslucent
-      onRequestClose={onBackdrop}
+      onRequestClose={onBack}
     >
       <Animated.View style={[styles.backdrop, { opacity: fade }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onBackdrop} />
@@ -168,7 +188,12 @@ export function AppAlertHost() {
             <Ionicons name={v.icon} size={26} color={v.color} />
           </View>
 
-          {hasTitle ? <Text style={styles.title}>{current.title}</Text> : null}
+          {hasTitle ? (
+            <Text style={styles.title} maxFontSizeMultiplier={MAX_FONT_SCALE} accessibilityRole="header">
+              {title.text}
+              {title.dot ? <Text style={styles.titleDot}>.</Text> : null}
+            </Text>
+          ) : null}
 
           {current.message ? (
             <ScrollView
@@ -177,7 +202,9 @@ export function AppAlertHost() {
               showsVerticalScrollIndicator={false}
               bounces={false}
             >
-              <Text style={[styles.message, !hasTitle && styles.messageOnly]}>{current.message}</Text>
+              <Text style={[styles.message, !hasTitle && styles.messageOnly]} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                {current.message}
+              </Text>
             </ScrollView>
           ) : null}
 
@@ -186,15 +213,18 @@ export function AppAlertHost() {
               const isCancel = b.style === 'cancel';
               const isDanger = b.style === 'destructive';
               const btnStyle = isDanger ? styles.btnDanger : isCancel ? styles.btnGhost : styles.btnPrimary;
-              const txtStyle = isCancel ? styles.btnGhostText : styles.btnPrimaryText;
+              const txtStyle = isDanger ? styles.btnDangerText : isCancel ? styles.btnGhostText : styles.btnPrimaryText;
               return (
                 <TouchableOpacity
                   key={`${b.text || 'btn'}-${i}`}
                   activeOpacity={0.85}
                   style={[styles.btn, btnStyle, !stacked && { flex: 1 }]}
                   onPress={() => finish(b.onPress)}
+                  accessibilityRole="button"
                 >
-                  <Text style={txtStyle} numberOfLines={1}>{b.text || 'OK'}</Text>
+                  <Text style={[txtStyle, styles.btnText]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                    {String(b.text || 'ok').toLowerCase()}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
@@ -208,14 +238,14 @@ export function AppAlertHost() {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(10,10,10,0.55)',
+    backgroundColor: T.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
   },
   card: {
     width: Math.min(SCREEN_W - 48, 340),
-    backgroundColor: T.card,
+    backgroundColor: T.paper,
     borderRadius: 24,
     paddingTop: 24,
     paddingHorizontal: 20,
@@ -242,27 +272,33 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: -0.3,
   },
+  titleDot: { color: T.yellow },
   msgScroll: { maxHeight: SCREEN_H * 0.4, marginTop: 6, alignSelf: 'stretch' },
   message: {
     fontSize: 14, fontFamily: F.body,
     lineHeight: 20,
-    color: T.textMuted,
+    color: T.ink,
     textAlign: 'center',
   },
   messageOnly: { color: DARK, fontSize: 15, fontFamily: F.bodySemi },
   btnRow: { flexDirection: 'row', gap: 10, marginTop: 20, alignSelf: 'stretch' },
   btnCol: { flexDirection: 'column' },
   btn: {
-    height: 48,
+    minHeight: 48, // at least 44 dp; grows with large text
+    paddingVertical: 10,
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 12,
   },
-  btnPrimary: { backgroundColor: DARK },
+  // primary = tdc yellow; destructive = solid red with white text (clearly different);
+  // cancel = sand outline
+  btnPrimary: { backgroundColor: T.yellow },
   btnDanger: { backgroundColor: T.danger },
   btnGhost: { backgroundColor: T.sand, borderWidth: 1, borderColor: T.line },
-  btnPrimaryText: { color: T.white, fontSize: 15, fontFamily: F.bodyBold },
+  btnText: { textAlign: 'center' },
+  btnPrimaryText: { color: DARK, fontSize: 15, fontFamily: F.bodyBold },
+  btnDangerText: { color: T.white, fontSize: 15, fontFamily: F.bodyBold },
   btnGhostText: { color: DARK, fontSize: 15, fontFamily: F.bodyBold },
 });
 

@@ -20,6 +20,7 @@ import io from "socket.io-client";
 
 import { color as T, font as F } from "../../theme/tokens";
 import { ScreenHeader, HeaderIconButton, Input, Chip, EmptyState, SkeletonBlock } from "../../ui";
+import { plainError } from "../../utils/plainError";
 const socket = io("https://the-deft-crew-production.up.railway.app");
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
@@ -388,7 +389,7 @@ export default function MessagesScreen() {
         Alert.alert('Error', res.data?.error || 'Could not delete this conversation.');
       }
     } catch (err) {
-      Alert.alert('Error', err.response?.data?.error || (err.request ? 'Network error. Check your connection.' : 'Could not delete this conversation.'));
+      Alert.alert('Error', plainError(err, "Could not delete this conversation."));
     }
   };
 

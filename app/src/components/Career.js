@@ -11,7 +11,6 @@ import {
   Dimensions,
   Alert,
   Platform,
-  ToastAndroid,
   ScrollView,
   ActivityIndicator,
   RefreshControl,
@@ -42,6 +41,7 @@ const API_URL = `${BASE_URL}/jobs`;
 
 import { color as T, font as F } from "../theme/tokens";
 import { useGuestGate } from '../guest/GuestGate';
+import { plainError } from "../utils/plainError";
 // Design system tokens (tdc-full-redesign/DESIGN_SYSTEM.md)
 const COLORS = {
   page: T.paper,
@@ -1279,7 +1279,7 @@ const Career = ({ navigation }) => {
     } catch (error) {
       console.error('Career optimization flow error:', error);
       setOptimizing(false);
-      Alert.alert('❌ Error', 'Failed to optimize resume: ' + error.message);
+      Alert.alert('❌ Error', plainError(error, "Failed to optimize resume. Please try again."));
     }
   };
 
@@ -1401,9 +1401,9 @@ const Career = ({ navigation }) => {
         onUploadProgress: (e) => setUploadProgress(Math.round((e.loaded * 100) / e.total)),
         timeout: 60000,
       });
-      Platform.OS === 'android' ? ToastAndroid.show("Submitted!", ToastAndroid.LONG) : Alert.alert("Success!", "Application submitted!");
+      Alert.alert("Submitted!", "Your application has been submitted.");
       setModalVisible(false); resetForm(); fetchMyApplications();
-    } catch (err) { Alert.alert("Error", err.response?.data?.error || "Failed to submit"); }
+    } catch (err) { Alert.alert("Error", plainError(err, "Failed to submit.")); }
     finally { setSubmitting(false); setUploadProgress(0); }
   };
 

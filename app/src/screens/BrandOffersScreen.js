@@ -13,6 +13,7 @@ import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { Screen, ScreenHeader, Button, Card, EmptyState, Skeleton } from "../ui";
 import { AuthContext } from "../context/AuthContext";
 import { useGuestGate } from "../guest/GuestGate";
+import { plainError } from "../utils/plainError";
 
 export default function BrandOffersScreen({ route }) {
   const { brandId, brandName } = route.params;
@@ -58,7 +59,7 @@ export default function BrandOffersScreen({ route }) {
       // Show proper message if already claimed
       Alert.alert(
         "Error",
-        err.response?.data?.message || "Failed to claim offer"
+        plainError(err, "Failed to claim offer.")
       );
     }
   };

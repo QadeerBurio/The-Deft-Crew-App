@@ -26,6 +26,7 @@ import { useGuestGate } from '../guest/GuestGate';
 import api from "../api/api";
 
 import { color as T, font as F } from "../theme/tokens";
+import { plainError } from "../utils/plainError";
 const { width, height } = Dimensions.get("window");
 
 export default function PaymentScreen({ navigation }) {
@@ -215,7 +216,7 @@ export default function PaymentScreen({ navigation }) {
     } catch (err) {
       Alert.alert(
         "❌ Error",
-        err.response?.data?.message || "Failed to submit request. Please try again."
+        plainError(err, "Failed to submit request. Please try again.")
       );
     } finally {
       setLoading(false);

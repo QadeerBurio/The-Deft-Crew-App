@@ -10,6 +10,7 @@ import { AuthContext } from '../context/AuthContext';
 import { useGuestGate } from '../guest/GuestGate';
 import { color as T, font as F } from "../theme/tokens";
 import ScreenHeader from "../ui/ScreenHeader";
+import { plainError } from "../utils/plainError";
 // --- SUB-COMPONENTS (Defined outside to prevent re-render lag) ---
 const SectionHeader = ({ title, icon, color }) => (
 
@@ -129,7 +130,7 @@ const ApplicationForm = ({ route, navigation }) => {
     }
   } catch (err) {
     console.error("Submission Error:", err);
-    Alert.alert("Application Failed", err.message);
+    Alert.alert("Application Failed", plainError(err, "We couldn't send your application. Please try again."));
   } finally {
     setLoading(false);
   }

@@ -50,6 +50,7 @@ import io from "socket.io-client";
 import { engagementBus, ENGAGEMENT_EVENTS } from "../../engagement/engagementBus";
 
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
+import { plainError } from "../../utils/plainError";
 const { height, width } = Dimensions.get("window");
 
 const API_BASE = "https://the-deft-crew-production.up.railway.app/api/events";
@@ -655,7 +656,7 @@ export default function EventsScreen() {
       fetchEvents();
       fetchCategories();
     } catch (error) {
-      Alert.alert("Error", error.response?.data?.error || "Failed to post event.");
+      Alert.alert("Error", plainError(error, "Failed to post event."));
     } finally {
       setSubmitting(false);
     }
@@ -950,7 +951,7 @@ export default function EventsScreen() {
       }
       Alert.alert(
         "Error",
-        error.response?.data?.error || "Registration failed"
+        plainError(error, "Registration failed.")
       );
     }
   };
@@ -979,7 +980,7 @@ export default function EventsScreen() {
             } catch (error) {
               Alert.alert(
                 "Error",
-                error.response?.data?.error || "Failed to cancel registration"
+                plainError(error, "Failed to cancel registration.")
               );
             }
           },

@@ -28,6 +28,7 @@ import resumeApi from '../../api/resumeApi';
 
 import { color as T, font as F } from "../../theme/tokens";
 import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
+import { plainError } from "../../utils/plainError";
 const { width, height } = Dimensions.get('window');
 
 const INDUSTRIES = [
@@ -515,7 +516,7 @@ const ResumeBuilderScreen = () => {
       }
     } catch (err) {
       setAiGeneratingVisible(false);
-      Alert.alert('Upload Error ❌', err.message || 'Server error parsing resume.');
+      Alert.alert('Upload Error ❌', plainError(err, "We couldn't read that resume file. Please try another file."));
     }
   };
 
@@ -567,7 +568,7 @@ const ResumeBuilderScreen = () => {
       Alert.alert('✅ Saved!', 'Personal Information saved successfully!');
     } catch (err) {
       console.error('Error saving personal info:', err);
-      Alert.alert('❌ Error', 'Failed to save Personal Information: ' + (err.message || 'Server error'));
+      Alert.alert('❌ Error', plainError(err, "Failed to save Personal Information. Please try again."));
     } finally {
       setSavingStep1(false);
     }
@@ -582,7 +583,7 @@ const ResumeBuilderScreen = () => {
       Alert.alert('✅ Saved!', 'Target Job & Summary saved successfully!');
     } catch (err) {
       console.error('Error saving target summary:', err);
-      Alert.alert('❌ Error', 'Failed to save Target Summary: ' + (err.message || 'Server error'));
+      Alert.alert('❌ Error', plainError(err, "Failed to save Target Summary. Please try again."));
     } finally {
       setSavingStep6(false);
     }
@@ -1029,7 +1030,7 @@ const ResumeBuilderScreen = () => {
         setAiProcessing(false);
       } catch (err) {
         setAiProcessing(false);
-        Alert.alert('AI Error', err.message || 'Enhancement failed. Please try again later.');
+        Alert.alert('AI Error', plainError(err, "Enhancement failed. Please try again later."));
       }
     };
 
@@ -1207,7 +1208,7 @@ const ResumeBuilderScreen = () => {
         setAiProcessing(false);
       } catch (err) {
         setAiProcessing(false);
-        Alert.alert('AI Error', err.message || 'Enhancement failed. Please try again later.');
+        Alert.alert('AI Error', plainError(err, "Enhancement failed. Please try again later."));
       }
     };
 
@@ -1485,7 +1486,7 @@ const ResumeBuilderScreen = () => {
         setAiProcessing(false);
       } catch (err) {
         setAiProcessing(false);
-        Alert.alert('AI Error', err.message || 'Failed to generate summary.');
+        Alert.alert('AI Error', plainError(err, "Failed to generate summary."));
       }
     };
 
@@ -1676,7 +1677,7 @@ const ResumeBuilderScreen = () => {
                 Alert.alert('No Suggestions', 'Could not generate suggestions. Try adding a target role in the Target step.');
               }
             } catch (err) {
-              Alert.alert('AI Failed', err.message || 'Suggestions timed out. Please try again.');
+              Alert.alert('AI Failed', plainError(err, "Suggestions timed out. Please try again."));
             }
           }}
         >

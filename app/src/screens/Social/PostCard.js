@@ -36,6 +36,7 @@ import {
 import BadgePip from '../../engagement/components/BadgePip';
 
 import { color as T, font as F } from "../../theme/tokens";
+import { plainError } from "../../utils/plainError";
 const { width, height } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
@@ -546,7 +547,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
       }
     } catch (err) {
       soundError();
-      Alert.alert("Error", err.response?.data?.error || "Could not block user.");
+      Alert.alert("Error", plainError(err, "Could not block user."));
     }
   };
 
@@ -715,7 +716,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
       }
     } catch (err) {
       soundError();
-      Alert.alert("Error", err.response?.data?.error || "Comment failed to post.");
+      Alert.alert("Error", plainError(err, "Comment failed to post."));
     } finally {
       setIsSubmitting(false);
     }
@@ -749,7 +750,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
               }
             } catch (err) {
               soundError();
-              Alert.alert("Error", err.response?.data?.error || "Could not delete comment");
+              Alert.alert("Error", plainError(err, "Could not delete comment."));
             }
           }
         }
@@ -867,7 +868,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
       }
     } catch (err) {
       soundError();
-      Alert.alert("Error", err.response?.data?.error || "Could not accept request");
+      Alert.alert("Error", plainError(err, "Could not accept request."));
     } finally {
       setIsConnecting(false);
     }

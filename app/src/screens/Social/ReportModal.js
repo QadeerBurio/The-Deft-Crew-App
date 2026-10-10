@@ -21,6 +21,7 @@ import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 
 import { color as T, font as F } from "../../theme/tokens";
+import { plainError } from "../../utils/plainError";
 const { height, width } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
@@ -120,7 +121,7 @@ export default function ReportModal({
       console.error('Error response:', err.response?.data);
       Alert.alert(
         'Error',
-        err.response?.data?.error || 'Failed to submit report. Please try again.'
+        plainError(err, "Failed to submit report. Please try again.")
       );
     } finally {
       setLoading(false);

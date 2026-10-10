@@ -17,6 +17,7 @@ import useMyProfessionalProfile from '../../hooks/useMyProfessionalProfile';
 
 import { color as T, font as F } from "../../theme/tokens";
 import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
+import { plainError } from "../../utils/plainError";
 const { width } = Dimensions.get('window');
 const HERO_WIDTH = width - 40; // matches the ScrollView's 20px content padding on each side
 
@@ -147,7 +148,7 @@ export default function ListingDetailScreen({ route, navigation }) {
         listingId: listing._id,
       });
     } catch (err) {
-      Alert.alert('Error', err.response?.data?.error || err.message || 'Failed to send inquiry');
+      Alert.alert('Error', plainError(err, "Failed to send inquiry."));
     } finally { setSubmittingInquiry(false); }
   };
 

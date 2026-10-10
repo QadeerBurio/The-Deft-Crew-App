@@ -17,6 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { color as T, font as F } from "../theme/tokens";
 import ScreenHeader from "../ui/ScreenHeader";
+import { plainError } from "../utils/plainError";
 const DigitalBadgeScreen = () => {
   const navigation = useNavigation();
   const badgeAnim = useRef(new Animated.Value(0)).current;
@@ -73,7 +74,7 @@ const DigitalBadgeScreen = () => {
         title: "My TDC Digital Badge",
       });
     } catch (error) {
-      Alert.alert("Error", error.message);
+      Alert.alert("Error", plainError(error, "Something went wrong. Please try again."));
     }
   };
 

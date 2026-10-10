@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CommonActions } from '@react-navigation/native';
 import api from '../api/api';
 import { AuthShell, AuthInput, AuthButton, AUTH } from '../components/AuthShell';
+import { plainError } from "../utils/plainError";
 
 const RULES = [
   { key: 'len', label: '6+ characters', test: (p) => p.length >= 6 },
@@ -62,7 +63,7 @@ export default function ResetPassword({ route, navigation }) {
       await api.post('/auth/reset-password', { resetToken, newPassword: password });
       Alert.alert('Password updated', 'Sign in with your new password.', [{ text: 'Sign in', onPress: goLogin }]);
     } catch (err) {
-      Alert.alert('Error', err.response?.data?.message || 'Failed to reset password');
+      Alert.alert('Error', plainError(err, "Failed to reset password."));
     } finally {
       setLoading(false);
     }

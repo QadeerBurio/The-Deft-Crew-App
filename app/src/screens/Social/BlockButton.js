@@ -13,6 +13,7 @@ import { AuthContext } from '../../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 
 import { color as T, font as F } from "../../theme/tokens";
+import { plainError } from "../../utils/plainError";
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
 export default function BlockButton({ userId, userName, onBlock, size = 'medium' }) {
@@ -62,7 +63,7 @@ export default function BlockButton({ userId, userName, onBlock, size = 'medium'
       console.error('Block error:', err);
       Alert.alert(
         'Error',
-        err.response?.data?.error || 'Failed to block user. Please try again.'
+        plainError(err, "Failed to block user. Please try again.")
       );
     } finally {
       setLoading(false);

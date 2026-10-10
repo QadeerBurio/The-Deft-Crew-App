@@ -43,6 +43,7 @@ import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import ScreenHeader from "../ui/ScreenHeader";
 import PressScale from "../ui/PressScale";
 import AmbassadorForm, { isAllowed as isAmbassadorFormUrl } from "./AmbassadorForm";
+import { plainError } from "../utils/plainError";
 const { width } = Dimensions.get('window');
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -55,7 +56,7 @@ const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${PLAY_STO
 
 // Ambassador Google Form (docs.google.com/forms/… or forms.gle/…). Until this is a real
 // form link the "join as ambassador" button is not shown.
-const AMBASSADOR_FORM_URL = 'https://forms.gle/Pag1pEEXQi1GDmvdA';
+const AMBASSADOR_FORM_URL = 'https://forms.gle/SvXWgyunW7BCibxB8';
 const AMBASSADOR_FORM_READY = isAmbassadorFormUrl(AMBASSADOR_FORM_URL);
 // "applied" is kept on this phone per student (no server change)
 const AMBASSADOR_KEY = (userId) => `@tdc_ambassador_applied:${userId}`;
@@ -813,7 +814,7 @@ const PointsScreen = () => {
         `${getShareLink()}`;
       await Share.share({ message: msg, title: 'The Deft Crew' });
     } catch (e) {
-      if (e.message !== 'User did not share') Alert.alert('Error', e.message);
+      if (e.message !== 'User did not share') Alert.alert('Error', plainError(e, "Couldn't open sharing. Please try again."));
     }
   }, [referralCode, getShareLink, shareScale]);
 

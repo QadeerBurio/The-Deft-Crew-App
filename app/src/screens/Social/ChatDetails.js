@@ -19,6 +19,7 @@ import * as Clipboard from 'expo-clipboard';
 
 import { color as T, font as F } from "../../theme/tokens";
 import { HeaderIconButton, EmptyState, SkeletonBlock } from "../../ui";
+import { plainText } from "../../utils/plainError";
 const { width } = Dimensions.get('window');
 const socket = io("https://the-deft-crew-production.up.railway.app");
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
@@ -970,7 +971,7 @@ export default function ChatDetailScreen() {
 
         Alert.alert('deleted', 'message deleted');
       } else {
-        Alert.alert('error', response.data?.error || 'could not delete the message');
+        Alert.alert('error', plainText(response.data?.error, "could not delete the message."));
       }
     } catch (err) {
       console.error('Delete message error:', err);

@@ -17,6 +17,7 @@ import { AuthContext } from "../../context/AuthContext";
 import { TouchableWithoutFeedback } from 'react-native';
 import { soundLike, soundTap } from "../../lib/tdcSounds";
 import { color as T, font as F } from "../../theme/tokens";
+import { plainError } from "../../utils/plainError";
 const { width, height } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 const COMMENTS_POLL_INTERVAL = 6000;
@@ -587,7 +588,7 @@ export default function UserProfile({ route, navigation }) {
       }
     } catch (err) {
       console.error("Accept request error:", err);
-      Alert.alert("Error", err.response?.data?.error || "Failed to accept request");
+      Alert.alert("Error", plainError(err, "Failed to accept request."));
     } finally {
       setIsActionLoading(false);
     }
@@ -737,7 +738,7 @@ export default function UserProfile({ route, navigation }) {
         );
       }
     } catch (err) {
-      Alert.alert("Error", err.response?.data?.error || "Could not block");
+      Alert.alert("Error", plainError(err, "Could not block."));
     }
   };
 
@@ -776,7 +777,7 @@ export default function UserProfile({ route, navigation }) {
         Alert.alert("Report Submitted", "We'll review it within 24 hours.");
       }
     } catch (err) {
-      Alert.alert("Error", err.response?.data?.error || "Could not report");
+      Alert.alert("Error", plainError(err, "Could not report."));
     }
   };
 
@@ -954,7 +955,7 @@ export default function UserProfile({ route, navigation }) {
         setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 250);
       }
     } catch (err) {
-      Alert.alert("Error", err.response?.data?.error || "Comment failed to post.");
+      Alert.alert("Error", plainError(err, "Comment failed to post."));
     } finally {
       setIsSubmittingComment(false);
     }
@@ -982,7 +983,7 @@ export default function UserProfile({ route, navigation }) {
               }));
             }
           } catch (err) {
-            Alert.alert("Error", err.response?.data?.error || "Could not delete comment");
+            Alert.alert("Error", plainError(err, "Could not delete comment."));
           }
         }
       }

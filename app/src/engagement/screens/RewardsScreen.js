@@ -28,6 +28,7 @@ import { success as hapticSuccess, warn, pop } from '../utils/haptics';
 
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 import { ScreenHeader, HeaderIconButton } from "../../ui";
+import { plainError } from "../../utils/plainError";
 const GOLD = T.yellow;
 const BLACK = T.ink;
 const WHITE = T.white;
@@ -272,7 +273,7 @@ export default function RewardsScreen() {
       }
     } catch (e) {
       console.log('[Rewards] export error:', e?.message);
-      Alert.alert('export failed', e?.message || 'try again.');
+      Alert.alert('export failed', plainError(e, "couldn't export. please try again."));
     }
   }, [ledgerFull, ledger]);
 
@@ -343,7 +344,7 @@ export default function RewardsScreen() {
       warn();
       Alert.alert(
         'redeem failed',
-        e?.response?.data?.message || 'please try again.'
+        plainError(e, "please try again.")
       );
     } finally {
       setBusy(null);

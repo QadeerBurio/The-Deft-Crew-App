@@ -6,6 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import api from "../api/api";
+import { plainError } from "../utils/plainError";
 
 export default function VerificationScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
@@ -83,7 +84,7 @@ export default function VerificationScreen({ navigation }) {
       } else if (!err.response) {
         Alert.alert("Network Error", "Cannot connect to server. Please check your connection.");
       } else {
-        Alert.alert("Upload Failed", err.response?.data?.error || "An unexpected error occurred.");
+        Alert.alert("Upload Failed", plainError(err, "An unexpected error occurred."));
       }
     } finally {
       setLoading(false);

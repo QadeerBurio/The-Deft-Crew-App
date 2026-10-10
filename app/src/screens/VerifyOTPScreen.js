@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, Pressable, Keyboard } from 'react-native';
 import api from '../api/api';
 import { AuthShell, AuthButton, AUTH } from '../components/AuthShell';
+import { plainError } from "../utils/plainError";
 
 const LEN = 6;
 
@@ -74,7 +75,7 @@ export default function VerifyOTP({ route, navigation }) {
       Alert.alert('Code sent', res.data?.message || 'A new code is on its way.');
     } catch (err) {
       if (err.response?.status === 429) setCooldown(err.response.data?.retryAfter || 60);
-      Alert.alert('Error', err.response?.data?.message || "Couldn't resend the code. Please try again.");
+      Alert.alert('Error', plainError(err, "Couldn't resend the code. Please try again."));
     } finally {
       setResending(false);
     }

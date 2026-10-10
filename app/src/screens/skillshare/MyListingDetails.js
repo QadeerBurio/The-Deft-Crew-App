@@ -14,6 +14,7 @@ import { goToAuth } from '../../utils/goToAuth';
 
 import { color as T, font as F } from "../../theme/tokens";
 import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
+import { plainError } from "../../utils/plainError";
 const BRAND = T.yellow;
 const INK = T.ink;
 const MUTED = T.textMuted;
@@ -168,7 +169,7 @@ export default function MyListingsScreen({ navigation }) {
           if (closingRef.current) return;
           closingRef.current = true;
           try { await closeListing(listingId); fetchListings(); }
-          catch (err) { Alert.alert('Error', err.response?.data?.error || err.message || 'Failed to close listing'); }
+          catch (err) { Alert.alert('Error', plainError(err, "Failed to close listing.")); }
           finally { closingRef.current = false; }
         },
       },
