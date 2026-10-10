@@ -46,11 +46,11 @@ import {
 import { brandMatchesCity, setSelectedCity as saveSelectedCity } from "../utils/cityFilter";
 
 import { color as T, font as F } from "../theme/tokens";
+import { imageUrl, brandLogoUrl } from "../utils/imageUrl";
 import { ScreenHeader } from "../ui";
 const { width } = Dimensions.get("window");
 const HORIZONTAL_PADDING = 16;
 
-const BASE_URL = "https://the-deft-crew-production.up.railway.app";
 
 // ═══════════════════════════════════════════════════════════
 // THREE FEATURED CITIES — hero cards
@@ -221,18 +221,11 @@ export default function CityScreen() {
     }
   }, [route.params?.city]);
 
-  const formatImageUrl = useCallback((imagePath, type = "offer") => {
-    if (!imagePath) return null;
-    if (imagePath.startsWith("http://") || imagePath.startsWith("https://"))
-      return imagePath;
-    const clean = imagePath.replace(/^\/+/, "");
-    if (type === "brand") {
-      return clean.startsWith("uploads/brands/")
-        ? `${BASE_URL}/${clean}`
-        : `${BASE_URL}/uploads/brands/${clean}`;
-    }
-    return `${BASE_URL}/${clean}`;
-  }, []);
+  // shared rule (utils/imageUrl): stored path as is, bare logo file → /uploads/brands/
+  const formatImageUrl = useCallback(
+    (imagePath, type = "offer") => (type === "brand" ? brandLogoUrl(imagePath) : imageUrl(imagePath)),
+    []
+  );
 
   // ═══════════════════════════════════════════════════════════
   // FETCH BRANDS (for city mapping)
