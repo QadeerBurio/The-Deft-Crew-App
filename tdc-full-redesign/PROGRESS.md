@@ -218,4 +218,6 @@ Cause: production /api/brands/nearby returned [] for every location (0 of 7 bran
 - 2fb15e0 Cities: brand logo URLs on the shared rule
 - b72eb01 Home: top discounts when there is no real near-me list
 - da4f6c4 Home: guest top-discounts request cached and rationed
+- 45455a5 Tour: once per device on a fresh install, guests included
+- de009ec Tour: arrows on the real tab icons, round cut-out
 
