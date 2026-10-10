@@ -13,6 +13,7 @@ import {
   Animated,
   AppState,
   Dimensions,
+  useWindowDimensions,
   Easing,
   FlatList,
   Image,
@@ -47,7 +48,6 @@ import { engagementBus, ENGAGEMENT_EVENTS } from "../../engagement/engagementBus
 
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 const { height, width } = Dimensions.get("window");
-const SHEET_HEIGHT = Math.round(height * 0.85);
 
 const API_BASE = "https://the-deft-crew-production.up.railway.app/api/events";
 
@@ -415,6 +415,7 @@ export default function EventsScreen() {
   const { requireAccount } = useGuestGate();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions(); // details sheet = 85% (follows rotation)
 
   const [events, setEvents] = useState(eventsCache.events || []);
   const [loading, setLoading] = useState(!eventsCache.events);
@@ -1141,11 +1142,18 @@ export default function EventsScreen() {
         onRequestClose={closeDetail}
         statusBarTranslucent={true}
       >
-        <Pressable style={styles.sheetBackdrop} onPress={closeDetail}>
+        {/* The sheet is a plain View: it used to be a Pressable (to stop taps reaching the
+            backdrop), which took the touch responder at touch start and stopped the
+            ScrollView inside from scrolling on Android. The backdrop is now its own
+            Pressable behind the sheet. */}
+        <View style={styles.sheetBackdrop}>
           <Pressable
-            style={[styles.sheetContainer, { height: SHEET_HEIGHT }]}
-            onPress={(e) => e.stopPropagation?.()}
-          >
+            style={StyleSheet.absoluteFill}
+            onPress={closeDetail}
+            accessibilityRole="button"
+            accessibilityLabel="close event details"
+          />
+          <View style={[styles.sheetContainer, { height: Math.round(windowHeight * 0.85) }]}>
             {selectedEvent && (
               <>
                 <View style={styles.sheetHeader}>
@@ -1186,6 +1194,7 @@ export default function EventsScreen() {
                   keyboardShouldPersistTaps="handled"
                   bounces={true}
                   nestedScrollEnabled={true}
+                  overScrollMode="always"
                 >
                   <View style={styles.sheetImageWrapper}>
                     {/* the event's own image only; no stock banner when it has none */}
@@ -1383,8 +1392,8 @@ export default function EventsScreen() {
                 </View>
               </>
             )}
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
 
       {/* ═══════════════════════════════════════════════════════════ */}
@@ -2121,7 +2130,7 @@ const styles = StyleSheet.create({
     minHeight: 0,
   },
   sheetScrollContent: {
-    paddingBottom: 90,
+    paddingBottom: 24, // the footer is outside the ScrollView
   },
   sheetImageWrapper: {
     position: "relative", width: "100%", height: 200,
