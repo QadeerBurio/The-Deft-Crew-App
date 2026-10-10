@@ -222,4 +222,7 @@ Cause: production /api/brands/nearby returned [] for every location (0 of 7 bran
 - de009ec Tour: arrows on the real tab icons, round cut-out
 - e4f1228 Tour: arrow on the real tab, no cut-out
 - 82e495e Tour: dim and arrow on the visible tab bar
+- f60556e Events: details sheet scrolls
+- 03f4ec6 Events: featured + list cards from the design, real data only
+- f70adab Events: save events, mine shows registered + saved
 
