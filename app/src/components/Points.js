@@ -27,7 +27,8 @@ import {
   Linking,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -56,6 +57,8 @@ const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${PLAY_STO
 // form link the "join as ambassador" button is not shown.
 const AMBASSADOR_FORM_URL = '[FORM_URL]';
 const AMBASSADOR_FORM_READY = isAmbassadorFormUrl(AMBASSADOR_FORM_URL);
+// "applied" is kept on this phone per student (no server change)
+const AMBASSADOR_KEY = (userId) => `@tdc_ambassador_applied:${userId}`;
 
 // ═══════════════════════════════════════════════════════════════════════
 // LEVELS — mirrors config/badges.config.js
@@ -684,6 +687,33 @@ const PointsScreen = () => {
   const { token, user } = useContext(AuthContext);
   const { me, refresh: refreshEngagement } = useEngagement();
   const [ambassadorFormOpen, setAmbassadorFormOpen] = useState(false);
+  // this student's own applied flag; another account (or a guest) never sees it
+  const ambassadorUserId = token ? user?._id || user?.id || null : null;
+  const [ambassadorApplied, setAmbassadorApplied] = useState(false);
+  const readAmbassador = useCallback(() => {
+    if (!ambassadorUserId) {
+      setAmbassadorApplied(false);
+      return undefined;
+    }
+    let alive = true;
+    AsyncStorage.getItem(AMBASSADOR_KEY(ambassadorUserId))
+      .then((v) => alive && setAmbassadorApplied(v === '1'))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [ambassadorUserId]);
+  useEffect(() => {
+    setAmbassadorApplied(false); // account changed: start from this account's own value
+    return readAmbassador();
+  }, [readAmbassador]);
+  useFocusEffect(readAmbassador); // back on the screen: read again
+  const onAmbassadorSubmitted = useCallback(() => {
+    setAmbassadorFormOpen(false);
+    if (!ambassadorUserId) return;
+    setAmbassadorApplied(true);
+    AsyncStorage.setItem(AMBASSADOR_KEY(ambassadorUserId), '1').catch(() => {});
+  }, [ambassadorUserId]);
   const {
     referralCode,
     rawCount,
@@ -936,7 +966,7 @@ const PointsScreen = () => {
             {applyAvailable && <FounderApplyBanner onApply={handleFounderApply} />}
 
             {AMBASSADOR_FORM_READY && (
-              <AmbassadorCard applied={false} onPress={() => setAmbassadorFormOpen(true)} />
+              <AmbassadorCard applied={ambassadorApplied} onPress={() => setAmbassadorFormOpen(true)} />
             )}
             {/* 12 apart when the ambassador card sits above it, so the two read as a pair */}
             <DownloadCard referralCode={referralCode} style={AMBASSADOR_FORM_READY ? styles.downloadAfterAmbassador : null} />
@@ -953,7 +983,7 @@ const PointsScreen = () => {
           visible={ambassadorFormOpen}
           url={AMBASSADOR_FORM_URL}
           onClose={() => setAmbassadorFormOpen(false)}
-          onSubmitted={() => setAmbassadorFormOpen(false)}
+          onSubmitted={onAmbassadorSubmitted}
         />
       )}
     </GuestGuard>
