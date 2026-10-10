@@ -17,6 +17,7 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { createSkillOffer } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
+import { useGuestGate } from '../../guest/GuestGate';
 import { goToAuth } from '../../utils/goToAuth';
 
 import { color as T, font as F } from "../../theme/tokens";
@@ -30,6 +31,7 @@ const MESSAGE_MAX = 500;
 
 export default function CreateOfferScreen({ route, navigation }) {
   const { getCurrentUserId, isGuest, setIsGuest } = useContext(AuthContext);
+  const { requireAccount } = useGuestGate();
   const { listing = {} } = route.params || {};
   const insets = useSafeAreaInsets();
   const submittingRef = useRef(false);
@@ -63,10 +65,7 @@ export default function CreateOfferScreen({ route, navigation }) {
     if (submittingRef.current) return;
     const userId = getCurrentUserId();
     if (!userId || isGuest) {
-      Alert.alert('Login Required', 'Please login to make an offer', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => goToAuth(setIsGuest) },
-      ]);
+      requireAccount();
       return;
     }
 

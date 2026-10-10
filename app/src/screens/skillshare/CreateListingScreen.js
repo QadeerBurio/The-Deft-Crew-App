@@ -19,6 +19,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { createListing, uploadListingAttachment } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
+import { useGuestGate } from '../../guest/GuestGate';
 import { goToAuth } from '../../utils/goToAuth';
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import * as ImagePicker from 'expo-image-picker';
@@ -34,6 +35,7 @@ const PROFICIENCY_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
 
 export default function CreateListingScreen({ route, navigation }) {
   const { getCurrentUserId, isGuest, setIsGuest } = useContext(AuthContext);
+  const { requireAccount } = useGuestGate();
   const insets = useSafeAreaInsets();
   const { fullName: myName, photoUrl: myPhoto } = useMyProfessionalProfile();
   const { type } = route.params || {}; // 'barter' | 'paid' | 'job'
@@ -196,10 +198,7 @@ export default function CreateListingScreen({ route, navigation }) {
 
     const ownerId = getCurrentUserId();
     if (!ownerId || isGuest) {
-      Alert.alert('Authentication Required', 'Please log in to create a listing.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Log in', onPress: () => goToAuth(setIsGuest) },
-      ]);
+      requireAccount();
       return;
     }
 

@@ -8,6 +8,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { getListings } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
+import { useGuestGate } from '../../guest/GuestGate';
 import ListingCard from '../../components/ListingCard';
 
 import { color as T, font as F } from "../../theme/tokens";
@@ -49,6 +50,7 @@ const ExploreRow = memo(function ExploreRow({ item, onOpen, onPropose }) {
 
 export default function Explore({ navigation }) {
   const { getCurrentUserId } = useContext(AuthContext);
+  const { requireAccount } = useGuestGate();
   const currentUserId = getCurrentUserId?.();
   const insets = useSafeAreaInsets();
   const userKey = String(currentUserId || 'anon');
@@ -122,7 +124,10 @@ export default function Explore({ navigation }) {
   const rest = filtered.slice(0, 20);
 
   const openListing = useCallback((id) => navigation.navigate('ListingDetail', { id }), [navigation]);
-  const proposeListing = useCallback((listing) => navigation.navigate('CreateOffer', { listing }), [navigation]);
+  const proposeListing = useCallback((listing) => {
+    if (!requireAccount()) return;
+    navigation.navigate('CreateOffer', { listing });
+  }, [navigation, requireAccount]);
   const renderItem = useCallback(
     ({ item }) => <ExploreRow item={item} onOpen={openListing} onPropose={proposeListing} />,
     [openListing, proposeListing]

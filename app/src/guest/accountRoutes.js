@@ -47,7 +47,11 @@ export const LOGIN_ONLY_ROUTES = new Set([
   "ResumeSettings",
   "ApplicationForm",
   "Payment",
-  // skillshare (own data, forms, chats)
+  // skillshare (own data, forms, chats, other students' profiles)
+  "DashboardMain",
+  "SelectListingTypeScreen",
+  "ProfessionalProfile",
+  "ChatMatch",
   "SkillProfile",
   "SkillProfileEdit",
   "ProfileWelcome",

@@ -105,21 +105,35 @@ import Home from '../screens/Home';
 import StudentDashboard from '../screens/StudentDashboard';
 import Explore from '../screens/Explore';
 import EnhancedCareerScreen from '../screens/Resume/EnhanceCareer';
-import Dashboard from '../screens/skillshare/Dashboard';
-import CreateListingScreen from '../screens/skillshare/CreateListingScreen';
+import DashboardBase from '../screens/skillshare/Dashboard';
+const Dashboard = accountOnly(DashboardBase, { title: "my skillshare" });
+import CreateListingScreenBase from '../screens/skillshare/CreateListingScreen';
+const CreateListingScreen = accountOnly(CreateListingScreenBase, { title: "new listing" });
 import ListingDetailScreen from '../screens/skillshare/ListingDetailScreen';
-import SelectListingTypeScreen from '../screens/skillshare/SelectListingTypeScreen';
-import CreateOfferScreen from '../screens/skillshare/CreateOfferScreen';
-import ManageOffersScreen from '../screens/skillshare/ManageOffersScreen';
-import MyOffersScreen from '../screens/skillshare/MyOffersScreen';
-import MyListingsScreen from '../screens/skillshare/MyListingDetails';
-import MatchChatScreen from '../screens/skillshare/MatchChatScreen';
-import InquiryChatScreen from '../screens/skillshare/InquiryChatScreen';
-import SkillProfile from '../screens/skillshare/SkillProfile';
-import ActivityScreen from '../screens/skillshare/ActivityScreen';
-import MyInquiriesScreen from '../screens/skillshare/MyInquiryScreen';
-import MyMatches from '../screens/skillshare/MyMatches';
-import ChatMatch from '../screens/skillshare/ChatMatch';
+import SelectListingTypeScreenBase from '../screens/skillshare/SelectListingTypeScreen';
+const SelectListingTypeScreen = accountOnly(SelectListingTypeScreenBase, { title: "new listing" });
+import CreateOfferScreenBase from '../screens/skillshare/CreateOfferScreen';
+const CreateOfferScreen = accountOnly(CreateOfferScreenBase, { title: "make an offer" });
+import ManageOffersScreenBase from '../screens/skillshare/ManageOffersScreen';
+const ManageOffersScreen = accountOnly(ManageOffersScreenBase, { title: "offers" });
+import MyOffersScreenBase from '../screens/skillshare/MyOffersScreen';
+const MyOffersScreen = accountOnly(MyOffersScreenBase, { title: "my offers" });
+import MyListingsScreenBase from '../screens/skillshare/MyListingDetails';
+const MyListingsScreen = accountOnly(MyListingsScreenBase, { title: "my listings" });
+import MatchChatScreenBase from '../screens/skillshare/MatchChatScreen';
+const MatchChatScreen = accountOnly(MatchChatScreenBase, { title: "chat" });
+import InquiryChatScreenBase from '../screens/skillshare/InquiryChatScreen';
+const InquiryChatScreen = accountOnly(InquiryChatScreenBase, { title: "chat" });
+import SkillProfileBase from '../screens/skillshare/SkillProfile';
+const SkillProfile = accountOnly(SkillProfileBase, { title: "my skillshare profile" });
+import ActivityScreenBase from '../screens/skillshare/ActivityScreen';
+const ActivityScreen = accountOnly(ActivityScreenBase, { title: "activity" });
+import MyInquiriesScreenBase from '../screens/skillshare/MyInquiryScreen';
+const MyInquiriesScreen = accountOnly(MyInquiriesScreenBase, { title: "my questions" });
+import MyMatchesBase from '../screens/skillshare/MyMatches';
+const MyMatches = accountOnly(MyMatchesBase, { title: "my matches" });
+import ChatMatchBase from '../screens/skillshare/ChatMatch';
+const ChatMatch = accountOnly(ChatMatchBase, { title: "chat" });
 import DigitalBadgeScreen from '../components/DigitalBadgeScreen';
 import MainCharacterScreen from '../components/MainCharacterScreen';
 import DeftProScreen from '../components/DeftProScreen';
@@ -134,13 +148,18 @@ import BlockedUsersScreenBase from '../screens/Social/BlockedUserScreen';
 const BlockedUsersScreen = accountOnly(BlockedUsersScreenBase, { title: "blocked" });
 import Terrms from '../screens/Social/Terrms';
 import Guideline from '../screens/Social/Guideline';
-import ProfileWelcomeScreen from '../screens/skillshare/profile/ProfileWelcomeScreen';
-import ProfileSetupScreen from '../screens/skillshare/profile/ProfileSetupScreen';
-import ProfileSuccessScreen from '../screens/skillshare/profile/ProfileSuccessScreen';
-import ProfessionalProfileScreen from '../screens/skillshare/profile/ProfessionalProfileScreen';
+import ProfileWelcomeScreenBase from '../screens/skillshare/profile/ProfileWelcomeScreen';
+const ProfileWelcomeScreen = accountOnly(ProfileWelcomeScreenBase, { title: "skillshare profile" });
+import ProfileSetupScreenBase from '../screens/skillshare/profile/ProfileSetupScreen';
+const ProfileSetupScreen = accountOnly(ProfileSetupScreenBase, { title: "skillshare profile" });
+import ProfileSuccessScreenBase from '../screens/skillshare/profile/ProfileSuccessScreen';
+const ProfileSuccessScreen = accountOnly(ProfileSuccessScreenBase, { title: "skillshare profile" });
+import ProfessionalProfileScreenBase from '../screens/skillshare/profile/ProfessionalProfileScreen';
+const ProfessionalProfileScreen = accountOnly(ProfessionalProfileScreenBase, { title: "profile" });
 import { getMyProfessionalProfile } from '../api/profileApi';
 import SkillShareExplore from '../screens/skillshare/Explore';
-import MyPostsByType from '../screens/skillshare/MyPostByType';
+import MyPostsByTypeBase from '../screens/skillshare/MyPostByType';
+const MyPostsByType = accountOnly(MyPostsByTypeBase, { title: "my posts" });
 import OfferScreen from '../screens/OfferScreen';
 
 // ---------- ENGAGEMENT ----------
@@ -150,7 +169,8 @@ import RewardsScreen from '../engagement/screens/RewardsScreen';
 import NotificationSettingsScreen from '../engagement/screens/NotificationSettingsScreen';
 import BadgesScreen from '../engagement/screens/BadgesScreen';
 import CityScreen from '../screens/CityScreen';
-import NotificationSkillshare from '../components/NotificationSkillshare';
+import NotificationSkillshareBase from '../components/NotificationSkillshare';
+const NotificationSkillshare = accountOnly(NotificationSkillshareBase, { title: "notifications" });
 
 const { width } = Dimensions.get('window');
 const Drawer = createDrawerNavigator();
@@ -997,6 +1017,13 @@ function SkillShareGate({ navigation }) {
   const resolvedRef = useRef(SKILLSHARE_GATE_RESOLVED);
 
   useEffect(() => {
+    // guest: browse listings (the dashboard is the student's own listings).
+    // Not cached, so after sign in the gate resolves normally.
+    if (isGuest) {
+      navigation.replace('BrowseListings');
+      return;
+    }
+
     if (resolvedRef.current) {
       const target = SKILLSHARE_GATE_TARGET || 'DashboardMain';
       navigation.replace(target);

@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getListingById, startInquiry, getInquiryForListing, getMyMatches } from '../../api/api';
 import { timeAgo } from '../../utils/time';
 import { AuthContext } from '../../context/AuthContext';
+import { useGuestGate } from '../../guest/GuestGate';
 import { goToAuth } from '../../utils/goToAuth';
 import useMyProfessionalProfile from '../../hooks/useMyProfessionalProfile';
 
@@ -29,6 +30,7 @@ const LISTING_CACHE = {};
 
 export default function ListingDetailScreen({ route, navigation }) {
   const { getCurrentUserId, isGuest, setIsGuest } = useContext(AuthContext);
+  const { requireAccount } = useGuestGate();
   const { photoUrl: myPhoto } = useMyProfessionalProfile();
   const insets = useSafeAreaInsets();
   const { id } = route.params || {};
@@ -130,10 +132,7 @@ export default function ListingDetailScreen({ route, navigation }) {
     if (!inquiryText.trim()) { Alert.alert('Error', 'Please enter your question'); return; }
     const currentUserId = getCurrentUserId();
     if (!currentUserId || isGuest) {
-      Alert.alert('Login Required', 'Please login to ask a question.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: goLogin },
-      ]);
+      requireAccount();
       return;
     }
     setSubmittingInquiry(true);
