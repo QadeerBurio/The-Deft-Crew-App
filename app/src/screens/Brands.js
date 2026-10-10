@@ -25,6 +25,7 @@ import {
   Animated,
   AppState,
   TextInput,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -58,13 +59,12 @@ import {
   resolveCity,
 } from "../utils/cityFilter";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
-import { Button, Chip, EmptyState, HeaderIconButton, PressScale, SectionTitle, SheetHandle, Skeleton } from "../ui";
+import { Button, Chip, EmptyState, HeaderIconButton, PressScale, SectionTitle, SheetHandle, SkeletonBlock } from "../ui";
 
 const { width, height } = Dimensions.get("window");
 const NUM_COLUMNS = 2;
-const HORIZONTAL_PADDING = 20;
-const GAP = 15;
-const CARD_WIDTH = (width - HORIZONTAL_PADDING * 2 - GAP) / NUM_COLUMNS;
+const GRID_SIDE = 16; // side padding
+const GRID_GAP = 12; // between cards, both directions
 
 const BASE_URL = "https://the-deft-crew-production.up.railway.app";
 // Per-user keys (v2 = includes brand cities). The old shared key showed one
@@ -110,6 +110,21 @@ const CATEGORIES = [
 
 const CATEGORY_BY_ID = new Map(CATEGORIES.map((c) => [c.id, c]));
 const CATEGORY_BY_NAME = new Map(CATEGORIES.map((c) => [c.name, c]));
+
+// ── Brand image URLs ──
+// OfferScreen shows a brand's logo as BASE_URL/<stored path>. This screen used to
+// put every relative logo under /uploads/brands/, so logos stored as
+// "uploads/logos/…" or "/uploads/…" became dead links (only bare file names
+// really live in /uploads/brands/). getBrandsFast (api/brandApi.js) still builds
+// them the old way, so its URLs are repaired here. The generic flaticon fallback
+// is not a brand image: those cards get the sand placeholder instead.
+const FALLBACK_IMG = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+const repairImageUrl = (url) => {
+  if (!url || url === FALLBACK_IMG) return null;
+  return String(url).replace("/uploads/brands/uploads/", "/uploads/");
+};
+// brand logo first (what OfferScreen shows), else the first offer's image
+const brandImageOf = (b) => repairImageUrl(b?.logo) || repairImageUrl(b?.displayImage);
 
 // Discount shown on the card (number, never a string like "10")
 const brandDiscount = (b) => {
@@ -259,21 +274,15 @@ const StatsBar = memo(({ stats, loading }) => {
   );
 });
 
-// online / in-store line under the brand name
-const modeLabel = (b) => {
-  if (b.isOnline && b.isInStore) return "online + in-store";
-  if (b.isOnline) return "online";
-  if (b.isInStore) return "in-store";
-  return "";
-};
-
 // ==========================================
-// BRAND ROW (Brands design: logo · name + meta · off pill)
+// BRAND CARD (2-column grid: image · name · category · off pill + modes)
 // ==========================================
 const BrandCard = memo(
-  ({ item, onPress }) => {
+  ({ item, onPress, cardWidth }) => {
     const firstOffer = item.offers?.[0];
-    const displayImage = item.displayImage;
+    const imageUri = brandImageOf(item);
+    const [failed, setFailed] = useState(false);
+    useEffect(() => setFailed(false), [imageUri]);
 
     // ✅ Consult BOTH server flag AND local registry
     const isClaimed =
@@ -281,56 +290,78 @@ const BrandCard = memo(
       (firstOffer?._id && isLocallyClaimed(firstOffer._id));
 
     useEffect(() => {
-      if (displayImage && !preloadedImages.has(displayImage)) {
-        preloadedImages.add(displayImage);
-        Image.prefetch(displayImage).catch(() => {});
+      if (imageUri && !preloadedImages.has(imageUri)) {
+        preloadedImages.add(imageUri);
+        Image.prefetch(imageUri).catch(() => {});
       }
-    }, [displayImage]);
+    }, [imageUri]);
 
-    const meta = [String(item.category || "general").toLowerCase(), modeLabel(item)]
-      .filter(Boolean)
-      .join(" · ");
+    const category = String(item.category || "general").toLowerCase();
     const discount = brandDiscount(item);
+    const showImage = !!imageUri && !failed;
+    const label = [
+      item.name,
+      category,
+      discount > 0 ? discount + "% off" : null,
+      isClaimed ? "claimed" : null,
+      item.isInStore ? "in store" : null,
+      item.isOnline ? "online" : null,
+    ]
+      .filter(Boolean)
+      .join(", ");
 
     return (
       <PressScale
         onPress={() => onPress(item)}
+        containerStyle={{ width: cardWidth }}
         style={styles.card}
-        accessibilityLabel={`${item.name}${discount > 0 ? `, ${discount}% off` : ""}${isClaimed ? ", claimed" : ""}`}
+        accessibilityLabel={label}
       >
-        <View style={styles.logoContainer}>
-          {displayImage ? (
-            <Image source={{ uri: displayImage }} style={styles.logo} resizeMode="contain" />
+        <View style={[styles.imageBox, !showImage && styles.imageBoxEmpty]}>
+          {showImage ? (
+            <Image
+              source={{ uri: imageUri }}
+              style={styles.image}
+              resizeMode="contain"
+              onError={() => setFailed(true)}
+              accessibilityIgnoresInvertColors
+            />
           ) : (
-            <MaterialCommunityIcons name="storefront-outline" size={22} color={T.textFaint} />
+            <MaterialCommunityIcons name="storefront-outline" size={28} color={T.textFaint} />
           )}
         </View>
 
-        <View style={styles.infoContainer}>
-          <Text style={styles.name} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-            {item.name}
-          </Text>
-          <Text style={styles.meta} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-            {meta}
-          </Text>
-          {isClaimed ? (
-            <Text style={styles.offerStatusClaimed} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-              claimed
-            </Text>
-          ) : !item.hasOffer ? (
-            <Text style={styles.offerStatusText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-              no offers yet
-            </Text>
-          ) : null}
-        </View>
+        <Text style={styles.name} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+          {item.name}
+        </Text>
+        <Text style={styles.meta} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+          {category}
+        </Text>
 
-        {discount > 0 && (
-          <View style={styles.discountBadge}>
-            <Text style={styles.discountText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-              {discount}% off
-            </Text>
+        <View style={styles.cardFoot}>
+          {discount > 0 ? (
+            <View style={styles.offPill}>
+              <Text style={styles.offPillText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                {discount}% off
+              </Text>
+            </View>
+          ) : null}
+          {isClaimed ? (
+            <Ionicons name="checkmark-circle" size={18} color={T.success} accessibilityLabel="claimed" />
+          ) : null}
+          <View style={styles.modeIcons}>
+            {item.isInStore ? (
+              <View accessible accessibilityLabel="in store">
+                <Ionicons name="storefront-outline" size={16} color={T.textMuted} />
+              </View>
+            ) : null}
+            {item.isOnline ? (
+              <View accessible accessibilityLabel="online">
+                <Ionicons name="globe-outline" size={16} color={T.textMuted} />
+              </View>
+            ) : null}
           </View>
-        )}
+        </View>
       </PressScale>
     );
   },
@@ -346,8 +377,12 @@ const BrandCard = memo(
       (nextFirst?._id && isLocallyClaimed(nextFirst._id));
 
     return (
+      prev.cardWidth === next.cardWidth &&
       prev.item._id === next.item._id &&
+      prev.item.name === next.item.name &&
+      prev.item.category === next.item.category &&
       prev.item.discount === next.item.discount &&
+      prev.item.logo === next.item.logo &&
       prev.item.displayImage === next.item.displayImage &&
       prev.item.isOnline === next.item.isOnline &&
       prev.item.isInStore === next.item.isInStore &&
@@ -357,11 +392,28 @@ const BrandCard = memo(
   }
 );
 
+// Loading: the same 2-column card shape
+const BrandGridSkeleton = ({ cardWidth }) => (
+  <View style={styles.skeletonGrid} accessible accessibilityLabel="loading brands">
+    {Array.from({ length: 6 }).map((_, i) => (
+      <View key={i} style={[styles.card, { width: cardWidth, flex: 0 }]}>
+        <SkeletonBlock height={Math.round((cardWidth - 18) * 0.75)} radius={18} />
+        <SkeletonBlock width="70%" height={14} style={{ marginTop: 12 }} />
+        <SkeletonBlock width="45%" height={11} style={{ marginTop: 8 }} />
+        <SkeletonBlock width={56} height={22} radius={11} style={{ marginTop: 10 }} />
+      </View>
+    ))}
+  </View>
+);
+
 // ==========================================
 // MAIN SCREEN
 // ==========================================
 export default function BrandsScreen() {
   const navigation = useNavigation();
+  const { width: screenWidth } = useWindowDimensions();
+  // 2 columns: 16 side padding, 12 gap
+  const cardWidth = Math.floor((screenWidth - GRID_SIDE * 2 - GRID_GAP) / 2);
   const route = useRoute();
   const { token, user, isGuest } = useContext(AuthContext);
   const { query } = route.params || {};
@@ -431,10 +483,10 @@ export default function BrandsScreen() {
     if (imagePath.startsWith("http://") || imagePath.startsWith("https://"))
       return imagePath;
     const clean = imagePath.replace(/^\/+/, "");
-    if (type === "brand") {
-      return clean.startsWith("uploads/brands/")
-        ? `${BASE_URL}/${clean}`
-        : `${BASE_URL}/uploads/brands/${clean}`;
+    // a stored path ("uploads/logos/x.png") is used as is, like OfferScreen;
+    // only a bare file name lives in /uploads/brands/
+    if (type === "brand" && !clean.includes("/")) {
+      return `${BASE_URL}/uploads/brands/${clean}`;
     }
     return `${BASE_URL}/${clean}`;
   }, []);
@@ -1300,8 +1352,8 @@ export default function BrandsScreen() {
     (showOnlyOnline ? 1 : 0);
 
   const renderBrand = useCallback(
-    ({ item }) => <BrandCard item={item} onPress={openOfferScreen} />,
-    [openOfferScreen]
+    ({ item }) => <BrandCard item={item} onPress={openOfferScreen} cardWidth={cardWidth} />,
+    [openOfferScreen, cardWidth]
   );
 
   const keyExtractor = useCallback((item) => item._id, []);
@@ -1500,7 +1552,15 @@ export default function BrandsScreen() {
           </View>
         )}
 
-        {error && !loading && (
+        {error && !loading && displayedBrands.length === 0 ? (
+          <EmptyState
+            mood="panic"
+            title="couldn't load brands"
+            line={String(error).toLowerCase()}
+            actionLabel="try again"
+            onAction={() => fetchBrands(true, { silent: false })}
+          />
+        ) : error && !loading ? (
           <View style={styles.errorContainer}>
             <MaterialCommunityIcons name="alert-circle-outline" size={20} color={T.danger} />
             <Text style={styles.errorText}>{error}</Text>
@@ -1513,19 +1573,21 @@ export default function BrandsScreen() {
               <Text style={styles.retryButtonText}>retry</Text>
             </TouchableOpacity>
           </View>
-        )}
+        ) : null}
 
         {loading && displayedBrands.length === 0 ? (
           <View style={styles.loadingContainer}>
-            <Skeleton rows={6} height={72} gap={8} style={{ paddingHorizontal: 0 }} />
+            <BrandGridSkeleton cardWidth={cardWidth} />
           </View>
-        ) : (
+        ) : error && displayedBrands.length === 0 ? null : (
           <FlatList
             ref={listRef}
             data={displayedBrands}
             keyExtractor={keyExtractor}
             removeClippedSubviews
             renderItem={renderBrand}
+            numColumns={2}
+            columnWrapperStyle={styles.gridRow}
             windowSize={5}
             maxToRenderPerBatch={8}
             initialNumToRender={8}
@@ -1626,7 +1688,7 @@ export default function BrandsScreen() {
   );
 }
 
-const ListGap = () => <View style={{ height: 8 }} />;
+const ListGap = () => <View style={{ height: GRID_GAP }} />;
 
 // ==========================================
 // STYLES
@@ -1742,40 +1804,41 @@ const styles = StyleSheet.create({
   loadingContainer: { paddingHorizontal: 16, paddingTop: 16 },
   listHeader: { paddingTop: 16, paddingBottom: 10 },
   listContent: { paddingHorizontal: 16, paddingBottom: 40 },
+  gridRow: { gap: GRID_GAP },
+  skeletonGrid: { flexDirection: "row", flexWrap: "wrap", gap: GRID_GAP },
   card: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 20,
+    flex: 1,
     backgroundColor: T.card,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: T.line,
+    padding: 8,
+    paddingBottom: 10,
   },
-  logoContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: T.lineSoft,
+  imageBox: {
+    aspectRatio: 4 / 3,
+    borderRadius: 18,
+    backgroundColor: T.card,
+    padding: 12,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
-  logo: { width: 40, height: 40 },
-  infoContainer: { flex: 1, minWidth: 0 },
-  name: { fontFamily: F.bodyBold, fontSize: 15, color: T.ink },
-  meta: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, marginTop: 2 },
-  offerStatusText: { fontFamily: F.bodySemi, fontSize: 12, color: T.textFaint, marginTop: 2 },
-  offerStatusClaimed: { fontFamily: F.bodyBold, fontSize: 12, color: T.success, marginTop: 2 },
-  discountBadge: {
-    height: 28,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    backgroundColor: T.yellow,
-    justifyContent: "center",
+  imageBoxEmpty: { backgroundColor: T.sand },
+  image: { width: "100%", height: "100%" },
+  name: { fontFamily: F.headingBold, fontSize: 15, color: T.ink, marginTop: 10, paddingHorizontal: 4 },
+  meta: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, marginTop: 2, paddingHorizontal: 4 },
+  cardFoot: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    height: 24,
+    marginTop: 8,
+    paddingHorizontal: 4,
   },
-  discountText: { fontFamily: F.bodyBold, fontSize: 12, color: T.ink },
+  offPill: { height: 22, paddingHorizontal: 8, borderRadius: 11, backgroundColor: T.yellow, justifyContent: "center" },
+  offPillText: { fontFamily: F.bodyBold, fontSize: 11.5, color: T.ink },
+  modeIcons: { flexDirection: "row", alignItems: "center", gap: 8, marginLeft: "auto" },
 
   // Footer
   footerLoader: { paddingVertical: 20, alignItems: "center" },
