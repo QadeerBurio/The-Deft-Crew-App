@@ -232,4 +232,5 @@ Cause: production /api/brands/nearby returned [] for every location (0 of 7 bran
 - 2f88dff Crew: ambassador form link
 - 98e2a74 Crew: display names for memo components
 - 6e51302 Profile + Home: savings from /offers/my-total-savings only
+- 67a0a65 Profile + My Discounts: claimed summary, real savings, tile and logo fixes
 
