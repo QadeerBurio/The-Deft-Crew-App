@@ -43,6 +43,8 @@ import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import GuestGuard from "../../components/GuestGuard";
 import { useGuestGate } from "../../guest/GuestGate";
+import { PressScale, EmptyState, SkeletonBlock } from "../../ui";
+import { imageUrl } from "../../utils/imageUrl";
 import io from "socket.io-client";
 import { engagementBus, ENGAGEMENT_EVENTS } from "../../engagement/engagementBus";
 
@@ -149,225 +151,197 @@ const COLORS = {
   warning: T.yellow,
 };
 
-const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 const formatCategoryLabel = (cat) => (cat === "All" ? "All" : cat);
 
-// ─── Shimmer Skeleton ───────────────────────────────────────────────────
-const ShimmerSkeleton = () => {
-  const shimmer = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmer, { toValue: 1, duration: 1000, useNativeDriver: true }),
-        Animated.timing(shimmer, { toValue: 0, duration: 1000, useNativeDriver: true }),
-      ])
-    ).start();
-  }, []);
-
-  const shimmerTranslate = shimmer.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-width * 1.5, width * 1.5],
-  });
-
-  return (
-    <View style={styles.skeletonCard}>
-      <View style={styles.skeletonImage}>
-        <Animated.View style={[styles.shimmerOverlay, { transform: [{ translateX: shimmerTranslate }] }]} />
-      </View>
-      <View style={styles.skeletonContent}>
-        <View style={[styles.skeletonTitle, { overflow: "hidden" }]}>
-          <Animated.View style={[styles.shimmerOverlay, { transform: [{ translateX: shimmerTranslate }] }]} />
-        </View>
-        <View style={[styles.skeletonText, { overflow: "hidden" }]}>
-          <Animated.View style={[styles.shimmerOverlay, { transform: [{ translateX: shimmerTranslate }] }]} />
-        </View>
-        <View style={[styles.skeletonTextShort, { overflow: "hidden" }]}>
-          <Animated.View style={[styles.shimmerOverlay, { transform: [{ translateX: shimmerTranslate }] }]} />
-        </View>
-        <View style={styles.skeletonFooter}>
-          <View style={[styles.skeletonButton, { overflow: "hidden" }]}>
-            <Animated.View style={[styles.shimmerOverlay, { transform: [{ translateX: shimmerTranslate }] }]} />
-          </View>
-        </View>
+// ─── Skeleton: one featured card + list cards, same shapes as the real ones
+const SkeletonList = () => (
+  <View style={styles.listContent} accessible accessibilityLabel="loading events">
+    <View style={[EV.featured, { backgroundColor: T.sand }]}>
+      <View style={[EV.featuredBanner, { backgroundColor: T.lineSoft }]} />
+      <View style={EV.featuredBody}>
+        <SkeletonBlock width="75%" height={20} />
+        <SkeletonBlock width="50%" height={12} style={{ marginTop: 10 }} />
+        <SkeletonBlock height={46} radius={23} style={{ marginTop: 16 }} />
       </View>
     </View>
-  );
-};
-
-const SkeletonList = () => (
-  <View style={styles.listContent}>
-    {[1, 2, 3].map((item) => (
-      <ShimmerSkeleton key={item} />
+    {[1, 2].map((k) => (
+      <View key={k} style={EV.card}>
+        <SkeletonBlock height={LIST_BANNER_H} radius={0} />
+        <View style={EV.cardBody}>
+          <SkeletonBlock width="80%" height={16} />
+          <SkeletonBlock width="55%" height={12} style={{ marginTop: 10 }} />
+          <SkeletonBlock height={40} radius={20} style={{ marginTop: 14 }} />
+        </View>
+      </View>
     ))}
   </View>
 );
 
-// ─── Event date helpers (real dates only) ────────────────────────────────
+// ─── Real data only ──────────────────────────────────────────────────────
+// The Event model fills empty fields with placeholders (date "TBA", location
+// "Online/Venue TBD", prize "TBD", deadline "Limited spots", teamSize "1-4 Members",
+// type "General", a stock Unsplash image). Those are treated as "no value" and hidden.
+const PLACEHOLDER = {
+  date: ["tba", "tbd"],
+  location: ["online/venue tbd", "venue tbd", "tbd", "tba"],
+  prize: ["tbd", "tba", "n/a", "none", "-"],
+  deadline: ["limited spots", "open", "tbd", "tba"],
+  teamSize: ["1-4 members", "any"],
+  type: ["general"],
+  organizer: ["organizer"],
+};
+const STOCK_EVENT_IMAGE = "https://images.unsplash.com/photo-1523240715632-d984bb4b970e?w=800";
+const real = (item, field) => {
+  const s = String(item?.[field] ?? "").trim();
+  if (!s) return null;
+  return (PLACEHOLDER[field] || []).includes(s.toLowerCase()) ? null : s;
+};
+const eventImage = (item) => {
+  const url = imageUrl(item?.image);
+  return url && url !== STOCK_EVENT_IMAGE ? url : null;
+};
 const parseEventDate = (raw) => {
   if (!raw) return null;
   const d = new Date(raw);
   return isNaN(d.getTime()) ? null : d;
 };
+// parsedDate (server) first, then the date string
+const eventDate = (item) => parseEventDate(item?.parsedDate) || parseEventDate(real(item, "date"));
+// "sat 11 oct · 7 pm" (time only when the date has one), else the real date text
 const eventWhen = (item) => {
-  const d = parseEventDate(item.date);
-  if (!d) return item.date || "";
-  return d
-    .toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })
-    .toLowerCase();
+  const d = eventDate(item);
+  if (!d) return real(item, "date") || "";
+  const day = d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }).toLowerCase();
+  const hasTime = d.getHours() !== 0 || d.getMinutes() !== 0;
+  if (!hasTime) return day;
+  const time = d
+    .toLocaleTimeString(undefined, { hour: "numeric", minute: d.getMinutes() ? "2-digit" : undefined })
+    .toLowerCase()
+    .replace(/\s/g, " ");
+  return `${day} · ${time}`;
 };
 const eventMeta = (item) =>
-  [item.location || item.university, item.city, item.teamSize ? `teams of ${item.teamSize}` : null]
+  [
+    real(item, "location") || real(item, "university"),
+    real(item, "city"),
+    real(item, "teamSize") ? `teams of ${real(item, "teamSize")}` : null,
+  ]
     .filter(Boolean)
     .join(" · ");
+// an event that has already happened (real date only)
+const isPastEvent = (item) => {
+  const d = eventDate(item);
+  if (!d) return false;
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  return d.getTime() < startOfToday.getTime();
+};
 
-// ─── Animated Event Card (featured = big banner card; otherwise a compact row)
-const EventCard = ({ item, index, onOpen, onRegister, isRegistered, onCancel, featured }) => {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(24)).current;
-  const cardScale = useRef(new Animated.Value(1)).current;
+const LIST_BANNER_H = 112;
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 450, delay: Math.min(index, 8) * 60, useNativeDriver: true }),
-      Animated.spring(translateY, { toValue: 0, friction: 8, tension: 50, delay: Math.min(index, 8) * 60, useNativeDriver: true }),
-    ]).start();
-  }, [index]);
-
-  const animatePressIn = () => {
-    Animated.spring(cardScale, { toValue: 0.98, friction: 5, useNativeDriver: true }).start();
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-  const animatePressOut = () => {
-    Animated.spring(cardScale, { toValue: 1, friction: 5, useNativeDriver: true }).start();
-  };
-
+// ─── Event card: featured (top event, dark, design) or list size (white) ──────
+// Same parts in both: banner (event image or sand) with the date and prize pills,
+// title, place line, tags, register / registered button and the slot on its right.
+const EventCard = ({ item, onOpen, onRegister, isRegistered, onCancel, featured, side }) => {
+  const [imgFailed, setImgFailed] = useState(false);
   const imported = isImportedEvent(item);
   const when = eventWhen(item);
   const meta = eventMeta(item);
+  const prize = real(item, "prize");
+  const type = real(item, "type");
+  const img = eventImage(item);
+  const showImg = !!img && !imgFailed;
 
   const action = isRegistered ? (
     <TouchableOpacity
-      style={[EV.regBtn, EV.regBtnDone, !featured && EV.regBtnSmall]}
+      style={[EV.regBtn, EV.regBtnDone, !featured && EV.regBtnList]}
       onPress={() => onCancel && onCancel(item)}
       activeOpacity={0.8}
       accessibilityRole="button"
       accessibilityLabel={`registered for ${item.title}, tap to cancel`}
     >
-      <Ionicons name="checkmark-circle" size={featured ? 17 : 14} color={T.success} />
-      <Text style={[EV.regText, !featured && EV.regTextSmall]} numberOfLines={2}>registered · tap to cancel</Text>
+      <Ionicons name="checkmark-circle" size={featured ? 17 : 15} color={T.success} />
+      <Text style={[EV.regText, !featured && EV.regTextList]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+        registered · tap to cancel
+      </Text>
     </TouchableOpacity>
   ) : (
     <TouchableOpacity
-      style={[EV.regBtn, !featured && EV.regBtnSmall]}
+      style={[EV.regBtn, !featured && EV.regBtnList]}
       onPress={() => onRegister(item)}
       activeOpacity={0.85}
       accessibilityRole="button"
       accessibilityLabel={imported ? `open link for ${item.title}` : `register for ${item.title}`}
     >
-      {imported && <Ionicons name="open-outline" size={featured ? 16 : 13} color={T.ink} />}
-      <Text style={[EV.regText, !featured && EV.regTextSmall]}>{imported ? "open link" : "register"}</Text>
+      {imported && <Ionicons name="open-outline" size={featured ? 16 : 14} color={T.ink} />}
+      <Text style={[EV.regText, !featured && EV.regTextList]} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+        {imported ? "open link" : "register"}
+      </Text>
     </TouchableOpacity>
   );
 
-  if (!featured) {
-    const d = parseEventDate(item.date);
-    return (
-      <AnimatedTouchable
-        activeOpacity={0.9}
-        onPress={() => onOpen(item)}
-        onPressIn={animatePressIn}
-        onPressOut={animatePressOut}
-        style={[EV.row, { opacity, transform: [{ translateY }, { scale: cardScale }] }]}
-        accessibilityRole="button"
-        accessibilityLabel={`${item.title}${when ? `, ${when}` : ""}`}
-      >
-        <View style={EV.dateBlock}>
-          {d ? (
-            <>
-              <Text style={EV.dow}>{d.toLocaleDateString(undefined, { weekday: "short" }).toLowerCase()}</Text>
-              <Text style={EV.dayNum} maxFontSizeMultiplier={MAX_FONT_SCALE}>{d.getDate()}</Text>
-            </>
-          ) : (
-            <Ionicons name="calendar-outline" size={20} color={T.ink} />
-          )}
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={EV.rowTitle} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_SCALE}>{item.title}</Text>
-          {!!(meta || (!d && when)) && (
-            <Text style={EV.rowMeta} numberOfLines={1}>{[!d ? when : null, meta].filter(Boolean).join(" · ")}</Text>
-          )}
-          <View style={EV.tagRow}>
-            {!!item.type && (
-              <View style={EV.tag}>
-                <Text style={EV.tagText} numberOfLines={1}>{String(item.type).toLowerCase()}</Text>
-              </View>
-            )}
-            {imported && (
-              <View style={[EV.tag, EV.tagDark]}>
-                <Text style={[EV.tagText, { color: T.yellow }]}>external</Text>
-              </View>
-            )}
-          </View>
-        </View>
-        {action}
-      </AnimatedTouchable>
-    );
-  }
-
   return (
-    <AnimatedTouchable
-      activeOpacity={0.95}
+    <PressScale
       onPress={() => onOpen(item)}
-      onPressIn={animatePressIn}
-      onPressOut={animatePressOut}
-      style={[EV.featured, { opacity, transform: [{ translateY }, { scale: cardScale }] }]}
-      accessibilityRole="button"
-      accessibilityLabel={item.title}
+      scaleTo={0.98}
+      style={featured ? EV.featured : EV.card}
+      accessibilityLabel={[item.title, when, meta].filter(Boolean).join(", ")}
     >
-      <View style={EV.banner}>
-        {item.image ? (
-          <Image source={{ uri: item.image }} style={EV.bannerImg} resizeMode="cover" />
+      <View style={featured ? EV.featuredBanner : EV.cardBanner}>
+        {showImg ? (
+          <Image
+            source={{ uri: img }}
+            style={EV.bannerImg}
+            resizeMode="cover"
+            onError={() => setImgFailed(true)}
+            accessibilityIgnoresInvertColors
+          />
         ) : (
-          <MaterialCommunityIcons name="calendar-star" size={40} color={T.textFaint} />
+          <MaterialCommunityIcons name="calendar-star" size={featured ? 36 : 28} color={featured ? T.onInkMuted : T.textFaint} />
         )}
-        <View style={EV.bannerPills}>
-          {!!when && (
-            <View style={EV.pillLight}>
-              <Text style={EV.pillLightText}>{when}</Text>
-            </View>
-          )}
-          {!!item.prize && (
-            <View style={EV.pillDark}>
-              <Text style={EV.pillDarkText} numberOfLines={1}>prize pool {item.prize}</Text>
-            </View>
-          )}
-        </View>
-        {imported && (
-          <View style={[EV.pillDark, EV.extPill]}>
-            <Text style={EV.pillDarkText}>external</Text>
+        {!!when && (
+          <View style={[EV.datePill, EV.pillLeft]}>
+            <Text style={EV.datePillText} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>{when}</Text>
+          </View>
+        )}
+        {!!prize && (
+          <View style={[EV.prizePill, EV.pillRight]}>
+            <Text style={EV.prizePillText} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>prize pool {prize}</Text>
           </View>
         )}
       </View>
-      <View style={EV.featuredBody}>
-        <Text style={EV.featuredTitle} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_SCALE}>{item.title}</Text>
-        {!!meta && <Text style={EV.featuredMeta} numberOfLines={1}>{meta}</Text>}
-        {!!item.description && (
-          <Text style={EV.featuredDesc} numberOfLines={2}>{item.description}</Text>
-        )}
-        <View style={EV.featuredActions}>
+
+      <View style={featured ? EV.featuredBody : EV.cardBody}>
+        <Text
+          style={featured ? EV.featuredTitle : EV.cardTitle}
+          numberOfLines={2}
+          maxFontSizeMultiplier={MAX_FONT_SCALE}
+        >
+          {item.title}
+        </Text>
+        <Text style={featured ? EV.featuredMeta : EV.cardMeta} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+          {meta}
+        </Text>
+        <View style={EV.tagRow}>
+          {!!type && (
+            <View style={[EV.tag, featured && EV.tagOnInk]}>
+              <Text style={[EV.tagText, featured && { color: T.white }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                {type.toLowerCase()}
+              </Text>
+            </View>
+          )}
+          {imported && (
+            <View style={[EV.tag, featured ? EV.tagOnInk : EV.tagDark]}>
+              <Text style={[EV.tagText, { color: featured ? T.white : T.yellow }]} maxFontSizeMultiplier={MAX_FONT_SCALE}>external</Text>
+            </View>
+          )}
+        </View>
+        <View style={EV.actions}>
           <View style={{ flex: 1 }}>{action}</View>
-          <TouchableOpacity
-            style={EV.detailsBtn}
-            onPress={() => onOpen(item)}
-            accessibilityRole="button"
-            accessibilityLabel="view details"
-          >
-            <Text style={EV.detailsText}>details</Text>
-          </TouchableOpacity>
+          {side}
         </View>
       </View>
-    </AnimatedTouchable>
+    </PressScale>
   );
 };
 
@@ -431,6 +405,7 @@ export default function EventsScreen() {
   const [isModalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   // Dynamic categories fetched from backend
   const [categories, setCategories] = useState([]);
@@ -719,8 +694,10 @@ export default function EventsScreen() {
       const fetchedEvents = Array.isArray(res.data) ? res.data : res.data?.events || [];
       setEvents(fetchedEvents);
       eventsCache.events = fetchedEvents;
+      setLoadError(false);
     } catch (error) {
-      if (!eventsCache.events) Alert.alert("Error", "Failed to fetch events");
+      // nothing cached to show → the error state (ui kit) instead of an alert
+      if (!eventsCache.events) setLoadError(true);
     } finally {
       setRefreshing(false);
     }
@@ -1073,7 +1050,6 @@ export default function EventsScreen() {
               )}
               <EventCard
                 item={item}
-                index={index}
                 featured={index === 0 && !showApplied}
                 onOpen={setSelectedEvent}
                 onRegister={handleRegister}
@@ -1087,47 +1063,35 @@ export default function EventsScreen() {
           refreshing={refreshing}
           onRefresh={onRefresh}
           ListEmptyComponent={
-            !refreshing && (
-              <Animated.View style={[styles.emptyState, { opacity: listOpacity }]}>
-                <View style={styles.emptyIconContainer}>
-                  <Ionicons
-                    name={showApplied ? "checkmark-circle" : "calendar"}
-                    size={48}
-                    color={T.ink}
-                  />
-                </View>
-                <Text style={styles.emptyTitle}>
-                  {showApplied ? "No registered events" : "No events found"}
-                </Text>
-                <Text style={styles.emptyText}>
-                  {showApplied
-                    ? "You haven't registered for any events yet. Explore and register!"
-                    : activeCity !== "All"
-                    ? `No events in ${activeCity}. Try another city.`
-                    : "Check back later for upcoming events in your area."}
-                </Text>
-                {showApplied && (
-                  <TouchableOpacity
-                    style={styles.exploreButton}
-                    onPress={() => setShowApplied(false)}
-                  >
-                    <LinearGradient colors={[T.yellow, T.yellow]} style={styles.exploreGradient}>
-                      <Text style={styles.exploreButtonText}>explore events</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                )}
-                {!showApplied && activeCity !== "All" && (
-                  <TouchableOpacity
-                    style={styles.exploreButton}
-                    onPress={() => setActiveCity("All")}
-                  >
-                    <LinearGradient colors={[T.yellow, T.yellow]} style={styles.exploreGradient}>
-                      <Text style={styles.exploreButtonText}>clear city filter</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                )}
-              </Animated.View>
-            )
+            !refreshing ? (
+              loadError && !showApplied ? (
+                <EmptyState
+                  mood="panic"
+                  title="couldn't load events."
+                  line="check your connection and try again."
+                  actionLabel="try again"
+                  onAction={() => fetchEvents()}
+                />
+              ) : showApplied ? (
+                <EmptyState
+                  mood="sleepy"
+                  title="no registered events."
+                  line="register for an event and it shows up here."
+                  actionLabel="explore events"
+                  onAction={() => setShowApplied(false)}
+                />
+              ) : activeCity !== "All" ? (
+                <EmptyState
+                  mood="sleepy"
+                  title={`no events in ${String(activeCity).toLowerCase()}.`}
+                  line="try another city."
+                  actionLabel="all cities"
+                  onAction={() => setActiveCity("All")}
+                />
+              ) : (
+                <EmptyState mood="sleepy" title="no events yet." line="new events show up here. check back soon." />
+              )
+            ) : null
           }
         />
       </Animated.View>
@@ -1198,9 +1162,9 @@ export default function EventsScreen() {
                 >
                   <View style={styles.sheetImageWrapper}>
                     {/* the event's own image only; no stock banner when it has none */}
-                    {selectedEvent.image ? (
+                    {eventImage(selectedEvent) ? (
                       <Image
-                        source={{ uri: selectedEvent.image }}
+                        source={{ uri: eventImage(selectedEvent) }}
                         style={styles.sheetBanner}
                         resizeMode="cover"
                       />
@@ -1223,6 +1187,7 @@ export default function EventsScreen() {
 
                   <View style={styles.sheetBody}>
                     <View style={styles.detailTopRow}>
+                      {!!real(selectedEvent, "type") && (
                       <View
                         style={[
                           styles.detailTag,
@@ -1241,9 +1206,10 @@ export default function EventsScreen() {
                           ]}
                           numberOfLines={1}
                         >
-                          {selectedEvent.type}
+                          {String(real(selectedEvent, "type")).toLowerCase()}
                         </Text>
                       </View>
+                      )}
                       {isEventRegistered(selectedEvent._id) && (
                         <View style={[styles.detailTag, { backgroundColor: T.successBg }]}>
                           <Ionicons name="checkmark-circle" size={12} color={COLORS.success} />
@@ -1256,6 +1222,7 @@ export default function EventsScreen() {
 
                     <Text style={styles.detailTitle}>{selectedEvent.title}</Text>
 
+                    {!!real(selectedEvent, "city") && (
                     <View style={styles.detailOrgRow}>
                       <LinearGradient
                         colors={[COLORS.gradientStart, COLORS.gradientEnd]}
@@ -1264,52 +1231,61 @@ export default function EventsScreen() {
                         <Ionicons name="location" size={16} color={T.white} />
                       </LinearGradient>
                       <Text style={styles.detailOrgLocationLarge}>
-                        {selectedEvent.city || "City"}
+                        {real(selectedEvent, "city")}
                       </Text>
                     </View>
+                    )}
 
+                    {!!(eventWhen(selectedEvent) || real(selectedEvent, "deadline") || real(selectedEvent, "teamSize")) && (
                     <View style={styles.specRow}>
-                      {!!selectedEvent.date && (
+                      {!!eventWhen(selectedEvent) && (
                         <View style={styles.specCard}>
                           <View style={styles.specIcon}>
                             <Ionicons name="calendar" size={18} color={T.ink} />
                           </View>
                           <Text style={styles.specTitle}>date</Text>
-                          <Text style={styles.specText}>{selectedEvent.date}</Text>
+                          <Text style={styles.specText}>{eventWhen(selectedEvent)}</Text>
                         </View>
                       )}
 
+                      {!!real(selectedEvent, "deadline") && (
                       <View style={styles.specCard}>
                         <View style={styles.specIcon}>
                           <Ionicons name="hourglass" size={18} color={T.ink} />
                         </View>
                         <Text style={styles.specTitle}>deadline</Text>
-                        <Text style={styles.specText}>{selectedEvent.deadline || "Open"}</Text>
+                        <Text style={styles.specText}>{real(selectedEvent, "deadline")}</Text>
                       </View>
+                      )}
 
+                      {!!real(selectedEvent, "teamSize") && (
                       <View style={[styles.specCard, styles.specCardLast]}>
                         <View style={styles.specIcon}>
                           <Ionicons name="people" size={18} color={T.ink} />
                         </View>
                         <Text style={styles.specTitle}>team</Text>
-                        <Text style={styles.specText}>{selectedEvent.teamSize || "Any"}</Text>
+                        <Text style={styles.specText}>{real(selectedEvent, "teamSize")}</Text>
                       </View>
+                      )}
                     </View>
+                    )}
 
+                    {!!String(selectedEvent.description || "").trim() && (
                     <View style={styles.sectionCard}>
                       <Text style={styles.sectionCardTitle}>description</Text>
-                      <Text style={styles.sectionCardBody}>
-                        {selectedEvent.description || "No description provided."}
-                      </Text>
+                      <Text style={styles.sectionCardBody}>{selectedEvent.description}</Text>
                     </View>
+                    )}
 
+                    {!!real(selectedEvent, "location") && (
                     <View style={styles.sectionCard}>
                       <Text style={styles.sectionCardTitle}>location</Text>
                       <Text style={styles.sectionCardBody}>
                         <Ionicons name="location" size={14} color={T.ink} />{" "}
-                        {selectedEvent.location || "Online event"}
+                        {real(selectedEvent, "location")}
                       </Text>
                     </View>
+                    )}
 
                     {selectedEvent.university ? (
                       <View style={styles.sectionCard}>
@@ -1321,12 +1297,12 @@ export default function EventsScreen() {
                       </View>
                     ) : null}
 
-                    {selectedEvent.prize ? (
+                    {real(selectedEvent, "prize") ? (
                       <View style={styles.sectionCard}>
                         <Text style={styles.sectionCardTitle}>prize pool</Text>
                         <Text style={styles.sectionCardBody}>
                           <Ionicons name="trophy" size={14} color={T.ink} />{" "}
-                          {selectedEvent.prize}
+                          {real(selectedEvent, "prize")}
                         </Text>
                       </View>
                     ) : null}
@@ -1353,12 +1329,16 @@ export default function EventsScreen() {
                 >
                   <View style={styles.sheetStickyContent}>
                     <View style={{ flex: 1, marginRight: 8 }}>
-                      <Text style={styles.stickyLabel}>
-                        {isImportedEvent(selectedEvent) ? "External event" : "Register before"}
-                      </Text>
-                      <Text style={styles.stickyValue} numberOfLines={1}>
-                        {selectedEvent.deadline || "Limited Spots"}
-                      </Text>
+                      {isImportedEvent(selectedEvent) ? (
+                        <Text style={styles.stickyLabel}>external event</Text>
+                      ) : real(selectedEvent, "deadline") ? (
+                        <>
+                          <Text style={styles.stickyLabel}>register before</Text>
+                          <Text style={styles.stickyValue} numberOfLines={1}>
+                            {real(selectedEvent, "deadline")}
+                          </Text>
+                        </>
+                      ) : null}
                     </View>
                     <TouchableOpacity
                       activeOpacity={0.88}
@@ -1974,7 +1954,7 @@ const styles = StyleSheet.create({
   },
   skeletonFooter: { flexDirection: "row" },
 
-  listContent: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 30 },
+  listContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 30 },
   card: {
     borderRadius: 16, overflow: "hidden", marginBottom: 12,
     shadowColor: T.ink, shadowOffset: { width: 0, height: 6 },
@@ -2327,37 +2307,39 @@ const EV = StyleSheet.create({
 
   h2: { fontFamily: F.heading, fontSize: 17, color: T.ink, marginTop: 6, marginBottom: 10, paddingHorizontal: 2 },
 
-  featured: { borderRadius: 26, backgroundColor: T.card, borderWidth: 1, borderColor: T.line, overflow: "hidden", marginBottom: 14 },
-  banner: { aspectRatio: 16 / 9, backgroundColor: T.sand, alignItems: "center", justifyContent: "center" },
-  bannerImg: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
-  bannerPills: { position: "absolute", left: 12, bottom: 12, right: 12, flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  pillLight: { height: 28, paddingHorizontal: 10, borderRadius: 14, backgroundColor: T.card, justifyContent: "center" },
-  pillLightText: { fontFamily: F.bodyBold, fontSize: 12, color: T.ink },
-  pillDark: { height: 28, paddingHorizontal: 10, borderRadius: 14, backgroundColor: T.ink, justifyContent: "center", maxWidth: 220 },
-  pillDarkText: { fontFamily: F.bodyBold, fontSize: 12, color: T.yellow },
-  extPill: { position: "absolute", top: 12, right: 12 },
+  // featured (top event): dark card from the Events design
+  featured: { borderRadius: 28, backgroundColor: T.ink, overflow: "hidden", marginBottom: 12 },
+  featuredBanner: { height: 140, backgroundColor: T.inkSoft, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   featuredBody: { padding: 16 },
-  featuredTitle: { fontFamily: F.heading, fontSize: 20, lineHeight: 24, color: T.ink },
-  featuredMeta: { fontFamily: F.body, fontSize: 13, color: T.textMuted, marginTop: 4 },
-  featuredDesc: { fontFamily: F.body, fontSize: 13, lineHeight: 18, color: T.ink, marginTop: 8 },
-  featuredActions: { flexDirection: "row", gap: 8, marginTop: 14 },
-  detailsBtn: { height: 46, paddingHorizontal: 18, borderRadius: 23, borderWidth: 1, borderColor: T.line, justifyContent: "center" },
-  detailsText: { fontFamily: F.bodyBold, fontSize: 14, color: T.ink },
+  featuredTitle: { fontFamily: F.heading, fontSize: 22, lineHeight: 27, minHeight: 54, color: T.white },
+  featuredMeta: { fontFamily: F.body, fontSize: 13.5, lineHeight: 18, minHeight: 18, color: T.onInkMuted, marginTop: 4 },
 
+  // list size: same parts, white with a 1 px line border
+  card: { borderRadius: 22, backgroundColor: T.card, borderWidth: 1, borderColor: T.line, overflow: "hidden", marginBottom: 12 },
+  cardBanner: { height: LIST_BANNER_H, backgroundColor: T.sand, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  cardBody: { padding: 14 },
+  cardTitle: { fontFamily: F.headingBold, fontSize: 17, lineHeight: 22, minHeight: 44, color: T.ink },
+  cardMeta: { fontFamily: F.body, fontSize: 12.5, lineHeight: 17, minHeight: 17, color: T.textMuted, marginTop: 2 },
+
+  bannerImg: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
+  datePill: { height: 28, paddingHorizontal: 10, borderRadius: 14, backgroundColor: T.yellow, justifyContent: "center", maxWidth: "62%" },
+  datePillText: { fontFamily: F.bodyBold, fontSize: 12, color: T.ink },
+  prizePill: { height: 28, paddingHorizontal: 10, borderRadius: 14, backgroundColor: T.card, justifyContent: "center", maxWidth: "45%" },
+  prizePillText: { fontFamily: F.bodyBold, fontSize: 12, color: T.ink },
+  pillLeft: { position: "absolute", left: 12, top: 12 },
+  pillRight: { position: "absolute", right: 12, top: 12 },
+
+  actions: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12 },
   regBtn: { height: 46, borderRadius: 23, backgroundColor: T.yellow, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: 16 },
   regBtnDone: { backgroundColor: T.card, borderWidth: 1, borderColor: T.line },
-  regBtnSmall: { height: undefined, minHeight: 36, maxWidth: 132, borderRadius: 18, paddingHorizontal: 12, paddingVertical: 6 },
+  regBtnList: { height: 44, borderRadius: 22, paddingHorizontal: 12 },
   regText: { fontFamily: F.bodyBold, fontSize: 14.5, color: T.ink },
-  regTextSmall: { fontSize: 12, textAlign: "center", flexShrink: 1 },
+  regTextList: { fontSize: 13.5, flexShrink: 1 },
 
-  row: { flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderRadius: 20, backgroundColor: T.card, borderWidth: 1, borderColor: T.line, marginBottom: 8 },
-  dateBlock: { width: 52, height: 58, borderRadius: 16, backgroundColor: T.yellowSoft, alignItems: "center", justifyContent: "center" },
-  dow: { fontFamily: F.bodyBold, fontSize: 11, color: T.ink },
-  dayNum: { fontFamily: F.heading, fontSize: 21, lineHeight: 24, color: T.ink },
-  rowTitle: { fontFamily: F.bodyBold, fontSize: 14.5, color: T.ink },
-  rowMeta: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, marginTop: 2 },
-  tagRow: { flexDirection: "row", gap: 6, marginTop: 6 },
-  tag: { height: 22, paddingHorizontal: 8, borderRadius: 11, backgroundColor: T.sand, justifyContent: "center", maxWidth: 140 },
+  // tags (always reserve the row so cards keep the same height)
+  tagRow: { flexDirection: "row", gap: 6, marginTop: 8, height: 22 },
+  tag: { height: 22, paddingHorizontal: 8, borderRadius: 11, backgroundColor: T.sand, justifyContent: "center", maxWidth: 160 },
+  tagOnInk: { backgroundColor: T.inkSoft },
   tagDark: { backgroundColor: T.ink },
   tagText: { fontFamily: F.bodyBold, fontSize: 11, color: T.ink },
 });
