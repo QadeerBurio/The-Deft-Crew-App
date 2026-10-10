@@ -1,22 +1,27 @@
 // app/src/engagement/tour/TourOverlay.js
-// Dims the screen with a round cut-out around the current tab icon (yellow ring) and
-// shows one card above the tab bar with an arrow pointing at the icon:
+// Dims the screen above the tab bar (the tab bar itself stays bright) and shows one
+// card with an arrow pointing down at the current tab:
 // dot face · title · line · "n of 5" · back / next (let's go on the last step) · skip.
-// Tapping the dim area (or the icon in the cut-out) does nothing; hardware back = skip.
+// No highlight is drawn on the tab. A transparent layer catches every touch (the tab
+// bar included), so only next / back / skip act; hardware back = skip.
 //
-// Geometry, all from real layout (no hard-coded tab positions):
-//   • overlay size: onLayout of the modal's root view (follows rotation)
-//   • icon: measureInWindow of the tab's icon box (TabNavigator refBox), on every
-//     step change and overlay size change, retried until it has a size
-//   • tab bar: measureInWindow of the tab bar view ("tab_bar"), so the arrow tip
-//     stays above the bar's top edge (safe area / gesture / 3-button bar included,
-//     since the bar's own height already includes the bottom inset)
-//   • arrow centre = icon centre x; tip = min(bar top, cut-out top) - 6
+// Geometry, all from real layout (no hard-coded tab positions), in the overlay's own
+// coordinates:
+//   • measureInWindow of three views, on every step change and overlay size change,
+//     retried until all have a size: the overlay root, the step's icon box
+//     (TabNavigator refBox) and the tab bar ("tab_bar", whose height already includes
+//     the bottom safe area for home-indicator, gesture and 3-button phones)
+//   • icon and bar = their measurement minus the overlay root's measurement.
+//     Android's measureInWindow subtracts the visible display frame (below the
+//     status bar), while the status-bar-translucent modal draws from the top of the
+//     screen; measuring the root the same way cancels that out on every device.
+//   • arrow centre x = icon centre x, kept inside the card's straight bottom edge
+//   • arrow tip y = min(bar top, icon top) - TIP_GAP (raised social button included)
+//   • dim = one rectangle from the top of the overlay down to the bar top
 //   • card: max 420 wide, centred on the icon, clamped 16 px from the screen edges;
-//     its bottom edge sits on the arrow, so a bigger font grows it upwards
-// Android is edge-to-edge (Expo SDK 54), so window coordinates and the
-// status-bar-translucent modal share the same origin.
-import React, { useCallback, useEffect, useState } from 'react';
+//     its bottom edge is the arrow's base, so a bigger font grows it upwards
+//   • not measured yet: whole screen dimmed, card above the bottom inset, no arrow
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   Modal,
@@ -34,34 +39,40 @@ import Dot from '../components/Dot';
 import { color as T, font as F, MAX_FONT_SCALE } from '../../theme/tokens';
 
 const DIM = 'rgba(17,17,17,0.72)'; // ink at 72%
-const PAD = 8; // cut-out padding around the icon
 const ARROW = 10; // arrow half-width = height
-const TIP_GAP = 6; // space between the arrow tip and the tab bar / cut-out
+const TIP_GAP = 6; // space between the arrow tip and the tab bar (or raised icon)
 const EDGE = 16; // card distance from the screen edges
 const CARD_MAX = 420;
 const CARD_RADIUS = 24;
+const ARROW_MIN_INSET = 6; // arrow base never closer than this to the card's side
 const MEASURE_TRIES = 8;
 const MEASURE_EVERY_MS = 150;
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
-const measure = (node) =>
+const measure = (node, needsSize = true) =>
   new Promise((resolve) => {
     if (!node?.measureInWindow) return resolve(null);
     try {
-      node.measureInWindow((x, y, w, h) => resolve(w > 0 && h > 0 ? { x, y, width: w, height: h } : null));
+      node.measureInWindow((x, y, w, h) =>
+        resolve(!needsSize || (w > 0 && h > 0) ? { x, y, width: w, height: h } : null)
+      );
     } catch {
       resolve(null);
     }
   });
 
+// a measured rect in the overlay's own coordinates
+const relativeTo = (r, root) => (r && root ? { x: r.x - root.x, y: r.y - root.y, width: r.width, height: r.height } : null);
+
 export default function TourOverlay() {
   const { running, stop, getTargets } = useTour();
   const insets = useSafeAreaInsets();
+  const rootRef = useRef(null);
   const [stepIdx, setStepIdx] = useState(0);
   const [size, setSize] = useState(null); // overlay { width, height }
-  const [icon, setIcon] = useState(null);
-  const [bar, setBar] = useState(null);
+  const [icon, setIcon] = useState(null); // overlay coordinates
+  const [bar, setBar] = useState(null); // overlay coordinates
   const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
@@ -80,7 +91,7 @@ export default function TourOverlay() {
     if (running) setStepIdx(0);
   }, [running]);
 
-  // Measure the current step's icon and the tab bar (again on rotation / resize)
+  // Measure the overlay root, the step's icon and the tab bar (again on rotation / resize)
   useEffect(() => {
     if (!running) {
       setIcon(null);
@@ -100,12 +111,21 @@ export default function TourOverlay() {
       if (cancelled) return;
       tries += 1;
       const targets = getTargets();
-      const [i, b] = await Promise.all([measure(targets.get(step.id)), measure(targets.get('tab_bar'))]);
+      const [root, i, b] = await Promise.all([
+        measure(rootRef.current),
+        measure(targets.get(step.id)),
+        measure(targets.get('tab_bar')),
+      ]);
       if (cancelled) return;
-      const sane = i && (!size || (i.y + i.height <= size.height + 1 && i.x + i.width <= size.width + 1));
-      if (sane) setIcon(i);
-      if (b) setBar(b);
-      if ((!sane || !b) && tries < MEASURE_TRIES) timer = setTimeout(run, retryDelay(tries));
+      const ri = relativeTo(i, root);
+      const rb = relativeTo(b, root);
+      const fits = (r) => !!r && (!size || (r.y + r.height <= size.height + 1 && r.x + r.width <= size.width + 1));
+      const ok = fits(ri) && fits(rb);
+      if (ok) {
+        setIcon(ri);
+        setBar(rb);
+      }
+      if (!ok && tries < MEASURE_TRIES) timer = setTimeout(run, retryDelay(tries));
       else if (tries < 3) timer = setTimeout(run, 450); // once more after transitions settle
     };
     timer = setTimeout(run, 120);
@@ -144,10 +164,9 @@ export default function TourOverlay() {
 
   // ── Geometry
   const W = size?.width || 0;
-  const H = size?.height || 0;
-  const g = icon && W && H ? geometry({ icon, bar, W, H }) : null;
+  const g = icon && bar && W ? geometry({ icon, bar, W }) : null;
   const cardW = W ? Math.min(W - EDGE * 2, CARD_MAX) : null;
-  const B = Math.max(W, H) * 2; // border width that covers the screen around the cut-out
+  const H = size?.height || 0;
 
   return (
     <Modal
@@ -157,37 +176,15 @@ export default function TourOverlay() {
       statusBarTranslucent
       onRequestClose={skip}
     >
-      <View style={StyleSheet.absoluteFill} onLayout={onRootLayout}>
-        {/* Catches every touch outside the card: tapping the dim area or the icon does nothing */}
+      <View ref={rootRef} collapsable={false} style={StyleSheet.absoluteFill} onLayout={onRootLayout}>
+        {/* Catches every touch outside the card, the tab bar included */}
         <Pressable style={StyleSheet.absoluteFill} accessible={false} />
 
-        {g ? (
-          <>
-            {/* dim with a round hole: one view whose huge border is the dim */}
-            <View
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                left: g.holeLeft - B,
-                top: g.holeTop - B,
-                width: g.hole + B * 2,
-                height: g.hole + B * 2,
-                borderRadius: g.hole / 2 + B,
-                borderWidth: B,
-                borderColor: DIM,
-              }}
-            />
-            <View
-              pointerEvents="none"
-              style={[
-                s.ring,
-                { left: g.holeLeft, top: g.holeTop, width: g.hole, height: g.hole, borderRadius: g.hole / 2 },
-              ]}
-            />
-          </>
-        ) : (
-          <View pointerEvents="none" style={[s.dim, StyleSheet.absoluteFillObject]} />
-        )}
+        {/* Dim: down to the tab bar's top edge (bar stays bright), or everything until measured */}
+        <View
+          pointerEvents="none"
+          style={[s.dim, g ? { top: 0, left: 0, right: 0, height: g.dimHeight } : StyleSheet.absoluteFillObject]}
+        />
 
         {!!W && (
           <View
@@ -262,7 +259,7 @@ export default function TourOverlay() {
           </View>
         )}
 
-        {/* arrow: on the card's bottom edge, tip above the icon */}
+        {/* arrow: on the card's bottom edge, tip just above the tab */}
         {g && <View pointerEvents="none" style={[s.arrow, { left: g.arrowLeft, top: g.arrowTop }]} />}
       </View>
     </Modal>
@@ -274,32 +271,36 @@ function retryDelay(tries) {
   return tries < 3 ? MEASURE_EVERY_MS : MEASURE_EVERY_MS * 2;
 }
 
-// Pure layout maths (screen coordinates)
-export function geometry({ icon, bar, W, H }) {
-  const cx = icon.x + icon.width / 2;
-  const cy = icon.y + icon.height / 2;
-  const hole = Math.max(icon.width, icon.height) + PAD * 2;
-  const holeLeft = cx - hole / 2;
-  const holeTop = cy - hole / 2;
-  const barTop = bar ? bar.y : holeTop; // bar not measured yet → stay above the cut-out
-  const tipY = Math.min(barTop, holeTop) - TIP_GAP;
-  const arrowTop = tipY - ARROW; // the triangle's top edge = the card's bottom edge
+// Pure layout maths. icon and bar in the overlay's own coordinates; W = overlay width.
+export function geometry({ icon, bar, W }) {
+  const iconCx = icon.x + icon.width / 2;
   const cardW = Math.min(W - EDGE * 2, CARD_MAX);
-  const cardLeft = clamp(cx - cardW / 2, EDGE, W - EDGE - cardW);
+  const cardLeft = clamp(iconCx - cardW / 2, EDGE, W - EDGE - cardW);
+  // arrow centre on the icon, but its base kept on the card's bottom edge
+  const cx = clamp(iconCx, cardLeft + ARROW + ARROW_MIN_INSET, cardLeft + cardW - ARROW - ARROW_MIN_INSET);
+  const tipY = Math.min(bar.y, icon.y) - TIP_GAP; // above the bar, or above a raised icon
+  const arrowTop = tipY - ARROW; // the triangle's top edge = the card's bottom edge
   const arrowLeft = cx - ARROW;
   // near a card corner, round that corner less so the arrow sits on a straight edge
   const radiusLeft = clamp(arrowLeft - cardLeft - 2, 6, CARD_RADIUS);
   const radiusRight = clamp(cardLeft + cardW - (cx + ARROW) - 2, 6, CARD_RADIUS);
-  return { cx, hole, holeLeft, holeTop, tipY, arrowTop, arrowLeft, cardW, cardLeft, cardBottomY: arrowTop, radiusLeft, radiusRight, H };
+  return {
+    iconCx,
+    cx,
+    tipY,
+    arrowTop,
+    arrowLeft,
+    cardW,
+    cardLeft,
+    cardBottomY: arrowTop,
+    radiusLeft,
+    radiusRight,
+    dimHeight: Math.max(0, bar.y),
+  };
 }
 
 const s = StyleSheet.create({
   dim: { position: 'absolute', backgroundColor: DIM },
-  ring: {
-    position: 'absolute',
-    borderWidth: 2.5,
-    borderColor: T.yellow,
-  },
   card: {
     position: 'absolute',
     backgroundColor: T.card,
