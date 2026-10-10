@@ -837,8 +837,27 @@ export default function SignupScreen({ navigation }) {
 
       <AuthButton title="create account" onPress={handleSignup} loading={loading} />
 
+      {/* info only: no checkbox, never blocks sign up. Links open the drawer's legal pages. */}
       <Text style={styles.terms}>
-        By creating an account you agree to the tdc terms and privacy policy.
+        by signing up you agree to our{" "}
+        <Text
+          style={styles.termsLink}
+          onPress={() => navigation.navigate("LegalTerms")}
+          accessibilityRole="link"
+          suppressHighlighting
+        >
+          terms
+        </Text>
+        {" "}and{" "}
+        <Text
+          style={styles.termsLink}
+          onPress={() => navigation.navigate("LegalPrivacy")}
+          accessibilityRole="link"
+          suppressHighlighting
+        >
+          privacy policy
+        </Text>
+        .
       </Text>
 
       <PickerSheet
@@ -933,6 +952,10 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     marginTop: 14,
     paddingHorizontal: 12,
+  },
+  termsLink: {
+    color: AUTH.dark,
+    textDecorationLine: "underline",
   },
 
   footerRow: { flexDirection: "row", alignItems: "center" },
