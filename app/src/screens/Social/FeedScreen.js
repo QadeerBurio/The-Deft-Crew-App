@@ -14,6 +14,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills (design system)
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 import EmptyState from "../../ui/EmptyState";
+import { useGuestGate, GuestLocked } from "../../guest";
 import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
@@ -56,6 +57,7 @@ const postsChanged = (oldPosts, newPosts) => {
 
 export default function FeedScreen({ navigation }) {
   const { user, isGuest, unreadCount, updateUnreadCount, token } = useContext(AuthContext);
+  const { requireAccount } = useGuestGate();
 
   const [activeTab, setActiveTab] = useState("Feed");
 
@@ -103,18 +105,9 @@ export default function FeedScreen({ navigation }) {
     }
   }, [isSearching, searchQuery]);
 
-  const showGuestAlert = (action) => {
-    Alert.alert(
-      'Create an Account',
-      `Sign up to ${action}!`,
-      [
-        { text: 'Not Now', style: 'cancel' },
-        {
-          text: 'Sign Up',
-          onPress: () => navigation.navigate('Login')
-        }
-      ]
-    );
+  // guest: the shared "sign up to continue" sheet
+  const showGuestAlert = () => {
+    requireAccount();
   };
 
   const markPostAsViewed = useCallback(async (postId) => {
@@ -633,7 +626,14 @@ export default function FeedScreen({ navigation }) {
           </View>
         ) : (
           <View style={{ flex: 1 }}>
-            <ConfessionScreen navigation={navigation} focusPostId={focusConfessionId} />
+            {isGuest ? (
+              // confessions only load with an account (the list call needs a token)
+              <View style={styles.guestConfessions}>
+                <GuestLocked compact title="sign up to see confessions" line="confessions are for students with an account." style={styles.guestConfessionsCard} />
+              </View>
+            ) : (
+              <ConfessionScreen navigation={navigation} focusPostId={focusConfessionId} />
+            )}
           </View>
         )}
       </View>
@@ -737,6 +737,8 @@ const styles = StyleSheet.create({
   // Confessions tab (dark)
   containerDark: { backgroundColor: T.ink },
   headerDark: { backgroundColor: T.ink },
+  guestConfessions: { flex: 1, justifyContent: 'center', padding: 16 },
+  guestConfessionsCard: { backgroundColor: T.card, borderRadius: 24 },
   tabsTrackDark: { backgroundColor: T.inkSoft },
   activeTabDark: { backgroundColor: T.yellow },
   tabTextDark: { color: T.onInkMuted },

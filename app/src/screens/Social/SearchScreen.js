@@ -33,6 +33,7 @@ import {
   useIsFocused,
 } from "@react-navigation/native";
 import { AuthContext } from "../../context/AuthContext";
+import { useGuestGate } from "../../guest/GuestGate";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { color as T, font as F } from "../../theme/tokens";
@@ -505,6 +506,7 @@ const RecentPeopleItem = React.memo(
 // ============================================================
 export default function SearchScreen({ navigation }) {
   const { user, isGuest, token } = useContext(AuthContext);
+  const { requireAccount } = useGuestGate();
   const isFocused = useIsFocused();
 
   // State
@@ -735,19 +737,9 @@ export default function SearchScreen({ navigation }) {
     }
   };
 
-  const showGuestAlert = (action) => {
-    Alert.alert(
-      "✨ Join TDC Community",
-      `Sign up to ${action} and connect with amazing students!`,
-      [
-        { text: "Maybe Later", style: "cancel" },
-        {
-          text: "Get Started",
-          style: "default",
-          onPress: () => navigation.navigate("Login"),
-        },
-      ]
-    );
+  // guest: the shared "sign up to continue" sheet
+  const showGuestAlert = () => {
+    requireAccount();
   };
 
   // ============================================================

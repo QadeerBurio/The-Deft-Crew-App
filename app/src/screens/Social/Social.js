@@ -1,18 +1,22 @@
 // Social.js (Tab Navigator) - WITH CENTER CREATE BUTTON
 import React, { useRef, useEffect, useState, useContext } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Platform, View, StyleSheet, Animated, TouchableOpacity, Dimensions, Text, StatusBar, Alert } from "react-native";
+import { Platform, View, StyleSheet, Animated, TouchableOpacity, Dimensions, Text, StatusBar } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills (design system)
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 import { AuthContext } from "../../context/AuthContext";
+import { useGuestGate, accountOnly } from "../../guest";
 import axios from "axios";
 
 import FeedScreen from "./FeedScreen";
 import SearchScreen from "./SearchScreen";
-import MessagesScreen from "./MessageScreen";
-import ProfileScreen from "./ProfileScreen";
+import MessagesScreenBase from "./MessageScreen";
+import ProfileScreenBase from "./ProfileScreen";
+// login-only tabs: locked state for a guest
+const MessagesScreen = accountOnly(MessagesScreenBase, { title: "messages", showBack: false });
+const ProfileScreen = accountOnly(ProfileScreenBase, { title: "my profile", showBack: false });
 
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get('window');
@@ -176,6 +180,7 @@ const ProfileIcon = ({ focused }) => {
 
 // ============ CENTER CREATE BUTTON ============
 const CreateButton = ({ onPress, navigation, isGuest }) => {
+  const { requireAccount } = useGuestGate();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
@@ -215,17 +220,7 @@ const CreateButton = ({ onPress, navigation, isGuest }) => {
     ]).start();
 
     if (isGuest) {
-      Alert.alert(
-        'Create an Account',
-        'Sign up to create a post!',
-        [
-          { text: 'Not Now', style: 'cancel' },
-          { 
-            text: 'Sign Up', 
-            onPress: () => navigation.navigate('Login')
-          }
-        ]
-      );
+      requireAccount();
       return;
     }
     
@@ -358,12 +353,13 @@ function CustomTabBar({ state, descriptors, navigation }) {
 
 // ============ MAIN SOCIAL COMPONENT ============
 export default function Social() {
-  const { token, user } = useContext(AuthContext);
+  const { token, user, isGuest } = useContext(AuthContext);
   const [totalUnread, setTotalUnread] = useState(0);
   const config = { headers: { Authorization: `Bearer ${token}` } };
 
   // Fetch unread count
   const fetchUnreadCount = async () => {
+    if (!token || isGuest) return; // inbox needs an account
     try {
       const res = await axios.get(`${API_URL}/inbox`, config);
       if (res.data && Array.isArray(res.data)) {

@@ -13,6 +13,7 @@ import axios from "axios";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AuthContext } from '../../context/AuthContext';
+import { useGuestGate } from "../../guest/GuestGate";
 import ReportModal from "./ReportModal";
 
 // ═══════════════════════════════════════════
@@ -124,6 +125,7 @@ const commentsChanged = (oldComments, newComments) => {
 
 export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
   const { user, token, setUser } = useContext(AuthContext);
+  const { requireAccount } = useGuestGate();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const inputRef = useRef(null);
@@ -420,6 +422,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
   // LIKE — with sound branching
   // ═══════════════════════════════════════════
   const handleLike = async () => {
+    if (!requireAccount()) return;
     if (!isLoggedIn) {
       soundNope();
       Alert.alert("Sign In", "Please sign in to like posts");
@@ -469,6 +472,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
   // SAVE / SHARE — with sounds
   // ═══════════════════════════════════════════
   const handleSave = async () => {
+    if (!requireAccount()) return;
     if (!isLoggedIn) {
       soundNope();
       Alert.alert("Sign In", "Please sign in to save posts");
@@ -512,6 +516,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
   // BLOCK / REPORT
   // ═══════════════════════════════════════════
   const handleBlockUser = () => {
+    if (!requireAccount()) return;
     setShowMenu(false);
     if (isOwnPost) {
       soundNope();
@@ -546,6 +551,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
   };
 
   const handleReportPost = () => {
+    if (!requireAccount()) return;
     setShowMenu(false);
     if (isOwnPost) {
       soundNope();
@@ -650,6 +656,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
   // SUBMIT COMMENT — send sound
   // ═══════════════════════════════════════════
   const handleComment = async () => {
+    if (!requireAccount()) return;
     if (!isLoggedIn) {
       soundNope();
       Alert.alert("Sign In", "Please sign in to comment");
@@ -751,6 +758,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
   };
 
   const onReplyPress = (comment, parentCommentId) => {
+    if (!requireAccount()) return;
     // 🔔 Small tap sound for reply selection
     soundTap();
 
@@ -794,6 +802,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
   // CONNECTION
   // ═══════════════════════════════════════════
   const handleConnect = async () => {
+    if (!requireAccount()) return;
     if (!isLoggedIn) {
       soundNope();
       Alert.alert("Sign In", "Please sign in to connect");
@@ -838,6 +847,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
   };
 
   const handleAcceptRequest = async () => {
+    if (!requireAccount()) return;
     if (!isLoggedIn) return;
     setIsConnecting(true);
 

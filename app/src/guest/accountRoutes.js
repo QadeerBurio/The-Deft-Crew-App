@@ -28,6 +28,7 @@ export const LOGIN_ONLY_ROUTES = new Set([
   "NotificationSettings",
   // social
   "UserProfile",
+  "PostDetailScreen", // the post GET is only made with a token
   "CreatePostScreen",
   "MessagesScreen",
   "ChatDetailScreen",
