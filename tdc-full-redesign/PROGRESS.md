@@ -233,4 +233,9 @@ Cause: production /api/brands/nearby returned [] for every location (0 of 7 bran
 - 98e2a74 Crew: display names for memo components
 - 6e51302 Profile + Home: savings from /offers/my-total-savings only
 - 67a0a65 Profile + My Discounts: claimed summary, real savings, tile and logo fixes
+- 9990541 Settings: account deletion works
+- eeb9629 app.json: drop unused restricted permissions, honest location text, no map link claims
+- 531874e File system + media: legacy API, save-only permission, offline avatars
+- fe66b21 Release: no placeholder links, Android back on every modal, quiet console
+- 5607bbb Release fixes 6/6: alert popup design, no toasts, no raw error text
 
