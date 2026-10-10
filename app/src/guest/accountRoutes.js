@@ -79,6 +79,10 @@ let auth = { signedIn: false, isGuest: false };
 export function setAuthSnapshot(next) {
   auth = next;
 }
+// true only while a student is signed in (not a guest, not mid-logout)
+export function isSignedInNow() {
+  return !!auth.signedIn;
+}
 
 // ── stored target (deep link / push that has to wait) ──────────────
 let pending = null;

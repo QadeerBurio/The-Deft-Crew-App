@@ -56,6 +56,7 @@ import {
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { Button, SkeletonBlock, ScreenHeader, HeaderIconButton } from "../ui";
 import { useGuestGate } from "../guest/GuestGate";
+import { isSignedInNow } from "../guest/accountRoutes";
 import Dot from "../engagement/components/Dot";
 import { formatDistance } from "../utils/distance";
 
@@ -119,6 +120,7 @@ const persistRegistry = () => {
   const owner = registryOwner;
   if (persistTimer) clearTimeout(persistTimer);
   persistTimer = setTimeout(async () => {
+    if (!isSignedInNow()) return; // logged out meanwhile: don't write claims back
     try {
       const arr = Array.from(claimedIdsRegistry);
       await AsyncStorage.setItem(storageKeyFor(owner), JSON.stringify(arr));
@@ -130,6 +132,14 @@ const persistRegistry = () => {
 
 // Loads the claimed IDs of the logged-in user. Safe to call many times.
 export const hydrateClaimedRegistry = async (userId) => {
+  // no signed-in student (guest, logged out): nothing is read from storage
+  if (!isSignedInNow()) {
+    claimedIdsRegistry.clear();
+    recentLocalClaims.clear();
+    registryOwner = null;
+    registryHydrated = false;
+    return;
+  }
   const uid = userId || (await userIdFromStoredToken());
 
   if (registryHydrated && registryOwner === (uid || null)) return;
@@ -172,7 +182,7 @@ export const clearClaimedRegistry = async (userId) => {
 };
 
 export const registerLocalClaim = (offerId) => {
-  if (!offerId) return;
+  if (!offerId || !isSignedInNow()) return;
   claimedIdsRegistry.add(String(offerId));
   recentLocalClaims.set(String(offerId), Date.now());
   persistRegistry();
@@ -186,7 +196,7 @@ export const unregisterLocalClaim = (offerId) => {
 };
 
 export const isLocallyClaimed = (offerId) => {
-  if (!offerId) return false;
+  if (!offerId || !isSignedInNow()) return false; // a guest never has claims
   return claimedIdsRegistry.has(String(offerId));
 };
 
@@ -201,7 +211,8 @@ export const getAllLocallyClaimed = () => Array.from(claimedIdsRegistry);
  *   on this phone in the last 20s (server may not have caught up yet).
  */
 export const reconcileClaimedIds = (serverIds, scopeIds = null) => {
-  if (!Array.isArray(serverIds)) return;
+  // late responses from a session that has ended must not refill the registry
+  if (!Array.isArray(serverIds) || !isSignedInNow()) return;
   const serverSet = new Set(serverIds.map(String));
   let changed = false;
 
@@ -285,9 +296,9 @@ const userIdFromToken = (tk) => {
 
 const isOfferClaimedByUser = (offer, currentUserId) => {
   if (!offer) return false;
-  if (!currentUserId) {
-    return Array.isArray(offer.claimedBy) && offer.claimedBy.length > 0;
-  }
+  // no signed-in user (guest): never claimed. Before, any offer someone had
+  // claimed (including the account that just logged out) showed as claimed.
+  if (!currentUserId) return false;
   if (!offer.claimedBy || !Array.isArray(offer.claimedBy)) return false;
 
   const me = String(currentUserId);
@@ -779,10 +790,11 @@ export default function OfferScreen() {
   const isStatsFetchingRef = useRef(false);
 
   const statsCacheKey = useMemo(() => {
+    if (!token || isGuest) return null; // guests: no stored claim counts read or written
     return initialBrand?._id
       ? `${OFFER_STATS_CACHE_PREFIX}${initialBrand._id}`
       : null;
-  }, [initialBrand?._id]);
+  }, [initialBrand?._id, token, isGuest]);
 
   const formatImageUrl = useCallback((imagePath) => {
     if (!imagePath) return null;

@@ -27,6 +27,7 @@ import {
   afterSignedOut,
   afterEnteredAsGuest,
 } from "./accountRoutes";
+import { clearStoredClaimedData } from "./clearClaimedData";
 
 const GuestGateContext = createContext({ isGuest: false, requireAccount: () => true });
 
@@ -58,6 +59,11 @@ export function GuestGateProvider({ children }) {
   // identity changes
   const prevRef = useRef(signedIn ? "student" : guest ? "guest" : "none");
   const loggedOutRef = useRef(false);
+
+  // app opened without a student: drop any claimed data a previous session left behind
+  useEffect(() => {
+    if (prevRef.current !== "student") clearStoredClaimedData();
+  }, []);
   useEffect(() => {
     const now = signedIn ? "student" : guest ? "guest" : "none";
     const prev = prevRef.current;
@@ -74,10 +80,12 @@ export function GuestGateProvider({ children }) {
       if (prev === "student") loggedOutRef.current = true;
       setSheetOpen(false);
       queryClient.resetQueries();
+      clearStoredClaimedData();
     } else if (now === "guest") {
       const fromLogout = loggedOutRef.current || prev === "student";
       loggedOutRef.current = false;
       queryClient.resetQueries();
+      clearStoredClaimedData();
       // wait one tick so the Drawer route exists
       setTimeout(fromLogout ? afterSignedOut : afterEnteredAsGuest, 0);
     }
