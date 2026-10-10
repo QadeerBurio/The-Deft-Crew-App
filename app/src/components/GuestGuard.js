@@ -20,7 +20,10 @@ export default function GuestGuard({ title, message, children, fallback }) {
     if (fallback !== undefined) return fallback;
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: T.paper }} edges={["top"]}>
-        <GuestLocked title={title || "sign up to continue"} line={message || "it's free and takes a minute."} />
+        <GuestLocked
+          title={String(title || "sign up to continue").toLowerCase()}
+          line={String(message || "it's free and takes a minute.").toLowerCase()}
+        />
       </SafeAreaView>
     );
   }

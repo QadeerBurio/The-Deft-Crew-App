@@ -1,28 +1,31 @@
 import React from "react";
 import { accountOnly } from '../guest';
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import ProfileScreen from "../screens/ProfileScreen";
-import ProfileDetails from "../screens/ProfileDetailsScreen";
+import ProfileScreenBase from "../screens/ProfileScreen";
+const ProfileScreen = accountOnly(ProfileScreenBase, { title: "profile", line: "sign up for your student card, discounts and points.", showBack: false });
+import ProfileDetailsBase from "../screens/ProfileDetailsScreen";
+const ProfileDetails = accountOnly(ProfileDetailsBase, { title: "profile" });
 import MyDiscountScreenBase from "../screens/MyDiscountScreen";
 const MyDiscountScreen = accountOnly(MyDiscountScreenBase, { title: "my discounts" });
-import PremiumMemberCard from "../components/Card";
-import SettingsScreen from "../screens/SettingScreen";
-import GuestGuard from '../components/GuestGuard';
+import PremiumMemberCardBase from "../components/Card";
+const PremiumMemberCard = accountOnly(PremiumMemberCardBase, { title: "membership card" });
+import SettingsScreenBase from "../screens/SettingScreen";
+const SettingsScreen = accountOnly(SettingsScreenBase, { title: "settings" });
 
 // 🆕 engagement
-import NotificationSettingsScreen from "../engagement/screens/NotificationSettingsScreen";
-import BadgesScreen from "../engagement/screens/BadgesScreen";
-import RewardsScreen from "../engagement/screens/RewardsScreen";
-import NotificationModal from "../components/NotificationModal";
+import NotificationSettingsScreenBase from "../engagement/screens/NotificationSettingsScreen";
+const NotificationSettingsScreen = accountOnly(NotificationSettingsScreenBase, { title: "notifications" });
+import BadgesScreenBase from "../engagement/screens/BadgesScreen";
+const BadgesScreen = accountOnly(BadgesScreenBase, { title: "badges" });
+import RewardsScreenBase from "../engagement/screens/RewardsScreen";
+const RewardsScreen = accountOnly(RewardsScreenBase, { title: "rewards" });
+import NotificationModalBase from "../components/NotificationModal";
+const NotificationModal = accountOnly(NotificationModalBase, { title: "notifications" });
 
 const Stack = createNativeStackNavigator();
 
 export default function ProfileStack() {
   return (
-    <GuestGuard
-      title="View Your Discounts"
-      message="Sign in to see your claimed offers and discounts."
-    >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="ProfileMain" component={ProfileScreen} />
         <Stack.Screen name="ProfileDetails" component={ProfileDetails} />
@@ -35,6 +38,5 @@ export default function ProfileStack() {
         <Stack.Screen name="Badges" component={BadgesScreen} />
         <Stack.Screen name="Rewards" component={RewardsScreen} />
       </Stack.Navigator>
-    </GuestGuard>
   );
 }

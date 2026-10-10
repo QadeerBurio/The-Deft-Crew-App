@@ -25,7 +25,9 @@ import HomeStack from "./HomeStack";
 import Social from "../screens/Social/Social";
 import CampusToolsScreen from "../screens/StudentDashboard";
 import Explore from "../screens/Explore";
-import ProfileScreen from "../screens/ProfileScreen";
+import ProfileScreenBase from "../screens/ProfileScreen";
+const ProfileScreen = accountOnly(ProfileScreenBase, { title: "profile", line: "sign up for your student card, discounts and points.", showBack: false });
+import { accountOnly } from "../guest";
 
 // 🆕 tour
 import { useTour } from "../engagement/tour/TourProvider";

@@ -26,6 +26,9 @@ export const LOGIN_ONLY_ROUTES = new Set([
   "Rewards",
   "Badges",
   "NotificationSettings",
+  "SettingsScreen",
+  "SettingScreen",
+  "NotificationModal",
   // social
   "UserProfile",
   "PostDetailScreen", // the post GET is only made with a token
