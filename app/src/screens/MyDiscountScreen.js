@@ -78,6 +78,8 @@ import {
   resolveCity,
 } from '../utils/cityFilter';
 import Dot from '../engagement/components/Dot';
+import useMySavings from '../hooks/useMySavings';
+import { claimedBrands } from '../utils/claimedBrands';
 
 const SERVER_URL = 'https://the-deft-crew-production.up.railway.app';
 
@@ -220,13 +222,13 @@ const StatCard = React.memo(({ title, value, icon, gradientColors, delay, isCurr
         <View style={styles.statCardLeft}>
           <View style={[styles.statIconBox, { backgroundColor: `${gradientColors[0]}15` }]}>
             <LinearGradient colors={[T.sand]} style={styles.statIconGradient}>
-              <Ionicons name={icon} size={18} color={T.ink} />
+              <Ionicons name={icon} size={16} color={T.ink} />
             </LinearGradient>
           </View>
-          <View>
-            <Text style={styles.statValue} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>{formattedValue}</Text>
-            <Text style={styles.statLabel}>{title}</Text>
-          </View>
+          <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            {formattedValue}
+          </Text>
+          <Text style={styles.statLabel} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_SCALE}>{title}</Text>
         </View>
       </LinearGradient>
     </Animated.View>
@@ -562,7 +564,9 @@ const DiscountCard = React.memo(({
           <LinearGradient colors={[T.ink]} style={styles.cardInner}>
             <View style={styles.cardImageContainer}>
               {item?.displayImage ? (
-                <Image source={{ uri: item.displayImage }} style={styles.cardImage} resizeMode="cover" />
+                <View style={styles.cardImageClean}>
+                  <Image source={{ uri: item.displayImage }} style={styles.cardImage} resizeMode="contain" />
+                </View>
               ) : (
                 <LinearGradient colors={[T.inkSoft]} style={styles.cardPlaceholder}>
                   <Ionicons name={theme.icon} size={32} color={`${COLORS.primary}30`} />
@@ -1182,6 +1186,20 @@ export default function MyDiscountScreen() {
     [claimedOffers, selectedCity]
   );
   const hiddenByCity = claimedOffers.length - visibleOffers.length;
+
+  // Summary: real claimed count, real savings (same query as Profile), one chip per brand
+  const { data: mySavings } = useMySavings();
+  const summaryBrands = useMemo(() => claimedBrands(claimedOffers), [claimedOffers]);
+  const listRef = useRef(null);
+  const scrollToBrand = useCallback(
+    (brandId) => {
+      const index = visibleOffers.findIndex((o) => String(o?.brand?._id || "") === brandId);
+      if (index < 0) return; // that brand's card is hidden by the city filter
+      soundTap();
+      listRef.current?.scrollToIndex({ index, viewOffset: 12, animated: true });
+    },
+    [visibleOffers]
+  );
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const isMounted = useRef(true);
@@ -1855,6 +1873,12 @@ export default function MyDiscountScreen() {
       )}
 
       <FlatList
+        ref={listRef}
+        onScrollToIndexFailed={(info) => {
+          // card not measured yet: jump near it, then try again
+          listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: true });
+          setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, viewOffset: 12, animated: true }), 250);
+        }}
         data={visibleOffers}
         renderItem={({ item, index }) => (
           <DiscountCard
@@ -1883,6 +1907,44 @@ export default function MyDiscountScreen() {
           />
         }
         ListHeaderComponent={
+          <>
+          <View style={[styles.statCardInner, styles.summaryCard]}>
+            <View style={styles.summaryTop}>
+              <Text style={styles.summaryCount} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                {claimedOffers.length} claimed
+              </Text>
+              {mySavings !== undefined && (
+                <Text style={styles.summarySaved} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                  saved rs {Math.round(mySavings.totalSaved).toLocaleString()}
+                </Text>
+              )}
+            </View>
+            {summaryBrands.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brandChips}>
+                {summaryBrands.map((b) => (
+                  <TouchableOpacity
+                    key={b.id}
+                    style={styles.brandChip}
+                    activeOpacity={0.8}
+                    onPress={() => scrollToBrand(b.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${b.name}, show its discount`}
+                  >
+                    <View style={styles.brandChipLogo}>
+                      {b.logo ? (
+                        <Image source={{ uri: b.logo }} style={styles.brandChipLogoImg} resizeMode="contain" />
+                      ) : (
+                        <Ionicons name="storefront-outline" size={13} color={T.textFaint} />
+                      )}
+                    </View>
+                    <Text style={styles.brandChipText} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                      {b.name.toLowerCase()}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </View>
           <View style={styles.statsContainer}>
             <StatCard title="active" value={stats.activeCount} icon="pricetag-outline" gradientColors={[T.yellow]} delay={200} />
             {stats.onlineCount > 0 && (
@@ -1892,6 +1954,7 @@ export default function MyDiscountScreen() {
               <StatCard title="codes ready" value={stats.promoCount} icon="code-outline" gradientColors={[T.success]} delay={400} />
             )}
           </View>
+          </>
         }
         ListEmptyComponent={
           hiddenByCity > 0 ? (
@@ -2015,8 +2078,9 @@ const styles = StyleSheet.create({
   listContainer: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 40 },
 
   // Stats
-  statsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
-  statCard: { flexGrow: 1, flexBasis: '30%' },
+  // three equal tiles inside the 16 px margins
+  statsContainer: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  statCard: { flex: 1, minWidth: 0 },
   statCardInner: {
     borderRadius: 18,
     borderWidth: 1,
@@ -2024,11 +2088,22 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
   },
-  statCardLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  statIconBox: { width: 34, height: 34, borderRadius: 17, overflow: 'hidden' },
+  statCardLeft: { alignItems: 'flex-start', gap: 4 },
+  statIconBox: { width: 30, height: 30, borderRadius: 15, overflow: 'hidden', marginBottom: 2 },
   statIconGradient: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   statValue: { fontFamily: F.heading, fontSize: 18, color: T.ink },
-  statLabel: { fontFamily: F.body, fontSize: 12, color: T.textMuted },
+  statLabel: { fontFamily: F.body, fontSize: 12, lineHeight: 15, color: T.textMuted },
+
+  // summary (claimed count, real savings, brand chips)
+  summaryCard: { backgroundColor: T.card, marginBottom: 10 },
+  summaryTop: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 },
+  summaryCount: { fontFamily: F.heading, fontSize: 18, color: T.ink },
+  summarySaved: { fontFamily: F.bodyBold, fontSize: 13, color: T.ink },
+  brandChips: { gap: 8, paddingTop: 10 },
+  brandChip: { height: 36, paddingLeft: 4, paddingRight: 12, borderRadius: 18, borderWidth: 1, borderColor: T.line, backgroundColor: T.card, flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 180 },
+  brandChipLogo: { width: 28, height: 28, borderRadius: 14, backgroundColor: T.paper, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  brandChipLogoImg: { width: 22, height: 22 },
+  brandChipText: { fontFamily: F.bodySemi, fontSize: 13, color: T.ink, flexShrink: 1 },
 
   // Discount card
   cardWrapper: { marginBottom: 12 },
@@ -2037,6 +2112,7 @@ const styles = StyleSheet.create({
   cardInner: { borderRadius: 26, overflow: 'hidden' },
   cardImageContainer: { height: 150, backgroundColor: T.inkSoft, position: 'relative' },
   cardImage: { width: '100%', height: '100%' },
+  cardImageClean: { flex: 1, backgroundColor: T.card, padding: 12 }, // logos shown whole, not blown up
   cardPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   cardImageOverlay: { ...StyleSheet.absoluteFillObject },
   cardPercentBadge: {

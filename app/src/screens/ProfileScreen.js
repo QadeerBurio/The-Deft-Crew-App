@@ -40,6 +40,7 @@ import * as Haptics from "expo-haptics";
 // 🆕 engagement
 import { useEngagement } from '../engagement/hooks/useEngagement';
 import useMySavings from '../hooks/useMySavings';
+import { claimedLine } from '../utils/claimedBrands';
 import SavingsCounter from '../engagement/components/SavingsCounter';
 import BadgeShelf from '../engagement/components/BadgeShelf';
 import StreakChip from '../engagement/components/StreakChip';
@@ -629,9 +630,7 @@ export default function ProfileScreen() {
             <Icon name="wallet-outline" size={22} color={T.ink} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={P.savingsLabel} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-              {savingsKnown && totalSaved <= 0 ? "saved on redeemed discounts" : "my tdc savings"}
-            </Text>
+            <Text style={P.savingsLabel} maxFontSizeMultiplier={MAX_FONT_SCALE}>my tdc savings</Text>
             {!savingsKnown && !savingsError ? (
               <SkeletonBlock width={120} height={26} radius={8} style={{ marginTop: 4 }} />
             ) : !savingsKnown ? (
@@ -639,14 +638,16 @@ export default function ProfileScreen() {
               <Text style={P.savingsHint} maxFontSizeMultiplier={MAX_FONT_SCALE}>
                 {"couldn't load your savings right now."}
               </Text>
-            ) : totalSaved > 0 ? (
+            ) : (
               <Text style={P.savingsValue} maxFontSizeMultiplier={MAX_FONT_SCALE}>
                 rs {Math.round(totalSaved).toLocaleString()}
                 <Text style={{ color: T.yellow }}>.</Text>
               </Text>
-            ) : (
-              <Text style={P.savingsHint} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-                claim a deal, use it at the counter, and your savings show up here.
+            )}
+            {/* real claimed offers: count + up to 3 brand names */}
+            {statsLoaded && (
+              <Text style={P.savingsHint} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                {claimedLine(claimedOffers)}
               </Text>
             )}
           </View>
