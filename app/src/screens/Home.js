@@ -11,6 +11,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthContext } from "../context/AuthContext";
 import { useGuestGate } from "../guest/GuestGate";
+import useMySavings from "../hooks/useMySavings";
 import ChatBotInterface from "./ChatBotInterface";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
@@ -105,7 +106,7 @@ export default function Home({ navigation }) {
   const userId = user?._id || user?.id || (isGuest ? "guest" : "anon");
 
   // 🆕 engagement
-  const { flags, me } = useEngagement();
+  const { flags } = useEngagement();
   const { missions } = useMissions();
   const { count: streakCount, enabled: streakEnabled } = useStreak();
 
@@ -334,7 +335,9 @@ export default function Home({ navigation }) {
   const sortedCount = FEATURES.filter((f) => sortedFeatureIds.has(FEATURE_ID_TO_MISSION[f.id])).length;
   const sortedLabel = !isGuest && flags?.missions ? `${sortedCount} of ${FEATURES.length} sorted` : null;
 
-  const totalSaved = Number(me?.stats?.totalSaved) || 0;
+  // same source as Profile (/offers/my-total-savings), only when the label is on
+  const { data: mySavings } = useMySavings({ enabled: !!flags?.savingsCounter });
+  const totalSaved = Number(mySavings?.totalSaved) || 0;
   const savedLabel =
     flags?.savingsCounter && totalSaved > 0
       ? `rs ${Math.round(totalSaved).toLocaleString()} saved · see all`
@@ -388,7 +391,7 @@ export default function Home({ navigation }) {
             </FadeInView>
           )}
 
-          {signedIn && !!latestConfession && (
+          {/* {signedIn && !!latestConfession && (
             <FadeInView delay={100}>
               <HomeCampus
                 confession={latestConfession}
@@ -396,7 +399,7 @@ export default function Home({ navigation }) {
                 onOpenFeed={openConfessionFeed}
               />
             </FadeInView>
-          )}
+          )} */}
 
           <FadeInView delay={150}>
             <HomeTools

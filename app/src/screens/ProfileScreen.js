@@ -39,6 +39,7 @@ import * as Haptics from "expo-haptics";
 
 // 🆕 engagement
 import { useEngagement } from '../engagement/hooks/useEngagement';
+import useMySavings from '../hooks/useMySavings';
 import SavingsCounter from '../engagement/components/SavingsCounter';
 import BadgeShelf from '../engagement/components/BadgeShelf';
 import StreakChip from '../engagement/components/StreakChip';
@@ -141,9 +142,13 @@ export default function ProfileScreen() {
 
   const [claimedOffers, setClaimedOffers] = useState([]);
   const [ecardModalVisible, setEcardModalVisible] = useState(false);
-  const [totalSaved, setTotalSaved] = useState(0);
-  const [redemptionCount, setRedemptionCount] = useState(0);
-  const [statsLoaded, setStatsLoaded] = useState(false); // first savings fetch done (skeleton until then)
+  const [statsLoaded, setStatsLoaded] = useState(false); // first claimed-offers fetch done (skeleton until then)
+  // Savings: only from /offers/my-total-savings (shared with Home). Claiming doesn't
+  // change it; a failed request keeps the last good value.
+  const { data: savings, isError: savingsError, refetch: refetchSavings } = useMySavings();
+  const savingsKnown = savings !== undefined;
+  const totalSaved = savings?.totalSaved ?? 0;
+  const redemptionCount = savings?.redemptionCount ?? 0;
 
   // 🆕 engagement state
   const { me, refresh } = useEngagement();
@@ -213,26 +218,18 @@ export default function ProfileScreen() {
 
   // ─── Fetch discount data ───────────────────────────────────────────────
   const fetchProfileData = useCallback(async () => {
+    refetchSavings(); // same endpoint as before, through the shared savings query
     try {
-      const [offersRes, savingsRes] = await Promise.all([
-        api.get("/offers/claimed", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        api.get("/offers/my-total-savings", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
+      const offersRes = await api.get("/offers/claimed", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setClaimedOffers(offersRes.data || []);
-      setTotalSaved(savingsRes.data.totalSaved || 0);
-      setRedemptionCount(savingsRes.data.redemptionCount || 0);
     } catch (err) {
       console.log("Error fetching profile data:", err);
-      setTotalSaved(0);
-      setRedemptionCount(0);
     } finally {
       setStatsLoaded(true);
     }
-  }, [token]);
+  }, [token, refetchSavings]);
 
   // ─── Focus effect — refresh data on screen focus ───────────────────────
   useFocusEffect(
@@ -243,12 +240,6 @@ export default function ProfileScreen() {
     }, [fetchProfileData, startEntranceAnimations, refresh])
   );
 
-  // ─── Sync totalSaved from engagement data ─────────────────────────────
-  useEffect(() => {
-    if (me?.stats?.totalSaved !== undefined) {
-      setTotalSaved(me.stats.totalSaved);
-    }
-  }, [me?.stats?.totalSaved]);
 
   // ─── Android back handler ─────────────────────────────────────────────
   useEffect(() => {
@@ -638,14 +629,25 @@ export default function ProfileScreen() {
             <Icon name="wallet-outline" size={22} color={T.ink} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={P.savingsLabel} maxFontSizeMultiplier={MAX_FONT_SCALE}>my tdc savings</Text>
-            {statsLoaded ? (
+            <Text style={P.savingsLabel} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+              {savingsKnown && totalSaved <= 0 ? "saved on redeemed discounts" : "my tdc savings"}
+            </Text>
+            {!savingsKnown && !savingsError ? (
+              <SkeletonBlock width={120} height={26} radius={8} style={{ marginTop: 4 }} />
+            ) : !savingsKnown ? (
+              // never loaded (offline / error): say so instead of a made-up 0
+              <Text style={P.savingsHint} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                {"couldn't load your savings right now."}
+              </Text>
+            ) : totalSaved > 0 ? (
               <Text style={P.savingsValue} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-                rs {Math.round(totalSaved || 0).toLocaleString()}
+                rs {Math.round(totalSaved).toLocaleString()}
                 <Text style={{ color: T.yellow }}>.</Text>
               </Text>
             ) : (
-              <SkeletonBlock width={120} height={26} radius={8} style={{ marginTop: 4 }} />
+              <Text style={P.savingsHint} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                claim a deal, use it at the counter, and your savings show up here.
+              </Text>
             )}
           </View>
           {totalSaved > 0 && (
@@ -1461,6 +1463,7 @@ const P = StyleSheet.create({
   },
   savingsLabel: { fontFamily: F.body, fontSize: 12, color: T.textMuted },
   savingsValue: { fontFamily: F.heading, fontSize: 26, color: T.ink },
+  savingsHint: { fontFamily: F.body, fontSize: 13, lineHeight: 18, color: T.textMuted, marginTop: 2 },
   shareBtn: {
     width: 38,
     height: 38,
