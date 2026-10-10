@@ -14,6 +14,7 @@ import NetInfo from '@react-native-community/netinfo';
 import Svg, { Path, Circle } from 'react-native-svg';
 import api from '../api/api';
 import { AuthContext } from '../context/AuthContext';
+import { useGuestGate } from '../guest/GuestGate';
 import { engagementBus, ENGAGEMENT_EVENTS } from '../engagement/engagementBus';
 
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
@@ -225,6 +226,7 @@ const TypingIndicator = () => {
 const TravelChatBot = forwardRef((props, ref) => {
   const insets = useSafeAreaInsets();
   const { token, isGuest } = useContext(AuthContext);
+  const { requireAccount } = useGuestGate();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
@@ -340,6 +342,7 @@ const TravelChatBot = forwardRef((props, ref) => {
   }, []);
 
   const openChat = useCallback(() => {
+    if (!requireAccount()) return; // AI chat needs an account
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsOpen(true);
     Animated.spring(modalSlide, {
@@ -348,7 +351,7 @@ const TravelChatBot = forwardRef((props, ref) => {
       tension: 65,
       friction: 11,
     }).start();
-  }, []);
+  }, [requireAccount]);
 
   const closeChat = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -462,9 +465,8 @@ const TravelChatBot = forwardRef((props, ref) => {
       const stores = await AsyncStorage.multiGet(['token', 'isGuest']);
       const token = stores[0][1];
       const isGuest = stores[1][1];
-      if (isGuest === 'true') {
-        xhr.setRequestHeader('Authorization', 'Bearer guest-token-2024');
-      } else if (token) {
+      // guests can't open the chat; no shared guest token is sent any more
+      if (token && isGuest !== 'true') {
         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       }
 
@@ -586,12 +588,13 @@ const TravelChatBot = forwardRef((props, ref) => {
   const pendingMessageRef = useRef(null);
   useImperativeHandle(ref, () => ({
     open: (message) => {
+      if (!requireAccount()) return;
       pendingMessageRef.current = message || null;
       openChat();
     },
     close: () => closeChat(),
     isOpen: () => isOpen,
-  }), [openChat, closeChat, isOpen]);
+  }), [openChat, closeChat, isOpen, requireAccount]);
 
   useEffect(() => {
     if (isOpen && pendingMessageRef.current) {

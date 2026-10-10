@@ -31,6 +31,7 @@ import GuestGuard from "./GuestGuard";
 import { BASE_URL } from "../api/api";
 
 import { color as T, font as F } from "../theme/tokens";
+import { useGuestGate } from '../guest/GuestGate';
 const { width, height } = Dimensions.get("window");
 
 // const getBaseURL = () => {
@@ -258,6 +259,7 @@ const TDCCareers = ({ navigation }) => {
   const [myApplications, setMyApplications] = useState([]);
   const [showApplicationsModal, setShowApplicationsModal] = useState(false);
   const [token, setToken] = useState(null);
+  const { requireAccount } = useGuestGate();
   const [user, setUser] = useState(null);
   const [appliedJobIds, setAppliedJobIds] = useState(new Set());
   const [selectedInterview, setSelectedInterview] = useState(null);
@@ -504,10 +506,7 @@ const TDCCareers = ({ navigation }) => {
   // FIXED: handleApply function with proper reset and state updates
   const handleApply = async () => {
     if (!token) {
-      Alert.alert("Login Required", "Please login to apply", [
-        { text: "Cancel" },
-        { text: "Login", onPress: () => navigation.navigate("Login") }
-      ]);
+      requireAccount();
       return;
     }
     

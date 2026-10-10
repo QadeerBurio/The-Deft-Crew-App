@@ -1321,6 +1321,7 @@ export default function OfferScreen() {
     },
     [
       isGuest,
+      requireAccount,
       token,
       brand,
       navigation,

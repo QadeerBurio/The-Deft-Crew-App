@@ -41,6 +41,7 @@ const { width, height } = Dimensions.get("window");
 const API_URL = `${BASE_URL}/jobs`;
 
 import { color as T, font as F } from "../theme/tokens";
+import { useGuestGate } from '../guest/GuestGate';
 // Design system tokens (tdc-full-redesign/DESIGN_SYSTEM.md)
 const COLORS = {
   page: T.paper,
@@ -1004,6 +1005,7 @@ const Career = ({ navigation }) => {
   const [myApplications, setMyApplications] = useState([]);
   const [showApplicationsModal, setShowApplicationsModal] = useState(false);
   const [token, setToken] = useState(null);
+  const { requireAccount } = useGuestGate();
   const [user, setUser] = useState(null);
   const [appliedJobIds, setAppliedJobIds] = useState(new Set());
   const [selectedInterview, setSelectedInterview] = useState(null);
@@ -1221,10 +1223,7 @@ const Career = ({ navigation }) => {
 
   const handleOptimizeResumeFlow = async (job) => {
     if (!token) {
-      Alert.alert("Login Required", "Please login to optimize your resume.", [
-        { text: "Cancel" },
-        { text: "Login", onPress: () => navigation.navigate("Login") }
-      ]);
+      requireAccount();
       return;
     }
 
@@ -1386,7 +1385,7 @@ const Career = ({ navigation }) => {
   // ============================================================
 
   const handleApply = async () => {
-    if (!token) { Alert.alert("Login Required", "Please login to apply", [{ text: "Cancel" }, { text: "Login", onPress: () => navigation.navigate("Login") }]); return; }
+    if (!token) { requireAccount(); return; }
     if (!validateForm()) {
       Alert.alert("Missing Information", "Please fill all required fields marked with *");
       return;

@@ -10,6 +10,7 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthContext } from "../context/AuthContext";
+import { useGuestGate } from "../guest/GuestGate";
 import ChatBotInterface from "./ChatBotInterface";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
@@ -96,6 +97,7 @@ export default function Home({ navigation }) {
   const [isChatVisible, setChatVisible] = useState(false);
   const [streakSheetVisible, setStreakSheetVisible] = useState(false);
   const { isGuest, user, token } = useContext(AuthContext);
+  const { requireAccount } = useGuestGate();
   const queryClient = useQueryClient();
 
   // ── user-scoped id, used for cache keys & the Slider
@@ -367,7 +369,7 @@ export default function Home({ navigation }) {
         </ScrollView>
       </View>
 
-      <AiFab onPress={() => setChatVisible(true)} />
+      <AiFab onPress={() => { if (requireAccount()) setChatVisible(true); }} />
 
       {/* Streak sheet */}
       <StreakSheet

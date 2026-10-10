@@ -22,6 +22,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Clipboard from "expo-clipboard";
 import { AuthContext } from "../context/AuthContext";
+import { useGuestGate } from '../guest/GuestGate';
 import api from "../api/api";
 
 import { color as T, font as F } from "../theme/tokens";
@@ -29,6 +30,7 @@ const { width, height } = Dimensions.get("window");
 
 export default function PaymentScreen({ navigation }) {
   const { user, token } = useContext(AuthContext);
+  const { requireAccount } = useGuestGate();
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -157,6 +159,7 @@ export default function PaymentScreen({ navigation }) {
   };
 
   const handleManualUpgrade = async () => {
+    if (!requireAccount()) return;
     const { address, city, phone } = formData;
 
     if (!address || !city || !phone || !receiptImage) {

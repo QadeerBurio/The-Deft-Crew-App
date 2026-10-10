@@ -7,14 +7,18 @@ import Slider from "../screens/Slider";
 import Home from "../screens/Home";
 import ContactUs from "../components/ContactUs";
 import Card from "../components/Card";
-import BookingScreen from "../components/BookingScreen";
-import PaymentScreen from "../components/PaymentScreen";
+import BookingScreenBase from "../components/BookingScreen";
+const BookingScreen = accountOnly(BookingScreenBase, { title: "booking" });
+import PaymentScreenBase from "../components/PaymentScreen";
+const PaymentScreen = accountOnly(PaymentScreenBase, { title: "payment" });
 import TravelingScreen from "../components/TravellingScreen";
 import EditProfileScreen from "../screens/Social/EditProfileScreen";
-import ChatHistoryScreen from "../screens/ChatHistoryScreen";
+import ChatHistoryScreenBase from "../screens/ChatHistoryScreen";
+const ChatHistoryScreen = accountOnly(ChatHistoryScreenBase, { title: "chat history" });
 import ResumeStack from "./ResumeNavigator";  // 👈 FIXED: was "./ResumeNavigator"
 import Social from "../screens/Social/Social";
 import OfferScreen from "../screens/OfferScreen";
+import { accountOnly } from "../guest";
 
 const Stack = createNativeStackNavigator();
 

@@ -133,6 +133,27 @@ export function afterEnteredAsGuest() {
   }
 }
 
+// Screens that read the token from storage once, on mount. After sign in they are
+// mounted again (same route, same params) so they pick up the student's token.
+export const REMOUNT_AFTER_SIGN_IN = new Set(["Career", "TDCCareers"]);
+
+function focusedLeaf(state) {
+  let s = state;
+  while (s && Array.isArray(s.routes)) {
+    const r = s.routes[s.index ?? 0];
+    if (r?.state) s = r.state;
+    else return { route: r, nav: s };
+  }
+  return null;
+}
+
+function remountIfStale() {
+  if (!navigationRef.isReady()) return;
+  const leaf = focusedLeaf(navigationRef.getRootState());
+  if (!leaf?.route || !REMOUNT_AFTER_SIGN_IN.has(leaf.route.name) || leaf.nav?.type !== "stack") return;
+  navigationRef.dispatch({ ...StackActions.replace(leaf.route.name, leaf.route.params), target: leaf.nav.key });
+}
+
 export function afterSignedIn() {
   if (navigationRef.isReady()) {
     const root = navigationRef.getRootState();
@@ -140,6 +161,7 @@ export function afterSignedIn() {
       navigationRef.dispatch(StackActions.popTo("Drawer"));
     }
   }
+  setTimeout(remountIfStale, 60);
   const t = takePendingTarget();
   if (t) setTimeout(() => navigateSoon(t.route, t.params), 350);
 }

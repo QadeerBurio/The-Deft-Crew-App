@@ -20,6 +20,7 @@ import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients
 import { useNavigation, useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
+import { useGuestGate } from '../guest/GuestGate';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { color as T, font as F } from "../theme/tokens";
@@ -32,6 +33,7 @@ const BookingScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { token, user } = useContext(AuthContext);
+  const { requireAccount } = useGuestGate();
   const { item } = route.params;
 
   const [loading, setLoading] = useState(false);
@@ -352,6 +354,7 @@ const BookingScreen = () => {
   };
 
   const handleSubmit = async () => {
+    if (!requireAccount()) return;
     Animated.sequence([
       Animated.timing(buttonScale, {
         toValue: 0.92,

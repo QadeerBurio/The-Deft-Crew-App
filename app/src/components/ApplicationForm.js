@@ -7,6 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
+import { useGuestGate } from '../guest/GuestGate';
 import { color as T, font as F } from "../theme/tokens";
 import ScreenHeader from "../ui/ScreenHeader";
 // --- SUB-COMPONENTS (Defined outside to prevent re-render lag) ---
@@ -41,6 +42,7 @@ const InputField = ({ label, icon, placeholder, value, onChangeText, keyboardTyp
 
 const ApplicationForm = ({ route, navigation }) => {
     const { token, user } = useContext(AuthContext);
+    const { requireAccount } = useGuestGate();
     const [loading, setLoading] = useState(false);
   const { program } = route.params || { 
     program: { title: 'Program', university: 'University', color: T.ink } 
@@ -90,7 +92,7 @@ const ApplicationForm = ({ route, navigation }) => {
   const handleApply = async () => {
   // 1. Basic Validation
   if (!token) {
-    Alert.alert("Authentication Required", "Please log in to apply.");
+    requireAccount();
     return;
   }
 

@@ -151,9 +151,8 @@ class AIService {
       const token = stores[0][1];
       const isGuest = stores[1][1];
 
-      if (isGuest === 'true') {
-        xhr.setRequestHeader('Authorization', 'Bearer guest-token-2024');
-      } else if (token) {
+      // guests can't open the AI chat; no shared guest token is sent any more
+      if (token && isGuest !== 'true') {
         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       }
 
