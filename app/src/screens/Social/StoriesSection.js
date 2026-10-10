@@ -4,6 +4,7 @@ import {
   Dimensions, Animated, Alert, ActivityIndicator, Share,
   TextInput, KeyboardAvoidingView, Platform, BackHandler, StatusBar
 } from 'react-native';
+import Avatar from '../../ui/Avatar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -426,7 +427,7 @@ export default function StoriesSection() {
     // Get the latest story image (last in the array after sorting)
     const latestStoryImage = hasStory ? 
       myStory.images[myStory.images.length - 1]?.image : 
-      (user?.profileImage || 'https://via.placeholder.com/150');
+      (user?.profileImage || null);
     
     return (
       <View style={styles.storyItemContainer}>
@@ -437,9 +438,10 @@ export default function StoriesSection() {
                 onPress={hasStory ? openMyStory : pickImage} 
                 activeOpacity={0.7}
               >
-                <Image 
-                  source={{ uri: latestStoryImage }} 
-                  style={[styles.storyImage, !hasStory && { opacity: 0.6 }]} 
+                <Avatar
+                  uri={latestStoryImage}
+                  name={user?.name}
+                  style={[styles.storyImage, !hasStory && { opacity: 0.6 }]}
                 />
               </TouchableOpacity>
               <TouchableOpacity 
@@ -645,7 +647,7 @@ export default function StoriesSection() {
               keyExtractor={(item) => item._id || Math.random().toString()}
               renderItem={({ item }) => (
                 <View style={styles.commentItem}>
-                  <Image source={{ uri: item.user?.profileImage || 'https://via.placeholder.com/40' }} style={styles.commentAvatar} />
+                  <Avatar uri={item.user?.profileImage} name={item.user?.name} style={styles.commentAvatar} />
                   <View style={styles.commentContent}>
                     <Text style={styles.commentUsername}>{item.user?.name || 'User'}</Text>
                     <Text style={styles.commentText}>{item.text}</Text>
@@ -701,7 +703,7 @@ export default function StoriesSection() {
                     navigation.navigate("UserProfile", { userId: item._id });
                   }}
                 >
-                  <Image source={{ uri: item.profileImage || 'https://via.placeholder.com/40' }} style={styles.viewerAvatar} />
+                  <Avatar uri={item.profileImage} name={item.name} style={styles.viewerAvatar} />
                   <Text style={styles.viewerName}>{item.name || 'User'}</Text>
                 </TouchableOpacity>
               )}

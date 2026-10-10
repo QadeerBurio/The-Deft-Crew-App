@@ -23,7 +23,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { Ionicons } from "@expo/vector-icons";
 import ViewShot from "react-native-view-shot";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy"; // SDK 54: the old API lives here
 import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
 import * as Haptics from "expo-haptics";
@@ -217,7 +217,8 @@ export default function PremiumMemberCard() {
           return;
         }
       }
-      const { status } = await MediaLibrary.requestPermissionsAsync();
+      // save-only access: reading media (READ_MEDIA_*) is blocked in app.json
+      const { status } = await MediaLibrary.requestPermissionsAsync(true);
       if (status !== "granted") {
         Alert.alert("Permission Denied");
         setDownloading(false);

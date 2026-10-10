@@ -20,7 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy'; // SDK 54: the old API lives here
 import * as Sharing from 'expo-sharing';
 import engagementApi from '../api/engagementApi';
 import { useEngagement } from '../hooks/useEngagement';

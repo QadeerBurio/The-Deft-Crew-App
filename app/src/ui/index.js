@@ -7,6 +7,7 @@ export { default as Chip } from "./Chip";
 export { default as Input } from "./Input";
 export { default as ListRow } from "./ListRow";
 export { default as EmptyState } from "./EmptyState";
+export { default as Avatar } from "./Avatar";
 export { default as Skeleton, SkeletonBlock } from "./Skeleton";
 export { default as Sheet, SheetHandle, SheetClose, sheetStyles } from "./Sheet";
 export { default as SectionTitle } from "./SectionTitle";

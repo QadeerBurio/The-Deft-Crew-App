@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Modal, StyleSheet, TouchableOpacity, Image, Animated } from 'react-native';
+import Avatar from '../ui/Avatar';
 import { Ionicons } from '@expo/vector-icons';
 
 import { color as T, font as F } from "../theme/tokens";
@@ -83,10 +84,7 @@ export default function CallModal({
       <View style={styles.container}>
         <View style={styles.content}>
           <Animated.View style={{ transform: [{ scale: pulseAnimation }] }}>
-            <Image 
-              source={{ uri: user?.profileImage || 'https://via.placeholder.com/150' }} 
-              style={styles.avatar} 
-            />
+            <Avatar uri={user?.profileImage} name={user?.name} style={styles.avatar} />
           </Animated.View>
           
           <Text style={styles.name}>{user?.name}</Text>
