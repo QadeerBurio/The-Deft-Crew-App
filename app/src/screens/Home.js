@@ -36,7 +36,7 @@ import HomeNearMe from "./home/HomeNearMe";
 import AiFab, { AI_FAB_BOTTOM } from "./home/AiFab";
 import {
   LATEST_CONFESSION_KEY, DEALS_KEY, fetchLatestConfession, fetchDeals, devLogOnce,
-  PUBLIC_DEALS_KEY, fetchPublicDeals,
+  PUBLIC_DEALS_KEY, getPublicDeals,
 } from "./home/homeData";
 import { color } from "../theme/tokens";
 import { useTour } from "../engagement/tour/TourProvider";
@@ -177,20 +177,25 @@ export default function Home({ navigation }) {
   });
 
   // Guests: the same deals from public endpoints (no token) for "top discounts."
-  const { data: publicDeals, isLoading: publicDealsLoading, refetch: refetchPublicDeals } = useQuery({
+  // Shared 10-minute cache in homeData; only requested while Home is focused and
+  // the section is on (or about to come on) screen.
+  const [guestDealsWanted, setGuestDealsWanted] = useState(false);
+  const { data: publicDeals, isLoading: publicDealsLoading } = useQuery({
     queryKey: PUBLIC_DEALS_KEY,
-    queryFn: async ({ signal }) => {
+    queryFn: async () => {
       try {
-        return await fetchPublicDeals(signal);
+        return await getPublicDeals();
       } catch (e) {
         devLogOnce("public deals", e);
         return [];
       }
     },
-    enabled: !!isGuest,
-    staleTime: 60 * 1000,
+    enabled: !!isGuest && guestDealsWanted,
+    staleTime: 10 * 60 * 1000,
     retry: false,
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 
   // Pull to refresh: missions, streak, daily drop, everything engagement,
@@ -209,12 +214,17 @@ export default function Home({ navigation }) {
               .catch((e) => devLogOnce("deals refresh", e))
           : null,
         signedIn ? queryClient.invalidateQueries({ queryKey: ["home", "nearby"] }) : null,
-        isGuest ? refetchPublicDeals() : null,
+        // guests: one forced call at most every 30 s (homeData enforces it)
+        isGuest && guestDealsWanted
+          ? getPublicDeals({ force: true })
+              .then((fresh) => queryClient.setQueryData(PUBLIC_DEALS_KEY, fresh))
+              .catch((e) => devLogOnce("public deals refresh", e))
+          : null,
       ]);
     } finally {
       setPullRefreshing(false);
     }
-  }, [refetchEngagement, queryClient, signedIn, refetchConfession, token, userId, isGuest, refetchPublicDeals]);
+  }, [refetchEngagement, queryClient, signedIn, refetchConfession, token, userId, isGuest, guestDealsWanted]);
 
   // Auto refresh whenever Home is opened again (max once every 15s), so a
   // new drop / finished mission shows without pulling down
@@ -246,6 +256,20 @@ export default function Home({ navigation }) {
   // loaded and none of its own sheets (AI chat, streak) are open
   const { setHomeLoaded } = useTour();
   const [homeFocused, setHomeFocused] = useState(false);
+
+  // Is the near-me / top discounts slot on screen (or within 200 px of it)?
+  const scrollYRef = useRef(0);
+  const viewportHRef = useRef(0);
+  const slotYRef = useRef(null);
+  const [slotInView, setSlotInView] = useState(false);
+  const updateSlotInView = useCallback(() => {
+    if (slotYRef.current == null || !viewportHRef.current) return;
+    const inView = scrollYRef.current + viewportHRef.current >= slotYRef.current - 200;
+    setSlotInView((prev) => (prev === inView ? prev : inView));
+  }, []);
+  useEffect(() => {
+    setGuestDealsWanted(!!isGuest && homeFocused && slotInView);
+  }, [isGuest, homeFocused, slotInView]);
   useFocusEffect(
     useCallback(() => {
       setHomeFocused(true);
@@ -322,6 +346,15 @@ export default function Home({ navigation }) {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          onLayout={(e) => {
+            viewportHRef.current = e.nativeEvent.layout.height;
+            updateSlotInView();
+          }}
+          onScroll={(e) => {
+            scrollYRef.current = e.nativeEvent.contentOffset.y;
+            updateSlotInView();
+          }}
+          scrollEventThrottle={100}
           refreshControl={
             <RefreshControl
               refreshing={pullRefreshing}
@@ -373,6 +406,12 @@ export default function Home({ navigation }) {
           </FadeInView>
 
           {/* near me / top discounts (guests: top discounts from public data) */}
+          <View
+            onLayout={(e) => {
+              slotYRef.current = e.nativeEvent.layout.y;
+              updateSlotInView();
+            }}
+          >
           <FadeInView delay={200}>
             <HomeNearMe
               signedIn={signedIn}
@@ -384,6 +423,7 @@ export default function Home({ navigation }) {
               onOpenDeal={openDeal}
             />
           </FadeInView>
+          </View>
         </ScrollView>
       </View>
 

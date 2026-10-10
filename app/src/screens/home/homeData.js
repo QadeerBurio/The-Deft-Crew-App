@@ -102,6 +102,52 @@ export async function fetchPublicDeals(signal) {
     .filter((b) => b.hasOffer);
 }
 
+// ── Guest deals cache ──
+// /offers/brandss is public, uncached and heavy on the server, so a guest's Home
+// reuses one result for 10 minutes across mounts and tab switches, never runs two
+// requests at once, and a pull to refresh forces a new one at most every 30 s.
+// A failed request is not tried again for a minute (no retry loop).
+const PUBLIC_DEALS_TTL_MS = 10 * 60 * 1000;
+const PUBLIC_DEALS_FORCE_GAP_MS = 30 * 1000;
+const PUBLIC_DEALS_FAIL_PAUSE_MS = 60 * 1000;
+let publicDealsCache = null; // { data, at }
+let publicDealsInFlight = null;
+let publicDealsForcedAt = 0;
+let publicDealsFailedAt = 0;
+
+export function clearPublicDealsCache() {
+  publicDealsCache = null;
+  publicDealsInFlight = null;
+  publicDealsForcedAt = 0;
+  publicDealsFailedAt = 0;
+}
+
+export async function getPublicDeals({ force = false } = {}) {
+  const now = Date.now();
+  const fresh = !!publicDealsCache && now - publicDealsCache.at < PUBLIC_DEALS_TTL_MS;
+  const canForce = force && now - publicDealsForcedAt >= PUBLIC_DEALS_FORCE_GAP_MS;
+  if (fresh && !canForce) return publicDealsCache.data;
+  if (publicDealsInFlight) return publicDealsInFlight;
+  if (!canForce && now - publicDealsFailedAt < PUBLIC_DEALS_FAIL_PAUSE_MS) {
+    return publicDealsCache ? publicDealsCache.data : [];
+  }
+  if (canForce) publicDealsForcedAt = now;
+  const run = fetchPublicDeals()
+    .then((data) => {
+      if (publicDealsInFlight === run) publicDealsCache = { data, at: Date.now() };
+      return data;
+    })
+    .catch((e) => {
+      if (publicDealsInFlight === run) publicDealsFailedAt = Date.now();
+      throw e;
+    })
+    .finally(() => {
+      if (publicDealsInFlight === run) publicDealsInFlight = null;
+    });
+  publicDealsInFlight = run;
+  return run;
+}
+
 // ── Top discounts ──
 // A real percentage: a number in (0, 100], or a string that is only a number
 // ("60") or contains one followed by "%" ("60%", "60% off", "up to 60%").

@@ -28,6 +28,7 @@ import {
   afterEnteredAsGuest,
 } from "./accountRoutes";
 import { clearStoredClaimedData } from "./clearClaimedData";
+import { clearPublicDealsCache } from "../screens/home/homeData";
 
 const GuestGateContext = createContext({ isGuest: false, requireAccount: () => true });
 
@@ -72,6 +73,7 @@ export function GuestGateProvider({ children }) {
 
     if (now === "student") {
       setSheetOpen(false);
+      clearPublicDealsCache(); // guest-only list
       guestFlagCleared().then(() => queryClient.resetQueries());
       // let the Drawer render with the student before moving
       setTimeout(afterSignedIn, 0);
@@ -79,6 +81,7 @@ export function GuestGateProvider({ children }) {
       // logged out: the splash switches to guest Home next
       if (prev === "student") loggedOutRef.current = true;
       setSheetOpen(false);
+      clearPublicDealsCache();
       queryClient.resetQueries();
       clearStoredClaimedData();
     } else if (now === "guest") {
