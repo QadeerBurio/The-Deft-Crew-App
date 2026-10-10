@@ -245,6 +245,14 @@ const DRAWER_ITEMS = [
     resetNavigation: false,
   },
   {
+    label: 'Contact Us',
+    icon: (size, color) => (
+      <Ionicons name="information-circle-outline" color={color} size={size} />
+    ),
+    route: 'ContactUs',
+    resetNavigation: false,
+  },
+  {
     label: 'How it Works',
     icon: (size, color) => <Ionicons name="cog-outline" color={color} size={size} />,
     route: 'How It Works',

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>resume dashboard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#111111}a:hover{color:#000000}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; background: #FAF8F3; font-family: 'DM Sans', sans-serif; color: #111111; overflow: hidden">
+
+<header style="display: flex; align-items: center; gap: 10px; padding: 18px 16px 0">
+<a href="Campus.dc.html" aria-label="back" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #ECE7DB; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<span style="flex: 1"><span style="display: block; font-size: 12.5px; color: #6B675E">hello, [NAME]</span><span style="display: block; font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 800; letter-spacing: -0.6px">resume<span style="color: {{accent}}">.</span></span></span>
+<button aria-label="resume settings" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #ECE7DB; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"></path></svg></button>
+</header>
+
+<section style="padding: 16px 16px 0">
+<div style="border-radius: 28px; background: #111111; color: #FFFFFF; padding: 18px">
+<div style="display: flex; align-items: center; gap: 16px">
+<span style="width: 92px; height: 92px; border-radius: 46px; background: conic-gradient({{accent}} 0 72%, #2A2925 72% 100%); display: flex; align-items: center; justify-content: center; flex-shrink: 0"><span style="width: 74px; height: 74px; border-radius: 37px; background: #111111; display: flex; flex-direction: column; align-items: center; justify-content: center"><span style="font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 800; line-height: 1">72</span><span style="font-size: 10px; color: #A39E92">/100</span></span></span>
+<span><span style="display: block; font-size: 12px; color: #A39E92">ats compatibility score</span><span style="display: block; font-weight: 700; font-size: 17px; margin-top: 4px">good. not sorted yet.</span><span style="display: block; font-size: 13px; color: #CFCAC0; margin-top: 4px">add 3 keywords to pass most filters.</span></span>
+</div>
+<div style="display: flex; gap: 8px; margin-top: 16px">
+<a href="#" style="flex: 1; height: 46px; border-radius: 23px; background: {{accent}}; color: #111111; text-decoration: none; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center">optimize with ai</a>
+<a href="#" style="flex: 1; height: 46px; border-radius: 23px; border: 1px solid #2A2925; color: #FFFFFF; text-decoration: none; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center">view &amp; download</a>
+</div>
+</div>
+</section>
+
+<section style="padding: 16px 16px 0">
+<h2 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 800">keywords found<span style="color: {{accent}}">.</span></h2>
+<div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px">
+<sc-for list="{{keys}}" as="k" hint-placeholder-count="7">
+<span style="height: 30px; padding: 0 12px; border-radius: 15px; background: {{k.bg}}; border: 1px solid {{k.border}}; color: {{k.fg}}; font-size: 12.5px; font-weight: 600; display: flex; align-items: center">{{k.label}}</span>
+</sc-for>
+</div>
+</section>
+
+<section style="padding: 16px 16px 0">
+<div style="display: flex; justify-content: space-between; align-items: baseline">
+<h2 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 800">recommended jobs<span style="color: {{accent}}">.</span></h2>
+<a href="Career.dc.html" style="font-size: 13px; font-weight: 600; color: #6B675E; text-decoration: none">see all</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px">
+<sc-for list="{{recs}}" as="r" hint-placeholder-count="2">
+<a href="Career.dc.html" style="padding: 12px 14px; border-radius: 20px; background: #FFFFFF; border: 1px solid #ECE7DB; text-decoration: none; color: #111111; display: block">
+<span style="display: flex; justify-content: space-between; align-items: center"><span style="font-weight: 700; font-size: 15px">{{r.title}}</span><span style="height: 26px; padding: 0 10px; border-radius: 13px; background: #111111; color: {{accent}}; font-size: 12px; font-weight: 800; display: flex; align-items: center">{{r.match}}</span></span>
+<span style="display: block; font-size: 12.5px; color: #6B675E; margin-top: 4px">why: {{r.why}}</span>
+</a>
+</sc-for>
+</div>
+</section>
+
+<div style="position: absolute; left: 0; bottom: 0"><dc-import name="Nav" active="campus" accent="{{accent}}" hint-size="390px,84px"></dc-import></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#F9C349"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#F9C349';
+    const have = ['social media', 'canva', 'copywriting', 'excel'];
+    const missing = ['seo', 'analytics', 'crm'];
+    const keys = [
+      ...have.map((label) => ({ label, bg: '#FFFFFF', border: '#ECE7DB', fg: '#111111' })),
+      ...missing.map((label) => ({ label: '+ ' + label, bg: '#FFF1CC', border: accent, fg: '#111111' }))
+    ];
+    const recs = [
+      { title: 'marketing intern', match: '86% match', why: 'social media, canva, copywriting' },
+      { title: 'content associate', match: '78% match', why: 'copywriting, excel' }
+    ];
+    return { accent, keys, recs };
+  }
+}
+</script>
+</body>
+</html>

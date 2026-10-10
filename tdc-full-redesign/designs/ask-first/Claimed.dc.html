@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>offer claimed</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#111111}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; background: {{accent}}; font-family: 'DM Sans', sans-serif; color: #111111; overflow: hidden">
+<div style="position: absolute; left: 50%; top: 120px; width: 520px; height: 520px; margin-left: -260px; border-radius: 50%; border: 1.5px solid rgba(17,17,17,0.10)"></div>
+<div style="position: absolute; left: 50%; top: 180px; width: 400px; height: 400px; margin-left: -200px; border-radius: 50%; border: 1.5px solid rgba(17,17,17,0.12)"></div>
+
+<div style="position: relative; display: flex; justify-content: space-between; align-items: center; padding: 20px 20px 0">
+<span style="height: 30px; padding: 0 12px; border-radius: 15px; background: rgba(17,17,17,0.08); font-size: 12.5px; font-weight: 700; display: flex; align-items: center">verified · [TIME]</span>
+<a href="Main.dc.html" aria-label="close" style="width: 44px; height: 44px; border-radius: 22px; background: rgba(17,17,17,0.08); display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
+</div>
+
+<div style="position: relative; display: flex; flex-direction: column; align-items: center; padding-top: 64px">
+<dc-import name="Dot" mood="sorted" size="176" hint-size="176px,176px"></dc-import>
+<h1 style="margin: 22px 0 0; font-family: 'Outfit', sans-serif; font-size: 72px; font-weight: 800; letter-spacing: -3px; line-height: 1">sorted.</h1>
+<p style="margin: 10px 0 0; font-size: 16px; font-weight: 600">[X]% off at [BRAND]. enjoy it.</p>
+</div>
+
+<section style="position: relative; margin: 30px 20px 0; border-radius: 26px; background: #111111; color: #F5F2EA; padding: 18px 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+<div><div style="font-size: 12px; color: #A39E92">you saved</div><div style="font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 800; margin-top: 2px">rs [X]</div></div>
+<div><div style="font-size: 12px; color: #A39E92">crew points</div><div style="font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 800; margin-top: 2px; color: {{accent}}">+[X]</div></div>
+<div style="grid-column: 1 / -1; height: 1px; background: #2A2925"></div>
+<div style="grid-column: 1 / -1; display: flex; justify-content: space-between; font-size: 13px; color: #CFCAC0"><span>rs [X] saved this month</span><span>[X] to pro</span></div>
+</section>
+
+<div style="position: absolute; left: 20px; right: 20px; bottom: 30px; display: flex; gap: 10px">
+<a href="MyDiscounts.dc.html" style="flex: 1; height: 56px; border-radius: 28px; border: 1.5px solid #111111; color: #111111; text-decoration: none; font-weight: 800; font-size: 15px; display: flex; align-items: center; justify-content: center">my discounts</a>
+<button style="flex: 1.3; height: 56px; border-radius: 28px; border: 0; background: #111111; color: #FFFFFF; font-weight: 800; font-size: 15px">share the win</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#F9C349"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return { accent: this.props.accent ?? '#F9C349' }; }
+}
+</script>
+</body>
+</html>

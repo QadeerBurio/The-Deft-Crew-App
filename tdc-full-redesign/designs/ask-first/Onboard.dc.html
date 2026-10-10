@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>first run</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; background: #0D0D0D; font-family: 'DM Sans', sans-serif; color: #F5F2EA; overflow: hidden">
+
+<div style="display: flex; gap: 6px; padding: 22px 24px 0">
+<span style="flex: 1; height: 4px; border-radius: 2px; background: {{accent}}"></span>
+<span style="flex: 1; height: 4px; border-radius: 2px; background: #2A2925"></span>
+</div>
+
+<section style="padding: 34px 24px 0">
+<h1 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 40px; font-weight: 800; letter-spacing: -1.4px; line-height: 1.02">what's the noise right now<span style="color: {{accent}}">?</span></h1>
+<p style="margin: 12px 0 0; font-size: 15px; color: #A39E92">pick up to 3. we'll sort those first.</p>
+</section>
+
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 26px 24px 0">
+<sc-for list="{{opts}}" as="o" hint-placeholder-count="8">
+<button onClick="{{o.pick}}" aria-pressed="{{o.pressed}}" style="height: 74px; border-radius: 20px; border: 1.5px solid {{o.border}}; background: {{o.bg}}; color: {{o.fg}}; display: flex; align-items: center; gap: 10px; padding: 0 12px; text-align: left">
+<dc-import name="Dot" mood="{{o.mood}}" size="36" accent="{{o.dot}}" hint-size="36px,36px"></dc-import>
+<span style="font-size: 14px; font-weight: 700; line-height: 1.2">{{o.label}}</span>
+</button>
+</sc-for>
+</div>
+
+<div style="position: absolute; left: 24px; right: 24px; bottom: 34px">
+<a href="HomeV2.dc.html" style="width: 100%; height: 58px; border-radius: 29px; background: {{ctaBg}}; color: {{ctaFg}}; font-weight: 800; font-size: 16px; display: flex; align-items: center; justify-content: center; text-decoration: none">{{cta}}</a>
+<div style="text-align: center; font-size: 13px; color: #736E65; margin-top: 12px">you can change this anytime.</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#F9C349"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { picked: ['broke', 'cv'] }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#F9C349';
+    const picked = this.state.picked;
+    const all = [
+      { id: 'broke', label: 'always broke.', mood: 'broke' },
+      { id: 'job', label: 'no internship yet.', mood: 'shook' },
+      { id: 'cv', label: 'my cv is a mess.', mood: 'panic' },
+      { id: 'bored', label: 'boring weekends.', mood: 'sleepy' },
+      { id: 'abroad', label: 'want to study abroad.', mood: 'sus' },
+      { id: 'skill', label: 'want a new skill.', mood: 'excited' },
+      { id: 'trip', label: 'trip with the crew.', mood: 'excited' },
+      { id: 'vent', label: 'need to vent.', mood: 'cheeky' }
+    ];
+    const opts = all.map((o) => {
+      const on = picked.includes(o.id);
+      return {
+        ...o,
+        pressed: on ? 'true' : 'false',
+        bg: on ? '#1A1916' : '#0D0D0D',
+        border: on ? accent : '#2A2925',
+        fg: on ? '#FFFFFF' : '#CFCAC0',
+        dot: on ? accent : '#5A5750',
+        pick: () => {
+          const has = picked.includes(o.id);
+          if (has) this.setState({ picked: picked.filter((p) => p !== o.id) });
+          else if (picked.length < 3) this.setState({ picked: [...picked, o.id] });
+        }
+      };
+    });
+    const n = picked.length;
+    return {
+      accent, opts,
+      cta: n ? 'sort ' + (n === 1 ? 'it' : 'these ' + n) : 'pick at least one',
+      ctaBg: n ? accent : '#2A2925',
+      ctaFg: n ? '#111111' : '#736E65'
+    };
+  }
+}
+</script>
+</body>
+</html>

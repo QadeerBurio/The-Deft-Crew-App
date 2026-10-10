@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>tdc brand kit</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 860px; height: 844px; display: grid; grid-template-columns: 340px minmax(0, 1fr); background: #FAF8F3; font-family: 'DM Sans', sans-serif; color: #111111; overflow: hidden">
+
+<div style="background: #111111; color: #FFFFFF; padding: 40px 32px; display: flex; flex-direction: column; justify-content: space-between">
+<div>
+<img src="/_blob/d4708844423d858ac2d42ee29f594107" alt="tdc." style="width: 260px; height: 130px; object-fit: cover; display: block; margin-left: -12px">
+<p style="margin: 28px 0 0; font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 700; line-height: 1.2">student life is noise.<br>tdc. ends it.</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 14px; font-size: 15px; color: #CFCAC0">
+<div>problem. tdc. full stop.</div>
+<div>lowercase. few words. calm.</div>
+<div>confident, a bit cheeky, never shouting.</div>
+<div style="display: flex; align-items: center; gap: 10px; margin-top: 10px; font-family: 'Outfit', sans-serif; font-size: 30px; font-weight: 800; color: #FFFFFF">sorted<span style="color: {{accent}}">.</span></div>
+</div>
+</div>
+
+<div style="padding: 36px 36px; display: flex; flex-direction: column; gap: 28px">
+<section>
+<h2 style="margin: 0 0 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.2px; color: #6B675E">colour</h2>
+<div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{colors}}" as="c" hint-placeholder-count="5">
+<div>
+<div style="height: 64px; border-radius: 14px; background: {{c.hex}}; border: 1px solid #ECE7DB"></div>
+<div style="font-size: 13px; font-weight: 700; margin-top: 6px">{{c.name}}</div>
+<div style="font-size: 12px; color: #6B675E">{{c.hex}}</div>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section>
+<h2 style="margin: 0 0 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.2px; color: #6B675E">the dot. 14 moods.</h2>
+<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px 6px">
+<sc-for list="{{moods}}" as="m" hint-placeholder-count="14">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 4px">
+<dc-import name="Dot" mood="{{m.mood}}" size="40" accent="{{accent}}" hint-size="40px,40px"></dc-import>
+<span style="font-size: 11.5px; font-weight: 600">{{m.mood}}</span>
+</div>
+</sc-for>
+</div>
+<p style="margin: 12px 0 0; font-size: 13px; color: #6B675E; line-height: 1.5">faces are for big moments only: the sorted screen, badges and empty states. everywhere else, the plain yellow dot: a full stop, the active tab, the points coin.</p>
+</section>
+
+<section>
+<h2 style="margin: 0 0 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.2px; color: #6B675E">type</h2>
+<div style="font-family: 'Outfit', sans-serif; font-size: 34px; font-weight: 800; letter-spacing: -1px">hub<span style="color: {{accent}}">.</span> headings, outfit 800</div>
+<div style="font-size: 15px; margin-top: 6px">body and labels in dm sans, 400 to 700. lowercase everywhere.</div>
+</section>
+
+<section>
+<h2 style="margin: 0 0 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.2px; color: #6B675E">components</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+<span style="height: 48px; padding: 0 22px; border-radius: 24px; background: #111111; color: #FFFFFF; font-weight: 700; font-size: 15px; display: flex; align-items: center">claim discount</span>
+<span style="height: 48px; padding: 0 22px; border-radius: 24px; background: {{accent}}; color: #111111; font-weight: 700; font-size: 15px; display: flex; align-items: center">apply now</span>
+<span style="height: 36px; padding: 0 14px; border-radius: 18px; background: #FFFFFF; border: 1px solid #ECE7DB; font-weight: 600; font-size: 14px; display: flex; align-items: center">cafes</span>
+<span style="height: 26px; padding: 0 10px; border-radius: 13px; background: {{accent}}; font-weight: 800; font-size: 12px; display: flex; align-items: center">10% off</span>
+<span style="height: 26px; padding: 0 10px; border-radius: 13px; background: #111111; color: {{accent}}; font-weight: 700; font-size: 12px; display: flex; align-items: center">86% match</span>
+</div>
+</section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#F9C349"},"$preview":{"width":860,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#F9C349';
+    const colors = [
+      { name: 'dot yellow', hex: '#F9C349' },
+      { name: 'ink', hex: '#111111' },
+      { name: 'paper', hex: '#FAF8F3' },
+      { name: 'card', hex: '#FFFFFF' },
+      { name: 'muted', hex: '#6B675E' }
+    ];
+    const moods = ['sorted', 'broke', 'panic', 'shook', 'shock', 'sleepy', 'sus', 'cheeky', 'excited', 'hype', 'smug', 'money', 'urgent', 'ghost'].map((mood) => ({ mood }));
+    return { accent, colors, moods };
+  }
+}
+</script>
+</body>
+</html>

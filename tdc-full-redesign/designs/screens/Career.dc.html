@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>jobs</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#111111}a:hover{color:#000000}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; background: #FAF8F3; font-family: 'DM Sans', sans-serif; color: #111111; overflow: hidden">
+
+<header style="display: flex; align-items: center; gap: 10px; padding: 18px 16px 0">
+<a href="Campus.dc.html" aria-label="back" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #ECE7DB; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<h1 style="margin: 0; flex: 1; font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -0.8px">jobs<span style="color: {{accent}}">.</span></h1>
+<button aria-label="filters" style="width: 44px; height: 44px; border-radius: 22px; border: 0; background: #111111; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"></path></svg></button>
+</header>
+
+<div style="padding: 14px 16px 0">
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 24px; background: #F0ECE2">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+<button onClick="{{t.pick}}" style="height: 40px; border-radius: 20px; border: 0; background: {{t.bg}}; color: {{t.fg}}; font-weight: {{t.weight}}; font-size: 13.5px">{{t.label}}</button>
+</sc-for>
+</div>
+</div>
+
+<sc-if value="{{listing}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 0">
+<sc-for list="{{jobs}}" as="j" hint-placeholder-count="4">
+<a href="#" style="display: block; padding: 14px; border-radius: 22px; background: #FFFFFF; border: 1px solid #ECE7DB; text-decoration: none; color: #111111">
+<span style="display: flex; align-items: center; gap: 12px">
+<span style="width: 46px; height: 46px; border-radius: 14px; background: #F0ECE2; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 700; color: #6B675E; flex-shrink: 0">[LOGO]</span>
+<span style="flex: 1; min-width: 0"><span style="display: block; font-weight: 700; font-size: 15px">{{j.title}}</span><span style="display: block; font-size: 12.5px; color: #6B675E; margin-top: 2px">{{j.meta}}</span></span>
+<span style="height: 28px; padding: 0 10px; border-radius: 14px; background: #111111; color: {{accent}}; font-size: 12px; font-weight: 800; display: flex; align-items: center">{{j.match}}</span>
+</span>
+<span style="display: flex; gap: 6px; margin-top: 12px">
+<span style="height: 26px; padding: 0 10px; border-radius: 13px; background: #F5F2EA; font-size: 12px; font-weight: 600; display: flex; align-items: center">{{j.type}}</span>
+<span style="height: 26px; padding: 0 10px; border-radius: 13px; background: #F5F2EA; font-size: 12px; font-weight: 600; display: flex; align-items: center">{{j.posted}}</span>
+<span style="margin-left: auto; height: 26px; padding: 0 10px; border-radius: 13px; background: {{accent}}; font-size: 12px; font-weight: 800; display: flex; align-items: center">easy apply</span>
+</span>
+</a>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{status}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 0">
+<sc-for list="{{apps}}" as="a" hint-placeholder-count="3">
+<div style="padding: 14px; border-radius: 22px; background: #FFFFFF; border: 1px solid #ECE7DB">
+<div style="display: flex; justify-content: space-between; align-items: center"><span style="font-weight: 700; font-size: 15px">{{a.title}}</span><span style="height: 26px; padding: 0 10px; border-radius: 13px; background: {{a.bg}}; color: {{a.fg}}; font-size: 12px; font-weight: 800; display: flex; align-items: center">{{a.state}}</span></div>
+<div style="font-size: 12.5px; color: #6B675E; margin-top: 4px">{{a.meta}}</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin-top: 12px">
+<sc-for list="{{a.steps}}" as="s" hint-placeholder-count="4"><span style="height: 5px; border-radius: 3px; background: {{s}}"></span></sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<div style="position: absolute; left: 0; bottom: 0"><dc-import name="Nav" active="campus" accent="{{accent}}" hint-size="390px,84px"></dc-import></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#F9C349"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { tab: 'for you' }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#F9C349';
+    const tabs = ['for you', 'all listings', 'applied'].map((label) => {
+      const on = this.state.tab === label;
+      return { label, bg: on ? '#111111' : 'transparent', fg: on ? '#FFFFFF' : '#111111', weight: on ? 700 : 600, pick: () => this.setState({ tab: label }) };
+    });
+    const jobs = [
+      { title: 'marketing intern', meta: '[COMPANY] · karachi', match: '86% match', type: 'paid internship', posted: '2d ago' },
+      { title: 'junior developer', meta: '[COMPANY] · hybrid', match: '74% match', type: 'full-time', posted: '4d ago' },
+      { title: 'content writer', meta: '[COMPANY] · remote', match: '68% match', type: 'part-time', posted: '1w ago' },
+      { title: 'ui design intern', meta: '[COMPANY] · lahore', match: '61% match', type: '3 months', posted: '1w ago' }
+    ];
+    const step = (n) => [0, 1, 2, 3].map((i) => (i < n ? '#111111' : '#ECE7DB'));
+    const apps = [
+      { title: 'marketing intern', meta: '[COMPANY] · applied [DATE]', state: 'shortlisted', bg: '#FFF1CC', fg: '#111111', steps: step(3) },
+      { title: 'junior developer', meta: '[COMPANY] · applied [DATE]', state: 'in review', bg: '#F0ECE2', fg: '#111111', steps: step(2) },
+      { title: 'sales associate', meta: '[COMPANY] · applied [DATE]', state: 'not this time', bg: '#F5F2EA', fg: '#6B675E', steps: step(1) }
+    ];
+    const applied = this.state.tab === 'applied';
+    return { accent, tabs, jobs, apps, listing: !applied, status: applied };
+  }
+}
+</script>
+</body>
+</html>

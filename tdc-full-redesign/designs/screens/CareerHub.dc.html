@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>career hub</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#111111}a:hover{color:#000000}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; background: #FAF8F3; font-family: 'DM Sans', sans-serif; color: #111111; overflow: hidden">
+
+<header style="display: flex; align-items: center; gap: 10px; padding: 18px 16px 0">
+<a href="Campus.dc.html" aria-label="back" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #ECE7DB; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<h1 style="margin: 0; flex: 1; font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -0.8px">career hub<span style="color: {{accent}}">.</span></h1>
+</header>
+
+<section style="padding: 16px 16px 0">
+<div style="position: relative; height: 210px; border-radius: 28px; background: #111111; color: #FFFFFF; padding: 20px; box-sizing: border-box; overflow: hidden">
+<svg width="92" height="92" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"  style="position: absolute; right: 18px; top: 20px" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3Z"></path></svg>
+<span style="display: inline-flex; height: 26px; padding: 0 10px; border-radius: 13px; background: {{accent}}; color: #111111; font-size: 11px; font-weight: 800; align-items: center">featured program</span>
+<div style="font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 800; line-height: 1.05; margin-top: 12px; max-width: 220px">study in europe, fully funded<span style="color: {{accent}}">.</span></div>
+<div style="font-size: 13.5px; color: #CFCAC0; margin-top: 6px">erasmus+ scholarships</div>
+<a href="#" style="position: absolute; left: 20px; bottom: 18px; height: 40px; padding: 0 16px; border-radius: 20px; background: #FFFFFF; color: #111111; text-decoration: none; font-weight: 700; font-size: 14px; display: flex; align-items: center">explore now</a>
+</div>
+</section>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 10px 16px 0">
+<sc-for list="{{stats}}" as="s" hint-placeholder-count="3">
+<div style="border-radius: 18px; background: #FFFFFF; border: 1px solid #ECE7DB; padding: 12px 6px; text-align: center">
+<div style="font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 800">{{s.n}}</div>
+<div style="font-size: 11.5px; color: #6B675E">{{s.label}}</div>
+</div>
+</sc-for>
+</div>
+
+<section style="padding: 16px 16px 0">
+<div style="display: flex; justify-content: space-between; align-items: baseline">
+<h2 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 800">recent opportunities<span style="color: {{accent}}">.</span></h2>
+<a href="Career.dc.html" style="font-size: 13px; font-weight: 600; color: #6B675E; text-decoration: none">see all</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px">
+<sc-for list="{{opps}}" as="o" hint-placeholder-count="3">
+<a href="#" style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 20px; background: #FFFFFF; border: 1px solid #ECE7DB; text-decoration: none; color: #111111">
+<span style="width: 44px; height: 44px; border-radius: 14px; background: #F0ECE2; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{o.icon}}"></path></svg></span>
+<span style="flex: 1; min-width: 0"><span style="display: block; font-weight: 700; font-size: 14.5px">{{o.title}}</span><span style="display: block; font-size: 12.5px; color: #6B675E; margin-top: 2px">{{o.meta}}</span></span>
+<span style="height: 24px; padding: 0 8px; border-radius: 12px; background: {{o.bg}}; font-size: 11px; font-weight: 800; display: flex; align-items: center">{{o.tag}}</span>
+</a>
+</sc-for>
+</div>
+</section>
+
+<div style="position: absolute; left: 0; bottom: 0"><dc-import name="Nav" active="campus" accent="{{accent}}" hint-size="390px,84px"></dc-import></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#F9C349"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#F9C349';
+    const stats = [['50+', 'active jobs'], ['20+', 'countries'], ['100+', 'hired']].map(([n, label]) => ({ n, label }));
+    const globe = 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3Z';
+    const bag = 'M4 7h16v13H4ZM9 7V5h6v2M4 13h16';
+    const opps = [
+      { title: '[SCHOLARSHIP NAME]', meta: 'masters · germany · fully funded', tag: 'hot', bg: accent, icon: globe },
+      { title: 'graduate trainee program', meta: '[COMPANY] · karachi', tag: 'new', bg: '#F0ECE2', icon: bag },
+      { title: '[EXCHANGE PROGRAM]', meta: 'undergrad · 1 semester · turkey', tag: 'global', bg: '#F0ECE2', icon: globe }
+    ];
+    return { accent, stats, opps };
+  }
+}
+</script>
+</body>
+</html>

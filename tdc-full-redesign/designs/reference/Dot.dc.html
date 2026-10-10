@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>the dot</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: {{s}}px; height: {{s}}px; display: block; line-height: 0">
+<img src="{{src}}" alt="{{mood}}" style="width: {{s}}px; height: {{s}}px; object-fit: contain; display: block; filter: {{filter}}; opacity: {{opacity}}">
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mood":{"editor":"enum","options":["sorted","broke","cheeky","excited","ghost","hype","money","panic","shock","shook","sleepy","smug","sus","urgent"],"default":"sorted"},"size":{"editor":"int","default":96,"min":16,"max":240},"muted":{"editor":"boolean","default":false},"accent":{"editor":null},"$preview":{"width":96,"height":96}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const M = {
+      broke: '/_blob/466feaf6f733a29be7c69732642969f4',
+      cheeky: '/_blob/97e868a5a639b5adb87fd2fa28c09796',
+      excited: '/_blob/1b3d682617cb6ef80db8f779f7bdb3a9',
+      ghost: '/_blob/ebffdfdc569de308709693184ab41c2f',
+      hype: '/_blob/235bc90532698a51a5dddbdee20ac5a6',
+      money: '/_blob/a614c591aed3aab983679daaa3859b8c',
+      panic: '/_blob/fe6471c305fcfb094cf26656d4f8d46a',
+      shock: '/_blob/631549b68eecc1e9fd07bef75b500659',
+      shook: '/_blob/2530a8bd7f51d8b41371c512e9abbd3c',
+      sleepy: '/_blob/fbdd6612441d3d5fcc292d27afa54b9d',
+      smug: '/_blob/cdcfbac782ee28df3598cfdab278fa74',
+      sorted: '/_blob/363b7753eff3faf39dd0fb269ffc3172',
+      sus: '/_blob/57c90d9b63cc23ee7c366851a5987079',
+      urgent: '/_blob/675ed92c16bcfffbf3118b471dd03d3c'
+    };
+    const mood = M[this.props.mood] ? this.props.mood : 'sorted';
+    const s = parseInt(this.props.size ?? 96, 10) || 96;
+    const muted = this.props.muted === true || this.props.muted === 'true';
+    return { src: M[mood], mood, s, filter: muted ? 'grayscale(1)' : 'none', opacity: muted ? 0.45 : 1 };
+  }
+}
+</script>
+</body>
+</html>

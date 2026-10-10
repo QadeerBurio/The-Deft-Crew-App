@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>deal and redeem</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#111111}a:hover{color:#000000}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; background: #FAF8F3; font-family: 'DM Sans', sans-serif; color: #111111; overflow: hidden">
+
+<div style="height: 250px; background: #F0ECE2; position: relative; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: #6B675E">[BRAND PHOTO]
+<a href="Hub.dc.html" aria-label="back" style="position: absolute; left: 20px; top: 18px; width: 44px; height: 44px; border-radius: 22px; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<button aria-label="save deal" style="position: absolute; right: 20px; top: 18px; width: 44px; height: 44px; border-radius: 22px; border: 0; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4Z"></path></svg></button>
+</div>
+
+<section style="margin: -36px 16px 0; position: relative; border-radius: 26px; background: #FFFFFF; border: 1px solid #ECE7DB; padding: 18px">
+<div style="display: flex; align-items: center; gap: 12px">
+<span style="width: 52px; height: 52px; border-radius: 16px; background: #F0ECE2; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #6B675E; flex-shrink: 0">[LOGO]</span>
+<div><div style="font-weight: 700; font-size: 17px">[BRAND]</div><div style="font-size: 13px; color: #6B675E; margin-top: 2px">cafe · dha phase 6 · 1.2 km</div></div>
+</div>
+<div style="font-family: 'Outfit', sans-serif; font-size: 42px; font-weight: 800; letter-spacing: -1.2px; margin-top: 16px; line-height: 1">[X]% off<span style="color: {{accent}}">.</span></div>
+<div style="font-size: 14px; color: #6B675E; margin-top: 6px">flat, on every visit. students only.</div>
+</section>
+
+<section style="padding: 22px 20px 0">
+<h2 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 800">how it works<span style="color: {{accent}}">.</span></h2>
+<div style="display: flex; flex-direction: column; gap: 12px; margin-top: 14px">
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 12px">
+<span style="width: 32px; height: 32px; border-radius: 16px; background: {{s.bg}}; color: {{s.fg}}; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; flex-shrink: 0">{{s.n}}</span>
+<span style="font-size: 15px">{{s.text}}</span>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section style="padding: 20px 20px 0">
+<div style="display: flex; gap: 8px">
+<span style="height: 32px; padding: 0 12px; border-radius: 16px; background: #FFFFFF; border: 1px solid #ECE7DB; font-size: 13px; font-weight: 600; display: flex; align-items: center">dine-in</span>
+<span style="height: 32px; padding: 0 12px; border-radius: 16px; background: #FFFFFF; border: 1px solid #ECE7DB; font-size: 13px; font-weight: 600; display: flex; align-items: center">[HOURS]</span>
+<a href="#" style="height: 32px; padding: 0 12px; border-radius: 16px; background: #FFFFFF; border: 1px solid #ECE7DB; font-size: 13px; font-weight: 600; display: flex; align-items: center; text-decoration: none">directions</a>
+</div>
+<p style="margin: 12px 0 0; font-size: 12.5px; color: #6B675E">[TERMS]</p>
+</section>
+
+<div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 20px 28px; background: #FAF8F3; border-top: 1px solid #ECE7DB">
+<a href="Sorted.dc.html" style="width: 100%; height: 56px; border-radius: 28px; background: #111111; color: #FFFFFF; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6v6H4ZM14 4h6v6h-6ZM4 14h6v6H4ZM14 14h2v2h-2ZM18 18h2v2h-2ZM14 18h2M18 14h2"></path></svg>claim and scan</a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#F9C349"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#F9C349';
+    const steps = [
+      { text: 'claim it in the app.' },
+      { text: 'scan the qr at the counter.' },
+      { text: 'profile verified. sorted.' }
+    ].map((s, i) => ({ ...s, n: i + 1, bg: i === 2 ? accent : '#111111', fg: i === 2 ? '#111111' : '#FFFFFF' }));
+    return { accent, steps };
+  }
+}
+</script>
+</body>
+</html>

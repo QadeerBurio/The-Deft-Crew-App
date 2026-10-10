@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>home anatomy</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1760px; height: 1440px; background: #F2EFE7; font-family: 'DM Sans', sans-serif; color: #111111; position: relative; overflow: hidden">
+
+<div style="position: absolute; left: 80px; top: 56px; right: 80px; display: flex; justify-content: space-between; align-items: flex-end">
+<div>
+<div style="font-size: 13px; font-weight: 700; color: #6B675E">home screen · anatomy</div>
+<h1 style="margin: 6px 0 0; font-family: 'Outfit', sans-serif; font-size: 46px; font-weight: 800; letter-spacing: -1.6px">every pixel has a job<span style="color: {{accent}}">.</span></h1>
+</div>
+<div style="max-width: 560px; font-size: 15px; line-height: 1.5; color: #3A3833">home is where students decide to stay or leave. it has 3 seconds to earn a tap, and every section ends in a one-tap action, so there are no dead ends.</div>
+</div>
+
+<!-- phone with markers -->
+<div style="position: absolute; left: 80px; top: 190px; width: 390px; height: 844px; border-radius: 36px; overflow: hidden; box-shadow: 0 30px 60px rgba(17,17,17,0.18); border: 8px solid #111111; box-sizing: content-box">
+<dc-import name="Balanced" hint-size="390px,844px"></dc-import>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: 300px; background: linear-gradient(180deg, rgba(30,158,82,0) 0%, rgba(30,158,82,0.10) 100%); pointer-events: none"></div>
+<div style="position: absolute; right: 12px; bottom: 96px; height: 22px; padding: 0 8px; border-radius: 11px; background: rgba(30,107,58,0.9); color: #FFFFFF; font-size: 10.5px; font-weight: 700; display: flex; align-items: center; pointer-events: none">easy thumb zone</div>
+</div>
+<sc-for list="{{marks}}" as="m" hint-placeholder-count="7">
+<span style="position: absolute; left: {{m.x}}; top: {{m.y}}; width: 30px; height: 30px; border-radius: 15px; background: #111111; color: {{accent}}; border: 3px solid {{accent}}; display: flex; align-items: center; justify-content: center; font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 14px; box-shadow: 0 4px 10px rgba(17,17,17,0.3)">{{m.n}}</span>
+</sc-for>
+
+<!-- callouts -->
+<div style="position: absolute; left: 540px; top: 190px; width: 1140px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px">
+<sc-for list="{{notes}}" as="n" hint-placeholder-count="7">
+<div style="background: #FFFFFF; border-radius: 20px; padding: 16px 18px; border: 1px solid #ECE7DB">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="width: 26px; height: 26px; border-radius: 13px; background: #111111; color: {{accent}}; display: flex; align-items: center; justify-content: center; font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 13px; flex-shrink: 0">{{n.n}}</span>
+<span style="font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 800; flex: 1">{{n.title}}</span>
+<span style="height: 24px; padding: 0 9px; border-radius: 12px; background: #FFF1CC; font-size: 11.5px; font-weight: 700; display: flex; align-items: center">{{n.principle}}</span>
+</div>
+<div style="font-size: 13.5px; line-height: 1.5; margin-top: 8px; color: #3A3833">{{n.why}}</div>
+<div style="font-size: 12.5px; margin-top: 8px; color: #6B675E"><b style="color: #111111">measure:</b> {{n.metric}}</div>
+</div>
+</sc-for>
+</div>
+
+<!-- bottom systems row -->
+<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px">
+
+<div style="background: #FFFFFF; border-radius: 20px; padding: 16px 18px; border: 1px solid #ECE7DB">
+<div style="font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 800">colour: 60 · 30 · 10<span style="color: {{accent}}">.</span></div>
+<div style="display: flex; height: 28px; border-radius: 10px; overflow: hidden; margin-top: 12px; border: 1px solid #ECE7DB">
+<span style="flex: 60; background: #FAF8F3"></span><span style="flex: 30; background: #111111"></span><span style="flex: 10; background: {{accent}}"></span>
+</div>
+<div style="font-size: 12.5px; line-height: 1.5; margin-top: 10px; color: #3A3833"><b>60% warm paper</b> is calmer than pure white and easier on eyes at night. <b>30% white cards and ink</b> give structure. <b>10% yellow</b>, only where an action or reward lives. When one thing is yellow, the eye goes there first (isolation effect).</div>
+</div>
+
+<div style="background: #FFFFFF; border-radius: 20px; padding: 16px 18px; border: 1px solid #ECE7DB">
+<div style="font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 800">the first 10 seconds<span style="color: {{accent}}">.</span></div>
+<div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px">
+<sc-for list="{{timeline}}" as="t" hint-placeholder-count="4">
+<div style="display: flex; gap: 10px; font-size: 12.5px; line-height: 1.4"><span style="flex: 0 0 52px; font-weight: 800">{{t.t}}</span><span style="color: #3A3833">{{t.d}}</span></div>
+</sc-for>
+</div>
+</div>
+
+<div style="background: #111111; color: #FFFFFF; border-radius: 20px; padding: 16px 18px">
+<div style="font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 800">the daily loop<span style="color: {{accent}}">.</span></div>
+<div style="display: flex; flex-direction: column; gap: 7px; margin-top: 12px">
+<sc-for list="{{loop}}" as="l" hint-placeholder-count="4">
+<div style="display: flex; gap: 10px; font-size: 12.5px; line-height: 1.4"><span style="flex: 0 0 74px; font-weight: 800; color: {{accent}}">{{l.k}}</span><span style="color: #CFCAC0">{{l.v}}</span></div>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px">
+<div style="background: #FFFFFF; border-radius: 20px; padding: 16px 18px; border: 1px solid #ECE7DB">
+<div style="font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 800">type and space<span style="color: {{accent}}">.</span></div>
+<div style="font-size: 12.5px; line-height: 1.5; margin-top: 8px; color: #3A3833">Only 3 text sizes on home: 26 for the hook, 19 for section titles, 14 for content. Outfit for headings (round and friendly like the logo), DM Sans for reading. 16px side margins and 24px between sections, so each block reads as one thought. Lowercase voice, short lines.</div>
+</div>
+<div style="background: #FFFFFF; border-radius: 20px; padding: 16px 18px; border: 1px solid #ECE7DB">
+<div style="font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 800">guardrails: fun, never pushy<span style="color: {{accent}}">.</span></div>
+<div style="font-size: 12.5px; line-height: 1.5; margin-top: 8px; color: #3A3833">Pushes only for the 3 daily drops, never more. The streak is weekly, so missing a day costs nothing. No fake countdowns, no red badges. Every count shown is real, or it's hidden. Students should come back because it's good, not because they feel guilty.</div>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#F9C349"},"$preview":{"width":1760,"height":1440}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#F9C349';
+    const px = 88, py = 198;
+    const marks = [
+      [1, 316, 18], [2, 330, 80], [3, 362, 170], [4, 362, 400], [5, 362, 640], [6, 210, 760], [7, 362, 740]
+    ].map(([n, x, y]) => ({ n, x: (px + x) + 'px', y: (py + y) + 'px' }));
+    const notes = [
+      { n: 1, title: 'logo and points', principle: 'endowed progress', why: 'Brand first, then the one number students care about. Points shown on arrival feel already earned, so people want to grow them. Only two items top right, so nothing competes with the hook.', metric: 'taps on points, return rate of students with 500+ points' },
+      { n: 2, title: 'name, streak and the hook', principle: 'self-reference + curiosity', why: 'Eyes find their own name before anything else. "what are we sorting today?" is a question, and an open question pulls a reply. The copy changes with the time of day so it feels alive. The streak is weekly and quiet: a nudge, not a threat.', metric: 'time to first tap (target under 5 seconds)' },
+      { n: 3, title: "today's drop", principle: 'variable reward', why: 'The easiest first action on the screen: one tap, no typing. The campus result stays hidden until you vote (curiosity gap), and voting earns +5 points. Three drops a day (morning, lunch, night) give 3 natural reasons to reopen, and "next 9 pm" builds anticipation.', metric: 'vote rate, sessions per day (target 2+)' },
+      { n: 4, title: 'on campus', principle: 'social proof + belonging', why: 'People check what their peers are doing far more than they check offers. The confession of the day is the most emotional content you have, so it goes high. Reactions are the lowest-effort way to join in. "[N] new posts since you last checked" leaves a gap the brain wants to close.', metric: 'feed opens from home, reactions per user' },
+      { n: 5, title: 'your tdc', principle: 'recognition over recall', why: 'All 8 tools are one tap away, so nobody has to remember where things live. Two rows of 4 is an easy chunk to scan. The coloured circles and dot faces match the live app, so current students recognise them instantly. A face shows the problem mood until the tool is used, then turns sorted.', metric: 'features used per student per week' },
+      { n: 6, title: 'social in the centre', principle: 'thumb zone + zeigarnik', why: 'The bottom centre is the easiest spot for a thumb on a phone held in one hand. Black is the strongest contrast on the screen and the unread count is an unfinished loop. That makes social the most obvious next move, which matches how students actually use the app.', metric: 'share of sessions that open social' },
+      { n: 7, title: 'deals below the fold', principle: 'goal gradient + peak end', why: 'Deals reward the scroll instead of greeting a cold visitor with ads. Photos carry the colour, and the running savings total reminds students what they would miss. Claiming a deal ends on the yellow "sorted" screen, the moment they remember and share.', metric: 'redemptions per active student' }
+    ];
+    const timeline = [
+      { t: '0-1 s', d: 'logo, name, points: "this is mine."' },
+      { t: '1-3 s', d: 'the hook and the drop: one easy thing to do right now.' },
+      { t: '3-10 s', d: 'scroll once: what campus is saying.' },
+      { t: '10 s +', d: 'tools and deals for whoever stayed with intent.' }
+    ];
+    const loop = [
+      { k: 'trigger', v: 'drop notification at 9 am, 1 pm, 9 pm' },
+      { k: 'action', v: 'one tap vote, one tap react' },
+      { k: 'reward', v: 'see what campus picked, +5 points, a laugh' },
+      { k: 'investment', v: 'streak, points and posts that make tomorrow better' }
+    ];
+    return { accent, marks, notes, timeline, loop };
+  }
+}
+</script>
+</body>
+</html>

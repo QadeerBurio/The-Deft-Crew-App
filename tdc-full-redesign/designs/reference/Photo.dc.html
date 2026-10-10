@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>photo slot</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: {{w}}; height: {{h}}; position: relative; overflow: hidden; background: {{bg}}; border-radius: {{r}}">
+<div style="position: absolute; inset: 0; background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.28), rgba(255,255,255,0) 55%)"></div>
+<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" style="position: absolute; left: 50%; top: 50%; width: {{art}}; height: {{art}}; transform: translate(-50%, -46%)" aria-hidden="true">
+<ellipse cx="50" cy="88" rx="34" ry="5" fill="rgba(0,0,0,0.25)"></ellipse>
+<sc-if value="{{coffee}}" hint-placeholder-val="{{ false }}">
+<path d="M38 22c-4 5 4 8 0 13M50 18c-4 6 4 9 0 15M62 22c-4 5 4 8 0 13" stroke="rgba(255,255,255,0.75)" stroke-width="2.4" fill="none" stroke-linecap="round"></path>
+<ellipse cx="50" cy="80" rx="34" ry="7" fill="#F4EEE4"></ellipse>
+<path d="M24 44h52l-5 30a8 8 0 0 1-8 7H37a8 8 0 0 1-8-7Z" fill="#FFFFFF"></path>
+<path d="M76 50c10 0 12 14 0 15" stroke="#FFFFFF" stroke-width="5" fill="none"></path>
+<ellipse cx="50" cy="44" rx="26" ry="6" fill="#6B3A1F"></ellipse>
+<path d="M50 48c-3-4-9-1-6 3l6 4 6-4c3-4-3-7-6-3Z" fill="#F4E3C9"></path>
+</sc-if>
+<sc-if value="{{burger}}" hint-placeholder-val="{{ false }}">
+<path d="M22 50a28 24 0 0 1 56 0Z" fill="#F2A541"></path>
+<g fill="#FFF3D6"><ellipse cx="38" cy="38" rx="2" ry="1.2"></ellipse><ellipse cx="50" cy="33" rx="2" ry="1.2"></ellipse><ellipse cx="62" cy="38" rx="2" ry="1.2"></ellipse><ellipse cx="44" cy="44" rx="2" ry="1.2"></ellipse><ellipse cx="57" cy="44" rx="2" ry="1.2"></ellipse></g>
+<path d="M19 53c5-4 8 2 13-1s8 3 13 0 8 3 13 0 8 2 13-1 8 3 10 1v4H19Z" fill="#4CAF50"></path>
+<path d="M22 57h56l-8 9-6-5-8 7-8-7-8 7-6-5-8 6Z" fill="#FFC928"></path>
+<rect x="20" y="59" width="60" height="10" rx="5" fill="#6B3A1F"></rect>
+<path d="M22 71h56v3a8 8 0 0 1-8 8H30a8 8 0 0 1-8-8Z" fill="#E8963A"></path>
+</sc-if>
+<sc-if value="{{sneaker}}" hint-placeholder-val="{{ false }}">
+<path d="M14 66c0-10 6-14 12-16l14-14c4 6 12 8 18 8 10 0 18 6 26 10 4 2 6 6 6 10v4H14Z" fill="#FFFFFF"></path>
+<path d="M14 70h76v6a4 4 0 0 1-4 4H18a4 4 0 0 1-4-4Z" fill="#111111"></path>
+<path d="M44 52l26 8M40 58l30 8" stroke="#F9C349" stroke-width="4" stroke-linecap="round"></path>
+<path d="M30 46l6 6M35 41l6 6" stroke="#C9C2B4" stroke-width="2.4" stroke-linecap="round"></path>
+</sc-if>
+<sc-if value="{{gym}}" hint-placeholder-val="{{ false }}">
+<rect x="30" y="47" width="40" height="6" rx="3" fill="#C9CDD2"></rect>
+<rect x="16" y="34" width="10" height="32" rx="3" fill="#2B2F33"></rect>
+<rect x="26" y="38" width="7" height="24" rx="2" fill="#41464B"></rect>
+<rect x="74" y="34" width="10" height="32" rx="3" fill="#2B2F33"></rect>
+<rect x="67" y="38" width="7" height="24" rx="2" fill="#41464B"></rect>
+<path d="M18 37v26M76 37v26" stroke="rgba(255,255,255,0.25)" stroke-width="1.6"></path>
+</sc-if>
+<sc-if value="{{skincare}}" hint-placeholder-val="{{ false }}">
+<rect x="28" y="36" width="22" height="44" rx="6" fill="#FFFFFF"></rect>
+<rect x="33" y="26" width="12" height="11" rx="2" fill="#2B2F33"></rect>
+<rect x="31" y="50" width="16" height="12" rx="2" fill="#F9C349"></rect>
+<path d="M56 80V44c0-4 3-6 7-6h4c4 0 7 2 7 6v36Z" fill="#FFE7EC"></path>
+<rect x="58" y="30" width="14" height="9" rx="2" fill="#C9667E"></rect>
+<circle cx="65" cy="58" r="5" fill="#C9667E"></circle>
+</sc-if>
+<sc-if value="{{pizza}}" hint-placeholder-val="{{ false }}">
+<path d="M50 84 20 28c18-8 42-8 60 0Z" fill="#F7C873"></path>
+<path d="M50 84 24 34c16-6 36-6 52 0Z" fill="#E8522E"></path>
+<path d="M20 28c18-8 42-8 60 0l-2 6c-16-7-40-7-56 0Z" fill="#D9963F"></path>
+<g fill="#FFE9B0"><circle cx="40" cy="44" r="5"></circle><circle cx="58" cy="46" r="5"></circle><circle cx="50" cy="62" r="4.5"></circle></g>
+<g fill="#7A1F12"><circle cx="46" cy="52" r="2.4"></circle><circle cx="56" cy="36" r="2.4"></circle><circle cx="44" cy="68" r="2"></circle></g>
+</sc-if>
+</svg>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":"enum","options":["coffee","burger","sneaker","gym","skincare","pizza"],"default":"coffee"},"w":{"editor":null,"default":"200px"},"h":{"editor":null,"default":"200px"},"r":{"editor":null,"default":"0px"},"art":{"editor":null,"default":"80%"},"$preview":{"width":200,"height":200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const BG = {
+      coffee: 'linear-gradient(160deg, #A0603A 0%, #4A2616 100%)',
+      burger: 'linear-gradient(160deg, #F2683A 0%, #A3260F 100%)',
+      sneaker: 'linear-gradient(160deg, #3E7BC0 0%, #17365A 100%)',
+      gym: 'linear-gradient(160deg, #4FA06C 0%, #1E4A2E 100%)',
+      skincare: 'linear-gradient(160deg, #F7C4CF 0%, #C9667E 100%)',
+      pizza: 'linear-gradient(160deg, #F5C451 0%, #C2621B 100%)'
+    };
+    const k = BG[this.props.kind] ? this.props.kind : 'coffee';
+    return {
+      bg: BG[k], w: this.props.w ?? '200px', h: this.props.h ?? '200px', r: this.props.r ?? '0px', art: this.props.art ?? '80%',
+      coffee: k === 'coffee', burger: k === 'burger', sneaker: k === 'sneaker', gym: k === 'gym', skincare: k === 'skincare', pizza: k === 'pizza'
+    };
+  }
+}
+</script>
+</body>
+</html>

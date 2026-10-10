@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>tdc home, balanced</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#111111}a:hover{color:#000000}
+button{font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.scroll{overflow-y:auto;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.rail{overflow-x:auto;scrollbar-width:none;scroll-snap-type:x mandatory}
+.rail::-webkit-scrollbar{display:none}
+.snap{scroll-snap-align:start}
+.tap{transition:transform .14s ease}
+.tap:active{transform:scale(.96)}
+.rise{animation:rise .45s ease-out both}
+@keyframes rise{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:none}}
+@keyframes live{0%,100%{opacity:1}50%{opacity:.35}}
+</style>
+</helmet>
+<div style="width: 390px; height: {{rootH}}; position: relative; overflow: hidden; background: #FAF8F3; font-family: 'DM Sans', sans-serif; color: #111111">
+
+<div class="scroll" style="position: absolute; left: 0; right: 0; top: 0; bottom: 84px">
+
+<header style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 0">
+<div style="width: 84px; height: 40px; border-radius: 12px; background: #000000; overflow: hidden"><img src="/_blob/d4708844423d858ac2d42ee29f594107" alt="tdc." style="width: 84px; height: 40px; object-fit: cover; display: block"></div>
+<div style="display: flex; gap: 8px">
+<a href="#" class="tap" aria-label="crew points: 1,240" style="height: 40px; padding: 0 12px 0 10px; border-radius: 20px; background: #FFFFFF; border: 1px solid #ECE7DB; display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 14px; text-decoration: none"><span style="width: 14px; height: 14px; border-radius: 7px; background: {{accent}}"></span>1,240</a>
+<button class="tap" aria-label="notifications, 2 new" style="width: 40px; height: 40px; border-radius: 20px; border: 1px solid #ECE7DB; background: #FFFFFF; position: relative; display: flex; align-items: center; justify-content: center">
+<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+<span style="position: absolute; top: 8px; right: 9px; width: 8px; height: 8px; border-radius: 4px; background: {{accent}}; border: 2px solid #FFFFFF"></span>
+</button>
+</div>
+</header>
+
+<section class="rise" style="padding: 18px 20px 0">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #6B675E">{{hello}}<span style="width: 3px; height: 3px; border-radius: 2px; background: #736E65"></span><span style="display: flex; align-items: center; gap: 4px; color: #111111; font-weight: 600"><svg width="13" height="13" viewBox="0 0 24 24" fill="{{accent}}" stroke="#111111" stroke-width="1.8" stroke-linejoin="round"><path d="M12 22c4 0 7-3 7-7 0-4-3-6-4-10-2 2-3 4-3 6-1-1-2-2-2-4-3 3-5 5-5 8 0 4 3 7 7 7Z"></path></svg>week 4 streak</span></div>
+<h1 style="margin: 2px 0 0; font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 800; letter-spacing: -0.7px; line-height: 1.1">{{line}}<span style="color: {{accent}}">?</span></h1>
+</section>
+
+<!-- 1. TODAY'S DROP -->
+<section class="rise" style="padding: 16px 16px 0; animation-delay: .05s">
+<div style="border-radius: 22px; background: #FFF1CC; padding: 16px">
+<div style="display: flex; justify-content: space-between; align-items: center">
+<span style="font-size: 13px; font-weight: 700">today's drop</span>
+<span style="font-size: 12px; font-weight: 600; color: #6B675E">{{slotLabel}}</span>
+</div>
+<div style="font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; line-height: 1.25; margin-top: 6px">{{question}}</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 12px">
+<sc-for list="{{poll}}" as="p" hint-placeholder-count="3">
+<button onClick="{{p.pick}}" class="tap" style="position: relative; height: 44px; border-radius: 12px; border: 1px solid {{p.border}}; background: #FFFFFF; overflow: hidden; padding: 0 6px; font-size: 13px; font-weight: 700; color: #111111">
+<span style="position: absolute; left: 0; top: 0; bottom: 0; width: {{p.w}}; background: {{p.fill}}; transition: width .5s ease"></span>
+<span style="position: relative">{{p.label}} {{p.pct}}</span>
+</button>
+</sc-for>
+</div>
+<div style="font-size: 12px; color: #6B675E; margin-top: 10px">{{after}}</div>
+</div>
+</section>
+
+<!-- 2. SOCIAL -->
+<section style="padding: 24px 16px 0">
+<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px">
+<h2 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 19px; font-weight: 800">on campus<span style="color: {{accent}}">.</span></h2>
+<a href="#" style="font-size: 13px; font-weight: 600; color: #6B675E; text-decoration: none">open feed</a>
+</div>
+<div style="margin-top: 12px; border-radius: 22px; background: #FFFFFF; border: 1px solid #ECE7DB; overflow: hidden">
+<div style="padding: 16px">
+<div style="font-size: 12px; font-weight: 600; color: #6B675E">confession of the day · anonymous</div>
+<p style="margin: 6px 0 0; font-size: 16px; font-weight: 600; line-height: 1.4">told my parents the trip was a "study retreat". we did not study.</p>
+<div style="display: flex; gap: 6px; margin-top: 12px">
+<sc-for list="{{reacts}}" as="r" hint-placeholder-count="3">
+<button onClick="{{r.tap}}" class="tap" style="height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid {{r.border}}; background: {{r.bg}}; font-size: 12.5px; font-weight: 600; color: #111111">{{r.label}} {{r.n}}</button>
+</sc-for>
+</div>
+</div>
+<a href="#" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 1px solid #F0ECE2; text-decoration: none; font-size: 13.5px">
+<span><b>[N] new posts</b> <span style="color: #6B675E">from [your uni]</span></span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#736E65" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg>
+</a>
+</div>
+</section>
+
+<!-- 3. YOUR TDC -->
+<section style="padding: 24px 16px 0">
+<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px">
+<h2 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 19px; font-weight: 800">your tdc<span style="color: {{accent}}">.</span></h2>
+<span style="font-size: 13px; font-weight: 600; color: #6B675E">{{sortedLabel}}</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px 4px; margin-top: 12px; background: #FFFFFF; border: 1px solid #ECE7DB; border-radius: 22px; padding: 18px 8px">
+<sc-for list="{{features}}" as="f" hint-placeholder-count="8">
+<a href="#" class="tap" style="display: flex; flex-direction: column; align-items: center; gap: 7px; text-decoration: none">
+<span style="position: relative; width: 50px; height: 50px; border-radius: {{f.radius}}; background: {{f.well}}; display: flex; align-items: center; justify-content: center">
+<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="{{f.stroke}}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{f.icon}}"></path></svg>
+<span style="position: absolute; right: 7px; bottom: 7px; width: 8px; height: 8px; box-sizing: border-box; border-radius: 4px; background: {{f.dot}}; border: 1.5px solid {{f.ring}}"></span>
+<span style="position: absolute; top: -6px; right: -7px; display: {{f.faceShow}}; line-height: 0"><dc-import name="Dot" mood="{{f.mood}}" size="22" hint-size="22px,22px"></dc-import></span>
+</span>
+<span style="font-size: 11.5px; font-weight: 600; text-align: center">{{f.label}}</span>
+<span style="display: {{f.pillShow}}; height: 18px; padding: 0 7px; margin-top: -3px; border-radius: 9px; background: #111111; color: #FFFFFF; font-size: 10px; font-weight: 700; align-items: center">sorted<span style="color: {{accent}}">.</span></span>
+</a>
+</sc-for>
+</div>
+</section>
+
+<!-- 4. DISCOUNTS -->
+<section style="padding: 24px 0 24px">
+<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 0 20px">
+<h2 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 19px; font-weight: 800">deals near you<span style="color: {{accent}}">.</span></h2>
+<a href="#" style="font-size: 13px; font-weight: 600; color: #6B675E; text-decoration: none">rs 2,420 saved · see all</a>
+</div>
+<div class="rail" style="display: flex; gap: 12px; padding: 12px 20px 6px">
+<sc-for list="{{deals}}" as="d" hint-placeholder-count="4">
+<a href="BalancedDeal.dc.html" class="tap snap" style="flex: 0 0 200px; border-radius: 20px; background: #FFFFFF; border: 1px solid #ECE7DB; overflow: hidden; text-decoration: none; display: block; box-shadow: 0 4px 14px rgba(17,17,17,0.05)">
+<span style="display: block; position: relative; height: 120px">
+<dc-import name="Photo" kind="{{d.kind}}" w="200px" h="120px" art="70%" hint-size="200px,120px"></dc-import>
+<span style="position: absolute; left: 10px; top: 10px; height: 26px; padding: 0 10px; border-radius: 13px; background: {{accent}}; color: #111111; font-size: 12.5px; font-weight: 800; display: flex; align-items: center">{{d.off}}</span>
+</span>
+<span style="display: block; padding: 10px 12px 12px">
+<span style="display: block; font-weight: 700; font-size: 15px">{{d.name}}</span>
+<span style="display: block; font-size: 12.5px; color: #6B675E; margin-top: 2px">{{d.meta}}</span>
+</span>
+</a>
+</sc-for>
+</div>
+</section>
+</div>
+
+<nav style="position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: #FFFFFF; border-top: 1px solid #ECE7DB; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: start; padding-top: 10px; box-sizing: border-box">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="5">
+<sc-if value="{{t.side}}" hint-placeholder-val="{{ true }}">
+<a href="{{t.href}}" style="display: flex; flex-direction: column; align-items: center; gap: 3px; text-decoration: none; color: {{t.c}}; font-size: 11px; font-weight: {{t.w}}">
+<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="{{t.c}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{t.icon}}"></path></svg>{{t.label}}<span style="width: 5px; height: 5px; border-radius: 3px; background: {{t.dot}}"></span>
+</a>
+</sc-if>
+<sc-if value="{{t.center}}" hint-placeholder-val="{{ false }}">
+<a href="#" aria-label="social, 12 new" style="justify-self: center; position: relative; margin-top: -24px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none">
+<span style="width: 58px; height: 58px; border-radius: 29px; background: #111111; border: 4px solid #FFFFFF; box-shadow: 0 6px 16px rgba(17,17,17,0.2); display: flex; align-items: center; justify-content: center">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.8 7L4 20l1-4.6A8 8 0 1 1 21 12Z"></path></svg>
+</span>
+<span style="position: absolute; top: 0; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box; border-radius: 10px; background: {{accent}}; border: 2px solid #FFFFFF; font-size: 10.5px; font-weight: 800; color: #111111; display: flex; align-items: center; justify-content: center">12</span>
+<span style="font-size: 11px; font-weight: 700; color: #111111">social</span>
+</a>
+</sc-if>
+</sc-for>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#F9C349"},"drop":{"editor":"enum","options":["morning","lunch","night"],"default":"lunch"},"full":{"editor":"boolean","default":false},"icons":{"editor":"enum","options":["plain","dot","original"],"default":"original"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { vote: null, r: {} }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#F9C349';
+    const drop = ['morning', 'lunch', 'night'].includes(this.props.drop) ? this.props.drop : 'lunch';
+    const D = {
+      morning: { hello: 'morning, [Name]', line: 'first class or first coffee', q: 'how are you surviving today?', opts: [['coffee', 52], ['sleep', 31], ['vibes only', 17]], next: '1 pm', i: 0 },
+      lunch: { hello: 'hey [Name]', line: 'what are we sorting today', q: 'what are you saving on this week?', opts: [['food', 46], ['fashion', 21], ['cafes', 33]], next: '9 pm', i: 1 },
+      night: { hello: 'still up, [Name]', line: 'so is the crew', q: 'best late night spot near campus?', opts: [['shawarma stall', 38], ['burger run', 41], ['home, obviously', 21]], next: '9 am', i: 2 }
+    }[drop];
+    const v = this.state.vote;
+    const poll = D.opts.map(([label, pct]) => ({
+      label, pct: v ? pct + '%' : '', w: v ? pct + '%' : '0%',
+      fill: v === label ? accent : '#F5F2EA', border: v === label ? '#111111' : '#ECE7DB',
+      pick: () => this.setState({ vote: label })
+    }));
+    const base = { same: 214, lol: 389, nope: 41 };
+    const reacts = Object.keys(base).map((k) => {
+      const on = !!this.state.r[k];
+      return { label: k, n: base[k] + (on ? 1 : 0), bg: on ? '#FFF1CC' : '#FAF8F3', border: on ? '#111111' : '#ECE7DB', tap: () => this.setState({ r: { ...this.state.r, [k]: !on } }) };
+    });
+    const I = {
+      tag: 'M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8ZM7.5 7.5h.01',
+      plane: 'M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2Z',
+      people: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 21v-1a6 6 0 0 1 12 0v1M16 3.5a4 4 0 0 1 0 7.5M22 21v-1a6 6 0 0 0-4-5.6',
+      cal: 'M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2ZM3 10h18M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2',
+      doc: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9ZM14 3v6h6M8 13h8M8 17h5',
+      bag: 'M4 7h16a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1ZM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18',
+      cap: 'M2 9l10-5 10 5-10 5ZM6 11v5c0 2 3 4 6 4s6-2 6-4v-5',
+      chat: 'M21 12a8 8 0 0 1-11.8 7L4 20l1-4.6A8 8 0 1 1 21 12Z',
+      home: 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z',
+      compass: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM15.5 8.5l-2 5-5 2 2-5Z',
+      user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21a8 8 0 0 1 16 0'
+    };
+    const style = ['plain', 'dot', 'original'].includes(this.props.icons) ? this.props.icons : 'original';
+    const live = { discounts: ['#FDE3E1', '#D9443F'], travel: ['#DDF0F8', '#1F86C4'], skillsshare: ['#E2F3E4', '#2E8B3E'], events: ['#F1E6F5', '#8E44AD'], resume: ['#FFF0DC', '#C77700'], jobs: ['#FDE6E2', '#D1383D'], scholarships: ['#E1F1FA', '#2B7FC0'], social: ['#FCE4EC', '#C2185B'] };
+    const done = { discounts: true, travel: true, events: true };
+    const moods = { discounts: 'broke', travel: 'excited', skillsshare: 'sus', events: 'sleepy', resume: 'panic', jobs: 'shook', scholarships: 'money', social: 'cheeky' };
+    const features = [['discounts', I.tag], ['travel', I.plane], ['skillsshare', I.people], ['events', I.cal], ['resume', I.doc], ['jobs', I.bag], ['scholarships', I.cap], ['social', I.chat]].map(([label, icon]) => ({
+      label, icon,
+      mood: done[label] ? 'sorted' : moods[label],
+      faceShow: style === 'original' ? 'block' : 'none',
+      pillShow: style === 'original' && done[label] ? 'flex' : 'none',
+      ring: style === 'dot' ? (done[label] ? accent : '#C9C3B6') : 'transparent',
+      well: style === 'original' ? live[label][0] : '#F5F2EA',
+      stroke: style === 'original' ? live[label][1] : '#111111',
+      radius: style === 'original' ? '25px' : '16px',
+      dot: style === 'dot' && done[label] ? accent : 'transparent'
+    }));
+    const deals = [
+      { kind: 'coffee', name: '[Cafe]', meta: 'dha phase 6 · 1.2 km', off: '25% off' },
+      { kind: 'burger', name: '[Burger Spot]', meta: 'clifton · 2.4 km', off: '20% off' },
+      { kind: 'skincare', name: 'Jenpharm', meta: 'skincare · online', off: '10% off' },
+      { kind: 'sneaker', name: '[Sneaker Store]', meta: 'dolmen mall · 3 km', off: '15% off' }
+    ];
+    const tabs = [['home', I.home, 'Balanced.dc.html', true], ['explore', I.compass, '#'], ['social', null, '#', false, true], ['campus', I.cap, '#'], ['profile', I.user, '#']]
+      .map(([label, icon, href, on, center]) => ({ label, icon, href, center: !!center, side: !center, c: on ? '#111111' : '#736E65', w: on ? 700 : 500, dot: on ? accent : 'transparent' }));
+    return {
+      sortedLabel: style === 'plain' ? '' : '3 of 8 sorted',
+      rootH: (this.props.full === true || this.props.full === 'true') ? '1300px' : '844px',
+      accent, hello: D.hello, line: D.line, question: D.q, next: D.next,
+      slotLabel: (D.i + 1) + ' of 3 today · next ' + D.next,
+      poll, reacts, features, deals, tabs,
+      after: v ? 'you and [N] others picked this. +5 points.' : 'vote to see what campus thinks. +5 points.'
+    };
+  }
+}
+</script>
+</body>
+</html>

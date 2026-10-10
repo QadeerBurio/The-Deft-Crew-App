@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>confessions</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#F5F2EA}a:hover{color:#FFFFFF}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; background: #111111; font-family: 'DM Sans', sans-serif; color: #F5F2EA; overflow: hidden">
+
+<header style="display: flex; align-items: center; gap: 10px; padding: 18px 16px 0">
+<a href="Main.dc.html" aria-label="back to home" style="width: 44px; height: 44px; border-radius: 22px; background: #1A1916; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F5F2EA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<h1 style="margin: 0; flex: 1; font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -0.8px">social<span style="color: {{accent}}">.</span></h1>
+</header>
+
+<div style="padding: 14px 16px 0">
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 24px; background: #1A1916">
+<a href="Social.dc.html" style="height: 40px; border-radius: 20px; color: #CFCAC0; font-weight: 600; font-size: 14px; text-decoration: none; display: flex; align-items: center; justify-content: center">feed</a>
+<a href="Confessions.dc.html" style="height: 40px; border-radius: 20px; background: {{accent}}; color: #111111; font-weight: 800; font-size: 14px; text-decoration: none; display: flex; align-items: center; justify-content: center">confessions</a>
+</div>
+</div>
+
+<div style="padding: 14px 16px 0">
+<a href="CreatePost.dc.html" style="display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 8px 0 16px; border-radius: 27px; border: 1px dashed #2A2925; text-decoration: none">
+<span style="flex: 1; font-size: 15px; color: #A39E92">confess. nobody will know it's you.</span>
+<span style="height: 38px; padding: 0 14px; border-radius: 19px; background: {{accent}}; color: #111111; font-size: 13px; font-weight: 800; display: flex; align-items: center">confess</span>
+</a>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 0">
+<sc-for list="{{items}}" as="c" hint-placeholder-count="3">
+<article style="border-radius: 24px; background: #1A1916; padding: 16px">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="width: 32px; height: 32px; border-radius: 16px; background: #2A2925; color: {{accent}}; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px">?</span>
+<span style="flex: 1; font-size: 12.5px; color: #A39E92">anon. · {{c.uni}} · {{c.time}}</span>
+<span style="height: 24px; padding: 0 8px; border-radius: 12px; background: #2A2925; font-size: 11px; font-weight: 700; display: flex; align-items: center; color: #CFCAC0">#{{c.tag}}</span>
+</div>
+<p style="margin: 12px 0 0; font-family: 'Outfit', sans-serif; font-size: 19px; font-weight: 600; line-height: 1.3">{{c.text}}</p>
+<div style="display: flex; gap: 14px; margin-top: 12px; font-size: 13px; font-weight: 700; color: #A39E92">
+<button onClick="{{c.react}}" style="border: 0; background: transparent; padding: 0; display: flex; align-items: center; gap: 6px; color: {{c.rc}}; font-size: 13px; font-weight: 700; min-height: 32px"><svg width="16" height="16" viewBox="0 0 24 24" fill="{{c.fill}}" stroke="{{c.rc}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10Z"></path></svg>{{c.likes}}</button>
+<span style="display: flex; align-items: center; gap: 6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A39E92" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.8 7L4 20l1-4.6A8 8 0 1 1 21 12Z"></path></svg>{{c.comments}}</span>
+<span style="margin-left: auto; display: flex; align-items: center">report</span>
+</div>
+</article>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#F9C349"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { r: {} }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#F9C349';
+    const raw = [
+      { id: 1, mood: 'shook', uni: '[UNI]', time: '1h', tag: 'campus', text: 'attended every class this semester. still no idea what the course is about.', likes: 88, comments: 31 },
+      { id: 2, mood: 'cheeky', uni: '[UNI]', time: '3h', tag: 'family', text: 'told my parents the trip was a "study retreat".', likes: 142, comments: 40 },
+      { id: 3, mood: 'broke', uni: '[UNI]', time: '6h', tag: 'money', text: 'the canteen fries are the only reason i show up.', likes: 57, comments: 12 }
+    ];
+    const items = raw.map((c) => {
+      const on = !!this.state.r[c.id];
+      return { ...c, likes: c.likes + (on ? 1 : 0), rc: on ? accent : '#A39E92', fill: on ? accent : 'none', react: () => this.setState({ r: { ...this.state.r, [c.id]: !on } }) };
+    });
+    return { accent, items };
+  }
+}
+</script>
+</body>
+</html>

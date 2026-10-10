@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>explore</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#111111}a:hover{color:#000000}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; background: #FAF8F3; font-family: 'DM Sans', sans-serif; color: #111111; overflow: hidden">
+
+<header style="display: flex; align-items: flex-end; justify-content: space-between; padding: 22px 20px 0">
+<div>
+<div style="font-size: 12px; font-weight: 700; letter-spacing: 0.2px; color: #6B675E">student hub</div>
+<h1 style="margin: 2px 0 0; font-family: 'Outfit', sans-serif; font-size: 32px; font-weight: 800; letter-spacing: -1px">explore<span style="color: {{accent}}">.</span></h1>
+</div>
+<button aria-label="search" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #ECE7DB; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></button>
+</header>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 16px 20px 0; border-radius: 20px; background: #FFFFFF; border: 1px solid #ECE7DB">
+<sc-for list="{{stats}}" as="s" hint-placeholder-count="3">
+<div style="padding: 12px 0; text-align: center; border-left: {{s.line}}">
+<div style="font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 800">{{s.n}}</div>
+<div style="font-size: 12px; color: #6B675E">{{s.label}}</div>
+</div>
+</sc-for>
+</div>
+
+<section style="padding: 16px 16px 0">
+<a href="Brands.dc.html" style="display: block; position: relative; height: 176px; border-radius: 28px; background: #111111; color: #FFFFFF; text-decoration: none; overflow: hidden; padding: 20px; box-sizing: border-box">
+<svg width="84" height="84" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: 20px; top: 22px" aria-hidden="true"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8ZM7.5 7.5h.01"></path></svg>
+<div style="font-size: 11px; font-weight: 700; letter-spacing: 0.2px; color: {{accent}}">exclusive discounts</div>
+<div style="font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 800; line-height: 1.05; margin-top: 8px; max-width: 190px">always broke<span style="color: {{accent}}">?</span></div>
+<div style="font-size: 14px; color: #CFCAC0; margin-top: 6px">100+ brands. flat student off.</div>
+<span style="position: absolute; left: 20px; bottom: 18px; height: 36px; padding: 0 14px; border-radius: 18px; background: {{accent}}; color: #111111; font-weight: 800; font-size: 13px; display: flex; align-items: center">see brands</span>
+</a>
+</section>
+
+<section style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 10px 16px 0">
+<sc-for list="{{tiles}}" as="t" hint-placeholder-count="2">
+<a href="{{t.href}}" style="height: 168px; border-radius: 26px; background: {{t.bg}}; border: 1px solid #ECE7DB; padding: 16px; box-sizing: border-box; text-decoration: none; color: #111111; display: flex; flex-direction: column; justify-content: space-between">
+<span style="width: 48px; height: 48px; border-radius: 16px; background: {{t.well}}; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="{{t.icon}}"></path></svg></span>
+<span><span style="display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.2px; color: #6B675E">{{t.kicker}}</span><span style="display: block; font-family: 'Outfit', sans-serif; font-size: 19px; font-weight: 800; margin-top: 4px; line-height: 1.1">{{t.title}}</span></span>
+</a>
+</sc-for>
+</section>
+
+<section style="padding: 10px 16px 0">
+<a href="Social.dc.html" style="display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 26px; background: #FFFFFF; border: 1px solid #ECE7DB; text-decoration: none; color: #111111">
+<span style="width: 48px; height: 48px; border-radius: 16px; background: #F5F2EA; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.8 7L4 20l1-4.6A8 8 0 1 1 21 12Z"></path></svg></span>
+<span style="flex: 1"><span style="display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.2px; color: #6B675E">social connect</span><span style="display: block; font-family: 'Outfit', sans-serif; font-size: 19px; font-weight: 800; margin-top: 2px">post, confess, connect<span style="color: {{accent}}">.</span></span></span>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg>
+</a>
+</section>
+
+<div style="position: absolute; left: 0; bottom: 0"><dc-import name="Nav" active="explore" accent="{{accent}}" hint-size="390px,84px"></dc-import></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#F9C349"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#F9C349';
+    const stats = [['100+', 'discounts'], ['25+', 'events'], ['500+', 'connections']].map(([n, label], i) => ({ n, label, line: i ? '1px solid #F0ECE2' : '0' }));
+    const tiles = [
+      { icon: 'M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2ZM3 10h18M8 3v4M16 3v4', well: '#F5F2EA', kicker: 'events hub', title: "what's on near you.", href: 'Events.dc.html', bg: '#FFFFFF' },
+      { icon: 'M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2Z', well: '#FFFFFF', kicker: 'travel', title: 'plan trips with ai.', href: 'Travel.dc.html', bg: '#FFF1CC' }
+    ];
+    return { accent, stats, tiles };
+  }
+}
+</script>
+</body>
+</html>

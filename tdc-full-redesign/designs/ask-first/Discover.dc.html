@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>tdc Discover</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#121212}a:hover{color:#000}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; background: #FAFAF7; font-family: 'DM Sans', sans-serif; color: #121212; overflow: hidden">
+
+<header style="padding: 22px 20px 0; display: flex; align-items: center; justify-content: space-between">
+<h1 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 700; letter-spacing: -0.5px">Discover</h1>
+<button aria-label="Filter" style="width: 44px; height: 44px; border-radius: 14px; border: 1px solid #ECEAE3; background: #FFFFFF; display: flex; align-items: center; justify-content: center">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#121212" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"></path></svg>
+</button>
+</header>
+<div style="padding: 4px 20px 0; font-size: 14px; color: #6B6A64">Deals, trips and plans around you</div>
+
+<div style="display: flex; gap: 8px; padding: 18px 20px 0; overflow: hidden">
+<sc-for list="{{chips}}" as="c" hint-placeholder-count="5">
+<button onClick="{{c.pick}}" style="flex-shrink: 0; height: 40px; padding: 0 16px; border-radius: 20px; border: 1px solid {{c.border}}; background: {{c.bg}}; color: {{c.fg}}; font-weight: 600; font-size: 14px">{{c.label}}</button>
+</sc-for>
+</div>
+
+<section style="padding: 22px 20px 0">
+<div style="display: flex; justify-content: space-between; align-items: center">
+<h2 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700">Near you</h2>
+<a href="#" style="font-size: 14px; font-weight: 600; text-decoration: none; color: #6B6A64">See all</a>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px">
+<sc-for list="{{deals}}" as="d" hint-placeholder-count="4">
+<a href="#" style="border-radius: 20px; background: #FFFFFF; border: 1px solid #ECEAE3; overflow: hidden; text-decoration: none; color: #121212">
+<div style="height: 92px; background: {{d.bg}}; position: relative; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #6B6A64">[PHOTO]
+<span style="position: absolute; left: 10px; top: 10px; height: 24px; padding: 0 8px; border-radius: 8px; background: #121212; color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center">{{d.off}}</span>
+</div>
+<div style="padding: 10px 12px 12px">
+<div style="font-weight: 700; font-size: 14px">{{d.name}}</div>
+<div style="font-size: 12px; color: #6B6A64; margin-top: 2px">{{d.meta}}</div>
+</div>
+</a>
+</sc-for>
+</div>
+</section>
+
+<section style="padding: 22px 20px 0">
+<h2 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700">This weekend</h2>
+<a href="#" style="margin-top: 12px; display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 18px; background: #FFFFFF; border: 1px solid #ECEAE3; text-decoration: none; color: #121212">
+<span style="width: 52px; height: 56px; border-radius: 14px; background: #F1E8FF; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0"><span style="font-size: 11px; font-weight: 700; color: #7A3FD1">sat</span><span style="font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 800">11</span></span>
+<span style="flex: 1; min-width: 0"><span style="display: block; font-weight: 700; font-size: 15px">[EVENT NAME]</span><span style="display: block; font-size: 13px; color: #6B6A64; margin-top: 2px">[VENUE] · 7 pm · Free for students</span></span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#121212" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg>
+</a>
+</section>
+
+<nav style="position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: #FFFFFF; border-top: 1px solid #ECEAE3; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; padding-bottom: 10px; box-sizing: border-box">
+<a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #8A8880; font-size: 11px; font-weight: 500"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8A8880" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z"></path></svg>Home</a>
+<a href="Discover.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #121212; font-size: 11px; font-weight: 700"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#121212" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM15.5 8.5l-2 5-5 2 2-5Z"></path></svg>Discover</a>
+<a href="#" aria-label="Scan to redeem" style="justify-self: center; width: 58px; height: 58px; margin-top: -26px; border-radius: 20px; background: {{accent}}; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(0,0,0,0.15); border: 4px solid #FFFFFF"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#121212" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6v6H4ZM14 4h6v6h-6ZM4 14h6v6H4ZM14 14h2v2h-2ZM18 18h2v2h-2ZM14 18h2M18 14h2"></path></svg></a>
+<a href="Career.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #8A8880; font-size: 11px; font-weight: 500"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8A8880" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9l10-5 10 5-10 5ZM6 11v5c0 2 3 4 6 4s6-2 6-4v-5"></path></svg>Career</a>
+<a href="Profile.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #8A8880; font-size: 11px; font-weight: 500"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8A8880" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21a8 8 0 0 1 16 0"></path></svg>Profile</a>
+</nav>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#F5B82E","options":["#F5B82E","#FFD23F","#FF8A3D"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { picked: 'Discounts' }; }
+  renderVals() {
+    const labels = ['Discounts', 'Travel', 'Events', 'Community'];
+    const chips = labels.map((label) => {
+      const on = this.state.picked === label;
+      return { label, bg: on ? '#121212' : '#FFFFFF', fg: on ? '#FFFFFF' : '#121212', border: on ? '#121212' : '#ECEAE3', pick: () => this.setState({ picked: label }) };
+    });
+    const deals = [
+      { name: '[BRAND ONE]', meta: 'Food · 1.2 km', off: '20% off', bg: '#FFF3D1' },
+      { name: '[BRAND TWO]', meta: 'Fashion · 2 km', off: '15% off', bg: '#E3F1FF' },
+      { name: '[BRAND THREE]', meta: 'Cafe · 3 km', off: 'BOGO', bg: '#E6F6EC' },
+      { name: '[BRAND FOUR]', meta: 'Tech · 4 km', off: '10% off', bg: '#FFE5EC' }
+    ];
+    return { accent: this.props.accent ?? '#F5B82E', chips, deals };
+  }
+}
+</script>
+</body>
+</html>

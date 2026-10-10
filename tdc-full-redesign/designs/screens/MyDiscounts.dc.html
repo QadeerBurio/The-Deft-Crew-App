@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>my discounts</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#111111}a:hover{color:#000000}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; background: #FAF8F3; font-family: 'DM Sans', sans-serif; color: #111111; overflow: hidden">
+
+<header style="display: flex; align-items: center; gap: 10px; padding: 18px 16px 0">
+<a href="Profile.dc.html" aria-label="back" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #ECE7DB; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<h1 style="margin: 0; flex: 1; font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -0.8px">my discounts<span style="color: {{accent}}">.</span></h1>
+</header>
+
+<section style="padding: 16px 16px 0">
+<div style="border-radius: 26px; background: #111111; color: #FFFFFF; padding: 18px">
+<div style="display: flex; align-items: center; gap: 12px">
+<span style="width: 48px; height: 48px; border-radius: 14px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 700; color: #6B675E">[LOGO]</span>
+<span style="flex: 1"><span style="display: block; font-weight: 700; font-size: 16px">[BRAND]</span><span style="display: block; font-size: 12.5px; color: #A39E92">ready to save. expires [DATE]</span></span>
+<span style="height: 28px; padding: 0 10px; border-radius: 14px; background: {{accent}}; color: #111111; font-size: 12px; font-weight: 800; display: flex; align-items: center">[X]% off</span>
+</div>
+<div style="display: flex; gap: 8px; margin-top: 16px">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+<button onClick="{{t.pick}}" style="flex: 1; height: 40px; border-radius: 20px; border: 1px solid {{t.border}}; background: {{t.bg}}; color: {{t.fg}}; font-weight: 700; font-size: 13.5px">{{t.label}}</button>
+</sc-for>
+</div>
+<sc-if value="{{showQr}}" hint-placeholder-val="{{ true }}">
+<div style="margin-top: 14px; height: 168px; border-radius: 20px; border: 2px dashed #2A2925; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px">
+<svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M4 12h16"></path></svg>
+<span style="font-size: 13px; color: #CFCAC0">point at the brand's counter qr</span>
+<a href="Claimed.dc.html" style="height: 40px; padding: 0 18px; border-radius: 20px; background: {{accent}}; color: #111111; text-decoration: none; font-weight: 800; font-size: 14px; display: flex; align-items: center">scan qr</a>
+</div>
+</sc-if>
+<sc-if value="{{showCode}}" hint-placeholder-val="{{ false }}">
+<div style="margin-top: 14px; height: 168px; border-radius: 20px; background: #1A1916; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px">
+<span style="font-size: 12px; color: #A39E92">your promo code</span>
+<span style="font-family: 'Outfit', sans-serif; font-size: 30px; font-weight: 800; letter-spacing: 3px; color: {{accent}}">TDC-[CODE]</span>
+<span style="height: 36px; padding: 0 16px; border-radius: 18px; background: #FFFFFF; color: #111111; font-weight: 700; font-size: 13px; display: flex; align-items: center">copy code</span>
+</div>
+</sc-if>
+</div>
+</section>
+
+<section style="padding: 18px 16px 0">
+<h2 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 800">history<span style="color: {{accent}}">.</span></h2>
+<div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px">
+<sc-for list="{{history}}" as="h" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 18px; background: #FFFFFF; border: 1px solid #ECE7DB">
+<span style="width: 40px; height: 40px; border-radius: 12px; background: #F0ECE2; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 700; color: #6B675E">[LOGO]</span>
+<span style="flex: 1"><span style="display: block; font-weight: 700; font-size: 14px">{{h.name}}</span><span style="display: block; font-size: 12px; color: #6B675E">{{h.meta}}</span></span>
+<span style="height: 24px; padding: 0 8px; border-radius: 12px; background: {{h.bg}}; color: {{h.fg}}; font-size: 11px; font-weight: 800; display: flex; align-items: center">{{h.state}}</span>
+</div>
+</sc-for>
+</div>
+</section>
+
+<div style="position: absolute; left: 0; bottom: 0"><dc-import name="Nav" active="profile" accent="{{accent}}" hint-size="390px,84px"></dc-import></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#F9C349"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { tab: 'in-store qr' }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#F9C349';
+    const tabs = ['in-store qr', 'online code'].map((label) => {
+      const on = this.state.tab === label;
+      return { label, bg: on ? accent : 'transparent', fg: on ? '#111111' : '#FFFFFF', border: on ? accent : '#2A2925', pick: () => this.setState({ tab: label }) };
+    });
+    const history = [
+      { name: '[BRAND]', meta: 'saved rs [X] · [DATE]', state: 'used', bg: '#E8F5EC', fg: '#1E6B3A' },
+      { name: 'Jenpharm', meta: 'online code · [DATE]', state: 'used', bg: '#E8F5EC', fg: '#1E6B3A' },
+      { name: '[BRAND]', meta: 'claimed · [DATE]', state: 'expired', bg: '#F0ECE2', fg: '#6B675E' }
+    ];
+    const qr = this.state.tab === 'in-store qr';
+    return { accent, tabs, history, showQr: qr, showCode: !qr };
+  }
+}
+</script>
+</body>
+</html>

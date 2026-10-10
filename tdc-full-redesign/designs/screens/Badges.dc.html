@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>badges</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#111111}a:hover{color:#000000}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; background: #FAF8F3; font-family: 'DM Sans', sans-serif; color: #111111; overflow: hidden">
+
+<header style="display: flex; align-items: center; gap: 10px; padding: 18px 16px 0">
+<a href="Profile.dc.html" aria-label="back" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #ECE7DB; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<h1 style="margin: 0; flex: 1; font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -0.8px">badges<span style="color: {{accent}}">.</span></h1>
+<span style="font-size: 14px; font-weight: 700; color: #6B675E">6 / 12</span>
+</header>
+
+<section style="padding: 16px 16px 0">
+<div style="border-radius: 26px; background: #111111; color: #FFFFFF; padding: 16px 18px; display: flex; align-items: center; gap: 14px">
+<span style="width: 52px; height: 52px; border-radius: 26px; background: {{accent}}; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c4 0 7-3 7-7 0-4-3-6-4-10-2 2-3 4-3 6-1-1-2-2-2-4-3 3-5 5-5 8 0 4 3 7 7 7Z"></path></svg></span>
+<span style="flex: 1"><span style="display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.2px; color: #A39E92">weekly streak</span><span style="display: block; font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 800">4 weeks<span style="color: {{accent}}">.</span></span><span style="display: block; font-size: 12.5px; color: #CFCAC0">one sorted thing a week keeps it going.</span></span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-top: 10px">
+<sc-for list="{{week}}" as="w" hint-placeholder-count="7">
+<div style="height: 44px; border-radius: 14px; background: {{w.bg}}; border: 1px solid {{w.border}}; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: {{w.fg}}">{{w.d}}</div>
+</sc-for>
+</div>
+</section>
+
+<section style="padding: 18px 16px 0">
+<h2 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 800">your collection<span style="color: {{accent}}">.</span></h2>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px">
+<sc-for list="{{badges}}" as="b" hint-placeholder-count="9">
+<button onClick="{{b.pick}}" style="height: 118px; border-radius: 22px; background: {{b.bg}}; border: 1.5px solid {{b.border}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 0 6px">
+<dc-import name="Dot" mood="{{b.mood}}" size="48" muted="{{b.locked}}" hint-size="48px,48px"></dc-import>
+<span style="font-size: 12px; font-weight: 700; text-align: center; color: {{b.fg}}">{{b.name}}</span>
+</button>
+</sc-for>
+</div>
+<div style="margin-top: 12px; padding: 12px 14px; border-radius: 18px; background: #FFFFFF; border: 1px solid #ECE7DB; font-size: 13.5px"><b>{{selName}}.</b> <span style="color: #6B675E">{{selHow}}</span></div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#F9C349"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { sel: 0 }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#F9C349';
+    const days = ['m', 't', 'w', 't', 'f', 's', 's'];
+    const done = [true, false, true, true, false, false, false];
+    const week = days.map((d, i) => ({ d, bg: done[i] ? accent : '#FFFFFF', border: done[i] ? accent : '#ECE7DB', fg: done[i] ? '#111111' : '#736E65' }));
+    const raw = [
+      ['first save', 'sorted', true, 'claimed your first discount.'],
+      ['deal hunter', 'broke', true, 'redeemed 5 discounts.'],
+      ['crew starter', 'hype', true, 'a friend joined with your code.'],
+      ['night owl', 'sleepy', true, 'went to your first event.'],
+      ['confessor', 'cheeky', true, 'posted your first confession.'],
+      ['cv ready', 'smug', true, 'finished your resume.'],
+      ['go getter', 'shook', false, 'apply to 3 jobs.'],
+      ['teacher', 'sus', false, 'teach a skill on skillsshare.'],
+      ['jet setter', 'excited', false, 'plan a trip with travel ai.']
+    ];
+    const badges = raw.map(([name, mood, got, how], i) => {
+      const on = this.state.sel === i;
+      return { name, mood, locked: !got, bg: got ? '#FFFFFF' : '#F5F2EA', border: on ? '#111111' : '#ECE7DB', fg: got ? '#111111' : '#736E65', pick: () => this.setState({ sel: i }) };
+    });
+    const s = raw[this.state.sel];
+    return { accent, week, badges, selName: s[0], selHow: (s[2] ? 'unlocked: ' : 'to unlock: ') + s[3] };
+  }
+}
+</script>
+</body>
+</html>
