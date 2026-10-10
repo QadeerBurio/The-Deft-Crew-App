@@ -57,6 +57,9 @@ import TourProvider from "./app/src/engagement/tour/TourProvider";
 import TourOverlay from "./app/src/engagement/tour/TourOverlay";
 import { holdTour, releaseTour } from "./app/src/engagement/tour/tourGate";
 
+// ─── Guest mode: one gate + sign-in return ───
+import { GuestGateProvider } from "./app/src/guest";
+
 // ═══════════════════════════════════════════════════════════════
 // 1. NOTIFICATION HANDLER — set ONCE at module load.
 //    This file is the single source of truth for the handler.
@@ -358,7 +361,9 @@ export default function App() {
           <AuthProvider>
             <EngagementProvider>
               <TourProvider>
-                <AppContent />
+                <GuestGateProvider>
+                  <AppContent />
+                </GuestGateProvider>
               </TourProvider>
             </EngagementProvider>
           </AuthProvider>
