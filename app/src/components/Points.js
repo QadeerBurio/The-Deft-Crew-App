@@ -38,8 +38,10 @@ import Dot from '../engagement/components/Dot';
 import { useEngagement } from '../engagement/hooks/useEngagement';
 import { useReferrals } from '../engagement/hooks/useReferrals';
 
-import { color as T, font as F } from "../theme/tokens";
+import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import ScreenHeader from "../ui/ScreenHeader";
+import PressScale from "../ui/PressScale";
+import AmbassadorForm, { isAllowed as isAmbassadorFormUrl } from "./AmbassadorForm";
 const { width } = Dimensions.get('window');
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -49,6 +51,11 @@ const PLAY_STORE_PACKAGE = 'com.aqkhan110.tdc';
 const APP_STORE_ID = '6765877675';
 const APP_STORE_URL = `https://apps.apple.com/br/app/the-deft-crew/id${APP_STORE_ID}`;
 const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${PLAY_STORE_PACKAGE}`;
+
+// Ambassador Google Form (docs.google.com/forms/… or forms.gle/…). Until this is a real
+// form link the "join as ambassador" button is not shown.
+const AMBASSADOR_FORM_URL = '[FORM_URL]';
+const AMBASSADOR_FORM_READY = isAmbassadorFormUrl(AMBASSADOR_FORM_URL);
 
 // ═══════════════════════════════════════════════════════════════════════
 // LEVELS — mirrors config/badges.config.js
@@ -583,7 +590,35 @@ const FounderApplyBanner = memo(({ onApply }) => (
 // ═══════════════════════════════════════════════════════════════════════
 // DOWNLOAD CARD
 // ═══════════════════════════════════════════════════════════════════════
-const DownloadCard = memo(({ referralCode }) => {
+// "join as ambassador": the download card's own container (same width and look) as one
+// pressable row, icon box like the store buttons'. Disabled look once applied.
+const AmbassadorCard = memo(({ applied, onPress }) => (
+  <PressScale
+    onPress={applied ? undefined : onPress}
+    disabled={applied}
+    scaleTo={0.98}
+    style={[styles.downloadCard, styles.ambassadorCard, applied && styles.ambassadorApplied]}
+    accessibilityRole="button"
+    accessibilityState={{ disabled: !!applied }}
+    accessibilityLabel={applied ? 'applied as ambassador' : 'join as ambassador, opens the application form'}
+  >
+    <View style={[styles.storeIconBox, styles.ambassadorIcon, applied && styles.ambassadorIconApplied]}>
+      <Ionicons name={applied ? 'checkmark' : 'megaphone-outline'} size={20} color={applied ? T.textFaint : T.yellow} />
+    </View>
+    <View style={{ flex: 1 }}>
+      <Text style={[styles.downloadTitle, applied && { color: T.textFaint }]} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+        {applied ? 'applied' : 'join as ambassador'}
+        {!applied && <Text style={{ color: T.yellow }}>.</Text>}
+      </Text>
+      <Text style={styles.ambassadorSub} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+        {applied ? "we'll be in touch." : 'bring the crew to your campus.'}
+      </Text>
+    </View>
+    {!applied && <Ionicons name="chevron-forward" size={18} color={T.ink} />}
+  </PressScale>
+));
+
+const DownloadCard = memo(({ referralCode, style }) => {
   const buildIosLink = () =>
     `${APP_STORE_URL}?referrer=utm_source%3Dshare%26utm_medium%3Dreferral%26utm_campaign%3D${referralCode || 'tdc'}`;
   const buildAndroidLink = () =>
@@ -610,7 +645,7 @@ const DownloadCard = memo(({ referralCode }) => {
   };
 
   return (
-    <View style={styles.downloadCard}>
+    <View style={[styles.downloadCard, style]}>
       <Text style={styles.downloadTitle}>
         download tdc<Text style={{ color: T.yellow }}>.</Text>
       </Text>
@@ -648,6 +683,7 @@ const PointsScreen = () => {
   const navigation = useNavigation();
   const { token, user } = useContext(AuthContext);
   const { me, refresh: refreshEngagement } = useEngagement();
+  const [ambassadorFormOpen, setAmbassadorFormOpen] = useState(false);
   const {
     referralCode,
     rawCount,
@@ -899,7 +935,11 @@ const PointsScreen = () => {
 
             {applyAvailable && <FounderApplyBanner onApply={handleFounderApply} />}
 
-            <DownloadCard referralCode={referralCode} />
+            {AMBASSADOR_FORM_READY && (
+              <AmbassadorCard applied={false} onPress={() => setAmbassadorFormOpen(true)} />
+            )}
+            {/* 12 apart when the ambassador card sits above it, so the two read as a pair */}
+            <DownloadCard referralCode={referralCode} style={AMBASSADOR_FORM_READY ? styles.downloadAfterAmbassador : null} />
 
             <Text style={styles.footerNote}>
               <Ionicons name="information-circle-outline" size={13} color={T.yellow} />{' '}
@@ -908,6 +948,14 @@ const PointsScreen = () => {
           </Animated.View>
         </ScrollView>
       </SafeAreaView>
+      {AMBASSADOR_FORM_READY && (
+        <AmbassadorForm
+          visible={ambassadorFormOpen}
+          url={AMBASSADOR_FORM_URL}
+          onClose={() => setAmbassadorFormOpen(false)}
+          onSubmitted={() => setAmbassadorFormOpen(false)}
+        />
+      )}
     </GuestGuard>
   );
 };
@@ -1186,6 +1234,14 @@ const styles = StyleSheet.create({
     paddingVertical: 9, borderRadius: 10, gap: 4,
   },
   applyBtnText: { color: T.ink, fontFamily: F.bodyBold, fontSize: 12 },
+
+  // Ambassador (pairs with the download card below it)
+  ambassadorCard: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 72 },
+  ambassadorApplied: { backgroundColor: T.sand, borderColor: T.sand },
+  ambassadorIcon: { backgroundColor: T.ink },
+  ambassadorIconApplied: { backgroundColor: T.card },
+  ambassadorSub: { fontSize: 12, color: T.textFaint, fontFamily: F.bodyMedium, marginTop: 2 },
+  downloadAfterAmbassador: { marginTop: 12 },
 
   // Download
   downloadCard: {
