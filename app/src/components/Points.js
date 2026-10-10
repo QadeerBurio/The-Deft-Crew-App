@@ -55,7 +55,7 @@ const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${PLAY_STO
 
 // Ambassador Google Form (docs.google.com/forms/… or forms.gle/…). Until this is a real
 // form link the "join as ambassador" button is not shown.
-const AMBASSADOR_FORM_URL = '[FORM_URL]';
+const AMBASSADOR_FORM_URL = 'https://forms.gle/Pag1pEEXQi1GDmvdA';
 const AMBASSADOR_FORM_READY = isAmbassadorFormUrl(AMBASSADOR_FORM_URL);
 // "applied" is kept on this phone per student (no server change)
 const AMBASSADOR_KEY = (userId) => `@tdc_ambassador_applied:${userId}`;
