@@ -1309,4 +1309,13 @@ const styles = StyleSheet.create({
   },
 });
 
+// names for React DevTools / error messages (memo components are anonymous otherwise)
+SkeletonLoader.displayName = "SkeletonLoader";
+HeroPointsCard.displayName = "HeroPointsCard";
+MembersCard.displayName = "MembersCard";
+LevelCard.displayName = "LevelCard";
+FounderApplyBanner.displayName = "FounderApplyBanner";
+AmbassadorCard.displayName = "AmbassadorCard";
+DownloadCard.displayName = "DownloadCard";
+
 export default PointsScreen;
