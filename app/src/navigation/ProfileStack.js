@@ -1,8 +1,10 @@
 import React from "react";
+import { accountOnly } from '../guest';
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import ProfileScreen from "../screens/ProfileScreen";
 import ProfileDetails from "../screens/ProfileDetailsScreen";
-import MyDiscountScreen from "../screens/MyDiscountScreen";
+import MyDiscountScreenBase from "../screens/MyDiscountScreen";
+const MyDiscountScreen = accountOnly(MyDiscountScreenBase, { title: "my discounts" });
 import PremiumMemberCard from "../components/Card";
 import SettingsScreen from "../screens/SettingScreen";
 import GuestGuard from '../components/GuestGuard';

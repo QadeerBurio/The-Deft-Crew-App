@@ -40,6 +40,7 @@ import * as Haptics from 'expo-haptics';
 // ---------- CONTEXT ----------
 import { AuthContext } from '../context/AuthContext';
 import { useGuestGate } from '../guest/GuestGate';
+import { accountOnly } from '../guest';
 import TabNavigator from './TabNavigator';
 import { useEngagement } from '../engagement/hooks/useEngagement';
 import { color as T, font as F, MAX_FONT_SCALE } from '../theme/tokens';
@@ -86,7 +87,8 @@ import HelpCenter from '../screens/Social/HelpCenter';
 import PostDetailScreen from '../screens/Social/PostDetailScreen';
 import FloatingMenu from '../screens/Social/FloatingMenu';
 import TDCFlow from '../screens/SplashScren';
-import MyDiscountScreen from '../screens/MyDiscountScreen';
+import MyDiscountScreenBase from '../screens/MyDiscountScreen';
+const MyDiscountScreen = accountOnly(MyDiscountScreenBase, { title: "my discounts" });
 import ProfileStack from './ProfileStack';
 import Home from '../screens/Home';
 import StudentDashboard from '../screens/StudentDashboard';

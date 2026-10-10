@@ -55,6 +55,7 @@ import {
 } from "../utils/cityFilter";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { Button, SkeletonBlock, ScreenHeader, HeaderIconButton } from "../ui";
+import { useGuestGate } from "../guest/GuestGate";
 import Dot from "../engagement/components/Dot";
 import { formatDistance } from "../utils/distance";
 
@@ -717,6 +718,7 @@ export default function OfferScreen() {
   const route = useRoute();
   const { brand: initialBrand } = route.params || {};
   const { token, isGuest } = useContext(AuthContext);
+  const { requireAccount } = useGuestGate();
 
   const [brand, setBrand] = useState(initialBrand || null);
   const [branches, setBranches] = useState([]);
@@ -1221,22 +1223,9 @@ export default function OfferScreen() {
   const claimOffer = useCallback(
     async (offerId) => {
       if (isGuest) {
-        // 🔔 nope sound for guest
+        // 🔔 nope sound for guest, then the sign up sheet
         soundNope();
-        Alert.alert(
-          "Sign In Required",
-          "Please sign in to claim this offer and get student discounts!",
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Sign In",
-              onPress: () => {
-                soundTap();
-                navigation.navigate("Login");
-              },
-            },
-          ]
-        );
+        requireAccount();
         return;
       }
 

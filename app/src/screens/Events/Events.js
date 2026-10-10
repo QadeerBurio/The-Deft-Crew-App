@@ -41,6 +41,7 @@ import { AuthContext } from "../../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import GuestGuard from "../../components/GuestGuard";
+import { useGuestGate } from "../../guest/GuestGate";
 import io from "socket.io-client";
 import { engagementBus, ENGAGEMENT_EVENTS } from "../../engagement/engagementBus";
 
@@ -411,6 +412,7 @@ const ModernHeader = ({ onBack, onMenuPress, showApplied, appliedCount }) => {
 // ─── Main Screen ──────────────────────────────────────────────────────────
 export default function EventsScreen() {
   const { token, user } = useContext(AuthContext);
+  const { requireAccount } = useGuestGate();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
@@ -514,6 +516,7 @@ export default function EventsScreen() {
   };
 
   const handlePostEvent = async () => {
+    if (!requireAccount()) return;
     if (!form.title || !form.university || !form.date) {
       Alert.alert("Validation Error", "Please fill required fields (Title, University, Date).");
       return;
@@ -553,6 +556,7 @@ export default function EventsScreen() {
 
   const handleRegister = (eventItem) => {
     if (!eventItem) return;
+    if (!requireAccount()) return;
 
     if (isEventRegistered(eventItem._id)) {
       const targetUrl =
@@ -786,7 +790,7 @@ export default function EventsScreen() {
       return;
     }
     if (!token) {
-      Alert.alert("Authentication Error", "Please login to register.");
+      requireAccount();
       return;
     }
     if (!registerEvent?._id) {
@@ -841,7 +845,7 @@ export default function EventsScreen() {
 
   const handleCancelRegistration = async (event) => {
     if (!token) {
-      Alert.alert("Authentication Error", "Please login to cancel registration.");
+      requireAccount();
       return;
     }
 
@@ -1683,6 +1687,7 @@ export default function EventsScreen() {
       <GuestGuard
         title="view your discounts"
         message="sign in to see your claimed offers and discounts."
+        fallback={null}
       >
         <Modal
           visible={!!registerEvent}

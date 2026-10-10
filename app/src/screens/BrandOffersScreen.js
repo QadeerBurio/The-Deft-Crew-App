@@ -12,10 +12,12 @@ import api from "../api/api";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { Screen, ScreenHeader, Button, Card, EmptyState, Skeleton } from "../ui";
 import { AuthContext } from "../context/AuthContext";
+import { useGuestGate } from "../guest/GuestGate";
 
 export default function BrandOffersScreen({ route }) {
   const { brandId, brandName } = route.params;
   const { token, user } = useContext(AuthContext); // get current student info
+  const { requireAccount } = useGuestGate();
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -42,6 +44,7 @@ export default function BrandOffersScreen({ route }) {
 
   // Claim offer
   const handleClaim = async (offerId, offerTitle) => {
+    if (!requireAccount()) return;
     try {
       const res = await api.post(
         `/offers/claim/${offerId}`,
@@ -61,7 +64,7 @@ export default function BrandOffersScreen({ route }) {
   };
 
   const renderOffer = ({ item }) => {
-    const claimedByStudent = item.claimedBy?.includes(user._id); // check if current student claimed
+    const claimedByStudent = item.claimedBy?.includes(user?._id); // check if current student claimed
     const claimedCount = item.claimedBy?.length || 0;
 
     return (

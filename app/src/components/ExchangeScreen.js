@@ -22,6 +22,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
+import { useGuestGate } from '../guest/GuestGate';
 import api, { publicAPI } from "../api/api";
 import { WebView } from 'react-native-webview';
 import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
@@ -98,6 +99,7 @@ const formatDate = (value) => {
 
 const ExchangeScreen = ({ navigation }) => {
   const { token, isGuest, logout, user } = useContext(AuthContext);
+  const { requireAccount } = useGuestGate();
 
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -194,15 +196,9 @@ const ExchangeScreen = ({ navigation }) => {
     return () => sub.remove();
   }, [isGuest]);
 
-  const showGuestAlert = (action) => {
-    Alert.alert(
-      'Create an Account',
-      `Sign up to ${action} and explore study abroad opportunities!`,
-      [
-        { text: 'Not Now', style: 'cancel' },
-        { text: 'Sign Up', onPress: () => navigation.navigate('Login') }
-      ]
-    );
+  // guest: the shared "sign up to continue" sheet
+  const showGuestAlert = () => {
+    requireAccount();
   };
 
   const fetchPrograms = async () => {
@@ -541,7 +537,7 @@ const ExchangeScreen = ({ navigation }) => {
                   title="no programs found."
                   line={searchQuery ? 'try a different search.' : 'check back soon for new programs.'}
                   actionLabel={isGuest ? 'create account' : undefined}
-                  onAction={isGuest ? () => navigation.navigate('Login') : undefined}
+                  onAction={isGuest ? () => requireAccount() : undefined}
                 />
               </View>
             }
