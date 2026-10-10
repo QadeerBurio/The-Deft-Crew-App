@@ -25,6 +25,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import api, { injectSessionErrorHandler } from "../api/api";
 import { AuthContext } from "../context/AuthContext";
+import { enterAccount } from "../guest/accountRoutes";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 
 // Dark sign-in (SignIn design). DARK = primary text on ink.
@@ -35,7 +36,8 @@ const ERR = "#FF8F85"; // red that reads on ink
 const validateEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim().toLowerCase());
 
 export default function SignIn({ navigation }) {
-  const { setUser, setToken, loginAsGuest } = useContext(AuthContext);
+  const auth = useContext(AuthContext);
+  const { loginAsGuest, isGuest } = auth;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -109,6 +111,11 @@ export default function SignIn({ navigation }) {
 
   const handleGuestBrowse = async () => {
     if (guestLoading || loading) return;
+    // already browsing as a guest (sign in opened over the app): just go back
+    if (isGuest && navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
     setGuestLoading(true);
     try {
       await loginAsGuest();
@@ -151,9 +158,8 @@ export default function SignIn({ navigation }) {
 
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      // straight into the app (the navigator switches screens by itself)
-      setToken(token);
-      setUser(user);
+      // straight into the app; a guest goes back to the screen they were on
+      await enterAccount(auth, token, user);
     } catch (err) {
       const status = err.response?.status;
       const data = err.response?.data || {};

@@ -38,7 +38,6 @@ import {
   setupAndroidChannels,
   claimNotificationResponse,
   getRouteFromNotificationData,
-  navigateWhenReady,
   NOTIFICATION_TASK,
 } from "./app/src/utils/pushNotifications";
 
@@ -58,7 +57,7 @@ import TourOverlay from "./app/src/engagement/tour/TourOverlay";
 import { holdTour, releaseTour } from "./app/src/engagement/tour/tourGate";
 
 // ─── Guest mode: one gate + sign-in return ───
-import { GuestGateProvider } from "./app/src/guest";
+import { GuestGateProvider, openTarget } from "./app/src/guest";
 
 // ═══════════════════════════════════════════════════════════════
 // 1. NOTIFICATION HANDLER — set ONCE at module load.
@@ -191,7 +190,8 @@ function ColdStartDeepLink() {
 
         console.log("[ColdStart] navigating to:", route, params);
         handledRef.current = true;
-        setTimeout(() => navigateWhenReady(navigationRef, route, params), 500);
+        // guest + login-only route → sign in first, then continue
+        setTimeout(() => openTarget(route, params), 500);
       })
       .catch(() => {});
   }, []);
@@ -216,19 +216,19 @@ function ExternalDeepLink() {
         console.log("[ExternalDeepLink] handling:", url, "parts:", parts);
 
         if (parts[0] === "post" && parts[1]) {
-          navigationRef.navigate("PostDetailScreen", { postId: parts[1] });
+          openTarget("PostDetailScreen", { postId: parts[1] });
         } else if (parts[0] === "user" && parts[1]) {
-          navigationRef.navigate("UserProfile", { userId: parts[1] });
+          openTarget("UserProfile", { userId: parts[1] });
         } else if (parts[0] === "offer" && parts[1]) {
-          navigationRef.navigate("OfferScreen", { offerId: parts[1] });
+          openTarget("OfferScreen", { offerId: parts[1] });
         } else if (parts[0] === "chat" && parts[1]) {
-          navigationRef.navigate("ChatDetailScreen", { chatId: parts[1] });
+          openTarget("ChatDetailScreen", { chatId: parts[1] });
         } else if (parts[0] === "listing" && parts[1]) {
-          navigationRef.navigate("ListingDetail", { listingId: parts[1] });
+          openTarget("ListingDetail", { listingId: parts[1] });
         } else if (parts[0] === "match" && parts[1]) {
-          navigationRef.navigate("MatchChat", { matchId: parts[1] });
+          openTarget("MatchChat", { matchId: parts[1] });
         } else if (parts[0] === "inquiry" && parts[1]) {
-          navigationRef.navigate("InquiryChat", { inquiryId: parts[1] });
+          openTarget("InquiryChat", { inquiryId: parts[1] });
         }
       } catch (e) {
         console.warn("[ExternalDeepLink] parse error:", e.message);

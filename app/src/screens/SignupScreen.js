@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import api from "../api/api";
 import { AuthContext } from "../context/AuthContext";
+import { enterAccount } from "../guest/accountRoutes";
 import { AuthShell, AuthInput, AuthButton, AUTH } from "../components/AuthShell";
 
 const UNIVERSITIES = [
@@ -350,7 +351,7 @@ function PickerSheet({ visible, title, options, selected, onSelect, onClose, sea
 
 export default function SignupScreen({ navigation }) {
   const route = useRoute();
-  const { setUser, setToken } = useContext(AuthContext);
+  const auth = useContext(AuthContext);
 
   const [loading, setLoading] = useState(false);
   const [sheet, setSheet] = useState(null); // 'university' | 'city' | 'gender' | 'academicLevel'
@@ -517,8 +518,7 @@ export default function SignupScreen({ navigation }) {
         if (newToken && newUser) {
           api.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-          setToken(newToken);
-          setUser(newUser);
+          await enterAccount(auth, newToken, newUser);
           return;
         }
       } catch (loginError) {

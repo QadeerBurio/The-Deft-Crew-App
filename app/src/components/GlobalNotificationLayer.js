@@ -7,12 +7,11 @@ import { AuthContext } from '../context/AuthContext';
 import { useNotifications, resetNotificationBaseline } from '../hooks/useNotifications';
 import { useNotificationPopup } from '../hooks/useNotificationPopup';
 import NotificationBanner from './NotificationBanner';
-import { navigationRef } from '../navigation/navigationRef';
+import { openTarget } from '../guest/accountRoutes';
 import * as Notifications from 'expo-notifications';
 import {
   claimNotificationResponse,
   getRouteFromNotificationData,
-  navigateWhenReady,
 } from '../utils/pushNotifications';
 
 // Long enough that the 10s poller doesn't re-show a push already on screen
@@ -169,7 +168,7 @@ export default function GlobalNotificationLayer() {
       if (!claimNotificationResponse(response)) return;
 
       const { route, params } = getRouteFromNotificationData(data);
-      navigateWhenReady(navigationRef, route, params);
+      openTarget(route, params); // guest + login-only route → sign in first, then continue
     });
 
     return () => {

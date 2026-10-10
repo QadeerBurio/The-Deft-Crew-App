@@ -39,6 +39,7 @@ import * as Haptics from 'expo-haptics';
 
 // ---------- CONTEXT ----------
 import { AuthContext } from '../context/AuthContext';
+import { useGuestGate } from '../guest/GuestGate';
 import TabNavigator from './TabNavigator';
 import { useEngagement } from '../engagement/hooks/useEngagement';
 import { color as T, font as F, MAX_FONT_SCALE } from '../theme/tokens';
@@ -441,7 +442,7 @@ const DrawerHeader = ({ isGuest, onClose }) => {
 // CUSTOM DRAWER CONTENT
 // ============================================================
 function CustomDrawerContent(props) {
-  const { logout, isGuest, setIsGuest } = useContext(AuthContext);
+  const { logout, isGuest } = useContext(AuthContext);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [activeRoute, setActiveRoute] = useState('HomeTabs');
 
@@ -478,13 +479,12 @@ function CustomDrawerContent(props) {
     }, 350);
   };
 
+  // sign in / sign up open over the app, so the guest comes back to where they were
   const handleGuestSignIn = () => {
-    setIsGuest(false);
     navigateToAuth('Login');
   };
 
   const handleGuestSignUp = () => {
-    setIsGuest(false);
     navigateToAuth('Signup');
   };
 
@@ -690,6 +690,7 @@ function CustomHeader({ navigation }) {
   const headerOpacity = useRef(new Animated.Value(0)).current;
   const headerTranslateY = useRef(new Animated.Value(-20)).current;
   const { unreadCount, updateUnreadCount, token, isGuest } = useContext(AuthContext);
+  const { requireAccount } = useGuestGate();
   const [notifVisible, setNotifVisible] = useState(false);
   const [streakSheetVisible, setStreakSheetVisible] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -809,10 +810,7 @@ function CustomHeader({ navigation }) {
   }, [navigation, token, isGuest, updateUnreadCount]);
 
   const handleNotificationPress = () => {
-    if (isGuest) {
-      navigation.getParent()?.navigate('Login');
-      return;
-    }
+    if (!requireAccount()) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setNotifVisible(true);
   };

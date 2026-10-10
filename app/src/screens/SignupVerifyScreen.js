@@ -9,6 +9,7 @@ import { Alert, Keyboard, Platform, Pressable, StyleSheet, Text, TextInput, Touc
 import { Ionicons } from "@expo/vector-icons";
 import api from "../api/api";
 import { AuthContext } from "../context/AuthContext";
+import { enterAccount } from "../guest/accountRoutes";
 import { AuthShell, AuthButton, AUTH } from "../components/AuthShell";
 
 const CODE_LENGTH = 6;
@@ -17,7 +18,7 @@ const RESEND_SECONDS = 60;
 export default function SignupVerifyScreen({ route, navigation }) {
   const { userId, email, maskedEmail, emailSent = true, retryAfter = 0, fromLogin = false, resumed = false } =
     route.params || {};
-  const { setUser, setToken } = useContext(AuthContext);
+  const auth = useContext(AuthContext);
 
   const [code, setCode] = useState("");
   const [verifying, setVerifying] = useState(false);
@@ -73,8 +74,7 @@ export default function SignupVerifyScreen({ route, navigation }) {
 
       // Logging in switches the app to the main screens
       setTimeout(() => {
-        setToken(token);
-        setUser(user);
+        enterAccount(auth, token, user);
       }, 300);
     } catch (err) {
       if (!mounted.current) return;

@@ -102,7 +102,7 @@ export function GuestGateProvider({ children }) {
       <Sheet visible={sheetOpen} onClose={() => setSheetOpen(false)} title="sign up to continue" scroll={false}>
         <View style={styles.body}>
           <Text style={styles.line} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-            it's free and takes a minute.
+            {"it's free and takes a minute."}
           </Text>
           <Button title="sign up" onPress={() => go(openSignUp)} />
           <Button title="sign in" variant="secondary" onPress={() => go(openSignIn)} style={{ marginTop: 10 }} />

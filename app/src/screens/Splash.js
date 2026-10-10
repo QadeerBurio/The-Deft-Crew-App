@@ -1,10 +1,11 @@
 // app/src/screens/Splash.js
-// First screen when signed out.
-//   1. tdc video (1.5s). Storage is read while it plays.
-//   2. First launch → 7 intro cards → Terms → Guidelines → Login
-//      Seen before → Terms/Guidelines only if not accepted yet, else Login.
+// Shown when there is no student and no guest yet (first install, or right after logout).
+//   1. tdc video (1.5s), once per app session. The intro flag is read while it plays.
+//   2. First install → 7 intro cards → Home as a guest.
+//      Seen before    → Home as a guest.
+// No terms, guidelines or sign in before Home; sign up shows the terms line instead.
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useContext } from 'react';
 import {
   View,
   Text,
@@ -16,11 +17,12 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
 
 import { color as T, font as F } from "../theme/tokens";
+import { AuthContext } from "../context/AuthContext";
+import { hasSeenIntro, markIntroSeen } from "../guest/firstRun";
 const { width, height } = Dimensions.get('window');
 
 const GOLD = T.yellow;
@@ -87,15 +89,8 @@ const SLIDES = [
   },
 ];
 
-// Where to go once the intro is done or skipped
-async function nextRoute() {
-  try {
-    const [[, terms], [, guidelines]] = await AsyncStorage.multiGet(['termsAccepted', 'guidelinesAccepted']);
-    if (terms === 'true' && guidelines === 'true') return 'Login';
-    if (terms === 'true') return 'CommunityGuidelines';
-  } catch {}
-  return 'Privacy';
-}
+// the video plays once per app session (not again after a logout)
+let videoPlayed = false;
 
 // Stable component, so the video never remounts
 const VideoSplash = React.memo(({ onDone }) => (
@@ -146,25 +141,45 @@ const SlideCard = ({ item, index, total }) => (
   </View>
 );
 
-export default function Splash({ navigation }) {
-  const [phase, setPhase] = useState('video'); // video | intro
+export default function Splash() {
+  const { loginAsGuest } = useContext(AuthContext);
+  const [phase, setPhase] = useState(videoPlayed ? 'wait' : 'video'); // video | wait | intro
   const [index, setIndex] = useState(0);
   const listRef = useRef(null);
   const fade = useRef(new Animated.Value(0)).current;
   const doneRef = useRef(false);
-  const seenRef = useRef(null); // onboardingComplete read while the video plays
-  const routeRef = useRef(null);
+  const enteredRef = useRef(false);
+  const seenRef = useRef(null); // intro flag, read while the video plays
 
-  // read storage during the video
+  // Home as a guest (switches the root navigator to the Drawer)
+  const enterApp = useCallback(async () => {
+    if (enteredRef.current) return;
+    enteredRef.current = true;
+    try {
+      await loginAsGuest();
+    } catch {
+      enteredRef.current = false;
+    }
+  }, [loginAsGuest]);
+
+  const finishVideo = useCallback(async () => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    videoPlayed = true;
+    if (seenRef.current === null) seenRef.current = await hasSeenIntro();
+    if (seenRef.current) {
+      enterApp();
+      return;
+    }
+    setPhase('intro');
+    Animated.timing(fade, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+  }, [enterApp, fade]);
+
+  // read the intro flag during the video (or straight away after a logout)
   useEffect(() => {
     (async () => {
-      try {
-        const [[, done], [, launched]] = await AsyncStorage.multiGet(['onboardingComplete', 'alreadyLaunched']);
-        seenRef.current = done === 'true' || launched === 'true';
-      } catch {
-        seenRef.current = true;
-      }
-      routeRef.current = await nextRoute();
+      seenRef.current = await hasSeenIntro();
+      if (phase === 'wait') finishVideo();
     })();
     // safety: never stay on the video more than 4s
     const t = setTimeout(() => finishVideo(), 4000);
@@ -172,34 +187,10 @@ export default function Splash({ navigation }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const finishVideo = useCallback(async () => {
-    if (doneRef.current) return;
-    doneRef.current = true;
-    if (seenRef.current === null) {
-      try {
-        const v = await AsyncStorage.getItem('onboardingComplete');
-        seenRef.current = v === 'true';
-      } catch {
-        seenRef.current = true;
-      }
-    }
-    if (seenRef.current) {
-      navigation.replace(routeRef.current || (await nextRoute()));
-      return;
-    }
-    setPhase('intro');
-    Animated.timing(fade, { toValue: 1, duration: 220, useNativeDriver: true }).start();
-  }, [navigation, fade]);
-
   const complete = useCallback(async () => {
-    try {
-      await AsyncStorage.multiSet([
-        ['alreadyLaunched', 'true'],
-        ['onboardingComplete', 'true'],
-      ]);
-    } catch {}
-    navigation.replace(await nextRoute());
-  }, [navigation]);
+    await markIntroSeen();
+    enterApp();
+  }, [enterApp]);
 
   const next = () => {
     if (index < SLIDES.length - 1) listRef.current?.scrollToIndex({ index: index + 1, animated: true });
@@ -211,6 +202,7 @@ export default function Splash({ navigation }) {
   }).current;
 
   if (phase === 'video') return <VideoSplash onDone={finishVideo} />;
+  if (phase === 'wait') return <View style={styles.wait} />;
 
   const last = index === SLIDES.length - 1;
   const item = SLIDES[index];
@@ -281,6 +273,7 @@ const CARD_H = Math.min(height * 0.42, 360);
 
 const styles = StyleSheet.create({
   videoWrap: { flex: 1, backgroundColor: T.ink },
+  wait: { flex: 1, backgroundColor: T.paper },
   video: { position: 'absolute', top: 0, left: 0, width, height },
 
   container: { flex: 1, backgroundColor: T.paper },
