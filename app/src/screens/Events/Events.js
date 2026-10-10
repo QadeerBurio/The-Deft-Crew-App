@@ -219,6 +219,9 @@ const DOW = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const MON = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 const ISO_DAY = /(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{1,2}):(\d{2}))?/g;
 const MONTH_WORD = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i;
+// 00:00 / 12:00 am (any format, seconds or not) means "no time set": day only.
+// Real times such as 8 pm or 12:30 am are kept.
+const setTime = (t) => (t && (t.h !== 0 || t.min !== 0) ? t : null);
 const timeIn = (text) => {
   const m = String(text || "").match(/\b(\d{1,2}):(\d{2})\s*(am|pm)?\b|\b(\d{1,2})\s*(am|pm)\b/i);
   if (!m) return null;
@@ -245,17 +248,27 @@ const datesFromText = (text) => {
     if (isNaN(start.getTime())) return null;
     const endRaw = isos[1] ? day(isos[1]) : null;
     const end = endRaw && !isNaN(endRaw.getTime()) && !sameDay(endRaw, start) ? endRaw : null;
-    // time: on either date ("…-03 10:30"), or written after them ("(20:00)");
-    // 00:00 is a timestamp's midnight, not a real start time
+    // time: on either date ("…-03 10:30"), or written after them ("(20:00)")
     const isoTime = isos.map((m) => (m[4] != null ? { h: Number(m[4]), min: Number(m[5]) } : null)).find(Boolean);
-    const found = isoTime || timeIn(raw.replace(ISO_DAY, " "));
-    const time = found && (found.h || found.min) ? found : null;
+    const time = setTime(isoTime || timeIn(raw.replace(ISO_DAY, " ")));
     return { start, end, time };
   }
   if (!MONTH_WORD.test(raw)) return null; // free text, not a date
-  const d = new Date(raw);
-  if (isNaN(d.getTime())) return null;
-  return { start: new Date(d.getFullYear(), d.getMonth(), d.getDate()), end: null, time: timeIn(raw) };
+  // "Dec 26, 2026" / "26 Dec 2026" read directly (Hermes' Date parser is strict and
+  // rejects text with a time like "8 pm"); the time is read separately
+  const mon = (w) => MON.indexOf(String(w).slice(0, 3).toLowerCase());
+  const md = raw.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})\b/i);
+  const dm = raw.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?,?\s+(\d{4})\b/i);
+  let start = null;
+  if (md) start = new Date(Number(md[3]), mon(md[1]), Number(md[2]));
+  else if (dm) start = new Date(Number(dm[3]), mon(dm[2]), Number(dm[1]));
+  else {
+    const d = new Date(raw);
+    if (!isNaN(d.getTime())) start = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+  if (!start || isNaN(start.getTime())) return null;
+  const rest = md ? raw.replace(md[0], " ") : dm ? raw.replace(dm[0], " ") : raw;
+  return { start, end: null, time: setTime(timeIn(rest)) };
 };
 
 const eventDates = (item) => {
