@@ -4,8 +4,8 @@
 // Runs the real app code (sound kit, AppAlert, shared ui pieces, back hook, copy helper)
 // in Node against fakes: expo-av, expo-haptics, expo-clipboard and a small stand-in for
 // react / react-native (enough hooks to mount AppAlert and press the shared pieces).
-// Each event must play exactly one sound:
-//   popup open / popup close (button, backdrop, Android back) · tap · back · copy
+// Each event must play exactly one sound: popup open / popup close (button, backdrop,
+// Android back) · copy. Shared buttons, header back and Sheet back play no sound of their own.
 // It cannot check that the phone actually makes a sound (see the note at the end).
 
 const fs = require("fs");
@@ -259,17 +259,20 @@ async function popupChecks() {
   return { buttons, modal };
 }
 
-// ── 3. taps ───────────────────────────────────────────────────
+// ── 3. taps / back: no shared tap sound ───────────────────
+// Taps and back play only where a screen calls soundTap() itself; the shared pieces
+// (Button, PressScale, ListRow, Chip, header buttons, Sheet) stay silent.
 async function tapChecks() {
   const Button = req("ui/Button.js").default;
   const PressScale = req("ui/PressScale.js").default;
   const ListRow = req("ui/ListRow.js").default;
   const Chip = req("ui/Chip.js").default;
+  const ScreenHeader = req("ui/ScreenHeader.js").default;
   const { HeaderIconButton } = req("ui/ScreenHeader.js");
+  const Sheet = req("ui/Sheet.js").default;
   const pressFirst = (el) => press(find(mount(el).tree, (e) => e.type === "Pressable")[0]);
   let pressed = 0;
   const onPress = () => { pressed++; };
-
   for (const [name, el] of [
     ["Button", React.createElement(Button, { title: "go", onPress })],
     ["PressScale", React.createElement(PressScale, { onPress })],
@@ -278,65 +281,22 @@ async function tapChecks() {
     ["HeaderIconButton", React.createElement(HeaderIconButton, { icon: "x", label: "x", onPress })],
   ]) {
     pressed = 0;
-    await expectSounds(`tap: ${name}`, () => pressFirst(el), ["tap"]);
-    check(pressed === 1, `tap: ${name} still runs its onPress once`);
+    await expectSounds(`shared ${name} press`, () => pressFirst(el), []);
+    check(pressed === 1, `${name} still runs its onPress once`);
   }
-  pressed = 0;
-  await expectSounds("tap: disabled Button", () => pressFirst(React.createElement(Button, { title: "no", onPress, disabled: true })), []);
-  await expectSounds("tap: loading Button", () => pressFirst(React.createElement(Button, { title: "no", onPress, loading: true })), []);
-  check(pressed === 0, "disabled / loading Button: onPress not called");
-  await expectSounds("tap: sound={false}", () => pressFirst(React.createElement(Button, { title: "q", onPress, sound: false })), []);
-
-  // tab bar items (TabNavigator needs the whole navigator, so its handlers are run from source)
-  const tab = fs.readFileSync(path.join(SRC, "navigation/TabNavigator.js"), "utf8").replace(/\r\n/g, "\n");
-  const ts = req("lib/tdcSounds.js");
-  const sideTab = tab.match(/style=\{styles\.tabItem\}\s*\n\s*onPress=\{(\(\) => \{[\s\S]*?\n {8}\})\}/);
-  check(!!sideTab, "tab bar: side tab press handler found");
-  if (sideTab) {
-    let navigated = 0;
-    // eslint-disable-next-line no-new-func
-    const fn = new Function("soundTap", "onPress", `return (${sideTab[1]});`)(ts.soundTap, () => { navigated++; });
-    await expectSounds("tap: tab bar item", () => fn(), ["tap"]);
-    check(navigated === 1, "tab bar item still navigates once");
-  }
-  const social = tab.match(/const handleSocialPress = (\(\) => \{[\s\S]*?\n {2}\});/);
-  check(!!social, "tab bar: social button handler found");
-  if (social) {
-    // eslint-disable-next-line no-new-func
-    const fn = new Function("soundTap", "navigation", `return (${social[1]});`)(ts.soundTap, { navigate() {} });
-    await expectSounds("tap: tab bar social button", () => fn(), ["tap"]);
-  }
-}
-
-// ── 4. back ───────────────────────────────────────────────────
-async function backChecks() {
-  const ScreenHeader = req("ui/ScreenHeader.js").default;
   navigation.backs = 0;
-  const header = mount(React.createElement(ScreenHeader, { title: "t" }));
-  await expectSounds("back: ScreenHeader back button", () => press(find(header.tree, (e) => e.type === "Pressable")[0]), ["tap"]);
+  await expectSounds("ScreenHeader back (default)", () => pressFirst(React.createElement(ScreenHeader, { title: "t" })), []);
   check(navigation.backs === 1, "ScreenHeader back still goes back once");
-  let custom = 0;
-  const header2 = mount(React.createElement(ScreenHeader, { title: "t", onBack: () => { custom++; } }));
-  await expectSounds("back: ScreenHeader with onBack", () => press(find(header2.tree, (e) => e.type === "Pressable")[0]), ["tap"]);
-  check(custom === 1, "custom onBack runs once");
 
-  const { installBackSound } = req("lib/backSound.js");
-  installBackSound();
-  installBackSound(); // twice: still one wrapper
-  const navSub = fakeRN.BackHandler.addEventListener("hardwareBackPress", () => true); // React Navigation went back
-  await expectSounds("back: hardware back, navigation goes back", () => hardwareBack(), ["tap"]);
-  const screenSub = fakeRN.BackHandler.addEventListener("hardwareBackPress", () => true); // screen closes its sheet
-  await expectSounds("back: hardware back, screen closes a sheet (one sound, not two)", () => hardwareBack(), ["tap"]);
-  screenSub.remove(); navSub.remove();
-  const noneSub = fakeRN.BackHandler.addEventListener("hardwareBackPress", () => false);
-  await expectSounds("back: hardware back does nothing (app exits)", () => hardwareBack(), []);
-  noneSub.remove();
+  // a screen's own tap on the header back (MyDiscount / Offer): exactly one tap
+  const ts = req("lib/tdcSounds.js");
+  await expectSounds("screen's own back tap (onBack calls soundTap)", () => pressFirst(React.createElement(ScreenHeader, { title: "t", onBack: () => { ts.soundTap(); navigation.goBack(); } })), ["tap"]);
 
-  const Sheet = req("ui/Sheet.js").default;
   let closed = 0;
   const sheet = mount(React.createElement(Sheet, { visible: true, onClose: () => { closed++; }, title: "s" }));
-  await expectSounds("back: Android back on a Sheet", () => find(sheet.tree, (e) => e.type === "Modal")[0].props.onRequestClose(), ["tap"]);
+  await expectSounds("Sheet Android back", () => find(sheet.tree, (e) => e.type === "Modal")[0].props.onRequestClose(), []);
   check(closed === 1, "Sheet closes once");
+  check(!fs.existsSync(path.join(SRC, "lib/backSound.js")), "no app-wide hardware back sound hook");
 }
 
 // ── 5. copy ───────────────────────────────────────────────────
@@ -379,20 +339,17 @@ function duplicateChecks() {
       else if (p.endsWith(".js")) {
         const s = fs.readFileSync(p, "utf8").replace(/\r\n/g, "\n");
         const rel = path.relative(SRC, p);
-        if (/onBack=\{\(\) => \{[^}]*soundTap\(\)/.test(s)) offenders.push(rel + " (ScreenHeader onBack)");
         if (/style: ['"]cancel['"], onPress: \(\) => soundTap\(\)/.test(s)) offenders.push(rel + " (popup cancel button)");
-        if (/<(Button|PressScale|ListRow|Chip|HeaderIconButton)\b[^>]*?onPress=\{\(\) => \{\s*soundTap\(\)/.test(s)) offenders.push(rel + " (shared piece)");
       }
     }
   })(SRC);
-  check(offenders.length === 0, `no screen plays its own tap on a press that already sounds${offenders.length ? ": " + offenders.join(", ") : ""}`);
+  check(offenders.length === 0, `no popup cancel button plays a tap on top of the popup close sound${offenders.length ? ": " + offenders.join(", ") : ""}`);
 }
 
 (async () => {
   await helperChecks();
   const popup = await popupChecks();
   await tapChecks();
-  await backChecks();
   await copyChecks(popup);
   duplicateChecks();
   console.warn = origWarn;

@@ -33,7 +33,6 @@ import { accountOnly } from "../guest";
 import { useTour } from "../engagement/tour/TourProvider";
 import { AuthContext } from "../context/AuthContext";
 import { color, font } from "../theme/tokens";
-import { soundTap } from "../lib/tdcSounds";
 
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get("window");
@@ -170,7 +169,6 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
   }
 
   const handleSocialPress = () => {
-    soundTap();
     navigation.navigate("Social");
   };
 
@@ -185,10 +183,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
     return (
       <TouchableOpacity
         style={styles.tabItem}
-        onPress={() => {
-          soundTap();
-          onPress();
-        }}
+        onPress={onPress}
         activeOpacity={0.7}
         accessibilityRole="tab"
         accessibilityState={{ selected }}

@@ -1813,7 +1813,7 @@ export default function MyDiscountScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-        <ScreenHeader title="my discounts" onBack={() => navigation.goBack()} />
+        <ScreenHeader title="my discounts" onBack={() => { soundTap(); navigation.goBack(); }} />
         <View style={styles.skeletonWrap} accessibilityLabel="loading your discounts">
           <View style={styles.skeletonStats}>
             <SkeletonBlock height={72} radius={20} style={{ flex: 1 }} />
@@ -1838,7 +1838,7 @@ export default function MyDiscountScreen() {
       <Animated.View style={{ opacity: headerAnim, transform: [{ translateY: headerTranslateY }] }}>
         <ScreenHeader
           title="my discounts"
-          onBack={() => navigation.goBack()}
+          onBack={() => { soundTap(); navigation.goBack(); }}
           right={
         <TouchableOpacity onPress={handleRefresh} style={styles.headerBadge} activeOpacity={0.7} disabled={refreshing} accessibilityRole="button" accessibilityLabel={`${stats.activeCount} active, refresh`}>
           {refreshing ? (
