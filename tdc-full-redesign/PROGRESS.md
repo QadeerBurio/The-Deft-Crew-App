@@ -203,4 +203,12 @@ Cause: production /api/brands/nearby returned [] for every location (0 of 7 bran
 - d372e03 Cities: ScreenHeader
 - 1ba4e8d Profile: skeleton for savings while loading
 - 16388ae ResumeDashboard: no yellow on white
+- a3b5d5b Guest kit: one gate, locked state, sign-in return
+- 7a89da0 Guest flow: navigation (splash -> intro -> guest Home)
+- e936232 Guest: deals, offers, events, scholarships
+- 480fb25 Guest: careers, travel, AI chat, booking/payment/apply forms
+- 014cc49 Guest: social
+- 4856602 Guest: skillshare
+- 76a7cd7 Guest: profile, rewards, badges, settings
+- 1ebb168 Signup: terms and privacy line with links
 
