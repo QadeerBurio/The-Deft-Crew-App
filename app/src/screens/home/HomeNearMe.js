@@ -1,15 +1,16 @@
 // app/src/screens/home/HomeNearMe.js
-// "near me." on Home (tdc-full-redesign/NEAR_ME_SPEC.md §3).
-//   guest              → hidden
-//   not asked yet      → permission card; only its button asks (never on app open)
-//   granted            → nearest brands from GET /brands/nearby, "1.2 km · food"
-//   granted, none near → "no partner deals near you yet." + "see all deals" (Brands);
-//                        a selected city's deals below it, never nationwide deals
-//   denied             → "turn on location… settings" + selected-city deals
-//                        (city "All": no deals, plus "see all deals")
-//   endpoint missing / failing / no position → selected-city deals titled "in [city]",
-//                        or for "All" a line + "see all deals" (never "near me"), max 6
-// "near me" is the title only while showing a real nearby list.
+// The "near me" slot on Home (tdc-full-redesign/NEAR_ME_SPEC.md §3).
+//   granted + /brands/nearby has brands with a distance → "near me.", "1.2 km · food"
+//   every other case → "top discounts." (up to 5 brands, highest real % first,
+//     ties newest first, "up to 60% off · food"); with a city selected
+//     "top discounts in [city]." and, if that city has none, the all-city list.
+//     Hidden when no brand has a real discount.
+//     · guest              → top discounts only (public data, no location card)
+//     · not asked yet      → permission card, top discounts below it (only the button asks)
+//     · denied             → "turn on location… settings" line above the top discounts
+//     · none near / endpoint failing / no position → top discounts
+// "near me" is the title only while showing a real nearby list, so the section
+// switches to it by itself once /brands/nearby returns brands.
 // Position: the cached one only if under 10 min old and within 1 km, else a fresh one;
 // anything less accurate than 2 km is not used. Rounded to 3 decimals, sent per query.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -21,7 +22,7 @@ import { useQuery } from "@tanstack/react-query";
 import Dot from "../../engagement/components/Dot";
 import Button from "../../ui/Button";
 import HomeDeals from "./HomeDeals";
-import { NEARBY_KEY, MAX_DEALS, fetchNearby, devLogOnce } from "./homeData";
+import { NEARBY_KEY, MAX_DEALS, fetchNearby, devLogOnce, rankTopDiscounts } from "./homeData";
 import { ALL_CITIES, useSelectedCity, brandMatchesCity } from "../../utils/cityFilter";
 import { formatDistance } from "../../utils/distance";
 import { color, font, radius, MAX_FONT_SCALE } from "../../theme/tokens";
@@ -39,6 +40,12 @@ const withTimeout = (promise, ms) =>
 
 const nearMeta = (brand) =>
   [formatDistance(brand?.distanceKm), String(brand?.category || "").toLowerCase()].filter(Boolean).join(" · ");
+
+// "up to 60% off · food" (real values only)
+const topMeta = (brand) =>
+  [brand?.topDiscount ? `up to ${brand.topDiscount}% off` : null, String(brand?.category || "").toLowerCase()]
+    .filter(Boolean)
+    .join(" · ");
 
 export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, savedLabel, onSeeAll, onOpenDeal }) {
   const [city] = useSelectedCity();
@@ -136,15 +143,16 @@ export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, s
     if (nearby.error) devLogOnce("nearby", nearby.error);
   }, [nearby.error]);
 
-  // Selected city's deals for the fallback. With "All" there is no city to fall back
-  // to, so the slot shows a line and a "see all deals" link instead of nationwide deals.
-  const cityDeals = useMemo(() => {
-    if (city === ALL_CITIES) return [];
+  // Fallback: top discounts. A selected city first; if it has none with a real
+  // discount, the all-city list.
+  const top = useMemo(() => {
     const list = Array.isArray(allDeals) ? allDeals : [];
-    return list.filter((b) => brandMatchesCity(b, city)).slice(0, MAX_DEALS);
+    if (city !== ALL_CITIES) {
+      const inCity = rankTopDiscounts(list.filter((b) => brandMatchesCity(b, city)));
+      if (inCity.length) return { title: `top discounts in ${String(city).toLowerCase()}`, deals: inCity };
+    }
+    return { title: "top discounts", deals: rankTopDiscounts(list) };
   }, [allDeals, city]);
-  const allCities = city === ALL_CITIES;
-  const cityLabel = city === ALL_CITIES ? null : city;
 
   const allowLocation = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -164,12 +172,36 @@ export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, s
     Linking.openSettings().catch(() => {});
   }, []);
 
-  if (!signedIn) return null;
+  // Top discounts section. `above` (permission card) keeps the section from being
+  // empty; `notice` is the location-off line.
+  const renderTop = ({ above = null, notice = null } = {}) => {
+    const hasTop = top.deals.length > 0;
+    if (!hasTop && dealsLoading) {
+      return <HomeDeals title={top.title} savedLabel={savedLabel} onSeeAll={onSeeAll} onOpenDeal={onOpenDeal} deals={[]} loading aboveRail={above} notice={notice} />;
+    }
+    if (!hasTop) {
+      if (!above) return null; // nothing with a real discount: hide the section
+      return <HomeDeals title="deals" savedLabel={savedLabel} onSeeAll={onSeeAll} onOpenDeal={onOpenDeal} deals={[]} loading={false} body={above} notice={notice} />;
+    }
+    return (
+      <HomeDeals
+        title={top.title}
+        savedLabel={savedLabel}
+        onSeeAll={onSeeAll}
+        onOpenDeal={onOpenDeal}
+        deals={top.deals}
+        loading={false}
+        getMeta={topMeta}
+        aboveRail={above}
+        notice={notice}
+      />
+    );
+  };
 
-  // "near me" only for a list that really came from /brands/nearby with distances;
-  // every fallback is titled by what it is: the selected city, or plain "deals"
-  const fallbackTitle = cityLabel ? `in ${String(cityLabel).toLowerCase()}` : "deals";
-  const common = { savedLabel, onSeeAll, onOpenDeal, title: fallbackTitle };
+  // Guests: top discounts only (no location card, public data)
+  if (!signedIn) return renderTop();
+
+  const common = { savedLabel, onSeeAll, onOpenDeal, title: top.title };
   const nearbyList = Array.isArray(nearby.data) ? nearby.data : null;
   const nearbyHasDistances =
     !!nearbyList && nearbyList.length > 0 && nearbyList.every((b) => Number.isFinite(Number(b?.distanceKm)));
@@ -177,48 +209,29 @@ export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, s
   // Still checking the permission → placeholders
   if (perm === null) return <HomeDeals {...common} deals={[]} loading />;
 
-  // 2. Not asked yet → permission card (only this button asks)
+  // Not asked yet → permission card (only this button asks), top discounts below it
   if (perm === "undetermined") {
-    return (
-      <HomeDeals
-        {...common}
-        deals={[]}
-        loading={false}
-        body={
-          <View style={styles.permCard}>
-            <View style={styles.permRow}>
-              <Dot mood="excited" size={40} animated={false} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.permTitle} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
-                  deals closest to you
-                </Text>
-                <Text style={styles.permLine} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-                  {"allow location and we'll show the nearest brands."}
-                </Text>
-              </View>
+    return renderTop({
+      above: (
+        <View style={styles.permCard}>
+          <View style={styles.permRow}>
+            <Dot mood="excited" size={40} animated={false} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.permTitle} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                deals closest to you
+              </Text>
+              <Text style={styles.permLine} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                {"allow location and we'll show the nearest brands."}
+              </Text>
             </View>
-            <Button title="allow location" size="small" full={false} onPress={allowLocation} style={styles.permBtn} />
           </View>
-        }
-      />
-    );
+          <Button title="allow location" size="small" full={false} onPress={allowLocation} style={styles.permBtn} />
+        </View>
+      ),
+    });
   }
 
-  // "see all deals" → Brands (same as the section title link)
-  const seeAllLink = (
-    <Pressable
-      onPress={onSeeAll}
-      accessibilityRole="link"
-      accessibilityLabel="see all deals"
-      hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
-    >
-      <Text style={styles.noticeLink} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-        see all deals
-      </Text>
-    </Pressable>
-  );
-
-  // 3. Granted and the endpoint answered with brands → nearest first
+  // Granted and the endpoint answered with brands that have a distance → nearest first
   if (perm === "granted" && !positionFailed) {
     const waiting = !coords || nearby.isLoading;
     if (waiting) return <HomeDeals {...common} deals={[]} loading />;
@@ -233,79 +246,32 @@ export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, s
         />
       );
     }
-    // 4. Granted, the endpoint answered but nothing within range → the line + "see all
-    //    deals"; the selected city's deals below it (never nationwide deals for "All")
-    if (!nearby.isError && nearbyList && nearbyList.length === 0) {
-      return (
-        <HomeDeals
-          {...common}
-          deals={cityDeals}
-          loading={!allCities && dealsLoading}
-          hideWhenEmpty={false}
-          notice={
-            <View style={styles.noticeRow}>
-              <Text style={styles.notice} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-                no partner deals near you yet.{cityDeals.length && cityLabel ? ` here's what's in ${cityLabel}.` : ""}
-              </Text>
-              {seeAllLink}
-            </View>
-          }
-        />
-      );
-    }
-    // 6. Endpoint missing / failing / no distances → city deals under their own
-    //    title, no "turn on location" row (location is already on)
+    // none near / endpoint failing / no distances → top discounts
   }
 
-  // 5. Denied (with a settings link) or 6. fallback. With "All" selected there are no
-  //    nationwide deals here: denied keeps its settings line, and both add "see all deals".
-  const denied = perm === "denied";
-  if (allCities && !denied) {
-    return (
-      <HomeDeals
-        {...common}
-        deals={[]}
-        loading={false}
-        hideWhenEmpty={false}
-        notice={
-          <View style={styles.noticeRow}>
-            <Text style={styles.notice} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-              {"deals near you aren't available right now."}
+  // Denied: the settings line above the top discounts. Everything else: top discounts.
+  if (perm === "denied") {
+    return renderTop({
+      notice: (
+        <View style={styles.noticeRow}>
+          <Text style={styles.notice} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            turn on location to see the nearest
+          </Text>
+          <Pressable
+            onPress={openSettings}
+            accessibilityRole="link"
+            accessibilityLabel="open settings to turn on location"
+            hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
+          >
+            <Text style={styles.noticeLink} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+              settings
             </Text>
-            {seeAllLink}
-          </View>
-        }
-      />
-    );
+          </Pressable>
+        </View>
+      ),
+    });
   }
-  return (
-    <HomeDeals
-      {...common}
-      deals={cityDeals}
-      loading={!allCities && dealsLoading}
-      hideWhenEmpty={!allCities}
-      notice={
-        denied ? (
-          <View style={styles.noticeRow}>
-            <Text style={styles.notice} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-              turn on location to see the nearest
-            </Text>
-            <Pressable
-              onPress={openSettings}
-              accessibilityRole="link"
-              accessibilityLabel="open settings to turn on location"
-              hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
-            >
-              <Text style={styles.noticeLink} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-                settings
-              </Text>
-            </Pressable>
-            {allCities ? seeAllLink : null}
-          </View>
-        ) : null
-      }
-    />
-  );
+  return renderTop();
 }
 
 const styles = StyleSheet.create({

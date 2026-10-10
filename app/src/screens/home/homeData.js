@@ -13,6 +13,8 @@ export const DEALS_KEY = (userId) => ["home", "deals", userId];
 export const NEARBY_KEY = (userId, lat, lng) => ["home", "nearby", userId, lat, lng];
 
 export const MAX_DEALS = 6;
+export const PUBLIC_DEALS_KEY = ["home", "publicDeals"];
+export const TOP_DISCOUNTS_MAX = 5;
 
 // Dev-only, once per label, so a failing section doesn't spam the console
 const logged = new Set();
@@ -54,6 +56,96 @@ export async function fetchDeals(token, userId, forceRefresh = false) {
 
 // Image URLs: shared rule (utils/imageUrl), same as Brands and OfferScreen
 const DEFAULT_IMAGE = FALLBACK_IMAGE;
+
+// Guests (no token): the same brand + offer data from public endpoints only.
+//   GET /brands             approved brands with their cities (same list Brands uses)
+//   GET /offers/brandss     every brand's offers with discountPercentage (no auth)
+// /offers/summary, which getBrandsFast uses, needs a token. Both group the same
+// Offer documents, so the numbers match what a signed-in student sees.
+export async function fetchPublicDeals(signal) {
+  const [brandsRes, offersRes] = await Promise.all([
+    api.get("/brands", { params: { limit: 200 }, signal, timeout: 8000, _skipDedup: true }),
+    api.get("/offers/brandss", { signal, timeout: 10000, _skipDedup: true }),
+  ]);
+  const raw = brandsRes?.data;
+  const brands = Array.isArray(raw) ? raw : raw?.data || raw?.brands || [];
+  const offersByBrand = new Map(
+    (Array.isArray(offersRes?.data?.brands) ? offersRes.data.brands : []).map((b) => [
+      String(b?._id),
+      Array.isArray(b?.offers) ? b.offers : [],
+    ])
+  );
+  return brands
+    .map((brand) => {
+      const logo = brandLogoUrl(brand.logo);
+      const offers = (offersByBrand.get(String(brand._id)) || []).map((o) => ({
+        ...o,
+        image: imageUrl(o.image),
+        displayImage: imageUrl(o.image),
+        isClaimed: false,
+        serverClaimed: false,
+        discountPercentage: o.discountPercentage || 0,
+      }));
+      const first = offers[0];
+      return {
+        ...brand,
+        logo,
+        offers,
+        displayImage: first?.image || logo || DEFAULT_IMAGE,
+        hasOffer: offers.length > 0,
+        discount: first?.discountPercentage || 0,
+        category: first?.category || brand.category || "General",
+        isOnline: first?.isOnline || brand.isOnline || false,
+        isInStore: first?.isInStore || brand.isInStore || false,
+      };
+    })
+    .filter((b) => b.hasOffer);
+}
+
+// ── Top discounts ──
+// A real percentage: a number in (0, 100], or a string that is only a number
+// ("60") or contains one followed by "%" ("60%", "60% off", "up to 60%").
+// Text like "buy 1 get 1" has no "%" and is not a percentage.
+export function parsePercent(v) {
+  let n = null;
+  if (typeof v === "number") n = v;
+  else if (typeof v === "string") {
+    const plain = v.match(/^\s*(\d+(?:\.\d+)?)\s*%?\s*$/);
+    const withPct = v.match(/(\d+(?:\.\d+)?)\s*%/);
+    const m = plain || withPct;
+    n = m ? Number(m[1]) : null;
+  }
+  return Number.isFinite(n) && n > 0 && n <= 100 ? n : null;
+}
+
+// Highest real percentage on the brand or any of its offers, else null
+export function topDiscountOf(brand) {
+  const values = [
+    brand?.discount,
+    brand?.maxDiscount,
+    brand?.discountPercentage,
+    ...(Array.isArray(brand?.offers) ? brand.offers : []).flatMap((o) => [o?.discountPercentage, o?.discount]),
+  ]
+    .map(parsePercent)
+    .filter((n) => n != null);
+  return values.length ? Math.round(Math.max(...values)) : null;
+}
+
+const timeOf = (b) => {
+  const t = new Date(b?.createdAt || 0).getTime();
+  return Number.isFinite(t) ? t : 0;
+};
+
+// Brands with a real discount, highest first (ties: newest first), at most `max`.
+// The card shows the brand's top percentage ("up to X% off").
+export function rankTopDiscounts(list, max = TOP_DISCOUNTS_MAX) {
+  return (Array.isArray(list) ? list : [])
+    .map((b) => ({ b, top: topDiscountOf(b) }))
+    .filter((x) => x.top != null)
+    .sort((a, b) => b.top - a.top || timeOf(b.b) - timeOf(a.b))
+    .slice(0, max)
+    .map(({ b, top }) => ({ ...b, discount: top, topDiscount: top }));
+}
 
 // GET /brands/nearby → brands mapped exactly like getBrandsFast, plus distanceKm and
 // nearestBranch. Throws on any failure (the section then falls back to city deals).

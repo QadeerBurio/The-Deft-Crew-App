@@ -1,5 +1,5 @@
 // app/src/screens/home/HomeDeals.js
-// Horizontal rail of deal cards. Used by "near me." (HomeNearMe.js).
+// Horizontal rail of deal cards. Used by HomeNearMe.js ("near me." / "top discounts.").
 import React, { useState } from "react";
 import { View, Text, Image, FlatList, StyleSheet, Platform } from "react-native";
 import SectionTitle from "../../ui/SectionTitle";
@@ -73,11 +73,12 @@ export default function HomeDeals({
   title = "near me",
   notice, // optional node under the title (permission / fallback line)
   body, // optional node instead of the rail (permission card)
+  aboveRail, // optional node above the rail, rail still shown (permission card + deals)
   getMeta,
   hideWhenEmpty = true,
 }) {
   const hasDeals = Array.isArray(deals) && deals.length > 0;
-  if (!hasDeals && !loading && !body && hideWhenEmpty) return null;
+  if (!hasDeals && !loading && !body && !aboveRail && hideWhenEmpty) return null;
 
   return (
     <View style={styles.section}>
@@ -89,6 +90,7 @@ export default function HomeDeals({
         style={styles.title}
       />
       {notice ? <View style={styles.notice}>{notice}</View> : null}
+      {aboveRail ? <View style={styles.bodySlot}>{aboveRail}</View> : null}
       {body ? (
         <View style={styles.bodySlot}>{body}</View>
       ) : hasDeals ? (

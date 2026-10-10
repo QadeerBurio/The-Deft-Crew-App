@@ -36,6 +36,7 @@ import HomeNearMe from "./home/HomeNearMe";
 import AiFab, { AI_FAB_BOTTOM } from "./home/AiFab";
 import {
   LATEST_CONFESSION_KEY, DEALS_KEY, fetchLatestConfession, fetchDeals, devLogOnce,
+  PUBLIC_DEALS_KEY, fetchPublicDeals,
 } from "./home/homeData";
 import { color } from "../theme/tokens";
 import { useTour } from "../engagement/tour/TourProvider";
@@ -175,6 +176,23 @@ export default function Home({ navigation }) {
     refetchOnWindowFocus: false,
   });
 
+  // Guests: the same deals from public endpoints (no token) for "top discounts."
+  const { data: publicDeals, isLoading: publicDealsLoading, refetch: refetchPublicDeals } = useQuery({
+    queryKey: PUBLIC_DEALS_KEY,
+    queryFn: async ({ signal }) => {
+      try {
+        return await fetchPublicDeals(signal);
+      } catch (e) {
+        devLogOnce("public deals", e);
+        return [];
+      }
+    },
+    enabled: !!isGuest,
+    staleTime: 60 * 1000,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
   // Pull to refresh: missions, streak, daily drop, everything engagement,
   // plus the confession and deals sections
   const [pullRefreshing, setPullRefreshing] = useState(false);
@@ -191,11 +209,12 @@ export default function Home({ navigation }) {
               .catch((e) => devLogOnce("deals refresh", e))
           : null,
         signedIn ? queryClient.invalidateQueries({ queryKey: ["home", "nearby"] }) : null,
+        isGuest ? refetchPublicDeals() : null,
       ]);
     } finally {
       setPullRefreshing(false);
     }
-  }, [refetchEngagement, queryClient, signedIn, refetchConfession, token, userId]);
+  }, [refetchEngagement, queryClient, signedIn, refetchConfession, token, userId, isGuest, refetchPublicDeals]);
 
   // Auto refresh whenever Home is opened again (max once every 15s), so a
   // new drop / finished mission shows without pulling down
@@ -353,19 +372,18 @@ export default function Home({ navigation }) {
             />
           </FadeInView>
 
-          {signedIn && (
-            <FadeInView delay={200}>
-              <HomeNearMe
-                signedIn={signedIn}
-                userId={userId}
-                allDeals={deals}
-                dealsLoading={dealsLoading}
-                savedLabel={savedLabel}
-                onSeeAll={openAllDeals}
-                onOpenDeal={openDeal}
-              />
-            </FadeInView>
-          )}
+          {/* near me / top discounts (guests: top discounts from public data) */}
+          <FadeInView delay={200}>
+            <HomeNearMe
+              signedIn={signedIn}
+              userId={userId}
+              allDeals={signedIn ? deals : publicDeals}
+              dealsLoading={signedIn ? dealsLoading : !!isGuest && publicDealsLoading}
+              savedLabel={savedLabel}
+              onSeeAll={openAllDeals}
+              onOpenDeal={openDeal}
+            />
+          </FadeInView>
         </ScrollView>
       </View>
 
