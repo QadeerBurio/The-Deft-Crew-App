@@ -45,6 +45,7 @@ import GuestGuard from "../../components/GuestGuard";
 import { useGuestGate } from "../../guest/GuestGate";
 import { PressScale, EmptyState, SkeletonBlock } from "../../ui";
 import { imageUrl } from "../../utils/imageUrl";
+import useSavedEvents from "./useSavedEvents";
 import io from "socket.io-client";
 import { engagementBus, ENGAGEMENT_EVENTS } from "../../engagement/engagementBus";
 
@@ -239,6 +240,27 @@ const isPastEvent = (item) => {
 
 const LIST_BANNER_H = 112;
 
+// Save / unsave: bookmark, filled when saved, 44 px, PressScale + light haptic
+const SaveButton = ({ saved, onPress, dark = false }) => (
+  <PressScale
+    onPress={() => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      onPress();
+    }}
+    scaleTo={0.9}
+    style={[EV.saveBtn, dark && EV.saveBtnDark, saved && (dark ? EV.saveBtnOnDark : EV.saveBtnOn)]}
+    accessibilityRole="button"
+    accessibilityState={{ selected: saved }}
+    accessibilityLabel={saved ? "remove from saved" : "save event"}
+  >
+    <Ionicons
+      name={saved ? "bookmark" : "bookmark-outline"}
+      size={18}
+      color={saved ? T.ink : dark ? T.white : T.ink}
+    />
+  </PressScale>
+);
+
 // ─── Event card: featured (top event, dark, design) or list size (white) ──────
 // Same parts in both: banner (event image or sand) with the date and prize pills,
 // title, place line, tags, register / registered button and the slot on its right.
@@ -367,7 +389,7 @@ const ModernHeader = ({ onBack, onMenuPress, showApplied, appliedCount }) => {
         activeOpacity={0.8}
         accessibilityRole="button"
         accessibilityState={{ selected: showApplied }}
-        accessibilityLabel={showApplied ? "show all events" : `my events, ${appliedCount} registered`}
+        accessibilityLabel={showApplied ? "show all events" : `my events, ${appliedCount} registered or saved`}
       >
         <Ionicons name={showApplied ? "close" : "checkmark-circle-outline"} size={16} color={showApplied ? T.white : T.ink} />
         <Text style={[EV.myBtnText, showApplied && { color: T.white }]}>
@@ -385,8 +407,20 @@ const ModernHeader = ({ onBack, onMenuPress, showApplied, appliedCount }) => {
 
 // ─── Main Screen ──────────────────────────────────────────────────────────
 export default function EventsScreen() {
-  const { token, user } = useContext(AuthContext);
+  const { token, user, isGuest } = useContext(AuthContext);
   const { requireAccount } = useGuestGate();
+  // saved events: this student's own device list (none for guests)
+  const savedUserId = token && !isGuest ? user?._id || user?.id || null : null;
+  const { savedIds, isSaved, toggle: toggleSaved, prune: pruneSaved } = useSavedEvents(savedUserId);
+  const [feedComplete, setFeedComplete] = useState(false); // the feed returned every event
+  const [feedLoaded, setFeedLoaded] = useState(false);
+  const onSave = useCallback(
+    (ev) => {
+      if (!requireAccount()) return; // guests: the sign up sheet
+      if (ev?._id) toggleSaved(ev._id);
+    },
+    [requireAccount, toggleSaved]
+  );
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions(); // details sheet = 85% (follows rotation)
@@ -695,6 +729,9 @@ export default function EventsScreen() {
       setEvents(fetchedEvents);
       eventsCache.events = fetchedEvents;
       setLoadError(false);
+      const total = Array.isArray(res.data) ? fetchedEvents.length : Number(res.data?.total);
+      setFeedComplete(!Number.isFinite(total) || fetchedEvents.length >= total);
+      setFeedLoaded(true);
     } catch (error) {
       // nothing cached to show → the error state (ui kit) instead of an alert
       if (!eventsCache.events) setLoadError(true);
@@ -906,7 +943,44 @@ export default function EventsScreen() {
   }, [activeTab, activeCity, events, showApplied, appliedEventsData]);
 
   const isEventRegistered = (eventId) => registeredEventIds.includes(eventId);
-  const appliedCount = registeredEventIds.length;
+
+  // Saved events that are gone or past are dropped quietly (only after a fresh feed;
+  // with a partial feed an id that isn't in it is kept, just not shown)
+  useEffect(() => {
+    if (!feedLoaded || !savedIds.length) return;
+    const byId = new Map(events.map((e) => [String(e._id), e]));
+    const keep = savedIds.filter((id) => {
+      const ev = byId.get(id);
+      if (ev) return !isPastEvent(ev);
+      return !feedComplete;
+    });
+    if (keep.length !== savedIds.length) pruneSaved(keep);
+  }, [feedLoaded, feedComplete, events, savedIds, pruneSaved]);
+
+  // live saved events (same city filter as "registered")
+  const savedEvents = useMemo(() => {
+    if (!savedIds.length) return [];
+    const byId = new Map(events.map((e) => [String(e._id), e]));
+    return savedIds
+      .map((id) => byId.get(id))
+      .filter((e) => e && !isPastEvent(e))
+      .filter((e) => isCityMatch(e, activeCity));
+  }, [savedIds, events, activeCity]);
+
+  const appliedCount = registeredEventIds.length + savedEvents.length;
+
+  // List rows. All events: featured + "coming up.". Mine: "registered." then "saved.",
+  // each with its own empty line.
+  const listRows = useMemo(() => {
+    if (!showApplied) return filteredEvents.map((e) => ({ kind: "event", key: String(e._id), event: e }));
+    const rows = [{ kind: "header", key: "h-registered", title: "registered" }];
+    if (filteredEvents.length) filteredEvents.forEach((e) => rows.push({ kind: "event", key: `r-${e._id}`, event: e }));
+    else rows.push({ kind: "empty", key: "e-registered", which: "registered" });
+    rows.push({ kind: "header", key: "h-saved", title: "saved" });
+    if (savedEvents.length) savedEvents.forEach((e) => rows.push({ kind: "event", key: `s-${e._id}`, event: e }));
+    else rows.push({ kind: "empty", key: "e-saved", which: "saved" });
+    return rows;
+  }, [showApplied, filteredEvents, savedEvents]);
 
   // Category chips (Events design: white pills, ink when active)
   const CategoryScroll = () => (
@@ -1039,25 +1113,45 @@ export default function EventsScreen() {
 
       <Animated.View style={[styles.feedContainer, { opacity: listOpacity }]}>
         <FlatList
-          data={filteredEvents}
-          keyExtractor={(item) => item._id}
-          renderItem={({ item, index }) => (
-            <>
-              {index === 1 && !showApplied && (
+          data={listRows}
+          keyExtractor={(row) => row.key}
+          extraData={[savedIds, registeredEventIds]}
+          renderItem={({ item: row, index }) => {
+            if (row.kind === "header") {
+              return (
                 <Text style={EV.h2} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
-                  coming up<Text style={{ color: T.yellow }}>.</Text>
+                  {row.title}<Text style={{ color: T.yellow }}>.</Text>
                 </Text>
-              )}
-              <EventCard
-                item={item}
-                featured={index === 0 && !showApplied}
-                onOpen={setSelectedEvent}
-                onRegister={handleRegister}
-                isRegistered={isEventRegistered(item._id)}
-                onCancel={handleCancelRegistration}
-              />
-            </>
-          )}
+              );
+            }
+            if (row.kind === "empty") {
+              return row.which === "saved" ? (
+                <EmptyState mood="sleepy" title="nothing saved yet." line="save an event and it shows up here." style={EV.sectionEmpty} />
+              ) : (
+                <EmptyState mood="sleepy" title="no registrations yet." line="register for an event and it shows up here." style={EV.sectionEmpty} />
+              );
+            }
+            const ev = row.event;
+            const featured = index === 0 && !showApplied;
+            return (
+              <>
+                {index === 1 && !showApplied && (
+                  <Text style={EV.h2} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                    coming up<Text style={{ color: T.yellow }}>.</Text>
+                  </Text>
+                )}
+                <EventCard
+                  item={ev}
+                  featured={featured}
+                  onOpen={setSelectedEvent}
+                  onRegister={handleRegister}
+                  isRegistered={isEventRegistered(ev._id)}
+                  onCancel={handleCancelRegistration}
+                  side={<SaveButton saved={isSaved(ev._id)} dark={featured} onPress={() => onSave(ev)} />}
+                />
+              </>
+            );
+          }}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           refreshing={refreshing}
@@ -1339,6 +1433,9 @@ export default function EventsScreen() {
                           </Text>
                         </>
                       ) : null}
+                    </View>
+                    <View style={{ marginRight: 8 }}>
+                      <SaveButton saved={isSaved(selectedEvent._id)} onPress={() => onSave(selectedEvent)} />
                     </View>
                     <TouchableOpacity
                       activeOpacity={0.88}
@@ -2341,5 +2438,12 @@ const EV = StyleSheet.create({
   tag: { height: 22, paddingHorizontal: 8, borderRadius: 11, backgroundColor: T.sand, justifyContent: "center", maxWidth: 160 },
   tagOnInk: { backgroundColor: T.inkSoft },
   tagDark: { backgroundColor: T.ink },
+
+  // save (bookmark): 44 px circle; light on white cards, outlined on the dark card
+  saveBtn: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: T.line, backgroundColor: T.card, alignItems: "center", justifyContent: "center" },
+  saveBtnDark: { backgroundColor: "transparent", borderColor: T.inkLine },
+  saveBtnOn: { backgroundColor: T.yellow, borderColor: T.yellow },
+  saveBtnOnDark: { backgroundColor: T.yellow, borderColor: T.yellow },
+  sectionEmpty: { paddingVertical: 16 },
   tagText: { fontFamily: F.bodyBold, fontSize: 11, color: T.ink },
 });
