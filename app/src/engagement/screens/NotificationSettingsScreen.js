@@ -28,8 +28,30 @@ import {
 import { color as T, font as F } from "../../theme/tokens";
 import { ScreenHeader, Skeleton } from "../../ui";
 import { plainError } from "../../utils/plainError";
+// What went wrong with the push test, in plain words (the server's codes are not shown).
+// data: GET /notification/test-push → { ok, problem, results: [{ ticket, receipt, error }] }
+export function pushTestMessage(data) {
+  if (data?.problem === "NO_TOKEN" || data?.problem === "NO_VALID_TOKEN") {
+    return "this account has no phone saved for notifications yet. open the installed tdc app (not expo go), log in and allow notifications, then try again.";
+  }
+  const results = Array.isArray(data?.results) ? data.results : [];
+  const failed = results.filter((r) => r.ticket !== "ok" || r.receipt === "error");
+  const okCount = results.length - failed.length;
+  const codes = new Set(failed.map((r) => r.error));
+  if (["InvalidCredentials", "MismatchSenderId", "UNAUTHORIZED"].some((c) => codes.has(c))) {
+    return "notifications aren't set up on our side for this version of the app yet. we're on it, please try again later.";
+  }
+  if (failed.length && failed.every((r) => r.error === "DeviceNotRegistered")) {
+    return okCount
+      ? `it was sent to ${okCount} of ${results.length} devices. an older install on this account no longer gets notifications, that's fine.`
+      : "this phone's notification registration has expired. close tdc completely, open it again, then try the test again.";
+  }
+  if (okCount) return `it was sent to ${okCount} of ${results.length} devices. one didn't get it, try the test again in a minute.`;
+  return "the test didn't go through. make sure notifications are allowed for tdc, then try again.";
+}
+
 // Re-saves this device's push token, then asks the server to push to it.
-// Shows exactly what is wrong if the push can't be delivered.
+// Shows what is wrong, in plain words, if the push can't be delivered.
 async function runPushTest(setTesting) {
   setTesting(true);
   try {
@@ -38,12 +60,17 @@ async function runPushTest(setTesting) {
       Alert.alert('no push token', 'allow notifications for tdc in phone settings, and test on the installed app, not Expo Go.');
       return;
     }
-    await savePushTokenToServer(api, token);
+    const saved = await savePushTokenToServer(api, token);
+    if (!saved?.ok) {
+      Alert.alert('push test', "this phone couldn't be saved for notifications. check your connection and try again.");
+      return;
+    }
     Alert.alert('test sent', 'minimise the app now. 4 notifications arrive over ~15 seconds, each with its own emoji and sound: new offer, message, streak, like.');
     const { data } = await api.get('/notification/test-push', { timeout: 30000 });
+    // full result for whoever reads the device log (adb logcat); tokens are cut short by the server
+    console.warn('[push test]', JSON.stringify({ ok: data?.ok, problem: data?.problem, results: data?.results }));
     if (!data?.ok) {
-      // server codes / raw send errors are not shown
-      Alert.alert('push failed', 'the test didn\'t go through. make sure notifications are allowed for tdc, then try again.');
+      Alert.alert('push failed', pushTestMessage(data));
     } else if (data?.legacyDevices) {
       Alert.alert('old build on a device', data.note);
     }
