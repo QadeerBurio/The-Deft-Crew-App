@@ -19,7 +19,6 @@ import {
 } from "react-native";
 import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
 import { AuthContext } from "../context/AuthContext";
 import { useGuestGate } from '../guest/GuestGate';
 import api from "../api/api";
@@ -27,6 +26,7 @@ import api from "../api/api";
 import { color as T, font as F } from "../theme/tokens";
 import { plainError } from "../utils/plainError";
 import { copyToClipboard as copyText } from "../utils/clipboard";
+import { pickImageFromLibrary, uploadImageToCloudinary } from "../utils/cloudinaryUpload";
 const { width, height } = Dimensions.get("window");
 
 export default function PaymentScreen({ navigation }) {
@@ -135,24 +135,9 @@ export default function PaymentScreen({ navigation }) {
   };
 
   const pickReceipt = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert(
-        "Permission Required",
-        "Please allow gallery access to upload your receipt."
-      );
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.8,
-      aspect: [4, 3],
-    });
-
-    if (!result.canceled) {
-      setReceiptImage(result.assets[0].uri);
+    const uri = await pickImageFromLibrary({ aspect: [4, 3] });
+    if (uri) {
+      setReceiptImage(uri);
       Vibration.vibrate(30);
     }
   };
@@ -172,25 +157,8 @@ export default function PaymentScreen({ navigation }) {
     setLoading(true);
 
     try {
-      const data = new FormData();
-      const filename = receiptImage.split("/").pop();
-      const match = /\.(\w+)$/.exec(filename ?? "");
-      const type = match ? `image/${match[1]}` : `image`;
-
-      data.append("file", {
-        uri: receiptImage,
-        name: filename,
-        type: type,
-      });
-      data.append("upload_preset", "tdc_profiles");
-
-      const uploadRes = await fetch(
-        "https://api.cloudinary.com/v1_1/decaxpera/image/upload",
-        { method: "POST", body: data }
-      );
-      const uploadData = await uploadRes.json();
-
-      if (!uploadData.secure_url) throw new Error("Cloudinary upload failed");
+      // shared upload (same preset / cloud as before)
+      const uploadData = { secure_url: await uploadImageToCloudinary(receiptImage) };
 
       await api.post(
         "/membership/request-upgrade",
