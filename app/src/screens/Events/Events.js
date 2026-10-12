@@ -41,7 +41,6 @@ import { useOpenFromParams } from "../../engagement/hooks/useOpenFromParams";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
-import GuestGuard from "../../components/GuestGuard";
 import { useGuestGate } from "../../guest/GuestGate";
 import { PressScale, EmptyState, SkeletonBlock } from "../../ui";
 import { imageUrl } from "../../utils/imageUrl";
@@ -51,6 +50,18 @@ import { engagementBus, ENGAGEMENT_EVENTS } from "../../engagement/engagementBus
 
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 import { plainError } from "../../utils/plainError";
+import RegisterSheet, { ProofSheet } from "./RegisterSheet";
+import {
+  getTemplates,
+  cachedTemplates,
+  priceLabel,
+  seatsLabel,
+  closesLabel,
+  registrationState,
+  detailRows,
+  formatRs,
+  PAYMENT_LABEL,
+} from "./eventsV2";
 const { height, width } = Dimensions.get("window");
 
 const API_BASE = "https://the-deft-crew-production.up.railway.app/api/events";
@@ -356,9 +367,13 @@ const SaveButton = ({ saved, onPress, dark = false }) => (
 // ─── Event card: featured (top event, dark, design) or list size (white) ──────
 // Same parts in both: banner (event image or sand) with the date and prize pills,
 // title, place line, tags, register / registered button and the slot on its right.
-const EventCard = ({ item, onOpen, onRegister, isRegistered, onCancel, featured, side }) => {
+const EventCard = ({ item, onOpen, onRegister, isRegistered, onCancel, featured, side, registration, onProof }) => {
   const [imgFailed, setImgFailed] = useState(false);
   const imported = isImportedEvent(item);
+  // events v2: price, seats, open / closed (not for external events)
+  const price = imported ? null : priceLabel(item);
+  const seats = imported ? null : seatsLabel(item);
+  const closedReason = imported ? "" : registrationState(item).reason;
   const when = eventWhen(item);
   const meta = eventMeta(item);
   const prize = real(item, "prize");
@@ -379,6 +394,19 @@ const EventCard = ({ item, onOpen, onRegister, isRegistered, onCancel, featured,
         registered · tap to cancel
       </Text>
     </TouchableOpacity>
+  ) : closedReason ? (
+    <View
+      style={[EV.regBtn, EV.regBtnOff, !featured && EV.regBtnList]}
+      accessible
+      accessibilityRole="button"
+      accessibilityState={{ disabled: true }}
+      accessibilityLabel={`${item.title}: ${closedReason}`}
+    >
+      <Ionicons name="lock-closed-outline" size={featured ? 16 : 14} color={T.textMuted} />
+      <Text style={[EV.regText, EV.regTextOff, !featured && EV.regTextList]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+        {closedReason}
+      </Text>
+    </View>
   ) : (
     <TouchableOpacity
       style={[EV.regBtn, !featured && EV.regBtnList]}
@@ -440,8 +468,18 @@ const EventCard = ({ item, onOpen, onRegister, isRegistered, onCancel, featured,
             {meta}
           </Text>
         )}
-        {!!(type || imported) && (
+        {!!(type || imported || price || seats) && (
           <View style={EV.tagRow}>
+            {!!price && (
+              <View style={[EV.tag, featured ? EV.tagOnInk : EV.tagPrice]}>
+                <Text style={[EV.tagText, featured && { color: T.yellow }]} maxFontSizeMultiplier={MAX_FONT_SCALE}>{price}</Text>
+              </View>
+            )}
+            {!!seats && (
+              <View style={[EV.tag, featured && EV.tagOnInk, seats === "sold out" && EV.tagSoldOut]}>
+                <Text style={[EV.tagText, featured && { color: T.white }, seats === "sold out" && { color: T.danger }]} maxFontSizeMultiplier={MAX_FONT_SCALE}>{seats}</Text>
+              </View>
+            )}
             {!!type && (
               <View style={[EV.tag, featured && EV.tagOnInk]}>
                 <Text style={[EV.tagText, featured && { color: T.white }]} maxFontSizeMultiplier={MAX_FONT_SCALE}>
@@ -460,8 +498,56 @@ const EventCard = ({ item, onOpen, onRegister, isRegistered, onCancel, featured,
           <View style={{ flex: 1 }}>{action}</View>
           {side}
         </View>
+        {registration && <RegistrationStatus registration={registration} onProof={onProof} dark={featured} />}
       </View>
     </PressScale>
+  );
+};
+
+// ─── Mine: tickets + payment status (events v2) ───────────────────────────
+// pending / rejected: "send payment proof again"; verified: a clear confirmed state
+const RegistrationStatus = ({ registration, onProof }) => {
+  const pay = registration?.payment || {};
+  const status = pay.status || "not_required";
+  const ticket = registration?.ticket;
+  if (status === "not_required" && !ticket?.tier) return null;
+  const tone = status === "verified" ? EV.statusVerified : status === "rejected" ? EV.statusRejected : EV.statusPending;
+  const icon = status === "verified" ? "checkmark-circle" : status === "rejected" ? "close-circle" : "time-outline";
+  const iconColor = status === "verified" ? T.success : status === "rejected" ? T.danger : T.ink;
+  return (
+    <View style={[EV.status, status === "not_required" ? { backgroundColor: T.sand } : tone]}>
+      {!!ticket?.tier && (
+        <Text style={EV.statusMeta} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+          {String(ticket.tier).toLowerCase()} × {ticket.quantity || 1}
+          {pay.amount ? ` · ${formatRs(pay.amount)}` : ""}
+        </Text>
+      )}
+      {status !== "not_required" && (
+        <View style={EV.statusRow}>
+          <Ionicons name={icon} size={16} color={iconColor} />
+          <Text style={EV.statusText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            {PAYMENT_LABEL[status]}
+          </Text>
+        </View>
+      )}
+      {status === "rejected" && !!pay.rejectReason && (
+        <Text style={EV.statusMeta} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+          reason: {pay.rejectReason}
+        </Text>
+      )}
+      {(status === "pending" || status === "rejected") && onProof && (
+        <TouchableOpacity
+          style={EV.statusBtn}
+          onPress={() => onProof(registration)}
+          accessibilityRole="button"
+          accessibilityLabel="send payment proof again"
+        >
+          <Text style={EV.statusBtnText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            send payment proof again
+          </Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 };
 
@@ -563,12 +649,18 @@ export default function EventsScreen() {
     registrationUrl: "",
   });
 
-  const [regForm, setRegForm] = useState({
-    studentName: "",
-    whatsapp: "",
-    studentId: "",
-    email: "",
-  });
+  // events v2: category templates (labels for event details) and "send proof again"
+  const [templates, setTemplates] = useState(cachedTemplates());
+  const [proofFor, setProofFor] = useState(null); // { registration, event }
+  useEffect(() => {
+    let alive = true;
+    getTemplates()
+      .then((t) => alive && setTemplates(t))
+      .catch(() => {}); // labels fall back to the detail keys
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const availableCities = useMemo(() => {
     if (!events || events.length === 0) return [];
@@ -733,13 +825,22 @@ export default function EventsScreen() {
       return;
     }
 
-    setRegForm({
-      studentName: user?.name || "",
-      email: user?.email || "",
-      whatsapp: "",
-      studentId: "",
-    });
+    const state = registrationState(eventItem);
+    if (!state.open) {
+      Alert.alert(state.reason, state.reason === "sold out" ? "this event is full." : "registration for this event has closed.");
+      return;
+    }
     setRegisterEvent(eventItem);
+  };
+
+  // after POST /register (RegisterSheet): points popups, profile, lists
+  const onRegistered = (data) => {
+    if (data?.engagement?.popups?.length) {
+      engagementBus.emit(ENGAGEMENT_EVENTS.POPUPS_QUEUED, data.engagement.popups);
+    }
+    engagementBus.emit(ENGAGEMENT_EVENTS.PROFILE_REFRESH);
+    fetchRegisteredEvents();
+    fetchEvents(); // seats left / tickets left
   };
 
   useEffect(() => {
@@ -895,65 +996,6 @@ export default function EventsScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     await Promise.all([fetchEvents(), fetchCategories(), fetchRegisteredEvents()]);
-  };
-
-  const handleRegistrationSubmit = async () => {
-    if (!regForm.studentName || !regForm.email || !regForm.whatsapp) {
-      Alert.alert("Validation Error", "Please fill all required fields.");
-      return;
-    }
-    if (!token) {
-      requireAccount();
-      return;
-    }
-    if (!registerEvent?._id) {
-      Alert.alert("Error", "No event selected.");
-      return;
-    }
-
-    try {
-      const res = await axios.post(
-        `${API_BASE}/register`,
-        {
-          eventId: registerEvent._id,
-          studentName: regForm.studentName,
-          email: regForm.email,
-          whatsapp: regForm.whatsapp,
-          studentId: regForm.studentId || "Not provided",
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      if (res?.data?.engagement?.popups?.length) {
-        engagementBus.emit(
-          ENGAGEMENT_EVENTS.POPUPS_QUEUED,
-          res.data.engagement.popups
-        );
-      }
-
-      engagementBus.emit(ENGAGEMENT_EVENTS.PROFILE_REFRESH);
-
-      Alert.alert("Success", "Registration successful.");
-      setRegisterEvent(null);
-      setRegForm({
-        studentName: user?.name || "",
-        whatsapp: "",
-        studentId: "",
-        email: user?.email || "",
-      });
-      await fetchRegisteredEvents();
-    } catch (error) {
-      if (error?.response?.data?.alreadyRegistered) {
-        Alert.alert("Notice", "You're already registered for this event.");
-        setRegisterEvent(null);
-        await fetchRegisteredEvents();
-        return;
-      }
-      Alert.alert(
-        "Error",
-        plainError(error, "Registration failed.")
-      );
-    }
   };
 
   const handleCancelRegistration = async (event) => {
@@ -1245,6 +1287,8 @@ export default function EventsScreen() {
                   onRegister={handleRegister}
                   isRegistered={isEventRegistered(ev._id)}
                   onCancel={handleCancelRegistration}
+                  registration={showApplied ? ev.registration : null}
+                  onProof={(reg) => setProofFor({ registration: reg, event: ev })}
                   side={<SaveButton saved={isSaved(ev._id)} dark={featured} onPress={() => onSave(ev)} />}
                 />
               </>
@@ -1462,6 +1506,39 @@ export default function EventsScreen() {
                     </View>
                     )}
 
+                    {/* events v2: price, seats, closing date (not for external events) */}
+                    {!isImportedEvent(selectedEvent) && (
+                      <View style={EV.infoRow}>
+                        <View style={[EV.infoPill, { backgroundColor: T.yellowSoft }]}>
+                          <Text style={EV.infoPillText} maxFontSizeMultiplier={MAX_FONT_SCALE}>{priceLabel(selectedEvent)}</Text>
+                        </View>
+                        {!!seatsLabel(selectedEvent) && (
+                          <View style={[EV.infoPill, seatsLabel(selectedEvent) === "sold out" && { backgroundColor: T.dangerBg }]}>
+                            <Text style={[EV.infoPillText, seatsLabel(selectedEvent) === "sold out" && { color: T.danger }]} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                              {seatsLabel(selectedEvent)}
+                            </Text>
+                          </View>
+                        )}
+                        {!!closesLabel(selectedEvent) && (
+                          <View style={EV.infoPill}>
+                            <Text style={EV.infoPillText} maxFontSizeMultiplier={MAX_FONT_SCALE}>{closesLabel(selectedEvent)}</Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+
+                    {detailRows(selectedEvent, templates).length > 0 && (
+                      <View style={styles.sectionCard}>
+                        <Text style={styles.sectionCardTitle}>details</Text>
+                        {detailRows(selectedEvent, templates).map((row) => (
+                          <View key={row.key} style={EV.detailRow}>
+                            <Text style={EV.detailLabel} maxFontSizeMultiplier={MAX_FONT_SCALE}>{row.label}</Text>
+                            <Text style={EV.detailValue} maxFontSizeMultiplier={MAX_FONT_SCALE}>{row.value}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+
                     {!!String(selectedEvent.description || "").trim() && (
                     <View style={styles.sectionCard}>
                       <Text style={styles.sectionCardTitle}>description</Text>
@@ -1489,7 +1566,7 @@ export default function EventsScreen() {
                       </View>
                     ) : null}
 
-                    {real(selectedEvent, "prize") ? (
+                    {real(selectedEvent, "prize") && !selectedEvent.details?.prizePool ? (
                       <View style={styles.sectionCard}>
                         <Text style={styles.sectionCardTitle}>prize pool</Text>
                         <Text style={styles.sectionCardBody}>
@@ -1523,6 +1600,15 @@ export default function EventsScreen() {
                     <View style={{ flex: 1, marginRight: 8 }}>
                       {isImportedEvent(selectedEvent) ? (
                         <Text style={styles.stickyLabel}>external event</Text>
+                      ) : !isImportedEvent(selectedEvent) && registrationState(selectedEvent).reason ? (
+                        <Text style={styles.stickyLabel}>{registrationState(selectedEvent).reason}</Text>
+                      ) : selectedEvent.registrationCloses ? (
+                        <>
+                          <Text style={styles.stickyLabel}>register before</Text>
+                          <Text style={styles.stickyValue} numberOfLines={1}>
+                            {(closesLabel(selectedEvent) || "").replace(/^registration closes /, "")}
+                          </Text>
+                        </>
                       ) : real(selectedEvent, "deadline") ? (
                         <>
                           <Text style={styles.stickyLabel}>register before</Text>
@@ -1537,6 +1623,10 @@ export default function EventsScreen() {
                     </View>
                     <TouchableOpacity
                       activeOpacity={0.88}
+                      disabled={!isImportedEvent(selectedEvent) && !isEventRegistered(selectedEvent._id) && !registrationState(selectedEvent).open}
+                      style={!isImportedEvent(selectedEvent) && !isEventRegistered(selectedEvent._id) && !registrationState(selectedEvent).open ? { opacity: 0.45 } : null}
+                      accessibilityRole="button"
+                      accessibilityState={{ disabled: !isImportedEvent(selectedEvent) && !isEventRegistered(selectedEvent._id) && !registrationState(selectedEvent).open }}
                       onPress={() => {
                         const e = selectedEvent;
                         setSelectedEvent(null);
@@ -1866,137 +1956,34 @@ export default function EventsScreen() {
       </Modal>
 
       {/* ═══════════════════════════════════════════════════════════ */}
-      {/* REGISTRATION MODAL — only for manual/admin events */}
+      {/* REGISTRATION (events v2): the event's own form, tickets, payment */}
       {/* ═══════════════════════════════════════════════════════════ */}
-      <GuestGuard
-        title="view your discounts"
-        message="sign in to see your claimed offers and discounts."
-        fallback={null}
-      >
-        <Modal
-          visible={!!registerEvent}
-          animationType="slide"
-          presentationStyle="pageSheet"
-          onRequestClose={() => setRegisterEvent(null)}
-          statusBarTranslucent={true}
-        >
-          <View style={styles.modalScreen}>
-            <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
-            {registerEvent && (
-              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                <View style={styles.modalContainer}>
-                  <LinearGradient
-                    colors={[COLORS.gradientStart, COLORS.gradientEnd]}
-                    style={[styles.modalHero, { paddingTop: (insets.top || 0) + 12 }]}
-                  >
-                    <View style={styles.modalHeroTop}>
-                      <View style={styles.modalHeroTitleRow}>
-                        <Ionicons name="clipboard" size={22} color={COLORS.accent} />
-                        <Text style={styles.modalHeroTitle}>register</Text>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.modalClose}
-                        onPress={() => setRegisterEvent(null)}
-                        activeOpacity={0.86}
-                        accessibilityRole="button"
-                        accessibilityLabel="close registration"
-                      >
-                        <Ionicons name="close" size={22} color={COLORS.accent} />
-                      </TouchableOpacity>
-                    </View>
-                    <Text style={styles.modalHeroSubtitle} numberOfLines={2}>
-                      {registerEvent.title}
-                    </Text>
-                  </LinearGradient>
-
-                  <KeyboardAvoidingView
-                    behavior={Platform.OS === "ios" ? "padding" : "height"}
-                    style={styles.keyboardAvoidView}
-                    keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
-                  >
-                    <ScrollView
-                      style={styles.formScrollView}
-                      showsVerticalScrollIndicator={false}
-                      contentContainerStyle={[
-                        styles.formScrollContent,
-                        { paddingBottom: (insets.bottom || 12) + 24 },
-                      ]}
-                      keyboardShouldPersistTaps="handled"
-                    >
-                      <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>Full Name *</Text>
-                        <TextInput
-                          style={styles.textInput}
-                          placeholder="Enter your full name"
-                          placeholderTextColor={T.textFaint}
-                          value={regForm.studentName}
-                          onChangeText={(text) =>
-                            setRegForm({ ...regForm, studentName: text })
-                          }
-                        />
-                      </View>
-
-                      <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>University Email *</Text>
-                        <TextInput
-                          style={styles.textInput}
-                          placeholder="student@university.edu"
-                          placeholderTextColor={T.textFaint}
-                          value={regForm.email}
-                          keyboardType="email-address"
-                          autoCapitalize="none"
-                          onChangeText={(text) => setRegForm({ ...regForm, email: text })}
-                        />
-                      </View>
-
-                      <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>WhatsApp Number *</Text>
-                        <TextInput
-                          style={styles.textInput}
-                          placeholder="+92 3XX XXXXXXX"
-                          placeholderTextColor={T.textFaint}
-                          keyboardType="phone-pad"
-                          value={regForm.whatsapp}
-                          onChangeText={(text) => setRegForm({ ...regForm, whatsapp: text })}
-                        />
-                      </View>
-
-                      <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>Student ID / CNIC</Text>
-                        <TextInput
-                          style={styles.textInput}
-                          placeholder="Optional"
-                          placeholderTextColor={T.textFaint}
-                          value={regForm.studentId}
-                          onChangeText={(text) => setRegForm({ ...regForm, studentId: text })}
-                        />
-                      </View>
-
-                      <TouchableOpacity
-                        style={styles.primaryFormButton}
-                        activeOpacity={0.88}
-                        onPress={handleRegistrationSubmit}
-                      >
-                        <LinearGradient
-                          colors={[T.yellow, T.yellow]}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={styles.primaryFormGradient}
-                        >
-                          <Text style={styles.primaryFormText}>submit registration</Text>
-                          <Ionicons name="checkmark-circle" size={20} color={T.white} />
-                        </LinearGradient>
-                      </TouchableOpacity>
-
-                      <View style={styles.formBottomSpacer} />
-                    </ScrollView>
-                  </KeyboardAvoidingView>
-                </View>
-              </TouchableWithoutFeedback>
-            )}
-          </View>
-        </Modal>
-      </GuestGuard>
+      {registerEvent && (
+        <RegisterSheet
+          event={registerEvent}
+          token={token}
+          user={user}
+          onClose={() => setRegisterEvent(null)}
+          onRegistered={onRegistered}
+          onAlreadyRegistered={() => {
+            Alert.alert("Notice", "You're already registered for this event.");
+            setRegisterEvent(null);
+            fetchRegisteredEvents();
+          }}
+        />
+      )}
+      {proofFor && (
+        <ProofSheet
+          registration={proofFor.registration}
+          event={proofFor.event}
+          token={token}
+          onClose={() => setProofFor(null)}
+          onSent={() => {
+            setProofFor(null);
+            fetchRegisteredEvents();
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -2532,6 +2519,25 @@ const EV = StyleSheet.create({
   regBtnList: { height: 44, borderRadius: 22, paddingHorizontal: 12 },
   regText: { fontFamily: F.bodyBold, fontSize: 14.5, color: T.ink },
   regTextList: { fontSize: 13.5, flexShrink: 1 },
+  regBtnOff: { backgroundColor: T.sand },
+  regTextOff: { color: T.textMuted },
+  tagPrice: { backgroundColor: T.yellowSoft },
+  tagSoldOut: { backgroundColor: T.dangerBg },
+  status: { marginTop: 12, borderRadius: 14, padding: 12, gap: 6 },
+  statusPending: { backgroundColor: T.yellowSoft },
+  statusVerified: { backgroundColor: T.successBg },
+  statusRejected: { backgroundColor: T.dangerBg },
+  statusRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  statusText: { fontFamily: F.bodyBold, fontSize: 13, color: T.ink, flexShrink: 1 },
+  statusMeta: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted },
+  statusBtn: { minHeight: 44, borderRadius: 22, borderWidth: 1, borderColor: T.ink, alignItems: "center", justifyContent: "center", paddingHorizontal: 14, marginTop: 4, alignSelf: "flex-start" },
+  statusBtnText: { fontFamily: F.bodyBold, fontSize: 13.5, color: T.ink },
+  infoRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
+  infoPill: { minHeight: 32, borderRadius: 16, paddingHorizontal: 12, justifyContent: "center", backgroundColor: T.sand },
+  infoPillText: { fontFamily: F.bodyBold, fontSize: 13, color: T.ink },
+  detailRow: { flexDirection: "row", justifyContent: "space-between", gap: 12, paddingVertical: 8, borderTopWidth: 1, borderTopColor: T.lineSoft },
+  detailLabel: { fontFamily: F.bodySemi, fontSize: 13.5, color: T.textMuted, flexShrink: 0, maxWidth: "45%" },
+  detailValue: { fontFamily: F.body, fontSize: 14, color: T.ink, flex: 1, textAlign: "right" },
 
   // tags (always reserve the row so cards keep the same height)
   tagRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 10 },
