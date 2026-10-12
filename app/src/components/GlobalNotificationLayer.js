@@ -19,15 +19,6 @@ const DEDUPE_WINDOW_MS = 2 * 60 * 1000;
 
 // App open → only the TDC in-app popup. Set here (on mount) as well as in
 // App.js so it always wins, even if an older App.js handler is still around.
-const HIDE_SYSTEM_POPUP = {
-  handleNotification: async () => ({
-    shouldShowBanner: false,
-    shouldShowList: false,
-    shouldPlaySound: false,
-    shouldSetBadge: true,
-  }),
-};
-
 export default function GlobalNotificationLayer() {
   const { token, isGuest, updateUnreadCount } = useContext(AuthContext);
   const appStateRef = useRef(AppState.currentState);
@@ -83,7 +74,7 @@ export default function GlobalNotificationLayer() {
   // ═══════════════════════════════════════════════════════════════
   useEffect(() => {
     console.log('[GlobalNotificationLayer] Setting up foreground listener...');
-    Notifications.setNotificationHandler(HIDE_SYSTEM_POPUP);
+    // The foreground handler is set once, in App.js (the only owner).
 
     const sub = Notifications.addNotificationReceivedListener((notification) => {
       // Skip if guest

@@ -143,6 +143,15 @@ export async function registerForPushNotificationsAsync() {
   }
 }
 
+// Plain reason for the log (no raw server text on screen; console.warn is kept in
+// release builds and shows in: adb logcat -s ReactNativeJS)
+const pushSaveReason = (err) => {
+  const s = err?.response?.status;
+  if (!err?.response) return 'no connection to the server';
+  if (s === 401 || s === 403) return 'not signed in any more';
+  return `server answered ${s}`;
+};
+
 export async function savePushTokenToServer(axiosInstance, token) {
   try {
     const res = await axiosInstance.put('/notification/save-token', {
@@ -153,8 +162,31 @@ export async function savePushTokenToServer(axiosInstance, token) {
     console.log('[push] token saved:', res.status);
     return { ok: true };
   } catch (err) {
-    console.error('[push] token save failed:', err.message, err.response?.data);
-    return { ok: false, reason: err.message };
+    const reason = pushSaveReason(err);
+    // warn, not error: console.error shows a red error screen in development builds
+    console.warn('[push] this phone could not be saved for notifications:', reason);
+    return { ok: false, reason };
+  }
+}
+
+// Logout: tell the server this phone should stop getting the previous user's pushes.
+// Uses the previous session's token explicitly (the app's api client has already
+// dropped it, or is in guest mode). Never throws.
+export async function removePushTokenFromServer(baseURL, authToken, pushToken) {
+  if (!baseURL || !authToken || !pushToken) return { ok: false, reason: 'nothing to remove' };
+  try {
+    // plain axios: no app interceptors (guest mode / 401 logout handling)
+    const axios = require('axios').default || require('axios');
+    await axios.delete(`${String(baseURL).replace(/\/$/, '')}/notification/remove-token`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+      data: { token: pushToken },
+      timeout: 10000,
+    });
+    console.log('[push] this phone removed from the signed-out account');
+    return { ok: true };
+  } catch (err) {
+    console.warn('[push] could not remove this phone on logout:', pushSaveReason(err));
+    return { ok: false, reason: pushSaveReason(err) };
   }
 }
 

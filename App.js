@@ -37,6 +37,7 @@ import { soundAppOpen } from "./app/src/lib/tdcSounds";
 import {
   registerForPushNotificationsAsync,
   savePushTokenToServer,
+  removePushTokenFromServer,
   registerBackgroundNotificationTask,
   setupAndroidChannels,
   claimNotificationResponse,
@@ -91,7 +92,8 @@ setupAndroidChannels();
 if (!TaskManager.isTaskDefined(NOTIFICATION_TASK)) {
   TaskManager.defineTask(NOTIFICATION_TASK, async ({ data, error }) => {
     if (error) {
-      console.error("[BG-Task] error:", error);
+      // warn, not error: no red error screen; kept in release logs (adb logcat)
+      console.warn("[BG-Task] background notification task failed:", error?.message || String(error));
       return;
     }
     if (data?.notification) {
@@ -125,10 +127,16 @@ const MyTheme = {
 function PushRegistration() {
   const { token: authToken, isGuest } = useContext(AuthContext);
   const lastRegisteredUserRef = useRef(null);
+  // the session + push token this phone was registered with, so logout can remove it
+  const registeredRef = useRef({ authToken: null, pushToken: null });
 
   useEffect(() => {
     if (!authToken || isGuest) {
       lastRegisteredUserRef.current = null;
+      // signed out (or switched to guest): this phone stops getting that account's pushes
+      const { authToken: prevAuth, pushToken } = registeredRef.current;
+      registeredRef.current = { authToken: null, pushToken: null };
+      if (prevAuth && pushToken) removePushTokenFromServer(api.defaults.baseURL, prevAuth, pushToken);
       return;
     }
 
@@ -156,16 +164,36 @@ function PushRegistration() {
 
         const result = await savePushTokenToServer(api, expoPushToken);
         if (result?.ok) {
+          registeredRef.current = { authToken, pushToken: expoPushToken };
           console.log("[PushRegistration] token registered ✅");
         } else {
           console.warn("[PushRegistration] token save failed:", result?.reason);
         }
       } catch (err) {
-        console.log("[PushRegistration] error:", err?.message);
+        console.warn("[PushRegistration] error:", err?.message);
       } finally {
         releaseTour("push-permission");
       }
     })();
+  }, [authToken, isGuest]);
+
+  // The phone's push token can change (reinstall data, Google rotation): save the new one
+  useEffect(() => {
+    if (!authToken || isGuest) return undefined;
+    const sub = Notifications.addPushTokenListener(async () => {
+      try {
+        const fresh = await registerForPushNotificationsAsync();
+        if (!fresh || fresh === registeredRef.current.pushToken) return;
+        const result = await savePushTokenToServer(api, fresh);
+        if (result?.ok) {
+          registeredRef.current = { authToken, pushToken: fresh };
+          console.log("[PushRegistration] new token saved after a change");
+        }
+      } catch (e) {
+        console.warn("[PushRegistration] token change not saved:", e?.message);
+      }
+    });
+    return () => sub.remove();
   }, [authToken, isGuest]);
 
   return null;
