@@ -39,7 +39,7 @@ import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
 import { useOpenFromParams } from "../../engagement/hooks/useOpenFromParams";
 import { AuthContext } from "../../context/AuthContext";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { useGuestGate } from "../../guest/GuestGate";
 import { PressScale, EmptyState, SkeletonBlock } from "../../ui";
@@ -61,13 +61,16 @@ import {
   detailRows,
   formatRs,
   PAYMENT_LABEL,
+  fetchEvent,
+  LIST_FRESH_MS,
 } from "./eventsV2";
 const { height, width } = Dimensions.get("window");
 
 const API_BASE = "https://the-deft-crew-production.up.railway.app/api/events";
 
-// Last loaded events, so opening Events again shows them at once
-const eventsCache = { events: null };
+// Last loaded events, so opening Events again shows them at once. `at` = when they were
+// loaded: older than LIST_FRESH_MS (30 s) → refetched on focus; pull-to-refresh always.
+const eventsCache = { events: null, at: 0 };
 const SOCKET_URL = "https://the-deft-crew-production.up.railway.app";
 
 // ─── Event source detection ─────────────────────────────────────────────
@@ -652,6 +655,9 @@ export default function EventsScreen() {
   // events v2: category templates (labels for event details) and "send proof again"
   const [templates, setTemplates] = useState(cachedTemplates());
   const [proofFor, setProofFor] = useState(null); // { registration, event }
+  const [detailStatus, setDetailStatus] = useState("fresh"); // loading | fresh | offline
+  const openIdRef = useRef(null);
+  const feedRequest = useRef(null); // one /feed request at a time
   useEffect(() => {
     let alive = true;
     getTemplates()
@@ -921,12 +927,15 @@ export default function EventsScreen() {
   };
 
   const fetchEvents = async (isInitial = false) => {
+    if (feedRequest.current) return feedRequest.current; // already loading
+    const run = (async () => {
     try {
       if (!isInitial) setRefreshing(true);
-      const res = await axios.get(`${API_BASE}/feed`);
+      const res = await axios.get(`${API_BASE}/feed`, { params: { _: Date.now() }, headers: { "Cache-Control": "no-cache" } });
       const fetchedEvents = Array.isArray(res.data) ? res.data : res.data?.events || [];
       setEvents(fetchedEvents);
       eventsCache.events = fetchedEvents;
+      eventsCache.at = Date.now();
       setLoadError(false);
       const total = Array.isArray(res.data) ? fetchedEvents.length : Number(res.data?.total);
       setFeedComplete(!Number.isFinite(total) || fetchedEvents.length >= total);
@@ -936,8 +945,23 @@ export default function EventsScreen() {
       if (!eventsCache.events) setLoadError(true);
     } finally {
       setRefreshing(false);
+      feedRequest.current = null;
     }
+    })();
+    feedRequest.current = run;
+    return run;
   };
+
+  // Back on this screen: refetch when the list is older than LIST_FRESH_MS (30 s)
+  useFocusEffect(
+    useCallback(() => {
+      if (eventsCache.at && Date.now() - eventsCache.at > LIST_FRESH_MS) {
+        fetchEvents(true);
+        fetchRegisteredEvents();
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+  );
 
   // Fetch the distinct category list from the backend.
   // Fails silently — the derived `availableCategories` still covers the UI.
@@ -1208,7 +1232,33 @@ export default function EventsScreen() {
 
   const closeDetail = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    openIdRef.current = null;
     setSelectedEvent(null);
+  };
+
+  // Details: show the list's copy at once, then the latest event (GET /api/events/:id).
+  // The list's copy stays only while loading or when offline.
+  const openEvent = (ev) => {
+    if (!ev?._id) return;
+    const id = String(ev._id);
+    openIdRef.current = id;
+    setSelectedEvent(ev);
+    setDetailStatus("loading");
+    fetchEvent(id)
+      .then((fresh) => {
+        if (openIdRef.current !== id) return; // closed or another event opened
+        setSelectedEvent((cur) => (cur && String(cur._id) === id ? { ...fresh, registration: cur.registration } : cur));
+        setDetailStatus("fresh");
+        // the list shows the same version from now on
+        setEvents((list) => {
+          const next = list.map((e) => (String(e._id) === id ? fresh : e));
+          eventsCache.events = next;
+          return next;
+        });
+      })
+      .catch(() => {
+        if (openIdRef.current === id) setDetailStatus("offline");
+      });
   };
 
   // Daily Drop / push → navigate('Events', { openEventId }) opens that event
@@ -1218,7 +1268,7 @@ export default function EventsScreen() {
       const res = await axios.get(`${API_BASE}/${id}`);
       ev = res.data;
     }
-    if (ev?._id) setSelectedEvent(ev);
+    if (ev?._id) openEvent(ev);
     return true;
   }, !loading);
 
@@ -1283,7 +1333,7 @@ export default function EventsScreen() {
                 <EventCard
                   item={ev}
                   featured={featured}
-                  onOpen={setSelectedEvent}
+                  onOpen={openEvent}
                   onRegister={handleRegister}
                   isRegistered={isEventRegistered(ev._id)}
                   onCancel={handleCancelRegistration}
@@ -1370,9 +1420,20 @@ export default function EventsScreen() {
                       <Ionicons name="arrow-back" size={20} color={COLORS.primary} />
                     </TouchableOpacity>
 
-                    <Text style={styles.sheetHeaderTitle} numberOfLines={1}>
-                      event details
-                    </Text>
+                    <View style={{ flex: 1, alignItems: "center" }}>
+                      <Text style={styles.sheetHeaderTitle} numberOfLines={1}>
+                        event details
+                      </Text>
+                      {detailStatus === "loading" && (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }} accessibilityLiveRegion="polite">
+                          <ActivityIndicator size="small" color={T.textMuted} />
+                          <Text style={EV.statusMeta} maxFontSizeMultiplier={MAX_FONT_SCALE}>updating…</Text>
+                        </View>
+                      )}
+                      {detailStatus === "offline" && (
+                        <Text style={EV.statusMeta} maxFontSizeMultiplier={MAX_FONT_SCALE}>offline · showing saved details</Text>
+                      )}
+                    </View>
 
                     <TouchableOpacity
                       onPress={closeDetail}

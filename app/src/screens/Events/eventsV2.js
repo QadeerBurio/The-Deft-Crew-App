@@ -18,7 +18,20 @@ const CLOUDINARY_CLOUDS = ["decaxpera"];
 const str = (v) => (v == null ? "" : String(v)).trim();
 const norm = (s) => str(s).toLowerCase().replace(/\s+/g, " ");
 
+// ── fresh event data ────────────────────────────────────────────
+// The events list is reused for at most this long; after that, focus / reopen refetches.
+export const LIST_FRESH_MS = 30 * 1000;
+
+// The latest copy of one event (GET /api/events/:id). The timestamp param and no-cache
+// header keep any HTTP cache on the phone from answering with an old copy.
+export async function fetchEvent(id, get = axios.get) {
+  const r = await get(`${API_BASE}/${id}`, { params: { _: Date.now() }, headers: { "Cache-Control": "no-cache" } });
+  if (!r?.data?._id) throw new Error("event not found");
+  return r.data;
+}
+
 // ── category templates: fetched once, shared ────────────────────
+// Labels only: an event's own details / registrationForm always come from the event.
 let templatesCache = null;
 let templatesPromise = null;
 export function getTemplates(get = axios.get) {
@@ -109,11 +122,26 @@ export function registrationState(event, now = new Date()) {
 
 // ── category details for the details sheet ──────────────────────
 const MONEY_KEYS = ["prizePool"];
+const humanizeKey = (k) =>
+  String(k)
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/_/g, " ")
+    .toLowerCase();
+
+// Every value in event.details is shown (empty ones hidden). The templates only give
+// labels and order; a key they don't know (new or renamed field) still shows.
 export function detailRows(event, templates) {
   const details = event?.details;
   if (!details || typeof details !== "object") return [];
   const tpl = findTemplate(templates, event.type);
-  const fields = (tpl?.createFields || []).filter((f) => f.store === "details");
+  const known = (tpl?.createFields || []).filter((f) => f.store === "details");
+  const knownKeys = new Set(known.map((f) => f.key));
+  const fields = [
+    ...known.filter((f) => f.key in details),
+    ...Object.keys(details)
+      .filter((k) => !knownKeys.has(k))
+      .map((k) => ({ key: k, label: humanizeKey(k) })),
+  ];
   const rows = [];
   for (const f of fields) {
     const v = details[f.key];

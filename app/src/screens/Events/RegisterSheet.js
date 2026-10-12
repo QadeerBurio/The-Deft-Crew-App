@@ -30,6 +30,8 @@ import {
   isLegacyRegistration,
   normTxn,
   METHOD_LABEL,
+  fetchEvent,
+  registrationState,
 } from "./eventsV2";
 
 const auth = (token) => ({ headers: { Authorization: `Bearer ${token}` } });
@@ -360,13 +362,19 @@ function PaymentStep({ total, info, infoState, onRetry, pay, setPay, errors }) {
   );
 }
 
-function usePaymentInfo(eventId, token, needed) {
+// Fetched fresh every time the payment step opens (`opens` changes), never reused.
+function usePaymentInfo(eventId, token, needed, opens = 0) {
   const [info, setInfo] = useState(null);
   const [state, setState] = useState(needed ? "loading" : "idle");
   const load = async () => {
     setState("loading");
+    setInfo(null);
     try {
-      const r = await axios.get(`${API_BASE}/${eventId}/payment-info`, auth(token));
+      const r = await axios.get(`${API_BASE}/${eventId}/payment-info`, {
+        ...auth(token),
+        params: { _: Date.now() },
+        headers: { ...auth(token).headers, "Cache-Control": "no-cache" },
+      });
       setInfo(r.data);
       setState("ready");
     } catch {
@@ -376,8 +384,26 @@ function usePaymentInfo(eventId, token, needed) {
   useEffect(() => {
     if (needed && eventId) load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [needed, eventId]);
+  }, [needed, eventId, opens]);
   return { info, state, load };
+}
+
+// The latest copy of the event (GET /api/events/:id) before building the form.
+// status: loading → fresh, or offline (the list's copy is used, with a note).
+function useFreshEvent(listEvent) {
+  const [state, setState] = useState({ event: listEvent, status: "loading" });
+  useEffect(() => {
+    let alive = true;
+    setState({ event: listEvent, status: "loading" });
+    fetchEvent(listEvent?._id)
+      .then((ev) => alive && setState({ event: ev, status: "fresh" }))
+      .catch(() => alive && setState({ event: listEvent, status: "offline" }));
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listEvent?._id]);
+  return state;
 }
 
 // upload the screenshot once; returns the https url
@@ -436,7 +462,48 @@ function FrameBody({ title, subtitle, onClose, onBack, children, footer }) {
 }
 
 // ── registration ──────────────────────────────────────────────
-export default function RegisterSheet({ event, token, user, onClose, onRegistered, onAlreadyRegistered }) {
+export default function RegisterSheet({ event: listEvent, token, user, onClose, onRegistered, onAlreadyRegistered }) {
+  const { event, status } = useFreshEvent(listEvent);
+  if (!listEvent) return null;
+  if (status === "loading") {
+    return (
+      <Frame visible title="register" subtitle={listEvent.title} onClose={onClose}>
+        <View style={s.center}>
+          <ActivityIndicator color={T.ink} />
+          <Text style={s.muted} maxFontSizeMultiplier={MAX_FONT_SCALE}>loading the latest form…</Text>
+        </View>
+      </Frame>
+    );
+  }
+  const state = registrationState(event);
+  if (!state.open) {
+    return (
+      <Frame visible title="register" subtitle={event.title} onClose={onClose}
+        footer={<Button title="close" variant="secondary" onPress={onClose} style={{ marginTop: 20 }} />}>
+        <View style={s.card}>
+          <Text style={s.body} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            {state.reason === "sold out" ? "this event is full now." : "registration for this event has closed."}
+          </Text>
+        </View>
+      </Frame>
+    );
+  }
+  return (
+    <RegisterForm
+      key={status}
+      event={event}
+      offline={status === "offline"}
+      token={token}
+      user={user}
+      onClose={onClose}
+      onRegistered={onRegistered}
+      onAlreadyRegistered={onAlreadyRegistered}
+    />
+  );
+}
+
+// the form, built only from this event's own registrationForm (four fields when it has none)
+function RegisterForm({ event, offline, token, user, onClose, onRegistered, onAlreadyRegistered }) {
   const fields = useMemo(() => formFields(event), [event]);
   const legacy = isLegacyRegistration(event);
   const tiers = event?.ticketTiers || [];
@@ -446,11 +513,12 @@ export default function RegisterSheet({ event, token, user, onClose, onRegistere
   const [pay, setPay] = useState({ method: "", transactionId: "", receiptUri: "", receiptUrl: undefined });
   const [errors, setErrors] = useState({});
   const [step, setStep] = useState("form"); // form | pay | done
+  const [payOpens, setPayOpens] = useState(0);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const total = totalFor(event, ticket);
   const paid = total > 0;
-  const payInfo = usePaymentInfo(event?._id, token, paid && step === "pay");
+  const payInfo = usePaymentInfo(event?._id, token, paid && step === "pay", payOpens);
 
   // a single account: preselect it
   useEffect(() => {
@@ -495,8 +563,10 @@ export default function RegisterSheet({ event, token, user, onClose, onRegistere
       Alert.alert("check the form", "some answers need fixing. they're marked in red.");
       return;
     }
-    if (paid) setStep("pay");
-    else submit();
+    if (paid) {
+      setPayOpens((n) => n + 1); // payment details are fetched again
+      setStep("pay");
+    } else submit();
   };
   const finishPay = () => {
     const e = validatePayment(pay, payInfo.info?.paymentAccounts);
@@ -573,6 +643,13 @@ export default function RegisterSheet({ event, token, user, onClose, onRegistere
         />
       }
     >
+      {offline && (
+        <View style={[s.card, { marginBottom: 16 }]}>
+          <Text style={s.muted} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            {"couldn't load the latest version of this form, so this is the saved one. check your connection if something looks out of date."}
+          </Text>
+        </View>
+      )}
       {fields
         .filter((f) => f.store !== "ticket")
         .map((f) => (
