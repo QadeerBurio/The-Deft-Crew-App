@@ -7,21 +7,21 @@ import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 
 const SOCIAL = [
   { icon: "facebook-f", label: "facebook", url: "https://www.facebook.com/share/1CijYDto1b/" },
-  { icon: "instagram", label: "instagram", url: "https://www.instagram.com/thedeftcrew?igsh=MWRnc3RnZ3hkN2s0Yw==" },
+  { icon: "instagram", label: "instagram", url: "https://www.instagram.com/tdc.app/" },
   { icon: "linkedin-in", label: "linkedin", url: "https://www.linkedin.com/company/thedeftcrew/" },
-  { icon: "globe", label: "website", url: "https://thedeftcrew.com" },
+  { icon: "globe", label: "website", url: "https://gettdc.pk" },
 ];
 
 export default function ContactUs() {
-  const openDial = () => Linking.openURL("tel:+923222969595");
-  const openEmail = () => Linking.openURL("mailto:hello@thedeftcrew.com");
-  const openWhatsApp = () => Linking.openURL("https://wa.me/923222969595");
+  const openDial = () => Linking.openURL("tel:+923249287649");
+  const openEmail = () => Linking.openURL("mailto:hello@gettdc.pk");
+  const openWhatsApp = () => Linking.openURL("https://wa.me/923249287649");
   const openSocial = (url) => Linking.openURL(url);
 
   const contacts = [
-    { icon: <Ionicons name="call-outline" size={20} color={T.ink} />, label: "Customer Care", value: "+92 322 2969595", onPress: openDial },
-    { icon: <MaterialCommunityIcons name="email-outline" size={20} color={T.ink} />, label: "Official Email", value: "hello@thedeftcrew.com", onPress: openEmail },
-    { icon: <FontAwesome5 name="whatsapp" size={20} color={T.ink} />, label: "WhatsApp Support", value: "+92 322 2969595", onPress: openWhatsApp },
+    { icon: <Ionicons name="call-outline" size={20} color={T.ink} />, label: "Customer Care", value: "+92 3249287649", onPress: openDial },
+    { icon: <MaterialCommunityIcons name="email-outline" size={20} color={T.ink} />, label: "Official Email", value: "hello@gettdc.pk", onPress: openEmail },
+    { icon: <FontAwesome5 name="whatsapp" size={20} color={T.ink} />, label: "WhatsApp Support", value: "+92 3249287649", onPress: openWhatsApp },
   ];
 
   return (

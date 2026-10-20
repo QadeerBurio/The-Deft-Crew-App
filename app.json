@@ -2,7 +2,7 @@
   "expo": {
     "name": "tdc",
     "slug": "Testting",
-    "version": "1.1.13",
+    "version": "1.1.14",
     "orientation": "default",
     "icon": "./assets/tdc.png",
     "scheme": "tdcapp",
@@ -29,7 +29,7 @@
     "android": {
       "package": "com.aqkhan110.tdc",
       "allowBackup": false,
-      "versionCode": 82,
+      "versionCode": 88,
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "INTERNET",

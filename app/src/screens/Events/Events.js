@@ -421,7 +421,7 @@ const EventCard = ({ item, onOpen, onRegister, isRegistered, onCancel, featured,
     >
       {imported && <Ionicons name="open-outline" size={featured ? 16 : 14} color={T.ink} />}
       <Text style={[EV.regText, !featured && EV.regTextList]} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-        {imported ? "open link" : "register"}
+        {imported ? "open link" : "Save my Spot"}
       </Text>
     </TouchableOpacity>
   );
@@ -1732,7 +1732,7 @@ export default function EventsScreen() {
                         style={styles.stickyButton}
                       >
                         <Text style={styles.stickyButtonText}>
-                          {isImportedEvent(selectedEvent) ? "open link" : "register now"}
+                          {isImportedEvent(selectedEvent) ? "open link" : "Save my Spot"}
                         </Text>
                         <Ionicons
                           name={isImportedEvent(selectedEvent) ? "open-outline" : "arrow-forward"}
