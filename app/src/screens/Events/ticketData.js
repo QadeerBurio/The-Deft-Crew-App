@@ -65,6 +65,22 @@ export async function loadTicket({ registrationId, token, userId, get = axios.ge
   }
 }
 
+/**
+ * What a registration shows for its ticket (mine card, event details):
+ *   { kind: "download", count }  valid tickets to download
+ *   { kind: "pending" }          "ticket after payment is confirmed"
+ *   null                         nothing (rejected, all cancelled, no ticket yet)
+ */
+export function ticketButtonState(registration) {
+  if (!registration) return null;
+  const status = registration.payment?.status || "not_required";
+  if (status === "rejected") return null;
+  if (status === "pending") return { kind: "pending" };
+  if (status !== "verified" && status !== "not_required") return null;
+  const count = (Array.isArray(registration.tickets) ? registration.tickets : []).filter((t) => t?.status === "valid").length;
+  return count > 0 ? { kind: "download", count } : null;
+}
+
 export const seatLabel = (t) => (t?.of > 1 ? `seat ${t.seat} of ${t.of}` : "admit one");
 export const amountLabel = (ticket) => (ticket?.paymentStatus === "paid" ? `${formatRs(ticket.amountPaid)} · paid` : "free");
 export const STATUS_LABEL = { valid: "valid", cancelled: "cancelled", used: "used" };

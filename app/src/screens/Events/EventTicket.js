@@ -120,10 +120,13 @@ export function TicketCard({ ticket, seat, cardRef }) {
 // ── screen ───────────────────────────────────────────────────
 export default function EventTicket({ route, navigation }) {
   const registrationId = route?.params?.registrationId;
+  // opened from a "download ticket" button: the download action is the first thing shown
+  const forDownload = !!route?.params?.download;
   const { token, user } = useContext(AuthContext) || {};
   const userId = user?._id || user?.id || null;
   const [state, setState] = useState({ loading: true, ticket: null, fromCache: false, savedAt: null, message: null });
   const [busy, setBusy] = useState(null); // "save:<code>" | "share:<code>"
+  const [saved, setSaved] = useState({}); // code → true once saved to the gallery
   const refs = useRef({});
 
   const load = useCallback(async () => {
@@ -166,12 +169,20 @@ export default function EventTicket({ route, navigation }) {
       // save-only access (no reading of the gallery)
       const perm = await MediaLibrary.requestPermissionsAsync(true);
       if (perm?.status !== "granted") {
-        Alert.alert("can't save", "allow tdc to save photos in your phone settings, then try again.");
+        Alert.alert(
+          "allow saving photos",
+          "tdc needs permission to save your ticket to the gallery. allow it in your phone settings, then tap download ticket again.",
+          [
+            { text: "not now", style: "cancel" },
+            { text: "open settings", onPress: () => Linking.openSettings?.().catch(() => {}) },
+          ]
+        );
         return;
       }
       const uri = await capture(code);
       await MediaLibrary.saveToLibraryAsync(uri);
-      Alert.alert("saved", "your ticket is in your gallery.");
+      setSaved((s) => ({ ...s, [code]: true }));
+      Alert.alert("ticket saved", "your ticket is in your gallery.");
     } catch {
       Alert.alert("can't save", "couldn't save the ticket. please try again.");
     } finally {
@@ -233,38 +244,50 @@ export default function EventTicket({ route, navigation }) {
               </Text>
             </View>
           )}
+          {forDownload && seats.some((s) => s.status === "valid") && (
+            <Text style={styles.hint} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+              {seats.filter((s) => s.status === "valid").length > 1
+                ? "tap download ticket under each seat to save it to your gallery."
+                : "tap download ticket to save it to your gallery."}
+            </Text>
+          )}
           {seats.map((seat) => {
-            const off = seat.status === "cancelled";
+            // only a valid ticket can be downloaded (not cancelled, not used)
+            const canSave = seat.status === "valid";
             return (
               <View key={seat.code} style={styles.seat}>
                 <TicketCard ticket={ticket} seat={seat} cardRef={(n) => (refs.current[seat.code] = n)} />
-                {!off && (
-                  <View style={styles.actions}>
+                {canSave && (
+                  <>
                     <Button
-                      title="save to gallery"
-                      variant="secondary"
-                      size="small"
-                      full={false}
-                      style={styles.action}
+                      title="download ticket"
+                      variant="primary"
+                      style={styles.download}
                       loading={busy === `save:${seat.code}`}
                       disabled={!!busy}
                       onPress={() => onSave(seat.code)}
-                      icon={<Ionicons name="download-outline" size={16} color={T.ink} />}
-                      accessibilityLabel={`save ticket ${seat.code} to gallery`}
+                      icon={<Ionicons name="download-outline" size={18} color={T.white} />}
+                      accessibilityLabel={`download ticket ${seat.code} to the gallery`}
                     />
                     <Button
                       title="share"
-                      variant="primary"
-                      size="small"
-                      full={false}
-                      style={styles.action}
+                      variant="secondary"
+                      style={styles.share}
                       loading={busy === `share:${seat.code}`}
                       disabled={!!busy}
                       onPress={() => onShare(seat.code)}
-                      icon={<Ionicons name="share-social-outline" size={16} color={T.white} />}
+                      icon={<Ionicons name="share-social-outline" size={18} color={T.ink} />}
                       accessibilityLabel={`share ticket ${seat.code} as an image`}
                     />
-                  </View>
+                    {saved[seat.code] && (
+                      <View style={styles.savedRow} accessibilityLiveRegion="polite">
+                        <Ionicons name="checkmark-circle" size={16} color={T.success} />
+                        <Text style={styles.savedText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                          saved to your gallery
+                        </Text>
+                      </View>
+                    )}
+                  </>
                 )}
               </View>
             );
@@ -322,7 +345,10 @@ const styles = StyleSheet.create({
   codeOff: { color: T.textFaint, textDecorationLine: "line-through" },
   cancelNote: { fontFamily: F.bodyMedium, fontSize: 13, color: T.danger, textAlign: "center", marginTop: 6 },
 
-  actions: { flexDirection: "row", gap: 10, marginTop: 12, justifyContent: "center" },
-  action: { minWidth: 140 },
+  hint: { fontFamily: F.bodyMedium, fontSize: 13, color: T.ink, backgroundColor: T.yellowSoft, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 12 },
+  download: { marginTop: 12 },
+  share: { marginTop: 8 },
+  savedRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 10 },
+  savedText: { fontFamily: F.bodySemi, fontSize: 13, color: T.success },
   foot: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, textAlign: "center", marginTop: 4 },
 });

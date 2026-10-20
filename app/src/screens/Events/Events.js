@@ -51,6 +51,7 @@ import { engagementBus, ENGAGEMENT_EVENTS } from "../../engagement/engagementBus
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 import { plainError } from "../../utils/plainError";
 import RegisterSheet, { ProofSheet } from "./RegisterSheet";
+import TicketButton from "./TicketButton";
 import {
   getTemplates,
   cachedTemplates,
@@ -536,6 +537,7 @@ const RegistrationStatus = ({ registration, onProof, onTicket }) => {
           </Text>
         </View>
       )}
+      <TicketButton registration={registration} onOpen={onTicket} />
       {status === "rejected" && !!pay.rejectReason && (
         <Text style={EV.statusMeta} maxFontSizeMultiplier={MAX_FONT_SCALE}>
           reason: {pay.rejectReason}
@@ -550,19 +552,6 @@ const RegistrationStatus = ({ registration, onProof, onTicket }) => {
         >
           <Text style={EV.statusBtnText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
             send payment proof again
-          </Text>
-        </TouchableOpacity>
-      )}
-      {hasTicket && onTicket && (
-        <TouchableOpacity
-          style={[EV.statusBtn, EV.ticketBtn]}
-          onPress={() => onTicket(registration)}
-          accessibilityRole="button"
-          accessibilityLabel={seats > 1 ? `open my ${seats} tickets` : "open my ticket"}
-        >
-          <Ionicons name="qr-code-outline" size={16} color={T.ink} />
-          <Text style={EV.statusBtnText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-            {seats > 1 ? "my tickets" : "my ticket"}
           </Text>
         </TouchableOpacity>
       )}
@@ -1288,6 +1277,11 @@ export default function EventsScreen() {
     return true;
   }, !loading);
 
+  // the ticket screen, ready to download (mine card, event details)
+  const openTicket = (reg) => navigation.navigate("EventTicket", { registrationId: String(reg._id), download: true });
+  const registrationFor = (eventId) =>
+    appliedEventsData.find((x) => String(x?.event?._id || x?.event) === String(eventId))?.registration || null;
+
   // "your ticket is ready" (push, in-app list) → navigate('Events', { ticketRegistrationId })
   useOpenFromParams("ticketRegistrationId", (id) => {
     navigation.navigate("EventTicket", { registrationId: String(id) });
@@ -1361,7 +1355,7 @@ export default function EventsScreen() {
                   onCancel={handleCancelRegistration}
                   registration={showApplied ? ev.registration : null}
                   onProof={(reg) => setProofFor({ registration: reg, event: ev })}
-                  onTicket={(reg) => navigation.navigate("EventTicket", { registrationId: String(reg._id) })}
+                  onTicket={openTicket}
                   side={<SaveButton saved={isSaved(ev._id)} dark={featured} onPress={() => onSave(ev)} />}
                 />
               </>
@@ -1539,6 +1533,16 @@ export default function EventsScreen() {
                         </View>
                       )}
                     </View>
+                    {isEventRegistered(selectedEvent._id) && (
+                      <TicketButton
+                        registration={registrationFor(selectedEvent._id)}
+                        onOpen={(reg) => {
+                          setSelectedEvent(null);
+                          openTicket(reg);
+                        }}
+                        style={{ marginBottom: 12 }}
+                      />
+                    )}
 
                     <Text style={styles.detailTitle}>{selectedEvent.title}</Text>
 
@@ -2616,7 +2620,6 @@ const EV = StyleSheet.create({
   statusMeta: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted },
   statusBtn: { minHeight: 44, borderRadius: 22, borderWidth: 1, borderColor: T.ink, alignItems: "center", justifyContent: "center", paddingHorizontal: 14, marginTop: 4, alignSelf: "flex-start" },
   statusBtnText: { fontFamily: F.bodyBold, fontSize: 13.5, color: T.ink },
-  ticketBtn: { flexDirection: "row", gap: 6, backgroundColor: T.yellow, borderColor: T.yellow },
   infoRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
   infoPill: { minHeight: 32, borderRadius: 16, paddingHorizontal: 12, justifyContent: "center", backgroundColor: T.sand },
   infoPillText: { fontFamily: F.bodyBold, fontSize: 13, color: T.ink },
