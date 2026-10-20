@@ -208,6 +208,11 @@ export function claimNotificationResponse(response) {
 }
 
 export function getRouteFromNotificationData(data = {}) {
+  // "your ticket is ready": the ticket itself (the server also sends route "Events" for
+  // builds that have no ticket screen)
+  if (data.ticketRegistrationId) {
+    return { route: 'EventTicket', params: { registrationId: String(data.ticketRegistrationId) } };
+  }
   const route = data.route || data.screen || null;
   const params = {
     ...(data.params && typeof data.params === 'object' ? data.params : {}),

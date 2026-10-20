@@ -29,6 +29,7 @@ export const LOGIN_ONLY_ROUTES = new Set([
   "SettingsScreen",
   "SettingScreen",
   "NotificationModal",
+  "EventTicket", // events: the student's own ticket
   // social
   "UserProfile",
   "PostDetailScreen", // the post GET is only made with a token

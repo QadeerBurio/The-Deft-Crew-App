@@ -46,6 +46,7 @@ import { useEngagement } from '../engagement/hooks/useEngagement';
 import { color as T, font as F, MAX_FONT_SCALE } from '../theme/tokens';
 
 // ---------- SCREENS ----------
+import EventTicket from '../screens/Events/EventTicket';
 import BrandOffersScreen from '../screens/BrandOffersScreen';
 import ProfileScreenBase from '../screens/ProfileScreen';
 const ProfileScreen = accountOnly(ProfileScreenBase, { title: "profile", line: "sign up for your student card, discounts and points.", showBack: false });
@@ -1311,6 +1312,7 @@ function HomeStackNavigator() {
       <Stack.Screen name="Guideline" component={Guideline} />
       <Stack.Screen name="Events" component={Events} />
       <Stack.Screen name="EventNotification" component={EventNotification} />
+      <Stack.Screen name="EventTicket" component={EventTicket} />
       <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
       <Stack.Screen name="ProfileDetails" component={ProfileDetails} />
       <Stack.Screen name="MyDiscountScreen" component={MyDiscountScreen} />

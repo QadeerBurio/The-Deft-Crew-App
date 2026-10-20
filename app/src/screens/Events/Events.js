@@ -370,7 +370,7 @@ const SaveButton = ({ saved, onPress, dark = false }) => (
 // ─── Event card: featured (top event, dark, design) or list size (white) ──────
 // Same parts in both: banner (event image or sand) with the date and prize pills,
 // title, place line, tags, register / registered button and the slot on its right.
-const EventCard = ({ item, onOpen, onRegister, isRegistered, onCancel, featured, side, registration, onProof }) => {
+const EventCard = ({ item, onOpen, onRegister, isRegistered, onCancel, featured, side, registration, onProof, onTicket }) => {
   const [imgFailed, setImgFailed] = useState(false);
   const imported = isImportedEvent(item);
   // events v2: price, seats, open / closed (not for external events)
@@ -501,7 +501,7 @@ const EventCard = ({ item, onOpen, onRegister, isRegistered, onCancel, featured,
           <View style={{ flex: 1 }}>{action}</View>
           {side}
         </View>
-        {registration && <RegistrationStatus registration={registration} onProof={onProof} dark={featured} />}
+        {registration && <RegistrationStatus registration={registration} onProof={onProof} onTicket={onTicket} dark={featured} />}
       </View>
     </PressScale>
   );
@@ -509,11 +509,14 @@ const EventCard = ({ item, onOpen, onRegister, isRegistered, onCancel, featured,
 
 // ─── Mine: tickets + payment status (events v2) ───────────────────────────
 // pending / rejected: "send payment proof again"; verified: a clear confirmed state
-const RegistrationStatus = ({ registration, onProof }) => {
+const RegistrationStatus = ({ registration, onProof, onTicket }) => {
   const pay = registration?.payment || {};
   const status = pay.status || "not_required";
   const ticket = registration?.ticket;
-  if (status === "not_required" && !ticket?.tier) return null;
+  // the ticket exists once the payment is verified (or straight away for a free event)
+  const seats = Array.isArray(registration?.tickets) ? registration.tickets.length : 0;
+  const hasTicket = seats > 0 && (status === "verified" || status === "not_required");
+  if (status === "not_required" && !ticket?.tier && !hasTicket) return null;
   const tone = status === "verified" ? EV.statusVerified : status === "rejected" ? EV.statusRejected : EV.statusPending;
   const icon = status === "verified" ? "checkmark-circle" : status === "rejected" ? "close-circle" : "time-outline";
   const iconColor = status === "verified" ? T.success : status === "rejected" ? T.danger : T.ink;
@@ -547,6 +550,19 @@ const RegistrationStatus = ({ registration, onProof }) => {
         >
           <Text style={EV.statusBtnText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
             send payment proof again
+          </Text>
+        </TouchableOpacity>
+      )}
+      {hasTicket && onTicket && (
+        <TouchableOpacity
+          style={[EV.statusBtn, EV.ticketBtn]}
+          onPress={() => onTicket(registration)}
+          accessibilityRole="button"
+          accessibilityLabel={seats > 1 ? `open my ${seats} tickets` : "open my ticket"}
+        >
+          <Ionicons name="qr-code-outline" size={16} color={T.ink} />
+          <Text style={EV.statusBtnText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            {seats > 1 ? "my tickets" : "my ticket"}
           </Text>
         </TouchableOpacity>
       )}
@@ -1272,6 +1288,12 @@ export default function EventsScreen() {
     return true;
   }, !loading);
 
+  // "your ticket is ready" (push, in-app list) → navigate('Events', { ticketRegistrationId })
+  useOpenFromParams("ticketRegistrationId", (id) => {
+    navigation.navigate("EventTicket", { registrationId: String(id) });
+    return true;
+  });
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
@@ -1339,6 +1361,7 @@ export default function EventsScreen() {
                   onCancel={handleCancelRegistration}
                   registration={showApplied ? ev.registration : null}
                   onProof={(reg) => setProofFor({ registration: reg, event: ev })}
+                  onTicket={(reg) => navigation.navigate("EventTicket", { registrationId: String(reg._id) })}
                   side={<SaveButton saved={isSaved(ev._id)} dark={featured} onPress={() => onSave(ev)} />}
                 />
               </>
@@ -2593,6 +2616,7 @@ const EV = StyleSheet.create({
   statusMeta: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted },
   statusBtn: { minHeight: 44, borderRadius: 22, borderWidth: 1, borderColor: T.ink, alignItems: "center", justifyContent: "center", paddingHorizontal: 14, marginTop: 4, alignSelf: "flex-start" },
   statusBtnText: { fontFamily: F.bodyBold, fontSize: 13.5, color: T.ink },
+  ticketBtn: { flexDirection: "row", gap: 6, backgroundColor: T.yellow, borderColor: T.yellow },
   infoRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
   infoPill: { minHeight: 32, borderRadius: 16, paddingHorizontal: 12, justifyContent: "center", backgroundColor: T.sand },
   infoPillText: { fontFamily: F.bodyBold, fontSize: 13, color: T.ink },
