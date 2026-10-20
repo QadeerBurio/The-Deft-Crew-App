@@ -158,6 +158,9 @@ export async function savePushTokenToServer(axiosInstance, token) {
       token,
       platform: Platform.OS,
       channels: CHANNEL_SET,
+      // the EAS project this build belongs to: the server sends with that project's access
+      // token (APKs exist from two projects). Old servers ignore it.
+      projectId: Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId || undefined,
     });
     console.log('[push] token saved:', res.status);
     return { ok: true };
