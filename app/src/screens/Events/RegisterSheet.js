@@ -15,6 +15,7 @@ import { Button, Input, Chip } from "../../ui";
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 import { plainError } from "../../utils/plainError";
 import { copyToClipboard } from "../../utils/clipboard";
+import { metaEvents } from "../../analytics/metaEvents";
 import { pickImageFromLibrary, uploadImageToCloudinary } from "../../utils/cloudinaryUpload";
 import {
   API_BASE,
@@ -541,6 +542,8 @@ function RegisterForm({ event, offline, token, user, onClose, onRegistered, onAl
       }
       const body = buildRegisterBody(event, values, ticket, payment);
       const res = await axios.post(`${API_BASE}/register`, body, auth(token));
+      // accepted by the server (free, or paid and waiting for payment review): Meta event
+      metaEvents.eventRegistered(event?._id);
       setResult(res.data);
       setStep("done");
       onRegistered && onRegistered(res.data);

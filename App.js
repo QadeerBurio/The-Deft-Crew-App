@@ -1,6 +1,8 @@
 // The-Deft-Crew-App/App.js
 // FIXED: Push registration, cold-start deep link, external deep link, in-app sounds
 
+import MetaEventsHost from "./app/src/analytics/MetaConsent"; // Meta App Events consent + switch
+
 // Release builds: no console.log / info / debug output (warn and error stay).
 if (!__DEV__) { console.log = () => {}; console.info = () => {}; console.debug = () => {}; }
 
@@ -308,6 +310,8 @@ function AppContent() {
 
             <CelebrationHost />
             <TourOverlay />
+            {/* Meta App Events: server switch + the student's consent (asks once) */}
+            <MetaEventsHost />
           </View>
         </ChatProvider>
       </ResumeProvider>

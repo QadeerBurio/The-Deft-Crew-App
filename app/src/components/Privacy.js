@@ -17,6 +17,11 @@ const privacyPoints = [
     content: "Your personal details stay with us.",
   },
   {
+    icon: "chart-line",
+    title: "Ad measurement (optional)",
+    content: "Only if you allow it, we share some app activity (sign-up, offer claims, job applications, AI resumes) and your device's advertising ID with Meta to measure our ads. Never your name, email or phone. Change it any time in Settings → Privacy.",
+  },
+  {
     icon: "shield-key-outline",
     title: "End-to-End Encryption",
     content: "Your sensitive info and student profile are protected.",

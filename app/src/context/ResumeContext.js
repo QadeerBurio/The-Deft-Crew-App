@@ -3,6 +3,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, Platform } from 'react-native';
 import resumeApi from '../api/resumeApi';
+import { metaEvents } from '../analytics/metaEvents';
 import { AuthContext } from './AuthContext';
 
 const getErrorMessage = (error, defaultMsg = 'An error occurred') => {
@@ -350,6 +351,8 @@ export default function ResumeProvider({ children }) {
 
       if (response?.success) {
         const newResume = response.data;
+        // AI made a resume from the uploaded CV
+        metaEvents.aiResumeCreated(newResume?._id, 'upload_parse');
         setResumes([newResume, ...resumes]);
         setCurrentResume(newResume);
         setLoading(false);
@@ -641,6 +644,8 @@ export default function ResumeProvider({ children }) {
       const response = await resumeApi.optimizeResume(resumeId, optimizeData);
       if (response?.success) {
         const optimizedResume = response.data;
+        // AI tailored the resume to a job
+        metaEvents.aiResumeCreated(`${resumeId}:${optimizeData?.jobId || ''}`, 'tailor');
         setResumes(resumes.map(r => r._id === resumeId ? optimizedResume : r));
         setCurrentResume(optimizedResume);
         setLoading(false);

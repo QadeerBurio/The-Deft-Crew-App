@@ -80,6 +80,7 @@ import useMySavings from '../hooks/useMySavings';
 import { claimedBrands } from '../utils/claimedBrands';
 import { plainError, plainText } from "../utils/plainError";
 import { copyToClipboard } from '../utils/clipboard';
+import { metaEvents } from '../analytics/metaEvents';
 
 const SERVER_URL = 'https://the-deft-crew-production.up.railway.app';
 
@@ -1586,6 +1587,7 @@ export default function MyDiscountScreen() {
               try {
                 soundDealClaimed();       // 🔔 claim sound
                 await api.post(`/offers/claim/${offerId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+                metaEvents.offerClaimed(offerId);
                 try { registerLocalClaim(offerId); } catch (e) {}
                 const retryResult = await generatePromoCodeForOffer(offerId);
                 if (retryResult) return retryResult;

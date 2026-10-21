@@ -60,6 +60,7 @@ import { isSignedInNow } from "../guest/accountRoutes";
 import { imageUrl, brandLogoUrl, fixLegacyImageUrl } from "../utils/imageUrl";
 import Dot from "../engagement/components/Dot";
 import { formatDistance } from "../utils/distance";
+import { metaEvents } from "../analytics/metaEvents";
 
 // ═══════════════════════════════════════════
 // TDC SOUND KIT
@@ -1273,6 +1274,7 @@ export default function OfferScreen() {
           {},
           { headers: { Authorization: `Bearer ${token}` } }
         );
+        metaEvents.offerClaimed(offerId);
 
         // 🔔 success sound + modal
         soundSuccess();

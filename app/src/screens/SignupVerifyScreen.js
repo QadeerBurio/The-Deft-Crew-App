@@ -8,6 +8,7 @@ import React, { useContext, useEffect, useRef, useState } from "react";
 import { Alert, Keyboard, Platform, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import api from "../api/api";
+import { metaEvents } from "../analytics/metaEvents";
 import { AuthContext } from "../context/AuthContext";
 import { enterAccount } from "../guest/accountRoutes";
 import { AuthShell, AuthButton, AUTH } from "../components/AuthShell";
@@ -71,6 +72,8 @@ export default function SignupVerifyScreen({ route, navigation }) {
 
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       setVerified(true);
+      // account confirmed: Meta sign-up event, sent only after consent
+      metaEvents.registration(user?._id || user?.id);
 
       // Logging in switches the app to the main screens
       setTimeout(() => {

@@ -48,12 +48,12 @@ const TERMS = [
 ];
 
 const PRIVACY = [
-  { icon: 'folder-open-outline', title: 'Information We Collect', points: ['Name, email, phone number', 'Profile information & preferences', 'Content you create or share', 'Device & usage data'] },
+  { icon: 'folder-open-outline', title: 'Information We Collect', points: ['Name, email, phone number', 'Profile information & preferences', 'Content you create or share', 'Device & usage data', 'Advertising ID (only if you allow ad measurement)'] },
   { icon: 'sparkles-outline', title: 'How We Use Data', points: ['Provide & improve services', 'Personalize experience', 'Send updates & promotions', 'Prevent fraud'] },
-  { icon: 'share-social-outline', title: 'Information Sharing', points: ['No selling of data', 'Shared with service providers', 'When required by law', 'With your consent'] },
+  { icon: 'share-social-outline', title: 'Information Sharing', points: ['No selling of data', 'Shared with service providers', 'When required by law', 'With your consent', 'With Meta, to measure our ads (only if you allow it)'] },
   { icon: 'lock-closed-outline', title: 'Data Security', text: 'We implement strong security measures to protect your data. However, no method is 100% secure.' },
-  { icon: 'hand-left-outline', title: 'Your Rights', points: ['Access & update data', 'Request deletion', 'Opt-out of marketing', 'Withdraw consent'] },
-  { icon: 'analytics-outline', title: 'Cookies', text: 'We use cookies to enhance experience, analyze usage, and deliver personalized content.' },
+  { icon: 'hand-left-outline', title: 'Your Rights', points: ['Access & update data', 'Request deletion', 'Opt-out of marketing', 'Withdraw consent', 'Turn off ad measurement in Settings → Privacy'] },
+  { icon: 'analytics-outline', title: 'Cookies', text: "We use cookies and similar technologies to understand how tdc is used. If you allow ad measurement, Meta's SDK in the app receives some app activity and your advertising ID to measure our ads." },
   { icon: 'time-outline', title: 'Data Retention', text: 'We retain data as long as necessary for services, legal obligations, and dispute resolution.' },
   { icon: 'happy-outline', title: "Children's Privacy", text: 'Services not for under 13. We do not knowingly collect data from children.' },
   { icon: 'refresh-outline', title: 'Policy Changes', text: 'We may update this policy. Changes will be posted here with updated date.' },

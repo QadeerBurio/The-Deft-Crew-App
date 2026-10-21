@@ -34,6 +34,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { renderResumeHTML } from '../services/templateService';
 import { ResumeContext } from '../context/ResumeContext';
 import { BASE_URL } from '../api/api';
+import { metaEvents } from '../analytics/metaEvents';
 
 const { width, height } = Dimensions.get("window");
 const API_URL = `${BASE_URL}/jobs`;
@@ -1400,6 +1401,7 @@ const Career = ({ navigation }) => {
         onUploadProgress: (e) => setUploadProgress(Math.round((e.loaded * 100) / e.total)),
         timeout: 60000,
       });
+      metaEvents.jobApplied(selectedJob._id);
       Alert.alert("Submitted!", "Your application has been submitted.");
       setModalVisible(false); resetForm(); fetchMyApplications();
     } catch (err) { Alert.alert("Error", plainError(err, "Failed to submit.")); }

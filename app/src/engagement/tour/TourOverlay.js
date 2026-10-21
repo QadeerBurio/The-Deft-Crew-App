@@ -39,6 +39,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTour } from './TourProvider';
 import { TOUR_STEPS } from './tourSteps';
 import { pop } from '../utils/haptics';
+import { metaEvents } from '../../analytics/metaEvents';
 import Dot from '../components/Dot';
 import { color as T, font as F, MAX_FONT_SCALE } from '../../theme/tokens';
 
@@ -157,8 +158,11 @@ export default function TourOverlay() {
 
   const next = () => {
     pop();
-    if (isLast) stop();
-    else setStepIdx((i) => i + 1);
+    if (isLast) {
+      // finished with "let's go" (skip / back don't count): Meta event, after consent only
+      metaEvents.onboardingCompleted();
+      stop();
+    } else setStepIdx((i) => i + 1);
   };
   const back = () => {
     pop();
