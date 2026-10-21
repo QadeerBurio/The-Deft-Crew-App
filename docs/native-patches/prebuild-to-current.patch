@@ -1,0 +1,78 @@
+--- a/android/app/build.gradle
++++ b/android/app/build.gradle
+@@ -92,8 +92,14 @@
+         applicationId 'com.aqkhan110.tdc'
+         minSdkVersion rootProject.ext.minSdkVersion
+         targetSdkVersion rootProject.ext.targetSdkVersion
+-        versionCode 88
+-        versionName "1.1.14"
++        versionCode 82
++        versionName "1.1.13"
++
++        // Meta App Events (react-native-fbsdk-next): the IDs come from the build environment
++        // (EAS environment variables META_APP_ID / META_CLIENT_TOKEN), never from a file.
++        // Empty when not set: the SDK then stays off (the app also checks extra.meta.enabled).
++        resValue "string", "meta_app_id", (System.getenv("META_APP_ID") ?: "").trim()
++        resValue "string", "meta_client_token", (System.getenv("META_CLIENT_TOKEN") ?: "").trim()
+ 
+         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
+     }
+--- a/android/app/src/main/AndroidManifest.xml
++++ b/android/app/src/main/AndroidManifest.xml
+@@ -4,7 +4,7 @@
+   <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" tools:node="remove"/>
+   <uses-permission android:name="android.permission.CAMERA"/>
+   <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+-  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" tools:node="remove"/>
++  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
+   <uses-permission android:name="android.permission.INTERNET"/>
+   <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+   <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+@@ -15,9 +15,9 @@
+   <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED"/>
+   <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+   <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+-  <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove"/>
+-  <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" tools:node="remove"/>
+-  <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" tools:node="remove"/>
++  <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
++  <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
++  <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
+   <uses-permission android:name="android.permission.VIBRATE"/>
+   <uses-permission android:name="android.permission.WAKE_LOCK"/>
+   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove"/>
+@@ -28,7 +28,14 @@
+       <data android:scheme="https"/>
+     </intent>
+   </queries>
+-  <application android:name=".MainApplication" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="false" android:theme="@style/AppTheme" android:supportsRtl="true" android:enableOnBackInvokedCallback="false" android:requestLegacyExternalStorage="true">
++  <application android:name=".MainApplication" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="true" android:theme="@style/AppTheme" android:supportsRtl="true" android:enableOnBackInvokedCallback="false" android:requestLegacyExternalStorage="true">
++    <!-- Meta App Events: never starts or logs by itself; the app starts it after consent -->
++    <meta-data android:name="com.facebook.sdk.ApplicationId" android:value="@string/meta_app_id"/>
++    <meta-data android:name="com.facebook.sdk.ClientToken" android:value="@string/meta_client_token"/>
++    <meta-data android:name="com.facebook.sdk.ApplicationName" android:value="tdc"/>
++    <meta-data android:name="com.facebook.sdk.AutoInitEnabled" android:value="false"/>
++    <meta-data android:name="com.facebook.sdk.AutoLogAppEventsEnabled" android:value="false"/>
++    <meta-data android:name="com.facebook.sdk.AdvertiserIDCollectionEnabled" android:value="false"/>
+     <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="tdc2_tdc_push_default"/>
+     <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/notification_icon_color"/>
+     <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/notification_icon"/>
+@@ -47,7 +54,17 @@
+         <category android:name="android.intent.category.DEFAULT"/>
+         <category android:name="android.intent.category.BROWSABLE"/>
+         <data android:scheme="tdcapp"/>
+-        <data android:scheme="exp+tdc"/>
++        <data android:scheme="exp+testting"/>
++      </intent-filter>
++      <intent-filter data-generated="true">
++        <action android:name="android.intent.action.VIEW"/>
++        <data android:scheme="geo"/>
++        <data android:scheme="exp+testting"/>
++      </intent-filter>
++      <intent-filter data-generated="true">
++        <action android:name="android.intent.action.VIEW"/>
++        <data android:scheme="https" android:host="www.google.com" android:pathPrefix="/maps"/>
++        <data android:scheme="exp+testting"/>
+       </intent-filter>
+       <intent-filter android:autoVerify="true" data-generated="true">
+         <action android:name="android.intent.action.VIEW"/>
