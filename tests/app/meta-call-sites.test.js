@@ -212,6 +212,39 @@ const press = async (node) => { await node.props.onPress(); await tick(40); };
   const before = callsOf("eventRegistered").length;
   r = await register(students[2], full);
   ok(callsOf("eventRegistered").length === before && /full/i.test(r.text), "event full (server refuses) → no event", r.text.slice(0, 200));
+  console.log("── event registered: paid event (payment step, real routes)");
+  const ACC = [{ method: "easypaisa", accountTitle: "TDC Events", accountNumber: "03001234567" }];
+  const paidEv = await create({ title: "paid workshop", type: "Seminar", fee: 500, paymentAccounts: ACC });
+  const registerPaid = async (me, ev, txn) => {
+    ctxValue = { token: me.token, user: { _id: me.id }, isGuest: false };
+    const outcome = { registered: 0, already: 0 };
+    const user = { _id: me.id, name: me.name, email: me.email, phone: "03001234567", university: { name: "MUET" }, rollNo: "21CS024" };
+    const sheet = mount(React.createElement(RegisterSheet, { event: ev, token: me.token, user, onClose() {}, onRegistered: () => { outcome.registered++; }, onAlreadyRegistered: () => { outcome.already++; } }));
+    await tick(80);
+    const btnOf = (title) => all(sheet.tree, (n) => n.type === "Button" && n.props.title === title)[0];
+    // form step → payment step
+    for (let round = 0; round < 3 && btnOf("continue to payment"); round++) {
+      await btnOf("continue to payment").props.onPress(); await tick(120);
+      for (const input of all(sheet.tree, (n) => n.type === "Input" && n.props.error)) input.props.onChangeText(/phone|whatsapp/i.test(input.props.label) ? "03001234567" : "test answer");
+    }
+    const onPayStep = !!btnOf("submit registration");
+    // payment: the one account is preselected; transaction id + receipt screenshot
+    all(sheet.tree, (n) => n.type === "Input" && n.props.label === "transaction id")[0]?.props.onChangeText(txn);
+    await tick(20);
+    const attach = btnOf("attach screenshot");
+    if (attach) { await attach.props.onPress(); await tick(60); }
+    await btnOf("submit registration").props.onPress(); await tick(150);
+    return { outcome, onPayStep, text: text(sheet.tree) };
+  };
+  const paidBefore = callsOf("eventRegistered").length;
+  r = await registerPaid(students[3], paidEv, "TXN-PAID-0001");
+  const paidReg = H.stores.Registration.find((x) => String(x.eventId) === String(paidEv._id) && String(x.userId) === students[3].id);
+  ok(r.onPayStep && paidReg?.payment?.status === "pending" && paidReg.payment.amount === 500 && paidReg.payment.transactionId === "TXN-PAID-0001", "paid event: payment step → the server accepted the registration (pending review, Rs 500)", JSON.stringify({ pay: paidReg?.payment, text: r.text.slice(0, 200) }));
+  const paidCalls = callsOf("eventRegistered").slice(paidBefore);
+  ok(paidCalls.length === 1 && paidCalls[0][1] === paidEv._id && r.outcome.registered === 1, "→ eventRegistered(eventId) once for the paid registration", JSON.stringify(paidCalls));
+  r = await registerPaid(students[4], paidEv, "TXN-PAID-0001"); // the same transaction id
+  const refusedShown = /already been used/i.test(r.text) || alerts.some((x) => /already been used/i.test(x));
+  ok(callsOf("eventRegistered").length === paidBefore + 1 && r.outcome.registered === 0 && refusedShown, "paid, transaction id already used (server refuses, the student sees why) → no event", JSON.stringify({ n: callsOf("eventRegistered").length - paidBefore, alerts: alerts.slice(-2) }));
   srv.close();
 
   console.log("── scholarship applied: ApplicationForm");
