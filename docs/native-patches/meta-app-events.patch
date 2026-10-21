@@ -2,7 +2,7 @@
 +++ b/android/app/build.gradle
 @@ -95,6 +95,12 @@
          versionCode 82
-         versionName "1.1.13"
+         versionName "1.1.14"
  
 +        // Meta App Events (react-native-fbsdk-next): the IDs come from the build environment
 +        // (EAS environment variables META_APP_ID / META_CLIENT_TOKEN), never from a file.
@@ -18,7 +18,7 @@
 @@ -29,6 +29,13 @@
      </intent>
    </queries>
-   <application android:name=".MainApplication" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="true" android:theme="@style/AppTheme" android:supportsRtl="true" android:enableOnBackInvokedCallback="false" android:requestLegacyExternalStorage="true">
+   <application android:name=".MainApplication" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="false" android:theme="@style/AppTheme" android:supportsRtl="true" android:enableOnBackInvokedCallback="false" android:requestLegacyExternalStorage="true">
 +    <!-- Meta App Events: never starts or logs by itself; the app starts it after consent -->
 +    <meta-data android:name="com.facebook.sdk.ApplicationId" android:value="@string/meta_app_id"/>
 +    <meta-data android:name="com.facebook.sdk.ClientToken" android:value="@string/meta_client_token"/>
