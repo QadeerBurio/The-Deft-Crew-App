@@ -20,6 +20,7 @@ import { useStreak } from '../../engagement/hooks/useStreak';
 import { color as T, font as F } from "../../theme/tokens";
 import { APP_VERSION } from "../../utils/appVersion";
 import { ScreenHeader, ListRow } from "../../ui";
+import { useMetaConsent } from "../../analytics/MetaConsent";
 const { width } = Dimensions.get('window');
 
 // ── SettingItem (kit ListRow) ──────────────────────────────────────────────
@@ -168,6 +169,7 @@ const PrivacyAndSafetyScreen = ({ navigation }) => {
 // ══════════════════════════════════════════════════════════════════════════
 export default function SettingsScreen({ navigation }) {
   const { logout, user, token } = useContext(AuthContext);
+  const meta = useMetaConsent(); // Meta ad measurement switch (Settings → privacy)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -376,6 +378,19 @@ export default function SettingsScreen({ navigation }) {
               last
             />
           </Group>
+
+          {meta.available && (
+            <Group title="privacy">
+              <ToggleItem
+                icon="analytics-outline"
+                label="ad measurement (Meta)"
+                subLabel="share app activity and this phone's advertising ID with Meta to measure our ads. no name, email or phone."
+                value={meta.allowed}
+                onToggle={() => meta.setAllowed(!meta.allowed)}
+                last
+              />
+            </Group>
+          )}
 
           <Group title="app">
             <SettingItem

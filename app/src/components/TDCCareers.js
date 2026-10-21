@@ -32,6 +32,7 @@ import { BASE_URL } from "../api/api";
 import { color as T, font as F } from "../theme/tokens";
 import { useGuestGate } from '../guest/GuestGate';
 import { plainError } from "../utils/plainError";
+import { metaEvents } from "../analytics/metaEvents";
 const { width, height } = Dimensions.get("window");
 
 // const getBaseURL = () => {
@@ -546,7 +547,8 @@ const TDCCareers = ({ navigation }) => {
         },
         timeout: 60000,
       });
-      
+      metaEvents.jobApplied(selectedJob._id);
+
       // Success notification
       Alert.alert("Submitted!", "Your application has been submitted to The Deft Crew team.");
       

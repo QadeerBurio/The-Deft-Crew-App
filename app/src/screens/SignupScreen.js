@@ -23,6 +23,7 @@ import { useRoute } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import api from "../api/api";
+import { metaEvents } from "../analytics/metaEvents";
 import { AuthContext } from "../context/AuthContext";
 import { enterAccount } from "../guest/accountRoutes";
 import { AuthShell, AuthInput, AuthButton, AUTH } from "../components/AuthShell";
@@ -507,6 +508,9 @@ export default function SignupScreen({ navigation }) {
         });
         return;
       }
+
+      // account created (no email code needed): Meta sign-up event, sent only after consent
+      metaEvents.registration(signupResponse.data?.user?._id || signupResponse.data?.user?.id);
 
       // STEP 2: auto-login. Setting the user switches to the app by itself.
       try {
