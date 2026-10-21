@@ -18,6 +18,9 @@
 //   offerClaimed(offerId)             tdc_offer_claimed
 //   jobApplied(jobId)                 SubmitApplication
 //   aiResumeCreated(resumeId, method) tdc_ai_resume_created  (method: upload_parse | tailor)
+//   onboardingCompleted()             tdc_onboarding_completed  (tour finished with "let's go"; skip doesn't count)
+//   eventRegistered(eventId)          tdc_event_registered  (feature_name: events; free, or paid and accepted)
+//   scholarshipApplied(programId)     tdc_scholarship_applied  (application saved by the server)
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
@@ -287,6 +290,15 @@ export const metaEvents = {
   /** AI resume made: upload_parse (from a CV) or tailor (to a job) */
   aiResumeCreated: (resumeId, method) =>
     log((s) => ({ name: "tdc_ai_resume_created", params: { method: id(method) } }), `resume:${id(method)}:${id(resumeId)}`),
+  /** app tour finished on its last step (not skipped); once per student */
+  onboardingCompleted: () =>
+    log(() => ({ name: "tdc_onboarding_completed", params: {} }), "onboarding"),
+  /** event registration accepted by the server; feature_name only, once per event */
+  eventRegistered: (eventId) =>
+    log(() => ({ name: "tdc_event_registered", params: { feature_name: "events" } }), `event:${id(eventId)}`),
+  /** scholarship application saved by the server; once per program */
+  scholarshipApplied: (programId) =>
+    log((s) => ({ name: "tdc_scholarship_applied", params: { [PARAM.contentType(s)]: "scholarship", [PARAM.contentId(s)]: id(programId) } }), `scholarship:${id(programId)}`),
 };
 
 // tests only

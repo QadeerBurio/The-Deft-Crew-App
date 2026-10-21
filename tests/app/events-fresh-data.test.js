@@ -92,6 +92,8 @@ const MOCKS = {
   "expo-haptics": new Proxy({}, { get: (_, k) => (typeof k === "string" && k.endsWith("Async") ? async () => {} : {}) }),
   "expo-image-picker": { MediaTypeOptions: { Images: "Images" } },
   axios: axiosFake,
+  // Meta events: recorded only (the module has its own suite)
+  "../../analytics/metaEvents": { metaEvents: new Proxy({}, { get: (t, k) => (...args) => { (global.__metaCalls = global.__metaCalls || []).push([k, ...args]); return Promise.resolve("stub"); } }) },
   "../../engagement/hooks/useOpenFromParams": { useOpenFromParams: () => {} },
   "../../context/AuthContext": { AuthContext: { get _value() { return ctxValue; } } },
   "@react-navigation/native": { useNavigation: () => navigation, useFocusEffect: (cb) => { focusCallbacks.push(cb); React.useEffect(() => cb(), []); } },

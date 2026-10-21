@@ -169,6 +169,43 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   await M.refreshFlags(); await M.refreshFlags(); await M.refreshFlags();
   ok(n === 0, "within 15 minutes the switch isn't asked again (unless forced)");
 
+  console.log("── onboarding completed / event registered / scholarship applied");
+  // gates: each of the 3 is off without the build IDs, off with the switch off, waits before consent
+  for (const [label, fire] of [["onboarding", () => E.onboardingCompleted()], ["event", () => E.eventRegistered("e1")], ["scholarship", () => E.scholarshipApplied("p1")]]) {
+    await setup({ build: false, consent: true });
+    const a = await fire();
+    await setup({ remote: false, consent: true });
+    const b = await fire();
+    await setup({});
+    const c = await fire();
+    ok(a === "off" && b === "off" && c === "queued" && calls.events.length === 0 && calls.init === 0, `${label}: build off → off, switch off → off, not asked yet → waits (SDK not started)`, [a, b, c].join());
+    await M.setConsent(false);
+    ok((await fire()) === "no_consent" && calls.events.length === 0, `${label}: 'not now' → nothing sent`);
+  }
+  await setup({ consent: true });
+  r = await E.onboardingCompleted();
+  ok(r === "sent" && calls.events[0].name === "tdc_onboarding_completed" && Object.keys(calls.events[0].params).length === 0, "tdc_onboarding_completed, no parameters", JSON.stringify(calls.events[0]));
+  ok((await E.onboardingCompleted()) === "duplicate" && calls.events.length === 1, "onboarding: once per student (replaying the tour doesn't send it again)");
+  await M.setMetaUser("u2"); await M.setConsent(true);
+  ok((await E.onboardingCompleted()) === "sent", "…another student on the same phone gets their own");
+  await setup({ consent: true });
+  r = await E.eventRegistered("ev1");
+  ok(r === "sent" && calls.events[0].name === "tdc_event_registered" && JSON.stringify(calls.events[0].params) === '{"feature_name":"events"}', "tdc_event_registered with feature_name only (no event id, title or name sent)", JSON.stringify(calls.events[0]));
+  ok((await E.eventRegistered("ev1")) === "duplicate" && (await E.eventRegistered("ev2")) === "sent" && calls.events.length === 2, "one per event per student: same event → duplicate, another event → sent");
+  r = await E.scholarshipApplied("prog1");
+  ok(r === "sent" && calls.events[2].name === "tdc_scholarship_applied" && calls.events[2].params.fb_content_type === "scholarship" && calls.events[2].params.fb_content_id === "prog1", "tdc_scholarship_applied (content type scholarship, program id)", JSON.stringify(calls.events[2]));
+  ok((await E.scholarshipApplied("prog1")) === "duplicate" && calls.events.length === 3, "one per program per student");
+  ok(calls.events.every((e) => !/@|name|phone|mail"/i.test(JSON.stringify(e.params).replace('"feature_name"', '"f"'))), "no personal data in any of the new events");
+  // never throws
+  sdkThrows = true;
+  let threwNew = false;
+  try { r = [await E.onboardingCompleted(), await E.eventRegistered("ev9"), await E.scholarshipApplied("p9")]; } catch { threwNew = true; }
+  ok(!threwNew && r.every((x) => x === "error" || x === "duplicate"), "native error → returned, never thrown", JSON.stringify(r));
+  sdkThrows = false;
+  threwNew = false;
+  try { await E.eventRegistered(undefined); await E.scholarshipApplied(null); } catch { threwNew = true; }
+  ok(!threwNew, "missing ids → no crash");
+
   console.log("── never throws");
   await setup({ consent: true });
   sdkThrows = true;

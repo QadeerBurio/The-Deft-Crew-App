@@ -11,6 +11,7 @@ import { useGuestGate } from '../guest/GuestGate';
 import { color as T, font as F } from "../theme/tokens";
 import ScreenHeader from "../ui/ScreenHeader";
 import { plainError } from "../utils/plainError";
+import { metaEvents } from "../analytics/metaEvents";
 // --- SUB-COMPONENTS (Defined outside to prevent re-render lag) ---
 const SectionHeader = ({ title, icon, color }) => (
 
@@ -123,6 +124,8 @@ const ApplicationForm = ({ route, navigation }) => {
     const result = await response.json();
 
     if (response.ok) {
+      // application saved by the server: Meta event, after consent only
+      metaEvents.scholarshipApplied(program?._id);
       Alert.alert("Success 🚀", "Your application has been submitted successfully!");
       // Navigation.goBack() or clear state here
     } else {
