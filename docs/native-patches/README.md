@@ -6,12 +6,12 @@ manual native work in git, so nothing depends on one machine.
 
 | File | What it is |
 |---|---|
-| `meta-app-events.patch` | Only the Meta App Events edits (2 files). Apply it to the native project as it was before Meta. |
+| `meta-app-events.patch` | Only the Meta App Events edits (2 files). Applies to `android/` without them (the release-hygiene state of 2026-10-21). |
 | `prebuild-to-current.patch` | Everything that differs from a fresh `expo prebuild --clean`: the Meta edits **and** every other manual change (see `MANUAL-NATIVE-CHANGES.md`). |
 | `notification-icons/` | The 5 notification icons the app ships (prebuild generates different ones). |
 
 Both patches were checked: applied to their base they give a byte-identical `android/`
-(app commit `85f4a2b`, Expo SDK 54.0.37, 2026-10-21). The Meta IDs are not in any of these
+(branch `fix/native-release-hygiene`, Expo SDK 54.0.37, 2026-10-21). The Meta IDs are not in any of these
 files: Gradle reads `META_APP_ID` / `META_CLIENT_TOKEN` from the build environment.
 
 ## Re-apply only the Meta edits
@@ -28,7 +28,8 @@ git -c core.autocrlf=false apply docs/native-patches/meta-app-events.patch
 ## Rebuild `android/` from scratch (lost disk, new machine)
 
 1. Back up whatever `android/` exists.
-2. Generate it without the Meta variables set (so the plugin doesn't add its own copy):
+2. Generate it without the Meta variables set (so the plugin doesn't add its own copy).
+   In bash, `unset META_APP_ID META_CLIENT_TOKEN` first:
    ```bash
    npx expo prebuild -p android --clean --no-install
    ```
