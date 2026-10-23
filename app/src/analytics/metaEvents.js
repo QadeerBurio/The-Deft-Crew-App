@@ -103,13 +103,20 @@ export const metaAvailable = () => buildOn() && state.remote === true;
 const active = () => metaAvailable() && !!state.userId && state.consent === "granted" && !!sdk();
 
 // ── start / stop the SDK ──
+
 function start() {
   const s = sdk();
   if (!s) return false;
+
   try {
     s.Settings.setAutoLogAppEventsEnabled(false);
-    s.Settings.setAdvertiserIDCollectionEnabled(true);
+
+    // Do not enable advertising ID collection
+    // without platform-appropriate permission.
+    s.Settings.setAdvertiserIDCollectionEnabled(false);
+
     s.Settings.initializeSDK();
+
     state.started = true;
     return true;
   } catch (e) {
@@ -117,6 +124,7 @@ function start() {
     return false;
   }
 }
+
 function stop() {
   const s = sdk();
   state.started = false;
@@ -213,10 +221,20 @@ async function markSent(key) {
   await write(KEY_SENT, list);
 }
 
+
 function send(name, params) {
   const s = sdk();
+
+  if (!s?.AppEventsLogger) {
+    throw new Error("Meta App Events SDK unavailable");
+  }
+
   s.AppEventsLogger.logEvent(name, params);
+
+  // Request immediate transmission of queued events.
+  s.AppEventsLogger.flush();
 }
+
 
 async function flushQueue() {
   if (!state.userId) return;

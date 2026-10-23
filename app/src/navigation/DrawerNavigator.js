@@ -447,7 +447,7 @@ const DrawerHeader = ({ isGuest, onClose }) => {
     >
       <View style={styles.drawerTopRow}>
         <Text style={styles.drawerLogo} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-          tdc<Text style={{ color: T.yellow }}>.</Text>
+          tdc<Text style={{ color: T.yellow}}>.</Text>
         </Text>
         <TouchableOpacity
           onPress={onClose}
@@ -920,20 +920,7 @@ function CustomHeader({ navigation }) {
         <View style={styles.headerRight}>
           {!searchVisible && (
             <>
-              {!isGuest && pointsBalance != null && (
-                <TouchableOpacity
-                  onPress={openRewards}
-                  style={styles.pointsPill}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityLabel={`crew points: ${pointsBalance.toLocaleString()}, open rewards`}
-                >
-                  <View style={styles.pointsDot} />
-                  <Text style={styles.pointsText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-                    {pointsBalance.toLocaleString()}
-                  </Text>
-                </TouchableOpacity>
-              )}
+              
               {!isGuest && (
                 <StreakChip onPress={() => setStreakSheetVisible(true)} />
               )}
@@ -1488,7 +1475,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   drawerLogo: {
-    fontFamily: F.heading,
+    fontFamily: 'Latobold',
+    fontWeight:700,
     fontSize: 30,
     color: T.white,
   },
@@ -1670,7 +1658,8 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   headerAppTitle: {
-    fontFamily: F.heading,
+    fontFamily: 'Latobold',
+    fontWeight:700,
     fontSize: 28,
     color: T.ink,
   },

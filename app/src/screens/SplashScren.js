@@ -88,7 +88,8 @@ const styles = StyleSheet.create({
   },
   splashLogoText: {
     fontSize: 50,
-    fontFamily: F.heading,
+    fontFamily: 'Latobold',
+    fontWeight:700,
     color: T.ink,
   },
   splashTitle: {

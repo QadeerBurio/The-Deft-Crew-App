@@ -179,7 +179,8 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  brand: { fontFamily: F.heading, fontSize: 24, color: AUTH.dark },
+  brand: { fontFamily: 'Latobold',
+    fontWeight:700, fontSize: 24, color: AUTH.dark },
   scroll: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 8, paddingBottom: 30 },
 
   steps: { flexDirection: 'row', gap: 8, marginBottom: 30 },

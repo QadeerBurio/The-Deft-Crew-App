@@ -457,7 +457,8 @@ const styles = StyleSheet.create({
 
   card: { paddingHorizontal: 24, paddingVertical: 16, width: '100%', maxWidth: 440, alignSelf: 'center' },
   header: { marginBottom: 28 },
-  logoText: { fontFamily: F.heading, fontSize: 40, color: T.white },
+  logoText: { fontFamily: 'Latobold',
+    fontWeight:700, fontSize: 40, color: T.white },
   title: { fontFamily: F.heading, fontSize: 36, lineHeight: 38, letterSpacing: -1.2, color: DARK, marginTop: 24 },
   subtitle: { fontFamily: F.body, color: T.onInkMuted, marginTop: 12, fontSize: 15 },
 
