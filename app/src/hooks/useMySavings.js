@@ -7,6 +7,7 @@ import { useContext } from "react";
 import { useQuery } from "@tanstack/react-query";
 import api from "../api/api";
 import { AuthContext } from "../context/AuthContext";
+import { checkRedemptions } from "../analytics/metaRedemptions";
 
 export const MY_SAVINGS_KEY = (userId) => ["offers", "myTotalSavings", userId];
 
@@ -24,6 +25,7 @@ export default function useMySavings({ enabled = true } = {}) {
       const totalSaved = Number(res?.data?.totalSaved);
       const redemptionCount = Number(res?.data?.redemptionCount);
       if (!Number.isFinite(totalSaved)) throw new Error("bad savings response");
+      checkRedemptions(); // savings refreshed: report any new redemption to Meta (never blocks this)
       return {
         totalSaved: Math.max(0, totalSaved),
         redemptionCount: Number.isFinite(redemptionCount) ? redemptionCount : 0,
