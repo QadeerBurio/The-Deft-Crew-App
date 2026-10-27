@@ -3,6 +3,7 @@ import React, { createContext, useState, useEffect, useCallback, useRef } from '
 import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import aiService from '../services/aiService';
+import { metaEvents } from '../analytics/metaEvents';
 
 export const ChatContext = createContext();
 
@@ -155,6 +156,7 @@ export const ChatProvider = ({ children }) => {
 
     let assistantMsgId = `assistant-${Date.now()}`;
     let accumulatedReply = '';
+    let streamFailed = false; // an error frame can still be followed by [DONE]
 
     const handleToken = (token) => {
       setIsLoading(false);
@@ -187,6 +189,9 @@ export const ChatProvider = ({ children }) => {
       setIsLoading(false);
       activeStreamRef.current = null;
 
+      // the server returned a reply: once per Karachi day
+      if (!streamFailed && accumulatedReply.trim()) metaEvents.aiChatUsed();
+
       try {
         const suggsRes = await aiService.getSuggestions(activeSessionId);
         if (suggsRes.success) {
@@ -199,6 +204,7 @@ export const ChatProvider = ({ children }) => {
     };
 
     const handleError = (err) => {
+      streamFailed = true;
       console.error('Stream processing error:', err?.message || err || 'Unknown stream error');
       setIsStreaming(false);
       setIsLoading(false);
