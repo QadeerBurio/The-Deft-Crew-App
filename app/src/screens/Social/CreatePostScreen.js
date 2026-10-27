@@ -26,6 +26,7 @@ import { AuthContext } from "../../context/AuthContext";
 import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus';
 
 import { color as T, font as F } from "../../theme/tokens";
+import { metaEvents } from "../../analytics/metaEvents";
 const { width, height } = Dimensions.get('window');
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
 
@@ -210,6 +211,7 @@ export default function CreatePostScreen({ navigation, route }) {
       const result = await response.json();
 
       if (response.ok) {
+        metaEvents.postCreated(result?._id); // saved by the server; no params
         if (result?.engagement?.popups?.length) {
           engagementBus.emit(
             ENGAGEMENT_EVENTS.POPUPS_QUEUED,
