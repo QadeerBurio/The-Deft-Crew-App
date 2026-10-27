@@ -35,6 +35,7 @@ import {
 import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus';
 
 import { color as T, font as F } from "../../theme/tokens";
+import { metaEvents } from "../../analytics/metaEvents";
 const { height, width } = Dimensions.get('window');
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
 
@@ -531,10 +532,15 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     ));
 
     try {
-      await fetch(`${API_URL}/confessions/like/${id}`, {
+      const res = await fetch(`${API_URL}/confessions/like/${id}`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
+      // the server says whether this was a like (true) or an unlike (false); unlikes send nothing
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (data?.liked === true) metaEvents.socialEngaged("like");
+      }
     } catch (err) {
       soundError();
       fetchConfessions(false);
@@ -676,6 +682,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
 
       if (res.ok) {
         const updated = await res.json();
+        metaEvents.socialEngaged("comment"); // type only, no confession id
         if (updated?.engagement?.popups?.length) {
           engagementBus.emit(
             ENGAGEMENT_EVENTS.POPUPS_QUEUED,
@@ -777,6 +784,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
 
       if (response.ok) {
         const result = await response.json();
+        metaEvents.confessionCreated(); // no params and no id of any kind
 
         // 🔔 success sound
         soundSuccess();
