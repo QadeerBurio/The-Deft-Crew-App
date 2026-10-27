@@ -27,6 +27,7 @@ import useMyProfessionalProfile from '../../hooks/useMyProfessionalProfile';
 
 import { color as T, font as F } from "../../theme/tokens";
 import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
+import { metaEvents } from "../../analytics/metaEvents";
 const BRAND = T.yellow;
 const INK = T.ink;
 const MUTED = T.textMuted;
@@ -251,7 +252,8 @@ export default function CreateListingScreen({ route, navigation }) {
         if (syllabus.trim()) payload.syllabus = syllabus.trim();
       }
 
-      await createListing(payload);
+      const saved = await createListing(payload);
+      metaEvents.skillshareListingCreated(saved?._id); // saved by the server; id only
 
       Alert.alert(
         '🎉 Success!',
