@@ -90,6 +90,7 @@ const state = {
   flagsAt: 0,
   started: false,
   tracking: null, // iPhone: "granted" | "denied" | "undetermined" | null (not read yet)
+  activated: false, // the fallback activation was logged since the app last came to the front
   sent: null, // Set of keys, loaded lazily
   sdk: undefined,
 };
@@ -239,9 +240,12 @@ export async function onAppState(appState) {
       if (isIOS() && state.started) await readTracking();
       await refreshFlags({ force: true });
       if (config.manualActivate && state.started) logActivate();
-    } else if (stopWatch) {
-      stopWatch();
-      stopWatch = null;
+    } else {
+      state.activated = false; // the next return is a new open
+      if (stopWatch) {
+        stopWatch();
+        stopWatch = null;
+      }
     }
   } catch (e) {
     warn("app state failed:", e?.message);
@@ -336,10 +340,13 @@ function send(name, params) {
   s.AppEventsLogger.flush();
 }
 
-// the fallback activation (config.manualActivate); never throws
+// the fallback activation (config.manualActivate): once per open, whether the SDK started at
+// launch or after "allow"; never throws
 function logActivate() {
   try {
-    if (state.started && active()) send(EVENT.activate(), {});
+    if (state.activated || !state.started || !active()) return;
+    send(EVENT.activate(), {});
+    state.activated = true;
   } catch (e) {
     warn("activate not sent:", e?.message);
   }
@@ -436,7 +443,7 @@ export const _test = {
   config,
   FLAGS_EVERY,
   reset: () => {
-    Object.assign(state, { userId: null, consent: null, remote: false, flagsAt: 0, started: false, tracking: null, sent: null, sdk: undefined });
+    Object.assign(state, { userId: null, consent: null, remote: false, flagsAt: 0, started: false, tracking: null, activated: false, sent: null, sdk: undefined });
     if (stopWatch) { try { stopWatch(); } catch {} }
     stopWatch = null;
     config.manualActivate = false;
