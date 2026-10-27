@@ -18,6 +18,7 @@ import { TouchableWithoutFeedback } from 'react-native';
 import { soundLike, soundTap } from "../../lib/tdcSounds";
 import { color as T, font as F } from "../../theme/tokens";
 import { plainError } from "../../utils/plainError";
+import { metaEvents } from "../../analytics/metaEvents";
 const { width, height } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 const COMMENTS_POLL_INTERVAL = 6000;
@@ -940,6 +941,7 @@ export default function UserProfile({ route, navigation }) {
       );
 
       if (res.data.success && res.data.comments) {
+        metaEvents.socialEngaged("comment");
         const fresh = normalizeComments(res.data.comments);
         setCommentsList(fresh);
         setUserPosts(prev => prev.map(p => {
@@ -1191,6 +1193,7 @@ export default function UserProfile({ route, navigation }) {
     try {
       const response = await axios.put(`${API_URL}/posts/like/${postId}`, {}, config);
       if (response.data.success) {
+        if (response.data.liked === true) metaEvents.socialEngaged("like"); // unlikes send nothing
         let finalLikes;
         let finalCount;
 
