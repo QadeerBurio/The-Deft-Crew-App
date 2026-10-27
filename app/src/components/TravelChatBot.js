@@ -19,6 +19,7 @@ import { engagementBus, ENGAGEMENT_EVENTS } from '../engagement/engagementBus';
 
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { copyToClipboard } from '../utils/clipboard';
+import { metaEvents } from '../analytics/metaEvents';
 const { width, height } = Dimensions.get('window');
 
 // ─── SUGGESTED PROMPT CHIPS ───────────────────────────────────────────
@@ -473,6 +474,8 @@ const TravelChatBot = forwardRef((props, ref) => {
 
       let processedChars = 0;
       let buffer = '';
+      let gotToken = false;
+      let streamFailed = false;
 
       xhr.onreadystatechange = () => {
         if (xhr.readyState === 3 || xhr.readyState === 4) {
@@ -490,6 +493,8 @@ const TravelChatBot = forwardRef((props, ref) => {
             const dataString = cleanFrame.replace('data: ', '').trim();
 
             if (dataString === '[DONE]') {
+              // the server answered: once per Karachi day, no prompt text sent
+              if (gotToken && !streamFailed && xhr.status < 400) metaEvents.travelAssistantUsed();
               setIsStreaming(false);
               setMessages((prev) =>
                 prev.map((m) =>
@@ -501,6 +506,7 @@ const TravelChatBot = forwardRef((props, ref) => {
               try {
                 const dataObj = JSON.parse(dataString);
                 if (dataObj.token) {
+                  gotToken = true;
                   setMessages((prev) =>
                     prev.map((m) =>
                       m.id === assistantId ? { ...m, content: m.content + dataObj.token } : m
@@ -509,6 +515,7 @@ const TravelChatBot = forwardRef((props, ref) => {
                   scrollToEnd();
                 }
                 if (dataObj.error) {
+                  streamFailed = true;
                   setMessages((prev) =>
                     prev.map((m) =>
                       m.id === assistantId
