@@ -32,6 +32,14 @@
 //   onboardingCompleted()             fb_mobile_tutorial_completion  (tour finished with "let's go"; skip doesn't count)
 //   eventRegistered(eventId)          tdc_event_registered  (feature_name: events; free, or paid and accepted)
 //   scholarshipApplied(programId)     tdc_scholarship_applied  (application saved by the server)
+//   discountRedeemed(redemptionId, offerId, redeemedAt)  tdc_discount_redeemed  (recorded by the brand's scan; last 24 h only)
+//   postCreated(postId)               tdc_post_created  (no params)
+//   confessionCreated()               tdc_confession_created  (no params, no id anywhere, random once-key)
+//   socialEngaged(type)               tdc_social_engaged  (type: like | comment; once per student per Karachi day per type)
+//   aiChatUsed()                      tdc_ai_chat_used  (once per Karachi day)
+//   travelAssistantUsed()             tdc_travel_assistant_used  (once per Karachi day)
+//   skillshareListingCreated(id)      tdc_skillshare_listing_created
+//   skillshareOfferCreated(id)        tdc_skillshare_offer_created
 // Plus, from the SDK itself once allowed: its install ping and fb_mobile_activate_app.
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -50,6 +58,8 @@ const FLAGS_EVERY = 5 * 60 * 1000; // and re-read it this often while the app is
 const QUEUE_MAX = 20;
 const QUEUE_TTL = 24 * 60 * 60 * 1000;
 const SENT_MAX = 500;
+const REDEEM_MAX_AGE = 24 * 60 * 60 * 1000; // older redemptions are never sent
+const KARACHI_OFFSET = 5 * 60 * 60 * 1000; // Asia/Karachi is UTC+5 all year (no daylight saving)
 
 // Fallback, OFF: log fb_mobile_activate_app ourselves on each open. Only for the case where a
 // device test shows the SDK's automatic logging misses the session it was started in. It counts
@@ -320,7 +330,9 @@ async function sentSet() {
 async function markSent(key) {
   const set = await sentSet();
   set.add(key);
-  const list = [...set];
+  // once-a-day keys from earlier days are no longer needed
+  const today = dayKey();
+  const list = [...set].filter((k) => !k.includes(":day:") || k.endsWith(`:${today}`));
   if (list.length > SENT_MAX) list.splice(0, list.length - SENT_MAX);
   state.sent = new Set(list);
   await write(KEY_SENT, list);
@@ -373,6 +385,7 @@ async function flushQueue() {
  * Logs one event. Returns what happened (for tests and logs), never throws:
  *   "sent" | "queued" (waiting for the student's choice) | "duplicate" | "off" | "no_consent" |
  *   "no_user" | "error"
+ * (the wrappers below also return "old", "invalid" or "no_id" without logging anything)
  */
 async function log(build, key, forUserId) {
   try {
@@ -412,6 +425,16 @@ async function log(build, key, forUserId) {
 
 const id = (v) => String(v ?? "").slice(0, 64);
 
+/** The Karachi date (YYYY-MM-DD) for once-a-day keys, whatever the phone's time zone. */
+export function dayKey(at = deps.now()) {
+  return new Date(Number(at) + KARACHI_OFFSET).toISOString().slice(0, 10);
+}
+// once per student per Karachi day
+const daily = (what) => `${what}:day:${dayKey()}`;
+// a key that says nothing about the item (confessions: not even their id)
+const randomKey = () => `${deps.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+const SOCIAL_TYPES = ["like", "comment"];
+
 export const metaEvents = {
   /** account sign-up confirmed by the server */
   registration: (userId) =>
@@ -434,6 +457,35 @@ export const metaEvents = {
   /** scholarship application saved by the server; once per program */
   scholarshipApplied: (programId) =>
     log((s) => ({ name: "tdc_scholarship_applied", params: { [PARAM.contentType(s)]: "scholarship", [PARAM.contentId(s)]: id(programId) } }), `scholarship:${id(programId)}`),
+  /** a redemption the server recorded (brand scan or promo code); once per redemption, last 24 h only */
+  discountRedeemed: async (redemptionId, offerId, redeemedAt) => {
+    const at = new Date(redeemedAt).getTime();
+    if (!redemptionId || !Number.isFinite(at) || deps.now() - at > REDEEM_MAX_AGE) return "old";
+    return log((s) => ({ name: "tdc_discount_redeemed", params: { [PARAM.contentType(s)]: "offer", [PARAM.contentId(s)]: id(offerId) } }), `redeem:${id(redemptionId)}`);
+  },
+  /** post saved by the server; no params */
+  postCreated: (postId) =>
+    log(() => ({ name: "tdc_post_created", params: {} }), `post:${postId ? id(postId) : randomKey()}`),
+  /** confession saved by the server; no params, and no id in the params, the once-key or the queue */
+  confessionCreated: () =>
+    log(() => ({ name: "tdc_confession_created", params: {} }), `confession:${randomKey()}`),
+  /** like or comment accepted by the server (posts and confessions); unlikes never call this */
+  socialEngaged: async (type) => {
+    if (!SOCIAL_TYPES.includes(type)) return "invalid";
+    return log(() => ({ name: "tdc_social_engaged", params: { type } }), daily(`social:${type}`));
+  },
+  /** the AI chat returned a reply; once per Karachi day */
+  aiChatUsed: () =>
+    log(() => ({ name: "tdc_ai_chat_used", params: { feature_name: "ai_chat" } }), daily("ai_chat")),
+  /** the travel assistant answered; once per Karachi day */
+  travelAssistantUsed: () =>
+    log(() => ({ name: "tdc_travel_assistant_used", params: { feature_name: "travel_assistant" } }), daily("travel")),
+  /** skillshare listing saved by the server */
+  skillshareListingCreated: async (listingId) =>
+    !listingId ? "no_id" : log((s) => ({ name: "tdc_skillshare_listing_created", params: { [PARAM.contentType(s)]: "skillshare_listing", [PARAM.contentId(s)]: id(listingId) } }), `listing:${id(listingId)}`),
+  /** skillshare offer saved by the server */
+  skillshareOfferCreated: async (offerId) =>
+    !offerId ? "no_id" : log((s) => ({ name: "tdc_skillshare_offer_created", params: { [PARAM.contentType(s)]: "skillshare_offer", [PARAM.contentId(s)]: id(offerId) } }), `skilloffer:${id(offerId)}`),
 };
 
 // tests only
