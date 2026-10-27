@@ -31,6 +31,7 @@ import { FEATURE_ID_TO_MISSION } from "../engagement/utils/mood";
 
 // 🆕 home sections
 import HomeHello from "./home/HomeHello";
+import HomeStreakReminder from "./home/HomeStreakReminder";
 import HomeCampus from "./home/HomeCampus";
 import HomeTools from "./home/HomeTools";
 import HomeNearMe from "./home/HomeNearMe";
@@ -108,7 +109,7 @@ export default function Home({ navigation }) {
   // 🆕 engagement
   const { flags } = useEngagement();
   const { missions } = useMissions();
-  const { count: streakCount, enabled: streakEnabled } = useStreak();
+  const { count: streakCount, enabled: streakEnabled, health: streakHealth } = useStreak();
 
   const headerFade = useRef(new Animated.Value(0)).current;
   const parentNavigation = navigation.getParent();
@@ -382,6 +383,13 @@ export default function Home({ navigation }) {
               showStreak={!isGuest && streakEnabled}
               onStreakPress={() => setStreakSheetVisible(true)}
             />
+            {!isGuest && streakEnabled && (
+              <HomeStreakReminder
+                health={streakHealth}
+                count={streakCount}
+                onPress={() => setStreakSheetVisible(true)}
+              />
+            )}
           </FadeInView>
 
           {/* 🆕 Daily Drop */}
