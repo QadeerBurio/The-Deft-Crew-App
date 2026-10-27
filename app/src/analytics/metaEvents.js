@@ -278,6 +278,8 @@ export async function setMetaUser(userId) {
 }
 
 export const getConsent = () => state.consent;
+/** The signed-in student's id (null when signed out or a guest). */
+export const metaUser = () => state.userId;
 
 /** The student's choice (consent sheet, Settings → privacy). */
 export async function setConsent(allowed) {
