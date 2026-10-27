@@ -15,6 +15,7 @@ import { AuthContext } from "../../context/AuthContext";
 import { soundLike, soundTap } from "../../lib/tdcSounds";
 import { color as T, font as F } from "../../theme/tokens";
 import { ScreenHeader, HeaderIconButton, EmptyState, SkeletonBlock } from "../../ui";
+import { metaEvents } from "../../analytics/metaEvents";
 const { width } = Dimensions.get('window');
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
 
@@ -339,6 +340,7 @@ export default function ProfileScreen() {
       });
       const data = await response.json();
       if (response.ok) {
+        metaEvents.socialEngaged("comment"); // posts and confessions; type only
         const updateList = selectedItemType === 'post' ? setUserPosts : setUserConfessions;
         updateList(prev => prev.map(item => item._id === selectedItem._id ? { ...item, comments: data.comments } : item));
         setSelectedItem(prev => ({ ...prev, comments: data.comments }));
