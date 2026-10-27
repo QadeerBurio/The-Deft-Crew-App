@@ -14,18 +14,20 @@ console.warn = () => {};
 // fakes
 const store = new Map();
 const storage = { getItem: async (k) => (store.has(k) ? store.get(k) : null), setItem: async (k, v) => { store.set(k, v); }, removeItem: async (k) => { store.delete(k); } };
-const calls = { init: 0, adId: [], autoLog: [], events: [] };
+const calls = { init: 0, adId: [], att: [], autoLog: [], flush: 0, events: [] };
 let sdkThrows = false;
 const fakeSdk = {
   Settings: {
     initializeSDK: () => { if (sdkThrows) throw new Error("native boom"); calls.init++; },
     setAdvertiserIDCollectionEnabled: (v) => calls.adId.push(v),
     setAutoLogAppEventsEnabled: (v) => calls.autoLog.push(v),
+    setAdvertiserTrackingEnabled: (v) => calls.att.push(v),
   },
   AppEventsLogger: {
-    AppEvents: { CompletedRegistration: "fb_mobile_complete_registration", SubmitApplication: "SubmitApplication" },
+    AppEvents: { CompletedRegistration: "fb_mobile_complete_registration", SubmitApplication: "SubmitApplication", CompletedTutorial: "fb_mobile_tutorial_completion" },
     AppEventParams: { RegistrationMethod: "fb_registration_method", ContentType: "fb_content_type", ContentID: "fb_content_id" },
     logEvent: (name, params) => { if (sdkThrows) throw new Error("native boom"); calls.events.push({ name, params }); },
+    flush: () => { calls.flush++; },
   },
 };
 let flags = { metaEvents: true };
@@ -40,6 +42,7 @@ m.require = (id) => ({
   axios: { __esModule: true, default: { get: async () => { throw new Error("use deps"); } } },
   "expo-constants": { __esModule: true, default: { expoConfig: { extra: { meta: { enabled: true } } } } },
   "../api/api": { BASE_URL: "https://example.test/api" },
+  "react-native": { Platform: { OS: "android" } },
 }[id] || (() => { throw new Error("unexpected require " + id); })());
 m._compile(code, file);
 const M = m.exports;
@@ -48,13 +51,16 @@ let buildOn = true;
 const setup = async ({ build = true, remote = true, user = "u1", consent } = {}) => {
   M._test.reset();
   store.clear();
-  Object.assign(calls, { init: 0, adId: [], autoLog: [], events: [] });
+  Object.assign(calls, { init: 0, adId: [], att: [], autoLog: [], flush: 0, events: [] });
   sdkThrows = false; flagsDown = false; buildOn = build; flags = { metaEvents: remote };
   Object.assign(M._test.deps, {
     storage,
     get: async (url) => { if (flagsDown) throw new Error("offline"); if (!/\/api\/app\/flags$/.test(url)) throw new Error("bad url " + url); return { data: flags }; },
     buildEnabled: () => buildOn,
     loadSdk: () => fakeSdk,
+    platform: () => "android",
+    loadTracking: () => { throw new Error("no tracking prompt on Android"); },
+    every: () => () => {},
     now: () => now,
   });
   await M.refreshFlags({ force: true });
@@ -67,7 +73,9 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   await setup({ consent: true });
   let r = await E.offerClaimed("o1");
   ok(r === "sent" && calls.events.length === 1 && calls.events[0].name === "tdc_offer_claimed" && calls.events[0].params.fb_content_id === "o1", "build on + switch on + allowed → sent", JSON.stringify({ r, calls }));
-  ok(calls.init === 1 && calls.autoLog[0] === false && calls.adId[0] === true, "SDK started only now: automatic events off, advertising ID on (after consent)", JSON.stringify(calls));
+  ok(calls.init === 1 && calls.autoLog[0] === true && calls.adId[0] === true && calls.att.length === 0, "SDK started only now: automatic logging (install, activate) on, then advertising ID on (Android, after consent)", JSON.stringify(calls));
+  ok(calls.flush === 1, "flushed right after the event", calls.flush);
+  ok(!calls.events.some((e) => e.name === "fb_mobile_activate_app"), "manual activate fallback is off by default (the SDK logs it)");
   await setup({ build: false, consent: true });
   r = await E.offerClaimed("o1");
   ok(r === "off" && calls.events.length === 0 && calls.init === 0 && !M.metaAvailable(), "build without Meta IDs → off, SDK never started");
@@ -97,7 +105,7 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   r = await E.jobApplied("j10");
   ok(r === "sent" && calls.events[0].name === "SubmitApplication" && calls.events[0].params.fb_content_type === "job", "after allowing: new events are sent");
   await M.setConsent(false);
-  ok(calls.adId.at(-1) === false, "withdraw → advertising ID collection switched off");
+  ok(calls.adId.at(-1) === false && calls.autoLog.at(-1) === false, "withdraw → automatic logging and advertising ID collection switched off");
   r = await E.jobApplied("j11");
   ok(r === "no_consent" && calls.events.length === 1, "withdraw → nothing more is sent");
 
@@ -144,7 +152,7 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   flags = { metaEvents: false };
   await M.refreshFlags({ force: true });
   r = await E.offerClaimed("k2");
-  ok(r === "off" && calls.events.length === 1 && calls.adId.at(-1) === false && !M.metaAvailable(), "switch turned off on the server → nothing more sent, advertising ID off");
+  ok(r === "off" && calls.events.length === 1 && calls.adId.at(-1) === false && calls.autoLog.at(-1) === false && !M.metaAvailable(), "switch turned off on the server → nothing more sent, automatic logging and advertising ID off");
   flags = { metaEvents: true };
   await M.refreshFlags({ force: true });
   r = await E.offerClaimed("k3");
@@ -167,7 +175,10 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   let n = 0;
   M._test.deps.get = async () => { n++; return { data: { metaEvents: true } }; };
   await M.refreshFlags(); await M.refreshFlags(); await M.refreshFlags();
-  ok(n === 0, "within 15 minutes the switch isn't asked again (unless forced)");
+  ok(n === 0, "within 5 minutes the switch isn't asked again (unless forced)");
+  now += 5 * 60 * 1000 + 1;
+  await M.refreshFlags();
+  ok(n === 1, "after 5 minutes it is asked again", n);
 
   console.log("── onboarding completed / event registered / scholarship applied");
   // gates: each of the 3 is off without the build IDs, off with the switch off, waits before consent
@@ -184,7 +195,8 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   }
   await setup({ consent: true });
   r = await E.onboardingCompleted();
-  ok(r === "sent" && calls.events[0].name === "tdc_onboarding_completed" && Object.keys(calls.events[0].params).length === 0, "tdc_onboarding_completed, no parameters", JSON.stringify(calls.events[0]));
+  ok(r === "sent" && calls.events[0].name === "fb_mobile_tutorial_completion" && Object.keys(calls.events[0].params).length === 0, "fb_mobile_tutorial_completion (SDK constant), no parameters", JSON.stringify(calls.events[0]));
+  ok(JSON.parse(store.get("tdc.metaSent.v1")).includes("u1:onboarding"), "once-key is still 'onboarding' (students who already finished aren't sent it again)");
   ok((await E.onboardingCompleted()) === "duplicate" && calls.events.length === 1, "onboarding: once per student (replaying the tour doesn't send it again)");
   await M.setMetaUser("u2"); await M.setConsent(true);
   ok((await E.onboardingCompleted()) === "sent", "…another student on the same phone gets their own");

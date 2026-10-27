@@ -169,6 +169,11 @@ const press = async (node) => { await node.props.onPress(); await tick(40); };
   await press(byLabel(m.tree, "next step"));
   all(m.tree, (n) => n.type === "Modal")[0].props.onRequestClose(); await tick();
   ok(!callsOf("onboardingCompleted").length && stops === 2, "hardware back mid-tour → no event");
+  // what onboardingCompleted sends: Meta's standard tutorial event, once-key unchanged
+  const metaSrc = fs.readFileSync(path.join(SRC, "analytics/metaEvents.js"), "utf8");
+  ok(/tutorial: \(sdk\) => sdk\?\.AppEventsLogger\?\.AppEvents\?\.CompletedTutorial \|\| "fb_mobile_tutorial_completion"/.test(metaSrc)
+    && /onboardingCompleted: \(\) =>\s*log\(\(s\) => \(\{ name: EVENT\.tutorial\(s\), params: \{\} \}\), "onboarding"\)/.test(metaSrc)
+    && !/tdc_onboarding_completed/.test(metaSrc.replace(/^\s*\/\/.*$/gm, "")), "onboardingCompleted → fb_mobile_tutorial_completion (SDK constant), once-key still \"onboarding\"");
 
   console.log("── event registered: RegisterSheet (real routes)");
   const { srv, call } = await H.start();
