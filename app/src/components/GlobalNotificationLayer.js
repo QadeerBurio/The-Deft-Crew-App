@@ -9,6 +9,7 @@ import { useNotificationPopup } from '../hooks/useNotificationPopup';
 import NotificationBanner from './NotificationBanner';
 import { openTarget } from '../guest/accountRoutes';
 import * as Notifications from 'expo-notifications';
+import { onRedemptionPush } from '../analytics/metaRedemptions';
 import {
   claimNotificationResponse,
   getRouteFromNotificationData,
@@ -86,6 +87,9 @@ export default function GlobalNotificationLayer() {
       const content = notification?.request?.content || {};
       const data = content.data || {};
 
+      // "payment successful." → report the redemption to Meta (consent and switch checked there)
+      onRedemptionPush(data);
+
       // Only while the app is on screen. Otherwise the phone shows it.
       if (AppState.currentState !== 'active') return;
 
@@ -157,6 +161,7 @@ export default function GlobalNotificationLayer() {
       });
 
       if (!claimNotificationResponse(response)) return;
+      onRedemptionPush(data);
 
       const { route, params } = getRouteFromNotificationData(data);
       openTarget(route, params); // guest + login-only route → sign in first, then continue
