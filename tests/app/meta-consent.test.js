@@ -33,7 +33,8 @@ const all = (t, pred, out = []) => { if (t == null || typeof t !== "object") ret
 const text = (t) => { const parts = []; (function w(x) { if (x == null || typeof x === "boolean") return; if (typeof x === "string" || typeof x === "number") return void parts.push(String(x)); if (Array.isArray(x)) return x.forEach(w); w(x.props?.children); })(t); return parts.join(" "); };
 
 // fake module state
-const meta = { available: true, consent: null, user: undefined, refreshed: 0, set: [], appStates: [], tracked: 0, listeners: new Set() };
+const meta = { available: true, consent: null, user: undefined, refreshed: 0, set: [], appStates: [], tracked: 0, redemptionChecks: 0, listeners: new Set() };
+let appStateListener = null;
 const platform = { OS: "android" };
 const held = new Set();
 const fakeMeta = {
@@ -48,12 +49,13 @@ const fakeMeta = {
 };
 const MOCKS = {
   react: React,
-  "react-native": { View: "View", Text: "Text", Platform: platform, StyleSheet: { create: (x) => x }, AppState: { currentState: "active", addEventListener: () => ({ remove() {} }) } },
+  "react-native": { View: "View", Text: "Text", Platform: platform, StyleSheet: { create: (x) => x }, AppState: { currentState: "active", addEventListener: (ev, fn) => { appStateListener = fn; return { remove() {} }; } } },
   "../context/AuthContext": { AuthContext: {} },
   "../ui": { Sheet: "Sheet", Button: "Button" },
   "../theme/tokens": { color: { ink: "#111", yellow: "#F9C349" }, font: { body: "b" }, MAX_FONT_SCALE: 1.3 },
   "../engagement/tour/tourGate": { holdTour: (k) => held.add(k), releaseTour: (k) => held.delete(k) },
   "./metaEvents": fakeMeta,
+  "./metaRedemptions": { checkRedemptions: async () => { meta.redemptionChecks++; return 0; } },
 };
 const file = path.join(SRC, "analytics/MetaConsent.js");
 const { code } = babel.transformSync(fs.readFileSync(file, "utf8"), { filename: file, babelrc: false, configFile: false, plugins: [[reqApp.resolve("@babel/plugin-transform-react-jsx"), { runtime: "classic" }], reqApp.resolve("@babel/plugin-transform-modules-commonjs")] });
@@ -67,6 +69,12 @@ const btn = (t, title) => all(t, (n) => n.type === "Button" && n.props.title ===
   let m = mount(React.createElement(Host));
   ok(meta.user === "u1" && meta.appStates[0] === "active", "follows the signed-in student; app state forwarded at launch (switch re-read, 5-minute check)", JSON.stringify(meta.appStates));
   ok(sheet(m.tree).props.visible === false, "not shown immediately (waits a moment after sign-in)");
+  await tick();
+  ok(meta.redemptionChecks === 1, "signed in → redemptions checked once (tdc_discount_redeemed)", meta.redemptionChecks);
+  appStateListener("background"); await tick();
+  ok(meta.redemptionChecks === 1, "app to the background → no redemption check");
+  appStateListener("active"); await tick();
+  ok(meta.redemptionChecks === 2 && meta.appStates.slice(-2).join() === "background,active", "back to the front → switch re-read, then redemptions checked", JSON.stringify(meta.appStates));
   await tick(1600); m.rerender();
   const sh = sheet(m.tree);
   ok(sh.props.visible === true && sh.props.title === "help us measure our ads", "then asks once: 'help us measure our ads'");

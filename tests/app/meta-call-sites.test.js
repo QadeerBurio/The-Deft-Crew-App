@@ -36,6 +36,9 @@ const React = {
   useContext(ctx) { return ctx && ctx._value ? ctx._value : {}; },
   useEffect(fn, deps) { const [l, i] = slot(() => ({ deps: undefined, cleanup: null })); const s = l[i]; if (!deps || !s.deps || deps.some((d, k) => !Object.is(d, s.deps[k]))) pendingEffects.push(() => { if (s.cleanup) s.cleanup(); s.deps = deps; s.cleanup = fn() || null; }); },
   forwardRef: (fn) => (props) => fn(props, null),
+  useImperativeHandle() {},
+  memo: (c) => c,
+  createContext: (v) => { const ctx = { _value: v }; ctx.Provider = ({ value, children }) => { ctx._value = value; return children; }; return ctx; },
 };
 React.default = React;
 function expand(el, p) {
@@ -70,23 +73,23 @@ const http = (method) => async (url, a, b) => {
   if (r.status >= 400) { const e = new Error("http " + r.status); e.response = { status: r.status, data: r.data }; throw e; }
   return { data: r.data };
 };
-const axiosFake = { get: http("GET"), post: http("POST"), patch: http("PATCH"), delete: http("DELETE") };
-class AnimValue { constructor(v) { this.v = v; } setValue(v) { this.v = v; } interpolate() { return this; } }
+const axiosFake = { get: http("GET"), post: http("POST"), put: http("PUT"), patch: http("PATCH"), delete: http("DELETE") };
+class AnimValue { constructor(v) { this.v = v; } setValue(v) { this.v = v; } interpolate() { return this; } stopAnimation(cb) { cb && cb(this.v); } addListener() { return "l"; } removeListener() {} removeAllListeners() {} }
 const anim = () => ({ start: (cb) => cb && cb({ finished: true }), stop() {} });
 const rnHost = new Set(["View", "Text", "Image", "ScrollView", "FlatList", "Modal", "Pressable", "TouchableOpacity", "TextInput", "ActivityIndicator", "StatusBar", "KeyboardAvoidingView", "TouchableWithoutFeedback"]);
 const fakeRN = new Proxy({
   StyleSheet: { create: (x) => x, absoluteFill: {}, absoluteFillObject: {}, hairlineWidth: 1, flatten: (x) => x },
   Platform: { OS: "android", select: (o) => o.android ?? o.default },
   Alert: { alert: (t, m) => alerts.push(`${t}: ${m}`) },
-  Animated: { Value: AnimValue, View: "Animated.View", Text: "Animated.Text", timing: anim, spring: anim, parallel: anim, sequence: anim, loop: anim, delay: anim },
+  Animated: { Value: AnimValue, View: "Animated.View", Text: "Animated.Text", Image: "Animated.Image", ScrollView: "Animated.ScrollView", timing: anim, spring: anim, parallel: anim, sequence: anim, loop: anim, delay: anim, stagger: anim, multiply: () => new AnimValue(0), add: () => new AnimValue(0), diffClamp: () => new AnimValue(0), event: () => () => {}, createAnimatedComponent: (c) => c },
   AppState: { addEventListener: () => ({ remove() {} }), currentState: "active" },
   Dimensions: { get: () => ({ width: 400, height: 800 }) },
   useWindowDimensions: () => ({ width: 400, height: 800 }),
   Linking: { openURL: async () => {} },
-  Keyboard: { dismiss() {} },
+  Keyboard: { dismiss() {}, addListener: () => ({ remove() {} }) },
   BackHandler: { addEventListener: () => ({ remove() {} }) },
   AccessibilityInfo: { isReduceMotionEnabled: async () => false, addEventListener: () => ({ remove() {} }) },
-  Easing: { out: () => 0, in: () => 0, ease: 0, cubic: 0, bezier: () => 0 },
+  Easing: { out: () => 0, in: () => 0, inOut: () => 0, ease: 0, cubic: 0, quad: 0, sin: 0, linear: 0, bezier: () => 0 },
 }, { get: (t, k) => (k in t ? t[k] : rnHost.has(k) ? k : typeof k === "string" ? k : undefined) });
 const navigation = { canGoBack: () => false, goBack() {}, navigate() {} };
 let ctxValue = {};
@@ -120,6 +123,12 @@ const MOCKS = {
   "socket.io-client": () => ({ emit() {}, on() {}, disconnect() {} }),
   "../../engagement/engagementBus": { engagementBus: { emit() {} }, ENGAGEMENT_EVENTS: {} },
   "../../utils/clipboard": { copyToClipboard: async () => true },
+  "../../lib/tdcSounds": new Proxy({}, { get: () => () => {} }),
+  "../../engagement/components/BadgePip": "BadgePip",
+  "./ReportModal": "ReportModal",
+  "../../utils/goToAuth": { goToAuth() {} },
+  "../../hooks/useMyProfessionalProfile": { __esModule: true, default: () => ({ fullName: "Me", photoUrl: null }), useMyProfessionalProfile: () => ({ fullName: "Me", photoUrl: null }) },
+  "../../../../assets/icons/offer-hand-stars.png": 1,
   "../../utils/cloudinaryUpload": { pickImageFromLibrary: async () => "file:///r.jpg", uploadImageToCloudinary: async () => "https://res.cloudinary.com/decaxpera/image/upload/r.jpg" },
 };
 const cache = new Map();
@@ -276,6 +285,186 @@ const press = async (node) => { await node.props.onPress(); await tick(40); };
   form = mount(React.createElement(ApplicationForm, { route: { params: { program } }, navigation: navigation2 }));
   await press(submit());
   ok(accountAsked === 1 && callsOf("scholarshipApplied").length === 1, "signed out → asked to sign in, no event");
+
+  // ══ more events: posts, confessions, likes/comments, AI chat, travel, skillshare, redemptions ══
+  const lastCall = (name) => callsOf(name).at(-1);
+  const resetCalls = () => { metaCalls.length = 0; alerts.length = 0; };
+  const fetchAs = (reply) => { global.fetch = async (url, init) => { fetched2.push({ url, init }); if (reply.throws) throw new Error("Network request failed"); return { ok: reply.ok, status: reply.ok ? 201 : 400, json: async () => reply.body }; }; };
+  const fetched2 = [];
+  const typeInto = (tree, value) => all(tree, (n) => n.type === "TextInput" && typeof n.props.onChangeText === "function").forEach((n) => n.props.onChangeText(value));
+
+  console.log("── tdc_post_created: CreatePostScreen");
+  const CreatePostScreen = load(path.join(SRC, "screens/Social/CreatePostScreen.js")).default;
+  ctxValue = { token: "tok", user: { _id: "u1", location: "Karachi" }, isGuest: false };
+  const postOnce = async (reply) => {
+    fetchAs(reply);
+    const m = mount(React.createElement(CreatePostScreen, { navigation, route: {} }));
+    await tick(360); // the composer shows after its 320 ms opening
+    typeInto(m.tree, "my private thoughts about exams"); await tick();
+    await all(m.tree, (n) => n.props?.onPress?.name === "handlePost")[0].props.onPress(); await tick(40);
+  };
+  resetCalls();
+  await postOnce({ ok: true, body: { _id: "post-123", content: "my private thoughts about exams" } });
+  ok(callsOf("postCreated").length === 1 && lastCall("postCreated")[1] === "post-123" && /\/create-post$/.test(fetched2.at(-1).url), "server saved the post (201) → postCreated(postId)", JSON.stringify(metaCalls));
+  ok(!JSON.stringify(metaCalls).includes("private thoughts"), "the post text never reaches Meta");
+  await postOnce({ ok: false, body: { error: "Please add some text" } });
+  ok(callsOf("postCreated").length === 1, "server error → no event");
+  await postOnce({ throws: true });
+  ok(callsOf("postCreated").length === 1, "offline → no event");
+
+  console.log("── PostCard: likes and comments");
+  const PostCard = load(path.join(SRC, "screens/Social/PostCard.js")).default;
+  ctxValue = { token: "tok", user: { _id: "u1", name: "Me" }, isGuest: false, setUser() {} };
+  const post = { _id: "p1", author: { _id: "u2", name: "Other" }, content: "hello", likes: [], comments: [], favorites: [], createdAt: new Date().toISOString() };
+  let likeReply = { status: 200, data: { success: true, liked: true, likes: 1, likedBy: ["u1"] } };
+  let commentReply = { status: 200, data: { success: true, comments: [{ _id: "c1", text: "nice post", user: { _id: "u1" } }], newCommentId: "c1" } };
+  forward = async (method, url) => (method === "PUT" && /\/posts\/like\//.test(url) ? likeReply : method === "POST" && /\/posts\/comment\//.test(url) ? commentReply : { status: 200, data: { success: true, comments: [] } });
+  resetCalls();
+  let card = mount(React.createElement(PostCard, { post, onPostUpdate() {} }));
+  const pressNamed = async (tree, name) => { const n = all(tree, (x) => x.props?.onPress?.name === name)[0]; if (!n) throw new Error("no button " + name); await n.props.onPress(); await tick(30); };
+  await pressNamed(card.tree, "handleLike");
+  ok(callsOf("socialEngaged").length === 1 && lastCall("socialEngaged")[1] === "like" && lastCall("socialEngaged").length === 2, "server accepted the like (liked: true) → socialEngaged(\"like\"), type only", JSON.stringify(metaCalls));
+  likeReply = { status: 200, data: { success: true, liked: false, likes: 0, likedBy: [] } };
+  card = mount(React.createElement(PostCard, { post: { ...post, likes: ["u1"] }, onPostUpdate() {} }));
+  await pressNamed(card.tree, "handleLike");
+  ok(callsOf("socialEngaged").length === 1, "unlike (liked: false) → nothing");
+  likeReply = { status: 500, data: { message: "boom" } };
+  card = mount(React.createElement(PostCard, { post, onPostUpdate() {} }));
+  await pressNamed(card.tree, "handleLike");
+  ok(callsOf("socialEngaged").length === 1, "like refused by the server (500) → nothing");
+  card = mount(React.createElement(PostCard, { post, onPostUpdate() {} }));
+  all(card.tree, (n) => n.props?.onChangeText?.name === "handleCommentTextChange")[0].props.onChangeText("nice post"); await tick();
+  await pressNamed(card.tree, "handleComment");
+  ok(callsOf("socialEngaged").length === 2 && lastCall("socialEngaged")[1] === "comment", "server accepted the comment → socialEngaged(\"comment\")", JSON.stringify(metaCalls));
+  ok(!JSON.stringify(metaCalls).includes("nice post"), "the comment text never reaches Meta");
+  commentReply = { status: 400, data: { error: "Comment text cannot be empty." } };
+  card = mount(React.createElement(PostCard, { post, onPostUpdate() {} }));
+  all(card.tree, (n) => n.props?.onChangeText?.name === "handleCommentTextChange")[0].props.onChangeText("again"); await tick();
+  await pressNamed(card.tree, "handleComment");
+  ok(callsOf("socialEngaged").length === 2, "comment refused by the server → nothing");
+
+  console.log("── skillshare: CreateOfferScreen / CreateListingScreen");
+  let skillReply = { offer: { _id: "skoffer-1" } };
+  let skillThrows = false;
+  MOCKS["../../api/api"] = {
+    createSkillOffer: async () => { if (skillThrows) { const e = new Error("http 400"); e.response = { data: { error: "already offered" } }; throw e; } return { success: true, message: "Offer submitted successfully", offer: skillReply.offer }; },
+    createListing: async () => { if (skillThrows) { const e = new Error("http 500"); e.response = { data: { error: "db" } }; throw e; } return { _id: "listing-1", title: "Guitar lessons" }; },
+    uploadListingMedia: async () => ({}),
+  };
+  ctxValue = { getCurrentUserId: () => "u1", isGuest: false, setIsGuest() {}, token: "tok", user: { _id: "u1" } };
+  const CreateOfferScreen = load(path.join(SRC, "screens/skillshare/CreateOfferScreen.js")).default;
+  const offerOnce = async () => {
+    const m = mount(React.createElement(CreateOfferScreen, { route: { params: { listing: { _id: "L1", type: "job", title: "Designer" } } }, navigation }));
+    typeInto(m.tree, "I can do this, call me on 03001234567"); await tick();
+    await pressNamed(m.tree, "handleSubmit");
+  };
+  resetCalls();
+  await offerOnce();
+  ok(callsOf("skillshareOfferCreated").length === 1 && lastCall("skillshareOfferCreated")[1] === "skoffer-1", "server saved the offer → skillshareOfferCreated(offerId)", JSON.stringify(metaCalls) + " " + alerts.join(" | "));
+  ok(!JSON.stringify(metaCalls).includes("0300"), "the offer message (with a phone number) never reaches Meta");
+  skillThrows = true;
+  await offerOnce();
+  ok(callsOf("skillshareOfferCreated").length === 1, "server refused the offer → no event");
+  skillThrows = false;
+  const CreateListingScreen = load(path.join(SRC, "screens/skillshare/CreateListingScreen.js")).default;
+  const listingOnce = async () => {
+    const m = mount(React.createElement(CreateListingScreen, { route: { params: { type: "barter" } }, navigation }));
+    typeInto(m.tree, "3"); await tick();
+    const level = all(m.tree, (n) => n.props?.onPress && /^\s*beginner\s*$/i.test(text(n)))[0];
+    if (level) { await level.props.onPress(); await tick(); }
+    await pressNamed(m.tree, "handleSubmit");
+  };
+  await listingOnce();
+  ok(callsOf("skillshareListingCreated").length === 1 && lastCall("skillshareListingCreated")[1] === "listing-1", "server saved the listing → skillshareListingCreated(listingId)", JSON.stringify(metaCalls) + " " + alerts.join(" | "));
+  skillThrows = true;
+  await listingOnce();
+  ok(callsOf("skillshareListingCreated").length === 1, "server refused the listing → no event");
+  skillThrows = false;
+
+  console.log("── tdc_ai_chat_used: ChatContext");
+  let stream = null;
+  MOCKS["@react-native-community/netinfo"] = { __esModule: true, default: { addEventListener: () => () => {}, fetch: async () => ({ isConnected: true }) } };
+  MOCKS["@react-native-async-storage/async-storage"] = { __esModule: true, default: { getItem: async () => null, setItem: async () => {}, removeItem: async () => {}, multiGet: async (ks) => ks.map((k) => [k, k === "token" ? "tok" : "false"]) } };
+  MOCKS["../services/aiService"] = { __esModule: true, default: {
+    streamMessage: (msg, sid, cat, onToken, onComplete, onError) => { stream = { msg, onToken, onComplete, onError }; return { abort() {} }; },
+    getSuggestions: async () => ({ success: true, data: [] }), getSessions: async () => ({ success: true, data: [] }), getHistory: async () => ({ success: true, data: [] }),
+  } };
+  const { ChatProvider, ChatContext } = load(path.join(SRC, "context/ChatContext.js"));
+  let chat = null;
+  const ChatProbe = () => { chat = React.useContext(ChatContext); return null; };
+  mount(React.createElement(ChatProvider, null, React.createElement(ChatProbe)));
+  resetCalls();
+  await chat.sendMessage("how do I write a cover letter for my CV?"); await tick();
+  stream.onToken("Start "); stream.onToken("with"); await stream.onComplete(); await tick();
+  ok(callsOf("aiChatUsed").length === 1 && lastCall("aiChatUsed").length === 1, "first reply ([DONE] after tokens) → aiChatUsed(), no arguments", JSON.stringify(metaCalls));
+  ok(!JSON.stringify(metaCalls).includes("cover letter"), "the chat message never reaches Meta");
+  await chat.sendMessage("again"); stream.onToken("x"); await stream.onComplete(); await tick();
+  ok(callsOf("aiChatUsed").length === 2, "every reply calls it; once a day is enforced by metaEvents (daily key)");
+  await chat.sendMessage("fails"); stream.onToken("half"); stream.onError(new Error("model down")); await stream.onComplete(); await tick();
+  ok(callsOf("aiChatUsed").length === 2, "error frame (even if [DONE] follows) → no event");
+  await chat.sendMessage("empty"); await stream.onComplete(); await tick();
+  ok(callsOf("aiChatUsed").length === 2, "[DONE] with no reply text → no event");
+
+  console.log("── tdc_travel_assistant_used: TravelChatBot");
+  const xhrs = [];
+  global.XMLHttpRequest = class { constructor() { this.readyState = 0; this.status = 0; this.responseText = ""; xhrs.push(this); } open(m, u) { this.url = u; } setRequestHeader() {} send(b) { this.body = b; } feed(textIn, state = 3, status = 200) { this.status = status; this.responseText += textIn; this.readyState = state; this.onreadystatechange && this.onreadystatechange(); } };
+  MOCKS["../api/api"] = { __esModule: true, default: { defaults: { baseURL: "https://tdc.test/api" }, post: async () => ({ data: {} }), get: async () => ({ data: {} }) } };
+  MOCKS["react-native-svg"] = new Proxy({ __esModule: true }, { get: (t, k) => (k in t ? t[k] : typeof k === "string" ? k : undefined) });
+  MOCKS["../../../assets/travel_mascot.png"] = 1; MOCKS["../../../assets/travel.png"] = 1;
+  MOCKS["../engagement/engagementBus"] = { engagementBus: { emit() {} }, ENGAGEMENT_EVENTS: {} };
+  MOCKS["../utils/clipboard"] = { copyToClipboard: async () => true };
+  ctxValue = { token: "tok", user: { _id: "u1" }, isGuest: false };
+  const TravelChatBot = load(path.join(SRC, "components/TravelChatBot.js")).default;
+  const travelAsk = async (question) => {
+    const m = mount(React.createElement(TravelChatBot, {}));
+    await all(m.tree, (n) => n.type === "TouchableOpacity" && n.props.onPress)[0].props.onPress(); await tick();
+    const input = () => all(m.tree, (n) => n.type === "TextInput" && n.props.onSubmitEditing)[0];
+    input().props.onChangeText(question); await tick();
+    await input().props.onSubmitEditing(); await tick(30);
+    return xhrs.at(-1);
+  };
+  resetCalls();
+  let x = await travelAsk("cheap hotels near my uncle's house in Hunza?");
+  ok(/\/api\/v1\/travel\/stream$/.test(x.url), "the question goes to /api/v1/travel/stream", x.url);
+  x.feed('data: {"token":"Try "}\n\n'); x.feed('data: {"token":"Karimabad"}\n\n'); x.feed("data: [DONE]\n\n", 4);
+  await tick();
+  ok(callsOf("travelAssistantUsed").length === 1 && lastCall("travelAssistantUsed").length === 1, "the server answered ([DONE] after tokens) → travelAssistantUsed()", JSON.stringify(metaCalls));
+  ok(!JSON.stringify(metaCalls).includes("Hunza"), "the travel question never reaches Meta");
+  x = await travelAsk("again");
+  x.feed('data: {"error":"quota"}\n\n'); x.feed("data: [DONE]\n\n", 4); await tick();
+  ok(callsOf("travelAssistantUsed").length === 1, "error frame → no event");
+  x = await travelAsk("again");
+  x.feed('data: {"token":"x"}\n\ndata: [DONE]\n\n', 4, 503); await tick();
+  ok(callsOf("travelAssistantUsed").length === 1, "HTTP 503 → no event");
+  x = await travelAsk("again");
+  x.feed("data: [DONE]\n\n", 4); await tick();
+  ok(callsOf("travelAssistantUsed").length === 1, "[DONE] with no answer → no event");
+
+  console.log("── the other call sites (source checks: inside the server-success branch)");
+  const src = (f) => fs.readFileSync(path.join(SRC, f), "utf8").replace(/\r\n/g, "\n");
+  const conf = src("screens/Social/ConfessionScreen.js");
+  ok(/if \(response\.ok\) \{\n\s*const result = await response\.json\(\);\n\s*metaEvents\.confessionCreated\(\);/.test(conf), "ConfessionScreen create: confessionCreated() only inside response.ok, with no arguments");
+  ok(/const res = await fetch\(`\$\{API_URL\}\/confessions\/like\/\$\{id\}`[\s\S]{0,260}if \(res\.ok\) \{\n\s*const data = await res\.json\(\)\.catch\(\(\) => null\);\n\s*if \(data\?\.liked === true\) metaEvents\.socialEngaged\("like"\);/.test(conf), "ConfessionScreen like: only res.ok AND liked === true (unlike/err → nothing)");
+  ok(/if \(res\.ok\) \{\n\s*const updated = await res\.json\(\);\n\s*metaEvents\.socialEngaged\("comment"\);/.test(conf), "ConfessionScreen comment: only inside res.ok");
+  ok(!/metaEvents\.\w+\([^)]*(\bid\b|_id|text|newConfession|selectedPost)/.test(conf), "ConfessionScreen: no confession id or text passed to any Meta call");
+  const det = src("screens/Social/PostDetailScreen.js");
+  ok(/if \(response\.data\.success\) \{\n\s*if \(response\.data\.liked === true\) metaEvents\.socialEngaged\("like"\);/.test(det) && /if \(response\.data\.success\) \{\n\s*metaEvents\.socialEngaged\("comment"\);/.test(det), "PostDetailScreen: like only on success + liked === true; comment only on success");
+  const up = src("screens/Social/UserProfile.js");
+  ok(/if \(response\.data\.success\) \{\n\s*if \(response\.data\.liked === true\) metaEvents\.socialEngaged\("like"\);/.test(up) && /if \(res\.data\.success && res\.data\.comments\) \{\n\s*metaEvents\.socialEngaged\("comment"\);/.test(up), "UserProfile: like only on success + liked === true; comment only on success");
+  const prof = src("screens/Social/ProfileScreen.js");
+  ok(/if \(response\.ok\) \{\n\s*metaEvents\.socialEngaged\("comment"\);/.test(prof), "Social ProfileScreen: comment (posts and confessions) only inside response.ok");
+  const allSites = ["screens/Social/CreatePostScreen.js", "screens/Social/ConfessionScreen.js", "screens/Social/PostCard.js", "screens/Social/PostDetailScreen.js", "screens/Social/UserProfile.js", "screens/Social/ProfileScreen.js", "context/ChatContext.js", "components/TravelChatBot.js", "screens/skillshare/CreateListingScreen.js", "screens/skillshare/CreateOfferScreen.js"].map((f) => [f, src(f)]);
+  const metaLines = allSites.flatMap(([f, s]) => (s.match(/metaEvents\.\w+\([^)]*\)/g) || []).map((c) => `${f}: ${c}`));
+  const allowed = /metaEvents\.(postCreated\(result\?\._id\)|confessionCreated\(\)|socialEngaged\("(like|comment)"\)|aiChatUsed\(\)|travelAssistantUsed\(\)|skillshareListingCreated\(saved\?\._id\)|skillshareOfferCreated\(saved\?\.offer\?\._id\))$/;
+  ok(metaLines.length === 15 && metaLines.every((l) => allowed.test(l.split(": ")[1])), "every new Meta call passes only a server id or a fixed word (no text, name, email, phone, message)", metaLines.join(" | "));
+  ok(["api/api.js", "services/aiService.js"].every((f) => !/metaEvents|metaRedemptions/.test(src(f))), "api/api.js and services/aiService.js untouched");
+
+  console.log("── tdc_discount_redeemed: when the app checks");
+  const gnl = src("components/GlobalNotificationLayer.js");
+  ok((gnl.match(/onRedemptionPush\(data\);/g) || []).length === 2, "GlobalNotificationLayer: the push is checked when received and when tapped");
+  ok(/if \(isGuest\) \{[\s\S]{0,200}return;\n\s*\}[\s\S]{0,500}onRedemptionPush\(data\);/.test(gnl), "…received: after the guest check (and checkRedemptions itself needs a signed-in student)");
+  ok(/if \(!Number\.isFinite\(totalSaved\)\) throw new Error\("bad savings response"\);\n\s*checkRedemptions\(\);/.test(src("hooks/useMySavings.js")), "useMySavings: checked after a good savings refresh (a failed one doesn't)");
+  ok(/if \(s === "active"\) checkRedemptions\(\);/.test(src("analytics/MetaConsent.js")) && /setMetaUser\(userId\)\.then\(\(\) => checkRedemptions\(\)\)/.test(src("analytics/MetaConsent.js")), "MetaEventsHost: checked on sign-in and on every return to the app");
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
