@@ -33,6 +33,7 @@ import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 import { ScreenHeader, Card, EmptyState, Skeleton } from "../../ui";
 import { plainError } from "../../utils/plainError";
+import { metaEvents } from "../../analytics/metaEvents";
 const { width, height } = Dimensions.get('window');
 
 // ✅ FIXED: Correct API URL (no duplicate /api)
@@ -333,6 +334,7 @@ export default function PostDetailScreen({ route, navigation }) {
     try {
       const response = await axios.put(`${API_URL}/posts/like/${postId}`, {}, config);
       if (response.data.success) {
+        if (response.data.liked === true) metaEvents.socialEngaged("like"); // unlikes send nothing
         setLiked(response.data.liked);
         setLikesCount(response.data.likes);
       }
@@ -467,6 +469,7 @@ export default function PostDetailScreen({ route, navigation }) {
       );
 
       if (response.data.success) {
+        metaEvents.socialEngaged("comment");
         const fresh = normalizeComments(response.data.comments);
         setCommentsList(fresh);
         setCommentText('');
