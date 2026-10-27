@@ -37,6 +37,7 @@ import BadgePip from '../../engagement/components/BadgePip';
 
 import { color as T, font as F } from "../../theme/tokens";
 import { plainError } from "../../utils/plainError";
+import { metaEvents } from "../../analytics/metaEvents";
 const { width, height } = Dimensions.get('window');
 const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
@@ -456,6 +457,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
     try {
       const res = await axios.put(`${API_URL}/posts/like/${post._id}`, {}, config);
       if (res.data.success) {
+        if (res.data.liked === true) metaEvents.socialEngaged("like"); // unlikes send nothing
         if (typeof res.data.likes === 'number') setLikeCount(res.data.likes);
         if (res.data.likedBy && Array.isArray(res.data.likedBy)) {
           setLikes(res.data.likedBy.map(u => (u?._id || u).toString()).filter(Boolean));
@@ -694,6 +696,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
       );
 
       if (res.data.success && res.data.comments) {
+        metaEvents.socialEngaged("comment");
         const normalizedComments = normalizeComments(res.data.comments);
 
         setCommentsList(normalizedComments);
