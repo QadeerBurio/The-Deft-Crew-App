@@ -1,14 +1,20 @@
 // app/src/analytics/MetaConsent.js
 // MetaEventsHost: follows the signed-in student, reads the server's switch (at launch and
 // when the app comes back), and asks once for consent. useMetaConsent: the same choice for
-// Settings → privacy.
+// Settings → privacy. On iPhone, Apple's tracking prompt follows "allow" (never "not now").
 import React, { useContext, useEffect, useState } from "react";
-import { AppState, View, Text, StyleSheet } from "react-native";
+import { AppState, Platform, View, Text, StyleSheet } from "react-native";
 import { AuthContext } from "../context/AuthContext";
 import { Sheet, Button } from "../ui";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { holdTour, releaseTour } from "../engagement/tour/tourGate";
-import { metaAvailable, getConsent, setConsent, setMetaUser, refreshFlags, subscribe } from "./metaEvents";
+import { metaAvailable, getConsent, setConsent, setMetaUser, refreshFlags, subscribe, onAppState, requestTracking } from "./metaEvents";
+
+// "allow", then (iPhone, if never answered) Apple's tracking prompt, once the sheet has closed
+async function allow() {
+  const ok = await setConsent(true);
+  if (ok && Platform.OS === "ios") setTimeout(() => { requestTracking(); }, 600);
+}
 
 export function useMetaConsent() {
   const [, setTick] = useState(0);
@@ -17,7 +23,7 @@ export function useMetaConsent() {
     available: metaAvailable(),
     allowed: getConsent() === "granted",
     decided: getConsent() != null,
-    setAllowed: (v) => setConsent(!!v),
+    setAllowed: (v) => (v ? allow() : setConsent(false)),
   };
 }
 
@@ -32,13 +38,15 @@ export default function MetaEventsHost() {
     setMetaUser(userId);
   }, [userId]);
 
-  // the server's switch: at launch, and when the app comes back to the front
+  // the server's switch: at launch, on every return to the front, and every 5 minutes while open
   useEffect(() => {
-    refreshFlags({ force: true });
-    const sub = AppState.addEventListener("change", (s) => {
-      if (s === "active") refreshFlags();
-    });
-    return () => sub.remove();
+    if (AppState.currentState === "active") onAppState("active"); // reads the switch now
+    else refreshFlags({ force: true });
+    const sub = AppState.addEventListener("change", onAppState);
+    return () => {
+      sub.remove();
+      onAppState("background"); // stops the 5-minute check
+    };
   }, []);
 
   // ask a moment after signing in, not on top of the first screen's load
@@ -67,7 +75,13 @@ export default function MetaEventsHost() {
           your name, email and phone number are never shared. nothing is sent unless you allow it, and you can change this
           any time in settings → privacy.
         </Text>
-        <Button title="allow" variant="accent" onPress={() => setConsent(true)} style={styles.btn} accessibilityLabel="allow sharing app activity with Meta" />
+        {Platform.OS === "ios" ? (
+          <Text style={styles.body} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            on iPhone, after you tap allow, Apple will ask whether tdc may track. the advertising ID is only shared if you
+            say yes there too.
+          </Text>
+        ) : null}
+        <Button title="allow" variant="accent" onPress={allow} style={styles.btn} accessibilityLabel="allow sharing app activity with Meta" />
         <Button title="not now" variant="ghost" onPress={() => setConsent(false)} accessibilityLabel="don't share app activity with Meta" />
       </View>
     </Sheet>
