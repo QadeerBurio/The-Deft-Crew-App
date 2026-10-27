@@ -9,6 +9,7 @@ import { Sheet, Button } from "../ui";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { holdTour, releaseTour } from "../engagement/tour/tourGate";
 import { metaAvailable, getConsent, setConsent, setMetaUser, refreshFlags, subscribe, onAppState, requestTracking } from "./metaEvents";
+import { checkRedemptions } from "./metaRedemptions";
 
 // "allow", then (iPhone, if never answered) Apple's tracking prompt, once the sheet has closed
 async function allow() {
@@ -35,14 +36,17 @@ export default function MetaEventsHost() {
 
   // the student whose choice applies
   useEffect(() => {
-    setMetaUser(userId);
+    setMetaUser(userId).then(() => checkRedemptions());
   }, [userId]);
 
   // the server's switch: at launch, on every return to the front, and every 5 minutes while open
   useEffect(() => {
     if (AppState.currentState === "active") onAppState("active"); // reads the switch now
     else refreshFlags({ force: true });
-    const sub = AppState.addEventListener("change", onAppState);
+    const sub = AppState.addEventListener("change", (s) => {
+      // the switch first, then any redemption recorded while the app was away
+      Promise.resolve(onAppState(s)).then(() => { if (s === "active") checkRedemptions(); });
+    });
     return () => {
       sub.remove();
       onAppState("background"); // stops the 5-minute check
