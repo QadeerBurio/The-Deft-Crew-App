@@ -30,7 +30,7 @@ module.exports = ({ config }) => {
                 advertiserIDCollectionEnabled: false,
 
                 iosUserTrackingPermission:
-                  "Allow TDC to track your activity across other companies' apps and websites to measure advertising performance."
+                  "tdc uses this to see which tdc ads brought you here. your name, email and phone are never shared."
               }
             ]
           ]
