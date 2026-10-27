@@ -22,6 +22,7 @@ import { goToAuth } from '../../utils/goToAuth';
 
 import { color as T, font as F } from "../../theme/tokens";
 import ScreenHeader from "../../ui/ScreenHeader";
+import { metaEvents } from "../../analytics/metaEvents";
 const BRAND = T.yellow;
 const INK = T.ink;
 const MUTED = T.textMuted;
@@ -111,7 +112,8 @@ export default function CreateOfferScreen({ route, navigation }) {
         payload.applicationNotes = applicationNotes.trim();
       }
 
-      await createSkillOffer(payload);
+      const saved = await createSkillOffer(payload);
+      metaEvents.skillshareOfferCreated(saved?.offer?._id); // saved by the server; id only
 
       Alert.alert('Success!', 'Your offer has been submitted successfully!', [
         { text: 'OK', onPress: goBack },
