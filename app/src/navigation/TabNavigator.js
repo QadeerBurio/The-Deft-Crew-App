@@ -37,6 +37,9 @@ import { color, font } from "../theme/tokens";
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get("window");
 const TAB_HEIGHT = 55;
+// The Social circle rises this far above the white bar. Touches only reach views inside
+// their parent's box, so the bar's touch box reaches up over the whole circle (see riseRoom).
+export const CIRCLE_RISE = 14;
 
 // Same value Social.js uses for GET /inbox (unread badge on the social button)
 const SOCIAL_API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
@@ -81,7 +84,7 @@ export const getDeepestRouteName = (route) => {
 // CustomTabBar
 // ⚠️ Rules of Hooks: ALL hooks must come BEFORE any early return.
 // ============================================================
-const CustomTabBar = ({ state, descriptors, navigation }) => {
+export const CustomTabBar = ({ state, descriptors, navigation }) => {
   // --- Hooks: always in the same order ---
   const insets = useSafeAreaInsets();
   const { registerTarget } = useTour();
@@ -182,7 +185,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
     const tint = selected ? color.ink : color.textFaint;
     return (
       <TouchableOpacity
-        style={styles.tabItem}
+        style={[styles.tabItem, { marginTop: riseRoom }]}
         onPress={onPress}
         activeOpacity={0.7}
         accessibilityRole="tab"
@@ -207,13 +210,21 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
 
   const badgeText = unread > 99 ? "99+" : String(unread);
 
+  // Room above the white bar for the raised circle. The row is centred in its box minus the
+  // bottom padding, so its items start pad/2 above the box: half the padding is added too.
+  // The extra strip is transparent and lets touches through (box-none); only the Social
+  // column reaches into it, so the whole circle is tappable and nothing else changes.
+  const pad = insets.bottom + 5;
+  const riseRoom = CIRCLE_RISE + Math.ceil(pad / 2);
+
   return (
     <View
       ref={barRef}
       collapsable={false}
+      pointerEvents="box-none"
       style={[
         styles.tabBarWrapper,
-        { height: TAB_HEIGHT + insets.bottom + 10 },
+        { height: TAB_HEIGHT + insets.bottom + 10 + riseRoom },
       ]}
     >
       <View
@@ -225,9 +236,10 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
         ]}
       />
       <View
+        pointerEvents="box-none"
         style={[
           styles.contentContainer,
-          { paddingBottom: insets.bottom + 5 },
+          { height: TAB_HEIGHT + riseRoom, paddingBottom: pad },
         ]}
       >
         {/* ─── Home tab ─────────────────────────────────────────── */}
@@ -252,7 +264,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
         {/* Same column as the side tabs (spacer · label · dot) so "social"
             shares their baseline; the circle floats above, raised */}
         <Pressable
-          style={styles.tabItem}
+          style={[styles.tabItem, { height: TAB_HEIGHT + riseRoom, paddingTop: 15 + riseRoom }]}
           onPress={handleSocialPress}
           onPressIn={() => scaleSocial(0.95)}
           onPressOut={() => scaleSocial(1)}
@@ -262,7 +274,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
         >
           <Animated.View
             pointerEvents="box-none"
-            style={[styles.centerRaised, { transform: [{ scale: socialScale }] }]}
+            style={[styles.centerRaised, { top: riseRoom - CIRCLE_RISE, transform: [{ scale: socialScale }] }]}
           >
             <View ref={socialRef} collapsable={false} style={styles.refBox}>
               <View style={styles.centerButton}>
@@ -418,10 +430,10 @@ const styles = StyleSheet.create({
   },
   tabDotActive: { backgroundColor: color.yellow },
 
-  // Raised like the design: circle starts 14 above the bar's top edge
+  // Raised like the design: circle starts CIRCLE_RISE above the bar's top edge
+  // (top is set in render, inside the Social column's box)
   centerRaised: {
     position: "absolute",
-    top: -14,
     left: 0,
     right: 0,
     alignItems: "center",
