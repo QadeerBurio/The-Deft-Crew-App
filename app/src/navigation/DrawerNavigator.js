@@ -6,6 +6,7 @@ import React, {
   useContext,
   useEffect,
   useCallback,
+  memo,
 } from 'react';
 import {
   View,
@@ -42,6 +43,7 @@ import { AuthContext } from '../context/AuthContext';
 import { useGuestGate } from '../guest/GuestGate';
 import { accountOnly } from '../guest';
 import TabNavigator from './TabNavigator';
+import { useHeaderVisibility } from './useHeaderVisibility';
 import { useEngagement } from '../engagement/hooks/useEngagement';
 import { color as T, font as F, MAX_FONT_SCALE } from '../theme/tokens';
 
@@ -983,23 +985,25 @@ const AnimatedScreenWrapper = ({ children }) => {
 // ============================================================
 // HOME TABS WRAPPER
 // ============================================================
-const HomeTabsScreen = (props) => {
-  const [activeTab, setActiveTab] = useState('Home');
-  const [deepestRoute, setDeepestRoute] = useState('Home');
+// Re-render only when their own props change (the route prop of HomeTabsScreen changes on
+// every nested navigation; neither of these needs it).
+const CustomHeaderMemo = memo(CustomHeader);
+const TabNavigatorMemo = memo(TabNavigator);
+const HEADER_HIDDEN = { display: 'none' };
 
-  const hideHeader =
-    activeTab === 'Social' ||
-    (deepestRoute && FULLSCREEN_SCREENS.includes(deepestRoute));
+const HomeTabsScreen = ({ navigation }) => {
+  // One value that changes only when the header shows or hides (useHeaderVisibility).
+  const { hidden, onTabChange, onRouteChange } = useHeaderVisibility(FULLSCREEN_SCREENS);
 
   return (
     <View style={{ flex: 1, backgroundColor: T.paper }}>
-      {!hideHeader && <CustomHeader navigation={props.navigation} />}
+      {/* Kept mounted and hidden with display: none. Unmounting it for Social meant a full
+          remount (unread fetch, timer, animations, two modals) every time Social was left. */}
+      <View style={hidden ? HEADER_HIDDEN : null}>
+        <CustomHeaderMemo navigation={navigation} />
+      </View>
       <AnimatedScreenWrapper>
-        <TabNavigator
-          {...props}
-          onTabChange={(tabName) => setActiveTab(tabName)}
-          onRouteChange={(routeName) => setDeepestRoute(routeName)}
-        />
+        <TabNavigatorMemo onTabChange={onTabChange} onRouteChange={onRouteChange} />
       </AnimatedScreenWrapper>
     </View>
   );

@@ -272,6 +272,37 @@ function hitTest(tree, rootBox, x, y) {
     ok(!/navigate\(|jumpTo\(/.test(tourSrc) && /if \(!shouldAutoStart \|\| running \|\| !homeReady\) return/.test(tourSrc), "the tour never switches tabs and starts only on Home (bar mounted)");
   }
 
+  // ═════ P1-3 header visibility without drawer re-renders ═════
+  console.log("── P1-3 header visibility: renders only when it flips; header stays mounted");
+  {
+    const { React, mount, renders } = makeReact();
+    const { useHeaderVisibility } = loader({ react: React })(path.join(SRC, "navigation/useHeaderVisibility.js"));
+    let api = null;
+    function Host() { api = useHeaderVisibility(["Brands", "OfferScreen", "Social"]); return null; }
+    mount(React.createElement(Host));
+    const base = renders.Host;
+    const cbs = { t: api.onTabChange, r: api.onRouteChange };
+    // a normal tap sequence: focus + nested state events for tabs that keep the header
+    for (const tab of ["Explore", "Campus", "Profile", "Home", "Explore"]) { api.onTabChange(tab); api.onRouteChange(tab); api.onRouteChange(tab); }
+    ok(renders.Host === base && api.hidden === false, "10 tab switches without Social: 0 extra renders", `${renders.Host - base}`);
+    api.onTabChange("Social");
+    ok(api.hidden === true && renders.Host === base + 1, "Social hides it: exactly 1 render");
+    api.onRouteChange("FeedScreen"); api.onRouteChange("Messages");
+    ok(renders.Host === base + 1, "moving inside Social: no render");
+    api.onTabChange("Home"); api.onRouteChange("HomeStackMain");
+    ok(api.hidden === false && renders.Host === base + 2, "back to Home: 1 render, header back");
+    api.onRouteChange("Brands");
+    ok(api.hidden === true, "a full-screen screen inside Home (Brands) hides it too");
+    ok(cbs.t === api.onTabChange && cbs.r === api.onRouteChange, "callbacks keep their identity (the memoised TabNavigator does not re-render)");
+
+    const drawer = read("app/src/navigation/DrawerNavigator.js");
+    const block = drawer.slice(drawer.indexOf("const CustomHeaderMemo"), drawer.indexOf("// SKILLSHARE GATE"));
+    ok(/const CustomHeaderMemo = memo\(CustomHeader\);/.test(block) && /const TabNavigatorMemo = memo\(TabNavigator\);/.test(block), "header and tab navigator are memoised");
+    ok(/<View style=\{hidden \? HEADER_HIDDEN : null\}>\s*<CustomHeaderMemo navigation=\{navigation\} \/>/.test(block) && /HEADER_HIDDEN = \{ display: 'none' \}/.test(block) && !/!hide\w* && <CustomHeader/.test(block), "header stays mounted and is hidden with display: none (no remount when leaving Social)");
+    ok(/<TabNavigatorMemo onTabChange=\{onTabChange\} onRouteChange=\{onRouteChange\} \/>/.test(block) && !/\{\.\.\.props\}/.test(block), "tab navigator gets only the two stable callbacks (not the route prop)");
+    ok(!/setActiveTab|setDeepestRoute/.test(drawer), "no per-event state left in the drawer");
+  }
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.log("FAIL  (stopped)", e?.stack || e); process.exit(1); });
