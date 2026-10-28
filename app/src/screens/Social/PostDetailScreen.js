@@ -7,7 +7,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   TouchableWithoutFeedback,
   TextInput,
@@ -541,6 +540,9 @@ export default function PostDetailScreen({ route, navigation }) {
   };
 
   // ============ RENDER COMMENT ============
+  // each comment keeps the comments section's side padding (it used to sit inside it)
+  const renderCommentRow = ({ item }) => <View style={styles.commentRow}>{renderComment({ item })}</View>;
+
   const renderComment = ({ item }) => {
     const isCollapsed = collapsedThreads[item._id] === true;
     const replies = item.replies || [];
@@ -753,17 +755,29 @@ export default function PostDetailScreen({ route, navigation }) {
         </Animated.View>
 
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <ScrollView
+          {/* One list: the post is its header, the comments its rows (was a ScrollView with a
+              non-scrolling FlatList inside, which rendered every comment at once) */}
+          <Animated.FlatList
             ref={scrollRef}
-            style={styles.content}
+            style={[styles.content, { opacity: fadeAnim }]}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.contentContainer}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             onScrollBeginDrag={Keyboard.dismiss}
-          >
+            data={organizedComments}
+            keyExtractor={(item) => item._id}
+            renderItem={renderCommentRow}
+            initialNumToRender={8}
+            windowSize={7}
+            ListEmptyComponent={
+              <View style={styles.commentRow}>
+                <EmptyState mood="sleepy" title="no comments yet." line="be the first to say something." />
+              </View>
+            }
+            ListFooterComponent={<View style={styles.bottomSpacer} />}
+            ListHeaderComponent={
             <Animated.View style={{
-              opacity: fadeAnim,
               transform: [{ translateY: slideAnim }]
             }}>
               <Card padded={false} style={styles.postCard}>
@@ -877,23 +891,10 @@ export default function PostDetailScreen({ route, navigation }) {
                     <Text style={styles.commentsCountText}>{totalCommentsCount}</Text>
                   </View>
                 </View>
-
-                {organizedComments.length > 0 ? (
-                  <FlatList
-                    data={organizedComments}
-                    keyExtractor={(item) => item._id}
-                    renderItem={renderComment}
-                    scrollEnabled={false}
-                    showsVerticalScrollIndicator={false}
-                  />
-                ) : (
-                  <EmptyState mood="sleepy" title="no comments yet." line="be the first to say something." />
-                )}
               </View>
-
-              <View style={styles.bottomSpacer} />
             </Animated.View>
-          </ScrollView>
+            }
+          />
         </TouchableWithoutFeedback>
 
         {/* Comment Input */}
@@ -1130,6 +1131,7 @@ const styles = StyleSheet.create({
   commentStatText: { fontSize: 14, color: COLORS.textSecondary, fontFamily: F.bodyMedium },
 
   commentsSection: { paddingHorizontal: 16, paddingTop: 24 },
+  commentRow: { paddingHorizontal: 16 },
   commentsHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: 16,

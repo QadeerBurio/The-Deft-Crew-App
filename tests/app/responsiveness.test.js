@@ -712,6 +712,42 @@ function hitTest(tree, rootBox, x, y) {
     ok(/renderItem=\{renderDiscount\}/.test(md) && /const renderDiscount = useCallback\(/.test(md), "MyDiscount: stable renderItem (cards and handlers were already memoised)");
   }
 
+  // ═════ P3-13 post details: one list, no list inside a ScrollView ═════
+  console.log("── P3-13 post details: post as list header, comments as rows");
+  {
+    const { React, mount } = makeReact();
+    const { rn } = makeRN({ TouchableWithoutFeedback: function TWF(p) { return p.children; }, Keyboard: { dismiss() {}, addListener: () => ({ remove() {} }) }, Alert: { alert() {} } });
+    rn.Animated.FlatList = "Animated.FlatList";
+    const comments = Array.from({ length: 40 }, (_, i) => ({ _id: "c" + i, text: "comment " + i, user: { _id: "u" + i, name: "n" + i }, createdAt: "2026-10-01T00:00:00Z", parentComment: null }));
+    const axios = { get: async (url) => ({ data: { _id: "p1", content: "hello", author: { _id: "u2", name: "Sara" }, likes: [], comments, createdAt: "2026-10-01T00:00:00Z" } }), post: async () => ({ data: {} }), put: async () => ({ data: {} }) };
+    const load = loader({
+      react: React, "react-native": rn, axios,
+      "../../ui/RemoteImage": "RemoteImage",
+      "react-native-safe-area-context": { SafeAreaView: "SafeAreaView" },
+      "@react-navigation/native": { useFocusEffect: () => {} },
+      "@expo/vector-icons": { Ionicons: "Icon" }, "../../ui/FlatGradient": { LinearGradient: "LinearGradient" },
+      "../../context/AuthContext": { AuthContext: { _default: { token: "tok", user: { _id: "me" } } } },
+      "../../engagement/engagementBus": { engagementBus: { emit() {} }, ENGAGEMENT_EVENTS: {} },
+      "../../ui": { ScreenHeader: "ScreenHeader", Card: function Card(p) { return React.createElement("Card", null, p.children); }, EmptyState: "EmptyState", Skeleton: "Skeleton" },
+      "../../utils/plainError": { plainError: (e) => String(e) },
+      "../../analytics/metaEvents": { metaEvents: new Proxy({}, { get: () => () => {} }) },
+    });
+    const Screen = load(path.join(SRC, "screens/Social/PostDetailScreen.js")).default;
+    const root = mount(React.createElement(Screen, { route: { params: { postId: "p1" } }, navigation: { navigate() {}, goBack() {}, setOptions() {} } }));
+    await tick(80); root.rerender();
+    const find = (pred, t = root.tree, out = []) => { (function w(n, depth) { if (!n || typeof n !== "object") return; if (Array.isArray(n)) return n.forEach((x) => w(x, depth)); if (pred(n)) out.push(n); w(n.props?.children, depth); for (const k of ["ListHeaderComponent", "ListFooterComponent", "ListEmptyComponent"]) if (n.props?.[k] && typeof n.props[k] === "object") w(n.props[k], depth); })(t, 0); return out; };
+    const lists = find((n) => /FlatList$/.test(String(n.type)));
+    const main = lists.find((n) => n.type === "Animated.FlatList");
+    ok(!!main && main.props.data?.length === 40, "the screen is one list whose rows are the 40 comments", lists.map((l) => l.type).join(","));
+    ok(find((n) => n.type === "ScrollView").length === 0, "no ScrollView around it any more");
+    const nested = main ? find((n) => /FlatList$/.test(String(n.type)), main.props.ListHeaderComponent) : [];
+    ok(nested.length === 0 && main && has(main.props.ListHeaderComponent, "hello"), "the post (\"hello\") is the list header, with no list inside it");
+    ok(main && main.props.initialNumToRender <= 10, "comments render in batches (virtualised), not all 40 at once");
+    const row = main?.props.renderItem({ item: comments[0] });
+    ok(row && flat(row.props.style).paddingHorizontal === 16 && has(row, "comment 0"), "each comment keeps the section's side padding");
+    ok(main && main.props.ListEmptyComponent && main.props.keyExtractor({ _id: "c9" }) === "c9", "empty state and keys kept");
+  }
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.log("FAIL  (stopped)", e?.stack || e); process.exit(1); });
