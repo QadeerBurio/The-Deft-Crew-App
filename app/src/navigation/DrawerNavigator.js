@@ -777,8 +777,14 @@ function CustomHeader({ navigation }) {
         useNativeDriver: true,
       }),
     ]).start();
+  }, [headerOpacity, headerTranslateY]);
 
-    Animated.loop(
+  // Badge pulse: only while the badge shows, stopped when it hides or the header unmounts
+  // (was started once and never stopped)
+  const showUnreadBadge = !isGuest && unreadCount > 0;
+  useEffect(() => {
+    if (!showUnreadBadge) return undefined;
+    const pulse = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1.15,
@@ -791,8 +797,13 @@ function CustomHeader({ navigation }) {
           useNativeDriver: true,
         }),
       ])
-    ).start();
-  }, [headerOpacity, headerTranslateY, pulseAnim]);
+    );
+    pulse.start();
+    return () => {
+      pulse.stop();
+      pulseAnim.setValue(1);
+    };
+  }, [showUnreadBadge, pulseAnim]);
 
   const toggleSearch = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

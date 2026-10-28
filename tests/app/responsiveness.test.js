@@ -303,6 +303,51 @@ function hitTest(tree, rootBox, x, y) {
     ok(!/setActiveTab|setDeepestRoute/.test(drawer), "no per-event state left in the drawer");
   }
 
+  // ═════ P1-4 AuthContext value + header effect + pulse ═════
+  console.log("── P1-4 AuthContext value stays the same object; one unread fetch; pulse stops");
+  {
+    const { React, mount } = makeReact();
+    const store = new Map([["user", JSON.stringify({ _id: "u1", name: "Ali" })], ["token", "tok.u1"], ["tdc.installedAt", "1"]]);
+    const AsyncStorage = {
+      getItem: async (k) => (store.has(k) ? store.get(k) : null), setItem: async (k, v) => store.set(k, String(v)),
+      removeItem: async (k) => store.delete(k), multiRemove: async (ks) => ks.forEach((k) => store.delete(k)), multiGet: async (ks) => ks.map((k) => [k, store.get(k) ?? null]),
+    };
+    const calls = [];
+    let nextCount = 2; // 2 at boot, then 3
+    const api = { get: async (url) => { calls.push(url); return { data: url.includes("unread-count") ? { count: nextCount++ } : {} }; } };
+    const load = loader({
+      react: React, "@react-native-async-storage/async-storage": { __esModule: true, default: AsyncStorage },
+      "../api/api": { __esModule: true, default: api, injectLogout() {}, setGuestMode() {}, notifyUserChanged() {} },
+      "jwt-decode": { jwtDecode: () => ({ exp: Date.now() / 1000 + 3600, id: "u1" }) },
+      "../hooks/useNotifications": { resetNotificationBaseline() {} },
+      "../screens/OfferScreen": { clearClaimedRegistry() {} },
+      "expo-application": { getInstallationTimeAsync: async () => new Date(1) },
+    });
+    const { default: AuthProvider } = load(path.join(SRC, "context/AuthContext.js"));
+    const root = mount(React.createElement(AuthProvider, { children: null }));
+    await tick(60);
+    const v1 = root.tree?.props?.value;
+    ok(v1 && v1.token === "tok.u1" && v1.user?._id === "u1", "provider loaded the saved session", JSON.stringify(v1 && { t: v1.token }));
+    const callsAfterBoot = calls.length;
+    root.rerender();
+    const v2 = root.tree.props.value;
+    ok(v2 === v1, "a provider render with nothing changed keeps the same value object (consumers skip)");
+    const fn = v1.updateUnreadCount;
+    await v1.updateUnreadCount();
+    await tick();
+    const v3 = root.tree.props.value;
+    ok(v3 !== v1 && v3.unreadCount === 3, "a new unread count gives a new value (consumers see it)");
+    ok(v3.updateUnreadCount === fn, "updateUnreadCount keeps its identity across renders");
+    ok(calls.length - callsAfterBoot === 1 && calls.at(-1) === "/notification/unread-count", "one request per update", calls.join(", "));
+
+    const drawer = read("app/src/navigation/DrawerNavigator.js");
+    const hdr = drawer.slice(drawer.indexOf("function CustomHeader("), drawer.indexOf("const toggleSearch"));
+    ok(/\}, \[token, isGuest, updateUnreadCount\]\);/.test(hdr), "header's unread effect depends on the (now stable) updateUnreadCount, token, isGuest");
+    ok(/const showUnreadBadge = !isGuest && unreadCount > 0;/.test(hdr) && /if \(!showUnreadBadge\) return undefined;/.test(hdr) && /pulse\.stop\(\);/.test(hdr), "badge pulse runs only while the badge shows and is stopped on hide/unmount");
+    const entrance = hdr.slice(hdr.indexOf("Animated.parallel(["), hdr.indexOf("const showUnreadBadge"));
+    ok(!/Animated\.loop/.test(entrance), "no endless loop left in the entrance animation");
+  }
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.log("FAIL  (stopped)", e?.stack || e); process.exit(1); });

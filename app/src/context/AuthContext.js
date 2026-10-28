@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   useRef,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -228,7 +229,9 @@ export function AuthProvider({ children }) {
   // ─────────────────────────────────────────────────────────
   // UNREAD COUNT
   // ─────────────────────────────────────────────────────────
-  const updateUnreadCount = async (authToken) => {
+  // Stable between renders (was a new function each time: the header's effect, which lists
+  // it as a dependency, refetched and restarted its 30 s timer on every provider render)
+  const updateUnreadCount = useCallback(async (authToken) => {
     const activeToken = authToken || token;
     if (!activeToken || isTokenExpired(activeToken) || isGuest) return 0;
 
@@ -244,7 +247,7 @@ export function AuthProvider({ children }) {
       console.log("Error updating unread count:", e);
       return 0;
     }
-  };
+  }, [token, isGuest]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─────────────────────────────────────────────────────────
   // BOOT
@@ -341,30 +344,35 @@ export function AuthProvider({ children }) {
 
   const getUser = useCallback(() => user, [user]);
 
+  // The same object until one of these changes (was a new object on every render, so every
+  // screen using the context re-rendered whenever the provider did)
+  const value = useMemo(
+    () => ({
+      user,
+      setUser,
+      token,
+      setToken,
+      loading,
+      logout,
+      unreadCount,
+      setUnreadCount,
+      updateUnreadCount,
+      isGuest,
+      setIsGuest,
+      loginAsGuest,
+      getCurrentUserId,
+      isAuthenticated,
+      getUserEmail,
+      getUserName,
+      getUser,
+    }),
+    [user, token, loading, logout, unreadCount, updateUnreadCount, isGuest, loginAsGuest, getCurrentUserId, isAuthenticated, getUserEmail, getUserName, getUser]
+  );
+
   if (loading) return null;
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        setUser,
-        token,
-        setToken,
-        loading,
-        logout,
-        unreadCount,
-        setUnreadCount,
-        updateUnreadCount,
-        isGuest,
-        setIsGuest,
-        loginAsGuest,
-        getCurrentUserId,
-        isAuthenticated,
-        getUserEmail,
-        getUserName,
-        getUser,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
