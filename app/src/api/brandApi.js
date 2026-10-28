@@ -381,20 +381,21 @@ export const optimizedAPI = {
 
     // forceRefresh really goes to the server now (before, the 5 min
     // memory cache answered even on pull-to-refresh)
-    return cachedGet("/brands", {
-      ttl: 30000,
-      force: forceRefresh,
-      config: { params: { limit } },
-    }).then(async (brandsRaw) => {
-      let summary = {};
-      try {
-        summary =
-          (await cachedGet("/offers/summary", {
-            ttl: 30000,
-            force: forceRefresh,
-            config: forceRefresh ? { params: { fresh: 1 } } : {},
-          })) || {};
-      } catch {}
+    // Both requests at once (was /brands, then /offers/summary). A failing summary
+    // still means brands without offers, as before.
+    return Promise.all([
+      cachedGet("/brands", {
+        ttl: 30000,
+        force: forceRefresh,
+        config: { params: { limit } },
+      }),
+      cachedGet("/offers/summary", {
+        ttl: 30000,
+        force: forceRefresh,
+        config: forceRefresh ? { params: { fresh: 1 } } : {},
+      }).catch(() => ({})),
+    ]).then(([brandsRaw, summaryRaw]) => {
+      const summary = summaryRaw || {};
 
       const brands = Array.isArray(brandsRaw)
         ? brandsRaw
