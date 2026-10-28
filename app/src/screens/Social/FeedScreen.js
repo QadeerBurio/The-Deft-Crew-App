@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useOpenFromParams } from '../../engagement/hooks/useOpenFromParams';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills (design system)
@@ -88,7 +88,10 @@ export default function FeedScreen({ navigation }) {
   const pollIntervalRef = useRef(null);
   const appStateRef = useRef(AppState.currentState);
   const isMountedRef = useRef(true);
-  const isScreenFocusedRef = useRef(true);
+  // false until the screen is really on screen (useFocusEffect below). It started as true, so a
+  // Feed mounted in the background polled every 15 s before Social was ever opened.
+  const isScreenFocusedRef = useRef(false);
+  const isFocused = useIsFocused();
   const lastFeedFetchRef = useRef(0);
 
   const config = useMemo(() => ({ headers: { Authorization: `Bearer ${token}` } }), [token]);
@@ -331,7 +334,9 @@ export default function FeedScreen({ navigation }) {
 
   // ============ FEED POLLING ============
   useEffect(() => {
-    const shouldPoll = activeTab === "Feed" && !isSearching && !isGuest && token;
+    // only while this screen is on screen (the focus effect fetches fresh data on every return,
+    // so a push or link into Social, a post or a confession still opens up to date)
+    const shouldPoll = isFocused && activeTab === "Feed" && !isSearching && !isGuest && token;
 
     if (!shouldPoll) {
       if (pollIntervalRef.current) {
@@ -358,7 +363,7 @@ export default function FeedScreen({ navigation }) {
         pollIntervalRef.current = null;
       }
     };
-  }, [activeTab, isSearching, isGuest, token, selectedCategory, searchQuery, isLoadingMore, refreshing, fetchPosts]);
+  }, [isFocused, activeTab, isSearching, isGuest, token, selectedCategory, searchQuery, isLoadingMore, refreshing, fetchPosts]);
 
   // App state listener
   useEffect(() => {
@@ -369,6 +374,7 @@ export default function FeedScreen({ navigation }) {
       if (
         prevState.match(/inactive|background/) &&
         nextAppState === 'active' &&
+        isScreenFocusedRef.current && // not on screen: the focus effect refreshes on return
         activeTab === "Feed" &&
         !isSearching
       ) {

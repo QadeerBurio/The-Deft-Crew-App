@@ -428,6 +428,74 @@ function hitTest(tree, rootBox, x, y) {
     ok(/setMessageUnread\(totalUnread\)/.test(read("app/src/screens/Social/MessageScreen.js")), "Messages screen feeds its total into the shared count");
   }
 
+  // ═════ P2-6 Feed polls only while on screen; pushes still open fresh ═════
+  console.log("── P2-6 Feed polls only while focused; focus (push, link, tab) refreshes");
+  {
+    const { React, mount } = makeReact();
+    const { rn } = makeRN({ LayoutAnimation: { configureNext() {}, Presets: {} }, Keyboard: { dismiss() {}, addListener: () => ({ remove() {} }) }, Alert: { alert() {} } });
+    let appListener = null;
+    rn.AppState = { currentState: "active", addEventListener: (ev, fn) => { appListener = fn; return { remove() {} }; } };
+    const feedCalls = [];
+    const axios = { get: async (url) => { if (url.includes("/feed")) feedCalls.push(url); return { data: { posts: [], hasMore: false } }; }, post: async () => ({ data: {} }) };
+    const nav = { focused: false };
+    // timers: capture the 15 s poll instead of waiting
+    const realSI = global.setInterval, realCI = global.clearInterval;
+    const intervals = new Map(); let nextId = 1;
+    global.setInterval = (fn, ms) => { if (ms >= 1000) { const id = nextId++; intervals.set(id, { fn, ms }); return id; } return realSI(fn, ms); };
+    global.clearInterval = (id) => { if (intervals.has(id)) intervals.delete(id); else realCI(id); };
+    const polls = () => [...intervals.values()].filter((x) => x.ms === 15000);
+    try {
+      const AuthContext = { _default: { user: { _id: "me" }, isGuest: false, token: "tok", unreadCount: 0, updateUnreadCount() {} } };
+      const load = loader({
+        react: React, "react-native": rn, axios,
+        "../../ui/RemoteImage": "RemoteImage",
+        "react-native-safe-area-context": { SafeAreaView: "SafeAreaView", useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) },
+        "@react-navigation/native": {
+          useIsFocused: () => nav.focused,
+          useFocusEffect: (cb) => React.useEffect(() => (nav.focused ? cb() : undefined), [nav.focused, cb]),
+          useRoute: () => ({ params: {} }), useNavigation: () => ({ setParams() {} }),
+        },
+        "../../engagement/hooks/useOpenFromParams": { useOpenFromParams() {} },
+        "@expo/vector-icons": { Ionicons: "Icon", MaterialCommunityIcons: "Icon" },
+        "../../ui/FlatGradient": { LinearGradient: "LinearGradient" },
+        "../../ui/EmptyState": "EmptyState",
+        "../../guest": { useGuestGate: () => ({ requireAccount() {} }), GuestLocked: "GuestLocked" },
+        "../../ui/ScreenHeader": { __esModule: true, default: "ScreenHeader", HeaderIconButton: "HeaderIconButton" },
+        "../../context/AuthContext": { AuthContext },
+        "./PostCard": { __esModule: true, default: "PostCard", PostCardSkeleton: "PostCardSkeleton" },
+        "./ConfessionScreen": "ConfessionScreen",
+        "./StoriesSection": "StoriesSection",
+      });
+      const FeedScreen = load(path.join(SRC, "screens/Social/FeedScreen.js")).default;
+      const el = () => React.createElement(FeedScreen, { navigation: { navigate() {}, goBack() {} } });
+      const screen = mount(el());
+      await tick(30);
+      const afterMount = feedCalls.length;
+      ok(polls().length === 0, "mounted but not on screen: no 15 s poll", `${polls().length}`);
+      appListener?.("background"); appListener?.("active"); await tick(30);
+      ok(feedCalls.length === afterMount, "back to the app while Social is not on screen: no feed request");
+      // focus (tab tap, push into Social, deep link): fresh data at once + poll starts
+      nav.focused = true; screen.rerender(el()); await tick(30);
+      ok(feedCalls.length === afterMount + 1, "focusing the feed (tab, push, link) fetches fresh posts at once", `${feedCalls.length - afterMount}`);
+      ok(polls().length === 1, "and the 15 s poll runs only now");
+      { const realNow = Date.now; Date.now = () => realNow() + 15_000; try { polls()[0].fn(); await tick(30); } finally { Date.now = realNow; } }
+      ok(feedCalls.length === afterMount + 2, "the poll fetches while on screen (15 s later)");
+      // blur: poll stops
+      nav.focused = false; screen.rerender(el()); await tick(30);
+      ok(polls().length === 0, "leaving Social stops the poll");
+      // a later push/link brings it back: fresh again (past the 3 s silent-fetch guard)
+      const realNow = Date.now; Date.now = () => realNow() + 40_000;
+      try { nav.focused = true; screen.rerender(el()); await tick(30); } finally { Date.now = realNow; }
+      ok(feedCalls.length === afterMount + 3 && polls().length === 1, "coming back later (push into Social) fetches fresh posts again", `${feedCalls.length - afterMount}`);
+    } finally {
+      global.setInterval = realSI; global.clearInterval = realCI;
+    }
+    const pd = read("app/src/screens/Social/PostDetailScreen.js");
+    ok(/useEffect\(\(\) => \{\s*if \(postId\)/.test(pd) && /\}, \[postId\]\);/.test(pd) && /if \(token && postId\) fetchPostDetails\(true\);/.test(pd), "a push to a post: PostDetailScreen loads it on open, on a new postId and on focus");
+    const fs2 = read("app/src/screens/Social/FeedScreen.js");
+    ok(/useOpenFromParams\('tab'/.test(fs2) && /useOpenFromParams\('postId'/.test(fs2), "a push to a confession (FeedScreen tab + postId) still opens that tab and post");
+  }
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.log("FAIL  (stopped)", e?.stack || e); process.exit(1); });
