@@ -26,6 +26,7 @@ import {
   TextInput,
   Share,
 } from "react-native";
+import RemoteImage from "../ui/RemoteImage";
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/api";
 import Icon from "react-native-vector-icons/Ionicons";
@@ -584,7 +585,10 @@ export default function ProfileScreen() {
                   {selectedImage ? (
                     <Image source={{ uri: selectedImage }} style={P.avatarImg} />
                   ) : user?.profileImage ? (
-                    <Image source={{ uri: `${user.profileImage}?t=${Date.now()}` }} style={P.avatarImg} />
+                    // cached by URL: every upload gives a new Cloudinary URL, so a new photo
+                    // shows at once and an unchanged one is not downloaded again (was ?t=Date.now()
+                    // on every render)
+                    <RemoteImage source={{ uri: user.profileImage }} style={P.avatarImg} size="card" />
                   ) : (
                     <Text style={P.avatarLetter}>{user?.name?.charAt(0)?.toUpperCase() || "?"}</Text>
                   )}
