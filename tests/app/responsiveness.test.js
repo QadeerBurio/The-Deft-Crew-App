@@ -40,7 +40,12 @@ function makeReact() {
     if (el == null || typeof el !== "object") return el;
     if (Array.isArray(el)) return el.map((c, k) => expand(c, `${p}.${k}`));
     if (typeof el.type === "function") { const prev = cur; const np = p + "/" + (el.type.name || "C"); cur = { path: np, i: 0 }; renders[el.type.name] = (renders[el.type.name] || 0) + 1; const out = el.type(el.props); cur = prev; return expand(out, np); }
-    return { type: el.type, props: { ...el.props, children: expand(el.props.children, p + "." + (el.type?.displayName || el.type)) } };
+    const out = { type: el.type, props: { ...el.props, children: expand(el.props.children, p + "." + (el.type?.displayName || el.type)) } };
+    // host refs (React 19: ref is a prop): point them at the expanded node
+    const ref = el.props?.ref;
+    if (ref && typeof ref === "object" && "current" in ref) ref.current = out;
+    else if (typeof ref === "function") ref(out);
+    return out;
   };
   const mount = (element) => {
     const root = "r" + Math.random().toString(36).slice(2); let tree = null;
@@ -213,17 +218,58 @@ function hitTest(tree, rootBox, x, y) {
       ok(r.homeHit?.props?.accessibilityLabel === "home", `bottom inset ${ib}: the home tab still answers on the bar`, r.homeHit?.props?.accessibilityLabel);
     }
     // the same model on the old tab bar shows the dead zone (proves the test sees the bug)
-    const old = path.join(require("os").tmpdir(), "tdc-tests-old-TabNavigator.js");
     try {
+      // 280205a = perf/round2, the tab bar before this branch
       const src = require("child_process").execSync("git show 280205a:app/src/navigation/TabNavigator.js", { cwd: APP }).toString().replace("const CustomTabBar = (", "export const CustomTabBar = (");
-      fs.mkdirSync(path.dirname(old), { recursive: true }); fs.writeFileSync(old, src);
-      // resolve the old file's relative imports from the real folder
+      // next to the real one so its relative imports resolve; removed right after
       const oldIn = path.join(SRC, "navigation", "__old_TabNavigator.js"); fs.writeFileSync(oldIn, src);
       let r; try { r = check(oldIn, 0); } finally { fs.unlinkSync(oldIn); }
       const oldRise = r.rise;
       ok(Math.abs(oldRise - (14 + 5 / 2)) < 0.01, "old bar has the same circle position (look unchanged)", `rise ${oldRise}`);
       ok(!r.hits.every(Boolean) && !r.hits[0], "before this fix the circle's top part did nothing (dead zone reproduced)", JSON.stringify(r.hits));
     } catch (e) { ok(false, "old tab bar comparison", e.message); }
+  }
+
+  // ═════ P1-2 lazy tabs, freezeOnBlur, tour still works ═════
+  console.log("── P1-2 lazy tabs + freezeOnBlur; the tour's targets");
+  {
+    const { React, mount } = makeReact();
+    const { rn } = makeRN();
+    const captured = { nav: null, screens: [] };
+    const Nav = function Nav(props) { captured.nav = props; return props.children; };
+    const Screen = function Screen(props) { captured.screens.push(props); return null; };
+    const registered = [];
+    const stub = () => null;
+    const load = loader({
+      react: React, "react-native": rn, axios: { get: async () => ({ data: [] }) },
+      "@react-navigation/bottom-tabs": { createBottomTabNavigator: () => ({ Navigator: Nav, Screen }) },
+      "@expo/vector-icons": { Octicons: "Icon", MaterialCommunityIcons: "Icon", MaterialIcons: "Icon", Foundation: "Icon" },
+      "react-native-safe-area-context": { SafeAreaProvider: function SAP(p) { return p.children; }, useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) },
+      "./HomeStack": stub, "../screens/Social/Social": stub, "../screens/StudentDashboard": stub, "../screens/Explore": stub, "../screens/ProfileScreen": stub,
+      "../guest": { accountOnly: (c) => c },
+      "../engagement/tour/TourProvider": { useTour: () => ({ registerTarget: (id) => registered.push(id) }) },
+      "../context/AuthContext": { AuthContext: { _default: { token: null, isGuest: true } } },
+      "../hooks/useMessageUnread": { useMessageUnread: () => ({ unread: 0, refresh() {} }) },
+    });
+    const TabMod = load(path.join(SRC, "navigation/TabNavigator.js"));
+    mount(React.createElement(TabMod.default, {}));
+    const so = captured.nav?.screenOptions || {};
+    ok(so.lazy === true && so.freezeOnBlur === true, "tabs are lazy and freeze when not on screen");
+    const byName = (n) => captured.screens.find((x) => x.name === n);
+    ok(captured.nav?.initialRouteName === "Home" && byName("Home")?.options?.lazy === false, "Home is the first tab and stays eager");
+    ok(["Explore", "Social", "Campus", "Profile"].every((n) => byName(n) && byName(n).options?.lazy !== false), "Explore, Social, Campus, Profile are lazy");
+
+    // the tour: every step's target is a tab bar icon, registered while the bar is mounted
+    const state = { index: 0, routes: ["Home", "Explore", "Social", "Campus", "Profile"].map((name) => ({ name, key: name })) };
+    mount(React.createElement(TabMod.CustomTabBar, { state, descriptors: {}, navigation: { navigate() {} } }));
+    await tick(150);
+    const { TOUR_STEPS } = loader({})(path.join(SRC, "engagement/tour/tourSteps.js"));
+    const stepIds = TOUR_STEPS.map((x) => x.id);
+    ok(stepIds.length === 5 && stepIds.every((id) => registered.includes(id)) && registered.includes("tab_bar_surface"), "every tour step (home, explore, social, campus, profile) targets a tab bar icon the bar registers", `steps ${stepIds} registered ${registered}`);
+    const owners = require("child_process").execSync('git grep -l "registerTarget(" -- app/src', { cwd: APP }).toString().trim().split("\n");
+    ok(owners.length === 1 && owners[0].endsWith("navigation/TabNavigator.js"), "no tour target lives inside a (now lazy) tab screen", owners.join(", "));
+    const tourSrc = read("app/src/engagement/tour/TourProvider.js") + read("app/src/engagement/tour/TourOverlay.js");
+    ok(!/navigate\(|jumpTo\(/.test(tourSrc) && /if \(!shouldAutoStart \|\| running \|\| !homeReady\) return/.test(tourSrc), "the tour never switches tabs and starts only on Home (bar mounted)");
   }
 
   console.log(`\n${passed} passed, ${failed} failed`);

@@ -339,7 +339,12 @@ export default function TabNavigator({ onTabChange, onRouteChange }) {
           headerShown: false,
           tabBarShowLabel: false,
           contentStyle: { backgroundColor: "#FFFFFF" },
-          lazy: false,
+          // Tabs mount the first time they are opened (was: all five at start, so Social's feed
+          // and polls ran from launch), and a tab that is not on screen does not re-render
+          // (react-freeze). Home is the first tab and stays eager. The app tour's targets are the
+          // tab bar icons, which are always mounted, so the tour does not depend on these screens.
+          lazy: true,
+          freezeOnBlur: true,
         }}
         initialRouteName="Home"
         backBehavior="initialRoute" // back always returns to Home (history sent you back to Profile)
@@ -364,7 +369,7 @@ export default function TabNavigator({ onTabChange, onRouteChange }) {
         <Tab.Screen
           name="Home"
           component={HomeStack}
-          options={{ unmountOnBlur: false }}
+          options={{ unmountOnBlur: false, lazy: false }}
         />
         <Tab.Screen name="Explore" component={Explore} />
         <Tab.Screen name="Social" component={Social} />
