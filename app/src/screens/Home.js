@@ -41,6 +41,7 @@ import {
 import { color } from "../theme/tokens";
 import { useTour } from "../engagement/tour/TourProvider";
 import { perfMark } from "../lib/perf";
+import { hydrateQuery, writeHomeCache, pruneHomeCache } from "../lib/homeCache";
 
 // The latest-confession section (HomeCampus) is commented out below; while it is, its
 // request (the whole confessions feed) does not run. Set true together with the section.
@@ -110,7 +111,7 @@ export default function Home({ navigation }) {
   const userId = user?._id || user?.id || (isGuest ? "guest" : "anon");
 
   // 🆕 engagement
-  const { flags } = useEngagement();
+  const { flags, me: engagementMe } = useEngagement();
   const { missions } = useMissions();
   const { count: streakCount, enabled: streakEnabled, health: streakHealth } = useStreak();
 
@@ -154,7 +155,8 @@ export default function Home({ navigation }) {
         return await fetchDeals(token, userId);
       } catch (e) {
         devLogOnce("deals", e);
-        return [];
+        // offline / failing: keep what is on screen (e.g. the phone cache) instead of nothing
+        return queryClient.getQueryData(DEALS_KEY(userId)) ?? [];
       }
     },
     enabled: signedIn,
@@ -174,7 +176,7 @@ export default function Home({ navigation }) {
         return await getPublicDeals();
       } catch (e) {
         devLogOnce("public deals", e);
-        return [];
+        return queryClient.getQueryData(PUBLIC_DEALS_KEY) ?? [];
       }
     },
     enabled: !!isGuest && guestDealsWanted,
@@ -184,6 +186,36 @@ export default function Home({ navigation }) {
     refetchOnReconnect: false,
     refetchOnMount: false,
   });
+
+  // Cold start: the last deals and engagement state saved on this phone show at once
+  // (stale-while-revalidate); the requests above run as usual and replace them.
+  // Only this user's copy is used, and another user's copy is deleted (lib/homeCache.js).
+  const fromPhoneRef = useRef(new Set());
+  useEffect(() => {
+    pruneHomeCache(userId);
+    const seed = (key, name) =>
+      hydrateQuery(queryClient, key, name, userId).then((d) => { if (d) fromPhoneRef.current.add(d); });
+    if (signedIn) {
+      seed(DEALS_KEY(userId), "deals");
+      seed(["engagement", "me"], "engagementMe");
+    } else if (isGuest) {
+      seed(PUBLIC_DEALS_KEY, "publicDeals");
+    }
+  }, [queryClient, signedIn, isGuest, userId]);
+
+  // ...and each fresh copy is saved for the next start
+  useEffect(() => {
+    if (signedIn && deals && !fromPhoneRef.current.has(deals)) writeHomeCache("deals", userId, deals);
+  }, [signedIn, deals, userId]);
+  useEffect(() => {
+    if (isGuest && publicDeals && !fromPhoneRef.current.has(publicDeals)) writeHomeCache("publicDeals", userId, publicDeals);
+  }, [isGuest, publicDeals, userId]);
+  useEffect(() => {
+    // popups are left out: an old copy must never show a popup again
+    if (signedIn && engagementMe && !fromPhoneRef.current.has(engagementMe)) {
+      writeHomeCache("engagementMe", userId, { ...engagementMe, popups: [] });
+    }
+  }, [signedIn, engagementMe, userId]);
 
   // Pull to refresh: missions, streak, daily drop, everything engagement,
   // plus the confession and deals sections
