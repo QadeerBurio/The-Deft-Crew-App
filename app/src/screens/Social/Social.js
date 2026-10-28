@@ -8,7 +8,7 @@ import { LinearGradient } from "../../ui/FlatGradient"; // flat fills (design sy
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 import { AuthContext } from "../../context/AuthContext";
 import { useGuestGate, accountOnly } from "../../guest";
-import axios from "axios";
+import { useMessageUnread } from "../../hooks/useMessageUnread";
 
 import FeedScreen from "./FeedScreen";
 import SearchScreen from "./SearchScreen";
@@ -20,7 +20,6 @@ const ProfileScreen = accountOnly(ProfileScreenBase, { title: "my profile", show
 
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get('window');
-const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 
 // ============ MODERN TAB BAR BUTTON ============
 const ModernTabBarButton = ({ children, onPress, onLongPress, focused, label }) => {
@@ -353,29 +352,10 @@ function CustomTabBar({ state, descriptors, navigation }) {
 
 // ============ MAIN SOCIAL COMPONENT ============
 export default function Social() {
-  const { token, user, isGuest } = useContext(AuthContext);
-  const [totalUnread, setTotalUnread] = useState(0);
-  const config = { headers: { Authorization: `Bearer ${token}` } };
-
-  // Fetch unread count
-  const fetchUnreadCount = async () => {
-    if (!token || isGuest) return; // inbox needs an account
-    try {
-      const res = await axios.get(`${API_URL}/inbox`, config);
-      if (res.data && Array.isArray(res.data)) {
-        const unread = res.data.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
-        setTotalUnread(unread);
-      }
-    } catch (err) {
-      console.error('Failed to fetch unread count:', err);
-    }
-  };
-
-  useEffect(() => {
-    fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  const { token, isGuest } = useContext(AuthContext);
+  // Shared with the tab bar and Messages (hooks/useMessageUnread). Was its own 30 s poll
+  // from launch, which also kept the first token it saw.
+  const { unread: totalUnread } = useMessageUnread(token, isGuest);
 
   return (
     <View style={styles.container}>

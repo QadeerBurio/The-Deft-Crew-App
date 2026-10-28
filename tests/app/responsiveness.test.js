@@ -33,6 +33,12 @@ function makeReact() {
     useEffect(fn, deps) { const [l, i] = slot(() => ({ deps: undefined, cleanup: null })); const s = l[i]; if (!deps || !s.deps || deps.some((d, k) => !Object.is(d, s.deps[k]))) pending.push(() => { if (s.cleanup) s.cleanup(); s.deps = deps; s.cleanup = fn() || null; }); },
     memo: (c) => c,
     forwardRef: (c) => c,
+    useSyncExternalStore(subscribe, getSnapshot) {
+      const [l, i] = slot(() => ({ unsub: null }));
+      const [, force] = React.useState(0);
+      if (!l[i].unsub) l[i].unsub = subscribe(() => force((x) => x + 1));
+      return getSnapshot();
+    },
   };
   React.useLayoutEffect = React.useEffect;
   React.default = React;
@@ -149,6 +155,17 @@ function layout(node, box, out = []) {
   }
   return out;
 }
+// every string in a rendered tree (text and props), skipping refs
+function strings(node, out = [], seen = new Set()) {
+  if (node == null) return out;
+  if (typeof node === "string" || typeof node === "number") { out.push(String(node)); return out; }
+  if (typeof node !== "object" || seen.has(node)) return out;
+  seen.add(node);
+  if (Array.isArray(node)) { node.forEach((n) => strings(n, out, seen)); return out; }
+  for (const [k, v] of Object.entries(node.props || {})) if (k !== "ref" && k !== "style") strings(v, out, seen);
+  return out;
+}
+const has = (tree, s) => strings(tree).includes(s);
 const inBox = (b, x, y) => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h;
 // Android: a ViewGroup only dispatches to children whose bounds contain the point; deepest touchable wins
 function hitTest(tree, rootBox, x, y) {
@@ -346,6 +363,69 @@ function hitTest(tree, rootBox, x, y) {
     ok(/const showUnreadBadge = !isGuest && unreadCount > 0;/.test(hdr) && /if \(!showUnreadBadge\) return undefined;/.test(hdr) && /pulse\.stop\(\);/.test(hdr), "badge pulse runs only while the badge shows and is stopped on hide/unmount");
     const entrance = hdr.slice(hdr.indexOf("Animated.parallel(["), hdr.indexOf("const showUnreadBadge"));
     ok(!/Animated\.loop/.test(entrance), "no endless loop left in the entrance animation");
+  }
+
+  // ═════ P1-5 one shared message-unread count ═════
+  console.log("── P1-5 shared unread count: no request on tab taps, one poll, Messages feeds it");
+  {
+    const { React, mount } = makeReact();
+    const { rn } = makeRN();
+    let appListener = null;
+    rn.AppState = { currentState: "active", addEventListener: (ev, fn) => { appListener = fn; return { remove() { appListener = null; } }; } };
+    const inbox = []; let reply = [{ unreadCount: 2 }, { unreadCount: 1 }]; let gate = null;
+    const axios = { get: async (url, cfg) => { inbox.push(cfg?.headers?.Authorization); if (gate) await gate; return { data: reply }; } };
+    const stub = () => null;
+    const mocks = {
+      react: React, "react-native": rn, axios,
+      "@react-navigation/bottom-tabs": { createBottomTabNavigator: () => ({ Navigator: "Nav", Screen: "Screen" }) },
+      "@expo/vector-icons": { Octicons: "Icon", MaterialCommunityIcons: "Icon", MaterialIcons: "Icon", Foundation: "Icon" },
+      "react-native-safe-area-context": { SafeAreaProvider: "SAP", useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) },
+      "./HomeStack": stub, "../screens/Social/Social": stub, "../screens/StudentDashboard": stub, "../screens/Explore": stub, "../screens/ProfileScreen": stub,
+      "../guest": { accountOnly: (c) => c },
+      "../engagement/tour/TourProvider": { useTour: () => ({ registerTarget() {} }) },
+      "../context/AuthContext": { AuthContext: { _default: { token: "tok-A", isGuest: false } } },
+    };
+    const load = loader(mocks);
+    const store = load(path.join(SRC, "hooks/useMessageUnread.js"));
+    const { CustomTabBar } = load(path.join(SRC, "navigation/TabNavigator.js"));
+    const routes = ["Home", "Explore", "Social", "Campus", "Profile"].map((name) => ({ name, key: name }));
+    const el = (index) => React.createElement(CustomTabBar, { state: { index, routes }, descriptors: {}, navigation: { navigate() {} } });
+    const bar = mount(el(0));
+    await tick();
+    const badge = () => has(bar.tree, "social, 3 unread");
+    ok(inbox.length === 1 && badge(), "first use: one /inbox request, badge shows 3", `${inbox.length}`);
+    for (const i of [1, 3, 4, 0, 1, 3, 0, 4, 1, 0]) bar.rerender(el(i));
+    await tick();
+    ok(inbox.length === 1, "10 tab taps: no extra /inbox request (was one per tap)", `${inbox.length}`);
+    ok(store._test.timerRunning, "one 60 s poll runs while the badge is shown");
+    // a second consumer (Social) shares it: no new request
+    function SocialLike() { const { unread } = store.useMessageUnread("tok-A", false); return React.createElement("Text", null, String(unread)); }
+    const soc = mount(React.createElement(SocialLike));
+    await tick();
+    ok(inbox.length === 1 && has(soc.tree, "3"), "Social's Messages badge reads the same number, no request");
+    // Messages screen reports its own total
+    store.setMessageUnread(0); await tick(); bar.rerender(el(0));
+    ok(!badge() && has(soc.tree, "0") && inbox.length === 1, "reading messages in Messages clears every badge without a request");
+    // back from background: one forced refresh
+    reply = [{ unreadCount: 5 }];
+    appListener?.("background"); appListener?.("active"); await tick(); bar.rerender(el(0));
+    ok(inbox.length === 2 && has(bar.tree, "social, 5 unread"), "back to the app: one refresh", `${inbox.length}`);
+    // two calls at once share one request; calls within 5 s are skipped
+    await Promise.all([store.refreshMessageUnread({ force: true }), store.refreshMessageUnread({ force: true })]);
+    await store.refreshMessageUnread();
+    ok(inbox.length === 3, "concurrent refreshes share one request; a refresh within 5 s is skipped", `${inbox.length}`);
+    // account switch while a request is in flight: the old answer is dropped
+    let open; gate = new Promise((r) => { open = r; }); reply = [{ unreadCount: 9 }];
+    const p = store.refreshMessageUnread({ force: true });
+    function Other() { store.useMessageUnread("tok-B", false); return null; }
+    mount(React.createElement(Other)); await tick();
+    open(); gate = null; await p; await tick();
+    ok(inbox.at(-1) === "Bearer tok-B" && store.useMessageUnread !== undefined, "switching account asks again with the new token");
+    store._test.reset();
+    ok(!store._test.timerRunning, "timers stop when nothing shows the number");
+    const src = read("app/src/navigation/TabNavigator.js") + read("app/src/screens/Social/Social.js");
+    ok(!/axios\.get\(/.test(src) && !/setInterval\(/.test(read("app/src/screens/Social/Social.js")), "tab bar and Social no longer request /inbox or poll themselves");
+    ok(/setMessageUnread\(totalUnread\)/.test(read("app/src/screens/Social/MessageScreen.js")), "Messages screen feeds its total into the shared count");
   }
 
   console.log(`\n${passed} passed, ${failed} failed`);

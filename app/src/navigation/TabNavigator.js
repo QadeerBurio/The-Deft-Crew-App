@@ -1,5 +1,5 @@
 // app/src/navigation/TabNavigator.js
-import React, { useEffect, useRef, useState, useCallback, useContext } from "react";
+import React, { useEffect, useRef, useContext } from "react";
 import {
   View,
   Text,
@@ -7,11 +7,9 @@ import {
   TouchableOpacity,
   Pressable,
   Animated,
-  AppState,
   Dimensions,
   StatusBar,
 } from "react-native";
-import axios from "axios";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import {
   Octicons,
@@ -32,6 +30,7 @@ import { accountOnly } from "../guest";
 // 🆕 tour
 import { useTour } from "../engagement/tour/TourProvider";
 import { AuthContext } from "../context/AuthContext";
+import { useMessageUnread } from "../hooks/useMessageUnread";
 import { color, font } from "../theme/tokens";
 
 const Tab = createBottomTabNavigator();
@@ -41,8 +40,6 @@ const TAB_HEIGHT = 55;
 // their parent's box, so the bar's touch box reaches up over the whole circle (see riseRoom).
 export const CIRCLE_RISE = 14;
 
-// Same value Social.js uses for GET /inbox (unread badge on the social button)
-const SOCIAL_API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 const LABEL_SCALE = 1.2; // labels must fit TAB_HEIGHT at big system fonts
 
 // ============================================================
@@ -113,46 +110,10 @@ export const CustomTabBar = ({ state, descriptors, navigation }) => {
     return () => clearTimeout(t);
   }, [registerTarget]);
 
-  // Unread messages badge: same GET /inbox as Social.js. Fetched on mount,
-  // when the active tab changes and when the app comes back. No polling.
+  // Unread messages badge: the shared count (hooks/useMessageUnread), also used by Social
+  // and Messages. No request on tab taps (was one GET /inbox per tab change).
   const { token, isGuest } = useContext(AuthContext);
-  const [unread, setUnread] = useState(0);
-  const mountedRef = useRef(true);
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  const fetchUnread = useCallback(async () => {
-    if (!token || isGuest) {
-      setUnread(0);
-      return;
-    }
-    try {
-      const res = await axios.get(`${SOCIAL_API_URL}/inbox`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!mountedRef.current || !Array.isArray(res?.data)) return;
-      setUnread(res.data.reduce((sum, c) => sum + (c?.unreadCount || 0), 0));
-    } catch (e) {
-      if (__DEV__) console.log("[TabBar] unread fetch failed:", e?.message);
-    }
-  }, [token, isGuest]);
-
-  useEffect(() => {
-    fetchUnread();
-  }, [fetchUnread, state.index]);
-
-  useEffect(() => {
-    let prev = AppState.currentState;
-    const sub = AppState.addEventListener("change", (next) => {
-      if (prev.match(/inactive|background/) && next === "active") fetchUnread();
-      prev = next;
-    });
-    return () => sub.remove();
-  }, [fetchUnread]);
+  const { unread } = useMessageUnread(token, isGuest);
 
   // Centre button press scale
   const socialScale = useRef(new Animated.Value(1)).current;
