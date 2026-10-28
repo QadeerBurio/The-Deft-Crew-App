@@ -592,6 +592,46 @@ function hitTest(tree, rootBox, x, y) {
     }
   }
 
+  // ═════ P3-10 own posts filtered on every page ═════
+  console.log("── P3-10 my own posts are left out on later pages too");
+  {
+    const { React, mount } = makeReact();
+    const { rn } = makeRN({ LayoutAnimation: { configureNext() {}, Presets: {} }, Keyboard: { dismiss() {}, addListener: () => ({ remove() {} }) }, Alert: { alert() {} } });
+    const p = (id, author, t) => ({ _id: id, author: { _id: author }, content: id, createdAt: t, likes: [], comments: [] });
+    const urls = [];
+    const axios = { get: async (url) => {
+      if (!url.includes("/feed")) return { data: {} };
+      urls.push(url);
+      return url.includes("before=")
+        ? { data: { posts: [p("other2", "u2", "2026-10-01T00:00:00Z"), p("mine2", "me", "2026-09-30T00:00:00Z")], hasMore: false } }
+        : { data: { posts: [p("other1", "u2", "2026-10-03T00:00:00Z"), p("mine1", "me", "2026-10-02T00:00:00Z")], hasMore: true } };
+    }, post: async () => ({ data: {} }) };
+    const load = loader({
+      react: React, "react-native": rn, axios,
+      "../../ui/RemoteImage": "RemoteImage",
+      "react-native-safe-area-context": { SafeAreaView: "SafeAreaView", useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) },
+      "@react-navigation/native": { useIsFocused: () => false, useFocusEffect() {}, useRoute: () => ({ params: {} }), useNavigation: () => ({ setParams() {} }) },
+      "../../engagement/hooks/useOpenFromParams": { useOpenFromParams() {} },
+      "@expo/vector-icons": { Ionicons: "Icon", MaterialCommunityIcons: "Icon" },
+      "../../ui/FlatGradient": { LinearGradient: "LinearGradient" }, "../../ui/EmptyState": "EmptyState",
+      "../../guest": { useGuestGate: () => ({ requireAccount() {} }), GuestLocked: "GuestLocked" },
+      "../../ui/ScreenHeader": { __esModule: true, default: "ScreenHeader", HeaderIconButton: "HeaderIconButton" },
+      "../../context/AuthContext": { AuthContext: { _default: { user: { _id: "me" }, isGuest: false, token: "tok", unreadCount: 0, updateUnreadCount() {} } } },
+      "./PostCard": { __esModule: true, default: "PostCard", PostCardSkeleton: "PostCardSkeleton" },
+      "./ConfessionScreen": "ConfessionScreen", "./StoriesSection": "StoriesSection",
+    });
+    const FeedScreen = load(path.join(SRC, "screens/Social/FeedScreen.js")).default;
+    const root = mount(React.createElement(FeedScreen, { navigation: { navigate() {}, goBack() {} } }));
+    await tick(40);
+    const list = () => { let found = null; (function walk(n) { if (!n || typeof n !== "object" || found) return; if (Array.isArray(n)) return n.forEach(walk); if (n.props?.onEndReached) { found = n; return; } walk(n.props?.children); })(root.tree); return found; };
+    const ids1 = (list()?.props.data || []).map((x) => x._id);
+    ok(JSON.stringify(ids1) === JSON.stringify(["other1"]), "page 1: only other people's posts", JSON.stringify(ids1));
+    list().props.onEndReached(); await tick(40);
+    const ids2 = (list()?.props.data || []).map((x) => x._id);
+    ok(JSON.stringify(ids2) === JSON.stringify(["other1", "other2"]), "page 2: my own post is left out too (was shown)", JSON.stringify(ids2));
+    ok(urls[1]?.includes("before=2026-10-02T00:00:00Z"), "paging still continues after the last post of the whole page (mine included)", urls[1]);
+  }
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.log("FAIL  (stopped)", e?.stack || e); process.exit(1); });

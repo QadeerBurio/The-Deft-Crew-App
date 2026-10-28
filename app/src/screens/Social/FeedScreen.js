@@ -154,13 +154,16 @@ export default function FeedScreen({ navigation }) {
         newPosts = newPosts.filter(post => !blockedPostIds.includes(post._id));
       }
 
+      // My own posts are not in the feed, on every page (later pages used to include them).
+      // The paging cursor below still uses the whole page.
+      const filteredPosts = isGuest
+        ? newPosts
+        : newPosts.filter(post => post.author?._id !== user?._id);
+
       if (loadMore) {
-        setPosts(prev => [...prev, ...newPosts]);
+        setPosts(prev => [...prev, ...filteredPosts]);
         setHasMore(moreAvailable);
       } else {
-        const filteredPosts = isGuest
-          ? newPosts
-          : newPosts.filter(post => post.author?._id !== user?._id);
 
         setPosts(prev => {
           if (silent && !postsChanged(prev, filteredPosts)) {
