@@ -50,10 +50,11 @@ export function withFixedImages(brand) {
 
 // ── Delivery size (Cloudinary only) ──
 // Cloudinary URLs straight from an upload ("…/image/upload/v<version>/<id>") get a width and
-// automatic format/quality: "…/upload/w_300,c_limit,f_auto,q_auto/v<version>/<id>". c_limit
+// automatic format/quality: "…/upload/w_480,c_limit,f_auto,q_auto/v<version>/<id>". c_limit
 // never upscales. Anything else is returned unchanged: /uploads files on our server, other
 // hosts, and Cloudinary URLs that already carry a transformation.
-export const IMAGE_WIDTHS = { avatar: 120, logo: 120, card: 300, banner: 800 };
+// card 480: a ~160 dp card on a 3x screen stays sharp (300 looked soft)
+export const IMAGE_WIDTHS = { avatar: 120, logo: 120, card: 480, banner: 800 };
 
 const CLOUDINARY_UPLOAD = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(v\d+\/.+)$/;
 
