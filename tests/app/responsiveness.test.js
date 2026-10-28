@@ -555,6 +555,23 @@ function hitTest(tree, rootBox, x, y) {
     ok(o.polls.includes(8000), "before: the same model shows the old 8 s whole-feed poll", JSON.stringify(o.polls));
   }
 
+  // ═════ P2-8 search text is encoded ═════
+  console.log("── P2-8 search text encoded in feed and people search");
+  {
+    const src = read("app/src/screens/Social/FeedScreen.js");
+    const feedTpl = src.match(/let url = `\$\{API_URL\}\/feed\?([^`]*)`/)[1];
+    const usersTpl = src.match(/users\/search\?([^`]*)`/)[1];
+    // evaluate the real templates with a nasty search text and parse them back
+    const build = (tpl, vars) => new Function(...Object.keys(vars), "return `" + tpl + "`;")(...Object.values(vars));
+    const nasty = "c&a #exam 50%+";
+    const q1 = new URLSearchParams(build(feedTpl, { category: "Events & Fun", search: nasty }));
+    ok(q1.get("search") === nasty && q1.get("category") === "Events & Fun" && q1.get("limit") === "10", "feed search: \"c&a #exam 50%+\" reaches the server intact", build(feedTpl, { category: "Events & Fun", search: nasty }));
+    const q2 = new URLSearchParams(build(usersTpl, { query: nasty, page: 2 }));
+    ok(q2.get("q") === nasty && q2.get("page") === "2", "people search: same", build(usersTpl, { query: nasty, page: 2 }));
+    const before = new URLSearchParams(build(feedTpl.replace(/encodeURIComponent/g, ""), { category: "All", search: nasty }));
+    ok(before.get("search") !== nasty, "without encoding the same text arrives broken (what students got before)", before.get("search"));
+  }
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.log("FAIL  (stopped)", e?.stack || e); process.exit(1); });

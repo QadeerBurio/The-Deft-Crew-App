@@ -136,7 +136,8 @@ export default function FeedScreen({ navigation }) {
         setLoading(true);
       }
 
-      let url = `${API_URL}/feed?category=${category}&search=${search}&limit=10`;
+      // encoded: "c&a" or "#exam" used to break the query string
+      let url = `${API_URL}/feed?category=${encodeURIComponent(category)}&search=${encodeURIComponent(search)}&limit=10`;
       if (loadMore && lastPostRef.current) {
         url += `&before=${lastPostRef.current}`;
       }
@@ -259,7 +260,7 @@ export default function FeedScreen({ navigation }) {
 
     try {
       const headers = (!isGuest && token) ? { Authorization: `Bearer ${token}` } : {};
-      const res = await axios.get(`${API_URL}/users/search?q=${query}&page=${page}&limit=20`, { headers });
+      const res = await axios.get(`${API_URL}/users/search?q=${encodeURIComponent(query)}&page=${page}&limit=20`, { headers });
 
       const newUsers = res.data.users || res.data;
       const moreAvailable = res.data.hasMore !== undefined ? res.data.hasMore : newUsers.length === 20;
