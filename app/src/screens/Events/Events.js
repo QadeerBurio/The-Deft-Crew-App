@@ -6,7 +6,9 @@ import React, {
   useRef,
   useState,
   useCallback,
+  memo,
 } from "react";
+import { useStableCallback } from "../../hooks/useStableCallback";
 import {
   ActivityIndicator,
   Alert,
@@ -509,6 +511,35 @@ const EventCard = ({ item, onOpen, onRegister, isRegistered, onCancel, featured,
     </PressScale>
   );
 };
+
+// One list row, memoised: it re-renders only when its event, its saved / registered state or
+// its place in the list changes (the screen passes stable callbacks). Before, an inline
+// renderItem built a new `side` element and onProof arrow per row, so every visible card
+// re-rendered on every screen render.
+const EventRow = memo(function EventRow({ ev, index, showApplied, saved, registered, onOpen, onRegister, onCancel, onTicket, onSave, onProof }) {
+  const featured = index === 0 && !showApplied;
+  return (
+    <>
+      {index === 1 && !showApplied && (
+        <Text style={EV.h2} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+          coming up<Text style={{ color: T.yellow }}>.</Text>
+        </Text>
+      )}
+      <EventCard
+        item={ev}
+        featured={featured}
+        onOpen={onOpen}
+        onRegister={onRegister}
+        isRegistered={registered}
+        onCancel={onCancel}
+        registration={showApplied ? ev.registration : null}
+        onProof={(reg) => onProof(reg, ev)}
+        onTicket={onTicket}
+        side={<SaveButton saved={saved} dark={featured} onPress={() => onSave(ev)} />}
+      />
+    </>
+  );
+});
 
 // ─── Mine: tickets + payment status (events v2) ───────────────────────────
 // pending / rejected: "send payment proof again"; verified: a clear confirmed state
@@ -1281,6 +1312,46 @@ export default function EventsScreen() {
 
   // the ticket screen, ready to download (mine card, event details)
   const openTicket = (reg) => navigation.navigate("EventTicket", { registrationId: String(reg._id), download: true });
+
+  // List rows (EventRow is memoised): stable callbacks and renderItem
+  const rowOpen = useStableCallback((ev) => openEvent(ev));
+  const rowRegister = useStableCallback((ev) => handleRegister(ev));
+  const rowCancel = useStableCallback((ev) => handleCancelRegistration(ev));
+  const rowTicket = useStableCallback((reg) => openTicket(reg));
+  const rowSave = useStableCallback((ev) => onSave(ev));
+  const rowProof = useStableCallback((reg, ev) => setProofFor({ registration: reg, event: ev }));
+  const renderRow = useCallback(({ item: row, index }) => {
+    if (row.kind === "header") {
+      return (
+        <Text style={EV.h2} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+          {row.title}<Text style={{ color: T.yellow }}>.</Text>
+        </Text>
+      );
+    }
+    if (row.kind === "empty") {
+      return row.which === "saved" ? (
+        <EmptyState mood="sleepy" title="nothing saved yet." line="save an event and it shows up here." style={EV.sectionEmpty} />
+      ) : (
+        <EmptyState mood="sleepy" title="no registrations yet." line="register for an event and it shows up here." style={EV.sectionEmpty} />
+      );
+    }
+    const ev = row.event;
+    return (
+      <EventRow
+        ev={ev}
+        index={index}
+        showApplied={showApplied}
+        saved={isSaved(ev._id)}
+        registered={registeredEventIds.includes(ev._id)}
+        onOpen={rowOpen}
+        onRegister={rowRegister}
+        onCancel={rowCancel}
+        onTicket={rowTicket}
+        onSave={rowSave}
+        onProof={rowProof}
+      />
+    );
+  }, [showApplied, isSaved, registeredEventIds, rowOpen, rowRegister, rowCancel, rowTicket, rowSave, rowProof]);
   const registrationFor = (eventId) =>
     appliedEventsData.find((x) => String(x?.event?._id || x?.event) === String(eventId))?.registration || null;
 
@@ -1324,45 +1395,7 @@ export default function EventsScreen() {
           data={listRows}
           keyExtractor={(row) => row.key}
           extraData={[savedIds, registeredEventIds]}
-          renderItem={({ item: row, index }) => {
-            if (row.kind === "header") {
-              return (
-                <Text style={EV.h2} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
-                  {row.title}<Text style={{ color: T.yellow }}>.</Text>
-                </Text>
-              );
-            }
-            if (row.kind === "empty") {
-              return row.which === "saved" ? (
-                <EmptyState mood="sleepy" title="nothing saved yet." line="save an event and it shows up here." style={EV.sectionEmpty} />
-              ) : (
-                <EmptyState mood="sleepy" title="no registrations yet." line="register for an event and it shows up here." style={EV.sectionEmpty} />
-              );
-            }
-            const ev = row.event;
-            const featured = index === 0 && !showApplied;
-            return (
-              <>
-                {index === 1 && !showApplied && (
-                  <Text style={EV.h2} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
-                    coming up<Text style={{ color: T.yellow }}>.</Text>
-                  </Text>
-                )}
-                <EventCard
-                  item={ev}
-                  featured={featured}
-                  onOpen={openEvent}
-                  onRegister={handleRegister}
-                  isRegistered={isEventRegistered(ev._id)}
-                  onCancel={handleCancelRegistration}
-                  registration={showApplied ? ev.registration : null}
-                  onProof={(reg) => setProofFor({ registration: reg, event: ev })}
-                  onTicket={openTicket}
-                  side={<SaveButton saved={isSaved(ev._id)} dark={featured} onPress={() => onSave(ev)} />}
-                />
-              </>
-            );
-          }}
+          renderItem={renderRow}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           refreshing={refreshing}

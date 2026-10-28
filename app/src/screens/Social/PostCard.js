@@ -126,7 +126,7 @@ const commentsChanged = (oldComments, newComments) => {
   return false;
 };
 
-export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
+function PostCard({ post, onBlock, onReport, onPostUpdate }) {
   const { user, token, setUser } = useContext(AuthContext);
   const { requireAccount } = useGuestGate();
   const navigation = useNavigation();
@@ -1675,3 +1675,6 @@ const styles = StyleSheet.create({
   menuCancelText: { color: T.textFaint, fontFamily: F.body },
   menuDivider: { height: 1, backgroundColor: T.sand, marginVertical: 4 },
 });
+
+// Memoised: a feed render no longer re-renders every visible post (same post object → skipped)
+export default React.memo(PostCard);

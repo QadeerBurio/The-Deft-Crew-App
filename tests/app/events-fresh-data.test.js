@@ -30,6 +30,7 @@ const React = {
   useContext(ctx) { return ctx && ctx._value ? ctx._value : {}; },
   useEffect(fn, deps) { const [l, i] = slot(() => ({ deps: undefined, cleanup: null })); const s = l[i]; if (!deps || !s.deps || deps.some((d, k) => !Object.is(d, s.deps[k]))) pendingEffects.push(() => { if (s.cleanup) s.cleanup(); s.deps = deps; s.cleanup = fn() || null; }); },
   forwardRef: (fn) => (props) => fn(props, null),
+  memo: (c) => c, // Events' list rows (EventRow) are memoised
 };
 React.default = React;
 function expand(el, p) {
@@ -152,7 +153,8 @@ const EventsScreen = load(path.join(SRC, "screens/Events/Events.js")).default;
     const listCopy = card();
     const openDetails = async (ev) => {
       const fl = all(screen.tree, (n) => n.type === "FlatList")[0];
-      const item = fl.props.renderItem({ item: { kind: "event", key: "x", event: ev }, index: 1 });
+      let item = fl.props.renderItem({ item: { kind: "event", key: "x", event: ev }, index: 1 });
+      if (typeof item.type === "function") item = item.type(item.props); // the memoised EventRow
       const cardEl = all(item, (n) => n.type && n.type.name === "EventCard")[0];
       cardEl.props.onOpen(ev);
     };
@@ -245,7 +247,8 @@ const EventsScreen = load(path.join(SRC, "screens/Events/Events.js")).default;
     await tick(60);
     const fl = all(screen.tree, (n) => n.type === "FlatList")[0];
     const oldItem = fl.props.data.find((r) => r.kind === "event" && String(r.event._id) === String(oldId)).event;
-    const el = fl.props.renderItem({ item: { kind: "event", key: "o", event: oldItem }, index: 1 });
+    let el = fl.props.renderItem({ item: { kind: "event", key: "o", event: oldItem }, index: 1 });
+    if (typeof el.type === "function") el = el.type(el.props); // the memoised EventRow
     all(el, (n) => n.type && n.type.name === "EventCard")[0].props.onRegister(oldItem);
     await tick(80);
     const labels = all(regTree(), (n) => n.type === "Input").map((n) => n.props.label);

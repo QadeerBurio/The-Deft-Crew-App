@@ -19,6 +19,7 @@ import { useGuestGate, GuestLocked } from "../../guest";
 import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
+import { useStableCallback } from '../../hooks/useStableCallback';
 import PostCard, { PostCardSkeleton } from "./PostCard";
 import ConfessionScreen from './ConfessionScreen';
 
@@ -218,6 +219,13 @@ export default function FeedScreen({ navigation }) {
   const handleReport = useCallback((reportedPostId) => {
     console.log('Post reported:', reportedPostId);
   }, []);
+
+  // stable renderItem; PostCard is memoised and only reads post, onBlock and onReport
+  // (handleBlock changes with the list, so rows get a stable wrapper)
+  const blockFromRow = useStableCallback(handleBlock);
+  const renderPost = useCallback(({ item }) => (
+    <PostCard post={item} onBlock={blockFromRow} onReport={handleReport} />
+  ), [blockFromRow, handleReport]);
 
   const loadMorePosts = () => {
     if (!hasMore || isLoadingMore || loading || isSearching) return;
@@ -478,16 +486,7 @@ export default function FeedScreen({ navigation }) {
               colors={[T.ink]}
             />
           }
-          renderItem={({ item }) => (
-            <PostCard
-              post={item}
-              onRefresh={onRefresh}
-              navigation={navigation}
-              isGuest={isGuest}
-              onBlock={handleBlock}
-              onReport={handleReport}
-            />
-          )}
+          renderItem={renderPost}
           onEndReached={loadMorePosts}
           onEndReachedThreshold={0.3}
           ListFooterComponent={renderFooter}

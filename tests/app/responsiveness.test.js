@@ -657,6 +657,61 @@ function hitTest(tree, rootBox, x, y) {
     ok(/const ProfileScreen = unmountWhenBlurred\(accountOnly\(ProfileScreenBase/.test(social), "Social's \"my profile\" tab starts fresh on every visit, as intended");
   }
 
+  // ═════ P3-12 memoised list rows ═════
+  console.log("── P3-12 big lists: stable renderItem, memoised rows");
+  {
+    // real React: useStableCallback keeps one identity and calls the latest function;
+    // a React.memo row with stable props renders once across parent renders
+    const real = require("../harness/realrender")(reqApp);
+    const R = real.React;
+    const { useStableCallback } = loader({ react: R })(path.join(SRC, "hooks/useStableCallback.js"));
+    const seen = new Set(); let rowRenders = 0; let lastCalled = null;
+    const Row = R.memo(function Row({ onPress }) { rowRenders++; seen.add(onPress); return R.createElement("Row", { onPress }); });
+    function Parent({ n }) { const cb = useStableCallback(() => { lastCalled = n; }); return R.createElement(Row, { onPress: cb }); }
+    const root = real.createRoot();
+    for (const n of [1, 2, 3, 4]) root.render(R.createElement(Parent, { n }));
+    await tick(20);
+    ok(seen.size === 1 && rowRenders === 1, "4 parent renders: the memoised row rendered once, one callback identity", `renders ${rowRenders}, identities ${seen.size}`);
+    root.tree[0].props.onPress();
+    ok(lastCalled === 4, "the stable callback runs the latest version");
+
+    // the real FeedScreen: renderItem keeps its identity across screen renders
+    const { React, mount } = makeReact();
+    const { rn } = makeRN({ LayoutAnimation: { configureNext() {}, Presets: {} }, Keyboard: { dismiss() {}, addListener: () => ({ remove() {} }) }, Alert: { alert() {} } });
+    const axios = { get: async () => ({ data: { posts: [{ _id: "a", author: { _id: "u2" }, createdAt: "2026-10-01T00:00:00Z", likes: [], comments: [] }], hasMore: false } }), post: async () => ({ data: {} }) };
+    const load = loader({
+      react: React, "react-native": rn, axios,
+      "../../ui/RemoteImage": "RemoteImage",
+      "react-native-safe-area-context": { SafeAreaView: "SafeAreaView", useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) },
+      "@react-navigation/native": { useIsFocused: () => false, useFocusEffect() {}, useRoute: () => ({ params: {} }), useNavigation: () => ({ setParams() {} }) },
+      "../../engagement/hooks/useOpenFromParams": { useOpenFromParams() {} },
+      "@expo/vector-icons": { Ionicons: "Icon", MaterialCommunityIcons: "Icon" },
+      "../../ui/FlatGradient": { LinearGradient: "LinearGradient" }, "../../ui/EmptyState": "EmptyState",
+      "../../guest": { useGuestGate: () => ({ requireAccount() {} }), GuestLocked: "GuestLocked" },
+      "../../ui/ScreenHeader": { __esModule: true, default: "ScreenHeader", HeaderIconButton: "HeaderIconButton" },
+      "../../context/AuthContext": { AuthContext: { _default: { user: { _id: "me" }, isGuest: false, token: "tok", unreadCount: 0, updateUnreadCount() {} } } },
+      "./PostCard": { __esModule: true, default: "PostCard", PostCardSkeleton: "PostCardSkeleton" },
+      "./ConfessionScreen": "ConfessionScreen", "./StoriesSection": "StoriesSection",
+    });
+    const FeedScreen = load(path.join(SRC, "screens/Social/FeedScreen.js")).default;
+    const el = () => React.createElement(FeedScreen, { navigation: { navigate() {}, goBack() {} } });
+    const feed = mount(el()); await tick(40);
+    const listOf = () => { let f = null; (function w(n) { if (!n || typeof n !== "object" || f) return; if (Array.isArray(n)) return n.forEach(w); if (n.props?.onEndReached) { f = n; return; } w(n.props?.children); })(feed.tree); return f; };
+    const r1 = listOf()?.props.renderItem; feed.rerender(el()); feed.rerender(el());
+    ok(r1 && listOf().props.renderItem === r1, "feed: renderItem keeps its identity across screen renders");
+    const row = r1({ item: { _id: "a" } });
+    ok(row.type === "PostCard" && Object.keys(row.props).filter((k) => k !== "children").sort().join() === "onBlock,onReport,post", "feed rows get only what PostCard reads (post, onBlock, onReport)", Object.keys(row.props).join());
+
+    const src = (f) => read(f).replace(/\r\n/g, "\n");
+    ok(/export default React\.memo\(PostCard\);/.test(src("app/src/screens/Social/PostCard.js")), "PostCard is memoised");
+    const career = src("app/src/components/Career.js");
+    ok(/renderItem=\{renderJob\}/.test(career) && /const renderJob = useCallback\(/.test(career) && /onPress=\{\(\) => onPress\(item\)\}/.test(career) && /onOptimizePress\(item\);/.test(career) && /const openJob = useStableCallback/.test(career), "Career: memoised cards get stable callbacks (open, location, optimize) and renderItem");
+    const events = src("app/src/screens/Events/Events.js");
+    ok(/renderItem=\{renderRow\}/.test(events) && /const EventRow = memo\(function EventRow/.test(events) && /saved=\{isSaved\(ev\._id\)\}/.test(events) && /registered=\{registeredEventIds\.includes\(ev\._id\)\}/.test(events), "Events: memoised EventRow with boolean saved/registered and stable callbacks");
+    const md = src("app/src/screens/MyDiscountScreen.js");
+    ok(/renderItem=\{renderDiscount\}/.test(md) && /const renderDiscount = useCallback\(/.test(md), "MyDiscount: stable renderItem (cards and handlers were already memoised)");
+  }
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.log("FAIL  (stopped)", e?.stack || e); process.exit(1); });
