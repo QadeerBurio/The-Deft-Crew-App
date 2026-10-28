@@ -121,6 +121,7 @@ const MOCKS = {
   "../../utils/imageUrl": { imageUrl: (x) => x },
   "./useSavedEvents": () => ({ savedIds: [], isSaved: () => false, toggle() {}, prune() {} }),
   "socket.io-client": () => ({ emit() {}, on() {}, disconnect() {} }),
+  "expo-image": { Image: Object.assign("ExpoImage", { prefetch: async () => true }) }, // ui/RemoteImage (native)
   "../../engagement/engagementBus": { engagementBus: { emit() {} }, ENGAGEMENT_EVENTS: {} },
   "../../utils/clipboard": { copyToClipboard: async () => true },
   "../../lib/tdcSounds": new Proxy({}, { get: () => () => {} }),

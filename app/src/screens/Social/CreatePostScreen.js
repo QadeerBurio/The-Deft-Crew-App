@@ -14,11 +14,11 @@ import {
   Animated,
   Dimensions,
   StatusBar,
-  Image,
   Keyboard,
   Modal,
   TouchableWithoutFeedback,
 } from "react-native";
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
@@ -375,9 +375,10 @@ export default function CreatePostScreen({ navigation, route }) {
                         >
                           <View style={styles.avatarMask}>
                             {user?.profileImage ? (
-                              <Image
+                              <RemoteImage
                                 source={{ uri: user.profileImage }}
                                 style={styles.avatarImg}
+                                size="avatar"
                               />
                             ) : (
                               <Text style={styles.avatarLetter}>

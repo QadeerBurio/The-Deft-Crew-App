@@ -8,7 +8,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Image,
   TouchableOpacity,
   TouchableWithoutFeedback,
   TextInput,
@@ -23,6 +22,7 @@ import {
   AppState,
   Keyboard,
 } from 'react-native';
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -554,7 +554,7 @@ export default function PostDetailScreen({ route, navigation }) {
         <View style={styles.parentRow}>
           <TouchableOpacity onPress={() => navigateToProfile(item.user?._id)} activeOpacity={0.7}>
             {item.user?.profileImage ? (
-              <Image source={{ uri: item.user.profileImage }} style={styles.avatarLg} />
+              <RemoteImage source={{ uri: item.user.profileImage }} style={styles.avatarLg} size="avatar" />
             ) : (
               <LinearGradient
                 colors={[COLORS.primary, COLORS.primaryDark]}
@@ -643,7 +643,7 @@ export default function PostDetailScreen({ route, navigation }) {
                     style={styles.replyAvatarWrap}
                   >
                     {reply.user?.profileImage ? (
-                      <Image source={{ uri: reply.user.profileImage }} style={styles.avatarSm} />
+                      <RemoteImage source={{ uri: reply.user.profileImage }} style={styles.avatarSm} size="avatar" />
                     ) : (
                       <LinearGradient
                         colors={[COLORS.primary, COLORS.primaryDark]}
@@ -775,7 +775,7 @@ export default function PostDetailScreen({ route, navigation }) {
                   activeOpacity={0.7}
                 >
                   {post.author?.profileImage ? (
-                    <Image source={{ uri: post.author.profileImage }} style={styles.authorAvatar} />
+                    <RemoteImage source={{ uri: post.author.profileImage }} style={styles.authorAvatar} size="avatar" />
                   ) : (
                     <LinearGradient
                       colors={[COLORS.primary, COLORS.primaryDark]}
@@ -810,7 +810,7 @@ export default function PostDetailScreen({ route, navigation }) {
 
               {post.image && (
                 <TouchableOpacity style={styles.imageWrapper} activeOpacity={0.9}>
-                  <Image source={{ uri: post.image }} style={styles.postImage} resizeMode="cover" />
+                  <RemoteImage source={{ uri: post.image }} style={styles.postImage} resizeMode="cover" size="banner" />
                   <LinearGradient
                     colors={['transparent', 'rgba(0,0,0,0.1)']}
                     style={styles.imageGradient}
@@ -934,7 +934,7 @@ export default function PostDetailScreen({ route, navigation }) {
                     onPress={() => handleMentionSelect(item)}
                   >
                     {item.profileImage ? (
-                      <Image source={{ uri: item.profileImage }} style={styles.mentionAvatar} />
+                      <RemoteImage source={{ uri: item.profileImage }} style={styles.mentionAvatar} size="avatar" />
                     ) : (
                       <LinearGradient
                         colors={[COLORS.primary, COLORS.primaryDark]}
@@ -964,7 +964,7 @@ export default function PostDetailScreen({ route, navigation }) {
               { transform: [{ translateY: commentBounce }] }
             ]}>
               {user?.profileImage ? (
-                <Image source={{ uri: user.profileImage }} style={styles.inputAvatar} />
+                <RemoteImage source={{ uri: user.profileImage }} style={styles.inputAvatar} size="avatar" />
               ) : (
                 <LinearGradient
                   colors={[COLORS.primary, COLORS.primaryDark]}

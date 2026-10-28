@@ -2,11 +2,12 @@
 
 import React, { useState, useContext, useEffect, useRef, useCallback, useMemo } from "react";
 import {
-  View, Text, StyleSheet, Image, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity,
   FlatList, StatusBar, Dimensions, Platform,
   RefreshControl, Alert, Modal,
   TextInput, Animated, Share
 } from "react-native";
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
@@ -76,7 +77,7 @@ const PostItem = React.memo(({ item, index, isPublic, user, onLike, onComment, o
     <View style={styles.postCard}>
       <View style={styles.cardUserHeader}>
         <View style={styles.cardAvatarWrapper}>
-          <Image source={{ uri: avatarUri }} style={styles.cardAvatar} />
+          <RemoteImage source={{ uri: avatarUri }} style={styles.cardAvatar} size="avatar" />
         </View>
         <View style={styles.cardHeaderText}>
           <View style={styles.cardNameRow}>
@@ -107,7 +108,7 @@ const PostItem = React.memo(({ item, index, isPublic, user, onLike, onComment, o
         )}
         {item.image && (
           <View style={styles.imageWrapper}>
-            <Image source={{ uri: item.image }} style={styles.postImage} resizeMode="cover" />
+            <RemoteImage source={{ uri: item.image }} style={styles.postImage} resizeMode="cover" size="banner" />
           </View>
         )}
       </View>
@@ -491,9 +492,10 @@ export default function ProfileScreen() {
       <View style={styles.headerSection}>
         <View style={styles.headerRow}>
           <View style={styles.avatarContainer}>
-            <Image
+            <RemoteImage
               source={{ uri: user?.profileImage || `https://ui-avatars.com/api/?name=${user?.name}&background=111111&color=f9c349&size=128` }}
               style={styles.avatar}
+              size="card"
             />
           </View>
           <View style={styles.headerRight}>
@@ -571,7 +573,7 @@ export default function ProfileScreen() {
               keyExtractor={(item) => item._id}
               renderItem={({ item }) => (
                 <TouchableOpacity style={styles.likeUserItem} onPress={() => { setShowLikesModal(false); navigation.navigate("UserProfile", { userId: item._id }); }}>
-                  <Image source={{ uri: item.profileImage || `https://ui-avatars.com/api/?name=${item.name}&background=111111&color=f9c349` }} style={styles.likeUserAvatar} />
+                  <RemoteImage source={{ uri: item.profileImage || `https://ui-avatars.com/api/?name=${item.name}&background=111111&color=f9c349` }} style={styles.likeUserAvatar} size="avatar" />
                   <Text style={styles.likeUserName}>{item.name}</Text>
                   <Ionicons name="chevron-forward" size={18} color={T.textFaint} />
                 </TouchableOpacity>
@@ -598,7 +600,7 @@ export default function ProfileScreen() {
               keyExtractor={(item) => item._id}
               renderItem={({ item }) => (
                 <View style={styles.commentItem}>
-                  <Image source={{ uri: item.user?.profileImage || `https://ui-avatars.com/api/?name=${item.user?.name}&background=111111&color=f9c349` }} style={styles.commentAvatar} />
+                  <RemoteImage source={{ uri: item.user?.profileImage || `https://ui-avatars.com/api/?name=${item.user?.name}&background=111111&color=f9c349` }} style={styles.commentAvatar} size="avatar" />
                   <View style={styles.commentContent}>
                     <View style={styles.commentBubble}>
                       <Text style={styles.commentUserName}>{item.user?.name || 'Anonymous'}</Text>
@@ -656,7 +658,7 @@ export default function ProfileScreen() {
                 >
                   <View style={styles.connectionModalAvatar}>
                     {item.profileImage ? (
-                      <Image source={{ uri: item.profileImage }} style={styles.connectionModalAvatarImg} />
+                      <RemoteImage source={{ uri: item.profileImage }} style={styles.connectionModalAvatarImg} size="avatar" />
                     ) : (
                       <LinearGradient colors={[T.yellow, T.yellow]} style={styles.connectionModalAvatarPlaceholder}>
                         <Text style={styles.connectionModalAvatarText}>

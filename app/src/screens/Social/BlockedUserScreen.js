@@ -7,7 +7,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Image,
   Alert,
   ActivityIndicator,
   RefreshControl,
@@ -15,6 +14,7 @@ import {
   Platform,
   Animated,
 } from 'react-native';
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
@@ -108,7 +108,7 @@ const BlockedUserItem = React.memo(({ item, index, onUnblock, onNavigate, unbloc
       >
         <View style={styles.userInfo}>
           {item.profileImage ? (
-            <Image source={{ uri: item.profileImage }} style={styles.avatar} />
+            <RemoteImage source={{ uri: item.profileImage }} style={styles.avatar} size="avatar" />
           ) : (
             <LinearGradient
               colors={[T.yellow, T.yellow]}

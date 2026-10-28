@@ -7,6 +7,7 @@ import {
   Modal, Animated, Linking, TextInput, KeyboardAvoidingView, Keyboard,
   AppState,
 } from 'react-native';
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader, HeaderIconButton, EmptyState } from '../../ui';
 import { useFocusEffect } from '@react-navigation/native';
@@ -1022,7 +1023,7 @@ export default function UserProfile({ route, navigation }) {
             activeOpacity={0.7}
           >
             {item.user?.profileImage ? (
-              <Image source={{ uri: item.user.profileImage }} style={styles.avatarLg} />
+              <RemoteImage source={{ uri: item.user.profileImage }} style={styles.avatarLg} size="avatar" />
             ) : (
               <LinearGradient colors={[T.yellow, T.yellow]} style={styles.avatarLgPlaceholder}>
                 <Text style={styles.avatarLgText}>
@@ -1103,7 +1104,7 @@ export default function UserProfile({ route, navigation }) {
                     style={styles.replyAvatarWrap}
                   >
                     {reply.user?.profileImage ? (
-                      <Image source={{ uri: reply.user.profileImage }} style={styles.avatarSm} />
+                      <RemoteImage source={{ uri: reply.user.profileImage }} style={styles.avatarSm} size="avatar" />
                     ) : (
                       <LinearGradient colors={[T.yellow, T.yellow]} style={styles.avatarSmPlaceholder}>
                         <Text style={styles.avatarSmText}>
@@ -1484,7 +1485,7 @@ export default function UserProfile({ route, navigation }) {
       <Animated.View style={[styles.postCard, { opacity: fadeAnim }]}>
         <View style={styles.postHeader}>
           {profileData?.profileImage ? (
-            <Image source={{ uri: profileData.profileImage }} style={styles.postAvatar} />
+            <RemoteImage source={{ uri: profileData.profileImage }} style={styles.postAvatar} size="avatar" />
           ) : (
             <LinearGradient colors={[T.yellow, T.yellow]} style={styles.postAvatarPlaceholder}>
               <Text style={styles.postAvatarText}>{profileData?.name?.charAt(0)?.toUpperCase()}</Text>
@@ -1515,7 +1516,7 @@ export default function UserProfile({ route, navigation }) {
             )}
           </View>
         )}
-        {item.image && <Image source={{ uri: item.image }} style={styles.postImage} resizeMode="cover" />}
+        {item.image && <RemoteImage source={{ uri: item.image }} style={styles.postImage} resizeMode="cover" size="banner" />}
 
         <View style={styles.postActions}>
           <TouchableOpacity
@@ -1622,7 +1623,7 @@ export default function UserProfile({ route, navigation }) {
                 <View style={styles.avatarRow}>
                   <View style={styles.avatarContainer}>
                     {profileData?.profileImage ? (
-                      <Image source={{ uri: profileData.profileImage }} style={styles.avatar} />
+                      <RemoteImage source={{ uri: profileData.profileImage }} style={styles.avatar} size="card" />
                     ) : (
                       <LinearGradient colors={[T.yellow, T.yellow]} style={styles.avatarPlaceholder}>
                         <Text style={styles.avatarText}>{profileData?.name?.charAt(0)?.toUpperCase()}</Text>
@@ -1751,11 +1752,12 @@ export default function UserProfile({ route, navigation }) {
                     navigation.push('UserProfile', { userId: item._id });
                   }}
                 >
-                  <Image
+                  <RemoteImage
                     source={{
                       uri: item.profileImage || `https://ui-avatars.com/api/?name=${item.name}&background=f9c349&color=1a1a1a`
                     }}
                     style={styles.connectionAvatar}
+                    size="avatar"
                   />
                   <View style={styles.connectionInfo}>
                     <Text style={styles.connectionName}>{item.name}</Text>
@@ -1868,7 +1870,7 @@ export default function UserProfile({ route, navigation }) {
                               onPress={() => handleMentionSelect(item)}
                             >
                               {item.profileImage ? (
-                                <Image source={{ uri: item.profileImage }} style={styles.mentionAvatar} />
+                                <RemoteImage source={{ uri: item.profileImage }} style={styles.mentionAvatar} size="avatar" />
                               ) : (
                                 <LinearGradient
                                   colors={[T.yellow, T.yellow]}

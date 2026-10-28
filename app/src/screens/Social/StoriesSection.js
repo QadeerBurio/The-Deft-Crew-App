@@ -4,6 +4,7 @@ import {
   Dimensions, Animated, Alert, ActivityIndicator, Share,
   TextInput, KeyboardAvoidingView, Platform, BackHandler, StatusBar
 } from 'react-native';
+import RemoteImage from "../../ui/RemoteImage";
 import Avatar from '../../ui/Avatar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -469,7 +470,7 @@ export default function StoriesSection() {
       <TouchableOpacity style={styles.storyItemContainer} onPress={() => openOtherStory(item)} activeOpacity={0.7}>
         <View style={styles.storyImageWrapper}>
           <GradientStoryRing hasUnseen={item?.hasUnseenStories} style={styles.storyRing}>
-            <Image source={{ uri: item?.images?.[0]?.image || item?.avatar }} style={styles.storyImage} />
+            <RemoteImage source={{ uri: item?.images?.[0]?.image || item?.avatar }} style={styles.storyImage} size="card" />
           </GradientStoryRing>
         </View>
         <Text style={styles.storyUsername} numberOfLines={1}>{item?.user || 'User'}</Text>
@@ -561,7 +562,7 @@ export default function StoriesSection() {
 
               <View style={styles.viewerHeader}>
                 <TouchableOpacity style={styles.viewerHeaderLeft} onPress={() => navigateToUserProfile(selectedStory?.id)}>
-                  <Image source={{ uri: selectedStory?.avatar || selectedStory?.images?.[0]?.image }} style={styles.viewerAvatar} />
+                  <RemoteImage source={{ uri: selectedStory?.avatar || selectedStory?.images?.[0]?.image }} style={styles.viewerAvatar} size="avatar" />
                   <View style={styles.viewerUserInfo}>
                     <Text style={styles.viewerUsername}>{selectedStory?.user || 'User'}</Text>
                     <Text style={styles.viewerTimeAgo}>{formatTimeAgo(selectedStory?.images?.[currentImageIndex]?.createdAt)}</Text>

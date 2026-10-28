@@ -2,11 +2,12 @@
 
 import React, { useState, useContext, useRef, useEffect, useMemo, useCallback } from "react";
 import {
-  View, Text, StyleSheet, TouchableOpacity, Image, Modal,
+  View, Text, StyleSheet, TouchableOpacity, Modal,
   TextInput, FlatList, KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
   TouchableWithoutFeedback, Dimensions, BackHandler, Animated, Share,
   Keyboard, AppState
 } from "react-native";
+import RemoteImage from "../../ui/RemoteImage";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import axios from "axios";
@@ -890,7 +891,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
         <View style={styles.parentRow}>
           <TouchableOpacity onPress={() => navigateToProfile(item.user?._id)} activeOpacity={0.8}>
             {item.user?.profileImage ? (
-              <Image source={{ uri: item.user.profileImage }} style={styles.avatarLg} />
+              <RemoteImage source={{ uri: item.user.profileImage }} style={styles.avatarLg} size="avatar" />
             ) : (
               <LinearGradient colors={[T.yellow, T.yellow]} style={styles.avatarLgPlaceholder}>
                 <Text style={styles.avatarLgText}>
@@ -972,7 +973,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                     style={styles.replyAvatarWrap}
                   >
                     {reply.user?.profileImage ? (
-                      <Image source={{ uri: reply.user.profileImage }} style={styles.avatarSm} />
+                      <RemoteImage source={{ uri: reply.user.profileImage }} style={styles.avatarSm} size="avatar" />
                     ) : (
                       <LinearGradient colors={[T.yellow, T.yellow]} style={styles.avatarSmPlaceholder}>
                         <Text style={styles.avatarSmText}>
@@ -1036,7 +1037,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
         >
           <View style={styles.avatarContainer}>
             {post.author?.profileImage ? (
-              <Image source={{ uri: post.author.profileImage }} style={styles.avatarImg} />
+              <RemoteImage source={{ uri: post.author.profileImage }} style={styles.avatarImg} size="avatar" />
             ) : (
               <LinearGradient colors={[T.ink, T.ink]} style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarText}>{post.author?.name?.charAt(0)?.toUpperCase()}</Text>
@@ -1115,11 +1116,12 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                 <ActivityIndicator color={T.yellow} />
               </View>
             )}
-            <Image
+            <RemoteImage
               source={{ uri: post.image }}
               style={styles.postImage}
               resizeMode="cover"
               onLoad={() => setImageLoaded(true)}
+              size="banner"
             />
           </View>
         )}
@@ -1266,7 +1268,7 @@ export default function PostCard({ post, onBlock, onReport, onPostUpdate }) {
                           activeOpacity={0.7}
                         >
                           {item.profileImage ? (
-                            <Image source={{ uri: item.profileImage }} style={styles.mentionAvatar} />
+                            <RemoteImage source={{ uri: item.profileImage }} style={styles.mentionAvatar} size="avatar" />
                           ) : (
                             <LinearGradient colors={[T.yellow, T.yellow]} style={styles.mentionAvatarPlaceholder}>
                               <Text style={styles.mentionAvatarText}>
