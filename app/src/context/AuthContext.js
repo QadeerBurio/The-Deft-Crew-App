@@ -233,10 +233,11 @@ export function AuthProvider({ children }) {
     if (!activeToken || isTokenExpired(activeToken) || isGuest) return 0;
 
     try {
-      const res = await api.get("/notification/my-notifications", {
+      // just the number (was the last 100 notifications, every 30 s, to count them here)
+      const res = await api.get("/notification/unread-count", {
         headers: { Authorization: `Bearer ${activeToken}` },
       });
-      const unread = res.data.filter((n) => !n.isRead).length;
+      const unread = Number(res.data?.count) || 0;
       setUnreadCount(unread);
       return unread;
     } catch (e) {
