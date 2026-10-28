@@ -496,6 +496,65 @@ function hitTest(tree, rootBox, x, y) {
     ok(/useOpenFromParams\('tab'/.test(fs2) && /useOpenFromParams\('postId'/.test(fs2), "a push to a confession (FeedScreen tab + postId) still opens that tab and post");
   }
 
+  // ═════ P2-7 confessions: one 20 s poll, comments from the same answer, no refetch loop ═════
+  console.log("── P2-7 confessions: one 20 s poll while on screen, comments reuse it");
+  const runConfessions = async (file, ms = 400) => {
+    const { React, mount } = makeReact();
+    const { rn } = makeRN({ Share: { share: async () => ({}) }, Keyboard: { dismiss() {}, addListener: () => ({ remove() {} }) }, Alert: { alert() {} }, TouchableWithoutFeedback: "TWF" });
+    const feedHits = [];
+    const post = (id, comments) => ({ _id: id, text: "t " + id, visibility: "public", likes: 0, comments, createdAt: new Date().toISOString() });
+    let comments = [{ _id: "c1", text: "first", createdAt: new Date().toISOString() }];
+    global.fetch = async (url) => {
+      if (url.includes("/confessions/feed")) feedHits.push(url);
+      return { ok: true, json: async () => [post("p1", comments), post("p2", [])] };
+    };
+    const nav = { focused: true };
+    const realSI = global.setInterval, realCI = global.clearInterval;
+    const intervals = new Map(); let nextId = 1;
+    global.setInterval = (fn, t) => { if (t >= 1000) { const id = nextId++; intervals.set(id, { fn, t }); return id; } return realSI(fn, t); };
+    global.clearInterval = (id) => { if (intervals.has(id)) intervals.delete(id); else realCI(id); };
+    try {
+      const load = loader({
+        react: React, "react-native": rn,
+        "../../ui/RemoteImage": "RemoteImage",
+        "@react-navigation/native": { useIsFocused: () => nav.focused, useFocusEffect: (cb) => React.useEffect(() => (nav.focused ? cb() : undefined), [nav.focused, cb]) },
+        "@expo/vector-icons": { Ionicons: "Icon" }, "../../ui/FlatGradient": { LinearGradient: "LinearGradient" },
+        "expo-image-picker": {}, "../../context/AuthContext": { AuthContext: { _default: { token: "tok", user: { _id: "me", university: { name: "U" } }, isGuest: false } } },
+        "../../lib/tdcSounds": new Proxy({}, { get: () => () => {} }),
+        "../../engagement/engagementBus": { engagementBus: { emit() {} }, ENGAGEMENT_EVENTS: {} },
+        "../../analytics/metaEvents": { metaEvents: new Proxy({}, { get: () => () => {} }) },
+      });
+      const Screen = load(file).default;
+      const el = () => React.createElement(Screen, { navigation: { navigate() {} } });
+      const root = mount(el());
+      await tick(ms);
+      const settled = feedHits.length;
+      const polls = [...intervals.values()].filter((x) => x.t >= 1000).map((x) => x.t);
+      return { root, settled, polls, intervals, feedHits, setComments: (c) => { comments = c; }, nav, rerender: () => root.rerender(el()), restore: () => { global.setInterval = realSI; global.clearInterval = realCI; } };
+    } catch (e) { global.setInterval = realSI; global.clearInterval = realCI; throw e; }
+  };
+  {
+    const file = path.join(SRC, "screens/Social/ConfessionScreen.js");
+    const r = await runConfessions(file);
+    ok(r.settled <= 2, `opening confessions: the feed loads once or twice, then stops (${r.settled} requests in 400 ms)`, r.settled);
+    ok(r.polls.length === 1 && r.polls[0] === 20000, "one poll, every 20 s (was 8 s, plus 6 s for comments)", JSON.stringify(r.polls));
+    // the poll updates the open comments sheet from the same answer
+    const src = read("app/src/screens/Social/ConfessionScreen.js").replace(/\r\n/g, "\n");
+    ok(!/COMMENTS_POLL_INTERVAL/.test(src) && /The open comments sheet takes its post's comments from the same answer/.test(src) && /setSelectedPost\(prev => \{\s*if \(!prev \|\| prev\._id !== openFresh\._id\) return prev;/.test(src), "no second poll for comments; the open sheet is updated from the confessions poll");
+    ok(/useEffect\(\(\) => \{\s*if \(!commentModalVisible \|\| !selectedPost\?\._id\) return;\s*fetchPostComments\(selectedPost\._id, true\);\s*\}, \[commentModalVisible/.test(src), "opening a comments sheet still loads fresh comments once");
+    // off screen: the poll stops
+    try {
+      r.nav.focused = false; r.rerender(); await tick(30);
+      ok([...r.intervals.values()].filter((x) => x.t >= 1000).length === 0, "leaving the confessions stops the poll");
+    } finally { r.restore(); }
+
+    // the old screen: whole feed every 8 s (and every 6 s more with comments open)
+    const oldIn = path.join(SRC, "screens/Social/__old_ConfessionScreen.js");
+    fs.writeFileSync(oldIn, require("child_process").execSync("git show 280205a:app/src/screens/Social/ConfessionScreen.js", { cwd: APP }).toString());
+    let o; try { o = await runConfessions(oldIn); o.restore(); } finally { fs.unlinkSync(oldIn); }
+    ok(o.polls.includes(8000), "before: the same model shows the old 8 s whole-feed poll", JSON.stringify(o.polls));
+  }
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.log("FAIL  (stopped)", e?.stack || e); process.exit(1); });

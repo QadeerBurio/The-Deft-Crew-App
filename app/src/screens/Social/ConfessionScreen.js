@@ -8,7 +8,7 @@ import {
   Keyboard, TouchableWithoutFeedback, ScrollView, AppState
 } from "react-native";
 import RemoteImage from "../../ui/RemoteImage";
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 import * as ImagePicker from 'expo-image-picker';
@@ -40,12 +40,13 @@ import { metaEvents } from "../../analytics/metaEvents";
 const { height, width } = Dimensions.get('window');
 const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
 
-const CONFESSIONS_POLL_INTERVAL = 8000;
+// One poll while the confessions are on screen. It also refreshes the open comments sheet
+// (was: the whole feed every 8 s, plus the whole feed again every 6 s for open comments).
+const CONFESSIONS_POLL_INTERVAL = 20000;
 
 // Last list per tab, kept for the whole app session, so switching tabs or
 // coming back to the screen shows posts instantly (no skeleton).
 const feedCache = { all: null, campus: null };
-const COMMENTS_POLL_INTERVAL = 6000;
 
 // ============ HELPERS ============
 const confessionsChanged = (oldList, newList) => {
@@ -195,10 +196,10 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
 
   // Polling
   const confessionsPollRef = useRef(null);
-  const commentsPollRef = useRef(null);
   const appStateRef = useRef(AppState.currentState);
   const isMountedRef = useRef(true);
-  const isScreenFocusedRef = useRef(true);
+  const isScreenFocusedRef = useRef(false); // set by the focus effect
+  const isFocused = useIsFocused();
   const lastConfessionsFetchRef = useRef(0);
   const lastCommentsFetchRef = useRef(0);
   const hasLoadedOnceRef = useRef(false);
@@ -300,6 +301,17 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
         if (silent && !confessionsChanged(prev, freshData)) return prev;
         return freshData;
       });
+
+      // The open comments sheet takes its post's comments from the same answer
+      const open = selectedPostRef.current;
+      const openFresh = open && freshData.find(c => c._id === open._id);
+      if (openFresh) {
+        setSelectedPost(prev => {
+          if (!prev || prev._id !== openFresh._id) return prev;
+          if (!commentsChanged(prev.comments || [], openFresh.comments || [])) return prev;
+          return { ...prev, comments: openFresh.comments || [] };
+        });
+      }
       
       hasLoadedOnceRef.current = true;
     } catch (err) {
@@ -387,11 +399,11 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     } else if (found) {
       focusFallbackDoneRef.current = focusPostId;
     }
-  }, [focusPostId, confessions, loading, myUniName]);
+  }, [token]); // reads refs only; stable, so the poll below is not restarted on every update
 
-  // Confessions polling
+  // Confessions polling: only while on screen
   useEffect(() => {
-    if (!token || !isScreenFocusedRef.current) {
+    if (!token || !isFocused) {
       if (confessionsPollRef.current) {
         clearInterval(confessionsPollRef.current);
         confessionsPollRef.current = null;
@@ -409,29 +421,13 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
         confessionsPollRef.current = null;
       }
     };
-  }, [token, fetchConfessions]);
+  }, [token, isFocused, fetchConfessions]);
 
-  // Comments polling
+  // Comments sheet: fresh comments once when it opens; after that the confessions poll above
+  // keeps them current (no second poll)
   useEffect(() => {
-    if (!commentModalVisible || !selectedPost?._id) {
-      if (commentsPollRef.current) {
-        clearInterval(commentsPollRef.current);
-        commentsPollRef.current = null;
-      }
-      return;
-    }
+    if (!commentModalVisible || !selectedPost?._id) return;
     fetchPostComments(selectedPost._id, true);
-    commentsPollRef.current = setInterval(() => {
-      if (appStateRef.current === 'active' && isScreenFocusedRef.current) {
-        fetchPostComments(selectedPost._id, true);
-      }
-    }, COMMENTS_POLL_INTERVAL);
-    return () => {
-      if (commentsPollRef.current) {
-        clearInterval(commentsPollRef.current);
-        commentsPollRef.current = null;
-      }
-    };
   }, [commentModalVisible, selectedPost?._id, fetchPostComments]);
 
   // App state
@@ -466,7 +462,6 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     return () => {
       isMountedRef.current = false;
       if (confessionsPollRef.current) clearInterval(confessionsPollRef.current);
-      if (commentsPollRef.current) clearInterval(commentsPollRef.current);
       if (mentionSearchTimeout.current) clearTimeout(mentionSearchTimeout.current);
     };
   }, []);
