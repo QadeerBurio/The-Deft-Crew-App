@@ -632,6 +632,31 @@ function hitTest(tree, rootBox, x, y) {
     ok(urls[1]?.includes("before=2026-10-02T00:00:00Z"), "paging still continues after the last post of the whole page (mine included)", urls[1]);
   }
 
+  // ═════ P3-11 unmountOnBlur replaced ═════
+  console.log("── P3-11 unmountOnBlur (ignored by React Navigation 7) replaced");
+  {
+    const { React, mount, renders } = makeReact();
+    const nav = { focused: true };
+    const { unmountWhenBlurred } = loader({ react: React, "@react-navigation/native": { useIsFocused: () => nav.focused } })(path.join(SRC, "navigation/unmountWhenBlurred.js"));
+    let mounts = 0, unmounts = 0;
+    function Profile() { React.useEffect(() => { mounts++; return () => { unmounts++; }; }, []); return React.createElement("Text", null, "profile"); }
+    const Wrapped = unmountWhenBlurred(Profile);
+    const root = mount(React.createElement(Wrapped));
+    ok(has(root.tree, "profile") && mounts === 1, "focused: the screen shows");
+    nav.focused = false; root.rerender();
+    ok(!has(root.tree, "profile"), "blurred: unmounted (nothing rendered)");
+    nav.focused = true; root.rerender();
+    ok(has(root.tree, "profile"), "back: rendered again, fresh");
+    // git grep exits 1 when nothing matches
+    let all = "";
+    try { all = require("child_process").execSync('git grep -n "unmountOnBlur:" -- app/src', { cwd: APP, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim(); } catch { all = ""; }
+    // code only, not comments
+    all = all.split("\n").filter((l) => l && !/^[^:]+:\d+:\s*\/\//.test(l) && !/\/\/.*unmountOnBlur:/.test(l)).join("\n");
+    ok(all === "", "no unmountOnBlur option left (React Navigation 7 ignores it)", all);
+    const social = read("app/src/screens/Social/Social.js");
+    ok(/const ProfileScreen = unmountWhenBlurred\(accountOnly\(ProfileScreenBase/.test(social), "Social's \"my profile\" tab starts fresh on every visit, as intended");
+  }
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.log("FAIL  (stopped)", e?.stack || e); process.exit(1); });

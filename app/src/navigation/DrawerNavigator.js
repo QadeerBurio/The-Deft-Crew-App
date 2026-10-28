@@ -1367,7 +1367,6 @@ export default function DrawerNavigator() {
               deepestRouteName && FULLSCREEN_SCREENS.includes(deepestRouteName);
 
             return {
-              unmountOnBlur: false,
               headerShown: false,
               swipeEnabled: !shouldDisableDrawer,
             };
@@ -1389,13 +1388,13 @@ export default function DrawerNavigator() {
         <Drawer.Screen
           name="Dashboard"
           component={DashboardStackNavigator}
-          options={{ headerShown: false, unmountOnBlur: false }}
+          options={{ headerShown: false }}
         />
 
         <Drawer.Screen
           name="SocialStack"
           component={SocialStackNavigator}
-          options={{ headerShown: false, swipeEnabled: false, unmountOnBlur: false }}
+          options={{ headerShown: false, swipeEnabled: false }}
         />
 
         <Drawer.Screen

@@ -330,7 +330,7 @@ export default function TabNavigator({ onTabChange, onRouteChange }) {
         <Tab.Screen
           name="Home"
           component={HomeStack}
-          options={{ unmountOnBlur: false, lazy: false }}
+          options={{ lazy: false }}
         />
         <Tab.Screen name="Explore" component={Explore} />
         <Tab.Screen name="Social" component={Social} />

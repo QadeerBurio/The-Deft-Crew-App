@@ -9,6 +9,7 @@ import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 import { AuthContext } from "../../context/AuthContext";
 import { useGuestGate, accountOnly } from "../../guest";
 import { useMessageUnread } from "../../hooks/useMessageUnread";
+import { unmountWhenBlurred } from "../../navigation/unmountWhenBlurred";
 
 import FeedScreen from "./FeedScreen";
 import SearchScreen from "./SearchScreen";
@@ -16,7 +17,8 @@ import MessagesScreenBase from "./MessageScreen";
 import ProfileScreenBase from "./ProfileScreen";
 // login-only tabs: locked state for a guest
 const MessagesScreen = accountOnly(MessagesScreenBase, { title: "messages", showBack: false });
-const ProfileScreen = accountOnly(ProfileScreenBase, { title: "my profile", showBack: false });
+// starts fresh on every visit (the old unmountOnBlur option did this; React Navigation 7 dropped it)
+const ProfileScreen = unmountWhenBlurred(accountOnly(ProfileScreenBase, { title: "my profile", showBack: false }));
 
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get('window');
@@ -407,7 +409,6 @@ export default function Social() {
             name="Profile"
             component={ProfileScreen}
             options={{
-              unmountOnBlur: true,
               tabBarIcon: ({ focused }) => (
                 <ProfileIcon focused={focused} />
               ),
