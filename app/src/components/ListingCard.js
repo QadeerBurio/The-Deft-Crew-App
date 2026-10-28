@@ -1,6 +1,7 @@
 // screens/skillshare/components/ListingCard.js
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import RemoteImage from "../ui/RemoteImage";
 import { Ionicons } from '@expo/vector-icons';
 
 import { color as T, font as F } from "../theme/tokens";
@@ -16,7 +17,7 @@ function OwnerRow({ owner, size = 28 }) {
   return (
     <View style={styles.ownerRow}>
       {image ? (
-        <Image source={{ uri: image }} style={[styles.ownerAvatar, { width: size, height: size, borderRadius: size / 2 }]} />
+        <RemoteImage source={{ uri: image }} style={[styles.ownerAvatar, { width: size, height: size, borderRadius: size / 2 }]} size="avatar" />
       ) : (
         <View style={[styles.ownerAvatar, styles.ownerAvatarFallback, { width: size, height: size, borderRadius: size / 2 }]}>
           <Text style={styles.ownerAvatarInitial}>{name.charAt(0).toUpperCase()}</Text>
@@ -44,7 +45,7 @@ export function PaidListingCard({ item, onPress, showOwner = true, ctaLabel = 'V
     <TouchableOpacity style={styles.paidCard} activeOpacity={0.9} onPress={onPress}>
       <View style={styles.paidImageWrap}>
         {image ? (
-          <Image source={{ uri: image }} style={styles.paidImage} />
+          <RemoteImage source={{ uri: image }} style={styles.paidImage} size="card" />
         ) : (
           <View style={[styles.paidImage, styles.paidImageFallback]}>
             <Ionicons name="image-outline" size={30} color={T.textFaint} />

@@ -15,6 +15,7 @@ import {
   Animated,
   Image,
 } from 'react-native';
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { createListing, uploadListingAttachment } from '../../api/api';
@@ -818,7 +819,7 @@ export default function CreateListingScreen({ route, navigation }) {
           <Animated.View style={{ opacity: fadeAnim }}>
   <View style={styles.postingAsRow}>
     {myPhoto ? (
-      <Image source={{ uri: myPhoto }} style={styles.postingAsAvatar} />
+      <RemoteImage source={{ uri: myPhoto }} style={styles.postingAsAvatar} size="avatar" />
     ) : (
       <View style={[styles.postingAsAvatar, styles.postingAsAvatarFallback]}>
         <Ionicons name="person" size={16} color={T.textFaint} />

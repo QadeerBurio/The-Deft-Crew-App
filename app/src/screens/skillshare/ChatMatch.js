@@ -9,11 +9,11 @@ import {
   ActivityIndicator,
   StatusBar,
   Platform,
-  Image,
   TextInput,
   Keyboard,
   Dimensions
 } from 'react-native';
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 // works on Android edge-to-edge too (the app is wrapped in KeyboardProvider)
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
@@ -250,7 +250,7 @@ export default function ChatMatch({ route, navigation }) {
           >
             <View style={styles.headerAvatar}>
               {displayImage ? (
-                <Image source={{ uri: displayImage }} style={styles.headerAvatarImage} />
+                <RemoteImage source={{ uri: displayImage }} style={styles.headerAvatarImage} size="avatar" />
               ) : (
                 <LinearGradient
                   colors={[T.yellow, T.yellow]}

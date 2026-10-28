@@ -10,10 +10,10 @@ import {
   Platform,
   ActivityIndicator,
   StatusBar,
-  Image,
   Keyboard,
   Alert,
 } from 'react-native';
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 // works on Android edge-to-edge too (the app is wrapped in KeyboardProvider)
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
@@ -428,7 +428,7 @@ export default function InquiryChatScreen({ route, navigation }) {
         <View style={styles.headerInfo}>
           <View>
             {otherUser?.profileImage ? (
-              <Image source={{ uri: otherUser.profileImage }} style={styles.avatar} />
+              <RemoteImage source={{ uri: otherUser.profileImage }} style={styles.avatar} size="avatar" />
             ) : (
               <View style={[styles.avatar, styles.avatarFallback]}>
                 <Text style={styles.avatarText}>

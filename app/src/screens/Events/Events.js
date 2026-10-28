@@ -32,6 +32,7 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
 } from "react-native";
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -436,12 +437,13 @@ const EventCard = ({ item, onOpen, onRegister, isRegistered, onCancel, featured,
       {/* poster: whole image (posters carry text), never cropped */}
       <View style={EV.media}>
         {showImg ? (
-          <Image
+          <RemoteImage
             source={{ uri: img }}
             style={EV.mediaImg}
             resizeMode="contain"
             onError={() => setImgFailed(true)}
             accessibilityIgnoresInvertColors
+            size="card"
           />
         ) : (
           <MaterialCommunityIcons name="calendar-star" size={featured ? 36 : 28} color={T.textFaint} />
@@ -1477,10 +1479,11 @@ export default function EventsScreen() {
                   <View style={styles.sheetImageWrapper}>
                     {/* the event's own image only; no stock banner when it has none */}
                     {eventImage(selectedEvent) ? (
-                      <Image
+                      <RemoteImage
                         source={{ uri: eventImage(selectedEvent) }}
                         style={styles.sheetBanner}
                         resizeMode="cover"
+                        size="banner"
                       />
                     ) : (
                       <View style={[styles.sheetBanner, { backgroundColor: T.sand, alignItems: "center", justifyContent: "center" }]}>

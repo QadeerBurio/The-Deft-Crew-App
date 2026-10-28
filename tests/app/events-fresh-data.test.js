@@ -103,6 +103,7 @@ const MOCKS = {
   "../../utils/imageUrl": { imageUrl: (x) => x },
   "./useSavedEvents": () => ({ savedIds: [], isSaved: () => false, toggle() {}, prune() {} }),
   "socket.io-client": () => ({ emit() {}, on() {}, disconnect() {} }),
+  "expo-image": { Image: Object.assign("ExpoImage", { prefetch: async () => true }) }, // ui/RemoteImage (native)
   "../../engagement/engagementBus": { engagementBus: { emit() {} }, ENGAGEMENT_EVENTS: {} },
   "../../utils/clipboard": { copyToClipboard: async () => true },
   "../../utils/cloudinaryUpload": { pickImageFromLibrary: async () => "file:///r.jpg", uploadImageToCloudinary: async () => "https://res.cloudinary.com/decaxpera/image/upload/r.jpg" },

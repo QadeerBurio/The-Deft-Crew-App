@@ -11,10 +11,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Image,
   Alert,
   StatusBar,
 } from 'react-native';
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
@@ -370,7 +370,7 @@ export default function SkillProfile({ navigation }) {
             <View style={styles.profileHeader}>
               <View style={styles.avatarWrapper}>
                 {userImage ? (
-                  <Image source={{ uri: userImage }} style={styles.avatar} />
+                  <RemoteImage source={{ uri: userImage }} style={styles.avatar} size="card" />
                 ) : (
                   <LinearGradient
                     colors={[T.yellow, T.yellow]}

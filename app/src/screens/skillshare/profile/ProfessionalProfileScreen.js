@@ -1,9 +1,10 @@
 // screens/skillshare/profile/ProfessionalProfileScreen.js
 import React, { useContext, useState, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, Image, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, StatusBar, RefreshControl, Alert,
 } from 'react-native';
+import RemoteImage from "../../../ui/RemoteImage";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -216,7 +217,7 @@ export default function ProfessionalProfileScreen({ navigation }) {
 
         <View style={styles.avatarWrap}>
           {profile?.photoUrl ? (
-            <Image source={{ uri: profile.photoUrl }} style={styles.avatar} />
+            <RemoteImage source={{ uri: profile.photoUrl }} style={styles.avatar} size="card" />
           ) : (
             <LinearGradient colors={[BRAND, BRAND_DARK]} style={styles.avatar}>
               <Text style={styles.avatarText}>{initial}</Text>
