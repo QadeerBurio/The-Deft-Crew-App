@@ -572,6 +572,26 @@ function hitTest(tree, rootBox, x, y) {
     ok(before.get("search") !== nasty, "without encoding the same text arrives broken (what students got before)", before.get("search"));
   }
 
+  // ═════ P3-9 story delete failure is handled ═════
+  console.log("── P3-9 failed story delete: message, viewer stays, no unhandled rejection");
+  {
+    // run the real onPress of the "Delete" button, cut out of StoriesSection, with a failing request
+    const src = read("app/src/screens/Social/StoriesSection.js").replace(/\r\n/g, "\n");
+    const m = src.match(/\{ text: "Delete", style: "destructive", onPress: (async \(\) => \{[\s\S]*?\n {6}\})\}/);
+    ok(!!m, "found the Delete button handler");
+    if (m) {
+      const calls = { alert: [], closed: 0, refetched: 0 };
+      const make = (axiosDelete) => new Function("axios", "API_URL", "storyId", "config", "Alert", "closeViewer", "fetchStories", `return ${m[1]};`)(
+        { delete: axiosDelete }, "https://x/api/social", "s1", {}, { alert: (...a) => calls.alert.push(a) }, () => calls.closed++, () => calls.refetched++);
+      let unhandled = null; const onUnhandled = (e) => { unhandled = e; }; process.on("unhandledRejection", onUnhandled);
+      await make(async () => { throw new Error("Network Error"); })(); await tick();
+      process.off("unhandledRejection", onUnhandled);
+      ok(!unhandled && calls.alert.length === 1 && calls.closed === 0 && calls.refetched === 0, "offline: one clear message, the viewer stays open, nothing thrown", JSON.stringify(calls));
+      await make(async () => ({ data: {} }))();
+      ok(calls.closed === 1 && calls.refetched === 1 && calls.alert.length === 1, "success: viewer closes and stories reload, as before");
+    }
+  }
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.log("FAIL  (stopped)", e?.stack || e); process.exit(1); });

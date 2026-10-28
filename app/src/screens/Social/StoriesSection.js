@@ -407,8 +407,14 @@ export default function StoriesSection() {
     Alert.alert("Delete Story", "Are you sure?", [
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: async () => {
-          await axios.delete(`${API_URL}/stories/${storyId}`, config);
-          closeViewer(); 
+          // was unhandled: offline or a server error left the viewer open with no message
+          try {
+            await axios.delete(`${API_URL}/stories/${storyId}`, config);
+          } catch (err) {
+            Alert.alert("Error", "Could not delete the story. Check your connection and try again.");
+            return;
+          }
+          closeViewer();
           fetchStories();
       }}
     ]);
