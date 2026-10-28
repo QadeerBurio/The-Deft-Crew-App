@@ -13,6 +13,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ═══════════════════════════════════════════════════════════════
 // ANDROID CHANNELS: one per sound
@@ -66,6 +67,10 @@ const LEGACY_CHANNELS = [
 
 let channelsPromise = null;
 
+// Old channels never come back once removed, so the removal runs once per channel set
+// (CHANNEL_SET), not on every start (32 native calls).
+const LEGACY_CLEANED_KEY = 'tdc.legacyChannelsCleaned';
+
 export function setupAndroidChannels() {
   if (Platform.OS !== 'android') return Promise.resolve();
   if (channelsPromise) return channelsPromise;
@@ -89,8 +94,13 @@ export function setupAndroidChannels() {
       }
     }
 
-    for (const id of LEGACY_CHANNELS) {
-      try { await Notifications.deleteNotificationChannelAsync(id); } catch {}
+    let cleaned = null;
+    try { cleaned = await AsyncStorage.getItem(LEGACY_CLEANED_KEY); } catch {}
+    if (cleaned !== CHANNEL_SET) {
+      for (const id of LEGACY_CHANNELS) {
+        try { await Notifications.deleteNotificationChannelAsync(id); } catch {}
+      }
+      try { await AsyncStorage.setItem(LEGACY_CLEANED_KEY, CHANNEL_SET); } catch {}
     }
 
     console.log('[push] android sound channels ready');

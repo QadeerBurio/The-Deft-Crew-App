@@ -26,7 +26,7 @@ import ChatProvider from "./app/src/context/ChatContext";
 import AppNavigator from "./app/src/navigation/AuthNavigator";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { KeyboardProvider } from "react-native-keyboard-controller";
-import { StatusBar, View, Platform } from "react-native";
+import { StatusBar, View, Platform, InteractionManager } from "react-native";
 import ResumeProvider from "./app/src/context/ResumeContext";
 import api from "./app/src/api/api";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -111,6 +111,51 @@ if (!TaskManager.isTaskDefined(NOTIFICATION_TASK)) {
 }
 
 SplashScreen.preventAutoHideAsync();
+
+// ─── Sounds load after the splash ───
+// tap + success right away (the first taps); the rest once the first screen has settled.
+// A sound played before it is loaded still loads on demand (soundManager).
+const HOT_SOUNDS = ["tdc_tap", "tdc_success"];
+const LATER_SOUNDS = [
+  "tdc_error",
+  "tdc_nope",
+  "tdc_like",
+  "tdc_send",
+  "tdc_popup_open",
+  "tdc_popup_close",
+  "tdc_notification_in_app",
+  "tdc_push_default",
+  "tdc_push_message",
+  "tdc_push_deal",
+  "tdc_push_confession",
+  "tdc_push_streak",
+  "tdc_push_level_up",
+];
+
+// fn once, after interactions settle or after `maxMs` (looping animations can keep
+// InteractionManager busy)
+function afterFirstScreen(fn, maxMs = 1500) {
+  let done = false;
+  const run = () => { if (!done) { done = true; fn(); } };
+  InteractionManager.runAfterInteractions(run);
+  setTimeout(run, maxMs);
+}
+
+function warmUpSounds(hiddenAt) {
+  (async () => {
+    await configureAudio();
+    await preloadSounds(HOT_SOUNDS);
+    // sonic logo ~300 ms after the splash, as before
+    setTimeout(() => {
+      try {
+        soundAppOpen();
+      } catch (e) {
+        console.log("[App] soundAppOpen error:", e?.message);
+      }
+    }, Math.max(0, 300 - (Date.now() - hiddenAt)));
+    afterFirstScreen(() => { preloadSounds(LATER_SOUNDS).catch(() => {}); });
+  })().catch((e) => console.warn("[App] sound warm-up error:", e?.message));
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -328,8 +373,10 @@ export default function App() {
 
   useEffect(() => {
     async function prepare() {
+      // Only the fonts hold the splash. Sounds load after it (warmUpSounds) and the
+      // Android channels, started at module load, finish in the background.
       try {
-        // 0. Fonts for the new Home + tab bar (falls back to system font)
+        // Fonts for the new Home + tab bar (falls back to system font)
         try {
           await Font.loadAsync({
             Outfit_700Bold,
@@ -343,47 +390,14 @@ export default function App() {
           console.warn("[App] font load error:", e);
         }
 
-        // 1. Init audio mode + preload hot sounds BEFORE splash hides
-        await configureAudio();
-        await preloadSounds([
-          "tdc_tap",
-          "tdc_success",
-          "tdc_error",
-          "tdc_nope",
-          "tdc_like",
-          "tdc_send",
-          "tdc_popup_open",
-          "tdc_popup_close",
-          "tdc_notification_in_app",
-          "tdc_push_default",
-          "tdc_push_message",
-          "tdc_push_deal",
-          "tdc_push_confession",
-          "tdc_push_streak",
-          "tdc_push_level_up",
-        ]);
-
-        // 2. Small delay so splash feels intentional
-        await new Promise((resolve) => setTimeout(resolve, 1200));
-
-        // 3. Make sure Android channels finished creating
-        await setupAndroidChannels();
-
         await SplashScreen.hideAsync();
         perfMark("splash-hidden");
         setAppIsReady(true);
-
-        // 4. Play the sonic logo on cold start
-        setTimeout(() => {
-          try {
-            soundAppOpen();
-          } catch (e) {
-            console.log("[App] soundAppOpen error:", e?.message);
-          }
-        }, 300);
+        warmUpSounds(Date.now());
       } catch (e) {
         console.warn("[App] prepare error:", e);
         setAppIsReady(true);
+        warmUpSounds(Date.now());
       }
     }
     prepare();
