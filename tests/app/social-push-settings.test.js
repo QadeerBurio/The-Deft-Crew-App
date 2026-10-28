@@ -89,6 +89,47 @@ function loader(mocks) {
     ok(/sub: 'new confessions at your university'/.test(src), "the confessions row says it is your university only");
   }
 
+  // ═════ 2. emoji / sound and where a tap opens ═════
+  console.log("── 2. push types: emoji, sound, tap target");
+  {
+    const feat = loader({})(path.join(SRC, "utils/notificationFeatures.js"));
+    const expect = { social_post: ["excited", "tdc_push_message"], social_confession: ["shock", "tdc_push_confession"], skillshare_listing: ["excited", "tdc_push_deal"] };
+    ok(Object.entries(expect).every(([t, [m, s]]) => feat.featureMood(t) === m && feat.featureSound(t) === s), "app table: same emoji mood and sound as the server for the three types (in-app banner matches the phone)");
+
+    // the exact payloads the server's services/socialPush.js sends
+    const P = {
+      post: { type: "social_post", route: "PostDetailScreen", params: { postId: "p1" }, postId: "p1" },
+      posts: { type: "social_post", route: "FeedScreen", params: { tab: "Feed" } },
+      confession: { type: "social_confession", route: "FeedScreen", params: { tab: "Confession", postId: "c1" } },
+      confessions: { type: "social_confession", route: "FeedScreen", params: { tab: "Confession" } },
+      listing: { type: "skillshare_listing", route: "Dashboard", params: { screen: "ListingDetail", params: { id: "l1", listingId: "l1" } }, listingId: "l1" },
+      listings: { type: "skillshare_listing", route: "Dashboard", params: {} },
+    };
+    const push = loader({
+      "expo-notifications": { AndroidImportance: { MAX: 5 }, AndroidNotificationVisibility: { PUBLIC: 1 } },
+      "expo-device": { isDevice: true }, "expo-constants": { __esModule: true, default: { expoConfig: { extra: {} } } },
+      "react-native": { Platform: { OS: "android" } },
+      "@react-native-async-storage/async-storage": { __esModule: true, default: { getItem: async () => null, setItem: async () => {} } },
+    })(path.join(SRC, "utils/pushNotifications.js"));
+    const r = Object.fromEntries(Object.entries(P).map(([k, d]) => [k, push.getRouteFromNotificationData(d)]));
+    ok(r.post.route === "PostDetailScreen" && r.post.params.postId === "p1", "a post opens that post (PostDetailScreen { postId })");
+    ok(r.posts.route === "FeedScreen" && r.posts.params.tab === "Feed", "several posts open the feed");
+    ok(r.confession.route === "FeedScreen" && r.confession.params.tab === "Confession" && r.confession.params.postId === "c1", "a confession opens the confessions tab at that confession");
+    ok(r.confessions.route === "FeedScreen" && r.confessions.params.tab === "Confession" && !r.confessions.params.postId, "several confessions open the confessions tab");
+    ok(r.listing.route === "Dashboard" && r.listing.params.screen === "ListingDetail" && r.listing.params.params.id === "l1", "a listing opens ListingDetail inside the skillshare stack (Dashboard → ListingDetail { id })");
+    ok(r.listings.route === "Dashboard", "several listings open skillshare");
+
+    // the targets exist where navigation looks for them, and read those params
+    const drawer = read("app/src/navigation/DrawerNavigator.js");
+    const dash = drawer.slice(drawer.indexOf("function DashboardStackNavigator"), drawer.indexOf("function", drawer.indexOf("function DashboardStackNavigator") + 10));
+    ok(/<Stack\.Screen name="PostDetailScreen"/.test(drawer) && /<Stack\.Screen name="FeedScreen"/.test(drawer), "PostDetailScreen and FeedScreen are registered (Home stack, as the Daily Drop uses)");
+    ok(/name="Dashboard"\s*\n\s*component=\{DashboardStackNavigator\}/.test(drawer) && /name="ListingDetail"/.test(dash), "Dashboard is a drawer screen whose stack has ListingDetail");
+    ok(/const \{ postId \} = route\.params \|\| \{\};/.test(read("app/src/screens/Social/PostDetailScreen.js")), "PostDetailScreen reads postId");
+    const feed = read("app/src/screens/Social/FeedScreen.js");
+    ok(/useOpenFromParams\('tab'/.test(feed) && /useOpenFromParams\('postId'/.test(feed), "FeedScreen opens the tab and the confession from the params");
+    ok(/const \{ id \} = route\.params \|\| \{\};/.test(read("app/src/screens/skillshare/ListingDetailScreen.js")), "ListingDetail reads id");
+  }
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.log("FAIL  (stopped)", e?.stack || e); process.exit(1); });
