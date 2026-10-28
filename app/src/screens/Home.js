@@ -42,6 +42,7 @@ import {
 } from "./home/homeData";
 import { color } from "../theme/tokens";
 import { useTour } from "../engagement/tour/TourProvider";
+import { perfMark } from "../lib/perf";
 
 // ids + screens unchanged; labels and colours per HOME_SPEC §2.5
 const FEATURES = [
@@ -117,6 +118,9 @@ export default function Home({ navigation }) {
   useEffect(() => {
     Animated.timing(headerFade, { toValue: 1, duration: 400, useNativeDriver: true }).start();
   }, [headerFade]);
+
+  // [perf] cold start marks (lib/perf.js logs each once per app start)
+  useEffect(() => { perfMark("home-first-render"); }, []);
 
   // ── Engagement home query (user-scoped, abort-safe)
   const { refetch: refetchEngagement } = useQuery({
@@ -283,6 +287,9 @@ export default function Home({ navigation }) {
     const loaded = signedIn ? !dealsLoading : !!isGuest;
     setHomeLoaded(homeFocused && loaded && !isChatVisible && !streakSheetVisible);
   }, [setHomeLoaded, homeFocused, signedIn, isGuest, dealsLoading, isChatVisible, streakSheetVisible]);
+  // [perf] first time the deals section has cards to show
+  const dealsCount = (signedIn ? deals : publicDeals)?.length || 0;
+  useEffect(() => { if (dealsCount > 0) perfMark("deals-shown"); }, [dealsCount]);
   useEffect(() => () => setHomeLoaded(false), [setHomeLoaded]);
 
   const sortedFeatureIds = useMemo(() => {

@@ -34,6 +34,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 // ─── Sound kit ───
 import { configureAudio, preloadSounds } from "./app/src/lib/soundManager";
 import { soundAppOpen } from "./app/src/lib/tdcSounds";
+import { perfMark } from "./app/src/lib/perf";
 
 // ─── Push utilities ───
 import {
@@ -369,6 +370,7 @@ export default function App() {
         await setupAndroidChannels();
 
         await SplashScreen.hideAsync();
+        perfMark("splash-hidden");
         setAppIsReady(true);
 
         // 4. Play the sonic logo on cold start
