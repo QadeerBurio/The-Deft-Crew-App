@@ -6,13 +6,13 @@ import {
   Modal,
   Pressable,
   TouchableOpacity,
-  Image,
   ScrollView,
   StyleSheet,
   Dimensions,
   Animated,
   Easing,
 } from "react-native";
+import RemoteImage from "../ui/RemoteImage";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { color as T, font as F } from "../theme/tokens";
@@ -111,10 +111,11 @@ const BrandDetailModal = ({
             >
               <View style={styles.brandDetailHeader}>
                 <View style={styles.modalLogoCircle}>
-                  <Image
+                  <RemoteImage
                     source={{ uri: currentOffer?.image || selectedBrand.displayImage }}
                     style={styles.modalImage}
                     resizeMode="contain"
+                    size="banner"
                   />
                 </View>
                 <Text style={styles.modalTitle}>{selectedBrand.name}</Text>

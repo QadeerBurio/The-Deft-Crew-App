@@ -1,7 +1,8 @@
 // app/src/screens/home/HomeDeals.js
 // Horizontal rail of deal cards. Used by HomeNearMe.js ("near me." / "top discounts.").
 import React, { useState } from "react";
-import { View, Text, Image, FlatList, StyleSheet, Platform } from "react-native";
+import { View, Text, FlatList, StyleSheet, Platform } from "react-native";
+import RemoteImage from "../../ui/RemoteImage";
 import SectionTitle from "../../ui/SectionTitle";
 import PressScale from "../../ui/PressScale";
 import { color, font, radius, MAX_FONT_SCALE } from "../../theme/tokens";
@@ -31,15 +32,16 @@ const DealCard = React.memo(function DealCard({ brand, onPress, getMeta }) {
       <View style={styles.imageWrap}>
         {/* Offer image or logo: always shown whole, never cropped */}
         {!imageFailed && brand?.displayImage ? (
-          <Image
+          <RemoteImage
             source={{ uri: brand.displayImage }}
             style={styles.image}
             resizeMode="contain"
             onError={() => setImageFailed(true)}
+            size="card"
           />
         ) : (
           <View style={styles.fallback}>
-            {!!brand?.logo && <Image source={{ uri: brand.logo }} style={styles.logo} resizeMode="contain" />}
+            {!!brand?.logo && <RemoteImage source={{ uri: brand.logo }} style={styles.logo} resizeMode="contain" size="logo" />}
           </View>
         )}
         {discount > 0 && (

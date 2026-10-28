@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
-  Image,
   StyleSheet,
   Dimensions,
   Animated,
@@ -14,6 +13,7 @@ import {
   RefreshControl,
   InteractionManager,
 } from "react-native";
+import RemoteImage from "../ui/RemoteImage";
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { color, font, color as T, font as F } from '../theme/tokens';
@@ -366,12 +366,11 @@ export default function Slider({ route } = {}) {
               (overflow: hidden would clip the shadow on iOS) */}
           <Animated.View style={[styles.card, { transform: [{ scale }, { translateY }] }]}>
             <View style={styles.cardInner}>
-              <Image
+              <RemoteImage
                 source={{ uri: item.image }}
                 style={styles.image}
                 resizeMode="cover"
-                loading="eager" // Load immediately
-                fadeDuration={0} // Remove fade animation
+                size="banner"
               />
             </View>
           </Animated.View>
@@ -499,12 +498,11 @@ export default function Slider({ route } = {}) {
                       bounces={false}
                     >
                       <View style={styles.imageContainer}>
-                        <Image
+                        <RemoteImage
                           source={{ uri: selectedOffer.image }}
                           style={styles.modalImage}
                           resizeMode="cover"
-                          loading="eager"
-                          fadeDuration={0}
+                          size="banner"
                         />
                         {/* Server types: 'slider' (default) | 'offer' → badge only for non-slider */}
                         {!!selectedOffer.type && String(selectedOffer.type).toLowerCase() !== "slider" && (

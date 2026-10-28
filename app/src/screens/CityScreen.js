@@ -18,13 +18,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Image,
   ImageBackground,
   Dimensions,
   StatusBar,
   Platform,
   AppState,
 } from "react-native";
+import RemoteImage from "../ui/RemoteImage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   useFocusEffect,
@@ -151,7 +151,7 @@ const BrandRow = memo(({ brand, onPress }) => {
       activeOpacity={0.85}
     >
       <View style={styles.brandImageWrap}>
-        <Image
+        <RemoteImage
           source={{
             uri:
               brand.displayImage ||
@@ -159,6 +159,7 @@ const BrandRow = memo(({ brand, onPress }) => {
           }}
           style={styles.brandImage}
           resizeMode="cover"
+          size="card"
         />
         {brand.discount > 0 && (
           <View style={styles.brandDiscountBadge}>

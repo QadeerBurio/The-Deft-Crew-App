@@ -12,7 +12,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ScrollView,
   Dimensions,
   StatusBar,
@@ -27,6 +26,7 @@ import {
   Easing,
   AccessibilityInfo,
 } from "react-native";
+import RemoteImage from "../ui/RemoteImage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   useNavigation,
@@ -1390,13 +1390,14 @@ export default function OfferScreen() {
       >
         {/* Hero */}
         <View style={styles.hero}>
-          <Image
+          <RemoteImage
             source={{
               uri: activeImage || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
             }}
             style={styles.heroImage}
             resizeMode="contain"
             accessibilityIgnoresInvertColors
+            size="banner"
           />
           <ScreenHeader
             title=""
@@ -1430,7 +1431,7 @@ export default function OfferScreen() {
           <View style={styles.brandDetailHeader}>
             <View style={styles.logoCircle}>
               {brand.logo ? (
-                <Image source={{ uri: brand.logo }} style={styles.brandImage} resizeMode="contain" />
+                <RemoteImage source={{ uri: brand.logo }} style={styles.brandImage} resizeMode="contain" size="logo" />
               ) : (
                 <Text style={styles.logoInitial}>{brandName.charAt(0).toUpperCase()}</Text>
               )}
