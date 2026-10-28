@@ -38,6 +38,7 @@ node tests/app/meta-events.test.js   # one suite
 | `app/meta-consent.test.js` | consent sheet and the Settings → privacy switch |
 | `app/notifications.test.js` | push token save / change / logout removal, one foreground handler |
 | `app/push-token-project.test.js` | the token save sends the build's EAS projectId |
+| `app/perf-app.test.js` | App speed: [perf] marks, splash waits for fonts only, legacy channels once, Home's unused requests, phone cache, RemoteImage + Cloudinary sizes, parallel brands + summary, unread count |
 | `app/ticket-screen.test.js` | ticket screen, download / share, offline copy, download button states |
 | `app/events-fresh-data.test.js` | events screen always shows the latest event, form and fee |
 | `admin/tickets-admin-ui.test.js` | admin registrations: ticket codes, cancel / restore, re-send, copy link, email status |
