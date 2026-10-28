@@ -14,8 +14,6 @@ import { useGuestGate } from "../guest/GuestGate";
 import useMySavings from "../hooks/useMySavings";
 import ChatBotInterface from "./ChatBotInterface";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
-import api from "../api/api";
 import Slider from "../screens/Slider";
 import { navigationRef } from "../navigation/navigationRef";
 
@@ -43,6 +41,10 @@ import {
 import { color } from "../theme/tokens";
 import { useTour } from "../engagement/tour/TourProvider";
 import { perfMark } from "../lib/perf";
+
+// The latest-confession section (HomeCampus) is commented out below; while it is, its
+// request (the whole confessions feed) does not run. Set true together with the section.
+const SHOW_LATEST_CONFESSION = false;
 
 // ids + screens unchanged; labels and colours per HOME_SPEC §2.5
 const FEATURES = [
@@ -122,29 +124,8 @@ export default function Home({ navigation }) {
   // [perf] cold start marks (lib/perf.js logs each once per app start)
   useEffect(() => { perfMark("home-first-render"); }, []);
 
-  // ── Engagement home query (user-scoped, abort-safe)
-  const { refetch: refetchEngagement } = useQuery({
-    queryKey: ["engagement", "home", userId],
-    queryFn: async ({ signal }) => {
-      try {
-        const res = await api.get("/engagement/home", { signal });
-        return res.data;
-      } catch (e) {
-        const isAbort =
-          axios.isCancel?.(e) ||
-          e?.code === "ERR_CANCELED" ||
-          e?.name === "CanceledError" ||
-          e?.name === "AbortError";
-        if (isAbort) return null;
-        // Real error → return null, don't crash the UI
-        return null;
-      }
-    },
-    staleTime: 1000 * 60 * 5,
-    enabled: !isGuest && !!userId,
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
+  // /engagement/home is fetched by DailyDropCard (useDailyDrop); Home's own copy of the same
+  // request was never read, so it is gone. Pull to refresh still refreshes it (["engagement"]).
 
   // ── Latest confession + deals (signed-in only; failures hide the section)
   const signedIn = !isGuest && !!token;
@@ -159,7 +140,7 @@ export default function Home({ navigation }) {
         return null;
       }
     },
-    enabled: signedIn,
+    enabled: signedIn && SHOW_LATEST_CONFESSION,
     staleTime: 1000 * 60 * 5,
     retry: false,
     refetchOnWindowFocus: false,
@@ -211,9 +192,8 @@ export default function Home({ navigation }) {
     setPullRefreshing(true);
     try {
       await Promise.all([
-        refetchEngagement(),
         queryClient.invalidateQueries({ queryKey: ["engagement"] }),
-        signedIn ? refetchConfession() : null,
+        signedIn && SHOW_LATEST_CONFESSION ? refetchConfession() : null,
         signedIn
           ? fetchDeals(token, userId, true)
               .then((fresh) => queryClient.setQueryData(DEALS_KEY(userId), fresh))
@@ -230,7 +210,7 @@ export default function Home({ navigation }) {
     } finally {
       setPullRefreshing(false);
     }
-  }, [refetchEngagement, queryClient, signedIn, refetchConfession, token, userId, isGuest, guestDealsWanted]);
+  }, [queryClient, signedIn, refetchConfession, token, userId, isGuest, guestDealsWanted]);
 
   // Auto refresh whenever Home is opened again (max once every 15s), so a
   // new drop / finished mission shows without pulling down
