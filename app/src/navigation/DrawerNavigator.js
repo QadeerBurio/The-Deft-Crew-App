@@ -1476,7 +1476,7 @@ const styles = StyleSheet.create({
   },
   drawerLogo: {
     fontFamily: 'Latobold',
-    fontWeight:700,
+    fontWeight:900,
     fontSize: 30,
     color: T.white,
   },
@@ -1658,10 +1658,15 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   headerAppTitle: {
-    fontFamily: 'Latobold',
-    fontWeight:700,
+    fontFamily: 'LatoBlack',
+    fontWeight:900,
     fontSize: 28,
     color: T.ink,
+    alignItems:'center',
+    justifyContent:'center',
+    paddingLeft:92,
+   textShadowOffset: { width: 0.4, height: 0.4 },
+  textShadowRadius: 0.4,
   },
   headerRight: {
     flexDirection: "row",

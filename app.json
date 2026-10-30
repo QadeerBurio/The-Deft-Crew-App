@@ -1,8 +1,8 @@
 {
   "expo": {
     "name": "tdc",
-    "slug": "tdc",
-    "version": "1.1.14",
+    "slug": "Testting",
+    "version": "1.1.16",
     "orientation": "default",
     "icon": "./assets/tdc.png",
     "scheme": "tdcapp",
@@ -151,9 +151,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "d14cdf3a-2494-4d4f-bee0-90f862bf3389"
+        "projectId": "112506b0-7553-4a1b-afeb-6a37019cc15f"
       }
     },
-    "owner": "aqkhan621"
+    "owner": "aqkhan622"
   }
 }
