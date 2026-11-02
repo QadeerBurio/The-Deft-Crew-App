@@ -97,6 +97,28 @@ const ROWS = [
     mood: 'sus',
     color: T.yellow,
   },
+  // one push per new post / confession / listing (grouped, max 10 a day, quiet at night)
+  {
+    key: 'posts',
+    label: 'new posts',
+    sub: 'when someone posts on campus',
+    mood: 'excited',
+    color: T.yellow,
+  },
+  {
+    key: 'confessions',
+    label: 'confessions',
+    sub: 'new confessions at your university',
+    mood: 'cheeky',
+    color: T.yellow,
+  },
+  {
+    key: 'skillshare',
+    label: 'skillshare',
+    sub: 'new skillshare listings',
+    mood: 'sorted',
+    color: T.yellow,
+  },
 ];
 
 // ─── Single pref row ────────────────────────────────────────────────────
