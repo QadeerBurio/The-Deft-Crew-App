@@ -88,3 +88,7 @@ yarn-error.*
 *.tsbuildinfo
 
 # @end expo-cli
+
+# EAS signing credentials (keystore passwords): never in git. EAS still uploads the local file for
+# builds, because .easignore (which EAS uses instead of this file) does not exclude it.
+credentials.json
