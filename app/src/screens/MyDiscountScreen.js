@@ -78,6 +78,7 @@ import {
 import Dot from '../engagement/components/Dot';
 import useMySavings from '../hooks/useMySavings';
 import { claimedBrands } from '../utils/claimedBrands';
+import LoyaltyVisits from '../components/LoyaltyVisits';
 import { plainError, plainText } from "../utils/plainError";
 import { copyToClipboard } from '../utils/clipboard';
 import { metaEvents } from '../analytics/metaEvents';
@@ -1210,6 +1211,8 @@ export default function MyDiscountScreen() {
   // Summary: real claimed count, real savings (same query as Profile), one chip per brand
   const { data: mySavings } = useMySavings();
   const summaryBrands = useMemo(() => claimedBrands(claimedOffers), [claimedOffers]);
+  // brand names for the loyalty visits list
+  const loyaltyBrandNames = useMemo(() => Object.fromEntries(summaryBrands.map((b) => [b.id, b.name])), [summaryBrands]);
   const listRef = useRef(null);
   const scrollToBrand = useCallback(
     (brandId) => {
@@ -1985,6 +1988,8 @@ export default function MyDiscountScreen() {
               <StatCard title="codes ready" value={stats.promoCount} icon="code-outline" gradientColors={[T.success]} delay={400} />
             )}
           </View>
+          {/* Loyalty (FLAG_LOYALTY_V2): which confirmed bills counted as visits */}
+          <LoyaltyVisits brandNames={loyaltyBrandNames} refreshKey={refreshing} />
           </>
         }
         ListEmptyComponent={

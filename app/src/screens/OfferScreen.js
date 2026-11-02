@@ -47,6 +47,7 @@ import api, {
 
 import { AuthContext } from "../context/AuthContext";
 import CityFilterBar from "../components/CityFilterBar";
+import LoyaltyCard from "../components/LoyaltyCard";
 import {
   ALL_CITIES,
   useSelectedCity,
@@ -1514,6 +1515,9 @@ export default function OfferScreen() {
             ))}
           </View>
         )}
+
+        {/* Loyalty (FLAG_LOYALTY_V2): visits, tier, next tier, terms; nothing outside the pilot */}
+        <LoyaltyCard brandId={initialBrand?._id} refreshKey={claimVersion} />
 
         {/* Details */}
         <View style={styles.section}>
