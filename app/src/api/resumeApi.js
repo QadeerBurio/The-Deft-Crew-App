@@ -259,7 +259,8 @@ export const resumeApi = {
 
   logJobInteraction: async (jobId, interactionType) => {
     try {
-      const response = await api.post(`/jobs/interactions/${jobId}`, { interactionType });
+      // the server route is POST /api/jobs/:jobId/interactions
+      const response = await api.post(`/jobs/${jobId}/interactions`, { interactionType });
       return response.data;
     } catch (error) {
       console.warn('Log interaction error (non-critical):', error?.message);
