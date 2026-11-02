@@ -273,6 +273,15 @@ const PromoCodeModal = React.memo(({
     return !!(promoDetails?.code && promoDetails?.expiresAt) || promoDetails?.status === 'used' || promoDetails?.status === 'expired';
   }, [promoDetails]);
 
+  // where the code works, as the server says (promo code onlineStore): a real coupon on the brand's
+  // connected store, or the brand checks it by hand. No onlineStore (older server): the old wording.
+  const store = promoDetails?.onlineStore || null;
+  const storeHost = store?.connected && store?.storeUrl
+    ? String(store.storeUrl).replace(/^https?:\/\//, '').replace(/\/$/, '')
+    : '';
+  const atStore = !!storeHost;
+  const showToBrand = !!store && !atStore;
+
   useEffect(() => {
     if (visible && promoCode && isFromBackend) {
       Animated.loop(
@@ -309,7 +318,7 @@ const PromoCodeModal = React.memo(({
 
   const handleUseCode = () => {
     soundTap();
-    if (onUseCode) onUseCode(promoCode);
+    if (onUseCode) onUseCode(promoCode, store);
   };
 
   const handleGenerate = () => {
@@ -346,9 +355,13 @@ const PromoCodeModal = React.memo(({
                 <Text style={{ color: T.ink }}>.</Text>
               </Text>
               <Text style={styles.promoModalSubtitle}>
-                {isFromBackend
-                  ? `use this code at ${brandName} checkout to get ${discountPercentage}% off.`
-                  : `generate a unique promo code for ${offerTitle}.`}
+                {!isFromBackend
+                  ? `generate a unique promo code for ${offerTitle}.`
+                  : atStore
+                  ? `use code ${promoCode} at ${storeHost} to get ${discountPercentage}% off.`
+                  : showToBrand
+                  ? `show this code to ${brandName} to get ${discountPercentage}% off.`
+                  : `use this code at ${brandName} checkout to get ${discountPercentage}% off.`}
               </Text>
             </LinearGradient>
 
@@ -425,11 +438,19 @@ const PromoCodeModal = React.memo(({
               </View>
               <View style={styles.promoStep}>
                 <View style={styles.promoStepNumber}><Text style={styles.promoStepNumberText}>2</Text></View>
-                <Text style={styles.promoStepText}>go to the {brandName} website or app.</Text>
+                <Text style={styles.promoStepText}>
+                  {atStore
+                    ? `go to ${storeHost}.`
+                    : showToBrand
+                    ? `show this code to ${brandName} when you order.`
+                    : `go to the ${brandName} website or app.`}
+                </Text>
               </View>
               <View style={styles.promoStep}>
                 <View style={styles.promoStepNumber}><Text style={styles.promoStepNumberText}>3</Text></View>
-                <Text style={styles.promoStepText}>enter the code at checkout.</Text>
+                <Text style={styles.promoStepText}>
+                  {showToBrand ? `${brandName} checks the code and takes it off your bill.` : 'enter the code at checkout.'}
+                </Text>
               </View>
               <View style={styles.promoStep}>
                 <View style={styles.promoStepNumber}><Text style={styles.promoStepNumberText}>4</Text></View>
@@ -437,10 +458,10 @@ const PromoCodeModal = React.memo(({
               </View>
             </View>
 
-            {isFromBackend && promoDetails?.status === 'active' && (
-              <TouchableOpacity style={styles.useCodeButton} onPress={handleUseCode} activeOpacity={0.85}>
+            {isFromBackend && promoDetails?.status === 'active' && !showToBrand && (
+              <TouchableOpacity style={styles.useCodeButton} onPress={handleUseCode} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel={atStore ? `open ${storeHost}` : 'use this code'}>
                 <LinearGradient colors={[T.ink]} style={styles.useCodeGradient}>
-                  <Text style={styles.useCodeText}>use this code</Text>
+                  <Text style={styles.useCodeText} numberOfLines={1}>{atStore ? `open ${storeHost}` : 'use this code'}</Text>
                   <Ionicons name="arrow-forward" size={18} color={COLORS.primary} style={{ marginLeft: 8 }} />
                 </LinearGradient>
               </TouchableOpacity>
@@ -549,7 +570,7 @@ const DiscountCard = React.memo(({
 
   const getDiscountDescription = () => {
     if (item?.isOnline) {
-      return hasActivePromo ? 'promo code ready.' : `use a code at ${item?.brand?.name || 'brand'} checkout.`;
+      return hasActivePromo ? 'promo code ready.' : `get your student code for ${item?.brand?.name || 'this brand'}.`;
     }
     if (item?.isInStore) return 'ready to save. show this in-store.';
     return item?.description || 'tap to view details.';
@@ -1622,9 +1643,11 @@ export default function MyDiscountScreen() {
     }
   }, []);
 
-  const usePromoCode = useCallback((code) => {
-    const websiteUrl = promoOffer?.brand?.websiteUrl || promoOffer?.brand?.shopifyStoreUrl;
-    const platform = promoOffer?.brand?.platform;
+  const usePromoCode = useCallback((code, store) => {
+    // the brand's connected store, as the server says; otherwise the old guess from the brand record
+    const connected = !!(store?.connected && store?.storeUrl);
+    const websiteUrl = connected ? store.storeUrl : promoOffer?.brand?.websiteUrl || promoOffer?.brand?.shopifyStoreUrl;
+    const platform = connected ? store.platform : promoOffer?.brand?.platform;
 
     const fallbackAlert = () => {
       Alert.alert('Use Promo Code', `Use code "${code}" at checkout to get your discount!`, [
@@ -1636,8 +1659,12 @@ export default function MyDiscountScreen() {
     if (websiteUrl) {
       const formattedUrl = websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`;
       const isShopify = platform === 'shopify' || formattedUrl.includes('myshopify.com');
+      // Shopify applies /discount/<code> itself; WooCommerce has no such link, so the store opens and the
+      // student enters the code at checkout
       const urlWithCoupon = isShopify
-        ? `${formattedUrl.replace(/\/$/, '')}/discount/${code}`
+        ? `${formattedUrl.replace(/\/$/, '')}/discount/${encodeURIComponent(code)}`
+        : connected
+        ? formattedUrl
         : `${formattedUrl}?coupon=${code}`;
       Linking.openURL(urlWithCoupon).catch(() => fallbackAlert());
     } else {
@@ -1704,6 +1731,7 @@ export default function MyDiscountScreen() {
         offerTitle: item.title,
         expiresAt: item.activePromoDetails?.expiresAt,
         status: item.promoStatus,
+        onlineStore: item.activePromoDetails?.onlineStore,
         isExisting: true,
       });
       setPromoModalVisible(true);
@@ -1721,6 +1749,7 @@ export default function MyDiscountScreen() {
         brandName: newPromo.brandName,
         offerTitle: newPromo.offerTitle,
         expiresAt: newPromo.expiresAt,
+        onlineStore: newPromo.onlineStore,
         isExisting: false,
       });
       loadDiscounts(true, false);
@@ -2008,6 +2037,7 @@ export default function MyDiscountScreen() {
                   brandName: newPromo.brandName,
                   offerTitle: newPromo.offerTitle,
                   expiresAt: newPromo.expiresAt,
+                  onlineStore: newPromo.onlineStore,
                   isExisting: false,
                 });
                 loadDiscounts(true, false);
