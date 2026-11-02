@@ -6,7 +6,8 @@
 // Each screen keeps its own data and taps; this file is only the look.
 
 import React, { memo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import RemoteImage from "../../ui/RemoteImage";
 import { Ionicons } from '@expo/vector-icons';
 
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
@@ -156,7 +157,7 @@ export const NotifRow = memo(function NotifRow({ item, onPress, onDelete, childr
       <View style={s.leading}>
         {hasAvatar ? (
           item.avatar ? (
-            <Image source={{ uri: item.avatar }} style={s.avatar} />
+            <RemoteImage source={{ uri: item.avatar }} style={s.avatar} size="avatar" />
           ) : (
             <View style={[s.avatar, s.avatarFallback]}>
               <Text style={s.avatarInitial}>{(item.name || '?').charAt(0).toUpperCase()}</Text>

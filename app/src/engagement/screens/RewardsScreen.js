@@ -12,11 +12,11 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
-  Image,
   Modal,
   FlatList,
   Share,
 } from 'react-native';
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -440,7 +440,7 @@ export default function RewardsScreen() {
                   <View key={r._id} style={R.perk}>
                     <View style={R.perkImage}>
                       {r.image ? (
-                        <Image source={{ uri: r.image }} style={R.perkImg} resizeMode="cover" />
+                        <RemoteImage source={{ uri: r.image }} style={R.perkImg} resizeMode="cover" size="card" />
                       ) : (
                         <MaterialCommunityIcons name="gift-outline" size={24} color={T.textMuted} />
                       )}

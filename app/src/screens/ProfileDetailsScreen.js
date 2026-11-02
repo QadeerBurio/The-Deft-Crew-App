@@ -12,12 +12,12 @@ import {
   ScrollView,
   Animated,
   StatusBar,
-  Image,
   TouchableOpacity,
   Share,
   RefreshControl,
   Alert,
 } from "react-native";
+import RemoteImage from "../ui/RemoteImage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -219,7 +219,7 @@ export default function ProfileDetailsScreen({ navigation }) {
           <View style={styles.heroTop}>
             <View style={[styles.avatarRing, profile.isVip && styles.avatarRingVip]}>
               {profile.profileImage ? (
-                <Image source={{ uri: profile.profileImage }} style={styles.avatarImage} />
+                <RemoteImage source={{ uri: profile.profileImage }} style={styles.avatarImage} size="card" />
               ) : (
                 <View style={styles.avatarFallback}>
                   <Text style={styles.avatarInitial}>{profile.name?.charAt(0)?.toUpperCase() || "?"}</Text>

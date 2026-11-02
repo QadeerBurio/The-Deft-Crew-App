@@ -2,9 +2,10 @@
 import React, { useContext, useRef, useEffect, useState } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar,
-  Platform, Alert, Animated, Image, Dimensions, Switch, Modal,
+  Platform, Alert, Animated, Dimensions, Switch, Modal,
   ActivityIndicator, TextInput, Linking, KeyboardAvoidingView,
 } from "react-native";
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -340,7 +341,7 @@ export default function SettingsScreen({ navigation }) {
             >
               <View style={styles.profileAvatarCompact}>
                 {user?.profileImage ? (
-                  <Image source={{ uri: user.profileImage }} style={styles.profileAvatarImage} />
+                  <RemoteImage source={{ uri: user.profileImage }} style={styles.profileAvatarImage} size="avatar" />
                 ) : (
                   <Text style={styles.profileAvatarText}>
                     {user?.name?.charAt(0)?.toUpperCase() || 'U'}

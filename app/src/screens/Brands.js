@@ -15,7 +15,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Image,
   Dimensions,
   Modal,
   Pressable,
@@ -27,6 +26,7 @@ import {
   TextInput,
   useWindowDimensions,
 } from "react-native";
+import RemoteImage, { prefetchRemoteImages } from "../ui/RemoteImage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   useFocusEffect,
@@ -287,7 +287,7 @@ const BrandCard = memo(
     useEffect(() => {
       if (imageUri && !preloadedImages.has(imageUri)) {
         preloadedImages.add(imageUri);
-        Image.prefetch(imageUri).catch(() => {});
+        prefetchRemoteImages(imageUri, "card"); // same sized URL and cache as the card
       }
     }, [imageUri]);
 
@@ -314,12 +314,13 @@ const BrandCard = memo(
       >
         <View style={[styles.imageBox, !showImage && styles.imageBoxEmpty]}>
           {showImage ? (
-            <Image
+            <RemoteImage
               source={{ uri: imageUri }}
               style={styles.image}
               resizeMode="contain"
               onError={() => setFailed(true)}
               accessibilityIgnoresInvertColors
+              size="card"
             />
           ) : (
             <MaterialCommunityIcons name="storefront-outline" size={28} color={T.textFaint} />
@@ -482,7 +483,7 @@ export default function BrandsScreen() {
   const preloadImage = useCallback((url) => {
     if (!url || preloadedImages.has(url)) return;
     preloadedImages.add(url);
-    Image.prefetch(url).catch(() => {});
+    prefetchRemoteImages(url, "card");
   }, []);
 
   const computeStatsFromBrands = useCallback((brands) => {

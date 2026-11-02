@@ -10,9 +10,9 @@ import {
   RefreshControl,
   StatusBar,
   Platform,
-  Image,
   TextInput,
 } from 'react-native';
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getMyMatches } from '../../api/api';
@@ -55,7 +55,7 @@ const MatchRow = memo(function MatchRow({ item, onPress }) {
     <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => onPress(item)}>
       <View style={styles.avatarWrap}>
         {userImage ? (
-          <Image source={{ uri: userImage }} style={styles.avatar} />
+          <RemoteImage source={{ uri: userImage }} style={styles.avatar} size="avatar" />
         ) : (
           <View style={[styles.avatar, styles.avatarFallback]}>
             <Text style={styles.avatarInitial}>{userInitial}</Text>

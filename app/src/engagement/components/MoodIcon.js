@@ -10,6 +10,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
+import RemoteImage from "../../ui/RemoteImage";
 import { color as T } from "../../theme/tokens";
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 
@@ -112,7 +113,7 @@ export default function MoodIcon({
   if (showRemote) {
     return (
       <View style={containerStyle}>
-        <Image
+        <RemoteImage
           source={{ uri: remoteUrl }}
           style={{ width: size, height: size, borderRadius }}
           resizeMode="cover"

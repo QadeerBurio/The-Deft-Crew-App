@@ -1,3 +1,5 @@
+// [perf] start time: must load before anything else (app/src/lib/perf.js)
+import './app/src/lib/perf';
 import { registerRootComponent } from 'expo';
 
 import App from './App';

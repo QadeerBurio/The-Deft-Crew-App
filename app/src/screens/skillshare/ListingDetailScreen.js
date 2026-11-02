@@ -3,8 +3,9 @@ import React, { useState, useContext, useRef, useCallback, useEffect } from 'rea
 import {
   View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView,
   Alert, Linking, Modal, TextInput, KeyboardAvoidingView, Platform,
-  StatusBar, RefreshControl, Image, Dimensions,
+  StatusBar, RefreshControl, Dimensions,
 } from 'react-native';
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -238,7 +239,7 @@ export default function ListingDetailScreen({ route, navigation }) {
 
             <View style={styles.ownerRow}>
               {ownerData.profileImage ? (
-                <Image source={{ uri: ownerData.profileImage }} style={styles.ownerAvatar} />
+                <RemoteImage source={{ uri: ownerData.profileImage }} style={styles.ownerAvatar} size="avatar" />
               ) : (
                 <View style={[styles.ownerAvatar, styles.ownerAvatarFallback]}>
                   <Ionicons name="person" size={16} color={T.textFaint} />
@@ -268,7 +269,7 @@ export default function ListingDetailScreen({ route, navigation }) {
                           <Ionicons name="play-circle" size={44} color={T.white} />
                         </View>
                       ) : (
-                        <Image source={{ uri: att.url }} style={styles.heroImage} />
+                        <RemoteImage source={{ uri: att.url }} style={styles.heroImage} size="banner" />
                       )}
                       <View style={styles.heroBadge}>
                         <Ionicons name="pricetag" size={11} color={T.white} />
@@ -384,7 +385,7 @@ export default function ListingDetailScreen({ route, navigation }) {
 
               <View style={styles.ownerRow}>
                 {ownerData.profileImage ? (
-                  <Image source={{ uri: ownerData.profileImage }} style={styles.ownerAvatar} />
+                  <RemoteImage source={{ uri: ownerData.profileImage }} style={styles.ownerAvatar} size="avatar" />
                 ) : (
                   <View style={[styles.ownerAvatar, styles.ownerAvatarFallback]}>
                     <Ionicons name="person" size={16} color={T.textFaint} />

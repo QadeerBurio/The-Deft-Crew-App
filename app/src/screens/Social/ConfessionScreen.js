@@ -7,6 +7,7 @@ import {
   Image, Alert, ActivityIndicator, RefreshControl, Share, Animated,
   Keyboard, TouchableWithoutFeedback, ScrollView, AppState
 } from "react-native";
+import RemoteImage from "../../ui/RemoteImage";
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
@@ -1037,7 +1038,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
 
         {item.image && (
           <View style={styles.imageContainer}>
-            <Image source={{ uri: item.image }} style={styles.postImage} resizeMode="cover" />
+            <RemoteImage source={{ uri: item.image }} style={styles.postImage} resizeMode="cover" size="banner" />
           </View>
         )}
 
@@ -1386,7 +1387,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
                               onPress={() => handleMentionSelect(item)}
                             >
                               {item.profileImage ? (
-                                <Image source={{ uri: item.profileImage }} style={styles.mentionAvatar} />
+                                <RemoteImage source={{ uri: item.profileImage }} style={styles.mentionAvatar} size="avatar" />
                               ) : (
                                 <LinearGradient colors={[T.yellow, '#e6b800']} style={styles.mentionAvatarPlaceholder}>
                                   <Text style={styles.mentionAvatarText}>{item.name?.charAt(0)?.toUpperCase()}</Text>

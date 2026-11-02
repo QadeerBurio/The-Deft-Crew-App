@@ -14,8 +14,6 @@ import { useGuestGate } from "../guest/GuestGate";
 import useMySavings from "../hooks/useMySavings";
 import ChatBotInterface from "./ChatBotInterface";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
-import api from "../api/api";
 import Slider from "../screens/Slider";
 import { navigationRef } from "../navigation/navigationRef";
 
@@ -42,6 +40,12 @@ import {
 } from "./home/homeData";
 import { color } from "../theme/tokens";
 import { useTour } from "../engagement/tour/TourProvider";
+import { perfMark } from "../lib/perf";
+import { hydrateQuery, writeHomeCache, pruneHomeCache } from "../lib/homeCache";
+
+// The latest-confession section (HomeCampus) is commented out below; while it is, its
+// request (the whole confessions feed) does not run. Set true together with the section.
+const SHOW_LATEST_CONFESSION = false;
 
 // ids + screens unchanged; labels and colours per HOME_SPEC §2.5
 const FEATURES = [
@@ -107,7 +111,7 @@ export default function Home({ navigation }) {
   const userId = user?._id || user?.id || (isGuest ? "guest" : "anon");
 
   // 🆕 engagement
-  const { flags } = useEngagement();
+  const { flags, me: engagementMe } = useEngagement();
   const { missions } = useMissions();
   const { count: streakCount, enabled: streakEnabled, health: streakHealth } = useStreak();
 
@@ -118,29 +122,11 @@ export default function Home({ navigation }) {
     Animated.timing(headerFade, { toValue: 1, duration: 400, useNativeDriver: true }).start();
   }, [headerFade]);
 
-  // ── Engagement home query (user-scoped, abort-safe)
-  const { refetch: refetchEngagement } = useQuery({
-    queryKey: ["engagement", "home", userId],
-    queryFn: async ({ signal }) => {
-      try {
-        const res = await api.get("/engagement/home", { signal });
-        return res.data;
-      } catch (e) {
-        const isAbort =
-          axios.isCancel?.(e) ||
-          e?.code === "ERR_CANCELED" ||
-          e?.name === "CanceledError" ||
-          e?.name === "AbortError";
-        if (isAbort) return null;
-        // Real error → return null, don't crash the UI
-        return null;
-      }
-    },
-    staleTime: 1000 * 60 * 5,
-    enabled: !isGuest && !!userId,
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
+  // [perf] cold start marks (lib/perf.js logs each once per app start)
+  useEffect(() => { perfMark("home-first-render"); }, []);
+
+  // /engagement/home is fetched by DailyDropCard (useDailyDrop); Home's own copy of the same
+  // request was never read, so it is gone. Pull to refresh still refreshes it (["engagement"]).
 
   // ── Latest confession + deals (signed-in only; failures hide the section)
   const signedIn = !isGuest && !!token;
@@ -155,7 +141,7 @@ export default function Home({ navigation }) {
         return null;
       }
     },
-    enabled: signedIn,
+    enabled: signedIn && SHOW_LATEST_CONFESSION,
     staleTime: 1000 * 60 * 5,
     retry: false,
     refetchOnWindowFocus: false,
@@ -169,7 +155,8 @@ export default function Home({ navigation }) {
         return await fetchDeals(token, userId);
       } catch (e) {
         devLogOnce("deals", e);
-        return [];
+        // offline / failing: keep what is on screen (e.g. the phone cache) instead of nothing
+        return queryClient.getQueryData(DEALS_KEY(userId)) ?? [];
       }
     },
     enabled: signedIn,
@@ -189,7 +176,7 @@ export default function Home({ navigation }) {
         return await getPublicDeals();
       } catch (e) {
         devLogOnce("public deals", e);
-        return [];
+        return queryClient.getQueryData(PUBLIC_DEALS_KEY) ?? [];
       }
     },
     enabled: !!isGuest && guestDealsWanted,
@@ -200,6 +187,36 @@ export default function Home({ navigation }) {
     refetchOnMount: false,
   });
 
+  // Cold start: the last deals and engagement state saved on this phone show at once
+  // (stale-while-revalidate); the requests above run as usual and replace them.
+  // Only this user's copy is used, and another user's copy is deleted (lib/homeCache.js).
+  const fromPhoneRef = useRef(new Set());
+  useEffect(() => {
+    pruneHomeCache(userId);
+    const seed = (key, name) =>
+      hydrateQuery(queryClient, key, name, userId).then((d) => { if (d) fromPhoneRef.current.add(d); });
+    if (signedIn) {
+      seed(DEALS_KEY(userId), "deals");
+      seed(["engagement", "me"], "engagementMe");
+    } else if (isGuest) {
+      seed(PUBLIC_DEALS_KEY, "publicDeals");
+    }
+  }, [queryClient, signedIn, isGuest, userId]);
+
+  // ...and each fresh copy is saved for the next start
+  useEffect(() => {
+    if (signedIn && deals && !fromPhoneRef.current.has(deals)) writeHomeCache("deals", userId, deals);
+  }, [signedIn, deals, userId]);
+  useEffect(() => {
+    if (isGuest && publicDeals && !fromPhoneRef.current.has(publicDeals)) writeHomeCache("publicDeals", userId, publicDeals);
+  }, [isGuest, publicDeals, userId]);
+  useEffect(() => {
+    // popups are left out: an old copy must never show a popup again
+    if (signedIn && engagementMe && !fromPhoneRef.current.has(engagementMe)) {
+      writeHomeCache("engagementMe", userId, { ...engagementMe, popups: [] });
+    }
+  }, [signedIn, engagementMe, userId]);
+
   // Pull to refresh: missions, streak, daily drop, everything engagement,
   // plus the confession and deals sections
   const [pullRefreshing, setPullRefreshing] = useState(false);
@@ -207,9 +224,8 @@ export default function Home({ navigation }) {
     setPullRefreshing(true);
     try {
       await Promise.all([
-        refetchEngagement(),
         queryClient.invalidateQueries({ queryKey: ["engagement"] }),
-        signedIn ? refetchConfession() : null,
+        signedIn && SHOW_LATEST_CONFESSION ? refetchConfession() : null,
         signedIn
           ? fetchDeals(token, userId, true)
               .then((fresh) => queryClient.setQueryData(DEALS_KEY(userId), fresh))
@@ -226,7 +242,7 @@ export default function Home({ navigation }) {
     } finally {
       setPullRefreshing(false);
     }
-  }, [refetchEngagement, queryClient, signedIn, refetchConfession, token, userId, isGuest, guestDealsWanted]);
+  }, [queryClient, signedIn, refetchConfession, token, userId, isGuest, guestDealsWanted]);
 
   // Auto refresh whenever Home is opened again (max once every 15s), so a
   // new drop / finished mission shows without pulling down
@@ -283,6 +299,9 @@ export default function Home({ navigation }) {
     const loaded = signedIn ? !dealsLoading : !!isGuest;
     setHomeLoaded(homeFocused && loaded && !isChatVisible && !streakSheetVisible);
   }, [setHomeLoaded, homeFocused, signedIn, isGuest, dealsLoading, isChatVisible, streakSheetVisible]);
+  // [perf] first time the deals section has cards to show
+  const dealsCount = (signedIn ? deals : publicDeals)?.length || 0;
+  useEffect(() => { if (dealsCount > 0) perfMark("deals-shown"); }, [dealsCount]);
   useEffect(() => () => setHomeLoaded(false), [setHomeLoaded]);
 
   const sortedFeatureIds = useMemo(() => {

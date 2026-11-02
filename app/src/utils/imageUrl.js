@@ -47,3 +47,19 @@ export function withFixedImages(brand) {
       : brand.offers,
   };
 }
+
+// ── Delivery size (Cloudinary only) ──
+// Cloudinary URLs straight from an upload ("…/image/upload/v<version>/<id>") get a width and
+// automatic format/quality: "…/upload/w_300,c_limit,f_auto,q_auto/v<version>/<id>". c_limit
+// never upscales. Anything else is returned unchanged: /uploads files on our server, other
+// hosts, and Cloudinary URLs that already carry a transformation.
+export const IMAGE_WIDTHS = { avatar: 120, logo: 120, card: 300, banner: 800 };
+
+const CLOUDINARY_UPLOAD = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(v\d+\/.+)$/;
+
+export function sizedImageUrl(url, size) {
+  const w = typeof size === "number" ? Math.round(size) : IMAGE_WIDTHS[size];
+  if (!w || w <= 0 || typeof url !== "string") return url;
+  const m = url.match(CLOUDINARY_UPLOAD);
+  return m ? `${m[1]}w_${w},c_limit,f_auto,q_auto/${m[2]}` : url;
+}

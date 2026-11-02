@@ -4,10 +4,10 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Image,
   Dimensions,
   Platform,
 } from 'react-native';
+import RemoteImage from '../ui/RemoteImage';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 import NotificationModal from './NotificationModal';  // ✅ FIXED: Use default import (no braces)
@@ -24,9 +24,10 @@ const CustomHeader = ({ title, showNotification = true }) => {
       <View style={styles.container}>
         <View style={styles.leftSection}>
           {user?.profilePicture ? (
-            <Image 
+            <RemoteImage 
               source={{ uri: user.profilePicture }} 
               style={styles.profilePic}
+              size="avatar"
             />
           ) : (
             <View style={styles.profilePlaceholder}>

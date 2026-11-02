@@ -9,7 +9,6 @@ import {
   Animated,
   StatusBar,
   Dimensions,
-  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -21,6 +20,7 @@ import {
   Linking,
   AppState,
 } from 'react-native';
+import RemoteImage from "../ui/RemoteImage";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { color as T, font as F, MAX_FONT_SCALE } from '../theme/tokens';
@@ -563,7 +563,7 @@ const DiscountCard = React.memo(({
             <View style={styles.cardImageContainer}>
               {item?.displayImage ? (
                 <View style={styles.cardImageClean}>
-                  <Image source={{ uri: item.displayImage }} style={styles.cardImage} resizeMode="contain" />
+                  <RemoteImage source={{ uri: item.displayImage }} style={styles.cardImage} resizeMode="contain" size="card" />
                 </View>
               ) : (
                 <LinearGradient colors={[T.inkSoft]} style={styles.cardPlaceholder}>
@@ -1930,7 +1930,7 @@ export default function MyDiscountScreen() {
                   >
                     <View style={styles.brandChipLogo}>
                       {b.logo ? (
-                        <Image source={{ uri: b.logo }} style={styles.brandChipLogoImg} resizeMode="contain" />
+                        <RemoteImage source={{ uri: b.logo }} style={styles.brandChipLogoImg} resizeMode="contain" size="logo" />
                       ) : (
                         <Ionicons name="storefront-outline" size={13} color={T.textFaint} />
                       )}

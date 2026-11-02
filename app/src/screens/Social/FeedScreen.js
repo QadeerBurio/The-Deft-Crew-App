@@ -5,8 +5,9 @@ import {
   View, Text, StyleSheet, StatusBar,
   FlatList, TouchableOpacity, Platform, TextInput,
   LayoutAnimation, ActivityIndicator, RefreshControl, Keyboard,
-  Image, Animated, Dimensions, Alert, AppState
+  Animated, Dimensions, Alert, AppState
 } from "react-native";
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useOpenFromParams } from '../../engagement/hooks/useOpenFromParams';
@@ -412,7 +413,7 @@ export default function FeedScreen({ navigation }) {
       activeOpacity={0.7}
     >
       {item.profileImage ? (
-        <Image source={{ uri: item.profileImage }} style={styles.avatarImg} />
+        <RemoteImage source={{ uri: item.profileImage }} style={styles.avatarImg} size="avatar" />
       ) : (
         <View style={styles.avatarPlaceholder}>
           <Text style={styles.avatarText}>{item.name?.charAt(0)?.toUpperCase()}</Text>

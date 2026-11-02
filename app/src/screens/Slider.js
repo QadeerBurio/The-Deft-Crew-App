@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
-  Image,
   StyleSheet,
   Dimensions,
   Animated,
@@ -14,9 +13,11 @@ import {
   RefreshControl,
   InteractionManager,
 } from "react-native";
+import RemoteImage from "../ui/RemoteImage";
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { color, font, color as T, font as F } from '../theme/tokens';
+import { readHomeCache, writeHomeCache } from '../lib/homeCache';
 
 const DOT_GREY = T.handle;
 
@@ -27,7 +28,9 @@ const ITEM_SPACING = (width - ITEM_WIDTH) / 2;
 
 const BASE_URL = "https://the-deft-crew-production.up.railway.app";
 const CACHE_DURATION = 5 * 60 * 1000;
-const FETCH_TIMEOUT = 2000; // Reduced timeout
+// 2 s aborted often on slow networks (the server alone takes ~1.2 s), leaving the slider
+// empty; same 8 s as the app's API client. The phone cache below shows meanwhile.
+const FETCH_TIMEOUT = 8000;
 
 // ==========================================
 // FAST SKELETON (Shows only for 200ms max)
@@ -129,6 +132,7 @@ export default function Slider({ route } = {}) {
     return !FastCache.get('slider_data_cache');
   });
   const [refreshing, setRefreshing] = useState(false);
+  const shownFromPhoneRef = useRef(false); // phone-cache slides on screen: no skeleton while fetching
   const scrollX = useRef(new Animated.Value(0)).current;
   const flatListRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -160,7 +164,7 @@ export default function Slider({ route } = {}) {
         }
       }
 
-      if (!isRefresh) setLoading(true);
+      if (!isRefresh && !shownFromPhoneRef.current) setLoading(true);
 
       // Parallel fetch with timeout
       const controller = new AbortController();
@@ -195,8 +199,9 @@ export default function Slider({ route } = {}) {
         visibleData = json.sliders.filter(item => item?.active !== false);
       }
       
-      // Cache and update
+      // Cache and update (memory + phone, for the next cold start)
       FastCache.set('slider_data_cache', visibleData);
+      writeHomeCache('slider', 'all', visibleData);
       
       if (isMounted) {
         setData(visibleData);
@@ -224,11 +229,19 @@ export default function Slider({ route } = {}) {
   useEffect(() => {
     setIsMounted(true);
     
-    // Show cached data immediately
+    // Show cached data immediately (memory, else the copy saved on the phone)
     const cached = FastCache.get('slider_data_cache');
     if (cached && cached.length > 0) {
       setData(cached);
       setLoading(false);
+    } else {
+      readHomeCache('slider', 'all').then((hit) => {
+        if (!hit || !Array.isArray(hit.data) || !hit.data.length) return;
+        // only if the network copy has not arrived first
+        shownFromPhoneRef.current = true;
+        setData((prev) => (prev && prev.length ? prev : hit.data));
+        setLoading(false);
+      });
     }
     
     // Fetch fresh data in background
@@ -353,12 +366,11 @@ export default function Slider({ route } = {}) {
               (overflow: hidden would clip the shadow on iOS) */}
           <Animated.View style={[styles.card, { transform: [{ scale }, { translateY }] }]}>
             <View style={styles.cardInner}>
-              <Image
+              <RemoteImage
                 source={{ uri: item.image }}
                 style={styles.image}
                 resizeMode="cover"
-                loading="eager" // Load immediately
-                fadeDuration={0} // Remove fade animation
+                size="banner"
               />
             </View>
           </Animated.View>
@@ -486,12 +498,11 @@ export default function Slider({ route } = {}) {
                       bounces={false}
                     >
                       <View style={styles.imageContainer}>
-                        <Image
+                        <RemoteImage
                           source={{ uri: selectedOffer.image }}
                           style={styles.modalImage}
                           resizeMode="cover"
-                          loading="eager"
-                          fadeDuration={0}
+                          size="banner"
                         />
                         {/* Server types: 'slider' (default) | 'offer' → badge only for non-slider */}
                         {!!selectedOffer.type && String(selectedOffer.type).toLowerCase() !== "slider" && (
