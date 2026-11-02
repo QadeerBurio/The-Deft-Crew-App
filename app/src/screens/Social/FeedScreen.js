@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useOpenFromParams } from '../../engagement/hooks/useOpenFromParams';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills (design system)
@@ -19,6 +19,7 @@ import { useGuestGate, GuestLocked } from "../../guest";
 import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
+import { useStableCallback } from '../../hooks/useStableCallback';
 import PostCard, { PostCardSkeleton } from "./PostCard";
 import ConfessionScreen from './ConfessionScreen';
 
@@ -88,7 +89,10 @@ export default function FeedScreen({ navigation }) {
   const pollIntervalRef = useRef(null);
   const appStateRef = useRef(AppState.currentState);
   const isMountedRef = useRef(true);
-  const isScreenFocusedRef = useRef(true);
+  // false until the screen is really on screen (useFocusEffect below). It started as true, so a
+  // Feed mounted in the background polled every 15 s before Social was ever opened.
+  const isScreenFocusedRef = useRef(false);
+  const isFocused = useIsFocused();
   const lastFeedFetchRef = useRef(0);
 
   const config = useMemo(() => ({ headers: { Authorization: `Bearer ${token}` } }), [token]);
@@ -133,7 +137,8 @@ export default function FeedScreen({ navigation }) {
         setLoading(true);
       }
 
-      let url = `${API_URL}/feed?category=${category}&search=${search}&limit=10`;
+      // encoded: "c&a" or "#exam" used to break the query string
+      let url = `${API_URL}/feed?category=${encodeURIComponent(category)}&search=${encodeURIComponent(search)}&limit=10`;
       if (loadMore && lastPostRef.current) {
         url += `&before=${lastPostRef.current}`;
       }
@@ -150,13 +155,16 @@ export default function FeedScreen({ navigation }) {
         newPosts = newPosts.filter(post => !blockedPostIds.includes(post._id));
       }
 
+      // My own posts are not in the feed, on every page (later pages used to include them).
+      // The paging cursor below still uses the whole page.
+      const filteredPosts = isGuest
+        ? newPosts
+        : newPosts.filter(post => post.author?._id !== user?._id);
+
       if (loadMore) {
-        setPosts(prev => [...prev, ...newPosts]);
+        setPosts(prev => [...prev, ...filteredPosts]);
         setHasMore(moreAvailable);
       } else {
-        const filteredPosts = isGuest
-          ? newPosts
-          : newPosts.filter(post => post.author?._id !== user?._id);
 
         setPosts(prev => {
           if (silent && !postsChanged(prev, filteredPosts)) {
@@ -212,6 +220,13 @@ export default function FeedScreen({ navigation }) {
     console.log('Post reported:', reportedPostId);
   }, []);
 
+  // stable renderItem; PostCard is memoised and only reads post, onBlock and onReport
+  // (handleBlock changes with the list, so rows get a stable wrapper)
+  const blockFromRow = useStableCallback(handleBlock);
+  const renderPost = useCallback(({ item }) => (
+    <PostCard post={item} onBlock={blockFromRow} onReport={handleReport} />
+  ), [blockFromRow, handleReport]);
+
   const loadMorePosts = () => {
     if (!hasMore || isLoadingMore || loading || isSearching) return;
     fetchPosts(selectedCategory, searchQuery, true, false);
@@ -256,7 +271,7 @@ export default function FeedScreen({ navigation }) {
 
     try {
       const headers = (!isGuest && token) ? { Authorization: `Bearer ${token}` } : {};
-      const res = await axios.get(`${API_URL}/users/search?q=${query}&page=${page}&limit=20`, { headers });
+      const res = await axios.get(`${API_URL}/users/search?q=${encodeURIComponent(query)}&page=${page}&limit=20`, { headers });
 
       const newUsers = res.data.users || res.data;
       const moreAvailable = res.data.hasMore !== undefined ? res.data.hasMore : newUsers.length === 20;
@@ -331,7 +346,9 @@ export default function FeedScreen({ navigation }) {
 
   // ============ FEED POLLING ============
   useEffect(() => {
-    const shouldPoll = activeTab === "Feed" && !isSearching && !isGuest && token;
+    // only while this screen is on screen (the focus effect fetches fresh data on every return,
+    // so a push or link into Social, a post or a confession still opens up to date)
+    const shouldPoll = isFocused && activeTab === "Feed" && !isSearching && !isGuest && token;
 
     if (!shouldPoll) {
       if (pollIntervalRef.current) {
@@ -358,7 +375,7 @@ export default function FeedScreen({ navigation }) {
         pollIntervalRef.current = null;
       }
     };
-  }, [activeTab, isSearching, isGuest, token, selectedCategory, searchQuery, isLoadingMore, refreshing, fetchPosts]);
+  }, [isFocused, activeTab, isSearching, isGuest, token, selectedCategory, searchQuery, isLoadingMore, refreshing, fetchPosts]);
 
   // App state listener
   useEffect(() => {
@@ -369,6 +386,7 @@ export default function FeedScreen({ navigation }) {
       if (
         prevState.match(/inactive|background/) &&
         nextAppState === 'active' &&
+        isScreenFocusedRef.current && // not on screen: the focus effect refreshes on return
         activeTab === "Feed" &&
         !isSearching
       ) {
@@ -468,16 +486,7 @@ export default function FeedScreen({ navigation }) {
               colors={[T.ink]}
             />
           }
-          renderItem={({ item }) => (
-            <PostCard
-              post={item}
-              onRefresh={onRefresh}
-              navigation={navigation}
-              isGuest={isGuest}
-              onBlock={handleBlock}
-              onReport={handleReport}
-            />
-          )}
+          renderItem={renderPost}
           onEndReached={loadMorePosts}
           onEndReachedThreshold={0.3}
           ListFooterComponent={renderFooter}

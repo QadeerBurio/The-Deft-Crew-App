@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { useNavigation, useFocusEffect, CommonActions } from '@react-navigation/native';
 import { AuthContext } from "../../context/AuthContext";
+import { setMessageUnread } from "../../hooks/useMessageUnread";
 import io from "socket.io-client";
 
 import { color as T, font as F } from "../../theme/tokens";
@@ -456,6 +457,11 @@ export default function MessagesScreen() {
     () => conversations.reduce((s, c) => s + (isBlockedConv(c) ? 0 : c.unreadCount || 0), 0),
     [conversations, isBlockedConv]
   );
+
+  // The badges elsewhere (tab bar, Social) show this number too: no extra request
+  useEffect(() => {
+    if (!loading) setMessageUnread(totalUnread);
+  }, [loading, totalUnread]);
 
   const selectedOther = otherOf(selectedChat, currentUser);
 

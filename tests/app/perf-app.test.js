@@ -14,7 +14,7 @@ const babel = reqApp("@babel/core");
 const tick = (ms = 20) => new Promise((r) => setTimeout(r, ms));
 let failed = 0, passed = 0;
 const ok = (c, l, x = "") => { c ? passed++ : failed++; console.log(`${c ? "ok  " : "FAIL"}  ${l}${!c && x ? "  → " + String(x).slice(0, 300) : ""}`); };
-const read = (rel) => fs.readFileSync(path.join(APP, rel), "utf8");
+const read = (rel) => fs.readFileSync(path.join(APP, rel), "utf8").replace(/\r\n/g, "\n"); // CRLF checkouts too
 
 // ── fakes ──
 const store = new Map();

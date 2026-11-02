@@ -1796,6 +1796,18 @@ export default function MyDiscountScreen() {
     }
   }, [token, refreshStatsOnly, userId]);
 
+  // stable, so a screen render does not hand every visible card a new renderItem
+  const renderDiscount = useCallback(({ item, index }) => (
+    <DiscountCard
+      item={item}
+      index={index}
+      onUseNow={handleUseNow}
+      onScan={handleScan}
+      onUnclaim={handleUnclaim}
+      onGetCode={handleGetCode}
+    />
+  ), [handleUseNow, handleScan, handleUnclaim, handleGetCode]);
+
   const handleRefresh = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     soundRefresh();       // 🔔 refresh whoosh
@@ -1878,16 +1890,7 @@ export default function MyDiscountScreen() {
           setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, viewOffset: 12, animated: true }), 250);
         }}
         data={visibleOffers}
-        renderItem={({ item, index }) => (
-          <DiscountCard
-            item={item}
-            index={index}
-            onUseNow={handleUseNow}
-            onScan={handleScan}
-            onUnclaim={handleUnclaim}
-            onGetCode={handleGetCode}
-          />
-        )}
+        renderItem={renderDiscount}
         keyExtractor={(item, index) => item._id?.toString() || `discount-${index}`}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
