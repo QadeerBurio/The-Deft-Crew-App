@@ -181,7 +181,9 @@ const Registration = fake(realEventMod.Registration, { unique: [["eventId", "use
 const EventNotification = fake(realEventMod.EventNotification);
 const Notification = fake(RealNotification);
 const users = new Map();
-const User = { findById: (id) => ({ select: async () => users.get(String(id)) || null }) };
+// auth middleware: findById(id).select(fields), awaited directly (before) or .lean() (a fresh copy)
+const userQuery = (u) => { const p = Promise.resolve(u); p.lean = async () => (u ? { ...u } : null); return p; };
+const User = { findById: (id) => ({ select: () => userQuery(users.get(String(id)) || null) }) };
 
 const MOCKS = {
   "../models/Event": { Event, Registration, EventNotification },

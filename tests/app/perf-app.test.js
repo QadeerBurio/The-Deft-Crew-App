@@ -175,8 +175,8 @@ const BASE_MOCKS = {
   {
     const { sizedImageUrl, IMAGE_WIDTHS } = loader(BASE_MOCKS)(path.join(SRC, "utils/imageUrl.js"));
     const cl = "https://res.cloudinary.com/demo/image/upload/v1785952666/TDC_Offers/TDC_Offers/offer_x.jpg";
-    ok(sizedImageUrl(cl, "card") === "https://res.cloudinary.com/demo/image/upload/w_300,c_limit,f_auto,q_auto/v1785952666/TDC_Offers/TDC_Offers/offer_x.jpg", "versioned Cloudinary URL → w_300,c_limit,f_auto,q_auto", sizedImageUrl(cl, "card"));
-    ok(IMAGE_WIDTHS.logo === 120 && IMAGE_WIDTHS.avatar === 120 && IMAGE_WIDTHS.card === 300 && IMAGE_WIDTHS.banner === 800, "widths: logo/avatar 120, card 300, banner 800");
+    ok(sizedImageUrl(cl, "card") === "https://res.cloudinary.com/demo/image/upload/w_480,c_limit,f_auto,q_auto/v1785952666/TDC_Offers/TDC_Offers/offer_x.jpg", "versioned Cloudinary URL → w_480,c_limit,f_auto,q_auto", sizedImageUrl(cl, "card"));
+    ok(IMAGE_WIDTHS.logo === 120 && IMAGE_WIDTHS.avatar === 120 && IMAGE_WIDTHS.card === 480 && IMAGE_WIDTHS.banner === 800, "widths: logo/avatar 120, card 480, banner 800");
     ok(sizedImageUrl(cl, 450).includes("/upload/w_450,c_limit,f_auto,q_auto/v1785952666/"), "a number is a pixel width");
     const same = [
       "https://the-deft-crew-production.up.railway.app/uploads/brands/logo.png",
@@ -201,7 +201,7 @@ const BASE_MOCKS = {
     ok(RI.default({ source: 7, size: "card" }).props.source === 7, "require()'d local sources pass through untouched");
     await RI.prefetchRemoteImages([cl, null], "card");
     const pf = imageProps.find((x) => x.prefetch);
-    ok(pf && pf.policy === "memory-disk" && pf.prefetch.length === 1 && pf.prefetch[0].includes("w_300"), "prefetch warms the same cache with the same sized URL");
+    ok(pf && pf.policy === "memory-disk" && pf.prefetch.length === 1 && pf.prefetch[0].includes("w_480"), "prefetch warms the same cache with the same sized URL");
 
     // every RemoteImage in the app: a known size, and no react-native-only prop
     const parser = reqApp("@babel/parser"); const traverse = reqApp("@babel/traverse").default;
