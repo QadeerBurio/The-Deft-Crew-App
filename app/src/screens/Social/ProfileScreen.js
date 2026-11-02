@@ -17,8 +17,9 @@ import { soundLike, soundTap } from "../../lib/tdcSounds";
 import { color as T, font as F } from "../../theme/tokens";
 import { ScreenHeader, HeaderIconButton, EmptyState, SkeletonBlock } from "../../ui";
 import { metaEvents } from "../../analytics/metaEvents";
+import { SERVER_ORIGIN } from "../../config/server";
 const { width } = Dimensions.get('window');
-const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
+const API_URL = `${SERVER_ORIGIN}/api/social`;
 
 // ============ IN-MEMORY CACHE ============
 const profileCache = {

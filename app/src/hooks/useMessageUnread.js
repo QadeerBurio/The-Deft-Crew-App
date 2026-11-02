@@ -8,8 +8,9 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { AppState } from "react-native";
 import axios from "axios";
+import { SERVER_ORIGIN } from "../config/server";
 
-const INBOX_URL = "https://the-deft-crew-production.up.railway.app/api/social/inbox";
+const INBOX_URL = `${SERVER_ORIGIN}/api/social/inbox`;
 const POLL_MS = 60_000;
 const MIN_GAP_MS = 5_000;
 

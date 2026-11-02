@@ -24,7 +24,8 @@ import { AuthContext } from '../../context/AuthContext';
 import { getConversationMessages, markMessagesRead } from '../../api/api';
 
 import { color as T, font as F } from "../../theme/tokens";
-const SOCKET_URL = __DEV__ ? 'https://the-deft-crew-production.up.railway.app' : 'https://the-deft-crew-production.up.railway.app';
+import { SERVER_ORIGIN } from "../../config/server";
+const SOCKET_URL = SERVER_ORIGIN;
 
 // ==================== DESIGN TOKENS (same as MatchChatScreen) ====================
 const C = {

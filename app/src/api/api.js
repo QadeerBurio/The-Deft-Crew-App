@@ -4,24 +4,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { engagementBus, ENGAGEMENT_EVENTS } from '../engagement/engagementBus';
 import { Alert, Platform } from 'react-native';
 import Constants from 'expo-constants';
+import { API_BASE, SERVER_ORIGIN } from "../config/server";
 const getBaseURL = () => {
   console.log('__DEV__ is:', __DEV__);
 
-  if (__DEV__) {
-    const manifest = Constants.expoConfig || Constants.manifest || {};
-    const hostUri = manifest.hostUri;
-    const devIp = hostUri ? hostUri.split(':')[0] : '192.168.18.93';
-
-    return `https://the-deft-crew-production.up.railway.app/api`;
-
-    // Alternative:
-    // return `http://${devIp}:5000/api`;
-
-    // Production:
-    // return 'https://the-deft-crew-production.up.railway.app/api';
-  }
-
-  return 'https://the-deft-crew-production.up.railway.app/api';
+  // EXPO_PUBLIC_API_URL (config/server.js); a local server: EXPO_PUBLIC_API_URL=http://<your-ip>:5000
+  return API_BASE;
 };
 
 export const BASE_URL = getBaseURL();
@@ -280,7 +268,7 @@ export const optimizedAPI = {
         (brandsRes.data?.data || brandsRes.data?.brands || []);
       const offersSummary = summaryRes.data || {};
 
-      const baseUrl = 'https://the-deft-crew-production.up.railway.app';
+      const baseUrl = `${SERVER_ORIGIN}`;
 
       // Fast mapping - one pass
       const brandsWithOffers = brands.map(brand => {

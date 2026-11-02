@@ -25,7 +25,8 @@ import * as Haptics from 'expo-haptics';
 
 import { color as T, font as F } from "../../theme/tokens";
 import { ScreenHeader, EmptyState } from "../../ui";
-const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
+import { SERVER_ORIGIN } from "../../config/server";
+const API_URL = `${SERVER_ORIGIN}/api/social`;
 
 // Skeleton Loader for Blocked Users
 const BlockedUsersSkeleton = () => {

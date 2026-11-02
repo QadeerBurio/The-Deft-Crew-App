@@ -18,6 +18,7 @@ import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { color, font, color as T, font as F } from '../theme/tokens';
 import { readHomeCache, writeHomeCache } from '../lib/homeCache';
+import { SERVER_ORIGIN } from "../config/server";
 
 const DOT_GREY = T.handle;
 
@@ -26,7 +27,7 @@ const ITEM_WIDTH = width * 0.95;
 const ITEM_HEIGHT = height * 0.22;
 const ITEM_SPACING = (width - ITEM_WIDTH) / 2;
 
-const BASE_URL = "https://the-deft-crew-production.up.railway.app";
+const BASE_URL = `${SERVER_ORIGIN}`;
 const CACHE_DURATION = 5 * 60 * 1000;
 // 2 s aborted often on slow networks (the server alone takes ~1.2 s), leaving the slider
 // empty; same 8 s as the app's API client. The phone cache below shows meanwhile.

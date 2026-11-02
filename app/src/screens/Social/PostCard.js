@@ -39,8 +39,9 @@ import BadgePip from '../../engagement/components/BadgePip';
 import { color as T, font as F } from "../../theme/tokens";
 import { plainError } from "../../utils/plainError";
 import { metaEvents } from "../../analytics/metaEvents";
+import { SERVER_ORIGIN } from "../../config/server";
 const { width, height } = Dimensions.get('window');
-const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
+const API_URL = `${SERVER_ORIGIN}/api/social`;
 
 const COMMENT_POLL_INTERVAL = 6000;
 

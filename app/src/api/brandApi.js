@@ -2,19 +2,12 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
+import { API_BASE } from "../config/server";
 
 // ─────────────────────────────────────────────────────
 // BASE URL RESOLUTION (only computed once)
 // ─────────────────────────────────────────────────────
-const getBaseURL = () => {
-  if (__DEV__) {
-    const manifest = Constants.expoConfig || Constants.manifest || {};
-    const hostUri = manifest.hostUri;
-    const devIp = hostUri ? hostUri.split(":")[0] : "192.168.18.93";
-    return `https://the-deft-crew-production.up.railway.app/api`;
-  }
-  return "https://the-deft-crew-production.up.railway.app/api";
-};
+const getBaseURL = () => API_BASE; // EXPO_PUBLIC_API_URL (config/server.js)
 
 export const BASE_URL = getBaseURL();
 export const SERVER_URL = BASE_URL.replace(/\/api\/?$/, "");

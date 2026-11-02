@@ -68,14 +68,15 @@ import {
   fetchEvent,
   LIST_FRESH_MS,
 } from "./eventsV2";
+import { SERVER_ORIGIN } from "../../config/server";
 const { height, width } = Dimensions.get("window");
 
-const API_BASE = "https://the-deft-crew-production.up.railway.app/api/events";
+const API_BASE = `${SERVER_ORIGIN}/api/events`;
 
 // Last loaded events, so opening Events again shows them at once. `at` = when they were
 // loaded: older than LIST_FRESH_MS (30 s) → refetched on focus; pull-to-refresh always.
 const eventsCache = { events: null, at: 0 };
-const SOCKET_URL = "https://the-deft-crew-production.up.railway.app";
+const SOCKET_URL = `${SERVER_ORIGIN}`;
 
 // ─── Event source detection ─────────────────────────────────────────────
 const isImportedEvent = (event) => {

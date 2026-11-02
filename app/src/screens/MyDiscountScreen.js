@@ -81,8 +81,9 @@ import { claimedBrands } from '../utils/claimedBrands';
 import { plainError, plainText } from "../utils/plainError";
 import { copyToClipboard } from '../utils/clipboard';
 import { metaEvents } from '../analytics/metaEvents';
+import { SERVER_ORIGIN } from "../config/server";
 
-const SERVER_URL = 'https://the-deft-crew-production.up.railway.app';
+const SERVER_URL = `${SERVER_ORIGIN}`;
 
 // Offer image → full URL (was pointing at /api/<path>, which 404s)
 const offerImageUrl = (img) => {

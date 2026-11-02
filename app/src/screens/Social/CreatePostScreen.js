@@ -27,8 +27,9 @@ import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus
 
 import { color as T, font as F } from "../../theme/tokens";
 import { metaEvents } from "../../analytics/metaEvents";
+import { SERVER_ORIGIN } from "../../config/server";
 const { width, height } = Dimensions.get('window');
-const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
+const API_URL = `${SERVER_ORIGIN}/api/social`;
 
 // ============================================================
 // INLINE SKELETON — shown briefly while sheet content warms up
