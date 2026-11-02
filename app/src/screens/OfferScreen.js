@@ -859,20 +859,25 @@ export default function OfferScreen() {
         ? { Authorization: `Bearer ${token}` }
         : undefined;
 
+      // The server has no stats route (/offers/brand/:id/stats was a 404): the stats come from the
+      // brand's offers, counted as fetchAll counts them (claimed = by this user, server or local)
       let remoteStats = null;
       try {
         const res = await api.get(
-          `/offers/brand/${initialBrand._id}/stats`,
+          hasAuth
+            ? `/offers/brand/${initialBrand._id}?fresh=1`
+            : `/offers/brand/${initialBrand._id}`,
           { headers, timeout: 4000 }
         );
-        if (res?.data) {
-          remoteStats = {
-            totalOffers: res.data.totalOffers || 0,
-            claimedCount: res.data.claimedCount || 0,
-            onlineCount: res.data.onlineCount || 0,
-            inStoreCount: res.data.inStoreCount || 0,
-            maxDiscount: res.data.maxDiscount || 0,
-          };
+        if (Array.isArray(res?.data)) {
+          const meId = userIdFromToken(token);
+          remoteStats = computeStatsFromOffers(
+            res.data.map((offer) => ({
+              ...offer,
+              isClaimed:
+                isOfferClaimedByUser(offer, meId) || isLocallyClaimed(offer._id),
+            }))
+          );
         }
       } catch {}
 
