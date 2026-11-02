@@ -2,7 +2,8 @@
 // Profile picture with an offline fallback: the person's initials on sand when there is
 // no image (or it fails to load). Size and shape come from `style` (width/height/radius).
 import React, { useState } from "react";
-import { View, Text, Image, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
+import RemoteImage from "./RemoteImage";
 import { color, font, MAX_FONT_SCALE } from "../theme/tokens";
 
 const initialsOf = (name) =>
@@ -22,8 +23,9 @@ export default function Avatar({ uri, name, style, imageStyle }) {
 
   if (uri && !failed) {
     return (
-      <Image
+      <RemoteImage
         source={{ uri }}
+        size={size <= 56 ? "avatar" : "card"}
         style={[style, imageStyle]}
         onError={() => setFailed(true)}
         accessibilityIgnoresInvertColors

@@ -1,9 +1,10 @@
 import React, { useState, useContext, useEffect, useRef } from "react";
 import { 
   View, Text, StyleSheet, TextInput, TouchableOpacity, 
-  ScrollView, Image, ActivityIndicator, Alert, Platform, 
+  ScrollView, ActivityIndicator, Alert, Platform, 
   StatusBar, Animated, KeyboardAvoidingView
 } from "react-native";
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
@@ -175,9 +176,10 @@ export default function EditProfileScreen({ navigation }) {
                       <ActivityIndicator size="large" color={T.white} />
                     </View>
                   ) : (
-                    <Image 
+                    <RemoteImage 
                       source={{ uri: profileImage || `https://ui-avatars.com/api/?name=${name}&background=111111&color=f9c349&size=200` }} 
-                      style={styles.avatar} 
+                      style={styles.avatar}
+                      size="card" 
                     />
                   )}
                 </LinearGradient>

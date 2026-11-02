@@ -5,13 +5,13 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   StatusBar,
   ActivityIndicator,
   ScrollView,
   BackHandler,
   Animated,
 } from 'react-native';
+import RemoteImage from "../../../ui/RemoteImage";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -119,7 +119,7 @@ export default function ProfileSuccessScreen({ navigation }) {
 
         <View style={styles.previewCard}>
           {profile?.photoUrl ? (
-            <Image source={{ uri: profile.photoUrl }} style={styles.avatar} />
+            <RemoteImage source={{ uri: profile.photoUrl }} style={styles.avatar} size="avatar" />
           ) : (
             <LinearGradient colors={[BRAND, BRAND_DARK]} style={styles.avatar}>
               <Text style={styles.avatarText}>{initial}</Text>

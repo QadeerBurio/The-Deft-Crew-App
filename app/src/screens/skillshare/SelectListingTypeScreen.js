@@ -1,7 +1,8 @@
 
 //backend/app/arc/screens/skillshare/SelectListingTypeScreen.js
 import React, { useState, useCallback, useContext, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView, ActivityIndicator } from 'react-native';
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -101,7 +102,7 @@ export default function SelectListingTypeScreen({ navigation }) {
           <>
             <TouchableOpacity onPress={() => navigation.navigate('SkillProfile')} hitSlop={10}>
           {myPhoto ? (
-            <Image source={{ uri: myPhoto }} style={styles.headerAvatar} />
+            <RemoteImage source={{ uri: myPhoto }} style={styles.headerAvatar} size="avatar" />
           ) : (
             <View style={[styles.headerAvatar, styles.headerAvatarFallback]}>
               <Ionicons name="person" size={14} color={T.textFaint} />

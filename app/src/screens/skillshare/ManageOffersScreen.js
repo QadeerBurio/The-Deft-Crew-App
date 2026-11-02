@@ -2,8 +2,9 @@
 import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator,
-  Alert, RefreshControl, StatusBar, Platform, Image,
+  Alert, RefreshControl, StatusBar, Platform,
 } from 'react-native';
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getOffersForListing, updateOfferStatus } from '../../api/api';
@@ -37,7 +38,7 @@ const OfferCard = memo(function OfferCard({ item, isBarter, busy, onAction, onOp
       <View style={styles.cardTopRow}>
         <View style={styles.offerorRow}>
           {offeror.profileImage ? (
-            <Image source={{ uri: offeror.profileImage }} style={styles.avatar} />
+            <RemoteImage source={{ uri: offeror.profileImage }} style={styles.avatar} size="avatar" />
           ) : (
             <View style={[styles.avatar, styles.avatarFallback]}>
               <Text style={styles.avatarInitial}>{(offeror.name || 'U').charAt(0).toUpperCase()}</Text>

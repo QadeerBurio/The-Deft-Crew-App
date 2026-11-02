@@ -7,10 +7,11 @@
 
 import React, { useState, useEffect, useContext, useCallback, useRef, useMemo } from "react";
 import {
-  View, Text, FlatList, StyleSheet, TouchableOpacity, Image,
+  View, Text, FlatList, StyleSheet, TouchableOpacity,
   StatusBar, Platform, Animated, Alert, Modal, Pressable,
   BackHandler, RefreshControl,
 } from "react-native";
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
@@ -86,9 +87,10 @@ const MessagesSkeleton = () => (
 const Avatar = ({ uri, name, size = 52, dim, online }) => (
   <View style={{ width: size, height: size }}>
     {uri ? (
-      <Image
+      <RemoteImage
         source={{ uri }}
         style={[{ width: size, height: size, borderRadius: size / 2, backgroundColor: C.soft }, dim && { opacity: 0.45 }]}
+        size="avatar"
       />
     ) : (
       <View

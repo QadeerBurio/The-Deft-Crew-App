@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
-  Image,
   Animated,
   Dimensions,
   Keyboard,
@@ -17,6 +16,7 @@ import {
   BackHandler,
   Platform,
 } from "react-native";
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenHeader, Input, Chip, EmptyState, SkeletonBlock } from "../../ui";
 import {
@@ -191,9 +191,10 @@ const UserResultItem = React.memo(
               <View style={styles.avatarContainer}>
                 <View style={[styles.avatarRing, styles.blockedAvatarRing]}>
                   {item.profileImage ? (
-                    <Image
+                    <RemoteImage
                       source={{ uri: item.profileImage }}
                       style={[styles.avatarImg, { opacity: 0.5 }]}
+                      size="avatar"
                     />
                   ) : (
                     <LinearGradient
@@ -257,9 +258,10 @@ const UserResultItem = React.memo(
             <View style={styles.avatarContainer}>
               <View style={styles.avatarRing}>
                 {item.profileImage ? (
-                  <Image
+                  <RemoteImage
                     source={{ uri: item.profileImage }}
                     style={styles.avatarImg}
+                    size="avatar"
                   />
                 ) : (
                   <LinearGradient
@@ -428,12 +430,13 @@ const RecentPeopleItem = React.memo(
         >
           <View style={styles.recentAvatarContainer}>
             {item.profileImage ? (
-              <Image
+              <RemoteImage
                 source={{ uri: item.profileImage }}
                 style={[
                   styles.recentUserAvatar,
                   isBlocked && { opacity: 0.5 },
                 ]}
+                size="avatar"
               />
             ) : (
               <LinearGradient

@@ -11,13 +11,13 @@ import {
   Platform,
   ActivityIndicator,
   StatusBar,
-  Image,
   Keyboard,
   Alert,
   AppState,
   Modal,
   Dimensions,
 } from 'react-native';
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Ionicons } from '@expo/vector-icons';
@@ -149,10 +149,11 @@ const MessageRow = React.memo(function MessageRow({
       const ratio = w && h ? Math.min(Math.max(h / w, 0.6), 1.4) : 1;
       content = (
         <TouchableOpacity activeOpacity={0.9} onPress={() => onMediaPress(item, 'image')}>
-          <Image
+          <RemoteImage
             source={{ uri: item.mediaUrl }}
             style={[styles.mediaImage, { height: Math.round(IMAGE_W * ratio) }]}
             resizeMode="cover"
+            size="banner"
           />
         </TouchableOpacity>
       );
@@ -712,7 +713,7 @@ export default function MatchChatScreen({ route, navigation }) {
         <TouchableOpacity style={styles.headerInfo} onPress={openProfile} activeOpacity={0.7}>
           <View>
             {otherUser?.profileImage ? (
-              <Image source={{ uri: otherUser.profileImage }} style={styles.avatar} />
+              <RemoteImage source={{ uri: otherUser.profileImage }} style={styles.avatar} size="avatar" />
             ) : (
               <View style={[styles.avatar, styles.avatarFallback]}>
                 <Text style={styles.avatarText}>

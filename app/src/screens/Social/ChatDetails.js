@@ -6,6 +6,7 @@ import {
   Modal, Alert, Dimensions, Animated, Keyboard, Pressable,
   Vibration, KeyboardAvoidingView, BackHandler
 } from "react-native";
+import RemoteImage from "../../ui/RemoteImage";
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute, CommonActions } from "@react-navigation/native";
@@ -117,7 +118,7 @@ const ImageContent = React.memo(({ item, isMe, onImagePress, onLongPress }) => {
       delayLongPress={400}
       style={[styles.imageWrap, isMe ? styles.myCorner : styles.theirCorner]}
     >
-      <Image source={{ uri: item.mediaUrl }} style={[styles.msgImage, size]} resizeMode="cover" />
+      <RemoteImage source={{ uri: item.mediaUrl }} style={[styles.msgImage, size]} resizeMode="cover" size="banner" />
       <MetaRow item={item} isMe={isMe} overlay />
     </Pressable>
   );
@@ -1097,7 +1098,7 @@ export default function ChatDetailScreen() {
           >
             <View style={styles.avatarWrap}>
               {recipient?.profileImage ? (
-                <Image source={{ uri: recipient.profileImage }} style={styles.avatar} />
+                <RemoteImage source={{ uri: recipient.profileImage }} style={styles.avatar} size="avatar" />
               ) : (
                 <View style={[styles.avatar, styles.avatarFallback]}>
                   <Text style={styles.avatarInitial}>{recipientName.charAt(0).toUpperCase()}</Text>

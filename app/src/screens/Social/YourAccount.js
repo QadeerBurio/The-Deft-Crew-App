@@ -1,6 +1,7 @@
 // screens/Social/YourAccount.js — account details. Same data and actions; design system layout.
 import React, { useContext } from 'react';
-import { View, Text, StyleSheet, ScrollView, StatusBar, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, StatusBar } from 'react-native';
+import RemoteImage from '../../ui/RemoteImage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../../context/AuthContext';
@@ -50,7 +51,7 @@ export default function YourAccount({ navigation }) {
           <View style={styles.heroRow}>
             <View style={styles.avatar}>
               {user?.profileImage ? (
-                <Image source={{ uri: user.profileImage }} style={styles.avatarImg} />
+                <RemoteImage source={{ uri: user.profileImage }} style={styles.avatarImg} size="card" />
               ) : (
                 <Text style={styles.avatarText}>{getInitials()}</Text>
               )}
