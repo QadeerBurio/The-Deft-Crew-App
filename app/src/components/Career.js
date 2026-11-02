@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useContext } from "react";
+import { useStableCallback } from "../hooks/useStableCallback";
 import {
   StyleSheet,
   Text,
@@ -124,7 +125,7 @@ const CareerCard = React.memo(({ item, index, onPress, onLocationPress, hasAppli
     <AnimatedTouchable
       style={[styles.card, { opacity, transform: [{ translateY }, { scale }] }]}
       activeOpacity={0.92}
-      onPress={onPress}
+      onPress={() => onPress(item)}
       onPressIn={() => animatePress(0.97)}
       onPressOut={() => animatePress(1)}
     >
@@ -263,7 +264,7 @@ const CareerCard = React.memo(({ item, index, onPress, onLocationPress, hasAppli
           style={styles.optimizeCardBtn}
           onPress={(e) => {
             e.stopPropagation();
-            onOptimizePress();
+            onOptimizePress(item);
           }}
         >
           <Ionicons name="sparkles" size={14} color={T.ink} />
@@ -1212,6 +1213,23 @@ const Career = ({ navigation }) => {
   };
 
   const checkAlreadyApplied = (jobId) => appliedJobIds.has(jobId);
+
+  // Rows are memoised (CareerCard): stable callbacks and renderItem, so a parent render no
+  // longer re-renders every visible job card
+  const openJob = useStableCallback((job) => openApplyModal(job));
+  const locationPress = useStableCallback((job) => handleLocationPress(job));
+  const optimizeJob = useStableCallback((job) => handleOptimizeResumeFlow(job));
+  const renderJob = useCallback(({ item, index }) => (
+    <CareerCard
+      item={item}
+      index={index}
+      onPress={openJob}
+      onLocationPress={locationPress}
+      hasApplied={appliedJobIds.has(item._id)}
+      isRecommended={item.isRecommended || item.matchPercentage >= 50}
+      onOptimizePress={optimizeJob}
+    />
+  ), [openJob, locationPress, optimizeJob, appliedJobIds]);
   const findMyApplication = (jobId) => myApplications.find(app => app.jobId?._id === jobId);
 
   const openInterviewDetails = (application) => {
@@ -1507,17 +1525,7 @@ const Career = ({ navigation }) => {
         <Animated.View style={[styles.listWrap, { opacity: entranceOpacity, transform: [{ translateY: entranceTranslate }] }]}>
           <FlatList
             data={filteredData}
-            renderItem={({ item, index }) => (
-              <CareerCard
-                item={item}
-                index={index}
-                onPress={() => openApplyModal(item)}
-                onLocationPress={handleLocationPress}
-                hasApplied={checkAlreadyApplied(item._id)}
-                isRecommended={item.isRecommended || item.matchPercentage >= 50}
-                onOptimizePress={() => handleOptimizeResumeFlow(item)}
-              />
-            )}
+            renderItem={renderJob}
             keyExtractor={(item, index) => item._id || `${item.title}-${index}`}
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}

@@ -6,6 +6,7 @@ import React, {
   useContext,
   useEffect,
   useCallback,
+  memo,
 } from 'react';
 import {
   View,
@@ -42,6 +43,7 @@ import { AuthContext } from '../context/AuthContext';
 import { useGuestGate } from '../guest/GuestGate';
 import { accountOnly } from '../guest';
 import TabNavigator from './TabNavigator';
+import { useHeaderVisibility } from './useHeaderVisibility';
 import { useEngagement } from '../engagement/hooks/useEngagement';
 import { color as T, font as F, MAX_FONT_SCALE } from '../theme/tokens';
 
@@ -775,8 +777,14 @@ function CustomHeader({ navigation }) {
         useNativeDriver: true,
       }),
     ]).start();
+  }, [headerOpacity, headerTranslateY]);
 
-    Animated.loop(
+  // Badge pulse: only while the badge shows, stopped when it hides or the header unmounts
+  // (was started once and never stopped)
+  const showUnreadBadge = !isGuest && unreadCount > 0;
+  useEffect(() => {
+    if (!showUnreadBadge) return undefined;
+    const pulse = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1.15,
@@ -789,8 +797,13 @@ function CustomHeader({ navigation }) {
           useNativeDriver: true,
         }),
       ])
-    ).start();
-  }, [headerOpacity, headerTranslateY, pulseAnim]);
+    );
+    pulse.start();
+    return () => {
+      pulse.stop();
+      pulseAnim.setValue(1);
+    };
+  }, [showUnreadBadge, pulseAnim]);
 
   const toggleSearch = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -983,23 +996,25 @@ const AnimatedScreenWrapper = ({ children }) => {
 // ============================================================
 // HOME TABS WRAPPER
 // ============================================================
-const HomeTabsScreen = (props) => {
-  const [activeTab, setActiveTab] = useState('Home');
-  const [deepestRoute, setDeepestRoute] = useState('Home');
+// Re-render only when their own props change (the route prop of HomeTabsScreen changes on
+// every nested navigation; neither of these needs it).
+const CustomHeaderMemo = memo(CustomHeader);
+const TabNavigatorMemo = memo(TabNavigator);
+const HEADER_HIDDEN = { display: 'none' };
 
-  const hideHeader =
-    activeTab === 'Social' ||
-    (deepestRoute && FULLSCREEN_SCREENS.includes(deepestRoute));
+const HomeTabsScreen = ({ navigation }) => {
+  // One value that changes only when the header shows or hides (useHeaderVisibility).
+  const { hidden, onTabChange, onRouteChange } = useHeaderVisibility(FULLSCREEN_SCREENS);
 
   return (
     <View style={{ flex: 1, backgroundColor: T.paper }}>
-      {!hideHeader && <CustomHeader navigation={props.navigation} />}
+      {/* Kept mounted and hidden with display: none. Unmounting it for Social meant a full
+          remount (unread fetch, timer, animations, two modals) every time Social was left. */}
+      <View style={hidden ? HEADER_HIDDEN : null}>
+        <CustomHeaderMemo navigation={navigation} />
+      </View>
       <AnimatedScreenWrapper>
-        <TabNavigator
-          {...props}
-          onTabChange={(tabName) => setActiveTab(tabName)}
-          onRouteChange={(routeName) => setDeepestRoute(routeName)}
-        />
+        <TabNavigatorMemo onTabChange={onTabChange} onRouteChange={onRouteChange} />
       </AnimatedScreenWrapper>
     </View>
   );
@@ -1352,7 +1367,6 @@ export default function DrawerNavigator() {
               deepestRouteName && FULLSCREEN_SCREENS.includes(deepestRouteName);
 
             return {
-              unmountOnBlur: false,
               headerShown: false,
               swipeEnabled: !shouldDisableDrawer,
             };
@@ -1374,13 +1388,13 @@ export default function DrawerNavigator() {
         <Drawer.Screen
           name="Dashboard"
           component={DashboardStackNavigator}
-          options={{ headerShown: false, unmountOnBlur: false }}
+          options={{ headerShown: false }}
         />
 
         <Drawer.Screen
           name="SocialStack"
           component={SocialStackNavigator}
-          options={{ headerShown: false, swipeEnabled: false, unmountOnBlur: false }}
+          options={{ headerShown: false, swipeEnabled: false }}
         />
 
         <Drawer.Screen

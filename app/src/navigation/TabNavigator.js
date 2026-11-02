@@ -1,5 +1,5 @@
 // app/src/navigation/TabNavigator.js
-import React, { useEffect, useRef, useState, useCallback, useContext } from "react";
+import React, { useEffect, useRef, useContext } from "react";
 import {
   View,
   Text,
@@ -7,11 +7,9 @@ import {
   TouchableOpacity,
   Pressable,
   Animated,
-  AppState,
   Dimensions,
   StatusBar,
 } from "react-native";
-import axios from "axios";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import {
   Octicons,
@@ -32,14 +30,16 @@ import { accountOnly } from "../guest";
 // 🆕 tour
 import { useTour } from "../engagement/tour/TourProvider";
 import { AuthContext } from "../context/AuthContext";
+import { useMessageUnread } from "../hooks/useMessageUnread";
 import { color, font } from "../theme/tokens";
 
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get("window");
 const TAB_HEIGHT = 55;
+// The Social circle rises this far above the white bar. Touches only reach views inside
+// their parent's box, so the bar's touch box reaches up over the whole circle (see riseRoom).
+export const CIRCLE_RISE = 14;
 
-// Same value Social.js uses for GET /inbox (unread badge on the social button)
-const SOCIAL_API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
 const LABEL_SCALE = 1.2; // labels must fit TAB_HEIGHT at big system fonts
 
 // ============================================================
@@ -81,7 +81,7 @@ export const getDeepestRouteName = (route) => {
 // CustomTabBar
 // ⚠️ Rules of Hooks: ALL hooks must come BEFORE any early return.
 // ============================================================
-const CustomTabBar = ({ state, descriptors, navigation }) => {
+export const CustomTabBar = ({ state, descriptors, navigation }) => {
   // --- Hooks: always in the same order ---
   const insets = useSafeAreaInsets();
   const { registerTarget } = useTour();
@@ -110,46 +110,10 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
     return () => clearTimeout(t);
   }, [registerTarget]);
 
-  // Unread messages badge: same GET /inbox as Social.js. Fetched on mount,
-  // when the active tab changes and when the app comes back. No polling.
+  // Unread messages badge: the shared count (hooks/useMessageUnread), also used by Social
+  // and Messages. No request on tab taps (was one GET /inbox per tab change).
   const { token, isGuest } = useContext(AuthContext);
-  const [unread, setUnread] = useState(0);
-  const mountedRef = useRef(true);
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  const fetchUnread = useCallback(async () => {
-    if (!token || isGuest) {
-      setUnread(0);
-      return;
-    }
-    try {
-      const res = await axios.get(`${SOCIAL_API_URL}/inbox`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!mountedRef.current || !Array.isArray(res?.data)) return;
-      setUnread(res.data.reduce((sum, c) => sum + (c?.unreadCount || 0), 0));
-    } catch (e) {
-      if (__DEV__) console.log("[TabBar] unread fetch failed:", e?.message);
-    }
-  }, [token, isGuest]);
-
-  useEffect(() => {
-    fetchUnread();
-  }, [fetchUnread, state.index]);
-
-  useEffect(() => {
-    let prev = AppState.currentState;
-    const sub = AppState.addEventListener("change", (next) => {
-      if (prev.match(/inactive|background/) && next === "active") fetchUnread();
-      prev = next;
-    });
-    return () => sub.remove();
-  }, [fetchUnread]);
+  const { unread } = useMessageUnread(token, isGuest);
 
   // Centre button press scale
   const socialScale = useRef(new Animated.Value(1)).current;
@@ -182,7 +146,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
     const tint = selected ? color.ink : color.textFaint;
     return (
       <TouchableOpacity
-        style={styles.tabItem}
+        style={[styles.tabItem, { marginTop: riseRoom }]}
         onPress={onPress}
         activeOpacity={0.7}
         accessibilityRole="tab"
@@ -207,13 +171,21 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
 
   const badgeText = unread > 99 ? "99+" : String(unread);
 
+  // Room above the white bar for the raised circle. The row is centred in its box minus the
+  // bottom padding, so its items start pad/2 above the box: half the padding is added too.
+  // The extra strip is transparent and lets touches through (box-none); only the Social
+  // column reaches into it, so the whole circle is tappable and nothing else changes.
+  const pad = insets.bottom + 5;
+  const riseRoom = CIRCLE_RISE + Math.ceil(pad / 2);
+
   return (
     <View
       ref={barRef}
       collapsable={false}
+      pointerEvents="box-none"
       style={[
         styles.tabBarWrapper,
-        { height: TAB_HEIGHT + insets.bottom + 10 },
+        { height: TAB_HEIGHT + insets.bottom + 10 + riseRoom },
       ]}
     >
       <View
@@ -225,9 +197,10 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
         ]}
       />
       <View
+        pointerEvents="box-none"
         style={[
           styles.contentContainer,
-          { paddingBottom: insets.bottom + 5 },
+          { height: TAB_HEIGHT + riseRoom, paddingBottom: pad },
         ]}
       >
         {/* ─── Home tab ─────────────────────────────────────────── */}
@@ -252,7 +225,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
         {/* Same column as the side tabs (spacer · label · dot) so "social"
             shares their baseline; the circle floats above, raised */}
         <Pressable
-          style={styles.tabItem}
+          style={[styles.tabItem, { height: TAB_HEIGHT + riseRoom, paddingTop: 15 + riseRoom }]}
           onPress={handleSocialPress}
           onPressIn={() => scaleSocial(0.95)}
           onPressOut={() => scaleSocial(1)}
@@ -262,7 +235,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
         >
           <Animated.View
             pointerEvents="box-none"
-            style={[styles.centerRaised, { transform: [{ scale: socialScale }] }]}
+            style={[styles.centerRaised, { top: riseRoom - CIRCLE_RISE, transform: [{ scale: socialScale }] }]}
           >
             <View ref={socialRef} collapsable={false} style={styles.refBox}>
               <View style={styles.centerButton}>
@@ -327,7 +300,12 @@ export default function TabNavigator({ onTabChange, onRouteChange }) {
           headerShown: false,
           tabBarShowLabel: false,
           contentStyle: { backgroundColor: "#FFFFFF" },
-          lazy: false,
+          // Tabs mount the first time they are opened (was: all five at start, so Social's feed
+          // and polls ran from launch), and a tab that is not on screen does not re-render
+          // (react-freeze). Home is the first tab and stays eager. The app tour's targets are the
+          // tab bar icons, which are always mounted, so the tour does not depend on these screens.
+          lazy: true,
+          freezeOnBlur: true,
         }}
         initialRouteName="Home"
         backBehavior="initialRoute" // back always returns to Home (history sent you back to Profile)
@@ -352,7 +330,7 @@ export default function TabNavigator({ onTabChange, onRouteChange }) {
         <Tab.Screen
           name="Home"
           component={HomeStack}
-          options={{ unmountOnBlur: false }}
+          options={{ lazy: false }}
         />
         <Tab.Screen name="Explore" component={Explore} />
         <Tab.Screen name="Social" component={Social} />
@@ -418,10 +396,10 @@ const styles = StyleSheet.create({
   },
   tabDotActive: { backgroundColor: color.yellow },
 
-  // Raised like the design: circle starts 14 above the bar's top edge
+  // Raised like the design: circle starts CIRCLE_RISE above the bar's top edge
+  // (top is set in render, inside the Social column's box)
   centerRaised: {
     position: "absolute",
-    top: -14,
     left: 0,
     right: 0,
     alignItems: "center",
