@@ -25,9 +25,10 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { color as T, font as F } from "../theme/tokens";
 import ScreenHeader from "../ui/ScreenHeader";
+import { SERVER_ORIGIN } from "../config/server";
 const { width } = Dimensions.get("window");
 
-const API_URL = 'https://the-deft-crew-production.up.railway.app/api/bookings';
+const API_URL = `${SERVER_ORIGIN}/api/bookings`;
 
 const BookingScreen = () => {
   const navigation = useNavigation();

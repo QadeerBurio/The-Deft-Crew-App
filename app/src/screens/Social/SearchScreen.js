@@ -37,8 +37,9 @@ import { useGuestGate } from "../../guest/GuestGate";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { color as T, font as F } from "../../theme/tokens";
+import { SERVER_ORIGIN } from "../../config/server";
 const { width, height } = Dimensions.get("window");
-const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
+const API_URL = `${SERVER_ORIGIN}/api/social`;
 
 // Enhanced Color Palette
 const COLORS = {

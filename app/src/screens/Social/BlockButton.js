@@ -14,7 +14,8 @@ import { useNavigation } from '@react-navigation/native';
 
 import { color as T, font as F } from "../../theme/tokens";
 import { plainError } from "../../utils/plainError";
-const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
+import { SERVER_ORIGIN } from "../../config/server";
+const API_URL = `${SERVER_ORIGIN}/api/social`;
 
 export default function BlockButton({ userId, userName, onBlock, size = 'medium' }) {
   const { token } = useContext(AuthContext);

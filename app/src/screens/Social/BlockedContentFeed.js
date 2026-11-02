@@ -15,7 +15,8 @@ import { AuthContext } from '../../context/AuthContext';
 import PostCard from './PostCard';
 
 import { color as T, font as F } from "../../theme/tokens";
-const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
+import { SERVER_ORIGIN } from "../../config/server";
+const API_URL = `${SERVER_ORIGIN}/api/social`;
 
 export default function BlockedContentFeed() {
   const { token } = useContext(AuthContext);

@@ -33,12 +33,9 @@ import { color as T, font as F } from "../theme/tokens";
 import { useGuestGate } from '../guest/GuestGate';
 import { plainError } from "../utils/plainError";
 import { metaEvents } from "../analytics/metaEvents";
+import {  } from "../config/server";
 const { width, height } = Dimensions.get("window");
 
-// const getBaseURL = () => {
-//   if (__DEV__) return "https://the-deft-crew-production.up.railway.app/api";
-//   return "https://the-deft-crew-production.up.railway.app/api";
-// };
 const API_URL = `${BASE_URL}/jobs`;
 
 const COLORS = {

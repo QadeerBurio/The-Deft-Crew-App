@@ -34,6 +34,7 @@ import * as Linking from 'expo-linking';
 import ImagePreviewModal from '../../../../components/media/ImagePreviewModal';
 
 import { color as T, font as F } from "../../theme/tokens";
+import { SERVER_ORIGIN } from "../../config/server";
 // ==================== DESIGN TOKENS ====================
 const C = {
   white: T.white,
@@ -55,7 +56,7 @@ const IMAGE_W = Math.round(SCREEN_W * 0.7);
 // Socket + raw fetch() use the SAME server as every other API call.
 // (Before, in dev builds this pointed at a local IP:5000 while the API used
 // Railway, so the socket never connected and the chat sat on "connecting…".)
-const SOCKET_URL = String(BASE_URL || 'https://the-deft-crew-production.up.railway.app/api').replace(/\/api\/?$/, '');
+const SOCKET_URL = String(BASE_URL || `${SERVER_ORIGIN}/api`).replace(/\/api\/?$/, '');
 
 // ==================== HELPERS ====================
 const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];

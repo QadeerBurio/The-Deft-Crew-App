@@ -22,9 +22,10 @@ import { AuthContext } from '../../context/AuthContext';
 import { useStableCallback } from '../../hooks/useStableCallback';
 import PostCard, { PostCardSkeleton } from "./PostCard";
 import ConfessionScreen from './ConfessionScreen';
+import { SERVER_ORIGIN } from "../../config/server";
 
 const { width, height } = Dimensions.get('window');
-const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
+const API_URL = `${SERVER_ORIGIN}/api/social`;
 
 const FEED_POLL_INTERVAL = 15000;
 

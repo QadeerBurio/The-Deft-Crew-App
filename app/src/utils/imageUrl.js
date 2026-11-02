@@ -9,8 +9,9 @@
 // stored as "uploads/logos/x.png" or "/uploads/x.png" became dead links.
 // api/brandApi.js (getBrandsFast) still builds them that way; fixLegacyImageUrl
 // repairs those URLs on the screen side.
+import { SERVER_ORIGIN } from "../config/server";
 
-export const IMAGE_SERVER_URL = "https://the-deft-crew-production.up.railway.app";
+export const IMAGE_SERVER_URL = `${SERVER_ORIGIN}`;
 
 // generic placeholder some data sources put in when there is no image
 export const FALLBACK_IMAGE = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";

@@ -14,7 +14,8 @@ import axios from "axios";
 
 import { color as T, font as F } from "../../theme/tokens";
 import { ScreenHeader } from "../../ui";
-const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social'; 
+import { SERVER_ORIGIN } from "../../config/server";
+const API_URL = `${SERVER_ORIGIN}/api/social`; 
 const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/decaxpera/auto/upload";
 const UPLOAD_PRESET = "tdc_profiles";
 

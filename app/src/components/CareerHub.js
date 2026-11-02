@@ -21,10 +21,11 @@ import * as Haptics from 'expo-haptics';
 import axios from 'axios';
 
 import { color as T, font as F } from "../theme/tokens";
+import { SERVER_ORIGIN } from "../config/server";
 const { width, height } = Dimensions.get('window');
 
 // API Configuration
-const API_BASE_URL = 'https://the-deft-crew-production.up.railway.app/api';
+const API_BASE_URL = `${SERVER_ORIGIN}/api`;
 const JOBS_PUBLIC_ENDPOINT = `${API_BASE_URL}/jobs/public/all`;
 
 // ─── Animated Particle Background ─────────────────────────────────────

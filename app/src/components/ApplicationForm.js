@@ -12,6 +12,7 @@ import { color as T, font as F } from "../theme/tokens";
 import ScreenHeader from "../ui/ScreenHeader";
 import { plainError } from "../utils/plainError";
 import { metaEvents } from "../analytics/metaEvents";
+import { SERVER_ORIGIN } from "../config/server";
 // --- SUB-COMPONENTS (Defined outside to prevent re-render lag) ---
 const SectionHeader = ({ title, icon, color }) => (
 
@@ -106,7 +107,7 @@ const ApplicationForm = ({ route, navigation }) => {
 
   setLoading(true);
   try {
-    const API_URL = "https://the-deft-crew-production.up.railway.app/api/auth/exchange/apply";
+    const API_URL = `${SERVER_ORIGIN}/api/auth/exchange/apply`;
 
     const response = await fetch(API_URL, {
       method: 'POST',

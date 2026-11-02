@@ -23,10 +23,11 @@ import { AuthContext } from '../../context/AuthContext';
 import { color as T, font as F } from "../../theme/tokens";
 import { ScreenHeader } from "../../ui";
 import { plainText } from "../../utils/plainError";
+import { SERVER_ORIGIN } from "../../config/server";
 const { width } = Dimensions.get('window');
 
 // IMPORTANT: Define your API URL here or import from config
-const API_URL = 'https://the-deft-crew-production.up.railway.app/api'; // Replace with your actual API URL
+const API_URL = `${SERVER_ORIGIN}/api`; // Replace with your actual API URL
 
 export default function ChangePassword({ navigation }) {
   const { token } = useContext(AuthContext);

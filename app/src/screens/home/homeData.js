@@ -4,9 +4,10 @@
 //   • deals            → optimizedAPI.getBrandsFast (same as Brands)
 import api, { optimizedAPI } from "../../api/brandApi";
 import { imageUrl, brandLogoUrl, withFixedImages, FALLBACK_IMAGE } from "../../utils/imageUrl";
+import { SERVER_ORIGIN } from "../../config/server";
 
 // Same value ConfessionScreen.js hard-codes
-const SOCIAL_API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
+const SOCIAL_API_URL = `${SERVER_ORIGIN}/api/social`;
 
 export const LATEST_CONFESSION_KEY = (userId) => ["home", "latestConfession", userId];
 export const DEALS_KEY = (userId) => ["home", "deals", userId];

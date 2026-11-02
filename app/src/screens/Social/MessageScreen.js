@@ -23,8 +23,9 @@ import io from "socket.io-client";
 import { color as T, font as F } from "../../theme/tokens";
 import { ScreenHeader, HeaderIconButton, Input, Chip, EmptyState, SkeletonBlock } from "../../ui";
 import { plainError } from "../../utils/plainError";
-const socket = io("https://the-deft-crew-production.up.railway.app");
-const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
+import { SERVER_ORIGIN } from "../../config/server";
+const socket = io(`${SERVER_ORIGIN}`);
+const API_URL = `${SERVER_ORIGIN}/api/social`;
 
 const C = {
   gold: T.yellow,

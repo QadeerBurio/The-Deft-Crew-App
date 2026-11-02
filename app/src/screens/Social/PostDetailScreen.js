@@ -33,10 +33,11 @@ import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 import { ScreenHeader, Card, EmptyState, Skeleton } from "../../ui";
 import { plainError } from "../../utils/plainError";
 import { metaEvents } from "../../analytics/metaEvents";
+import { SERVER_ORIGIN } from "../../config/server";
 const { width, height } = Dimensions.get('window');
 
 // ✅ FIXED: Correct API URL (no duplicate /api)
-const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
+const API_URL = `${SERVER_ORIGIN}/api/social`;
 
 const COMMENTS_POLL_INTERVAL = 6000;
 

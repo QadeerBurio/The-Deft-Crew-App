@@ -37,8 +37,9 @@ import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus
 
 import { color as T, font as F } from "../../theme/tokens";
 import { metaEvents } from "../../analytics/metaEvents";
+import { SERVER_ORIGIN } from "../../config/server";
 const { height, width } = Dimensions.get('window');
-const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
+const API_URL = `${SERVER_ORIGIN}/api/social`;
 
 // One poll while the confessions are on screen. It also refreshes the open comments sheet
 // (was: the whole feed every 8 s, plus the whole feed again every 6 s for open comments).

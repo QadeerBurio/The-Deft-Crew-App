@@ -3,8 +3,9 @@
 // category details, the registration form, validation (same rules as the server's
 // services/events/eventValidation.js) and the exact POST /api/events/register body.
 import axios from "axios";
+import { SERVER_ORIGIN } from "../../config/server";
 
-export const API_BASE = "https://the-deft-crew-production.up.railway.app/api/events";
+export const API_BASE = `${SERVER_ORIGIN}/api/events`;
 export const BASE_KEYS = ["studentName", "email", "whatsapp", "university", "studentId"];
 // today's form: events without a registrationForm register exactly as before
 export const LEGACY_FORM = [

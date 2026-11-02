@@ -16,8 +16,9 @@ import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradie
 import { BlurView } from 'expo-blur';
 
 import { color as T, font as F } from "../../theme/tokens";
+import { SERVER_ORIGIN } from "../../config/server";
 const { width, height } = Dimensions.get('window');
-const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
+const API_URL = `${SERVER_ORIGIN}/api/social`;
 
 const formatTimeAgo = (dateString) => {
   const now = new Date();

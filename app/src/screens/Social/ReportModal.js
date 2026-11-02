@@ -22,8 +22,9 @@ import { AuthContext } from '../../context/AuthContext';
 
 import { color as T, font as F } from "../../theme/tokens";
 import { plainError } from "../../utils/plainError";
+import { SERVER_ORIGIN } from "../../config/server";
 const { height, width } = Dimensions.get('window');
-const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
+const API_URL = `${SERVER_ORIGIN}/api/social`;
 
 const REPORT_REASONS = [
   { id: 'Spam', label: 'Spam', icon: 'mail-outline' },

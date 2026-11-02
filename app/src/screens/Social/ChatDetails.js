@@ -21,9 +21,10 @@ import { color as T, font as F } from "../../theme/tokens";
 import { HeaderIconButton, EmptyState, SkeletonBlock } from "../../ui";
 import { plainText } from "../../utils/plainError";
 import { copyToClipboard } from '../../utils/clipboard';
+import { SERVER_ORIGIN } from "../../config/server";
 const { width } = Dimensions.get('window');
-const socket = io("https://the-deft-crew-production.up.railway.app");
-const API_URL = "https://the-deft-crew-production.up.railway.app/api/social";
+const socket = io(`${SERVER_ORIGIN}`);
+const API_URL = `${SERVER_ORIGIN}/api/social`;
 const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/decaxpera/auto/upload";
 const UPLOAD_PRESET = "tdc_profiles";
 

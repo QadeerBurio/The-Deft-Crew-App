@@ -27,8 +27,9 @@ import {
   NotifEmpty,
 } from '../../components/notifications/NotifUI';
 import { plainError } from "../../utils/plainError";
+import { SERVER_ORIGIN } from "../../config/server";
 
-const API_URL = 'https://the-deft-crew-production.up.railway.app/api/social';
+const API_URL = `${SERVER_ORIGIN}/api/social`;
 const POLL_MS = 20000;
 
 const SKILLSHARE_ONLY = ['new_offer', 'offer_accepted', 'offer_rejected', 'match_created'];
