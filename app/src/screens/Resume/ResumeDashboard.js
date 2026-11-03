@@ -33,6 +33,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 import Svg, { Circle } from 'react-native-svg';
 import { plainError } from "../../utils/plainError";
+import { studioEnabled } from "../../api/resumeStudioApi";
 const { width } = Dimensions.get('window');
 const MAX_CREATIONS = 2;
 
@@ -115,6 +116,9 @@ const ResumeDashboardScreen = ({ navigation }) => {
   const [skillGapData, setSkillGapData] = useState({ missingSkills: [], message: '' });
   const [savedJobIds, setSavedJobIds] = useState(new Set());
   const [savingJobId, setSavingJobId] = useState(null);
+  // AI Resume Studio (FLAG_RESUME_STUDIO_V2): "tailor for a job" and "my versions"
+  const [studioOn, setStudioOn] = useState(false);
+  useEffect(() => { studioEnabled().then(setStudioOn).catch(() => setStudioOn(false)); }, [isGuest]);
 
   // ============================================================
   // Entrance animation
@@ -958,6 +962,25 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
 
               {selectedResume ? (
                 <>
+                  {studioOn && (
+                    <View style={RD.section}>
+                      <View style={RD.studio}>
+                        <Text style={RD.studioTitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>resume studio</Text>
+                        <Text style={RD.studioText} maxFontSizeMultiplier={MAX_FONT_SCALE}>tailor this resume for a job. you review every change; nothing is invented.</Text>
+                        <View style={RD.studioRow}>
+                          <TouchableOpacity style={RD.studioBtn} accessibilityRole="button" accessibilityLabel="tailor for a job"
+                            onPress={() => navigation.navigate('ResumeStudio', { resumeId: selectedResume._id, fresh: true })}>
+                            <Text style={RD.studioBtnText} maxFontSizeMultiplier={MAX_FONT_SCALE}>tailor for a job</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={[RD.studioBtn, RD.studioBtnLight]} accessibilityRole="button" accessibilityLabel="my tailored versions"
+                            onPress={() => navigation.navigate('ResumeStudio', { view: 'versions' })}>
+                            <Text style={[RD.studioBtnText, { color: T.ink }]} maxFontSizeMultiplier={MAX_FONT_SCALE}>my versions</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </View>
+                  )}
+
                   {/* Dark card: score ring + actions */}
                   <View style={RD.section}>
                     <View style={RD.dark}>
@@ -1752,6 +1775,13 @@ export default ResumeDashboardScreen;
 
 // ─── Resume dashboard design layout ──────────────────────────────────
 const RD = StyleSheet.create({
+  studio: { padding: 16, borderRadius: 22, backgroundColor: T.card, borderWidth: 1, borderColor: T.line },
+  studioTitle: { fontFamily: F.bodyBold, fontSize: 15, color: T.ink },
+  studioText: { fontFamily: F.body, fontSize: 13, color: T.textMuted, marginTop: 4 },
+  studioRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  studioBtn: { minHeight: 44, paddingHorizontal: 16, borderRadius: 14, backgroundColor: T.ink, justifyContent: 'center' },
+  studioBtnLight: { backgroundColor: T.card, borderWidth: 1, borderColor: T.line },
+  studioBtnText: { fontFamily: F.bodySemi, fontSize: 13.5, color: T.white },
   header: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6, backgroundColor: T.paper },
   hello: { fontFamily: F.bodySemi, fontSize: 13.5, color: T.textMuted },
   title: { fontFamily: F.heading, fontSize: 24, color: T.ink },

@@ -70,6 +70,8 @@ import CardBase from '../components/Card';
 const Card = accountOnly(CardBase, { title: "membership card" });
 import NotificationModal from '../components/NotificationModal';
 import Career from '../components/Career';
+import ResumeStudioBase from '../screens/Resume/ResumeStudio';
+const ResumeStudio = accountOnly(ResumeStudioBase, { title: "resume studio" }); // FLAG_RESUME_STUDIO_V2, from a job's details
 import TDCCareers from '../components/TDCCareers';
 import ExchangeScreen from '../components/ExchangeScreen';
 import ApplicationFormBase from '../components/ApplicationForm';
@@ -219,6 +221,7 @@ const FULLSCREEN_SCREENS = [
   'ResumeAnalytics',
   'ResumeSettings',
   'ResumeView',
+  'ResumeStudio',
   'Social',
   'SocialStack',
   'Messages',
@@ -1277,6 +1280,7 @@ function HomeStackNavigator() {
       <Stack.Screen name="Disclaimer" component={DisclaimerScreen} />
       <Stack.Screen name="FAQ" component={FAQScreen} />
       <Stack.Screen name="Career" component={Career} />
+      <Stack.Screen name="ResumeStudio" component={ResumeStudio} />
       <Stack.Screen name="TDCCareers" component={TDCCareers} />
       <Stack.Screen name="Booking" component={BookingScreen} />
       <Stack.Screen name="Exchange" component={ExchangeScreen} />

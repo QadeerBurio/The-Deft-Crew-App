@@ -15,7 +15,9 @@ import ResumeTemplateScreen from "../screens/Resume/ResumeTemplate";
 import ResumeSettingsScreen from "../screens/Resume/ResumeSetting";
 import ResumeAnalyticsScreen from "../screens/Resume/ResumeAnalytics";
 import ResumeShareScreenBase from "../screens/Resume/ResumeShare";
+import ResumeStudioScreenBase from "../screens/Resume/ResumeStudio";
 const ResumeShareScreen = accountOnly(ResumeShareScreenBase, { title: "share resume" });
+const ResumeStudioScreen = accountOnly(ResumeStudioScreenBase, { title: "resume studio" }); // FLAG_RESUME_STUDIO_V2
 
 const Stack = createNativeStackNavigator();
 
@@ -86,6 +88,12 @@ export default function ResumeStack() {
         name="ResumeSettings" 
         component={ResumeSettingsScreen}
          options={{headerShown: false}}
+      />
+
+      <Stack.Screen
+        name="ResumeStudio"
+        component={ResumeStudioScreen}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );
