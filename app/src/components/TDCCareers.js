@@ -33,6 +33,8 @@ import { color as T, font as F } from "../theme/tokens";
 import { useGuestGate } from '../guest/GuestGate';
 import { plainError } from "../utils/plainError";
 import { metaEvents } from "../analytics/metaEvents";
+import CareerApplications from "./CareerApplications";
+import { careerEnabled } from "../api/careerApi";
 import {  } from "../config/server";
 const { width, height } = Dimensions.get("window");
 
@@ -257,6 +259,9 @@ const TDCCareers = ({ navigation }) => {
   const [myApplications, setMyApplications] = useState([]);
   const [showApplicationsModal, setShowApplicationsModal] = useState(false);
   const [token, setToken] = useState(null);
+  // FLAG_CAREER_TIMELINE: pilot students see their applications on the hiring timeline
+  const [careerOn, setCareerOn] = useState(false);
+  useEffect(() => { careerEnabled().then(setCareerOn).catch(() => setCareerOn(false)); }, [token]);
   const { requireAccount } = useGuestGate();
   const [user, setUser] = useState(null);
   const [appliedJobIds, setAppliedJobIds] = useState(new Set());
@@ -1035,7 +1040,11 @@ const TDCCareers = ({ navigation }) => {
               </TouchableOpacity>
               <Text style={styles.appsModalTitle}>my tdc applications</Text>
               <Text style={styles.appsModalCount}>{myApplications.length} applications</Text>
-              {myApplications.length === 0 ? (
+              {careerOn ? (
+                <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: height * 0.7 }}>
+                  <CareerApplications />
+                </ScrollView>
+              ) : myApplications.length === 0 ? (
                 <View style={styles.emptyState}>
                   <MaterialCommunityIcons name="briefcase-search" size={50} color={T.ink} />
                   <Text style={styles.emptyStateText}>no applications yet</Text>
