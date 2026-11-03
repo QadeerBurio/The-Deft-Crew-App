@@ -44,6 +44,7 @@ import { color as T, font as F } from "../theme/tokens";
 import { useGuestGate } from '../guest/GuestGate';
 import { plainError } from "../utils/plainError";
 import { copyToClipboard } from "../utils/clipboard";
+import { studioEnabled, studioApi } from "../api/resumeStudioApi";
 // Design system tokens (tdc-full-redesign/DESIGN_SYSTEM.md)
 const COLORS = {
   page: T.paper,
@@ -1006,6 +1007,10 @@ const Career = ({ navigation }) => {
   const [myApplications, setMyApplications] = useState([]);
   const [showApplicationsModal, setShowApplicationsModal] = useState(false);
   const [token, setToken] = useState(null);
+  // AI Resume Studio (FLAG_RESUME_STUDIO_V2): "tailor my resume" on a TDC job, and after applying, send
+  // an approved version tailored for that job
+  const [studioOn, setStudioOn] = useState(false);
+  useEffect(() => { if (token) studioEnabled().then(setStudioOn).catch(() => setStudioOn(false)); else setStudioOn(false); }, [token]);
   const { requireAccount } = useGuestGate();
   const [user, setUser] = useState(null);
   const [appliedJobIds, setAppliedJobIds] = useState(new Set());
@@ -1414,16 +1419,30 @@ const Career = ({ navigation }) => {
       const formData = new FormData();
       Object.entries(applicationForm).forEach(([key, value]) => formData.append(key, value || ""));
       formData.append('resume', { uri: selectedResume.uri, type: selectedResume.mimeType || 'application/octet-stream', name: selectedResume.name });
-      await axios.post(`${API_URL}/apply/${selectedJob._id}`, formData, {
+      const applied = await axios.post(`${API_URL}/apply/${selectedJob._id}`, formData, {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (e) => setUploadProgress(Math.round((e.loaded * 100) / e.total)),
         timeout: 60000,
       });
       metaEvents.jobApplied(selectedJob._id);
-      Alert.alert("Submitted!", "Your application has been submitted.");
+      const offered = await offerTailoredVersion(applied?.data?.application?._id, selectedJob);
+      if (!offered) Alert.alert("Submitted!", "Your application has been submitted.");
       setModalVisible(false); resetForm(); fetchMyApplications();
     } catch (err) { Alert.alert("Error", plainError(err, "Failed to submit.")); }
     finally { setSubmitting(false); setUploadProgress(0); }
+  };
+
+  // after applying: an approved Resume Studio version tailored for this job can go with the application
+  const offerTailoredVersion = async (applicationId, job) => {
+    if (!studioOn || !applicationId || !job?._id) return false;
+    const versions = await studioApi.versions().catch(() => []);
+    const v = (versions || []).find((x) => x.target?.kind === "tdc_job" && String(x.target.jobId) === String(job._id));
+    if (!v) return false;
+    Alert.alert("Submitted!", `Send your tailored resume "${v.label || job.title}" with this application? The employer sees exactly this version.`, [
+      { text: "Not now", style: "cancel" },
+      { text: "Send it", onPress: () => studioApi.attachVersion(applicationId, v.id).then(() => Alert.alert("Sent", "Your tailored resume is attached to this application.")).catch((e) => Alert.alert("Not sent", e.message)) },
+    ]);
+    return true;
   };
 
   const resetForm = () => {
@@ -1697,6 +1716,18 @@ const Career = ({ navigation }) => {
                   </View>
                 )}
               </View>
+
+              {studioOn && selectedJob?._id && (
+                <TouchableOpacity
+                  style={styles.tailorBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="tailor my resume for this job"
+                  onPress={() => { setModalVisible(false); navigation.navigate("ResumeStudio", { jobId: selectedJob._id, jobTitle: selectedJob.title, fresh: true }); }}
+                >
+                  <Ionicons name="sparkles-outline" size={16} color={T.ink} />
+                  <Text style={styles.tailorBtnText}>Tailor my resume for this job</Text>
+                </TouchableOpacity>
+              )}
 
               {selectedJob?.description && (
                 <View style={styles.detailSection}>
@@ -2170,6 +2201,8 @@ const styles = StyleSheet.create({
   detailSection: { marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: T.line },
   sectionHeading: { fontSize: 14, fontFamily: F.bodyBold, color: T.ink, marginBottom: 10 },
   descriptionText: { fontSize: 13, fontFamily: F.body, color: T.textMuted, lineHeight: 20 },
+  tailorBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', minHeight: 44, paddingHorizontal: 14, borderRadius: 14, backgroundColor: T.yellowSoft, marginTop: 12 },
+  tailorBtnText: { fontSize: 13.5, fontFamily: F.bodySemi, color: T.ink },
   detailItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8 },
   detailItemText: { fontSize: 13, fontFamily: F.body, color: T.textMuted, flex: 1, lineHeight: 18 },
   benefitsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },

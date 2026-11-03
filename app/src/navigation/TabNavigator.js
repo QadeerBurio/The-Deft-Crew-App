@@ -54,6 +54,7 @@ export const HIDE_TAB_BAR_SCREENS = [
   "ResumeAnalytics",
   "ResumeSettings",
   "ResumeView",
+  "ResumeStudio",
   "Brands",
   "OfferScreen",
   "BrandOffers",
