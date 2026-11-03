@@ -56,6 +56,8 @@ import University from '../screens/University';
 import ProfileDetailsBase from '../screens/ProfileDetailsScreen';
 const ProfileDetails = accountOnly(ProfileDetailsBase, { title: "profile" });
 import Brands from '../screens/Brands';
+import SurpriseBoxesBase from '../screens/SurpriseBoxes';
+const SurpriseBoxes = accountOnly(SurpriseBoxesBase, { title: "surprise boxes" }); // FLAG_SURPLUS_BOXES, from the Discounts area
 import ContactUs from '../components/ContactUs';
 import PointsScreen from '../components/Points';
 import WhyPointsScreen from '../components/WhyPoints';
@@ -222,6 +224,7 @@ const FULLSCREEN_SCREENS = [
   'ResumeSettings',
   'ResumeView',
   'ResumeStudio',
+  'SurpriseBoxes',
   'Social',
   'SocialStack',
   'Messages',
@@ -1324,6 +1327,7 @@ function HomeStackNavigator() {
       <Stack.Screen name="MyDiscountScreen" component={MyDiscountScreen} />
       <Stack.Screen name="Explore" component={Explore} />
       <Stack.Screen name="Brands" component={Brands} />
+      <Stack.Screen name="SurpriseBoxes" component={SurpriseBoxes} />
       <Stack.Screen name="Badges" component={BadgesScreen} />
       <Stack.Screen name="CityScreen" component={CityScreen} />
       <Stack.Screen

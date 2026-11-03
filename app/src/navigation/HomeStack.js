@@ -1,6 +1,7 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import Brands from "../screens/Brands"; 
+import SurpriseBoxesBase from "../screens/SurpriseBoxes";
 import BrandOffersScreen from "../screens/OfferScreen";
 import UniversityScreen from "../screens/University"; 
 import Slider from "../screens/Slider";
@@ -19,6 +20,7 @@ import ResumeStack from "./ResumeNavigator";  // 👈 FIXED: was "./ResumeNaviga
 import Social from "../screens/Social/Social";
 import OfferScreen from "../screens/OfferScreen";
 import { accountOnly } from "../guest";
+const SurpriseBoxes = accountOnly(SurpriseBoxesBase, { title: "surprise boxes" }); // FLAG_SURPLUS_BOXES
 
 const Stack = createNativeStackNavigator();
 
@@ -34,6 +36,7 @@ export default function HomeStack() {
         options={{ freezeOnBlur: false }}
       />
       <Stack.Screen name="Brands" component={Brands} />
+      <Stack.Screen name="SurpriseBoxes" component={SurpriseBoxes} />
       <Stack.Screen name="ContactUs" component={ContactUs} />
       
       {/* Resume Stack — nested navigator */}
