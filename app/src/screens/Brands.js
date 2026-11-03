@@ -61,6 +61,7 @@ import {
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { imageUrl, brandLogoUrl, fixLegacyImageUrl, FALLBACK_IMAGE } from "../utils/imageUrl";
 import { Button, Chip, EmptyState, HeaderIconButton, PressScale, SectionTitle, SheetHandle, SkeletonBlock } from "../ui";
+import SurpriseBoxCard from "../components/SurpriseBoxCard";
 
 const { width, height } = Dimensions.get("window");
 const NUM_COLUMNS = 2;
@@ -1395,10 +1396,12 @@ export default function BrandsScreen() {
   const renderHeader = useCallback(
     () => (
       <View style={styles.listHeader}>
+        {/* Surprise Boxes (FLAG_SURPLUS_BOXES): renders nothing for students outside the pilot */}
+        <SurpriseBoxCard onOpen={() => navigation.navigate("SurpriseBoxes")} refreshKey={refreshing} />
         <SectionTitle title="crew's privilege brands" right={universityName || undefined} />
       </View>
     ),
-    [universityName]
+    [universityName, navigation, refreshing]
   );
 
   return (
