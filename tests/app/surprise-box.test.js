@@ -284,6 +284,35 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
   await settle(root);
   ok(alerts.some((a) => a.title === "you already have an order here" && (a.buttons || []).some((b) => b.text === "see it")), "one active order per brand: explained, with a link to the order");
 
+  console.log("-- notification taps open the order");
+  {
+    const loadP = loader({ "expo-notifications": {}, "expo-device": {}, "expo-constants": { __esModule: true, default: {} }, "react-native": { Platform: { OS: "android" } }, "@react-native-async-storage/async-storage": { getItem: async () => null } });
+    const P = loadP(path.join(SRC, "utils/pushNotifications.js"));
+    // what the server sends for a student's Surprise Box notification (services/surplus/notifications.js tapData)
+    const payload = { surplusOrderId: "o7", ref: "SB-XYZ789", eventType: "READY_FOR_PICKUP", screen: "SurpriseBoxes", params: { orderId: "o7" } };
+    const r = P.getRouteFromNotificationData(payload);
+    ok(r.route === "SurpriseBoxes" && r.params.orderId === "o7" && !r.params.offerId, "push tap: the server's payload opens SurpriseBoxes on that order (not an offer)", JSON.stringify(r));
+    const popup = read("app/src/hooks/useNotificationPopup.js");
+    const modal = read("app/src/components/NotificationModal.js");
+    const banner = read("app/src/components/NotificationBanner.js");
+    ok(popup.includes("data.screen") && popup.includes("data.params") && modal.includes("m.screen") && modal.includes("m.params") && banner.includes("meta?.screen") && banner.includes("meta?.params"), "the in-app banner, the notification list and the banner card use the same screen + params");
+    const drawer = read("app/src/navigation/DrawerNavigator.js");
+    ok(drawer.includes('<Stack.Screen name="Career" component={Career} />') && drawer.includes('name="SurpriseBoxes"'), "SurpriseBoxes sits in the same stack as Career (where notification taps already go)");
+    const opened = [];
+    const realOrder = studioMock.surplusApi.order;
+    studioMock.surplusApi.order = async (id) => { opened.push(id); return { ...order(), id, ref: `SB-${id}` }; };
+    const rootT = mount(React.createElement(SurpriseBoxes, { route: { params: { orderId: "o1" } }, navigation }));
+    await settle(rootT);
+    rootT.rerender(React.createElement(SurpriseBoxes, { route: { params: { orderId: "o7" } }, navigation }));
+    await settle(rootT);
+    ok(opened.join() === "o1,o7" && textOf(rootT.tree).includes("SB-o7"), "a tap while the screen is already open opens the new order", opened.join());
+    studioMock.surplusApi.order = async () => ({ ...order(), pickup: { code: null, qr: null, validUntil: soon(240), unavailable: true } });
+    const rootU = mount(React.createElement(SurpriseBoxes, { route: { params: { orderId: "o1" } }, navigation }));
+    await settle(rootU);
+    ok(textOf(rootU.tree).includes("can't be shown right now") && !find(rootU.tree, (x) => x.type === "QRCode"), "if the server can't make the code, the app says so (no empty QR)");
+    studioMock.surplusApi.order = realOrder;
+  }
+
   console.log("\u2500\u2500 accessibility and placement");
   const src = read("app/src/screens/SurpriseBoxes.js");
   ok(/minHeight: 44/.test(src) && /accessibilityLiveRegion="polite"/.test(src) && /accessibilityRole="switch"/.test(src), "44 pt targets, the timer is announced, the terms switch is labelled");

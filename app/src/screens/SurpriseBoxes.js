@@ -6,7 +6,8 @@
 //   hold     the boxes are held for 10 minutes (timer); confirming needs "I've read the food and pickup terms"
 //   orders   my orders; an order shows its status timeline, the pickup code + QR while it's awaiting pickup,
 //            cancel (until 30 minutes before pickup), and a support case within 24 hours of pickup
-// Route params: { orderId } opens that order; { view: "orders" } opens my orders.
+// Route params: { orderId } opens that order (also when a notification is tapped while this screen is open);
+// { view: "orders" } opens my orders. Notifications carry screen "SurpriseBoxes" + params { orderId }.
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View, Text, TouchableOpacity, TextInput, ScrollView, Switch, ActivityIndicator, Alert, RefreshControl, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -79,6 +80,13 @@ export default function SurpriseBoxes({ route, navigation }) {
     })();
     return () => { live = false; };
   }, []);
+
+  // a notification tapped while this screen is already open: open that order
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) { mounted.current = true; return; }
+    if (enabled && params.orderId) openOrder(params.orderId);
+  }, [params.orderId]);
 
   // the hold timer
   useEffect(() => {
@@ -252,7 +260,10 @@ export default function SurpriseBoxes({ route, navigation }) {
         <Text style={styles.muted} maxFontSizeMultiplier={M}>{order.brand?.name} · {order.branch.name}{order.branch.address ? `, ${order.branch.address}` : ""} · order {order.ref}</Text>
         <Text style={styles.priceBig} maxFontSizeMultiplier={M}>{order.payment.state === "paid_at_pickup" ? `paid ${money(order.price.total, order.price.currency)} at pickup` : order.payment.note}</Text>
         <Text style={styles.body} maxFontSizeMultiplier={M}>pickup {span(order.pickupStart, order.pickupEnd)}</Text>
-        {order.pickup && (
+        {order.pickup?.unavailable && (
+          <Text style={styles.warn} maxFontSizeMultiplier={M}>your pickup code can't be shown right now. try again in a little while; your order is safe.</Text>
+        )}
+        {order.pickup && !order.pickup.unavailable && (
           <View style={styles.codeBox} accessible accessibilityLabel={`pickup code ${order.pickup.code.split("").join(" ")}. show it at the brand.`}>
             <Text style={styles.label} maxFontSizeMultiplier={M}>show this at pickup</Text>
             <View style={{ alignItems: "center", marginVertical: 10 }}><QRCode value={order.pickup.qr} size={176} color={T.ink} backgroundColor={T.white} ecl="M" /></View>
