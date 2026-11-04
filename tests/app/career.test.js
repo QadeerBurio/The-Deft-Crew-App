@@ -232,6 +232,11 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
   const nav = read("app/src/navigation/TabNavigator.js");
   ok(!nav.includes("CareerApplications"), "no new tab for it");
 
+  console.log("── every hire event has words, not a code");
+  const careerSrc = read("app/src/components/CareerApplications.js");
+  const unlabelled = ["HIRE_CONFIRMED", "HIRE_DISPUTED", "HIRE_REVOKED", "HIRE_RESTORED"].filter((t) => !careerSrc.includes(`${t}: "`));
+  ok(unlabelled.length === 0, "confirmed, disputed, revoked and restored (an admin rejected the dispute) each have a label", unlabelled.join(", "));
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.error("FATAL", e); process.exit(2); });
