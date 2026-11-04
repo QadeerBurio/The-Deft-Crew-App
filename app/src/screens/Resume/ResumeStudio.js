@@ -418,7 +418,7 @@ function Coaching({ draft }) {
   const [open, setOpen] = useState(true);
   return (
     <View style={styles.box}>
-      <TouchableOpacity onPress={() => setOpen(!open)} accessibilityRole="button" accessibilityState={{ expanded: open }} accessibilityLabel="how your resume matches this job" style={styles.row}>
+      <TouchableOpacity onPress={() => setOpen(!open)} hitSlop={{ top: 6, bottom: 6 }} accessibilityRole="button" accessibilityState={{ expanded: open }} accessibilityLabel="how your resume matches this job" style={[styles.row, { minHeight: 32 }]}>
         <Text style={styles.title} maxFontSizeMultiplier={M}>how your resume matches</Text>
         <Ionicons name={open ? "chevron-up" : "chevron-down"} size={18} color={T.ink} />
       </TouchableOpacity>
@@ -453,7 +453,7 @@ function TrueSwitch({ value, onChange, label }) {
 
 function Tab({ label, on, onPress }) {
   return (
-    <TouchableOpacity onPress={onPress} style={[styles.tab, on && styles.tabOn]} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={label}>
+    <TouchableOpacity onPress={onPress} style={[styles.tab, on && styles.tabOn]} hitSlop={{ top: 4, bottom: 4 }} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={label}>
       <Text style={[styles.tabText, on && styles.tabTextOn]} maxFontSizeMultiplier={M}>{label}</Text>
     </TouchableOpacity>
   );

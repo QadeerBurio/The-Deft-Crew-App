@@ -75,7 +75,7 @@ export default function CareerApplications() {
     <View>
       <View style={styles.tabs} accessibilityRole="tablist">
         {["active", "closed"].map((t) => (
-          <TouchableOpacity key={t} onPress={() => setTab(t)} style={[styles.tab, tab === t && styles.tabOn]} accessibilityRole="tab" accessibilityState={{ selected: tab === t }}>
+          <TouchableOpacity key={t} onPress={() => setTab(t)} style={[styles.tab, tab === t && styles.tabOn]} hitSlop={{ top: 6, bottom: 6 }} accessibilityRole="tab" accessibilityState={{ selected: tab === t }}>
             <Text style={[styles.tabText, tab === t && styles.tabTextOn]} maxFontSizeMultiplier={MAX_FONT_SCALE}>
               {t} ({apps.filter((a) => (t === "active" ? !a.closed : a.closed)).length})
             </Text>
@@ -140,7 +140,7 @@ function Timeline({ applicationId, onBack }) {
   const v = t.version;
   return (
     <View>
-      <TouchableOpacity onPress={onBack} style={styles.back} accessibilityRole="button" accessibilityLabel="back to my applications">
+      <TouchableOpacity onPress={onBack} style={styles.back} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} accessibilityRole="button" accessibilityLabel="back to my applications">
         <Ionicons name="chevron-back" size={18} color={T.ink} /><Text style={styles.backText}>my applications</Text>
       </TouchableOpacity>
       <Text style={styles.h1} maxFontSizeMultiplier={MAX_FONT_SCALE}>{t.job.title}</Text>
