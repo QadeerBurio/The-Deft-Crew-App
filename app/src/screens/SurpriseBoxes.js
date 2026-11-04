@@ -354,7 +354,7 @@ function Timeline({ order }) {
 }
 function Tab({ label, on, onPress }) {
   return (
-    <TouchableOpacity onPress={onPress} style={[styles.tab, on && styles.tabOn]} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={label}>
+    <TouchableOpacity onPress={onPress} style={[styles.tab, on && styles.tabOn]} hitSlop={{ top: 4, bottom: 4 }} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={label}>
       <Text style={[styles.tabText, on && { color: T.white }]} maxFontSizeMultiplier={M}>{label}</Text>
     </TouchableOpacity>
   );
