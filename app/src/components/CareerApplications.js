@@ -26,7 +26,7 @@ const EVENT = {
   INTERVIEW_DECLINED: "you declined the interview", INTERVIEW_RESCHEDULE_REQUESTED: "you asked for another time", INTERVIEW_COMPLETED: "interview recorded as completed",
   CANDIDATE_NO_SHOW_REPORTED: "the employer reported you didn't join", EMPLOYER_NO_SHOW_REPORTED: "you reported the interview didn't happen", INTERVIEW_DISPUTED: "you disputed the interview record",
   OFFER_SENT: "you got an offer", OFFER_WITHDRAWN: "the offer was withdrawn", OFFER_ACCEPTED: "you accepted the offer", OFFER_DECLINED: "you declined the offer",
-  HIRE_CONFIRMED: "hire confirmed: hired via tdc", HIRE_DISPUTED: "you disputed the hire", HIRE_REVOKED: "hire record corrected by tdc",
+  HIRE_CONFIRMED: "hire confirmed: hired via tdc", HIRE_DISPUTED: "you disputed the hire", HIRE_REVOKED: "hire record corrected by tdc", HIRE_RESTORED: "tdc reviewed your dispute and kept the hire",
 };
 const when = (iso, tz = "Asia/Karachi") => {
   if (!iso) return "";
