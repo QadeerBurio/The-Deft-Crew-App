@@ -146,6 +146,16 @@ const ROWS = [
     mood: 'sorted',
     color: T.yellow,
   },
+  // loyalty visits, a new discount tier, a reversed visit (FLAG_LOYALTY_V2): shown only when the server sends
+  // the switch, which it does for students in the loyalty pilot
+  {
+    key: 'loyalty',
+    label: 'loyalty',
+    sub: 'visits and new discounts at your brands',
+    mood: 'money',
+    color: T.yellow,
+    pilotOnly: true,
+  },
 ];
 
 // ─── Single pref row ────────────────────────────────────────────────────
@@ -241,9 +251,11 @@ export default function NotificationSettingsScreen() {
 
   const [testing, setTesting] = useState(false);
 
+  // the switches this account has (a pilot-only switch only when the server sends it)
+  const rows = ROWS.filter((r) => !r.pilotOnly || (prefs && r.key in prefs));
   // Count how many are ON
-  const enabledCount = ROWS.filter((r) => prefs[r.key] !== false).length;
-  const totalCount = ROWS.length;
+  const enabledCount = rows.filter((r) => prefs[r.key] !== false).length;
+  const totalCount = rows.length;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -316,7 +328,7 @@ export default function NotificationSettingsScreen() {
           </View>
 
           <View style={styles.card}>
-            {ROWS.map((r, i) => (
+            {rows.map((r, i) => (
               <PrefRow
                 key={r.key}
                 row={r}
