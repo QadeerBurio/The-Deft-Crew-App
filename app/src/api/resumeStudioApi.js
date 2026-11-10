@@ -56,6 +56,8 @@ export const studioApi = {
   approve: (id, body) => unwrap(api.post(`${B}/drafts/${id}/approve`, body, { timeout: 15000 })),
   deleteDraft: (id) => unwrap(api.delete(`${B}/drafts/${id}`, { timeout: 10000 })),
   versions: () => unwrap(api.get(`${B}/versions`, { timeout: 10000 })),
+  // one version with its content and pdf status ({ urdu: none | included | not_included, message })
+  version: (id) => unwrap(api.get(`${B}/versions/${id}`, { timeout: 10000 })),
   deleteVersion: (id) => unwrap(api.delete(`${B}/versions/${id}`, { timeout: 10000 })),
   attachVersion: (applicationId, versionId) => unwrap(api.post(`${B}/applications/${applicationId}/attach-version`, { versionId }, { timeout: 10000 })),
   applicationResume: (applicationId) => unwrap(api.get(`${B}/applications/${applicationId}/resume`, { timeout: 10000 })),

@@ -213,6 +213,7 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
       deleteDraft: async () => ({}),
       versions: async () => [{ id: "v1", label: "Frontend - Bright", target: { kind: "tdc_job" }, approvedAt: "2026-11-03T00:00:00Z", usedInApplication: true, deletable: false }, { id: "v2", label: "Pasted role", target: { kind: "pasted" }, approvedAt: "2026-11-02T00:00:00Z", usedInApplication: false, deletable: true }],
       deleteVersion: async (id) => { sent.push({ what: "deleteVersion", id }); return {}; },
+      version: async (id) => ({ id, pdf: { urdu: "none", message: null } }),
       attachVersion: async (appId, versionId) => { sent.push({ what: "attach", appId, versionId }); attachedState = { applicationId: appId, versionId, label: "Frontend - Bright", contentHash: "abcdef1234567890", attachedAt: "2026-11-03T10:00:00Z" }; return attachedState; },
       applicationResume: async () => { if (!attachedState) throw Object.assign(new Error("none"), { code: "NOT_FOUND" }); return attachedState; },
     },
