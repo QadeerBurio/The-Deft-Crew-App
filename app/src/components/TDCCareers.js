@@ -34,6 +34,7 @@ import { useGuestGate } from '../guest/GuestGate';
 import { plainError } from "../utils/plainError";
 import { metaEvents } from "../analytics/metaEvents";
 import CareerApplications from "./CareerApplications";
+import { EmployerRating } from "./CareerRatings";
 import { careerEnabled } from "../api/careerApi";
 import {  } from "../config/server";
 const { width, height } = Dimensions.get("window");
@@ -656,6 +657,7 @@ const TDCCareers = ({ navigation }) => {
             </TouchableOpacity>
             <Text style={styles.detailModalTitle}>{detailJob?.title}</Text>
             <Text style={styles.detailModalCompany}>the deft crew</Text>
+            <EmployerRating jobId={detailJob?._id} />
             {myApp && (
               <View style={[styles.statusBanner, { backgroundColor: getStatusColor(myApp.status) + "25", borderColor: getStatusColor(myApp.status) + "40" }]}>
                 <View style={[styles.statusDot, { backgroundColor: getStatusColor(myApp.status) }]} />

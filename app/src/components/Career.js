@@ -45,6 +45,7 @@ import { useGuestGate } from '../guest/GuestGate';
 import { plainError } from "../utils/plainError";
 import { copyToClipboard } from "../utils/clipboard";
 import { studioEnabled, studioApi } from "../api/resumeStudioApi";
+import { EmployerRating } from "./CareerRatings";
 // Design system tokens (tdc-full-redesign/DESIGN_SYSTEM.md)
 const COLORS = {
   page: T.paper,
@@ -568,6 +569,7 @@ const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 30 }}>
             <View style={styles.applyModalHeader}>
               {job?.companyName && <Text style={styles.applyModalCompany}>{job.companyName}</Text>}
+              <EmployerRating jobId={job?._id} />
               <Text style={styles.applyModalJobTitle}>{job?.title}</Text>
               <Text style={styles.applyModalJobMeta}>{job?.department} • {job?.location}</Text>
 

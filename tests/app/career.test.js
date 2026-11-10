@@ -158,7 +158,8 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
     },
     addInterviewToCalendar: async (id) => { sent.push({ what: "calendar", id }); },
   };
-  const load = loader({ react: React, "react-native": rn, ...icons, "../api/careerApi": careerApiMock });
+  // ratings have their own test (career-pilot.test.js): here they render nothing
+  const load = loader({ react: React, "react-native": rn, ...icons, "../api/careerApi": careerApiMock, "./CareerRatings": { RateEmployer: () => null, RatingsReceived: () => null } });
   const CareerApplications = load(path.join(SRC, "components/CareerApplications.js")).default;
 
   console.log("── my applications (components/CareerApplications.js)");

@@ -9,6 +9,7 @@ import { View, Text, TouchableOpacity, TextInput, Switch, ActivityIndicator, Ale
 import { Ionicons } from "@expo/vector-icons";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { careerApi, addInterviewToCalendar } from "../api/careerApi";
+import { RateEmployer, RatingsReceived } from "./CareerRatings";
 
 const STAGE = {
   applied: { label: "applied", tone: T.sand },
@@ -99,6 +100,7 @@ export default function CareerApplications() {
         </TouchableOpacity>
       ))}
       <Outcomes />
+      <RatingsReceived />
     </View>
   );
 }
@@ -224,6 +226,7 @@ function Timeline({ applicationId, onBack }) {
         </View>
       ))}
       {t.events.length === 0 && <Text style={styles.muted} maxFontSizeMultiplier={MAX_FONT_SCALE}>no updates yet ({t.legacyStatus})</Text>}
+      <RateEmployer applicationId={applicationId} />
       {can("WITHDRAWN") && (
         <SmallButton label="withdraw my application" disabled={busy} onPress={() => confirmThen("withdraw your application?", "you can't undo this.", () => careerApi.event(applicationId, { type: "WITHDRAWN", version: v }), "withdrawn")} />
       )}
