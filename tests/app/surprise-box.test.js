@@ -140,7 +140,7 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
   let enabled = true;
   const soon = (min) => new Date(Date.now() + min * 60000).toISOString();
   const disclosures = { contentsMayVary: true, contentsNote: "Contents may vary: it's what the brand has left that day.", description: "breads and pastries", allergens: ["gluten", "dairy"], allergenNotes: "contains gluten and dairy; may contain nuts", allergenWarning: "Ask the brand at pickup if you have an allergy.", dietary: ["vegetarian"], bestBefore: soon(600), pickupStart: soon(180), pickupEnd: soon(240), payment: "Pay PKR 450 per box at pickup. tdc doesn't take payment.", cancellationRule: "Pay at pickup. You can cancel in the app until 30 minutes before pickup starts; after that, not collecting counts as a no-show.", cancelUntil: soon(150), branchName: "Alpha Clifton" };
-  const listing = { id: "l1", title: "Evening bakery box", brand: { id: "b1", name: "Alpha Bakery" }, branch: { id: "br1", name: "Alpha Clifton", city: "Karachi", address: "Clifton block 5" }, price: 450, listPrice: 1200, currency: "PKR", quantityLeft: 3, quantityTotal: 5, pickupStart: soon(180), pickupEnd: soon(240), available: true, status: "published", distanceKm: 1.2, maxPerOrder: 2, disclosures };
+  const listing = { id: "l1", title: "Evening bakery box", brand: { id: "b1", name: "Alpha Bakery" }, branch: { id: "br1", name: "Alpha Clifton", city: "Karachi", address: "Clifton block 5" }, price: 450, listPrice: 1200, currency: "PKR", quantityLeft: 3, quantityTotal: 5, pickupStart: soon(180), pickupEnd: soon(240), available: true, status: "published", distanceKm: 1.2, maxPerOrder: 2, disclosures, image: "https://res.cloudinary.com/testcloud/image/upload/box1.jpg" };
   let holdExpires = soon(10);
   const order = (extra = {}) => ({ id: "o1", ref: "SB-ABC123", state: "ORDER_PLACED", qty: 2, price: { unitPrice: 450, listPrice: 1200, total: 900, currency: "PKR" }, payment: { mode: "pay_at_pickup", state: "unpaid", note: "Pay PKR 900 at pickup" }, title: "Evening bakery box", brand: { name: "Alpha Bakery" }, branch: { name: "Alpha Clifton", address: "Clifton block 5" }, pickupStart: soon(180), pickupEnd: soon(240), disclosures, history: [{ from: "RESERVED", to: "ORDER_PLACED", byRole: "student", at: new Date().toISOString() }], version: 1, canCancel: true, cancelUntil: soon(150), canDispute: false, pickup: { code: "K7QM2X", qr: "TDCBOX1:o1:K7QM2X", validUntil: soon(240) }, supportCase: null, ...extra });
   let current = order();
@@ -152,7 +152,7 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
     CASE_REASONS: [["food_safety", "food safety problem"], ["other", "something else"]],
     pkTime: (iso) => (iso ? new Date(iso).toISOString().slice(11, 16) : ""),
     surplusApi: {
-      listings: async (params) => { sent.push({ what: "listings", params }); return { listings: [listing, { ...listing, id: "l2", title: "Sold out box", available: false, quantityLeft: 0, status: "sold_out" }] }; },
+      listings: async (params) => { sent.push({ what: "listings", params }); return { listings: [listing, { ...listing, id: "l2", title: "Sold out box", available: false, quantityLeft: 0, status: "sold_out", image: null }] }; },
       listing: async () => listing,
       hold: async (listingId, qty, key) => { sent.push({ what: "hold", listingId, qty, key }); if (holdError) throw holdError; return { hold: { id: "h1", listingId, qty, state: "active", expiresAt: holdExpires }, disclosures, total: 450 * qty }; },
       releaseHold: async (id) => { sent.push({ what: "release", id }); return {}; },
@@ -213,10 +213,13 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
   await settle(root);
   ok(location.asked && sent.filter((s) => s.what === "listings").pop().params.lat === 24.81 && textOf(root.tree).includes("1.2 km"), "'show distance' asks for location, then sends it and shows the distance");
 
+  const images = (tree) => { const out = []; const walk = (x) => { if (!x || typeof x !== "object") return; if (Array.isArray(x)) return x.forEach(walk); if (x.type === "Image") out.push(x.props); walk(x.props?.children); }; walk(tree); return out; };
+  ok(images(root.tree).length === 1 && images(root.tree)[0].source?.uri === listing.image, "photo: the box with a photo shows it in the list; the one without shows none (as before)", JSON.stringify(images(root.tree).map((i) => i.source)));
   console.log("\u2500\u2500 detail: every disclosure before confirming");
   find(root.tree, (x) => typeof x.props?.accessibilityLabel === "string" && x.props.accessibilityLabel.startsWith("Evening bakery box from Alpha Bakery")).props.onPress();
   await settle(root);
   t = textOf(root.tree);
+  ok(images(root.tree).some((i) => i.source?.uri === listing.image && i.accessibilityLabel === "photo of Evening bakery box"), "detail: the photo at the top, described for screen readers");
   ok(["Contents may vary", "allergens: contains gluten and dairy; may contain nuts (gluten, dairy)", "Ask the brand at pickup if you have an allergy", "best before", "pickup", "at Alpha Clifton", "cancel in the app until 30 minutes before pickup starts", "Pay PKR 450 per box at pickup"].every((w) => t.includes(w)), "contents may vary, allergens, best-before, pickup window, cancellation rule, pay at pickup", t.slice(0, 600));
   byLabel(root.tree, "2 boxes").props.onPress();
   root.rerender();
