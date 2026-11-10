@@ -166,6 +166,27 @@ const textOf = (n) => (n == null || n === false ? "" : typeof n === "string" || 
     root = mount(React.createElement(LoyaltyCard, { brandId: "b3", refreshKey: 0 }));
     await tick(30); root.rerender();
     ok(textOf(root.tree) === "", "outside the pilot: nothing rendered", textOf(root.tree));
+    // reward mode (a stamp card): progress null, stamps given
+    const stamps = { mode: "reward", stamps: 2, needed: 5, visitsToReward: 3, reward: { visitsNeeded: 5, kind: "item", label: "a free coffee", maxPerMonth: 2 }, available: null, limitReached: null };
+    reply = { enabled: true, program: { ...program, mode: "reward" }, progress: null, stamps };
+    root = mount(React.createElement(LoyaltyCard, { brandId: "b4", refreshKey: 0 }));
+    await tick(30); root.rerender();
+    t = textOf(root.tree);
+    ok(t.includes("2 of 5 visits") && t.includes("stamp card") && t.includes("3 more visits to a free coffee."), "stamp card: 2 of 5 visits, 3 more visits to a free coffee", t);
+    ok(t.includes("5 verified visits = a free coffee") && t.includes("after you use the reward the card starts again") && t.includes("up to 2 rewards a month") && !t.includes("on your next visit"), "stamp card terms (no tier %)", t);
+    const stampDots = (n) => { let c = 0; const walk = (x) => { if (!x || typeof x !== "object") return; if (Array.isArray(x)) return x.forEach(walk); if (Array.isArray(x.props?.style) && x.props.style[1]) c++; walk(x.props?.children); }; walk(n); return c; };
+    ok(stampDots(root.tree) === 2, "2 stamps filled", stampDots(root.tree));
+    reply = { ...reply, stamps: { ...stamps, stamps: 5, visitsToReward: 0, available: { id: "rw1", label: "a free coffee" } } };
+    root = mount(React.createElement(LoyaltyCard, { brandId: "b5", refreshKey: 0 }));
+    await tick(30); root.rerender();
+    t = textOf(root.tree);
+    ok(t.includes("5 of 5 visits") && t.includes("reward waiting") && t.includes("your reward is waiting: a free coffee. show your qr on your next visit."), "a full card: the reward is waiting", t);
+    reply = { ...reply, stamps: { ...stamps, stamps: 5, visitsToReward: 0, limitReached: "monthly-limit" } };
+    root = mount(React.createElement(LoyaltyCard, { brandId: "b6", refreshKey: 0 }));
+    await tick(30); root.rerender();
+    ok(textOf(root.tree).includes("you've had this month's rewards"), "monthly limit reached: says so", textOf(root.tree));
+    const card = read("app/src/components/LoyaltyCard.js");
+    ok(/accessibilityLabel=\{`loyalty stamp card: \$\{have\} of \$\{n\} visits/.test(card), "the stamp card reads out \"loyalty stamp card: 2 of 5 visits…\" for screen readers");
   }
 
   console.log("── the visits list (components/LoyaltyVisits.js)");
@@ -184,6 +205,13 @@ const textOf = (n) => (n == null || n === false ? "" : typeof n === "string" || 
     ok(t.includes("didn't count") && t.includes("one visit a day counts"), "a second bill the same day: didn't count", t);
     ok(t.includes("reversed") && t.includes("a brand"), "a refunded visit: reversed (unknown brand name: 'a brand')", t);
     ok(t.includes("alpha cafe"), "brand names from the claimed offers", t);
+    // a brand with a stamp card gets its progress line; a tiers brand doesn't
+    const load2 = loader({ react: React, "react-native": rn, ...nav, ...icons, "../api/loyaltyApi": { getMyLoyaltyCredits: async () => credits, getBrandLoyalty: async (b) => (b === "b1" ? { enabled: true, program: {}, progress: null, stamps: { stamps: 4, needed: 5, visitsToReward: 1, reward: { label: "a free coffee" }, available: null } } : { enabled: true, program: {}, progress: {} }) } });
+    const LoyaltyVisits2 = load2(path.join(SRC, "components/LoyaltyVisits.js")).default;
+    root = mount(React.createElement(LoyaltyVisits2, { brandNames: { b1: "Alpha Cafe" }, refreshKey: false }));
+    await tick(40); root.rerender();
+    const t2 = textOf(root.tree);
+    ok(t2.includes("4 of 5 stamps") && t2.includes("1 to a free coffee") && (t2.match(/stamps/g) || []).length === 1, "My discounts: the stamp card's progress for that brand only", t2);
     credits = [];
     root = mount(React.createElement(LoyaltyVisits, { brandNames: {}, refreshKey: false }));
     await tick(30); root.rerender();
