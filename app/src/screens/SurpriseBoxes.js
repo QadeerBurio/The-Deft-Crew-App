@@ -9,7 +9,7 @@
 // Route params: { orderId } opens that order (also when a notification is tapped while this screen is open);
 // { view: "orders" } opens my orders. Notifications carry screen "SurpriseBoxes" + params { orderId }.
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, TextInput, ScrollView, Switch, ActivityIndicator, Alert, RefreshControl, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, TextInput, ScrollView, Switch, ActivityIndicator, Alert, RefreshControl, StyleSheet, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import QRCode from "react-native-qrcode-svg";
@@ -23,6 +23,9 @@ const money = (n, c = "PKR") => `${c} ${Number(n || 0).toLocaleString("en-PK")}`
 const span = (a, b) => `${pkTime(a)} – ${pkTime(b, { hour: "2-digit", minute: "2-digit" })}`;
 const left = (iso, now) => Math.max(0, Math.floor((new Date(iso).getTime() - now) / 1000));
 const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+// a box's optional photo (https only); no photo = the box looks as before
+export const photoUri = (u) => (/^https:\/\//i.test(String(u || "")) ? u : null);
 
 export default function SurpriseBoxes({ route, navigation }) {
   const params = route?.params || {};
@@ -180,6 +183,7 @@ export default function SurpriseBoxes({ route, navigation }) {
       {listings?.map((l) => (
         <TouchableOpacity key={l.id} style={[styles.card, !l.available && { opacity: 0.6 }]} onPress={() => openListing(l.id)} accessibilityRole="button"
           accessibilityLabel={`${l.title} from ${l.brand.name}. ${money(l.price, l.currency)}, usually ${money(l.listPrice, l.currency)}. pickup ${span(l.pickupStart, l.pickupEnd)}. ${l.available ? `${l.quantityLeft} left` : "sold out"}${l.distanceKm != null ? `. ${l.distanceKm} km away` : ""}`}>
+          {photoUri(l.image) && <Image source={{ uri: photoUri(l.image) }} style={styles.thumb} resizeMode="cover" accessible={false} />}
           <View style={styles.row}>
             <Text style={styles.title} maxFontSizeMultiplier={M}>{l.title}</Text>
             <Text style={styles.price} maxFontSizeMultiplier={M}>{money(l.price, l.currency)}</Text>
@@ -198,6 +202,7 @@ export default function SurpriseBoxes({ route, navigation }) {
   if (view === "detail") return frame(scroll(
     !listing ? <ActivityIndicator color={T.ink} accessibilityLabel="loading" /> : (
       <View>
+        {photoUri(listing.image) && <Image source={{ uri: photoUri(listing.image) }} style={styles.hero} resizeMode="cover" accessibilityLabel={`photo of ${listing.title}`} />}
         <Text style={styles.h1} accessibilityRole="header" maxFontSizeMultiplier={M}>{listing.title}</Text>
         <Text style={styles.muted} maxFontSizeMultiplier={M}>{listing.brand.name} · {listing.branch.name}{listing.branch.address ? `, ${listing.branch.address}` : ""}</Text>
         <View style={styles.row}><Text style={styles.priceBig} maxFontSizeMultiplier={M}>{money(listing.price, listing.currency)}</Text><Text style={styles.strike} maxFontSizeMultiplier={M}>usually {money(listing.listPrice, listing.currency)}</Text></View>
@@ -368,6 +373,8 @@ function Button({ label, onPress, primary, disabled }) {
 }
 
 const styles = StyleSheet.create({
+  thumb: { width: "100%", height: 120, borderRadius: 14, marginBottom: 8, backgroundColor: T.sand },
+  hero: { width: "100%", height: 200, borderRadius: 18, marginBottom: 12, backgroundColor: T.sand },
   screen: { flex: 1, backgroundColor: T.paper },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   tabs: { flexDirection: "row", gap: 8, marginBottom: 12 },
