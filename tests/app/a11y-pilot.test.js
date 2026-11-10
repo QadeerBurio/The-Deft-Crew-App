@@ -1,5 +1,5 @@
 // Accessibility of the pilot screens (Sprint 7): loyalty card and visits, my applications (hiring timeline),
-// Resume Studio, Surprise Boxes and its Discounts card. Static checks on the real source (Babel AST):
+// Resume Studio, Surprise Boxes and its Discounts card, mutual ratings. Static checks on the real source (Babel AST):
 //   - every TouchableOpacity / Pressable / Switch / TextInput has an accessibilityLabel (or, for a touchable,
 //     visible text that becomes its label) and touchables have an accessibilityRole
 //   - every touchable is at least 44 pt (minHeight / height / width + height in its StyleSheet style, or
@@ -18,6 +18,7 @@ const ok = (c, l, x = "") => { c ? passed++ : failed++; console.log(`${c ? "ok  
 const FILES = [
   "app/src/components/LoyaltyCard.js", "app/src/components/LoyaltyVisits.js", "app/src/components/CareerApplications.js",
   "app/src/screens/Resume/ResumeStudio.js", "app/src/screens/SurpriseBoxes.js", "app/src/components/SurpriseBoxCard.js",
+  "app/src/components/CareerRatings.js",
 ];
 const TOUCH = new Set(["TouchableOpacity", "Pressable", "TouchableHighlight", "TouchableWithoutFeedback"]);
 const LABELLED = new Set([...TOUCH, "Switch", "TextInput"]);

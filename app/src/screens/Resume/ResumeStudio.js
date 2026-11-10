@@ -52,6 +52,14 @@ const orderText = (s, draft) => {
   } catch { return s.proposed; }
 };
 
+// before exporting: if the server can't put Urdu in the PDF right now, say so and let the student choose
+const urduWarning = (pdf) => (pdf?.urdu === "not_included" ? pdf.message || "Urdu text can't be included in this PDF right now." : null);
+function confirmExport(pdf, go) {
+  const w = urduWarning(pdf);
+  if (!w) return go();
+  Alert.alert("urdu won't be in this pdf", w, [{ text: "not now", style: "cancel" }, { text: "export without urdu", onPress: go }]);
+}
+
 export default function ResumeStudio({ route, navigation }) {
   const params = route?.params || {};
   const insets = useSafeAreaInsets();
@@ -336,8 +344,9 @@ export default function ResumeStudio({ route, navigation }) {
               </View>
             );
           })}
+          {urduWarning(draft.pdf) && <Text style={styles.warn} accessibilityRole="alert" maxFontSizeMultiplier={M}>{urduWarning(draft.pdf)}</Text>}
           <View style={styles.actions}>
-            <Button label="preview pdf" disabled={busy} onPress={() => openPdf(`drafts/${draft.id}/preview.pdf`, `DRAFT ${draft.target?.title || "resume"}`).catch((e) => Alert.alert("no preview", e.message))} />
+            <Button label="preview pdf" disabled={busy} onPress={() => confirmExport(draft.pdf, () => openPdf(`drafts/${draft.id}/preview.pdf`, `DRAFT ${draft.target?.title || "resume"}`).catch((e) => Alert.alert("no preview", e.message)))} />
             <Button primary label="continue to approve" disabled={busy || draft.unresolved > 0 || queued} onPress={() => setStep("approve")} />
           </View>
           {draft.unresolved > 0 && <Text style={styles.muted} maxFontSizeMultiplier={M}>accept or reject every change to continue.</Text>}
@@ -351,7 +360,8 @@ export default function ResumeStudio({ route, navigation }) {
         <View>
           <Text style={styles.h1} accessibilityRole="header" maxFontSizeMultiplier={M}>approve this version</Text>
           <Text style={styles.muted} maxFontSizeMultiplier={M}>once approved it never changes. employers you send it to see exactly this version.</Text>
-          <Button label="preview pdf" disabled={busy} onPress={() => openPdf(`drafts/${draft.id}/preview.pdf`, `DRAFT ${draft.target?.title || "resume"}`).catch((e) => Alert.alert("no preview", e.message))} />
+          {urduWarning(draft.pdf) && <Text style={styles.warn} accessibilityRole="alert" maxFontSizeMultiplier={M}>{urduWarning(draft.pdf)}</Text>}
+          <Button label="preview pdf" disabled={busy} onPress={() => confirmExport(draft.pdf, () => openPdf(`drafts/${draft.id}/preview.pdf`, `DRAFT ${draft.target?.title || "resume"}`).catch((e) => Alert.alert("no preview", e.message)))} />
           <Text style={styles.h2} maxFontSizeMultiplier={M}>name</Text>
           <TextInput style={styles.inputLine} value={label} onChangeText={setLabel} placeholder="e.g. frontend developer, bright labs" placeholderTextColor={T.textFaint} accessibilityLabel="version name" maxFontSizeMultiplier={M} />
           <TrueSwitch value={confirmAccurate} onChange={setConfirmAccurate} label="everything in this resume is true" />
@@ -367,7 +377,8 @@ export default function ResumeStudio({ route, navigation }) {
         <View>
           <Text style={styles.h1} accessibilityRole="header" maxFontSizeMultiplier={M}>approved</Text>
           {version && <Text style={styles.body} maxFontSizeMultiplier={M}>{version.label}</Text>}
-          {version && <Button label="download pdf" onPress={() => openPdf(`versions/${version.id}/export.pdf`, version.label || "resume").catch((e) => Alert.alert("no pdf", e.message))} />}
+          {version && urduWarning(draft?.pdf) && <Text style={styles.warn} accessibilityRole="alert" maxFontSizeMultiplier={M}>{urduWarning(draft.pdf)}</Text>}
+          {version && <Button label="download pdf" onPress={() => confirmExport(draft?.pdf, () => openPdf(`versions/${version.id}/export.pdf`, version.label || "resume").catch((e) => Alert.alert("no pdf", e.message)))} />}
           {version?.target?.kind === "tdc_job" && application === null && (
             <View style={styles.box}>
               <Text style={styles.body} maxFontSizeMultiplier={M}>you haven't applied for this job yet. apply, then send this version with your application.</Text>
@@ -402,7 +413,7 @@ export default function ResumeStudio({ route, navigation }) {
               <Text style={styles.title} maxFontSizeMultiplier={M}>{v.label || "tailored resume"}</Text>
               <Text style={styles.muted} maxFontSizeMultiplier={M}>{v.target?.kind === "pasted" ? "pasted job" : "tdc job"} · approved {new Date(v.approvedAt).toLocaleDateString()}{v.usedInApplication ? " · sent with an application, kept 2 years" : ""}</Text>
               <View style={styles.actions}>
-                <Button label={`download ${v.label || "version"}`} text="download pdf" onPress={() => openPdf(`versions/${v.id}/export.pdf`, v.label || "resume").catch((e) => Alert.alert("no pdf", e.message))} />
+                <Button label={`download ${v.label || "version"}`} text="download pdf" onPress={() => studioApi.version(v.id).catch(() => null).then((full) => confirmExport(full?.pdf, () => openPdf(`versions/${v.id}/export.pdf`, v.label || "resume").catch((e) => Alert.alert("no pdf", e.message))))} />
                 {v.deletable && <Button label={`delete ${v.label || "version"}`} text="delete" onPress={() => Alert.alert("delete this version?", "you can't undo this.", [{ text: "no" }, { text: "yes", onPress: () => studioApi.deleteVersion(v.id).then(loadVersions).catch((e) => Alert.alert("not deleted", e.message)) }])} />}
               </View>
             </View>
@@ -481,6 +492,7 @@ const styles = StyleSheet.create({
   body: { fontFamily: F.body, fontSize: 14, color: T.ink, marginTop: 2, flexShrink: 1 },
   label: { fontFamily: F.bodyBold, fontSize: 12, color: T.textMuted, marginTop: 10, textTransform: "uppercase" },
   muted: { fontFamily: F.body, fontSize: 12.5, color: T.textMuted, marginTop: 4 },
+  warn: { fontFamily: F.bodySemi, fontSize: 13, color: T.ink, backgroundColor: T.yellowSoft, borderRadius: 12, padding: 10, marginTop: 8 },
   warn: { fontFamily: F.bodySemi, fontSize: 12.5, color: T.danger, marginTop: 6 },
   notice: { fontFamily: F.bodySemi, fontSize: 13, color: T.ink, backgroundColor: T.yellowSoft, padding: 10, borderRadius: 12, marginVertical: 6 },
   decision: { fontFamily: F.bodySemi, fontSize: 12.5, color: T.success, marginTop: 6 },
