@@ -6,7 +6,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
-import { getMyLoyaltyCredits } from "../api/loyaltyApi";
+import { getMyLoyaltyCredits, getBrandLoyalty } from "../api/loyaltyApi";
 
 const STATUS = {
   credited: { label: "visit credited", icon: "checkmark-circle", fg: T.success, bg: T.successBg },
@@ -18,11 +18,23 @@ const day = (d) => new Date(d).toLocaleDateString(undefined, { day: "numeric", m
 // brandNames: { brandId: name } from the screen's claimed offers; other brands show as "a brand"
 export default function LoyaltyVisits({ brandNames = {}, refreshKey, max = 5 }) {
   const [credits, setCredits] = useState([]);
+  // stamp cards (reward mode) of the brands in the list: { brandId: stamps }
+  const [cards, setCards] = useState({});
   const load = useCallback(() => {
     let alive = true;
-    getMyLoyaltyCredits().then((c) => alive && setCredits(c));
+    getMyLoyaltyCredits().then(async (c) => {
+      if (!alive) return;
+      setCredits(c);
+      const brands = [...new Set((c || []).slice(0, max).map((x) => x.brand))].slice(0, 5);
+      const out = {};
+      for (const b of brands) {
+        const d = await Promise.resolve().then(() => getBrandLoyalty(b)).catch(() => null);
+        if (d?.enabled && d.stamps) out[b] = d.stamps;
+      }
+      if (alive) setCards(out);
+    });
     return () => { alive = false; };
-  }, []);
+  }, [max]);
   useEffect(load, [load, refreshKey]);
   useFocusEffect(load);
 
@@ -32,6 +44,11 @@ export default function LoyaltyVisits({ brandNames = {}, refreshKey, max = 5 }) 
       <Text style={styles.title} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
         your loyalty visits<Text style={{ color: T.yellow }}>.</Text>
       </Text>
+      {Object.entries(cards).map(([b, s]) => (
+        <Text key={`stamps-${b}`} style={styles.stampLine} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+          {`${brandNames[b] || "a brand"}: ${Math.min(s.stamps, s.needed)} of ${s.needed} stamps${s.available ? ` · reward waiting: ${s.available.label}` : ` · ${s.visitsToReward} to ${s.reward?.label || "the reward"}`}`}
+        </Text>
+      ))}
       {credits.slice(0, max).map((c) => {
         const s = STATUS[c.status] || STATUS["not-counted"];
         const brand = brandNames[c.brand] || "a brand";
@@ -56,6 +73,7 @@ export default function LoyaltyVisits({ brandNames = {}, refreshKey, max = 5 }) 
 }
 
 const styles = StyleSheet.create({
+  stampLine: { fontFamily: F.bodySemi, fontSize: 13, color: T.ink, marginTop: 6 },
   card: { padding: 14, borderRadius: 18, backgroundColor: T.card, borderWidth: 1, borderColor: T.line, marginBottom: 14 },
   title: { fontFamily: F.heading, fontSize: 16, color: T.ink, marginBottom: 6 },
   row: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8, borderTopWidth: 1, borderTopColor: T.lineSoft },
