@@ -86,7 +86,8 @@ const User = {
     if (p) { const list = p.$in || [p]; u.pushTokens = u.pushTokens.filter((t) => !list.includes(t.token)); }
     if (upd.$push?.pushTokens) {
       const v = upd.$push.pushTokens;
-      if (v.$each) { u.pushTokens.sort((a, b) => b.updatedAt - a.updatedAt); u.pushTokens = u.pushTokens.slice(0, v.$slice); } else u.pushTokens.push({ ...v });
+      // save-token adds its entry with $each, newest first, at most $slice kept (the entries are added, then sorted and trimmed)
+      if (v.$each) { u.pushTokens.push(...v.$each.map((e) => ({ ...e }))); u.pushTokens.sort((a, b) => b.updatedAt - a.updatedAt); if (Number.isInteger(v.$slice)) u.pushTokens = v.$slice >= 0 ? u.pushTokens.slice(0, v.$slice) : u.pushTokens.slice(v.$slice); } else u.pushTokens.push({ ...v });
     }
     return { modifiedCount: 1 };
   },

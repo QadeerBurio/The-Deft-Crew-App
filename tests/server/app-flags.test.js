@@ -27,9 +27,15 @@ const ok = (c, l, x = "") => { c ? passed++ : failed++; console.log(`${c ? "ok  
   ok(r.body.metaEvents === true, "META_EVENTS_ENABLED=true → on");
   r = await get(" TRUE ");
   ok(r.body.metaEvents === true, "case and spaces ignored");
-  for (const v of ["false", "1", "yes", "on", ""]) {
+  // since the server's shared flag reader (config/featureFlags.js, Nov 2026) the older variable reads like every
+  // FLAG_* value: on / true / 1 / yes turn it on; off / false / 0 / no / empty / anything unreadable keep it off
+  for (const v of ["1", "yes", "on"]) {
     r = await get(v);
-    ok(r.body.metaEvents === false, `META_EVENTS_ENABLED="${v}" → off (only "true" turns it on)`);
+    ok(r.body.metaEvents === true, `META_EVENTS_ENABLED="${v}" → on (same as "true")`);
+  }
+  for (const v of ["false", "0", "no", "off", "", "maybe"]) {
+    r = await get(v);
+    ok(r.body.metaEvents === false, `META_EVENTS_ENABLED="${v}" → off`);
   }
   ok(/max-age=60/.test(r.cache), "short cache (a switch-off reaches phones within minutes)", r.cache);
   const res = await fetch(url); // no Authorization header at all

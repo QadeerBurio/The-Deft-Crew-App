@@ -41,8 +41,15 @@ const User = {
   updateOne: async (filter, upd) => {
     const u = users.get(String(filter._id)); if (!u) return { modifiedCount: 0 };
     if (upd.$pull) return { modifiedCount: pullTok(u, upd) };
-    if (upd.$push?.pushTokens?.token) { u.pushTokens.push(upd.$push.pushTokens); return { modifiedCount: 1 }; }
-    return { modifiedCount: 0 }; // $sort / $slice housekeeping
+    // save-token: { $push: { pushTokens: { $each: [entry], $sort: { updatedAt: -1 }, $slice: 5 } } } (one entry, newest
+    // first, at most 5 kept); the older single-entry form { $push: { pushTokens: entry } } is accepted too
+    const p = upd.$push?.pushTokens;
+    const entries = p ? (Array.isArray(p.$each) ? p.$each : p.token ? [p] : []) : [];
+    if (!entries.length || !entries.every((e) => e && e.token)) return { modifiedCount: 0 };
+    u.pushTokens.push(...entries);
+    if (p.$sort?.updatedAt === -1) u.pushTokens.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    if (Number.isInteger(p.$slice)) u.pushTokens = p.$slice >= 0 ? u.pushTokens.slice(0, p.$slice) : u.pushTokens.slice(p.$slice);
+    return { modifiedCount: 1 };
   },
 };
 const origLoad = Module._load;

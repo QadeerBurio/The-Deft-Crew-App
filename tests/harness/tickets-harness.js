@@ -204,7 +204,7 @@ const SERVICE_MOCKS = {
 };
 const origLoad = Module._load;
 Module._load = function (request, parent, isMain) {
-  if (request in MOCKS && parent && parent.filename && parent.filename.includes(path.join("server", "routes"))) return MOCKS[request];
+  if (request in MOCKS && parent && parent.filename && parent.filename.toLowerCase().startsWith(path.join(SERVER, "routes").toLowerCase() + path.sep) /* the server repo's routes, wherever it is (not only a folder named "server") */) return MOCKS[request];
   if (request in SERVICE_MOCKS && parent && parent.filename && parent.filename.includes(path.join("services", "events", "tickets"))) return SERVICE_MOCKS[request];
   if (request === "../models/User" && parent && parent.filename && parent.filename.includes("middleware")) return User;
   return origLoad.call(this, request, parent, isMain);
