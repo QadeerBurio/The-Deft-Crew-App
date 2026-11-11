@@ -188,8 +188,9 @@ const byLabel = (tree, label) => all(tree, (x) => x.props?.accessibilityLabel ==
 
   console.log("── placement");
   const hub = read("app/src/components/CareerHub.js");
-  ok(hub.includes('import RecommendedJobs from "./RecommendedJobs"') && hub.includes("<RecommendedJobs navigation={navigation} refreshKey={refreshing} />") && hub.indexOf("<RecommendedJobs") < hub.indexOf("styles.navGrid"), "CareerHub shows it under the header (before the navigation grid), refreshed with the hub");
   const career = read("app/src/components/Career.js");
+  ok(career.includes('import RecommendedJobs from "./RecommendedJobs"') && career.includes("<RecommendedJobs navigation={navigation} refreshKey={refreshing} />") && career.indexOf("<RecommendedJobs") < career.indexOf("jobs found") && read("app/src/navigation/DrawerNavigator.js").includes('<Stack.Screen name="Career" component={Career} />'), "shown at the top of the jobs list (Career, a registered screen: the one pushes and the Daily Drop open), refreshed with it");
+  ok(!hub.includes("RecommendedJobs"), "not in CareerHub.js (no route shows that file)");
   ok(career.includes("useOpenFromParams('openJobId'"), "Career opens a job from openJobId (the route the tap uses)");
 
   console.log(`
