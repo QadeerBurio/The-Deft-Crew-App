@@ -46,6 +46,8 @@ import { plainError } from "../utils/plainError";
 import { copyToClipboard } from "../utils/clipboard";
 import { studioEnabled, studioApi } from "../api/resumeStudioApi";
 import { EmployerRating } from "./CareerRatings";
+import RecommendedJobs from "./RecommendedJobs"; // FLAG_CAREER_MATCHING: jobs that match the student's resume skills
+import CareerInvites from "./CareerInvites"; // FLAG_CAREER_MATCHING: invites to apply, and the "let employers invite me" switch
 // Design system tokens (tdc-full-redesign/DESIGN_SYSTEM.md)
 const COLORS = {
   page: T.paper,
@@ -1576,10 +1578,18 @@ const Career = ({ navigation }) => {
                 </TouchableOpacity>
               ) : null
             }
-            ListHeaderComponent={filteredData.length > 0 && (
+            ListHeaderComponent={(
+              <View>
+                {/* FLAG_CAREER_MATCHING (nothing shown otherwise): jobs that match the student's resume skills, and
+                    invites to apply with the "let employers invite me" switch */}
+                <RecommendedJobs navigation={navigation} refreshKey={refreshing} />
+                <CareerInvites navigation={navigation} refreshKey={refreshing} />
+                {filteredData.length > 0 && (
               <View style={styles.listHeader}>
                 <Text style={styles.resultCount}>{totalJobsCount} jobs found</Text>
                 {filters.datePosted !== "all" && <View style={styles.activeFilterBadge}><Text style={styles.activeFilterText}>{filters.datePosted === "24h" ? "Past 24h" : filters.datePosted === "week" ? "Past week" : "Past month"}</Text></View>}
+              </View>
+                )}
               </View>
             )}
             ListEmptyComponent={

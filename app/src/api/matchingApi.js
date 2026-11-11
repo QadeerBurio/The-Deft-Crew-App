@@ -30,4 +30,21 @@ export async function matchingEnabled() {
 export const recommendedJobs = (limit = 5) =>
   api.get("/career/matching/recommended", { params: { limit }, timeout: 10000 }).then((r) => r.data?.data || { hasResume: false, recommendations: [] });
 
-export default { matchingEnabled, recommendedJobs };
+const unwrap = (request) =>
+  request
+    .then((r) => r.data?.data)
+    .catch((e) => {
+      const body = e.response?.data || {};
+      const err = new Error(body.error?.message || body.message || "something went wrong, try again");
+      err.code = body.error?.code;
+      throw err;
+    });
+
+/** { discoverable, invites: [{ id, job: { id, title, companyName, location, type }, status, sentAt }] } */
+export const myInvites = () => unwrap(api.get("/career/invites/me", { timeout: 10000 }));
+/** "interested" | "declined" */
+export const respondInvite = (id, response) => unwrap(api.post(`/career/invites/${id}/respond`, { response }, { timeout: 10000 }));
+/** "let employers invite me to apply": saved on the professional profile (the existing route) */
+export const setDiscoverable = (on) => api.post("/professional-profile", { discoverable: !!on }, { timeout: 10000 }).then((r) => !!r.data?.profile?.discoverable);
+
+export default { matchingEnabled, recommendedJobs, myInvites, respondInvite, setDiscoverable };
