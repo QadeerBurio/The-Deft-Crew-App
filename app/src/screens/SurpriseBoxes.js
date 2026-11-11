@@ -84,17 +84,20 @@ export default function SurpriseBoxes({ route, navigation }) {
       if (!on) return;
       if (params.orderId) return openOrder(params.orderId);
       if (params.view === "orders") return loadOrders();
+      // "a new Surprise Box near you" tapped: that box (the list loads behind it, for "back")
+      if (params.listingId) { loadList(await locate(false)); return openListing(params.listingId); }
       loadList(await locate(false));
     })();
     return () => { live = false; };
   }, []);
 
-  // a notification tapped while this screen is already open: open that order
+  // a notification tapped while this screen is already open: open that order (or the new box)
   const mounted = useRef(false);
   useEffect(() => {
     if (!mounted.current) { mounted.current = true; return; }
     if (enabled && params.orderId) openOrder(params.orderId);
-  }, [params.orderId]);
+    else if (enabled && params.listingId) openListing(params.listingId);
+  }, [params.orderId, params.listingId]);
 
   // the hold timer
   useEffect(() => {

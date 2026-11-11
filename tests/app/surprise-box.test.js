@@ -154,7 +154,7 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
     pkTime: (iso) => (iso ? new Date(iso).toISOString().slice(11, 16) : ""),
     surplusApi: {
       listings: async (params) => { sent.push({ what: "listings", params }); return { listings: [listing, { ...listing, id: "l2", title: "Sold out box", available: false, quantityLeft: 0, status: "sold_out", image: null }], city: params?.scope === "city" ? listCity : null }; },
-      listing: async () => listing,
+      listing: async (id) => { sent.push({ what: "listing", id }); return listing; },
       hold: async (listingId, qty, key) => { sent.push({ what: "hold", listingId, qty, key }); if (holdError) throw holdError; return { hold: { id: "h1", listingId, qty, state: "active", expiresAt: holdExpires }, disclosures, total: 450 * qty }; },
       releaseHold: async (id) => { sent.push({ what: "release", id }); return {}; },
       placeOrder: async (holdId, key) => { sent.push({ what: "order", holdId, key }); current = order(); return current; },
@@ -314,6 +314,9 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
     const payload = { surplusOrderId: "o7", ref: "SB-XYZ789", eventType: "READY_FOR_PICKUP", screen: "SurpriseBoxes", params: { orderId: "o7" } };
     const r = P.getRouteFromNotificationData(payload);
     ok(r.route === "SurpriseBoxes" && r.params.orderId === "o7" && !r.params.offerId, "push tap: the server's payload opens SurpriseBoxes on that order (not an offer)", JSON.stringify(r));
+    // "a new Surprise Box near you" (server: services/surplus/announcements.js payloadFor)
+    const announce = P.getRouteFromNotificationData({ surplusListingId: "l1", screen: "SurpriseBoxes", params: { listingId: "l1" } });
+    ok(announce.route === "SurpriseBoxes" && announce.params.listingId === "l1" && !announce.params.orderId, "new-box push tap: opens SurpriseBoxes on that box", JSON.stringify(announce));
     const popup = read("app/src/hooks/useNotificationPopup.js");
     const modal = read("app/src/components/NotificationModal.js");
     const banner = read("app/src/components/NotificationBanner.js");
@@ -354,6 +357,13 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
   }
   ok(compiled === files.length, "the changed files compile (jsx)");
 
+  console.log("-- a new box near you: the tap opens that box");
+  sent.length = 0;
+  root = mount(React.createElement(SurpriseBoxes, { route: { params: { listingId: "l1" } }, navigation }));
+  await settle(root);
+  t = textOf(root.tree);
+  ok(sent.some((s) => s.what === "listing" && s.id === "l1") && t.includes("Evening bakery box") && /allergen|contents may vary/i.test(t), "opened with listingId: the box's details with every disclosure", t.slice(0, 200));
+  ok(sent.some((s) => s.what === "listings"), "…and the list loads behind it (for 'back')");
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.error("FATAL", e); process.exit(2); });
