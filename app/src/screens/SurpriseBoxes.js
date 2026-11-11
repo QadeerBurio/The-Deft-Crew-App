@@ -33,6 +33,9 @@ export default function SurpriseBoxes({ route, navigation }) {
   const [enabled, setEnabled] = useState(null);
   const [view, setView] = useState(params.orderId ? "order" : params.view === "orders" ? "orders" : "list");
   const [listings, setListings] = useState(null);
+  // boxes in the student's own city (from their profile) unless they ask for every city; city: what the server used
+  const [allCities, setAllCities] = useState(false);
+  const [city, setCity] = useState(null);
   const [here, setHere] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [listing, setListing] = useState(null);
@@ -58,12 +61,14 @@ export default function SurpriseBoxes({ route, navigation }) {
       return p;
     } catch { return null; }
   }, []);
-  const loadList = useCallback(async (at = here) => {
+  const loadList = useCallback(async (at = here, all = allCities) => {
     try {
-      const d = await surplusApi.listings(at ? { lat: at.lat, lng: at.lng } : {});
+      const d = await surplusApi.listings({ ...(at ? { lat: at.lat, lng: at.lng } : {}), ...(all ? {} : { scope: "city" }) });
       setListings(d?.listings || []);
+      if (!all) setCity(d?.city || null);
     } catch (e) { setListings([]); Alert.alert("couldn't load", e.message); }
-  }, [here]);
+  }, [here, allCities]);
+  const switchCities = (all) => { setAllCities(all); setListings(null); loadList(here, all); };
   const loadOrders = useCallback(() => surplusApi.myOrders().then(setOrders).catch((e) => { setOrders([]); Alert.alert("couldn't load", e.message); }), []);
   const openOrder = useCallback(async (id) => {
     setView("order"); setOrder(null);
@@ -177,9 +182,17 @@ export default function SurpriseBoxes({ route, navigation }) {
   if (view === "list") return frame(scroll(
     <View>
       <Text style={styles.lead} maxFontSizeMultiplier={M}>brands' surplus food at a lower price. contents may vary; you pick up and pay at the brand.</Text>
+      {!!city && (
+        <View style={styles.row}>
+          <Text style={styles.muted} maxFontSizeMultiplier={M} accessibilityRole="header">{allCities ? "boxes in every city" : `boxes in ${city}`}</Text>
+          <TouchableOpacity onPress={() => switchCities(!allCities)} accessibilityRole="button" accessibilityLabel={allCities ? `show only boxes in ${city}` : "show boxes in every city"} style={{ minHeight: 44, justifyContent: "center" }} hitSlop={{ top: 4, bottom: 4, left: 10, right: 10 }}>
+            <Text style={[styles.muted, { textDecorationLine: "underline", color: T.ink }]} maxFontSizeMultiplier={M}>{allCities ? `only ${city}` : "all cities"}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       {!here && <Button label="show distance" onPress={async () => loadList(await locate(true))} />}
       {listings === null && <ActivityIndicator color={T.ink} style={{ marginTop: 24 }} accessibilityLabel="loading" />}
-      {listings?.length === 0 && <Text style={styles.muted} maxFontSizeMultiplier={M}>no surprise boxes right now. brands list them later in the day.</Text>}
+      {listings?.length === 0 && <Text style={styles.muted} maxFontSizeMultiplier={M}>{city && !allCities ? `no surprise boxes in ${city} right now. brands list them later in the day, or see all cities.` : "no surprise boxes right now. brands list them later in the day."}</Text>}
       {listings?.map((l) => (
         <TouchableOpacity key={l.id} style={[styles.card, !l.available && { opacity: 0.6 }]} onPress={() => openListing(l.id)} accessibilityRole="button"
           accessibilityLabel={`${l.title} from ${l.brand.name}. ${money(l.price, l.currency)}, usually ${money(l.listPrice, l.currency)}. pickup ${span(l.pickupStart, l.pickupEnd)}. ${l.available ? `${l.quantityLeft} left` : "sold out"}${l.distanceKm != null ? `. ${l.distanceKm} km away` : ""}`}>
