@@ -2,7 +2,7 @@
   "expo": {
     "name": "tdc",
     "slug": "Testting",
-    "version": "1.1.16",
+    "version": "1.2.0",
     "orientation": "default",
     "icon": "./assets/tdc.png",
     "scheme": "tdcapp",
@@ -24,12 +24,13 @@
         "UIBackgroundModes": [
           "remote-notification"
         ]
-      }
+      },
+      "buildNumber": "89"
     },
     "android": {
       "package": "com.aqkhan110.tdc",
       "allowBackup": false,
-      "versionCode": 88,
+      "versionCode": 89,
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "INTERNET",
@@ -154,6 +155,14 @@
         "projectId": "112506b0-7553-4a1b-afeb-6a37019cc15f"
       }
     },
-    "owner": "aqkhan622"
+    "owner": "aqkhan622",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/112506b0-7553-4a1b-afeb-6a37019cc15f",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    }
   }
 }
