@@ -17,7 +17,7 @@ const ok = (c, l, x = "") => { c ? passed++ : failed++; console.log(`${c ? "ok  
 
 const FILES = [
   "app/src/components/LoyaltyCard.js", "app/src/components/LoyaltyVisits.js", "app/src/components/CareerApplications.js",
-  "app/src/screens/Resume/ResumeStudio.js", "app/src/screens/SurpriseBoxes.js", "app/src/components/SurpriseBoxCard.js",
+  "app/src/screens/Resume/ResumeStudio.js", "app/src/screens/SurpriseBoxes.js", "app/src/components/SurpriseBoxCard.js", "app/src/components/RecommendedJobs.js",
   "app/src/components/CareerRatings.js",
 ];
 const TOUCH = new Set(["TouchableOpacity", "Pressable", "TouchableHighlight", "TouchableWithoutFeedback"]);

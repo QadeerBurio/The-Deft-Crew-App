@@ -22,6 +22,7 @@ import axios from 'axios';
 
 import { color as T, font as F } from "../theme/tokens";
 import { SERVER_ORIGIN } from "../config/server";
+import RecommendedJobs from "./RecommendedJobs"; // FLAG_CAREER_MATCHING: jobs that match the student's resume skills
 const { width, height } = Dimensions.get('window');
 
 // API Configuration
@@ -613,6 +614,9 @@ const CareerHub = ({ navigation }) => {
               Discover opportunities that match your ambition
             </Text>
           </Animated.View>
+
+          {/* ── Recommended for you (FLAG_CAREER_MATCHING; nothing shown otherwise) ── */}
+          <RecommendedJobs navigation={navigation} refreshKey={refreshing} />
 
           {/* ── Navigation Grid ── */}
           <View style={styles.navGrid}>
