@@ -145,6 +145,7 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
   const order = (extra = {}) => ({ id: "o1", ref: "SB-ABC123", state: "ORDER_PLACED", qty: 2, price: { unitPrice: 450, listPrice: 1200, total: 900, currency: "PKR" }, payment: { mode: "pay_at_pickup", state: "unpaid", note: "Pay PKR 900 at pickup" }, title: "Evening bakery box", brand: { name: "Alpha Bakery" }, branch: { name: "Alpha Clifton", address: "Clifton block 5" }, pickupStart: soon(180), pickupEnd: soon(240), disclosures, history: [{ from: "RESERVED", to: "ORDER_PLACED", byRole: "student", at: new Date().toISOString() }], version: 1, canCancel: true, cancelUntil: soon(150), canDispute: false, pickup: { code: "K7QM2X", qr: "TDCBOX1:o1:K7QM2X", validUntil: soon(240) }, supportCase: null, ...extra });
   let current = order();
   let holdError = null;
+  let listCity = null; // the city the server used for ?scope=city (null: every city, e.g. no location on the profile)
   const studioMock = {
     surplusEnabled: async () => enabled,
     newKey: (() => { let n = 0; return () => `key-${++n}`; })(),
@@ -152,7 +153,7 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
     CASE_REASONS: [["food_safety", "food safety problem"], ["other", "something else"]],
     pkTime: (iso) => (iso ? new Date(iso).toISOString().slice(11, 16) : ""),
     surplusApi: {
-      listings: async (params) => { sent.push({ what: "listings", params }); return { listings: [listing, { ...listing, id: "l2", title: "Sold out box", available: false, quantityLeft: 0, status: "sold_out", image: null }] }; },
+      listings: async (params) => { sent.push({ what: "listings", params }); return { listings: [listing, { ...listing, id: "l2", title: "Sold out box", available: false, quantityLeft: 0, status: "sold_out", image: null }], city: params?.scope === "city" ? listCity : null }; },
       listing: async () => listing,
       hold: async (listingId, qty, key) => { sent.push({ what: "hold", listingId, qty, key }); if (holdError) throw holdError; return { hold: { id: "h1", listingId, qty, state: "active", expiresAt: holdExpires }, disclosures, total: 450 * qty }; },
       releaseHold: async (id) => { sent.push({ what: "release", id }); return {}; },
@@ -196,6 +197,7 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
   ok(t.includes("surprise boxes near you") && t.includes("1 on sale") && t.includes("pick up and pay at the brand"), "pilot: 'surprise boxes near you' with how many are on sale", t);
   find(root.tree, (x) => x.props?.accessibilityRole === "button").props.onPress();
   ok(sent.some((s) => s.what === "open"), "tapping it opens the Surprise Boxes screen");
+  ok(sent.filter((s) => s.what === "listings").every((s) => s.params?.scope === "city"), "the card counts boxes in the student's own city (scope=city)", JSON.stringify(sent.filter((s) => s.what === "listings").map((s) => s.params)));
 
   console.log("\u2500\u2500 flag off / list");
   enabled = false;
@@ -212,6 +214,23 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
   byLabel(root.tree, "show distance").props.onPress();
   await settle(root);
   ok(location.asked && sent.filter((s) => s.what === "listings").pop().params.lat === 24.81 && textOf(root.tree).includes("1.2 km"), "'show distance' asks for location, then sends it and shows the distance");
+  ok(sent.filter((s) => s.what === "listings").every((s) => s.params?.scope === "city"), "the list asks for the student's own city (scope=city), with or without distance", JSON.stringify(sent.filter((s) => s.what === "listings").map((s) => s.params)));
+  ok(!textOf(root.tree).includes("all cities"), "no city known (server answered city: null): no city line, every box shown as before");
+  console.log("── city: own city first, every city on request");
+  listCity = "Karachi";
+  sent.length = 0;
+  root = mount(React.createElement(SurpriseBoxes, { route: { params: {} }, navigation }));
+  await settle(root);
+  t = textOf(root.tree);
+  ok(t.includes("boxes in Karachi") && t.includes("all cities"), "'boxes in Karachi' with an 'all cities' link", t.slice(0, 200));
+  byLabel(root.tree, "show boxes in every city").props.onPress();
+  await settle(root);
+  t = textOf(root.tree);
+  ok(sent.filter((s) => s.what === "listings").pop().params.scope === undefined && t.includes("boxes in every city") && t.includes("only Karachi"), "'all cities': asked without the city scope, says so, offers 'only Karachi'", JSON.stringify(sent.filter((s) => s.what === "listings").pop().params));
+  byLabel(root.tree, "show only boxes in Karachi").props.onPress();
+  await settle(root);
+  ok(sent.filter((s) => s.what === "listings").pop().params.scope === "city" && textOf(root.tree).includes("boxes in Karachi"), "'only Karachi': back to the student's city");
+  listCity = null;
 
   const images = (tree) => { const out = []; const walk = (x) => { if (!x || typeof x !== "object") return; if (Array.isArray(x)) return x.forEach(walk); if (x.type === "Image") out.push(x.props); walk(x.props?.children); }; walk(tree); return out; };
   ok(images(root.tree).length === 1 && images(root.tree)[0].source?.uri === listing.image, "photo: the box with a photo shows it in the list; the one without shows none (as before)", JSON.stringify(images(root.tree).map((i) => i.source)));

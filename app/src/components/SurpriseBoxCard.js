@@ -1,6 +1,7 @@
 // SurpriseBoxCard.js: "Surprise Boxes near you" in the Discounts area (Brands screen), only when
 // FLAG_SURPLUS_BOXES is on for the student (GET /app/flags/me). Shows how many boxes are on sale and the
-// soonest pickup; opens the SurpriseBoxes screen. Renders nothing otherwise, so the screen is unchanged.
+// soonest pickup in the student's own city (profile location; every city when none is set); opens the
+// SurpriseBoxes screen. Renders nothing otherwise, so the screen is unchanged.
 import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -14,7 +15,7 @@ export default function SurpriseBoxCard({ onOpen, refreshKey }) {
     (async () => {
       if (!(await surplusEnabled())) { if (live) setState(null); return; }
       try {
-        const d = await surplusApi.listings();
+        const d = await surplusApi.listings({ scope: "city" }); // the student's own city (from their profile)
         const open = (d?.listings || []).filter((l) => l.available);
         if (live) setState({ count: open.length, next: open.map((l) => l.pickupStart).sort()[0] || null });
       } catch {
