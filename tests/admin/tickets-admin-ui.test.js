@@ -20,6 +20,7 @@ const PROD = "https://the-deft-crew-production.up.railway.app";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let failed = 0, passed = 0;
+let fontsBlocked = 0; // Google Fonts requests failed on purpose (see Fetch.requestPaused)
 const ok = (c, label, extra = "") => { c ? passed++ : failed++; console.log(`${c ? "ok  " : "FAIL"}  ${label}${!c && extra ? "  → " + String(extra).slice(0, 300) : ""}`); };
 const apiLog = [];
 const leaks = [];
@@ -82,6 +83,9 @@ const leaks = [];
     const { requestId, request } = m.params;
     const u = new URL(request.url);
     if (u.hostname === "127.0.0.1") return send("Fetch.continueRequest", { requestId });
+    // Google Fonts blocked at the network (as on a network that blocks or can't reach Google): the portal must
+    // still open every screen, in the system font
+    if (/(^|\.)fonts\.(googleapis|gstatic)\.com$/.test(u.hostname)) { fontsBlocked++; return send("Fetch.failRequest", { requestId, errorReason: "BlockedByClient" }); }
     const origin = request.headers.Origin || request.headers.origin;
     if (request.url.startsWith(PROD + "/api/events")) {
       if (request.method === "OPTIONS") return send("Fetch.fulfillRequest", { requestId, responseCode: 204, responseHeaders: cors(origin) });
@@ -117,13 +121,14 @@ const leaks = [];
     await sleep(1200);
     await evaluate(`localStorage.setItem("token", ${JSON.stringify(admin.token)}); localStorage.setItem("user", JSON.stringify({ _id: ${JSON.stringify(String(admin._id))}, name: "Admin", email: "admin@tdc.pk", role: "admin" })); true`);
     await send("Page.navigate", { url: WEB + "/eventmanagement" });
-    await until(`document.querySelectorAll('[role="tab"]').length > 1`, 10000);
+    const opened = await until(`document.querySelectorAll('[role="tab"]').length > 1`, 10000);
+    ok(opened && fontsBlocked > 0 && !(await body()).includes("tdc was updated"), "events admin opens with Google Fonts blocked (no 'tdc was updated' screen)", `tabs ${opened}, font requests blocked ${fontsBlocked}`);
     await evaluate(HELP);
     await evaluate(`T.click('[role="tab"]', "Registrations")`);
     ok(await until(`document.body.innerText.includes(${JSON.stringify(codes1[0])})`), "registrations tab lists the ticket codes", (await body()).slice(0, 300));
     let t = await body();
     ok(/ticket code/i.test(t) && t.includes(codes1[1]) && t.includes(code3) && /valid/.test(t), "column 'Ticket code' with each seat's code + status (paid ×2, free)");
-    ok(await evaluate(`[...document.querySelectorAll('tbody tr')].some((tr) => tr.innerText.includes("Night Gig") && tr.innerText.includes("pending") && tr.innerText.includes("—"))`), "pending registration: no code (—)");
+    ok(await evaluate(`[...document.querySelectorAll('tbody tr')].some((tr) => tr.innerText.includes("Night Gig") && tr.innerText.includes("pending") && /[—–]/.test(tr.innerText) && !/TDC-/.test(tr.innerText))`), "pending registration: no code (– / —)");
     ok(await evaluate(`document.querySelector('input[placeholder*="ticket code"]') != null`), "search box mentions ticket code");
     await shot("admin-registrations.png");
 
@@ -167,7 +172,8 @@ const leaks = [];
     // verify from the admin → ticket appears
     await evaluate(`T.click('.ev2-panel button', "Verify")`);
     await until(`document.body.innerText.includes("Verify this payment?")`);
-    await evaluate(`T.click('.MuiDialog-root button', "Verify")`);
+    // the confirm dialog: the portal's own kit modal (data-kit="modal") since the redesign; MUI's dialog before it
+    await evaluate(`T.click('[data-kit="modal"] .k-modal button, .MuiDialog-root button', "Verify")`);
     await sleep(400);
     const got = await until(`[...document.querySelectorAll('tbody tr')].filter((tr) => /TDC-[A-Z0-9]{4}-[A-Z0-9]{4}/.test(tr.innerText)).length === 3`);
     ok(got && R(s2, gig).tickets?.length === 1, "verify in the admin → the row gets its ticket code", JSON.stringify({ stored: R(s2, gig).tickets, rows: await evaluate(`[...document.querySelectorAll('tbody tr')].map((tr) => tr.innerText.replace(/\s+/g, " "))`), calls: apiLog.slice(-3) }));
