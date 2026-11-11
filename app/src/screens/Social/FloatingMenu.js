@@ -180,7 +180,8 @@ const FloatingMenu = ({ navigation }) => {
           onPress={() => {
             toggleMenu();
             if (target && navigation) {
-              setTimeout(() => navigation.navigate(target), 300);
+              // a route name, or { name, params } for a screen inside a nested navigator (the Campus tab)
+              setTimeout(() => (typeof target === "string" ? navigation.navigate(target) : navigation.navigate(target.name, target.params)), 300);
             }
           }}
           activeOpacity={0.7}
@@ -206,11 +207,12 @@ const FloatingMenu = ({ navigation }) => {
         {/* TOP */}
         {renderMiniBtn(Ionicons, 'home', 'Home', 'Home', 0, -75, 0)}
         {/* BOTTOM */}
-        {renderMiniBtn(Ionicons, 'airplane', 'Travel', 'Traveling', 0, 75, 0.15)}
+        {renderMiniBtn(Ionicons, 'airplane', 'Travel', 'Travelling', 0, 75, 0.15)}
         {/* LEFT */}
-        {renderMiniBtn(FontAwesome5, 'book-reader', 'Learn', 'Campus', -75, 0, 0.3)}
+        {renderMiniBtn(FontAwesome5, 'book-reader', 'Learn', { name: 'HomeTabs', params: { screen: 'Campus' } }, -75, 0, 0.3)}
         {/* RIGHT */}
-        {renderMiniBtn(MaterialCommunityIcons, 'briefcase-variant', 'Career', 'CareerHub', 75, 0, 0.45)}
+        {/* the jobs list (Career): recommended jobs and invites to apply sit at its top */}
+        {renderMiniBtn(MaterialCommunityIcons, 'briefcase-variant', 'Career', 'Career', 75, 0, 0.45)}
 
         {/* MAIN FAB */}
         <TouchableOpacity
