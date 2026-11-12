@@ -270,10 +270,13 @@ export default function UserProfile({ route, navigation }) {
   // ============ REFRESH CURRENT USER FROM BACKEND ============
   const refreshCurrentUser = useCallback(async () => {
     try {
-      const meRes = await axios.get(`${API_URL}/user/me`, config);
-      if (meRes.data?.user && setUser) {
-        setUser(meRes.data.user);
-        return meRes.data.user;
+      // GET /api/auth/profile/me replies with the user itself (connections, sentRequests, receivedRequests included);
+      // there is no /api/social/user/me
+      const meRes = await axios.get(`${SERVER_ORIGIN}/api/auth/profile/me`, config);
+      const me = meRes.data?._id ? meRes.data : null;
+      if (me && setUser) {
+        setUser((prev) => ({ ...(prev || {}), ...me }));
+        return me;
       }
     } catch (err) {
       console.warn("Refresh current user failed:", err.message);
