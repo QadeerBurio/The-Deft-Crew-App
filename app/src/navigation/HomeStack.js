@@ -12,7 +12,6 @@ import BookingScreenBase from "../components/BookingScreen";
 const BookingScreen = accountOnly(BookingScreenBase, { title: "booking" });
 import PaymentScreenBase from "../components/PaymentScreen";
 const PaymentScreen = accountOnly(PaymentScreenBase, { title: "payment" });
-import TravelingScreen from "../components/TravellingScreen";
 import EditProfileScreen from "../screens/Social/EditProfileScreen";
 import ChatHistoryScreenBase from "../screens/ChatHistoryScreen";
 const ChatHistoryScreen = accountOnly(ChatHistoryScreenBase, { title: "chat history" });
@@ -64,7 +63,6 @@ export default function HomeStack() {
       <Stack.Screen name="Booking" component={BookingScreen} />
       <Stack.Screen name="Payment" component={PaymentScreen} />
       <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
-      <Stack.Screen name="TravellingScreen" component={TravelingScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ChatHistory" component={ChatHistoryScreen} />
       <Stack.Screen name="Social" component={Social} options={{ headerShown: false }} />
     </Stack.Navigator>

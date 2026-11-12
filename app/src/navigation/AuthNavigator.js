@@ -18,7 +18,6 @@ import VerifyOTP from "../screens/VerifyOTPScreen"
 import SignupVerifyScreen from "../screens/SignupVerifyScreen"
 import ResetPassword from "../screens/ResetPasswordScreen"
 import ResumeStack from "./ResumeNavigator";
-import TermsScreen from "../screens/PrivacyScreen";
 import CommunityGuidelinesScreen from "../screens/Guidelines";
 // the drawer's legal pages, opened from the sign up line
 import LegalTermsScreen from "../components/Terms";
@@ -41,7 +40,6 @@ export default function AppNavigator() {
       )}
 
       {/* Old onboarding pages: no longer in the first-run flow, kept registered */}
-      <Stack.Screen name="Privacy" component={TermsScreen} />
       <Stack.Screen name="CommunityGuidelines" component={CommunityGuidelinesScreen} />
 
       {/* Auth screens (open over the app for a guest) */}
