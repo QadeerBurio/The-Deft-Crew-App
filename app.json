@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "tdc",
-    "slug": "Testting",
+    "slug": "tdc",
     "version": "1.2.0",
     "orientation": "default",
     "icon": "./assets/tdc.png",
@@ -42,7 +42,8 @@
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.VIBRATE",
         "android.permission.WAKE_LOCK",
-        "android.permission.RECEIVE_BOOT_COMPLETED"
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "com.google.android.gms.permission.AD_ID"
       ],
       "blockedPermissions": [
         "android.permission.READ_MEDIA_IMAGES",
@@ -110,6 +111,7 @@
             "./assets/sounds/moods/tdc_mood_shook.wav",
             "./assets/sounds/moods/tdc_mood_sus.wav",
             "./assets/sounds/moods/tdc_mood_cheeky.wav",
+            "./assets/sounds/moods/tdc_mood_rs.wav",
             "./assets/sounds/ui/tdc_like.wav",
             "./assets/sounds/ui/tdc_nope.wav"
           ],
@@ -152,15 +154,15 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "112506b0-7553-4a1b-afeb-6a37019cc15f"
+        "projectId": "d14cdf3a-2494-4d4f-bee0-90f862bf3389"
       }
     },
-    "owner": "aqkhan622",
+    "owner": "aqkhan621",
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/112506b0-7553-4a1b-afeb-6a37019cc15f",
+      "url": "https://u.expo.dev/d14cdf3a-2494-4d4f-bee0-90f862bf3389",
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 0
     }
