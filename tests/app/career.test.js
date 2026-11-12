@@ -229,7 +229,8 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
   ok(sent.some((s) => s.what === "event" && s.type === "HIRE_DISPUTED" && s.note === "the employer withdrew the job" && s.version === 9), "the dispute is sent with the reason and the version");
 
   console.log("── placement: the existing Jobs area, no new tab");
-  ok(read("app/src/components/TDCCareers.js").includes("<CareerApplications />"), "the TDC careers applications sheet shows it for pilot students");
+  const careerSheet = read("app/src/components/Career.js").replace(/\r\n/g, "\n");
+  ok(/\{timeline \? \(\n\s*<ScrollView[^>]*>\n\s*<CareerApplications \/>/.test(careerSheet) && careerSheet.includes("timeline={careerOn}") && careerSheet.includes("careerEnabled().then(setCareerOn)"), "the jobs list's 'my applications' sheet shows it for pilot students (was TDCCareers' sheet)");
   const nav = read("app/src/navigation/TabNavigator.js");
   ok(!nav.includes("CareerApplications"), "no new tab for it");
 

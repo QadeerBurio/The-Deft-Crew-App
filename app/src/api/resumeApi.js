@@ -325,34 +325,6 @@ export const resumeApi = {
     }
   },
 
-  applyToJob: async (jobId, applicationData) => {
-    try {
-      const formData = new FormData();
-
-      Object.keys(applicationData).forEach(key => {
-        if (key === 'resume' && applicationData.resume) {
-          formData.append('resume', {
-            uri: applicationData.resume.uri,
-            type: applicationData.resume.type || 'application/pdf',
-            name: applicationData.resume.name || 'resume.pdf',
-          });
-        } else if (applicationData[key] !== undefined && applicationData[key] !== null) {
-          formData.append(key, applicationData[key].toString());
-        }
-      });
-
-      const response = await api.post(`/jobs/apply/${jobId}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 60000,
-      });
-
-      memoryCache.delete('recommendations:*');
-      return response.data;
-    } catch (error) {
-      console.error('Apply to job error:', error);
-      throw error;
-    }
-  },
 
   getMyApplications: async () => {
     try {

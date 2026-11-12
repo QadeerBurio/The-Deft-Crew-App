@@ -15,6 +15,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
 import { BASE_URL } from '../api/api';
 import { navigationRef } from '../navigation/navigationRef';
+import { jobTarget } from '../utils/jobRoutes';
 import {
   N,
   timeAgo,
@@ -66,7 +67,10 @@ const cache = { userId: null, list: null };
 const targetOf = (n) => {
   const m = n.metadata || {};
   const screen = m.screenToOpen || m.screen || m.route;
-  if (screen) return { screen, params: m.params || {} };
+  if (screen) {
+    const t = jobTarget(screen, m.params || {}, m); // job notifications open the job
+    return { screen: t.route, params: t.params };
+  }
   if (n.type === 'new_offer') return { screen: 'ManageOffers', params: {} };
   if (n.type === 'offer_accepted' && m.matchId) return { screen: 'MatchChat', params: { matchId: m.matchId } };
   if (['offer_accepted', 'offer_rejected', 'match_created'].includes(n.type)) return { screen: 'MyOffers', params: {} };

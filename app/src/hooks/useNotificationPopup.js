@@ -5,6 +5,7 @@ import { AuthContext } from '../context/AuthContext';
 import { playSound } from '../lib/soundManager';
 import { styleNotification } from '../utils/notificationStyle';
 import { navigationRef } from '../navigation/navigationRef';
+import { jobTarget } from '../utils/jobRoutes';
 
 export const useNotificationPopup = () => {
   const { token, updateUnreadCount } = useContext(AuthContext);
@@ -81,8 +82,10 @@ export const useNotificationPopup = () => {
       if (route && navigationRef?.isReady?.()) {
         setTimeout(() => {
           try {
-            navigationRef.navigate(route, params);
-            console.log('[useNotificationPopup] navigated →', route, params);
+            // job notifications (old names TDCCareers / MyApplications included) open the job
+            const t = jobTarget(route, params, data);
+            navigationRef.navigate(t.route, t.params);
+            console.log('[useNotificationPopup] navigated →', t.route, t.params);
           } catch (e) {
             console.warn('[useNotificationPopup] nav failed:', e.message);
           }

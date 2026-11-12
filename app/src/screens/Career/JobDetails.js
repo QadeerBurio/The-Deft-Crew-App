@@ -21,7 +21,7 @@ import { AuthContext } from "../../context/AuthContext";
 import { useGuestGate } from "../../guest/GuestGate";
 import { EmployerRating } from "../../components/CareerRatings";
 import { WebViewModal, buildLocationUrl } from "../../components/career/JobWebView";
-import { JOB_APPLICATION_FORM, jobState, externalApplyUrl } from "../../utils/careerNav";
+import { JOB_APPLICATION_FORM, jobState, externalApplyUrl, openMyApplications } from "../../utils/careerNav";
 import { plainError } from "../../utils/plainError";
 
 const QUALITY_LABEL = { strong: "strong match", medium: "medium match", weak: "weak match", insufficient: "not enough info" };
@@ -250,6 +250,16 @@ export default function JobDetails({ navigation, route }) {
             <Ionicons name="checkmark-circle" size={18} color={T.success} />
             <Text style={styles.bannerText} maxFontSizeMultiplier={MAX_FONT_SCALE}>you applied{application?.status ? `: ${STATUS_LABEL[application.status] || application.status}` : ""}</Text>
           </View>
+        )}
+        {state === "applied" && signedIn && (
+          <Button
+            title="open my application"
+            variant="secondary"
+            icon={<Ionicons name="list-outline" size={16} color={T.ink} />}
+            accessibilityLabel="open my application: interviews, offers and updates"
+            onPress={() => openMyApplications(navigation)}
+            style={{ marginTop: 10 }}
+          />
         )}
         {state === "closed" && (
           <View style={[styles.banner, { backgroundColor: T.sand }]}>

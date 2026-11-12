@@ -16,6 +16,7 @@ import { getMoodMeta } from '../utils/notificationIcon';
 import { navigationRef } from '../navigation/navigationRef';
 
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
+import { jobTarget } from '../utils/jobRoutes';
 const NotificationBanner = ({
   visible,
   notification,
@@ -94,7 +95,9 @@ const NotificationBanner = ({
 
   if (route && navigationRef?.isReady?.()) {
     try {
-      navigationRef.navigate(route, params);
+      // job notifications (old names TDCCareers / MyApplications included) open the job
+      const t = jobTarget(route, params, meta);
+      navigationRef.navigate(t.route, t.params);
       console.log('[Banner] navigated →', route, params);
     } catch (e) {
       console.warn('[Banner] nav failed:', e.message);

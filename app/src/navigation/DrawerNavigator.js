@@ -76,7 +76,8 @@ import JobDetails from '../screens/Career/JobDetails';
 import JobApplicationFormBase from '../screens/Career/JobApplicationForm';
 import ResumeStudioBase from '../screens/Resume/ResumeStudio';
 const ResumeStudio = accountOnly(ResumeStudioBase, { title: "resume studio" }); // FLAG_RESUME_STUDIO_V2, from a job's details
-import TDCCareers from '../components/TDCCareers';
+// old job route names (pushes already sent, installed-app notifications): replaced by the jobs list / JobDetails
+import JobRouteRedirect from '../screens/Career/JobRouteRedirect';
 import ExchangeScreen from '../components/ExchangeScreen';
 import ApplicationFormBase from '../components/ApplicationForm';
 const ApplicationForm = accountOnly(ApplicationFormBase, { title: "apply" });
@@ -1280,7 +1281,8 @@ function HomeStackNavigator() {
       <Stack.Screen name="JobDetails" component={JobDetails} options={{ gestureEnabled: true }} />
       <Stack.Screen name="JobApplicationForm" component={JobApplicationForm} options={{ gestureEnabled: true }} />
       <Stack.Screen name="ResumeStudio" component={ResumeStudio} />
-      <Stack.Screen name="TDCCareers" component={TDCCareers} />
+      <Stack.Screen name="TDCCareers" component={JobRouteRedirect} />
+      <Stack.Screen name="MyApplications" component={JobRouteRedirect} />
       <Stack.Screen name="Booking" component={BookingScreen} />
       <Stack.Screen name="Exchange" component={ExchangeScreen} />
       <Stack.Screen name="ApplicationForm" component={ApplicationForm} />

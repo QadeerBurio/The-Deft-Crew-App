@@ -27,6 +27,8 @@ import axios from "axios";
 import { useOpenFromParams } from '../engagement/hooks/useOpenFromParams';
 import { WebViewModal, formatUrl, buildLocationUrl } from "./career/JobWebView"; // in-app browser (also used by JobDetails)
 import { openJobDetails } from "../utils/careerNav"; // a job opens full screen; Apply is on JobApplicationForm
+import CareerApplications from "./CareerApplications"; // FLAG_CAREER_TIMELINE: "my applications" on the hiring timeline
+import { careerEnabled } from "../api/careerApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from 'expo-constants';
 import * as Print from 'expo-print';
@@ -399,7 +401,9 @@ const InterviewDetailsModal = ({ visible, interview, onClose }) => {
 };
 
 // ==================== APPLICATIONS MODAL ====================
-const ApplicationsModal = ({ visible, applications, onClose, onInterviewPress }) => {
+// timeline (FLAG_CAREER_TIMELINE): the hiring timeline (CareerApplications: answer interviews and offers, withdraw);
+// otherwise the classic list
+const ApplicationsModal = ({ visible, applications, onClose, onInterviewPress, timeline = false }) => {
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case "pending": return COLORS.warning;
@@ -437,7 +441,11 @@ const ApplicationsModal = ({ visible, applications, onClose, onInterviewPress })
 
           <Text style={styles.applicationsModalTitle}>my applications</Text>
           <Text style={styles.applicationsModalCount}>{applications.length} applications</Text>
-          {applications.length === 0 ? (
+          {timeline ? (
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: height * 0.7 }}>
+              <CareerApplications />
+            </ScrollView>
+          ) : applications.length === 0 ? (
             <View style={styles.emptyState}><MaterialCommunityIcons name="briefcase-search" size={50} color={T.textFaint} /><Text style={styles.emptyStateText}>no applications yet</Text></View>
           ) : (
             <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: height * 0.6 }}>
@@ -559,6 +567,8 @@ const Career = ({ navigation, route }) => {
   const [showFilters, setShowFilters] = useState(false);
   const [myApplications, setMyApplications] = useState([]);
   const [showApplicationsModal, setShowApplicationsModal] = useState(false);
+  // FLAG_CAREER_TIMELINE: pilot students see their applications on the hiring timeline (was TDCCareers' sheet)
+  const [careerOn, setCareerOn] = useState(false);
   const [token, setToken] = useState(null);
   const { requireAccount } = useGuestGate();
   const [appliedJobIds, setAppliedJobIds] = useState(new Set());
@@ -690,6 +700,24 @@ const Career = ({ navigation, route }) => {
 
   // back from JobApplicationForm after the server confirmed the application (utils/careerNav.backToJobsList):
   // the job shows "Applied" at once, then the statuses reload
+  useEffect(() => { careerEnabled().then(setCareerOn).catch(() => setCareerOn(false)); }, [token]);
+
+  // a job push without a job (utils/careerNav.jobTarget) → { openApplications: true }: the applications sheet;
+  // the old TDC careers list (TDCCareers) → { tdc: true }: this list, TDC jobs only
+  const openApplications = route?.params?.openApplications;
+  useEffect(() => {
+    if (!openApplications) return;
+    setShowApplicationsModal(true);
+    if (token) fetchMyApplications();
+    navigation.setParams({ openApplications: undefined });
+  }, [openApplications]);
+  const tdcOnly = route?.params?.tdc;
+  useEffect(() => {
+    if (!tdcOnly) return;
+    setFilters((f) => ({ ...f, isTdc: true }));
+    navigation.setParams({ tdc: undefined });
+  }, [tdcOnly]);
+
   const appliedJobId = route?.params?.appliedJobId;
   useEffect(() => {
     if (!appliedJobId) return;
@@ -964,6 +992,7 @@ const Career = ({ navigation, route }) => {
       />
       <ApplicationsModal
         visible={showApplicationsModal}
+        timeline={careerOn}
         applications={myApplications}
         onClose={() => setShowApplicationsModal(false)}
         onInterviewPress={openInterviewDetails}

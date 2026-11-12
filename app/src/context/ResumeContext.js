@@ -588,26 +588,6 @@ export default function ResumeProvider({ children }) {
     }
   };
 
-  // Apply to a job
-  const applyToJob = async (jobId, applicationData) => {
-    try {
-      setLoading(true);
-
-      if (isGuest) {
-        Alert.alert('Login Required', 'Please login or create an account to apply for jobs.');
-        setLoading(false);
-        return null;
-      }
-
-      const response = await resumeApi.applyToJob(jobId, applicationData);
-      setLoading(false);
-      return response;
-    } catch (error) {
-      console.error('Apply to job error:', error);
-      setLoading(false);
-      throw error;
-    }
-  };
 
   // Get my applications
   const getMyApplications = async () => {
@@ -732,7 +712,6 @@ export default function ResumeProvider({ children }) {
         getRecommendedJobs,
         getJobRecommendations,
         getTopJobRecommendations,
-        applyToJob,
         getMyApplications,
         updateTemplate,
         getAnalytics,

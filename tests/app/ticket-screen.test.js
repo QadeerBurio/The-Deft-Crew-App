@@ -256,7 +256,11 @@ async function show(registrationId, who) {
   const PNfile = path.join(SRC, "utils/pushNotifications.js");
   const { code } = babel.transformSync(fs.readFileSync(PNfile, "utf8"), { filename: PNfile, babelrc: false, configFile: false, plugins: [reqApp.resolve("@babel/plugin-transform-modules-commonjs")] });
   const pm = new Module(PNfile); pm.filename = PNfile;
-  pm.require = (id) => (id === "react-native" ? { Platform: { OS: "android" } } : new Proxy({}, { get: (t2, k) => (k === "__esModule" ? true : k === "then" ? undefined : anyThing) }));
+  // ./jobRoutes (job pushes → the job) has no imports: the real one
+  const JRfile = path.join(SRC, "utils/jobRoutes.js");
+  const jr = new Module(JRfile); jr.filename = JRfile;
+  jr._compile(babel.transformSync(fs.readFileSync(JRfile, "utf8"), { filename: JRfile, babelrc: false, configFile: false, plugins: [reqApp.resolve("@babel/plugin-transform-modules-commonjs")] }).code, JRfile);
+  pm.require = (id) => (id === "react-native" ? { Platform: { OS: "android" } } : id === "./jobRoutes" ? jr.exports : new Proxy({}, { get: (t2, k) => (k === "__esModule" ? true : k === "then" ? undefined : anyThing) }));
   pm._compile(code, PNfile);
   const r1 = pm.exports.getRouteFromNotificationData({ type: "event", route: "Events", params: { ticketRegistrationId: "abc" }, ticketRegistrationId: "abc" });
   const r2 = pm.exports.getRouteFromNotificationData({ route: "Events", params: { openEventId: "e1" } });
