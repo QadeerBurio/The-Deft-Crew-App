@@ -135,18 +135,28 @@ const PrivacyAndSafetyScreen = ({ navigation }) => {
           />
         </Group>
 
+        <Group title="help">
+          <SettingItem
+            icon="help-circle-outline"
+            label="help & FAQ"
+            subLabel="Answers to common questions, and how to reach us"
+            onPress={() => navigation.navigate('FAQ')}
+            last
+          />
+        </Group>
+
         <Group title="legal">
           <SettingItem
             icon="document-text-outline"
             label="privacy policy"
             subLabel="How we handle your data"
-            onPress={() => navigation.navigate('PrivacyPolicy')}
+            onPress={() => navigation.navigate('Privacy Policy')}
           />
           <SettingItem
             icon="document-text-outline"
             label="terms & conditions"
             subLabel="Our terms and conditions"
-            onPress={() => navigation.navigate('TermsAndConditions')}
+            onPress={() => navigation.navigate('Terms & Conditions')}
           />
           <SettingItem
             icon="people-outline"

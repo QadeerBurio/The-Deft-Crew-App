@@ -1290,7 +1290,7 @@ export default function UserProfile({ route, navigation }) {
     if (isOwnProfile) {
       return (
         <View style={styles.btnRow}>
-          <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('EditProfile')}>
+          <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('EditProfileScreen')}>
             <LinearGradient colors={[T.ink, T.ink]} style={styles.editGradient}>
               <Ionicons name="create-outline" size={16} color={T.yellow} />
               <Text style={styles.editBtnText}>edit profile</Text>

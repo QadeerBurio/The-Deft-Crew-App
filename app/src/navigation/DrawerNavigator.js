@@ -115,7 +115,6 @@ import ProfileStack from './ProfileStack';
 import Home from '../screens/Home';
 import StudentDashboard from '../screens/StudentDashboard';
 import Explore from '../screens/Explore';
-import EnhancedCareerScreen from '../screens/Resume/EnhanceCareer';
 import DashboardBase from '../screens/skillshare/Dashboard';
 const Dashboard = accountOnly(DashboardBase, { title: "my skillshare" });
 import CreateListingScreenBase from '../screens/skillshare/CreateListingScreen';
@@ -1290,7 +1289,6 @@ function HomeStackNavigator() {
       <Stack.Screen name="ApplicationForm" component={ApplicationForm} />
       <Stack.Screen name="Payment" component={PaymentScreen} />
       <Stack.Screen name="StudentDashboard" component={StudentDashboard} />
-      <Stack.Screen name="EnhancedCareer" component={EnhancedCareerScreen} />
       <Stack.Screen name="Card" component={Card} />
       <Stack.Screen name="DigitalBadge" component={DigitalBadgeScreen} />
       <Stack.Screen name="MainCharacter" component={MainCharacterScreen} />
