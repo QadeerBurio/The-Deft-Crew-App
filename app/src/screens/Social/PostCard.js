@@ -40,6 +40,7 @@ import { color as T, font as F } from "../../theme/tokens";
 import { plainError } from "../../utils/plainError";
 import { metaEvents } from "../../analytics/metaEvents";
 import { SERVER_ORIGIN } from "../../config/server";
+import { acceptRequestFrom } from "../../utils/connectionRequests";
 const { width, height } = Dimensions.get('window');
 const API_URL = `${SERVER_ORIGIN}/api/social`;
 
@@ -858,8 +859,14 @@ function PostCard({ post, onBlock, onReport, onPostUpdate }) {
     setIsConnecting(true);
 
     try {
-      const res = await axios.post(`${API_URL}/user/accept/${post.author._id}`, {}, config);
-      if (res.data.success) {
+      // the server accepts through the request's notification (utils/connectionRequests.js)
+      const res = await acceptRequestFrom(axios, API_URL, config, post.author._id);
+      if (!res.ok && res.reason === "not_pending") {
+        Alert.alert("Request", "This request isn't waiting any more. It may have been answered already.");
+        return;
+      }
+      if (!res.ok) throw res.error;
+      {
         setConnectionStatus('connected');
         soundSuccess();
         if (setUser && user) {
