@@ -150,7 +150,7 @@ export default function SettingsScreen({ navigation }) {
       title: "Edit Profile",
       subtitle: "Update your personal information",
       color: T.yellow,
-      onPress: () => navigation.navigate("EditProfile"),
+      onPress: () => navigation.navigate("EditProfileScreen"),
     },
     {
       id: 2,
@@ -158,7 +158,7 @@ export default function SettingsScreen({ navigation }) {
       title: "Privacy & Security",
       subtitle: "Manage your account security",
       color: T.success,
-      onPress: () => navigation.navigate("PrivacySecurity"),
+      onPress: () => navigation.navigate("PrivacyAndSafety"),
     },
     {
       id: 3,
@@ -197,7 +197,7 @@ export default function SettingsScreen({ navigation }) {
       title: "Help & Support",
       subtitle: "Get help with your account",
       color: T.ink,
-      onPress: () => navigation.navigate("HelpSupport"),
+      onPress: () => navigation.navigate("FAQ"),
     },
     {
       id: 7,
@@ -434,7 +434,7 @@ export default function SettingsScreen({ navigation }) {
                     style={styles.alternativeItem}
                     onPress={() => {
                       closeDeleteModal();
-                      navigation.navigate("EditProfile");
+                      navigation.navigate("EditProfileScreen");
                     }}
                   >
                     <Ionicons name="create-outline" size={20} color={T.yellow} />
@@ -446,7 +446,7 @@ export default function SettingsScreen({ navigation }) {
                     style={styles.alternativeItem}
                     onPress={() => {
                       closeDeleteModal();
-                      navigation.navigate("HelpSupport");
+                      navigation.navigate("FAQ");
                     }}
                   >
                     <Ionicons

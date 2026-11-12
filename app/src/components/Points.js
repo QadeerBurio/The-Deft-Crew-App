@@ -842,7 +842,7 @@ const PointsScreen = () => {
   );
 
   const handleFounderApply = useCallback(() => {
-    navigation.navigate('FounderApply');
+    navigation.navigate('FounderCircle'); // the founder tier's screen (there is no separate apply route)
   }, [navigation]);
 
   if (loading) return <SkeletonLoader />;
