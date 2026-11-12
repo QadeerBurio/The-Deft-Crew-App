@@ -41,6 +41,18 @@ export function backToJobsList(navigation, appliedJobId) {
   navigation.dispatch(CommonActions.reset({ ...state, index: next.length - 1, routes: next }));
 }
 
+// jobTarget / OLD_JOB_ROUTES live in ./jobRoutes (no imports: the push code loads it without navigation)
+export { jobTarget, OLD_JOB_ROUTES } from "./jobRoutes";
+import { jobTarget, OLD_JOB_ROUTES } from "./jobRoutes";
+
+/** "my applications" (the hiring timeline) on the jobs list under this screen, or a new jobs list */
+export function openMyApplications(navigation) {
+  const state = navigation?.getState?.();
+  const routes = state?.routes || [];
+  if (routes.some((r) => r.name === JOBS_LIST)) navigation.popTo(JOBS_LIST, { openApplications: true }, { merge: true });
+  else navigation?.navigate?.(JOBS_LIST, { openApplications: true });
+}
+
 export function externalApplyUrl(job) {
   return job?.externalUrl || job?.applyUrl || job?.applicationLink || job?.url || null;
 }
@@ -61,4 +73,4 @@ export function jobState(job, { applied = false, now = new Date() } = {}) {
   return "open";
 }
 
-export default { openJobDetails, backToJobsList, jobState, isClosed, isExternalJob, externalApplyUrl, JOBS_LIST, JOB_DETAILS, JOB_APPLICATION_FORM };
+export default { openJobDetails, backToJobsList, jobTarget, openMyApplications, OLD_JOB_ROUTES, jobState, isClosed, isExternalJob, externalApplyUrl, JOBS_LIST, JOB_DETAILS, JOB_APPLICATION_FORM };

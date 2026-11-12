@@ -329,7 +329,8 @@ const deferred = () => { let resolve, reject; const p = new Promise((a, b) => { 
     net.gets.length = 0; net.matchingOn = matchingOn; net.match = async () => match;
     net.get = async (url) => (url.startsWith("/jobs/public/job/") ? { data: job } : url === "/jobs/my-applications" ? { data: apps } : { data: {} });
   };
-  const applyBtn = (tree) => all(tree, (x) => x.type === "Button")[0];
+  const BAR = new Set(["Apply", "Applied", "Closed", "Apply on company site"]);
+  const applyBtn = (tree) => all(tree, (x) => x.type === "Button" && BAR.has(x.props.title))[0];
   {
     setNet({ match: MATCH, matchingOn: true });
     const navi = makeNav(stack().slice(0, 3));
@@ -409,9 +410,8 @@ const deferred = () => { let resolve, reject; const p = new Promise((a, b) => { 
   const metaCalls = [];
   const walk = (d) => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name); if (f.isDirectory()) walk(p); else if (/\.js$/.test(f.name) && /metaEvents\.jobApplied\(/.test(fs.readFileSync(p, "utf8"))) metaCalls.push(path.relative(APP, p).split(path.sep).join("/")); } };
   walk(SRC);
-  // TDCCareers (the TDC careers area job pushes open) keeps its own form: also sent only after its awaited POST
-  const tdc = read("app/src/components/TDCCareers.js");
-  ok(metaCalls.join() === "app/src/components/TDCCareers.js,app/src/screens/Career/JobApplicationForm.js" && /await axios\.post\(`\$\{API_URL\}\/apply\/\$\{selectedJob\._id\}`[\s\S]{0,400}?\}\);\n\s*metaEvents\.jobApplied\(selectedJob\._id\);/.test(tdc), "SubmitApplication: the apply form, and TDCCareers' own form, each only after the server accepted", metaCalls.join());
+  // (TDCCareers and its own apply form are gone: fix/tdccareers-to-jobdetails)
+  ok(metaCalls.join() === "app/src/screens/Career/JobApplicationForm.js", "SubmitApplication is sent from one place only: the apply form, after the server accepted", metaCalls.join());
   ok(/jobApplied: \(jobId\) =>\n\s*log\([\s\S]*?`job:\$\{id\(jobId\)\}`\)/.test(read("app/src/analytics/metaEvents.js")), "…and counted once per job (de-duplicated by job id)");
   for (const [f, n] of [["app/src/components/CareerInvites.js", 'navigation?.navigate?.("Career", { openJobId: inv.job.id })'], ["app/src/components/RecommendedJobs.js", 'navigation?.navigate?.("Career", { openJobId: String(j._id) })']]) ok(read(f).includes(n), `${path.basename(f)}: still opens the job through Career (the list stays underneath)`);
 

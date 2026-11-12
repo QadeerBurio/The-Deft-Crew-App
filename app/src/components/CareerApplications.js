@@ -1,5 +1,5 @@
 // CareerApplications.js: "my applications" on the hiring timeline (FLAG_CAREER_TIMELINE), inside the Jobs
-// area's applications sheet (TDCCareers). Active / closed lists; an application opens its timeline with the
+// area's applications sheet (Career's "my applications"; TDCCareers before). Active / closed lists; an application opens its timeline with the
 // next step: answer an interview invite (accept, ask for another time, decline, add to calendar), report
 // an interview that didn't happen or dispute a recorded one, answer an offer, see a confirmed hire and
 // dispute it within 7 days, withdraw. "Hired / Interviewed via TDC" outcomes are private unless the

@@ -26,6 +26,7 @@ import { soundPopupOpen, soundPopupClose } from '../lib/tdcSounds';
 import { AuthContext } from '../context/AuthContext';
 import { BASE_URL } from '../api/api';
 import { navigationRef } from '../navigation/navigationRef';
+import { jobTarget } from '../utils/jobRoutes';
 import {
   N,
   timeAgo,
@@ -100,7 +101,11 @@ const go = (screen, params, navigation) => {
 const targetOf = (item) => {
   const m = item.metadata || {};
   const screen = item.screenToOpen || m.screenToOpen || m.screen || m.route;
-  if (screen) return { screen, params: m.params || item.params || {} };
+  if (screen) {
+    // job notifications (old names TDCCareers / MyApplications included) open the job
+    const t = jobTarget(screen, m.params || item.params || {}, m);
+    return { screen: t.route, params: t.params };
+  }
 
   const link = item.link || m.link || item.url;
   if (!link || typeof link !== 'string') return null;

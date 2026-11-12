@@ -14,6 +14,7 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { jobTarget } from './jobRoutes';
 
 // ═══════════════════════════════════════════════════════════════
 // ANDROID CHANNELS: one per sound
@@ -237,7 +238,8 @@ export function getRouteFromNotificationData(data = {}) {
     ...(data.postId ? { postId: data.postId } : {}),
     ...(data.userId ? { userId: data.userId } : {}),
   };
-  return { route, params };
+  // job pushes (old names TDCCareers / MyApplications included) open the job: utils/careerNav.jobTarget
+  return jobTarget(route, params, data);
 }
 
 // Navigate once the navigation container is ready (retries up to ~5s)
