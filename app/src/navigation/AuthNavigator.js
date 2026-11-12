@@ -17,7 +17,6 @@ import ForgotPassword from "../screens/ForgotPassword"
 import VerifyOTP from "../screens/VerifyOTPScreen"
 import SignupVerifyScreen from "../screens/SignupVerifyScreen"
 import ResetPassword from "../screens/ResetPasswordScreen"
-import VerificationScreen from "../screens/VerificationScreen";
 import ResumeStack from "./ResumeNavigator";
 import TermsScreen from "../screens/PrivacyScreen";
 import CommunityGuidelinesScreen from "../screens/Guidelines";
@@ -48,7 +47,6 @@ export default function AppNavigator() {
       {/* Auth screens (open over the app for a guest) */}
       <Stack.Screen name="Signup" component={SignupScreen} />
       <Stack.Screen name="SignupVerify" component={SignupVerifyScreen} />
-      <Stack.Screen name="VerificationScreen" component={VerificationScreen}/>
       <Stack.Screen name="Login" component={SignIn} />
       <Stack.Screen name="ForgotPassword" component={ForgotPassword}/>
       <Stack.Screen name="VerifyOTP" component={VerifyOTP}/>
