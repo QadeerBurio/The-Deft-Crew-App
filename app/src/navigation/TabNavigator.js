@@ -55,6 +55,8 @@ export const HIDE_TAB_BAR_SCREENS = [
   "ResumeSettings",
   "ResumeView",
   "ResumeStudio",
+  "JobDetails",
+  "JobApplicationForm",
   "SurpriseBoxes",
   "Brands",
   "OfferScreen",

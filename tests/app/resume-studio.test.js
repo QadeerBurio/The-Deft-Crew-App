@@ -359,19 +359,21 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
   ok(all.filter((x) => x.type === "Text").every((x) => x.props.maxFontSizeMultiplier), "every text caps its font scale (large fonts stay readable)");
 
   console.log("\u2500\u2500 placement");
-  const career = read("app/src/components/Career.js");
-  ok(/studioOn && selectedJob\?\._id/.test(career) && career.includes('navigation.navigate("ResumeStudio", { jobId: selectedJob._id'), "job details: 'tailor my resume' only for pilot students, opens the studio for that job");
-  ok(/offerTailoredVersion\(applied\?\.data\?\.application\?\._id/.test(career), "after applying: offers to send a version tailored for that job");
+  // the job's own screen (JobDetails) and its apply form (JobApplicationForm) took over from Career.js's modal
+  const details = read("app/src/screens/Career/JobDetails.js");
+  const form = read("app/src/screens/Career/JobApplicationForm.js");
+  ok(/studioOn && state === "open"/.test(details) && details.includes('navigation.navigate("ResumeStudio", { jobId: job._id'), "job details: 'tailor my resume' only for pilot students on an open job, opens the studio for that job");
+  ok(/x\.target\?\.kind === "tdc_job" && String\(x\.target\.jobId\) === jobId/.test(form) && /studioApi\.attachVersion\(applicationId, resume\.version\.id\)/.test(form) && form.indexOf("studioApi.attachVersion") > form.indexOf("metaEvents.jobApplied"), "apply form: the version tailored for that job can be sent; attached only after the server has the application");
   const dash = read("app/src/screens/Resume/ResumeDashboard.js");
   ok(/studioOn && \(/.test(dash) && dash.includes("navigation.navigate('ResumeStudio', { resumeId: selectedResume._id, fresh: true })") && dash.includes("{ view: 'versions' }"), "resume dashboard: 'tailor for a job' and 'my versions' only for pilot students");
   ok(read("app/src/navigation/ResumeNavigator.js").includes('name="ResumeStudio"') && read("app/src/navigation/DrawerNavigator.js").includes('name="ResumeStudio"'), "the screen is registered in the resume stack and next to the jobs screen");
   ok(read("app/src/navigation/TabNavigator.js").includes('"ResumeStudio"') && read("app/src/navigation/DrawerNavigator.js").includes("'ResumeStudio',"), "full screen: tab bar and drawer header hidden");
   const babel2 = reqApp("@babel/core");
   let parsed = 0;
-  for (const f of ["app/src/components/Career.js", "app/src/screens/Resume/ResumeDashboard.js", "app/src/navigation/ResumeNavigator.js", "app/src/navigation/DrawerNavigator.js", "app/src/navigation/TabNavigator.js"]) {
+  for (const f of ["app/src/components/Career.js", "app/src/screens/Career/JobDetails.js", "app/src/screens/Career/JobApplicationForm.js", "app/src/screens/Resume/ResumeDashboard.js", "app/src/navigation/ResumeNavigator.js", "app/src/navigation/DrawerNavigator.js", "app/src/navigation/TabNavigator.js"]) {
     try { babel2.transformSync(read(f), { filename: f, babelrc: false, configFile: false, plugins: [reqApp.resolve("@babel/plugin-transform-react-jsx"), reqApp.resolve("@babel/plugin-transform-modules-commonjs")] }); parsed++; } catch (e) { console.log(e.message.slice(0, 200)); }
   }
-  ok(parsed === 5, "the changed app files compile (jsx)");
+  ok(parsed === 7, "the changed app files compile (jsx)");
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);

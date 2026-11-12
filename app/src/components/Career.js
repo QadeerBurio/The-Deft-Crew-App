@@ -21,12 +21,12 @@ import {
   Linking,
   Animated,
 } from "react-native";
-import { WebView } from "react-native-webview";
-import * as DocumentPicker from "expo-document-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import axios from "axios";
 import { useOpenFromParams } from '../engagement/hooks/useOpenFromParams';
+import { WebViewModal, formatUrl, buildLocationUrl } from "./career/JobWebView"; // in-app browser (also used by JobDetails)
+import { openJobDetails } from "../utils/careerNav"; // a job opens full screen; Apply is on JobApplicationForm
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from 'expo-constants';
 import * as Print from 'expo-print';
@@ -35,7 +35,6 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { renderResumeHTML } from '../services/templateService';
 import { ResumeContext } from '../context/ResumeContext';
 import { BASE_URL } from '../api/api';
-import { metaEvents } from '../analytics/metaEvents';
 
 const { width, height } = Dimensions.get("window");
 const API_URL = `${BASE_URL}/jobs`;
@@ -44,8 +43,6 @@ import { color as T, font as F } from "../theme/tokens";
 import { useGuestGate } from '../guest/GuestGate';
 import { plainError } from "../utils/plainError";
 import { copyToClipboard } from "../utils/clipboard";
-import { studioEnabled, studioApi } from "../api/resumeStudioApi";
-import { EmployerRating } from "./CareerRatings";
 import RecommendedJobs from "./RecommendedJobs"; // FLAG_CAREER_MATCHING: jobs that match the student's resume skills
 import CareerInvites from "./CareerInvites"; // FLAG_CAREER_MATCHING: invites to apply, and the "let employers invite me" switch
 // Design system tokens (tdc-full-redesign/DESIGN_SYSTEM.md)
@@ -68,27 +65,7 @@ const COLORS = {
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 // ==================== URL HELPERS ====================
-const formatUrl = (url) => {
-  if (!url) return null;
-  const trimmed = String(url).trim();
-  if (!trimmed) return null;
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
-  if (trimmed.startsWith('www.')) return 'https://' + trimmed;
-  if (!trimmed.includes('://') && !trimmed.startsWith('mailto:') && !trimmed.startsWith('tel:')) {
-    return 'https://' + trimmed;
-  }
-  return trimmed;
-};
 
-// Build a Google Maps search URL for a given location string
-const buildLocationUrl = (locationString) => {
-  if (!locationString) return null;
-  const clean = String(locationString).trim();
-  if (!clean) return null;
-  const encoded = encodeURIComponent(clean);
-  // Universal Google Maps link — opens native app if installed, falls back to web
-  return `https://www.google.com/maps/search/?api=1&query=${encoded}`;
-};
 
 // ==================== ENHANCED CAREER CARD ====================
 const CareerCard = React.memo(({ item, index, onPress, onLocationPress, hasApplied, isRecommended, onOptimizePress }) => {
@@ -291,431 +268,8 @@ const CareerCard = React.memo(({ item, index, onPress, onLocationPress, hasAppli
 });
 
 // ==================== WEBVIEW MODAL ====================
-const WebViewModal = ({ visible, url, title, onClose }) => {
-  const [loading, setLoading] = useState(true);
-  const [progress, setProgress] = useState(0);
-  const [error, setError] = useState(null);
-  const [canGoBack, setCanGoBack] = useState(false);
-  const webViewRef = useRef(null);
-
-  useEffect(() => {
-    if (visible) {
-      setLoading(true);
-      setProgress(0);
-      setError(null);
-      setCanGoBack(false);
-    }
-  }, [visible, url]);
-
-  const handleShouldStartLoad = (request) => {
-    const { url: reqUrl } = request;
-    // Let the WebView handle http(s) — block only non-web protocols
-    if (reqUrl.startsWith('http://') || reqUrl.startsWith('https://') || reqUrl.startsWith('about:')) {
-      return true;
-    }
-    // mailto:, tel:, intent://, whatsapp:// etc → open externally
-    Linking.canOpenURL(reqUrl).then((supported) => {
-      if (supported) Linking.openURL(reqUrl);
-    });
-    return false;
-  };
-
-  const handleOpenInBrowser = async () => {
-    if (!url) return;
-    try {
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert('Cannot Open', 'This link cannot be opened in your browser.');
-      }
-    } catch (e) {
-      Alert.alert('Error', 'Could not open link.');
-    }
-  };
-
-  const handleRetry = () => {
-    setError(null);
-    setLoading(true);
-    setProgress(0);
-    webViewRef.current?.reload();
-  };
-
-  return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      onRequestClose={onClose}
-      presentationStyle="pageSheet"
-    >
-      <SafeAreaView style={webViewStyles.container} edges={['top', 'bottom']}>
-        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
-
-        {/* Header */}
-        <View style={webViewStyles.header}>
-          <TouchableOpacity onPress={onClose} style={webViewStyles.headerBtn}>
-            <Ionicons name="close" size={22} color={T.ink} />
-          </TouchableOpacity>
-
-          <View style={webViewStyles.headerCenter}>
-            <Text style={webViewStyles.headerTitle} numberOfLines={1}>
-              {title || 'Application'}
-            </Text>
-            <Text style={webViewStyles.headerUrl} numberOfLines={1}>
-              {url ? url.replace(/^https?:\/\//, '').split('/')[0] : ''}
-            </Text>
-          </View>
-
-          <View style={webViewStyles.headerActions}>
-            {canGoBack && (
-              <TouchableOpacity
-                onPress={() => webViewRef.current?.goBack()}
-                style={webViewStyles.headerBtn}
-              >
-                <Ionicons name="arrow-back" size={20} color={T.ink} />
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              onPress={handleOpenInBrowser}
-              style={webViewStyles.headerBtn}
-            >
-              <Ionicons name="open-outline" size={20} color={T.ink} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Progress bar */}
-        {loading && !error && (
-          <View style={webViewStyles.progressTrack}>
-            <View style={[webViewStyles.progressFill, { width: `${Math.max(progress * 100, 5)}%` }]} />
-          </View>
-        )}
-
-        {/* Error state */}
-        {error ? (
-          <View style={webViewStyles.errorContainer}>
-            <View style={webViewStyles.errorIconCircle}>
-              <MaterialCommunityIcons name="wifi-off" size={48} color={T.yellow} />
-            </View>
-            <Text style={webViewStyles.errorTitle}>couldn't load page</Text>
-            <Text style={webViewStyles.errorSubtitle}>
-              {error.message || "Please check your internet connection and try again."}
-            </Text>
-            <View style={webViewStyles.errorActions}>
-              <TouchableOpacity style={webViewStyles.retryBtn} onPress={handleRetry}>
-                <Ionicons name="refresh" size={16} color={T.ink} />
-                <Text style={webViewStyles.retryText}>retry</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={webViewStyles.openBrowserBtn} onPress={handleOpenInBrowser}>
-                <Ionicons name="open-outline" size={16} color={T.white} />
-                <Text style={webViewStyles.openBrowserText}>open in browser</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          <WebView
-            ref={webViewRef}
-            source={{ uri: url }}
-            style={webViewStyles.webview}
-            onLoadStart={() => {
-              setLoading(true);
-              setError(null);
-            }}
-            onLoadEnd={() => setLoading(false)}
-            onLoadProgress={({ nativeEvent }) => setProgress(nativeEvent.progress)}
-            onError={(syntheticEvent) => {
-              const { nativeEvent } = syntheticEvent;
-              setLoading(false);
-              setError({
-                message: nativeEvent.description || 'Failed to load page',
-                code: nativeEvent.code,
-              });
-            }}
-            onHttpError={(syntheticEvent) => {
-              const { nativeEvent } = syntheticEvent;
-              // Only surface hard failures — 4xx on form pages might still render
-              if (nativeEvent.statusCode >= 500) {
-                setLoading(false);
-                setError({ message: `Server error (${nativeEvent.statusCode})` });
-              }
-            }}
-            onNavigationStateChange={(navState) => {
-              setCanGoBack(navState.canGoBack);
-            }}
-            onShouldStartLoadWithRequest={handleShouldStartLoad}
-            startInLoadingState
-            javaScriptEnabled
-            domStorageEnabled
-            allowsBackForwardNavigationGestures
-            sharedCookiesEnabled
-            thirdPartyCookiesEnabled
-            setSupportMultipleWindows={false}
-            userAgent={
-              Platform.OS === 'android'
-                ? 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
-                : undefined
-            }
-            renderLoading={() => (
-              <View style={webViewStyles.loadingOverlay}>
-                <ActivityIndicator size="large" color={T.yellow} />
-                <Text style={webViewStyles.loadingText}>loading application...</Text>
-              </View>
-            )}
-          />
-        )}
-      </SafeAreaView>
-    </Modal>
-  );
-};
 
 // ==================== JOB DETAILS MODAL (For Applied Jobs) ====================
-const JobDetailsModal = ({ visible, job, onClose, myApplication }) => {
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.spring(scaleAnim, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true }),
-        Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-      ]).start();
-    } else {
-      scaleAnim.setValue(0.9);
-      fadeAnim.setValue(0);
-    }
-  }, [visible]);
-
-  if (!job) return null;
-
-  const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case "pending": return COLORS.warning;
-      case "reviewed": return COLORS.info;
-      case "shortlisted": return COLORS.success;
-      case "interview": return COLORS.purple;
-      case "rejected": return COLORS.error;
-      case "hired": return T.success;
-      default: return COLORS.muted;
-    }
-  };
-
-  const getStatusLabel = (status) => {
-    switch (status?.toLowerCase()) {
-      case "pending": return "Pending Review";
-      case "reviewed": return "Reviewed";
-      case "shortlisted": return "Shortlisted";
-      case "interview": return "Interview Stage";
-      case "rejected": return "Not Selected";
-      case "hired": return "Hired! 🎉";
-      default: return status || "Unknown";
-    }
-  };
-
-  const openLocation = () => {
-    const url = buildLocationUrl(job.location);
-    if (url) Linking.openURL(url);
-  };
-
-  return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.applyModalOverlay}>
-        <TouchableWithoutFeedback onPress={onClose}><View style={StyleSheet.absoluteFill} /></TouchableWithoutFeedback>
-        <Animated.View style={[styles.applyModalContent, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-          <View style={styles.modalDragHandle} />
-
-          <TouchableOpacity style={styles.closeXButton} onPress={onClose}>
-            <Ionicons name="close" size={24} color={T.ink} />
-          </TouchableOpacity>
-
-          {myApplication && (
-            <View style={[styles.statusBanner, { backgroundColor: getStatusColor(myApplication.status) + "15" }]}>
-              <View style={[styles.statusDot, { backgroundColor: getStatusColor(myApplication.status) }]} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.statusBannerTitle}>application status</Text>
-                <Text style={[styles.statusBannerStatus, { color: getStatusColor(myApplication.status) }]}>
-                  {getStatusLabel(myApplication.status)}
-                </Text>
-              </View>
-              <View style={[styles.statusBadgeLarge, { backgroundColor: getStatusColor(myApplication.status) + "20" }]}>
-                <Text style={[styles.statusBadgeLargeText, { color: getStatusColor(myApplication.status) }]}>
-                  {getStatusLabel(myApplication.status)}
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {myApplication?.interviewDate && (
-            <TouchableOpacity
-              style={styles.interviewBanner}
-              onPress={onClose}
-            >
-              <View style={styles.interviewBannerIcon}>
-                <Ionicons name="calendar" size={20} color={T.yellow} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.interviewBannerTitle}>interview scheduled</Text>
-                <Text style={styles.interviewBannerDate}>
-                  {new Date(myApplication.interviewDate).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={T.yellow} />
-            </TouchableOpacity>
-          )}
-
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 30 }}>
-            <View style={styles.applyModalHeader}>
-              {job?.companyName && <Text style={styles.applyModalCompany}>{job.companyName}</Text>}
-              <EmployerRating jobId={job?._id} />
-              <Text style={styles.applyModalJobTitle}>{job?.title}</Text>
-              <Text style={styles.applyModalJobMeta}>{job?.department} • {job?.location}</Text>
-
-              {/* Tappable location chip */}
-              <TouchableOpacity style={styles.locationChip} onPress={openLocation} activeOpacity={0.7}>
-                <Ionicons name="location-sharp" size={14} color={T.yellow} />
-                <Text style={styles.locationChipText} numberOfLines={1}>{job?.location || 'View on Map'}</Text>
-                <Ionicons name="open-outline" size={12} color={T.yellow} />
-              </TouchableOpacity>
-
-              <View style={styles.applyModalMetaRow}>
-                <View style={styles.applyModalMetaBadge}>
-                  <Ionicons name="briefcase-outline" size={12} color={T.yellow} />
-                  <Text style={styles.applyModalMetaText}>{job?.type}</Text>
-                </View>
-                <View style={styles.applyModalMetaBadge}>
-                  <Ionicons name="trending-up-outline" size={12} color={T.ink} />
-                  <Text style={styles.applyModalMetaText}>{job?.experienceLevel}</Text>
-                </View>
-                <View style={styles.applyModalMetaBadge}>
-                  <Ionicons name="school-outline" size={12} color={T.ink} />
-                  <Text style={styles.applyModalMetaText}>{job?.education || "Bachelor's"}</Text>
-                </View>
-              </View>
-
-              <View style={styles.applyModalMetaRow}>
-                <Text style={styles.applyModalSalary}>💰 {job?.salary}</Text>
-                {job?.minExperience > 0 && <Text style={styles.applyModalExp}>⏱ {job.minExperience}+ yrs</Text>}
-              </View>
-
-              {job?.locationType && (
-                <View style={styles.locTypeRow}>
-                  <Ionicons name={job.locationType === "Remote" ? "laptop-outline" : "business-outline"} size={14} color={T.yellow} />
-                  <Text style={styles.locTypeText}>{job.locationType}</Text>
-                </View>
-              )}
-
-              {myApplication && (
-                <View style={styles.applicationInfoBox}>
-                  <View style={styles.applicationInfoRow}>
-                    <Ionicons name="calendar-outline" size={14} color={T.textMuted} />
-                    <Text style={styles.applicationInfoText}>
-                      Applied: {new Date(myApplication.appliedAt).toLocaleDateString()}
-                    </Text>
-                  </View>
-                  {myApplication.coverLetter && (
-                    <View style={styles.applicationInfoRow}>
-                      <Ionicons name="document-text-outline" size={14} color={T.textMuted} />
-                      <Text style={styles.applicationInfoText} numberOfLines={2}>
-                        Cover Letter: {myApplication.coverLetter}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              )}
-            </View>
-
-            {job?.description && (
-              <View style={styles.detailSection}>
-                <Text style={styles.sectionHeading}>📋 Description</Text>
-                <Text style={styles.descriptionText}>{job.description}</Text>
-              </View>
-            )}
-
-            {job?.requirements?.length > 0 && (
-              <View style={styles.detailSection}>
-                <Text style={styles.sectionHeading}>✅ Requirements</Text>
-                {job.requirements.map((req, i) => (
-                  <View key={i} style={styles.detailItem}>
-                    <Ionicons name="checkmark-circle" size={16} color={T.success} />
-                    <Text style={styles.detailItemText}>{req}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {job?.responsibilities?.length > 0 && (
-              <View style={styles.detailSection}>
-                <Text style={styles.sectionHeading}>🎯 Responsibilities</Text>
-                {job.responsibilities.map((resp, i) => (
-                  <View key={i} style={styles.detailItem}>
-                    <Ionicons name="flag-outline" size={16} color={T.yellow} />
-                    <Text style={styles.detailItemText}>{resp}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {job?.benefits?.length > 0 && (
-              <View style={styles.detailSection}>
-                <Text style={styles.sectionHeading}>🎁 Benefits</Text>
-                <View style={styles.benefitsGrid}>
-                  {job.benefits.map((benefit, i) => (
-                    <View key={i} style={styles.benefitItem}>
-                      <Ionicons name="star" size={14} color={T.yellow} />
-                      <Text style={styles.benefitItemText}>{benefit}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {job?.skills?.length > 0 && (
-              <View style={styles.detailSection}>
-                <Text style={styles.sectionHeading}>💡 Required Skills</Text>
-                <View style={styles.skillsGrid}>
-                  {job.skills.map((skill, i) => (
-                    <View key={i} style={styles.skillBadgeLarge}>
-                      <Text style={styles.skillBadgeLargeText}>{skill}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {(job?.companyName || job?.companyWebsite) && (
-              <View style={styles.detailSection}>
-                <Text style={styles.sectionHeading}>🏢 Company Info</Text>
-                {job.companyName && <Text style={styles.companyInfoText}>{job.companyName}</Text>}
-                {job.companyWebsite && (
-                  <TouchableOpacity onPress={() => Linking.openURL(formatUrl(job.companyWebsite))}>
-                    <Text style={styles.companyLink}>🌐 {job.companyWebsite}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-
-            <View style={styles.modalButtonRow}>
-              <TouchableOpacity style={styles.shareBtn} onPress={() => {
-                Share.share({ message: `🚀 Career Opportunity!\n\n${job.title}\n${job.companyName || job.department}\n${job.location}\nSalary: ${job.salary}\n\nApply via TDC App!` });
-              }}>
-                <Ionicons name="share-social-outline" size={18} color={T.ink} />
-                <Text style={styles.shareBtnText}>share</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
-                <Text style={styles.cancelBtnText}>close</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </Animated.View>
-      </View>
-    </Modal>
-  );
-};
 
 // ==================== INTERVIEW DETAILS MODAL ====================
 const InterviewDetailsModal = ({ visible, interview, onClose }) => {
@@ -990,7 +544,7 @@ const FilterModal = React.memo(({ visible, filters, setFilters, onClose, onApply
 ));
 
 // ==================== MAIN CAREER SCREEN ====================
-const Career = ({ navigation }) => {
+const Career = ({ navigation, route }) => {
   const { resumes = [], optimizeResume, checkResumeFit } = useContext(ResumeContext);
   const [optimizing, setOptimizing] = useState(false);
   const [skillGapVisible, setSkillGapVisible] = useState(false);
@@ -1003,33 +557,19 @@ const Career = ({ navigation }) => {
   const [filters, setFilters] = useState({ type: "All", locationType: "", experienceLevel: "", category: "", datePosted: "all", isTdc: false });
   const scope = 'pakistan';
   const [showFilters, setShowFilters] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedJob, setSelectedJob] = useState(null);
-  const [selectedResume, setSelectedResume] = useState(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [submitting, setSubmitting] = useState(false);
   const [myApplications, setMyApplications] = useState([]);
   const [showApplicationsModal, setShowApplicationsModal] = useState(false);
   const [token, setToken] = useState(null);
-  // AI Resume Studio (FLAG_RESUME_STUDIO_V2): "tailor my resume" on a TDC job, and after applying, send
-  // an approved version tailored for that job
-  const [studioOn, setStudioOn] = useState(false);
-  useEffect(() => { if (token) studioEnabled().then(setStudioOn).catch(() => setStudioOn(false)); else setStudioOn(false); }, [token]);
   const { requireAccount } = useGuestGate();
-  const [user, setUser] = useState(null);
   const [appliedJobIds, setAppliedJobIds] = useState(new Set());
   const [selectedInterview, setSelectedInterview] = useState(null);
   const [showInterviewModal, setShowInterviewModal] = useState(false);
-  const [validationErrors, setValidationErrors] = useState({});
 
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [totalJobsCount, setTotalJobsCount] = useState(0);
 
-  const [showJobDetailsModal, setShowJobDetailsModal] = useState(false);
-  const [selectedAppliedJob, setSelectedAppliedJob] = useState(null);
-  const [selectedMyApplication, setSelectedMyApplication] = useState(null);
 
   // ✅ NEW: WebView state
   const [webViewVisible, setWebViewVisible] = useState(false);
@@ -1040,34 +580,12 @@ const Career = ({ navigation }) => {
   const entranceTranslate = useRef(new Animated.Value(20)).current;
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  const [applicationForm, setApplicationForm] = useState({
-    fullName: "", email: "", phone: "", address: "", city: "", country: "",
-    coverLetter: "", portfolioUrl: "", linkedInUrl: "", githubUrl: "",
-    currentCompany: "", currentPosition: "", yearsOfExperience: "",
-    expectedSalary: "", noticePeriod: "", workAuthorization: "Citizen",
-  });
-
-  const requiredFields = {
-    fullName: "Full Name",
-    email: "Email",
-    phone: "Phone",
-    coverLetter: "Cover Letter",
-  };
-
   useEffect(() => { loadAuthData(); }, []);
 
   const loadAuthData = async () => {
     try {
       const storedToken = await AsyncStorage.getItem("token");
-      const storedUser = await AsyncStorage.getItem("user");
-      if (storedToken) {
-        setToken(storedToken);
-        if (storedUser) {
-          const userData = JSON.parse(storedUser);
-          setUser(userData);
-          setApplicationForm(prev => ({ ...prev, fullName: userData.name || "", email: userData.email || "" }));
-        }
-      }
+      if (storedToken) setToken(storedToken);
     } catch (err) { console.log("Error loading auth data:", err); }
   };
 
@@ -1170,62 +688,22 @@ const Career = ({ navigation }) => {
 
   useEffect(() => { if (token) fetchMyApplications(); }, [token]);
 
+  // back from JobApplicationForm after the server confirmed the application (utils/careerNav.backToJobsList):
+  // the job shows "Applied" at once, then the statuses reload
+  const appliedJobId = route?.params?.appliedJobId;
+  useEffect(() => {
+    if (!appliedJobId) return;
+    setAppliedJobIds((prev) => new Set(prev).add(String(appliedJobId)));
+    if (token) fetchMyApplications();
+    navigation.setParams({ appliedJobId: undefined });
+  }, [appliedJobId]);
+
   const onRefresh = () => { setRefreshing(true); fetchJobs(1, false); if (token) fetchMyApplications(); };
-
-  const handleInputChange = (field, value) => {
-    setApplicationForm(prev => ({ ...prev, [field]: value }));
-    if (validationErrors[field]) {
-      setValidationErrors(prev => {
-        const updated = { ...prev };
-        delete updated[field];
-        return updated;
-      });
-    }
-  };
-
-  const validateForm = () => {
-    const errors = {};
-    Object.entries(requiredFields).forEach(([field, label]) => {
-      if (!applicationForm[field]?.trim()) errors[field] = `${label} is required`;
-    });
-    if (!selectedResume) errors.resume = "Resume is required";
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const pickResume = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'], copyToCacheDirectory: true });
-
-      let file = null;
-      if (result.assets && result.assets.length > 0) file = result.assets[0];
-      else if (result.type === 'success') file = result;
-
-      if (file) {
-        const allowedExtensions = ['pdf', 'doc', 'docx'];
-        const fileExt = file.name?.split('.').pop()?.toLowerCase();
-
-        if (!allowedExtensions.includes(fileExt)) {
-          Alert.alert('Unsupported Format ⚠️', 'Only PDF (.pdf), Word (.doc), and Word OpenXML (.docx) formats are supported.');
-          return;
-        }
-        if (file.size && file.size > 10 * 1024 * 1024) {
-          Alert.alert('File Too Large ⚠️', 'The selected file exceeds the 10MB limit. Please upload a smaller document.');
-          return;
-        }
-        setSelectedResume({ uri: file.uri, name: file.name, mimeType: file.mimeType || file.type, size: file.size });
-        if (validationErrors.resume) {
-          setValidationErrors(prev => { const u = { ...prev }; delete u.resume; return u; });
-        }
-      }
-    } catch (err) { Alert.alert("Error", "Failed to pick resume."); }
-  };
-
-  const checkAlreadyApplied = (jobId) => appliedJobIds.has(jobId);
 
   // Rows are memoised (CareerCard): stable callbacks and renderItem, so a parent render no
   // longer re-renders every visible job card
-  const openJob = useStableCallback((job) => openApplyModal(job));
+  // a job opens full screen (JobDetails: details, "your match", Apply / Applied / Closed)
+  const openJob = useStableCallback((job) => openJobDetails(navigation, job));
   const locationPress = useStableCallback((job) => handleLocationPress(job));
   const optimizeJob = useStableCallback((job) => handleOptimizeResumeFlow(job));
   const renderJob = useCallback(({ item, index }) => (
@@ -1239,7 +717,6 @@ const Career = ({ navigation }) => {
       onOptimizePress={optimizeJob}
     />
   ), [openJob, locationPress, optimizeJob, appliedJobIds]);
-  const findMyApplication = (jobId) => myApplications.find(app => app.jobId?._id === jobId);
 
   const openInterviewDetails = (application) => {
     if (application.interviewDate) {
@@ -1341,124 +818,6 @@ const Career = ({ navigation }) => {
       .catch(() => openInWebView(mapUrl, job.location));
   };
 
-  // ============================================================
-  // FIXED: openApplyModal — external jobs now open in WebView
-  // ============================================================
-  const openApplyModal = (job) => {
-    setSelectedJob(job);
-
-    const isExpired = job.isExpired || job.active === false || (job.applicationDeadline && new Date(job.applicationDeadline) < new Date());
-    if (isExpired) {
-      Alert.alert('Opportunity Expired ⏰',
-        `The application deadline for "${job.title}" at ${job.companyName || 'this company'} has passed. Applications are no longer accepted for this opportunity.`,
-        [{ text: 'OK' }]);
-      return;
-    }
-
-    const isTDC =
-      (job.companyName || '').toLowerCase().includes('deft crew') ||
-      (job.companyName || '').toLowerCase().includes('tdc') ||
-      (job.company || '').toLowerCase().includes('deft crew') ||
-      (job.company || '').toLowerCase().includes('tdc') ||
-      job.isExternal === false ||
-      (job.applyUrl && job.applyUrl.includes('/apply/')) ||
-      job.createdBy === 'tdc' ||
-      job.createdBy === 'admin' ||
-      job.source === 'tdc' ||
-      job.source === 'internal' ||
-      job.applicationType === 'tdc' ||
-      job.applicationType === 'internal';
-
-    // ============ EXTERNAL JOB → OPEN IN WEBVIEW ============
-    if (job.isExternal === true || job.source === 'external' || job.applicationType === 'external') {
-      const applyUrl = job.externalUrl || job.applyUrl || job.applicationLink || job.url || job.companyWebsite;
-
-      if (!applyUrl) {
-        Alert.alert(
-          'External Application',
-          `${job.companyName || 'This company'} hosts applications on their own website. Please search for "${job.title}" on their careers page.`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Search',
-              onPress: () => {
-                const q = encodeURIComponent(`${job.companyName || job.title} careers`);
-                openInWebView(`https://www.google.com/search?q=${q}`, 'Search');
-              }
-            }
-          ]
-        );
-        return;
-      }
-
-      // Open in the beautiful in-app WebView
-      openInWebView(applyUrl, job.companyName || job.title);
-      return;
-    }
-
-    // ============ TDC INTERNAL JOB ============
-    if (checkAlreadyApplied(job._id)) {
-      const myApp = findMyApplication(job._id);
-      setSelectedAppliedJob(job);
-      setSelectedMyApplication(myApp);
-      setShowJobDetailsModal(true);
-      return;
-    }
-
-    setApplicationForm(prev => ({ ...prev, fullName: user?.name || "", email: user?.email || "" }));
-    setValidationErrors({});
-    setModalVisible(true);
-  };
-  // ============================================================
-
-  const handleApply = async () => {
-    if (!token) { requireAccount(); return; }
-    if (!validateForm()) {
-      Alert.alert("Missing Information", "Please fill all required fields marked with *");
-      return;
-    }
-
-    setSubmitting(true); setUploadProgress(0);
-    try {
-      const formData = new FormData();
-      Object.entries(applicationForm).forEach(([key, value]) => formData.append(key, value || ""));
-      formData.append('resume', { uri: selectedResume.uri, type: selectedResume.mimeType || 'application/octet-stream', name: selectedResume.name });
-      const applied = await axios.post(`${API_URL}/apply/${selectedJob._id}`, formData, {
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (e) => setUploadProgress(Math.round((e.loaded * 100) / e.total)),
-        timeout: 60000,
-      });
-      metaEvents.jobApplied(selectedJob._id);
-      const offered = await offerTailoredVersion(applied?.data?.application?._id, selectedJob);
-      if (!offered) Alert.alert("Submitted!", "Your application has been submitted.");
-      setModalVisible(false); resetForm(); fetchMyApplications();
-    } catch (err) { Alert.alert("Error", plainError(err, "Failed to submit.")); }
-    finally { setSubmitting(false); setUploadProgress(0); }
-  };
-
-  // after applying: an approved Resume Studio version tailored for this job can go with the application
-  const offerTailoredVersion = async (applicationId, job) => {
-    if (!studioOn || !applicationId || !job?._id) return false;
-    const versions = await studioApi.versions().catch(() => []);
-    const v = (versions || []).find((x) => x.target?.kind === "tdc_job" && String(x.target.jobId) === String(job._id));
-    if (!v) return false;
-    Alert.alert("Submitted!", `Send your tailored resume "${v.label || job.title}" with this application? The employer sees exactly this version.`, [
-      { text: "Not now", style: "cancel" },
-      { text: "Send it", onPress: () => studioApi.attachVersion(applicationId, v.id).then(() => Alert.alert("Sent", "Your tailored resume is attached to this application.")).catch((e) => Alert.alert("Not sent", e.message)) },
-    ]);
-    return true;
-  };
-
-  const resetForm = () => {
-    setApplicationForm({ fullName: user?.name || "", email: user?.email || "", phone: "", address: "", city: "", country: "", coverLetter: "", portfolioUrl: "", linkedInUrl: "", githubUrl: "", currentCompany: "", currentPosition: "", yearsOfExperience: "", expectedSalary: "", noticePeriod: "", workAuthorization: "Citizen" });
-    setSelectedResume(null);
-    setValidationErrors({});
-  };
-
-  const shareJob = async (job) => {
-    try { await Share.share({ message: `🚀 Career Opportunity!\n\n${job.title}\n${job.companyName || job.department}\n${job.location}\nSalary: ${job.salary}\n\nApply via TDC App!` }); } catch (err) {}
-  };
-
   const clearAllFilters = () => setFilters({ type: "", locationType: "", experienceLevel: "", category: "", datePosted: "all" });
 
   const headerAnimatedStyle = {
@@ -1470,12 +829,8 @@ const Career = ({ navigation }) => {
 
   // Daily Drop / push → navigate('Career', { openJobId }) opens that job
   useOpenFromParams('openJobId', async (id) => {
-    let job = jobs.find((j) => String(j._id) === String(id));
-    if (!job) {
-      const res = await axios.get(`${API_URL}/public/job/${id}`);
-      job = res.data;
-    }
-    if (job?._id) openApplyModal(job);
+    const job = jobs.find((j) => String(j._id) === String(id));
+    openJobDetails(navigation, job || String(id));
     return true;
   }, !loading);
 
@@ -1668,375 +1023,11 @@ const Career = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Job Details Modal for Applied Jobs */}
-      <JobDetailsModal
-        visible={showJobDetailsModal}
-        job={selectedAppliedJob}
-        myApplication={selectedMyApplication}
-        onClose={() => setShowJobDetailsModal(false)}
-      />
 
-      {/* ===== APPLICATION FORM MODAL ===== */}
-      <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.applyModalOverlay}>
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}><View style={StyleSheet.absoluteFill} /></TouchableWithoutFeedback>
-          <View style={styles.applyModalContent}>
-            <View style={styles.modalDragHandle} />
-
-            <TouchableOpacity style={styles.closeXButton} onPress={() => setModalVisible(false)}>
-              <Ionicons name="close" size={24} color={T.ink} />
-            </TouchableOpacity>
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 30 }}>
-
-              <View style={styles.applyModalHeader}>
-                {selectedJob?.companyName && <Text style={styles.applyModalCompany}>{selectedJob.companyName}</Text>}
-                <Text style={styles.applyModalJobTitle}>{selectedJob?.title}</Text>
-                <Text style={styles.applyModalJobMeta}>{selectedJob?.department} • {selectedJob?.location}</Text>
-
-                {/* Tappable location */}
-                <TouchableOpacity style={styles.locationChip} onPress={() => handleLocationPress(selectedJob)} activeOpacity={0.7}>
-                  <Ionicons name="location-sharp" size={14} color={T.yellow} />
-                  <Text style={styles.locationChipText} numberOfLines={1}>{selectedJob?.location || 'View on Map'}</Text>
-                  <Ionicons name="open-outline" size={12} color={T.yellow} />
-                </TouchableOpacity>
-
-                <View style={styles.applyModalMetaRow}>
-                  <View style={styles.applyModalMetaBadge}>
-                    <Ionicons name="briefcase-outline" size={12} color={T.yellow} />
-                    <Text style={styles.applyModalMetaText}>{selectedJob?.type}</Text>
-                  </View>
-                  <View style={styles.applyModalMetaBadge}>
-                    <Ionicons name="trending-up-outline" size={12} color={T.ink} />
-                    <Text style={styles.applyModalMetaText}>{selectedJob?.experienceLevel}</Text>
-                  </View>
-                  <View style={styles.applyModalMetaBadge}>
-                    <Ionicons name="school-outline" size={12} color={T.ink} />
-                    <Text style={styles.applyModalMetaText}>{selectedJob?.education || "Bachelor's"}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.applyModalMetaRow}>
-                  <Text style={styles.applyModalSalary}>💰 {selectedJob?.salary}</Text>
-                  {selectedJob?.minExperience > 0 && <Text style={styles.applyModalExp}>⏱ {selectedJob.minExperience}+ yrs</Text>}
-                </View>
-
-                {selectedJob?.locationType && (
-                  <View style={styles.locTypeRow}>
-                    <Ionicons name={selectedJob.locationType === "Remote" ? "laptop-outline" : "business-outline"} size={14} color={T.yellow} />
-                    <Text style={styles.locTypeText}>{selectedJob.locationType}</Text>
-                  </View>
-                )}
-              </View>
-
-              {studioOn && selectedJob?._id && (
-                <TouchableOpacity
-                  style={styles.tailorBtn}
-                  accessibilityRole="button"
-                  accessibilityLabel="tailor my resume for this job"
-                  onPress={() => { setModalVisible(false); navigation.navigate("ResumeStudio", { jobId: selectedJob._id, jobTitle: selectedJob.title, fresh: true }); }}
-                >
-                  <Ionicons name="sparkles-outline" size={16} color={T.ink} />
-                  <Text style={styles.tailorBtnText}>Tailor my resume for this job</Text>
-                </TouchableOpacity>
-              )}
-
-              {selectedJob?.description && (
-                <View style={styles.detailSection}>
-                  <Text style={styles.sectionHeading}>📋 Description</Text>
-                  <Text style={styles.descriptionText}>{selectedJob.description}</Text>
-                </View>
-              )}
-
-              {selectedJob?.requirements?.length > 0 && (
-                <View style={styles.detailSection}>
-                  <Text style={styles.sectionHeading}>✅ Requirements</Text>
-                  {selectedJob.requirements.map((req, i) => (
-                    <View key={i} style={styles.detailItem}>
-                      <Ionicons name="checkmark-circle" size={16} color={T.success} />
-                      <Text style={styles.detailItemText}>{req}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              {selectedJob?.responsibilities?.length > 0 && (
-                <View style={styles.detailSection}>
-                  <Text style={styles.sectionHeading}>🎯 Responsibilities</Text>
-                  {selectedJob.responsibilities.map((resp, i) => (
-                    <View key={i} style={styles.detailItem}>
-                      <Ionicons name="flag-outline" size={16} color={T.yellow} />
-                      <Text style={styles.detailItemText}>{resp}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              {selectedJob?.benefits?.length > 0 && (
-                <View style={styles.detailSection}>
-                  <Text style={styles.sectionHeading}>🎁 Benefits</Text>
-                  <View style={styles.benefitsGrid}>
-                    {selectedJob.benefits.map((benefit, i) => (
-                      <View key={i} style={styles.benefitItem}>
-                        <Ionicons name="star" size={14} color={T.yellow} />
-                        <Text style={styles.benefitItemText}>{benefit}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {selectedJob?.skills?.length > 0 && (
-                <View style={styles.detailSection}>
-                  <Text style={styles.sectionHeading}>💡 Required Skills</Text>
-                  <View style={styles.skillsGrid}>
-                    {selectedJob.skills.map((skill, i) => (
-                      <View key={i} style={styles.skillBadgeLarge}>
-                        <Text style={styles.skillBadgeLargeText}>{skill}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {(selectedJob?.companyName || selectedJob?.companyWebsite) && (
-                <View style={styles.detailSection}>
-                  <Text style={styles.sectionHeading}>🏢 Company Info</Text>
-                  {selectedJob.companyName && <Text style={styles.companyInfoText}>{selectedJob.companyName}</Text>}
-                  {selectedJob.companyWebsite && (
-                    <TouchableOpacity onPress={() => openInWebView(selectedJob.companyWebsite, selectedJob.companyName)}>
-                      <Text style={styles.companyLink}>🌐 {selectedJob.companyWebsite}</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
-
-              {/* Application Form */}
-              <View style={styles.formSection}>
-                <Text style={styles.sectionHeading}>📝 Application Form</Text>
-                <Text style={styles.formRequiredNote}>* Required fields</Text>
-
-                <Text style={styles.formLabel}>Full Name *</Text>
-                <TextInput
-                  style={[styles.formInput, validationErrors.fullName && styles.formInputError]}
-                  placeholder="Enter your full name"
-                  placeholderTextColor={T.textFaint}
-                  value={applicationForm.fullName}
-                  onChangeText={t => handleInputChange("fullName", t)}
-                />
-                {validationErrors.fullName && <Text style={styles.errorText}>{validationErrors.fullName}</Text>}
-
-                <Text style={styles.formLabel}>Email Address *</Text>
-                <TextInput
-                  style={[styles.formInput, validationErrors.email && styles.formInputError]}
-                  placeholder="Enter your email"
-                  placeholderTextColor={T.textFaint}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  value={applicationForm.email}
-                  onChangeText={t => handleInputChange("email", t)}
-                />
-                {validationErrors.email && <Text style={styles.errorText}>{validationErrors.email}</Text>}
-
-                <Text style={styles.formLabel}>Phone Number *</Text>
-                <TextInput
-                  style={[styles.formInput, validationErrors.phone && styles.formInputError]}
-                  placeholder="Enter your phone number"
-                  placeholderTextColor={T.textFaint}
-                  keyboardType="phone-pad"
-                  value={applicationForm.phone}
-                  onChangeText={t => handleInputChange("phone", t)}
-                />
-                {validationErrors.phone && <Text style={styles.errorText}>{validationErrors.phone}</Text>}
-
-                <Text style={styles.formLabel}>address</Text>
-                <TextInput style={styles.formInput} placeholder="Street address" placeholderTextColor={T.textFaint} value={applicationForm.address} onChangeText={t => handleInputChange("address", t)} />
-
-                <View style={styles.formRow}>
-                  <View style={styles.formHalf}>
-                    <Text style={styles.formLabel}>city</Text>
-                    <TextInput style={styles.formInput} placeholder="City" placeholderTextColor={T.textFaint} value={applicationForm.city} onChangeText={t => handleInputChange("city", t)} />
-                  </View>
-                  <View style={styles.formHalf}>
-                    <Text style={styles.formLabel}>country</Text>
-                    <TextInput style={styles.formInput} placeholder="Country" placeholderTextColor={T.textFaint} value={applicationForm.country} onChangeText={t => handleInputChange("country", t)} />
-                  </View>
-                </View>
-
-                <Text style={styles.formLabel}>current company</Text>
-                <TextInput style={styles.formInput} placeholder="Your current employer" placeholderTextColor={T.textFaint} value={applicationForm.currentCompany} onChangeText={t => handleInputChange("currentCompany", t)} />
-
-                <Text style={styles.formLabel}>current position</Text>
-                <TextInput style={styles.formInput} placeholder="Your current role" placeholderTextColor={T.textFaint} value={applicationForm.currentPosition} onChangeText={t => handleInputChange("currentPosition", t)} />
-
-                <Text style={styles.formLabel}>years of experience</Text>
-                <TextInput style={styles.formInput} placeholder="e.g., 5" placeholderTextColor={T.textFaint} keyboardType="numeric" value={applicationForm.yearsOfExperience} onChangeText={t => handleInputChange("yearsOfExperience", t)} />
-
-                <Text style={styles.formLabel}>expected salary</Text>
-                <TextInput style={styles.formInput} placeholder="e.g., $80,000 - $100,000" placeholderTextColor={T.textFaint} value={applicationForm.expectedSalary} onChangeText={t => handleInputChange("expectedSalary", t)} />
-
-                <Text style={styles.formLabel}>notice period</Text>
-                <TextInput style={styles.formInput} placeholder="e.g., 2 weeks" placeholderTextColor={T.textFaint} value={applicationForm.noticePeriod} onChangeText={t => handleInputChange("noticePeriod", t)} />
-
-                <Text style={styles.formLabel}>Cover Letter *</Text>
-                <TextInput
-                  style={[styles.formInput, styles.formTextArea, validationErrors.coverLetter && styles.formInputError]}
-                  placeholder="Why are you a good fit for this role?"
-                  placeholderTextColor={T.textFaint}
-                  multiline
-                  numberOfLines={5}
-                  value={applicationForm.coverLetter}
-                  onChangeText={t => handleInputChange("coverLetter", t)}
-                />
-                {validationErrors.coverLetter && <Text style={styles.errorText}>{validationErrors.coverLetter}</Text>}
-
-                <Text style={styles.formLabel}>linkedin url</Text>
-                <TextInput style={styles.formInput} placeholder="https://linkedin.com/in/yourprofile" placeholderTextColor={T.textFaint} autoCapitalize="none" value={applicationForm.linkedInUrl} onChangeText={t => handleInputChange("linkedInUrl", t)} />
-
-                <Text style={styles.formLabel}>Resume *</Text>
-                <TouchableOpacity
-                  style={[styles.resumeBtn, validationErrors.resume && styles.resumeBtnError]}
-                  onPress={pickResume}
-                >
-                  <Ionicons name="document-attach-outline" size={20} color={validationErrors.resume ? T.danger : T.yellow} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.resumeBtnText}>{selectedResume ? selectedResume.name : "Upload Resume (PDF/DOC/DOCX)"}</Text>
-                    {selectedResume && <Text style={styles.resumeSize}>{(selectedResume.size / 1024).toFixed(1)} KB</Text>}
-                  </View>
-                  {selectedResume ? (
-                    <TouchableOpacity onPress={() => setSelectedResume(null)}>
-                      <Ionicons name="close-circle" size={18} color={T.danger} />
-                    </TouchableOpacity>
-                  ) : (
-                    <Ionicons name="cloud-upload-outline" size={18} color={T.textFaint} />
-                  )}
-                </TouchableOpacity>
-                {validationErrors.resume && <Text style={styles.errorText}>{validationErrors.resume}</Text>}
-
-                {submitting && uploadProgress > 0 && (
-                  <View style={styles.progressBar}>
-                    <View style={[styles.progressFill, { width: `${uploadProgress}%` }]} />
-                    <Text style={styles.progressText}>{uploadProgress}%</Text>
-                  </View>
-                )}
-
-                <TouchableOpacity style={styles.submitBtn} onPress={handleApply} disabled={submitting}>
-                  <View style={styles.submitBtnGradient}>
-                    {submitting ? (
-                      <ActivityIndicator color={T.white} size="small" />
-                    ) : (
-                      <>
-                        <Text style={styles.submitBtnText}>submit application</Text>
-                        <Ionicons name="paper-plane" size={16} color={T.white} />
-                      </>
-                    )}
-                  </View>
-                </TouchableOpacity>
-
-                <View style={styles.modalButtonRow}>
-                  <TouchableOpacity style={styles.shareBtn} onPress={() => shareJob(selectedJob)}>
-                    <Ionicons name="share-social-outline" size={18} color={T.ink} />
-                    <Text style={styles.shareBtnText}>share</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
-                    <Text style={styles.cancelBtnText}>cancel</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 };
 
-// ==================== WEBVIEW STYLES ====================
-const webViewStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: T.card },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: T.line,
-    backgroundColor: T.card,
-    gap: 6,
-  },
-  headerBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: T.sand,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerCenter: { flex: 1, alignItems: 'center', paddingHorizontal: 4 },
-  headerTitle: { fontSize: 14, fontFamily: F.bodyBold, color: T.ink },
-  headerUrl: { fontSize: 10, color: T.textFaint, fontFamily: F.bodyMedium, marginTop: 1 },
-  headerActions: { flexDirection: 'row', gap: 4 },
-  progressTrack: {
-    height: 3,
-    backgroundColor: T.sand,
-    width: '100%',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: T.yellow,
-  },
-  webview: { flex: 1, backgroundColor: T.card },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: T.card,
-  },
-  loadingText: { marginTop: 12, fontSize: 13, color: T.textFaint, fontFamily: F.bodyMedium },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-    backgroundColor: T.card,
-  },
-  errorIconCircle: {
-    width: 90,
-    height: 90,
-    borderRadius: 24,
-    backgroundColor: T.yellowSoft,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-    borderWidth: 2,
-    borderColor: T.line,
-  },
-  errorTitle: { fontSize: 20, fontFamily: F.heading, color: T.ink, marginBottom: 6 },
-  errorSubtitle: { fontSize: 13, fontFamily: F.body, color: T.textFaint, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
-  errorActions: { flexDirection: 'row', gap: 10 },
-  retryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: 12,
-    backgroundColor: T.sand,
-    borderWidth: 1,
-    borderColor: T.line,
-  },
-  retryText: { fontFamily: F.bodyBold, color: T.ink, fontSize: 13 },
-  openBrowserBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: 12,
-    backgroundColor: T.ink,
-  },
-  openBrowserText: { fontFamily: F.bodyBold, color: T.white, fontSize: 13 },
-});
 
 // ==================== COMPLETE STYLES ====================
 const styles = StyleSheet.create({

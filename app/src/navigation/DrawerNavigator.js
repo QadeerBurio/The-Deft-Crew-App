@@ -72,12 +72,16 @@ import CardBase from '../components/Card';
 const Card = accountOnly(CardBase, { title: "membership card" });
 import NotificationModal from '../components/NotificationModal';
 import Career from '../components/Career';
+// a job, full screen, and its apply form ("ApplicationForm" is the scholarship form): utils/careerNav.js
+import JobDetails from '../screens/Career/JobDetails';
+import JobApplicationFormBase from '../screens/Career/JobApplicationForm';
 import ResumeStudioBase from '../screens/Resume/ResumeStudio';
 const ResumeStudio = accountOnly(ResumeStudioBase, { title: "resume studio" }); // FLAG_RESUME_STUDIO_V2, from a job's details
 import TDCCareers from '../components/TDCCareers';
 import ExchangeScreen from '../components/ExchangeScreen';
 import ApplicationFormBase from '../components/ApplicationForm';
 const ApplicationForm = accountOnly(ApplicationFormBase, { title: "apply" });
+const JobApplicationForm = accountOnly(JobApplicationFormBase, { title: "apply" });
 import BookingScreenBase from '../components/BookingScreen';
 const BookingScreen = accountOnly(BookingScreenBase, { title: "booking" });
 import PaymentScreenBase from '../components/PaymentScreen';
@@ -223,6 +227,8 @@ const FULLSCREEN_SCREENS = [
   'ResumeSettings',
   'ResumeView',
   'ResumeStudio',
+  'JobDetails',
+  'JobApplicationForm',
   'SurpriseBoxes',
   'Social',
   'SocialStack',
@@ -1282,6 +1288,8 @@ function HomeStackNavigator() {
       <Stack.Screen name="Disclaimer" component={DisclaimerScreen} />
       <Stack.Screen name="FAQ" component={FAQScreen} />
       <Stack.Screen name="Career" component={Career} />
+      <Stack.Screen name="JobDetails" component={JobDetails} options={{ gestureEnabled: true }} />
+      <Stack.Screen name="JobApplicationForm" component={JobApplicationForm} options={{ gestureEnabled: true }} />
       <Stack.Screen name="ResumeStudio" component={ResumeStudio} />
       <Stack.Screen name="TDCCareers" component={TDCCareers} />
       <Stack.Screen name="Booking" component={BookingScreen} />

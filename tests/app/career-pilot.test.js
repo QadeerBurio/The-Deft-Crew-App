@@ -206,7 +206,7 @@ const byLabel = (tree, label) => all(tree, (x) => x.props?.accessibilityLabel ==
   console.log("── placement");
   {
     ok(read("app/src/components/CareerApplications.js").includes("<RateEmployer applicationId={applicationId} />") && read("app/src/components/CareerApplications.js").includes("<RatingsReceived />"), "the application timeline offers the rating; my applications lists ratings received");
-    ok(read("app/src/components/TDCCareers.js").includes("<EmployerRating jobId={detailJob?._id} />") && read("app/src/components/Career.js").includes("<EmployerRating jobId={job?._id} />"), "both job detail screens show the employer's average (when 5+)");
+    ok(read("app/src/components/TDCCareers.js").includes("<EmployerRating jobId={detailJob?._id} />") && read("app/src/screens/Career/JobDetails.js").includes("<EmployerRating jobId={job?._id} />"), "both job detail screens show the employer's average (when 5+)");
   }
 
   console.log("── loyalty notifications: the setting and the tap");
