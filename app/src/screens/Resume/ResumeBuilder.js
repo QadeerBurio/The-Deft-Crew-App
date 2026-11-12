@@ -3,7 +3,6 @@ import React, { useState, useContext, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
@@ -17,6 +16,8 @@ import {
   StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+// the focused field scrolls above the keyboard (KeyboardProvider is at the app root)
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { AuthContext } from '../../context/AuthContext';
 import { useGuestGate } from '../../guest/GuestGate';
 import { ResumeContext } from '../../context/ResumeContext';
@@ -1778,7 +1779,7 @@ const ResumeBuilderScreen = () => {
       </View>
 
       {/* The White Card containing the active step form */}
-      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
+      <KeyboardAwareScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} bottomOffset={24} keyboardShouldPersistTaps="handled">
         <View style={styles.cardContainer}>
           <View style={styles.cardHeaderRow}>
             <Text style={styles.cardTitle}>{steps[activeStep - 1].title}</Text>
@@ -1847,7 +1848,7 @@ const ResumeBuilderScreen = () => {
             </Text>
           ))}
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {/* CLEAN MODAL PREVIEW */}
       <Modal visible={previewVisible} transparent animationType="slide" onRequestClose={() => setPreviewVisible(false)}>

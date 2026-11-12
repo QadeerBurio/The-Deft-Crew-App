@@ -11,7 +11,9 @@
 //   G versions: your approved versions, export as PDF, delete one you never sent
 // Route params: { jobId, jobTitle } from a job's details, { view: "versions" }, or nothing.
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, TextInput, Switch, ScrollView, ActivityIndicator, Alert, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, TextInput, Switch, ActivityIndicator, Alert, StyleSheet } from "react-native";
+// the focused field scrolls above the keyboard (KeyboardProvider is at the app root)
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScreenHeader } from "../../ui";
@@ -226,7 +228,7 @@ export default function ResumeStudio({ route, navigation }) {
   if (!enabled) return frame(<View style={styles.center}><Text style={styles.muted} maxFontSizeMultiplier={M}>resume studio isn't available for your account yet.</Text></View>);
 
   return frame(
-    <ScrollView style={styles.screen} contentContainerStyle={{ padding: 16, paddingBottom: 40 + insets.bottom }} keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScrollView style={styles.screen} contentContainerStyle={{ padding: 16, paddingBottom: 40 + insets.bottom }} bottomOffset={24} keyboardShouldPersistTaps="handled">
       <View style={styles.tabs} accessibilityRole="tablist">
         <Tab label="tailor" on={step !== "versions"} onPress={() => setStep(draft ? (draft.status === "approved" ? "approved" : "review") : "start")} />
         <Tab label="my versions" on={step === "versions"} onPress={() => { setStep("versions"); loadVersions(); }} />
@@ -420,7 +422,7 @@ export default function ResumeStudio({ route, navigation }) {
           ))}
         </View>
       )}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

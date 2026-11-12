@@ -236,6 +236,7 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
   const load = loader({
     react: React, "react-native": rn, ...icons,
     "react-native-safe-area-context": { useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) },
+    "react-native-keyboard-controller": { KeyboardAwareScrollView: "ScrollView" }, // native module; renders as a scroll view here
     "../../ui": { ScreenHeader: (p) => React.createElement("Header", { accessibilityLabel: "header" }, p.title) },
     "../../api/resumeApi": resumeApiMock,
     "../../api/resumeStudioApi": studioMock,
