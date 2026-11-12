@@ -2,7 +2,7 @@
 // The in-app browser for job links (an external job's apply page, a company website, a map fallback), moved out
 // of Career.js so the jobs list and the JobDetails screen share it.
 //   <WebViewModal visible url title onClose />   formatUrl(url) → https URL or null   buildLocationUrl(text) → maps URL
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Modal, ActivityIndicator, Alert, Linking, Platform, StatusBar, Dimensions } from "react-native";
 import { WebView } from "react-native-webview";
 import { SafeAreaView } from "react-native-safe-area-context";
