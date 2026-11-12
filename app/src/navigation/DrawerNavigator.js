@@ -62,7 +62,6 @@ import ContactUs from '../components/ContactUs';
 import PointsScreen from '../components/Points';
 import WhyPointsScreen from '../components/WhyPoints';
 import HowItWorksScreen from '../components/HowItsWorks';
-import WhyEduBoostScreen from '../components/WhyEduBoost';
 import AboutScreen from '../components/AboutScreen';
 import TermsScreen from '../components/Terms';
 import PrivacyScreen from '../components/Privacy';
@@ -101,23 +100,18 @@ const SettingsScreen = accountOnly(SettingsScreenBase, { title: "settings" });
 import EditProfileScreenBase from '../screens/Social/EditProfileScreen';
 const EditProfileScreen = accountOnly(EditProfileScreenBase, { title: "edit profile" });
 import Events from '../screens/Events/Events';
-import EventNotification from '../screens/Events/EventNotification';
 import YourAccountBase from '../screens/Social/YourAccount';
 const YourAccount = accountOnly(YourAccountBase, { title: "your account" });
 import SecurityAndAccessBase from '../screens/Social/SecurityAnd Access';
 const SecurityAndAccess = accountOnly(SecurityAndAccessBase, { title: "security" });
 import PrivacyAndSafety from '../screens/Social/PrivacyAndSafety';
-import AccessibilityDisplay from '../screens/Social/AccessibilityDisplay';
 import HelpCenter from '../screens/Social/HelpCenter';
 import PostDetailScreenBase from '../screens/Social/PostDetailScreen';
 const PostDetailScreen = accountOnly(PostDetailScreenBase, { title: "post" });
-import FloatingMenu from '../screens/Social/FloatingMenu';
-import TDCFlow from '../screens/SplashScren';
 import MyDiscountScreenBase from '../screens/MyDiscountScreen';
 const MyDiscountScreen = accountOnly(MyDiscountScreenBase, { title: "my discounts" });
 import ProfileStack from './ProfileStack';
 import Home from '../screens/Home';
-import StudentDashboard from '../screens/StudentDashboard';
 import Explore from '../screens/Explore';
 import DashboardBase from '../screens/skillshare/Dashboard';
 const Dashboard = accountOnly(DashboardBase, { title: "my skillshare" });
@@ -152,7 +146,6 @@ import DigitalBadgeScreenBase from '../components/DigitalBadgeScreen';
 const DigitalBadgeScreen = accountOnly(DigitalBadgeScreenBase, { title: "digital badge" });
 import MainCharacterScreen from '../components/MainCharacterScreen';
 import DeftProScreen from '../components/DeftProScreen';
-import DeftGoatScreen from '../components/DeftGoatScreen';
 import FounderCircleScreen from '../components/FounderCircleScreen';
 import CreatePostScreenBase from '../screens/Social/CreatePostScreen';
 const CreatePostScreen = accountOnly(CreatePostScreenBase, { title: "new post" });
@@ -186,7 +179,6 @@ import NotificationSettingsScreenBase from '../engagement/screens/NotificationSe
 const NotificationSettingsScreen = accountOnly(NotificationSettingsScreenBase, { title: "notifications" });
 import BadgesScreenBase from '../engagement/screens/BadgesScreen';
 const BadgesScreen = accountOnly(BadgesScreenBase, { title: "badges" });
-import CityScreen from '../screens/CityScreen';
 import NotificationSkillshareBase from '../components/NotificationSkillshare';
 const NotificationSkillshare = accountOnly(NotificationSkillshareBase, { title: "notifications" });
 
@@ -1238,7 +1230,6 @@ function SocialStackNavigator() {
         }
       />
       <Stack.Screen name="UserProfile" component={UserProfile} />
-      <Stack.Screen name="FloatingMenu" component={FloatingMenu} />
       <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} />
       <Stack.Screen name="CreatePostScreen" component={CreatePostScreen} />
       <Stack.Screen name="FeedScreen" component={FeedScreen} />
@@ -1247,7 +1238,6 @@ function SocialStackNavigator() {
       <Stack.Screen name="YourAccount" component={YourAccount} />
       <Stack.Screen name="SecurityAndAccess" component={SecurityAndAccess} />
       <Stack.Screen name="PrivacyAndSafety" component={PrivacyAndSafety} />
-      <Stack.Screen name="AccessibilityDisplay" component={AccessibilityDisplay} />
       <Stack.Screen name="HelpCenter" component={HelpCenter} />
       <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
       <Stack.Screen name="ChangePassword" component={ChangePassword} />
@@ -1281,7 +1271,6 @@ function HomeStackNavigator() {
       <Stack.Screen name="Points" component={PointsScreen} />
       <Stack.Screen name="WhyPoints" component={WhyPointsScreen} />
       <Stack.Screen name="How It Works" component={HowItWorksScreen} />
-      <Stack.Screen name="Why EduBoost" component={WhyEduBoostScreen} />
       <Stack.Screen name="About" component={AboutScreen} />
       <Stack.Screen name="Terms & Conditions" component={TermsScreen} />
       <Stack.Screen name="Privacy Policy" component={PrivacyScreen} />
@@ -1296,12 +1285,10 @@ function HomeStackNavigator() {
       <Stack.Screen name="Exchange" component={ExchangeScreen} />
       <Stack.Screen name="ApplicationForm" component={ApplicationForm} />
       <Stack.Screen name="Payment" component={PaymentScreen} />
-      <Stack.Screen name="StudentDashboard" component={StudentDashboard} />
       <Stack.Screen name="Card" component={Card} />
       <Stack.Screen name="DigitalBadge" component={DigitalBadgeScreen} />
       <Stack.Screen name="MainCharacter" component={MainCharacterScreen} />
       <Stack.Screen name="DeftPro" component={DeftProScreen} />
-      <Stack.Screen name="DeftGoat" component={DeftGoatScreen} />
       <Stack.Screen name="FounderCircle" component={FounderCircleScreen} />
       <Stack.Screen name="SocialStack" component={SocialStackNavigator} />
       <Stack.Screen name="Social" component={Social} />
@@ -1309,7 +1296,6 @@ function HomeStackNavigator() {
       <Stack.Screen name="MessagesScreen" component={MessagesScreen} />
       <Stack.Screen name="ChatDetailScreen" component={ChatDetailScreen} />
       <Stack.Screen name="UserProfile" component={UserProfile} />
-      <Stack.Screen name="FloatingMenu" component={FloatingMenu} />
       <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} />
       <Stack.Screen name="CreatePostScreen" component={CreatePostScreen} />
       <Stack.Screen name="FeedScreen" component={FeedScreen} />
@@ -1318,7 +1304,6 @@ function HomeStackNavigator() {
       <Stack.Screen name="YourAccount" component={YourAccount} />
       <Stack.Screen name="SecurityAndAccess" component={SecurityAndAccess} />
       <Stack.Screen name="PrivacyAndSafety" component={PrivacyAndSafety} />
-      <Stack.Screen name="AccessibilityDisplay" component={AccessibilityDisplay} />
       <Stack.Screen name="HelpCenter" component={HelpCenter} />
       <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
       <Stack.Screen name="ChangePassword" component={ChangePassword} />
@@ -1326,7 +1311,6 @@ function HomeStackNavigator() {
       <Stack.Screen name="Terrms" component={Terrms} />
       <Stack.Screen name="Guideline" component={Guideline} />
       <Stack.Screen name="Events" component={Events} />
-      <Stack.Screen name="EventNotification" component={EventNotification} />
       <Stack.Screen name="EventTicket" component={EventTicket} />
       <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
       <Stack.Screen name="ProfileDetails" component={ProfileDetails} />
@@ -1335,14 +1319,12 @@ function HomeStackNavigator() {
       <Stack.Screen name="Brands" component={Brands} />
       <Stack.Screen name="SurpriseBoxes" component={SurpriseBoxes} />
       <Stack.Screen name="Badges" component={BadgesScreen} />
-      <Stack.Screen name="CityScreen" component={CityScreen} />
       <Stack.Screen
         name="OfferScreen"
         component={OfferScreen}
         options={{ animation: 'slide_from_right' }}
         getId={({ params }) => params?.brand?._id}
       />
-      <Stack.Screen name="TDCFlow" component={TDCFlow} />
     </Stack.Navigator>
   );
 }

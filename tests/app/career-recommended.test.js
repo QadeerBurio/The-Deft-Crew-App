@@ -187,10 +187,9 @@ const byLabel = (tree, label) => all(tree, (x) => x.props?.accessibilityLabel ==
   ok(root.tree == null || textOf(root.tree) === "", "a failed request: nothing shown (no error on the hub)");
 
   console.log("── placement");
-  const hub = read("app/src/components/CareerHub.js");
   const career = read("app/src/components/Career.js");
   ok(career.includes('import RecommendedJobs from "./RecommendedJobs"') && career.includes("<RecommendedJobs navigation={navigation} refreshKey={refreshing} />") && career.indexOf("<RecommendedJobs") < career.indexOf("jobs found") && read("app/src/navigation/DrawerNavigator.js").includes('<Stack.Screen name="Career" component={Career} />'), "shown at the top of the jobs list (Career, a registered screen: the one pushes and the Daily Drop open), refreshed with it");
-  ok(!hub.includes("RecommendedJobs"), "not in CareerHub.js (no route shows that file)");
+  ok(!fs.existsSync(path.join(APP, "app/src/components/CareerHub.js")), "CareerHub.js is gone (nothing showed it; chore/app-cleanup)");
   ok(career.includes("useOpenFromParams('openJobId'"), "Career opens a job from openJobId (the route the tap uses)");
 
   console.log(`

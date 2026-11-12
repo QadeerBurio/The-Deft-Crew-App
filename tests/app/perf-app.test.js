@@ -222,7 +222,9 @@ const BASE_MOCKS = {
         } else if (name === "Image" && /uri/.test(attr("source") ? src.slice(attr("source").value.start, attr("source").value.end) : "")) rnRemote++;
       } });
     }
-    ok(count >= 75 && bad.length === 0, `${count} RemoteImage uses, every size known, no unsupported prop`, bad.join(", "));
+    // 70: chore/app-cleanup removed 6 uses that sat in files nothing imported (BrandDetailsModal, CustomeHeader,
+    // MoodIcon, CityScreen, StoriesSection)
+    ok(count >= 70 && bad.length === 0, `${count} RemoteImage uses, every size known, no unsupported prop`, bad.join(", "));
     ok(rnRemote <= 16, `react-native Image left only for local previews, viewers and the cache-busted avatar (${rnRemote})`);
   }
 
