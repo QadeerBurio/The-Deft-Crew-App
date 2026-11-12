@@ -44,7 +44,11 @@ const unwrap = (request) =>
 export const myInvites = () => unwrap(api.get("/career/invites/me", { timeout: 10000 }));
 /** "interested" | "declined" */
 export const respondInvite = (id, response) => unwrap(api.post(`/career/invites/${id}/respond`, { response }, { timeout: 10000 }));
+/** the student's own match for one job (JobDetails "your match"): { hasResume, applied, match, note } where match is
+ *  { score, quality: strong | medium | weak | insufficient, summary, matched: [{ skill, evidence: [text] }],
+ *  missing: [skill], unknown: [skill], mandatory: [{ criterion, status, evidence }] } or null without a resume */
+export const myJobMatch = (jobId) => unwrap(api.get(`/career/matching/jobs/${encodeURIComponent(String(jobId))}/me`, { timeout: 10000 }));
 /** "let employers invite me to apply": saved on the professional profile (the existing route) */
 export const setDiscoverable = (on) => api.post("/professional-profile", { discoverable: !!on }, { timeout: 10000 }).then((r) => !!r.data?.profile?.discoverable);
 
-export default { matchingEnabled, recommendedJobs, myInvites, respondInvite, setDiscoverable };
+export default { matchingEnabled, recommendedJobs, myJobMatch, myInvites, respondInvite, setDiscoverable };

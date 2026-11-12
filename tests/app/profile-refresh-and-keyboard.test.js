@@ -35,8 +35,7 @@ const files = [];
 const walk = (d) => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name); if (f.isDirectory()) walk(p); else if (/\.js$/.test(f.name)) files.push(p); } };
 walk(path.join(APP, "app/src"));
 const KB = /KeyboardAvoidingView|KeyboardAwareScrollView|react-native-keyboard-controller|KeyboardStickyView/;
-// Career.js: its apply form moves to the JobApplicationForm screen (feat/job-details-screen), which handles the keyboard
-const PENDING = new Set(["app/src/components/Career.js"]);
+const PENDING = new Set(); // (Career.js's apply form moved to JobApplicationForm, which handles the keyboard)
 const missing = [];
 for (const f of files) {
   const rel = path.relative(APP, f).split(path.sep).join("/");
