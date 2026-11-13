@@ -17,6 +17,7 @@ import { navigationRef } from '../navigation/navigationRef';
 
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { jobTarget } from '../utils/jobRoutes';
+import { navigateAnywhere } from "../navigation/routes";
 const NotificationBanner = ({
   visible,
   notification,
@@ -97,7 +98,7 @@ const NotificationBanner = ({
     try {
       // job notifications (old names TDCCareers / MyApplications included) open the job
       const t = jobTarget(route, params, meta);
-      navigationRef.navigate(t.route, t.params);
+      navigateAnywhere(navigationRef, t.route, t.params); // works from any screen
       console.log('[Banner] navigated →', route, params);
     } catch (e) {
       console.warn('[Banner] nav failed:', e.message);

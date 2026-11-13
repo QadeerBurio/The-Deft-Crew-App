@@ -42,6 +42,7 @@ import { color } from "../theme/tokens";
 import { useTour } from "../engagement/tour/TourProvider";
 import { perfMark } from "../lib/perf";
 import { hydrateQuery, writeHomeCache, pruneHomeCache } from "../lib/homeCache";
+import { navigateAnywhere } from "../navigation/routes";
 
 // The latest-confession section (HomeCampus) is commented out below; while it is, its
 // request (the whole confessions feed) does not run. Set true together with the section.
@@ -329,7 +330,7 @@ export default function Home({ navigation }) {
   const openFeedScreen = useCallback(
     (params) => {
       try {
-        if (navigationRef.isReady()) navigationRef.navigate("FeedScreen", params);
+        if (navigationRef.isReady()) navigateAnywhere(navigationRef, "FeedScreen", params);
         else navigation.navigate("FeedScreen", params);
       } catch (e) {
         if (__DEV__) console.log("[Home] open feed error:", e?.message);

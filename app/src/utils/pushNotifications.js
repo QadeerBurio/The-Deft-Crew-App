@@ -15,6 +15,7 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { jobTarget } from './jobRoutes';
+import { navigateAnywhere, pathTo } from "../navigation/routes";
 
 // ═══════════════════════════════════════════════════════════════
 // ANDROID CHANNELS: one per sound
@@ -242,17 +243,26 @@ export function getRouteFromNotificationData(data = {}) {
   return jobTarget(route, params, data);
 }
 
-// Navigate once the navigation container is ready (retries up to ~5s)
+// Open the push's screen from wherever the app is: the full nested path (navigation/routes.js).
+// Waits (up to ~15 s) while the container isn't ready or the app is still behind Splash / login.
 export function navigateWhenReady(navigationRef, route, params, attempt = 0) {
   if (!route) return;
+  if (!pathTo(route, params)) {
+    console.warn(`[push] "${route}" is not a screen in this app`);
+    return;
+  }
   if (navigationRef?.isReady?.()) {
     try {
-      navigationRef.navigate(route, params);
-      console.log('[push] navigated →', route);
+      if (navigateAnywhere(navigationRef, route, params)) {
+        console.log('[push] navigated →', route);
+        return;
+      }
     } catch (e) {
       console.warn(`[push] navigate("${route}") failed:`, e?.message);
+      return;
     }
-  } else if (attempt < 50) {
+  }
+  if (attempt < 150) {
     setTimeout(() => navigateWhenReady(navigationRef, route, params, attempt + 1), 100);
   }
 }

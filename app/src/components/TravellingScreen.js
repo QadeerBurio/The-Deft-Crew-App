@@ -173,7 +173,8 @@ const TravelingScreen = () => {
       </Animated.ScrollView>
 
       {/* Chat (floating button + full-screen chat) */}
-      <TravelChatBot ref={chatRef} />
+      {/* while the chat is open the menu edge swipe is off (see navigation/routes.js) */}
+      <TravelChatBot ref={chatRef} onOpenChange={(open) => navigation.setParams({ chatOpen: open })} />
     </SafeAreaView>
   );
 };

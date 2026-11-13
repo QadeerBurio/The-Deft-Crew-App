@@ -205,7 +205,7 @@ export default function SettingsScreen({ navigation }) {
       title: "About tdc",
       subtitle: "Learn more about the app",
       color: T.ink,
-      onPress: () => navigation.navigate("About"),
+      onPress: () => navigation.navigate("HomeTabs", { screen: "About" }), // About lives in the home stack
     },
   ];
 

@@ -27,6 +27,7 @@ import {
   NotifSkeleton,
   NotifEmpty,
 } from './notifications/NotifUI';
+import { navigateAnywhere } from "../navigation/routes";
 
 const SKILLSHARE_TYPES = ['new_offer', 'offer_accepted', 'offer_rejected', 'match_created', 'message'];
 
@@ -183,7 +184,7 @@ const NotificationSkillshare = () => {
     const t = targetOf(n);
     if (!t) return;
     try {
-      if (navigationRef.isReady()) navigationRef.navigate(t.screen, t.params);
+      if (navigationRef.isReady()) navigateAnywhere(navigationRef, t.screen, t.params);
       else navigation.navigate(t.screen, t.params);
     } catch (e) {
       Alert.alert('Not available', 'This item is no longer available.');

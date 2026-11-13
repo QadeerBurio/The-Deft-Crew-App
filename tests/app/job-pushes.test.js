@@ -198,10 +198,10 @@ const byLabel = (tree, label) => all(tree, (x) => x.props?.accessibilityLabel ==
   console.log("── every notification consumer maps job routes");
   for (const [f, re] of [
     ["app/src/utils/pushNotifications.js", /return jobTarget\(route, params, data\);/],
-    ["app/src/components/NotificationBanner.js", /const t = jobTarget\(route, params, meta\);\n\s*navigationRef\.navigate\(t\.route, t\.params\);/],
+    ["app/src/components/NotificationBanner.js", /const t = jobTarget\(route, params, meta\);\n\s*(?:navigationRef\.navigate\(|navigateAnywhere\(navigationRef, )t\.route, t\.params\);/],
     ["app/src/components/NotificationModal.js", /const t = jobTarget\(screen, m\.params \|\| item\.params \|\| \{\}, m\);/],
     ["app/src/components/NotificationSkillshare.js", /const t = jobTarget\(screen, m\.params \|\| \{\}, m\);/],
-    ["app/src/hooks/useNotificationPopup.js", /const t = jobTarget\(route, params, data\);\n\s*navigationRef\.navigate\(t\.route, t\.params\);/],
+    ["app/src/hooks/useNotificationPopup.js", /const t = jobTarget\(route, params, data\);\n\s*(?:navigationRef\.navigate\(|navigateAnywhere\(navigationRef, )t\.route, t\.params\);/],
   ]) ok(re.test(read(f)), `${path.basename(f)} sends job notifications to the job`);
   ok(/useOpenFromParams\('openJobId', async \(id\) => \{\n\s*const job = jobs\.find\(\(j\) => String\(j\._id\) === String\(id\)\);\n\s*openJobDetails\(navigation, job \|\| String\(id\)\);/.test(read("app/src/components/Career.js")), "Career { openJobId } opens JobDetails (Apply → JobApplicationForm)");
 
