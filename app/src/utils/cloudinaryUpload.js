@@ -3,6 +3,7 @@
 // screen has always used), plus the gallery picker with its permission prompt.
 import { Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { fetchWithTimeout } from "../config/timeouts";
 
 const CLOUD = "decaxpera";
 const PRESET = "tdc_profiles";
@@ -37,7 +38,7 @@ export async function uploadImageToCloudinary(uri, { timeoutMs = 45000 } = {}) {
   const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
   let res;
   try {
-    res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD}/image/upload`, {
+    res = await fetchWithTimeout(`https://api.cloudinary.com/v1_1/${CLOUD}/image/upload`, {
       method: "POST",
       body: data,
       signal: controller?.signal,

@@ -3,6 +3,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { API_BASE } from "../config/server";
+import { TIMEOUT } from "../config/timeouts";
 
 // ─────────────────────────────────────────────────────
 // BASE URL RESOLUTION (only computed once)
@@ -17,7 +18,7 @@ export const SERVER_URL = BASE_URL.replace(/\/api\/?$/, "");
 // ─────────────────────────────────────────────────────
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 8000,
+  timeout: TIMEOUT.DEFAULT,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",

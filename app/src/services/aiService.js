@@ -1,6 +1,7 @@
 // services/aiService.js
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../api/api';
+import { TIMEOUT, timeoutError } from "../config/timeouts";
 
 class AIService {
   get BASE_URL() {
@@ -17,7 +18,7 @@ class AIService {
         message,
         sessionId,
         category,
-      });
+      }, { timeout: TIMEOUT.AI });
       return response.data;
     } catch (err) {
       console.error('API sendMessage error:', err.message);
@@ -147,6 +148,20 @@ class AIService {
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.setRequestHeader('Accept', 'text/event-stream');
 
+    // TIMEOUT.AI without any data ends the stream with a timeout error; abort() ends it quietly
+    let ended = false;
+    let completed = false;
+    let idleTimer = null;
+    const armIdle = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        if (ended) return;
+        ended = true;
+        try { xhr.abort(); } catch {}
+        if (onError) onError(timeoutError(TIMEOUT.AI, 'chat stream'));
+      }, TIMEOUT.AI);
+    };
+
     AsyncStorage.multiGet(['token', 'isGuest']).then((stores) => {
       const token = stores[0][1];
       const isGuest = stores[1][1];
@@ -158,13 +173,16 @@ class AIService {
 
       let processedChars = 0;
       let buffer = '';
+      armIdle();
 
       xhr.onreadystatechange = () => {
+        if (ended) return;
         if (xhr.readyState === 3 || xhr.readyState === 4) {
           const currentText = xhr.responseText;
           const chunk = currentText.substring(processedChars);
           processedChars = currentText.length;
-          
+          if (chunk) armIdle();
+
           buffer += chunk;
 
           const parts = buffer.split('\n\n');
@@ -179,6 +197,7 @@ class AIService {
               const dataString = cleanFrame.replace('data: ', '').trim();
               
               if (dataString === '[DONE]') {
+                completed = true;
                 if (onComplete) onComplete();
               } else {
                 try {
@@ -218,11 +237,20 @@ class AIService {
           }
           if (xhr.status >= 400 && onError) {
             onError(new Error(`Streaming failed with status: ${xhr.status}`));
+          } else if (!completed && xhr.status > 0 && onComplete) {
+            // the server closed the stream without [DONE]: finish anyway so nothing spins
+            completed = true;
+            onComplete();
           }
+          ended = true;
+          clearTimeout(idleTimer);
         }
       };
 
       xhr.onerror = (err) => {
+        if (ended) return;
+        ended = true;
+        clearTimeout(idleTimer);
         if (onError) onError(new Error('Network request failed or CORS error.'));
       };
 
@@ -239,6 +267,8 @@ class AIService {
 
     return {
       abort: () => {
+        ended = true;
+        clearTimeout(idleTimer);
         xhr.abort();
       },
     };

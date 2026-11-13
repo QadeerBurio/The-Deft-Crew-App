@@ -20,6 +20,7 @@ import { engagementBus, ENGAGEMENT_EVENTS } from '../engagement/engagementBus';
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { copyToClipboard } from '../utils/clipboard';
 import { metaEvents } from '../analytics/metaEvents';
+import { TIMEOUT, TOO_LONG } from "../config/timeouts";
 const { width, height } = Dimensions.get('window');
 
 // ─── SUGGESTED PROMPT CHIPS ───────────────────────────────────────────
@@ -355,9 +356,14 @@ const TravelChatBot = forwardRef((props, ref) => {
     }).start();
   }, [requireAccount]);
 
+  // the answer being streamed right now: { xhr, stop(note) }
+  const streamRef = useRef(null);
+  useEffect(() => () => streamRef.current?.stop(), []); // leaving the screen ends it
+
   const closeChat = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Keyboard.dismiss();
+    streamRef.current?.stop(); // closing the chat ends the answer and frees the input
     Animated.timing(modalSlide, {
       toValue: height,
       duration: 250,
@@ -371,6 +377,7 @@ const TravelChatBot = forwardRef((props, ref) => {
 
   const startNewTrip = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    streamRef.current?.stop();
     setMessages([]);
     setInputText('');
     setIsStreaming(false);
@@ -477,11 +484,38 @@ const TravelChatBot = forwardRef((props, ref) => {
       let gotToken = false;
       let streamFailed = false;
 
+      // One way to end the stream early: closing the chat, a new trip, leaving the screen, or
+      // TIMEOUT.AI without any data. Later XHR events are ignored once it has ended.
+      let ended = false;
+      let idleTimer = null;
+      const stop = (note) => {
+        if (ended) return;
+        ended = true;
+        clearTimeout(idleTimer);
+        if (streamRef.current?.xhr === xhr) streamRef.current = null;
+        try { xhr.abort(); } catch {}
+        setIsStreaming(false);
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.id !== assistantId) return m;
+            const content = note ? (m.content ? `${m.content}\n\n${note}` : note) : m.content || 'stopped.';
+            return { ...m, content, isStreaming: false };
+          })
+        );
+      };
+      const armIdle = () => {
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => stop(TOO_LONG), TIMEOUT.AI);
+      };
+      streamRef.current = { xhr, stop };
+
       xhr.onreadystatechange = () => {
+        if (ended) return;
         if (xhr.readyState === 3 || xhr.readyState === 4) {
           const currentText = xhr.responseText;
           const chunk = currentText.substring(processedChars);
           processedChars = currentText.length;
+          if (chunk) armIdle();
           buffer += chunk;
 
           const parts = buffer.split('\n\n');
@@ -565,10 +599,17 @@ const TravelChatBot = forwardRef((props, ref) => {
             )
           );
           scrollToEnd();
+          ended = true;
+          clearTimeout(idleTimer);
+          if (streamRef.current?.xhr === xhr) streamRef.current = null;
         }
       };
 
       xhr.onerror = () => {
+        if (ended) return;
+        ended = true;
+        clearTimeout(idleTimer);
+        if (streamRef.current?.xhr === xhr) streamRef.current = null;
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
@@ -580,6 +621,7 @@ const TravelChatBot = forwardRef((props, ref) => {
       };
 
       xhr.send(JSON.stringify({ message: trimmed, conversationHistory }));
+      armIdle();
     } catch (err) {
       setMessages((prev) =>
         prev.map((m) =>

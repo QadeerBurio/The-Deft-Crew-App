@@ -18,6 +18,7 @@ import { color as T, font as F } from "../../theme/tokens";
 import { ScreenHeader, HeaderIconButton, EmptyState, SkeletonBlock } from "../../ui";
 import { metaEvents } from "../../analytics/metaEvents";
 import { SERVER_ORIGIN } from "../../config/server";
+import { fetchWithTimeout } from "../../config/timeouts";
 const { width } = Dimensions.get('window');
 const API_URL = `${SERVER_ORIGIN}/api/social`;
 
@@ -268,7 +269,7 @@ export default function ProfileScreen() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/user/connections/${user._id}`, {
+      const res = await fetchWithTimeout(`${API_URL}/user/connections/${user._id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -309,7 +310,7 @@ export default function ProfileScreen() {
 
     try {
       const endpoint = type === 'post' ? `${API_URL}/posts/like/${itemId}` : `${API_URL}/confessions/like/${itemId}`;
-      const response = await fetch(endpoint, {
+      const response = await fetchWithTimeout(endpoint, {
         method: 'PUT', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
       const data = await response.json();
@@ -336,7 +337,7 @@ export default function ProfileScreen() {
     if (!commentText.trim()) return;
     try {
       const endpoint = selectedItemType === 'post' ? `${API_URL}/posts/comment/${selectedItem._id}` : `${API_URL}/confessions/comment/${selectedItem._id}`;
-      const response = await fetch(endpoint, {
+      const response = await fetchWithTimeout(endpoint, {
         method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: commentText })
       });
@@ -368,7 +369,7 @@ export default function ProfileScreen() {
                 ? `${API_URL}/posts/${item._id}`
                 : `${API_URL}/confessions/${item._id}`;
 
-              const response = await fetch(endpoint, {
+              const response = await fetchWithTimeout(endpoint, {
                 method: 'DELETE',
                 headers: {
                   'Authorization': `Bearer ${token}`,

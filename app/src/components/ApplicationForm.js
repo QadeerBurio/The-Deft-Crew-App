@@ -13,6 +13,7 @@ import ScreenHeader from "../ui/ScreenHeader";
 import { plainError } from "../utils/plainError";
 import { metaEvents } from "../analytics/metaEvents";
 import { SERVER_ORIGIN } from "../config/server";
+import { fetchWithTimeout } from "../config/timeouts";
 // --- SUB-COMPONENTS (Defined outside to prevent re-render lag) ---
 const SectionHeader = ({ title, icon, color }) => (
 
@@ -109,7 +110,7 @@ const ApplicationForm = ({ route, navigation }) => {
   try {
     const API_URL = `${SERVER_ORIGIN}/api/auth/exchange/apply`;
 
-    const response = await fetch(API_URL, {
+    const response = await fetchWithTimeout(API_URL, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',

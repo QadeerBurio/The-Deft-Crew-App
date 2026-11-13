@@ -22,6 +22,7 @@ import { HeaderIconButton, EmptyState, SkeletonBlock } from "../../ui";
 import { plainText } from "../../utils/plainError";
 import { copyToClipboard } from '../../utils/clipboard';
 import { SERVER_ORIGIN } from "../../config/server";
+import { TIMEOUT } from "../../config/timeouts";
 const { width } = Dimensions.get('window');
 const socket = io(`${SERVER_ORIGIN}`);
 const API_URL = `${SERVER_ORIGIN}/api/social`;
@@ -539,6 +540,7 @@ export default function ChatDetailScreen() {
 
       const res = await axios.post(CLOUDINARY_URL, formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        timeout: TIMEOUT.UPLOAD,
         onUploadProgress: (progressEvent) => {
           if (!progressEvent.total) return;
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);

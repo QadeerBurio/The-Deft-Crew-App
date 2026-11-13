@@ -47,6 +47,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import * as FileSystem from 'expo-file-system';
 import { engagementBus, ENGAGEMENT_EVENTS } from '../engagement/engagementBus';
+import { TIMEOUT } from "../config/timeouts";
 
 export const resumeApi = {
   // Create new resume
@@ -173,7 +174,7 @@ export const resumeApi = {
 
   optimizeResume: async (resumeId, optimizeData) => {
     try {
-      const response = await api.post(`/resume/${resumeId}/optimize`, optimizeData, { timeout: 60000 });
+      const response = await api.post(`/resume/${resumeId}/optimize`, optimizeData, { timeout: TIMEOUT.AI });
       memoryCache.delete(`resume:${resumeId}`);
       memoryCache.delete(`recommendations:${resumeId}`);
       memoryCache.delete('resumes:all');
@@ -219,7 +220,7 @@ export const resumeApi = {
             onProgress(progress);
           }
         },
-        timeout: 60000,
+        timeout: TIMEOUT.UPLOAD,
       });
 
       memoryCache.delete('resumes:all');
@@ -365,7 +366,7 @@ export const resumeApi = {
 
   enhanceText: async (text, context) => {
     try {
-      const response = await api.post('/resume/enhance-text', { text, context }, { timeout: 60000 });
+      const response = await api.post('/resume/enhance-text', { text, context }, { timeout: TIMEOUT.AI });
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Failed to enhance text');
@@ -374,7 +375,7 @@ export const resumeApi = {
 
   suggestSkills: async (currentSkills, targetRole) => {
     try {
-      const response = await api.post('/resume/suggest-skills', { currentSkills, targetRole }, { timeout: 60000 });
+      const response = await api.post('/resume/suggest-skills', { currentSkills, targetRole }, { timeout: TIMEOUT.AI });
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Failed to get skill suggestions');
@@ -383,7 +384,7 @@ export const resumeApi = {
 
   checkResumeFit: async (resumeId, jobId) => {
     try {
-      const response = await api.post(`/resume/${resumeId}/check-fit`, { jobId }, { timeout: 60000 });
+      const response = await api.post(`/resume/${resumeId}/check-fit`, { jobId }, { timeout: TIMEOUT.AI });
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Failed to check resume fit');

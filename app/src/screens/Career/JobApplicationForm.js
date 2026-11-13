@@ -23,6 +23,7 @@ import { metaEvents } from "../../analytics/metaEvents";
 import { AuthContext } from "../../context/AuthContext";
 import { backToJobsList } from "../../utils/careerNav";
 import { plainError } from "../../utils/plainError";
+import { TIMEOUT } from "../../config/timeouts";
 
 export const REQUIRED = { fullName: "Full name", email: "Email", phone: "Phone", coverLetter: "Cover letter" };
 export const EMPTY_FORM = {
@@ -114,7 +115,7 @@ export default function JobApplicationForm({ navigation, route }) {
       const res = await api.post(`/jobs/apply/${encodeURIComponent(jobId)}`, buildBody(form, resume), {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (e) => e?.total && setProgress(Math.round((e.loaded * 100) / e.total)),
-        timeout: 60000,
+        timeout: TIMEOUT.UPLOAD,
       });
       applicationId = res?.data?.application?._id || null;
     } catch (err) {

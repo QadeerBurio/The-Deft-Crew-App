@@ -5,6 +5,7 @@ import { engagementBus, ENGAGEMENT_EVENTS } from '../engagement/engagementBus';
 import { Alert, Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { API_BASE, SERVER_ORIGIN } from "../config/server";
+import { TIMEOUT } from "../config/timeouts";
 const getBaseURL = () => {
   console.log('__DEV__ is:', __DEV__);
 
@@ -17,9 +18,12 @@ export const BASE_URL = getBaseURL();
 console.log('[api.js] Resolved BASE_URL:', BASE_URL);
 
 // Create axios instance with optimized config
+// every request without its own limit: the axios default (direct axios calls) and this instance
+axios.defaults.timeout = TIMEOUT.DEFAULT;
+
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 8000,
+  timeout: TIMEOUT.DEFAULT,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -558,7 +562,7 @@ export const uploadListingAttachment = async (fileUri, mimeType, fileName) => {
   // when the body is FormData, regardless of what Content-Type is passed here.
   const response = await api.post('/listings/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
-    timeout: 30000, // uploads need more headroom than the 12s instance default
+    timeout: TIMEOUT.UPLOAD, // uploads get the upload limit
   });
 
   return response.data; // { url, type }
@@ -794,6 +798,7 @@ export const uploadChatFile = async (uri, mimeType, fileName) => {
   formData.append('file', { uri, type: mimeType, name: fileName });
   const response = await api.post('/chat/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: TIMEOUT.UPLOAD,
   });
   return response.data; // { mediaUrl, messageType, mediaMetadata }
 };
