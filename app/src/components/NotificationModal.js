@@ -38,6 +38,7 @@ import {
   NotifSkeleton,
   NotifEmpty,
 } from './notifications/NotifUI';
+import { navigateAnywhere } from "../navigation/routes";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -89,7 +90,7 @@ const FILTERS = [
 // ── deep links ──
 const go = (screen, params, navigation) => {
   try {
-    if (navigationRef.isReady()) navigationRef.navigate(screen, params);
+    if (navigationRef.isReady()) navigateAnywhere(navigationRef, screen, params);
     else navigation?.navigate(screen, params);
     return true;
   } catch (e) {

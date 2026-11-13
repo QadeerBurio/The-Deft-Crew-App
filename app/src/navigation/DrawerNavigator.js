@@ -112,6 +112,7 @@ const PostDetailScreen = accountOnly(PostDetailScreenBase, { title: "post" });
 import MyDiscountScreenBase from '../screens/MyDiscountScreen';
 const MyDiscountScreen = accountOnly(MyDiscountScreenBase, { title: "my discounts" });
 import ProfileStack from './ProfileStack';
+import { drawerSwipeOff } from './routes';
 import Home from '../screens/Home';
 import Explore from '../screens/Explore';
 import DashboardBase from '../screens/skillshare/Dashboard';
@@ -1321,6 +1322,10 @@ function HomeStackNavigator() {
       <Stack.Screen name="Brands" component={Brands} />
       <Stack.Screen name="SurpriseBoxes" component={SurpriseBoxes} />
       <Stack.Screen name="Badges" component={BadgesScreen} />
+      {/* were drawer pages (no iOS swipe back there); the menu opens them here */}
+      <Stack.Screen name="Travelling" component={TravelingScreen} options={{ gestureEnabled: true }} />
+      <Stack.Screen name="Rewards" component={RewardsScreen} />
+      <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
       <Stack.Screen
         name="OfferScreen"
         component={OfferScreen}
@@ -1340,9 +1345,9 @@ export default function DrawerNavigator() {
       <Drawer.Navigator
         drawerContent={(props) => <CustomDrawerContent {...props} />}
         screenOptions={({ route }) => {
-          const deepestRouteName = getDeepestRouteName(route);
-          const shouldDisableDrawer =
-            deepestRouteName && FULLSCREEN_SCREENS.includes(deepestRouteName);
+          // off whenever a stack inside has somewhere to go back to, a full-screen section is
+          // open, or the travel chat is open (the edge swipe would open the menu instead of back)
+          const shouldDisableDrawer = drawerSwipeOff(route, FULLSCREEN_SCREENS);
 
           return {
             drawerStyle: styles.drawerStyle,
@@ -1360,9 +1365,7 @@ export default function DrawerNavigator() {
           name="HomeTabs"
           component={HomeStackNavigator}
           options={({ route }) => {
-            const deepestRouteName = getDeepestRouteName(route);
-            const shouldDisableDrawer =
-              deepestRouteName && FULLSCREEN_SCREENS.includes(deepestRouteName);
+            const shouldDisableDrawer = drawerSwipeOff(route, FULLSCREEN_SCREENS);
 
             return {
               headerShown: false,
@@ -1378,74 +1381,8 @@ export default function DrawerNavigator() {
         />
 
         <Drawer.Screen
-          name="Travelling"
-          component={TravelingScreen}
-          options={{ headerShown: false }}
-        />
-
-        <Drawer.Screen
           name="Dashboard"
           component={DashboardStackNavigator}
-          options={{ headerShown: false }}
-        />
-
-        <Drawer.Screen
-          name="SocialStack"
-          component={SocialStackNavigator}
-          options={{ headerShown: false, swipeEnabled: false }}
-        />
-
-        <Drawer.Screen
-          name="Rewards"
-          component={RewardsScreen}
-          options={{ headerShown: false }}
-        />
-
-        <Drawer.Screen
-          name="NotificationSettings"
-          component={NotificationSettingsScreen}
-          options={{ headerShown: false }}
-        />
-
-        <Drawer.Screen
-          name="Points"
-          component={PointsScreen}
-          options={{ headerShown: false }}
-        />
-
-        <Drawer.Screen
-          name="WhyPoints"
-          component={WhyPointsScreen}
-          options={{ headerShown: false }}
-        />
-
-        <Drawer.Screen
-          name="How It Works"
-          component={HowItWorksScreen}
-          options={{ headerShown: false }}
-        />
-
-        <Drawer.Screen
-          name="About"
-          component={AboutScreen}
-          options={{ headerShown: false }}
-        />
-
-        <Drawer.Screen
-          name="Terms & Conditions"
-          component={TermsScreen}
-          options={{ headerShown: false }}
-        />
-
-        <Drawer.Screen
-          name="Privacy Policy"
-          component={PrivacyScreen}
-          options={{ headerShown: false }}
-        />
-
-        <Drawer.Screen
-          name="Disclaimer"
-          component={DisclaimerScreen}
           options={{ headerShown: false }}
         />
       </Drawer.Navigator>

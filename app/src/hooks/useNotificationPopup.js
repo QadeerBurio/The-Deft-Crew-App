@@ -6,6 +6,7 @@ import { playSound } from '../lib/soundManager';
 import { styleNotification } from '../utils/notificationStyle';
 import { navigationRef } from '../navigation/navigationRef';
 import { jobTarget } from '../utils/jobRoutes';
+import { navigateAnywhere } from "../navigation/routes";
 
 export const useNotificationPopup = () => {
   const { token, updateUnreadCount } = useContext(AuthContext);
@@ -84,7 +85,7 @@ export const useNotificationPopup = () => {
           try {
             // job notifications (old names TDCCareers / MyApplications included) open the job
             const t = jobTarget(route, params, data);
-            navigationRef.navigate(t.route, t.params);
+            navigateAnywhere(navigationRef, t.route, t.params);
             console.log('[useNotificationPopup] navigated →', t.route, t.params);
           } catch (e) {
             console.warn('[useNotificationPopup] nav failed:', e.message);

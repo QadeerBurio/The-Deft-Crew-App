@@ -12,6 +12,7 @@ import { StackActions } from "@react-navigation/native";
 import { navigationRef } from "../navigation/navigationRef";
 import { setGuestMode as setApiGuestMode } from "../api/api";
 import { setGuestMode as setBrandGuestMode } from "../api/brandApi";
+import { navigateAnywhere } from "../navigation/routes";
 
 export const LOGIN_ONLY_ROUTES = new Set([
   // discounts / profile / rewards
@@ -102,7 +103,7 @@ export function takePendingTarget() {
 function navigateSoon(route, params, attempt = 0) {
   if (navigationRef.isReady()) {
     try {
-      navigationRef.navigate(route, params);
+      navigateAnywhere(navigationRef, route, params);
     } catch (e) {
       console.warn(`[guest] navigate("${route}") failed:`, e?.message);
     }

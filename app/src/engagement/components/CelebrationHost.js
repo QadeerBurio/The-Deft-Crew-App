@@ -9,6 +9,7 @@ import FullySortedCelebration from './FullySortedCelebration';
 import { useCelebrationQueue } from '../hooks/useCelebrationQueue';
 import { navigationRef } from '../../navigation/navigationRef';
 import { holdTour, releaseTour } from '../tour/tourGate';
+import { navigateAnywhere } from "../../navigation/routes";
 
 const EXIT_DELAY_MS = 400;   // delay before allowing the next popup to mount
 
@@ -53,10 +54,7 @@ export default function CelebrationHost() {
   const routeTo = () => {
     try {
       if (activePopup.cta?.route && navigationRef.isReady?.()) {
-        navigationRef.navigate(
-          activePopup.cta.route,
-          activePopup.cta.params || {}
-        );
+        navigateAnywhere(navigationRef, activePopup.cta.route, activePopup.cta.params || {});
       }
     } catch (e) {
       console.log('[CelebrationHost] navigate error:', e?.message);

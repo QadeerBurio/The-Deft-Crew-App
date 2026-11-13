@@ -24,6 +24,7 @@ import engagementApi from '../api/engagementApi';
 import { pop, success } from '../utils/haptics';
 import { navigationRef } from '../../navigation/navigationRef';
 import { color as T, font as F, MAX_FONT_SCALE } from '../../theme/tokens';
+import { navigateAnywhere } from "../../navigation/routes";
 
 const GOLD = '#f9c349';
 const GOLD_DARK = '#e0a82e';
@@ -234,7 +235,7 @@ export default function DailyDropCard({ variant } = {}) {
     const params = target.params || {};
     try {
       if (navigationRef.isReady()) {
-        navigationRef.navigate(target.route, params);
+        navigateAnywhere(navigationRef, target.route, params);
       } else {
         navigation.navigate(target.route, params);
       }

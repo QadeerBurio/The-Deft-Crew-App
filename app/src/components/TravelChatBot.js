@@ -6,7 +6,7 @@ import {
   Dimensions, Animated, ActivityIndicator,
   Share, Keyboard, Linking, Image, Easing, ScrollView,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -227,6 +227,7 @@ const TypingIndicator = () => {
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────
 const TravelChatBot = forwardRef((props, ref) => {
+  const { onOpenChange } = props || {};
   const insets = useSafeAreaInsets();
   const { token, isGuest } = useContext(AuthContext);
   const { requireAccount } = useGuestGate();
@@ -242,7 +243,6 @@ const TravelChatBot = forwardRef((props, ref) => {
 
   // Animation References
   const fabPulse = useRef(new Animated.Value(1)).current;
-  const modalSlide = useRef(new Animated.Value(height)).current;
   const mascotFloatY = useRef(new Animated.Value(0)).current;
   const mascotScale = useRef(new Animated.Value(1)).current;
   const sparklesRotation = useRef(new Animated.Value(0)).current;
@@ -348,12 +348,6 @@ const TravelChatBot = forwardRef((props, ref) => {
     if (!requireAccount()) return; // AI chat needs an account
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsOpen(true);
-    Animated.spring(modalSlide, {
-      toValue: 0,
-      useNativeDriver: true,
-      tension: 65,
-      friction: 11,
-    }).start();
   }, [requireAccount]);
 
   // the answer being streamed right now: { xhr, stop(note) }
@@ -364,16 +358,11 @@ const TravelChatBot = forwardRef((props, ref) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Keyboard.dismiss();
     streamRef.current?.stop(); // closing the chat ends the answer and frees the input
-    Animated.timing(modalSlide, {
-      toValue: height,
-      duration: 250,
-      easing: Easing.in(Easing.cubic),
-      useNativeDriver: true,
-    }).start(() => {
-      setIsOpen(false);
-      modalSlide.setValue(height);
-    });
+    setIsOpen(false); // the modal slides itself out
   }, []);
+
+  // the screen hears when the chat opens / closes (the menu's edge swipe is off while it's open)
+  useEffect(() => { onOpenChange?.(isOpen); }, [isOpen]);
 
   const startNewTrip = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -755,16 +744,19 @@ const TravelChatBot = forwardRef((props, ref) => {
       )}
 
       {/* ── CHAT MODAL ─────────────────────────────────────────────── */}
+      {/* A full-screen modal with the system slide. The header is padded by the phone's insets
+          (notch / Dynamic Island / status bar), read from the app's provider: a SafeAreaView
+          measured while the old sheet was still off-screen got 0 and put the back button under
+          the status bar on iPhone. The input bar adds the bottom inset itself. */}
       <Modal
         visible={isOpen}
-        animationType="none"
-        transparent
+        animationType="slide"
+        presentationStyle="fullScreen"
         statusBarTranslucent
         onRequestClose={closeChat}
       >
-        <View style={styles.modalBackdrop}>
-          <Animated.View style={[styles.modalContainer, { transform: [{ translateY: modalSlide }] }]}>
-            <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+        <View style={styles.modalContainer}>
+            <View style={[styles.safeArea, { paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right }]}>
               <KeyboardAvoidingView
                 style={styles.flex}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -927,8 +919,7 @@ const TravelChatBot = forwardRef((props, ref) => {
                   <Text style={styles.footNote}>tdc ai plans it. you book it.</Text>
                 </View>
               </KeyboardAvoidingView>
-            </SafeAreaView>
-          </Animated.View>
+            </View>
         </View>
       </Modal>
     </>
