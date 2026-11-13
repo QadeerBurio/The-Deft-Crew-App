@@ -113,15 +113,27 @@ function FieldInput({ field, value, onChange, error }) {
           <Ionicons name={mode === "date" ? "calendar-outline" : "time-outline"} size={18} color={T.ink} />
         </Pressable>
         {picker && (
-          <DateTimePicker
-            value={toDate(value, mode)}
-            mode={mode}
-            is24Hour
-            onChange={(e, d) => {
-              setPicker(Platform.OS === "ios");
-              if (e.type === "set" && d) onChange(mode === "date" ? ymd(d) : hm(d));
-            }}
-          />
+          <View style={Platform.OS === "ios" ? s.iosPickerSheet : null}>
+            {Platform.OS === "ios" && (
+              <View style={s.iosPickerBar}>
+                <TouchableOpacity onPress={() => setPicker(false)} style={s.iosPickerDone} accessibilityRole="button" accessibilityLabel={`done picking ${lbl}`}>
+                  <Text style={s.iosPickerDoneText} maxFontSizeMultiplier={MAX_FONT_SCALE}>done</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            <DateTimePicker
+              value={toDate(value, mode)}
+              mode={mode}
+              is24Hour
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              themeVariant="light"
+              textColor={T.ink}
+              onChange={(e, d) => {
+                setPicker(Platform.OS === "ios"); // iOS: stays until "done"; Android: the dialog closed
+                if (e.type === "set" && d) onChange(mode === "date" ? ymd(d) : hm(d));
+              }}
+            />
+          </View>
         )}
         <Err text={error} />
       </View>
@@ -717,6 +729,12 @@ export function ProofSheet({ registration, event, token, onClose, onSent }) {
 }
 
 const s = StyleSheet.create({
+  // iOS date / time picker: a spinner sheet with a done bar. Light variant and ink text: app.json
+  // forces the dark system style, which drew light wheel text on this light sheet.
+  iosPickerSheet: { backgroundColor: T.card, borderTopWidth: 1, borderColor: T.line, borderRadius: 16, marginTop: 8, overflow: 'hidden' },
+  iosPickerBar: { flexDirection: 'row', justifyContent: 'flex-end', borderBottomWidth: 1, borderColor: T.line },
+  iosPickerDone: { minHeight: 44, minWidth: 64, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
+  iosPickerDoneText: { color: T.ink, fontSize: 16, fontWeight: '700' },
   screen: { flex: 1, backgroundColor: T.paper },
   header: { flexDirection: "row", alignItems: "flex-start", gap: 8, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 8 },
   iconBtn: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: T.card, borderWidth: 1, borderColor: T.line },

@@ -11,12 +11,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
-  SafeAreaView,
   Animated,
   Dimensions,
   StatusBar,
   Vibration,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "../ui/FlatGradient"; // flat fills, no gradients (design system)
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { AuthContext } from "../context/AuthContext";
