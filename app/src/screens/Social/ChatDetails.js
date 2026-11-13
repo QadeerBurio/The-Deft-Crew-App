@@ -19,7 +19,7 @@ import * as Haptics from 'expo-haptics';
 
 import { color as T, font as F } from "../../theme/tokens";
 import { HeaderIconButton, EmptyState, SkeletonBlock } from "../../ui";
-import { plainText } from "../../utils/plainError";
+import { plainText, plainError } from "../../utils/plainError";
 import { copyToClipboard } from '../../utils/clipboard';
 import { SERVER_ORIGIN } from "../../config/server";
 import { TIMEOUT } from "../../config/timeouts";
@@ -403,7 +403,8 @@ export default function ChatDetailScreen() {
       setMessages(Array.isArray(res.data) ? res.data : []);
       setTimeout(() => scrollToEnd(false), 100);
     } catch (err) {
-      console.error("Fetch Error:", err);
+      console.warn("[chat] messages not loaded:", err?.message);
+      Alert.alert("couldn't load the messages", plainError(err, "please go back and open the chat again."));
     } finally {
       setLoading(false);
     }
@@ -490,7 +491,7 @@ export default function ChatDetailScreen() {
         isRecordingRef.current = false;
         try {
           stale.stopAndUnloadAsync();
-        } catch (e) {}
+        } catch (e) { console.warn("[chat] cleanup failed:", e?.message || e); }
       }
 
       // Reset flags so next mount works cleanly
@@ -712,7 +713,7 @@ export default function ChatDetailScreen() {
       if (recordingRef.current) {
         try {
           await recordingRef.current.stopAndUnloadAsync();
-        } catch (e) {}
+        } catch (e) { console.warn("[chat] stopping the previous recording failed:", e?.message || e); }
         recordingRef.current = null;
       }
 
@@ -755,7 +756,7 @@ export default function ChatDetailScreen() {
           shouldDuckAndroid: true,
           playThroughEarpieceAndroid: false,
         });
-      } catch (e) {}
+      } catch (e) { console.warn("[chat] setting the audio mode failed:", e?.message || e); }
 
       isRecordingRef.current = false;
       recordingRef.current = null;
@@ -793,7 +794,7 @@ export default function ChatDetailScreen() {
           shouldDuckAndroid: true,
           playThroughEarpieceAndroid: false,
         });
-      } catch (e) {}
+      } catch (e) { console.warn("[chat] resetting the audio mode failed:", e?.message || e); }
     };
 
     const cleanupPromise = (async () => {
@@ -849,7 +850,8 @@ export default function ChatDetailScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (uploadErr) {
-      console.error('[Recording] upload/send error:', uploadErr);
+      console.warn('[chat] voice message not sent:', uploadErr?.message);
+      Alert.alert("voice message not sent", plainError(uploadErr, "please record it again."));
     }
 
     setRecordingDuration(0);

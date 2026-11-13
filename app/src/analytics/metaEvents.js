@@ -106,8 +106,8 @@ const state = {
 };
 let stopWatch = null; // the 5-minute switch check while the app is open
 const listeners = new Set();
-const notify = () => listeners.forEach((fn) => { try { fn(); } catch {} });
-const warn = (...a) => { try { console.warn("[meta]", ...a); } catch {} };
+const notify = () => listeners.forEach((fn) => { try { fn(); } catch { /* nothing useful to log here */ } });
+const warn = (...a) => { try { console.warn("[meta]", ...a); } catch { /* nothing useful to log here */ } };
 
 async function read(key, fallback) {
   try {
@@ -121,7 +121,7 @@ async function write(key, value) {
   try {
     if (value == null) await deps.storage.removeItem(key);
     else await deps.storage.setItem(key, JSON.stringify(value));
-  } catch {}
+  } catch (e) { console.warn("[meta] saving consent state failed:", e?.message || e); }
 }
 
 function sdk() {
@@ -195,7 +195,7 @@ function stop() {
     s?.Settings?.setAutoLogAppEventsEnabled(false);
     if (isIOS()) s?.Settings?.setAdvertiserTrackingEnabled?.(false);
     s?.Settings?.setAdvertiserIDCollectionEnabled(false);
-  } catch {}
+  } catch (e) { console.warn("[meta] reading the tracking setting failed:", e?.message || e); }
 }
 
 async function applyState() {
@@ -498,7 +498,7 @@ export const _test = {
   FLAGS_EVERY,
   reset: () => {
     Object.assign(state, { userId: null, consent: null, remote: false, flagsAt: 0, started: false, tracking: null, activated: false, sent: null, sdk: undefined });
-    if (stopWatch) { try { stopWatch(); } catch {} }
+    if (stopWatch) { try { stopWatch(); } catch { /* nothing useful to log here */ } }
     stopWatch = null;
     config.manualActivate = false;
     listeners.clear();
