@@ -13,9 +13,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Dimensions,
-  SafeAreaView
+  Dimensions
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
