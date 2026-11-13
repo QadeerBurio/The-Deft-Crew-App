@@ -15,6 +15,7 @@ import axios from "axios";
 import { color as T, font as F } from "../../theme/tokens";
 import { ScreenHeader } from "../../ui";
 import { SERVER_ORIGIN } from "../../config/server";
+import { fetchWithTimeout } from "../../config/timeouts";
 const API_URL = `${SERVER_ORIGIN}/api/social`; 
 const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/decaxpera/auto/upload";
 const UPLOAD_PRESET = "tdc_profiles";
@@ -94,7 +95,7 @@ export default function EditProfileScreen({ navigation }) {
       });
       data.append("upload_preset", UPLOAD_PRESET);
 
-      const res = await fetch(CLOUDINARY_URL, { method: "POST", body: data });
+      const res = await fetchWithTimeout(CLOUDINARY_URL, { method: "POST", body: data });
       const json = await res.json();
       if (json.secure_url) {
         setProfileImage(json.secure_url);

@@ -3,6 +3,8 @@
 // Raw technical text (axios "Network Error", "Request failed with status code 500",
 // server stack / database messages, JSON) is never shown.
 
+import { isTimeout, TOO_LONG } from "../config/timeouts";
+
 const CONNECTION = "please check your connection and try again.";
 
 // words that only show up in technical text
@@ -20,6 +22,8 @@ export function plainText(msg, fallback) {
 }
 
 export function plainError(err, fallback = "something went wrong. please try again.") {
+  // ran out of time (axios timeout, fetchWithTimeout, withTimeout, useAction): say so plainly
+  if (isTimeout(err)) return TOO_LONG;
   const res = err?.response;
   if (res) {
     // 4xx messages are written for the user (e.g. "event is full"); 5xx are not

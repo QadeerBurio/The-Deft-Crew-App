@@ -445,7 +445,7 @@ const press = async (node) => { await node.props.onPress(); await tick(40); };
   const src = (f) => fs.readFileSync(path.join(SRC, f), "utf8").replace(/\r\n/g, "\n");
   const conf = src("screens/Social/ConfessionScreen.js");
   ok(/if \(response\.ok\) \{\n\s*const result = await response\.json\(\);\n\s*metaEvents\.confessionCreated\(\);/.test(conf), "ConfessionScreen create: confessionCreated() only inside response.ok, with no arguments");
-  ok(/const res = await fetch\(`\$\{API_URL\}\/confessions\/like\/\$\{id\}`[\s\S]{0,260}if \(res\.ok\) \{\n\s*const data = await res\.json\(\)\.catch\(\(\) => null\);\n\s*if \(data\?\.liked === true\) metaEvents\.socialEngaged\("like"\);/.test(conf), "ConfessionScreen like: only res.ok AND liked === true (unlike/err → nothing)");
+  ok(/const res = await (?:fetch|fetchWithTimeout)\(`\$\{API_URL\}\/confessions\/like\/\$\{id\}`[\s\S]{0,260}if \(res\.ok\) \{\n\s*const data = await res\.json\(\)\.catch\(\(\) => null\);\n\s*if \(data\?\.liked === true\) metaEvents\.socialEngaged\("like"\);/.test(conf), "ConfessionScreen like: only res.ok AND liked === true (unlike/err → nothing)");
   ok(/if \(res\.ok\) \{\n\s*const updated = await res\.json\(\);\n\s*metaEvents\.socialEngaged\("comment"\);/.test(conf), "ConfessionScreen comment: only inside res.ok");
   ok(!/metaEvents\.\w+\([^)]*(\bid\b|_id|text|newConfession|selectedPost)/.test(conf), "ConfessionScreen: no confession id or text passed to any Meta call");
   const det = src("screens/Social/PostDetailScreen.js");

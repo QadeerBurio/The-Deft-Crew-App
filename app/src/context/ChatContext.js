@@ -4,6 +4,7 @@ import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import aiService from '../services/aiService';
 import { metaEvents } from '../analytics/metaEvents';
+import { isTimeout, TOO_LONG } from '../config/timeouts';
 
 export const ChatContext = createContext();
 
@@ -215,7 +216,7 @@ export const ChatProvider = ({ children }) => {
         {
           _id: `error-${Date.now()}`,
           role: 'assistant',
-          message: '❌ Failed to receive completion stream from server. Please retry.',
+          message: isTimeout(err) ? TOO_LONG : '❌ Failed to receive completion stream from server. Please retry.',
           createdAt: new Date(),
           isError: true,
         },

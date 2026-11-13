@@ -5,6 +5,7 @@
 import api, { optimizedAPI } from "../../api/brandApi";
 import { imageUrl, brandLogoUrl, withFixedImages, FALLBACK_IMAGE } from "../../utils/imageUrl";
 import { SERVER_ORIGIN } from "../../config/server";
+import { fetchWithTimeout } from "../../config/timeouts";
 
 // Same value ConfessionScreen.js hard-codes
 const SOCIAL_API_URL = `${SERVER_ORIGIN}/api/social`;
@@ -29,7 +30,7 @@ export const devLogOnce = (label, err) => {
 // The feed endpoint returns the whole feed; the backend needs a light
 // "latest confession" endpoint later.
 export async function fetchLatestConfession(token, signal) {
-  const res = await fetch(`${SOCIAL_API_URL}/confessions/feed?scope=all`, {
+  const res = await fetchWithTimeout(`${SOCIAL_API_URL}/confessions/feed?scope=all`, {
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     signal,
   });

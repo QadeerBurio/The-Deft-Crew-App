@@ -10,6 +10,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system/legacy"; // SDK 54: the old API lives here
 import * as Sharing from "expo-sharing";
 import api, { BASE_URL } from "./api";
+import { TIMEOUT, withTimeout } from "../config/timeouts";
 
 const FLAGS_MAX_AGE = 5 * 60 * 1000;
 let flags = { key: null, at: 0, on: false, pending: null };
@@ -143,7 +144,11 @@ export const lastDraft = () => AsyncStorage.getItem("resumeStudio:lastDraft").ca
 export async function openPdf(pathUnderStudio, name) {
   const token = await AsyncStorage.getItem("token");
   const file = `${FileSystem.cacheDirectory}${String(name).replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 60) || "resume"}.pdf`;
-  const res = await FileSystem.downloadAsync(`${BASE_URL}${B}/${pathUnderStudio}`, file, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  const res = await withTimeout(
+    FileSystem.downloadAsync(`${BASE_URL}${B}/${pathUnderStudio}`, file, { headers: token ? { Authorization: `Bearer ${token}` } : {} }),
+    TIMEOUT.PDF,
+    "pdf download"
+  );
   if (res.status !== 200) throw new Error("couldn't get the pdf, try again");
   if (!(await Sharing.isAvailableAsync())) throw new Error("sharing isn't available on this phone");
   await Sharing.shareAsync(res.uri, { mimeType: "application/pdf", UTI: "com.adobe.pdf", dialogTitle: name });

@@ -28,6 +28,7 @@ import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus
 import { color as T, font as F } from "../../theme/tokens";
 import { metaEvents } from "../../analytics/metaEvents";
 import { SERVER_ORIGIN } from "../../config/server";
+import { fetchWithTimeout } from "../../config/timeouts";
 const { width, height } = Dimensions.get('window');
 const API_URL = `${SERVER_ORIGIN}/api/social`;
 
@@ -200,7 +201,7 @@ export default function CreatePostScreen({ navigation, route }) {
         location: user?.location || "Karachi",
       };
 
-      const response = await fetch(`${API_URL}/create-post`, {
+      const response = await fetchWithTimeout(`${API_URL}/create-post`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

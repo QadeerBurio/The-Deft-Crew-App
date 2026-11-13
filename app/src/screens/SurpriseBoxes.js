@@ -15,6 +15,7 @@ import * as Location from "expo-location";
 import QRCode from "react-native-qrcode-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScreenHeader } from "../ui";
+import useAction from "../hooks/useAction";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { surplusEnabled, surplusApi, newKey, STATE, CASE_REASONS, pkTime } from "../api/surplusApi";
 
@@ -68,6 +69,8 @@ export default function SurpriseBoxes({ route, navigation }) {
       if (!all) setCity(d?.city || null);
     } catch (e) { setListings([]); Alert.alert("couldn't load", e.message); }
   }, [here, allCities]);
+  // one tap at a time: location + list (both report their own errors)
+  const showDistance = useAction(async () => loadList(await locate(true)), { silent: true, name: "show distance" });
   const switchCities = (all) => { setAllCities(all); setListings(null); loadList(here, all); };
   const loadOrders = useCallback(() => surplusApi.myOrders().then(setOrders).catch((e) => { setOrders([]); Alert.alert("couldn't load", e.message); }), []);
   const openOrder = useCallback(async (id) => {
@@ -193,7 +196,7 @@ export default function SurpriseBoxes({ route, navigation }) {
           </TouchableOpacity>
         </View>
       )}
-      {!here && <Button label="show distance" onPress={async () => loadList(await locate(true))} />}
+      {!here && <Button label="show distance" onPress={() => showDistance.run()} disabled={showDistance.running} />}
       {listings === null && <ActivityIndicator color={T.ink} style={{ marginTop: 24 }} accessibilityLabel="loading" />}
       {listings?.length === 0 && <Text style={styles.muted} maxFontSizeMultiplier={M}>{city && !allCities ? `no surprise boxes in ${city} right now. brands list them later in the day, or see all cities.` : "no surprise boxes right now. brands list them later in the day."}</Text>}
       {listings?.map((l) => (

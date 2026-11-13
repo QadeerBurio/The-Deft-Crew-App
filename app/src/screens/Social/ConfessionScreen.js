@@ -38,6 +38,7 @@ import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus
 import { color as T, font as F } from "../../theme/tokens";
 import { metaEvents } from "../../analytics/metaEvents";
 import { SERVER_ORIGIN } from "../../config/server";
+import { fetchWithTimeout } from "../../config/timeouts";
 const { height, width } = Dimensions.get('window');
 const API_URL = `${SERVER_ORIGIN}/api/social`;
 
@@ -286,7 +287,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     // Ref, not state: the 8s poll always uses the tab that is open now
     const requestScope = scopeRef.current;
     try {
-      const response = await fetch(`${API_URL}/confessions/feed?scope=${requestScope}`, {
+      const response = await fetchWithTimeout(`${API_URL}/confessions/feed?scope=${requestScope}`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -334,7 +335,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     try {
       // Fetch the feed the post lives in, or a campus post would vanish
       const postScope = selectedPostRef.current?.visibility === 'campus' ? 'campus' : 'all';
-      const res = await fetch(`${API_URL}/confessions/feed?scope=${postScope}`, {
+      const res = await fetchWithTimeout(`${API_URL}/confessions/feed?scope=${postScope}`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -529,7 +530,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     ));
 
     try {
-      const res = await fetch(`${API_URL}/confessions/like/${id}`, {
+      const res = await fetchWithTimeout(`${API_URL}/confessions/like/${id}`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
@@ -594,7 +595,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     if (mentionSearchTimeout.current) clearTimeout(mentionSearchTimeout.current);
     mentionSearchTimeout.current = setTimeout(async () => {
       try {
-        const res = await fetch(
+        const res = await fetchWithTimeout(
           `${API_URL}/users/mention-search?q=${encodeURIComponent(afterAt)}`,
           { headers: { 'Authorization': `Bearer ${token}` } }
         );
@@ -671,7 +672,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     if (replyTo?.commentId) payload.parentComment = replyTo.commentId;
 
     try {
-      const res = await fetch(`${API_URL}/confessions/comment/${selectedPost._id}`, {
+      const res = await fetchWithTimeout(`${API_URL}/confessions/comment/${selectedPost._id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(payload)
@@ -723,7 +724,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
           style: "destructive",
           onPress: async () => {
             try {
-              const res = await fetch(
+              const res = await fetchWithTimeout(
                 `${API_URL}/confessions/comment/${selectedPost._id}/${comment._id}`,
                 { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }
               );
@@ -753,7 +754,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     const data = new FormData();
     data.append("file", { uri: fileUri, name: 'upload.jpg', type: 'image/jpeg' });
     data.append("upload_preset", "tdc_profiles");
-    const res = await fetch("https://api.cloudinary.com/v1_1/decaxpera/image/upload", { method: "POST", body: data });
+    const res = await fetchWithTimeout("https://api.cloudinary.com/v1_1/decaxpera/image/upload", { method: "POST", body: data });
     const json = await res.json();
     return json.secure_url;
   };
@@ -773,7 +774,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
       let imageUrl = "";
       if (selectedImage) imageUrl = await uploadToCloudinary(selectedImage);
 
-      const response = await fetch(`${API_URL}/confessions/create`, {
+      const response = await fetchWithTimeout(`${API_URL}/confessions/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ text: newConfession.trim(), image: imageUrl, visibility: postVisibility })

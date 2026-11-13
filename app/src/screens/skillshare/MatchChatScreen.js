@@ -35,6 +35,7 @@ import ImagePreviewModal from '../../../../components/media/ImagePreviewModal';
 
 import { color as T, font as F } from "../../theme/tokens";
 import { SERVER_ORIGIN } from "../../config/server";
+import { fetchWithTimeout } from "../../config/timeouts";
 // ==================== DESIGN TOKENS ====================
 const C = {
   white: T.white,
@@ -402,7 +403,7 @@ export default function MatchChatScreen({ route, navigation }) {
     if (!conversationId || !userId || userId === 'guest-user') return;
     try {
       const storedToken = await AsyncStorage.getItem('token');
-      const response = await fetch(`${SOCKET_URL}/api/chat/messages/${conversationId}`, {
+      const response = await fetchWithTimeout(`${SOCKET_URL}/api/chat/messages/${conversationId}`, {
         headers: { Authorization: `Bearer ${storedToken || token}` },
       });
       if (response.ok) {

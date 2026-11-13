@@ -49,6 +49,7 @@ import StreakSheet from '../engagement/components/StreakSheet';
 
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { APP_VERSION } from "../utils/appVersion";
+import { fetchWithTimeout } from "../config/timeouts";
 const { width, height } = Dimensions.get("window");
 
 // ─── Modern Menu Item ────────────────────────────────────────────────────────
@@ -287,7 +288,7 @@ export default function ProfileScreen() {
       data.append("file", { uri: selectedImage, name: filename, type });
       data.append("upload_preset", "tdc_profiles");
 
-      const uploadRes = await fetch(
+      const uploadRes = await fetchWithTimeout(
         "https://api.cloudinary.com/v1_1/decaxpera/image/upload",
         { method: "POST", body: data }
       );
