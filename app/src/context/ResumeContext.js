@@ -1,10 +1,15 @@
 // app/src/context/ResumeContext.js
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, Platform } from 'react-native';
 import resumeApi from '../api/resumeApi';
 import { metaEvents } from '../analytics/metaEvents';
 import { AuthContext } from './AuthContext';
+import { runInGroup } from '../hooks/useAction';
+import { plainError } from '../utils/plainError';
+
+export const ACCOUNT_LIMIT_MSG = 'You have used all 2 resume creations available for your account. Deleting a resume will not restore your creation limit.';
+export const GUEST_LIMIT_MSG = 'You have used all 2 resume creations available for guest mode. Deleting a resume will not restore your creation limit.';
 
 const getErrorMessage = (error, defaultMsg = 'An error occurred') => {
   if (error.response?.data?.error) {
@@ -20,20 +25,58 @@ export const ResumeContext = createContext();
 
 export default function ResumeProvider({ children }) {
   const { token, isGuest, user } = useContext(AuthContext);
-  const [resumes, setResumes] = useState([]);
-  const [currentResume, setCurrentResume] = useState(null);
+  const [resumes, setResumesState] = useState([]);
+  const [currentResume, setCurrentResumeState] = useState(null);
   const [creationsUsed, setCreationsUsed] = useState(0);
-  const [loading, setLoading] = useState(false);
+  // what is running, per action: { fetch: 1, "update:<id>": 1, ... } (never one flag for everything)
+  const [pending, setPending] = useState({});
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
   const [initialized, setInitialized] = useState(false);
 
-  // Fetch all resumes
-  const fetchResumes = async (force = true) => {
-    try {
-      setLoading(true);
-      setError(null);
+  // The latest list / open resume, readable inside queued saves (state in a closure can be stale)
+  const resumesRef = useRef([]);
+  const currentRef = useRef(null);
+  const setResumes = useCallback((next) => {
+    const value = typeof next === 'function' ? next(resumesRef.current) : next;
+    resumesRef.current = Array.isArray(value) ? value : [];
+    setResumesState(resumesRef.current);
+  }, []);
+  const setCurrentResume = useCallback((next) => {
+    const value = typeof next === 'function' ? next(currentRef.current) : next;
+    currentRef.current = value || null;
+    setCurrentResumeState(currentRef.current);
+  }, []);
+  // put one changed resume everywhere it is shown
+  const replaceResume = useCallback((updated) => {
+    if (!updated?._id) return;
+    setResumes((list) => list.map((r) => (r._id === updated._id ? updated : r)));
+    setCurrentResume((cur) => (cur?._id === updated._id ? updated : cur));
+  }, [setResumes, setCurrentResume]);
 
+  const begin = useCallback((key) => setPending((p) => ({ ...p, [key]: (p[key] || 0) + 1 })), []);
+  const end = useCallback((key) => setPending((p) => {
+    const n = (p[key] || 0) - 1;
+    const next = { ...p };
+    if (n > 0) next[key] = n; else delete next[key];
+    return next;
+  }), []);
+  const track = useCallback(async (key, work) => {
+    begin(key);
+    try { return await work(); } finally { end(key); }
+  }, [begin, end]);
+  /** is an action running? isPending("update", id) / isPending("fetch") */
+  const isPending = useCallback((action, id) => !!pending[id ? `${action}:${id}` : action], [pending]);
+
+  const persistGuest = async (list) => {
+    try { await AsyncStorage.setItem('guestResumes', JSON.stringify(list)); }
+    catch (e) { console.warn('[resume] guest save failed:', e?.message); }
+  };
+
+  // Fetch all resumes. A failed refresh keeps the list the student already sees.
+  const fetchResumes = async (force = true) => track('fetch', async () => {
+    try {
+      setError(null);
       if (isGuest) {
         const storedResumes = await AsyncStorage.getItem('guestResumes');
         const storedCreations = await AsyncStorage.getItem('guestCreationsUsed');
@@ -41,56 +84,51 @@ export default function ResumeProvider({ children }) {
         const usedCount = storedCreations ? parseInt(storedCreations, 10) : (Array.isArray(parsedResumes) ? parsedResumes.length : 0);
         setResumes(Array.isArray(parsedResumes) ? parsedResumes : []);
         setCreationsUsed(usedCount);
-        setInitialized(true);
-        setLoading(false);
-        return;
+        return true;
       }
-
       if (!token) {
         setResumes([]);
         setCreationsUsed(0);
-        setInitialized(true);
-        setLoading(false);
-        return;
+        return true;
       }
-
       const response = await resumeApi.getResumes(force);
       if (response?.success) {
         setResumes(Array.isArray(response.data) ? response.data : []);
         setCreationsUsed(response.creationsUsed !== undefined ? response.creationsUsed : (response.data?.length || 0));
-      } else {
-        setResumes([]);
+        return true;
       }
-    } catch (error) {
-      console.error('Fetch resumes error:', error);
-      setError(getErrorMessage(error, 'Failed to fetch resumes'));
-      setResumes([]);
+      setError('Failed to fetch resumes');
+      return false;
+    } catch (err) {
+      console.warn('[resume] refresh failed, keeping the last list:', err?.message);
+      setError(getErrorMessage(err, 'Failed to fetch resumes'));
+      return false;
     } finally {
-      setLoading(false);
       setInitialized(true);
     }
-  };
+  });
 
-  // Create new resume
-  const createResume = async (resumeData = {}) => {
+  const isLimitError = (err) =>
+    err?.code === 'RESUME_LIMIT' ||
+    err?.response?.data?.code === 'RESUME_CREATION_LIMIT_REACHED' ||
+    err?.response?.data?.code === 'RESUME_LIMIT_REACHED' ||
+    String(err?.response?.data?.error || '').includes('resume creations') ||
+    String(err?.message || '').includes('resume creations');
+
+  // Create new resume. At the limit it throws an error with code RESUME_LIMIT;
+  // { alert: false } lets the screen show its own message.
+  const createResume = async (resumeData = {}, { alert = true } = {}) => track('create', async () => {
     try {
-      setLoading(true);
       setError(null);
-
       if (isGuest) {
         const storedResumes = await AsyncStorage.getItem('guestResumes');
         const storedCreations = await AsyncStorage.getItem('guestCreationsUsed');
         const parsed = storedResumes ? JSON.parse(storedResumes) : [];
         const guestList = Array.isArray(parsed) ? parsed : [];
         const usedCount = storedCreations ? parseInt(storedCreations, 10) : guestList.length;
-
         if (usedCount >= 2) {
-          const limitMsg = 'You have used all 2 resume creations available for guest mode. Deleting a resume will not restore your creation limit.';
-          Alert.alert('Resume Creation Limit Reached ⚠️', limitMsg);
-          setLoading(false);
-          throw new Error(limitMsg);
+          throw Object.assign(new Error(GUEST_LIMIT_MSG), { code: 'RESUME_LIMIT' });
         }
-
         const newResume = {
           _id: `guest_${Date.now()}`,
           isGuest: true,
@@ -117,129 +155,88 @@ export default function ResumeProvider({ children }) {
           targetJobs: resumeData.targetJobs || [],
           targetJob: resumeData.targetJob || {},
         };
-
         const updatedResumes = [...guestList, newResume];
-        const newUsedCount = usedCount + 1;
         setResumes(updatedResumes);
-        setCreationsUsed(newUsedCount);
-        await AsyncStorage.setItem('guestResumes', JSON.stringify(updatedResumes));
-        await AsyncStorage.setItem('guestCreationsUsed', String(newUsedCount));
+        setCreationsUsed(usedCount + 1);
+        await persistGuest(updatedResumes);
+        await AsyncStorage.setItem('guestCreationsUsed', String(usedCount + 1));
         setCurrentResume(newResume);
-        setLoading(false);
         return newResume;
       }
 
       const response = await resumeApi.createResume(resumeData);
       if (response?.success) {
         const newResume = response.data;
-        setResumes([newResume, ...resumes]);
-        setCreationsUsed(prev => prev + 1);
+        setResumes((list) => [newResume, ...list]);
+        setCreationsUsed((prev) => prev + 1);
         setCurrentResume(newResume);
-        setLoading(false);
         return newResume;
       }
-      setLoading(false);
       return null;
-    } catch (error) {
-      console.error('Create resume error:', error);
-      const isLimit = error?.response?.data?.code === 'RESUME_CREATION_LIMIT_REACHED' || 
-                      error?.response?.data?.code === 'RESUME_LIMIT_REACHED' || 
-                      error?.response?.data?.error?.includes('resume creations') ||
-                      error?.message?.includes('resume creations');
-      const title = isLimit ? 'Resume Creation Limit Reached ⚠️' : 'Error';
-      const errMsg = isLimit 
-        ? 'You have used all 2 resume creations available for your account. Deleting a resume will not restore your creation limit.' 
-        : getErrorMessage(error, 'Failed to create resume');
-      setError(errMsg);
-      setLoading(false);
-      Alert.alert(title, errMsg);
-      throw new Error(errMsg);
+    } catch (err) {
+      const limit = isLimitError(err);
+      const msg = limit ? (isGuest ? GUEST_LIMIT_MSG : ACCOUNT_LIMIT_MSG) : getErrorMessage(err, 'Failed to create resume');
+      setError(msg);
+      if (alert) Alert.alert(limit ? 'Resume Creation Limit Reached ⚠️' : 'Error', limit ? msg : plainError(err, "couldn't create the resume. please try again."));
+      if (limit) err.code = 'RESUME_LIMIT';
+      throw err;
     }
-  };
+  });
 
-  // Update resume
+  // Update resume: only the sent fields change on the server. Saves of one resume run one after
+  // another; `updates` may be a function of the latest saved resume (computed when the save runs),
+  // so two quick edits never overwrite each other. Returns the saved resume.
   const updateResume = async (resumeId, updates) => {
+    begin(`update:${resumeId}`);
     try {
-      setLoading(true);
-      setError(null);
-
-      if (isGuest) {
-        const updatedResumes = resumes.map(r => {
-          if (r._id === resumeId) {
-            return { ...r, ...updates, updatedAt: new Date().toISOString() };
-          }
-          return r;
-        });
-        setResumes(updatedResumes);
-        await AsyncStorage.setItem('guestResumes', JSON.stringify(updatedResumes));
-        if (currentResume?._id === resumeId) {
-          const updated = updatedResumes.find(r => r._id === resumeId);
-          setCurrentResume(updated || null);
+      return await runInGroup(`resume:${resumeId}`, async () => {
+        const latest = resumesRef.current.find((r) => r._id === resumeId) || (currentRef.current?._id === resumeId ? currentRef.current : null);
+        const changes = typeof updates === 'function' ? updates(latest) : updates;
+        if (!changes || Object.keys(changes).length === 0) return latest;
+        setError(null);
+        if (isGuest || String(resumeId).startsWith('guest_')) {
+          const base = latest || {};
+          const updated = { ...base, ...changes, updatedAt: new Date().toISOString() };
+          replaceResume(updated);
+          await persistGuest(resumesRef.current);
+          return updated;
         }
-        setLoading(false);
-        return updatedResumes.find(r => r._id === resumeId);
-      }
-
-      const response = await resumeApi.updateResume(resumeId, updates);
-      if (response?.success) {
-        const updatedResume = response.data;
-        setResumes(resumes.map(r => r._id === resumeId ? updatedResume : r));
-        if (currentResume?._id === resumeId) {
-          setCurrentResume(updatedResume);
+        const response = await resumeApi.updateResume(resumeId, changes);
+        if (response?.success && response.data) {
+          replaceResume(response.data);
+          return response.data;
         }
-        setLoading(false);
-        return updatedResume;
-      }
-      setLoading(false);
-      return null;
-    } catch (error) {
-      console.error('Update resume error:', error);
-      const errMsg = getErrorMessage(error, 'Failed to update resume');
-      setError(errMsg);
-      setLoading(false);
-      throw new Error(errMsg);
+        return null;
+      });
+    } catch (err) {
+      console.warn('[resume] update failed:', err?.message);
+      setError(getErrorMessage(err, 'Failed to update resume'));
+      throw err;
+    } finally {
+      end(`update:${resumeId}`);
     }
   };
 
   // Delete resume
-  const deleteResume = async (resumeId) => {
+  const deleteResume = async (resumeId) => track(`delete:${resumeId}`, async () => {
     try {
-      setLoading(true);
       setError(null);
-
-      if (isGuest) {
-        const updatedResumes = resumes.filter(r => r._id !== resumeId);
-        setResumes(updatedResumes);
-        await AsyncStorage.setItem('guestResumes', JSON.stringify(updatedResumes));
-        if (currentResume?._id === resumeId) {
-          setCurrentResume(updatedResumes.length > 0 ? updatedResumes[0] : null);
-        }
-        setLoading(false);
-        return;
-      }
-
-      await resumeApi.deleteResume(resumeId);
-      const updatedResumes = resumes.filter(r => r._id !== resumeId);
-      setResumes(updatedResumes);
-      if (currentResume?._id === resumeId) {
-        setCurrentResume(updatedResumes.length > 0 ? updatedResumes[0] : null);
-      }
-      setLoading(false);
-    } catch (error) {
-      console.error('Delete resume error:', error);
-      const errMsg = getErrorMessage(error, 'Failed to delete resume');
-      setError(errMsg);
-      setLoading(false);
-      throw new Error(errMsg);
+      if (!isGuest) await resumeApi.deleteResume(resumeId);
+      setResumes((list) => list.filter((r) => r._id !== resumeId));
+      setCurrentResume((cur) => (cur?._id === resumeId ? (resumesRef.current[0] || null) : cur));
+      if (isGuest) await persistGuest(resumesRef.current);
+    } catch (err) {
+      console.warn('[resume] delete failed:', err?.message);
+      setError(getErrorMessage(err, 'Failed to delete resume'));
+      throw err;
     }
-  };
+  });
 
 
 
   // Upload and parse resume
-  const uploadResume = async (file) => {
+  const uploadResume = async (file) => track('upload', async () => {
     try {
-      setLoading(true);
       setError(null);
       setUploadProgress(0);
 
@@ -308,11 +305,9 @@ export default function ResumeProvider({ children }) {
           viewsHistory: []
         };
 
-        const updatedResumes = [...resumes, newResume];
-        setResumes(updatedResumes);
-        await AsyncStorage.setItem('guestResumes', JSON.stringify(updatedResumes));
+        setResumes((list) => [...list, newResume]);
+        await persistGuest(resumesRef.current);
         setCurrentResume(newResume);
-        setLoading(false);
         setUploadProgress(100);
         return newResume;
       }
@@ -353,9 +348,8 @@ export default function ResumeProvider({ children }) {
         const newResume = response.data;
         // AI made a resume from the uploaded CV
         metaEvents.aiResumeCreated(newResume?._id, 'upload_parse');
-        setResumes([newResume, ...resumes]);
+        setResumes((list) => [newResume, ...list]);
         setCurrentResume(newResume);
-        setLoading(false);
         setUploadProgress(100);
 
         // Notify user about missing critical fields
@@ -379,19 +373,15 @@ export default function ResumeProvider({ children }) {
         return newResume;
       }
 
-      setLoading(false);
       setUploadProgress(0);
       return null;
     } catch (error) {
-      console.error('Upload resume error:', error);
-      const errMsg = getErrorMessage(error, 'Failed to upload resume');
-      setError(errMsg);
-      setLoading(false);
+      console.warn('[resume] upload failed:', error?.message);
+      setError(getErrorMessage(error, 'Failed to upload resume'));
       setUploadProgress(0);
-      Alert.alert('Upload Error', errMsg);
-      throw new Error(errMsg);
+      throw error; // the screen that started the upload shows the message
     }
-  };
+  });
 
   // Get recommended jobs
   // app/src/context/ResumeContext.js - This is already complete
@@ -437,10 +427,7 @@ export default function ResumeProvider({ children }) {
       const response = await resumeApi.updateTemplate(resumeId, template);
       if (response?.success) {
         const updatedResume = response.data;
-        setResumes(resumes.map(r => r._id === resumeId ? updatedResume : r));
-        if (currentResume?._id === resumeId) {
-          setCurrentResume(updatedResume);
-        }
+        replaceResume(updatedResume);
         return updatedResume;
       }
       return null;
@@ -490,7 +477,7 @@ export default function ResumeProvider({ children }) {
 
   // Load resume by ID
   const loadResume = (resumeId) => {
-    const found = resumes.find(r => r._id === resumeId);
+    const found = resumesRef.current.find(r => r._id === resumeId);
     if (found) {
       setCurrentResume(found);
     }
@@ -616,9 +603,8 @@ export default function ResumeProvider({ children }) {
   };
 
   // Optimize resume (Flow C - Instant AI Match)
-  const optimizeResume = async (resumeId, optimizeData) => {
+  const optimizeResume = async (resumeId, optimizeData) => track(`optimize:${resumeId}`, async () => {
     try {
-      setLoading(true);
       setError(null);
 
       const response = await resumeApi.optimizeResume(resumeId, optimizeData);
@@ -626,30 +612,25 @@ export default function ResumeProvider({ children }) {
         const optimizedResume = response.data;
         // AI tailored the resume to a job
         metaEvents.aiResumeCreated(`${resumeId}:${optimizeData?.jobId || ''}`, 'tailor');
-        setResumes(resumes.map(r => r._id === resumeId ? optimizedResume : r));
+        setResumes((list) => list.map(r => r._id === resumeId ? optimizedResume : r));
         setCurrentResume(optimizedResume);
-        setLoading(false);
         return optimizedResume;
       }
-      setLoading(false);
       return null;
     } catch (error) {
-      console.error('Optimize resume context error:', error);
-      const errMsg = getErrorMessage(error, 'Failed to optimize resume');
-      setError(errMsg);
-      setLoading(false);
-      throw new Error(errMsg);
+      console.warn('[resume] tailor failed:', error?.message);
+      setError(getErrorMessage(error, 'Failed to optimize resume'));
+      throw error;
     }
-  };
+  });
 
   // Duplicate resume
-  const duplicateResume = async (resumeId) => {
+  const duplicateResume = async (resumeId) => track(`duplicate:${resumeId}`, async () => {
     try {
-      setLoading(true);
       setError(null);
 
       if (isGuest) {
-        const found = resumes.find(r => r._id === resumeId);
+        const found = resumesRef.current.find(r => r._id === resumeId);
         if (!found) {
           throw new Error('Resume not found');
         }
@@ -666,30 +647,24 @@ export default function ResumeProvider({ children }) {
             firstName: `Copy of ${duplicate.personalInfo.firstName || 'Resume'}`
           };
         }
-        const updatedResumes = [duplicate, ...resumes];
-        setResumes(updatedResumes);
-        await AsyncStorage.setItem('guestResumes', JSON.stringify(updatedResumes));
-        setLoading(false);
+        setResumes((list) => [duplicate, ...list]);
+        await persistGuest(resumesRef.current);
         return duplicate;
       }
 
       const response = await resumeApi.duplicateResume(resumeId);
       if (response?.success) {
         const duplicated = response.data;
-        setResumes([duplicated, ...resumes]);
-        setLoading(false);
+        setResumes((list) => [duplicated, ...list]);
         return duplicated;
       }
-      setLoading(false);
       return null;
     } catch (error) {
-      console.error('Duplicate resume error:', error);
-      const errMsg = getErrorMessage(error, 'Failed to duplicate resume');
-      setError(errMsg);
-      setLoading(false);
-      throw new Error(errMsg);
+      console.warn('[resume] duplicate failed:', error?.message);
+      setError(getErrorMessage(error, 'Failed to duplicate resume'));
+      throw error;
     }
-  };
+  });
 
   // Update the return object with new methods
   return (
@@ -698,7 +673,10 @@ export default function ResumeProvider({ children }) {
         resumes,
         currentResume,
         creationsUsed,
-        loading,
+        // true only while the first list loads and nothing is shown yet; background saves never set it
+        loading: !initialized || (!!pending.fetch && resumes.length === 0),
+        pending,
+        isPending,
         uploadProgress,
         error,
         initialized,
