@@ -1316,7 +1316,7 @@ export default function MyDiscountScreen() {
     }
 
     if (userCache.inFlight) {
-      try { await userCache.inFlight; } catch (_) {}
+      try { await userCache.inFlight; } catch (_) { console.warn("[my discounts] waiting for the profile failed:", _?.message || _); }
       return;
     }
 
@@ -1382,7 +1382,7 @@ export default function MyDiscountScreen() {
         replaceClaimedIds(
           (Array.isArray(offersRes.data) ? offersRes.data : []).map((o) => o._id)
         );
-      } catch (e) {}
+      } catch (e) { console.warn("[my discounts] reading saved discounts failed:", e?.message || e); }
 
       activeCache.offers = offersWithImages;
       activeCache.totalSaved = saved;
@@ -1547,7 +1547,7 @@ export default function MyDiscountScreen() {
       if (!activeUserId || currentUserIdRef.current !== activeUserId) return;
 
       if (event.type === 'offer:claimed' && event.offerId) {
-        try { registerLocalClaim(event.offerId); } catch (e) {}
+        try { registerLocalClaim(event.offerId); } catch (e) { console.warn("[my discounts] marking a claim on this phone failed:", e?.message || e); }
 
         const c = getUserCache(activeUserId);
         if (c) {
@@ -1563,7 +1563,7 @@ export default function MyDiscountScreen() {
       }
 
       if (event.type === 'offer:unclaimed' && event.offerId) {
-        try { unregisterLocalClaim(event.offerId); } catch (e) {}
+        try { unregisterLocalClaim(event.offerId); } catch (e) { console.warn("[my discounts] unmarking a claim on this phone failed:", e?.message || e); }
 
         const c = getUserCache(activeUserId);
         if (c) {
@@ -1613,7 +1613,7 @@ export default function MyDiscountScreen() {
                 soundDealClaimed();       // 🔔 claim sound
                 await api.post(`/offers/claim/${offerId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
                 metaEvents.offerClaimed(offerId);
-                try { registerLocalClaim(offerId); } catch (e) {}
+                try { registerLocalClaim(offerId); } catch (e) { console.warn("[my discounts] marking a claim on this phone failed:", e?.message || e); }
                 const retryResult = await generatePromoCodeForOffer(offerId);
                 if (retryResult) return retryResult;
               } catch (claimErr) {

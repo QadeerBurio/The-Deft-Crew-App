@@ -97,12 +97,12 @@ export function setupAndroidChannels() {
     }
 
     let cleaned = null;
-    try { cleaned = await AsyncStorage.getItem(LEGACY_CLEANED_KEY); } catch {}
+    try { cleaned = await AsyncStorage.getItem(LEGACY_CLEANED_KEY); } catch (e) { console.warn("[push] reading the channel cleanup flag failed:", e?.message || e); }
     if (cleaned !== CHANNEL_SET) {
       for (const id of LEGACY_CHANNELS) {
-        try { await Notifications.deleteNotificationChannelAsync(id); } catch {}
+        try { await Notifications.deleteNotificationChannelAsync(id); } catch (e) { console.warn("[push] removing an old notification channel failed:", e?.message || e); }
       }
-      try { await AsyncStorage.setItem(LEGACY_CLEANED_KEY, CHANNEL_SET); } catch {}
+      try { await AsyncStorage.setItem(LEGACY_CLEANED_KEY, CHANNEL_SET); } catch (e) { console.warn("[push] saving the channel cleanup flag failed:", e?.message || e); }
     }
 
     console.log('[push] android sound channels ready');

@@ -380,7 +380,7 @@ const TravelChatBot = forwardRef((props, ref) => {
   const handleShare = useCallback(async (text) => {
     try {
       await Share.share({ message: text, title: 'TDC Travel Assistant' });
-    } catch {}
+    } catch { /* the share sheet was closed */ }
   }, []);
 
   const scrollToEnd = useCallback(() => {
@@ -482,7 +482,7 @@ const TravelChatBot = forwardRef((props, ref) => {
         ended = true;
         clearTimeout(idleTimer);
         if (streamRef.current?.xhr === xhr) streamRef.current = null;
-        try { xhr.abort(); } catch {}
+        try { xhr.abort(); } catch { /* nothing useful to log here */ }
         setIsStreaming(false);
         setMessages((prev) =>
           prev.map((m) => {
@@ -548,7 +548,7 @@ const TravelChatBot = forwardRef((props, ref) => {
                   );
                   setIsStreaming(false);
                 }
-              } catch {}
+              } catch { /* a frame split across chunks: the rest comes next */ }
             }
           }
         }
@@ -568,7 +568,7 @@ const TravelChatBot = forwardRef((props, ref) => {
                       )
                     );
                   }
-                } catch {}
+                } catch { /* a frame split across chunks: the rest comes next */ }
               }
             }
           }

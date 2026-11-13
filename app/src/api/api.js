@@ -100,12 +100,12 @@ let isGuestMode = false;
 // AuthContext calls this when the logged-in user changes (login, logout,
 // switch account, guest). Drops every cached response of the old user.
 export const notifyUserChanged = () => {
-  try { memoryCache.clear(); } catch {}
-  try { pendingRequests.clear(); } catch {}
+  try { memoryCache.clear(); } catch { /* nothing useful to log here */ }
+  try { pendingRequests.clear(); } catch { /* nothing useful to log here */ }
   try {
     // brandApi has its own cache (Brands / Offer / My Discounts)
     require("./brandApi").notifyUserChanged();
-  } catch {}
+  } catch (e) { console.warn("[api] telling brand data the account changed failed:", e?.message || e); }
 };
 
 // FIXED: Export function to set guest mode

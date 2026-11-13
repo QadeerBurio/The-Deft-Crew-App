@@ -106,7 +106,7 @@ export function AuthProvider({ children }) {
     // ✅ Remove legacy unscoped key (pre-per-user builds)
     try {
       await AsyncStorage.removeItem(LEGACY_CLAIM_KEY);
-    } catch (e) {}
+    } catch (e) { console.warn("[auth] clearing the previous account's data failed:", e?.message || e); }
 
     // Persisted auth storage
     try {
@@ -133,7 +133,7 @@ export function AuthProvider({ children }) {
       setGuestMode(false);
       try {
         await AsyncStorage.multiRemove(["user", "token", "isGuest"]);
-      } catch (_) {}
+      } catch (_) { console.warn("[auth] clearing the session on logout failed:", _?.message || _); }
       isLoggingOutRef.current = false;
     }
   }, [clearAllData]);

@@ -156,7 +156,7 @@ export const hydrateClaimedRegistry = async (userId) => {
     registryOwner = uid || null;
     registryHydrated = true;
 
-    try { await AsyncStorage.removeItem(LEGACY_CLAIMED_IDS_KEY); } catch {}
+    try { await AsyncStorage.removeItem(LEGACY_CLAIMED_IDS_KEY); } catch (e) { console.warn("[offers] removing old claim data failed:", e?.message || e); }
     if (!uid) return;
 
     try {
@@ -180,7 +180,7 @@ export const clearClaimedRegistry = async (userId) => {
   try {
     if (userId) await AsyncStorage.removeItem(storageKeyFor(userId));
     await AsyncStorage.removeItem(LEGACY_CLAIMED_IDS_KEY);
-  } catch {}
+  } catch (e) { console.warn("[offers] clearing old claim data failed:", e?.message || e); }
 };
 
 export const registerLocalClaim = (offerId) => {
@@ -809,7 +809,7 @@ export default function OfferScreen() {
           statsCacheKey,
           JSON.stringify({ data: computedStats, timestamp: Date.now() })
         );
-      } catch (e) {}
+      } catch (e) { console.warn("[offers] saving stats on this phone failed:", e?.message || e); }
     },
     [statsCacheKey]
   );
@@ -880,7 +880,7 @@ export default function OfferScreen() {
             }))
           );
         }
-      } catch {}
+      } catch (e) { console.warn("[offers] loading my profile failed:", e?.message || e); }
 
       if (remoteStats && isMountedRef.current) {
         setStats((prev) =>
@@ -890,8 +890,7 @@ export default function OfferScreen() {
         saveStatsCache(remoteStats);
         emitStatsChanged(remoteStats, initialBrand._id);
       }
-    } catch (err) {
-    } finally {
+    } catch (err) { console.warn("[offers] loading the offer stats failed:", err?.message || err); } finally {
       isStatsFetchingRef.current = false;
     }
   }, [initialBrand?._id, token, isGuest, saveStatsCache]);
@@ -1314,7 +1313,7 @@ export default function OfferScreen() {
           emitOfferClaimed(initialBrand._id, offerId);
           try {
             notifyOfferClaimed(initialBrand._id, offerId, userIdFromToken(token));
-          } catch (e) {}
+          } catch (e) { console.warn("[offers] refreshing after a claim error failed:", e?.message || e); }
           return;
         }
 

@@ -4,6 +4,8 @@ import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import aiService from '../services/aiService';
 import { metaEvents } from '../analytics/metaEvents';
+import { Alert } from 'react-native';
+import { plainError } from '../utils/plainError';
 import { isTimeout, TOO_LONG } from '../config/timeouts';
 
 export const ChatContext = createContext();
@@ -86,6 +88,7 @@ export const ChatProvider = ({ children }) => {
       }
     } catch (err) {
       console.warn('[ai chat] history not loaded:', err?.message);
+      if (seq === viewSeq.current) Alert.alert("couldn't open this chat", plainError(err, 'please try again.'));
     } finally {
       if (seq === viewSeq.current) setHistoryLoading(false);
     }
@@ -250,7 +253,8 @@ export const ChatProvider = ({ children }) => {
         }
       }
     } catch (err) {
-      console.error('deleteSession error:', err.message);
+      console.warn('[ai chat] chat not deleted:', err?.message);
+      Alert.alert('chat not deleted', plainError(err, 'please try again.'));
     }
   };
 
