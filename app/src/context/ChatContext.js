@@ -13,7 +13,10 @@ export const ChatProvider = ({ children }) => {
   const [activeSessionId, setActiveSessionId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // waiting for an answer to start
+  const [historyLoading, setHistoryLoading] = useState(false); // opening a past chat
+  // bumped by every send and every chat switch: an older history answer is dropped
+  const viewSeq = useRef(0);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [offlineQueue, setOfflineQueue] = useState([]);
@@ -64,7 +67,8 @@ export const ChatProvider = ({ children }) => {
 
   const loadSessionDetails = useCallback(async (sessionId) => {
     if (!sessionId) return;
-    setIsLoading(true);
+    const seq = ++viewSeq.current;
+    setHistoryLoading(true);
     try {
       setActiveSessionId(sessionId);
       
@@ -72,6 +76,7 @@ export const ChatProvider = ({ children }) => {
         aiService.getHistory(sessionId),
         aiService.getSuggestions(sessionId),
       ]);
+      if (seq !== viewSeq.current) return; // a message was sent or another chat opened meanwhile
 
       if (historyRes.success) {
         setMessages(historyRes.data);
@@ -80,9 +85,9 @@ export const ChatProvider = ({ children }) => {
         setSuggestions(suggestionsRes.data);
       }
     } catch (err) {
-      console.error('loadSessionDetails error:', err.message);
+      console.warn('[ai chat] history not loaded:', err?.message);
     } finally {
-      setIsLoading(false);
+      if (seq === viewSeq.current) setHistoryLoading(false);
     }
   }, []);
 
@@ -143,6 +148,8 @@ export const ChatProvider = ({ children }) => {
       return;
     }
 
+    viewSeq.current++; // a history still loading must not replace this message
+    setHistoryLoading(false);
     setIsLoading(true);
     setSuggestions([]);
 
@@ -273,6 +280,7 @@ export const ChatProvider = ({ children }) => {
         messages,
         suggestions,
         isLoading,
+        historyLoading,
         isStreaming,
         isOnline,
         loadSessions,

@@ -501,11 +501,14 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
   }, []);
 
   // ============ LIKE — with sound branching ============
+  const likesInFlight = useRef(new Set()); // confession ids with a like request on its way
   const handleLike = useCallback(async (id) => {
     if (!token) {
       soundNope();
       return;
     }
+    if (likesInFlight.current.has(id)) return;
+    likesInFlight.current.add(id);
 
     // Find the current confession to know if we're liking or unliking
     const current = confessions.find(c => c._id === id);
@@ -542,6 +545,8 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     } catch (err) {
       soundError();
       fetchConfessions(false);
+    } finally {
+      likesInFlight.current.delete(id);
     }
   }, [token, confessions, fetchConfessions]);
 
