@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Share,
   Alert,
   TextInput,
@@ -14,6 +13,7 @@ import {
     Linking
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ResumeContext } from '../../context/ResumeContext';
 import { AuthContext } from '../../context/AuthContext';

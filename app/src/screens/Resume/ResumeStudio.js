@@ -17,6 +17,7 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScreenHeader } from "../../ui";
+import useAction from "../../hooks/useAction";
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 import resumeApi from "../../api/resumeApi";
 import { studioEnabled, studioApi, newKey, waitForTailoring, saveDecisions, flushPending, rememberDraft, lastDraft, openPdf } from "../../api/resumeStudioApi";
@@ -68,6 +69,9 @@ export default function ResumeStudio({ route, navigation }) {
   const [enabled, setEnabled] = useState(null);
   const [step, setStep] = useState(params.view === "versions" ? "versions" : "start");
   const [busy, setBusy] = useState(false);
+  // PDFs: one at a time (one share sheet); deletes: one at a time
+  const pdfAction = useAction(async (_c, task) => task(), { errorTitle: "no pdf", fallback: "couldn't get the pdf, try again" });
+  const removeAction = useAction(async (_c, task) => task(), { errorTitle: "not deleted", fallback: "please try again." });
   const [message, setMessage] = useState("");
   // A
   const [resumes, setResumes] = useState([]);
@@ -348,12 +352,12 @@ export default function ResumeStudio({ route, navigation }) {
           })}
           {urduWarning(draft.pdf) && <Text style={styles.warn} accessibilityRole="alert" maxFontSizeMultiplier={M}>{urduWarning(draft.pdf)}</Text>}
           <View style={styles.actions}>
-            <Button label="preview pdf" disabled={busy} onPress={() => confirmExport(draft.pdf, () => openPdf(`drafts/${draft.id}/preview.pdf`, `DRAFT ${draft.target?.title || "resume"}`).catch((e) => Alert.alert("no preview", e.message)))} />
+            <Button label="preview pdf" disabled={busy || pdfAction.running} onPress={() => confirmExport(draft.pdf, () => pdfAction.run(() => openPdf(`drafts/${draft.id}/preview.pdf`, `DRAFT ${draft.target?.title || "resume"}`)))} />
             <Button primary label="continue to approve" disabled={busy || draft.unresolved > 0 || queued} onPress={() => setStep("approve")} />
           </View>
           {draft.unresolved > 0 && <Text style={styles.muted} maxFontSizeMultiplier={M}>accept or reject every change to continue.</Text>}
           <View style={styles.actions}>
-            <Button label="discard this draft" onPress={() => Alert.alert("discard this draft?", "your resume stays as it is.", [{ text: "no" }, { text: "yes", onPress: () => studioApi.deleteDraft(draft.id).then(() => { rememberDraft(""); setDraft(null); setStep("start"); }).catch((e) => Alert.alert("not deleted", e.message)) }])} />
+            <Button label="discard this draft" disabled={removeAction.running} onPress={() => Alert.alert("discard this draft?", "your resume stays as it is.", [{ text: "no" }, { text: "yes", onPress: () => removeAction.run(() => studioApi.deleteDraft(draft.id).then(() => { rememberDraft(""); setDraft(null); setStep("start"); })) }])} />
           </View>
         </View>
       )}
@@ -363,7 +367,7 @@ export default function ResumeStudio({ route, navigation }) {
           <Text style={styles.h1} accessibilityRole="header" maxFontSizeMultiplier={M}>approve this version</Text>
           <Text style={styles.muted} maxFontSizeMultiplier={M}>once approved it never changes. employers you send it to see exactly this version.</Text>
           {urduWarning(draft.pdf) && <Text style={styles.warn} accessibilityRole="alert" maxFontSizeMultiplier={M}>{urduWarning(draft.pdf)}</Text>}
-          <Button label="preview pdf" disabled={busy} onPress={() => confirmExport(draft.pdf, () => openPdf(`drafts/${draft.id}/preview.pdf`, `DRAFT ${draft.target?.title || "resume"}`).catch((e) => Alert.alert("no preview", e.message)))} />
+          <Button label="preview pdf" disabled={busy || pdfAction.running} onPress={() => confirmExport(draft.pdf, () => pdfAction.run(() => openPdf(`drafts/${draft.id}/preview.pdf`, `DRAFT ${draft.target?.title || "resume"}`)))} />
           <Text style={styles.h2} maxFontSizeMultiplier={M}>name</Text>
           <TextInput style={styles.inputLine} value={label} onChangeText={setLabel} placeholder="e.g. frontend developer, bright labs" placeholderTextColor={T.textFaint} accessibilityLabel="version name" maxFontSizeMultiplier={M} />
           <TrueSwitch value={confirmAccurate} onChange={setConfirmAccurate} label="everything in this resume is true" />
@@ -380,7 +384,7 @@ export default function ResumeStudio({ route, navigation }) {
           <Text style={styles.h1} accessibilityRole="header" maxFontSizeMultiplier={M}>approved</Text>
           {version && <Text style={styles.body} maxFontSizeMultiplier={M}>{version.label}</Text>}
           {version && urduWarning(draft?.pdf) && <Text style={styles.warn} accessibilityRole="alert" maxFontSizeMultiplier={M}>{urduWarning(draft.pdf)}</Text>}
-          {version && <Button label="download pdf" onPress={() => confirmExport(draft?.pdf, () => openPdf(`versions/${version.id}/export.pdf`, version.label || "resume").catch((e) => Alert.alert("no pdf", e.message)))} />}
+          {version && <Button label="download pdf" disabled={pdfAction.running} onPress={() => confirmExport(draft?.pdf, () => pdfAction.run(() => openPdf(`versions/${version.id}/export.pdf`, version.label || "resume")))} />}
           {version?.target?.kind === "tdc_job" && application === null && (
             <View style={styles.box}>
               <Text style={styles.body} maxFontSizeMultiplier={M}>you haven't applied for this job yet. apply, then send this version with your application.</Text>
@@ -415,8 +419,8 @@ export default function ResumeStudio({ route, navigation }) {
               <Text style={styles.title} maxFontSizeMultiplier={M}>{v.label || "tailored resume"}</Text>
               <Text style={styles.muted} maxFontSizeMultiplier={M}>{v.target?.kind === "pasted" ? "pasted job" : "tdc job"} · approved {new Date(v.approvedAt).toLocaleDateString()}{v.usedInApplication ? " · sent with an application, kept 2 years" : ""}</Text>
               <View style={styles.actions}>
-                <Button label={`download ${v.label || "version"}`} text="download pdf" onPress={() => studioApi.version(v.id).catch(() => null).then((full) => confirmExport(full?.pdf, () => openPdf(`versions/${v.id}/export.pdf`, v.label || "resume").catch((e) => Alert.alert("no pdf", e.message))))} />
-                {v.deletable && <Button label={`delete ${v.label || "version"}`} text="delete" onPress={() => Alert.alert("delete this version?", "you can't undo this.", [{ text: "no" }, { text: "yes", onPress: () => studioApi.deleteVersion(v.id).then(loadVersions).catch((e) => Alert.alert("not deleted", e.message)) }])} />}
+                <Button label={`download ${v.label || "version"}`} text="download pdf" disabled={pdfAction.running} onPress={() => studioApi.version(v.id).catch(() => null).then((full) => confirmExport(full?.pdf, () => pdfAction.run(() => openPdf(`versions/${v.id}/export.pdf`, v.label || "resume"))))} />
+                {v.deletable && <Button label={`delete ${v.label || "version"}`} text="delete" disabled={removeAction.running} onPress={() => Alert.alert("delete this version?", "you can't undo this.", [{ text: "no" }, { text: "yes", onPress: () => removeAction.run(() => studioApi.deleteVersion(v.id).then(loadVersions)) }])} />}
               </View>
             </View>
           ))}

@@ -62,6 +62,7 @@ global.__DEV__ = false;
     react: React, "react-native": rn,
     "@expo/vector-icons": { Ionicons: "Icon" },
     "react-native-keyboard-controller": { KeyboardAwareScrollView: "KeyboardAwareScrollView" },
+    "react-native-safe-area-context": { SafeAreaView: "SafeAreaView", useSafeAreaInsets: () => ({ top: 47, bottom: 34, left: 0, right: 0 }) },
     "/app/src/context/AuthContext": { AuthContext },
     "../../guest/GuestGate": { useGuestGate: () => ({ requireAccount: () => true, isGuest: false }) },
     "@react-navigation/native": { useNavigation: () => nav, useRoute: () => route, usePreventRemove: (enabled, cb) => { nav.prevent = { enabled, cb }; } },

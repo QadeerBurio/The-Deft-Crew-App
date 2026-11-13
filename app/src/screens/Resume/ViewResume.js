@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
@@ -17,6 +16,7 @@ import {
   Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useContext } from 'react';
 import { ResumeContext } from '../../context/ResumeContext';
@@ -30,6 +30,8 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { WebView } from 'react-native-webview';
 import { color as T, font as F } from "../../theme/tokens";
 import ScreenHeader from "../../ui/ScreenHeader";
+import useAction from "../../hooks/useAction";
+import { TIMEOUT, withTimeout } from "../../config/timeouts";
 import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
 
 const { width, height } = Dimensions.get('window');
@@ -40,10 +42,12 @@ const ResumeViewScreen = () => {
   const { resumeId } = route.params || {};
   const { user } = useContext(AuthContext);
   const { requireAccount, isGuest: guestMode } = useGuestGate();
-  const { resumes, currentResume, loadResume, loading, updateResume } = useContext(ResumeContext);
+  const { resumes, currentResume, loadResume, updateResume } = useContext(ResumeContext);
   const [resume, setResume] = useState(null);
   const [showWebView, setShowWebView] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
+  // 'loading' | 'ready' | 'error' (never an endless spinner)
+  const [loadState, setLoadState] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
   const [activeTab, setActiveTab] = useState('preview');
   
   // Animation values
@@ -69,111 +73,66 @@ const ResumeViewScreen = () => {
   useEffect(() => {
     let isMounted = true;
     const fetchFresh = async () => {
+      setLoadState('loading');
+      let found = null;
       if (resumeId) {
         // guest resumes live on the device only: no server call for them
         if (!guestMode) {
           try {
             const res = await resumeApi.getResume(resumeId, true);
-            if (isMounted && res?.success && res?.data) {
-              setResume(res.data);
-              return;
-            }
+            if (res?.success && res?.data) found = res.data;
           } catch (err) {
-            console.log('Error fetching fresh resume in ViewResume:', err);
+            console.warn('[resume view] fresh copy not loaded, using the saved list:', err?.message);
           }
         }
-        const found = loadResume(resumeId) || (Array.isArray(resumes) ? resumes.find(r => r._id === resumeId) : null);
-        if (isMounted && found) {
-          setResume(found);
-        }
+        if (!found) found = loadResume(resumeId) || (Array.isArray(resumes) ? resumes.find(r => r._id === resumeId) : null);
       } else if (resumes && resumes.length > 0) {
-        setResume(resumes[0]);
+        found = resumes[0];
       }
+      if (!isMounted) return;
+      if (found) { setResume(found); setLoadState('ready'); }
+      else setLoadState('error');
     };
     fetchFresh();
     return () => { isMounted = false; };
-  }, [resumeId, resumes, guestMode]);
+  }, [resumeId, guestMode, attempt]);
+
+  // an edit saved elsewhere (builder, templates) shows here without another request
+  useEffect(() => {
+    if (!resume?._id || !Array.isArray(resumes)) return;
+    const fresh = resumes.find(r => r._id === resume._id);
+    if (fresh && fresh !== resume && fresh.updatedAt && fresh.updatedAt !== resume.updatedAt) setResume(fresh);
+  }, [resumes]);
 
   const generateHTML = (isPrinting = false) => {
     if (!resume) return '';
     return renderResumeHTML(resume, resume.template || 'modern_ats', resume.customStyles || {}, isPrinting);
   };
 
-  const handleShare = async () => {
-    if (!requireAccount()) return;
-    try {
-      setIsExporting(true);
-      const html = generateHTML(true);
-      const { uri } = await Print.printToFileAsync({ html });
-
-      // Clean name parameters for safe filename
-      const firstName = (resume?.personalInfo?.firstName || 'User').trim().replace(/[^a-zA-Z0-9]/g, '_');
-      const lastName = (resume?.personalInfo?.lastName || 'Resume').trim().replace(/[^a-zA-Z0-9]/g, '_');
-      const targetName = `${firstName}_${lastName}_Resume.pdf`;
-      const localUri = `${FileSystem.cacheDirectory}${targetName}`;
-      await FileSystem.copyAsync({
-        from: uri,
-        to: localUri
-      });
-      
-      if (resume && resume._id) {
-        await updateResume(resume._id, { shareCount: (resume.shareCount || 0) + 1 });
-      }
-      
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(localUri, {
-          mimeType: 'application/pdf',
-          dialogTitle: `${firstName} ${lastName} Resume`,
-          UTI: 'com.adobe.pdf',
-        });
-      } else {
-        Alert.alert('Sharing', 'Sharing is not available on this device');
-      }
-    } catch (error) {
-      console.error('Share PDF error:', error);
-      Alert.alert('Error', 'Failed to share PDF');
-    } finally {
-      setIsExporting(false);
-    }
+  // a background counter: never blocks or fails the PDF
+  const bump = (field) => {
+    if (!resume?._id) return;
+    updateResume(resume._id, { [field]: (resume[field] || 0) + 1 }).catch((e) => console.warn('[resume view] counter not saved:', e?.message));
   };
 
-  const handleExportPDF = async () => {
-    if (!requireAccount()) return;
-    try {
-      setIsExporting(true);
-      const html = generateHTML(true);
-      const { uri } = await Print.printToFileAsync({ html });
-
-      // Clean name parameters for safe filename
-      const firstName = (resume?.personalInfo?.firstName || 'User').trim().replace(/[^a-zA-Z0-9]/g, '_');
-      const lastName = (resume?.personalInfo?.lastName || 'Resume').trim().replace(/[^a-zA-Z0-9]/g, '_');
-      const targetName = `${firstName}_${lastName}_Resume.pdf`;
-      const localUri = `${FileSystem.cacheDirectory}${targetName}`;
-      await FileSystem.copyAsync({
-        from: uri,
-        to: localUri
-      });
-      
-      if (resume && resume._id) {
-        await updateResume(resume._id, { downloadCount: (resume.downloadCount || 0) + 1 });
-      }
-      
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(localUri, {
-          mimeType: 'application/pdf',
-          dialogTitle: `${firstName} ${lastName} Resume`,
-          UTI: 'com.adobe.pdf',
-        });
-      } else {
-        Alert.alert('Success', 'PDF exported successfully!');
-      }
-    } catch (error) {
-      console.error('Export PDF error:', error);
-      Alert.alert('Error', 'Failed to export PDF');
-    } finally {
-      setIsExporting(false);
+  // share and download both make the PDF and open the share sheet: one at a time
+  const pdf = useAction(async (_c, mode) => {
+    const html = generateHTML(true);
+    const { uri } = await withTimeout(Print.printToFileAsync({ html }), TIMEOUT.PDF, 'pdf');
+    const firstName = (resume?.personalInfo?.firstName || 'User').trim().replace(/[^a-zA-Z0-9]/g, '_');
+    const lastName = (resume?.personalInfo?.lastName || 'Resume').trim().replace(/[^a-zA-Z0-9]/g, '_');
+    const localUri = `${FileSystem.cacheDirectory}${firstName}_${lastName}_Resume.pdf`;
+    await FileSystem.copyAsync({ from: uri, to: localUri });
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(localUri, { mimeType: 'application/pdf', dialogTitle: `${firstName} ${lastName} Resume`, UTI: 'com.adobe.pdf' });
+    } else {
+      Alert.alert(mode === 'share' ? 'Sharing' : 'Success', mode === 'share' ? 'Sharing is not available on this device' : 'PDF exported successfully!');
     }
-  };
+    bump(mode === 'share' ? 'shareCount' : 'downloadCount');
+  }, { errorTitle: "couldn't make the pdf", fallback: 'please try again.' });
+  const isExporting = pdf.running;
+  const handleShare = () => { if (requireAccount()) pdf.run('share'); };
+  const handleExportPDF = () => { if (requireAccount()) pdf.run('download'); };
 
   const handlePreview = () => {
     setShowWebView(true);
@@ -201,7 +160,22 @@ const ResumeViewScreen = () => {
     }
   };
 
-  if (loading || !resume) {
+  if (loadState === 'error' && !resume) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
+        <ScreenHeader dark title="resume document" onBack={() => navigation.goBack()} />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText} accessibilityRole="alert">couldn't open this resume. please check your connection.</Text>
+          <TouchableOpacity onPress={() => setAttempt((n) => n + 1)} style={[styles.headerAction, styles.exportButton, { marginTop: 16, minHeight: 44, paddingHorizontal: 18 }]} accessibilityRole="button" accessibilityLabel="try again">
+            <Text style={styles.exportButtonText}>try again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!resume) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
@@ -231,7 +205,7 @@ const ResumeViewScreen = () => {
         {/* Header */}
         <ScreenHeader dark title="resume document" onBack={() => navigation.goBack()} right={
             <>
-              <TouchableOpacity onPress={handleShare} style={styles.headerAction} disabled={isExporting}>
+              <TouchableOpacity onPress={handleShare} style={styles.headerAction} disabled={isExporting} accessibilityRole="button" accessibilityLabel="share pdf" hitSlop={6}>
                             <Ionicons name="share-social-outline" size={22} color={T.white} />
                           </TouchableOpacity>
               <TouchableOpacity 
