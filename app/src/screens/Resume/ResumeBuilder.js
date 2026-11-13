@@ -5,7 +5,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   Modal,
   TextInput,
   Dimensions,
@@ -16,6 +15,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 // the focused field scrolls above the keyboard (KeyboardProvider is at the app root)
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { AuthContext } from '../../context/AuthContext';

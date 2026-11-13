@@ -33,6 +33,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 import Svg, { Circle } from 'react-native-svg';
 import { plainError } from "../../utils/plainError";
+import useAction from '../../hooks/useAction';
+import { TIMEOUT, withTimeout } from '../../config/timeouts';
 import { studioEnabled } from "../../api/resumeStudioApi";
 const { width } = Dimensions.get('window');
 const MAX_CREATIONS = 2;
@@ -105,7 +107,6 @@ const ResumeDashboardScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [downloadModalVisible, setDownloadModalVisible] = useState(false);
-  const [downloading, setDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [showAllResumes, setShowAllResumes] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -142,7 +143,7 @@ const ResumeDashboardScreen = ({ navigation }) => {
         setIsLoading(false);
       };
       loadData();
-    }, [safeResumes.length])
+    }, [])
   );
 
   // ============================================================
@@ -158,13 +159,11 @@ const ResumeDashboardScreen = ({ navigation }) => {
           const firstResume = safeResumes[0];
           setSelectedResume(firstResume);
           loadResume(firstResume._id);
-          fetchRecommendations(firstResume._id);
         }
       } else {
         const firstResume = safeResumes[0];
         setSelectedResume(firstResume);
         loadResume(firstResume._id);
-        fetchRecommendations(firstResume._id);
       }
       setFilteredResumes(safeResumes);
     } else {
@@ -177,7 +176,7 @@ const ResumeDashboardScreen = ({ navigation }) => {
     if (selectedResume && selectedResume._id) {
       fetchRecommendations(selectedResume._id);
     }
-  }, [selectedResume]);
+  }, [selectedResume?._id]);
 
   // Search filter
   useEffect(() => {
@@ -200,14 +199,13 @@ const ResumeDashboardScreen = ({ navigation }) => {
   // ============================================================
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchResumes();
-    if (safeResumes && safeResumes.length > 0) {
-      const firstResume = safeResumes[0];
-      setSelectedResume(firstResume);
-      await fetchRecommendations(firstResume._id);
+    try {
+      await fetchResumes();
+      if (selectedResume?._id) await fetchRecommendations(selectedResume._id);
+    } finally {
+      setRefreshing(false);
     }
-    setRefreshing(false);
-  }, [resumes]);
+  }, [selectedResume?._id]);
 
   // ============================================================
   // Recommendations
@@ -241,6 +239,7 @@ const ResumeDashboardScreen = ({ navigation }) => {
   // ============================================================
   // Delete resume — counters update instantly
   // ============================================================
+  const deletingRef = useRef(false);
   const handleDeleteResume = (resumeId) => {
     Alert.alert(
       'Delete Resume',
@@ -251,6 +250,8 @@ const ResumeDashboardScreen = ({ navigation }) => {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            if (deletingRef.current) return;
+            deletingRef.current = true;
             try {
               await deleteResume(resumeId);
               // Optimistically clear selection
@@ -263,6 +264,8 @@ const ResumeDashboardScreen = ({ navigation }) => {
               Alert.alert('✅ Success', 'Resume deleted successfully');
             } catch (error) {
               Alert.alert('❌ Error', plainError(error, "Failed to delete resume."));
+            } finally {
+              deletingRef.current = false;
             }
           },
         },
@@ -273,124 +276,82 @@ const ResumeDashboardScreen = ({ navigation }) => {
   // ============================================================
   // Download / share / optimize handlers (unchanged)
   // ============================================================
-  const handleDownloadResume = async (resume, format = 'pdf') => {
+  // a background counter: never blocks or fails the file
+  const bump = (resume, field) => {
+    if (!resume?._id) return;
+    updateResume(resume._id, { [field]: (resume[field] || 0) + 1 }).catch((e) => console.warn('[dashboard] counter not saved:', e?.message));
+  };
+  const fileName = (resume, suffix) => {
+    const first = (resume.personalInfo?.firstName || 'User').trim().replace(/[^a-zA-Z0-9]/g, '_');
+    const last = (resume.personalInfo?.lastName || 'Resume').trim().replace(/[^a-zA-Z0-9]/g, '_');
+    return { first, last, name: `${first}_${last}_${suffix}` };
+  };
+  // the progress sheet shows one file at a time; it always closes (finally), even on an error
+  const exporter = useAction(async (_c, task) => {
+    setDownloadProgress(10);
+    setDownloadModalVisible(true);
+    try {
+      return await task();
+    } finally {
+      setDownloadModalVisible(false);
+      setDownloadProgress(0);
+    }
+  }, { errorTitle: "couldn't make the file", fallback: 'please try again.' });
+  const downloading = exporter.running;
+
+  const handleDownloadResume = (resume) => {
     if (!requireAccount()) return;
     if (!resume) return Alert.alert('Error', 'No resume selected');
-    try {
-      setDownloading(true);
-      setDownloadProgress(10);
-      setDownloadModalVisible(true);
+    exporter.run(async () => {
       const html = renderResumeHTML(resume, resume.template || 'modern_ats', resume.customStyles || {}, true);
       setDownloadProgress(30);
-      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      const { uri } = await withTimeout(Print.printToFileAsync({ html, base64: false }), TIMEOUT.PDF, 'pdf');
       setDownloadProgress(70);
-      const firstName = (resume.personalInfo?.firstName || 'User').trim().replace(/[^a-zA-Z0-9]/g, '_');
-      const lastName = (resume.personalInfo?.lastName || 'Resume').trim().replace(/[^a-zA-Z0-9]/g, '_');
-      const fileName = `${firstName}_${lastName}_Resume.pdf`;
-      const fileUri = FileSystem.documentDirectory + fileName;
+      const f = fileName(resume, 'Resume.pdf');
+      const fileUri = FileSystem.documentDirectory + f.name;
       await FileSystem.copyAsync({ from: uri, to: fileUri });
-      if (resume._id) {
-        await updateResume(resume._id, { downloadCount: (resume.downloadCount || 0) + 1 });
-      }
-      setDownloadProgress(90);
+      setDownloadProgress(100);
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType: 'application/pdf',
-          dialogTitle: `${firstName} ${lastName} Resume`,
-          UTI: 'com.adobe.pdf',
-        });
-        setDownloadProgress(100);
-        Alert.alert('✅ Success', 'Resume downloaded successfully!');
+        await Sharing.shareAsync(fileUri, { mimeType: 'application/pdf', dialogTitle: `${f.first} ${f.last} Resume`, UTI: 'com.adobe.pdf' });
       } else {
-        setDownloadProgress(100);
-        Alert.alert('✅ Success', `Resume saved as: ${fileName}`);
+        Alert.alert('✅ Success', `Resume saved as: ${f.name}`);
       }
-      setTimeout(() => {
-        setDownloadModalVisible(false);
-        setDownloading(false);
-        setDownloadProgress(0);
-      }, 1000);
-    } catch (error) {
-      console.error('Download error:', error);
-      setDownloading(false);
-      setDownloadModalVisible(false);
-      setDownloadProgress(0);
-      Alert.alert('❌ Error', plainError(error, "Failed to download resume. Please try again."));
-    }
+      bump(resume, 'downloadCount');
+    });
   };
 
-  const handleDownloadHTML = async (resume) => {
+  const handleDownloadHTML = (resume) => {
     if (!requireAccount()) return;
     if (!resume) return Alert.alert('Error', 'No resume selected');
-    try {
-      setDownloading(true);
-      setDownloadProgress(10);
-      setDownloadModalVisible(true);
+    exporter.run(async () => {
       const html = renderResumeHTML(resume, resume.template || 'modern_ats', resume.customStyles || {}, true);
       setDownloadProgress(50);
-      const fileName = `Resume_${resume.personalInfo?.firstName || 'Resume'}_${Date.now()}.html`;
-      const fileUri = FileSystem.documentDirectory + fileName;
+      const name = `Resume_${resume.personalInfo?.firstName || 'Resume'}_${Date.now()}.html`;
+      const fileUri = FileSystem.documentDirectory + name;
       await FileSystem.writeAsStringAsync(fileUri, html, { encoding: FileSystem.EncodingType.UTF8 });
-      setDownloadProgress(80);
-      if (resume._id) {
-        await updateResume(resume._id, { downloadCount: (resume.downloadCount || 0) + 1 });
-      }
       setDownloadProgress(100);
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType: 'text/html',
-          dialogTitle: `Resume_${resume.personalInfo?.firstName || 'Resume'}.html`,
-        });
+        await Sharing.shareAsync(fileUri, { mimeType: 'text/html', dialogTitle: `Resume_${resume.personalInfo?.firstName || 'Resume'}.html` });
       }
-      setTimeout(() => {
-        setDownloadModalVisible(false);
-        setDownloading(false);
-        setDownloadProgress(0);
-      }, 1000);
-    } catch (error) {
-      console.error('Download HTML error:', error);
-      setDownloading(false);
-      setDownloadModalVisible(false);
-      setDownloadProgress(0);
-      Alert.alert('❌ Error', 'Failed to download HTML resume');
-    }
+      bump(resume, 'downloadCount');
+    });
   };
 
-  const handleDownloadJSON = async (resume) => {
+  const handleDownloadJSON = (resume) => {
     if (!requireAccount()) return;
     if (!resume) return Alert.alert('Error', 'No resume selected');
-    try {
-      setDownloading(true);
-      setDownloadProgress(10);
-      setDownloadModalVisible(true);
+    exporter.run(async () => {
       const jsonData = JSON.stringify(resume, null, 2);
       setDownloadProgress(50);
-      const fileName = `Resume_${resume.personalInfo?.firstName || 'Resume'}_${Date.now()}.json`;
-      const fileUri = FileSystem.documentDirectory + fileName;
+      const name = `Resume_${resume.personalInfo?.firstName || 'Resume'}_${Date.now()}.json`;
+      const fileUri = FileSystem.documentDirectory + name;
       await FileSystem.writeAsStringAsync(fileUri, jsonData, { encoding: FileSystem.EncodingType.UTF8 });
-      setDownloadProgress(80);
-      if (resume._id) {
-        await updateResume(resume._id, { downloadCount: (resume.downloadCount || 0) + 1 });
-      }
       setDownloadProgress(100);
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType: 'application/json',
-          dialogTitle: `Resume_${resume.personalInfo?.firstName || 'Resume'}.json`,
-        });
+        await Sharing.shareAsync(fileUri, { mimeType: 'application/json', dialogTitle: `Resume_${resume.personalInfo?.firstName || 'Resume'}.json` });
       }
-      setTimeout(() => {
-        setDownloadModalVisible(false);
-        setDownloading(false);
-        setDownloadProgress(0);
-      }, 1000);
-    } catch (error) {
-      console.error('Download JSON error:', error);
-      setDownloading(false);
-      setDownloadModalVisible(false);
-      setDownloadProgress(0);
-      Alert.alert('❌ Error', 'Failed to download JSON resume');
-    }
+      bump(resume, 'downloadCount');
+    });
   };
 
   const handleShareResume = async (resume) => {
@@ -415,9 +376,7 @@ ${resume?.completionPercentage || 0}% Complete
         title: `${resume?.personalInfo?.firstName || ''}'s Resume`,
       });
       if (result.action === Share.sharedAction) {
-        if (resume._id) {
-          await updateResume(resume._id, { shareCount: (resume.shareCount || 0) + 1 });
-        }
+        bump(resume, 'shareCount');
         Alert.alert('✅ Success', 'Resume shared successfully!');
       }
     } catch (error) {
@@ -429,19 +388,14 @@ ${resume?.completionPercentage || 0}% Complete
   // ============================================================
   // Optimize resume flow
   // ============================================================
-  const handleOptimizeResumeFlow = async (job) => {
+  const handleOptimizeResumeFlow = (job) => {
     if (isGuest) return requireAccount();
     if (!selectedResume || !selectedResume._id) {
       return Alert.alert('No Resume Found', 'Please create or upload a resume first.');
     }
-    try {
-      setDownloading(true);
-      setDownloadProgress(10);
-      setDownloadModalVisible(true);
+    exporter.run(async () => {
       const fitResult = await checkResumeFit(selectedResume._id, job._id);
       if (!fitResult.meetsRequirements) {
-        setDownloadModalVisible(false);
-        setDownloading(false);
         setSkillGapData({
           missingSkills: fitResult.missingSkills || [],
           message:
@@ -460,36 +414,19 @@ ${resume?.completionPercentage || 0}% Complete
       setDownloadProgress(75);
       const html = renderResumeHTML(tailored, tailored.template || 'modern_ats', tailored.customStyles || {}, true);
       setDownloadProgress(85);
-      const { uri } = await Print.printToFileAsync({ html, base64: false });
-      const firstName = (tailored.personalInfo?.firstName || 'User').trim().replace(/[^a-zA-Z0-9]/g, '_');
-      const lastName = (tailored.personalInfo?.lastName || 'Resume').trim().replace(/[^a-zA-Z0-9]/g, '_');
-      const fileName = `${firstName}_${lastName}_Optimized_Resume.pdf`;
-      const fileUri = FileSystem.documentDirectory + fileName;
+      const { uri } = await withTimeout(Print.printToFileAsync({ html, base64: false }), TIMEOUT.PDF, 'pdf');
+      const f = fileName(tailored, 'Optimized_Resume.pdf');
+      const fileUri = FileSystem.documentDirectory + f.name;
       await FileSystem.copyAsync({ from: uri, to: fileUri });
       setDownloadProgress(100);
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType: 'application/pdf',
-          dialogTitle: `${firstName} ${lastName} Optimized Resume`,
-          UTI: 'com.adobe.pdf',
-        });
+        await Sharing.shareAsync(fileUri, { mimeType: 'application/pdf', dialogTitle: `${f.first} ${f.last} Optimized Resume`, UTI: 'com.adobe.pdf' });
       } else {
-        Alert.alert('✅ Success', `Optimized resume saved as: ${fileName}`);
+        Alert.alert('✅ Success', `Optimized resume saved as: ${f.name}`);
       }
-      // Refresh to update counter after tailor creates new resume
-      await fetchResumes(true);
-      setTimeout(() => {
-        setDownloadModalVisible(false);
-        setDownloading(false);
-        setDownloadProgress(0);
-      }, 1000);
-    } catch (error) {
-      console.error('Optimization flow error:', error);
-      setDownloading(false);
-      setDownloadModalVisible(false);
-      setDownloadProgress(0);
-      Alert.alert('❌ Error', plainError(error, "Failed to optimize resume. Please try again."));
-    }
+      // the tailored copy counts against the limit: refresh the list (background)
+      fetchResumes(true).catch(() => {});
+    });
   };
 
   const handleApplyToJob = (job) => {
