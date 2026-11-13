@@ -143,7 +143,15 @@ export default function UserProfile({ route, navigation }) {
   const [isReceived, setIsReceived] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [isBlockedByUser, setIsBlockedByUser] = useState(false);
-  const [isActionLoading, setIsActionLoading] = useState(false);
+  const [isActionLoading, setIsActionLoading] = useState(false); // connect / accept / reject / cancel / disconnect
+  const [openingChat, setOpeningChat] = useState(false);
+  const [loadingConnections, setLoadingConnections] = useState(false);
+  // set at once (a state flag is only seen after the next render: a double tap got past it)
+  const actionBusyRef = useRef(false);
+  const chatBusyRef = useRef(false);
+  const listBusyRef = useRef(false);
+  const beginAction = () => { actionBusyRef.current = true; setIsActionLoading(true); };
+  const endAction = () => { actionBusyRef.current = false; setIsActionLoading(false); };
   const [showConnectionsModal, setShowConnectionsModal] = useState(false);
   const [connectionsList, setConnectionsList] = useState([]);
   const [likingItems, setLikingItems] = useState({});
@@ -419,7 +427,7 @@ export default function UserProfile({ route, navigation }) {
         setIsPending(false);
         setIsConnected(true);
         setIsReceived(false);
-        setIsActionLoading(false);
+        endAction();
         // Refresh from backend to keep state consistent
         refreshCurrentUser();
       }
@@ -565,8 +573,8 @@ export default function UserProfile({ route, navigation }) {
 
   // ============ ACCEPT REQUEST (FIXED) ============
   const handleAcceptRequest = async () => {
-    if (isActionLoading) return;
-    setIsActionLoading(true);
+    if (actionBusyRef.current) return;
+    beginAction();
     try {
       const notificationsRes = await axios.get(`${API_URL}/notifications`, config);
       const pendingRequest = notificationsRes.data.find(
@@ -575,7 +583,7 @@ export default function UserProfile({ route, navigation }) {
 
       if (!pendingRequest) {
         Alert.alert("Error", "No pending request found");
-        setIsActionLoading(false);
+        endAction();
         return;
       }
 
@@ -596,7 +604,7 @@ export default function UserProfile({ route, navigation }) {
       console.error("Accept request error:", err);
       Alert.alert("Error", plainError(err, "Failed to accept request."));
     } finally {
-      setIsActionLoading(false);
+      endAction();
     }
   };
 
@@ -605,8 +613,8 @@ export default function UserProfile({ route, navigation }) {
       { text: "Cancel", style: "cancel" },
       {
         text: "Decline", style: "destructive", onPress: async () => {
-          if (isActionLoading) return;
-          setIsActionLoading(true);
+          if (actionBusyRef.current) return;
+          beginAction();
           try {
             const notificationsRes = await axios.get(`${API_URL}/notifications`, config);
             const pendingRequest = notificationsRes.data.find(
@@ -627,7 +635,7 @@ export default function UserProfile({ route, navigation }) {
           } catch (err) {
             Alert.alert("Error", "Failed to decline request");
           } finally {
-            setIsActionLoading(false);
+            endAction();
           }
         }
       }
@@ -639,8 +647,8 @@ export default function UserProfile({ route, navigation }) {
       { text: "No", style: "cancel" },
       {
         text: "Yes", style: "destructive", onPress: async () => {
-          if (isActionLoading) return;
-          setIsActionLoading(true);
+          if (actionBusyRef.current) return;
+          beginAction();
           try {
             await axios.post(`${API_URL}/user/cancel-request/${targetId}`, {}, config);
             setIsPending(false);
@@ -651,7 +659,7 @@ export default function UserProfile({ route, navigation }) {
           } catch (err) {
             Alert.alert("Error", "Failed to cancel request");
           } finally {
-            setIsActionLoading(false);
+            endAction();
           }
         }
       }
@@ -659,8 +667,8 @@ export default function UserProfile({ route, navigation }) {
   };
 
   const handleConnect = async () => {
-    if (isActionLoading) return;
-    setIsActionLoading(true);
+    if (actionBusyRef.current) return;
+    beginAction();
     try {
       const response = await axios.post(`${API_URL}/user/connect/${targetId}`, {}, config);
       if (response.data.success) {
@@ -683,7 +691,7 @@ export default function UserProfile({ route, navigation }) {
       }
       Alert.alert("Info", errorMsg || "Could not send request");
     } finally {
-      setIsActionLoading(false);
+      endAction();
     }
   };
 
@@ -692,8 +700,8 @@ export default function UserProfile({ route, navigation }) {
       { text: "Cancel", style: "cancel" },
       {
         text: "Remove", style: "destructive", onPress: async () => {
-          if (isActionLoading) return;
-          setIsActionLoading(true);
+          if (actionBusyRef.current) return;
+          beginAction();
           try {
             await axios.post(`${API_URL}/user/disconnect/${targetId}`, {}, config);
             setIsConnected(false);
@@ -703,7 +711,7 @@ export default function UserProfile({ route, navigation }) {
           } catch (err) {
             Alert.alert("Error", "Failed to remove connection");
           } finally {
-            setIsActionLoading(false);
+            endAction();
           }
         }
       }
@@ -799,8 +807,9 @@ export default function UserProfile({ route, navigation }) {
   const handleMessagePress = async () => {
     if (isBlocked) return Alert.alert("Blocked", "Unblock to send a message.");
     if (!isConnected && !isOwnProfile) return Alert.alert("Not Connected", "You need to be connected.");
-    if (isActionLoading) return;
-    setIsActionLoading(true);
+    if (chatBusyRef.current) return;
+    chatBusyRef.current = true;
+    setOpeningChat(true);
     try {
       const res = await axios.post(`${API_URL}/conversations/get-or-create`, { recipientId: targetId }, config);
       if (res.data.conversationId) {
@@ -810,23 +819,26 @@ export default function UserProfile({ route, navigation }) {
         });
       }
     } catch (err) {
-      Alert.alert("Error", "Could not initiate chat.");
+      Alert.alert("couldn't open the chat", plainError(err, "please try again."));
     } finally {
-      setIsActionLoading(false);
+      chatBusyRef.current = false;
+      setOpeningChat(false);
     }
   };
 
   const handleViewConnections = async () => {
-    if (isBlocked || isActionLoading) return;
-    setIsActionLoading(true);
+    if (isBlocked || listBusyRef.current) return;
+    listBusyRef.current = true;
+    setLoadingConnections(true);
     try {
       const res = await axios.get(`${API_URL}/user/connections/${targetId}`, config);
       setConnectionsList(res.data.connections || []);
       setShowConnectionsModal(true);
     } catch (err) {
-      Alert.alert("Error", "Failed to load connections");
+      Alert.alert("couldn't load connections", plainError(err, "please try again."));
     } finally {
-      setIsActionLoading(false);
+      listBusyRef.current = false;
+      setLoadingConnections(false);
     }
   };
 
@@ -1312,7 +1324,7 @@ export default function UserProfile({ route, navigation }) {
               <Text style={styles.connectedBtnText}>connected</Text>
             </LinearGradient>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.msgBtn} onPress={handleMessagePress} hitSlop={{ top: 2, bottom: 2 }}>
+          <TouchableOpacity style={styles.msgBtn} onPress={handleMessagePress} hitSlop={{ top: 2, bottom: 2 }} disabled={openingChat} accessibilityRole="button" accessibilityLabel="message" accessibilityState={{ busy: openingChat }}>
             <Ionicons name="chatbubble-outline" size={16} color={T.yellow} />
             <Text style={styles.msgBtnText}>message</Text>
           </TouchableOpacity>
@@ -1362,7 +1374,7 @@ export default function UserProfile({ route, navigation }) {
             <Text style={styles.connectedBtnText}>connect</Text>
           </LinearGradient>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.msgBtn} onPress={handleMessagePress} hitSlop={{ top: 2, bottom: 2 }}>
+        <TouchableOpacity style={styles.msgBtn} onPress={handleMessagePress} hitSlop={{ top: 2, bottom: 2 }} disabled={openingChat} accessibilityRole="button" accessibilityLabel="message" accessibilityState={{ busy: openingChat }}>
           <Ionicons name="chatbubble-outline" size={16} color={T.yellow} />
           <Text style={styles.msgBtnText}>message</Text>
         </TouchableOpacity>
@@ -1456,6 +1468,7 @@ export default function UserProfile({ route, navigation }) {
           <TouchableOpacity
             style={styles.connectionSummaryItem}
             onPress={handleViewConnections}
+            disabled={loadingConnections}
             activeOpacity={0.7}
           >
             <Text style={styles.connectionSummaryNumber}>{connectionsCount}</Text>
@@ -1641,6 +1654,7 @@ export default function UserProfile({ route, navigation }) {
 
                 <TouchableOpacity
                   onPress={handleViewConnections}
+            disabled={loadingConnections}
                   style={styles.connectionTouchable}
                   accessibilityRole="button"
                   accessibilityLabel={`${connectionCount} connections, view all`}

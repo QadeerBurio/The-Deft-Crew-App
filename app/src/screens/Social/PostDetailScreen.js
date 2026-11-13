@@ -309,8 +309,10 @@ export default function PostDetailScreen({ route, navigation }) {
   }, []);
 
   // ============ LIKE ============
+  const likeInFlight = useRef(false);
   const handleLike = async () => {
-    if (isLiking) return;
+    if (isLiking || likeInFlight.current) return; // the ref stops a double tap before the re-render
+    likeInFlight.current = true;
     setIsLiking(true);
 
     Animated.sequence([
@@ -343,6 +345,7 @@ export default function PostDetailScreen({ route, navigation }) {
       setLiked(wasLiked);
       setLikesCount(currentCount);
     } finally {
+      likeInFlight.current = false;
       setIsLiking(false);
     }
   };

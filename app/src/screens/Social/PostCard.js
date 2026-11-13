@@ -426,8 +426,10 @@ function PostCard({ post, onBlock, onReport, onPostUpdate }) {
   // ═══════════════════════════════════════════
   // LIKE — with sound branching
   // ═══════════════════════════════════════════
+  const likeInFlight = useRef(false);
   const handleLike = async () => {
     if (!requireAccount()) return;
+    if (likeInFlight.current) return; // the first tap's request is still on its way
     if (!isLoggedIn) {
       soundNope();
       Alert.alert("Sign In", "Please sign in to like posts");
@@ -457,6 +459,7 @@ function PostCard({ post, onBlock, onReport, onPostUpdate }) {
       ]).start();
     }
 
+    likeInFlight.current = true;
     try {
       const res = await axios.put(`${API_URL}/posts/like/${post._id}`, {}, config);
       if (res.data.success) {
@@ -471,6 +474,8 @@ function PostCard({ post, onBlock, onReport, onPostUpdate }) {
       soundError();
       setLikes(currentLikes);
       setLikeCount(currentCount);
+    } finally {
+      likeInFlight.current = false;
     }
   };
 
