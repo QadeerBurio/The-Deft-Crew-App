@@ -21,7 +21,8 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { AuthContext } from '../../context/AuthContext';
 import { useGuestGate } from '../../guest/GuestGate';
 import { ResumeContext } from '../../context/ResumeContext';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, usePreventRemove } from '@react-navigation/native';
+import useAction, { errorMessage } from '../../hooks/useAction';
 import * as DocumentPicker from 'expo-document-picker';
 import { WebView } from 'react-native-webview';
 import { renderResumeHTML } from '../../services/templateService';
@@ -139,6 +140,24 @@ const SYSTEM_TEMPLATES = [
   { id: 'canva', name: 'Canva Professional', desc: 'Visually polished two-column creative layout combining left-hand sidebar options.' }
 ];
 
+// A list item's identity: the server's _id, else its content (guest items). Never its position,
+// so deleting one item can't make "Update" overwrite another.
+export const keyOf = (item) => (item?._id ? `id:${item._id}` : `v:${JSON.stringify(item)}`);
+export const indexOfKey = (list, key) => (key == null ? -1 : (list || []).findIndex((x) => keyOf(x) === key));
+
+// The personal-info fields as the server stores them
+export const buildPersonal = ({ name, title, email, phone, location, linkedin, github, portfolio }) => {
+  const parts = String(name || '').trim().split(' ');
+  return {
+    firstName: parts[0] || '',
+    lastName: parts.slice(1).join(' ') || '',
+    title, email, phone, location, linkedin, github, portfolio,
+  };
+};
+
+export const LIMIT_TITLE = 'you already have 2 resumes';
+export const LIMIT_TEXT = 'open one of them to edit it, or delete one to make a new one.';
+
 const ResumeBuilderScreen = () => {
   const { user } = useContext(AuthContext);
   const { requireAccount, isGuest: guestMode } = useGuestGate();
@@ -154,12 +173,34 @@ const ResumeBuilderScreen = () => {
     error,
     clearError,
     fetchResumes,
-    setCurrentResume
+    setCurrentResume,
+    loadResume,
   } = useContext(ResumeContext);
-  
+
   const navigation = useNavigation();
   const route = useRoute();
   const { resumeId } = route.params || {};
+  // no resumeId = a new resume: nothing is created until the student saves something
+  const isNew = !resumeId;
+  const createdIdRef = useRef(null);
+  const creatingRef = useRef(null);
+  const limitShownRef = useRef(false);
+  const [opened, setOpened] = useState(false); // first list load done
+
+  // One action per button: its own spinner, one tap at a time, errors shown plainly
+  const runner = (errorTitle) => ({ errorTitle });
+  const saveItem = useAction(async (_c, task) => task(), runner('not saved'));
+  const removeItem = useAction(async (_c, task) => task(), runner('not deleted'));
+  const addSkill = useAction(async (_c, task) => task(), runner('skill not added'));
+  const toggleRole = useAction(async (_c, task) => task(), runner('not saved'));
+  const moveStep = useAction(async (_c, task) => task(), runner('not saved'));
+  const saveStep1 = useAction(async (_c, task) => task(), runner('not saved'));
+  const saveStep6 = useAction(async (_c, task) => task(), runner('not saved'));
+  const aiWork = useAction(async (_c, task) => task(), runner("AI couldn't help right now"));
+  const aiProj = useAction(async (_c, task) => task(), runner("AI couldn't help right now"));
+  const aiSummary = useAction(async (_c, task) => task(), runner("AI couldn't write a summary"));
+  const aiSkills = useAction(async (_c, task) => task(), runner("AI couldn't suggest skills"));
+  const finish = useAction(async (_c, task) => task(), runner('not saved'));
 
   // Step state: 1 to 7
   const [activeStep, setActiveStep] = useState(1);
@@ -223,9 +264,6 @@ const ResumeBuilderScreen = () => {
   const [skillInput, setSkillInput] = useState('');
 
   // AI & Preview Control
-  const [aiProcessing, setAiProcessing] = useState(false);
-  const [savingStep1, setSavingStep1] = useState(false);
-  const [savingStep6, setSavingStep6] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewTemplateId, setPreviewTemplateId] = useState('modern_ats');
 
@@ -252,22 +290,13 @@ const ResumeBuilderScreen = () => {
     }
   }, [currentResume]);
 
+  // only the changed colour / font is sent; the server merges it (background save: logged, not shown)
   const saveCustomStyles = async (updatedFields) => {
-    if (!currentResume) return;
-    
-    const newStyles = {
-      font: selectedFont,
-      accentColor: accentColor,
-      headingColor: headingColor,
-      textColor: textColor,
-      bgColor: bgColor,
-      ...updatedFields
-    };
-    
+    if (!currentResume?._id) return;
     try {
-      await updateResume(currentResume._id, { customStyles: newStyles });
+      await updateResume(currentResume._id, { customStyles: updatedFields });
     } catch (err) {
-      console.log('Error saving custom styles:', err);
+      console.warn('[builder] style not saved:', err?.message);
     }
   };
 
@@ -339,7 +368,16 @@ const ResumeBuilderScreen = () => {
   const syncedResumeIdRef = useRef(null);
   const syncedStepRef = useRef(null);
 
-  // Sync inputs from currentResume
+  // What was last saved (or loaded), to send personal info / summary only when they changed
+  const currentPersonal = () => buildPersonal({ name: pName, title: pTitle, email: pEmail, phone: pPhone, location: pLocation, linkedin: pLinkedin, github: pGithub, portfolio: pPortfolio });
+  const lastPersonalRef = useRef(null);
+  const personalInflight = useRef(null);
+  const lastSummaryRef = useRef(null);
+  const personalUnsaved = () => lastPersonalRef.current !== null && JSON.stringify(currentPersonal()) !== lastPersonalRef.current;
+  const summaryUnsaved = () => lastSummaryRef.current !== null && targetSummary !== lastSummaryRef.current;
+
+  // Sync inputs from the open resume: on a new resume always; on a step change only when the
+  // student has nothing unsaved there (a failed save never gets overwritten by older data)
   useEffect(() => {
     if (currentResume) {
       const isNewResume = syncedResumeIdRef.current !== currentResume._id;
@@ -349,74 +387,99 @@ const ResumeBuilderScreen = () => {
         syncedResumeIdRef.current = currentResume._id;
         syncedStepRef.current = activeStep;
 
-        if (activeStep === 1) {
+        if (activeStep === 1 && (isNewResume || !personalUnsaved())) {
           const info = currentResume.personalInfo || {};
           const fullName = `${info.firstName || ''} ${info.lastName || ''}`.trim();
-          if (fullName) setPName(fullName);
-
           const loadedTitle = info.title || currentResume.professionalSummary?.title || currentResume.targetJob?.jobTitle || '';
-          if (loadedTitle) setPTitle(loadedTitle);
-
-          if (info.email) setPEmail(info.email);
-          if (info.phone) setPPhone(info.phone);
-
           const loadedLocation = info.location || (info.city ? `${info.city}${info.country ? ', ' + info.country : ''}` : '') || currentResume.targetJob?.location || '';
-          if (loadedLocation) setPLocation(loadedLocation);
-
-          if (info.linkedin) setPLinkedin(info.linkedin);
-          if (info.github) setPGithub(info.github);
-          if (info.portfolio) setPPortfolio(info.portfolio);
-        } else if (activeStep === 6) {
-          setTargetSummary(currentResume.professionalSummary?.summary || '');
+          const v = {
+            name: fullName || pName, title: loadedTitle || pTitle, email: info.email || pEmail, phone: info.phone || pPhone,
+            location: loadedLocation || pLocation, linkedin: info.linkedin || pLinkedin, github: info.github || pGithub, portfolio: info.portfolio || pPortfolio,
+          };
+          setPName(v.name); setPTitle(v.title); setPEmail(v.email); setPPhone(v.phone);
+          setPLocation(v.location); setPLinkedin(v.linkedin); setPGithub(v.github); setPPortfolio(v.portfolio);
+          lastPersonalRef.current = JSON.stringify(buildPersonal(v));
+        } else if (activeStep === 6 && (isNewResume || !summaryUnsaved())) {
+          const s = currentResume.professionalSummary?.summary || '';
+          setTargetSummary(s);
+          lastSummaryRef.current = s;
         }
       }
     }
   }, [currentResume, activeStep]);
 
-  // Initial resume setup
+  const showLimit = () => {
+    if (limitShownRef.current) return;
+    limitShownRef.current = true;
+    Alert.alert(LIMIT_TITLE, LIMIT_TEXT, [
+      { text: 'see my resumes', onPress: () => navigation.navigate('ResumeDashboard') },
+      { text: 'ok', style: 'cancel', onPress: () => { if (!createdIdRef.current && navigation.canGoBack()) navigation.goBack(); } },
+    ]);
+  };
+
+  // Open: an existing resume is loaded by its id; a new one starts empty (prefilled from the
+  // profile) and is created on the first save
   useEffect(() => {
-    const initResume = async () => {
+    let live = true;
+    (async () => {
+      if (!resumeId && guestMode) {
+        requireAccount();
+        navigation.goBack();
+        return;
+      }
+      if (!resumeId) {
+        setCurrentResume(null);
+        const v = {
+          name: user?.name || '', title: user?.headline || '', email: user?.email || '', phone: user?.phone || '',
+          location: user?.location || '', linkedin: '', github: '', portfolio: '',
+        };
+        setPName(v.name); setPTitle(v.title); setPEmail(v.email); setPPhone(v.phone);
+        setPLocation(v.location); setPLinkedin(''); setPGithub(''); setPPortfolio(''); setTargetSummary('');
+        lastPersonalRef.current = JSON.stringify(buildPersonal(v));
+        lastSummaryRef.current = '';
+      }
+      await fetchResumes();
+      if (!live) return;
       if (resumeId) {
-        await fetchResumes();
-      } else {
-        if (guestMode) {
-          requireAccount();
+        const found = loadResume(resumeId);
+        if (!found) {
+          Alert.alert("couldn't open this resume", 'please check your connection and try again.');
           navigation.goBack();
           return;
         }
-        try {
-          setPName(user?.name || '');
-          setPTitle(user?.headline || 'Software Engineer');
-          setPEmail(user?.email || '');
-          setPPhone(user?.phone || '');
-          setPLocation(user?.location || 'Karachi, Pakistan');
-          setPLinkedin('');
-          setPGithub('');
-          setPPortfolio('');
-          setTargetSummary('');
-
-          await createResume({
-            personalInfo: { 
-              firstName: user?.name?.split(' ')[0] || '', 
-              lastName: user?.name?.split(' ')[1] || '',
-              email: user?.email || '',
-              phone: user?.phone || '',
-              location: user?.location || 'Karachi, Pakistan',
-              title: user?.headline || 'Software Engineer',
-              linkedin: '',
-              github: '',
-              portfolio: ''
-            },
-            template: 'modern_ats'
-          });
-        } catch (err) {
-          console.log('Error auto-creating blank resume', err);
-          navigation.goBack();
-        }
       }
-    };
-    initResume();
+      setOpened(true);
+    })();
+    return () => { live = false; };
   }, [resumeId]);
+
+  // a new resume at the limit: say so right away, with a way to the existing ones
+  useEffect(() => {
+    if (isNew && opened && !createdIdRef.current && creationsUsed >= 2) showLimit();
+  }, [isNew, opened, creationsUsed]);
+
+  /** The resume being built; a new one is created here, once (concurrent callers share it). */
+  const ensureResume = async () => {
+    if (!isNew) return currentResume || null;
+    if (createdIdRef.current && currentResume?._id === createdIdRef.current) return currentResume;
+    if (creatingRef.current) return creatingRef.current;
+    creatingRef.current = (async () => {
+      try {
+        const created = await createResume({ personalInfo: currentPersonal(), template: 'modern_ats' }, { alert: false });
+        if (created?._id) {
+          createdIdRef.current = created._id;
+          lastPersonalRef.current = JSON.stringify(currentPersonal());
+        }
+        return created || null;
+      } catch (err) {
+        if (err?.code === 'RESUME_LIMIT') { showLimit(); return null; }
+        throw err;
+      } finally {
+        creatingRef.current = null;
+      }
+    })();
+    return creatingRef.current;
+  };
 
   // Pick Document Helper
   const pickDocument = async () => {
@@ -427,13 +490,13 @@ const ResumeBuilderScreen = () => {
       });
       if (!res.canceled && res.assets && res.assets.length > 0) {
         const pickedFile = res.assets[0];
-        
+
         const allowedExtensions = ['pdf', 'doc', 'docx'];
         const fileExt = pickedFile.name?.split('.').pop()?.toLowerCase();
-        
+
         if (!allowedExtensions.includes(fileExt)) {
           Alert.alert(
-            'Unsupported Format ⚠️', 
+            'Unsupported Format ⚠️',
             'Only PDF (.pdf), Word (.doc), and Word OpenXML (.docx) formats are supported.'
           );
           return null;
@@ -441,7 +504,7 @@ const ResumeBuilderScreen = () => {
 
         if (pickedFile.size && pickedFile.size > 10 * 1024 * 1024) {
           Alert.alert(
-            'File Too Large ⚠️', 
+            'File Too Large ⚠️',
             'The selected file exceeds the 10MB limit. Please upload a smaller document.'
           );
           return null;
@@ -451,37 +514,37 @@ const ResumeBuilderScreen = () => {
       }
       return null;
     } catch (err) {
-      console.error('File picker error:', err);
+      console.warn('[builder] file picker failed:', err?.message);
       return null;
     }
   };
 
-  // Upload and parse helper
+  // Upload and parse: the upload makes its own resume (no blank one first)
+  const uploadingRef = useRef(false);
   const handleAutoFillUpload = async () => {
     if (!requireAccount()) return; // uploads to the server to parse
+    if (uploadingRef.current) return;
     if (creationsUsed >= 2) {
-      Alert.alert(
-        'Resume Limit Reached ⚠️',
-        'You already have 2 resumes. Please delete an existing resume to create a new one.'
-      );
+      showLimit();
+      limitShownRef.current = false; // the next tap may show it again
       return;
     }
     const file = await pickDocument();
     if (!file) return;
 
+    uploadingRef.current = true;
     setAiGeneratingVisible(true);
     setAiGeneratingStep('Uploading resume document...');
     setAiGeneratingProgress(15);
+    const progressInterval = setInterval(() => {
+      setAiGeneratingProgress(prev => {
+        if (prev < 50) return prev + 5;
+        if (prev < 80) return prev + 2;
+        return prev;
+      });
+    }, 400);
 
     try {
-      const progressInterval = setInterval(() => {
-        setAiGeneratingProgress(prev => {
-          if (prev < 50) return prev + 5;
-          if (prev < 80) return prev + 2;
-          return prev;
-        });
-      }, 400);
-
       const payload = {
         uri: file.uri,
         name: file.name || 'resume.pdf',
@@ -492,132 +555,126 @@ const ResumeBuilderScreen = () => {
       setAiGeneratingProgress(55);
 
       const parsed = await uploadResume(payload);
-      
       clearInterval(progressInterval);
 
       if (parsed) {
         syncedResumeIdRef.current = null;
         setAiGeneratingStep('Structuring resume sections...');
-        setAiGeneratingProgress(85);
-        
-        await new Promise(resolve => setTimeout(resolve, 800));
-
-        setAiGeneratingStep('Generating document preview...');
         setAiGeneratingProgress(100);
-
         await new Promise(resolve => setTimeout(resolve, 600));
         setAiGeneratingVisible(false);
-
-        await fetchResumes();
-
+        fetchResumes().catch(() => {});
         navigation.navigate('ResumeView', { resumeId: parsed._id });
       } else {
         setAiGeneratingVisible(false);
-        Alert.alert('Error', 'Failed to generate resume from file.');
+        Alert.alert("couldn't read that file", 'please try another file.');
       }
     } catch (err) {
       setAiGeneratingVisible(false);
-      Alert.alert('Upload Error ❌', plainError(err, "We couldn't read that resume file. Please try another file."));
+      if (err?.response?.data?.code === 'RESUME_CREATION_LIMIT_REACHED') { showLimit(); limitShownRef.current = false; }
+      else Alert.alert("couldn't read that file", errorMessage(err, "We couldn't read that resume file. Please try another file."));
+    } finally {
+      clearInterval(progressInterval);
+      uploadingRef.current = false;
     }
   };
 
-  // Step sync calls
+  // Personal info: only `personalInfo`, only when it changed (the server keeps the title / location
+  // of the summary and target job in step). Two calls with the same data share one request.
   const savePersonalInfo = async () => {
-    if (!currentResume) return;
-    const parts = pName.trim().split(' ');
-    const first = parts[0] || '';
-    const last = parts.slice(1).join(' ') || '';
-    const updated = {
-      firstName: first,
-      lastName: last,
-      title: pTitle,
-      email: pEmail,
-      phone: pPhone,
-      location: pLocation,
-      linkedin: pLinkedin,
-      github: pGithub,
-      portfolio: pPortfolio
-    };
-    await updateResume(currentResume._id, { 
-      personalInfo: updated,
-      professionalSummary: {
-        ...currentResume.professionalSummary,
-        title: pTitle || currentResume.professionalSummary?.title || ''
-      },
-      targetJob: {
-        ...currentResume.targetJob,
-        location: pLocation || currentResume.targetJob?.location || ''
-      }
-    });
+    const payload = currentPersonal();
+    const sig = JSON.stringify(payload);
+    if (sig === lastPersonalRef.current && (!isNew || createdIdRef.current)) return currentResume;
+    if (personalInflight.current?.sig === sig) return personalInflight.current.promise;
+    const promise = (async () => {
+      const resume = await ensureResume();
+      if (!resume?._id) return null;
+      if (sig === lastPersonalRef.current) return resume; // created with this data just now
+      const saved = await updateResume(resume._id, { personalInfo: payload });
+      lastPersonalRef.current = sig;
+      return saved;
+    })();
+    personalInflight.current = { sig, promise };
+    try { return await promise; } finally { if (personalInflight.current?.promise === promise) personalInflight.current = null; }
   };
+  // field blur: a background save (logged; the save buttons and step moves report errors)
+  const savePersonalQuietly = () => { savePersonalInfo().catch((e) => console.warn('[builder] personal info not saved yet:', e?.message)); };
 
   const saveTargetSummary = async () => {
-    if (!currentResume) return;
-    await updateResume(currentResume._id, {
-      professionalSummary: {
-        ...currentResume.professionalSummary,
-        summary: targetSummary
-      }
-    });
+    if (targetSummary === lastSummaryRef.current) return currentResume;
+    const resume = await ensureResume();
+    if (!resume?._id) return null;
+    const value = targetSummary;
+    const saved = await updateResume(resume._id, { professionalSummary: { summary: value } });
+    lastSummaryRef.current = value;
+    return saved;
   };
+  const saveSummaryQuietly = () => { saveTargetSummary().catch((e) => console.warn('[builder] summary not saved yet:', e?.message)); };
 
-  const handleSaveStep1 = async () => {
-    if (!currentResume) return;
-    try {
-      setSavingStep1(true);
-      await savePersonalInfo();
-      Alert.alert('✅ Saved!', 'Personal Information saved successfully!');
-    } catch (err) {
-      console.error('Error saving personal info:', err);
-      Alert.alert('❌ Error', plainError(err, "Failed to save Personal Information. Please try again."));
-    } finally {
-      setSavingStep1(false);
-    }
-  };
+  const handleSaveStep1 = () => saveStep1.run(async () => {
+    const saved = await savePersonalInfo();
+    if (saved) Alert.alert('✅ Saved!', 'Personal Information saved successfully!');
+  });
 
   // Save handler for Target Job (now Step 6)
-  const handleSaveStep6 = async () => {
-    if (!currentResume) return;
+  const handleSaveStep6 = () => saveStep6.run(async () => {
+    const saved = await saveTargetSummary();
+    if (saved) Alert.alert('✅ Saved!', 'Target Job & Summary saved successfully!');
+  });
+
+  // Moving between steps saves the step first; a failed save says so but never traps the student
+  const saveCurrentStep = async () => {
+    if (activeStep === 1) await savePersonalInfo();
+    else if (activeStep === 6) await saveTargetSummary();
+  };
+  const goToStep = (next) => moveStep.run(async () => {
     try {
-      setSavingStep6(true);
-      await saveTargetSummary();
-      Alert.alert('✅ Saved!', 'Target Job & Summary saved successfully!');
+      await saveCurrentStep();
     } catch (err) {
-      console.error('Error saving target summary:', err);
-      Alert.alert('❌ Error', plainError(err, "Failed to save Target Summary. Please try again."));
-    } finally {
-      setSavingStep6(false);
+      Alert.alert('not saved yet', `${errorMessage(err)} your changes stay on this screen; tap save to try again.`);
     }
-  };
+    setActiveStep(next);
+  });
 
-  const handleStepChange = async (newStep) => {
-    if (activeStep === 1) {
-      await savePersonalInfo();
-    } else if (activeStep === 6) {
-      await saveTargetSummary();
+  const handleStepChange = (newStep) => goToStep(newStep);
+  const handlePrevStep = () => goToStep((prev) => Math.max(1, prev - 1));
+  // back: the leave check below saves or asks
+  const handleGoBack = () => navigation.goBack();
+
+  // what is typed in an item form but not added yet
+  const unsavedItem = () => {
+    if (eduInstitution.trim() || eduDegree.trim()) return 'education';
+    if (workCompany.trim() || workPosition.trim()) return 'experience';
+    if (projName.trim() || projDesc.trim()) return 'project';
+    if (certName.trim() || certIssuer.trim()) return 'certification';
+    return null;
+  };
+  const leaveUnsaved = !!unsavedItem() || personalUnsaved() || summaryUnsaved();
+  // header back, iOS swipe back and Android back all pass here
+  usePreventRemove(leaveUnsaved, ({ data }) => {
+    const item = unsavedItem();
+    const leave = () => navigation.dispatch(data.action);
+    if (item) {
+      Alert.alert(`your ${item} isn't added yet`, `tap "add ${item}" to keep it, or leave without it.`, [
+        { text: 'keep editing', style: 'cancel' },
+        { text: 'leave without it', style: 'destructive', onPress: leave },
+      ]);
+      return;
     }
-    setActiveStep(newStep);
-  };
+    Alert.alert('save your changes?', 'you changed this step but it isn\'t saved yet.', [
+      { text: 'keep editing', style: 'cancel' },
+      { text: 'discard', style: 'destructive', onPress: leave },
+      {
+        text: 'save and leave',
+        onPress: () => moveStep.run(async () => {
+          await saveCurrentStep();
+          if (!personalUnsaved() || activeStep !== 1) leave();
+        }),
+      },
+    ]);
+  });
 
-  const handlePrevStep = async () => {
-    if (activeStep === 1) {
-      await savePersonalInfo();
-    } else if (activeStep === 6) {
-      await saveTargetSummary();
-    }
-    setActiveStep(prev => Math.max(1, prev - 1));
-  };
-
-  const handleGoBack = async () => {
-    if (activeStep === 1) {
-      await savePersonalInfo();
-    } else if (activeStep === 6) {
-      await saveTargetSummary();
-    }
-    navigation.goBack();
-  };
-
-  const handleNextStep = async () => {
+  const handleNextStep = () => {
     if (activeStep === 2 && (eduInstitution.trim() || eduDegree.trim())) {
       Alert.alert(
         'Unsaved Education details 🎓',
@@ -646,13 +703,37 @@ const ResumeBuilderScreen = () => {
       );
       return;
     }
+    goToStep((prev) => Math.min(7, prev + 1));
+  };
 
-    if (activeStep === 1) {
-      await savePersonalInfo();
-    } else if (activeStep === 6) {
-      await saveTargetSummary();
-    }
-    setActiveStep(prev => Math.min(7, prev + 1));
+  // Add or update one item of a list section, on the latest saved list (by key, never by position)
+  const saveListItem = async (field, newItem, editingKey) => {
+    const resume = await ensureResume();
+    if (!resume?._id) return false;
+    await updateResume(resume._id, (latest) => {
+      const list = [...(latest?.[field] || [])];
+      const i = indexOfKey(list, editingKey);
+      if (editingKey != null && i >= 0) list[i] = { ...list[i], ...newItem };
+      else list.push(newItem);
+      return { [field]: list };
+    });
+    return true;
+  };
+  // Delete one item after asking; `onGone` clears the form if that item was being edited
+  const confirmRemove = (field, item, label, onGone) => {
+    const key = keyOf(item);
+    Alert.alert(`delete this ${label}?`, "you can't undo this.", [
+      { text: 'cancel', style: 'cancel' },
+      {
+        text: 'delete',
+        style: 'destructive',
+        onPress: () => removeItem.run(async () => {
+          if (!currentResume?._id) return;
+          await updateResume(currentResume._id, (latest) => ({ [field]: (latest?.[field] || []).filter((x) => keyOf(x) !== key) }));
+          if (onGone) onGone(key);
+        }),
+      },
+    ]);
   };
 
   const getTargetRoleFallback = () => {
@@ -676,7 +757,7 @@ const ResumeBuilderScreen = () => {
               <Text style={styles.bannerUploadBtnText}>upload & auto-fill</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.bannerSkipBtn} onPress={() => {
-              savePersonalInfo();
+              savePersonalQuietly();
               setPreviewTemplateId(currentResume?.template || 'modern_ats');
               setPreviewVisible(true);
             }}>
@@ -692,7 +773,7 @@ const ResumeBuilderScreen = () => {
           placeholderTextColor={T.textFaint}
           value={pName}
           onChangeText={setPName}
-          onBlur={savePersonalInfo}
+          onBlur={savePersonalQuietly}
         />
 
         <Text style={styles.inputLabel}>Professional Title *</Text>
@@ -702,7 +783,7 @@ const ResumeBuilderScreen = () => {
           placeholderTextColor={T.textFaint}
           value={pTitle}
           onChangeText={setPTitle}
-          onBlur={savePersonalInfo}
+          onBlur={savePersonalQuietly}
         />
 
         <View style={styles.inputGridRow}>
@@ -716,7 +797,7 @@ const ResumeBuilderScreen = () => {
               autoCapitalize="none"
               value={pEmail}
               onChangeText={setPEmail}
-              onBlur={savePersonalInfo}
+              onBlur={savePersonalQuietly}
             />
           </View>
           <View style={{ flex: 1, marginLeft: 8 }}>
@@ -728,7 +809,7 @@ const ResumeBuilderScreen = () => {
               keyboardType="phone-pad"
               value={pPhone}
               onChangeText={setPPhone}
-              onBlur={savePersonalInfo}
+              onBlur={savePersonalQuietly}
             />
           </View>
         </View>
@@ -742,7 +823,7 @@ const ResumeBuilderScreen = () => {
               placeholderTextColor={T.textFaint}
               value={pLocation}
               onChangeText={setPLocation}
-              onBlur={savePersonalInfo}
+              onBlur={savePersonalQuietly}
             />
           </View>
           <View style={{ flex: 1, marginLeft: 8 }}>
@@ -754,7 +835,7 @@ const ResumeBuilderScreen = () => {
               autoCapitalize="none"
               value={pLinkedin}
               onChangeText={setPLinkedin}
-              onBlur={savePersonalInfo}
+              onBlur={savePersonalQuietly}
             />
           </View>
         </View>
@@ -769,7 +850,7 @@ const ResumeBuilderScreen = () => {
               autoCapitalize="none"
               value={pGithub}
               onChangeText={setPGithub}
-              onBlur={savePersonalInfo}
+              onBlur={savePersonalQuietly}
             />
           </View>
           <View style={{ flex: 1, marginLeft: 8 }}>
@@ -781,7 +862,7 @@ const ResumeBuilderScreen = () => {
               autoCapitalize="none"
               value={pPortfolio}
               onChangeText={setPPortfolio}
-              onBlur={savePersonalInfo}
+              onBlur={savePersonalQuietly}
             />
           </View>
         </View>
@@ -789,9 +870,12 @@ const ResumeBuilderScreen = () => {
         <TouchableOpacity 
           style={[styles.yellowButton, { marginTop: 20 }]} 
           onPress={handleSaveStep1}
-          disabled={savingStep1}
+          disabled={saveStep1.running}
+          accessibilityRole="button"
+          accessibilityLabel="save personal information"
+          accessibilityState={{ busy: saveStep1.running }}
         >
-          {savingStep1 ? (
+          {saveStep1.running ? (
             <ActivityIndicator color={T.ink} size="small" />
           ) : (
             <Text style={styles.yellowButtonText}>💾 Save Personal Information</Text>
@@ -807,7 +891,7 @@ const ResumeBuilderScreen = () => {
   const renderStep2 = () => {
     const items = currentResume?.education || [];
 
-    const handleAddEducation = async () => {
+    const handleAddEducation = () => saveItem.run(async () => {
       if (!eduDegree.trim() || !eduInstitution.trim()) {
         Alert.alert('Required', 'Degree and University/Institution are mandatory.');
         return;
@@ -823,15 +907,7 @@ const ResumeBuilderScreen = () => {
         current: eduCurrent
       };
       
-      let updated;
-      if (editingEduIndex !== null) {
-        updated = [...items];
-        updated[editingEduIndex] = newItem;
-      } else {
-        updated = [...items, newItem];
-      }
-
-      await updateResume(currentResume._id, { education: updated });
+      if (!(await saveListItem('education', newItem, editingEduIndex))) return;
       
       setEduDegree('');
       setEduField('');
@@ -842,12 +918,12 @@ const ResumeBuilderScreen = () => {
       setEduEndDate('');
       setEduCurrent(false);
       setEditingEduIndex(null);
-    };
+    });
 
     return (
       <View style={styles.formContainer}>
         {items.map((item, index) => (
-          <View key={index} style={styles.itemRowBadge}>
+          <View key={item?._id || `i${index}`} style={styles.itemRowBadge}>
             <View style={{ flex: 1 }}>
               <Text style={styles.itemBadgeTitle}>{item.degree} in {item.fieldOfStudy}</Text>
               <Text style={styles.itemBadgeSub}>{item.institution} • {item.startDate} - {item.current ? 'Currently studying' : item.endDate}</Text>
@@ -863,14 +939,13 @@ const ResumeBuilderScreen = () => {
                 setEduStartDate(formatDateForInput(item.startDate));
                 setEduEndDate(formatDateForInput(item.endDate));
                 setEduCurrent(item.current || false);
-                setEditingEduIndex(index);
+                setEditingEduIndex(keyOf(item));
               }} style={{ marginRight: 12 }}>
                 <Ionicons name="create-outline" size={20} color={T.ink} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={async () => {
-                const updated = items.filter((_, i) => i !== index);
-                await updateResume(currentResume._id, { education: updated });
-              }}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={`delete education ${index + 1}`} disabled={removeItem.running} hitSlop={8} onPress={() => confirmRemove('education', item, 'education', (k) => {
+                if (editingEduIndex === k) { setEduDegree(''); setEduField(''); setEduInstitution(''); setEduGpa(''); setEduSemester(''); setEduStartDate(''); setEduEndDate(''); setEduCurrent(false); setEditingEduIndex(null); }
+              })}>
                 <Ionicons name="trash-outline" size={20} color={T.danger} />
               </TouchableOpacity>
             </View>
@@ -878,7 +953,7 @@ const ResumeBuilderScreen = () => {
         ))}
 
         <Text style={styles.certificationHeading}>
-          {editingEduIndex !== null ? `Edit Education #${editingEduIndex + 1}` : `Education #${items.length + 1}`}
+          {editingEduIndex !== null ? `Edit Education #${indexOfKey(items, editingEduIndex) + 1}` : `Education #${items.length + 1}`}
         </Text>
 
         <Text style={styles.inputLabel}>degree</Text>
@@ -963,10 +1038,10 @@ const ResumeBuilderScreen = () => {
           </>
         )}
 
-        <TouchableOpacity style={styles.yellowButton} onPress={handleAddEducation}>
-          <Text style={styles.yellowButtonText}>
+        <TouchableOpacity style={styles.yellowButton} onPress={handleAddEducation} disabled={saveItem.running} accessibilityRole="button" accessibilityLabel={editingEduIndex !== null ? 'update education' : 'add education'} accessibilityState={{ busy: saveItem.running }}>
+          {saveItem.running ? <ActivityIndicator color={T.ink} size="small" /> : <Text style={styles.yellowButtonText}>
             {editingEduIndex !== null ? 'Update Education' : 'Add Education'}
-          </Text>
+          </Text>}
         </TouchableOpacity>
       </View>
     );
@@ -978,7 +1053,7 @@ const ResumeBuilderScreen = () => {
   const renderStep3 = () => {
     const items = currentResume?.workExperience || [];
 
-    const handleAddWork = async () => {
+    const handleAddWork = () => saveItem.run(async () => {
       if (!workCompany.trim() || !workPosition.trim()) {
         Alert.alert('Required', 'Company name and Position/Role are mandatory.');
         return;
@@ -993,15 +1068,7 @@ const ResumeBuilderScreen = () => {
         description: workDesc.trim()
       };
 
-      let updated;
-      if (editingWorkIndex !== null) {
-        updated = [...items];
-        updated[editingWorkIndex] = newItem;
-      } else {
-        updated = [...items, newItem];
-      }
-
-      await updateResume(currentResume._id, { workExperience: updated });
+      if (!(await saveListItem('workExperience', newItem, editingWorkIndex))) return;
       
       setWorkCompany('');
       setWorkPosition('');
@@ -1011,34 +1078,27 @@ const ResumeBuilderScreen = () => {
       setWorkCurrent(false);
       setWorkDesc('');
       setEditingWorkIndex(null);
-    };
+    });
 
-    const handleAIEnhanceWork = async () => {
+    const handleAIEnhanceWork = () => {
       if (!requireAccount()) return;
       if (!workDesc.trim()) {
         Alert.alert('Empty', 'Please type in your responsibilities first before enhancing.');
         return;
       }
-      try {
-        setAiProcessing(true);
+      aiWork.run(async () => {
         const result = await resumeApi.enhanceText(
           workDesc,
           `Work experience as ${workPosition || 'professional'} at ${workCompany || 'a company'}`
         );
-        if (result?.enhanced) {
-          setWorkDesc(result.enhanced);
-        }
-        setAiProcessing(false);
-      } catch (err) {
-        setAiProcessing(false);
-        Alert.alert('AI Error', plainError(err, "Enhancement failed. Please try again later."));
-      }
+        if (result?.enhanced) setWorkDesc(result.enhanced);
+      });
     };
 
     return (
       <View style={styles.formContainer}>
         {items.map((item, index) => (
-          <View key={index} style={styles.itemRowBadge}>
+          <View key={item?._id || `i${index}`} style={styles.itemRowBadge}>
             <View style={{ flex: 1 }}>
               <Text style={styles.itemBadgeTitle}>{item.position} at {item.company}</Text>
               <Text style={styles.itemBadgeSub}>{item.location} • {item.startDate} - {item.current ? 'Present' : item.endDate}</Text>
@@ -1052,14 +1112,13 @@ const ResumeBuilderScreen = () => {
                 setWorkEndDate(formatDateForInput(item.endDate));
                 setWorkCurrent(item.current || false);
                 setWorkDesc(item.description || '');
-                setEditingWorkIndex(index);
+                setEditingWorkIndex(keyOf(item));
               }} style={{ marginRight: 12 }}>
                 <Ionicons name="create-outline" size={20} color={T.ink} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={async () => {
-                const updated = items.filter((_, i) => i !== index);
-                await updateResume(currentResume._id, { workExperience: updated });
-              }}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={`delete experience ${index + 1}`} disabled={removeItem.running} hitSlop={8} onPress={() => confirmRemove('workExperience', item, 'experience', (k) => {
+                if (editingWorkIndex === k) { setWorkCompany(''); setWorkPosition(''); setWorkLocation(''); setWorkStartDate(''); setWorkEndDate(''); setWorkCurrent(false); setWorkDesc(''); setEditingWorkIndex(null); }
+              })}>
                 <Ionicons name="trash-outline" size={20} color={T.danger} />
               </TouchableOpacity>
             </View>
@@ -1067,7 +1126,7 @@ const ResumeBuilderScreen = () => {
         ))}
 
         <Text style={styles.certificationHeading}>
-          {editingWorkIndex !== null ? `Edit Experience #${editingWorkIndex + 1}` : `Experience #${items.length + 1}`}
+          {editingWorkIndex !== null ? `Edit Experience #${indexOfKey(items, editingWorkIndex) + 1}` : `Experience #${items.length + 1}`}
         </Text>
 
         <Text style={styles.inputLabel}>company name</Text>
@@ -1131,8 +1190,8 @@ const ResumeBuilderScreen = () => {
 
         <View style={styles.labelWithAction}>
           <Text style={styles.inputLabel}>responsibilities & achievements</Text>
-          <TouchableOpacity style={styles.aiEnhanceMiniBtn} onPress={handleAIEnhanceWork} disabled={aiProcessing}>
-            <Ionicons name="sparkles" size={14} color={T.ink} />
+          <TouchableOpacity style={styles.aiEnhanceMiniBtn} onPress={handleAIEnhanceWork} disabled={aiWork.running} accessibilityRole="button" accessibilityLabel="ai enhance experience" accessibilityState={{ busy: aiWork.running }}>
+            {aiWork.running ? <ActivityIndicator color={T.ink} size="small" /> : <Ionicons name="sparkles" size={14} color={T.ink} />}
             <Text style={styles.aiEnhanceMiniBtnText}>ai enhance</Text>
           </TouchableOpacity>
         </View>
@@ -1145,10 +1204,10 @@ const ResumeBuilderScreen = () => {
           onChangeText={setWorkDesc}
         />
 
-        <TouchableOpacity style={styles.yellowButton} onPress={handleAddWork}>
-          <Text style={styles.yellowButtonText}>
+        <TouchableOpacity style={styles.yellowButton} onPress={handleAddWork} disabled={saveItem.running} accessibilityRole="button" accessibilityLabel={editingWorkIndex !== null ? 'update experience' : 'add experience'} accessibilityState={{ busy: saveItem.running }}>
+          {saveItem.running ? <ActivityIndicator color={T.ink} size="small" /> : <Text style={styles.yellowButtonText}>
             {editingWorkIndex !== null ? 'Update Experience' : 'Add Experience'}
-          </Text>
+          </Text>}
         </TouchableOpacity>
       </View>
     );
@@ -1160,7 +1219,7 @@ const ResumeBuilderScreen = () => {
   const renderStep4 = () => {
     const items = currentResume?.projects || [];
 
-    const handleAddProj = async () => {
+    const handleAddProj = () => saveItem.run(async () => {
       if (!projName.trim() || !projDesc.trim()) {
         Alert.alert('Required', 'Project name and Description are mandatory.');
         return;
@@ -1173,15 +1232,7 @@ const ResumeBuilderScreen = () => {
         description: projDesc.trim()
       };
 
-      let updated;
-      if (editingProjIndex !== null) {
-        updated = [...items];
-        updated[editingProjIndex] = newItem;
-      } else {
-        updated = [...items, newItem];
-      }
-
-      await updateResume(currentResume._id, { projects: updated });
+      if (!(await saveListItem('projects', newItem, editingProjIndex))) return;
       
       setProjName('');
       setProjTech('');
@@ -1189,34 +1240,27 @@ const ResumeBuilderScreen = () => {
       setProjLive('');
       setProjDesc('');
       setEditingProjIndex(null);
-    };
+    });
 
-    const handleAIEnhanceProj = async () => {
+    const handleAIEnhanceProj = () => {
       if (!requireAccount()) return;
       if (!projDesc.trim()) {
         Alert.alert('Empty', 'Please describe your project first.');
         return;
       }
-      try {
-        setAiProcessing(true);
+      aiProj.run(async () => {
         const result = await resumeApi.enhanceText(
           projDesc,
           `Project description for ${projName || 'a software project'} using ${projTech || 'various technologies'}`
         );
-        if (result?.enhanced) {
-          setProjDesc(result.enhanced);
-        }
-        setAiProcessing(false);
-      } catch (err) {
-        setAiProcessing(false);
-        Alert.alert('AI Error', plainError(err, "Enhancement failed. Please try again later."));
-      }
+        if (result?.enhanced) setProjDesc(result.enhanced);
+      });
     };
 
     return (
       <View style={styles.formContainer}>
         {items.map((item, index) => (
-          <View key={index} style={styles.itemRowBadge}>
+          <View key={item?._id || `i${index}`} style={styles.itemRowBadge}>
             <View style={{ flex: 1 }}>
               <Text style={styles.itemBadgeTitle}>{item.name}</Text>
               <Text style={styles.itemBadgeSub}>{Array.isArray(item.technologies) ? item.technologies.join(', ') : item.technologies}</Text>
@@ -1228,14 +1272,13 @@ const ResumeBuilderScreen = () => {
                 setProjGithub(item.githubUrl || '');
                 setProjLive(item.url || '');
                 setProjDesc(item.description || '');
-                setEditingProjIndex(index);
+                setEditingProjIndex(keyOf(item));
               }} style={{ marginRight: 12 }}>
                 <Ionicons name="create-outline" size={20} color={T.ink} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={async () => {
-                const updated = items.filter((_, i) => i !== index);
-                await updateResume(currentResume._id, { projects: updated });
-              }}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={`delete project ${index + 1}`} disabled={removeItem.running} hitSlop={8} onPress={() => confirmRemove('projects', item, 'project', (k) => {
+                if (editingProjIndex === k) { setProjName(''); setProjTech(''); setProjGithub(''); setProjLive(''); setProjDesc(''); setEditingProjIndex(null); }
+              })}>
                 <Ionicons name="trash-outline" size={20} color={T.danger} />
               </TouchableOpacity>
             </View>
@@ -1243,7 +1286,7 @@ const ResumeBuilderScreen = () => {
         ))}
 
         <Text style={styles.certificationHeading}>
-          {editingProjIndex !== null ? `Edit Project #${editingProjIndex + 1}` : `Project #${items.length + 1}`}
+          {editingProjIndex !== null ? `Edit Project #${indexOfKey(items, editingProjIndex) + 1}` : `Project #${items.length + 1}`}
         </Text>
 
         <Text style={styles.inputLabel}>project name</Text>
@@ -1286,8 +1329,8 @@ const ResumeBuilderScreen = () => {
 
         <View style={styles.labelWithAction}>
           <Text style={styles.inputLabel}>description</Text>
-          <TouchableOpacity style={styles.aiEnhanceMiniBtn} onPress={handleAIEnhanceProj} disabled={aiProcessing}>
-            <Ionicons name="sparkles" size={14} color={T.ink} />
+          <TouchableOpacity style={styles.aiEnhanceMiniBtn} onPress={handleAIEnhanceProj} disabled={aiProj.running} accessibilityRole="button" accessibilityLabel="ai enhance project" accessibilityState={{ busy: aiProj.running }}>
+            {aiProj.running ? <ActivityIndicator color={T.ink} size="small" /> : <Ionicons name="sparkles" size={14} color={T.ink} />}
             <Text style={styles.aiEnhanceMiniBtnText}>ai enhance</Text>
           </TouchableOpacity>
         </View>
@@ -1300,10 +1343,10 @@ const ResumeBuilderScreen = () => {
           onChangeText={setProjDesc}
         />
 
-        <TouchableOpacity style={styles.yellowButton} onPress={handleAddProj}>
-          <Text style={styles.yellowButtonText}>
+        <TouchableOpacity style={styles.yellowButton} onPress={handleAddProj} disabled={saveItem.running} accessibilityRole="button" accessibilityLabel={editingProjIndex !== null ? 'update project' : 'add project'} accessibilityState={{ busy: saveItem.running }}>
+          {saveItem.running ? <ActivityIndicator color={T.ink} size="small" /> : <Text style={styles.yellowButtonText}>
             {editingProjIndex !== null ? 'Update Project' : 'Add Project'}
-          </Text>
+          </Text>}
         </TouchableOpacity>
       </View>
     );
@@ -1315,7 +1358,7 @@ const ResumeBuilderScreen = () => {
   const renderStep5 = () => {
     const items = currentResume?.certifications || [];
 
-    const handleAddCertification = async () => {
+    const handleAddCertification = () => saveItem.run(async () => {
       if (!certName.trim() || !certIssuer.trim()) {
         Alert.alert('Required', 'Certification name and Issuer are mandatory.');
         return;
@@ -1328,15 +1371,7 @@ const ResumeBuilderScreen = () => {
         expiryDate: certExpiryDate.trim()
       };
 
-      let updated;
-      if (editingCertIndex !== null) {
-        updated = [...items];
-        updated[editingCertIndex] = newCert;
-      } else {
-        updated = [...items, newCert];
-      }
-
-      await updateResume(currentResume._id, { certifications: updated });
+      if (!(await saveListItem('certifications', newCert, editingCertIndex))) return;
       
       setCertName('');
       setCertIssuer('');
@@ -1344,12 +1379,12 @@ const ResumeBuilderScreen = () => {
       setCertUrl('');
       setCertExpiryDate('');
       setEditingCertIndex(null);
-    };
+    });
 
     return (
       <View style={styles.formContainer}>
         {items.map((item, index) => (
-          <View key={index} style={styles.itemRowBadge}>
+          <View key={item?._id || `i${index}`} style={styles.itemRowBadge}>
             <View style={{ flex: 1 }}>
               <Text style={styles.itemBadgeTitle}>{item.name}</Text>
               <Text style={styles.itemBadgeSub}>{item.organization} • {item.date}</Text>
@@ -1361,14 +1396,13 @@ const ResumeBuilderScreen = () => {
                 setCertIssueDate(item.date || '');
                 setCertUrl(item.url || '');
                 setCertExpiryDate(item.expiryDate || '');
-                setEditingCertIndex(index);
+                setEditingCertIndex(keyOf(item));
               }} style={{ marginRight: 12 }}>
                 <Ionicons name="create-outline" size={20} color={T.ink} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={async () => {
-                const updated = items.filter((_, i) => i !== index);
-                await updateResume(currentResume._id, { certifications: updated });
-              }}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={`delete certification ${index + 1}`} disabled={removeItem.running} hitSlop={8} onPress={() => confirmRemove('certifications', item, 'certification', (k) => {
+                if (editingCertIndex === k) { setCertName(''); setCertIssuer(''); setCertIssueDate(''); setCertUrl(''); setCertExpiryDate(''); setEditingCertIndex(null); }
+              })}>
                 <Ionicons name="trash-outline" size={20} color={T.danger} />
               </TouchableOpacity>
             </View>
@@ -1376,7 +1410,7 @@ const ResumeBuilderScreen = () => {
         ))}
 
         <Text style={styles.certificationHeading}>
-          {editingCertIndex !== null ? `Edit Certification #${editingCertIndex + 1}` : `Certification #${items.length + 1}`}
+          {editingCertIndex !== null ? `Edit Certification #${indexOfKey(items, editingCertIndex) + 1}` : `Certification #${items.length + 1}`}
         </Text>
 
         <Text style={styles.inputLabel}>certification name</Text>
@@ -1425,10 +1459,10 @@ const ResumeBuilderScreen = () => {
           onChangeText={setCertExpiryDate}
         />
 
-        <TouchableOpacity style={styles.yellowButton} onPress={handleAddCertification}>
-          <Text style={styles.yellowButtonText}>
+        <TouchableOpacity style={styles.yellowButton} onPress={handleAddCertification} disabled={saveItem.running} accessibilityRole="button" accessibilityLabel={editingCertIndex !== null ? 'update certification' : 'add certification'} accessibilityState={{ busy: saveItem.running }}>
+          {saveItem.running ? <ActivityIndicator color={T.ink} size="small" /> : <Text style={styles.yellowButtonText}>
             {editingCertIndex !== null ? 'Update Certification' : 'Add Certification'}
-          </Text>
+          </Text>}
         </TouchableOpacity>
       </View>
     );
@@ -1440,55 +1474,47 @@ const ResumeBuilderScreen = () => {
   const renderStep6 = () => {
     const selectedRoles = currentResume?.targetJobs || [];
 
-    const handleSelectRole = async (role) => {
-      const exist = selectedRoles.some(r => r.jobTitle.toLowerCase() === role.toLowerCase());
-      let updated;
-      if (exist) {
-        updated = selectedRoles.filter(r => r.jobTitle.toLowerCase() !== role.toLowerCase());
-      } else {
-        updated = [...selectedRoles, { jobTitle: role, industry: expandedIndustry || '', jobType: 'Full-time' }];
-      }
-      await updateResume(currentResume._id, { 
-        targetJobs: updated,
-        targetJob: updated[0] || { jobTitle: role, industry: expandedIndustry || '', jobType: 'Full-time' } 
+    // roles: toggled on the latest saved list
+    const handleSelectRole = (role) => toggleRole.run(async () => {
+      const resume = await ensureResume();
+      if (!resume?._id) return;
+      const industry = expandedIndustry || '';
+      await updateResume(resume._id, (latest) => {
+        const list = latest?.targetJobs || [];
+        const exist = list.some(r => r.jobTitle.toLowerCase() === role.toLowerCase());
+        const updated = exist
+          ? list.filter(r => r.jobTitle.toLowerCase() !== role.toLowerCase())
+          : [...list, { jobTitle: role, industry, jobType: 'Full-time' }];
+        return { targetJobs: updated, targetJob: updated[0] || { jobTitle: role, industry, jobType: 'Full-time' } };
       });
-    };
+    });
 
-    const handleClearRole = async (role) => {
-      const updated = selectedRoles.filter(r => r.jobTitle.toLowerCase() !== role.toLowerCase());
-      await updateResume(currentResume._id, { 
-        targetJobs: updated,
-        targetJob: updated[0] || {}
+    const handleClearRole = (role) => toggleRole.run(async () => {
+      if (!currentResume?._id) return;
+      await updateResume(currentResume._id, (latest) => {
+        const updated = (latest?.targetJobs || []).filter(r => r.jobTitle.toLowerCase() !== role.toLowerCase());
+        return { targetJobs: updated, targetJob: updated[0] || {} };
       });
-    };
+    });
 
-    const handleAIGenerateSummary = async () => {
+    const handleAIGenerateSummary = () => {
       if (!requireAccount()) return;
       const jobTitle = getTargetRoleFallback();
       if (!jobTitle || selectedRoles.length === 0) {
         Alert.alert('Required', 'Please select at least one target role first.');
         return;
       }
-      try {
-        setAiProcessing(true);
+      aiSummary.run(async () => {
         const skillNames = (currentResume?.skills || []).map(s => s.name).join(', ');
         const expSummary = (currentResume?.workExperience || []).map(w => `${w.position} at ${w.company}`).join(', ');
         const prompt = `Write a concise, powerful 3-4 sentence professional summary for a ${jobTitle} resume. Skills: ${skillNames || 'not specified'}. Experience: ${expSummary || 'not specified'}. Make it ATS-optimized.`;
         const result = await resumeApi.enhanceText(prompt, `professional summary for ${jobTitle}`);
         if (result?.enhanced) {
           setTargetSummary(result.enhanced);
-          await updateResume(currentResume._id, {
-            professionalSummary: {
-              ...currentResume.professionalSummary,
-              summary: result.enhanced
-            }
-          });
+          await updateResume(currentResume._id, { professionalSummary: { summary: result.enhanced } });
+          lastSummaryRef.current = result.enhanced;
         }
-        setAiProcessing(false);
-      } catch (err) {
-        setAiProcessing(false);
-        Alert.alert('AI Error', plainError(err, "Failed to generate summary."));
-      }
+      });
     };
 
     return (
@@ -1546,6 +1572,7 @@ const ResumeBuilderScreen = () => {
                           key={role} 
                           style={[styles.roleSelectBtn, isActive && styles.roleSelectBtnActive]}
                           onPress={() => handleSelectRole(role)}
+                          disabled={toggleRole.running}
                         >
                           <Text style={[styles.roleSelectText, isActive && styles.roleSelectTextActive]}>
                             {role}
@@ -1568,15 +1595,18 @@ const ResumeBuilderScreen = () => {
           placeholderTextColor={T.textFaint}
           value={targetSummary}
           onChangeText={setTargetSummary}
-          onBlur={saveTargetSummary}
+          onBlur={saveSummaryQuietly}
         />
 
         <TouchableOpacity 
           style={styles.yellowButton} 
           onPress={handleAIGenerateSummary}
-          disabled={aiProcessing}
+          disabled={aiSummary.running}
+          accessibilityRole="button"
+          accessibilityLabel="generate summary with ai"
+          accessibilityState={{ busy: aiSummary.running }}
         >
-          {aiProcessing ? (
+          {aiSummary.running ? (
             <ActivityIndicator color={T.ink} size="small" />
           ) : (
             <Text style={styles.yellowButtonText}>⚡ Generate with AI</Text>
@@ -1586,9 +1616,12 @@ const ResumeBuilderScreen = () => {
         <TouchableOpacity 
           style={[styles.yellowButton, { marginTop: 12, backgroundColor: T.ink }]} 
           onPress={handleSaveStep6}
-          disabled={savingStep6}
+          disabled={saveStep6.running}
+          accessibilityRole="button"
+          accessibilityLabel="save target job and summary"
+          accessibilityState={{ busy: saveStep6.running }}
         >
-          {savingStep6 ? (
+          {saveStep6.running ? (
             <ActivityIndicator color={T.white} size="small" />
           ) : (
             <Text style={[styles.yellowButtonText, { color: T.white }]}>💾 Save Target Job & Summary</Text>
@@ -1604,16 +1637,19 @@ const ResumeBuilderScreen = () => {
   const renderStep7 = () => {
     const items = currentResume?.skills || [];
 
-    const handleAddSkill = async () => {
-      if (!skillInput.trim()) return;
-      const exist = items.some(s => s.name.toLowerCase() === skillInput.trim().toLowerCase());
-      if (exist) {
+    const handleAddSkill = () => {
+      const name = skillInput.trim();
+      if (!name) return;
+      addSkill.run(async () => {
+        const resume = await ensureResume();
+        if (!resume?._id) return;
+        await updateResume(resume._id, (latest) => {
+          const list = latest?.skills || [];
+          if (list.some(s => s.name.toLowerCase() === name.toLowerCase())) return null; // already there
+          return { skills: [...list, { name, level: 'Advanced' }] };
+        });
         setSkillInput('');
-        return;
-      }
-      const updated = [...items, { name: skillInput.trim(), level: 'Advanced' }];
-      await updateResume(currentResume._id, { skills: updated });
-      setSkillInput('');
+      });
     };
 
     return (
@@ -1627,8 +1663,8 @@ const ResumeBuilderScreen = () => {
             onChangeText={setSkillInput}
             onSubmitEditing={handleAddSkill}
           />
-          <TouchableOpacity style={styles.skillAddBtn} onPress={handleAddSkill}>
-            <Ionicons name="add" size={22} color={T.ink} />
+          <TouchableOpacity style={styles.skillAddBtn} onPress={handleAddSkill} disabled={addSkill.running} accessibilityRole="button" accessibilityLabel="add skill" accessibilityState={{ busy: addSkill.running }}>
+            {addSkill.running ? <ActivityIndicator color={T.ink} size="small" /> : <Ionicons name="add" size={22} color={T.ink} />}
           </TouchableOpacity>
         </View>
 
@@ -1639,12 +1675,9 @@ const ResumeBuilderScreen = () => {
         ) : (
           <View style={styles.skillsTagRow}>
             {items.map((skill, index) => (
-              <View key={index} style={styles.skillTag}>
+              <View key={skill?._id || skill.name || index} style={styles.skillTag}>
                 <Text style={styles.skillTagText}>{skill.name}</Text>
-                <TouchableOpacity onPress={async () => {
-                  const updated = items.filter((_, i) => i !== index);
-                  await updateResume(currentResume._id, { skills: updated });
-                }}>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel={`remove ${skill.name}`} disabled={removeItem.running} hitSlop={8} onPress={() => confirmRemove('skills', skill, 'skill')}>
                   <Ionicons name="close" size={14} color={T.textMuted} style={{ marginLeft: 4 }} />
                 </TouchableOpacity>
               </View>
@@ -1654,35 +1687,38 @@ const ResumeBuilderScreen = () => {
 
         <TouchableOpacity 
           style={[styles.yellowButton, { marginTop: 24 }]}
-          onPress={async () => {
+          disabled={aiSkills.running}
+          accessibilityRole="button"
+          accessibilityLabel="ai skill suggestions"
+          accessibilityState={{ busy: aiSkills.running }}
+          onPress={() => {
             if (!requireAccount()) return;
-            try {
-              const items = currentResume?.skills || [];
+            aiSkills.run(async () => {
+              const resume = await ensureResume();
+              if (!resume?._id) return;
               const targetRole = getTargetRoleFallback();
-              const result = await resumeApi.suggestSkills(
-                items.map(s => s.name),
-                targetRole
-              );
-              if (result?.suggestions && result.suggestions.length > 0) {
-                const existingNames = new Set(items.map(s => s.name.toLowerCase()));
-                const newSkills = result.suggestions
-                  .filter(s => !existingNames.has(s.toLowerCase()))
-                  .map(s => ({ name: s, level: 'Intermediate' }));
-                if (newSkills.length > 0) {
-                  await updateResume(currentResume._id, { skills: [...items, ...newSkills] });
-                  Alert.alert('Skills Added ✨', `${newSkills.length} new skills added based on your target role.`);
-                } else {
-                  Alert.alert('All Caught Up ✓', 'No new skills to suggest — you already have them!');
-                }
-              } else {
+              const result = await resumeApi.suggestSkills((resume.skills || []).map(s => s.name), targetRole);
+              if (!(result?.suggestions && result.suggestions.length > 0)) {
                 Alert.alert('No Suggestions', 'Could not generate suggestions. Try adding a target role in the Target step.');
+                return;
               }
-            } catch (err) {
-              Alert.alert('AI Failed', plainError(err, "Suggestions timed out. Please try again."));
-            }
+              let added = 0;
+              // added to the latest list (skills added meanwhile are kept, none twice)
+              await updateResume(resume._id, (latest) => {
+                const list = latest?.skills || [];
+                const existingNames = new Set(list.map(s => s.name.toLowerCase()));
+                const newSkills = [...new Set(result.suggestions)]
+                  .filter(s => !existingNames.has(String(s).toLowerCase()))
+                  .map(s => ({ name: s, level: 'Intermediate' }));
+                added = newSkills.length;
+                return newSkills.length ? { skills: [...list, ...newSkills] } : null;
+              });
+              if (added > 0) Alert.alert('Skills Added ✨', `${added} new skills added based on your target role.`);
+              else Alert.alert('All Caught Up ✓', 'No new skills to suggest — you already have them!');
+            });
           }}
         >
-          <Text style={styles.yellowButtonText}>✨ AI Skill Suggestions</Text>
+          {aiSkills.running ? <ActivityIndicator color={T.ink} size="small" /> : <Text style={styles.yellowButtonText}>✨ AI Skill Suggestions</Text>}
         </TouchableOpacity>
         <Text style={styles.skillTipText}>💡 Press Enter or , to add a skill quickly</Text>
       </View>
@@ -1740,8 +1776,8 @@ const ResumeBuilderScreen = () => {
           <HeaderIconButton
             dark
             label="preview resume"
-            onPress={async () => {
-              await savePersonalInfo();
+            onPress={() => {
+              savePersonalQuietly();
               setPreviewTemplateId(currentResume?.template || 'modern_ats');
               setPreviewVisible(true);
             }}
@@ -1763,6 +1799,9 @@ const ResumeBuilderScreen = () => {
                   activeStep > s.id && styles.stepCircleCompleted
                 ]}
                 onPress={() => handleStepChange(s.id)}
+                disabled={moveStep.running}
+                accessibilityRole="button"
+                accessibilityLabel={`step ${s.id}: ${s.name}`}
               >
                 <Ionicons 
                   name={activeStep > s.id ? 'checkmark' : s.icon} 
@@ -1803,7 +1842,7 @@ const ResumeBuilderScreen = () => {
         <View style={styles.footerContainer}>
           <TouchableOpacity 
             style={[styles.backButton, activeStep === 1 && { opacity: 0.5 }]}
-            disabled={activeStep === 1}
+            disabled={activeStep === 1 || moveStep.running}
             onPress={handlePrevStep}
           >
             <Ionicons name="arrow-back" size={16} color={T.white} />
@@ -1812,17 +1851,19 @@ const ResumeBuilderScreen = () => {
 
           <TouchableOpacity 
   style={[styles.continueButton, activeStep === 7 && { backgroundColor: T.success }]}
-  onPress={async () => {
+  disabled={moveStep.running || finish.running}
+  accessibilityRole="button"
+  accessibilityState={{ busy: moveStep.running || finish.running }}
+  onPress={() => {
     if (activeStep === 7) {
-      // ✅ Skills step — nothing pending to save. Skills are already persisted
-      //    on every "Add Skill" tap. Just navigate to the view screen.
-      if (!currentResume?._id) {
-        Alert.alert('Error', 'No resume to finish.');
-        return;
-      }
-      navigation.navigate('ResumeView', { resumeId: currentResume._id });
+      // skills are saved on every add; a new resume that was never saved is created first
+      finish.run(async () => {
+        const resume = currentResume?._id ? currentResume : await ensureResume();
+        if (!resume?._id) return;
+        navigation.navigate('ResumeView', { resumeId: resume._id });
+      });
     } else {
-      await handleNextStep();
+      handleNextStep();
     }
   }}
 >
@@ -1855,7 +1896,7 @@ const ResumeBuilderScreen = () => {
         <SafeAreaView style={styles.previewOverlay}>
           <View style={styles.previewHeader}>
             <Text style={styles.previewTitle}>resume template preview</Text>
-            <TouchableOpacity onPress={() => setPreviewVisible(false)}>
+            <TouchableOpacity onPress={() => setPreviewVisible(false)} hitSlop={10} style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }} accessibilityRole="button" accessibilityLabel="close preview">
               <Ionicons name="close" size={26} color={T.white} />
             </TouchableOpacity>
           </View>
