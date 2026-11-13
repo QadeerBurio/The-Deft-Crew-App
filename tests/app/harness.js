@@ -34,7 +34,12 @@ function makeReact() {
   const React = {
     createElement: (type, props, ...children) => ({ type, props: { ...(props || {}), children: children.length <= 1 ? children[0] : children } }),
     Fragment: "Fragment",
-    createContext: (dflt) => ({ _default: dflt, Provider: "Provider" }),
+    // a Provider hands its value to everything rendered after it (and keeps it on the tree as props.value)
+    createContext: (dflt) => {
+      const c = { _default: dflt };
+      c.Provider = function Provider(props) { contexts.set(c, props.value); return { type: "Provider", props: { value: props.value, children: props.children } }; };
+      return c;
+    },
     useState(init) {
       const [l, i] = slot(() => ({ v: typeof init === "function" ? init() : init }));
       const root = cur.path.split("/")[0];

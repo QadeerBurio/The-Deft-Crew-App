@@ -8,8 +8,8 @@ import { AuthContext } from './AuthContext';
 import { runInGroup } from '../hooks/useAction';
 import { plainError } from '../utils/plainError';
 
-export const ACCOUNT_LIMIT_MSG = 'You have used all 2 resume creations available for your account. Deleting a resume will not restore your creation limit.';
-export const GUEST_LIMIT_MSG = 'You have used all 2 resume creations available for guest mode. Deleting a resume will not restore your creation limit.';
+export const ACCOUNT_LIMIT_MSG = "you already have 2 resumes. open one of them to edit it, or delete one to make a new one.";
+export const GUEST_LIMIT_MSG = "guest mode allows 2 resumes, and deleting one doesn't free a slot. sign up to make more.";
 
 const getErrorMessage = (error, defaultMsg = 'An error occurred') => {
   if (error.response?.data?.error) {
