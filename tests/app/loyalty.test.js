@@ -196,7 +196,9 @@ const textOf = (n) => (n == null || n === false ? "" : typeof n === "string" || 
       { redemptionId: "r2", brand: "b1", status: "not-counted", visitNumber: null, discountPct: 15, at: "2026-11-02T12:00:00Z" },
       { redemptionId: "r1", brand: "b9", status: "reversed", visitNumber: 2, discountPct: 15, at: "2026-11-01T10:00:00Z" },
     ];
-    const load = loader({ react: React, "react-native": rn, ...nav, ...icons, "../api/loyaltyApi": { getMyLoyaltyCredits: async () => credits } });
+    let flagOnForList = true;
+    let programs = [];
+    const load = loader({ react: React, "react-native": rn, ...nav, ...icons, "../api/loyaltyApi": { loyaltyEnabled: async () => flagOnForList, getMyLoyaltyCredits: async () => credits, activeLoyaltyPrograms: async () => ({ enabled: true, programs }) } });
     const LoyaltyVisits = load(path.join(SRC, "components/LoyaltyVisits.js")).default;
     let root = mount(React.createElement(LoyaltyVisits, { brandNames: { b1: "Alpha Cafe" }, refreshKey: false }));
     await tick(30); root.rerender();
@@ -206,7 +208,7 @@ const textOf = (n) => (n == null || n === false ? "" : typeof n === "string" || 
     ok(t.includes("reversed") && t.includes("a brand"), "a refunded visit: reversed (unknown brand name: 'a brand')", t);
     ok(t.includes("alpha cafe"), "brand names from the claimed offers", t);
     // a brand with a stamp card gets its progress line; a tiers brand doesn't
-    const load2 = loader({ react: React, "react-native": rn, ...nav, ...icons, "../api/loyaltyApi": { getMyLoyaltyCredits: async () => credits, getBrandLoyalty: async (b) => (b === "b1" ? { enabled: true, program: {}, progress: null, stamps: { stamps: 4, needed: 5, visitsToReward: 1, reward: { label: "a free coffee" }, available: null } } : { enabled: true, program: {}, progress: {} }) } });
+    const load2 = loader({ react: React, "react-native": rn, ...nav, ...icons, "../api/loyaltyApi": { loyaltyEnabled: async () => true, getMyLoyaltyCredits: async () => credits, activeLoyaltyPrograms: async () => ({ enabled: true, programs: [] }), getBrandLoyalty: async (b) => (b === "b1" ? { enabled: true, program: {}, progress: null, stamps: { stamps: 4, needed: 5, visitsToReward: 1, reward: { label: "a free coffee" }, available: null } } : { enabled: true, program: {}, progress: {} }) } });
     const LoyaltyVisits2 = load2(path.join(SRC, "components/LoyaltyVisits.js")).default;
     root = mount(React.createElement(LoyaltyVisits2, { brandNames: { b1: "Alpha Cafe" }, refreshKey: false }));
     await tick(40); root.rerender();
@@ -215,7 +217,15 @@ const textOf = (n) => (n == null || n === false ? "" : typeof n === "string" || 
     credits = [];
     root = mount(React.createElement(LoyaltyVisits, { brandNames: {}, refreshKey: false }));
     await tick(30); root.rerender();
-    ok(textOf(root.tree) === "", "no confirmed bills yet (or outside the pilot): nothing rendered", textOf(root.tree));
+    ok(/your loyalty visits/.test(textOf(root.tree)) && /no loyalty programs near you yet/.test(textOf(root.tree)), "flag on, no bills, no brand running a program: 'no loyalty programs near you yet'", textOf(root.tree));
+    programs = [{ brandId: "b1", brandName: "Alpha Cafe", name: "regulars" }, { brandId: "b2", brandName: "Beta Bakes", name: "" }];
+    root = mount(React.createElement(LoyaltyVisits, { brandNames: {}, refreshKey: 1 }));
+    await tick(30); root.rerender();
+    ok(/loyalty at Alpha Cafe, Beta Bakes. claim their offers to earn visits/.test(textOf(root.tree)), "flag on, no bills, brands running programs: where to earn", textOf(root.tree));
+    flagOnForList = false;
+    root = mount(React.createElement(LoyaltyVisits, { brandNames: {}, refreshKey: 2 }));
+    await tick(30); root.rerender();
+    ok(textOf(root.tree) === "", "flag off: nothing rendered", textOf(root.tree));
   }
 
   console.log("── placement: the existing Discounts area, no new tab");

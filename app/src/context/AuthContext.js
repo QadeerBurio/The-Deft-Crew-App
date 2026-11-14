@@ -16,6 +16,7 @@ import api, {
 import { jwtDecode } from "jwt-decode";
 import { resetNotificationBaseline } from "../hooks/useNotifications";
 import { clearClaimedRegistry } from "../screens/OfferScreen";
+import { refreshFlags, clearFlags } from "../api/appFlags";
 
 export const AuthContext = createContext();
 
@@ -62,6 +63,7 @@ export function AuthProvider({ children }) {
 
   // Prevents the save() effect from re-persisting during logout
   const isLoggingOutRef = useRef(false);
+  const flagsTokenRef = useRef(null); // the token whose features were last asked for
 
   // Refs to avoid dependency churn in callbacks
   const userRef = useRef(null);
@@ -74,6 +76,8 @@ export function AuthProvider({ children }) {
   // ─────────────────────────────────────────────────────────
   const clearAllData = useCallback(async () => {
     isLoggingOutRef.current = true;
+    // this account's feature flags go with it (memory and phone)
+    clearFlags();
 
     // Capture the outgoing user BEFORE nulling state
     const outgoing = userRef.current;
@@ -273,6 +277,11 @@ export function AuthProvider({ children }) {
           await AsyncStorage.setItem("token", token);
         } catch (e) {
           console.log("Storage save error:", e);
+        }
+        // a new sign-in (or another account): ask for its features now
+        if (flagsTokenRef.current !== token) {
+          flagsTokenRef.current = token;
+          refreshFlags({ force: true });
         }
       }
     };

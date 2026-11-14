@@ -35,7 +35,7 @@ export default function SurpriseBoxes({ route, navigation }) {
   const [view, setView] = useState(params.orderId ? "order" : params.view === "orders" ? "orders" : "list");
   const [listings, setListings] = useState(null);
   // boxes in the student's own city (from their profile) unless they ask for every city; city: what the server used
-  const [allCities, setAllCities] = useState(false);
+  const [allCities, setAllCities] = useState(!!params.allCities); // "all cities" from the Discounts card
   const [city, setCity] = useState(null);
   const [here, setHere] = useState(null);
   const [refreshing, setRefreshing] = useState(false);

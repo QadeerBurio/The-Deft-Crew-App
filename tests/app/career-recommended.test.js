@@ -160,11 +160,13 @@ const byLabel = (tree, label) => all(tree, (x) => x.props?.accessibilityLabel ==
   reply = { hasResume: false, recommendations: [] };
   root = mount(React.createElement(RecommendedJobs, { navigation }));
   await settle(root);
-  ok(root.tree == null || textOf(root.tree) === "", "no resume: nothing shown");
+  { const t0 = textOf(root.tree); const cta = all(root.tree, (x) => x.type === "TouchableOpacity" && x.props.accessibilityLabel === "add a resume")[0];
+    ok(t0.includes("recommended for you") && t0.includes("add a resume to get job matches") && !!cta, "flag on, no resume: the card says 'add a resume to get job matches' with a button", t0);
+    cta.props.onPress(); ok(nav.some((n) => n.s === "Resume"), "…the button opens Resume", JSON.stringify(nav)); nav.length = 0; }
   reply = { hasResume: true, recommendations: [] };
   root = mount(React.createElement(RecommendedJobs, { navigation }));
   await settle(root);
-  ok(root.tree == null || textOf(root.tree) === "", "nothing matches: nothing shown");
+  ok(textOf(root.tree).includes("no strong matches yet"), "flag on, nothing scores 60%+: 'no strong matches yet'", textOf(root.tree));
   reply = { hasResume: true, recommendations: [
     { _id: "j1", title: "React intern", companyName: "Bright Labs", location: "Karachi", matchPercentage: 100, matchedSkills: ["JavaScript", "React", "Node.js", "Git"] },
     { _id: "j2", title: "Frontend intern", company: "Hire Co", matchPercentage: 67, matchedSkills: ["React"] },
@@ -184,7 +186,7 @@ const byLabel = (tree, label) => all(tree, (x) => x.props?.accessibilityLabel ==
   mapi.recommendedJobs = async () => { throw new Error("offline"); };
   root = mount(React.createElement(RecommendedJobs, { navigation, refreshKey: 1 }));
   await settle(root);
-  ok(root.tree == null || textOf(root.tree) === "", "a failed request: nothing shown (no error on the hub)");
+  ok(/couldn't load your matches/.test(textOf(root.tree)), "a failed request: the card stays with 'couldn't load your matches' (no blank spot)", textOf(root.tree));
 
   console.log("── placement");
   const career = read("app/src/components/Career.js");

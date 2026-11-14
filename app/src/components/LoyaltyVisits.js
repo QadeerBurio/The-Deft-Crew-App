@@ -1,12 +1,14 @@
 // LoyaltyVisits.js: the student's recent confirmed bills at loyalty brands and whether each counted
 // as a visit ("visit credited", "didn't count", "reversed"), in My discounts (FLAG_LOYALTY_V2).
-// Renders nothing for guests, outside the pilot, or before the first confirmed bill.
+// With the flag on and no bill yet: the brands running a loyalty program, or "no loyalty programs near you yet".
+// Renders nothing for guests or with the flag off.
 import React, { useCallback, useEffect, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
-import { getMyLoyaltyCredits, getBrandLoyalty } from "../api/loyaltyApi";
+import { getMyLoyaltyCredits, getBrandLoyalty, activeLoyaltyPrograms, loyaltyEnabled } from "../api/loyaltyApi";
+import useFlag from "../hooks/useFlag";
 
 const STATUS = {
   credited: { label: "visit credited", icon: "checkmark-circle", fg: T.success, bg: T.successBg },
@@ -17,7 +19,9 @@ const day = (d) => new Date(d).toLocaleDateString(undefined, { day: "numeric", m
 
 // brandNames: { brandId: name } from the screen's claimed offers; other brands show as "a brand"
 export default function LoyaltyVisits({ brandNames = {}, refreshKey, max = 5 }) {
+  const on = useFlag("loyaltyV2", loyaltyEnabled);
   const [credits, setCredits] = useState([]);
+  const [programs, setPrograms] = useState(null); // null: loading; [] none yet
   // stamp cards (reward mode) of the brands in the list: { brandId: stamps }
   const [cards, setCards] = useState({});
   const load = useCallback(() => {
@@ -35,10 +39,36 @@ export default function LoyaltyVisits({ brandNames = {}, refreshKey, max = 5 }) 
     });
     return () => { alive = false; };
   }, [max]);
-  useEffect(load, [load, refreshKey]);
+  useEffect(load, [load, refreshKey, on]);
+  // nothing earned yet: which brands run a program (or none)
+  useEffect(() => {
+    if (on !== true || credits.length) return undefined;
+    let alive = true;
+    activeLoyaltyPrograms()
+      .then((d) => { if (alive) setPrograms(d?.programs || []); })
+      .catch((e) => { console.warn("[loyalty] programs not loaded:", e?.message); if (alive) setPrograms([]); });
+    return () => { alive = false; };
+  }, [on, credits.length, refreshKey]);
   useFocusEffect(load);
 
-  if (!credits.length) return null;
+  if (on !== true) return null;
+  if (!credits.length) {
+    // the flag is on but no visits yet: where loyalty can be earned, or that there's nowhere yet
+    const names = (programs || []).map((p) => p.brandName).filter(Boolean);
+    const line = programs === null
+      ? "loading loyalty programs…"
+      : names.length
+      ? `loyalty at ${names.slice(0, 4).join(", ")}${names.length > 4 ? ` and ${names.length - 4} more` : ""}. claim their offers to earn visits.`
+      : "no loyalty programs near you yet.";
+    return (
+      <View style={styles.card}>
+        <Text style={styles.title} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+          your loyalty visits<Text style={{ color: T.yellow }}>.</Text>
+        </Text>
+        <Text style={styles.emptyLine} maxFontSizeMultiplier={MAX_FONT_SCALE}>{line}</Text>
+      </View>
+    );
+  }
   return (
     <View style={styles.card}>
       <Text style={styles.title} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
@@ -76,6 +106,7 @@ const styles = StyleSheet.create({
   stampLine: { fontFamily: F.bodySemi, fontSize: 13, color: T.ink, marginTop: 6 },
   card: { padding: 14, borderRadius: 18, backgroundColor: T.card, borderWidth: 1, borderColor: T.line, marginBottom: 14 },
   title: { fontFamily: F.heading, fontSize: 16, color: T.ink, marginBottom: 6 },
+  emptyLine: { fontFamily: F.body, fontSize: 14, color: T.textMuted },
   row: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8, borderTopWidth: 1, borderTopColor: T.lineSoft },
   brand: { fontFamily: F.bodySemi, fontSize: 14, color: T.ink },
   detail: { fontFamily: F.body, fontSize: 12, color: T.textMuted, marginTop: 2 },

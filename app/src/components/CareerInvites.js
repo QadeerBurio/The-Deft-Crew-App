@@ -1,24 +1,48 @@
 // CareerInvites.js: "invites to apply" in the careers hub (CareerHub.js), only when FLAG_CAREER_MATCHING is on for the
 // student. The switch "let employers invite me to apply" (off by default; saved on the professional profile) and the
 // invites employers sent after seeing ONLY the student's skills (never their name). The student decides: view the
-// job (Career, openJobId, where they can apply), or "not interested". Renders nothing outside the pilot.
+// job (Career, openJobId, where they can apply), or "not interested". With the flag on the card always shows (the
+// switch even with no invites; "couldn't load" with try again on an error). Flag off: nothing.
 import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, Switch, StyleSheet, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { matchingEnabled, myInvites, respondInvite, setDiscoverable } from "../api/matchingApi";
+import useFlag from "../hooks/useFlag";
 
 const STATUS = { sent: "new", interested: "you're interested", declined: "not interested", applied: "you applied", expired: "closed" };
 
 export default function CareerInvites({ navigation, refreshKey }) {
-  const [state, setState] = useState(null); // null: hidden; { discoverable, invites }
+  const on = useFlag("careerMatching", matchingEnabled);
+  const [state, setState] = useState(null); // null: loading; { discoverable, invites } | { error: true }
   const [saving, setSaving] = useState(false);
   const load = async (live = { on: true }) => {
-    if (!(await matchingEnabled())) { if (live.on) setState(null); return; }
-    try { const d = await myInvites(); if (live.on) setState(d); } catch { if (live.on) setState(null); }
+    try { const d = await myInvites(); if (live.on) setState({ discoverable: !!d?.discoverable, invites: d?.invites || [] }); }
+    catch (e) { console.warn("[career] invites not loaded:", e?.message); if (live.on) setState({ error: true, discoverable: false, invites: [] }); }
   };
-  useEffect(() => { const live = { on: true }; load(live); return () => { live.on = false; }; }, [refreshKey]);
-  if (!state) return null;
+  useEffect(() => {
+    if (on !== true) { setState(null); return undefined; }
+    const live = { on: true };
+    load(live);
+    return () => { live.on = false; };
+  }, [on, refreshKey]);
+  if (on !== true) return null;
+  if (!state || state.error) {
+    return (
+      <View style={styles.card}>
+        <View style={styles.head}>
+          <Ionicons name="mail-unread-outline" size={18} color={T.ink} />
+          <Text style={styles.title} maxFontSizeMultiplier={MAX_FONT_SCALE} accessibilityRole="header">invites to apply</Text>
+        </View>
+        <Text style={styles.note} maxFontSizeMultiplier={MAX_FONT_SCALE}>{state ? "couldn't load your invites." : "loading your invites…"}</Text>
+        {state && (
+          <TouchableOpacity style={[styles.btn, { alignSelf: "flex-start", marginTop: 8 }]} onPress={() => { setState(null); load(); }} accessibilityRole="button" accessibilityLabel="try loading invites again">
+            <Text style={styles.btnText} maxFontSizeMultiplier={MAX_FONT_SCALE}>try again</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  }
 
   const toggle = async (on) => {
     setSaving(true);

@@ -186,7 +186,11 @@ const byLabel = (tree, label) => all(tree, (x) => x.props?.accessibilityLabel ==
   mapi.myInvites = async () => { throw new Error("offline"); };
   root = mount(React.createElement(CareerInvites, { navigation, refreshKey: 2 }));
   await settle(root);
-  ok(root.tree == null || textOf(root.tree) === "", "a failed request: nothing shown (no error on the hub)");
+  { const t2 = textOf(root.tree); const again = byLabel(root.tree, "try loading invites again");
+    ok(t2.includes("invites to apply") && /couldn't load your invites/.test(t2) && !!again, "a failed request: the card stays with 'couldn't load your invites' and 'try again'", t2);
+    mapi.myInvites = async () => ({ discoverable: false, invites: [] });
+    again.props.onPress(); await settle(root);
+    ok(/let employers invite me to apply/.test(textOf(root.tree)), "…try again loads the opt-in card"); }
 
   console.log("── placement");
   const career = read("app/src/components/Career.js");
