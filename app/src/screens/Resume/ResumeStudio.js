@@ -4,7 +4,7 @@
 //   B tailoring: the request runs on the server; this screen polls it
 //   C review: each change with the reason and the resume facts behind it; "not in your resume" changes
 //     need "this is true", blocked ones can only be rejected; the coaching panel says what matches, what's
-//     missing and what we can't tell (no scores, no hiring predictions)
+//     missing and what we can't tell (no hiring predictions); the match estimate before → after tailoring
 //   D preview: the ATS Classic PDF, marked DRAFT
 //   E approve: two confirmations; the approved version never changes afterwards
 //   F send: attach the version to your application for that job (the employer sees exactly this one)
@@ -73,6 +73,8 @@ export default function ResumeStudio({ route, navigation }) {
   const pdfAction = useAction(async (_c, task) => task(), { errorTitle: "no pdf", fallback: "couldn't get the pdf, try again" });
   const removeAction = useAction(async (_c, task) => task(), { errorTitle: "not deleted", fallback: "please try again." });
   const [message, setMessage] = useState("");
+  const [canRetry, setCanRetry] = useState(false); // a failed tailoring: "try again"
+  const [haveSkill, setHaveSkill] = useState({}); // skill → { on, proof }
   // A
   const [resumes, setResumes] = useState([]);
   const [resumeId, setResumeId] = useState(null);
@@ -137,7 +139,7 @@ export default function ResumeStudio({ route, navigation }) {
   const startTailoring = async () => {
     if (!resumeId) return Alert.alert("choose a resume", "pick the resume to tailor first.");
     if (!jobId && pasteText.trim().length < 80) return Alert.alert("paste the job description", "paste the full job description (at least a few sentences).");
-    setBusy(true); setMessage("");
+    setBusy(true); setMessage(""); setCanRetry(false);
     try {
       const body = jobId ? { resumeId, jobId } : { resumeId, jobTitle: pasteTitle.trim(), jobDescription: pasteText };
       const job = await studioApi.startTailoring(body, tapKey.current);
@@ -148,7 +150,9 @@ export default function ResumeStudio({ route, navigation }) {
       tapKey.current = newKey();
       if (done.status !== "succeeded") {
         setStep("start");
-        setMessage(done.errorCode === "TIMED_OUT" ? "this took too long. please try again." : "we couldn't tailor it this time. your resume is unchanged; try again.");
+        // nothing was saved (the server never keeps a half-made draft): say why, offer "try again"
+        setMessage(done.errorMessage || (done.errorCode === "TIMED_OUT" || done.errorCode === "AI_TIMEOUT" ? "tailoring took too long. nothing was saved. please try again." : "tailoring didn't work this time. nothing was saved. please try again."));
+        setCanRetry(done.retryable !== false);
         return;
       }
       const d = await studioApi.draft(done.draftId);
@@ -171,6 +175,19 @@ export default function ResumeStudio({ route, navigation }) {
       setSource(null); setStep("start");
       await startTailoring();
     } catch (e) { Alert.alert("not confirmed", e.message); } finally { setBusy(false); }
+  };
+
+  // "I have this" + a proof line: the skill goes into this version and the % recalculates
+  const confirmSkill = async (skill, proof, remove = false) => {
+    setBusy(true);
+    try {
+      const d = await studioApi.confirmSkill(draft.id, remove ? { revision: draft.revision, skill, remove: true } : { revision: draft.revision, skill, proof, confirmTrue: true });
+      setDraft(d);
+      setHaveSkill((h) => ({ ...h, [skill]: { on: false, proof: "" } }));
+    } catch (e) {
+      if (e.code === "STALE_REVISION") { setDraft(await studioApi.draft(draft.id)); setMessage("this draft changed on another device; we reloaded it."); }
+      else Alert.alert("not added", e.message);
+    } finally { setBusy(false); }
   };
 
   // ---------- C ----------
@@ -238,6 +255,7 @@ export default function ResumeStudio({ route, navigation }) {
         <Tab label="my versions" on={step === "versions"} onPress={() => { setStep("versions"); loadVersions(); }} />
       </View>
       {!!message && <Text style={styles.notice} accessibilityLiveRegion="polite" accessibilityRole="alert" maxFontSizeMultiplier={M}>{message}</Text>}
+      {canRetry && step === "start" && <View style={styles.actions}><Button primary label="try tailoring again" text="try again" disabled={busy} onPress={startTailoring} /></View>}
 
       {step === "start" && (
         <View>
@@ -293,6 +311,10 @@ export default function ResumeStudio({ route, navigation }) {
           {queued && <Text style={styles.notice} accessibilityLiveRegion="polite" maxFontSizeMultiplier={M}>saved on your phone; it syncs when you're back online.</Text>}
           {draft.warnings?.map((w, i) => <Text key={i} style={styles.notice} maxFontSizeMultiplier={M}>{w}</Text>)}
 
+          <Scores draft={draft} />
+          <AddedSkills draft={draft} />
+          <MissingSkills draft={draft} state={haveSkill} setState={setHaveSkill} busy={busy} onConfirm={confirmSkill} />
+          <WhatChanged draft={draft} />
           <Coaching draft={draft} />
 
           {draft.suggestions.length === 0 && (
@@ -430,6 +452,86 @@ export default function ResumeStudio({ route, navigation }) {
   );
 }
 
+// the match estimate on your resume and on this tailored version
+export function scoreLine(scores) {
+  if (!scores || scores.before == null || scores.after == null) return "";
+  return scores.after === scores.before ? `match ${scores.after}% (the same skills, better worded)` : `match before ${scores.before}% → after ${scores.after}%`;
+}
+function Scores({ draft }) {
+  const line = scoreLine(draft.scores);
+  if (!line) return null;
+  return (
+    <View style={styles.card} accessible accessibilityLabel={line} testID="studio-scores">
+      <Text style={styles.h2} maxFontSizeMultiplier={M}>{line}</Text>
+      <Text style={styles.muted} maxFontSizeMultiplier={M}>skills this job lists that your tailored resume shows. it only goes up with skills you really have.</Text>
+    </View>
+  );
+}
+// skills the resume already shows in experience / projects, now in the skills section in the job's wording
+function AddedSkills({ draft }) {
+  const list = draft.surfacedSkills || [];
+  if (!list.length) return null;
+  return (
+    <View style={styles.card} testID="studio-surfaced">
+      <Text style={styles.h2} maxFontSizeMultiplier={M}>added to your skills</Text>
+      <Text style={styles.muted} maxFontSizeMultiplier={M}>these are already in your experience or projects; now they're in your skills too.</Text>
+      {list.map((s) => <Text key={s.skill} style={styles.body} maxFontSizeMultiplier={M}>{`${s.skill}${s.evidence?.[0] ? ` · from "${s.evidence[0]}"` : ""}`}</Text>)}
+    </View>
+  );
+}
+// skills the job asks for that the resume doesn't show: added only when the student says they have it, with proof
+function MissingSkills({ draft, state, setState, busy, onConfirm }) {
+  const missing = draft.missingSkills || [];
+  const confirmed = draft.confirmedSkills || [];
+  if (!missing.length && !confirmed.length) return null;
+  return (
+    <View style={styles.card} testID="studio-missing">
+      <Text style={styles.h2} maxFontSizeMultiplier={M}>skills this job asks for that your resume doesn't show</Text>
+      <Text style={styles.muted} maxFontSizeMultiplier={M}>tick only the ones you really have, and say where you used it. we never add a skill for you.</Text>
+      {confirmed.map((c) => (
+        <View key={c.skill} style={styles.skillRow}>
+          <Text style={styles.body} maxFontSizeMultiplier={M}>{`✓ ${c.skill}: ${c.proof}`}</Text>
+          <Button label={`remove ${c.skill}`} text="remove" disabled={busy} onPress={() => onConfirm(c.skill, "", true)} />
+        </View>
+      ))}
+      {missing.map((skill) => {
+        const st = state[skill] || { on: false, proof: "" };
+        return (
+          <View key={skill} style={styles.skillRow}>
+            <TrueSwitch value={st.on} onChange={(v) => setState({ ...state, [skill]: { ...st, on: v } })} label={`I have ${skill}`} />
+            {st.on && (
+              <>
+                <TextInput style={styles.inputLine} value={st.proof} onChangeText={(t) => setState({ ...state, [skill]: { ...st, proof: t } })} placeholder={`where you used ${skill} (a project or job)`} placeholderTextColor={T.textFaint} accessibilityLabel={`proof for ${skill}`} maxLength={200} maxFontSizeMultiplier={M} />
+                <Button primary label={`add ${skill}`} text="add" disabled={busy || st.proof.trim().length < 8} onPress={() => onConfirm(skill, st.proof.trim())} />
+              </>
+            )}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+// side by side: each changed part before and after
+function WhatChanged({ draft }) {
+  const list = draft.changes || [];
+  if (!list.length) return null;
+  return (
+    <View style={styles.card} testID="studio-changes">
+      <Text style={styles.h2} maxFontSizeMultiplier={M}>what changed</Text>
+      {list.map((c, i) => (
+        <View key={`${c.section}-${i}`} style={styles.changeRow} accessible accessibilityLabel={`${c.label}. before: ${c.before || "nothing"}. after: ${c.after || "nothing"}`}>
+          <Text style={styles.changeLabel} maxFontSizeMultiplier={M}>{c.label}</Text>
+          <View style={styles.sideBySide}>
+            <View style={styles.side}><Text style={styles.sideHead} maxFontSizeMultiplier={M}>before</Text><Text style={styles.sideText} maxFontSizeMultiplier={M}>{c.before || "—"}</Text></View>
+            <View style={styles.side}><Text style={styles.sideHead} maxFontSizeMultiplier={M}>after</Text><Text style={styles.sideText} maxFontSizeMultiplier={M}>{c.after || "—"}</Text></View>
+          </View>
+        </View>
+      ))}
+      <Text style={styles.muted} maxFontSizeMultiplier={M}>{`your tailored resume keeps everything: ${draft.sections?.workExperience ?? 0} jobs, ${draft.sections?.education ?? 0} schools, ${draft.sections?.projects ?? 0} projects, ${draft.sections?.skills ?? 0} skills, ${draft.sections?.certifications ?? 0} certifications.`}</Text>
+    </View>
+  );
+}
+
 function Coaching({ draft }) {
   const m = draft.match || {};
   const [open, setOpen] = useState(true);
@@ -441,7 +543,7 @@ function Coaching({ draft }) {
       </TouchableOpacity>
       {open && (
         <View>
-          <Text style={styles.muted} maxFontSizeMultiplier={M}>no scores and no hiring predictions: just what your resume shows.</Text>
+          <Text style={styles.muted} maxFontSizeMultiplier={M}>no hiring predictions: just what your resume shows.</Text>
           {(m.matched || []).length > 0 && <Text style={styles.label} maxFontSizeMultiplier={M}>in your resume</Text>}
           {(m.matched || []).map((x) => <Text key={`m-${x.requirement}`} style={styles.body} maxFontSizeMultiplier={M}>✓ {x.requirement}{x.evidenceFactIds?.length ? ` (${x.evidenceFactIds.map((id) => draft.facts.find((f) => f.factId === id)?.value).filter(Boolean).slice(0, 2).join("; ")})` : ""}</Text>)}
           {(m.missing || []).length > 0 && <Text style={styles.label} maxFontSizeMultiplier={M}>not in your resume</Text>}
@@ -485,6 +587,13 @@ function Button({ label, text, onPress, primary, disabled }) {
 }
 
 const styles = StyleSheet.create({
+  skillRow: { marginTop: 10, gap: 6 },
+  changeRow: { marginTop: 10 },
+  changeLabel: { fontFamily: F.bodySemi, fontSize: 13.5, color: T.ink },
+  sideBySide: { flexDirection: "row", gap: 8, marginTop: 4 },
+  side: { flex: 1, padding: 8, borderRadius: 10, backgroundColor: T.sand || T.yellowSoft },
+  sideHead: { fontFamily: F.bodyBold, fontSize: 11.5, color: T.textMuted },
+  sideText: { fontFamily: F.body, fontSize: 13, color: T.ink, marginTop: 2 },
   screen: { flex: 1, backgroundColor: T.paper },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 12 },
   tabs: { flexDirection: "row", gap: 8, marginBottom: 10 },

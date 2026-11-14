@@ -347,6 +347,13 @@ const deferred = () => { let resolve, reject; const p = new Promise((a, b) => { 
     ok(navi.navigated[0]?.[0] === "JobApplicationForm" && navi.navigated[0][1].jobId === "j1" && navi.navigated[0][1].job.title === "React intern", "Apply → JobApplicationForm for this job", JSON.stringify(navi.navigated));
   }
   {
+    // a tailored version for this job: "before X% → after Y%" on the resume that was tailored
+    setNet({ match: { ...MATCH, tailored: { versionId: "v1", label: "React intern", before: 50, score: 83, quality: "strong" } }, matchingOn: true });
+    const root = mount(React.createElement(Details, { navigation: makeNav(stack().slice(0, 3)), route: { params: { jobId: "j1" } } }));
+    await settle(root);
+    ok(textOf(root.tree).includes("your tailored resume (React intern): before 50% → after 83%"), "your match: the tailored version's before → after", textOf(root.tree).slice(0, 400));
+  }
+  {
     setNet({ apps: [{ jobId: { _id: "j1" }, status: "shortlisted" }] });
     const root = mount(React.createElement(Details, { navigation: makeNav(stack().slice(0, 3)), route: { params: { jobId: "j1" } } }));
     await settle(root);

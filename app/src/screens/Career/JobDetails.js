@@ -82,6 +82,11 @@ export function YourMatch({ data }) {
         </View>
       </View>
       {!!m.summary && <Text style={styles.matchSummary} maxFontSizeMultiplier={MAX_FONT_SCALE}>{m.summary}</Text>}
+      {data.tailored && data.tailored.score != null && (
+        <Text style={styles.matchSummary} maxFontSizeMultiplier={MAX_FONT_SCALE} testID="tailored-match">
+          {`your tailored resume${data.tailored.label ? ` (${data.tailored.label})` : ""}: ${data.tailored.before != null ? `before ${data.tailored.before}% → after ${data.tailored.score}%` : `${data.tailored.score}%`}`}
+        </Text>
+      )}
       {strengths.length > 0 && (
         <View style={styles.matchBlock}>
           <Text style={styles.matchLabel} maxFontSizeMultiplier={MAX_FONT_SCALE}>your strengths</Text>
