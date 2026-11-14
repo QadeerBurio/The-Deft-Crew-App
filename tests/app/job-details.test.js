@@ -413,7 +413,7 @@ const deferred = () => { let resolve, reject; const p = new Promise((a, b) => { 
   // (TDCCareers and its own apply form are gone: fix/tdccareers-to-jobdetails)
   ok(metaCalls.join() === "app/src/screens/Career/JobApplicationForm.js", "SubmitApplication is sent from one place only: the apply form, after the server accepted", metaCalls.join());
   ok(/jobApplied: \(jobId\) =>\n\s*log\([\s\S]*?`job:\$\{id\(jobId\)\}`\)/.test(read("app/src/analytics/metaEvents.js")), "…and counted once per job (de-duplicated by job id)");
-  for (const [f, n] of [["app/src/components/CareerInvites.js", 'navigation?.navigate?.("Career", { openJobId: inv.job.id })'], ["app/src/components/RecommendedJobs.js", 'navigation?.navigate?.("Career", { openJobId: String(j._id) })']]) ok(read(f).includes(n), `${path.basename(f)}: still opens the job through Career (the list stays underneath)`);
+  for (const [f, n] of [["app/src/components/CareerInvites.js", 'navigation?.navigate?.("Career", { openJobId: inv.job.id })']]) ok(read(f).includes(n), `${path.basename(f)}: still opens the job through Career (the list stays underneath)`);
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);

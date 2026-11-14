@@ -1,4 +1,4 @@
-// Invites to apply in the careers hub (FLAG_CAREER_MATCHING): app/src/components/CareerInvites.js and its calls in
+// Invites to apply on the Resume dashboard (FLAG_CAREER_MATCHING): app/src/components/CareerInvites.js and its calls in
 // app/src/api/matchingApi.js. Hidden outside the pilot; the "let employers invite me to apply" switch (off by default,
 // saved on the professional profile); each invite with the job and its status; the student decides: "view job"
 // (interested, opens the job) or "not interested"; placed in CareerHub.js.
@@ -194,7 +194,8 @@ const byLabel = (tree, label) => all(tree, (x) => x.props?.accessibilityLabel ==
 
   console.log("── placement");
   const career = read("app/src/components/Career.js");
-  ok(career.includes('import CareerInvites from "./CareerInvites"') && career.includes("<CareerInvites navigation={navigation} refreshKey={refreshing} />") && career.indexOf("<CareerInvites") < career.indexOf("jobs found") && read("app/src/navigation/DrawerNavigator.js").includes('<Stack.Screen name="Career" component={Career} />'), "shown at the top of the jobs list (Career, a registered screen), under 'recommended for you', refreshed with it");
+  const dash = read("app/src/screens/Resume/ResumeDashboard.js");
+  ok(!career.includes("CareerInvites") && dash.includes('import CareerInvites from "../../components/CareerInvites"') && dash.indexOf('testID="resume-invites"') > 0 && dash.indexOf("<CareerInvites navigation={navigation} refreshKey={refreshing} />") > dash.indexOf('testID="resume-invites"'), "not on the jobs list (Career); on the Resume dashboard below the resumes, refreshed with it");
   ok(!fs.existsSync(path.join(APP, "app/src/components/CareerHub.js")), "CareerHub.js is gone (nothing showed it; chore/app-cleanup)");
 
   console.log(`

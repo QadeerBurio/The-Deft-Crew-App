@@ -1,4 +1,4 @@
-// CareerInvites.js: "invites to apply" in the careers hub (CareerHub.js), only when FLAG_CAREER_MATCHING is on for the
+// CareerInvites.js: "invites to apply" on the Resume dashboard (screens/Resume/ResumeDashboard.js), only when FLAG_CAREER_MATCHING is on for the
 // student. The switch "let employers invite me to apply" (off by default; saved on the professional profile) and the
 // invites employers sent after seeing ONLY the student's skills (never their name). The student decides: view the
 // job (Career, openJobId, where they can apply), or "not interested". With the flag on the card always shows (the
