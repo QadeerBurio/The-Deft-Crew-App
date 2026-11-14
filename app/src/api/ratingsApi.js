@@ -1,29 +1,15 @@
 // app/src/api/ratingsApi.js
 // Mutual ratings (server: routes/careerRatings.routes.js, FLAG_CAREER_RATINGS). Shown only when
-// GET /app/flags/me says careerRatings for this student (asked once per account, kept 5 minutes).
+// GET /app/flags/me says careerRatings for this student (the shared flags, api/appFlags.js).
 // Replies are { success, data }; these return `data` and throw an Error with the server's message and `code`.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "./api";
 
-const FLAGS_MAX_AGE = 5 * 60 * 1000;
-let flags = { key: null, at: 0, on: false, pending: null };
-
-/** Are ratings on for the signed-in student? Guests, errors, an unreachable server: no. */
+import { flagOn } from "./appFlags";
+// the shared flags (api/appFlags.js): asked on login, app open and back in the foreground; a failed
+// request never switches the feature off
 export async function ratingsEnabled() {
-  const [token, guest] = await Promise.all([AsyncStorage.getItem("token"), AsyncStorage.getItem("isGuest")]);
-  if (!token || guest === "true") return false;
-  if (flags.key === token && Date.now() - flags.at < FLAGS_MAX_AGE) return flags.on;
-  if (flags.key === token && flags.pending) return flags.pending;
-  flags = { key: token, at: 0, on: false, pending: null };
-  flags.pending = api
-    .get("/app/flags/me", { timeout: 6000 })
-    .then((r) => !!r.data?.careerRatings)
-    .catch(() => false)
-    .then((on) => {
-      if (flags.key === token) flags = { key: token, at: Date.now(), on, pending: null };
-      return on;
-    });
-  return flags.pending;
+  return flagOn("careerRatings");
 }
 
 const unwrap = (request) =>

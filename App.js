@@ -26,7 +26,9 @@ import ChatProvider from "./app/src/context/ChatContext";
 import AppNavigator from "./app/src/navigation/AuthNavigator";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { KeyboardProvider } from "react-native-keyboard-controller";
-import { StatusBar, View, Platform, InteractionManager } from "react-native";
+import { StatusBar, View, Platform, InteractionManager, AppState } from "react-native";
+import { watchFlags } from "./app/src/api/appFlags";
+import { APP_VERSION } from "./app/src/utils/appVersion";
 import ResumeProvider from "./app/src/context/ResumeContext";
 import api from "./app/src/api/api";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -335,9 +337,16 @@ function ExternalDeepLink() {
 // ═══════════════════════════════════════════════════════════════
 // 6. APP CONTENT
 // ═══════════════════════════════════════════════════════════════
+// feature flags: asked on app open and whenever the app comes back to the foreground (at most once a minute)
+function FlagWatch() {
+  useEffect(() => watchFlags(AppState, APP_VERSION), []);
+  return null;
+}
+
 function AppContent() {
   return (
     <>
+      <FlagWatch />
       <PushRegistration />
       <ColdStartDeepLink />
       <ExternalDeepLink />

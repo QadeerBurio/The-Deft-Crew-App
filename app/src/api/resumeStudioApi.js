@@ -1,6 +1,6 @@
 // app/src/api/resumeStudioApi.js
 // AI Resume Studio (server: routes/careerResume.routes.js, behind FLAG_RESUME_STUDIO_V2). Shown only when
-// GET /app/flags/me says resumeStudioV2 for this student (asked once per account, kept 5 minutes).
+// GET /app/flags/me says resumeStudioV2 for this student (the shared flags, api/appFlags.js).
 // Replies are { success, data }; these return `data` and throw an Error with the server's message, `code`
 // and any extra fields (riskFlags, pending, ...).
 // Decisions are saved as the student makes them. Offline, they wait on the phone (per draft) and are sent
@@ -10,27 +10,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system/legacy"; // SDK 54: the old API lives here
 import * as Sharing from "expo-sharing";
 import api, { BASE_URL } from "./api";
+import { flagOn } from "./appFlags";
 import { TIMEOUT, withTimeout } from "../config/timeouts";
 
-const FLAGS_MAX_AGE = 5 * 60 * 1000;
-let flags = { key: null, at: 0, on: false, pending: null };
-
-/** Is Resume Studio on for the signed-in student? Guests, errors, an unreachable server: no. */
+// the shared flags (api/appFlags.js): asked on login, app open and back in the foreground; a failed
+// request never switches the feature off
 export async function studioEnabled() {
-  const [token, guest] = await Promise.all([AsyncStorage.getItem("token"), AsyncStorage.getItem("isGuest")]);
-  if (!token || guest === "true") return false;
-  if (flags.key === token && Date.now() - flags.at < FLAGS_MAX_AGE) return flags.on;
-  if (flags.key === token && flags.pending) return flags.pending;
-  flags = { key: token, at: 0, on: false, pending: null };
-  flags.pending = api
-    .get("/app/flags/me", { timeout: 6000 })
-    .then((r) => !!r.data?.resumeStudioV2)
-    .catch(() => false)
-    .then((on) => {
-      if (flags.key === token) flags = { key: token, at: Date.now(), on, pending: null };
-      return on;
-    });
-  return flags.pending;
+  return flagOn("resumeStudioV2");
 }
 
 const unwrap = (request) =>

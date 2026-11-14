@@ -1397,7 +1397,7 @@ export default function BrandsScreen() {
     () => (
       <View style={styles.listHeader}>
         {/* Surprise Boxes (FLAG_SURPLUS_BOXES): renders nothing for students outside the pilot */}
-        <SurpriseBoxCard onOpen={() => navigation.navigate("SurpriseBoxes")} refreshKey={refreshing} />
+        <SurpriseBoxCard onOpen={() => navigation.navigate("SurpriseBoxes")} onOpenAll={() => navigation.navigate("SurpriseBoxes", { allCities: true })} refreshKey={refreshing} />
         <SectionTitle title="crew's privilege brands" right={universityName || undefined} />
       </View>
     ),
