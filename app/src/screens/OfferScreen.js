@@ -13,6 +13,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  RefreshControl,
   Dimensions,
   StatusBar,
   Alert,
@@ -750,6 +751,15 @@ export default function OfferScreen() {
   const [statsLoading, setStatsLoading] = useState(true);
 
   const [claimVersion, setClaimVersion] = useState(0);
+  const fetchAllRef = useRef(null);
+  // pull to refresh: the offers and the loyalty card again
+  const [pullRefreshing, setPullRefreshing] = useState(false);
+  const onPullRefresh = useCallback(async () => {
+    setPullRefreshing(true);
+    try { await fetchAllRef.current?.({ silent: true, forceFresh: true }); } catch (e) { console.warn("[offer] refresh failed:", e?.message); }
+    setClaimVersion((v) => v + 1);
+    setPullRefreshing(false);
+  }, []);
 
   // ── City filter (shared with Brands + My Discounts, Karachi default) ──
   const [city, setCity] = useSelectedCity();
@@ -1033,6 +1043,7 @@ export default function OfferScreen() {
     },
     [initialBrand, token, isGuest, formatImageUrl, updateStatsFromOffers]
   );
+  fetchAllRef.current = fetchAll; // pull to refresh calls it
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -1392,6 +1403,7 @@ export default function OfferScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={pullRefreshing} onRefresh={onPullRefresh} />}
       >
         {/* Hero */}
         <View style={styles.hero}>

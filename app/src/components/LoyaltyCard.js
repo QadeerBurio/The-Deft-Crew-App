@@ -3,11 +3,11 @@
 // Stamp cards (the brand's "reward" mode): "2 of 5 visits", the stamps, the reward and whether it's waiting.
 // Renders nothing for guests, outside the pilot, or when the brand has no program.
 import React, { useCallback, useEffect, useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, AppState } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
-import { getBrandLoyalty } from "../api/loyaltyApi";
+import { getBrandLoyalty, onLoyaltyChanged } from "../api/loyaltyApi";
 
 const rule = (t) => (t.maxVisit == null ? `visit ${t.minVisit} onward` : t.minVisit === t.maxVisit ? `visit ${t.minVisit}` : `visits ${t.minVisit}–${t.maxVisit}`);
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
@@ -23,6 +23,13 @@ export default function LoyaltyCard({ brandId, refreshKey }) {
   useEffect(load, [load, refreshKey]);
   // back from a redemption: the visit count may have changed
   useFocusEffect(load);
+  // a redemption / loyalty push for this brand (or any), or the app back in the foreground: reload
+  useEffect(() => onLoyaltyChanged((b) => { if (!b || String(b) === String(brandId)) load(); }), [load, brandId]);
+  useEffect(() => {
+    if (!AppState?.addEventListener) return undefined;
+    const sub = AppState.addEventListener("change", (s) => { if (s === "active") load(); });
+    return () => sub?.remove?.();
+  }, [load]);
 
   if (!data?.enabled || !data.program) return null;
   if (data.stamps) return <StampCard stamps={data.stamps} program={data.program} />;
@@ -79,7 +86,7 @@ export default function LoyaltyCard({ brandId, refreshKey }) {
 // reward mode: one stamp per verified visit; a full card earns the reward; the card restarts after it's used
 export function stampLine(s) {
   const label = s.reward?.label || "the reward";
-  if (s.available) return `your reward is waiting: ${s.available.label}. show your qr on your next visit.`;
+  if (s.available) return `reward ready: ${s.available.label}. show your qr on your next visit.`;
   if (s.limitReached) return s.limitReached === "monthly-limit" ? "you've had this month's rewards. stamps start again next month." : "you've had all the rewards this program gives.";
   return `${plural(s.visitsToReward, "more visit")} to ${label}.`;
 }
@@ -92,7 +99,7 @@ function StampCard({ stamps: s, program }) {
         <MaterialCommunityIcons name="star-circle-outline" size={22} color={T.ink} />
         <Text style={styles.title} maxFontSizeMultiplier={MAX_FONT_SCALE}>loyalty<Text style={{ color: T.yellow }}>.</Text></Text>
         <View style={styles.tierPill}>
-          <Text style={styles.tierPillText} maxFontSizeMultiplier={MAX_FONT_SCALE}>{s.available ? "reward waiting" : "stamp card"}</Text>
+          <Text style={styles.tierPillText} maxFontSizeMultiplier={MAX_FONT_SCALE}>{s.available ? "reward ready" : "stamp card"}</Text>
         </View>
       </View>
       <Text style={styles.stampCount} maxFontSizeMultiplier={MAX_FONT_SCALE}>{have} of {n} visits</Text>
