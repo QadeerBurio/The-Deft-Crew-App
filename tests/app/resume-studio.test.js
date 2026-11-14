@@ -279,8 +279,8 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
   ok(t.includes("a skill that isn't in your resume: TypeScript") && t.includes("a date that isn't in your resume: 2019"), "the risk is explained in plain words");
   ok(t.includes("from your resume: Built a React page for order tracking"), "the fact behind a change is shown");
   ok(t.includes("looked like instructions to the AI"), "the injection warning is shown");
-  ok(t.includes("no scores and no hiring predictions") && t.includes("\u2713 React") && t.includes("\u2013 TypeScript") && t.includes("a small typescript project") && t.includes("? 2+ years"), "coaching panel: matched with evidence, missing with a note, unknown");
-  ok(!/\b\d{1,3}%|percentile|hire probability|shortlist/i.test(t), "no scores, percentages or hiring verdicts anywhere");
+  ok(t.includes("no hiring predictions") && t.includes("\u2713 React") && t.includes("\u2013 TypeScript") && t.includes("a small typescript project") && t.includes("? 2+ years"), "coaching panel: matched with evidence, missing with a note, unknown");
+  ok(!/percentile|hire probability|shortlist/i.test(t) && !/\b\d{1,3}%/.test(t.replace(/match (before \d{1,3}% → after \d{1,3}%|\d{1,3}%)/g, "")), "no hiring verdicts; the only percentage is the match estimate");
   ok(t.includes("React, JavaScript"), "a reorder is shown as the new order");
   ok(byLabel(root.tree, "accept summary").props.disabled === true, "a 'not in your resume' change can't be accepted until 'this is true' is on");
   ok(!byLabel(root.tree, "accept experience 1") && byLabel(root.tree, "reject experience 1") && textOf(byLabel(root.tree, "reject experience 1")) === "keep my original", "a blocked change can only be rejected (keep my original)");
@@ -301,6 +301,59 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
   await settle(root);
   t = textOf(root.tree);
   ok(t.includes("all reviewed") && byLabel(root.tree, "continue to approve").props.disabled === false, "all decided: approve is open", t.slice(0, 120));
+
+  console.log("── tailoring fix: before → after %, skills, what changed, try again");
+  {
+    const keep = draftState;
+    draftState = { ...freshDraft(), suggestions: [], unresolved: 0,
+      scores: { before: 50, after: 50 },
+      surfacedSkills: [{ skill: "React", evidence: ["Built a React.js page for order tracking"] }],
+      confirmedSkills: [], missingSkills: ["TypeScript"],
+      changes: [{ section: "skills", label: "skills", before: "JavaScript", after: "React\nJavaScript" }, { section: "summary", label: "summary", before: "Student.", after: "Student who builds web apps." }],
+      sections: { workExperience: 2, education: 1, projects: 2, skills: 2, certifications: 1, languages: 0 } };
+    const skillCalls = [];
+    studioMock.studioApi.confirmSkill = async (id, body) => {
+      skillCalls.push({ id, body });
+      draftState = { ...draftState, revision: draftState.revision + 1, scores: { before: 50, after: 75 }, missingSkills: [], confirmedSkills: [{ skill: body.skill, proof: body.proof, confirmedAt: "2026-11-14T00:00:00Z" }] };
+      return draftState;
+    };
+    let r2 = mount(React.createElement(ResumeStudio, { route: { params: { jobId: "j1", jobTitle: "Frontend Developer" } }, navigation }));
+    await settle(r2);
+    byLabel(r2.tree, "tailor my resume").props.onPress();
+    await settle(r2);
+    let tt = textOf(r2.tree);
+    ok(tt.includes("match 50% (the same skills, better worded)"), "the % on the tailored version: unchanged when tailoring only rewords and moves skills", tt.slice(0, 300));
+    ok(tt.includes("added to your skills") && tt.includes('React · from "Built a React.js page for order tracking"'), "skills found in projects / experience: listed with where they're shown");
+    ok(tt.includes("skills this job asks for that your resume doesn't show") && tt.includes("we never add a skill for you"), "the missing-skills checklist, with the promise");
+    ok(tt.includes("what changed") && tt.includes("before") && tt.includes("after") && tt.includes("Student who builds web apps."), "what changed: before and after side by side");
+    ok(tt.includes("keeps everything: 2 jobs, 1 schools, 2 projects, 2 skills, 1 certifications"), "it says the tailored resume keeps every section");
+    find(r2.tree, (x) => x.type === "Switch" && x.props.accessibilityLabel === "I have TypeScript").props.onValueChange(true);
+    r2.rerender();
+    const proof = find(r2.tree, (x) => x.type === "TextInput" && x.props.accessibilityLabel === "proof for TypeScript");
+    ok(!!proof && byLabel(r2.tree, "add TypeScript").props.disabled === true, "'I have this' asks for a proof line; add stays off until there is one");
+    proof.props.onChangeText("the admin panel of Campus Eats is in TypeScript");
+    r2.rerender();
+    byLabel(r2.tree, "add TypeScript").props.onPress();
+    await settle(r2);
+    ok(skillCalls.length === 1 && skillCalls[0].body.skill === "TypeScript" && skillCalls[0].body.confirmTrue === true && /Campus Eats/.test(skillCalls[0].body.proof), "the skill goes to the server with the proof and the confirmation", JSON.stringify(skillCalls));
+    tt = textOf(r2.tree);
+    ok(tt.includes("match before 50% → after 75%") && tt.includes("✓ TypeScript: the admin panel of Campus Eats is in TypeScript"), "…the % recalculates: before 50% → after 75%", tt.slice(0, 400));
+
+    // a failed tailoring: nothing saved, "try again"
+    studioMock.waitForTailoring = async () => ({ status: "failed", errorCode: "AI_TIMEOUT", errorMessage: "Tailoring took too long. Nothing was saved. Please try again.", retryable: true });
+    const startsBefore = sent.filter((s) => s.what === "start").length;
+    r2 = mount(React.createElement(ResumeStudio, { route: { params: { jobId: "j1", jobTitle: "Frontend Developer" } }, navigation }));
+    await settle(r2);
+    byLabel(r2.tree, "tailor my resume").props.onPress();
+    await settle(r2);
+    tt = textOf(r2.tree);
+    ok(tt.includes("Tailoring took too long. Nothing was saved. Please try again.") && !!byLabel(r2.tree, "try tailoring again"), "a timeout: the message and 'try again'", tt.slice(0, 200));
+    studioMock.waitForTailoring = async () => ({ status: "succeeded", draftId: "d1" });
+    byLabel(r2.tree, "try tailoring again").props.onPress();
+    await settle(r2);
+    ok(sent.filter((s) => s.what === "start").length === startsBefore + 2 && textOf(r2.tree).includes("review the changes"), "try again starts a new tailoring");
+    draftState = keep;
+  }
 
   console.log("\u2500\u2500 D preview, E approve, F send with the application");
   byLabel(root.tree, "preview pdf").props.onPress();
