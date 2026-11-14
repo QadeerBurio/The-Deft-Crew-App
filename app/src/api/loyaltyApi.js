@@ -12,6 +12,24 @@ export async function loyaltyEnabled() {
   return flagOn("loyaltyV2");
 }
 
+// "loyalty changed": a redemption or loyalty push arrived (components/GlobalNotificationLayer.js); the cards reload
+const changeListeners = new Set();
+/** subscribe; returns the unsubscribe function */
+export function onLoyaltyChanged(fn) {
+  changeListeners.add(fn);
+  return () => changeListeners.delete(fn);
+}
+export function loyaltyChanged(brandId = null) {
+  changeListeners.forEach((fn) => { try { fn(brandId); } catch (e) { console.warn("[loyalty] a listener failed:", e?.message); } });
+}
+
+/** "my loyalty": each brand's card ({ brandId, brandName, stamps | progress, rewardsEarned, rewardsUsed, rewardReady, history }) */
+export async function getMyLoyaltyCards() {
+  if (!(await loyaltyEnabled())) return [];
+  const r = await api.get("/loyalty/me/cards", { timeout: 8000 });
+  return r.data?.data?.cards || [];
+}
+
 /** The brands running a loyalty program now: { enabled, programs: [{ brandId, brandName, name }] } */
 export async function activeLoyaltyPrograms() {
   if (!(await loyaltyEnabled())) return { enabled: false, programs: [] };

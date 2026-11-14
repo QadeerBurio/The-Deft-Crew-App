@@ -10,6 +10,7 @@ import NotificationBanner from './NotificationBanner';
 import { openTarget } from '../guest/accountRoutes';
 import * as Notifications from 'expo-notifications';
 import { onRedemptionPush } from '../analytics/metaRedemptions';
+import { loyaltyChanged } from '../api/loyaltyApi';
 import {
   claimNotificationResponse,
   getRouteFromNotificationData,
@@ -89,6 +90,8 @@ export default function GlobalNotificationLayer() {
 
       // "payment successful." → report the redemption to Meta (consent and switch checked there)
       onRedemptionPush(data);
+      // a redemption or a loyalty visit: the loyalty cards on screen reload ("1 of 2 visits" → "2 of 2")
+      if (data.type === 'loyalty' || data.type === 'redemption' || data.pushType === 'redemption') loyaltyChanged(data.brandId || null);
 
       // Only while the app is on screen. Otherwise the phone shows it.
       if (AppState.currentState !== 'active') return;

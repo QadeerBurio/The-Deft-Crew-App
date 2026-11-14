@@ -147,7 +147,9 @@ const textOf = (n) => (n == null || n === false ? "" : typeof n === "string" || 
     const program = { tiers: [{ name: "Member", minVisit: 1, maxVisit: 5, discountPct: 15 }, { name: "Regular", minVisit: 6, maxVisit: null, discountPct: 25 }], maxVisitsPerDay: 1, resetMonths: 12, terms: "dine-in only." };
     let reply = { enabled: true, program, progress: { visits: 2, nextVisitNumber: 3, currentTier: { name: "Member", discountPct: 15 }, nextTier: { name: "Regular", minVisit: 6, discountPct: 25 }, visitsBeforeNextTier: 3 } };
     const asked = [];
-    const load = loader({ react: React, "react-native": rn, ...nav, ...icons, "../api/loyaltyApi": { getBrandLoyalty: async (id) => { asked.push(id); return reply; } } });
+    const changed = new Set();
+    const loyaltyMock = { getBrandLoyalty: async (id) => { asked.push(id); return reply; }, onLoyaltyChanged: (fn) => { changed.add(fn); return () => changed.delete(fn); } };
+    const load = loader({ react: React, "react-native": rn, ...nav, ...icons, "../api/loyaltyApi": loyaltyMock });
     const LoyaltyCard = load(path.join(SRC, "components/LoyaltyCard.js")).default;
     let root = mount(React.createElement(LoyaltyCard, { brandId: "b1", refreshKey: 0 }));
     await tick(30); root.rerender();
@@ -180,50 +182,67 @@ const textOf = (n) => (n == null || n === false ? "" : typeof n === "string" || 
     root = mount(React.createElement(LoyaltyCard, { brandId: "b5", refreshKey: 0 }));
     await tick(30); root.rerender();
     t = textOf(root.tree);
-    ok(t.includes("5 of 5 visits") && t.includes("reward waiting") && t.includes("your reward is waiting: a free coffee. show your qr on your next visit."), "a full card: the reward is waiting", t);
+    ok(t.includes("5 of 5 visits") && t.includes("reward ready") && t.includes("reward ready: a free coffee. show your qr on your next visit."), "a full card: reward ready", t);
     reply = { ...reply, stamps: { ...stamps, stamps: 5, visitsToReward: 0, limitReached: "monthly-limit" } };
     root = mount(React.createElement(LoyaltyCard, { brandId: "b6", refreshKey: 0 }));
     await tick(30); root.rerender();
     ok(textOf(root.tree).includes("you've had this month's rewards"), "monthly limit reached: says so", textOf(root.tree));
+    // after a redemption: the redemption / loyalty push says "loyalty changed" and the card shows the new count
+    const two = { mode: "reward", stamps: 1, needed: 2, visitsToReward: 1, reward: { visitsNeeded: 2, kind: "item", label: "a free coffee" }, available: null, limitReached: null };
+    reply = { enabled: true, program: { ...program, mode: "reward" }, progress: null, stamps: two };
+    root = mount(React.createElement(LoyaltyCard, { brandId: "b7", refreshKey: 0 }));
+    await tick(30); root.rerender();
+    ok(textOf(root.tree).includes("1 of 2 visits") && textOf(root.tree).includes("1 more visit to a free coffee."), "a 2-visit card after one visit: 1 of 2 visits", textOf(root.tree));
+    reply = { ...reply, stamps: { ...two, stamps: 2, visitsToReward: 0, available: { id: "rw7", label: "a free coffee" } } };
+    for (const fn of changed) fn("b7");
+    await tick(30); root.rerender();
+    ok(textOf(root.tree).includes("2 of 2 visits") && textOf(root.tree).includes("reward ready"), "…a redemption push arrives: the card shows 2 of 2, reward ready (no reopening needed)", textOf(root.tree));
+    reply = { ...reply, stamps: { ...two, stamps: 0, visitsToReward: 2, available: null } };
+    for (const fn of changed) fn(null);
+    await tick(30); root.rerender();
+    ok(textOf(root.tree).includes("0 of 2 visits"), "…after the reward is used: the count restarts (0 of 2)", textOf(root.tree));
     const card = read("app/src/components/LoyaltyCard.js");
+    ok(card.includes('AppState.addEventListener("change"') && card.includes("useFocusEffect(load)"), "the card also reloads on screen focus and when the app comes back to the foreground");
+    const offerSrc = read("app/src/screens/OfferScreen.js");
+    ok(offerSrc.includes("refreshControl={<RefreshControl refreshing={pullRefreshing} onRefresh={onPullRefresh} />}") && /const onPullRefresh = useCallback\(async \(\) => \{[^]*?setClaimVersion\(\(v\) => v \+ 1\);/.test(offerSrc),"the offer screen: pull to refresh reloads the loyalty card");
+    ok(read("app/src/components/GlobalNotificationLayer.js").includes("if (data.type === 'loyalty' || data.type === 'redemption' || data.pushType === 'redemption') loyaltyChanged("), "a redemption or loyalty push tells the loyalty cards to reload");
     ok(/accessibilityLabel=\{`loyalty stamp card: \$\{have\} of \$\{n\} visits/.test(card), "the stamp card reads out \"loyalty stamp card: 2 of 5 visits…\" for screen readers");
   }
 
-  console.log("── the visits list (components/LoyaltyVisits.js)");
+  console.log("── my loyalty (components/LoyaltyVisits.js)");
   {
-    let credits = [
-      { redemptionId: "r3", brand: "b1", status: "credited", visitNumber: 3, discountPct: 15, at: "2026-11-03T10:00:00Z" },
-      { redemptionId: "r2", brand: "b1", status: "not-counted", visitNumber: null, discountPct: 15, at: "2026-11-02T12:00:00Z" },
-      { redemptionId: "r1", brand: "b9", status: "reversed", visitNumber: 2, discountPct: 15, at: "2026-11-01T10:00:00Z" },
+    let cards = [
+      { brandId: "b1", brandName: "Alpha Cafe", active: true, stamps: { mode: "reward", stamps: 1, needed: 2, visitsToReward: 1, reward: { label: "a free coffee" }, available: null }, rewardsEarned: 1, rewardsUsed: 1, rewardReady: false, lastVisitAt: "2026-11-03T10:00:00Z",
+        history: [{ kind: "visit", status: "counted", at: "2026-11-03T10:00:00Z" }, { kind: "reward-used", label: "a free coffee", at: "2026-11-02T12:00:00Z" }, { kind: "visit", status: "not-counted", message: "visit already counted today", at: "2026-11-01T12:00:00Z" }] },
+      { brandId: "b2", brandName: "Beta Bakes", active: true, stamps: { mode: "reward", stamps: 3, needed: 3, visitsToReward: 0, reward: { label: "a cake" }, available: { id: "rw", label: "a cake" } }, rewardsEarned: 1, rewardsUsed: 0, rewardReady: true, lastVisitAt: "2026-11-04T10:00:00Z", history: [{ kind: "reward-earned", label: "a cake", at: "2026-11-04T10:00:00Z" }] },
+      { brandId: "b3", brandName: "Tier Cafe", active: true, progress: { visits: 4, currentTier: { discountPct: 15 } }, rewardsEarned: 0, rewardsUsed: 0, rewardReady: false, lastVisitAt: null, history: [{ kind: "visit", status: "reversed", at: "2026-11-01T10:00:00Z" }] },
     ];
     let flagOnForList = true;
     let programs = [];
-    const load = loader({ react: React, "react-native": rn, ...nav, ...icons, "../api/loyaltyApi": { loyaltyEnabled: async () => flagOnForList, getMyLoyaltyCredits: async () => credits, activeLoyaltyPrograms: async () => ({ enabled: true, programs }) } });
+    const changed = new Set();
+    const load = loader({ react: React, "react-native": rn, ...nav, ...icons, "../api/loyaltyApi": { loyaltyEnabled: async () => flagOnForList, getMyLoyaltyCards: async () => cards, activeLoyaltyPrograms: async () => ({ enabled: true, programs }), onLoyaltyChanged: (fn) => { changed.add(fn); return () => changed.delete(fn); } } });
     const LoyaltyVisits = load(path.join(SRC, "components/LoyaltyVisits.js")).default;
-    let root = mount(React.createElement(LoyaltyVisits, { brandNames: { b1: "Alpha Cafe" }, refreshKey: false }));
+    let root = mount(React.createElement(LoyaltyVisits, { refreshKey: false }));
     await tick(30); root.rerender();
     const t = textOf(root.tree);
-    ok(t.includes("visit credited") && t.includes("visit 3 · 15% off"), "a counted bill: visit credited, visit 3, 15%", t);
-    ok(t.includes("didn't count") && t.includes("one visit a day counts"), "a second bill the same day: didn't count", t);
-    ok(t.includes("reversed") && t.includes("a brand"), "a refunded visit: reversed (unknown brand name: 'a brand')", t);
-    ok(t.includes("alpha cafe"), "brand names from the claimed offers", t);
-    // a brand with a stamp card gets its progress line; a tiers brand doesn't
-    const load2 = loader({ react: React, "react-native": rn, ...nav, ...icons, "../api/loyaltyApi": { loyaltyEnabled: async () => true, getMyLoyaltyCredits: async () => credits, activeLoyaltyPrograms: async () => ({ enabled: true, programs: [] }), getBrandLoyalty: async (b) => (b === "b1" ? { enabled: true, program: {}, progress: null, stamps: { stamps: 4, needed: 5, visitsToReward: 1, reward: { label: "a free coffee" }, available: null } } : { enabled: true, program: {}, progress: {} }) } });
-    const LoyaltyVisits2 = load2(path.join(SRC, "components/LoyaltyVisits.js")).default;
-    root = mount(React.createElement(LoyaltyVisits2, { brandNames: { b1: "Alpha Cafe" }, refreshKey: false }));
-    await tick(40); root.rerender();
-    const t2 = textOf(root.tree);
-    ok(t2.includes("4 of 5 stamps") && t2.includes("1 to a free coffee") && (t2.match(/stamps/g) || []).length === 1, "My discounts: the stamp card's progress for that brand only", t2);
-    credits = [];
-    root = mount(React.createElement(LoyaltyVisits, { brandNames: {}, refreshKey: false }));
+    ok(t.includes("my loyalty") && t.includes("alpha cafe") && t.includes("1 of 2 visits") && t.includes("1 reward earned · 1 used"), "each brand's card: Alpha Cafe 1 of 2 visits, 1 reward earned, 1 used", t);
+    ok(t.includes("beta bakes") && t.includes("reward ready: a cake"), "a full card: reward ready", t);
+    ok(t.includes("tier cafe") && t.includes("4 visits · 15% off"), "a tiers program: its visits and %", t);
+    ok(t.includes("visit counted") && t.includes("reward used: a free coffee") && t.includes("visit already counted today") && t.includes("visit reversed"), "the history: counted, reward used, 'visit already counted today', reversed", t);
+    cards = [{ ...cards[0], stamps: { ...cards[0].stamps, stamps: 2, visitsToReward: 0, available: { id: "r2", label: "a free coffee" } }, rewardReady: true }];
+    for (const fn of changed) fn("b1");
     await tick(30); root.rerender();
-    ok(/your loyalty visits/.test(textOf(root.tree)) && /no loyalty programs near you yet/.test(textOf(root.tree)), "flag on, no bills, no brand running a program: 'no loyalty programs near you yet'", textOf(root.tree));
+    ok(textOf(root.tree).includes("reward ready: a free coffee"), "a redemption push: the list reloads (reward ready)", textOf(root.tree));
+    cards = [];
+    root = mount(React.createElement(LoyaltyVisits, { refreshKey: 3 }));
+    await tick(30); root.rerender();
+    ok(/my loyalty/.test(textOf(root.tree)) && /no loyalty programs near you yet/.test(textOf(root.tree)), "flag on, no visits, no brand running a program: 'no loyalty programs near you yet'", textOf(root.tree));
     programs = [{ brandId: "b1", brandName: "Alpha Cafe", name: "regulars" }, { brandId: "b2", brandName: "Beta Bakes", name: "" }];
-    root = mount(React.createElement(LoyaltyVisits, { brandNames: {}, refreshKey: 1 }));
+    root = mount(React.createElement(LoyaltyVisits, { refreshKey: 4 }));
     await tick(30); root.rerender();
-    ok(/loyalty at Alpha Cafe, Beta Bakes. claim their offers to earn visits/.test(textOf(root.tree)), "flag on, no bills, brands running programs: where to earn", textOf(root.tree));
+    ok(/loyalty at Alpha Cafe, Beta Bakes. claim their offers to earn visits/.test(textOf(root.tree)), "flag on, no visits, brands running programs: where to earn", textOf(root.tree));
     flagOnForList = false;
-    root = mount(React.createElement(LoyaltyVisits, { brandNames: {}, refreshKey: 2 }));
+    root = mount(React.createElement(LoyaltyVisits, { refreshKey: 5 }));
     await tick(30); root.rerender();
     ok(textOf(root.tree) === "", "flag off: nothing rendered", textOf(root.tree));
   }
@@ -232,7 +251,7 @@ const textOf = (n) => (n == null || n === false ? "" : typeof n === "string" || 
   {
     const offer = read("app/src/screens/OfferScreen.js");
     ok(offer.includes("<LoyaltyCard brandId={initialBrand?._id} refreshKey={claimVersion} />"), "the brand's offer screen shows the loyalty card");
-    ok(read("app/src/screens/MyDiscountScreen.js").includes("<LoyaltyVisits brandNames={loyaltyBrandNames}"), "My discounts shows the visits list");
+    ok(read("app/src/screens/MyDiscountScreen.js").includes("<LoyaltyVisits brandNames={loyaltyBrandNames}"), "My discounts shows 'my loyalty'");
     ok(!/loyalty/i.test(read("app/src/navigation/TabNavigator.js")), "no loyalty tab in the tab bar");
   }
 
