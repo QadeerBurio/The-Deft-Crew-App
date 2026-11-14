@@ -33,6 +33,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 import Svg, { Circle } from 'react-native-svg';
 import { plainError } from "../../utils/plainError";
+// FLAG_CAREER_MATCHING: "recommended for you" (the server's skill-evidence matcher, GET /jobs/recommendations/:resumeId)
+// and "invites to apply" (the "let employers invite me" switch + invites) show only with it on for the student
+import useFlag from "../../hooks/useFlag";
+import { matchingEnabled } from "../../api/matchingApi";
+import CareerInvites from "../../components/CareerInvites";
 import useAction from '../../hooks/useAction';
 import { TIMEOUT, withTimeout } from '../../config/timeouts';
 import { studioEnabled } from "../../api/resumeStudioApi";
@@ -70,7 +75,21 @@ const ScoreRing = ({ value, label }) => {
   );
 };
 
-const ResumeDashboardScreen = ({ navigation }) => {
+const ResumeDashboardScreen = ({ navigation, route }) => {
+  const matchingOn = useFlag("careerMatching", matchingEnabled) === true;
+  // an invite push without a job: { openInvites: true } scrolls to the invites card
+  const openInvites = !!route?.params?.openInvites;
+  const scrollRef = useRef(null);
+  const invitesY = useRef(null);
+  const scrolledToInvites = useRef(false);
+  const onInvitesLayout = (e) => {
+    invitesY.current = e.nativeEvent.layout.y;
+    if (openInvites && !scrolledToInvites.current) {
+      scrolledToInvites.current = true;
+      scrollRef.current?.scrollTo?.({ y: Math.max(0, invitesY.current - 12), animated: true });
+    }
+  };
+  useEffect(() => { if (openInvites) scrolledToInvites.current = false; }, [openInvites, route?.params?.at]);
   const { user, isGuest } = useContext(AuthContext);
   const { requireAccount } = useGuestGate();
   const insets = useSafeAreaInsets();
@@ -173,10 +192,10 @@ const ResumeDashboardScreen = ({ navigation }) => {
   }, [resumes]);
 
   useEffect(() => {
-    if (selectedResume && selectedResume._id) {
+    if (matchingOn && selectedResume && selectedResume._id) {
       fetchRecommendations(selectedResume._id);
     }
-  }, [selectedResume?._id]);
+  }, [selectedResume?._id, matchingOn]);
 
   // Search filter
   useEffect(() => {
@@ -201,7 +220,7 @@ const ResumeDashboardScreen = ({ navigation }) => {
     setRefreshing(true);
     try {
       await fetchResumes();
-      if (selectedResume?._id) await fetchRecommendations(selectedResume._id);
+      if (matchingOn && selectedResume?._id) await fetchRecommendations(selectedResume._id);
     } finally {
       setRefreshing(false);
     }
@@ -862,6 +881,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
 
         {/* ==================== SCROLL CONTENT ==================== */}
         <ScrollView
+          ref={scrollRef}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           contentContainerStyle={styles.scrollContent}
@@ -1018,13 +1038,15 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                     )}
                   </View>
 
-                  {/* Recommended jobs */}
-                  <View style={RD.section}>
-                    <Text style={RD.h2} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
-                      recommended jobs<Text style={{ color: T.yellow }}>.</Text>
-                    </Text>
-                    <View style={{ marginTop: 10 }}>{renderRecommendations()}</View>
-                  </View>
+                  {/* Recommended for you (FLAG_CAREER_MATCHING) */}
+                  {matchingOn && (
+                    <View style={RD.section} testID="resume-recommended">
+                      <Text style={RD.h2} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                        recommended for you<Text style={{ color: T.yellow }}>.</Text>
+                      </Text>
+                      <View style={{ marginTop: 10 }}>{renderRecommendations()}</View>
+                    </View>
+                  )}
                 </>
               ) : (
                 <View style={styles.emptyContainer}>
@@ -1059,6 +1081,12 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
               >
                 <Text style={RD.btnYellowText}>create resume</Text>
               </TouchableOpacity>
+            </View>
+          )}
+          {/* Invites to apply (FLAG_CAREER_MATCHING), below the resumes; renders nothing with it off */}
+          {matchingOn && (
+            <View onLayout={onInvitesLayout} testID="resume-invites" style={{ marginTop: 8 }}>
+              <CareerInvites navigation={navigation} refreshKey={refreshing} />
             </View>
           )}
           <View style={styles.bottomSpacer} />

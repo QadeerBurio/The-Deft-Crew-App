@@ -45,8 +45,6 @@ import { color as T, font as F } from "../theme/tokens";
 import { useGuestGate } from '../guest/GuestGate';
 import { plainError } from "../utils/plainError";
 import { copyToClipboard } from "../utils/clipboard";
-import RecommendedJobs from "./RecommendedJobs"; // FLAG_CAREER_MATCHING: jobs that match the student's resume skills
-import CareerInvites from "./CareerInvites"; // FLAG_CAREER_MATCHING: invites to apply, and the "let employers invite me" switch
 // Design system tokens (tdc-full-redesign/DESIGN_SYSTEM.md)
 const COLORS = {
   page: T.paper,
@@ -963,10 +961,6 @@ const Career = ({ navigation, route }) => {
             }
             ListHeaderComponent={(
               <View>
-                {/* FLAG_CAREER_MATCHING (nothing shown otherwise): jobs that match the student's resume skills, and
-                    invites to apply with the "let employers invite me" switch */}
-                <RecommendedJobs navigation={navigation} refreshKey={refreshing} />
-                <CareerInvites navigation={navigation} refreshKey={refreshing} />
                 {filteredData.length > 0 && (
               <View style={styles.listHeader}>
                 <Text style={styles.resultCount}>{totalJobsCount} jobs found</Text>

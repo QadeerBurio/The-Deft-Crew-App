@@ -1,6 +1,5 @@
-// "Recommended for you" in the careers hub (FLAG_CAREER_MATCHING): app/src/api/matchingApi.js (the flags gate) and
-// app/src/components/RecommendedJobs.js (hidden outside the pilot, without a resume or with nothing matching; each job
-// with its match share and matched skills; a tap opens the job in Career with openJobId); placed in CareerHub.js.
+// "Recommended for you" (FLAG_CAREER_MATCHING): app/src/api/matchingApi.js (the flags gate). The card itself is on the
+// Resume dashboard now (tests/app/resume-matching.test.js); the jobs list (Career) no longer shows it.
 //   node tests/app/career-recommended.test.js
 // Real app modules (Babel) with fakes for React Native, phone storage and the network.
 const path = require("path");
@@ -141,58 +140,11 @@ const byLabel = (tree, label) => all(tree, (x) => x.props?.accessibilityLabel ==
   store.isGuest = null;
   ok((await M.matchingEnabled()) === true && (await M.matchingEnabled()) === true && calls.filter((c) => c.url === "/app/flags/me").length === 1, "pilot student: on, /flags/me asked once");
 
-  console.log("── RecommendedJobs");
-  const { React, mount } = makeReact();
-  const { rn } = makeRN();
-  const icons = { "@expo/vector-icons": { Ionicons: "Ionicons" } };
-  let enabled = false;
-  const mapi = { matchingEnabled: async () => enabled, recommendedJobs: async (limit) => { calls.push({ url: "recommended", limit }); return reply; } };
-  const load = loader({ react: React, "react-native": rn, ...icons, "../api/matchingApi": mapi });
-  const RecommendedJobs = load(path.join(SRC, "components/RecommendedJobs.js")).default;
-  const settle = async (root) => { for (let i = 0; i < 5; i++) { await tick(); root.rerender(); } };
-  const nav = []; const navigation = { navigate: (s, p) => nav.push({ s, p }) };
-
-  let root = mount(React.createElement(RecommendedJobs, { navigation }));
-  await settle(root);
-  ok(root.tree == null || textOf(root.tree) === "", "outside the pilot: nothing shown (the hub is unchanged)");
-  ok(!calls.some((c) => c.url === "recommended"), "…and no recommendations request");
-  enabled = true;
-  reply = { hasResume: false, recommendations: [] };
-  root = mount(React.createElement(RecommendedJobs, { navigation }));
-  await settle(root);
-  { const t0 = textOf(root.tree); const cta = all(root.tree, (x) => x.type === "TouchableOpacity" && x.props.accessibilityLabel === "add a resume")[0];
-    ok(t0.includes("recommended for you") && t0.includes("add a resume to get job matches") && !!cta, "flag on, no resume: the card says 'add a resume to get job matches' with a button", t0);
-    cta.props.onPress(); ok(nav.some((n) => n.s === "Resume"), "…the button opens Resume", JSON.stringify(nav)); nav.length = 0; }
-  reply = { hasResume: true, recommendations: [] };
-  root = mount(React.createElement(RecommendedJobs, { navigation }));
-  await settle(root);
-  ok(textOf(root.tree).includes("no strong matches yet"), "flag on, nothing scores 60%+: 'no strong matches yet'", textOf(root.tree));
-  reply = { hasResume: true, recommendations: [
-    { _id: "j1", title: "React intern", companyName: "Bright Labs", location: "Karachi", matchPercentage: 100, matchedSkills: ["JavaScript", "React", "Node.js", "Git"] },
-    { _id: "j2", title: "Frontend intern", company: "Hire Co", matchPercentage: 67, matchedSkills: ["React"] },
-  ] };
-  calls.length = 0;
-  root = mount(React.createElement(RecommendedJobs, { navigation }));
-  await settle(root);
-  const t = textOf(root.tree);
-  ok(t.includes("recommended for you") && t.includes("React intern") && t.includes("Bright Labs · Karachi") && t.includes("100%") && t.includes("Frontend intern") && t.includes("67%"), "the jobs, best first, with company, place and the share of skills matched", t.slice(0, 200));
-  ok(t.includes("you show: JavaScript, React, Node.js") && !t.includes("Git"), "up to three matched skills each");
-  ok(/an estimate, not a promise/.test(t), "says it's an estimate");
-  ok(calls.find((c) => c.url === "recommended")?.limit === 5, "asks for 5");
-  const row = all(root.tree, (x) => x.type === "TouchableOpacity")[0];
-  ok(row.props.accessibilityRole === "button" && /React intern at Bright Labs. 100% of its skills on your resume: JavaScript, React, Node.js. opens the job/.test(row.props.accessibilityLabel), "each job is a button with a full spoken label", row.props.accessibilityLabel);
-  row.props.onPress();
-  ok(nav.length === 1 && nav[0].s === "Career" && nav[0].p.openJobId === "j1", "a tap opens the job in the jobs list (Career, openJobId)", JSON.stringify(nav));
-  mapi.recommendedJobs = async () => { throw new Error("offline"); };
-  root = mount(React.createElement(RecommendedJobs, { navigation, refreshKey: 1 }));
-  await settle(root);
-  ok(/couldn't load your matches/.test(textOf(root.tree)), "a failed request: the card stays with 'couldn't load your matches' (no blank spot)", textOf(root.tree));
-
   console.log("── placement");
   const career = read("app/src/components/Career.js");
-  ok(career.includes('import RecommendedJobs from "./RecommendedJobs"') && career.includes("<RecommendedJobs navigation={navigation} refreshKey={refreshing} />") && career.indexOf("<RecommendedJobs") < career.indexOf("jobs found") && read("app/src/navigation/DrawerNavigator.js").includes('<Stack.Screen name="Career" component={Career} />'), "shown at the top of the jobs list (Career, a registered screen: the one pushes and the Daily Drop open), refreshed with it");
+  ok(!/RecommendedJobs/.test(career) && !fs.existsSync(path.join(SRC, "components/RecommendedJobs.js")), "not on the jobs list (Career); RecommendedJobs.js is gone");
+  { const dash = read("app/src/screens/Resume/ResumeDashboard.js"); ok(dash.includes("recommended for you") && dash.includes('useFlag("careerMatching", matchingEnabled)') && dash.includes("{matchingOn && ("), "on the Resume dashboard, behind careerMatching (resume-matching.test.js)"); }
   ok(!fs.existsSync(path.join(APP, "app/src/components/CareerHub.js")), "CareerHub.js is gone (nothing showed it; chore/app-cleanup)");
-  ok(career.includes("useOpenFromParams('openJobId'"), "Career opens a job from openJobId (the route the tap uses)");
 
   console.log(`
 ${passed} passed, ${failed} failed`);
