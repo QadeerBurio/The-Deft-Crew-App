@@ -19,7 +19,7 @@ const privacyPoints = [
   {
     icon: "chart-line",
     title: "Ad measurement (optional)",
-    content: "Only if you allow it, we share some app activity (sign-up, offer claims, job applications, AI resumes) and your device's advertising ID with Meta to measure our ads. Never your name, email or phone. Change it any time in Settings → Privacy.",
+    content: "To count which ads bring new users, the app tells Meta when it is installed and opened (no advertising ID, nothing about you). Only if you allow it, we also share some app activity (sign-up, offer claims, job applications, AI resumes) and your device's advertising ID. Never your name, email or phone. Tap not now and nothing is sent. Change it any time in Settings → Privacy. Full policy: gettdc.pk/privacy",
   },
   {
     icon: "shield-key-outline",
