@@ -75,13 +75,14 @@ const setup = async ({ platform = "ios", status = "undetermined", answer = "gran
 };
 
 (async () => {
-  console.log("── the prompt follows 'allow', never 'not now'");
+  console.log("── the prompt: on by default, never after switching off");
   await setup({});
+  ok(calls.init === 1 && calls.adId.every((v) => v === false), "signed in, prompt not answered yet → SDK running, advertising ID off");
   let r = await M.requestTracking();
-  ok(r === null && att.asked === 0 && calls.init === 1 && calls.att.every((v) => v === false) && calls.adId.every((v) => v === false), "not decided yet → no prompt; only the install count runs (tracking and advertising ID off)");
-  await M.setConsent(false);
+  ok(r === "granted" && att.asked === 1 && calls.adId.at(-1) === true, "signed in, never touched the switch → Apple's prompt asked once; allowed → advertising ID on");
+  await setup({ consent: false });
   r = await M.requestTracking();
-  ok(r === null && att.asked === 0 && calls.adId.every((v) => v === false), "'not now' → no prompt, no advertising ID");
+  ok(r === null && att.asked === 0 && calls.adId.every((v) => v === false), "switched off → no prompt, no advertising ID");
   await setup({ consent: true });
   ok(calls.init === 1 && calls.autoLog[0] === true, "allow → SDK started with automatic logging on (install, activate)", JSON.stringify(calls.order));
   ok(calls.att.at(-1) === false && calls.adId.at(-1) === false, "allow, prompt not answered yet → advertising tracking off, advertising ID off", JSON.stringify(calls.order));

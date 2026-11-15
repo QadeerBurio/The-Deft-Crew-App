@@ -18,8 +18,8 @@ const privacyPoints = [
   },
   {
     icon: "chart-line",
-    title: "Ad measurement (optional)",
-    content: "To count which ads bring new users, the app tells Meta when it is installed and opened (no advertising ID, nothing about you). Only if you allow it, we also share some app activity (sign-up, offer claims, job applications, AI resumes) and your device's advertising ID. Never your name, email or phone. Tap not now and nothing is sent. Change it any time in Settings → Privacy. Full policy: gettdc.pk/privacy",
+    title: "Ad measurement",
+    content: "To see which of our ads bring students to tdc, the app shares some activity with Meta (installs, app opens, sign-up, offer claims, job applications, AI resumes) and your device's advertising ID. On iPhone, the advertising ID is only shared if you allow tracking when Apple asks. Never your name, email or phone. Switch it off any time in Settings → Privacy. Full policy: gettdc.pk/privacy",
   },
   {
     icon: "shield-key-outline",

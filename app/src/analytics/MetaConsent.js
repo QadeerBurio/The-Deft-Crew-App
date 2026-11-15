@@ -1,17 +1,18 @@
 // app/src/analytics/MetaConsent.js
-// MetaEventsHost: follows the signed-in student, reads the server's switch (at launch and
-// when the app comes back), and asks once for consent. useMetaConsent: the same choice for
-// Settings → privacy. On iPhone, Apple's tracking prompt follows "allow" (never "not now").
-import React, { useContext, useEffect, useState } from "react";
-import { AppState, Platform, View, Text, StyleSheet } from "react-native";
+// MetaEventsHost: follows the signed-in student and reads the server's switch (at launch and when
+// the app comes back). Ad measurement is on by default with an opt-out in Settings → privacy;
+// there is no consent sheet (since 2026-11-15). On iPhone, Apple's tracking prompt is shown once,
+// a few seconds after sign-in, unless the student switched ad measurement off. useMetaConsent:
+// the Settings → privacy switch.
+import { useContext, useEffect, useState } from "react";
+import { AppState, Platform } from "react-native";
 import { AuthContext } from "../context/AuthContext";
-import { Sheet, Button } from "../ui";
-import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
-import { holdTour, releaseTour } from "../engagement/tour/tourGate";
 import { metaAvailable, getConsent, setConsent, setMetaUser, refreshFlags, subscribe, onAppState, requestTracking } from "./metaEvents";
 import { checkRedemptions } from "./metaRedemptions";
 
-// "allow", then (iPhone, if never answered) Apple's tracking prompt, once the sheet has closed
+const TRACKING_DELAY = 4000; // after sign-in, not on top of the first screen's load
+
+// switched on in Settings, then (iPhone, if never answered) Apple's tracking prompt
 async function allow() {
   const ok = await setConsent(true);
   if (ok && Platform.OS === "ios") setTimeout(() => { requestTracking(); }, 600);
@@ -22,8 +23,7 @@ export function useMetaConsent() {
   useEffect(() => subscribe(() => setTick((n) => n + 1)), []);
   return {
     available: metaAvailable(),
-    allowed: getConsent() === "granted",
-    decided: getConsent() != null,
+    allowed: getConsent() !== "denied", // on unless switched off
     setAllowed: (v) => (v ? allow() : setConsent(false)),
   };
 }
@@ -31,8 +31,7 @@ export function useMetaConsent() {
 export default function MetaEventsHost() {
   const { user, token, isGuest } = useContext(AuthContext) || {};
   const userId = !isGuest && token ? user?._id || user?.id || null : null;
-  const { available, decided } = useMetaConsent();
-  const [ready, setReady] = useState(false);
+  const { available, allowed } = useMetaConsent();
 
   // the student whose choice applies
   useEffect(() => {
@@ -53,47 +52,13 @@ export default function MetaEventsHost() {
     };
   }, []);
 
-  // ask a moment after signing in, not on top of the first screen's load
+  // iPhone: Apple's tracking prompt once, a moment after sign-in (requestTracking only asks if it
+  // was never answered, and never when Meta is off or the student switched ad measurement off)
   useEffect(() => {
-    setReady(false);
-    if (!userId) return undefined;
-    const t = setTimeout(() => setReady(true), 1500);
+    if (Platform.OS !== "ios" || !userId || !available || !allowed) return undefined;
+    const t = setTimeout(() => { requestTracking(); }, TRACKING_DELAY);
     return () => clearTimeout(t);
-  }, [userId]);
+  }, [userId, available, allowed]);
 
-  const visible = !!userId && available && !decided && ready;
-  // the onboarding tour waits while this sheet is up
-  useEffect(() => {
-    if (!visible) return undefined;
-    holdTour("meta-consent");
-    return () => releaseTour("meta-consent");
-  }, [visible]);
-
-  return (
-    <Sheet visible={visible} onClose={() => setConsent(false)} title="help us measure our ads" scroll={false}>
-      <View>
-        <Text style={styles.body} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-          {"allow tdc to share some app activity with Meta (sign-up, offer claims, job applications, AI resumes) together with this phone's advertising ID, so we can see which of our Facebook and Instagram ads bring students to tdc."}
-        </Text>
-        <Text style={styles.body} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-          your name, email and phone number are never shared. without this, tdc only tells Meta that the app was installed
-          and opened (no advertising ID, nothing about you). tap not now and that stops too. you can change this any time
-          in settings → privacy.
-        </Text>
-        {Platform.OS === "ios" ? (
-          <Text style={styles.body} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-            on iPhone, after you tap allow, Apple will ask whether tdc may track. the advertising ID is only shared if you
-            say yes there too.
-          </Text>
-        ) : null}
-        <Button title="allow" variant="accent" onPress={allow} style={styles.btn} accessibilityLabel="allow sharing app activity with Meta" />
-        <Button title="not now" variant="ghost" onPress={() => setConsent(false)} accessibilityLabel="don't share app activity with Meta" />
-      </View>
-    </Sheet>
-  );
+  return null;
 }
-
-const styles = StyleSheet.create({
-  body: { fontFamily: F.body, fontSize: 14.5, lineHeight: 21, color: T.ink, marginBottom: 12 },
-  btn: { marginTop: 4, marginBottom: 6 },
-});

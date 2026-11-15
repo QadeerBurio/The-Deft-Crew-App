@@ -129,9 +129,9 @@ const setup = async ({ remote = true, consent = true, manual = false } = {}) => 
   ok(M._test.config.manualActivate === false && !calls.events.some((e) => e.name === "fb_mobile_activate_app"), "off by default → we never log fb_mobile_activate_app ourselves (the SDK does)");
   await setup({ consent: null, manual: true });
   await M.onAppState("active");
-  ok(!calls.events.length, "on, but not asked yet → no fallback activation (the install count is the SDK's own)");
+  ok(calls.events.filter((e) => e.name === "fb_mobile_activate_app").length === 1, "on, signed in, never touched the switch → one fb_mobile_activate_app for the open", JSON.stringify(calls.events));
   await M.setConsent(true);
-  ok(calls.events.filter((e) => e.name === "fb_mobile_activate_app").length === 1 && calls.flush >= 1, "on + allow → one fb_mobile_activate_app at start, flushed", JSON.stringify(calls.events));
+  ok(calls.events.filter((e) => e.name === "fb_mobile_activate_app").length === 1 && calls.flush >= 1, "…switching it on again doesn't add a second one; flushed", JSON.stringify(calls.events));
   ok(JSON.stringify(calls.events.find((e) => e.name === "fb_mobile_activate_app").params) === "{}", "…with no parameters");
   await M.onAppState("background");
   await M.onAppState("active");
@@ -147,7 +147,10 @@ const setup = async ({ remote = true, consent = true, manual = false } = {}) => 
   ok(calls.events.filter((e) => e.name === "fb_mobile_activate_app").length === 1, "on, switch turned off → none on the next open");
   await setup({ consent: false, manual: true });
   await M.onAppState("active");
-  ok(!calls.events.length && calls.autoLog.at(-1) === false, "on, 'not now' → none, install count stopped");
+  const offCount = calls.events.length;
+  await M.onAppState("background");
+  await M.onAppState("active");
+  ok(calls.events.length === offCount && calls.autoLog.at(-1) === false, "on, switched off → none on later opens, install count stopped");
 
   console.log("── never throws");
   await setup({});

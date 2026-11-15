@@ -61,7 +61,7 @@ const R = rm.exports;
 // Karachi wall-clock time → epoch ms (Asia/Karachi is UTC+5, no daylight saving)
 const pkt = (iso) => Date.parse(iso + "+05:00");
 const sentKeys = () => JSON.parse(store.get("tdc.metaSent.v1") || "[]");
-const noPersonal = (evs) => evs.every((e) => !/@|name|phone|mail"|text|content|message/i.test(JSON.stringify(e.params)));
+const noPersonal = (evs) => evs.every((e) => !/@|name|phone|mail"|text|content|message/i.test(JSON.stringify(e.params).replace(/fb_content_(type|id)/g, "")));
 let buildOn = true;
 const setup = async ({ build = true, remote = true, user = "u1", consent } = {}) => {
   M._test.reset();
@@ -101,46 +101,39 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   r = await E.offerClaimed("o1");
   ok(r === "no_user" && calls.events.length === 0, "signed out / guest → nothing");
 
-  console.log("── strict consent");
+  console.log("── on by default, opt-out in Settings → privacy");
   await setup({});
   r = await E.offerClaimed("o1");
-  ok(r === "queued" && calls.events.length === 0 && calls.init === 1 && calls.adId.every((v) => v === false), "not asked yet → waits on the phone; only the install count runs, no advertising ID", JSON.stringify(calls));
-  await M.setConsent(true);
-  ok(calls.events.length === 1 && calls.events[0].params.fb_content_id === "o1" && calls.init === 1, "allow → the waiting event is sent once");
+  ok(r === "sent" && calls.events.length === 1 && calls.events[0].params.fb_content_id === "o1" && calls.init === 1 && calls.adId.at(-1) === true, "signed in, never touched the switch → sent, advertising ID on (Android)", JSON.stringify(calls));
   r = await E.offerClaimed("o1");
   ok(r === "duplicate" && calls.events.length === 1, "the same offer again → duplicate, not sent twice");
-  await setup({});
-  await E.jobApplied("j9");
   await M.setConsent(false);
-  ok(calls.events.length === 0 && calls.autoLog.at(-1) === false && calls.adId.every((v) => v === false) && store.get("tdc.metaQueue.v1.u1") == null, "not now → waiting events dropped, install count stopped, no advertising ID ever");
+  ok(calls.adId.at(-1) === false && calls.autoLog.at(-1) === false, "switched off → automatic logging and advertising ID collection off");
   r = await E.jobApplied("j10");
-  ok(r === "no_consent" && calls.events.length === 0, "after 'not now' → nothing is sent or kept");
+  ok(r === "no_consent" && calls.events.length === 1, "switched off → nothing more is sent or kept");
   await M.setConsent(true);
-  ok(calls.events.length === 0, "allowing later does not bring back dropped events");
   r = await E.jobApplied("j10");
-  ok(r === "sent" && calls.events[0].name === "SubmitApplication" && calls.events[0].params.fb_content_type === "job", "after allowing: new events are sent");
-  await M.setConsent(false);
-  ok(calls.adId.at(-1) === false && calls.autoLog.at(-1) === false, "withdraw → automatic logging and advertising ID collection switched off");
-  r = await E.jobApplied("j11");
-  ok(r === "no_consent" && calls.events.length === 1, "withdraw → nothing more is sent");
+  ok(r === "sent" && calls.events.at(-1).name === "SubmitApplication" && calls.events.at(-1).params.fb_content_type === "job" && calls.adId.at(-1) === true, "switched back on → events sent again");
 
   console.log("── sign-up (before the session and the choice)");
   await setup({ user: null });
   r = await E.registration("newbie");
-  ok(r === "queued" && calls.events.length === 0, "sign-up confirmed, student not asked yet → waits", r);
+  ok(r === "queued" && calls.events.length === 0, "sign-up confirmed before the session starts → waits on the phone", r);
   await M.setMetaUser("newbie");
-  ok(calls.events.length === 0, "signed in, still not asked → still waiting");
-  await M.setConsent(true);
-  ok(calls.events.length === 1 && calls.events[0].name === "fb_mobile_complete_registration" && calls.events[0].params.fb_registration_method === "email", "allow → fb_mobile_complete_registration (method email), once");
+  ok(calls.events.length === 1 && calls.events[0].name === "fb_mobile_complete_registration" && calls.events[0].params.fb_registration_method === "email", "signed in → fb_mobile_complete_registration (method email), once");
   r = await E.registration("newbie");
   ok(r === "duplicate" && calls.events.length === 1, "a second sign-up call for the same account → duplicate");
   ok(calls.events.every((e) => !/@|name|phone|mail"/i.test(JSON.stringify(e.params).replace('"email"', '"method"'))), "no email address, name or phone in any event's parameters", JSON.stringify(calls.events));
   // waiting events expire after 24 h
-  await setup({});
-  await E.offerClaimed("old");
+  await setup({ user: null });
+  await E.registration("late");
   now += 25 * 60 * 60 * 1000;
-  await M.setConsent(true);
+  await M.setMetaUser("late");
   ok(calls.events.length === 0, "an event waiting more than 24 h is not sent");
+  await setup({ user: null });
+  await E.registration("nope");
+  await M.setMetaUser("nope");
+  ok(calls.events.length === 1, "(control) within 24 h it is sent");
 
   console.log("── duplicates per item");
   await setup({ consent: true });
@@ -159,7 +152,7 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   // another student on the same phone: their own consent and keys
   await M.setMetaUser("u2");
   r = await E.offerClaimed("A");
-  ok(r === "queued", "second student on the phone: not asked yet → waits (u1's choice doesn't apply)");
+  ok(r === "sent", "second student on the phone: their own keys (u1's duplicate doesn't apply)");
 
   console.log("── kill switch");
   await setup({ consent: true });
@@ -196,7 +189,7 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   ok(n === 1, "after 5 minutes it is asked again", n);
 
   console.log("── onboarding completed / event registered / scholarship applied");
-  // gates: each of the 3 is off without the build IDs, off with the switch off, waits before consent
+  // gates: each of the 3 is off without the build IDs, off with the switch off, sent by default
   for (const [label, fire] of [["onboarding", () => E.onboardingCompleted()], ["event", () => E.eventRegistered("e1")], ["scholarship", () => E.scholarshipApplied("p1")]]) {
     await setup({ build: false, consent: true });
     const a = await fire();
@@ -204,9 +197,9 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
     const b = await fire();
     await setup({});
     const c = await fire();
-    ok(a === "off" && b === "off" && c === "queued" && calls.events.length === 0 && calls.adId.every((v) => v === false), `${label}: build off → off, switch off → off, not asked yet → waits (install count only)`, [a, b, c].join());
-    await M.setConsent(false);
-    ok((await fire()) === "no_consent" && calls.events.length === 0, `${label}: 'not now' → nothing sent`);
+    ok(a === "off" && b === "off" && c === "sent" && calls.events.length === 1, `${label}: build off → off, switch off → off, on by default → sent`, [a, b, c].join());
+    await setup({ consent: false });
+    ok((await fire()) === "no_consent" && calls.events.length === 0, `${label}: switched off → nothing sent`);
   }
   await setup({ consent: true });
   r = await E.onboardingCompleted();
@@ -272,10 +265,10 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   ok(r.join() === "sent,sent" && calls.events.length === 2 && calls.events.every((e) => e.name === "tdc_confession_created" && JSON.stringify(e.params) === "{}"), "tdc_confession_created: each confession counts, no params", r.join());
   ok(!JSON.stringify([...store.values()]).includes("CONF-SECRET-ID") && !JSON.stringify(calls.events).includes("CONF-SECRET-ID"), "confession event has no id: not in params, once-keys or anything stored on the phone");
   ok(M.metaEvents.confessionCreated.length === 0, "confessionCreated takes no arguments at all");
-  await setup({});
+  await setup({ consent: true });
+  calls.events.length = 0;
   await E.confessionCreated("CONF-SECRET-ID");
-  const q = store.get("tdc.metaQueue.v1.u1") || "";
-  ok(/tdc_confession_created/.test(q) && !q.includes("CONF-SECRET-ID") && JSON.parse(q)[0].key.startsWith("u1:confession:") && JSON.stringify(JSON.parse(q)[0].params) === "{}", "before consent: the waiting confession event has no id either", q);
+  ok(!JSON.stringify([...store.values()]).includes("CONF-SECRET-ID") && calls.events.length === 1 && JSON.stringify(calls.events[0].params) === "{}", "confession id never stored on the phone or sent", JSON.stringify(calls.events));
 
   console.log("── skillshare");
   await setup({ consent: true });
@@ -318,14 +311,14 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   ok(!threwR && r === 0 && calls.events.length === 2, "server error → no event, no crash");
   redApi = async () => ({ data: { redemptions: [{ redemptionId: "X9", offerId: "o9", redeemedAt: new Date(now).toISOString() }] } });
   await M.setConsent(false); redCalls.length = 0;
-  ok((await R.checkRedemptions({ force: true })) === 0 && redCalls.length === 0, "'not now' → the server isn't even asked");
+  ok((await R.checkRedemptions({ force: true })) === 0 && redCalls.length === 0, "switched off → the server isn't even asked");
   await setup({ remote: false, consent: true }); R._test.reset();
   ok((await R.checkRedemptions({ force: true })) === 0 && redCalls.length === 0, "server switch off → not asked");
   await setup({ user: null }); R._test.reset();
   ok((await R.checkRedemptions({ force: true })) === 0 && redCalls.length === 0, "signed out → not asked");
   await setup({}); R._test.reset(); now = pkt("2026-10-27T18:00:00"); R._test.deps.now = () => now;
   r = await R.checkRedemptions({ force: true });
-  ok(r === 0 && calls.events.length === 0 && /tdc_discount_redeemed/.test(store.get("tdc.metaQueue.v1.u1") || ""), "not asked yet → waits on the phone like every other event");
+  ok(redCalls.length === 1, "never touched the switch → the server is asked (on by default)", JSON.stringify(redCalls));
 
   ok(noPersonal(calls.events), "no name, email, phone, text or message in any of the new events");
 
@@ -372,11 +365,11 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   Object.assign(calls, { init: 0, adId: [], att: [], autoLog: [], flush: 0, events: [] });
   Object.assign(M._test.deps, { storage, get: async () => ({ data: { metaEvents: true } }), buildEnabled: () => true, loadSdk: () => fakeSdk, platform: () => "android", every: () => () => {}, now: () => now });
   await M.refreshFlags({ force: true });
-  ok(calls.init === 0, "someone on this phone chose 'not now' → next launch, signed out, the install count stays off", JSON.stringify(calls));
+  ok(calls.init === 0, "someone on this phone switched it off → next launch, signed out, the install count stays off", JSON.stringify(calls));
   await M.setMetaUser("u1");
   await M.setConsent(true);
-  ok(calls.init === 1 && calls.autoLog.at(-1) === true && calls.adId.at(-1) === true, "…until they allow in settings → privacy");
-  ok(store.get("tdc.metaDenied.v1") == null, "…and the phone-wide 'not now' is cleared");
+  ok(calls.init === 1 && calls.autoLog.at(-1) === true && calls.adId.at(-1) === true, "…until they switch it back on in settings → privacy");
+  ok(store.get("tdc.metaDenied.v1") == null, "…and the phone-wide off is cleared");
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);

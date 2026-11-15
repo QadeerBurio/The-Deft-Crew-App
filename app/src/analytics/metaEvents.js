@@ -1,36 +1,27 @@
 // app/src/analytics/metaEvents.js
-// Meta App Events (react-native-fbsdk-next), consent for everything except the install count.
+// Meta App Events (react-native-fbsdk-next): on by default, opt-out in Settings → privacy.
 //
-// Install count (since 2026-11-15): when the build has the Meta IDs and the server's switch is
-// on, the SDK starts at launch with its automatic logging only: its one-time install ping and
-// fb_mobile_activate_app on each open. No advertising ID, no tdc events, nothing about the
-// student. This is what lets Meta credit an install to the ad that brought it (the install
-// campaigns only count installs within 1 day of the click, and on iPhone Apple's attribution is
-// set up when the SDK starts). Not started, or stopped, when anyone on this phone chose
-// "not now" (KEY_DENIED, kept across sign-outs) or the switch is off.
+// Since 2026-11-15 (was: strict opt-in with a consent sheet). When the build has the Meta IDs
+// (app.config.js → extra.meta.enabled) and the server's switch is on (GET /api/app/flags →
+// metaEvents), the SDK starts at launch with its automatic logging: its one-time install ping
+// and fb_mobile_activate_app on each open. That is what lets Meta credit an install to the ad
+// that brought it (the install campaigns count installs within 1 day of the click, and on iPhone
+// Apple's attribution is set up when the SDK starts).
 //
-// Everything else (tdc events, the advertising ID) is sent only when ALL of these are true:
-//   1. this build was made with the Meta IDs     (app.config.js → extra.meta.enabled)
-//   2. the server's switch is on                 (GET /api/app/flags → metaEvents)
-//   3. the signed-in student allowed it          (consent sheet / Settings → privacy)
-// The SDK is only started (initializeSDK) after that; the native settings keep it from
-// starting or logging by itself before then.
+// Signed-in student who hasn't switched it off: tdc events below are sent too, and the
+// advertising ID is collected (Android: yes; iPhone: only if Apple's tracking prompt was allowed;
+// MetaConsent asks it once after sign-in). Signed out: install count and app opens only, no
+// advertising ID, no tdc events.
 //
-// Once allowed, the SDK's automatic logging is switched on before it starts, so the SDK sends
-// its own one-time install ping and fb_mobile_activate_app on each open. It goes off again when
-// the student withdraws or the server's switch turns off (the SDK can't be unloaded; it just
-// stops logging and collecting).
+// Switched off in Settings → privacy ("denied"): automatic logging and the advertising ID go off
+// and nothing more is sent. The phone remembers it (KEY_DENIED) across sign-outs, so the install
+// count stays off too until someone switches it back on. The server's switch turns everything
+// off within minutes (re-read every 5 minutes while open and on every return to the app).
 //
-// Advertising ID: Android, with consent. iPhone, with consent AND the system tracking prompt
-// granted (asked only after the student says "allow"; never on its own).
-//
-// The server's switch is re-read every 5 minutes while the app is open and on every return to
-// the app (onAppState), so turning META_EVENTS_ENABLED off stops everything within minutes.
-//
-// Before the student decides, events (e.g. the sign-up) wait on the phone for up to 24 h:
-// sent if they allow, dropped if they don't. Each item is sent once (per-item keys kept on
-// the phone). Every function here catches its own errors: a Meta problem never breaks a
-// sign-up, a claim or an application.
+// Sign-up events logged before the new student is the active user wait on the phone (24 h) and
+// are sent once they are. Each item is sent once (per-item keys kept on the phone). Every
+// function here catches its own errors: a Meta problem never breaks a sign-up, a claim or an
+// application.
 //
 // Events (no name, email, phone number or free text, ever):
 //   registration(userId)              fb_mobile_complete_registration  (account sign-up)
@@ -104,7 +95,7 @@ const deps = {
 
 const state = {
   userId: null,
-  consent: null, // "granted" | "denied" | null (not asked yet)
+  consent: null, // "granted" | "denied" | null (never touched the switch: on)
   remote: false,
   flagsAt: 0,
   started: false,
@@ -150,7 +141,7 @@ const isIOS = () => { try { return deps.platform() === "ios"; } catch { return f
 const buildOn = () => { try { return deps.buildEnabled(); } catch { return false; } };
 /** Meta can be used at all (build + server switch). The UI asks / shows the switch only then. */
 export const metaAvailable = () => buildOn() && state.remote === true;
-const active = () => metaAvailable() && !!state.userId && state.consent === "granted" && !!sdk();
+const active = () => metaAvailable() && !!state.userId && state.consent !== "denied" && !!sdk(); // on unless switched off
 
 // ── iPhone tracking prompt ──
 function tracking() {
@@ -168,7 +159,7 @@ async function readTracking() {
   return state.tracking;
 }
 
-/** The advertising ID may be collected now: Android with consent; iPhone with consent and tracking granted. */
+/** The advertising ID may be collected now: signed in and not switched off; on iPhone also Apple's prompt allowed. */
 const adIdAllowed = () => active() && (!isIOS() || state.tracking === "granted");
 
 function applyAdId(s) {
@@ -313,7 +304,7 @@ export const getConsent = () => state.consent;
 /** The signed-in student's id (null when signed out or a guest). */
 export const metaUser = () => state.userId;
 
-/** The student's choice (consent sheet, Settings → privacy). */
+/** The Settings → privacy switch. */
 export async function setConsent(allowed) {
   try {
     if (!state.userId) return false;
@@ -419,7 +410,7 @@ async function flushQueue() {
 
 /**
  * Logs one event. Returns what happened (for tests and logs), never throws:
- *   "sent" | "queued" (waiting for the student's choice) | "duplicate" | "off" | "no_consent" |
+ *   "sent" | "queued" (waiting for that student to be the signed-in one) | "duplicate" | "off" | "no_consent" |
  *   "no_user" | "error"
  * (the wrappers below also return "old", "invalid" or "no_id" without logging anything)
  */
@@ -438,8 +429,8 @@ async function log(build, key, forUserId) {
     if (!s) return "off";
     const { name, params } = build(s);
 
-    // allowed by the signed-in student: send now
-    if (consent === "granted" && userId === state.userId) {
+    // the signed-in student, not switched off: send now
+    if (consent !== "denied" && userId === state.userId) {
       if (!state.full) await applyState();
       if (state.full) {
         send(name, params);
@@ -447,7 +438,7 @@ async function log(build, key, forUserId) {
         return "sent";
       }
     }
-    // not decided yet (or not their session yet): wait on the phone, sent only if allowed
+    // not their session yet (sign-up before the new student is active): wait on the phone
     const queue = await read(keyQueue(userId), []);
     if (queue.some((q) => q.key === fullKey)) return "duplicate";
     queue.push({ name, params, key: fullKey, at: deps.now() });

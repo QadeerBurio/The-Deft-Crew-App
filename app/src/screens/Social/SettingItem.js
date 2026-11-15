@@ -395,7 +395,7 @@ export default function SettingsScreen({ navigation }) {
               <ToggleItem
                 icon="analytics-outline"
                 label="ad measurement (Meta)"
-                subLabel="share app activity and this phone's advertising ID with Meta to measure our ads. no name, email or phone."
+                subLabel="shares app activity and this phone's advertising ID with Meta to measure our ads. no name, email or phone. switch off to stop sharing anything with Meta."
                 value={meta.allowed}
                 onToggle={() => meta.setAllowed(!meta.allowed)}
                 last
