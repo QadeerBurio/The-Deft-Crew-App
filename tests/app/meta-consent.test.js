@@ -79,7 +79,7 @@ const btn = (t, title) => all(t, (n) => n.type === "Button" && n.props.title ===
   const sh = sheet(m.tree);
   ok(sh.props.visible === true && sh.props.title === "help us measure our ads", "then asks once: 'help us measure our ads'");
   const body = text(sh);
-  ok(/advertising ID/.test(body) && /never shared/.test(body) && /settings → privacy/.test(body) && /nothing is sent unless you allow it/.test(body), "plain words: what is shared, what never is, where to change it", body);
+  ok(/advertising ID/.test(body) && /never shared/.test(body) && /settings → privacy/.test(body) && /only tells Meta that the app was installed\s+and opened/.test(body) && /tap not now and that stops too/.test(body), "plain words: what is shared, what never is, where to change it", body);
   ok(!/Apple will ask/.test(body), "Android: no mention of the iPhone prompt");
   ok(held.has("meta-consent"), "the onboarding tour waits while the sheet is up");
   await btn(m.tree, "allow").props.onPress(); await tick(); m.rerender();

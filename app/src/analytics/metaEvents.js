@@ -1,7 +1,15 @@
 // app/src/analytics/metaEvents.js
-// Meta App Events (react-native-fbsdk-next), strict consent.
+// Meta App Events (react-native-fbsdk-next), consent for everything except the install count.
 //
-// Nothing is sent and the advertising ID is not collected unless ALL of these are true:
+// Install count (since 2026-11-15): when the build has the Meta IDs and the server's switch is
+// on, the SDK starts at launch with its automatic logging only: its one-time install ping and
+// fb_mobile_activate_app on each open. No advertising ID, no tdc events, nothing about the
+// student. This is what lets Meta credit an install to the ad that brought it (the install
+// campaigns only count installs within 1 day of the click, and on iPhone Apple's attribution is
+// set up when the SDK starts). Not started, or stopped, when anyone on this phone chose
+// "not now" (KEY_DENIED, kept across sign-outs) or the switch is off.
+//
+// Everything else (tdc events, the advertising ID) is sent only when ALL of these are true:
 //   1. this build was made with the Meta IDs     (app.config.js → extra.meta.enabled)
 //   2. the server's switch is on                 (GET /api/app/flags → metaEvents)
 //   3. the signed-in student allowed it          (consent sheet / Settings → privacy)
@@ -50,6 +58,7 @@ import { BASE_URL } from "../api/api";
 
 const KEY_FLAGS = "tdc.appFlags.v1";
 const KEY_SENT = "tdc.metaSent.v1";
+const KEY_DENIED = "tdc.metaDenied.v1"; // someone on this phone chose "not now": no install count either
 const keyConsent = (userId) => `tdc.metaConsent.v1.${userId}`;
 const keyQueue = (userId) => `tdc.metaQueue.v1.${userId}`;
 
@@ -103,6 +112,8 @@ const state = {
   activated: false, // the fallback activation was logged since the app last came to the front
   sent: null, // Set of keys, loaded lazily
   sdk: undefined,
+  full: false, // started with the student's consent (not just the install count)
+  denied: null, // KEY_DENIED, read lazily
 };
 let stopWatch = null; // the 5-minute switch check while the app is open
 const listeners = new Set();
@@ -190,6 +201,7 @@ async function start() {
 function stop() {
   const s = sdk();
   state.started = false;
+  state.full = false;
   try {
     // the SDK can't be unloaded: no automatic logging, no events from us, no advertising ID
     s?.Settings?.setAutoLogAppEventsEnabled(false);
@@ -198,15 +210,35 @@ function stop() {
   } catch (e) { console.warn("[meta] reading the tracking setting failed:", e?.message || e); }
 }
 
+async function deviceDenied() {
+  if (state.denied == null) state.denied = (await read(KEY_DENIED, false)) === true;
+  return state.denied;
+}
+
+/** The install count may run: build + switch on, and nobody here (or this student) said "not now". */
+async function basicAllowed() {
+  return metaAvailable() && !!sdk() && state.consent !== "denied" && !(await deviceDenied());
+}
+
 async function applyState() {
   try {
     if (active()) {
       if (!state.started) {
-        if (await start()) await flushQueue();
+        if (await start()) { state.full = true; await flushQueue(); }
       } else {
         const s = sdk();
-        if (s) applyAdId(s); // e.g. the tracking answer changed
+        if (s) applyAdId(s); // e.g. the tracking answer changed, or "allow" after the install count
+        if (!state.full) {
+          state.full = true;
+          if (config.manualActivate) logActivate(); // the fallback counts from "allow", as before
+          await flushQueue();
+        }
       }
+    } else if (await basicAllowed()) {
+      // install count only: automatic logging on, advertising ID off (adIdAllowed() is false here)
+      if (!state.started) await start();
+      else { const s = sdk(); if (s) applyAdId(s); }
+      state.full = false;
     } else if (state.started) {
       stop();
     }
@@ -287,6 +319,8 @@ export async function setConsent(allowed) {
     if (!state.userId) return false;
     state.consent = allowed ? "granted" : "denied";
     await write(keyConsent(state.userId), state.consent);
+    state.denied = !allowed;
+    await write(KEY_DENIED, allowed ? null : true);
     if (!allowed) await write(keyQueue(state.userId), null); // nothing waiting is ever sent
     await applyState();
     notify();
@@ -406,8 +440,8 @@ async function log(build, key, forUserId) {
 
     // allowed by the signed-in student: send now
     if (consent === "granted" && userId === state.userId) {
-      if (!state.started) await applyState();
-      if (state.started) {
+      if (!state.full) await applyState();
+      if (state.full) {
         send(name, params);
         await markSent(fullKey);
         return "sent";
@@ -497,7 +531,7 @@ export const _test = {
   config,
   FLAGS_EVERY,
   reset: () => {
-    Object.assign(state, { userId: null, consent: null, remote: false, flagsAt: 0, started: false, tracking: null, activated: false, sent: null, sdk: undefined });
+    Object.assign(state, { userId: null, consent: null, remote: false, flagsAt: 0, started: false, tracking: null, activated: false, sent: null, sdk: undefined, full: false, denied: null });
     if (stopWatch) { try { stopWatch(); } catch { /* nothing useful to log here */ } }
     stopWatch = null;
     config.manualActivate = false;

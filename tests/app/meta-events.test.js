@@ -88,7 +88,7 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   await setup({ consent: true });
   let r = await E.offerClaimed("o1");
   ok(r === "sent" && calls.events.length === 1 && calls.events[0].name === "tdc_offer_claimed" && calls.events[0].params.fb_content_id === "o1", "build on + switch on + allowed → sent", JSON.stringify({ r, calls }));
-  ok(calls.init === 1 && calls.autoLog[0] === true && calls.adId[0] === true && calls.att.length === 0, "SDK started only now: automatic logging (install, activate) on, then advertising ID on (Android, after consent)", JSON.stringify(calls));
+  ok(calls.init === 1 && calls.autoLog[0] === true && calls.adId[0] === false && calls.adId.at(-1) === true && calls.att.length === 0, "SDK started at launch for the install count (automatic logging on, advertising ID off), advertising ID on only after consent (Android)", JSON.stringify(calls));
   ok(calls.flush === 1, "flushed right after the event", calls.flush);
   ok(!calls.events.some((e) => e.name === "fb_mobile_activate_app"), "manual activate fallback is off by default (the SDK logs it)");
   await setup({ build: false, consent: true });
@@ -104,7 +104,7 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   console.log("── strict consent");
   await setup({});
   r = await E.offerClaimed("o1");
-  ok(r === "queued" && calls.events.length === 0 && calls.init === 0 && calls.adId.length === 0, "not asked yet → waits on the phone; SDK not started, no advertising ID", JSON.stringify(calls));
+  ok(r === "queued" && calls.events.length === 0 && calls.init === 1 && calls.adId.every((v) => v === false), "not asked yet → waits on the phone; only the install count runs, no advertising ID", JSON.stringify(calls));
   await M.setConsent(true);
   ok(calls.events.length === 1 && calls.events[0].params.fb_content_id === "o1" && calls.init === 1, "allow → the waiting event is sent once");
   r = await E.offerClaimed("o1");
@@ -112,7 +112,7 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   await setup({});
   await E.jobApplied("j9");
   await M.setConsent(false);
-  ok(calls.events.length === 0 && calls.init === 0 && store.get("tdc.metaQueue.v1.u1") == null, "not now → waiting events dropped, SDK never started");
+  ok(calls.events.length === 0 && calls.autoLog.at(-1) === false && calls.adId.every((v) => v === false) && store.get("tdc.metaQueue.v1.u1") == null, "not now → waiting events dropped, install count stopped, no advertising ID ever");
   r = await E.jobApplied("j10");
   ok(r === "no_consent" && calls.events.length === 0, "after 'not now' → nothing is sent or kept");
   await M.setConsent(true);
@@ -204,7 +204,7 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
     const b = await fire();
     await setup({});
     const c = await fire();
-    ok(a === "off" && b === "off" && c === "queued" && calls.events.length === 0 && calls.init === 0, `${label}: build off → off, switch off → off, not asked yet → waits (SDK not started)`, [a, b, c].join());
+    ok(a === "off" && b === "off" && c === "queued" && calls.events.length === 0 && calls.adId.every((v) => v === false), `${label}: build off → off, switch off → off, not asked yet → waits (install count only)`, [a, b, c].join());
     await M.setConsent(false);
     ok((await fire()) === "no_consent" && calls.events.length === 0, `${label}: 'not now' → nothing sent`);
   }
@@ -356,6 +356,27 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   threw = false;
   try { await E.offerClaimed(undefined); await E.jobApplied(null); await E.aiResumeCreated(); await E.registration(); } catch { threw = true; }
   ok(!threw, "missing ids → no crash");
+
+  console.log("── install count at launch (2026-11-15)");
+  await setup({ user: null });
+  ok(calls.init === 1 && calls.autoLog.at(-1) === true && calls.adId.every((v) => v === false), "first open, signed out → SDK starts with automatic logging (install ping, app opens), advertising ID off", JSON.stringify(calls));
+  r = await E.offerClaimed("o1");
+  ok(r === "no_user" && calls.events.length === 0, "…no tdc events without a signed-in student who allowed");
+  await setup({ build: false, user: null });
+  ok(calls.init === 0, "build without Meta IDs → the install count doesn't run either");
+  await setup({ remote: false, user: null });
+  ok(calls.init === 0, "server switch off → the install count doesn't run either");
+  await setup({ consent: false });
+  await M.setMetaUser(null);
+  M._test.reset();
+  Object.assign(calls, { init: 0, adId: [], att: [], autoLog: [], flush: 0, events: [] });
+  Object.assign(M._test.deps, { storage, get: async () => ({ data: { metaEvents: true } }), buildEnabled: () => true, loadSdk: () => fakeSdk, platform: () => "android", every: () => () => {}, now: () => now });
+  await M.refreshFlags({ force: true });
+  ok(calls.init === 0, "someone on this phone chose 'not now' → next launch, signed out, the install count stays off", JSON.stringify(calls));
+  await M.setMetaUser("u1");
+  await M.setConsent(true);
+  ok(calls.init === 1 && calls.autoLog.at(-1) === true && calls.adId.at(-1) === true, "…until they allow in settings → privacy");
+  ok(store.get("tdc.metaDenied.v1") == null, "…and the phone-wide 'not now' is cleared");
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);

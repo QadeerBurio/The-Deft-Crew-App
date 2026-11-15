@@ -78,7 +78,7 @@ const setup = async ({ platform = "ios", status = "undetermined", answer = "gran
   console.log("── the prompt follows 'allow', never 'not now'");
   await setup({});
   let r = await M.requestTracking();
-  ok(r === null && att.asked === 0 && calls.init === 0, "not decided yet → no prompt, SDK not started");
+  ok(r === null && att.asked === 0 && calls.init === 1 && calls.att.every((v) => v === false) && calls.adId.every((v) => v === false), "not decided yet → no prompt; only the install count runs (tracking and advertising ID off)");
   await M.setConsent(false);
   r = await M.requestTracking();
   ok(r === null && att.asked === 0 && calls.adId.every((v) => v === false), "'not now' → no prompt, no advertising ID");

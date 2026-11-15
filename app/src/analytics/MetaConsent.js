@@ -76,8 +76,9 @@ export default function MetaEventsHost() {
           {"allow tdc to share some app activity with Meta (sign-up, offer claims, job applications, AI resumes) together with this phone's advertising ID, so we can see which of our Facebook and Instagram ads bring students to tdc."}
         </Text>
         <Text style={styles.body} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-          your name, email and phone number are never shared. nothing is sent unless you allow it, and you can change this
-          any time in settings → privacy.
+          your name, email and phone number are never shared. without this, tdc only tells Meta that the app was installed
+          and opened (no advertising ID, nothing about you). tap not now and that stops too. you can change this any time
+          in settings → privacy.
         </Text>
         {Platform.OS === "ios" ? (
           <Text style={styles.body} maxFontSizeMultiplier={MAX_FONT_SCALE}>
