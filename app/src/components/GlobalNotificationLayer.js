@@ -11,6 +11,8 @@ import { openTarget } from '../guest/accountRoutes';
 import * as Notifications from 'expo-notifications';
 import { onRedemptionPush } from '../analytics/metaRedemptions';
 import { loyaltyChanged } from '../api/loyaltyApi';
+import { fromNotificationData as loyaltyMoment } from '../loyalty/celebrations';
+import RewardCelebration from './RewardCelebration';
 import {
   claimNotificationResponse,
   getRouteFromNotificationData,
@@ -65,6 +67,8 @@ export default function GlobalNotificationLayer() {
       if (t && Date.now() - t < DEDUPE_WINDOW_MS) return;
     }
     if (isDuplicate(notification?._id)) return;
+    // a loyalty moment (reward unlocked / used) found by polling: the celebration, once per reward
+    if (notification?.metadata?.event) loyaltyMoment(notification.metadata).catch(() => {});
     addNotification(notification);
   }, [addNotification, isDuplicate]);
 
@@ -92,6 +96,8 @@ export default function GlobalNotificationLayer() {
       onRedemptionPush(data);
       // a redemption or a loyalty visit: the loyalty cards on screen reload ("1 of 2 visits" → "2 of 2")
       if (data.type === 'loyalty' || data.type === 'redemption' || data.pushType === 'redemption') loyaltyChanged(data.brandId || null);
+      // "reward unlocked" (confetti) / "reward used, you saved PKR X": once per reward (loyalty/celebrations.js)
+      loyaltyMoment(data).catch(() => {});
 
       // Only while the app is on screen. Otherwise the phone shows it.
       if (AppState.currentState !== 'active') return;
@@ -165,6 +171,7 @@ export default function GlobalNotificationLayer() {
 
       if (!claimNotificationResponse(response)) return;
       onRedemptionPush(data);
+      loyaltyMoment(data).catch(() => {}); // opened from the tray: still celebrated once
 
       const { route, params } = getRouteFromNotificationData(data);
       openTarget(route, params); // guest + login-only route → sign in first, then continue
@@ -203,11 +210,14 @@ export default function GlobalNotificationLayer() {
   // RENDER
   // ═══════════════════════════════════════════════════════════════
   return (
-    <NotificationBanner
-      visible={bannerVisible && !!token && !isGuest}
-      notification={currentNotification}
-      onPress={handleBannerPress}
-      onDismiss={dismissBanner}
-    />
+    <>
+      <NotificationBanner
+        visible={bannerVisible && !!token && !isGuest}
+        notification={currentNotification}
+        onPress={handleBannerPress}
+        onDismiss={dismissBanner}
+      />
+      {!!token && !isGuest && <RewardCelebration />}
+    </>
   );
 }

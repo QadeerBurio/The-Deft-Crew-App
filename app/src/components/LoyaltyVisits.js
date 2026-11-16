@@ -11,6 +11,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { getMyLoyaltyCards, activeLoyaltyPrograms, loyaltyEnabled, onLoyaltyChanged } from "../api/loyaltyApi";
 import useFlag from "../hooks/useFlag";
+import StampCircles from "./StampCircles";
+import { fromStamps } from "../loyalty/celebrations";
 
 const day = (d) => (d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "");
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
@@ -55,6 +57,8 @@ export default function LoyaltyVisits({ refreshKey }) {
   useFocusEffect(useCallback(() => (on === true ? load() : undefined), [load, on]));
   // a redemption or a loyalty push: the counts may have changed
   useEffect(() => onLoyaltyChanged(() => { if (on === true) load(); }), [load, on]);
+  // ready rewards this phone hasn't celebrated yet (a missed push): the popup, once per reward
+  useEffect(() => { (cards || []).forEach((c) => { if (c.stamps?.available) fromStamps(c.stamps, c.brandName).catch(() => {}); }); }, [cards]);
   // nothing earned yet: which brands run a program (or none)
   const none = cards !== null && cards.length === 0;
   useEffect(() => {
@@ -105,11 +109,7 @@ export default function LoyaltyVisits({ refreshKey }) {
               )}
             </View>
             <Text style={styles.count} maxFontSizeMultiplier={MAX_FONT_SCALE}>{cardLine(c)}</Text>
-            {c.stamps && (
-              <View style={styles.stamps} accessibilityElementsHidden importantForAccessibility="no">
-                {Array.from({ length: n }, (_, i) => <View key={i} style={[styles.stamp, (i < have || ready) && styles.stampOn]} />)}
-              </View>
-            )}
+            {c.stamps && <StampCircles needed={n} stamps={have} ready={!!c.stamps.available} size={22} testID={`stamps-${c.brandId}`} />}
             <Text style={styles.detail} maxFontSizeMultiplier={MAX_FONT_SCALE}>
               {plural(c.rewardsEarned || 0, "reward")} earned · {c.rewardsUsed || 0} used{c.lastVisitAt ? ` · last visit ${day(c.lastVisitAt)}` : ""}
             </Text>
@@ -138,9 +138,6 @@ const styles = StyleSheet.create({
   brandHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   brand: { flex: 1, fontFamily: F.bodySemi, fontSize: 14.5, color: T.ink },
   count: { fontFamily: F.heading, fontSize: 18, color: T.ink, marginTop: 4 },
-  stamps: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 },
-  stamp: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: T.yellow },
-  stampOn: { backgroundColor: T.yellow },
   detail: { fontFamily: F.body, fontSize: 12, color: T.textMuted, marginTop: 6 },
   row: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 28 },
   historyText: { flex: 1, fontFamily: F.body, fontSize: 12.5, color: T.ink },
