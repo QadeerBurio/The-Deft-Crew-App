@@ -8,11 +8,16 @@ import { useFocusEffect } from "@react-navigation/native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { getBrandLoyalty, onLoyaltyChanged } from "../api/loyaltyApi";
+import StampCircles from "./StampCircles";
+import { fromStamps } from "../loyalty/celebrations";
 
 const rule = (t) => (t.maxVisit == null ? `visit ${t.minVisit} onward` : t.minVisit === t.maxVisit ? `visit ${t.minVisit}` : `visits ${t.minVisit}–${t.maxVisit}`);
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+// "25% off your next bill" / "PKR 200 off your next bill"; a free item is just its name
+const moneyOff = (r) => r?.kind === "percent" || r?.kind === "amount";
+export const readyText = (a) => (moneyOff(a) ? `${a.label} your next bill` : a?.item || a?.label || "your reward");
 
-export default function LoyaltyCard({ brandId, refreshKey }) {
+export default function LoyaltyCard({ brandId, brandName, refreshKey }) {
   const [data, setData] = useState(null);
 
   const load = useCallback(() => {
@@ -30,6 +35,9 @@ export default function LoyaltyCard({ brandId, refreshKey }) {
     const sub = AppState.addEventListener("change", (s) => { if (s === "active") load(); });
     return () => sub?.remove?.();
   }, [load]);
+
+  // a ready reward this phone hasn't celebrated yet (the push was missed): the popup, once
+  useEffect(() => { if (data?.stamps?.available) fromStamps(data.stamps, brandName).catch(() => {}); }, [data, brandName]);
 
   if (!data?.enabled || !data.program) return null;
   if (data.stamps) return <StampCard stamps={data.stamps} program={data.program} />;
@@ -86,7 +94,7 @@ export default function LoyaltyCard({ brandId, refreshKey }) {
 // reward mode: one stamp per verified visit; a full card earns the reward; the card restarts after it's used
 export function stampLine(s) {
   const label = s.reward?.label || "the reward";
-  if (s.available) return `reward ready: ${s.available.label}. show your qr on your next visit.`;
+  if (s.available) return `reward ready: ${moneyOff(s.available) ? readyText(s.available) : s.available.label}. show your qr on your next visit.`;
   if (s.limitReached) return s.limitReached === "monthly-limit" ? "you've had this month's rewards. stamps start again next month." : "you've had all the rewards this program gives.";
   return `${plural(s.visitsToReward, "more visit")} to ${label}.`;
 }
@@ -102,10 +110,14 @@ function StampCard({ stamps: s, program }) {
           <Text style={styles.tierPillText} maxFontSizeMultiplier={MAX_FONT_SCALE}>{s.available ? "reward ready" : "stamp card"}</Text>
         </View>
       </View>
-      <Text style={styles.stampCount} maxFontSizeMultiplier={MAX_FONT_SCALE}>{have} of {n} visits</Text>
-      <View style={styles.stamps} accessibilityElementsHidden importantForAccessibility="no">
-        {Array.from({ length: n }, (_, i) => <View key={i} style={[styles.stamp, i < have && styles.stampOn]} />)}
-      </View>
+      <Text style={styles.stampCount} maxFontSizeMultiplier={MAX_FONT_SCALE}>{s.available ? `${n} of ${n} visits` : `${have} of ${n} visits`}</Text>
+      <StampCircles needed={n} stamps={have} ready={!!s.available} testID="stamp-card" />
+      {s.available && (
+        <View style={styles.ready} testID="reward-ready">
+          <MaterialCommunityIcons name="gift-outline" size={18} color={T.ink} />
+          <Text style={styles.readyText} maxFontSizeMultiplier={MAX_FONT_SCALE}>{readyText(s.available)}</Text>
+        </View>
+      )}
       <Text style={styles.next} maxFontSizeMultiplier={MAX_FONT_SCALE}>{stampLine(s)}</Text>
       <Text style={styles.terms} maxFontSizeMultiplier={MAX_FONT_SCALE}>
         {n} verified visits = {s.reward?.label || "a reward"}. a visit counts when the brand confirms your bill; after you use the reward the card starts again.
@@ -118,9 +130,8 @@ function StampCard({ stamps: s, program }) {
 
 const styles = StyleSheet.create({
   stampCount: { fontFamily: F.heading, fontSize: 22, color: T.ink, marginTop: 12 },
-  stamps: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 10 },
-  stamp: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: T.yellow },
-  stampOn: { backgroundColor: T.yellow },
+  ready: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10, padding: 10, borderRadius: 14, backgroundColor: T.yellowSoft },
+  readyText: { fontFamily: F.bodyBold, fontSize: 14, color: T.ink, flex: 1 },
   card: { marginHorizontal: 16, marginTop: 16, padding: 16, borderRadius: 22, backgroundColor: T.card, borderWidth: 1, borderColor: T.line },
   head: { flexDirection: "row", alignItems: "center", gap: 8 },
   title: { fontFamily: F.heading, fontSize: 18, color: T.ink, flex: 1 },

@@ -149,7 +149,8 @@ const textOf = (n) => (n == null || n === false ? "" : typeof n === "string" || 
     const asked = [];
     const changed = new Set();
     const loyaltyMock = { getBrandLoyalty: async (id) => { asked.push(id); return reply; }, onLoyaltyChanged: (fn) => { changed.add(fn); return () => changed.delete(fn); } };
-    const load = loader({ react: React, "react-native": rn, ...nav, ...icons, "../api/loyaltyApi": loyaltyMock });
+    const celebrated = [];
+    const load = loader({ react: React, "react-native": rn, ...nav, ...icons, "../api/loyaltyApi": loyaltyMock, "../loyalty/celebrations": { fromStamps: async (s, b) => { celebrated.push([s?.available?.id, b]); return true; } } });
     const LoyaltyCard = load(path.join(SRC, "components/LoyaltyCard.js")).default;
     let root = mount(React.createElement(LoyaltyCard, { brandId: "b1", refreshKey: 0 }));
     await tick(30); root.rerender();
@@ -176,13 +177,18 @@ const textOf = (n) => (n == null || n === false ? "" : typeof n === "string" || 
     t = textOf(root.tree);
     ok(t.includes("2 of 5 visits") && t.includes("stamp card") && t.includes("3 more visits to a free coffee."), "stamp card: 2 of 5 visits, 3 more visits to a free coffee", t);
     ok(t.includes("5 verified visits = a free coffee") && t.includes("after you use the reward the card starts again") && t.includes("up to 2 rewards a month") && !t.includes("on your next visit"), "stamp card terms (no tier %)", t);
-    const stampDots = (n) => { let c = 0; const walk = (x) => { if (!x || typeof x !== "object") return; if (Array.isArray(x)) return x.forEach(walk); if (Array.isArray(x.props?.style) && x.props.style[1]) c++; walk(x.props?.children); }; walk(n); return c; };
-    ok(stampDots(root.tree) === 2, "2 stamps filled", stampDots(root.tree));
+    const stampDots = (n, id = "stamp-on") => { let c = 0; const walk = (x) => { if (!x || typeof x !== "object") return; if (Array.isArray(x)) return x.forEach(walk); if (x.props?.testID === id) c++; walk(x.props?.children); }; walk(n); return c; };
+    ok(stampDots(root.tree) === 2 && stampDots(root.tree, "stamp-off") === 3, "N stamp circles: 2 filled, 3 empty", stampDots(root.tree));
     reply = { ...reply, stamps: { ...stamps, stamps: 5, visitsToReward: 0, available: { id: "rw1", label: "a free coffee" } } };
     root = mount(React.createElement(LoyaltyCard, { brandId: "b5", refreshKey: 0 }));
     await tick(30); root.rerender();
     t = textOf(root.tree);
-    ok(t.includes("5 of 5 visits") && t.includes("reward ready") && t.includes("reward ready: a free coffee. show your qr on your next visit."), "a full card: reward ready", t);
+    ok(t.includes("5 of 5 visits") && t.includes("reward ready") && t.includes("reward ready: a free coffee. show your qr on your next visit.") && stampDots(root.tree) === 5, "a full card: reward ready, all 5 stamps filled", t);
+    ok(celebrated.some(([id]) => id === "rw1"), "a ready reward on the card: the celebration is asked for (shown once per reward by loyalty/celebrations.js)", JSON.stringify(celebrated));
+    reply = { ...reply, stamps: { ...stamps, stamps: 5, visitsToReward: 0, available: { id: "rw9", label: "25% off", kind: "percent", value: 25 } } };
+    root = mount(React.createElement(LoyaltyCard, { brandId: "b9", brandName: "Chai Cafe", refreshKey: 0 }));
+    await tick(30); root.rerender();
+    ok(textOf(root.tree).includes("25% off your next bill") && celebrated.some(([id, b]) => id === "rw9" && b === "Chai Cafe"), "a % reward ready: '25% off your next bill', celebrated with the brand's name", textOf(root.tree));
     reply = { ...reply, stamps: { ...stamps, stamps: 5, visitsToReward: 0, limitReached: "monthly-limit" } };
     root = mount(React.createElement(LoyaltyCard, { brandId: "b6", refreshKey: 0 }));
     await tick(30); root.rerender();
@@ -220,7 +226,7 @@ const textOf = (n) => (n == null || n === false ? "" : typeof n === "string" || 
     let flagOnForList = true;
     let programs = [];
     const changed = new Set();
-    const load = loader({ react: React, "react-native": rn, ...nav, ...icons, "../api/loyaltyApi": { loyaltyEnabled: async () => flagOnForList, getMyLoyaltyCards: async () => cards, activeLoyaltyPrograms: async () => ({ enabled: true, programs }), onLoyaltyChanged: (fn) => { changed.add(fn); return () => changed.delete(fn); } } });
+    const load = loader({ react: React, "react-native": rn, ...nav, ...icons, "../loyalty/celebrations": { fromStamps: async () => true }, "../api/loyaltyApi": { loyaltyEnabled: async () => flagOnForList, getMyLoyaltyCards: async () => cards, activeLoyaltyPrograms: async () => ({ enabled: true, programs }), onLoyaltyChanged: (fn) => { changed.add(fn); return () => changed.delete(fn); } } });
     const LoyaltyVisits = load(path.join(SRC, "components/LoyaltyVisits.js")).default;
     let root = mount(React.createElement(LoyaltyVisits, { refreshKey: false }));
     await tick(30); root.rerender();
@@ -250,7 +256,7 @@ const textOf = (n) => (n == null || n === false ? "" : typeof n === "string" || 
   console.log("── placement: the existing Discounts area, no new tab");
   {
     const offer = read("app/src/screens/OfferScreen.js");
-    ok(offer.includes("<LoyaltyCard brandId={initialBrand?._id} refreshKey={claimVersion} />"), "the brand's offer screen shows the loyalty card");
+    ok(offer.includes("<LoyaltyCard brandId={initialBrand?._id} brandName={initialBrand?.brandName || initialBrand?.name} refreshKey={claimVersion} />"), "the brand's offer screen shows the loyalty card (with the brand's name for the celebration)");
     ok(read("app/src/screens/MyDiscountScreen.js").includes("<LoyaltyVisits brandNames={loyaltyBrandNames}"), "My discounts shows 'my loyalty'");
     ok(!/loyalty/i.test(read("app/src/navigation/TabNavigator.js")), "no loyalty tab in the tab bar");
   }

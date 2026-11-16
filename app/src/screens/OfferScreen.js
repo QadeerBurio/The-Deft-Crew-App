@@ -1528,7 +1528,7 @@ export default function OfferScreen() {
         )}
 
         {/* Loyalty (FLAG_LOYALTY_V2): visits, tier, next tier, terms; nothing outside the pilot */}
-        <LoyaltyCard brandId={initialBrand?._id} refreshKey={claimVersion} />
+        <LoyaltyCard brandId={initialBrand?._id} brandName={initialBrand?.brandName || initialBrand?.name} refreshKey={claimVersion} />
 
         {/* Details */}
         <View style={styles.section}>
