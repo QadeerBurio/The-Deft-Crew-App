@@ -8,10 +8,13 @@
 //      and Aggregated Event Measurement (both handled by the SDK) need. A student can switch it off in Settings →
 //      privacy ("ad measurement"); then nothing at all goes to Meta. A student who said "not now" on the old consent
 //      sheet (before this change) stays off: their explicit choice wins.
-//   2. Identifiers (default OFF): the advertising ID and advanced matching (the student's email and phone, hashed by
-//      the SDK). Only after the tdc pre-screen ("continue") AND, on iPhone, Apple's tracking prompt allowed
-//      (setAdvertiserTrackingEnabled(true)). On Android "continue" is the opt-in. "not now", a declined or restricted
-//      Apple prompt, or measurement off: identifiers stay off and advanced matching is cleared.
+//   2. Identifiers:
+//      - the advertising ID: Android ON by default (fix/android-ad-id-default), off once the student says no (the
+//        pre-screen's "not now" or Settings → privacy "ads with your details" off; remembered on the phone). iPhone:
+//        only after the pre-screen's "continue" AND Apple's tracking prompt allowed (setAdvertiserTrackingEnabled).
+//      - advanced matching (the student's email and phone, hashed by the SDK): both platforms only after "continue"
+//        (and on iPhone Apple's prompt allowed). Otherwise it stays off and is cleared.
+//      Measurement off turns everything off.
 // Meta also needs this build to have the Meta IDs (app.config.js → extra.meta.enabled) and the server's switch on
 // (GET /api/app/flags → metaEvents, re-read every 5 minutes and on each return to the app).
 //
@@ -49,6 +52,7 @@ import { BASE_URL } from "../api/api";
 const KEY_FLAGS = "tdc.appFlags.v1";
 const KEY_SENT = "tdc.metaSent.v1";
 const KEY_DEVICE = "tdc.metaMeasurement.device.v1"; // "denied" when switched off on this phone (also while signed out)
+const KEY_DEVICE_IDS = "tdc.metaIds.device.v1"; // "declined" when the student said no to identifiers on this phone (Android ad ID while signed out)
 const keyConsent = (userId) => `tdc.metaConsent.v1.${userId}`; // measurement: "granted" | "denied" | null (default on)
 const keyIds = (userId) => `tdc.metaIds.v1.${userId}`; // identifiers: "allowed" | "declined" | null (pre-screen not answered)
 const keyValue = (userId) => `tdc.metaValue.v1.${userId}`; // { kind, at }: the first time the student saw value
@@ -98,6 +102,7 @@ const state = {
   userId: null,
   consent: null, // the student's measurement choice: "granted" | "denied" | null (default: on)
   device: null, // this phone's measurement choice (used while signed out): "denied" | null
+  deviceIds: null, // this phone's identifiers no (used while signed out): "declined" | null
   ids: null, // identifiers: "allowed" | "declined" | null (pre-screen not answered yet)
   value: null, // { kind, at } once the student has seen value
   matching: null, // { email, phone } of the signed-in student (advanced matching, only when identifiers are allowed)
@@ -165,16 +170,24 @@ async function readTracking() {
   return state.tracking;
 }
 
+/** iPhone identifiers: a signed-in student who chose "continue" AND Apple's tracking prompt allowed. */
+const iosIdsAllowed = () => active() && !!state.userId && state.ids === "allowed" && state.tracking === "granted";
+/** The student (or, signed out, this phone) said no to identifiers: the pre-screen's "not now" or the Settings switch. */
+const idsDeclined = () => (state.userId ? state.ids === "declined" : state.deviceIds === "declined");
 /**
- * Identifiers may be used now: measurement on, a signed-in student who chose "continue" on the pre-screen (or the
- * Settings switch), and on iPhone Apple's tracking prompt allowed. Anything else: off.
+ * The advertising ID may be collected now. Android: on by default, off once the student said no. iPhone: "continue" and
+ * Apple's prompt allowed. Measurement off: never.
  */
-const idsAllowed = () => active() && !!state.userId && state.ids === "allowed" && (!isIOS() || state.tracking === "granted");
+const adIdAllowed = () => (isIOS() ? iosIdsAllowed() : active() && !idsDeclined());
+/** Advanced matching (email, phone): only after "continue" (and on iPhone Apple's prompt allowed), on both platforms. */
+const matchingAllowed = () => (isIOS() ? iosIdsAllowed() : active() && !!state.userId && state.ids === "allowed");
+// what earlier code called idsAllowed: identifiers in the full sense (advanced matching)
+const idsAllowed = matchingAllowed;
 
-/** Tell the SDK: advertising ID, advertiser tracking (iPhone) and advanced matching, all from idsAllowed(). */
+/** Tell the SDK: advertising ID (adIdAllowed), advertiser tracking (iPhone) and advanced matching (matchingAllowed). */
 function applyIds(s, force = false) {
-  const on = idsAllowed();
-  const matching = on && state.matching ? { email: state.matching.email || undefined, phone: state.matching.phone || undefined } : null;
+  const on = adIdAllowed();
+  const matching = matchingAllowed() && state.matching ? { email: state.matching.email || undefined, phone: state.matching.phone || undefined } : null;
   const sig = JSON.stringify({ on, matching });
   if (!force && state.applied === sig) return;
   if (isIOS()) s.Settings.setAdvertiserTrackingEnabled?.(on);
@@ -235,11 +248,34 @@ async function applyState() {
   }
 }
 
+/**
+ * This phone's measurement choice, known BEFORE the SDK can start (at launch the signed-in student may not be known
+ * yet). A student who refused on this phone (Settings, or "not now" on the old consent sheet, saved per student before
+ * this phone-wide key existed) keeps the phone off from the first moment: no app open, no advertising ID. Saved
+ * phone-wide the first time it's found.
+ */
+async function loadDeviceChoice() {
+  const saved = await read(KEY_DEVICE, null);
+  if (saved) return saved;
+  try {
+    const keys = (await deps.storage.getAllKeys?.()) || [];
+    for (const k of keys) {
+      if (!String(k).startsWith("tdc.metaConsent.v1.")) continue;
+      if ((await read(k, null)) === "denied") {
+        await write(KEY_DEVICE, "denied");
+        return "denied";
+      }
+    }
+  } catch (e) { warn("reading earlier choices failed:", e?.message); }
+  return null;
+}
+
 // ── the server's switch ──
 /** Reads GET /api/app/flags (cached on the phone). Unreachable and never read: off. */
 export async function refreshFlags({ force = false } = {}) {
   try {
-    if (state.device == null) state.device = await read(KEY_DEVICE, null);
+    if (state.device == null) state.device = await loadDeviceChoice();
+    if (state.deviceIds == null) state.deviceIds = await read(KEY_DEVICE_IDS, null);
     if (!force && state.flagsAt && deps.now() - state.flagsAt < FLAGS_MAX_AGE) return state.remote;
     try {
       const res = await deps.get(deps.flagsUrl(), { timeout: 5000, headers: { "Cache-Control": "no-cache" } });
@@ -317,7 +353,9 @@ export const measurementAllowed = () => measurementOn();
 /** The identifiers choice: "allowed" | "declined" | null (the pre-screen hasn't been answered). */
 export const getIdsChoice = () => state.ids;
 /** Identifiers are actually on now (choice + Apple's prompt on iPhone). */
-export const identifiersOn = () => idsAllowed();
+export const identifiersOn = () => adIdAllowed();
+/** Advanced matching (email, phone) is on now. */
+export const matchingOn = () => matchingAllowed();
 /** iPhone: Apple's tracking answer ("granted" | "denied" | "restricted" | "undetermined"); null elsewhere. */
 export const trackingStatus = () => state.tracking;
 /** The signed-in student's id (null when signed out or a guest). */
@@ -351,6 +389,9 @@ export async function setIdsChoice(allowed) {
     if (!state.userId) return false;
     state.ids = allowed ? "allowed" : "declined";
     await write(keyIds(state.userId), state.ids);
+    // the phone remembers a no (Android's advertising ID stays off while signed out too)
+    state.deviceIds = allowed ? null : "declined";
+    await write(KEY_DEVICE_IDS, state.deviceIds);
     await applyState();
     notify();
     return true;
@@ -572,7 +613,7 @@ export const _test = {
   config,
   FLAGS_EVERY,
   reset: () => {
-    Object.assign(state, { userId: null, consent: null, device: null, ids: null, value: null, matching: null, remote: false, flagsAt: 0, started: false, tracking: null, activated: false, sent: null, sdk: undefined, applied: null });
+    Object.assign(state, { userId: null, consent: null, device: null, deviceIds: null, ids: null, value: null, matching: null, remote: false, flagsAt: 0, started: false, tracking: null, activated: false, sent: null, sdk: undefined, applied: null });
     if (stopWatch) { try { stopWatch(); } catch { /* nothing useful to log here */ } }
     stopWatch = null;
     config.manualActivate = false;

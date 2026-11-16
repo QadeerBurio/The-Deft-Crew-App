@@ -145,10 +145,24 @@ const hasIdentifiers = () =>
   await setup({ platform: "android" });
   await M.setMetaUser("u1", { email: EMAIL, phone: PHONE });
   await E.offerClaimed("a1");
-  ok(!hasIdentifiers() && calls.att.length === 0, "before 'continue': anonymous, no identifiers, no iOS tracking flag");
+  ok(calls.adId.at(-1) === true && calls.att.length === 0 && calls.userData.every((d) => JSON.stringify(d) === "{}") && !calls.events.some((e) => /student\.example|1234567/.test(JSON.stringify(e.params))), "before 'continue': Android advertising ID on by default; NO advanced matching (no email / phone); no iOS tracking flag", JSON.stringify({ adId: calls.adId, userData: calls.userData }));
   await M.setIdsChoice(true);
   r = await M.requestTracking();
-  ok(r === null && att.asked === 0 && calls.adId.at(-1) === true && calls.userData.at(-1).email === EMAIL, "'continue' → advertising ID and advanced matching on; no prompt", JSON.stringify(calls.userData.at(-1)));
+  ok(r === null && att.asked === 0 && calls.adId.at(-1) === true && calls.userData.at(-1).email === EMAIL, "'continue' → advanced matching on too; no prompt", JSON.stringify(calls.userData.at(-1)));
+  await M.setIdsChoice(false);
+  ok(calls.adId.at(-1) === false && JSON.stringify(calls.userData.at(-1)) === "{}", "'ads with your details' off → advertising ID off and advanced matching cleared");
+  // a student who said "not now" on the old sheet, opening the app: the "no" is known before the SDK starts, even before
+  // the signed-in student is (no launch window)
+  M._test.reset(); store.clear(); os = "android";
+  calls = { init: 0, adId: [], att: [], autoLog: [], flush: 0, events: [], order: [], userData: [] };
+  store.set("tdc.metaConsent.v1.u1", JSON.stringify("denied"));
+  M._test.deps.storage = { ...storage, getAllKeys: async () => [...store.keys()] };
+  await M.refreshFlags({ force: true });
+  await M.setMetaUser("u1");
+  await E.offerClaimed("x1");
+  ok(calls.init === 0 && !calls.adId.some((v) => v === true) && !calls.events.length, "Android, 'not now' on the old sheet → from the first moment of launch: SDK not started, no advertising ID, nothing sent", JSON.stringify(calls));
+  ok(store.get("tdc.metaMeasurement.device.v1") === JSON.stringify("denied"), "…and the phone now remembers it phone-wide");
+  M._test.deps.storage = storage;
 
   console.log("── resilience");
   await setup({ missing: true });

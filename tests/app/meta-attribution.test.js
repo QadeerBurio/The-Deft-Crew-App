@@ -78,7 +78,8 @@ const appSrc = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((d)
 const files = appSrc(path.join(APP, "app/src"));
 ok(!files.some((f) => /AEMReporterIOS|logAEMEvent/.test(fs.readFileSync(f, "utf8"))), "no second AEM recording (the SDK records AEM for the events it logs: no double counting)");
 ok(!files.some((f) => /graph\.facebook\.com|facebook\.com\/tr\b/.test(fs.readFileSync(f, "utf8"))), "the app never calls Meta's servers itself (only through the SDK)");
-ok(!/setUserID\(/.test(ev) && /setUserData\?\.\(matching \?/.test(ev) && /const idsAllowed = \(\) => active\(\) && !!state\.userId && state\.ids === "allowed" && \(!isIOS\(\) \|\| state\.tracking === "granted"\);/.test(ev), "advanced matching only through idsAllowed (choice + Apple's prompt on iPhone); never a user id");
+ok(!/setUserID\(/.test(ev) && /setUserData\?\.\(matching \?/.test(ev) && /const matching = matchingAllowed\(\) && state\.matching/.test(ev) && /const matchingAllowed = \(\) => \(isIOS\(\) \? iosIdsAllowed\(\) : active\(\) && !!state\.userId && state\.ids === "allowed"\);/.test(ev) && /const iosIdsAllowed = \(\) => active\(\) && !!state\.userId && state\.ids === "allowed" && state\.tracking === "granted";/.test(ev), "advanced matching only after 'continue' (and Apple's Allow on iPhone); never a user id");
+  ok(/const adIdAllowed = \(\) => \(isIOS\(\) \? iosIdsAllowed\(\) : active\(\) && !idsDeclined\(\)\);/.test(ev), "advertising ID: iPhone only with 'continue' + Apple's Allow; Android on unless the student said no");
 
 console.log("── the server: no Conversions API");
 const serverFiles = (dir) => fs.existsSync(dir) ? fs.readdirSync(dir, { withFileTypes: true }).flatMap((d) => (d.isDirectory() ? (["node_modules", "tests", ".git", "chat-service", "uploads"].includes(d.name) ? [] : serverFiles(path.join(dir, d.name))) : d.name.endsWith(".js") ? [path.join(dir, d.name)] : [])) : [];

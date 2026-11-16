@@ -19,7 +19,7 @@ const privacyPoints = [
   {
     icon: "chart-line",
     title: "Ad measurement",
-    content: "We share some app activity (installs, app opens, sign-up, offer claims, job applications, discounts redeemed, AI resumes) with Meta to measure our ads, without anything that identifies you. Only if you allow \"ads with your details\" (and on iPhone, Apple's tracking prompt) do we also share your device's advertising ID and your email and phone (sent hashed) so Meta can show you better student deals. Turn either off any time in Settings → Privacy.",
+    content: "We share some app activity (installs, app opens, sign-up, offer claims, job applications, discounts redeemed, AI resumes) with Meta to measure our ads, without anything that identifies you. On Android we also share your device's advertising ID unless you turn off \"ads with your details\"; on iPhone only if you allow it and Apple's tracking prompt. Your email and phone (sent hashed) are shared only if you allow \"ads with your details\". Turn either off any time in Settings → Privacy.",
   },
   {
     icon: "shield-key-outline",
