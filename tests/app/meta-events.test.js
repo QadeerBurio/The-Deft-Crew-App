@@ -89,7 +89,7 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   await setup({ consent: true });
   let r = await E.offerClaimed("o1");
   ok(r === "sent" && calls.events.length === 1 && calls.events[0].name === "tdc_offer_claimed" && calls.events[0].params.fb_content_id === "o1", "build on + switch on + allowed → sent", JSON.stringify({ r, calls }));
-  ok(calls.init === 1 && calls.autoLog[0] === true && calls.adId[0] === false && calls.att.length === 0, "SDK started: automatic logging (install, activate) on; advertising ID off until the student allows identifiers", JSON.stringify(calls));
+  ok(calls.init === 1 && calls.autoLog[0] === true && calls.adId[0] === true && calls.att.length === 0, "SDK started: automatic logging (install, activate) on; Android advertising ID on by default", JSON.stringify(calls));
   ok(calls.flush === 1, "flushed right after the event", calls.flush);
   ok(!calls.events.some((e) => e.name === "fb_mobile_activate_app"), "manual activate fallback is off by default (the SDK logs it)");
   await setup({ build: false, consent: true });
@@ -105,9 +105,18 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   console.log("── anonymous measurement (default on), identifiers only when allowed");
   await setup({});
   r = await E.offerClaimed("o1");
-  ok(r === "sent" && calls.events.length === 1 && calls.init === 1 && calls.adId.every((v) => v === false), "nothing chosen yet → sent anonymously: SDK started, advertising ID off", JSON.stringify(calls));
+  ok(r === "sent" && calls.events.length === 1 && calls.init === 1 && calls.adId.at(-1) === true, "nothing chosen yet (Android) → sent, advertising ID on by default", JSON.stringify(calls));
+  await M.setIdsChoice(false);
+  ok(calls.adId.at(-1) === false, "'ads with your details' off (or the pre-screen's 'not now') → advertising ID collection stops");
+  r = await E.offerClaimed("o-after-off");
+  ok(r === "sent" && calls.adId.at(-1) === false, "…events still go, without the advertising ID");
+  await M.setMetaUser(null);
+  ok(calls.adId.at(-1) === false, "…and it stays off after signing out (the phone remembers the no)");
+  await M.setMetaUser("u1");
+  await M.setIdsChoice(true);
+  ok(calls.adId.at(-1) === true, "switched back on → on again");
   r = await E.offerClaimed("o1");
-  ok(r === "duplicate" && calls.events.length === 1, "the same offer again → duplicate, not sent twice");
+  ok(r === "duplicate" && calls.events.filter((e) => e.params.fb_content_id === "o1").length === 1, "the same offer again → duplicate, not sent twice");
   await M.setIdsChoice(true);
   ok(calls.adId.at(-1) === true, "the pre-screen's 'continue' (Android) → advertising ID on");
   await setup({});
@@ -132,7 +141,7 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   store.set("tdc.metaConsent.v1.yes", JSON.stringify("granted"));
   await M.setMetaUser("yes");
   await E.offerClaimed("y");
-  ok(M.getIdsChoice() === "allowed" && calls.adId.at(-1) === true, "'allow' on the old consent sheet → identifiers stay allowed (Android: advertising ID on)");
+  ok(M.getIdsChoice() === "allowed" && calls.adId.at(-1) === true, "'allow' on the old consent sheet → identifiers stay allowed (advertising ID on, advanced matching allowed)");
 
   console.log("── sign-up (before the session)");
   await setup({ user: null });
@@ -211,7 +220,7 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
     const b = await fire();
     await setup({});
     const c = await fire();
-    ok(a === "off" && b === "off" && c === "sent" && calls.events.length === 1 && calls.adId.every((v) => v === false), `${label}: build off → off, switch off → off, nothing chosen → sent anonymously (no advertising ID)`, [a, b, c].join());
+    ok(a === "off" && b === "off" && c === "sent" && calls.events.length === 1 && calls.adId.at(-1) === true, `${label}: build off → off, switch off → off, nothing chosen → sent (Android advertising ID on by default)`, [a, b, c].join());
     await M.setConsent(false);
     ok(calls.events.length === 1 && calls.autoLog.at(-1) === false, `${label}: measurement off → nothing more sent`);
   }
@@ -331,7 +340,7 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   ok((await R.checkRedemptions({ force: true })) === 0 && redCalls.length === 0, "signed out → not asked");
   await setup({}); R._test.reset(); now = pkt("2026-10-27T18:00:00"); R._test.deps.now = () => now;
   r = await R.checkRedemptions({ force: true });
-  ok(r > 0 && calls.events.some((e) => e.name === "tdc_discount_redeemed") && calls.adId.every((v) => v === false), "nothing chosen yet → sent anonymously like every other event", String(r));
+  ok(r > 0 && calls.events.some((e) => e.name === "tdc_discount_redeemed"), "nothing chosen yet → sent like every other event", String(r));
 
   ok(noPersonal(calls.events), "no name, email, phone, text or message in any of the new events");
 

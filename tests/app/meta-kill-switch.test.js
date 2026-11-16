@@ -93,7 +93,7 @@ const setup = async ({ remote = true, consent = true, manual = false } = {}) => 
   ok(r === "off" && calls.events.length === 1, "…and nothing more is sent or kept");
   flags = { metaEvents: true };
   await tickTimers();
-  ok(M.metaAvailable() && calls.autoLog.at(-1) === true && calls.adId.at(-1) === false, "switched back on → automatic logging on again; the advertising ID stays off (identifiers weren't allowed)", JSON.stringify(calls));
+  ok(M.metaAvailable() && calls.autoLog.at(-1) === true && calls.adId.at(-1) === true, "switched back on → automatic logging and the (Android, default) advertising ID on again", JSON.stringify(calls));
   r = await E.offerClaimed("a3");
   ok(r === "sent", "…and events are sent again");
 
@@ -129,7 +129,7 @@ const setup = async ({ remote = true, consent = true, manual = false } = {}) => 
   ok(M._test.config.manualActivate === false && !calls.events.some((e) => e.name === "fb_mobile_activate_app"), "off by default → we never log fb_mobile_activate_app ourselves (the SDK does)");
   await setup({ consent: null, manual: true });
   await M.onAppState("active");
-  ok(calls.events.filter((e) => e.name === "fb_mobile_activate_app").length === 1 && calls.adId.every((v) => v === false), "on, nothing chosen yet → the open is counted anonymously (no advertising ID)", JSON.stringify(calls.events.map((e) => e.name)));
+  ok(calls.events.filter((e) => e.name === "fb_mobile_activate_app").length === 1, "on, nothing chosen yet → the open is counted", JSON.stringify(calls.events.map((e) => e.name)));
   await M.setConsent(true);
   ok(calls.events.filter((e) => e.name === "fb_mobile_activate_app").length === 1 && calls.flush >= 1, "on + allow → one fb_mobile_activate_app at start, flushed", JSON.stringify(calls.events));
   ok(JSON.stringify(calls.events.find((e) => e.name === "fb_mobile_activate_app").params) === "{}", "…with no parameters");

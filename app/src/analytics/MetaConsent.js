@@ -41,8 +41,10 @@ export function useMetaConsent() {
     // anonymous measurement (Settings → privacy "ad measurement")
     allowed: measurementAllowed(),
     setAllowed: (v) => setConsent(!!v),
-    // identifiers (Settings → privacy "ads with your details")
+    // identifiers (Settings → privacy "ads with your details"): Android on unless the student said no; iPhone only
+    // after "continue"
     idsChoice: getIdsChoice(),
+    detailsOn: Platform.OS === "android" ? getIdsChoice() !== "declined" : getIdsChoice() === "allowed",
     idsOn: identifiersOn(),
     tracking: trackingStatus(),
     setIdsAllowed: (v) => (v ? continuePrescreen() : setIdsChoice(false)),

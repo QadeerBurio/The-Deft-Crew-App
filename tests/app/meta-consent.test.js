@@ -150,7 +150,7 @@ const btn = (t, title) => all(t, (n) => n.type === "Button" && n.props.title ===
   ok(meta.idsSet.join() === "true,false", "…switched off → identifiers declined");
   platform.OS = "android";
   const settings = fs.readFileSync(path.join(SRC, "screens/Social/SettingItem.js"), "utf8");
-  ok(/label="ad measurement \(Meta\)"/.test(settings) && /value=\{meta\.allowed\}/.test(settings) && /label="ads with your details"/.test(settings) && /value=\{meta\.idsChoice === "allowed"\}/.test(settings) && /meta\.setIdsAllowed\(/.test(settings), "Settings → privacy: 'ad measurement (Meta)' and 'ads with your details'");
+  ok(/label="ad measurement \(Meta\)"/.test(settings) && /value=\{meta\.allowed\}/.test(settings) && /label="ads with your details"/.test(settings) && /value=\{meta\.detailsOn\}/.test(settings) && /meta\.setIdsAllowed\(!meta\.detailsOn\)/.test(settings), "Settings → privacy: 'ad measurement (Meta)' and 'ads with your details'");
   ok(/iPhone settings → privacy → tracking/.test(settings), "…when iOS doesn't allow tracking, it says where to change it");
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
