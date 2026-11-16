@@ -1,30 +1,28 @@
 // app/src/analytics/metaEvents.js
-// Meta App Events (react-native-fbsdk-next), strict consent.
+// Meta App Events (react-native-fbsdk-next): anonymous measurement for everyone, identifiers only when allowed.
 //
-// Nothing is sent and the advertising ID is not collected unless ALL of these are true:
-//   1. this build was made with the Meta IDs     (app.config.js → extra.meta.enabled)
-//   2. the server's switch is on                 (GET /api/app/flags → metaEvents)
-//   3. the signed-in student allowed it          (consent sheet / Settings → privacy)
-// The SDK is only started (initializeSDK) after that; the native settings keep it from
-// starting or logging by itself before then.
+// Two separate things (feat/ios-meta-attribution):
+//   1. Measurement, anonymous (default ON): the SDK runs and sends its install ping, fb_mobile_activate_app on each
+//      open and our events below, WITHOUT any identifier: no advertising ID, no advanced matching, no email, phone or
+//      user id. This is what Apple allows without App Tracking Transparency, and what SKAdNetwork conversion values
+//      and Aggregated Event Measurement (both handled by the SDK) need. A student can switch it off in Settings →
+//      privacy ("ad measurement"); then nothing at all goes to Meta. A student who said "not now" on the old consent
+//      sheet (before this change) stays off: their explicit choice wins.
+//   2. Identifiers (default OFF): the advertising ID and advanced matching (the student's email and phone, hashed by
+//      the SDK). Only after the tdc pre-screen ("continue") AND, on iPhone, Apple's tracking prompt allowed
+//      (setAdvertiserTrackingEnabled(true)). On Android "continue" is the opt-in. "not now", a declined or restricted
+//      Apple prompt, or measurement off: identifiers stay off and advanced matching is cleared.
+// Meta also needs this build to have the Meta IDs (app.config.js → extra.meta.enabled) and the server's switch on
+// (GET /api/app/flags → metaEvents, re-read every 5 minutes and on each return to the app).
 //
-// Once allowed, the SDK's automatic logging is switched on before it starts, so the SDK sends
-// its own one-time install ping and fb_mobile_activate_app on each open. It goes off again when
-// the student withdraws or the server's switch turns off (the SDK can't be unloaded; it just
-// stops logging and collecting).
+// The pre-screen (MetaConsent.js) shows once per student, never at first launch: only after onboarding is finished and
+// the student has seen value (markValue: the first job opened, offer claimed or discount redeemed).
 //
-// Advertising ID: Android, with consent. iPhone, with consent AND the system tracking prompt
-// granted (asked only after the student says "allow"; never on its own).
+// Each item is sent once (per-item keys kept on the phone). Every function here catches its own errors: a Meta problem
+// never breaks a sign-up, a claim or an application.
 //
-// The server's switch is re-read every 5 minutes while the app is open and on every return to
-// the app (onAppState), so turning META_EVENTS_ENABLED off stops everything within minutes.
-//
-// Before the student decides, events (e.g. the sign-up) wait on the phone for up to 24 h:
-// sent if they allow, dropped if they don't. Each item is sent once (per-item keys kept on
-// the phone). Every function here catches its own errors: a Meta problem never breaks a
-// sign-up, a claim or an application.
-//
-// Events (no name, email, phone number or free text, ever):
+// Events (no name, email, phone number or free text, ever; Meta's standard names where one exists, so Aggregated
+// Event Measurement can map them):
 //   registration(userId)              fb_mobile_complete_registration  (account sign-up)
 //   offerClaimed(offerId)             tdc_offer_claimed
 //   jobApplied(jobId)                 SubmitApplication
@@ -40,7 +38,7 @@
 //   travelAssistantUsed()             tdc_travel_assistant_used  (once per Karachi day)
 //   skillshareListingCreated(id)      tdc_skillshare_listing_created
 //   skillshareOfferCreated(id)        tdc_skillshare_offer_created
-// Plus, from the SDK itself once allowed: its install ping and fb_mobile_activate_app.
+// Plus, from the SDK itself: its install ping and fb_mobile_activate_app.
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
@@ -50,16 +48,19 @@ import { BASE_URL } from "../api/api";
 
 const KEY_FLAGS = "tdc.appFlags.v1";
 const KEY_SENT = "tdc.metaSent.v1";
-const keyConsent = (userId) => `tdc.metaConsent.v1.${userId}`;
-const keyQueue = (userId) => `tdc.metaQueue.v1.${userId}`;
+const KEY_DEVICE = "tdc.metaMeasurement.device.v1"; // "denied" when switched off on this phone (also while signed out)
+const keyConsent = (userId) => `tdc.metaConsent.v1.${userId}`; // measurement: "granted" | "denied" | null (default on)
+const keyIds = (userId) => `tdc.metaIds.v1.${userId}`; // identifiers: "allowed" | "declined" | null (pre-screen not answered)
+const keyValue = (userId) => `tdc.metaValue.v1.${userId}`; // { kind, at }: the first time the student saw value
+const keyQueue = (userId) => `tdc.metaQueue.v1.${userId}`; // events kept before this change (sent once, then removed)
 
 const FLAGS_MAX_AGE = 5 * 60 * 1000; // refresh the switch when older than this
 const FLAGS_EVERY = 5 * 60 * 1000; // and re-read it this often while the app is open
-const QUEUE_MAX = 20;
 const QUEUE_TTL = 24 * 60 * 60 * 1000;
 const SENT_MAX = 500;
 const REDEEM_MAX_AGE = 24 * 60 * 60 * 1000; // older redemptions are never sent
 const KARACHI_OFFSET = 5 * 60 * 60 * 1000; // Asia/Karachi is UTC+5 all year (no daylight saving)
+const VALUE_KINDS = ["job_view", "offer_claimed", "discount_redeemed"];
 
 // Fallback, OFF: log fb_mobile_activate_app ourselves on each open. Only for the case where a
 // device test shows the SDK's automatic logging misses the session it was started in. It counts
@@ -95,7 +96,11 @@ const deps = {
 
 const state = {
   userId: null,
-  consent: null, // "granted" | "denied" | null (not asked yet)
+  consent: null, // the student's measurement choice: "granted" | "denied" | null (default: on)
+  device: null, // this phone's measurement choice (used while signed out): "denied" | null
+  ids: null, // identifiers: "allowed" | "declined" | null (pre-screen not answered yet)
+  value: null, // { kind, at } once the student has seen value
+  matching: null, // { email, phone } of the signed-in student (advanced matching, only when identifiers are allowed)
   remote: false,
   flagsAt: 0,
   started: false,
@@ -103,6 +108,7 @@ const state = {
   activated: false, // the fallback activation was logged since the app last came to the front
   sent: null, // Set of keys, loaded lazily
   sdk: undefined,
+  applied: null, // what the SDK was last told: { ids, matching } (no repeated native calls)
 };
 let stopWatch = null; // the 5-minute switch check while the app is open
 const listeners = new Set();
@@ -121,7 +127,7 @@ async function write(key, value) {
   try {
     if (value == null) await deps.storage.removeItem(key);
     else await deps.storage.setItem(key, JSON.stringify(value));
-  } catch (e) { console.warn("[meta] saving consent state failed:", e?.message || e); }
+  } catch (e) { console.warn("[meta] saving the Meta setting failed:", e?.message || e); }
 }
 
 function sdk() {
@@ -137,9 +143,11 @@ function sdk() {
 
 const isIOS = () => { try { return deps.platform() === "ios"; } catch { return false; } };
 const buildOn = () => { try { return deps.buildEnabled(); } catch { return false; } };
-/** Meta can be used at all (build + server switch). The UI asks / shows the switch only then. */
+/** Meta can be used at all (build + server switch). The UI shows the pre-screen / switches only then. */
 export const metaAvailable = () => buildOn() && state.remote === true;
-const active = () => metaAvailable() && !!state.userId && state.consent === "granted" && !!sdk();
+/** Anonymous measurement is on: not switched off by the student (or on this phone while signed out). */
+const measurementOn = () => (state.userId ? state.consent !== "denied" : state.device !== "denied");
+const active = () => metaAvailable() && measurementOn() && !!sdk();
 
 // ── iPhone tracking prompt ──
 function tracking() {
@@ -157,13 +165,23 @@ async function readTracking() {
   return state.tracking;
 }
 
-/** The advertising ID may be collected now: Android with consent; iPhone with consent and tracking granted. */
-const adIdAllowed = () => active() && (!isIOS() || state.tracking === "granted");
+/**
+ * Identifiers may be used now: measurement on, a signed-in student who chose "continue" on the pre-screen (or the
+ * Settings switch), and on iPhone Apple's tracking prompt allowed. Anything else: off.
+ */
+const idsAllowed = () => active() && !!state.userId && state.ids === "allowed" && (!isIOS() || state.tracking === "granted");
 
-function applyAdId(s) {
-  const on = adIdAllowed();
+/** Tell the SDK: advertising ID, advertiser tracking (iPhone) and advanced matching, all from idsAllowed(). */
+function applyIds(s, force = false) {
+  const on = idsAllowed();
+  const matching = on && state.matching ? { email: state.matching.email || undefined, phone: state.matching.phone || undefined } : null;
+  const sig = JSON.stringify({ on, matching });
+  if (!force && state.applied === sig) return;
   if (isIOS()) s.Settings.setAdvertiserTrackingEnabled?.(on);
   s.Settings.setAdvertiserIDCollectionEnabled(on);
+  // advanced matching: only with identifiers allowed; an empty object clears what the SDK kept
+  try { s.AppEventsLogger?.setUserData?.(matching ? Object.fromEntries(Object.entries(matching).filter(([, v]) => v)) : {}); } catch (e) { warn("user data not set:", e?.message); }
+  state.applied = sig;
 }
 
 // ── start / stop the SDK ──
@@ -174,9 +192,9 @@ async function start() {
 
   try {
     if (isIOS() && state.tracking == null) await readTracking();
-    // automatic logging first, so the SDK sends its install ping and fb_mobile_activate_app
+    // identifiers decided BEFORE the SDK starts, then automatic logging (install ping, fb_mobile_activate_app)
+    applyIds(s, true);
     s.Settings.setAutoLogAppEventsEnabled(true);
-    applyAdId(s);
     s.Settings.initializeSDK();
     state.started = true;
     if (config.manualActivate) logActivate();
@@ -191,21 +209,23 @@ function stop() {
   const s = sdk();
   state.started = false;
   try {
-    // the SDK can't be unloaded: no automatic logging, no events from us, no advertising ID
+    // the SDK can't be unloaded: no automatic logging, no events from us, no identifiers
     s?.Settings?.setAutoLogAppEventsEnabled(false);
     if (isIOS()) s?.Settings?.setAdvertiserTrackingEnabled?.(false);
     s?.Settings?.setAdvertiserIDCollectionEnabled(false);
-  } catch (e) { console.warn("[meta] reading the tracking setting failed:", e?.message || e); }
+    s?.AppEventsLogger?.setUserData?.({});
+    state.applied = null;
+  } catch (e) { console.warn("[meta] stopping the SDK failed:", e?.message || e); }
 }
 
 async function applyState() {
   try {
     if (active()) {
       if (!state.started) {
-        if (await start()) await flushQueue();
+        if (await start()) await flushLegacyQueue();
       } else {
         const s = sdk();
-        if (s) applyAdId(s); // e.g. the tracking answer changed
+        if (s) applyIds(s); // e.g. the tracking answer or the identifiers choice changed
       }
     } else if (state.started) {
       stop();
@@ -219,6 +239,7 @@ async function applyState() {
 /** Reads GET /api/app/flags (cached on the phone). Unreachable and never read: off. */
 export async function refreshFlags({ force = false } = {}) {
   try {
+    if (state.device == null) state.device = await read(KEY_DEVICE, null);
     if (!force && state.flagsAt && deps.now() - state.flagsAt < FLAGS_MAX_AGE) return state.remote;
     try {
       const res = await deps.get(deps.flagsUrl(), { timeout: 5000, headers: { "Cache-Control": "no-cache" } });
@@ -263,31 +284,55 @@ export async function onAppState(appState) {
 }
 
 // ── who is signed in ──
-/** Call when the signed-in student changes (null when signed out or a guest). */
-export async function setMetaUser(userId) {
+/**
+ * Call when the signed-in student changes (null when signed out or a guest). matching: { email, phone } for advanced
+ * matching, used only while identifiers are allowed.
+ */
+export async function setMetaUser(userId, matching = null) {
   try {
     const id = userId ? String(userId) : null;
-    if (id === state.userId) return;
+    const m = id && matching ? { email: String(matching.email || "").trim().toLowerCase() || null, phone: String(matching.phone || "").replace(/[^\d+]/g, "") || null } : null;
+    const same = id === state.userId;
+    state.matching = m;
+    if (same) { await applyState(); return; }
     state.userId = id;
     state.consent = id ? await read(keyConsent(id), null) : null;
+    state.ids = id ? await read(keyIds(id), null) : null;
+    // the old consent sheet's "allow" included the advertising ID: kept as identifiers allowed
+    if (id && state.ids == null && state.consent === "granted") state.ids = "allowed";
+    state.value = id ? await read(keyValue(id), null) : null;
     await applyState();
+    // events kept on the phone before this change (the SDK may already be running for the anonymous install ping)
+    if (state.started) await flushLegacyQueue();
     notify();
   } catch (e) {
     warn("user change failed:", e?.message);
   }
 }
 
+/** The measurement choice: "granted" | "denied" | null (null = default, on). */
 export const getConsent = () => state.consent;
+/** Anonymous measurement is on for the signed-in student (or this phone). */
+export const measurementAllowed = () => measurementOn();
+/** The identifiers choice: "allowed" | "declined" | null (the pre-screen hasn't been answered). */
+export const getIdsChoice = () => state.ids;
+/** Identifiers are actually on now (choice + Apple's prompt on iPhone). */
+export const identifiersOn = () => idsAllowed();
+/** iPhone: Apple's tracking answer ("granted" | "denied" | "restricted" | "undetermined"); null elsewhere. */
+export const trackingStatus = () => state.tracking;
 /** The signed-in student's id (null when signed out or a guest). */
 export const metaUser = () => state.userId;
 
-/** The student's choice (consent sheet, Settings → privacy). */
+/** Anonymous measurement on / off (Settings → privacy "ad measurement"). Off: nothing at all goes to Meta. */
 export async function setConsent(allowed) {
   try {
-    if (!state.userId) return false;
-    state.consent = allowed ? "granted" : "denied";
-    await write(keyConsent(state.userId), state.consent);
-    if (!allowed) await write(keyQueue(state.userId), null); // nothing waiting is ever sent
+    const v = allowed ? "granted" : "denied";
+    if (state.userId) {
+      state.consent = v;
+      await write(keyConsent(state.userId), v);
+    }
+    state.device = allowed ? null : "denied";
+    await write(KEY_DEVICE, state.device);
     await applyState();
     notify();
     return true;
@@ -298,13 +343,52 @@ export async function setConsent(allowed) {
 }
 
 /**
- * iPhone only, and only after the student allowed it: shows the system tracking prompt if it was
- * never answered, then switches the advertising ID on or off to match. Never asks after "not now",
- * when Meta is off, or on Android. Returns the tracking status (null when not asked).
+ * The identifiers choice: the pre-screen's "continue" (true) or "not now" (false), or the Settings switch. Saved for
+ * the signed-in student; on iPhone, "continue" is followed by Apple's prompt (requestTracking, called by the screen).
+ */
+export async function setIdsChoice(allowed) {
+  try {
+    if (!state.userId) return false;
+    state.ids = allowed ? "allowed" : "declined";
+    await write(keyIds(state.userId), state.ids);
+    await applyState();
+    notify();
+    return true;
+  } catch (e) {
+    warn("identifiers choice failed:", e?.message);
+    return false;
+  }
+}
+
+/** The student saw value (first job opened, offer claimed, discount redeemed): the pre-screen may now show. Once. */
+export async function markValue(kind) {
+  try {
+    if (!state.userId || !VALUE_KINDS.includes(kind) || state.value) return false;
+    state.value = { kind, at: deps.now() };
+    await write(keyValue(state.userId), state.value);
+    notify();
+    return true;
+  } catch (e) {
+    warn("value not saved:", e?.message);
+    return false;
+  }
+}
+
+/**
+ * Should the tdc pre-screen show now? Once per student: Meta usable, measurement on, a signed-in student who hasn't
+ * answered it, onboarding finished, and value seen. Never at first launch (onboarding isn't finished then).
+ */
+export const shouldShowPrescreen = ({ onboardingDone }) =>
+  metaAvailable() && measurementOn() && !!state.userId && state.ids == null && !!state.value && onboardingDone === true;
+
+/**
+ * iPhone only, and only after "continue": shows Apple's tracking prompt if it was never answered, then switches the
+ * identifiers on or off to match. Never asks after "not now", when Meta or measurement is off, or on Android. Returns
+ * the tracking status (null when not asked).
  */
 export async function requestTracking() {
   try {
-    if (!isIOS() || !active()) return null;
+    if (!isIOS() || !active() || state.ids !== "allowed") return null;
     const t = tracking();
     if (!t) return null;
     let res = await t.getTrackingPermissionsAsync();
@@ -354,8 +438,7 @@ function send(name, params) {
   s.AppEventsLogger.flush();
 }
 
-// the fallback activation (config.manualActivate): once per open, whether the SDK started at
-// launch or after "allow"; never throws
+// the fallback activation (config.manualActivate): once per open; never throws
 function logActivate() {
   try {
     if (state.activated || !state.started || !active()) return;
@@ -366,10 +449,11 @@ function logActivate() {
   }
 }
 
-
-async function flushQueue() {
+// events kept on the phone before this change (when measurement waited for "allow"): sent once, then removed
+async function flushLegacyQueue() {
   if (!state.userId) return;
-  const queue = await read(keyQueue(state.userId), []);
+  const queue = await read(keyQueue(state.userId), null);
+  if (!queue) return;
   await write(keyQueue(state.userId), null);
   const set = await sentSet();
   for (const item of queue) {
@@ -378,15 +462,15 @@ async function flushQueue() {
       send(item.name, item.params);
       await markSent(item.key);
     } catch (e) {
-      warn("queued event not sent:", e?.message);
+      warn("kept event not sent:", e?.message);
     }
   }
 }
 
 /**
- * Logs one event. Returns what happened (for tests and logs), never throws:
- *   "sent" | "queued" (waiting for the student's choice) | "duplicate" | "off" | "no_consent" |
- *   "no_user" | "error"
+ * Logs one event, anonymously (identifiers only ever come from the SDK settings above). Returns what happened (for
+ * tests and logs), never throws:
+ *   "sent" | "duplicate" | "off" | "no_consent" (measurement switched off) | "no_user" | "error"
  * (the wrappers below also return "old", "invalid" or "no_id" without logging anything)
  */
 async function log(build, key, forUserId) {
@@ -399,26 +483,15 @@ async function log(build, key, forUserId) {
 
     // the student this event belongs to (sign-up: may not be the active user yet)
     const consent = userId === state.userId ? state.consent : await read(keyConsent(userId), null);
-    if (consent === "denied") return "no_consent";
+    if (consent === "denied" || (!state.userId && state.device === "denied")) return "no_consent";
     const s = sdk();
     if (!s) return "off";
+    if (!state.started) await applyState();
+    if (!state.started) return "off";
     const { name, params } = build(s);
-
-    // allowed by the signed-in student: send now
-    if (consent === "granted" && userId === state.userId) {
-      if (!state.started) await applyState();
-      if (state.started) {
-        send(name, params);
-        await markSent(fullKey);
-        return "sent";
-      }
-    }
-    // not decided yet (or not their session yet): wait on the phone, sent only if allowed
-    const queue = await read(keyQueue(userId), []);
-    if (queue.some((q) => q.key === fullKey)) return "duplicate";
-    queue.push({ name, params, key: fullKey, at: deps.now() });
-    await write(keyQueue(userId), queue.slice(-QUEUE_MAX));
-    return "queued";
+    send(name, params);
+    await markSent(fullKey);
+    return "sent";
   } catch (e) {
     warn("event not sent:", e?.message);
     return "error";
@@ -443,7 +516,8 @@ export const metaEvents = {
     log((s) => ({ name: EVENT.registration(s), params: { [PARAM.method(s)]: "email" } }), "registration", userId),
   /** offer claim confirmed by the server */
   offerClaimed: (offerId) =>
-    log((s) => ({ name: "tdc_offer_claimed", params: { [PARAM.contentType(s)]: "offer", [PARAM.contentId(s)]: id(offerId) } }), `offer:${id(offerId)}`),
+    // also the student's first value moment (the pre-screen may follow)
+    markValue("offer_claimed").then(() => log((s) => ({ name: "tdc_offer_claimed", params: { [PARAM.contentType(s)]: "offer", [PARAM.contentId(s)]: id(offerId) } }), `offer:${id(offerId)}`)),
   /** job application confirmed by the server */
   jobApplied: (jobId) =>
     log((s) => ({ name: EVENT.application(s), params: { [PARAM.contentType(s)]: "job", [PARAM.contentId(s)]: id(jobId) } }), `job:${id(jobId)}`),
@@ -463,6 +537,7 @@ export const metaEvents = {
   discountRedeemed: async (redemptionId, offerId, redeemedAt) => {
     const at = new Date(redeemedAt).getTime();
     if (!redemptionId || !Number.isFinite(at) || deps.now() - at > REDEEM_MAX_AGE) return "old";
+    await markValue("discount_redeemed");
     return log((s) => ({ name: "tdc_discount_redeemed", params: { [PARAM.contentType(s)]: "offer", [PARAM.contentId(s)]: id(offerId) } }), `redeem:${id(redemptionId)}`);
   },
   /** post saved by the server; no params */
@@ -497,7 +572,7 @@ export const _test = {
   config,
   FLAGS_EVERY,
   reset: () => {
-    Object.assign(state, { userId: null, consent: null, remote: false, flagsAt: 0, started: false, tracking: null, activated: false, sent: null, sdk: undefined });
+    Object.assign(state, { userId: null, consent: null, device: null, ids: null, value: null, matching: null, remote: false, flagsAt: 0, started: false, tracking: null, activated: false, sent: null, sdk: undefined, applied: null });
     if (stopWatch) { try { stopWatch(); } catch { /* nothing useful to log here */ } }
     stopWatch = null;
     config.manualActivate = false;

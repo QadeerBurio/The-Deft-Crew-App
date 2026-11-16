@@ -29,10 +29,14 @@ module.exports = ({ config }) => {
                 autoLogAppEventsEnabled: false,
                 advertiserIDCollectionEnabled: false,
 
+                // Apple's tracking prompt (NSUserTrackingUsageDescription), plain words; asked only after the tdc
+                // pre-screen's "continue" (app/src/analytics/MetaConsent.js)
                 iosUserTrackingPermission:
-                  "tdc uses this to see which tdc ads brought you here. your name, email and phone are never shared."
+                  "tdc uses this to show you better student deals in ads on other apps, and to know which of our ads brought you here."
               }
-            ]
+            ],
+            // Meta's SKAdNetwork IDs + the AEM deep-link line (plugins/withMetaAttribution.js)
+            "./plugins/withMetaAttribution"
           ]
         : [])
     ],

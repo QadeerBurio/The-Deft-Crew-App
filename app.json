@@ -2,7 +2,7 @@
   "expo": {
     "name": "tdc",
     "slug": "tdc",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "orientation": "default",
     "icon": "./assets/tdc.png",
     "scheme": "tdcapp",

@@ -395,11 +395,23 @@ export default function SettingsScreen({ navigation }) {
               <ToggleItem
                 icon="analytics-outline"
                 label="ad measurement (Meta)"
-                subLabel="share app activity and this phone's advertising ID with Meta to measure our ads. no name, email or phone."
+                subLabel="tell Meta which of our ads bring students to tdc, with nothing that identifies you. off: nothing is sent to Meta."
                 value={meta.allowed}
                 onToggle={() => meta.setAllowed(!meta.allowed)}
-                last
+                last={!meta.allowed}
               />
+              {meta.allowed && (
+                <ToggleItem
+                  icon="megaphone-outline"
+                  label="ads with your details"
+                  subLabel={Platform.OS === "ios" && meta.idsChoice === "allowed" && meta.tracking && meta.tracking !== "granted" && meta.tracking !== "undetermined"
+                    ? "your iPhone doesn't allow tracking for tdc. you can change that in iPhone settings → privacy → tracking."
+                    : "let tdc use this phone's advertising ID and your email and phone (sent hashed) to show you better student deals in ads."}
+                  value={meta.idsChoice === "allowed"}
+                  onToggle={() => meta.setIdsAllowed(meta.idsChoice !== "allowed")}
+                  last
+                />
+              )}
             </Group>
           )}
 

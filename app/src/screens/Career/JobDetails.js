@@ -23,6 +23,7 @@ import { EmployerRating } from "../../components/CareerRatings";
 import { WebViewModal, buildLocationUrl } from "../../components/career/JobWebView";
 import { JOB_APPLICATION_FORM, jobState, externalApplyUrl, openMyApplications } from "../../utils/careerNav";
 import { plainError } from "../../utils/plainError";
+import * as meta from "../../analytics/metaEvents";
 
 const QUALITY_LABEL = { strong: "strong match", medium: "medium match", weak: "weak match", insufficient: "not enough info" };
 const STATUS_LABEL = { pending: "sent, waiting for the employer", reviewed: "seen by the employer", shortlisted: "shortlisted", interview: "interview", interviewed: "interviewed", offered: "offer", hired: "hired", accepted: "accepted", rejected: "not selected" };
@@ -143,7 +144,11 @@ export default function JobDetails({ navigation, route }) {
     setError(null);
     try {
       const r = await api.get(`/jobs/public/job/${encodeURIComponent(jobId)}`, { timeout: 10000 });
-      if (r.data?._id) setJob(r.data);
+      if (r.data?._id) {
+        setJob(r.data);
+        // the student's first value moment (the ads pre-screen may follow later, once); never breaks the screen
+        try { Promise.resolve(meta.markValue?.("job_view")).catch(() => {}); } catch { /* nothing to do */ }
+      }
     } catch (e) {
       setError(e?.response?.status === 404 ? "This job is no longer listed." : plainError(e, "Couldn't load this job."));
     }
