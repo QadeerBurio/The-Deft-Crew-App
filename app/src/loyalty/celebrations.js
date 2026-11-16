@@ -48,6 +48,24 @@ export function usedLine({ savedAmount, brandName }) {
   return `reward used${brandName ? ` at ${brandName}` : ""}, you saved PKR ${n.toLocaleString("en-PK")}`;
 }
 
+/**
+ * The same breakdown the brand saw (server services/loyalty.js), as lines for the "reward used" card:
+ * ["bill PKR 1,000", "offer 15% −PKR 150", "reward 25% off −PKR 250", "you paid PKR 600"]
+ */
+export function breakdownLines(bd) {
+  if (!bd || !(Number(bd.bill) > 0)) return [];
+  const pkr = (n) => `PKR ${Number(n || 0).toLocaleString("en-PK")}`;
+  const lines = [`bill ${pkr(bd.bill)}`];
+  if (bd.combine === "replace" && Number(bd.offerDiscount) === 0) lines.push(`reward ${bd.reward?.label || ""} −${pkr(bd.rewardDiscount)} (instead of the offer)`.replace("  ", " "));
+  else {
+    lines.push(`offer ${Number(bd.offerPct) || 0}% −${pkr(bd.offerDiscount)}`);
+    if (Number(bd.rewardDiscount) > 0) lines.push(`reward ${bd.reward?.label || ""} −${pkr(bd.rewardDiscount)}`.replace("  ", " "));
+  }
+  if (bd.giveItem) lines.push(`free: ${bd.giveItem}`);
+  lines.push(`you paid ${pkr(bd.pay)}`);
+  return lines;
+}
+
 async function show(kind, moment) {
   const id = moment?.rewardId ? String(moment.rewardId) : null;
   if (!id) return false;
@@ -76,7 +94,7 @@ export function fromNotificationData(data) {
   if (!data || data.type !== "loyalty") return Promise.resolve(false);
   const base = { rewardId: data.rewardId, brandName: data.brandName || data.params?.brand?.brandName || "", label: data.rewardLabel, kind: data.rewardKind };
   if (data.event === "reward_unlocked") return celebrateReward(base);
-  if (data.event === "reward_used") return rewardUsed({ ...base, savedAmount: data.savedAmount });
+  if (data.event === "reward_used") return rewardUsed({ ...base, savedAmount: data.savedAmount, breakdown: data.breakdown || null });
   return Promise.resolve(false);
 }
 
