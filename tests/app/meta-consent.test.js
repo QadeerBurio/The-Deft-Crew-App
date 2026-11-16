@@ -1,5 +1,6 @@
-// Mounts the real MetaEventsHost (consent sheet) with a small hook runtime; the module behind
-// it is a fake whose state the test controls.
+// Mounts the real MetaEventsHost (the ads pre-screen) with a small hook runtime; the module behind it is a fake whose
+// state the test controls. The pre-screen shows once, only after onboarding and value; Apple's prompt only after
+// "continue"; never at first launch.
 const path = require("path");
 const fs = require("fs");
 const Module = require("module");
@@ -32,16 +33,23 @@ function mount(element) { let tree = null; const root = "root" + Math.random(); 
 const all = (t, pred, out = []) => { if (t == null || typeof t !== "object") return out; if (Array.isArray(t)) { t.forEach((x) => all(x, pred, out)); return out; } if (pred(t)) out.push(t); all(t.props?.children, pred, out); return out; };
 const text = (t) => { const parts = []; (function w(x) { if (x == null || typeof x === "boolean") return; if (typeof x === "string" || typeof x === "number") return void parts.push(String(x)); if (Array.isArray(x)) return x.forEach(w); w(x.props?.children); })(t); return parts.join(" "); };
 
-// fake module state
-const meta = { available: true, consent: null, user: undefined, refreshed: 0, set: [], appStates: [], tracked: 0, redemptionChecks: 0, listeners: new Set() };
+// fake module state (the real rules for the pre-screen: shouldShowPrescreen, mirrored from metaEvents.js)
+const meta = { available: true, measurement: true, ids: null, value: false, user: undefined, matching: null, refreshed: 0, set: [], idsSet: [], appStates: [], tracked: 0, redemptionChecks: 0, listeners: new Set() };
 let appStateListener = null;
 const platform = { OS: "android" };
 const held = new Set();
+const store = new Map([["@tdc_tour_device_v1_done", "pending"]]); // a fresh install: the tour isn't finished yet
+const emit = () => meta.listeners.forEach((f) => f());
 const fakeMeta = {
   metaAvailable: () => meta.available,
-  getConsent: () => meta.consent,
-  setConsent: async (v) => { meta.set.push(v); meta.consent = v ? "granted" : "denied"; meta.listeners.forEach((f) => f()); return true; },
-  setMetaUser: async (u) => { meta.user = u; },
+  measurementAllowed: () => meta.measurement,
+  setConsent: async (v) => { meta.set.push(v); meta.measurement = !!v; emit(); return true; },
+  getIdsChoice: () => meta.ids,
+  setIdsChoice: async (v) => { meta.idsSet.push(v); meta.ids = v ? "allowed" : "declined"; emit(); return true; },
+  identifiersOn: () => meta.ids === "allowed",
+  trackingStatus: () => null,
+  shouldShowPrescreen: ({ onboardingDone }) => meta.available && meta.measurement && !!meta.user && meta.ids == null && meta.value && onboardingDone === true,
+  setMetaUser: async (u, matching) => { meta.user = u; meta.matching = matching; },
   refreshFlags: async () => { meta.refreshed++; },
   subscribe: (fn) => { meta.listeners.add(fn); return () => meta.listeners.delete(fn); },
   onAppState: async (st) => { meta.appStates.push(st); },
@@ -50,6 +58,7 @@ const fakeMeta = {
 const MOCKS = {
   react: React,
   "react-native": { View: "View", Text: "Text", Platform: platform, StyleSheet: { create: (x) => x }, AppState: { currentState: "active", addEventListener: (ev, fn) => { appStateListener = fn; return { remove() {} }; } } },
+  "@react-native-async-storage/async-storage": { __esModule: true, default: { getItem: async (k) => (store.has(k) ? store.get(k) : null) } },
   "../context/AuthContext": { AuthContext: {} },
   "../ui": { Sheet: "Sheet", Button: "Button" },
   "../theme/tokens": { color: { ink: "#111", yellow: "#F9C349" }, font: { body: "b" }, MAX_FONT_SCALE: 1.3 },
@@ -65,78 +74,84 @@ const sheet = (t) => all(t, (n) => n.type === "Sheet")[0];
 const btn = (t, title) => all(t, (n) => n.type === "Button" && n.props.title === title)[0];
 
 (async () => {
-  auth = { user: { _id: "u1" }, token: "t", isGuest: false };
+  const PRE = "allow tdc to show you better student deals in ads";
+  const settle = async (m, ms = 1600) => { await tick(ms); m.rerender(); await tick(30); m.rerender(); };
+  auth = { user: { _id: "u1", email: "sana@student.example", phone: "03001234567" }, token: "t", isGuest: false };
   let m = mount(React.createElement(Host));
   ok(meta.user === "u1" && meta.appStates[0] === "active", "follows the signed-in student; app state forwarded at launch (switch re-read, 5-minute check)", JSON.stringify(meta.appStates));
-  ok(sheet(m.tree).props.visible === false, "not shown immediately (waits a moment after sign-in)");
-  await tick();
+  ok(meta.matching?.email === "sana@student.example", "the student's email / phone are handed over for advanced matching (used only if identifiers are allowed)");
+  await settle(m);
   ok(meta.redemptionChecks === 1, "signed in → redemptions checked once (tdc_discount_redeemed)", meta.redemptionChecks);
   appStateListener("background"); await tick();
-  ok(meta.redemptionChecks === 1, "app to the background → no redemption check");
   appStateListener("active"); await tick();
-  ok(meta.redemptionChecks === 2 && meta.appStates.slice(-2).join() === "background,active", "back to the front → switch re-read, then redemptions checked", JSON.stringify(meta.appStates));
-  await tick(1600); m.rerender();
+  ok(meta.redemptionChecks === 2 && meta.appStates.slice(-2).join() === "background,active", "back to the front → switch re-read, then redemptions checked");
+
+  console.log("── never at first launch: only after onboarding AND value");
+  ok(sheet(m.tree).props.visible === false, "first launch (tour not finished, no value yet) → no pre-screen");
+  meta.value = true; emit(); await settle(m);
+  ok(sheet(m.tree).props.visible === false, "value seen but onboarding still running → no pre-screen");
+  meta.value = false; store.set("@tdc_tour_device_v1_done", "1"); m = mount(React.createElement(Host)); await settle(m);
+  ok(sheet(m.tree).props.visible === false, "onboarding finished but no value yet (no job opened, offer claimed or discount redeemed) → no pre-screen");
+  meta.value = true; emit(); await settle(m);
   const sh = sheet(m.tree);
-  ok(sh.props.visible === true && sh.props.title === "help us measure our ads", "then asks once: 'help us measure our ads'");
-  const body = text(sh);
-  ok(/advertising ID/.test(body) && /never shared/.test(body) && /settings → privacy/.test(body) && /nothing is sent unless you allow it/.test(body), "plain words: what is shared, what never is, where to change it", body);
-  ok(!/Apple will ask/.test(body), "Android: no mention of the iPhone prompt");
-  ok(held.has("meta-consent"), "the onboarding tour waits while the sheet is up");
-  await btn(m.tree, "allow").props.onPress(); await tick(); m.rerender();
-  ok(meta.set.join() === "true" && sheet(m.tree).props.visible === false && !held.has("meta-consent"), "allow → consent saved, sheet closes, tour released");
-  await tick(700);
-  ok(meta.tracked === 0, "Android: allow never shows a tracking prompt");
+  ok(sh.props.visible === true && sh.props.title === PRE, `onboarding finished + value seen → the pre-screen: "${PRE}"`, sh.props.title);
+  ok(!!btn(m.tree, "continue") && !!btn(m.tree, "not now") && all(m.tree, (n) => n.type === "Button").length === 2, "two plain choices: continue / not now (no reward, nothing else)");
+  ok(!/Apple|iPhone will ask/.test(text(sh)), "Android: no mention of the iPhone prompt");
+  ok(held.has("meta-prescreen"), "the onboarding tour waits while it's up (it never covers the tour)");
+  ok(meta.tracked === 0, "showing the pre-screen asks Apple nothing");
 
-  meta.consent = null; meta.set = [];
-  m = mount(React.createElement(Host)); await tick(1600); m.rerender();
-  await btn(m.tree, "not now").props.onPress(); m.rerender();
-  ok(meta.set.join() === "false" && sheet(m.tree).props.visible === false, "not now → saved as no");
-  meta.consent = null; meta.set = [];
-  m = mount(React.createElement(Host)); await tick(1600); m.rerender();
-  await sheet(m.tree).props.onClose(); m.rerender();
-  ok(meta.set.join() === "false", "closing the sheet counts as 'not now' (strict: no is the default)");
+  console.log("── Android: continue / not now");
+  await btn(m.tree, "continue").props.onPress(); await settle(m, 700);
+  ok(meta.idsSet.join() === "true" && sheet(m.tree).props.visible === false && !held.has("meta-prescreen"), "continue → identifiers allowed, closes, tour released");
+  ok(meta.tracked === 0, "Android: no tracking prompt");
+  m = mount(React.createElement(Host)); await settle(m);
+  ok(sheet(m.tree).props.visible === false, "answered → never shown again");
+  meta.ids = null; meta.idsSet = []; m = mount(React.createElement(Host)); await settle(m);
+  btn(m.tree, "not now").props.onPress(); await settle(m, 700);
+  ok(meta.idsSet.join() === "false" && sheet(m.tree).props.visible === false, "not now → saved as declined, closes");
+  meta.ids = null; meta.idsSet = []; m = mount(React.createElement(Host)); await settle(m);
+  sheet(m.tree).props.onClose();
+  ok(meta.idsSet.join() === "false", "closing it counts as 'not now' (identifiers stay off)");
+  meta.ids = null; meta.idsSet = [];
+  meta.measurement = false; m = mount(React.createElement(Host)); await settle(m);
+  ok(sheet(m.tree).props.visible === false, "ad measurement switched off → never shown");
+  meta.measurement = true; meta.available = false; m = mount(React.createElement(Host)); await settle(m);
+  ok(sheet(m.tree).props.visible === false, "Meta off (build or server switch) → never shown");
+  meta.available = true; auth = { user: null, token: null, isGuest: true }; m = mount(React.createElement(Host)); await settle(m);
+  ok(sheet(m.tree).props.visible === false && meta.user === null, "guest → no student, never shown");
 
-  meta.consent = "granted";
-  m = mount(React.createElement(Host)); await tick(1600); m.rerender();
-  ok(sheet(m.tree).props.visible === false, "already decided → not asked again");
-  meta.consent = null; meta.available = false;
-  m = mount(React.createElement(Host)); await tick(1600); m.rerender();
-  ok(sheet(m.tree).props.visible === false, "Meta off (build or server switch) → never asks");
-  meta.available = true;
-  auth = { user: null, token: null, isGuest: true };
-  m = mount(React.createElement(Host)); await tick(1600); m.rerender();
-  ok(sheet(m.tree).props.visible === false && meta.user === null, "guest → no student, never asks");
-
-  // iPhone: Apple's tracking prompt only after "allow"
+  console.log("── iPhone: Apple's prompt only after continue");
   platform.OS = "ios";
   auth = { user: { _id: "u1" }, token: "t", isGuest: false };
-  meta.consent = null; meta.set = []; meta.tracked = 0;
-  m = mount(React.createElement(Host)); await tick(1600); m.rerender();
-  ok(/Apple will ask whether tdc may track/.test(text(sheet(m.tree))) && /only shared if you say yes there too/.test(text(sheet(m.tree))), "iPhone: the sheet says Apple's prompt follows 'allow'", text(sheet(m.tree)));
-  await btn(m.tree, "not now").props.onPress(); await tick(700); m.rerender();
-  ok(meta.set.join() === "false" && meta.tracked === 0, "iPhone: 'not now' → no tracking prompt, ever");
-  await sheet(m.tree).props.onClose(); await tick(700);
-  ok(meta.tracked === 0, "iPhone: closing the sheet → no tracking prompt");
-  meta.consent = null; meta.set = [];
-  m = mount(React.createElement(Host)); await tick(1600); m.rerender();
-  await btn(m.tree, "allow").props.onPress(); m.rerender();
-  ok(meta.set.join() === "true" && meta.tracked === 0 && sheet(m.tree).props.visible === false, "iPhone: allow → consent saved first, sheet closes, prompt not yet on top of it");
+  meta.ids = null; meta.idsSet = []; meta.tracked = 0;
+  m = mount(React.createElement(Host)); await settle(m);
+  ok(/your iPhone will ask/.test(text(sheet(m.tree))), "iPhone: one short line says the iPhone will ask next");
+  btn(m.tree, "not now").props.onPress(); await tick(700);
+  ok(meta.idsSet.join() === "false" && meta.tracked === 0, "iPhone: not now → no Apple prompt, ever");
+  meta.ids = null; meta.idsSet = []; m = mount(React.createElement(Host)); await settle(m);
+  sheet(m.tree).props.onClose(); await tick(700);
+  ok(meta.tracked === 0, "iPhone: closing it → no Apple prompt");
+  meta.ids = null; meta.idsSet = []; m = mount(React.createElement(Host)); await settle(m);
+  await btn(m.tree, "continue").props.onPress(); m.rerender();
+  ok(meta.idsSet.join() === "true" && meta.tracked === 0 && sheet(m.tree).props.visible === false, "iPhone: continue → choice saved, closes, Apple's prompt not yet (the sheet closes first)");
   await tick(700);
-  ok(meta.tracked === 1, "iPhone: …then Apple's tracking prompt is requested once");
-  // Settings → privacy uses the same path
+  ok(meta.tracked === 1, "…then Apple's prompt is requested once");
+
+  console.log("── Settings → privacy");
   let probe = null;
   const Probe = () => { probe = mod.exports.useMetaConsent(); return null; };
-  meta.tracked = 0; meta.set = [];
+  meta.tracked = 0; meta.set = []; meta.idsSet = [];
   mount(React.createElement(Probe));
-  await probe.setAllowed(false); await tick(700);
-  ok(meta.set.join() === "false" && meta.tracked === 0, "iPhone Settings: switching off → no prompt");
-  await probe.setAllowed(true); await tick(700);
-  ok(meta.set.join() === "false,true" && meta.tracked === 1, "iPhone Settings: switching on → consent, then the prompt (if never answered)");
+  await probe.setAllowed(false); await tick(50);
+  ok(meta.set.join() === "false" && meta.tracked === 0, "ad measurement off → saved; no prompt");
+  await probe.setIdsAllowed(true); await tick(700);
+  ok(meta.idsSet.join() === "true" && meta.tracked === 1, "iPhone: 'ads with your details' on → identifiers allowed, then Apple's prompt (if never answered)");
+  await probe.setIdsAllowed(false);
+  ok(meta.idsSet.join() === "true,false", "…switched off → identifiers declined");
   platform.OS = "android";
-
-  // Settings → privacy switch is the same choice
   const settings = fs.readFileSync(path.join(SRC, "screens/Social/SettingItem.js"), "utf8");
-  ok(/const meta = useMetaConsent\(\);/.test(settings) && /\{meta\.available && \(\s*<Group title="privacy">/.test(settings) && /value=\{meta\.allowed\}/.test(settings) && /onToggle=\{\(\) => meta\.setAllowed\(!meta\.allowed\)\}/.test(settings), "Settings → privacy: 'ad measurement (Meta)' switch bound to the same consent (shown only while Meta is on)");
+  ok(/label="ad measurement \(Meta\)"/.test(settings) && /value=\{meta\.allowed\}/.test(settings) && /label="ads with your details"/.test(settings) && /value=\{meta\.idsChoice === "allowed"\}/.test(settings) && /meta\.setIdsAllowed\(/.test(settings), "Settings → privacy: 'ad measurement (Meta)' and 'ads with your details'");
+  ok(/iPhone settings → privacy → tracking/.test(settings), "…when iOS doesn't allow tracking, it says where to change it");
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.log("CRASH", e.stack); process.exit(1); });

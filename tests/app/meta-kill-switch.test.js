@@ -93,7 +93,7 @@ const setup = async ({ remote = true, consent = true, manual = false } = {}) => 
   ok(r === "off" && calls.events.length === 1, "…and nothing more is sent or kept");
   flags = { metaEvents: true };
   await tickTimers();
-  ok(M.metaAvailable() && calls.autoLog.at(-1) === true && calls.adId.at(-1) === true, "switched back on → automatic logging and advertising ID on again (consent kept)", JSON.stringify(calls));
+  ok(M.metaAvailable() && calls.autoLog.at(-1) === true && calls.adId.at(-1) === false, "switched back on → automatic logging on again; the advertising ID stays off (identifiers weren't allowed)", JSON.stringify(calls));
   r = await E.offerClaimed("a3");
   ok(r === "sent", "…and events are sent again");
 
@@ -129,7 +129,7 @@ const setup = async ({ remote = true, consent = true, manual = false } = {}) => 
   ok(M._test.config.manualActivate === false && !calls.events.some((e) => e.name === "fb_mobile_activate_app"), "off by default → we never log fb_mobile_activate_app ourselves (the SDK does)");
   await setup({ consent: null, manual: true });
   await M.onAppState("active");
-  ok(!calls.events.length && calls.init === 0, "on, but not asked yet → nothing");
+  ok(calls.events.filter((e) => e.name === "fb_mobile_activate_app").length === 1 && calls.adId.every((v) => v === false), "on, nothing chosen yet → the open is counted anonymously (no advertising ID)", JSON.stringify(calls.events.map((e) => e.name)));
   await M.setConsent(true);
   ok(calls.events.filter((e) => e.name === "fb_mobile_activate_app").length === 1 && calls.flush >= 1, "on + allow → one fb_mobile_activate_app at start, flushed", JSON.stringify(calls.events));
   ok(JSON.stringify(calls.events.find((e) => e.name === "fb_mobile_activate_app").params) === "{}", "…with no parameters");
@@ -146,8 +146,14 @@ const setup = async ({ remote = true, consent = true, manual = false } = {}) => 
   await M.onAppState("active");
   ok(calls.events.filter((e) => e.name === "fb_mobile_activate_app").length === 1, "on, switch turned off → none on the next open");
   await setup({ consent: false, manual: true });
+  // what follows the choice (the phone also keeps it, so on the next launch the SDK doesn't start at all)
+  calls.events.length = 0;
+  await M.onAppState("background");
   await M.onAppState("active");
-  ok(!calls.events.length && calls.init === 0, "on, 'not now' → none, SDK never started");
+  ok(!calls.events.length && calls.autoLog.at(-1) === false, "on, ad measurement switched off → no open counted from then on (automatic logging off)", JSON.stringify(calls));
+  M._test.reset();
+  await M.refreshFlags({ force: true });
+  ok(calls.autoLog.at(-1) === false && !calls.events.length, "…and after a restart, still nothing (the phone remembers the choice)", JSON.stringify(calls));
 
   console.log("── never throws");
   await setup({});

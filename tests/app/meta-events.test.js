@@ -61,7 +61,8 @@ const R = rm.exports;
 // Karachi wall-clock time → epoch ms (Asia/Karachi is UTC+5, no daylight saving)
 const pkt = (iso) => Date.parse(iso + "+05:00");
 const sentKeys = () => JSON.parse(store.get("tdc.metaSent.v1") || "[]");
-const noPersonal = (evs) => evs.every((e) => !/@|name|phone|mail"|text|content|message/i.test(JSON.stringify(e.params)));
+// Meta's own parameter names (fb_content_type, fb_content_id) aren't personal data
+const noPersonal = (evs) => evs.every((e) => !/@|name|phone|mail"|text|content|message/i.test(JSON.stringify(e.params).replace(/"fb_content_(type|id)"/g, '"k"')));
 let buildOn = true;
 const setup = async ({ build = true, remote = true, user = "u1", consent } = {}) => {
   M._test.reset();
@@ -88,7 +89,7 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   await setup({ consent: true });
   let r = await E.offerClaimed("o1");
   ok(r === "sent" && calls.events.length === 1 && calls.events[0].name === "tdc_offer_claimed" && calls.events[0].params.fb_content_id === "o1", "build on + switch on + allowed → sent", JSON.stringify({ r, calls }));
-  ok(calls.init === 1 && calls.autoLog[0] === true && calls.adId[0] === true && calls.att.length === 0, "SDK started only now: automatic logging (install, activate) on, then advertising ID on (Android, after consent)", JSON.stringify(calls));
+  ok(calls.init === 1 && calls.autoLog[0] === true && calls.adId[0] === false && calls.att.length === 0, "SDK started: automatic logging (install, activate) on; advertising ID off until the student allows identifiers", JSON.stringify(calls));
   ok(calls.flush === 1, "flushed right after the event", calls.flush);
   ok(!calls.events.some((e) => e.name === "fb_mobile_activate_app"), "manual activate fallback is off by default (the SDK logs it)");
   await setup({ build: false, consent: true });
@@ -101,46 +102,52 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   r = await E.offerClaimed("o1");
   ok(r === "no_user" && calls.events.length === 0, "signed out / guest → nothing");
 
-  console.log("── strict consent");
+  console.log("── anonymous measurement (default on), identifiers only when allowed");
   await setup({});
   r = await E.offerClaimed("o1");
-  ok(r === "queued" && calls.events.length === 0 && calls.init === 0 && calls.adId.length === 0, "not asked yet → waits on the phone; SDK not started, no advertising ID", JSON.stringify(calls));
-  await M.setConsent(true);
-  ok(calls.events.length === 1 && calls.events[0].params.fb_content_id === "o1" && calls.init === 1, "allow → the waiting event is sent once");
+  ok(r === "sent" && calls.events.length === 1 && calls.init === 1 && calls.adId.every((v) => v === false), "nothing chosen yet → sent anonymously: SDK started, advertising ID off", JSON.stringify(calls));
   r = await E.offerClaimed("o1");
   ok(r === "duplicate" && calls.events.length === 1, "the same offer again → duplicate, not sent twice");
+  await M.setIdsChoice(true);
+  ok(calls.adId.at(-1) === true, "the pre-screen's 'continue' (Android) → advertising ID on");
   await setup({});
-  await E.jobApplied("j9");
   await M.setConsent(false);
-  ok(calls.events.length === 0 && calls.init === 0 && store.get("tdc.metaQueue.v1.u1") == null, "not now → waiting events dropped, SDK never started");
   r = await E.jobApplied("j10");
-  ok(r === "no_consent" && calls.events.length === 0, "after 'not now' → nothing is sent or kept");
+  ok(r === "no_consent" && calls.events.length === 0 && calls.autoLog.at(-1) === false, "ad measurement switched off → nothing at all is sent, automatic logging off");
   await M.setConsent(true);
-  ok(calls.events.length === 0, "allowing later does not bring back dropped events");
   r = await E.jobApplied("j10");
-  ok(r === "sent" && calls.events[0].name === "SubmitApplication" && calls.events[0].params.fb_content_type === "job", "after allowing: new events are sent");
+  ok(r === "sent" && calls.events[0].name === "SubmitApplication" && calls.events[0].params.fb_content_type === "job", "switched back on → events sent again");
   await M.setConsent(false);
-  ok(calls.adId.at(-1) === false && calls.autoLog.at(-1) === false, "withdraw → automatic logging and advertising ID collection switched off");
+  ok(calls.adId.at(-1) === false && calls.autoLog.at(-1) === false, "switch off → automatic logging and advertising ID collection off");
   r = await E.jobApplied("j11");
-  ok(r === "no_consent" && calls.events.length === 1, "withdraw → nothing more is sent");
+  ok(r === "no_consent" && calls.events.length === 1, "switch off → nothing more is sent");
+  // a student who said "not now" on the old consent sheet: their explicit choice wins
+  await setup({ user: null });
+  store.set("tdc.metaConsent.v1.old", JSON.stringify("denied"));
+  await M.setMetaUser("old");
+  r = await E.offerClaimed("x");
+  ok(r === "no_consent" && calls.events.length === 0, "'not now' on the old consent sheet → still nothing sent");
+  // the old sheet's "allow" included the advertising ID: kept
+  await setup({ user: null });
+  store.set("tdc.metaConsent.v1.yes", JSON.stringify("granted"));
+  await M.setMetaUser("yes");
+  await E.offerClaimed("y");
+  ok(M.getIdsChoice() === "allowed" && calls.adId.at(-1) === true, "'allow' on the old consent sheet → identifiers stay allowed (Android: advertising ID on)");
 
-  console.log("── sign-up (before the session and the choice)");
+  console.log("── sign-up (before the session)");
   await setup({ user: null });
   r = await E.registration("newbie");
-  ok(r === "queued" && calls.events.length === 0, "sign-up confirmed, student not asked yet → waits", r);
+  ok(r === "sent" && calls.events.length === 1 && calls.events[0].name === "fb_mobile_complete_registration" && calls.events[0].params.fb_registration_method === "email", "sign-up confirmed → fb_mobile_complete_registration (method email), anonymously", r);
   await M.setMetaUser("newbie");
-  ok(calls.events.length === 0, "signed in, still not asked → still waiting");
-  await M.setConsent(true);
-  ok(calls.events.length === 1 && calls.events[0].name === "fb_mobile_complete_registration" && calls.events[0].params.fb_registration_method === "email", "allow → fb_mobile_complete_registration (method email), once");
   r = await E.registration("newbie");
   ok(r === "duplicate" && calls.events.length === 1, "a second sign-up call for the same account → duplicate");
   ok(calls.events.every((e) => !/@|name|phone|mail"/i.test(JSON.stringify(e.params).replace('"email"', '"method"'))), "no email address, name or phone in any event's parameters", JSON.stringify(calls.events));
-  // waiting events expire after 24 h
-  await setup({});
-  await E.offerClaimed("old");
-  now += 25 * 60 * 60 * 1000;
-  await M.setConsent(true);
-  ok(calls.events.length === 0, "an event waiting more than 24 h is not sent");
+  // events kept on the phone before this change: sent once (if under 24 h), then removed
+  await setup({ user: null });
+  store.set("tdc.metaQueue.v1.k1", JSON.stringify([{ name: "tdc_offer_claimed", params: {}, key: "k1:offer:q1", at: now - 1000 }, { name: "tdc_offer_claimed", params: {}, key: "k1:offer:q0", at: now - 25 * 3600e3 }]));
+  await M.setMetaUser("k1");
+  await E.offerClaimed("z");
+  ok(calls.events.filter((e) => e.name === "tdc_offer_claimed").length === 2 && store.get("tdc.metaQueue.v1.k1") == null, "an event kept before this change is sent once (the one older than 24 h is dropped), then the queue is removed");
 
   console.log("── duplicates per item");
   await setup({ consent: true });
@@ -159,7 +166,7 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   // another student on the same phone: their own consent and keys
   await M.setMetaUser("u2");
   r = await E.offerClaimed("A");
-  ok(r === "queued", "second student on the phone: not asked yet → waits (u1's choice doesn't apply)");
+  ok(r === "sent", "second student on the phone: their own keys (u1's duplicate doesn't apply) → sent");
 
   console.log("── kill switch");
   await setup({ consent: true });
@@ -196,7 +203,7 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   ok(n === 1, "after 5 minutes it is asked again", n);
 
   console.log("── onboarding completed / event registered / scholarship applied");
-  // gates: each of the 3 is off without the build IDs, off with the switch off, waits before consent
+  // gates: each of the 3 is off without the build IDs, off with the switch off, sent anonymously by default
   for (const [label, fire] of [["onboarding", () => E.onboardingCompleted()], ["event", () => E.eventRegistered("e1")], ["scholarship", () => E.scholarshipApplied("p1")]]) {
     await setup({ build: false, consent: true });
     const a = await fire();
@@ -204,9 +211,9 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
     const b = await fire();
     await setup({});
     const c = await fire();
-    ok(a === "off" && b === "off" && c === "queued" && calls.events.length === 0 && calls.init === 0, `${label}: build off → off, switch off → off, not asked yet → waits (SDK not started)`, [a, b, c].join());
+    ok(a === "off" && b === "off" && c === "sent" && calls.events.length === 1 && calls.adId.every((v) => v === false), `${label}: build off → off, switch off → off, nothing chosen → sent anonymously (no advertising ID)`, [a, b, c].join());
     await M.setConsent(false);
-    ok((await fire()) === "no_consent" && calls.events.length === 0, `${label}: 'not now' → nothing sent`);
+    ok(calls.events.length === 1 && calls.autoLog.at(-1) === false, `${label}: measurement off → nothing more sent`);
   }
   await setup({ consent: true });
   r = await E.onboardingCompleted();
@@ -274,8 +281,7 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   ok(M.metaEvents.confessionCreated.length === 0, "confessionCreated takes no arguments at all");
   await setup({});
   await E.confessionCreated("CONF-SECRET-ID");
-  const q = store.get("tdc.metaQueue.v1.u1") || "";
-  ok(/tdc_confession_created/.test(q) && !q.includes("CONF-SECRET-ID") && JSON.parse(q)[0].key.startsWith("u1:confession:") && JSON.stringify(JSON.parse(q)[0].params) === "{}", "before consent: the waiting confession event has no id either", q);
+  ok(calls.events.length === 1 && JSON.stringify(calls.events[0].params) === "{}" && !JSON.stringify([...store.values()]).includes("CONF-SECRET-ID"), "nothing chosen yet: the confession is sent anonymously with no id either (not in params or on the phone)");
 
   console.log("── skillshare");
   await setup({ consent: true });
@@ -325,7 +331,7 @@ const setup = async ({ build = true, remote = true, user = "u1", consent } = {})
   ok((await R.checkRedemptions({ force: true })) === 0 && redCalls.length === 0, "signed out → not asked");
   await setup({}); R._test.reset(); now = pkt("2026-10-27T18:00:00"); R._test.deps.now = () => now;
   r = await R.checkRedemptions({ force: true });
-  ok(r === 0 && calls.events.length === 0 && /tdc_discount_redeemed/.test(store.get("tdc.metaQueue.v1.u1") || ""), "not asked yet → waits on the phone like every other event");
+  ok(r > 0 && calls.events.some((e) => e.name === "tdc_discount_redeemed") && calls.adId.every((v) => v === false), "nothing chosen yet → sent anonymously like every other event", String(r));
 
   ok(noPersonal(calls.events), "no name, email, phone, text or message in any of the new events");
 

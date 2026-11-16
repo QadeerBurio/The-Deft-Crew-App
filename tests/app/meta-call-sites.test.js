@@ -465,7 +465,7 @@ const press = async (node) => { await node.props.onPress(); await tick(40); };
   ok((gnl.match(/onRedemptionPush\(data\);/g) || []).length === 2, "GlobalNotificationLayer: the push is checked when received and when tapped");
   ok(/if \(isGuest\) \{[\s\S]{0,200}return;\n\s*\}[\s\S]{0,500}onRedemptionPush\(data\);/.test(gnl), "…received: after the guest check (and checkRedemptions itself needs a signed-in student)");
   ok(/if \(!Number\.isFinite\(totalSaved\)\) throw new Error\("bad savings response"\);\n\s*checkRedemptions\(\);/.test(src("hooks/useMySavings.js")), "useMySavings: checked after a good savings refresh (a failed one doesn't)");
-  ok(/if \(s === "active"\) checkRedemptions\(\);/.test(src("analytics/MetaConsent.js")) && /setMetaUser\(userId\)\.then\(\(\) => checkRedemptions\(\)\)/.test(src("analytics/MetaConsent.js")), "MetaEventsHost: checked on sign-in and on every return to the app");
+  ok(/if \(s === "active"\) checkRedemptions\(\);/.test(src("analytics/MetaConsent.js")) && /setMetaUser\(userId, [^\n]*\)\.then\(\(\) => checkRedemptions\(\)\)/.test(src("analytics/MetaConsent.js")), "MetaEventsHost: checked on sign-in and on every return to the app");
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);

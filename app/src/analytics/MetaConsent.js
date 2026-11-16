@@ -1,20 +1,36 @@
 // app/src/analytics/MetaConsent.js
-// MetaEventsHost: follows the signed-in student, reads the server's switch (at launch and
-// when the app comes back), and asks once for consent. useMetaConsent: the same choice for
-// Settings → privacy. On iPhone, Apple's tracking prompt follows "allow" (never "not now").
+// MetaEventsHost: follows the signed-in student, reads the server's switch (at launch and when the app comes back),
+// and shows the tdc pre-screen once. useMetaConsent: the same choices for Settings → privacy.
+//
+// Measurement is anonymous and on by default (metaEvents.js). The pre-screen only asks about identifiers (the
+// advertising ID and advanced matching): one plain line, "continue" or "not now". It never shows at first launch:
+// only once onboarding is finished and the student has seen value (first job opened, offer claimed or discount
+// redeemed). On iPhone, Apple's tracking prompt follows "continue" (never "not now"); on Android "continue" is the
+// opt-in. No pressure: "not now" closes it, the app isn't blocked, nothing is given for allowing, and it isn't asked
+// again (Settings → privacy can change it).
 import React, { useContext, useEffect, useState } from "react";
 import { AppState, Platform, View, Text, StyleSheet } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AuthContext } from "../context/AuthContext";
 import { Sheet, Button } from "../ui";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 import { holdTour, releaseTour } from "../engagement/tour/tourGate";
-import { metaAvailable, getConsent, setConsent, setMetaUser, refreshFlags, subscribe, onAppState, requestTracking } from "./metaEvents";
+import {
+  metaAvailable, measurementAllowed, setConsent, getIdsChoice, setIdsChoice, identifiersOn, trackingStatus,
+  setMetaUser, refreshFlags, subscribe, onAppState, requestTracking, shouldShowPrescreen,
+} from "./metaEvents";
 import { checkRedemptions } from "./metaRedemptions";
 
-// "allow", then (iPhone, if never answered) Apple's tracking prompt, once the sheet has closed
-async function allow() {
-  const ok = await setConsent(true);
+// the app tour's own key: "pending" from a fresh install until it's finished or skipped (TourProvider.js)
+const TOUR_DEVICE_KEY = "@tdc_tour_device_v1_done";
+export const PRESCREEN_TEXT = "allow tdc to show you better student deals in ads";
+
+// "continue": identifiers allowed for this student, then (iPhone, if never answered) Apple's prompt, once the sheet
+// has closed
+export async function continuePrescreen() {
+  const ok = await setIdsChoice(true);
   if (ok && Platform.OS === "ios") setTimeout(() => { requestTracking(); }, 600);
+  return ok;
 }
 
 export function useMetaConsent() {
@@ -22,23 +38,43 @@ export function useMetaConsent() {
   useEffect(() => subscribe(() => setTick((n) => n + 1)), []);
   return {
     available: metaAvailable(),
-    allowed: getConsent() === "granted",
-    decided: getConsent() != null,
-    setAllowed: (v) => (v ? allow() : setConsent(false)),
+    // anonymous measurement (Settings → privacy "ad measurement")
+    allowed: measurementAllowed(),
+    setAllowed: (v) => setConsent(!!v),
+    // identifiers (Settings → privacy "ads with your details")
+    idsChoice: getIdsChoice(),
+    idsOn: identifiersOn(),
+    tracking: trackingStatus(),
+    setIdsAllowed: (v) => (v ? continuePrescreen() : setIdsChoice(false)),
   };
+}
+
+function useOnboardingDone(userId) {
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    let live = true;
+    // finished or skipped ("1"), or an install from before the tour (no key); "pending" until then
+    const check = () => AsyncStorage.getItem(TOUR_DEVICE_KEY)
+      .then((v) => { if (live) setDone(v !== "pending"); })
+      .catch(() => { if (live) setDone(false); });
+    check();
+    const t = setInterval(check, 4000); // the tour finishing writes the key; checked again shortly after
+    return () => { live = false; clearInterval(t); };
+  }, [userId]);
+  return done;
 }
 
 export default function MetaEventsHost() {
   const { user, token, isGuest } = useContext(AuthContext) || {};
   const userId = !isGuest && token ? user?._id || user?.id || null : null;
-  const { available, decided } = useMetaConsent();
+  useMetaConsent(); // re-render on every change
   const [ready, setReady] = useState(false);
+  const onboardingDone = useOnboardingDone(userId);
 
-  // the student whose choice applies
+  // the student whose choices apply (email / phone only for advanced matching, used only with identifiers allowed)
   useEffect(() => {
-    setMetaUser(userId).then(() => checkRedemptions());
-  }, [userId]);
-
+    setMetaUser(userId, userId ? { email: user?.email, phone: user?.phone } : null).then(() => checkRedemptions());
+  }, [userId, user?.email, user?.phone]);
   // the server's switch: at launch, on every return to the front, and every 5 minutes while open
   useEffect(() => {
     if (AppState.currentState === "active") onAppState("active"); // reads the switch now
@@ -52,8 +88,7 @@ export default function MetaEventsHost() {
       onAppState("background"); // stops the 5-minute check
     };
   }, []);
-
-  // ask a moment after signing in, not on top of the first screen's load
+  // not on top of a screen that is still loading
   useEffect(() => {
     setReady(false);
     if (!userId) return undefined;
@@ -61,32 +96,22 @@ export default function MetaEventsHost() {
     return () => clearTimeout(t);
   }, [userId]);
 
-  const visible = !!userId && available && !decided && ready;
+  const visible = !!userId && ready && shouldShowPrescreen({ onboardingDone });
   // the onboarding tour waits while this sheet is up
   useEffect(() => {
     if (!visible) return undefined;
-    holdTour("meta-consent");
-    return () => releaseTour("meta-consent");
+    holdTour("meta-prescreen");
+    return () => releaseTour("meta-prescreen");
   }, [visible]);
 
   return (
-    <Sheet visible={visible} onClose={() => setConsent(false)} title="help us measure our ads" scroll={false}>
+    <Sheet visible={visible} onClose={() => setIdsChoice(false)} title={PRESCREEN_TEXT} scroll={false}>
       <View>
         <Text style={styles.body} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-          {"allow tdc to share some app activity with Meta (sign-up, offer claims, job applications, AI resumes) together with this phone's advertising ID, so we can see which of our Facebook and Instagram ads bring students to tdc."}
+          {Platform.OS === "ios" ? "next, your iPhone will ask. you can change this any time in settings → privacy." : "you can change this any time in settings → privacy."}
         </Text>
-        <Text style={styles.body} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-          your name, email and phone number are never shared. nothing is sent unless you allow it, and you can change this
-          any time in settings → privacy.
-        </Text>
-        {Platform.OS === "ios" ? (
-          <Text style={styles.body} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-            on iPhone, after you tap allow, Apple will ask whether tdc may track. the advertising ID is only shared if you
-            say yes there too.
-          </Text>
-        ) : null}
-        <Button title="allow" variant="accent" onPress={allow} style={styles.btn} accessibilityLabel="allow sharing app activity with Meta" />
-        <Button title="not now" variant="ghost" onPress={() => setConsent(false)} accessibilityLabel="don't share app activity with Meta" />
+        <Button title="continue" variant="accent" onPress={continuePrescreen} style={styles.btn} accessibilityLabel="continue" />
+        <Button title="not now" variant="ghost" onPress={() => setIdsChoice(false)} accessibilityLabel="not now" />
       </View>
     </Sheet>
   );

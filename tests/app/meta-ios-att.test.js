@@ -1,7 +1,8 @@
 // The real app/src/analytics/metaEvents.js on a fake iPhone: a fake Meta SDK and a fake
-// expo-tracking-transparency. Checks: the tracking prompt is only asked after consent, the
-// advertising ID only goes on with consent AND tracking granted, and it follows changes made in
-// iOS Settings. Android never touches the prompt.
+// expo-tracking-transparency. Checks (feat/ios-meta-attribution): anonymous by default (install, app open, events
+// with no identifier); Apple's prompt only after the pre-screen's "continue"; identifiers (advertising ID, advertiser
+// tracking, advanced matching) only when allowed; declined / restricted → no identifier anywhere; follows iOS Settings;
+// Android's opt-in is "continue".
 const path = require("path");
 const fs = require("fs");
 const Module = require("module");
@@ -23,11 +24,13 @@ const fakeSdk = {
     setAdvertiserTrackingEnabled: (v) => { calls.att.push(v); calls.order.push("att:" + v); },
     setAutoLogAppEventsEnabled: (v) => { calls.autoLog.push(v); calls.order.push("autoLog:" + v); },
   },
+  // advanced matching (only with identifiers allowed; {} clears it)
   AppEventsLogger: {
     AppEvents: { CompletedRegistration: "fb_mobile_complete_registration", SubmitApplication: "SubmitApplication", CompletedTutorial: "fb_mobile_tutorial_completion" },
     AppEventParams: { RegistrationMethod: "fb_registration_method", ContentType: "fb_content_type", ContentID: "fb_content_id" },
     logEvent: (name, params) => { calls.events.push({ name, params }); },
     flush: () => { calls.flush++; },
+    setUserData: (d) => { calls.userData.push(d); calls.order.push("userData:" + JSON.stringify(d)); },
   },
 };
 // Apple's prompt: status as iOS reports it, and what the student taps if asked
@@ -56,7 +59,7 @@ const E = M.metaEvents;
 const setup = async ({ platform = "ios", status = "undetermined", answer = "granted", consent, missing = false } = {}) => {
   M._test.reset();
   store.clear();
-  calls = { init: 0, adId: [], att: [], autoLog: [], flush: 0, events: [], order: [] };
+  calls = { init: 0, adId: [], att: [], autoLog: [], flush: 0, events: [], order: [], userData: [] };
   att = { status, answer, reads: 0, asked: 0 };
   os = platform; trackingMissing = missing;
   Object.assign(M._test.deps, {
@@ -74,76 +77,85 @@ const setup = async ({ platform = "ios", status = "undetermined", answer = "gran
   if (consent !== undefined) await M.setConsent(consent);
 };
 
+// identifiers anywhere in what the app hands the SDK: user data (advanced matching), the advertising ID switches,
+// event parameters (an email, phone or user id)
+const EMAIL = "sana@student.example", PHONE = "+92 300 1234567";
+const hasIdentifiers = () =>
+  calls.adId.some((v) => v === true) || calls.att.some((v) => v === true) ||
+  calls.userData.some((d) => Object.keys(d || {}).length > 0) ||
+  calls.events.some((e) => /sana|student\.example|300 ?1234567|923001234567|\bu1\b/i.test(JSON.stringify(e.params)));
+
 (async () => {
-  console.log("── the prompt follows 'allow', never 'not now'");
+  console.log("── anonymous by default: install, app open and events with no identifier");
   await setup({});
-  let r = await M.requestTracking();
-  ok(r === null && att.asked === 0 && calls.init === 0, "not decided yet → no prompt, SDK not started");
-  await M.setConsent(false);
+  await M.setMetaUser("u1", { email: EMAIL, phone: PHONE });
+  let r = await E.offerClaimed("o1");
+  ok(r === "sent" && calls.init === 1 && calls.autoLog.at(-1) === true, "the SDK runs (install ping, fb_mobile_activate_app) and the event is sent", JSON.stringify(calls.order));
+  ok(!hasIdentifiers(), "…with no advertising ID, no advertiser tracking, no advanced matching, no email / phone / user id in any event", JSON.stringify({ adId: calls.adId, att: calls.att, userData: calls.userData }));
+  ok(calls.order.indexOf("att:false") < calls.order.indexOf("init") && calls.order.indexOf("adId:false") < calls.order.indexOf("init"), "identifiers are switched off BEFORE the SDK starts", calls.order.join());
+  ok(att.asked === 0, "Apple's prompt is never asked on its own (not at launch, not with the first event)");
+
+  console.log("── Apple's prompt only after the pre-screen's 'continue'");
+  await setup({});
   r = await M.requestTracking();
-  ok(r === null && att.asked === 0 && calls.adId.every((v) => v === false), "'not now' → no prompt, no advertising ID");
-  await setup({ consent: true });
-  ok(calls.init === 1 && calls.autoLog[0] === true, "allow → SDK started with automatic logging on (install, activate)", JSON.stringify(calls.order));
-  ok(calls.att.at(-1) === false && calls.adId.at(-1) === false, "allow, prompt not answered yet → advertising tracking off, advertising ID off", JSON.stringify(calls.order));
-  ok(calls.order.indexOf("autoLog:true") < calls.order.indexOf("init") && calls.order.indexOf("att:false") < calls.order.indexOf("init"), "settings applied before initializeSDK", calls.order.join());
-  r = await E.offerClaimed("o1");
-  ok(r === "sent" && calls.events.length === 1 && calls.flush === 1, "events are still sent with consent (no advertising ID), and flushed");
+  ok(r === null && att.asked === 0, "before the pre-screen: requestTracking asks nothing");
+  await M.setIdsChoice(false);
+  r = await M.requestTracking();
+  ok(r === null && att.asked === 0 && !hasIdentifiers(), "'not now' → no prompt, ever; identifiers off");
+  await setup({ answer: "granted" });
+  await M.setMetaUser("u1", { email: EMAIL, phone: PHONE });
+  await M.setIdsChoice(true);
+  ok(att.asked === 0 && calls.adId.every((v) => v === false), "'continue' alone doesn't turn identifiers on (Apple hasn't answered)");
   r = await M.requestTracking();
   ok(r === "granted" && att.asked === 1, "then Apple's prompt is asked once");
-  ok(calls.att.at(-1) === true && calls.adId.at(-1) === true, "prompt granted → advertising tracking on, advertising ID on", JSON.stringify(calls.order));
-  ok(calls.order.lastIndexOf("att:true") < calls.order.lastIndexOf("adId:true"), "tracking flag set before the advertising ID switch", calls.order.join());
-  ok(calls.init === 1, "the SDK isn't started a second time");
+  ok(calls.att.at(-1) === true && calls.adId.at(-1) === true, "allowed → setAdvertiserTrackingEnabled(true), advertising ID on", JSON.stringify(calls.order));
+  ok(JSON.stringify(calls.userData.at(-1)) === JSON.stringify({ email: EMAIL, phone: "+923001234567" }), "…and advanced matching with the student's email and phone (the SDK hashes them)", JSON.stringify(calls.userData.at(-1)));
   r = await M.requestTracking();
-  ok(att.asked === 1 && r === "granted", "asking again → iOS answer reused, no second prompt");
+  ok(att.asked === 1, "asking again → iOS answer reused, no second prompt");
 
-  console.log("── prompt denied");
-  await setup({ consent: true, answer: "denied" });
+  console.log("── Apple's prompt declined: no identifiers anywhere");
+  await setup({ answer: "denied" });
+  await M.setMetaUser("u1", { email: EMAIL, phone: PHONE });
+  await M.setIdsChoice(true);
   r = await M.requestTracking();
-  ok(r === "denied" && att.asked === 1, "student taps 'ask app not to track'");
-  ok(calls.att.at(-1) === false && calls.adId.at(-1) === false && !calls.adId.includes(true), "→ advertising tracking and advertising ID stay off", JSON.stringify(calls.order));
-  r = await E.jobApplied("j1");
-  ok(r === "sent", "events with consent still go (no advertising ID)");
+  await E.jobApplied("j1"); await E.registration("u1"); await E.offerClaimed("o2");
+  ok(r === "denied" && calls.events.length === 3, "'Ask App not to Track' → events still sent", JSON.stringify(calls.events.map((e) => e.name)));
+  ok(!hasIdentifiers(), "…with no advertising ID, no advertiser tracking, no advanced matching and no email / phone / user id in any event", JSON.stringify({ adId: calls.adId, att: calls.att, userData: calls.userData }));
+  ok(calls.userData.length > 0 && calls.userData.every((d) => JSON.stringify(d) === "{}"), "advanced matching is actively cleared (empty user data), not just left unset");
+  await setup({ status: "restricted" });
+  await M.setIdsChoice(true);
+  r = await M.requestTracking();
+  ok(r === "restricted" && att.asked === 0 && !hasIdentifiers(), "restricted (parental controls etc.) → never asked, no identifiers");
 
-  console.log("── answered before / changed in iOS Settings");
-  await setup({ status: "granted", consent: true });
-  ok(calls.att.at(-1) === true && calls.adId.at(-1) === true && att.asked === 0, "tracking already allowed in iOS → advertising ID on at start, no prompt", JSON.stringify(calls.order));
+  console.log("── follows iOS Settings");
+  await setup({ status: "granted" });
+  await M.setMetaUser("u1", { email: EMAIL, phone: PHONE });
+  await M.setIdsChoice(true);
+  ok(calls.adId.at(-1) === true && att.asked === 0, "already allowed in iOS and 'continue' → identifiers on, no prompt");
   att.status = "denied";
   await M.onAppState("active");
-  ok(calls.att.at(-1) === false && calls.adId.at(-1) === false, "turned off in iOS Settings → off on the next return to the app", JSON.stringify(calls.order));
+  ok(calls.adId.at(-1) === false && calls.att.at(-1) === false && JSON.stringify(calls.userData.at(-1)) === "{}", "turned off in iOS Settings → back in the app: identifiers off, advanced matching cleared");
   att.status = "granted";
   await M.onAppState("active");
-  ok(calls.att.at(-1) === true && calls.adId.at(-1) === true, "turned back on in iOS Settings → on again");
-  await setup({ status: "restricted", consent: true });
-  r = await M.requestTracking();
-  ok(att.asked === 0 && calls.adId.at(-1) === false && r === "restricted", "restricted (parental controls etc.) → never asked, advertising ID off");
-
-  console.log("── withdraw / switch off");
-  await setup({ status: "granted", consent: true });
+  ok(calls.adId.at(-1) === true, "turned back on → on again");
   await M.setConsent(false);
-  ok(calls.autoLog.at(-1) === false && calls.att.at(-1) === false && calls.adId.at(-1) === false, "withdraw → automatic logging, advertising tracking and advertising ID off", JSON.stringify(calls.order));
+  ok(calls.adId.at(-1) === false && calls.autoLog.at(-1) === false && JSON.stringify(calls.userData.at(-1)) === "{}", "ad measurement switched off → everything off, advanced matching cleared");
+
+  console.log("── Android: no Apple prompt; the pre-screen's 'continue' is the opt-in");
+  await setup({ platform: "android" });
+  await M.setMetaUser("u1", { email: EMAIL, phone: PHONE });
+  await E.offerClaimed("a1");
+  ok(!hasIdentifiers() && calls.att.length === 0, "before 'continue': anonymous, no identifiers, no iOS tracking flag");
+  await M.setIdsChoice(true);
   r = await M.requestTracking();
-  ok(r === null && att.asked === 0, "after withdrawing → no prompt");
+  ok(r === null && att.asked === 0 && calls.adId.at(-1) === true && calls.userData.at(-1).email === EMAIL, "'continue' → advertising ID and advanced matching on; no prompt", JSON.stringify(calls.userData.at(-1)));
 
-  console.log("── Android");
-  await setup({ platform: "android", consent: true });
+  console.log("── resilience");
+  await setup({ missing: true });
+  await M.setIdsChoice(true);
   r = await M.requestTracking();
-  ok(r === null && att.reads === 0 && att.asked === 0, "Android → the tracking module is never used");
-  ok(calls.att.length === 0 && calls.adId.at(-1) === true && calls.autoLog[0] === true, "Android → advertising ID on with consent; no iOS tracking flag", JSON.stringify(calls.order));
-
-  console.log("── never throws");
-  await setup({ consent: true, missing: true });
-  let threw = false;
-  try { r = await M.requestTracking(); await M.onAppState("active"); } catch { threw = true; }
-  ok(!threw && r === null && calls.adId.at(-1) === false && calls.init === 1, "tracking module missing → treated as not granted, no crash", JSON.stringify(calls.order));
-  await setup({ consent: true });
-  fakeTracking.requestTrackingPermissionsAsync = async () => { throw new Error("native boom"); };
-  threw = false;
-  try { r = await M.requestTracking(); } catch { threw = true; }
-  ok(!threw && r === null && calls.adId.at(-1) === false, "prompt failing → no crash, advertising ID stays off");
-
-  // no personal data in anything sent here
-  ok(calls.events.every((e) => !/@|name|phone|mail"/i.test(JSON.stringify(e.params))), "no name, email or phone in any event");
+  ok(r === null && !hasIdentifiers(), "tracking module missing in this build → no crash, identifiers off");
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
-})().catch((e) => { console.log("CRASH", e.stack); process.exit(1); });
+})().catch((e) => { console.error("CRASH", e); process.exit(1); });
