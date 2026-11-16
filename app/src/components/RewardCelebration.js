@@ -7,7 +7,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Modal, View, Text, Pressable, StyleSheet, Animated, Easing, AccessibilityInfo, Dimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
-import { onCelebration } from "../loyalty/celebrations";
+import { onCelebration, breakdownLines } from "../loyalty/celebrations";
 
 const COLORS = [T.yellow, "#E8505B", "#2B7FC0", "#1E6B3A", "#C77700", "#8E5BD9"];
 const PIECES = 28;
@@ -67,6 +67,14 @@ export default function RewardCelebration() {
           <Text style={styles.title} maxFontSizeMultiplier={MAX_FONT_SCALE}>{unlocked ? "reward unlocked" : "reward used"}<Text style={{ color: T.yellow }}>.</Text></Text>
           <Text style={styles.text} maxFontSizeMultiplier={MAX_FONT_SCALE}>{current.text}</Text>
           {unlocked && <Text style={styles.hint} maxFontSizeMultiplier={MAX_FONT_SCALE}>show your qr on your next visit and the brand applies it to your bill.</Text>}
+          {/* reward used: the same breakdown the brand saw (bill, offer, reward, what you paid) */}
+          {!unlocked && breakdownLines(current.breakdown).length > 0 && (
+            <View style={styles.breakdown} testID="reward-breakdown">
+              {breakdownLines(current.breakdown).map((l, i, all) => (
+                <Text key={l} style={[styles.line, i === all.length - 1 && styles.lineTotal]} maxFontSizeMultiplier={MAX_FONT_SCALE}>{l}</Text>
+              ))}
+            </View>
+          )}
           <Pressable onPress={close} style={({ pressed }) => [styles.button, pressed && { opacity: 0.85 }]} accessibilityRole="button" accessibilityLabel={unlocked ? "nice, close" : "ok, close"} hitSlop={8}>
             <Text style={styles.buttonText} maxFontSizeMultiplier={MAX_FONT_SCALE}>{unlocked ? "nice!" : "ok"}</Text>
           </Pressable>
@@ -82,6 +90,9 @@ const styles = StyleSheet.create({
   icon: { width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center", marginBottom: 12 },
   title: { fontFamily: F.heading, fontSize: 22, color: T.ink },
   text: { fontFamily: F.bodySemi, fontSize: 15, color: T.ink, textAlign: "center", marginTop: 8, lineHeight: 21 },
+  breakdown: { alignSelf: "stretch", marginTop: 12, padding: 12, borderRadius: 14, backgroundColor: T.sand || "#F5F2EA", gap: 4 },
+  line: { fontFamily: F.body, fontSize: 13.5, color: T.ink },
+  lineTotal: { fontFamily: F.bodyBold },
   hint: { fontFamily: F.body, fontSize: 13, color: T.textMuted, textAlign: "center", marginTop: 8 },
   button: { marginTop: 18, minHeight: 48, minWidth: 140, paddingHorizontal: 22, borderRadius: 24, backgroundColor: T.ink, alignItems: "center", justifyContent: "center" },
   buttonText: { fontFamily: F.bodyBold, fontSize: 15, color: T.card },

@@ -5,6 +5,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { DocScreen, DocHero, DocSection, DocCard, DocFooter } from "../ui/DocPage";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 
+export const PRIVACY_URL = "https://gettdc.pk/privacy";
+
 const privacyPoints = [
   {
     icon: "database-lock-outline",
@@ -40,6 +42,8 @@ const privacyPoints = [
 
 export default function PrivacyScreen() {
   const openEmail = () => Linking.openURL("mailto:info@thedeftcrew.com");
+  // the full policy (the store listings use the same page)
+  const openPolicy = () => Linking.openURL(PRIVACY_URL);
 
   return (
     <DocScreen title="Privacy Center">
@@ -49,6 +53,24 @@ export default function PrivacyScreen() {
       {privacyPoints.map((p) => (
         <DocCard key={p.title} icon={p.icon} title={p.title} body={p.content} />
       ))}
+
+      {/* the full privacy policy on the website */}
+      <TouchableOpacity
+        style={s.contact}
+        onPress={openPolicy}
+        activeOpacity={0.85}
+        accessibilityRole="link"
+        accessibilityLabel="Full privacy policy, opens gettdc.pk/privacy"
+      >
+        <View style={s.contactIcon}>
+          <Ionicons name="document-text-outline" size={20} color={T.ink} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={s.contactTitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>Full privacy policy</Text>
+          <Text style={s.contactText} maxFontSizeMultiplier={MAX_FONT_SCALE}>gettdc.pk/privacy</Text>
+        </View>
+        <Ionicons name="open-outline" size={18} color={T.yellow} />
+      </TouchableOpacity>
 
       {/* Contact */}
       <TouchableOpacity
