@@ -159,7 +159,7 @@ export default function TourOverlay() {
   const next = () => {
     pop();
     if (isLast) {
-      // finished with "let's go" (skip / back don't count): Meta event, after consent only
+      // finished with "let's go" (skip / back don't count): Meta event (anonymous unless the student allowed identifiers; off if ad measurement is off)
       metaEvents.onboardingCompleted();
       stop();
     } else setStepIdx((i) => i + 1);

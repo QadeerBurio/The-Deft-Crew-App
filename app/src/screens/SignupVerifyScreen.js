@@ -72,7 +72,7 @@ export default function SignupVerifyScreen({ route, navigation }) {
 
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       setVerified(true);
-      // account confirmed: Meta sign-up event, sent only after consent
+      // account confirmed: Meta sign-up event (anonymous unless the student allowed identifiers)
       metaEvents.registration(user?._id || user?.id);
 
       // Logging in switches the app to the main screens
