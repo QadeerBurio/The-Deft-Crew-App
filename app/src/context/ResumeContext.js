@@ -1,7 +1,7 @@
 // app/src/context/ResumeContext.js
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert, Platform } from 'react-native';
+import { Alert, Platform, AppState } from 'react-native';
 import resumeApi from '../api/resumeApi';
 import { metaEvents } from '../analytics/metaEvents';
 import { AuthContext } from './AuthContext';
@@ -22,6 +22,22 @@ const getErrorMessage = (error, defaultMsg = 'An error occurred') => {
 };
 
 export const ResumeContext = createContext();
+
+// ---- saves made without a connection: kept on the phone, sent when the connection is back ----
+export const PENDING_KEY = 'resumePendingSaves';
+const MERGED = ['personalInfo', 'professionalSummary', 'customStyles', 'targetJob', 'settings'];
+/** b on top of a (objects that the server merges are merged here too) */
+export const mergeChanges = (a, b) => {
+  const out = { ...(a || {}) };
+  for (const [k, v] of Object.entries(b || {})) {
+    out[k] = MERGED.includes(k) && v && typeof v === 'object' && !Array.isArray(v) ? { ...(out[k] || {}), ...v } : v;
+  }
+  return out;
+};
+/** no answer from the server (offline, timeout): the save can wait; a 4xx/5xx answer can't */
+export const isOfflineError = (err) => !!err && !err.response && (
+  !!err.request || err.code === 'ECONNABORTED' || err.code === 'ERR_NETWORK' || /network|timeout|taking too long/i.test(String(err.message || ''))
+);
 
 export default function ResumeProvider({ children }) {
   const { token, isGuest, user } = useContext(AuthContext);
@@ -68,6 +84,74 @@ export default function ResumeProvider({ children }) {
   /** is an action running? isPending("update", id) / isPending("fetch") */
   const isPending = useCallback((action, id) => !!pending[id ? `${action}:${id}` : action], [pending]);
 
+  // { [resumeId]: changes not on the server yet }, mirrored in AsyncStorage (survives closing the app)
+  const pendingSavesRef = useRef({});
+  const [pendingSync, setPendingSync] = useState(0);
+  const writePending = async (next) => {
+    pendingSavesRef.current = next;
+    setPendingSync(Object.keys(next).length);
+    try { await AsyncStorage.setItem(PENDING_KEY, JSON.stringify(next)); } catch (e) { console.warn('[resume] offline copy not kept:', e?.message); }
+  };
+  const readPending = async () => {
+    try {
+      const raw = await AsyncStorage.getItem(PENDING_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      pendingSavesRef.current = parsed && typeof parsed === 'object' ? parsed : {};
+    } catch { pendingSavesRef.current = {}; }
+    setPendingSync(Object.keys(pendingSavesRef.current).length);
+    return pendingSavesRef.current;
+  };
+  // the server's copy with the changes still waiting on this phone on top
+  const withPending = (r) => (r?._id && pendingSavesRef.current[r._id] ? { ...mergeChanges(r, pendingSavesRef.current[r._id]), _pendingSync: true } : r);
+
+  const flushingRef = useRef(null);
+  /** send every waiting save (one per resume, oldest first); stops at the first one that still can't reach the server */
+  const flushPendingSaves = () => {
+    if (flushingRef.current) return flushingRef.current;
+    flushingRef.current = (async () => {
+      try {
+        if (isGuest || !token) return 0;
+        await readPending();
+        let sent = 0;
+        for (const id of Object.keys(pendingSavesRef.current)) {
+          const changes = pendingSavesRef.current[id];
+          try {
+            const res = await runInGroup(`resume:${id}`, () => resumeApi.updateResume(id, changes));
+            const { [id]: _done, ...rest } = pendingSavesRef.current;
+            await writePending(rest);
+            if (res?.success && res.data) replaceResume(withPending(res.data));
+            sent++;
+          } catch (err) {
+            if (isOfflineError(err)) break;
+            // the server said no (deleted resume, bad data): don't retry it forever
+            console.warn('[resume] waiting save dropped:', err?.message);
+            const { [id]: _bad, ...rest } = pendingSavesRef.current;
+            await writePending(rest);
+          }
+        }
+        return sent;
+      } finally {
+        flushingRef.current = null;
+      }
+    })();
+    return flushingRef.current;
+  };
+
+  // back online / back in the app: send what is waiting
+  useEffect(() => {
+    if (isGuest || !token) return undefined;
+    readPending().then((p) => { if (Object.keys(p).length) flushPendingSaves(); });
+    const subs = [];
+    try {
+      const NetInfo = require('@react-native-community/netinfo').default;
+      const off = NetInfo?.addEventListener?.((s) => { if (s?.isConnected && Object.keys(pendingSavesRef.current).length) flushPendingSaves(); });
+      if (off) subs.push(off);
+    } catch { /* no NetInfo: app focus and the next save still send it */ }
+    const appSub = AppState?.addEventListener?.('change', (s) => { if (s === 'active' && Object.keys(pendingSavesRef.current).length) flushPendingSaves(); });
+    if (appSub) subs.push(() => appSub.remove());
+    return () => subs.forEach((f) => { try { f(); } catch {} });
+  }, [token, isGuest]);
+
   const persistGuest = async (list) => {
     try { await AsyncStorage.setItem('guestResumes', JSON.stringify(list)); }
     catch (e) { console.warn('[resume] guest save failed:', e?.message); }
@@ -93,7 +177,7 @@ export default function ResumeProvider({ children }) {
       }
       const response = await resumeApi.getResumes(force);
       if (response?.success) {
-        setResumes(Array.isArray(response.data) ? response.data : []);
+        setResumes(Array.isArray(response.data) ? response.data.map(withPending) : []);
         setCreationsUsed(response.creationsUsed !== undefined ? response.creationsUsed : (response.data?.length || 0));
         return true;
       }
@@ -201,12 +285,25 @@ export default function ResumeProvider({ children }) {
           await persistGuest(resumesRef.current);
           return updated;
         }
-        const response = await resumeApi.updateResume(resumeId, changes);
-        if (response?.success && response.data) {
-          replaceResume(response.data);
-          return response.data;
+        // saves still waiting for this resume go first, in the same request
+        const waiting = pendingSavesRef.current[resumeId];
+        const toSend = waiting ? mergeChanges(waiting, changes) : changes;
+        try {
+          const response = await resumeApi.updateResume(resumeId, toSend);
+          if (waiting) { const { [resumeId]: _sent, ...rest } = pendingSavesRef.current; await writePending(rest); }
+          if (response?.success && response.data) {
+            replaceResume(response.data);
+            return response.data;
+          }
+          return null;
+        } catch (err) {
+          if (!isOfflineError(err)) throw err;
+          // no connection: keep it on this phone and show it as saved; it is sent when the connection is back
+          await writePending({ ...pendingSavesRef.current, [resumeId]: toSend });
+          const local = { ...mergeChanges(latest || { _id: resumeId }, changes), _pendingSync: true, updatedAt: new Date().toISOString() };
+          replaceResume(local);
+          return local;
         }
-        return null;
       });
     } catch (err) {
       console.warn('[resume] update failed:', err?.message);
@@ -244,7 +341,7 @@ export default function ResumeProvider({ children }) {
         const newResume = {
           _id: `guest_${Date.now()}`,
           personalInfo: {
-            firstName: file.name?.split('.')[0] || 'Resume',
+            firstName: '',
             lastName: '',
             email: '',
             phone: '',
@@ -351,24 +448,6 @@ export default function ResumeProvider({ children }) {
         setResumes((list) => [newResume, ...list]);
         setCurrentResume(newResume);
         setUploadProgress(100);
-
-        // Notify user about missing critical fields
-        const missingFields = [];
-        const pi = newResume.personalInfo || {};
-        if (!pi.title && !newResume.professionalSummary?.title) {
-          missingFields.push('Professional Title');
-        }
-        if (!pi.location && !pi.city) {
-          missingFields.push('Location');
-        }
-        if (missingFields.length > 0) {
-          setTimeout(() => {
-            Alert.alert(
-              'Missing Fields ⚠️',
-              `Your uploaded resume did not contain: ${missingFields.join(' & ')}. Please fill these in on Step 1 — Personal Info.`
-            );
-          }, 800);
-        }
 
         return newResume;
       }
@@ -697,6 +776,8 @@ export default function ResumeProvider({ children }) {
         setCurrentResume,
         duplicateResume,
         clearError: () => setError(null),
+        pendingSync,
+        flushPendingSaves,
       }}
     >
       {children}

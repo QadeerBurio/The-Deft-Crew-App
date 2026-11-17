@@ -61,7 +61,7 @@ global.__DEV__ = false;
   let m = mount(React.createElement(Dashboard, { navigation, route: { params: {} } }));
   await settle(m);
   let t = H.textOf(m.tree);
-  ok(t.includes("resume completion") && t.includes("1 / 2 resumes used"), "the dashboard renders its resume", t.slice(0, 160));
+  ok(t.includes("resume strength") && !t.includes("resume completion") && t.includes("1 / 2 resumes used"), "the dashboard renders its resume", t.slice(0, 160));
   ok(!byTest(m.tree, "resume-recommended") && !t.includes("recommended for you") && !H.find(m.tree, (x) => x.type === "CareerInvites"), "careerMatching off: no 'recommended for you', no invites card");
   ok(recCalls.length === 0, "…and no recommendations request", JSON.stringify(recCalls));
 

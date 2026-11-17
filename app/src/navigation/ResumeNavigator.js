@@ -16,6 +16,7 @@ import ResumeSettingsScreen from "../screens/Resume/ResumeSetting";
 import ResumeAnalyticsScreen from "../screens/Resume/ResumeAnalytics";
 import ResumeShareScreenBase from "../screens/Resume/ResumeShare";
 import ResumeStudioScreenBase from "../screens/Resume/ResumeStudio";
+import ResumeImportReviewScreen from "../screens/Resume/ResumeImportReview";
 const ResumeShareScreen = accountOnly(ResumeShareScreenBase, { title: "share resume" });
 const ResumeStudioScreen = accountOnly(ResumeStudioScreenBase, { title: "resume studio" }); // FLAG_RESUME_STUDIO_V2
 
@@ -66,6 +67,12 @@ export default function ResumeStack() {
         }}
       />
       
+      <Stack.Screen
+        name="ResumeImportReview"
+        component={ResumeImportReviewScreen}
+        options={{ headerShown: false }}
+      />
+
       <Stack.Screen 
         name="ResumeTemplate" 
         component={ResumeTemplateScreen}
