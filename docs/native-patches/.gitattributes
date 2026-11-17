@@ -1,3 +1,0 @@
-# patches must apply to LF native files byte for byte; icons are binary
-*.patch -text
-*.png binary

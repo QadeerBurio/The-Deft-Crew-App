@@ -27,6 +27,10 @@ module.exports = ({ config }) => {
 
       ...(configured
         ? [
+            // Android: advertising-ID collection ON by default in the manifest (iOS stays off: Apple's Allow first).
+            // Listed BEFORE the Meta plugin: Expo runs the plugins' manifest changes last-listed first, so this one runs
+            // after the Meta plugin has written its entries (plugins/withAndroidAdIdDefault.js)
+            "./plugins/withAndroidAdIdDefault",
             [
               "react-native-fbsdk-next",
               {
