@@ -9,6 +9,16 @@ module.exports = ({ config }) => {
     /^\d{5,25}$/.test(appID) &&
     clientToken.length >= 8;
 
+  // A production build on EAS without the Meta IDs would send Meta nothing (no installs, no events): stop it here.
+  // Only on the EAS build worker (EAS_BUILD=true) for the "production" profile; local runs, previews and
+  // `eas update` aren't affected.
+  if (process.env.EAS_BUILD === "true" && String(process.env.EAS_BUILD_PROFILE || "") === "production" && !configured) {
+    throw new Error(
+      "tdc: this production build needs META_APP_ID and META_CLIENT_TOKEN (EAS environment \"production\"). " +
+      "Without them Meta sees no installs or events from this build."
+    );
+  }
+
   return {
     ...config,
 

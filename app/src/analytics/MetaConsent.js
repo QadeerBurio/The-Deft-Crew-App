@@ -20,6 +20,7 @@ import {
   setMetaUser, refreshFlags, subscribe, onAppState, requestTracking, shouldShowPrescreen,
 } from "./metaEvents";
 import { checkRedemptions } from "./metaRedemptions";
+import { reportMetaBuild } from "./metaBuildReport";
 
 // the app tour's own key: "pending" from a fresh install until it's finished or skipped (TourProvider.js)
 const TOUR_DEVICE_KEY = "@tdc_tour_device_v1_done";
@@ -77,6 +78,8 @@ export default function MetaEventsHost() {
   useEffect(() => {
     setMetaUser(userId, userId ? { email: user?.email, phone: user?.phone } : null).then(() => checkRedemptions());
   }, [userId, user?.email, user?.phone]);
+  // once per build: tell the server whether this build carries the Meta IDs (nothing about the student or the phone)
+  useEffect(() => { reportMetaBuild(); }, []);
   // the server's switch: at launch, on every return to the front, and every 5 minutes while open
   useEffect(() => {
     if (AppState.currentState === "active") onAppState("active"); // reads the switch now
