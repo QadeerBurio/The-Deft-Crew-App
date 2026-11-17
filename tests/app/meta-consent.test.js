@@ -65,6 +65,7 @@ const MOCKS = {
   "../engagement/tour/tourGate": { holdTour: (k) => held.add(k), releaseTour: (k) => held.delete(k) },
   "./metaEvents": fakeMeta,
   "./metaRedemptions": { checkRedemptions: async () => { meta.redemptionChecks++; return 0; } },
+  "./metaBuildReport": { reportMetaBuild: async () => { meta.buildReports = (meta.buildReports || 0) + 1; return "sent"; } },
 };
 const file = path.join(SRC, "analytics/MetaConsent.js");
 const { code } = babel.transformSync(fs.readFileSync(file, "utf8"), { filename: file, babelrc: false, configFile: false, plugins: [[reqApp.resolve("@babel/plugin-transform-react-jsx"), { runtime: "classic" }], reqApp.resolve("@babel/plugin-transform-modules-commonjs")] });
