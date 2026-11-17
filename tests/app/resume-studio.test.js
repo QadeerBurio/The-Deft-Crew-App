@@ -112,6 +112,7 @@ function makeRN(extra = {}) {
 const textOf = (n) => (n == null || n === false ? "" : typeof n === "string" || typeof n === "number" ? String(n) : Array.isArray(n) ? n.map(textOf).join("") : textOf(n.props?.children));
 const find = (n, pred) => { let hit = null; (function w(x) { if (!x || hit || typeof x !== "object") return; if (Array.isArray(x)) return x.forEach(w); if (pred(x)) { hit = x; return; } w(x.props?.children); })(n); return hit; };
 const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel === label);
+const findAll = (n, pred) => { const out = []; (function w(x) { if (!x || typeof x !== "object") return; if (Array.isArray(x)) return x.forEach(w); if (pred(x)) out.push(x); w(x.props?.children); })(n); return out; };
 
 (async () => {
   // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 api/resumeStudioApi.js \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -185,6 +186,7 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
   const { rn } = makeRN({ Alert: { alert: (title, text, buttons) => { alerts.push({ title, text }); const yes = (buttons || []).find((b) => b.text === "yes"); if (yes) yes.onPress(); } }, Switch: "Switch", TextInput: "TextInput" });
   const icons = { "@expo/vector-icons": { Ionicons: "Icon", MaterialCommunityIcons: "Icon" } };
   const sent = [];
+  const savedPdfs = [];
   let enabled = true;
   let draftState;
   const freshDraft = () => ({
@@ -209,7 +211,18 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
       confirmSource: async (id, hash) => { sent.push({ what: "confirm", id, hash }); startError = null; return { verified: true }; },
       startTailoring: async (body, key) => { sent.push({ what: "start", body, key }); if (startError) throw startError; return { id: "tj1", status: "queued" }; },
       draft: async () => draftState,
-      approve: async (id, body) => { sent.push({ what: "approve", id, body }); return { version: { id: "v1", label: body.label, target: { kind: "tdc_job", jobId: "j1", title: "Frontend Developer" } }, created: true }; },
+      // accept / undo a section (or everything): accept takes only the checked ("ok") changes
+      decideBulk: async (id, revision, bulk) => {
+        sent.push({ what: "bulk", id, revision, bulk });
+        for (const s of draftState.suggestions) {
+          if (bulk.section && (s.section || "") !== bulk.section) continue;
+          if (bulk.decision === "accepted" && s.status !== "ok") continue;
+          s.decision = bulk.decision;
+        }
+        draftState = { ...draftState, revision: draftState.revision + 1, unresolved: draftState.suggestions.filter((x) => x.decision === "pending").length };
+        return draftState;
+      },
+      approve: async (id, body) => { sent.push({ what: "approve", id, body }); return { version: { id: "v1", label: body.label, templateId: body.templateId === "jakes" ? "jakes" : undefined, target: { kind: "tdc_job", jobId: "j1", title: "Frontend Developer" } }, created: true }; },
       deleteDraft: async () => ({}),
       versions: async () => [{ id: "v1", label: "Frontend - Bright", target: { kind: "tdc_job" }, approvedAt: "2026-11-03T00:00:00Z", usedInApplication: true, deletable: false }, { id: "v2", label: "Pasted role", target: { kind: "pasted" }, approvedAt: "2026-11-02T00:00:00Z", usedInApplication: false, deletable: true }],
       deleteVersion: async (id) => { sent.push({ what: "deleteVersion", id }); return {}; },
@@ -240,6 +253,8 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
     "../../ui": { ScreenHeader: (p) => React.createElement("Header", { accessibilityLabel: "header" }, p.title) },
     "../../api/resumeApi": resumeApiMock,
     "../../api/resumeStudioApi": studioMock,
+    "react-native-webview": { WebView: "WebView" },
+    "../../utils/resumeFiles": { makeResumePdf: async (r) => { savedPdfs.push(r); return { uri: "file:///cache/x.pdf", name: "x.pdf", pages: 1 }; }, saveResumePdf: async (f) => { savedPdfs.push(f); return { status: "saved", message: "Saved to Downloads" }; } },
   });
   const ResumeStudio = load(path.join(SRC, "screens/Resume/ResumeStudio.js")).default;
   const settle = async (root) => { for (let i = 0; i < 4; i++) { await tick(15); root.rerender(); } };
@@ -402,6 +417,84 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
   t = textOf(root.tree);
   ok(t.includes("insufficient information") && !/\b50\b/.test(t), "no ai suggestions: says insufficient information, no made-up numbers", t.slice(0, 300));
   ok(byLabel(root.tree, "continue to approve").props.disabled === false, "the student's own resume can still be approved in the ats layout");
+
+
+  console.log("\u2500\u2500 strong tailoring review: sections, accept all / undo, highlights, keywords, template");
+  {
+    const S = load(path.join(SRC, "screens/Resume/ResumeStudio.js"));
+    const cw = S.changedWords("Helped with screening 120 CVs for three roles", "Screened 120 CVs for three open roles");
+    ok(cw.filter((x) => x.isNew).map((x) => x.w).join(" ") === "Screened open" && cw.map((x) => x.w).join("") === "Screened 120 CVs for three open roles", "the new words are highlighted, the text stays whole", JSON.stringify(cw));
+    ok(S.keywordLine({ before: { covered: ["a"], total: 17 }, after: { covered: ["a", "b", "c"], missing: [], total: 17 } }) === "keywords covered 1 → 3 of 17", "'keywords covered 1 → 3 of 17'");
+    ok(S.pagesLine({ after: 1.1, budget: 1 }) === "about 1 page" && /aim for 1/.test(S.pagesLine({ after: 1.6, budget: 1 })), "about how many pages, and a nudge when it's over the budget");
+    ok(S.sectionOfPath("personalInfo.title") === "headline" && S.sectionOfPath("condense.workExperience[2]") === "experience" && S.sectionOfPath("order.sections") === "layout" && S.sectionOfPath("workExperience[0].achievements[1]") === "experience", "every change belongs to a section");
+    const base = freshDraft();
+    draftState = {
+      ...base, unresolved: 6, defaultLabel: "Ayesha Khan – HR Intern (Engro Corporation)", target: { ...base.target, title: "HR Intern", company: "Engro Corporation" },
+      content: { personalInfo: { firstName: "Ayesha", lastName: "Khan", title: "BBA (HRM) student | aspiring HR Intern" }, professionalSummary: { summary: "BBA student in Human Resource Management." }, workExperience: [], education: [], projects: [], skills: [], certifications: [], languages: [], sectionOrder: ["experience", "projects"] },
+      scores: { before: 65, after: 74 },
+      keywords: { before: { covered: ["Excel"], missing: [], total: 17 }, after: { covered: ["Excel", "Screen CVs", "interviews"], missing: ["onboarding"], total: 17 } },
+      pages: { before: 1.2, after: 0.9, budget: 1 },
+      suggestions: [
+        { suggestionId: "h1", kind: "reword", section: "headline", fieldPath: "personalInfo.title", original: "BBA Student", proposed: "BBA (HRM) student | aspiring HR Intern", reason: "aims at the job", sourceFactIds: ["fact_1"], status: "ok", riskFlags: [], decision: "pending" },
+        { suggestionId: "e1", kind: "reword", section: "experience", fieldPath: "workExperience[0].achievements[0]", original: "Helped with screening 120 CVs for three roles", proposed: "Screened 120 CVs for three open roles", reason: "job words", sourceFactIds: ["fact_4"], status: "ok", riskFlags: [], decision: "pending" },
+        { suggestionId: "e2", kind: "reword", section: "experience", fieldPath: "workExperience[0].achievements[2]", original: "Updated employee records in Excel", proposed: "Maintained employee records, cutting hiring time by 30%", reason: "impact", sourceFactIds: [], status: "needs_user_confirmation", riskFlags: [{ flag: "new_number", values: ["30%"] }], decision: "pending" },
+        { suggestionId: "e3", kind: "condense", section: "experience", fieldPath: "condense.workExperience[2]", original: "Handled cash and card payments\nTrained 2 new cashiers on the till", proposed: "Handled cash and card payments; trained 2 new cashiers.", reason: "less relevant", sourceFactIds: [], status: "ok", riskFlags: [], decision: "pending" },
+        { suggestionId: "e4", kind: "reorder", section: "experience", fieldPath: "order.workExperience", original: "", proposed: "[1,0,2]", reason: "most relevant first", sourceFactIds: [], status: "ok", riskFlags: [], decision: "pending" },
+        { suggestionId: "l1", kind: "reorder", section: "layout", fieldPath: "order.sections", original: "", proposed: "[\"experience\",\"projects\"]", reason: "projects up", sourceFactIds: [], status: "ok", riskFlags: [], decision: "pending" },
+      ],
+    };
+    studioMock.lastDraft = async () => "d1";
+    studioMock.flushPending = async () => ({ draft: draftState });
+    let r = mount(React.createElement(ResumeStudio, { route: { params: {} }, navigation }));
+    await settle(r);
+    let tx = textOf(r.tree);
+    ok(tx.includes("match before 65% → after 74%") && tx.includes("keywords covered 1 → 3 of 17") && tx.includes("not in your resume: onboarding") && tx.includes("about 1 page"), "match before → after, keywords covered N of M (and which), about how many pages", tx.slice(0, 400));
+    ok(["headline", "experience", "layout"].every((k) => find(r.tree, (x) => x.props?.testID === `section-${k}`)) && !find(r.tree, (x) => x.props?.testID === "section-summary"), "changes are grouped by section");
+    ok(tx.includes("experience 3 · one line") && tx.includes("as one line (less relevant for this job; kept, shorter)"), "a one-line entry says it's kept, only shorter");
+    const hl = findAll(r.tree, (x) => x.type === "Text" && x.props?.style && x.props.style.backgroundColor);
+    ok(hl.some((x) => textOf(x) === "Screened") && hl.some((x) => textOf(x) === "open"), "the suggested bullet highlights its new words");
+    byLabel(r.tree, "accept all checked changes").props.onPress();
+    await settle(r);
+    const bulk = sent.filter((s) => s.what === "bulk").at(-1);
+    ok(bulk && bulk.bulk.decision === "accepted" && !bulk.bulk.section && draftState.suggestions.find((s) => s.suggestionId === "e2").decision === "pending" && draftState.suggestions.filter((s) => s.decision === "accepted").length === 5, "accept all: every checked change; the '30%' one still waits for the student", JSON.stringify(bulk));
+    byLabel(r.tree, "undo experience section").props.onPress();
+    await settle(r);
+    ok(sent.filter((s) => s.what === "bulk").at(-1).bulk.section === "experience" && draftState.suggestions.filter((s) => s.section === "experience").every((s) => s.decision === "rejected") && draftState.suggestions.find((s) => s.suggestionId === "h1").decision === "accepted", "undo one section: only that section goes back to the original");
+    byLabel(r.tree, "accept experience section").props.onPress();
+    await settle(r);
+    ok(draftState.suggestions.filter((s) => s.section === "experience" && s.status === "ok").every((s) => s.decision === "accepted"), "accept that section again");
+    byLabel(r.tree, "edit experience 3 · one line").props.onPress();
+    await settle(r);
+    ok(!!byLabel(r.tree, "edit experience 3 · one line") && find(r.tree, (x) => x.type === "TextInput" && x.props.accessibilityLabel === "edit experience 3 · one line"), "a one-line entry can be edited by hand too");
+    byLabel(r.tree, "cancel edit").props.onPress();
+    await settle(r);
+    // approve: the chosen template, preview in it, the default name
+    draftState.suggestions.find((s) => s.suggestionId === "e2").decision = "rejected";
+    draftState = { ...draftState, unresolved: 0 };
+    r.rerender();
+    await settle(r);
+    byLabel(r.tree, "continue to approve").props.onPress();
+    await settle(r);
+    tx = textOf(r.tree);
+    ok(find(r.tree, (x) => x.type === "TextInput" && x.props.accessibilityLabel === "version name").props.value === "Ayesha Khan – HR Intern (Engro Corporation)", "the version is named '<Name> – <Job title> (<Company>)'");
+    ok(["Modern", "Classic", "Compact", "Minimal", "Executive"].every((n) => byLabel(r.tree, `template ${n}`)), "the five templates to choose from");
+    byLabel(r.tree, "template Compact").props.onPress();
+    await settle(r);
+    byLabel(r.tree, "preview in this template").props.onPress();
+    await settle(r);
+    const wv = find(r.tree, (x) => x.props?.testID === "studio-template-preview");
+    ok(wv && /data-template="jakes"/.test(wv.props.source.html) && wv.props.source.html.includes("aspiring HR Intern"), "preview: the tailored resume in the chosen template");
+    byLabel(r.tree, "close preview").props.onPress();
+    for (const sw of findAll(r.tree, (x) => x.type === "Switch")) sw.props.onValueChange(true);
+    await settle(r);
+    byLabel(r.tree, "approve").props.onPress();
+    await settle(r);
+    const ap = sent.filter((s) => s.what === "approve").at(-1);
+    ok(ap.body.templateId === "jakes" && ap.body.label === "Ayesha Khan – HR Intern (Engro Corporation)", "approve saves the template and the name", JSON.stringify(ap.body));
+    byLabel(r.tree, "download pdf").props.onPress();
+    await settle(r);
+    ok(savedPdfs.some((x) => x.template === "jakes" && x.personalInfo?.title?.includes("aspiring")) && savedPdfs.some((x) => x.name === "Ayesha Khan – HR Intern (Engro Corporation).pdf"), "download: the same template, saved on the phone with the version's name", JSON.stringify(savedPdfs.map((x) => x.template || x.name)));
+  }
 
   console.log("\u2500\u2500 accessibility");
   const all = [];
