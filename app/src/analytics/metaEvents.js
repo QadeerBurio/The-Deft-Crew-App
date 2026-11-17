@@ -190,6 +190,8 @@ function applyIds(s, force = false) {
   const matching = matchingAllowed() && state.matching ? { email: state.matching.email || undefined, phone: state.matching.phone || undefined } : null;
   const sig = JSON.stringify({ on, matching });
   if (!force && state.applied === sig) return;
+  // iPhone: Meta SDK 17+ reads Apple's tracking answer itself on iOS 17 and later (the flag is ignored there), but
+  // iOS 15 and 16 (the app supports 15.1+) may still use it: kept on purpose
   if (isIOS()) s.Settings.setAdvertiserTrackingEnabled?.(on);
   s.Settings.setAdvertiserIDCollectionEnabled(on);
   // advanced matching: only with identifiers allowed; an empty object clears what the SDK kept

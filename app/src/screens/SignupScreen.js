@@ -865,7 +865,7 @@ export default function SignupScreen({ navigation }) {
         return;
       }
 
-      // account created (no email code needed): Meta sign-up event, sent only after consent
+      // account created (no email code needed): Meta sign-up event (anonymous unless the student allowed identifiers)
       metaEvents.registration(signupResponse.data?.user?._id || signupResponse.data?.user?.id);
 
       // STEP 2: auto-login. Setting the user switches to the app by itself.

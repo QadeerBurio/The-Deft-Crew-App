@@ -126,7 +126,7 @@ const ApplicationForm = ({ route, navigation }) => {
     const result = await response.json();
 
     if (response.ok) {
-      // application saved by the server: Meta event, after consent only
+      // application saved by the server: Meta event (anonymous unless the student allowed identifiers; off if ad measurement is off)
       metaEvents.scholarshipApplied(program?._id);
       Alert.alert("Success 🚀", "Your application has been submitted successfully!");
       // Navigation.goBack() or clear state here
