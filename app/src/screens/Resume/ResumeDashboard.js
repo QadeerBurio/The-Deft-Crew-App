@@ -41,6 +41,9 @@ import CareerInvites from "../../components/CareerInvites";
 import useAction from '../../hooks/useAction';
 import { TIMEOUT, withTimeout } from '../../config/timeouts';
 import { studioEnabled } from "../../api/resumeStudioApi";
+import ResumeStrength from "../../components/ResumeStrength";
+import { resumeStrength, resumeName } from "../../utils/resumeRules";
+import { makeResumePdf, saveResumePdf, openSavedPdf } from "../../utils/resumeFiles";
 const { width } = Dimensions.get('window');
 const MAX_CREATIONS = 2;
 
@@ -322,20 +325,19 @@ const ResumeDashboardScreen = ({ navigation, route }) => {
     if (!requireAccount()) return;
     if (!resume) return Alert.alert('Error', 'No resume selected');
     exporter.run(async () => {
-      const html = renderResumeHTML(resume, resume.template || 'modern_ats', resume.customStyles || {}, true);
       setDownloadProgress(30);
-      const { uri } = await withTimeout(Print.printToFileAsync({ html, base64: false }), TIMEOUT.PDF, 'pdf');
-      setDownloadProgress(70);
-      const f = fileName(resume, 'Resume.pdf');
-      const fileUri = FileSystem.documentDirectory + f.name;
-      await FileSystem.copyAsync({ from: uri, to: fileUri });
+      const file = await makeResumePdf(resume);
       setDownloadProgress(100);
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, { mimeType: 'application/pdf', dialogTitle: `${f.first} ${f.last} Resume`, UTI: 'com.adobe.pdf' });
-      } else {
-        Alert.alert('✅ Success', `Resume saved as: ${f.name}`);
+      const r = await saveResumePdf(file);
+      if (r.status === 'saved') {
+        bump(resume, 'downloadCount');
+        const buttons = Platform.OS === 'android' && r.uri ? [{ text: 'ok', style: 'cancel' }, { text: 'open', onPress: () => { openSavedPdf(r.uri); } }] : [{ text: 'ok' }];
+        Alert.alert(r.message, file.name, buttons);
+      } else if (r.status === 'shared') {
+        bump(resume, 'downloadCount');
+      } else if (r.status === 'denied') {
+        Alert.alert('not saved', r.message);
       }
-      bump(resume, 'downloadCount');
     });
   };
 
@@ -388,7 +390,7 @@ ${resume?.professionalSummary?.summary || ''}
 🎓 Education: ${resume?.education?.length || 0} degrees
 🔧 Skills: ${resume?.skills?.map(s => s.name).join(', ') || 'None listed'}
 
-${resume?.completionPercentage || 0}% Complete
+Resume strength: ${resumeStrength(resume).score}%
       `;
       const result = await Share.share({
         message: shareMessage,
@@ -740,7 +742,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
           {downloading ? (
             <View style={styles.downloadProgressContainer}>
               <ActivityIndicator size="large" color={T.ink} />
-              <Text style={styles.downloadProgressText}>{downloadProgress}% Complete</Text>
+              <Text style={styles.downloadProgressText}>making your pdf… {downloadProgress}%</Text>
               <View style={styles.progressBar}>
                 <View style={[styles.progressFill, { width: `${downloadProgress}%` }]} />
               </View>
@@ -905,11 +907,11 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                         accessibilityRole="button"
                         accessibilityState={{ selected: on }}
                       >
-                        <Text style={[RD.chipText, on && RD.chipTextOn]}>
-                          {(resume?.personalInfo?.firstName || 'resume').toLowerCase()}
+                        <Text style={[RD.chipText, on && RD.chipTextOn]} numberOfLines={1}>
+                          {resumeName(resume)}
                         </Text>
-                        <Text style={[RD.chipPct, on && RD.chipTextOn]}>
-                          {resume?.completionPercentage || 0}%
+                        <Text style={[RD.chipPct, on && RD.chipTextOn]} accessibilityLabel={`resume strength ${resumeStrength(resume).score} percent`}>
+                          strength {resumeStrength(resume).score}%
                         </Text>
                       </TouchableOpacity>
                     );
@@ -943,16 +945,15 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                     <View style={RD.dark}>
                       <View style={RD.darkTop}>
                         <ScoreRing
-                          value={hasAts ? atsScore : selectedResume?.completionPercentage || 0}
-                          label={hasAts ? 'ats' : 'done'}
+                          value={hasAts ? atsScore : resumeStrength(selectedResume).score}
+                          label={hasAts ? 'ats' : 'strength'}
                         />
                         <View style={{ flex: 1 }}>
                           <Text style={RD.darkLabel}>
-                            {hasAts ? 'ats compatibility score' : 'resume completion'}
+                            {hasAts ? 'ats compatibility score' : 'resume strength'}
                           </Text>
-                          <Text style={RD.darkName} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-                            {selectedResume?.personalInfo?.firstName || 'untitled'}{' '}
-                            {selectedResume?.personalInfo?.lastName || ''}
+                          <Text style={RD.darkName} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                            {resumeName(selectedResume)}
                           </Text>
                           {!!selectedResume?.professionalSummary?.title && (
                             <Text style={RD.darkSub} numberOfLines={1}>
@@ -963,16 +964,23 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                             <View
                               style={[
                                 RD.statusDot,
-                                { backgroundColor: getStatusColor(selectedResume?.completionPercentage || 0) },
+                                { backgroundColor: getStatusColor(resumeStrength(selectedResume).score) },
                               ]}
                             />
                             <Text style={RD.darkSub}>
-                              {getStatusText(selectedResume?.completionPercentage || 0).toLowerCase()}
-                              {hasAts ? ` · ${selectedResume?.completionPercentage || 0}% complete` : ''}
+                              {getStatusText(resumeStrength(selectedResume).score).toLowerCase()}
                             </Text>
                           </View>
                         </View>
                       </View>
+
+                      {/* what the % means, and exactly what is missing (tap) */}
+                      <ResumeStrength
+                        resume={selectedResume}
+                        dark
+                        style={{ marginTop: 12 }}
+                        onGoTo={(step) => navigation.navigate('ResumeBuilder', { resumeId: selectedResume._id, step })}
+                      />
 
                       <View style={RD.statsRow}>
                         <Text style={RD.stat}>

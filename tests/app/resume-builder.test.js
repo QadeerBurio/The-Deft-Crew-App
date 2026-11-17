@@ -58,6 +58,9 @@ global.__DEV__ = false;
   let route = { params: {} };
   const AuthContext = { _default: { user: { name: "Sana Khan", email: "sana@example.test" }, token: "tok", isGuest: false } };
   const picked = { file: null };
+  // AsyncStorage on the phone (drafts, saves waiting for a connection)
+  const store = new Map();
+  const storage = { getItem: async (k) => (store.has(k) ? store.get(k) : null), setItem: async (k, v) => { store.set(k, String(v)); }, removeItem: async (k) => { store.delete(k); } };
   const load = H.loader({
     react: React, "react-native": rn,
     "@expo/vector-icons": { Ionicons: "Icon" },
@@ -70,7 +73,7 @@ global.__DEV__ = false;
     "react-native-webview": { WebView: "WebView" },
     "../../services/templateService": { renderResumeHTML: () => "<html></html>" },
     "/app/src/api/resumeApi": { __esModule: true, default: resumeApi },
-    "@react-native-async-storage/async-storage": { __esModule: true, default: { getItem: async () => null, setItem: async () => {} } },
+    "@react-native-async-storage/async-storage": { __esModule: true, default: storage },
     "../analytics/metaEvents": { metaEvents: { aiResumeCreated() {} } },
   });
   const { default: ResumeProvider } = load(path.join(H.SRC, "context/ResumeContext.js"));
@@ -87,7 +90,7 @@ global.__DEV__ = false;
   const input = (m, placeholder) => H.find(m.tree, (n) => n.type === "TextInput" && n.props.placeholder === placeholder);
   const type = async (m, placeholder, value) => { input(m, placeholder).props.onChangeText(value); await H.tick(2); };
   const busy = (m, text) => { const b = btn(m, text); return !!(b?.props.disabled || b?.props.accessibilityState?.busy); };
-  const step = async (m, n) => { await tap(m, `step ${n}: ${["", "Personal", "Education", "Work", "Projects", "Certifications", "Target", "Skills"][n]}`, 30); };
+  const step = async (m, n) => { await tap(m, `step ${n}: ${["", "Personal", "Education", "Experience", "Projects", "Certificates", "Summary", "Skills"][n]}`, 30); };
   const R = () => server.list.find((x) => x._id === "r1");
 
   console.log("── item keys");
@@ -146,37 +149,87 @@ global.__DEV__ = false;
   await tap(m, "update education", 30);
   ok(R().education.length === 1 && R().education[0].degree === "MS (Hons)" && R().education[0].institution === "NED", "update changes MS, not some other item", JSON.stringify(R().education));
 
-  console.log("── a failed save never traps the student");
+  console.log("── no connection: the save is kept on the phone and sent later (never lost, never traps)");
   await step(m, 1);
   await type(m, "e.g. Senior Software Engineer", "Frontend Engineer");
   server.failPut = true;
+  const alertsBefore = alerts.length;
   await tap(m, "Continue", 40);
-  ok(alerts.some((a) => a.title === "not saved yet" && /taking too long, try again/.test(a.text)), "Continue with a failing save: 'not saved yet' with a plain reason", JSON.stringify(alerts.slice(-1)));
-  ok(/Education/.test(H.textOf(m.tree)) && /2\/7/.test(H.textOf(m.tree)), "…and the next step opens anyway");
+  ok(alerts.length === alertsBefore, "Continue offline: no error popup", JSON.stringify(alerts.slice(alertsBefore)));
+  ok(/Education/.test(H.textOf(m.tree)) && /2\/7/.test(H.textOf(m.tree)), "…and the next step opens");
   ok(!busy(m, "Continue"), "the Continue button works again");
+  const waiting = JSON.parse(store.get("resumePendingSaves") || "{}");
+  ok(waiting.r1?.personalInfo?.title === "Frontend Engineer", "the change is kept on the phone (survives closing the app)", store.get("resumePendingSaves"));
   server.failPut = false;
   await step(m, 1);
-  ok(input(m, "e.g. Senior Software Engineer").props.value === "Frontend Engineer", "back on step 1 the unsaved title is still there (not overwritten by old data)");
+  ok(input(m, "e.g. Senior Software Engineer").props.value === "Frontend Engineer", "back on step 1 the title is still there (not overwritten by old data)");
+  ok(R().personalInfo.title === "Dev", "…and not on the server yet");
+  await type(m, "e.g. John Doe", "Sana A. Khan");
   await tap(m, "save personal information", 30);
   const lastPut = server.puts[server.puts.length - 1];
-  ok(Object.keys(lastPut.changes).join() === "personalInfo" && lastPut.changes.personalInfo.title === "Frontend Engineer", "save sends only personalInfo", JSON.stringify(lastPut.changes));
+  ok(Object.keys(lastPut.changes).join() === "personalInfo" && lastPut.changes.personalInfo.title === "Frontend Engineer" && lastPut.changes.personalInfo.lastName === "A. Khan", "back online: the waiting change goes with the next save, only personalInfo", JSON.stringify(lastPut.changes));
+  ok(R().personalInfo.title === "Frontend Engineer" && !JSON.parse(store.get("resumePendingSaves") || "{}").r1, "…the server has it and nothing is waiting any more");
   ok(R().professionalSummary.summary === "old summary", "the summary is untouched by a personal-info save");
   const before = server.puts.length;
   input(m, "e.g. John Doe").props.onBlur(); await H.tick(20);
   ok(server.puts.length === before, "leaving a field without changing anything sends nothing");
 
-  console.log("── leaving with unsaved changes asks first");
+  console.log("── back never loses what was typed");
   await step(m, 3);
   await type(m, "e.g. Google", "Hire Co");
-  ok(nav.prevent?.enabled === true, "typed experience, not added: leaving is held");
+  await H.tick(350);
+  ok(nav.prevent?.enabled === true, "typed experience, not added: leaving goes through the keep check");
   nav.calls.length = 0;
+  const askedBefore = alerts.length;
   nav.goBack();
-  ok(alerts.some((a) => a.title === "your experience isn't added yet"), "back asks: keep editing / leave without it");
-  press("your experience isn't added yet", "keep editing");
-  ok(!nav.calls.some((c) => c[0] === "dispatch"), "keep editing: stays");
-  nav.goBack();
-  press("your experience isn't added yet", "leave without it");
-  ok(nav.calls.some((c) => c[0] === "dispatch"), "leave without it: leaves");
+  await H.tick(20);
+  ok(alerts.length === askedBefore && nav.calls.some((c) => c[0] === "dispatch"), "back leaves right away (no 'discard' question)");
+  ok(JSON.parse(store.get("resumeBuilderDraft:r1") || "{}").workCompany === "Hire Co", "…and what was typed is kept on the phone");
+  m.unmount();
+  m = await open({ resumeId: "r1" });
+  await step(m, 3);
+  await H.tick(20);
+  ok(input(m, "e.g. Google").props.value === "Hire Co", "opening the resume again: the typed experience is back");
+
+  console.log("── continue adds what is typed (no 'click add first' wall)");
+  await type(m, "e.g. Software Engineer", "Intern");
+  await tap(m, "Continue", 60);
+  ok(R().workExperience.some((w) => w.company === "Hire Co" && w.position === "Intern") && /4\/7/.test(H.textOf(m.tree)), "Continue saved the experience and moved on", JSON.stringify(R().workExperience));
+
+  console.log("── skip for now on optional sections");
+  ok(btn(m, "skip for now"), "projects (optional) has 'skip for now'");
+  await tap(m, "skip for now", 30);
+  ok(/5\/7/.test(H.textOf(m.tree)), "skip moves on without asking anything");
+  await step(m, 1);
+  ok(!btn(m, "skip for now"), "personal info (required) has no skip");
+
+  console.log("── required fields: only on finish, only the truly required ones");
+  ok(!H.find(m.tree, (n) => n.props?.testID === "finish-problems") && !/to finish, please add/.test(H.textOf(m.tree)), "no missing-field errors while editing");
+  m.unmount();
+  server.list.push({ _id: "r3", personalInfo: { firstName: "", email: "" }, education: [], workExperience: [], projects: [], certifications: [], skills: [] });
+  m = await open({ resumeId: "r3" });
+  await type(m, "e.g. John Doe", "");
+  await step(m, 7);
+  ok(!/to finish, please add/.test(H.textOf(m.tree)), "the last step before finishing: still no errors");
+  nav.calls.length = 0;
+  await tap(m, "Finish", 40);
+  const probs = H.find(m.tree, (n) => n.props?.testID === "finish-problems");
+  const ptext = H.textOf(probs);
+  ok(probs && /add your full name/.test(ptext) && /add your email or phone/.test(ptext) && /education, experience or a project/.test(ptext), "finish: name, email-or-phone and one of education/experience/projects", ptext);
+  ok(!/skill|summary|title|city|certificate/i.test(ptext), "optional sections never block finishing", ptext);
+  ok(!nav.calls.some((c) => c[1] === "ResumeView"), "finish didn't continue to the preview");
+  await tap(m, "go to field: add your full name", 30);
+  const fieldMsg = H.findAll(m.tree, (n) => n.type === "Text" && n.props?.accessibilityRole === "alert").map(H.textOf).join(" | ");
+  ok(/1\/7/.test(H.textOf(m.tree)) && /add your full name/.test(fieldMsg), "'go to field' opens personal info with the message on the field", fieldMsg);
+  await type(m, "e.g. John Doe", "Ali Raza");
+  await type(m, "+92 301 0000000", "03001234567");
+  await step(m, 4);
+  await type(m, "e.g. AI Resume Builder", "Library app");
+  await tap(m, "add project", 30);
+  await step(m, 7);
+  nav.calls.length = 0;
+  await tap(m, "Finish", 60);
+  ok(nav.calls.some((c) => c[0] === "navigate" && c[1] === "ResumeView"), "with name, phone and a project: finish opens the preview", JSON.stringify(nav.calls));
   m.unmount();
 
   console.log("── a new resume is created only when something is saved");
@@ -207,7 +260,8 @@ global.__DEV__ = false;
   picked.file = { uri: "file:///cv.pdf", name: "cv.pdf", size: 1000, mimeType: "application/pdf" };
   m = await open({});
   await tap(m, "upload & auto-fill", 900);
-  ok(server.creates === 1 && nav.calls.some((c) => c[0] === "navigate" && c[1] === "ResumeView"), "upload: one parsed resume, opened; no blank one", `${server.creates} ${JSON.stringify(nav.calls)}`);
+  ok(server.creates === 1 && nav.calls.some((c) => c[0] === "navigate" && c[1] === "ResumeImportReview"), "upload: one parsed resume, then the 'please check' review; no blank one", `${server.creates} ${JSON.stringify(nav.calls)}`);
+  ok(!alerts.some((a) => /Missing Fields/i.test(a.title)), "no 'missing fields' popup after an upload");
   picked.file = null;
   m.unmount();
 

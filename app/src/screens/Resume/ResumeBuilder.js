@@ -27,6 +27,9 @@ import * as DocumentPicker from 'expo-document-picker';
 import { WebView } from 'react-native-webview';
 import { renderResumeHTML } from '../../services/templateService';
 import resumeApi from '../../api/resumeApi';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import ResumeStrength from '../../components/ResumeStrength';
+import { finishErrors as requiredForFinish, defaultResumeName } from '../../utils/resumeRules';
 
 import { color as T, font as F } from "../../theme/tokens";
 import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
@@ -179,7 +182,7 @@ const ResumeBuilderScreen = () => {
 
   const navigation = useNavigation();
   const route = useRoute();
-  const { resumeId } = route.params || {};
+  const { resumeId, step: startStep } = route.params || {};
   // no resumeId = a new resume: nothing is created until the student saves something
   const isNew = !resumeId;
   const createdIdRef = useRef(null);
@@ -203,7 +206,13 @@ const ResumeBuilderScreen = () => {
   const finish = useAction(async (_c, task) => task(), runner('not saved'));
 
   // Step state: 1 to 7
-  const [activeStep, setActiveStep] = useState(1);
+  const [activeStep, setActiveStep] = useState(startStep >= 1 && startStep <= 7 ? startStep : 1);
+  // "edit" from the preview / the upload review opens the builder at that section
+  useEffect(() => { if (startStep >= 1 && startStep <= 7) setActiveStep(startStep); }, [startStep]);
+  // missing required fields: only after the student tries to finish
+  const [finishTried, setFinishTried] = useState(false);
+  // the resume's name (empty = the default "<Full name> – <title>")
+  const [resumeNameInput, setResumeNameInput] = useState('');
   const [aiGeneratingVisible, setAiGeneratingVisible] = useState(false);
   const [aiGeneratingStep, setAiGeneratingStep] = useState('');
   const [aiGeneratingProgress, setAiGeneratingProgress] = useState(0);
@@ -348,13 +357,13 @@ const ResumeBuilderScreen = () => {
   // 7. Skills
   // ============================================================
   const steps = [
-    { id: 1, name: 'Personal', icon: 'person-outline', title: 'Personal Info', desc: 'Your contact details and basic information' },
-    { id: 2, name: 'Education', icon: 'school-outline', title: 'Education', desc: 'Academic background and qualifications' },
-    { id: 3, name: 'Work', icon: 'briefcase-outline', title: 'Work Experience', desc: 'Work history with AI-enhanced bullet points' },
-    { id: 4, name: 'Projects', icon: 'folder-outline', title: 'Projects', desc: 'Portfolio projects with AI-optimized descriptions' },
-    { id: 5, name: 'Certifications', icon: 'ribbon-outline', title: 'Certifications', desc: 'Professional certifications and credentials' },
-    { id: 6, name: 'Target', icon: 'locate-outline', title: 'Target Job', desc: 'Role (any industry) and AI-generated summary' },
-    { id: 7, name: 'Skills', icon: 'hammer-outline', title: 'Skills', desc: 'Skills with AI suggestions — for any field' },
+    { id: 1, name: 'Personal', icon: 'person-outline', title: 'Personal Info', desc: 'Your name and how employers can reach you' },
+    { id: 2, name: 'Education', icon: 'school-outline', title: 'Education', desc: 'School, college or university' },
+    { id: 3, name: 'Experience', icon: 'briefcase-outline', title: 'Experience', desc: 'Internships, jobs and volunteering (optional)' },
+    { id: 4, name: 'Projects', icon: 'folder-outline', title: 'Projects', desc: 'Class, personal or work projects (optional)' },
+    { id: 5, name: 'Certificates', icon: 'ribbon-outline', title: 'Certificates', desc: 'Courses and certificates (optional)' },
+    { id: 6, name: 'Summary', icon: 'locate-outline', title: 'Summary & goal', desc: 'The job you want and 2–3 lines about you (optional)' },
+    { id: 7, name: 'Skills', icon: 'hammer-outline', title: 'Skills', desc: 'What you are good at — any field (optional)' },
   ];
 
   // Date format helper
@@ -407,6 +416,69 @@ const ResumeBuilderScreen = () => {
       }
     }
   }, [currentResume, activeStep]);
+
+  useEffect(() => {
+    setResumeNameInput(currentResume?.nameCustom ? (currentResume.name || '') : '');
+  }, [currentResume?._id]);
+  const lastNameSaved = useRef(null);
+  const saveResumeName = () => {
+    const value = resumeNameInput.trim();
+    if (!currentResume?._id || value === (currentResume.nameCustom ? currentResume.name || '' : '') || value === lastNameSaved.current) return;
+    lastNameSaved.current = value;
+    updateResume(currentResume._id, { name: value }).catch((e) => console.warn('[builder] name not saved yet:', e?.message));
+  };
+
+  // ---- autosave: every change is saved shortly after typing stops (offline: kept on the phone, sent later) ----
+  const autosaveTimer = useRef(null);
+  const autosaveReady = useRef(false);
+  useEffect(() => {
+    if (!autosaveReady.current) return undefined; // not the values loaded from the resume
+    clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => {
+      if (personalUnsaved()) savePersonalQuietly();
+      if (summaryUnsaved()) saveSummaryQuietly();
+    }, 1500);
+    return () => clearTimeout(autosaveTimer.current);
+  }, [pName, pTitle, pEmail, pPhone, pLocation, pLinkedin, pGithub, pPortfolio, targetSummary]);
+  useEffect(() => { const t0 = setTimeout(() => { autosaveReady.current = true; }, 0); return () => clearTimeout(t0); }, [currentResume?._id]);
+  useEffect(() => () => clearTimeout(autosaveTimer.current), []);
+
+  // ---- what is typed in an item form but not added yet: kept on the phone (back / closing the app never loses it) ----
+  const draftKey = `resumeBuilderDraft:${resumeId || 'new'}`;
+  const draftLoaded = useRef(false);
+  const draftValues = {
+    eduDegree, eduField, eduInstitution, eduGpa, eduSemester, eduStartDate, eduEndDate, eduCurrent,
+    workCompany, workPosition, workLocation, workStartDate, workEndDate, workCurrent, workDesc,
+    projName, projTech, projGithub, projLive, projDesc,
+    certName, certIssuer, certIssueDate, certUrl, certExpiryDate, skillInput,
+  };
+  const draftSetters = {
+    eduDegree: setEduDegree, eduField: setEduField, eduInstitution: setEduInstitution, eduGpa: setEduGpa, eduSemester: setEduSemester, eduStartDate: setEduStartDate, eduEndDate: setEduEndDate, eduCurrent: setEduCurrent,
+    workCompany: setWorkCompany, workPosition: setWorkPosition, workLocation: setWorkLocation, workStartDate: setWorkStartDate, workEndDate: setWorkEndDate, workCurrent: setWorkCurrent, workDesc: setWorkDesc,
+    projName: setProjName, projTech: setProjTech, projGithub: setProjGithub, projLive: setProjLive, projDesc: setProjDesc,
+    certName: setCertName, certIssuer: setCertIssuer, certIssueDate: setCertIssueDate, certUrl: setCertUrl, certExpiryDate: setCertExpiryDate, skillInput: setSkillInput,
+  };
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(draftKey);
+        const d = raw ? JSON.parse(raw) : null;
+        if (live && d && typeof d === 'object') for (const [k, v] of Object.entries(d)) if (draftSetters[k] && v !== '' && v !== false && v != null) draftSetters[k](v);
+      } catch { /* no draft */ }
+      draftLoaded.current = true;
+    })();
+    return () => { live = false; };
+  }, [draftKey]);
+  const draftSig = JSON.stringify(draftValues);
+  useEffect(() => {
+    if (!draftLoaded.current) return undefined;
+    const tm = setTimeout(() => {
+      const empty = Object.values(draftValues).every((v) => v === '' || v === false);
+      (empty ? AsyncStorage.removeItem(draftKey) : AsyncStorage.setItem(draftKey, draftSig)).catch(() => {});
+    }, 300);
+    return () => clearTimeout(tm);
+  }, [draftSig]);
 
   const showLimit = () => {
     if (limitShownRef.current) return;
@@ -564,7 +636,8 @@ const ResumeBuilderScreen = () => {
         await new Promise(resolve => setTimeout(resolve, 600));
         setAiGeneratingVisible(false);
         fetchResumes().catch(() => {});
-        navigation.navigate('ResumeView', { resumeId: parsed._id });
+        // "we filled in X sections, please check" before the builder
+        navigation.navigate('ResumeImportReview', { resumeId: parsed._id });
       } else {
         setAiGeneratingVisible(false);
         Alert.alert("couldn't read that file", 'please try another file.');
@@ -572,7 +645,11 @@ const ResumeBuilderScreen = () => {
     } catch (err) {
       setAiGeneratingVisible(false);
       if (err?.response?.data?.code === 'RESUME_CREATION_LIMIT_REACHED') { showLimit(); limitShownRef.current = false; }
-      else Alert.alert("couldn't read that file", errorMessage(err, "We couldn't read that resume file. Please try another file."));
+      else {
+        const code = err?.response?.data?.code;
+        const title = code === 'RESUME_SCAN' ? 'this file looks like a scan' : code === 'RESUME_UNSUPPORTED' ? "this file type can't be read" : "couldn't read that file";
+        Alert.alert(title, errorMessage(err, "We couldn't read that resume file. Please try another file."));
+      }
     } finally {
       clearInterval(progressInterval);
       uploadingRef.current = false;
@@ -650,60 +727,51 @@ const ResumeBuilderScreen = () => {
     return null;
   };
   const leaveUnsaved = !!unsavedItem() || personalUnsaved() || summaryUnsaved();
-  // header back, iOS swipe back and Android back all pass here
+  // header back, iOS swipe back and Android back all pass here: save what changed, keep what is typed, leave
   usePreventRemove(leaveUnsaved, ({ data }) => {
-    const item = unsavedItem();
-    const leave = () => navigation.dispatch(data.action);
-    if (item) {
-      Alert.alert(`your ${item} isn't added yet`, `tap "add ${item}" to keep it, or leave without it.`, [
-        { text: 'keep editing', style: 'cancel' },
-        { text: 'leave without it', style: 'destructive', onPress: leave },
-      ]);
-      return;
-    }
-    Alert.alert('save your changes?', 'you changed this step but it isn\'t saved yet.', [
-      { text: 'keep editing', style: 'cancel' },
-      { text: 'discard', style: 'destructive', onPress: leave },
-      {
-        text: 'save and leave',
-        onPress: () => moveStep.run(async () => {
-          await saveCurrentStep();
-          if (!personalUnsaved() || activeStep !== 1) leave();
-        }),
-      },
-    ]);
+    clearTimeout(autosaveTimer.current);
+    if (personalUnsaved()) savePersonalQuietly();
+    if (summaryUnsaved()) saveSummaryQuietly();
+    AsyncStorage.setItem(draftKey, JSON.stringify(draftValues)).catch(() => {});
+    navigation.dispatch(data.action);
   });
 
+  // the add-item buttons of each step (defined with their forms), so "continue" can add what is typed
+  const addHandlers = useRef({});
+  const optionalStep = (s) => s >= 2 && s <= 6;
+
+  // Continue: an item typed but not added is added first (never lost, never blocks)
   const handleNextStep = () => {
-    if (activeStep === 2 && (eduInstitution.trim() || eduDegree.trim())) {
-      Alert.alert(
-        'Unsaved Education details 🎓',
-        'You have typed education details but haven\'t clicked "Add Education" yet. Please click the yellow "Add Education" button to save them or clear the text fields to continue.'
-      );
-      return;
-    }
-    if (activeStep === 3 && (workCompany.trim() || workPosition.trim())) {
-      Alert.alert(
-        'Unsaved Experience details 💼',
-        'You have typed experience details but haven\'t clicked "Add Experience" yet. Please click the yellow "Add Experience" button to save them or clear the text fields to continue.'
-      );
-      return;
-    }
-    if (activeStep === 4 && (projName.trim() || projDesc.trim())) {
-      Alert.alert(
-        'Unsaved Project details 📂',
-        'You have typed project details but haven\'t clicked "Add Project" yet. Please click the yellow "Add Project" button to save them or clear the text fields to continue.'
-      );
-      return;
-    }
-    if (activeStep === 5 && (certName.trim() || certIssuer.trim())) {
-      Alert.alert(
-        'Unsaved Certification details 🏅',
-        'You have typed certification details but haven\'t clicked "Add Certification" yet. Please click the yellow "Add Certification" button to save them or clear the text fields to continue.'
-      );
+    const item = unsavedItem();
+    const add = item && { education: 2, experience: 3, project: 4, certification: 5 }[item] === activeStep && addHandlers.current[activeStep];
+    if (add) {
+      Promise.resolve(add({ quiet: true })).finally(() => goToStep((prev) => Math.min(7, prev + 1)));
       return;
     }
     goToStep((prev) => Math.min(7, prev + 1));
+  };
+  // skip for now: optional sections never block; what is typed stays on the phone for later
+  const handleSkipStep = () => goToStep((prev) => Math.min(7, prev + 1));
+
+  // Finish: only now are missing required fields shown (name, email or phone, one of education/experience/projects)
+  const finishProblems = () => requiredForFinish(buildLiveResume());
+  const handleFinish = () => finish.run(async () => {
+    const problems = finishProblems();
+    if (problems.length) {
+      setFinishTried(true);
+      return;
+    }
+    const resume = currentResume?._id ? currentResume : await ensureResume();
+    if (!resume?._id) return;
+    if (personalUnsaved()) await savePersonalInfo().catch(() => {});
+    if (summaryUnsaved()) await saveTargetSummary().catch(() => {});
+    navigation.navigate('ResumeView', { resumeId: resume._id });
+  });
+  const problems = finishTried ? finishProblems() : [];
+  const problemFor = (field) => problems.find((x) => x.field === field);
+  const fieldError = (field) => {
+    const pr = problemFor(field);
+    return pr ? <Text style={styles.fieldError} accessibilityRole="alert">{pr.text}</Text> : null;
   };
 
   // Add or update one item of a list section, on the latest saved list (by key, never by position)
@@ -766,7 +834,7 @@ const ResumeBuilderScreen = () => {
           </View>
         </View>
 
-        <Text style={styles.inputLabel}>Full Name *</Text>
+        <Text style={styles.inputLabel}>full name *</Text>
         <TextInput
           style={styles.textInput}
           placeholder="e.g. John Doe"
@@ -774,9 +842,11 @@ const ResumeBuilderScreen = () => {
           value={pName}
           onChangeText={setPName}
           onBlur={savePersonalQuietly}
+          accessibilityLabel="full name"
         />
+        {fieldError('name')}
 
-        <Text style={styles.inputLabel}>Professional Title *</Text>
+        <Text style={styles.inputLabel}>title (like "HR Intern")</Text>
         <TextInput
           style={styles.textInput}
           placeholder="e.g. Senior Software Engineer"
@@ -788,7 +858,7 @@ const ResumeBuilderScreen = () => {
 
         <View style={styles.inputGridRow}>
           <View style={{ flex: 1, marginRight: 8 }}>
-            <Text style={styles.inputLabel}>Email Address *</Text>
+            <Text style={styles.inputLabel}>email</Text>
             <TextInput
               style={styles.textInput}
               placeholder="john@example.com"
@@ -801,7 +871,7 @@ const ResumeBuilderScreen = () => {
             />
           </View>
           <View style={{ flex: 1, marginLeft: 8 }}>
-            <Text style={styles.inputLabel}>Phone Number *</Text>
+            <Text style={styles.inputLabel}>phone</Text>
             <TextInput
               style={styles.textInput}
               placeholder="+92 301 0000000"
@@ -813,10 +883,12 @@ const ResumeBuilderScreen = () => {
             />
           </View>
         </View>
+        <Text style={styles.fieldHint}>email or phone is needed so employers can reach you</Text>
+        {fieldError('contact')}
 
         <View style={styles.inputGridRow}>
           <View style={{ flex: 1, marginRight: 8 }}>
-            <Text style={styles.inputLabel}>Location *</Text>
+            <Text style={styles.inputLabel}>city</Text>
             <TextInput
               style={styles.textInput}
               placeholder="Karachi, Pakistan"
@@ -867,6 +939,18 @@ const ResumeBuilderScreen = () => {
           </View>
         </View>
 
+        <Text style={styles.inputLabel}>resume name</Text>
+        <TextInput
+          style={styles.textInput}
+          placeholder={defaultResumeName(buildLiveResume())}
+          placeholderTextColor={T.textFaint}
+          value={resumeNameInput}
+          onChangeText={setResumeNameInput}
+          onBlur={saveResumeName}
+          accessibilityLabel="resume name"
+        />
+        <Text style={styles.fieldHint}>only you see this. leave it empty to use "{defaultResumeName(buildLiveResume())}".</Text>
+
         <TouchableOpacity 
           style={[styles.yellowButton, { marginTop: 20 }]} 
           onPress={handleSaveStep1}
@@ -891,16 +975,20 @@ const ResumeBuilderScreen = () => {
   const renderStep2 = () => {
     const items = currentResume?.education || [];
 
-    const handleAddEducation = () => saveItem.run(async () => {
-      if (!eduDegree.trim() || !eduInstitution.trim()) {
-        Alert.alert('Required', 'Degree and University/Institution are mandatory.');
+    const handleAddEducation = ({ quiet } = {}) => saveItem.run(async () => {
+      if (!eduDegree.trim() && !eduInstitution.trim()) {
+        if (!quiet) Alert.alert('add a school or degree', 'type your school, college or university (or your degree) to add it.');
         return;
       }
+      const gradeText = eduGpa.trim();
+      const gpaNum = Number((gradeText.match(/^(\d(?:\.\d{1,2})?)(?:\s*\/\s*\d(?:\.\d{1,2})?)?$/) || [])[1]);
       const newItem = {
         degree: eduDegree.trim(),
         fieldOfStudy: eduField.trim(),
         institution: eduInstitution.trim(),
-        gpa: eduGpa.trim(),
+        // the grade as typed ("3.5/4", "A", "First Division"); a plain number also as gpa
+        grade: gradeText,
+        gpa: gpaNum > 0 && gpaNum <= 5 ? gpaNum : undefined,
         currentSemester: eduSemester.trim(),
         startDate: eduStartDate.trim(),
         endDate: eduCurrent ? '' : eduEndDate.trim(),
@@ -919,6 +1007,7 @@ const ResumeBuilderScreen = () => {
       setEduCurrent(false);
       setEditingEduIndex(null);
     });
+    addHandlers.current[2] = handleAddEducation;
 
     return (
       <View style={styles.formContainer}>
@@ -1053,9 +1142,9 @@ const ResumeBuilderScreen = () => {
   const renderStep3 = () => {
     const items = currentResume?.workExperience || [];
 
-    const handleAddWork = () => saveItem.run(async () => {
-      if (!workCompany.trim() || !workPosition.trim()) {
-        Alert.alert('Required', 'Company name and Position/Role are mandatory.');
+    const handleAddWork = ({ quiet } = {}) => saveItem.run(async () => {
+      if (!workCompany.trim() && !workPosition.trim()) {
+        if (!quiet) Alert.alert('add a company or role', 'type where you worked (or your role) to add it.');
         return;
       }
       const newItem = {
@@ -1065,7 +1154,8 @@ const ResumeBuilderScreen = () => {
         startDate: workStartDate.trim(),
         endDate: workCurrent ? '' : workEndDate.trim(),
         current: workCurrent,
-        description: workDesc.trim()
+        description: workDesc.trim(),
+        achievements: [] // bullets from an upload are in the description box now
       };
 
       if (!(await saveListItem('workExperience', newItem, editingWorkIndex))) return;
@@ -1079,6 +1169,7 @@ const ResumeBuilderScreen = () => {
       setWorkDesc('');
       setEditingWorkIndex(null);
     });
+    addHandlers.current[3] = handleAddWork;
 
     const handleAIEnhanceWork = () => {
       if (!requireAccount()) return;
@@ -1111,7 +1202,7 @@ const ResumeBuilderScreen = () => {
                 setWorkStartDate(formatDateForInput(item.startDate));
                 setWorkEndDate(formatDateForInput(item.endDate));
                 setWorkCurrent(item.current || false);
-                setWorkDesc(item.description || '');
+                setWorkDesc([item.description || '', ...(item.achievements || []).map((b) => `• ${b}`)].filter(Boolean).join('\n'));
                 setEditingWorkIndex(keyOf(item));
               }} style={{ marginRight: 12 }}>
                 <Ionicons name="create-outline" size={20} color={T.ink} />
@@ -1219,9 +1310,9 @@ const ResumeBuilderScreen = () => {
   const renderStep4 = () => {
     const items = currentResume?.projects || [];
 
-    const handleAddProj = () => saveItem.run(async () => {
-      if (!projName.trim() || !projDesc.trim()) {
-        Alert.alert('Required', 'Project name and Description are mandatory.');
+    const handleAddProj = ({ quiet } = {}) => saveItem.run(async () => {
+      if (!projName.trim()) {
+        if (!quiet) Alert.alert('add a project name', 'give your project a short name to add it.');
         return;
       }
       const newItem = {
@@ -1241,6 +1332,7 @@ const ResumeBuilderScreen = () => {
       setProjDesc('');
       setEditingProjIndex(null);
     });
+    addHandlers.current[4] = handleAddProj;
 
     const handleAIEnhanceProj = () => {
       if (!requireAccount()) return;
@@ -1358,17 +1450,18 @@ const ResumeBuilderScreen = () => {
   const renderStep5 = () => {
     const items = currentResume?.certifications || [];
 
-    const handleAddCertification = () => saveItem.run(async () => {
-      if (!certName.trim() || !certIssuer.trim()) {
-        Alert.alert('Required', 'Certification name and Issuer are mandatory.');
+    const handleAddCertification = ({ quiet } = {}) => saveItem.run(async () => {
+      if (!certName.trim()) {
+        if (!quiet) Alert.alert('add a certificate name', 'type the certificate or course name to add it.');
         return;
       }
+      // the model's field names (date/url were silently dropped before)
       const newCert = {
         name: certName.trim(),
         organization: certIssuer.trim(),
-        date: certIssueDate.trim(),
-        url: certUrl.trim(),
-        expiryDate: certExpiryDate.trim()
+        issueDate: certIssueDate.trim() || undefined,
+        credentialUrl: certUrl.trim(),
+        expiryDate: certExpiryDate.trim() || undefined
       };
 
       if (!(await saveListItem('certifications', newCert, editingCertIndex))) return;
@@ -1380,6 +1473,7 @@ const ResumeBuilderScreen = () => {
       setCertExpiryDate('');
       setEditingCertIndex(null);
     });
+    addHandlers.current[5] = handleAddCertification;
 
     return (
       <View style={styles.formContainer}>
@@ -1728,12 +1822,26 @@ const ResumeBuilderScreen = () => {
   // Compile responsive WebView HTML for pure preview modal
   const renderPreviewHTMLMobile = () => {
     if (!currentResume) return '';
+    return renderResumeHTML(buildLiveResume(), previewTemplateId, {
+      font: selectedFont,
+      accentColor: accentColor,
+      headingColor: headingColor,
+      textColor: textColor,
+      bgColor: bgColor
+    });
+  };
 
+  // the resume as it is on screen right now (typed but not yet saved included)
+  function buildLiveResume() {
+    const base = currentResume || { education: [], workExperience: [], projects: [], certifications: [], skills: [] };
     const parts = (pName || '').trim().split(' ');
-    const first = parts[0] || currentResume.personalInfo?.firstName || '';
-    const last = parts.slice(1).join(' ') || currentResume.personalInfo?.lastName || '';
-
-    const liveResume = {
+    const first = parts[0] || base.personalInfo?.firstName || '';
+    const last = parts.slice(1).join(' ') || base.personalInfo?.lastName || '';
+    const currentResumeLive = base;
+    return liveFrom(currentResumeLive, first, last);
+  }
+  function liveFrom(currentResume, first, last) {
+    return {
       ...currentResume,
       personalInfo: {
         ...currentResume.personalInfo,
@@ -1753,15 +1861,7 @@ const ResumeBuilderScreen = () => {
         summary: targetSummary || currentResume.professionalSummary?.summary || ''
       }
     };
-
-    return renderResumeHTML(liveResume, previewTemplateId, {
-      font: selectedFont,
-      accentColor: accentColor,
-      headingColor: headingColor,
-      textColor: textColor,
-      bgColor: bgColor
-    });
-  };
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -1827,6 +1927,20 @@ const ResumeBuilderScreen = () => {
             </View>
           </View>
           <Text style={styles.cardSubtitle}>{steps[activeStep - 1].desc}</Text>
+          <ResumeStrength resume={buildLiveResume()} compact style={{ marginBottom: 12 }} onGoTo={(s) => goToStep(s)} />
+          {problems.length > 0 && (
+            <View style={styles.problemBox} accessibilityRole="alert" testID="finish-problems">
+              <Text style={styles.problemTitle}>to finish, please add:</Text>
+              {problems.map((pr) => (
+                <View key={pr.field} style={styles.problemRow}>
+                  <Text style={styles.problemText}>• {pr.text}</Text>
+                  <TouchableOpacity onPress={() => goToStep(pr.step)} accessibilityRole="button" accessibilityLabel={`go to field: ${pr.text}`} hitSlop={8} style={styles.problemGo}>
+                    <Text style={styles.problemGoText}>go to field</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
 
           {/* Form Switcher — NEW ORDER */}
           {activeStep === 1 && renderStep1()}
@@ -1857,11 +1971,7 @@ const ResumeBuilderScreen = () => {
   onPress={() => {
     if (activeStep === 7) {
       // skills are saved on every add; a new resume that was never saved is created first
-      finish.run(async () => {
-        const resume = currentResume?._id ? currentResume : await ensureResume();
-        if (!resume?._id) return;
-        navigation.navigate('ResumeView', { resumeId: resume._id });
-      });
+      handleFinish();
     } else {
       handleNextStep();
     }
@@ -1877,6 +1987,12 @@ const ResumeBuilderScreen = () => {
             />
           </TouchableOpacity>
         </View>
+
+        {optionalStep(activeStep) && (
+          <TouchableOpacity onPress={handleSkipStep} disabled={moveStep.running} style={styles.skipLink} accessibilityRole="button" accessibilityLabel="skip for now">
+            <Text style={styles.skipLinkText}>skip for now</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Label list underneath the stepper */}
         <View style={styles.bottomLabelsContainer}>
@@ -1941,6 +2057,16 @@ const ResumeBuilderScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  fieldError: { color: T.danger, fontFamily: F.bodySemi, fontSize: 12.5, marginTop: 4 },
+  fieldHint: { color: T.textMuted, fontFamily: F.body, fontSize: 12, marginTop: 4 },
+  problemBox: { backgroundColor: T.dangerBg, borderRadius: 12, padding: 12, marginBottom: 12 },
+  problemTitle: { fontFamily: F.bodyBold, fontSize: 13.5, color: T.danger, marginBottom: 4 },
+  problemRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  problemText: { flex: 1, fontFamily: F.body, fontSize: 13, color: T.ink },
+  problemGo: { minHeight: 44, justifyContent: 'center' },
+  problemGoText: { fontFamily: F.bodyBold, fontSize: 13, color: T.ink, textDecorationLine: 'underline' },
+  skipLink: { alignSelf: 'center', minHeight: 44, justifyContent: 'center', paddingHorizontal: 16 },
+  skipLinkText: { fontFamily: F.bodySemi, fontSize: 14, color: T.textMuted, textDecorationLine: 'underline' },
   safeArea: {
     flex: 1,
     backgroundColor: T.ink,

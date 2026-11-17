@@ -26,6 +26,7 @@ import QRCode from 'react-native-qrcode-svg';
 import { color as T, font as F } from "../../theme/tokens";
 import ScreenHeader from "../../ui/ScreenHeader";
 import { copyToClipboard } from '../../utils/clipboard';
+import { resumeStrength, resumeName } from '../../utils/resumeRules';
 const ResumeShareScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -266,13 +267,13 @@ View full resume: ${shareLink}
           </View>
           <View style={styles.resumeDetails}>
             <Text style={styles.resumeName}>
-              {resume?.personalInfo?.firstName || 'Untitled'} {resume?.personalInfo?.lastName || ''}
+              {resumeName(resume)}
             </Text>
             <Text style={styles.resumeTitle}>
               {resume?.professionalSummary?.title || 'No title set'}
             </Text>
             <Text style={styles.resumeCompleteness}>
-              {resume?.completionPercentage || 0}% Complete
+              resume strength {resumeStrength(resume).score}% · how ready it is for employers
             </Text>
           </View>
         </View>

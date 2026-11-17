@@ -1,74 +1,45 @@
-// app/src/screens/Resume/ResumeViewScreen.js
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-  Share,
-  Dimensions,
-  Modal,
-  Platform,
-  StatusBar,
-  Animated,
-} from 'react-native';
+// app/src/screens/Resume/ViewResume.js — the full-screen preview of the exact PDF, then save / share.
+// The PDF is made once from the same HTML as everywhere else (utils/resumeFiles -> templateService) and shown:
+//   build with react-native-pdf + blob-util (1.2.1+): the PDF itself, pinch zoom, page count
+//   iPhone without it: the PDF file in the WebView (WKWebView shows PDFs natively, pinch zoom)
+//   Android without it: the same HTML in the WebView with zoom, page count from expo-print
+// "edit" goes back to any builder section; "Save to phone" (Android) / "Save to Files" (iPhone) and "Share"
+// are separate buttons. One PDF job at a time; the view/download/share counters never block anything.
+import React, { useState, useEffect, useContext, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { useContext } from 'react';
-import { ResumeContext } from '../../context/ResumeContext';
-import { AuthContext } from '../../context/AuthContext';
-import { useGuestGate } from '../../guest/GuestGate';
-import { renderResumeHTML } from '../../services/templateService';
-import resumeApi from '../../api/resumeApi';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system/legacy';
 import { WebView } from 'react-native-webview';
-import { color as T, font as F } from "../../theme/tokens";
-import ScreenHeader from "../../ui/ScreenHeader";
-import useAction from "../../hooks/useAction";
-import { TIMEOUT, withTimeout } from "../../config/timeouts";
-import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradients (design system)
+import { ResumeContext } from '../../context/ResumeContext';
+import { useGuestGate } from '../../guest/GuestGate';
+import resumeApi from '../../api/resumeApi';
+import ScreenHeader from '../../ui/ScreenHeader';
+import ResumeStrength from '../../components/ResumeStrength';
+import useAction from '../../hooks/useAction';
+import { resumeName } from '../../utils/resumeRules';
+import { TEMPLATES, canonicalTemplate } from '../../services/templateService';
+import { makeResumePdf, saveResumePdf, shareResumePdf, openSavedPdf, nativePdfView, canSaveToFilesDialog, resumeHtml } from '../../utils/resumeFiles';
+import { color as T, font as F, MAX_FONT_SCALE as M } from '../../theme/tokens';
 
-const { width, height } = Dimensions.get('window');
+export const EDIT_TARGETS = [
+  { label: 'contact', step: 1 }, { label: 'education', step: 2 }, { label: 'experience', step: 3 }, { label: 'projects', step: 4 },
+  { label: 'certificates', step: 5 }, { label: 'summary', step: 6 }, { label: 'skills', step: 7 }, { label: 'template', screen: 'ResumeTemplate' },
+];
 
 const ResumeViewScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { resumeId } = route.params || {};
-  const { user } = useContext(AuthContext);
   const { requireAccount, isGuest: guestMode } = useGuestGate();
-  const { resumes, currentResume, loadResume, updateResume } = useContext(ResumeContext);
+  const { resumes, loadResume, updateResume } = useContext(ResumeContext);
   const [resume, setResume] = useState(null);
-  const [showWebView, setShowWebView] = useState(false);
   // 'loading' | 'ready' | 'error' (never an endless spinner)
   const [loadState, setLoadState] = useState('loading');
   const [attempt, setAttempt] = useState(0);
-  const [activeTab, setActiveTab] = useState('preview');
-  
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-
-  // Entrance animation
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
+  const [pdf, setPdf] = useState(null); // { uri, name, pages, key }
+  const [pages, setPages] = useState(null);
+  const PdfView = useRef(nativePdfView()).current;
 
   useEffect(() => {
     let isMounted = true;
@@ -85,7 +56,7 @@ const ResumeViewScreen = () => {
             console.warn('[resume view] fresh copy not loaded, using the saved list:', err?.message);
           }
         }
-        if (!found) found = loadResume(resumeId) || (Array.isArray(resumes) ? resumes.find(r => r._id === resumeId) : null);
+        if (!found) found = loadResume(resumeId) || (Array.isArray(resumes) ? resumes.find((r) => r._id === resumeId) : null);
       } else if (resumes && resumes.length > 0) {
         found = resumes[0];
       }
@@ -97,78 +68,72 @@ const ResumeViewScreen = () => {
     return () => { isMounted = false; };
   }, [resumeId, guestMode, attempt]);
 
-  // an edit saved elsewhere (builder, templates) shows here without another request
+  // an edit saved elsewhere (builder, templates, offline copy) shows here without another request
   useEffect(() => {
     if (!resume?._id || !Array.isArray(resumes)) return;
-    const fresh = resumes.find(r => r._id === resume._id);
+    const fresh = resumes.find((r) => r._id === resume._id);
     if (fresh && fresh !== resume && fresh.updatedAt && fresh.updatedAt !== resume.updatedAt) setResume(fresh);
   }, [resumes]);
 
-  const generateHTML = (isPrinting = false) => {
-    if (!resume) return '';
-    return renderResumeHTML(resume, resume.template || 'modern_ats', resume.customStyles || {}, isPrinting);
-  };
-
   // a background counter: never blocks or fails the PDF
   const bump = (field) => {
-    if (!resume?._id) return;
+    if (!resume?._id || guestMode) return;
     updateResume(resume._id, { [field]: (resume[field] || 0) + 1 }).catch((e) => console.warn('[resume view] counter not saved:', e?.message));
   };
 
-  // share and download both make the PDF and open the share sheet: one at a time
-  const pdf = useAction(async (_c, mode) => {
-    const html = generateHTML(true);
-    const { uri } = await withTimeout(Print.printToFileAsync({ html }), TIMEOUT.PDF, 'pdf');
-    const firstName = (resume?.personalInfo?.firstName || 'User').trim().replace(/[^a-zA-Z0-9]/g, '_');
-    const lastName = (resume?.personalInfo?.lastName || 'Resume').trim().replace(/[^a-zA-Z0-9]/g, '_');
-    const localUri = `${FileSystem.cacheDirectory}${firstName}_${lastName}_Resume.pdf`;
-    await FileSystem.copyAsync({ from: uri, to: localUri });
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(localUri, { mimeType: 'application/pdf', dialogTitle: `${firstName} ${lastName} Resume`, UTI: 'com.adobe.pdf' });
-    } else {
-      Alert.alert(mode === 'share' ? 'Sharing' : 'Success', mode === 'share' ? 'Sharing is not available on this device' : 'PDF exported successfully!');
+  const pdfKey = resume ? `${resume._id}|${resume.updatedAt || ''}|${canonicalTemplate(resume.template)}` : '';
+  // the PDF for what is on screen (made again only when the resume or its template changed)
+  const ensurePdf = async () => {
+    if (pdf && pdf.key === pdfKey) return pdf;
+    const made = { ...(await makeResumePdf(resume)), key: pdfKey };
+    setPdf(made);
+    if (made.pages) setPages(made.pages);
+    return made;
+  };
+
+  // one job at a time: making the preview PDF, saving, sharing
+  const job = useAction(async (_c, mode) => {
+    const file = await ensurePdf();
+    if (mode === 'preview') return;
+    if (mode === 'share') {
+      const r = await shareResumePdf(file);
+      if (r.status === 'shared') bump('shareCount');
+      else if (r.message) Alert.alert('not shared', r.message);
+      return;
     }
-    bump(mode === 'share' ? 'shareCount' : 'downloadCount');
+    const r = await saveResumePdf(file);
+    if (r.status === 'saved') {
+      bump('downloadCount');
+      const buttons = Platform.OS === 'android' && r.uri ? [{ text: 'ok', style: 'cancel' }, { text: 'open', onPress: () => { openSavedPdf(r.uri).then((ok) => { if (!ok) Alert.alert("couldn't open it", 'open it from your Files or Downloads app.'); }); } }] : [{ text: 'ok' }];
+      Alert.alert(r.message, `${file.name}`, buttons);
+    } else if (r.status === 'shared') {
+      bump('downloadCount');
+    } else if (r.status === 'denied') {
+      Alert.alert('not saved', r.message);
+    }
   }, { errorTitle: "couldn't make the pdf", fallback: 'please try again.' });
-  const isExporting = pdf.running;
-  const handleShare = () => { if (requireAccount()) pdf.run('share'); };
-  const handleExportPDF = () => { if (requireAccount()) pdf.run('download'); };
+  const busy = job.running;
 
-  const handlePreview = () => {
-    setShowWebView(true);
-  };
-
-  // Get status color
-  const getStatusColor = (percentage) => {
-    if (percentage >= 80) return T.success;
-    if (percentage >= 50) return T.yellow;
-    if (percentage >= 30) return T.ink;
-    return T.danger;
-  };
-
-  // Get skill level color
-  const getSkillLevelStyle = (level) => {
-    switch (level?.toLowerCase()) {
-      case 'expert':
-        return { backgroundColor: T.ink, borderColor: T.yellow };
-      case 'advanced':
-        return { backgroundColor: T.ink, borderColor: T.yellow };
-      case 'intermediate':
-        return { backgroundColor: T.inkSoft, borderColor: T.yellow };
-      default:
-        return { backgroundColor: T.sand, borderColor: T.line };
+  // make the preview PDF as soon as the resume is here (and again after an edit or a template change)
+  useEffect(() => {
+    if (loadState === 'ready' && resume && (!pdf || pdf.key !== pdfKey)) {
+      ensurePdf().catch((e) => console.warn('[resume view] preview pdf not made:', e?.message));
     }
-  };
+  }, [loadState, pdfKey]);
+
+  const handleSave = () => { if (requireAccount()) job.run('save'); };
+  const handleShare = () => { if (requireAccount()) job.run('share'); };
+  const goEdit = (t) => (t.screen ? navigation.navigate(t.screen, { resumeId: resume._id }) : navigation.navigate('ResumeBuilder', { resumeId: resume._id, step: t.step }));
 
   if (loadState === 'error' && !resume) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
-        <ScreenHeader dark title="resume document" onBack={() => navigation.goBack()} />
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText} accessibilityRole="alert">couldn't open this resume. please check your connection.</Text>
-          <TouchableOpacity onPress={() => setAttempt((n) => n + 1)} style={[styles.headerAction, styles.exportButton, { marginTop: 16, minHeight: 44, paddingHorizontal: 18 }]} accessibilityRole="button" accessibilityLabel="try again">
-            <Text style={styles.exportButtonText}>try again</Text>
+        <StatusBar barStyle="light-content" backgroundColor={T.ink} />
+        <ScreenHeader dark title="preview" onBack={() => navigation.goBack()} />
+        <View style={styles.center}>
+          <Text style={styles.centerText} accessibilityRole="alert">couldn't open this resume. please check your connection.</Text>
+          <TouchableOpacity onPress={() => setAttempt((n) => n + 1)} style={[styles.btn, styles.btnPrimary, { marginTop: 16, paddingHorizontal: 18 }]} accessibilityRole="button" accessibilityLabel="try again">
+            <Text style={styles.btnPrimaryText}>try again</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -178,634 +143,118 @@ const ResumeViewScreen = () => {
   if (!resume) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar barStyle="dark-content" backgroundColor={T.paper} />
-        <View style={styles.loadingContainer}>
+        <StatusBar barStyle="light-content" backgroundColor={T.ink} />
+        <View style={styles.center}>
           <ActivityIndicator size="large" color={T.yellow} />
-          <Text style={styles.loadingText}>loading resume...</Text>
+          <Text style={styles.centerText}>loading resume...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  const htmlContent = generateHTML();
+  const tpl = TEMPLATES.find((x) => x.id === canonicalTemplate(resume.template)) || TEMPLATES[0];
+  const ready = pdf && pdf.key === pdfKey;
+  const saveLabel = Platform.OS === 'android' ? 'Save to phone' : 'Save to Files';
+  const pageText = pages ? `${pages} page${pages === 1 ? '' : 's'}` : ready ? '' : 'making pdf…';
+
+  let viewer;
+  if (PdfView && ready) {
+    viewer = (
+      <PdfView
+        source={{ uri: pdf.uri }}
+        style={styles.viewer}
+        onLoadComplete={(n) => setPages(n)}
+        enablePaging={false}
+        minScale={1}
+        maxScale={4}
+        trustAllCerts={false}
+        onError={(e) => console.warn('[resume view] pdf view:', e?.message || e)}
+      />
+    );
+  } else if (Platform.OS === 'ios' && ready) {
+    viewer = <WebView testID="pdf-file" originWhitelist={['*']} source={{ uri: pdf.uri }} allowingReadAccessToURL={pdf.uri} style={styles.viewer} />;
+  } else {
+    viewer = (
+      <WebView
+        testID="pdf-html"
+        originWhitelist={['*']}
+        source={{ html: resumeHtml(resume) }}
+        style={styles.viewer}
+        scalesPageToFit
+        setBuiltInZoomControls
+        setDisplayZoomControls={false}
+        startInLoadingState
+        renderLoading={() => <View style={styles.center}><ActivityIndicator size="large" color={T.yellow} /></View>}
+        onShouldStartLoadWithRequest={(req) => !/^(https?:|mailto:|tel:)/.test(req.url)}
+      />
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor={T.paper} />
-      
-      <Animated.View 
-        style={[
-          styles.container,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }
-        ]}
-      >
-        {/* Header */}
-        <ScreenHeader dark title="resume document" onBack={() => navigation.goBack()} right={
-            <>
-              <TouchableOpacity onPress={handleShare} style={styles.headerAction} disabled={isExporting} accessibilityRole="button" accessibilityLabel="share pdf" hitSlop={6}>
-                            <Ionicons name="share-social-outline" size={22} color={T.white} />
-                          </TouchableOpacity>
-              <TouchableOpacity 
-                            onPress={handleExportPDF} 
-                            style={[styles.headerAction, styles.exportButton]} 
-                            disabled={isExporting}
-                          >
-                             {isExporting ? (
-                               <ActivityIndicator size="small" color={T.ink} />
-                             ) : (
-                               <>
-                                 <Ionicons name="download-outline" size={18} color={T.ink} />
-                                 <Text style={styles.exportButtonText}>pdf</Text>
-                               </>
-                             )}
-                          </TouchableOpacity>
-            </>
-          } />
-        {/* WebView Preview container */}
-        <View style={{ flex: 1, backgroundColor: T.inkSoft }}>
-          <WebView
-            originWhitelist={['*']}
-            source={{ html: htmlContent }}
-            style={{ flex: 1 }}
-            scalesPageToFit={true}
-            startInLoadingState={true}
-            renderLoading={() => (
-              <View style={styles.inlineLoading}>
-                <ActivityIndicator size="large" color={T.yellow} />
-                <Text style={styles.inlineLoadingText}>loading document preview...</Text>
-              </View>
-            )}
-            onShouldStartLoadWithRequest={(request) => {
-              if (request.url.startsWith('http') || request.url.startsWith('mailto:') || request.url.startsWith('tel:')) {
-                return false;
-              }
-              return true;
-            }}
-          />
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <StatusBar barStyle="light-content" backgroundColor={T.ink} />
+      <ScreenHeader dark title={resumeName(resume)} onBack={() => navigation.goBack()} />
+
+      <View style={styles.meta}>
+        <ResumeStrength resume={resume} compact dark style={{ flex: 1 }} onGoTo={(step) => navigation.navigate('ResumeBuilder', { resumeId: resume._id, step })} />
+        <View style={styles.metaRight}>
+          <Text style={styles.metaText} maxFontSizeMultiplier={M} testID="page-count">{pageText}</Text>
+          <Text style={styles.metaSub} maxFontSizeMultiplier={M}>{tpl.name} · A4</Text>
         </View>
+      </View>
+      {pages > 2 ? <Text style={styles.tip} maxFontSizeMultiplier={M}>tip: employers prefer 1–2 pages. try the Compact template.</Text> : null}
 
-        {/* Bottom Actions Toolbar */}
-        <View style={styles.bottomToolbar}>
-          <TouchableOpacity 
-            style={styles.toolbarButton} 
-            onPress={() => navigation.navigate('ResumeTemplate', { resumeId: resume._id })}
-          >
-            <Ionicons name="color-palette-outline" size={22} color={T.white} />
-            <Text style={styles.toolbarButtonText}>templates</Text>
-          </TouchableOpacity>
+      <View style={styles.viewerWrap}>{viewer}</View>
 
-          <TouchableOpacity 
-            style={styles.toolbarButton} 
-            onPress={() => navigation.navigate('ResumeBuilder', { resumeId: resume._id })}
-          >
-            <Ionicons name="create-outline" size={22} color={T.white} />
-            <Text style={styles.toolbarButtonText}>customize</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.edits} style={styles.editsBar}>
+        <Text style={styles.editsLabel} maxFontSizeMultiplier={M}>edit</Text>
+        {EDIT_TARGETS.map((t) => (
+          <TouchableOpacity key={t.label} onPress={() => goEdit(t)} style={styles.chip} accessibilityRole="button" accessibilityLabel={`edit ${t.label}`}>
+            <Text style={styles.chipText} maxFontSizeMultiplier={M}>{t.label}</Text>
           </TouchableOpacity>
+        ))}
+      </ScrollView>
 
-          <TouchableOpacity 
-            style={styles.toolbarButton} 
-            onPress={handleExportPDF}
-            disabled={isExporting}
-          >
-            <Ionicons name="download-outline" size={22} color={T.yellow} />
-            <Text style={[styles.toolbarButtonText, { color: T.yellow }]}>download pdf</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.toolbarButton} 
-            onPress={handleShare}
-            disabled={isExporting}
-          >
-            <Ionicons name="share-social-outline" size={22} color={T.white} />
-            <Text style={styles.toolbarButtonText}>share pdf</Text>
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
+      <View style={styles.actions}>
+        <TouchableOpacity style={[styles.btn, styles.btnPrimary]} onPress={handleSave} disabled={busy} accessibilityRole="button" accessibilityLabel={saveLabel} accessibilityState={{ busy, disabled: busy }}>
+          {busy ? <ActivityIndicator color={T.ink} /> : <Ionicons name="download-outline" size={18} color={T.ink} />}
+          <Text style={styles.btnPrimaryText} maxFontSizeMultiplier={M}>{saveLabel}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.btn, styles.btnGhost]} onPress={handleShare} disabled={busy} accessibilityRole="button" accessibilityLabel="Share" accessibilityState={{ busy, disabled: busy }}>
+          <Ionicons name="share-social-outline" size={18} color={T.white} />
+          <Text style={styles.btnGhostText} maxFontSizeMultiplier={M}>Share</Text>
+        </TouchableOpacity>
+      </View>
+      {Platform.OS === 'ios' && !canSaveToFilesDialog() ? (
+        <Text style={styles.hint} maxFontSizeMultiplier={M}>Save to Files opens the share list: pick "Save to Files".</Text>
+      ) : null}
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  bottomToolbar: {
-    flexDirection: 'row',
-    backgroundColor: T.ink,
-    borderTopWidth: 1,
-    borderTopColor: T.ink,
-    paddingVertical: 12,
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingBottom: Platform.OS === 'ios' ? 24 : 12,
-  },
-  toolbarButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-  },
-  toolbarButtonText: {
-    color: T.white,
-    fontSize: 10,
-    fontFamily: F.bodySemi,
-    marginTop: 4,
-  },
-  inlineLoading: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: T.inkSoft,
-  },
-  inlineLoadingText: {
-    color: T.white,
-    marginTop: 10,
-    fontSize: 14, fontFamily: F.body,
-  },
-  safeArea: {
-    flex: 1,
-    backgroundColor: T.ink,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: T.ink,
-  },
-  scrollContent: {
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-  },
-  bottomSpacer: {
-    height: Platform.OS === 'ios' ? 20 : 10,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: T.ink,
-  },
-  loadingText: {
-    marginTop: 12,
-    color: T.textFaint,
-    fontSize: 14, fontFamily: F.body,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 4 : 8,
-    paddingBottom: 12,
-    backgroundColor: T.ink,
-    borderBottomWidth: 1,
-    borderBottomColor: T.ink,
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontFamily: F.headingBold,
-    color: T.white,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerAction: {
-    marginLeft: 14,
-    padding: 4,
-  },
-  exportButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: T.yellow,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginLeft: 14,
-  },
-  exportButtonText: {
-    color: T.ink,
-    fontSize: 12,
-    fontFamily: F.bodySemi,
-    marginLeft: 4,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-  profileCard: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    marginBottom: 16,
-    shadowColor: T.ink,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  profileGradient: {
-    padding: 20,
-  },
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  avatarContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: T.yellow,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: T.white,
-  },
-  avatarText: {
-    fontSize: 28,
-    fontFamily: F.heading,
-    color: T.ink,
-  },
-  profileInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  name: {
-    fontSize: 22,
-    fontFamily: F.heading,
-    color: T.white,
-  },
-  title: {
-    fontSize: 14, fontFamily: F.body,
-    color: 'rgba(255,255,255,0.85)',
-    marginTop: 2,
-  },
-  contactGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 12,
-  },
-  contactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 16,
-    marginTop: 4,
-  },
-  contactText: {
-    fontSize: 12, fontFamily: F.body,
-    color: 'rgba(255,255,255,0.85)',
-    marginLeft: 4,
-  },
-  badgeContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 8,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginRight: 8,
-    marginBottom: 4,
-  },
-  badgeText: {
-    fontSize: 11, fontFamily: F.body,
-    color: T.white,
-    marginLeft: 4,
-  },
-  completionBadge: {
-    backgroundColor: T.yellowSoft,
-  },
-  completionBadgeText: {
-    color: T.yellow,
-  },
-  progressBarContainer: {
-    marginTop: 4,
-  },
-  progressBarTrack: {
-    height: 4,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: T.yellow,
-    borderRadius: 2,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    backgroundColor: T.card,
-    borderRadius: 16,
-    paddingVertical: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: T.line,
-    shadowColor: T.ink,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 18,
-    fontFamily: F.headingBold,
-    color: T.ink,
-    marginTop: 2,
-  },
-  statLabel: {
-    fontSize: 11, fontFamily: F.body,
-    color: T.textFaint,
-    marginTop: 1,
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: T.sand,
-  },
-  section: {
-    backgroundColor: T.card,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: T.line,
-    shadowColor: T.ink,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: T.yellow,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontFamily: F.bodyBold,
-    color: T.ink,
-  },
-  sectionContent: {
-    fontSize: 14, fontFamily: F.body,
-    color: T.textMuted,
-    lineHeight: 22,
-  },
-  itemCard: {
-    backgroundColor: T.sand,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: T.line,
-  },
-  itemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
-  itemTitle: {
-    fontSize: 15,
-    fontFamily: F.bodySemi,
-    color: T.ink,
-    flex: 1,
-  },
-  itemBadge: {
-    backgroundColor: T.sand,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  itemBadgeText: {
-    fontSize: 10,
-    color: T.textMuted,
-    fontFamily: F.bodyMedium,
-  },
-  itemSubtitle: {
-    fontSize: 14, fontFamily: F.body,
-    color: T.textMuted,
-    marginTop: 1,
-  },
-  itemDate: {
-    fontSize: 12, fontFamily: F.body,
-    color: T.textFaint,
-    marginTop: 4,
-  },
-  itemDescription: {
-    fontSize: 13, fontFamily: F.body,
-    color: T.textMuted,
-    marginTop: 6,
-    lineHeight: 20,
-  },
-  gpaContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  gpaLabel: {
-    fontSize: 12, fontFamily: F.body,
-    color: T.textFaint,
-    marginRight: 4,
-  },
-  gpaValue: {
-    fontSize: 13,
-    fontFamily: F.bodySemi,
-    color: T.success,
-  },
-  skillsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  skillTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-  },
-  skillText: {
-    fontSize: 13,
-    color: T.ink,
-    fontFamily: F.bodyMedium,
-  },
-  skillTextLight: {
-    color: T.white,
-  },
-  skillLevelDot: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 8,
-    marginLeft: 6,
-  },
-  skillLevelText: {
-    fontSize: 9,
-    color: T.white,
-    fontFamily: F.bodySemi,
-  },
-  techContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 4,
-  },
-  techTag: {
-    backgroundColor: T.sand,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    marginRight: 6,
-    marginBottom: 4,
-  },
-  techText: {
-    fontSize: 11, fontFamily: F.body,
-    color: T.ink,
-  },
-  credentialText: {
-    fontSize: 12, fontFamily: F.body,
-    color: T.textFaint,
-    marginTop: 2,
-  },
-  languageItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: T.line,
-  },
-  languageName: {
-    fontSize: 14,
-    color: T.ink,
-    fontFamily: F.bodyMedium,
-  },
-  languageProficiencyBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 10,
-  },
-  languageProficiencyText: {
-    fontSize: 11,
-    color: T.white,
-    fontFamily: F.bodyMedium,
-  },
-  targetJobCard: {
-    backgroundColor: T.sand,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: T.ink,
-  },
-  targetJobHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  targetJobTitle: {
-    fontSize: 15,
-    fontFamily: F.bodySemi,
-    color: T.ink,
-  },
-  targetJobTypeBadge: {
-    backgroundColor: T.ink,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  targetJobTypeText: {
-    fontSize: 10,
-    color: T.white,
-    fontFamily: F.bodyMedium,
-  },
-  targetJobIndustry: {
-    fontSize: 13, fontFamily: F.body,
-    color: T.textMuted,
-    marginTop: 2,
-  },
-  targetJobLocation: {
-    fontSize: 12, fontFamily: F.body,
-    color: T.textMuted,
-    marginTop: 2,
-  },
-  targetJobSalary: {
-    fontSize: 12, fontFamily: F.body,
-    color: T.textMuted,
-    marginTop: 2,
-  },
-  targetJobAvailability: {
-    fontSize: 12, fontFamily: F.body,
-    color: T.textMuted,
-    marginTop: 2,
-  },
-  // WebView Styles
-  webViewContainer: {
-    flex: 1,
-    backgroundColor: T.ink,
-  },
-  webViewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: T.ink,
-    borderBottomWidth: 1,
-    borderBottomColor: T.ink,
-  },
-  webViewHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  webViewClose: {
-    padding: 4,
-    marginRight: 12,
-  },
-  webViewTitle: {
-    fontSize: 18,
-    fontFamily: F.headingBold,
-    color: T.white,
-  },
-  webViewExport: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: T.yellow,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 16,
-  },
-  webViewExportText: {
-    color: T.ink,
-    fontSize: 12,
-    fontFamily: F.bodySemi,
-    marginLeft: 4,
-  },
-  webView: {
-    flex: 1,
-  },
-  webViewLoading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  safeArea: { flex: 1, backgroundColor: T.ink },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: T.ink },
+  centerText: { color: T.white, marginTop: 10, fontSize: 14, fontFamily: F.body, textAlign: 'center' },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingBottom: 8 },
+  metaRight: { alignItems: 'flex-end', minWidth: 86 },
+  metaText: { color: T.white, fontFamily: F.bodyBold, fontSize: 14 },
+  metaSub: { color: T.onInkMuted, fontFamily: F.body, fontSize: 12, marginTop: 2 },
+  tip: { color: T.yellow, fontFamily: F.body, fontSize: 12, paddingHorizontal: 16, paddingBottom: 6 },
+  viewerWrap: { flex: 1, backgroundColor: '#525659' },
+  viewer: { flex: 1, backgroundColor: '#525659' },
+  editsBar: { flexGrow: 0, borderTopWidth: 1, borderTopColor: T.inkLine },
+  edits: { alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
+  editsLabel: { color: T.onInkMuted, fontFamily: F.bodySemi, fontSize: 12, marginRight: 2 },
+  chip: { borderWidth: 1, borderColor: T.inkLine, borderRadius: 999, paddingHorizontal: 12, minHeight: 36, justifyContent: 'center' },
+  chipText: { color: T.white, fontFamily: F.bodySemi, fontSize: 13 },
+  actions: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10 },
+  btn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, minHeight: 50 },
+  btnPrimary: { flex: 1.4, backgroundColor: T.yellow },
+  btnPrimaryText: { fontFamily: F.bodyBold, fontSize: 15, color: T.ink },
+  btnGhost: { flex: 1, borderWidth: 1, borderColor: T.inkLine },
+  btnGhostText: { fontFamily: F.bodyBold, fontSize: 15, color: T.white },
+  hint: { color: T.onInkMuted, fontFamily: F.body, fontSize: 11.5, textAlign: 'center', paddingBottom: 8, paddingHorizontal: 16 },
 });
 
 export default ResumeViewScreen;
