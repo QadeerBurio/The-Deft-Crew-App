@@ -128,15 +128,24 @@ function body(resume) {
     ${contact.length ? `<div class="contact">${contact.join('<span class="sep"> | </span>')}</div>` : ''}
   </header>
   ${section('Summary', summary ? `<p dir="auto">${esc(summary)}</p>` : '')}
-  ${workFirst ? section('Experience', work) : ''}
-  ${section('Education', edu)}
-  ${workFirst ? '' : section('Experience', work)}
-  ${section('Projects', projects)}
-  ${section('Skills', skills.length ? `<p class="skills" dir="auto">${skills.map(esc).join(', ')}</p>` : '')}
-  ${section('Certifications', certs)}
-  ${section('Languages', langs.length ? `<p dir="auto">${langs.join(', ')}</p>` : '')}
+  ${ordered(r, workFirst, {
+    experience: section('Experience', work),
+    education: section('Education', edu),
+    projects: section('Projects', projects),
+    skills: section('Skills', skills.length ? `<p class="skills" dir="auto">${skills.map(esc).join(', ')}</p>` : ''),
+    certifications: section('Certifications', certs),
+    languages: section('Languages', langs.length ? `<p dir="auto">${langs.join(', ')}</p>` : ''),
+  })}
   ${section('Achievements', achievements.length ? `<ul>${achievements.map((a) => `<li dir="auto">${esc(a)}</li>`).join('')}</ul>` : '')}
   ${section('Additional information', str(r.otherNotes) ? lines(r.otherNotes) : '')}`;
+}
+
+// the sections in the order a tailored version chose (sectionOrder), else experience first when there is some
+function ordered(r, workFirst, html) {
+  const chosen = Array.isArray(r.sectionOrder) ? r.sectionOrder.filter((k) => k in html) : [];
+  const fallback = workFirst ? ['experience', 'education', 'projects', 'skills', 'certifications', 'languages'] : ['education', 'experience', 'projects', 'skills', 'certifications', 'languages'];
+  const order = [...chosen, ...fallback.filter((k) => !chosen.includes(k))];
+  return order.map((k) => html[k]).join('');
 }
 
 function css(look, styles) {

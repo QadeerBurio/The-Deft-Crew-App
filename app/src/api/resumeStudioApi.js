@@ -40,6 +40,8 @@ export const studioApi = {
   tailorJob: (id) => unwrap(api.get(`${B}/tailor-jobs/${id}`, { timeout: 10000 })),
   draft: (id) => unwrap(api.get(`${B}/drafts/${id}`, { timeout: 10000 })),
   decide: (id, revision, decisions) => unwrap(api.patch(`${B}/drafts/${id}/decisions`, { revision, decisions }, { timeout: 10000 })),
+  // a whole section (or everything): { section?, decision: accepted | rejected | pending }
+  decideBulk: (id, revision, bulk) => unwrap(api.patch(`${B}/drafts/${id}/decisions`, { revision, bulk }, { timeout: 10000 })),
   // "I have this": a skill the job asks for that the resume doesn't show, with a proof line; or { remove: true }
   confirmSkill: (id, body) => unwrap(api.post(`${B}/drafts/${id}/skills`, body, { timeout: 10000 })),
   approve: (id, body) => unwrap(api.post(`${B}/drafts/${id}/approve`, body, { timeout: 15000 })),

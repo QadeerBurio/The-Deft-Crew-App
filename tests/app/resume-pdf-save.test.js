@@ -60,6 +60,9 @@ const norm = (s) => s.replace(/\r\n/g, "\n");
     ok(/ENDMARK13/.test(html) && /Cricket and debate club/.test(html) && /3\.6\/4\.0/.test(html), `${t.name}: bullets, other notes and the grade as written are printed`);
   }
   ok(tpl.formatDate("2023-06-01T00:00:00.000Z") === "Jun 2023" && tpl.formatDate("Jun 2023") === "Jun 2023" && tpl.formatDate("2025") === "2025", "dates: ISO -> 'Jun 2023'; typed dates stay as typed (no 'Invalid Date')");
+  const tailoredOrder = tpl.renderResumeHTML({ ...long, projects: [{ name: "ShopEase", description: "web app" }], sectionOrder: ["experience", "projects", "skills", "education"] }, "modern_ats", {});
+  const at = (h) => tailoredOrder.indexOf(`<h2>${h}</h2>`);
+  ok(at("Experience") < at("Projects") && at("Projects") < at("Skills") && at("Skills") < at("Education"), "a tailored version's section order is followed (Resume Studio: projects above education)", [at("Experience"), at("Projects"), at("Skills"), at("Education")].join(","));
 
   // a real print: A4 pages, no entry split across two pages (Chrome's print engine = Android WebView's)
   const chrome = [process.env.CHROME_PATH, "C:/Program Files/Google/Chrome/Application/chrome.exe", "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/usr/bin/google-chrome", "/usr/bin/chromium"].find((p) => p && fs.existsSync(p));

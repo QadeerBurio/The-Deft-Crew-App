@@ -2,7 +2,8 @@
 // a pasted job description, review every change, approve a version, send it with your application.
 //   A start: pick a resume and a job (a parsed upload is checked and confirmed first)
 //   B tailoring: the request runs on the server; this screen polls it
-//   C review: each change with the reason and the resume facts behind it; "not in your resume" changes
+//   C review (by section, "accept all" / accept or undo a section, the new words highlighted, match % and the
+//     job's keywords covered before → after, about how many pages): each change with the reason and the resume facts behind it; "not in your resume" changes
 //     need "this is true", blocked ones can only be rejected; the coaching panel says what matches, what's
 //     missing and what we can't tell (no hiring predictions); the match estimate before → after tailoring
 //   D preview: the ATS Classic PDF, marked DRAFT
@@ -11,7 +12,10 @@
 //   G versions: your approved versions, export as PDF, delete one you never sent
 // Route params: { jobId, jobTitle } from a job's details, { view: "versions" }, or nothing.
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, TextInput, Switch, ActivityIndicator, Alert, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, TextInput, Switch, ActivityIndicator, Alert, StyleSheet, Modal } from "react-native";
+import { WebView } from "react-native-webview";
+import { TEMPLATES, renderResumeHTML } from "../../services/templateService";
+import { makeResumePdf, saveResumePdf } from "../../utils/resumeFiles";
 // the focused field scrolls above the keyboard (KeyboardProvider is at the app root)
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,6 +28,12 @@ import { studioEnabled, studioApi, newKey, waitForTailoring, saveDecisions, flus
 
 const M = MAX_FONT_SCALE;
 const fieldLabel = (p) => {
+  if (p === "personalInfo.title") return "headline";
+  if (p === "order.workExperience") return "order of your experience";
+  if (p === "order.education") return "order of your education";
+  if (p === "order.sections") return "order of the sections";
+  let c = /^condense\.(workExperience|projects)\[(\d+)\]$/.exec(p);
+  if (c) return `${c[1] === "projects" ? "project" : "experience"} ${+c[2] + 1} · one line`;
   if (p === "professionalSummary.summary") return "summary";
   if (p === "order.skills") return "order of your skills";
   if (p === "order.projects") return "order of your projects";
@@ -39,8 +49,17 @@ const FLAG_TEXT = {
   new_number: "a number that isn't in your resume", new_date: "a date that isn't in your resume", new_skill: "a skill that isn't in your resume",
   new_name: "a name that isn't in your resume", new_link: "a link that isn't in your resume", new_email: "an e-mail that isn't in your resume",
   new_claim: "a claim your resume doesn't make", much_longer: "much longer than your original", no_evidence: "no fact from your resume backs it",
+  claims_job_title: "it says you already have this job", not_shorter: "not shorter than the original", first_person: "uses 'I' or 'my'",
   original_mismatch: "your resume changed since", not_a_reorder: "it would add or drop items", unknown_field: "a field that can't be tailored", empties_field: "it would empty the field",
 };
+// the review is grouped by section (old drafts without "section" get it from the path)
+const SECTIONS = [["headline", "headline"], ["summary", "summary"], ["experience", "experience"], ["projects", "projects"], ["education", "education"], ["skills", "skills"], ["layout", "order of sections"], ["other", "other"]];
+export const sectionOfPath = (p) => (p === "personalInfo.title" ? "headline" : p === "professionalSummary.summary" ? "summary" : p === "order.sections" ? "layout"
+  : (/^(?:order\.|condense\.)?(workExperience|projects|education|skills)/.exec(p) || [])[1]?.replace("workExperience", "experience") || "other");
+export const groupBySection = (list = []) => SECTIONS.map(([k, label]) => [k, label, list.filter((s) => (s.section || sectionOfPath(s.fieldPath)) === k)]).filter(([, , l]) => l.length);
+// a tailored version as a resume for the five app templates (preview / download in the chosen look)
+export const asResume = (content, template) => ({ ...(content || {}), template });
+const APP_TEMPLATES = TEMPLATES.map((x) => x.id);
 const flagsText = (flags = []) => flags.map((f) => `${FLAG_TEXT[f.flag] || f.flag}${f.values?.length ? `: ${f.values.join(", ")}` : ""}`).join("; ");
 const STATUS = {
   ok: { label: "from your resume", tone: T.successBg },
@@ -79,6 +98,9 @@ export default function ResumeStudio({ route, navigation }) {
   const [resumes, setResumes] = useState([]);
   const [resumeId, setResumeId] = useState(null);
   const [pasteTitle, setPasteTitle] = useState("");
+  const [pasteCompany, setPasteCompany] = useState("");
+  const [templateId, setTemplateId] = useState("modern_ats"); // the look of the version (preview, pdf, share)
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const [source, setSource] = useState(null); // unverified upload to check
   const tapKey = useRef(newKey());
@@ -104,7 +126,7 @@ export default function ResumeStudio({ route, navigation }) {
   const loadVersions = useCallback(() => studioApi.versions().then(setVersions).catch((e) => { setVersions([]); setMessage(e.message); }), []);
   const showDraft = (d) => {
     setDraft(d);
-    setLabel(d.target?.title ? `${d.target.title}` : "");
+    setLabel(d.defaultLabel || (d.target?.title ? `${d.target.title}` : ""));
     setStep(d.status === "approved" ? "approved" : "review");
   };
 
@@ -141,7 +163,7 @@ export default function ResumeStudio({ route, navigation }) {
     if (!jobId && pasteText.trim().length < 80) return Alert.alert("paste the job description", "paste the full job description (at least a few sentences).");
     setBusy(true); setMessage(""); setCanRetry(false);
     try {
-      const body = jobId ? { resumeId, jobId } : { resumeId, jobTitle: pasteTitle.trim(), jobDescription: pasteText };
+      const body = jobId ? { resumeId, jobId } : { resumeId, jobTitle: pasteTitle.trim(), jobCompany: pasteCompany.trim(), jobDescription: pasteText };
       const job = await studioApi.startTailoring(body, tapKey.current);
       setStep("working"); setProgress("queued");
       cancelled.current = { cancelled: false };
@@ -191,6 +213,25 @@ export default function ResumeStudio({ route, navigation }) {
   };
 
   // ---------- C ----------
+  // "accept all" / accept or undo one section: one request; a "not in your resume" change still needs its own "this is true"
+  const decideBulk = async (section, decision) => {
+    setBusy(true);
+    try {
+      setDraft(await studioApi.decideBulk(draft.id, draft.revision, { ...(section ? { section } : {}), decision }));
+      setQueued(false);
+    } catch (e) {
+      if (e.code === "STALE_REVISION") { setDraft(await studioApi.draft(draft.id)); setMessage("this draft changed on another device; we reloaded it."); }
+      else Alert.alert(e.offline ? "you're offline" : "not saved", e.offline ? "accepting a whole section needs a connection. you can still decide changes one by one." : e.message);
+    } finally { setBusy(false); }
+  };
+  // the version in the chosen app template: saved on the phone (Downloads / Files)
+  const saveInTemplate = async (content, tpl, name) => {
+    const file = await makeResumePdf(asResume(content, tpl));
+    const r = await saveResumePdf({ ...file, name: `${String(name || file.name.replace(/\.pdf$/i, "")).replace(/[\\/:*?"<>|]+/g, "").trim() || "resume"}.pdf` });
+    if (r.status === "saved") Alert.alert(r.message, name || file.name);
+    else if (r.status === "denied") Alert.alert("not saved", r.message);
+  };
+
   const decide = async (s, decision, extra = {}) => {
     setBusy(true);
     try {
@@ -213,7 +254,7 @@ export default function ResumeStudio({ route, navigation }) {
   const approve = async () => {
     setBusy(true); setMessage("");
     try {
-      const r = await studioApi.approve(draft.id, { revision: draft.revision, confirmAccurate, confirmReviewed, label: label.trim() });
+      const r = await studioApi.approve(draft.id, { revision: draft.revision, confirmAccurate, confirmReviewed, label: label.trim(), templateId });
       setVersion(r.version);
       rememberDraft("");
       setStep("approved");
@@ -273,6 +314,7 @@ export default function ResumeStudio({ route, navigation }) {
             <View>
               <Text style={styles.h2} maxFontSizeMultiplier={M}>the job</Text>
               <TextInput style={styles.inputLine} value={pasteTitle} onChangeText={setPasteTitle} placeholder="job title" placeholderTextColor={T.textFaint} accessibilityLabel="job title" maxFontSizeMultiplier={M} />
+              <TextInput style={styles.inputLine} value={pasteCompany} onChangeText={setPasteCompany} placeholder="company (optional)" placeholderTextColor={T.textFaint} accessibilityLabel="company" maxFontSizeMultiplier={M} />
               <TextInput style={styles.input} value={pasteText} onChangeText={setPasteText} multiline placeholder="paste the job description" placeholderTextColor={T.textFaint} accessibilityLabel="job description" maxFontSizeMultiplier={M} />
               <Text style={styles.muted} maxFontSizeMultiplier={M}>a pasted job isn't linked to a tdc application.</Text>
             </View>
@@ -316,11 +358,25 @@ export default function ResumeStudio({ route, navigation }) {
           <MissingSkills draft={draft} state={haveSkill} setState={setHaveSkill} busy={busy} onConfirm={confirmSkill} />
           <WhatChanged draft={draft} />
           <Coaching draft={draft} />
+          {draft.suggestions.some((s) => s.decision === "pending" && s.status === "ok") && (
+            <View style={styles.actions}>
+              <Button primary label="accept all checked changes" text="accept all" disabled={busy || queued} onPress={() => decideBulk(null, "accepted")} />
+            </View>
+          )}
 
           {draft.suggestions.length === 0 && (
             <Text style={styles.body} maxFontSizeMultiplier={M}>{draft.aiSuggestions === "insufficient_information" ? "no ai suggestions right now: insufficient information. your resume stays as you wrote it; you can still approve it in the ats layout." : "no changes suggested: your resume already fits this job well."}</Text>
           )}
-          {draft.suggestions.map((s) => {
+          {groupBySection(draft.suggestions).map(([sec, secLabel, list]) => (
+            <View key={`sec-${sec}`} testID={`section-${sec}`}>
+              <View style={styles.sectionBar}>
+                <Text style={styles.h2} maxFontSizeMultiplier={M}>{secLabel}</Text>
+                <View style={styles.row}>
+                  <Button label={`accept ${secLabel} section`} text="accept section" disabled={busy || queued || !list.some((s) => s.status === "ok" && s.decision !== "accepted")} onPress={() => decideBulk(sec, "accepted")} />
+                  <Button label={`undo ${secLabel} section`} text="undo" disabled={busy || queued || !list.some((s) => s.decision !== "rejected")} onPress={() => decideBulk(sec, "rejected")} />
+                </View>
+              </View>
+          {list.map((s) => {
             const st = STATUS[s.status];
             const isEditing = editing?.suggestionId === s.suggestionId;
             const evidence = (s.sourceFactIds || []).map((id) => draft.facts.find((f) => f.factId === id)?.value).filter(Boolean);
@@ -335,6 +391,13 @@ export default function ResumeStudio({ route, navigation }) {
                     <Text style={styles.label} maxFontSizeMultiplier={M}>now</Text>
                     <Text style={styles.body} maxFontSizeMultiplier={M}>{s.original}</Text>
                     <Text style={styles.label} maxFontSizeMultiplier={M}>suggested</Text>
+                    <Highlighted before={s.original} after={s.decision === "edited" ? s.editedText : s.proposed} />
+                  </View>
+                ) : s.kind === "condense" ? (
+                  <View>
+                    <Text style={styles.label} maxFontSizeMultiplier={M}>now</Text>
+                    <Text style={styles.body} maxFontSizeMultiplier={M}>{s.original}</Text>
+                    <Text style={styles.label} maxFontSizeMultiplier={M}>as one line (less relevant for this job; kept, shorter)</Text>
                     <Text style={styles.body} maxFontSizeMultiplier={M}>{s.decision === "edited" ? s.editedText : s.proposed}</Text>
                   </View>
                 ) : (
@@ -365,13 +428,15 @@ export default function ResumeStudio({ route, navigation }) {
                           onPress={() => decide(s, "accepted", s.status === "needs_user_confirmation" ? { confirmTrue: true } : {})} />
                       )}
                       <Button label={`reject ${fieldLabel(s.fieldPath)}`} text={s.status === "blocked" ? "keep my original" : "reject"} disabled={busy} onPress={() => decide(s, "rejected")} />
-                      {s.kind === "reword" && s.status !== "blocked" && <Button label={`edit ${fieldLabel(s.fieldPath)}`} text="edit" disabled={busy} onPress={() => setEditing({ suggestionId: s.suggestionId, text: s.decision === "edited" ? s.editedText : s.proposed, confirmTrue: false })} />}
+                      {s.kind !== "reorder" && s.status !== "blocked" && <Button label={`edit ${fieldLabel(s.fieldPath)}`} text="edit" disabled={busy} onPress={() => setEditing({ suggestionId: s.suggestionId, text: s.decision === "edited" ? s.editedText : s.proposed, confirmTrue: false })} />}
                     </View>
                   </View>
                 )}
               </View>
             );
           })}
+            </View>
+          ))}
           {urduWarning(draft.pdf) && <Text style={styles.warn} accessibilityRole="alert" maxFontSizeMultiplier={M}>{urduWarning(draft.pdf)}</Text>}
           <View style={styles.actions}>
             <Button label="preview pdf" disabled={busy || pdfAction.running} onPress={() => confirmExport(draft.pdf, () => pdfAction.run(() => openPdf(`drafts/${draft.id}/preview.pdf`, `DRAFT ${draft.target?.title || "resume"}`)))} />
@@ -390,8 +455,26 @@ export default function ResumeStudio({ route, navigation }) {
           <Text style={styles.muted} maxFontSizeMultiplier={M}>once approved it never changes. employers you send it to see exactly this version.</Text>
           {urduWarning(draft.pdf) && <Text style={styles.warn} accessibilityRole="alert" maxFontSizeMultiplier={M}>{urduWarning(draft.pdf)}</Text>}
           <Button label="preview pdf" disabled={busy || pdfAction.running} onPress={() => confirmExport(draft.pdf, () => pdfAction.run(() => openPdf(`drafts/${draft.id}/preview.pdf`, `DRAFT ${draft.target?.title || "resume"}`)))} />
+          <Text style={styles.h2} maxFontSizeMultiplier={M}>template</Text>
+          <View style={styles.actions} accessibilityRole="radiogroup">
+            {TEMPLATES.map((x) => (
+              <TouchableOpacity key={x.id} onPress={() => setTemplateId(x.id)} style={[styles.chip, templateId === x.id && styles.chipOn]} accessibilityRole="radio" accessibilityState={{ checked: templateId === x.id }} accessibilityLabel={`template ${x.name}`}>
+                <Text style={[styles.chipText, templateId === x.id && styles.chipTextOn]} maxFontSizeMultiplier={M}>{x.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Button label="preview in this template" onPress={() => setPreviewOpen(true)} />
+          <Modal visible={previewOpen} animationType="slide" onRequestClose={() => setPreviewOpen(false)}>
+            <View style={[styles.screen, { paddingTop: insets.top }]}>
+              <View style={styles.sectionBar}>
+                <Text style={styles.h2} maxFontSizeMultiplier={M}>{(TEMPLATES.find((x) => x.id === templateId) || {}).name} · A4</Text>
+                <Button label="close preview" text="close" onPress={() => setPreviewOpen(false)} />
+              </View>
+              <WebView testID="studio-template-preview" originWhitelist={["*"]} source={{ html: renderResumeHTML(asResume(draft.content, templateId), templateId) }} style={{ flex: 1 }} scalesPageToFit setBuiltInZoomControls setDisplayZoomControls={false} />
+            </View>
+          </Modal>
           <Text style={styles.h2} maxFontSizeMultiplier={M}>name</Text>
-          <TextInput style={styles.inputLine} value={label} onChangeText={setLabel} placeholder="e.g. frontend developer, bright labs" placeholderTextColor={T.textFaint} accessibilityLabel="version name" maxFontSizeMultiplier={M} />
+          <TextInput style={styles.inputLine} value={label} onChangeText={setLabel} placeholder="e.g. Ayesha Khan – HR Intern (Engro)" placeholderTextColor={T.textFaint} accessibilityLabel="version name" maxFontSizeMultiplier={M} />
           <TrueSwitch value={confirmAccurate} onChange={setConfirmAccurate} label="everything in this resume is true" />
           <TrueSwitch value={confirmReviewed} onChange={setConfirmReviewed} label="i reviewed every change" />
           <View style={styles.actions}>
@@ -406,7 +489,9 @@ export default function ResumeStudio({ route, navigation }) {
           <Text style={styles.h1} accessibilityRole="header" maxFontSizeMultiplier={M}>approved</Text>
           {version && <Text style={styles.body} maxFontSizeMultiplier={M}>{version.label}</Text>}
           {version && urduWarning(draft?.pdf) && <Text style={styles.warn} accessibilityRole="alert" maxFontSizeMultiplier={M}>{urduWarning(draft.pdf)}</Text>}
-          {version && <Button label="download pdf" disabled={pdfAction.running} onPress={() => confirmExport(draft?.pdf, () => pdfAction.run(() => openPdf(`versions/${version.id}/export.pdf`, version.label || "resume")))} />}
+          {version && <Button label="download pdf" disabled={pdfAction.running} onPress={() => (APP_TEMPLATES.includes(version.templateId) && draft?.content
+            ? pdfAction.run(() => saveInTemplate(draft.content, version.templateId, version.label))
+            : confirmExport(draft?.pdf, () => pdfAction.run(() => openPdf(`versions/${version.id}/export.pdf`, version.label || "resume"))))} />}
           {version?.target?.kind === "tdc_job" && application === null && (
             <View style={styles.box}>
               <Text style={styles.body} maxFontSizeMultiplier={M}>you haven't applied for this job yet. apply, then send this version with your application.</Text>
@@ -441,7 +526,9 @@ export default function ResumeStudio({ route, navigation }) {
               <Text style={styles.title} maxFontSizeMultiplier={M}>{v.label || "tailored resume"}</Text>
               <Text style={styles.muted} maxFontSizeMultiplier={M}>{v.target?.kind === "pasted" ? "pasted job" : "tdc job"} · approved {new Date(v.approvedAt).toLocaleDateString()}{v.usedInApplication ? " · sent with an application, kept 2 years" : ""}</Text>
               <View style={styles.actions}>
-                <Button label={`download ${v.label || "version"}`} text="download pdf" disabled={pdfAction.running} onPress={() => studioApi.version(v.id).catch(() => null).then((full) => confirmExport(full?.pdf, () => pdfAction.run(() => openPdf(`versions/${v.id}/export.pdf`, v.label || "resume"))))} />
+                <Button label={`download ${v.label || "version"}`} text="download pdf" disabled={pdfAction.running} onPress={() => studioApi.version(v.id).catch(() => null).then((full) => (APP_TEMPLATES.includes(full?.templateId) && full?.content
+                  ? pdfAction.run(() => saveInTemplate(full.content, full.templateId, v.label))
+                  : confirmExport(full?.pdf, () => pdfAction.run(() => openPdf(`versions/${v.id}/export.pdf`, v.label || "resume")))))} />
                 {v.deletable && <Button label={`delete ${v.label || "version"}`} text="delete" disabled={removeAction.running} onPress={() => Alert.alert("delete this version?", "you can't undo this.", [{ text: "no" }, { text: "yes", onPress: () => removeAction.run(() => studioApi.deleteVersion(v.id).then(loadVersions)) }])} />}
               </View>
             </View>
@@ -457,14 +544,43 @@ export function scoreLine(scores) {
   if (!scores || scores.before == null || scores.after == null) return "";
   return scores.after === scores.before ? `match ${scores.after}% (the same skills, better worded)` : `match before ${scores.before}% → after ${scores.after}%`;
 }
+export function keywordLine(k) {
+  if (!k?.after || !k.after.total) return "";
+  return k.before && k.before.covered.length !== k.after.covered.length
+    ? `keywords covered ${k.before.covered.length} → ${k.after.covered.length} of ${k.after.total}`
+    : `keywords covered ${k.after.covered.length} of ${k.after.total}`;
+}
+export function pagesLine(p) {
+  if (!p || p.after == null) return "";
+  const n = Math.max(1, Math.round(p.after));
+  return `about ${n} page${n === 1 ? "" : "s"}${p.after > (p.budget || 2) + 0.15 ? ` · aim for ${p.budget}: shorten the less relevant parts` : ""}`;
+}
 function Scores({ draft }) {
   const line = scoreLine(draft.scores);
-  if (!line) return null;
+  const kw = keywordLine(draft.keywords);
+  const pages = pagesLine(draft.pages);
+  if (!line && !kw) return null;
   return (
-    <View style={styles.card} accessible accessibilityLabel={line} testID="studio-scores">
-      <Text style={styles.h2} maxFontSizeMultiplier={M}>{line}</Text>
-      <Text style={styles.muted} maxFontSizeMultiplier={M}>skills this job lists that your tailored resume shows. it only goes up with skills you really have.</Text>
+    <View style={styles.card} accessible accessibilityLabel={[line, kw, pages].filter(Boolean).join(". ")} testID="studio-scores">
+      {!!line && <Text style={styles.h2} maxFontSizeMultiplier={M}>{line}</Text>}
+      {!!kw && <Text style={styles.title} maxFontSizeMultiplier={M}>{kw}</Text>}
+      {!!draft.keywords?.after?.covered?.length && <Text style={styles.muted} maxFontSizeMultiplier={M}>in your resume: {draft.keywords.after.covered.join(", ")}</Text>}
+      {!!draft.keywords?.after?.missing?.length && <Text style={styles.muted} maxFontSizeMultiplier={M}>not in your resume: {draft.keywords.after.missing.join(", ")}</Text>}
+      {!!pages && <Text style={styles.muted} maxFontSizeMultiplier={M}>{pages}</Text>}
+      <Text style={styles.muted} maxFontSizeMultiplier={M}>skills and words this job lists that your tailored resume shows. it only goes up with what you really have.</Text>
     </View>
+  );
+}
+// the suggested text with the words that are new (not in the original) highlighted
+export function changedWords(before, after) {
+  const had = new Set(String(before || "").toLowerCase().split(/[^a-z0-9+#.%']+/).filter(Boolean));
+  return String(after || "").split(/(\s+)/).map((w) => ({ w, isNew: /\S/.test(w) && !had.has(w.toLowerCase().replace(/^[^a-z0-9+#]+|[^a-z0-9+#%]+$/g, "")) }));
+}
+function Highlighted({ before, after }) {
+  return (
+    <Text style={styles.body} maxFontSizeMultiplier={M}>
+      {changedWords(before, after).map((x, i) => (x.isNew ? <Text key={i} style={styles.newWord} maxFontSizeMultiplier={M}>{x.w}</Text> : x.w))}
+    </Text>
   );
 }
 // skills the resume already shows in experience / projects, now in the skills section in the job's wording
@@ -587,6 +703,12 @@ function Button({ label, text, onPress, primary, disabled }) {
 }
 
 const styles = StyleSheet.create({
+  newWord: { backgroundColor: T.yellowSoft, fontFamily: F.bodySemi },
+  sectionBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 6, marginTop: 8 },
+  chip: { paddingHorizontal: 12, minHeight: 44, justifyContent: "center", borderRadius: 16, borderWidth: 1, borderColor: T.line, backgroundColor: T.card },
+  chipOn: { backgroundColor: T.ink, borderColor: T.ink },
+  chipText: { fontFamily: F.bodySemi, fontSize: 13, color: T.ink },
+  chipTextOn: { color: T.white },
   skillRow: { marginTop: 10, gap: 6 },
   changeRow: { marginTop: 10 },
   changeLabel: { fontFamily: F.bodySemi, fontSize: 13.5, color: T.ink },
