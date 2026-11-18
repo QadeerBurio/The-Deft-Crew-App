@@ -16,6 +16,8 @@ import { color as T, font as F } from "../../theme/tokens";
 import { ScreenHeader } from "../../ui";
 import { SERVER_ORIGIN } from "../../config/server";
 import { fetchWithTimeout } from "../../config/timeouts";
+import UniversityPicker from "../../components/UniversityPicker";
+import { universitiesApi } from "../../api/universitiesApi";
 const API_URL = `${SERVER_ORIGIN}/api/social`; 
 const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/decaxpera/auto/upload";
 const UPLOAD_PRESET = "tdc_profiles";
@@ -28,7 +30,10 @@ export default function EditProfileScreen({ navigation }) {
   const [name, setName] = useState("");
   const [headline, setHeadline] = useState("");
   const [bio, setBio] = useState("");
-  const [school, setSchool] = useState(""); 
+  const [school, setSchool] = useState("");
+  // students: the university from the shared list (the same picker as signup)
+  const [uni, setUni] = useState(null);
+  const isStudent = user?.role === "student";
   const [degree, setDegree] = useState("");
   const [rollNo, setRollNo] = useState("");
   const [profileImage, setProfileImage] = useState(null);
@@ -52,8 +57,10 @@ export default function EditProfileScreen({ navigation }) {
       setHeadline(user.headline || "");
       setBio(user.bio || "");
       setRollNo(user.rollNo || "");
-      const currentUni = user.education?.[0]?.school || user.university?.name || "";
+      const currentUni = user.education?.[0]?.school || user.university?.name || user.universityName || "";
       setSchool(currentUni);
+      const u = user.university;
+      setUni(u && typeof u === "object" && u.name ? { id: String(u._id || u.id), name: u.name, shortName: u.shortName || "", city: u.city || "", status: u.status || "approved" } : null);
       setDegree(user.education?.[0]?.degree || "");
       setProfileImage(user.profileImage || null);
     }
@@ -120,14 +127,19 @@ export default function EditProfileScreen({ navigation }) {
 
     setLoading(true);
     try {
+      // a new university from the list is saved first (the profile then shows it)
+      const oldUniId = user?.university?._id || user?.university?.id || user?.university;
+      let uniSaved = null;
+      if (isStudent && uni?.id && String(uni.id) !== String(oldUniId || "")) uniSaved = (await universitiesApi.setMine(uni.id))?.university || null;
       const response = await axios.put(
         `${API_URL}/profile/update`,
-        { name, headline, bio, school, degree, rollNo },
+        { name, headline, bio, school: isStudent && uni?.name ? uni.name : school, degree, rollNo },
         { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
       );
 
       if (response.data.user) {
-        setUser({ ...response.data.user, profileImage: profileImage || response.data.user.profileImage });
+        const withUni = uniSaved ? { university: { _id: uniSaved.id, name: uniSaved.name, shortName: uniSaved.shortName, city: uniSaved.city, status: uniSaved.status }, universityName: uniSaved.name } : {};
+        setUser({ ...response.data.user, ...withUni, profileImage: profileImage || response.data.user.profileImage });
         Alert.alert("Success", "Your profile has been updated!", [
           { text: "OK", onPress: () => navigation.goBack() }
         ]);
@@ -259,7 +271,10 @@ export default function EditProfileScreen({ navigation }) {
               <View style={styles.divider} />
               <Text style={styles.sectionLabel}>education</Text>
               
-              {/* School Input */}
+              {/* University: students pick from the shared list (same as signup); others type their school */}
+              {isStudent ? (
+                <UniversityPicker label="university" value={uni} onChange={setUni} disabled={loading} />
+              ) : (
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>university / school</Text>
                 <View style={[styles.inputWrapper, schoolFocused && styles.inputFocused]}>
@@ -277,6 +292,7 @@ export default function EditProfileScreen({ navigation }) {
                   />
                 </View>
               </View>
+              )}
 
               {/* Degree Input */}
               <View style={styles.inputGroup}>
