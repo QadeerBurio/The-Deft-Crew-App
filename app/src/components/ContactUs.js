@@ -5,6 +5,9 @@ import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-ico
 import { DocScreen, DocHero, DocSection, DocFooter } from "../ui/DocPage";
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 
+// the support contacts (also used by the university dropdown: "can't find your university? contact support")
+export const SUPPORT_WHATSAPP = "https://wa.me/923249287649";
+
 const SOCIAL = [
   { icon: "facebook-f", label: "facebook", url: "https://www.facebook.com/share/1CijYDto1b/" },
   { icon: "instagram", label: "instagram", url: "https://www.instagram.com/tdc.app/" },
@@ -15,7 +18,7 @@ const SOCIAL = [
 export default function ContactUs() {
   const openDial = () => Linking.openURL("tel:+923249287649");
   const openEmail = () => Linking.openURL("mailto:hello@gettdc.pk");
-  const openWhatsApp = () => Linking.openURL("https://wa.me/923249287649");
+  const openWhatsApp = () => Linking.openURL(SUPPORT_WHATSAPP);
   const openSocial = (url) => Linking.openURL(url);
 
   const contacts = [

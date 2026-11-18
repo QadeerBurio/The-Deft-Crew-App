@@ -60,7 +60,7 @@ export default function EditProfileScreen({ navigation }) {
       const currentUni = user.education?.[0]?.school || user.university?.name || user.universityName || "";
       setSchool(currentUni);
       const u = user.university;
-      setUni(u && typeof u === "object" && u.name ? { id: String(u._id || u.id), name: u.name, shortName: u.shortName || "", city: u.city || "", status: u.status || "approved" } : null);
+      setUni(u && typeof u === "object" && u.name ? { id: String(u._id || u.id), name: u.name, shortName: u.shortName || "", city: u.city || "" } : null);
       setDegree(user.education?.[0]?.degree || "");
       setProfileImage(user.profileImage || null);
     }
@@ -130,6 +130,12 @@ export default function EditProfileScreen({ navigation }) {
       // a new university from the list is saved first (the profile then shows it)
       const oldUniId = user?.university?._id || user?.university?.id || user?.university;
       let uniSaved = null;
+      // picked from the bundled list (the server's didn't load): say so rather than save something else
+      if (isStudent && uni && !uni.id && uni.name !== (user?.university?.name || user?.universityName)) {
+        Alert.alert("couldn't save your university", "check your connection and pick it again.");
+        setLoading(false);
+        return;
+      }
       if (isStudent && uni?.id && String(uni.id) !== String(oldUniId || "")) uniSaved = (await universitiesApi.setMine(uni.id))?.university || null;
       const response = await axios.put(
         `${API_URL}/profile/update`,
@@ -138,7 +144,7 @@ export default function EditProfileScreen({ navigation }) {
       );
 
       if (response.data.user) {
-        const withUni = uniSaved ? { university: { _id: uniSaved.id, name: uniSaved.name, shortName: uniSaved.shortName, city: uniSaved.city, status: uniSaved.status }, universityName: uniSaved.name } : {};
+        const withUni = uniSaved ? { university: { _id: uniSaved.id, name: uniSaved.name, shortName: uniSaved.shortName, city: uniSaved.city }, universityName: uniSaved.name } : {};
         setUser({ ...response.data.user, ...withUni, profileImage: profileImage || response.data.user.profileImage });
         Alert.alert("Success", "Your profile has been updated!", [
           { text: "OK", onPress: () => navigation.goBack() }
