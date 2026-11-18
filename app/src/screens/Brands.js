@@ -1391,7 +1391,7 @@ export default function BrandsScreen() {
     );
   }, [loadingMore, displayedBrands.length, loading, filteredData.length, hasMore, clearAllFilters, lastUpdated, selectedCity, activeFilterCount, searchQuery, setSelectedCity]);
 
-  const universityName = isGuest ? null : user?.university?.name || null;
+  const universityName = isGuest ? null : user?.university?.name || user?.universityName || null;
 
   const renderHeader = useCallback(
     () => (

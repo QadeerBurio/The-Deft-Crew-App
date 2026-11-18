@@ -52,7 +52,7 @@ const toProfile = (d = {}) => ({
   rollNo: d.rollNo || "",
   phone: d.phone || "",
   email: d.email || "",
-  university: d.university?.name || "not assigned",
+  university: d.university?.name || d.universityName || "not assigned",
   profileImage: d.profileImage || null,
   isAlumni: d.isAlumni || false,
   isVip: d.isVip || false,

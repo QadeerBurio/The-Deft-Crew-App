@@ -542,7 +542,7 @@ export default function ProfileScreen() {
 
   const universityName =
     typeof user?.university === "object"
-      ? user?.university?.name || ""
+      ? user?.university?.name || user?.universityName || ""
       : typeof user?.university === "string" && !/^[a-f0-9]{24}$/i.test(user.university)
       ? user.university
       : "";
