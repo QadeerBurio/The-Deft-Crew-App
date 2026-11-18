@@ -1,111 +1,131 @@
-// The university picker (feat/universities): one component for signup and profile edit, on the shared list.
-// Type to filter (name / short name / city), pick one; "my university isn't listed" -> a request: "did you mean …?"
-// for one that's already there, else the student continues with it as "pending review".
+// The university dropdown (feat/universities, fix/universities-rules): one component for signup and profile edit.
+// It opens on the FULL list A–Z with no typing; the search box filters (name, short name, alias, city); the list is
+// never empty (the bundled HEC list when offline or when the server returns nothing; the server's list, with an
+// admin's additions, when it loads); students can't add a university: "can't find your university? contact support".
 //   node tests/app/university-picker.test.js
 const path = require("path");
+const fs = require("fs");
 const H = require("./harness");
+const { SERVER } = require("../paths");
 const { ok, done } = H.counter();
 global.__DEV__ = false;
 
 (async () => {
   const { React, mount } = H.makeReact();
   const FlatList = ({ data, renderItem, ListEmptyComponent }) => React.createElement("View", null, data && data.length ? data.map((item, index) => React.createElement(React.Fragment, { key: index }, renderItem({ item, index }))) : ListEmptyComponent || null);
-  const { rn } = H.makeRN({ FlatList });
-  const calls = [];
-  const LIST = [
-    { id: "u1", name: "Institute of Business Management", shortName: "IoBM", city: "Karachi", status: "approved" },
-    { id: "u2", name: "NED University of Engineering & Technology", shortName: "NED", city: "Karachi", status: "approved" },
-  ];
-  const api = {
-    search: async (q) => { calls.push(["search", q]); if (api.fail) throw Object.assign(new Error("offline"), { offline: true }); return LIST.filter((u) => !q || `${u.name} ${u.shortName} ${u.city}`.toLowerCase().includes(q.toLowerCase())); },
-    request: async (body) => { calls.push(["request", body]); return api.answer(body); },
-    setMine: async () => ({}),
+  const opened = [];
+  const { rn } = H.makeRN({ FlatList, Linking: { openURL: async (u) => { opened.push(u); } } });
+  const BUNDLED = JSON.parse(fs.readFileSync(path.join(H.SRC, "data/universities-pk.json"), "utf8"));
+  const server = { mode: "ok", list: null, gets: 0 };
+  const apiMock = {
+    __esModule: true,
+    default: {
+      get: async (url) => {
+        server.gets++;
+        if (server.mode === "offline") throw Object.assign(new Error("Network Error"), { request: {} });
+        if (server.mode === "empty") return { data: { success: true, data: [] } };
+        return { data: { success: true, data: server.list } };
+      },
+      put: async () => ({ data: { data: {} } }),
+    },
   };
+  const nav = { routeNames: [], calls: [] };
   const load = H.loader({
     react: React, "react-native": rn,
     "@expo/vector-icons": { Ionicons: "Icon" },
     "react-native-safe-area-context": { useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) },
-    "../api/universitiesApi": { universitiesApi: api, universityLabel: load0().universityLabel },
+    "@react-navigation/native": { useNavigation: () => ({ getState: () => ({ routeNames: nav.routeNames }), navigate: (n) => nav.calls.push(n) }) },
+    "./api": apiMock,
+    "../data/universities-pk.json": BUNDLED,
+    "./ContactUs": { SUPPORT_WHATSAPP: "https://wa.me/923249287649" },
   });
-  function load0() { return H.loader({ react: React, "react-native": rn, "./api": { __esModule: true, default: {} } })(path.join(H.SRC, "api/universitiesApi.js")); }
+  const uapi = load(path.join(H.SRC, "api/universitiesApi.js"));
   const Picker = load(path.join(H.SRC, "components/UniversityPicker.js")).default;
-  const { universityLabel } = load0();
 
-  console.log("── how a university reads");
-  ok(universityLabel(LIST[0]) === "Institute of Business Management (IoBM) · Karachi", "name, short name and city", universityLabel(LIST[0]));
-  ok(universityLabel({ name: "Karachi Grammar College of Design", city: "Karachi", status: "pending" }).endsWith("· pending review"), "a requested one says 'pending review'");
+  console.log("── the bundled list is the server's seed");
+  const seed = JSON.parse(fs.readFileSync(path.join(SERVER, "seeds", "universities-pk.json"), "utf8"));
+  const seedNames = seed.universities.filter((u) => u.status === "approved").map((u) => u.name).sort();
+  ok(JSON.stringify(BUNDLED.universities.map((u) => u.name).sort()) === JSON.stringify(seedNames) && BUNDLED.universities.length >= 280, `bundled list = the server seed's approved universities (${BUNDLED.universities.length})`);
+  ok(BUNDLED.universities.every((u) => u.name && "shortName" in u && "city" in u && Array.isArray(u.aliases)), "each with name, short name, city and aliases");
 
-  console.log("── pick from the list");
+  // the server's list: the seed (with ids) plus one the admin added
+  server.list = [...BUNDLED.universities.map((u, i) => ({ id: `s${i}`, ...u, status: "approved" })), { id: "new1", name: "Aaa Test Institute of Design", shortName: "ATID", city: "Lahore", aliases: [], status: "approved" }];
   let picked = null;
   let value = null;
   const el = () => React.createElement(Picker, { value, onChange: (u) => { picked = u; value = u; } });
   const m = mount(el());
   const byId = (id) => H.find(m.tree, (n) => n.props?.testID === id);
-  ok(/select university/.test(H.textOf(byId("university-field"))), "empty: 'select university'");
-  byId("university-field").props.onPress();
-  await H.tick(20);
-  ok(calls.some((c) => c[0] === "search" && c[1] === "") && byId("university-u1") && byId("university-u2"), "opening the sheet lists universities");
-  H.find(m.tree, (n) => n.type === "TextInput" && n.props.accessibilityLabel === "search universities").props.onChangeText("iobm");
-  await H.tick(300);
-  ok(byId("university-u1") && !byId("university-u2"), "typing the short name filters (server search)");
-  ok(/Institute of Business Management/.test(H.textOf(byId("university-u1"))) && /IoBM · Karachi/.test(H.textOf(byId("university-u1"))), "each row: name, short name and city");
-  byId("university-u1").props.onPress();
-  await H.tick(5);
-  m.rerender(el());
-  ok(picked?.id === "u1" && /Institute of Business Management \(IoBM\) · Karachi/.test(H.textOf(byId("university-field"))), "picked: the field shows it");
+  const rows = () => H.findAll(m.tree, (n) => typeof n.props?.testID === "string" && n.props.testID.startsWith("university-") && !["university-field", "university-count", "university-support"].includes(n.props.testID));
+  const search = (q) => H.find(m.tree, (n) => n.type === "TextInput" && n.props.accessibilityLabel === "search universities").props.onChangeText(q);
 
-  console.log("── offline");
-  api.fail = true;
+  console.log("── opens on the full list, no typing");
   byId("university-field").props.onPress();
-  await H.tick(20);
-  ok(/couldn't load the list/.test(H.textOf(m.tree)) && H.byLabel(m.tree, "try again"), "the list can't load: says so, with 'try again'");
-  api.fail = false;
-  H.byLabel(m.tree, "try again").props.onPress();
-  await H.tick(20);
-  ok(byId("university-u1"), "try again: the list is back");
-
-  console.log("── my university isn't listed");
-  byId("university-not-listed").props.onPress();
-  await H.tick(5);
-  const input = (label) => H.find(m.tree, (n) => n.type === "TextInput" && n.props.accessibilityLabel === label);
-  ok(input("university name") && input("city"), "a small form: name and city");
-  H.byLabel(m.tree, "add my university").props.onPress();
-  await H.tick(5);
-  ok(/full name and its city/.test(H.textOf(m.tree)) && !calls.some((c) => c[0] === "request"), "empty: says what's missing, sends nothing");
-  api.answer = () => ({ match: LIST[0], message: "Did you mean Institute of Business Management (Karachi)?" });
-  input("university name").props.onChangeText("Inst of Business Mgmt");
-  input("city").props.onChangeText("Karachi");
-  await H.tick(2);
-  H.byLabel(m.tree, "add my university").props.onPress();
+  const firstPaint = rows().length;
+  ok(firstPaint === BUNDLED.universities.length, "the first paint (before the server answers) is already the full bundled list", firstPaint);
   await H.tick(10);
-  ok(/Did you mean Institute of Business Management/.test(H.textOf(m.tree)) && H.byLabel(m.tree, "use Institute of Business Management"), "already on the list: 'did you mean …?' with a button to use it");
-  H.byLabel(m.tree, "use Institute of Business Management").props.onPress();
-  await H.tick(5);
-  ok(picked?.id === "u1", "…using it picks that one (no request made)");
+  const names = rows().map((r) => r.props.testID.replace("university-", ""));
+  ok(names.length === server.list.length, `then the server's full list: ${names.length} universities`, names.length);
+  ok(names.every((n, i) => i === 0 || names[i - 1].localeCompare(n) <= 0), "A–Z");
+  ok(names[0] === "Aaa Test Institute of Design", "an admin's addition is in the dropdown (no app update)", names[0]);
+  ok(/IoBM · Karachi/.test(H.textOf(byId("university-Institute of Business Management"))), "each row: name, short name and city");
+  ok(/universities, A–Z/.test(H.textOf(byId("university-count"))), "says how many, A–Z");
+
+  console.log("── the search box filters as you type");
+  search("iobm"); await H.tick(2);
+  ok(rows().length === 1 && byId("university-Institute of Business Management"), "short name: 'iobm'");
+  search("fast-nuces"); await H.tick(2);
+  ok(byId("university-National University of Computer & Emerging Sciences"), "alias: 'fast-nuces'");
+  search("karachi university"); await H.tick(2);
+  ok(byId("university-University of Karachi"), "alias words: 'karachi university'");
+  search("jamshoro"); await H.tick(2);
+  ok(rows().length > 0 && rows().every((r) => /Jamshoro/.test(H.textOf(r))), "city: 'jamshoro'");
+  search("ned engineering"); await H.tick(2);
+  ok(byId("university-NED University of Engineering & Technology"), "words of the name: 'ned engineering'");
+  search("zzzz nothing"); await H.tick(2);
+  ok(rows().length === 0 && /no match/.test(H.textOf(m.tree)), "no match: says so");
+  search(""); await H.tick(2);
+  ok(rows().length === server.list.length, "clearing the search: the full list again");
+  byId("university-Institute of Business Management").props.onPress();
+  await H.tick(2);
+  m.rerender(el());
+  ok(picked?.id && picked.name === "Institute of Business Management" && /Institute of Business Management \(IoBM\) · Karachi/.test(H.textOf(byId("university-field"))), "picked: the field shows it (with the server's id)");
+
+  console.log("── never empty");
+  uapi._resetForTests();
+  server.mode = "offline";
+  byId("university-field").props.onPress();
+  await H.tick(10);
+  ok(rows().length === BUNDLED.universities.length, "offline: the bundled list", rows().length);
+  byId("university-Habib University").props.onPress();
+  await H.tick(2);
+  ok(picked?.name === "Habib University" && picked.id === null, "…a bundled pick has the name (signup sends it; the server matches it)");
+  uapi._resetForTests();
+  server.mode = "empty";
   m.rerender(el());
   byId("university-field").props.onPress();
-  await H.tick(20);
-  byId("university-not-listed").props.onPress();
-  await H.tick(5);
-  api.answer = (b) => ({ university: { id: "p1", name: b.name, shortName: "", city: b.city, status: "pending" }, created: true });
-  input("university name").props.onChangeText("Karachi Grammar College of Design");
-  input("city").props.onChangeText("Karachi");
-  await H.tick(2);
-  H.byLabel(m.tree, "add my university").props.onPress();
   await H.tick(10);
-  m.rerender(el());
-  ok(picked?.id === "p1" && picked.status === "pending" && calls.some((c) => c[0] === "request" && c[1].name === "Karachi Grammar College of Design" && c[1].city === "Karachi"), "a new one: requested, and the student continues with it");
-  ok(/Karachi Grammar College of Design · Karachi · pending review/.test(H.textOf(byId("university-field"))) && /we're checking this university/.test(H.textOf(m.tree)), "it shows as their university, marked pending review");
+  ok(rows().length === BUNDLED.universities.length, "the server returns nothing: the bundled list");
+  ok((await uapi.loadUniversities({ force: true })).length === BUNDLED.universities.length, "loadUniversities: bundled when the server's list is empty");
 
-  console.log("── one component for signup and profile edit");
+  console.log("── students can't add a university");
+  ok(!byId("university-not-listed") && !H.byLabel(m.tree, "my university isn't listed") && !H.find(m.tree, (n) => n.type === "TextInput" && n.props.accessibilityLabel === "university name"), "no 'my university isn't listed', no form");
+  ok(/can't find your university\? contact support/.test(H.textOf(byId("university-support"))), "instead: 'can't find your university? contact support'");
+  byId("university-support").props.onPress();
+  ok(opened.includes("https://wa.me/923249287649"), "signup (no help screen here): opens tdc support on WhatsApp, as on the help screen");
+  nav.routeNames = ["Home", "ContactUs"];
+  byId("university-field").props.onPress();
+  await H.tick(5);
+  byId("university-support").props.onPress();
+  ok(nav.calls.includes("ContactUs"), "signed in: opens the help & support screen");
+  const apiSrc = H.read("app/src/api/universitiesApi.js");
+  ok(!/\/universities\/request/.test(apiSrc) && !/request\s*:/.test(apiSrc), "the app has no way to send a university request");
+
+  console.log("── one component, one list");
   const signup = H.read("app/src/screens/SignupScreen.js");
   const edit = H.read("app/src/screens/Social/EditProfileScreen.js");
   ok(/import UniversityPicker from "\.\.\/components\/UniversityPicker"/.test(signup) && /<UniversityPicker/.test(signup), "signup uses UniversityPicker");
-  ok(/import UniversityPicker from "\.\.\/\.\.\/components\/UniversityPicker"/.test(edit) && /<UniversityPicker/.test(edit) && /universitiesApi\.setMine\(uni\.id\)/.test(edit), "profile edit uses the same picker and saves through /universities/mine");
-  ok(!/const UNIVERSITIES = \[/.test(signup) && !/Aga Khan University — Karachi/.test(signup), "no hard-coded university list in the app any more");
-  ok(/universityId: university\?\.id/.test(signup) && /if \(!university\?\.id\)/.test(signup), "signup sends the list's id and needs one");
-  const shown = ["app/src/screens/ProfileScreen.js", "app/src/screens/ProfileDetailsScreen.js", "app/src/screens/Brands.js"].map(H.read).join("\n");
-  ok((shown.match(/universityName/g) || []).length >= 3, "profile, details and brands fall back to the student's university name");
-  m.unmount?.();
+  ok(/import UniversityPicker from "\.\.\/\.\.\/components\/UniversityPicker"/.test(edit) && /<UniversityPicker/.test(edit) && /universitiesApi\.setMine\(uni\.id\)/.test(edit), "profile edit uses the same dropdown and saves through /universities/mine");
+  ok(!/const UNIVERSITIES = \[/.test(signup), "no other university list in the app");
+  ok(/universityId: university\?\.id \|\| undefined/.test(signup) && /universityName: university\?\.name/.test(signup), "signup sends the id (or, offline, the bundled name)");
   done();
 })().catch((e) => { console.error("CRASH", e); process.exit(1); });

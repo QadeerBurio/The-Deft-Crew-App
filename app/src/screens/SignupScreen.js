@@ -355,7 +355,7 @@ export default function SignupScreen({ navigation }) {
     if (!name.trim()) e.name = "Enter your full name";
     if (!gender) e.gender = "Pick your gender";
     if (ph && !validatePhone(ph)) e.phone = "Enter an 11-digit number starting with 0";
-    if (!university?.id) e.university = "Pick your university (or add it if it isn't listed)";
+    if (!university?.name) e.university = "Pick your university";
     if (!city) e.city = "Pick your city";
     // Academic Level is only required for Students (not Alumni)
     if (!isAlumni && !academicLevel) e.academicLevel = "Pick your academic level";
@@ -401,8 +401,9 @@ export default function SignupScreen({ navigation }) {
         fullName: name.trim(),
         rollNo: rollNo.trim() || undefined,
         phone: phone.trim() || undefined,
-        universityId: university?.id,
-        universityName: university?.name, // shown until the server answers; the id is what counts
+        // the id from the server's list; offline (the bundled list) only the name, which the server matches
+        universityId: university?.id || undefined,
+        universityName: university?.name,
         referralCodeInput: referralCode.trim() || undefined,
         isAlumni,
         gender,
