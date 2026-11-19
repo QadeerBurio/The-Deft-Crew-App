@@ -29,7 +29,7 @@ import { color, font, radius, MAX_FONT_SCALE } from "../../theme/tokens";
 import { holdTour, releaseTour } from "../../engagement/tour/tourGate";
 
 const LOCATION_TTL_MS = 10 * 60 * 1000; // refresh the position at most every 10 minutes
-const POSITION_TIMEOUT_MS = 6000;
+const POSITION_TIMEOUT_MS = 12000;
 const CACHED_MAX_AGE_MS = 10 * 60 * 1000; // use the phone's cached position only if it is this fresh…
 const CACHED_MIN_ACCURACY_M = 1000;       // …and at least this accurate
 const QUERY_MIN_ACCURACY_M = 2000;        // never ask for nearby deals with a position worse than this
@@ -54,8 +54,9 @@ export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, s
   const [positionFailed, setPositionFailed] = useState(false);
   const lastLocAtRef = useRef(0);
   const mountedRef = useRef(true);
-  useEffect(() => () => {
-    mountedRef.current = false;
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
   }, []);
 
   // Read the permission without asking
@@ -85,7 +86,7 @@ export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, s
   }, [signedIn, checkPermission]);
 
   // Cached position first (only if under 10 minutes old and within 1 km), then a
-  // fresh one (6 s max). A position less accurate than 2 km is never used.
+  // fresh one (12 s max). A position less accurate than 2 km is never used.
   const readPosition = useCallback(async () => {
     lastLocAtRef.current = Date.now();
     const apply = (pos, { maxAgeMs, minAccuracyM }) => {
@@ -127,8 +128,8 @@ export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, s
   useFocusEffect(
     useCallback(() => {
       if (!signedIn || perm !== "granted") return;
-      if (Date.now() - lastLocAtRef.current >= LOCATION_TTL_MS) readPosition();
-    }, [signedIn, perm, readPosition])
+      if (positionFailed || Date.now() - lastLocAtRef.current >= LOCATION_TTL_MS) readPosition();
+    }, [signedIn, perm, readPosition, positionFailed])
   );
 
   const nearby = useQuery({
@@ -136,7 +137,7 @@ export default function HomeNearMe({ signedIn, userId, allDeals, dealsLoading, s
     queryFn: ({ signal }) => fetchNearby(coords.lat, coords.lng, userId, signal),
     enabled: !!signedIn && perm === "granted" && !!coords,
     staleTime: LOCATION_TTL_MS,
-    retry: false,
+    retry: 1,
     refetchOnWindowFocus: false,
   });
   useEffect(() => {
