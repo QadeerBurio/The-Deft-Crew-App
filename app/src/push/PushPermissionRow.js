@@ -42,7 +42,7 @@ export default function PushPermissionRow() {
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={denied ? "notifications are off for tdc. turn on in settings" : "turn on notifications"}
-      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", backgroundColor: T.yellow, borderRadius: 16, padding: 14, marginTop: 12, opacity: pressed ? 0.8 : 1 })}
+      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", backgroundColor: T.yellow, borderRadius: 16, padding: 14, marginHorizontal: 16, marginBottom: 16, opacity: pressed ? 0.8 : 1 })}
     >
       <Ionicons name="notifications-off-outline" size={20} color={T.ink} style={{ marginRight: 10 }} />
       <View style={{ flex: 1 }}>
