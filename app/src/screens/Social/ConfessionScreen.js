@@ -52,7 +52,7 @@ import { reportError } from "../../utils/reportError";
 import ReportModal from "./ReportModal";
 import ConfessionSupportSheet from "./ConfessionSupportSheet";
 import ConfessionRulesSheet from "./ConfessionRulesSheet";
-import { safetyMe, acceptRules, muteAuthor, deleteMyConfession, myConfessionIds } from "./confessionSafetyApi";
+import { safetyMe, acceptRules, muteAuthor, deleteMyConfession, myConfessionIds, precheckText } from "./confessionSafetyApi";
 const { height, width } = Dimensions.get('window');
 const API_URL = `${SERVER_ORIGIN}/api/social`;
 
@@ -811,6 +811,17 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
 
     setPosting(true);
     try {
+      // confession safety: check the text before uploading the image, so a post that needs an edit leaves no image
+      // behind (server P4-1 follow-up). Unreachable check: carry on, the post is checked by the server anyway.
+      if (safety && selectedImage && newConfession.trim()) {
+        const pre = await precheckText(token, newConfession.trim()).catch((e) => { reportError("confessionSafety", e, { step: "precheck" }); return null; });
+        if (pre?.verdict === "edit" && Array.isArray(pre.reasons)) {
+          soundError();
+          setComposerIssues(pre.reasons);
+          funnel("confession_precheck_edit");
+          return;
+        }
+      }
       let imageUrl = "";
       if (selectedImage) imageUrl = await uploadToCloudinary(selectedImage);
 
