@@ -49,6 +49,7 @@ import {
   getRouteFromNotificationData,
   NOTIFICATION_TASK,
 } from "./app/src/utils/pushNotifications";
+import { reportPushOpened } from "./app/src/utils/pushOpened";
 
 import GlobalNotificationLayer from "./app/src/components/GlobalNotificationLayer";
 import AppAlertHost, { installAppAlert } from "./app/src/components/AppAlert";
@@ -267,6 +268,7 @@ function ColdStartDeepLink() {
         if (!claimNotificationResponse(response)) return;
 
         const data = response?.notification?.request?.content?.data || {};
+        reportPushOpened(data); // N-6: only pushes that carry a pushLogId (pushOpenTracking)
         const { route, params } = getRouteFromNotificationData(data);
         if (!route) return;
 

@@ -10,6 +10,7 @@ import NotificationBanner from './NotificationBanner';
 import { openTarget } from '../guest/accountRoutes';
 import * as Notifications from 'expo-notifications';
 import { onRedemptionPush } from '../analytics/metaRedemptions';
+import { reportPushOpened } from '../utils/pushOpened';
 import { loyaltyChanged } from '../api/loyaltyApi';
 import { fromNotificationData as loyaltyMoment } from '../loyalty/celebrations';
 import RewardCelebration from './RewardCelebration';
@@ -172,6 +173,7 @@ export default function GlobalNotificationLayer() {
       if (!claimNotificationResponse(response)) return;
       onRedemptionPush(data);
       loyaltyMoment(data).catch(() => {}); // opened from the tray: still celebrated once
+      reportPushOpened(data); // N-6: only pushes that carry a pushLogId (pushOpenTracking)
 
       const { route, params } = getRouteFromNotificationData(data);
       openTarget(route, params); // guest + login-only route → sign in first, then continue
