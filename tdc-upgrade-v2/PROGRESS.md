@@ -55,7 +55,8 @@ All server suites use in-memory fakes; they delete `MONGO_URI` and stub `dotenv`
 | P1-1 app links "verified host" | the Railway host's `autoVerify` fails (no assetlinks.json served); iOS has no associated domains | gettdc.pk app links prepared for 1.3.0 (`release-1.3.0.md`) |
 | P1-4 "uses the existing getReferralLeaderboard" | all-time only, full names and photos of the top 10 to every student, no rank, no campus | monthly / rank / campus params; first names, no photos for everyone (owner) |
 | P1-1 validate | public route returned the referrer's full name and photo (any code could be tried) | first name only, no photo, rate-limited, for everyone (owner) |
-| (found in P1) | `services/engagement/referral.js` logs `referral_credited` with `source: 'system'`, which the event model rejects (only server / client), so those events are probably never stored | not changed (the monthly leaderboard uses the points ledger); owner to decide |
+| (found in P1) | `referral_signup_bonus` / `referral_credited` events were written with `source: 'system'` (signup in `routes/auth.routes.js`, and `services/engagement/referral.js`), which the event model rejects (only server / client); the error was caught, so **the points were paid, only the event rows were lost** | fixed in P1 follow-ups: `source: 'server'` (an existing value, no enum change); read-only `scripts/count-referral-credits.js` for the owner |
+| (found in P1 follow-ups) | live referral rewards: the signup route pays the referrer **+50 and +100** and the new student **+100** at signup, before the e-mail code is entered (students start `emailVerified: false`); `referral.js`'s "+100 on first sort" then finds the same keys and pays nothing. The P1 share text says "when your friend starts using tdc" | not changed (owner decision #6: rewards stay as live). Owner to decide: the copy, and whether to pay only after e-mail verification (any new e-mail address earns the referrer 150 today) |
 | (found in P4-1) | confession mention notifications named the commenter ("<name> mentioned you in a confession") | anonymous with `confessionSafety` on; **recommend making it unconditional** (owner) |
 | P0-1/P0-3/P0-5: add app helpers in Phase 0 | `tests/app/app-cleanup` fails on any `app/src` file nothing imports | written and tested in Phase 0, kept in `tdc-upgrade-v2/pending/`, moved into `app/src` with their first caller (P4-1) |
 | P0-6 (new, owner) "super admins are exempt" | no admin levels exist until Phase A (`User.adminAccess`) | every `role: 'admin'` is exempt for now (plan A-1: admins without `adminAccess` count as super); revisit in Phase A |
@@ -145,16 +146,13 @@ Quiet hours: the owner first asked for them on chat pushes, then corrected it (C
 - Confession composer image button returns in P4-3 (images are now moderated; the precheck and server clean-up are ready).
 - SkillShare `typing` event (server handles only `typing_start` / `typing_stop`); tell the other person when a message is deleted (polish phase).
 - Fix `tests/app/events-fresh-data` isolation properly (its fixed waits fail under load); no weakening.
-- SERVER tests that check replies for the text "0300" (a phone prefix) can fail when a random ObjectId contains it
-  (fixed so far: loyalty-visits, career). Same pattern still in: admin-delete-account, career-best-matches,
-  career-job-alerts, career-retention, feature-access, surplus-announce, surplus (×2). Fix each to its exact seeded
-  phone.
-- `referral_credited` events rejected by the event model (`source: 'system'`), see plan corrections.
+- ~~SERVER tests checking for the text "0300"~~: all fixed (loyalty-visits, career, then the remaining 7 suites in SERVER `3c62524c`).
+- ~~`referral_credited` events rejected~~: fixed in P1 follow-ups (SERVER `bed92851`).
 
 ## Release plan
 
 **Branches** (each repo; each built on the one before, so they merge in this order):
-`upgrade/p0-safety` → `upgrade/p4-1-safety` → `upgrade/p4-1-followups` → `upgrade/sec-1-socket` → `upgrade/chat-1-push` → `upgrade/p1-growth`. ADMIN has changes in `p4-1-safety`, `p4-1-followups` and `p1-growth`; its other branches equal the one before. P1 adds: a portal deploy with the new `vercel.json` (check on a preview first), and the 1.3.0 store build later for app links and the install referrer. Nothing is merged, pushed or deployed without the owner's written OK.
+`upgrade/p0-safety` → `upgrade/p4-1-safety` → `upgrade/p4-1-followups` → `upgrade/sec-1-socket` → `upgrade/chat-1-push` → `upgrade/p1-growth` → `upgrade/p1-followups`. ADMIN has changes in `p4-1-safety`, `p4-1-followups` and `p1-growth`; its other branches equal the one before. P1 adds: a portal deploy with the new `vercel.json` (check on a preview first), and the 1.3.0 store build later for app links and the install referrer. Nothing is merged, pushed or deployed without the owner's written OK.
 
 **Before staging** (once the owner has created it, `server/docs/STAGING.md`):
 1. Staging Railway variables: `APP_ENV=staging`, its own `MONGO_URI`, new `JWT_SECRET`, `SAFETY_ALERT_EMAILS`, `SAFETY_APPEAL_EMAIL`, a capped `OPENAI_API_KEY`, `PUBLIC_BASE_URL`.
@@ -186,12 +184,46 @@ validate first name only and rate-limited; leaderboard monthly / rank / campus, 
 | P1-1 / P1-4 / P1-5 app | `growth/inviteLinks.js` (links, owner's share text, opening links by sign-in state, `@tdc_pending_ref`), `App.js` handles `tdcapp://i/CODE` and `gettdc.pk/i/CODE` first; Signup: `InviteCodeExtras` ("invited by <first name> ✓", "paste invite code" on tap only); crew screen behind **growthV2**: share link `gettdc.pk/i/CODE?c=`, WhatsApp first, owner's text, `ReferralLeaderboard`; behind **shareCards**: `ui/ShareCard.js` (1080×1350, QR, invite / levelUp / resumeReady / savings / confession) | APP `0126fe2` | invite-link 28/28; APP run-all ok; export ok (9.77 MB, +30 KB) |
 | P1-3 | install referrer: waits for 1.3.0 (`tdc-upgrade-v2/release-1.3.0.md`) | — | — |
 
-**Before production:** check `vercel.json` on a Vercel **preview** of the portal first (it is new to the repo): the
-landing page, `/ambassador`, a deep page reload, `/i/ABC123`, and both `.well-known` files.
+**Before production:** check `vercel.json` on a Vercel **preview** of the portal first (it is new to the repo): the exact
+18-row list is in `release-1.3.0.md` → "Vercel preview check" (owner).
 
 **Funnel note:** an invitee is signed out until they sign up, so `invite_link_opened` / `invite_code_prefilled` /
 `signup_with_ref` can't be app events; they are measured on the server instead: `ReferralClick` (opens, by channel) and
 `User.referredBy` (signups with a code).
+
+## P1 follow-ups (branch `upgrade/p1-followups`, owner 22 Nov 2026)
+
+| Item | What changed | Commit | Tests |
+|---|---|---|---|
+| 1 referral events | `source: 'system'` → `'server'` in the signup route and `referral.js` (2×): the `referral_signup_bonus` / `referral_credited` events are stored again. Points logic unchanged. New read-only `scripts/count-referral-credits.js` (owner runs it; refuses without `MONGO_URI`, prints host/db only, no names / e-mails / phones) | SERVER `bed92851` | referral-events 22/22 (events stored; +50 / +100 / +100 once each; nothing writes 'system'; count() writes nothing) |
+| 3 flakes | the last 7 suites check the exact seeded value instead of "0300": admin-delete-account, career-best-matches, career-job-alerts, career-retention (×2), feature-access, surplus-announce, surplus (×2) | SERVER `3c62524c` | all 7 ok, 3 runs each |
+| 2 App Store link | `Points.js`: `apps.apple.com/app/id6765877675` (and `itms-apps://…/app/id…`) for everyone, instead of the Brazil store page | APP `890cea6` | invite-link 30/30; APP run-all 52/52; export ok |
+| 4 preview list | `release-1.3.0.md`: the 18-row Vercel preview check for `vercel.json` | APP docs commit (this log) | — |
+
+Full runs after the changes: SERVER 79/79 suites (1 skipped as always: shopify-review needs a local MongoDB).
+
+**Answer on referral points (item 1):** (a) the points **were credited**: `points.award` runs after the failed event
+write (the error is caught) and saves the balance, then the ledger row. Only the event log was lost.
+(b) No loss is expected, but `node scripts/count-referral-credits.js` (owner, read only) confirms it from the ledger:
+per award type the students and points missing, by month, first/last date; plus how many referred students never
+verified their e-mail but were paid. No balance was changed; back-payment is the owner's decision.
+
+Not changed: the portal's own App Store link (`edu-boost/src/web/site.js`: `apps.apple.com/pk/…`) works for Pakistan;
+the app-link values in `.well-known` are still placeholders (needed only for 1.3.0).
+
+## Phase N verification (read only, 22 Nov 2026; no code yet)
+
+| Plan | What the plan assumes | What the code has | Differs? |
+|---|---|---|---|
+| N1 / N-1 | social pushes for every post / confession / listing; `SOCIAL_PUSH_GROUP_MINUTES` default 0, `SOCIAL_PUSH_DAILY_MAX` default 10, quiet hours on | as described (`services/socialPush.js` L159–210), **but each kind only sends when its Railway switch is exactly `"true"`** (`SOCIAL_PUSH_POSTS` / `_CONFESSIONS` / `_SKILLSHARE`); quiet hours on unless `SOCIAL_PUSH_QUIET_HOURS=off` | small: whether N1 is live depends on those switches (owner checks; not read) |
+| N2 / N-2 | ~20 sender files, each with its own rules | 23 files (incl. utils/scripts). Engagement gateway: daily cap 1, weekly 2/4, quiet hours, prefs, PushLog. **Not in the plan:** every new bell `Notification` row auto-pushes from a model hook (`models/Notification.js` L153, 52 create sites) through `sendToUser`: pref check only, **no quiet hours, no cap, no PushLog**. Chat push (CHAT-1): personal, no cap, as N-2 wants | **yes**: the bell hook is the biggest uncapped sender; N-2 must classify it (by `type`) or it bypasses the budget |
+| N3 / N-3 | OS prompt on login, `App.js` ~L206, `utils/pushNotifications.js` L117 | `App.js` L207 → `registerForPushNotificationsAsync` → `requestPermissionsAsync` (L128); tour already held | no |
+| N4 / N-4 | two inboxes: `Notification` and `SocialNotification` | as described (`/api/notifications/my-notifications`, `/api/social/notifications`). A third, `EventNotification` (`/api/events/notifications`), is for event creators only | small: leave event-creator notices out of the unified inbox (or a later tab) |
+| N5 / N-5 | 9 switches; `NOTIF_PREF_DEFAULTS` at engagement.routes.js L948 | 8 for everyone (L958 now), + `messages` (chatPushV1 accounts) + `loyalty` (loyalty pilot) = up to 10 | no (line numbers only) |
+| N6 / N-6 | push report from `PushLog` + receipts | **opens are never recorded**: the app never calls `POST /api/notifications/push-opened/:logId`, and the push data doesn't carry the log id (the row is written after the messages are built), so `openedAt` is always empty and today's admin "push opened" numbers are 0. Only the engagement gateway writes `PushLog` (social, bell, chat, career, loyalty, surplus don't). `markOpened` doesn't check the owner | **yes**: N-6 needs open tracking first (log id in the data + the app reporting the tap, behind a flag) and logging for the other senders, else the report shows a real-looking 0% |
+| N7 / N-7 | copy bank `services/engagement/copy.js` | exists (`BANK`, `fill`, `pickVariant`) | no |
+
+N-1 is the owner's Railway action (not touched).
 
 ## Railway variables for the owner to set (never set by the developer)
 
