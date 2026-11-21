@@ -1,5 +1,5 @@
 // N-6 push open tracking (upgrade/phase-n): a tapped push that carries a pushLogId is reported once
-// (POST /notifications/push-opened/<id>); pushes without one (every push while the server's pushOpenTracking flag is
+// (POST /notification/push-opened/<id>); pushes without one (every push while the server's pushOpenTracking flag is
 // off) report nothing. Both tap paths call it: the cold-start tap (App.js) and the tray tap (GlobalNotificationLayer).
 //   node tests/app/push-opened.test.js
 const path = require("path");
@@ -14,7 +14,7 @@ const { reportPushOpened } = load(path.join(H.SRC, "utils", "pushOpened.js"));
 
 (async () => {
   const id = "6b0224d7346757a2f1ee4cc7";
-  ok(reportPushOpened({ type: "reply", pushLogId: id }) === true && posts.length === 1 && posts[0].url === `/notifications/push-opened/${id}`, "a push with a pushLogId: reported to /notifications/push-opened/<id>", JSON.stringify(posts));
+  ok(reportPushOpened({ type: "reply", pushLogId: id }) === true && posts.length === 1 && posts[0].url === `/notification/push-opened/${id}`, "a push with a pushLogId: reported to /notification/push-opened/<id> (the server's real path)", JSON.stringify(posts));
   ok(reportPushOpened({ pushLogId: id }) === false && posts.length === 1, "…once per push (cold start + listener can both see it)");
   for (const [name, data] of [["no pushLogId (flag off)", { type: "reply", route: "Home" }], ["no data", undefined], ["not an id", { pushLogId: "../admin" }], ["a number", { pushLogId: 12 }]]) {
     ok(reportPushOpened(data) === false && posts.length === 1, `${name}: nothing sent`);

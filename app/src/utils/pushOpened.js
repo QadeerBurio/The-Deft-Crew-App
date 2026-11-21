@@ -10,6 +10,6 @@ export function reportPushOpened(data) {
   const id = data && typeof data.pushLogId === "string" ? data.pushLogId : null;
   if (!id || !/^[0-9a-f]{24}$/i.test(id) || reported.has(id)) return false;
   reported.add(id);
-  api.post(`/notifications/push-opened/${id}`, {}, { timeout: 8000 }).catch(() => {});
+  api.post(`/notification/push-opened/${id}`, {}, { timeout: 8000 }).catch(() => {});
   return true;
 }
