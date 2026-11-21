@@ -420,7 +420,7 @@ export default function ChatDetailScreen() {
       setIsRecipientOnline(recipient.online);
     }
 
-    socket.emit("user_online", currentUser._id);
+    socket.emit("user_online", currentUser._id, token); // the token proves who this is (server P4-1b)
     socket.emit("join_chat", conversationId);
 
     const handleStatusUpdate = (data) => {
