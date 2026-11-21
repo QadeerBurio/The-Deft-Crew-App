@@ -13,6 +13,7 @@ import { useNavigation, useRoute, CommonActions } from "@react-navigation/native
 import axios from "axios";
 import { AuthContext } from "../../context/AuthContext";
 import { io } from "socket.io-client";
+import useSocketAuth from "../../hooks/useSocketAuth";
 import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from 'expo-haptics';
@@ -287,6 +288,7 @@ export default function ChatDetailScreen() {
   const route = useRoute();
   const insets = useSafeAreaInsets();
   const { token, user: currentUser } = useContext(AuthContext);
+  useSocketAuth(socket, token); // SEC-1: before the join below, so the server knows who joins
 
   const conversationId = route.params?.conversationId;
   const recipient = route.params?.recipient || {};
