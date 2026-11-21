@@ -44,6 +44,15 @@ import ConfessionCard from "./ConfessionCard";
 import ConfessionCommentThread from "./ConfessionCommentThread";
 import ConfessionComposer from "./ConfessionComposer";
 import ConfessionComments from "./ConfessionComments";
+// confession safety (plan P4-1): everything below is used only while useFlag(FLAGS.confessionSafety) is true
+import useFlag from "../../hooks/useFlag";
+import { FLAGS } from "../../api/upgradeFlags";
+import { funnel } from "../../analytics/funnel";
+import { reportError } from "../../utils/reportError";
+import ReportModal from "./ReportModal";
+import ConfessionSupportSheet from "./ConfessionSupportSheet";
+import ConfessionRulesSheet from "./ConfessionRulesSheet";
+import { safetyMe, acceptRules, muteAuthor, deleteMyConfession, myConfessionIds } from "./confessionSafetyApi";
 const { height, width } = Dimensions.get('window');
 const API_URL = `${SERVER_ORIGIN}/api/social`;
 
@@ -169,6 +178,23 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
   const mentionSearchTimeout = useRef(null);
 
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // ---- confession safety (plan P4-1, flag confessionSafety). Flag off: none of this runs or renders. ----
+  const safety = useFlag(FLAGS.confessionSafety) === true;
+  const [safetyInfo, setSafetyInfo] = useState(null); // { rulesAcceptedAt, helplines, … } from the server
+  const [myIds, setMyIds] = useState(() => new Set()); // my own confessions (for "delete" in the ⋯ menu)
+  const [reportTarget, setReportTarget] = useState(null); // { type: 'Confession' | 'ConfessionComment', id }
+  const [composerIssues, setComposerIssues] = useState([]); // why the pre-check asked for an edit
+  const [support, setSupport] = useState(null); // helplines to show after a self-harm hold
+  const [rulesVisible, setRulesVisible] = useState(false);
+  const [rulesBusy, setRulesBusy] = useState(false);
+  useEffect(() => {
+    if (!safety || !token) return;
+    let live = true;
+    safetyMe(token).then((info) => { if (live) setSafetyInfo(info); }).catch((e) => reportError("confessionSafety", e, { step: "safety-me" }));
+    myConfessionIds(token).then((ids) => { if (live && ids) setMyIds(ids); }).catch((e) => reportError("confessionSafety", e, { step: "my-ids" }));
+    return () => { live = false; };
+  }, [safety, token]);
 
   // Animations
   const fabScale = useRef(new Animated.Value(1)).current;
@@ -691,6 +717,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
       if (res.ok) {
         const updated = await res.json();
         metaEvents.socialEngaged("comment"); // type only, no confession id
+        if (safety && updated?.held) Alert.alert("under review", updated.message || "your comment is under review. it'll show once it's checked.");
         if (updated?.engagement?.popups?.length) {
           engagementBus.emit(
             ENGAGEMENT_EVENTS.POPUPS_QUEUED,
@@ -709,7 +736,10 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
         setTimeout(() => commentFlatListRef.current?.scrollToEnd({ animated: true }), 250);
       } else {
         soundError();
-        Alert.alert("Error", "Failed to post comment");
+        // confession safety: the server's own sentence (needs an edit, banned, too many) instead of a generic error
+        let msg = null;
+        if (safety) { try { const e = await res.json(); if (typeof e?.error === 'string') msg = e.error; } catch (e2) {} }
+        Alert.alert(msg ? "couldn't post" : "Error", msg || "Failed to post comment");
       }
     } catch (err) {
       soundError();
@@ -717,7 +747,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     } finally {
       setCommentLoading(false);
     }
-  }, [commentText, selectedPost, selectedMentions, replyTo, token]);
+  }, [commentText, selectedPost, selectedMentions, replyTo, token, safety]);
 
   // ============ DELETE COMMENT — swipe sound ============
   const handleDeleteComment = useCallback((comment) => {
@@ -793,6 +823,14 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
       if (response.ok) {
         const result = await response.json();
         metaEvents.confessionCreated(); // no params and no id of any kind
+        if (safety) {
+          setComposerIssues([]);
+          funnel(result?.held ? "confession_precheck_hold" : "confession_precheck_ok");
+          if (result?.held) {
+            if (result.support?.helplines?.length) setSupport(result.support.helplines);
+            else Alert.alert("under review", result.message || "your confession is under review. it'll show once it's checked.");
+          }
+        }
 
         // 🔔 success sound
         soundSuccess();
@@ -815,7 +853,11 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
         soundError();
         try {
           const err = await response.json();
-          if (err?.error) Alert.alert("Couldn't post", err.error);
+          // the pre-post check asked for an edit (flag confessionSafety): keep the text, show why in the composer
+          if (safety && response.status === 422 && err?.code === 'NEEDS_EDIT' && Array.isArray(err.reasons)) {
+            setComposerIssues(err.reasons);
+            funnel("confession_precheck_edit");
+          } else if (err?.error) Alert.alert("Couldn't post", err.error);
         } catch (e) {}
       }
     } catch (err) {
@@ -824,7 +866,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     } finally {
       setPosting(false);
     }
-  }, [newConfession, selectedImage, token, fetchConfessions, postVisibility]);
+  }, [newConfession, selectedImage, token, fetchConfessions, postVisibility, safety]);
 
   const resetForm = useCallback(() => {
     setNewConfession("");
@@ -835,6 +877,12 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
   }, []);
 
   const handleFabPress = useCallback(() => {
+    // confession safety: the rules once, before the first post
+    if (safety && safetyInfo && !safetyInfo.rulesAcceptedAt) {
+      soundPopupOpen();
+      setRulesVisible(true);
+      return;
+    }
     // 🔔 popup open sound (the useEffect also fires one — this is the initial)
     soundPopupOpen();
 
@@ -844,7 +892,80 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
       Animated.spring(fabScale, { toValue: 1, friction: 3, useNativeDriver: true }),
     ]).start();
     setModalVisible(true);
-  }, [fabScale]);
+  }, [fabScale, safety, safetyInfo]);
+
+  // ============ CONFESSION SAFETY (flag confessionSafety) ============
+  const handleAgreeRules = useCallback(async () => {
+    setRulesBusy(true);
+    try {
+      if (await acceptRules(token)) setSafetyInfo((prev) => ({ ...(prev || {}), rulesAcceptedAt: new Date().toISOString() }));
+      setRulesVisible(false);
+      setModalVisible(true); // straight on to the composer
+    } catch (e) {
+      soundError();
+      reportError("confessionSafety", e, { step: "accept-rules" });
+      Alert.alert("couldn't save", "check your connection and try again.");
+    } finally {
+      setRulesBusy(false);
+    }
+  }, [token]);
+
+  const handleMore = useCallback((item) => {
+    soundTap();
+    const id = String(item._id);
+    if (myIds.has(id)) {
+      Alert.alert("your confession", "delete it for everyone?", [
+        { text: "cancel", style: "cancel" },
+        {
+          text: "delete", style: "destructive",
+          onPress: async () => {
+            try {
+              if (!(await deleteMyConfession(token, id))) throw new Error("delete refused");
+              soundSwipe();
+              setConfessions((prev) => prev.filter((c) => String(c._id) !== id));
+              feedCache.all = null; feedCache.campus = null;
+            } catch (e) {
+              soundError();
+              reportError("confessionSafety", e, { step: "delete" });
+              Alert.alert("couldn't delete", "please try again.");
+            }
+          },
+        },
+      ]);
+      return;
+    }
+    Alert.alert("this confession", undefined, [
+      { text: "report", onPress: () => setReportTarget({ type: "Confession", id }) },
+      {
+        text: "don't show me this person",
+        onPress: async () => {
+          try {
+            const r = await muteAuthor(token, id, true);
+            if (!r.ok) throw new Error("mute refused");
+            setConfessions((prev) => prev.filter((c) => String(c._id) !== id));
+            fetchConfessions(false); // their other posts go too
+            Alert.alert("done", r.message || "you won't see posts from this person.");
+          } catch (e) {
+            soundError();
+            reportError("confessionSafety", e, { step: "mute" });
+            Alert.alert("couldn't do that", "please try again.");
+          }
+        },
+      },
+      { text: "cancel", style: "cancel" },
+    ]);
+  }, [myIds, token, fetchConfessions]);
+
+  const handleReportComment = useCallback((comment) => {
+    if (!selectedPost?._id || !comment?._id) return;
+    soundTap();
+    setReportTarget({ type: "ConfessionComment", id: `${selectedPost._id}:${comment._id}` });
+  }, [selectedPost]);
+
+  const handleConfessionTextChange = useCallback((text) => {
+    setNewConfession(text);
+    setComposerIssues((prev) => (prev.length ? [] : prev));
+  }, []);
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -889,8 +1010,10 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
       onReplyPress={onReplyPress}
       handleDeleteComment={handleDeleteComment}
       toggleThread={toggleThread}
+      safety={safety}
+      onReport={safety ? handleReportComment : null}
     />
-  ), [collapsedThreads, formatPostTime, onReplyPress, handleDeleteComment, toggleThread]);
+  ), [collapsedThreads, formatPostTime, onReplyPress, handleDeleteComment, toggleThread, safety, handleReportComment]);
 
   // ============ RENDER CONFESSION CARD ============
   const renderConfession = useCallback(({ item }) => (
@@ -906,8 +1029,10 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
       toggleExpand={toggleExpand}
       handleLike={handleLike}
       openComments={openComments}
+      safety={safety}
+      onMore={safety ? handleMore : null}
     />
-  ), [expandedPosts, textLayouts, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, highlightId, scope]);
+  ), [expandedPosts, textLayouts, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, highlightId, scope, safety, handleMore]);
 
   // No skeleton: tabs + list render right away, a small loader only while
   // a tab is loading for the very first time.
@@ -1025,7 +1150,8 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
         setPostVisibility={setPostVisibility}
         confessionInputRef={confessionInputRef}
         newConfession={newConfession}
-        setNewConfession={setNewConfession}
+        setNewConfession={safety ? handleConfessionTextChange : setNewConfession}
+        issues={safety ? composerIssues : []}
         selectedImage={selectedImage}
         setSelectedImage={setSelectedImage}
         handlePost={handlePost}
@@ -1055,6 +1181,21 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
         handlePostComment={handlePostComment}
         commentLoading={commentLoading}
       />
+
+      {/* confession safety (flag confessionSafety): report, rules once, support after a self-harm hold */}
+      {safety && (
+        <>
+          <ReportModal
+            visible={!!reportTarget}
+            contentType={reportTarget?.type || "Confession"}
+            contentId={reportTarget?.id}
+            onClose={() => setReportTarget(null)}
+            onSuccess={() => funnel("confession_reported")}
+          />
+          <ConfessionRulesSheet visible={rulesVisible} busy={rulesBusy} onAgree={handleAgreeRules} onClose={() => setRulesVisible(false)} />
+          <ConfessionSupportSheet visible={!!support} helplines={support || []} onClose={() => setSupport(null)} />
+        </>
+      )}
     </View>
   );
 }

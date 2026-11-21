@@ -5,7 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { color as T } from "../../theme/tokens";
 import styles from "./confessionStyles";
 
-export default function ConfessionCommentThread({ item, collapsedThreads, formatPostTime, onReplyPress, handleDeleteComment, toggleThread }) {
+// safety / onReport (plan P4-1, flag confessionSafety): "report" on others' comments, "under review" on my held ones.
+// Without them the thread is exactly as before.
+export default function ConfessionCommentThread({ item, collapsedThreads, formatPostTime, onReplyPress, handleDeleteComment, toggleThread, safety = false, onReport = null }) {
     const isCollapsed = collapsedThreads[item._id] === true;
     const replies = item.replies || [];
     const hasReplies = replies.length > 0;
@@ -33,6 +35,20 @@ export default function ConfessionCommentThread({ item, collapsedThreads, format
                   <Text style={styles.metaDot}>·</Text>
                   <TouchableOpacity onPress={() => handleDeleteComment(item)}>
                     <Text style={[styles.replyBtn, styles.deleteBtnText]}>delete</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+              {safety && item.isMyComment && item.status && item.status !== 'live' && (
+                <>
+                  <Text style={styles.metaDot}>·</Text>
+                  <Text style={styles.metaText}>under review</Text>
+                </>
+              )}
+              {safety && onReport && !item.isMyComment && (
+                <>
+                  <Text style={styles.metaDot}>·</Text>
+                  <TouchableOpacity onPress={() => onReport(item)} accessibilityRole="button" accessibilityLabel="report comment" hitSlop={8}>
+                    <Text style={styles.replyBtn}>report</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -95,6 +111,20 @@ export default function ConfessionCommentThread({ item, collapsedThreads, format
                           <Text style={styles.metaDot}>·</Text>
                           <TouchableOpacity onPress={() => handleDeleteComment(reply)}>
                             <Text style={[styles.replyBtnSm, styles.deleteBtnText]}>delete</Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
+                      {safety && reply.isMyComment && reply.status && reply.status !== 'live' && (
+                        <>
+                          <Text style={styles.metaDot}>·</Text>
+                          <Text style={styles.metaTextSm}>under review</Text>
+                        </>
+                      )}
+                      {safety && onReport && !reply.isMyComment && (
+                        <>
+                          <Text style={styles.metaDot}>·</Text>
+                          <TouchableOpacity onPress={() => onReport(reply)} accessibilityRole="button" accessibilityLabel="report reply" hitSlop={8}>
+                            <Text style={styles.replyBtnSm}>report</Text>
                           </TouchableOpacity>
                         </>
                       )}

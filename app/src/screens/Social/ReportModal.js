@@ -38,6 +38,21 @@ const REPORT_REASONS = [
   { id: 'Other', label: 'Other', icon: 'ellipsis-horizontal-outline' }
 ];
 
+// Confessions and confession comments (plan P4-1, flag confessionSafety): the reasons the server accepts for them,
+// the most urgent first. Reports are checked automatically; the reporter can paste the exact words as evidence.
+const CONFESSION_REASONS = [
+  { id: 'Self Harm Risk', label: 'someone may be at risk', icon: 'heart-outline' },
+  { id: 'Identifies A Person', label: 'it names or identifies someone', icon: 'person-outline' },
+  { id: 'Personal Info', label: 'phone, address or id number', icon: 'call-outline' },
+  { id: 'Harassment', label: 'Harassment or bullying', icon: 'people-outline' },
+  { id: 'Hate Speech', label: 'Hate, religion or politics', icon: 'warning-outline' },
+  { id: 'Sexual Content', label: 'Sexual content', icon: 'alert-circle-outline' },
+  { id: 'Violence', label: 'Threats or violence', icon: 'flash-outline' },
+  { id: 'Spam', label: 'Spam', icon: 'mail-outline' },
+  { id: 'Other', label: 'Other', icon: 'ellipsis-horizontal-outline' },
+];
+const isConfessionType = (t) => t === 'Confession' || t === 'ConfessionComment';
+
 export default function ReportModal({
   visible = false,
   onClose,
@@ -52,6 +67,11 @@ export default function ReportModal({
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  // confessions: the exact words (evidence) and the server's answer ("action taken" / "no rule broken" / …)
+  const [evidence, setEvidence] = useState('');
+  const [outcomeText, setOutcomeText] = useState('');
+  const confessionReport = isConfessionType(contentType);
+  const reasons = confessionReport ? CONFESSION_REASONS : REPORT_REASONS;
 
   // Sync internal state with prop
   useEffect(() => {
@@ -99,6 +119,17 @@ export default function ReportModal({
         case 'User':
           endpoint = `${API_URL}/user/report/${contentId}`;
           break;
+        case 'Confession':
+          endpoint = `${API_URL}/confessions/${contentId}/report`;
+          if (evidence.trim()) payload.evidence = evidence.trim();
+          break;
+        case 'ConfessionComment': {
+          const [confessionId, confessionCommentId] = String(contentId).split(':');
+          if (!confessionId || !confessionCommentId) throw new Error('Invalid comment ID format');
+          endpoint = `${API_URL}/confessions/comment/${confessionId}/${confessionCommentId}/report`;
+          if (evidence.trim()) payload.evidence = evidence.trim();
+          break;
+        }
         default:
           throw new Error('Invalid content type');
       }
@@ -108,6 +139,7 @@ export default function ReportModal({
       
       console.log('Report response:', response.data);
 
+      if (confessionReport && typeof response.data?.message === 'string') setOutcomeText(response.data.message);
       setSubmitted(true);
       if (onSuccess) {
         onSuccess(response.data);
@@ -134,6 +166,8 @@ export default function ReportModal({
     setDescription('');
     setSubmitted(false);
     setLoading(false);
+    setEvidence('');
+    setOutcomeText('');
   };
 
   const handleClose = () => {
@@ -151,6 +185,8 @@ export default function ReportModal({
       case 'Post': return 'post';
       case 'Comment': return 'comment';
       case 'User': return 'account';
+      case 'Confession': return 'confession';
+      case 'ConfessionComment': return 'comment';
       default: return 'content';
     }
   };
@@ -198,7 +234,9 @@ export default function ReportModal({
               </View>
               <Text style={styles.successTitle}>report submitted</Text>
               <Text style={styles.successSubtext}>
-                Thank you for your report. Our moderation team will review it within 24 hours.
+                {confessionReport
+                  ? (outcomeText || "thank you. we'll look at it.")
+                  : 'Thank you for your report. Our moderation team will review it within 24 hours.'}
               </Text>
               <View style={styles.successBadge}>
                 <Ionicons name="shield-checkmark" size={16} color={T.success} />
@@ -217,7 +255,7 @@ export default function ReportModal({
               </Text>
 
               <View style={styles.reasonsContainer}>
-                {REPORT_REASONS.map((reason) => (
+                {reasons.map((reason) => (
                   <TouchableOpacity
                     key={reason.id}
                     style={[
@@ -254,6 +292,26 @@ export default function ReportModal({
                 ))}
               </View>
 
+              {confessionReport && (
+                <>
+                  <Text style={styles.descriptionLabel}>
+                    the exact words <Text style={styles.optionalText}>(evidence: copy them from the post)</Text>
+                  </Text>
+                  <TextInput
+                    style={styles.descriptionInput}
+                    placeholder="paste or type the words that break the rules"
+                    placeholderTextColor={T.textFaint}
+                    value={evidence}
+                    onChangeText={setEvidence}
+                    multiline
+                    textAlignVertical="top"
+                    editable={!loading}
+                    maxLength={500}
+                    accessibilityLabel="the exact words, as evidence"
+                  />
+                </>
+              )}
+
               <Text style={styles.descriptionLabel}>
                 additional details <Text style={styles.optionalText}>(optional)</Text>
               </Text>
@@ -288,7 +346,9 @@ export default function ReportModal({
               <View style={styles.noteContainer}>
                 <Ionicons name="information-circle-outline" size={16} color={T.textFaint} />
                 <Text style={styles.noteText}>
-                  Reports are reviewed by our moderation team. False reports may lead to account restrictions.
+                  {confessionReport
+                    ? 'reports with the exact words are checked at once. false reports pause your reporting.'
+                    : 'Reports are reviewed by our moderation team. False reports may lead to account restrictions.'}
                 </Text>
               </View>
 

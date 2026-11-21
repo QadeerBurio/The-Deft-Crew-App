@@ -7,10 +7,20 @@ import { soundTap } from "../../lib/tdcSounds";
 import { color as T } from "../../theme/tokens";
 import styles from "./confessionStyles";
 
-export default function ConfessionCard({ item, isExpanded, lineCount, scope, highlightId, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments }) {
+// safety / onMore (plan P4-1, flag confessionSafety): a "more" button (report, mute, delete mine) and the
+// "under review" chip on my held posts. Without them the card is exactly as before.
+export default function ConfessionCard({ item, isExpanded, lineCount, scope, highlightId, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, safety = false, onMore = null }) {
     const isLiked = item.likedByCurrentUser;
     const shouldShowMore = lineCount > 7 || (item.text?.length || 0) > 250;
     const isCampus = item.visibility === 'campus';
+    const badge = (
+          <View style={styles.confessionBadge}>
+            <Ionicons name="lock-closed" size={10} color={isCampus ? T.yellow : T.onInkMuted} />
+            <Text style={[styles.badgeText, isCampus && { color: T.yellow }]}>
+              {isCampus ? 'campus only' : 'confession'}
+            </Text>
+          </View>
+    );
 
     return (
       <Animated.View style={[styles.card, highlightId === String(item._id) && styles.cardHighlight, { opacity: fadeAnim }]}>
@@ -36,13 +46,28 @@ export default function ConfessionCard({ item, isExpanded, lineCount, scope, hig
               )}
             </View>
           </View>
-          <View style={styles.confessionBadge}>
-            <Ionicons name="lock-closed" size={10} color={isCampus ? T.yellow : T.onInkMuted} />
-            <Text style={[styles.badgeText, isCampus && { color: T.yellow }]}>
-              {isCampus ? 'campus only' : 'confession'}
-            </Text>
-          </View>
+          {safety && onMore ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {badge}
+              <TouchableOpacity
+                onPress={() => onMore(item)}
+                accessibilityRole="button"
+                accessibilityLabel="more options"
+                hitSlop={10}
+                style={{ minWidth: 36, minHeight: 36, alignItems: 'flex-end', justifyContent: 'center', marginLeft: 4 }}
+              >
+                <Ionicons name="ellipsis-horizontal" size={18} color={T.onInkMuted} />
+              </TouchableOpacity>
+            </View>
+          ) : badge}
         </View>
+
+        {safety && item.status === 'pending' && (
+          <View style={[styles.campusPill, { alignSelf: 'flex-start', marginBottom: 8 }]} accessibilityLabel="under review: only you can see this">
+            <Ionicons name="time-outline" size={11} color={T.yellow} />
+            <Text style={[styles.campusPillText, { color: T.yellow }]}>under review · only you can see this</Text>
+          </View>
+        )}
 
         {item.text && (
           <View>

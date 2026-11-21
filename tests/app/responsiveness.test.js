@@ -523,6 +523,11 @@ function hitTest(tree, rootBox, x, y) {
         "../../lib/tdcSounds": new Proxy({}, { get: () => () => {} }),
         "../../engagement/engagementBus": { engagementBus: { emit() {} }, ENGAGEMENT_EVENTS: {} },
         "../../analytics/metaEvents": { metaEvents: new Proxy({}, { get: () => () => {} }) },
+        // confession safety (P4-1) imports: the flag OFF here, so these checks keep measuring today's screen
+        "../../hooks/useFlag": { __esModule: true, default: () => false },
+        "../../analytics/funnel": { funnel() {} },
+        "./ReportModal": "ReportModal",
+        "./confessionSafetyApi": { safetyMe: async () => null, acceptRules: async () => true, muteAuthor: async () => ({ ok: true }), deleteMyConfession: async () => true, myConfessionIds: async () => new Set() },
       });
       const Screen = load(file).default;
       const el = () => React.createElement(Screen, { navigation: { navigate() {} } });

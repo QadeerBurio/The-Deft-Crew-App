@@ -13,6 +13,8 @@ import styles from "./confessionStyles";
 export default function ConfessionComposer({
   modalVisible, resetForm, modalSlide, myUniName, postVisibility, setPostVisibility, confessionInputRef,
   newConfession, setNewConfession, selectedImage, setSelectedImage, handlePost, posting,
+  // plan P4-1 (flag confessionSafety): why the pre-post check asked for an edit; empty = nothing shown
+  issues = [],
 }) {
   return (
       <Modal visible={modalVisible} animationType="fade" transparent onRequestClose={resetForm}>
@@ -78,6 +80,22 @@ export default function ConfessionComposer({
                   ) : null}
                 </View>
                 <ScrollView style={styles.modalScrollView} keyboardShouldPersistTaps="handled">
+                  {issues.length > 0 && (
+                    <View
+                      style={{ backgroundColor: T.yellowSoft, borderRadius: 14, padding: 12, marginBottom: 10 }}
+                      accessibilityRole="alert"
+                      accessibilityLabel={`edit to post: ${issues.map((x) => x.message).join(' ')}`}
+                    >
+                      {issues.map((x, i) => (
+                        <View key={`${x.code}-${i}`} style={{ flexDirection: 'row', gap: 8, marginBottom: i === issues.length - 1 ? 0 : 6 }}>
+                          <Ionicons name="alert-circle-outline" size={16} color={T.ink} style={{ marginTop: 1 }} />
+                          <Text style={{ flex: 1, color: T.ink, fontSize: 13 }} maxFontSizeMultiplier={1.3}>
+                            {x.message}{x.span ? <Text style={{ fontWeight: '700' }}>{` ("${x.span}")`}</Text> : null}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
                   <TextInput
                     ref={confessionInputRef}
                     style={styles.input}
