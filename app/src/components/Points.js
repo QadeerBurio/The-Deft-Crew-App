@@ -923,7 +923,7 @@ const PointsScreen = () => {
               </View>
               <Text style={styles.codeHint}>
                 {growth
-                  ? 'you both get 100 points when your friend starts using tdc.'
+                  ? 'your friend gets 100 points and you get 150 when they join and verify their email.'
                   : 'friend joins: +50 pts. friend sorts first card: +100 more.'}
               </Text>
 

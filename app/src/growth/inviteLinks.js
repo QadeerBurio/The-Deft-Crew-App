@@ -30,7 +30,7 @@ export function inviteLink(code, channel = "direct") {
 /** The share text (owner's copy, lowercase voice). */
 export function inviteMessage(code, channel = "direct") {
   const c = String(code || "").toUpperCase();
-  return `join me on tdc, the student app.\n\nuse my code: ${c}\nyou both get 100 points when your friend starts using tdc.\n\n${inviteLink(c, channel)}`;
+  return `join me on tdc, the student app.\n\nuse my code: ${c}\nyour friend gets 100 points and you get 150 when they join and verify their email.\n\n${inviteLink(c, channel)}`;
 }
 
 /**
