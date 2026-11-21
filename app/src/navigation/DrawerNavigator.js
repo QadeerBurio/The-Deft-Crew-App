@@ -92,7 +92,10 @@ const ChatDetailScreen = accountOnly(ChatDetailScreenBase, { title: "chat" });
 import MessagesScreenBase from '../screens/Social/MessageScreen';
 const MessagesScreen = accountOnly(MessagesScreenBase, { title: "messages" });
 import NotificationScreenBase from '../screens/Social/NotificationScreen';
-const NotificationScreen = accountOnly(NotificationScreenBase, { title: "notifications" });
+// N-4: "Notifications" is the one inbox with the unifiedInbox flag, the social list without it (NotificationsRoute)
+import NotificationsRouteBase from '../notifications/NotificationsRoute';
+const NotificationScreen = accountOnly(NotificationsRouteBase, { title: "notifications" });
+const SocialNotificationScreen = accountOnly(NotificationScreenBase, { title: "notifications" });
 import UserProfileBase from '../screens/Social/UserProfile';
 const UserProfile = accountOnly(UserProfileBase, { title: "profile" });
 import TravelingScreen from '../components/TravellingScreen';
@@ -1237,6 +1240,7 @@ function SocialStackNavigator() {
       <Stack.Screen name="CreatePostScreen" component={CreatePostScreen} />
       <Stack.Screen name="FeedScreen" component={FeedScreen} />
       <Stack.Screen name="Notifications" component={NotificationScreen} />
+      <Stack.Screen name="SocialNotifications" component={SocialNotificationScreen} />
       <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
       <Stack.Screen name="YourAccount" component={YourAccount} />
       <Stack.Screen name="SecurityAndAccess" component={SecurityAndAccess} />
@@ -1304,6 +1308,7 @@ function HomeStackNavigator() {
       <Stack.Screen name="CreatePostScreen" component={CreatePostScreen} />
       <Stack.Screen name="FeedScreen" component={FeedScreen} />
       <Stack.Screen name="Notifications" component={NotificationScreen} />
+      <Stack.Screen name="SocialNotifications" component={SocialNotificationScreen} />
       <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
       <Stack.Screen name="YourAccount" component={YourAccount} />
       <Stack.Screen name="SecurityAndAccess" component={SecurityAndAccess} />
