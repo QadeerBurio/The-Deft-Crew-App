@@ -123,21 +123,61 @@ All server suites use in-memory fakes; they delete `MONGO_URI` and stub `dotenv`
 
 **Before switching `socketTokenRequired` on:** most installs must run an app with SEC-1 (an older app's chats stop working: refused with `auth_required`). The server logs `[sec-1] … without a token (older app)` lines: when they become rare, it's time.
 
+## CHAT-1 chat push notifications (branch `upgrade/chat-1-push`)
+
+**Why they stopped:** on 5 Oct 2026 (commit `f7c672a2`) the device push for a chat message was moved out of `POST /notifications/create-message-notif` into `pushChatMessage` in `socket/chatSocket.js`. That file has never been loaded (since the first commit, `server.js` ran its own socket handlers, now `socket/chatHandlers.js`), so since 5 Oct no chat message has sent a push.
+
+| Step | What changed | Commit | Tests |
+|---|---|---|---|
+| server | `services/chatPush.js` (the stranded logic, wired into `send_message`): a push to each other participant, opening that chat (MessagesScreen / MatchChat / InquiryChat), only when: flag **`chatPushV1`** on for the recipient; not in that chat's room; their **"messages"** switch on; they haven't blocked the sender; not 23:00–09:00 Karachi (skipped, not queued; `CHAT_PUSH_QUIET_HOURS=off` to send at night); at most one per conversation every 20 s. No daily cap ("personal" in the Phase N budget). The "messages" switch exists only for flagged accounts (like loyalty): `GET/PUT /engagement/notification-prefs` and `/engagement/me` are unchanged for everyone else | SERVER `12681426` | chat-push 20/20 (real socket.io); feature-access 96/96 (14 grantable flags) |
+| app | Notification Settings: a "messages · new chat messages" switch, shown only when the server sends it | APP `a9396d7` | social-push-settings 20/20 |
+
+Note (owner rule wins over the plan): the plan's N-2 says personal pushes ignore quiet hours for chat; the owner asked for quiet hours, so chat pushes respect them.
+
+## Backlog (owner, not now)
+
+- Confession composer image button returns in P4-3 (images are now moderated; the precheck and server clean-up are ready).
+- SkillShare `typing` event (server handles only `typing_start` / `typing_stop`); tell the other person when a message is deleted (polish phase).
+- Fix `tests/app/events-fresh-data` isolation properly (its fixed waits fail under load); no weakening.
+
+## Release plan
+
+**Branches** (each repo; each built on the one before, so they merge in this order):
+`upgrade/p0-safety` → `upgrade/p4-1-safety` → `upgrade/p4-1-followups` → `upgrade/sec-1-socket` → `upgrade/chat-1-push` → (P1 next). ADMIN has changes only in `p4-1-safety` and `p4-1-followups`; its later branches equal `p4-1-followups`. Nothing is merged, pushed or deployed without the owner's written OK.
+
+**Before staging** (once the owner has created it, `server/docs/STAGING.md`):
+1. Staging Railway variables: `APP_ENV=staging`, its own `MONGO_URI`, new `JWT_SECRET`, `SAFETY_ALERT_EMAILS`, `SAFETY_APPEAL_EMAIL`, a capped `OPENAI_API_KEY`, `PUBLIC_BASE_URL`.
+2. Deploy the SERVER branch tip to staging (owner), run the seed (`scripts/seed-staging.js`), check the startup log lines (`[flags]`, `[jobs] staging`).
+3. ADMIN: a staging build with `REACT_APP_API_URL=<staging-url>`.
+4. APP: `EXPO_PUBLIC_API_URL=<staging-url> npx expo start` (or a preview build: owner).
+5. Run each phase's manual test steps from its report (P0, P4-1, follow-ups, SEC-1, CHAT-1), on an Android phone and an iPhone.
+
+**Before production**, in this order, each step after the owner's OK:
+1. SERVER: merge the branches into `main` in the order above → Railway deploys. All new flags are off and `confessionSafety` mode is `enforce` (acts only for flagged accounts), so students see no change except the privacy fixes that apply to everyone: my-confessions without commenters' names, likes list names only for the author, anonymous confession mentions; chat sockets of **new** apps checked for membership (old apps unchanged).
+2. Railway values (owner): `SAFETY_ALERT_EMAILS`, `SAFETY_APPEAL_EMAIL`; check `CLOUDINARY_NAME`.
+3. ADMIN: deploy (the Safety page, mode, "would have blocked").
+4. APP: all app changes so far are JS-only (no new native module), so they can ship over the air **per live runtime version** (1.2.2 now), after the owner's OK; or with the 1.3.0 store build.
+5. Switch on, one at a time, watching 48 h each (plan §13): confession safety **observe** mode → review "would have blocked" → `confessionSafety` for test accounts → `enforce` → 10% → 50% → 100%; `chatPushV1` for test accounts → students; `FLAG_ACCOUNT_STATUS_ENFORCE` after the count review **and** once most installs send the socket token; `FLAG_SOCKET_TOKEN_REQUIRED` last, when the `[sec-1] … without a token` logs are rare.
+
+**Rollback:** turn the flag (or mode) off in admin / Railway: instant. Every new field is optional; old code can be redeployed without a migration.
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |
 |---|---|---|---|
-| `SAFETY_ALERT_EMAILS` | **pending (owner: the recipients' addresses, comma-separated)** | production (+ staging later) | the safety e-mails (suspensions, threats, doxxing, self-harm) |
+| `SAFETY_ALERT_EMAILS` | the owner's recipients (given 21 Nov 2026; set by the owner, not written here) | production (+ staging later) | the safety e-mails (suspensions, threats, doxxing, self-harm) |
 | `SAFETY_APPEAL_EMAIL` | `safety@gettdc.pk` | production (+ staging) | the appeal address shown to suspended / banned students |
 | `OPENAI_API_KEY` | (already set) | — | the pre-post checks; without it every checked post is held |
 | `FLAG_ACCOUNT_STATUS_ENFORCE` | leave unset until the count is reviewed (P0-6) | — | suspended / banned accounts locked out |
 | `FLAG_SOCKET_TOKEN_REQUIRED` | leave unset until most installs run the SEC-1 app | — | socket events need a verified token |
+| `FLAG_CHAT_PUSH_V1` | not needed: turn on per account in admin → features ("Chat pushes") | — | chat message pushes |
+| `CHAT_PUSH_QUIET_HOURS` | leave unset (quiet hours on) | — | `off` sends chat pushes at night too |
 | `FLAG_CONFESSION_SAFETY` | not needed: turn on per account in admin → features | — | — |
 | Cloudinary | check that `CLOUDINARY_NAME` is the cloud the app uploads to (`decaxpera`); otherwise images aren't deleted (logged, nothing breaks) | — | image clean-up |
 
 ## Found along the way (pre-existing, not changed; owner to decide)
 
-- **Chat pushes are probably never sent.** The live socket code (now `socket/chatHandlers.js`) sends no device push for a chat message; the code that does (`pushChatMessage` in `socket/chatSocket.js`) is never loaded, and `social.routes.js` says chat pushes come from there.
+- ~~**Chat pushes are probably never sent.**~~ Confirmed and fixed behind `chatPushV1` in CHAT-1 (see above).
 - SkillShare chats emit a `typing` event the server doesn't handle (the social chat uses `typing_start` / `typing_stop`).
 - The confession composer has no image button since the redesign (`pickImage` / `showImageOptions` aren't rendered): today's app posts text-only confessions.
 - After a REST delete, ChatDetails' socket `delete_message` finds nothing (already deleted), so the other side isn't told (no `message_deleted`).
