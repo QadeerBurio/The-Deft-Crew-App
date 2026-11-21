@@ -37,6 +37,7 @@ import { engagementBus, ENGAGEMENT_EVENTS } from '../../engagement/engagementBus
 
 import { color as T, font as F } from "../../theme/tokens";
 import { metaEvents } from "../../analytics/metaEvents";
+import { pushMoment } from "../../push/pushAsk";
 import { SERVER_ORIGIN } from "../../config/server";
 import { fetchWithTimeout } from "../../config/timeouts";
 import styles from "./confessionStyles";
@@ -834,6 +835,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
       if (response.ok) {
         const result = await response.json();
         metaEvents.confessionCreated(); // no params and no id of any kind
+        if (!result?.held) pushMoment("confession"); // N-3 (pushAskV2): a good moment to ask for notifications
         if (safety) {
           setComposerIssues([]);
           funnel(result?.held ? "confession_precheck_hold" : "confession_precheck_ok");

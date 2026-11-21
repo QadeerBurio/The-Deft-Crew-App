@@ -187,6 +187,7 @@ const deferred = () => { let resolve, reject; const p = new Promise((a, b) => { 
   let nextPick = null;
   const mocks = {
     react: React, "react-native": rn,
+    "../../push/pushAsk": { pushMoment: () => {} }, // N-3 (pushAskV2): the flag off here
     "react-native-safe-area-context": { SafeAreaView: "SafeAreaView", useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) },
     "react-native-keyboard-controller": { KeyboardAwareScrollView: "KeyboardAwareScrollView" },
     "@expo/vector-icons": { Ionicons: "Ionicons" },

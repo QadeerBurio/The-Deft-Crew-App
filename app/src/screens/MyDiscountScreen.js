@@ -82,6 +82,7 @@ import LoyaltyVisits from '../components/LoyaltyVisits';
 import { plainError, plainText } from "../utils/plainError";
 import { copyToClipboard } from '../utils/clipboard';
 import { metaEvents } from '../analytics/metaEvents';
+import { pushMoment } from '../push/pushAsk';
 import { SERVER_ORIGIN } from "../config/server";
 
 const SERVER_URL = `${SERVER_ORIGIN}`;
@@ -1613,6 +1614,7 @@ export default function MyDiscountScreen() {
                 soundDealClaimed();       // 🔔 claim sound
                 await api.post(`/offers/claim/${offerId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
                 metaEvents.offerClaimed(offerId);
+                pushMoment("deal"); // N-3 (pushAskV2): a good moment to ask for notifications
                 try { registerLocalClaim(offerId); } catch (e) { console.warn("[my discounts] marking a claim on this phone failed:", e?.message || e); }
                 const retryResult = await generatePromoCodeForOffer(offerId);
                 if (retryResult) return retryResult;

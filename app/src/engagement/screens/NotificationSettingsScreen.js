@@ -28,6 +28,8 @@ import {
 import { color as T, font as F } from "../../theme/tokens";
 import { ScreenHeader, Skeleton } from "../../ui";
 import { plainError } from "../../utils/plainError";
+import useFlag from "../../hooks/useFlag";
+import PushPermissionRow from "../../push/PushPermissionRow";
 // What went wrong with the push test, in plain words (the server's codes are not shown).
 // data: GET /notification/test-push → { ok, problem, results: [{ ticket, receipt, error }] }
 export function pushTestMessage(data) {
@@ -260,6 +262,7 @@ export default function NotificationSettingsScreen() {
   };
 
   const [testing, setTesting] = useState(false);
+  const askOn = useFlag("pushAskV2") === true; // N-3: PushPermissionRow replaces the warning below
 
   // the switches this account has (a pilot-only switch only when the server sends it)
   const rows = ROWS.filter((r) => !r.pilotOnly || (prefs && r.key in prefs));
@@ -310,7 +313,9 @@ export default function NotificationSettingsScreen() {
           </LinearGradient>
 
           {/* ── OS PERMISSION WARNING ─────────────────────────── */}
-          {osPermission === 'denied' && (
+          {/* N-3 (pushAskV2 on): this phone's own permission, with "turn on" or "turn on in settings" */}
+          <PushPermissionRow />
+          {!askOn && osPermission === 'denied' && (
             <TouchableOpacity
               style={styles.permissionRow}
               onPress={() => Linking.openSettings()}

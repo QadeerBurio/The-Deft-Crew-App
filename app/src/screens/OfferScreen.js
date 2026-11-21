@@ -63,6 +63,7 @@ import { imageUrl, brandLogoUrl, fixLegacyImageUrl } from "../utils/imageUrl";
 import Dot from "../engagement/components/Dot";
 import { formatDistance } from "../utils/distance";
 import { metaEvents } from "../analytics/metaEvents";
+import { pushMoment } from "../push/pushAsk";
 
 // ═══════════════════════════════════════════
 // TDC SOUND KIT
@@ -1291,6 +1292,7 @@ export default function OfferScreen() {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         metaEvents.offerClaimed(offerId);
+        pushMoment("deal"); // N-3 (pushAskV2): a good moment to ask for notifications
 
         // 🔔 success sound + modal
         soundSuccess();
