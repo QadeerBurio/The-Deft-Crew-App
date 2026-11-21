@@ -44,6 +44,13 @@ import PressScale from "../ui/PressScale";
 import AmbassadorForm, { isAllowed as isAmbassadorFormUrl } from "./AmbassadorForm";
 import { plainError } from "../utils/plainError";
 import { copyToClipboard } from '../utils/clipboard';
+// P1 (flags growthV2 / shareCards): invite links, WhatsApp first, the leaderboard, share cards
+import useFlag from '../hooks/useFlag';
+import { FLAGS } from '../api/upgradeFlags';
+import { inviteLink, inviteMessage } from '../growth/inviteLinks';
+import ReferralLeaderboard from './crew/ReferralLeaderboard';
+import ShareCardSheet from '../ui/ShareCard';
+import { funnel } from '../analytics/funnel';
 const { width } = Dimensions.get('window');
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -686,6 +693,9 @@ const DownloadCard = memo(({ referralCode, style }) => {
 const PointsScreen = () => {
   const navigation = useNavigation();
   const { token, user } = useContext(AuthContext);
+  const growth = useFlag(FLAGS.growthV2) === true;
+  const cardsOn = useFlag(FLAGS.shareCards) === true;
+  const [cardOpen, setCardOpen] = useState(false);
   const { me, refresh: refreshEngagement } = useEngagement();
   const [ambassadorFormOpen, setAmbassadorFormOpen] = useState(false);
   // this student's own applied flag; another account (or a guest) never sees it
@@ -794,11 +804,12 @@ const PointsScreen = () => {
 
   const getShareLink = useCallback(() => {
     const code = referralCode || 'tdc';
+    if (growth && referralCode) return inviteLink(referralCode, 'direct'); // P1: the invite page (gettdc.pk/i/CODE)
     if (Platform.OS === 'ios') {
       return `${APP_STORE_URL}?referrer=utm_source%3Dshare%26utm_medium%3Dreferral%26utm_campaign%3D${code}`;
     }
     return `${PLAY_STORE_URL}&referrer=utm_source%3Dshare%26utm_medium%3Dreferral%26utm_campaign%3D${code}`;
-  }, [referralCode]);
+  }, [referralCode, growth]);
 
   const onShare = useCallback(async () => {
     Animated.sequence([
@@ -807,7 +818,7 @@ const PointsScreen = () => {
     ]).start();
 
     try {
-      const msg =
+      const msg = growth && referralCode ? inviteMessage(referralCode, 'direct') :
         `join the crew.\n\n` +
         `use my code: ${referralCode || 'TDC'}\n\n` +
         `friend joins: you get +50. friend sorts a card: +100 more.\n\n` +
@@ -816,7 +827,20 @@ const PointsScreen = () => {
     } catch (e) {
       if (e.message !== 'User did not share') Alert.alert('Error', plainError(e, "Couldn't open sharing. Please try again."));
     }
-  }, [referralCode, getShareLink, shareScale]);
+  }, [referralCode, getShareLink, shareScale, growth]);
+
+  // P1 (growthV2): WhatsApp first (most used in Pakistan); without WhatsApp, the normal share sheet
+  const onShareWhatsApp = useCallback(async () => {
+    if (!referralCode) return;
+    const text = inviteMessage(referralCode, 'wa');
+    try {
+      const url = `whatsapp://send?text=${encodeURIComponent(text)}`;
+      if (await Linking.canOpenURL(url)) await Linking.openURL(url);
+      else await Share.share({ message: text, title: 'The Deft Crew' });
+    } catch (e) {
+      Alert.alert('Error', plainError(e, "Couldn't open sharing. Please try again."));
+    }
+  }, [referralCode]);
 
   const copyCode = useCallback(async () => {
     if (!referralCode) return;
@@ -898,8 +922,19 @@ const PointsScreen = () => {
                 </TouchableOpacity>
               </View>
               <Text style={styles.codeHint}>
-                friend joins: +50 pts. friend sorts first card: +100 more.
+                {growth
+                  ? 'you both get 100 points when your friend starts using tdc.'
+                  : 'friend joins: +50 pts. friend sorts first card: +100 more.'}
               </Text>
+
+              {growth && (
+                <TouchableOpacity onPress={onShareWhatsApp} style={[styles.shareBtn, { marginBottom: 8 }]} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="share on whatsapp">
+                  <LinearGradient colors={[T.yellow, T.yellow]} style={styles.shareGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                    <Ionicons name="logo-whatsapp" size={18} color={T.ink} />
+                    <Text style={styles.shareText}>share on whatsapp</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
 
               <Animated.View style={{ transform: [{ scale: shareScale }] }}>
                 <TouchableOpacity onPress={onShare} style={styles.shareBtn} activeOpacity={0.85}>
@@ -910,11 +945,22 @@ const PointsScreen = () => {
                     end={{ x: 1, y: 0 }}
                   >
                     <Ionicons name="share-social-outline" size={18} color={T.ink} />
-                    <Text style={styles.shareText}>share my code</Text>
+                    <Text style={styles.shareText}>{growth ? 'more ways to share' : 'share my code'}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               </Animated.View>
+              {cardsOn && !!referralCode && (
+                <TouchableOpacity onPress={() => setCardOpen(true)} accessibilityRole="button" accessibilityLabel="share as image" style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 4 }}>
+                  <Text style={{ fontFamily: F.bodySemi, fontSize: 14, color: T.yellow, textDecorationLine: 'underline' }}>share as image</Text>
+                </TouchableOpacity>
+              )}
             </View>
+
+            {/* ── P1-4: top inviters (growthV2) ── */}
+            {growth && <ReferralLeaderboard universityId={user?.university?._id || user?.university || null} />}
+            {cardsOn && !!referralCode && (
+              <ShareCardSheet visible={cardOpen} onClose={() => setCardOpen(false)} variant="invite" code={referralCode} onShared={(v) => funnel(`share_card_${String(v).toLowerCase()}`)} />
+            )}
 
             {/* ── WAYS TO EARN ── */}
             <View style={styles.section}>
