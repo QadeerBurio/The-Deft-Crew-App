@@ -146,6 +146,16 @@ const ROWS = [
     mood: 'sorted',
     color: T.yellow,
   },
+  // chat message pushes (CHAT-1, flag chatPushV1): shown only when the server sends the switch, which it does only
+  // for accounts with the flag
+  {
+    key: 'messages',
+    label: 'messages',
+    sub: 'new chat messages',
+    mood: 'cheeky',
+    color: T.yellow,
+    pilotOnly: true,
+  },
   // loyalty visits, a new discount tier, a reversed visit (FLAG_LOYALTY_V2): shown only when the server sends
   // the switch, which it does for students in the loyalty pilot
   {
