@@ -129,10 +129,10 @@ All server suites use in-memory fakes; they delete `MONGO_URI` and stub `dotenv`
 
 | Step | What changed | Commit | Tests |
 |---|---|---|---|
-| server | `services/chatPush.js` (the stranded logic, wired into `send_message`): a push to each other participant, opening that chat (MessagesScreen / MatchChat / InquiryChat), only when: flag **`chatPushV1`** on for the recipient; not in that chat's room; their **"messages"** switch on; they haven't blocked the sender; not 23:00–09:00 Karachi (skipped, not queued; `CHAT_PUSH_QUIET_HOURS=off` to send at night); at most one per conversation every 20 s. No daily cap ("personal" in the Phase N budget). The "messages" switch exists only for flagged accounts (like loyalty): `GET/PUT /engagement/notification-prefs` and `/engagement/me` are unchanged for everyone else | SERVER `12681426` | chat-push 20/20 (real socket.io); feature-access 96/96 (14 grantable flags) |
+| server | `services/chatPush.js` (the stranded logic, wired into `send_message`): a push to each other participant, opening that chat (MessagesScreen / MatchChat / InquiryChat), only when: flag **`chatPushV1`** on for the recipient; not in that chat's room; their **"messages"** switch on; they haven't blocked the sender; **no quiet hours** (person-to-person, any hour, like WhatsApp; optional override `CHAT_PUSH_QUIET_HOURS=on`); at most one per conversation every 20 s. No daily cap ("personal" in the Phase N budget). The "messages" switch exists only for flagged accounts (like loyalty): `GET/PUT /engagement/notification-prefs` and `/engagement/me` are unchanged for everyone else | SERVER `12681426` | chat-push 20/20 (real socket.io); feature-access 96/96 (14 grantable flags) |
 | app | Notification Settings: a "messages · new chat messages" switch, shown only when the server sends it | APP `a9396d7` | social-push-settings 20/20 |
 
-Note (owner rule wins over the plan): the plan's N-2 says personal pushes ignore quiet hours for chat; the owner asked for quiet hours, so chat pushes respect them.
+Quiet hours: the owner first asked for them on chat pushes, then corrected it (CHAT-1 sign-off): chat pushes have **no quiet hours** by default, as the plan's N-2 says (the phone's Do Not Disturb handles silence). `CHAT_PUSH_QUIET_HOURS=on` is an optional override; unset / empty = none. Broadcast pushes (posts, confessions, drops, streaks) keep their quiet hours. Commit SERVER `605af794`, chat-push 24/24.
 
 ## Backlog (owner, not now)
 
@@ -171,7 +171,7 @@ Note (owner rule wins over the plan): the plan's N-2 says personal pushes ignore
 | `FLAG_ACCOUNT_STATUS_ENFORCE` | leave unset until the count is reviewed (P0-6) | — | suspended / banned accounts locked out |
 | `FLAG_SOCKET_TOKEN_REQUIRED` | leave unset until most installs run the SEC-1 app | — | socket events need a verified token |
 | `FLAG_CHAT_PUSH_V1` | not needed: turn on per account in admin → features ("Chat pushes") | — | chat message pushes |
-| `CHAT_PUSH_QUIET_HOURS` | leave unset (quiet hours on) | — | `off` sends chat pushes at night too |
+| `CHAT_PUSH_QUIET_HOURS` | leave unset (no quiet hours for chat, as planned) | — | optional override: `on` skips chat pushes 23:00–09:00 Karachi |
 | `FLAG_CONFESSION_SAFETY` | not needed: turn on per account in admin → features | — | — |
 | Cloudinary | check that `CLOUDINARY_NAME` is the cloud the app uploads to (`decaxpera`); otherwise images aren't deleted (logged, nothing breaks) | — | image clean-up |
 
