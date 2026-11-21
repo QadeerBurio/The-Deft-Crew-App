@@ -58,7 +58,7 @@ const { width } = Dimensions.get('window');
 // ═══════════════════════════════════════════════════════════════════════
 const PLAY_STORE_PACKAGE = 'com.aqkhan110.tdc';
 const APP_STORE_ID = '6765877675';
-const APP_STORE_URL = `https://apps.apple.com/br/app/the-deft-crew/id${APP_STORE_ID}`;
+const APP_STORE_URL = `https://apps.apple.com/app/id${APP_STORE_ID}`; // country-neutral: Apple sends each visitor to their own store
 const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${PLAY_STORE_PACKAGE}`;
 
 // Ambassador Google Form (docs.google.com/forms/… or forms.gle/…). Until this is a real
@@ -637,7 +637,7 @@ const DownloadCard = memo(({ referralCode, style }) => {
 
   const openIos = async () => {
     try {
-      const nativeUrl = `itms-apps://apps.apple.com/br/app/id${APP_STORE_ID}`;
+      const nativeUrl = `itms-apps://apps.apple.com/app/id${APP_STORE_ID}`;
       const canOpen = await Linking.canOpenURL(nativeUrl);
       await Linking.openURL(canOpen ? nativeUrl : buildIosLink());
     } catch {
