@@ -18,6 +18,8 @@ import {
   StatusBar,
   Animated,
   Keyboard,
+  Alert,
+  Linking,
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -173,6 +175,20 @@ export default function SignIn({ navigation }) {
           retryAfter: data.retryAfter || 0,
           fromLogin: true,
         });
+        return;
+      }
+
+      // suspended / banned (server P0-6): the reason, and "appeal" when the server gives an appeal address
+      if (status === 403 && (data.code === "ACCOUNT_SUSPENDED" || data.code === "ACCOUNT_BANNED")) {
+        const reason = typeof data.message === "string" && data.message ? data.message : "your account is paused.";
+        const buttons = [{ text: "ok", style: "cancel" }];
+        if (typeof data.appealEmail === "string" && /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(data.appealEmail)) {
+          const subject = encodeURIComponent(data.code === "ACCOUNT_BANNED" ? "appeal: account closed" : "appeal: account paused");
+          const body = encodeURIComponent(`my account e-mail: ${email.trim().toLowerCase()}\n\nwhy i think this should be reviewed:\n`);
+          buttons.unshift({ text: "appeal", onPress: () => Linking.openURL(`mailto:${data.appealEmail}?subject=${subject}&body=${body}`).catch(() => {}) });
+        }
+        shake();
+        Alert.alert(data.code === "ACCOUNT_BANNED" ? "account closed" : "account paused", reason, buttons);
         return;
       }
 
