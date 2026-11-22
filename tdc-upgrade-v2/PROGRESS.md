@@ -56,7 +56,15 @@ All server suites use in-memory fakes; they delete `MONGO_URI` and stub `dotenv`
 | P1-4 "uses the existing getReferralLeaderboard" | all-time only, full names and photos of the top 10 to every student, no rank, no campus | monthly / rank / campus params; first names, no photos for everyone (owner) |
 | P1-1 validate | public route returned the referrer's full name and photo (any code could be tried) | first name only, no photo, rate-limited, for everyone (owner) |
 | (found in P1) | `referral_signup_bonus` / `referral_credited` events were written with `source: 'system'` (signup in `routes/auth.routes.js`, and `services/engagement/referral.js`), which the event model rejects (only server / client); the error was caught, so **the points were paid, only the event rows were lost** | fixed in P1 follow-ups: `source: 'server'` (an existing value, no enum change); read-only `scripts/count-referral-credits.js` for the owner |
-| (found in P1 follow-ups) | live referral rewards: the signup route pays the referrer **+50 and +100** and the new student **+100** at signup, before the e-mail code is entered (students start `emailVerified: false`); `referral.js`'s "+100 on first sort" then finds the same keys and pays nothing. The P1 share text says "when your friend starts using tdc" | not changed (owner decision #6: rewards stay as live). Owner to decide: the copy, and whether to pay only after e-mail verification (any new e-mail address earns the referrer 150 today) |
+| (found in P1 follow-ups) | live referral rewards: the signup route pays the referrer **+50 and +100** and the new student **+100** at signup, before the e-mail code is entered (students start `emailVerified: false`); `referral.js`'s "+100 on first sort" then finds the same keys and pays nothing. The P1 share text says "when your friend starts using tdc" | **owner, decision #6 updated (P1 follow-ups sign-off):** keep the amounts (referrer 150, new student 100) but pay only after the new student verifies their e-mail, behind `referralVerifyGate` (off); already-paid rewards never touched. Copy (growthV2): "your friend gets 100 points and you get 150 when they join and verify their email" (signup / invite page, the invitee's view: "you get 100 points and your friend gets 150 when you join and verify your email") |
+| N-1..N-7 flags | the plan names `pushBudgetV1` and `pushAskV2` only | one flag per step, all off, grantable to students, none in ROLE_DEFAULTS: `pushOpenTracking` (N-6a), `pushBudgetV1` (N-2), `pushAskV2` (N-3), `unifiedInbox` (N-4), `notifSettingsV2` (N-5), `pushCopyV2` (N-7); server-only `referralVerifyGate` |
+| N-2 classes | plan: personal "quiet hours respected except chat" | owner: quiet hours for relevant and broadcast only; personal never waits. Bell pushes are classed by the bell row's type (their push type is only a sound family). The budget replaces the gateway's own quiet hours and caps for flag accounts; the social daily max (N-1) stays as an extra ceiling |
+| N-3 good moments | first deal claimed, first confession posted, first job applied | the same, from the success points of the 3 offer-claim screens, the job form and a confession that isn't held |
+| N-4 tabs | for you · campus · system | social items and your own applications / tickets / bookings / payments / messages → for you; offers, jobs, scholarships, courses, programmes, promotions → campus; account / app messages → system. Chat messages stay out (own badge); event creators' notices stay separate (owner) |
+| N-5 "mute per confession thread (P4-5)" | P4-5 (confession follow / unfollow) isn't built | waits for P4-5 |
+| N-5 digest | "today at your campus: 12 confessions, 2 events" | real counts of today only: live confessions at the student's university, posts by its students, newly approved events (events are city-wide, so "N new events", not "at your campus"); a 0 part is left out; nothing → no push. With the digest on, the per-item campus pushes skip the student |
+| N-6 report | from `PushLog` + receipts | opens were never recorded (see Phase N verification): N-6a adds tracking first; the report reads tracked rows only, rates from `PUSH_REPORT_MIN_SENT` sends of a type (default 50), "not enough data yet" below. Opt-outs are recorded (tracked accounts only) as `notif_opt_out` events |
+| N-7 copy pass | wording | also found made-up numbers in today's win-back copy (`{n}` = days shown as "deals dropped" / "Rs saved", a "tdc · 20% off" offer that doesn't exist); fixed for `pushCopyV2` accounts with real counts and the best live offer, or no push |
 | (found in P4-1) | confession mention notifications named the commenter ("<name> mentioned you in a confession") | anonymous with `confessionSafety` on; **recommend making it unconditional** (owner) |
 | P0-1/P0-3/P0-5: add app helpers in Phase 0 | `tests/app/app-cleanup` fails on any `app/src` file nothing imports | written and tested in Phase 0, kept in `tdc-upgrade-v2/pending/`, moved into `app/src` with their first caller (P4-1) |
 | P0-6 (new, owner) "super admins are exempt" | no admin levels exist until Phase A (`User.adminAccess`) | every `role: 'admin'` is exempt for now (plan A-1: admins without `adminAccess` count as super); revisit in Phase A |
@@ -152,7 +160,7 @@ Quiet hours: the owner first asked for them on chat pushes, then corrected it (C
 ## Release plan
 
 **Branches** (each repo; each built on the one before, so they merge in this order):
-`upgrade/p0-safety` → `upgrade/p4-1-safety` → `upgrade/p4-1-followups` → `upgrade/sec-1-socket` → `upgrade/chat-1-push` → `upgrade/p1-growth` → `upgrade/p1-followups`. ADMIN has changes in `p4-1-safety`, `p4-1-followups` and `p1-growth`; its other branches equal the one before. P1 adds: a portal deploy with the new `vercel.json` (check on a preview first), and the 1.3.0 store build later for app links and the install referrer. Nothing is merged, pushed or deployed without the owner's written OK.
+`upgrade/p0-safety` → `upgrade/p4-1-safety` → `upgrade/p4-1-followups` → `upgrade/sec-1-socket` → `upgrade/chat-1-push` → `upgrade/p1-growth` → `upgrade/p1-followups` → `upgrade/phase-n`. ADMIN has changes in `p4-1-safety`, `p4-1-followups` and `p1-growth`; its other branches equal the one before. P1 adds: a portal deploy with the new `vercel.json` (check on a preview first), and the 1.3.0 store build later for app links and the install referrer. Nothing is merged, pushed or deployed without the owner's written OK.
 
 **Before staging** (once the owner has created it, `server/docs/STAGING.md`):
 1. Staging Railway variables: `APP_ENV=staging`, its own `MONGO_URI`, new `JWT_SECRET`, `SAFETY_ALERT_EMAILS`, `SAFETY_APPEAL_EMAIL`, a capped `OPENAI_API_KEY`, `PUBLIC_BASE_URL`.
@@ -166,7 +174,7 @@ Quiet hours: the owner first asked for them on chat pushes, then corrected it (C
 2. Railway values (owner): `SAFETY_ALERT_EMAILS`, `SAFETY_APPEAL_EMAIL`; check `CLOUDINARY_NAME`.
 3. ADMIN: deploy (the Safety page, mode, "would have blocked").
 4. APP: all app changes so far are JS-only (no new native module), so they can ship over the air **per live runtime version** (1.2.2 now), after the owner's OK; or with the 1.3.0 store build.
-5. Switch on, one at a time, watching 48 h each (plan §13): confession safety **observe** mode → review "would have blocked" → `confessionSafety` for test accounts → `enforce` → 10% → 50% → 100%; `chatPushV1` for test accounts → students; `FLAG_ACCOUNT_STATUS_ENFORCE` after the count review **and** once most installs send the socket token; `FLAG_SOCKET_TOKEN_REQUIRED` last, when the `[sec-1] … without a token` logs are rare.
+5. Switch on, one at a time, watching 48 h each (plan §13): confession safety **observe** mode → review "would have blocked" → `confessionSafety` for test accounts → `enforce` → 10% → 50% → 100%; `chatPushV1` for test accounts → students; `FLAG_ACCOUNT_STATUS_ENFORCE` after the count review **and** once most installs send the socket token; `FLAG_SOCKET_TOKEN_REQUIRED` last, when the `[sec-1] … without a token` logs are rare. Phase N, after N-1 (owner, Railway): `pushOpenTracking` first (it only measures) → a week of data in the push report → `pushBudgetV1`, `notifSettingsV2`, `unifiedInbox`, `pushAskV2`, `pushCopyV2` for test accounts, then students, one at a time; `referralVerifyGate` after checking `count-referral-credits.js` (`FLAG_REFERRAL_VERIFY_GATE=ids:<test referrer>` first, then `on`).
 
 **Rollback:** turn the flag (or mode) off in admin / Railway: instant. Every new field is optional; old code can be redeployed without a migration.
 
@@ -225,6 +233,33 @@ the app-link values in `.well-known` are still placeholders (needed only for 1.3
 
 N-1 is the owner's Railway action (not touched).
 
+## Phase N: notifications people keep on (branch `upgrade/phase-n`, owner 22 Nov 2026)
+
+Every step behind its own flag, all **off**; flag off = today's behaviour (each test checks it).
+
+| Step | What changed | Commits | Tests |
+|---|---|---|---|
+| referral gate (P1 follow-up) | signup awards moved to `services/engagement/referralSignup.js` (split only), then **`referralVerifyGate`** (server only, checked for the referrer): nothing paid at signup while the student still has to enter the e-mail code; `verify-otp` pays the same three awards (same keys) once; `verifiedReferralCount` counts only verified referees | SERVER `39e56ab6` (split), `6806caa7` | referral-gate 19/19 (fails without the change) |
+| referral copy | growthV2 only: share text / crew hint "your friend gets 100 points and you get 150 when they join and verify their email"; signup and the invite page from the invitee's side | APP `16c822c`, ADMIN `8f2d64d` | invite-link 31/31; InvitePage 6/6 |
+| N-6a open tracking | **`pushOpenTracking`**: `services/pushTracking.js` hooked into `sendAllSafe` (every sender): one tracked PushLog row per recipient per send, its id (`pushLogId`) in the push; receipts mark delivered; `markOpened` only by the recipient, first tap only. App: `utils/pushOpened.js` reports a tap (cold start and tray) to `/notification/push-opened/:id` | SERVER `22d2be20`, `f0f688fb`; APP `6e439cf`, `ebba8cf` (path fix) | push-tracking 20/20; push-opened 9/9 |
+| N-2 budget | **`pushBudgetV1`**: `services/pushBudget.js` + `models/PushBudget.js` at the three paths every push takes (gateway, `sendToUser` incl. bell, social bulk): personal no cap / no quiet hours; relevant 3 a day; broadcast 2 a day (`PUSH_BUDGET_*_MAX`); quiet hours for relevant + broadcast; unknown types → relevant, logged once | SERVER `a9ba4d0a` | push-budget 25/25 |
+| N-3 ask at a good moment | **`pushAskV2`**: no OS prompt on login (phones that already allow register as before); sheet after the first deal claimed / confession posted / job applied ("not now" → once more after 7 days, then Settings only); Settings row "turn on" / "turn on in settings" | SERVER `16654fad` (flag); APP `7a40013` | push-ask 25/25 |
+| N-4 one inbox | **`unifiedInbox`**: `GET /api/notification/unified` (bell + social, tabs, per-tab unread), `/unread-count?scope=all`; app: the bell sheet and the "Notifications" route show it; reads / deletes go to each list's own endpoint; new route `SocialNotifications` for answering requests | SERVER `d05b491d`; APP `5084241` | unified-inbox 18/18 + 20/20 |
+| N-5 settings | **`notifSettingsV2`**: `notifPrefs.mode` / `digest` (additive); modes act on every sender; 6 pm campus digest (scheduler, real counts only); app: how often + digest on top, the switches under "fine-tune · N" | SERVER `46eae697`; APP `871a27e` | notif-modes 16/16 + 10/10 |
+| N-6b push report | `GET /api/admin/engagement/push-report` (tracked rows only; rates from 50 sends of a type; review under 3% opens or 2% opt-outs); opt-outs recorded for tracked accounts; admin: "push report" card on engagement metrics | SERVER `ed25c715`; ADMIN `7cfd8e8` | push-report 20/20; PushReport 5/5 |
+| N-7 copy | **`pushCopyV2`**: `copy.fillV2`: no `{placeholder}` left, every variant names its thing, numbers real and above 0, else no push; win-back with real counts and the best live offer | SERVER `ef95a92a` | push-copy 17/17 |
+
+Full runs at the end: SERVER 86/86 suites (shopify-review skipped as always); APP run-all ok, export ok; ADMIN jest 23 suites / 124
+tests, portal 38/38.
+
+**Found in Phase N (pre-existing, not changed, owner to decide):**
+- An empty extensionless file `server/services/engagement/inactivity` (committed 27 Sep in "Add") shadows
+  `inactivity.js`, so `POST /api/admin/engagement/nudge/win-back/:userId` has always answered 500. Removing it would
+  switch the admin win-back nudge on, with today's copy (the made-up numbers above) unless `pushCopyV2` is on.
+- Today's win-back copy uses made-up numbers (see plan corrections, N-7); only reachable through that broken route.
+- `pushGateway.checkReceipts` is never scheduled; the per-send receipt check runs, and N-6a uses it for tracked rows.
+- Per-thread mute (N-5) waits for P4-5.
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |
@@ -237,6 +272,11 @@ N-1 is the owner's Railway action (not touched).
 | `FLAG_CHAT_PUSH_V1` | not needed: turn on per account in admin → features ("Chat pushes") | — | chat message pushes |
 | `CHAT_PUSH_QUIET_HOURS` | leave unset (no quiet hours for chat, as planned) | — | optional override: `on` skips chat pushes 23:00–09:00 Karachi |
 | `FLAG_CONFESSION_SAFETY` | not needed: turn on per account in admin → features | — | — |
+| `FLAG_REFERRAL_VERIFY_GATE` | leave unset; after reviewing `count-referral-credits.js`: `ids:<test referrer id>`, then `on` | production | referral rewards wait for the e-mail code |
+| `PUSH_BUDGET_RELEVANT_MAX` / `PUSH_BUDGET_BROADCAST_MAX` | optional; defaults 3 and 2 (broadcast only 1 or 2) | — | the N-2 daily caps |
+| `PUSH_REPORT_MIN_SENT` | optional; default 50 | — | pushes of a type before the report shows its rates |
+| Phase N flags (`pushOpenTracking`, `pushBudgetV1`, `pushAskV2`, `unifiedInbox`, `notifSettingsV2`, `pushCopyV2`) | not needed: per account in admin → features | — | — |
+| N-1: `SOCIAL_PUSH_GROUP_MINUTES=180`, `SOCIAL_PUSH_DAILY_MAX=2` | owner action (plan N-1), at a quiet hour (a change restarts the service) | production | grouped social pushes, max 2 a day |
 | Cloudinary | check that `CLOUDINARY_NAME` is the cloud the app uploads to (`decaxpera`); otherwise images aren't deleted (logged, nothing breaks) | — | image clean-up |
 
 ## Found along the way (pre-existing, not changed; owner to decide)
