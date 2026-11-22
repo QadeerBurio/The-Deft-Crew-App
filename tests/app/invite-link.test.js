@@ -8,6 +8,7 @@
 //     + expo-sharing
 //   wiring (source): App.js handles invite links first; Signup shows the extras and clears the saved code once the
 //     account exists; Points.js changes only behind growthV2 / shareCards, today's text kept with the flags off
+//   P1 follow-up: the App Store link in Points.js is country-neutral (apps.apple.com/app/id…), for everyone
 //   node tests/app/invite-link.test.js
 const path = require("path");
 const H = require("./harness");
@@ -129,5 +130,8 @@ const asMock = { "@react-native-async-storage/async-storage": { __esModule: true
   ok(/if \(growth && referralCode\) return inviteLink\(referralCode, 'direct'\);/.test(pts) && /const msg = growth && referralCode \? inviteMessage\(referralCode, 'direct'\) :\s*`join the crew\./.test(pts), "…share link and text change only with growthV2 (today's text kept)");
   ok(/\{growth && \(\s*<TouchableOpacity onPress=\{onShareWhatsApp\}/.test(pts) && /\{growth && <ReferralLeaderboard/.test(pts) && /\{cardsOn && !!referralCode && \(\s*<ShareCardSheet/.test(pts), "…WhatsApp button and leaderboard only with growthV2; the share card only with shareCards");
   ok(/'friend joins: \+50 pts\. friend sorts first card: \+100 more\.'/.test(pts), "…flag off: today's code hint unchanged");
+  // P1 follow-up: the App Store link is country-neutral for everyone (it was the Brazil store page)
+  ok(/const APP_STORE_URL = `https:\/\/apps\.apple\.com\/app\/id\$\{APP_STORE_ID\}`;/.test(pts) && /APP_STORE_ID = '6765877675'/.test(pts), "App Store link: apps.apple.com/app/id6765877675 (no country)");
+  ok(!/apps\.apple\.com\/[a-z]{2}\//.test(pts) && /itms-apps:\/\/apps\.apple\.com\/app\/id\$\{APP_STORE_ID\}/.test(pts), "…no country-specific store page in Points.js (web link and itms-apps)");
   done();
 })().catch((e) => { console.error("CRASH", e); process.exit(1); });
