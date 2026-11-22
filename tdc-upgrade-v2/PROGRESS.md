@@ -160,7 +160,7 @@ Quiet hours: the owner first asked for them on chat pushes, then corrected it (C
 ## Release plan
 
 **Branches** (each repo; each built on the one before, so they merge in this order):
-`upgrade/p0-safety` → `upgrade/p4-1-safety` → `upgrade/p4-1-followups` → `upgrade/sec-1-socket` → `upgrade/chat-1-push` → `upgrade/p1-growth` → `upgrade/p1-followups` → `upgrade/phase-n`. ADMIN has changes in `p4-1-safety`, `p4-1-followups` and `p1-growth`; its other branches equal the one before. P1 adds: a portal deploy with the new `vercel.json` (check on a preview first), and the 1.3.0 store build later for app links and the install referrer. Nothing is merged, pushed or deployed without the owner's written OK.
+`upgrade/p0-safety` → `upgrade/p4-1-safety` → `upgrade/p4-1-followups` → `upgrade/sec-1-socket` → `upgrade/chat-1-push` → `upgrade/p1-growth` → `upgrade/p1-followups` → `upgrade/phase-n`, merged locally into `release/r1` (Release 1, `RELEASE-1.md`). ADMIN has changes in `p4-1-safety`, `p4-1-followups` and `p1-growth`; its other branches equal the one before. P1 adds: a portal deploy with the new `vercel.json` (check on a preview first), and the 1.3.0 store build later for app links and the install referrer. Nothing is merged, pushed or deployed without the owner's written OK.
 
 **Before staging** (once the owner has created it, `server/docs/STAGING.md`):
 1. Staging Railway variables: `APP_ENV=staging`, its own `MONGO_URI`, new `JWT_SECRET`, `SAFETY_ALERT_EMAILS`, `SAFETY_APPEAL_EMAIL`, a capped `OPENAI_API_KEY`, `PUBLIC_BASE_URL`.
@@ -259,6 +259,33 @@ tests, portal 38/38.
 - Today's win-back copy uses made-up numbers (see plan corrections, N-7); only reachable through that broken route.
 - `pushGateway.checkReceipts` is never scheduled; the per-send receipt check runs, and N-6a uses it for tracked rows.
 - Per-thread mute (N-5) waits for P4-5.
+
+## Phase N fixes (owner, Phase N sign-off)
+
+| Fix | What changed | Commit | Tests |
+|---|---|---|---|
+| win-back nudge | the empty extensionless `services/engagement/inactivity` removed (the admin route works: 200); `sendWinBack` sends only with `pushCopyV2`, real numbers only, else nothing | SERVER `f1a1405d` | push-copy 22/22, push-report 21/21 |
+| push receipts | `pushGateway.checkReceipts` every 30 min (job `pushReceipts`, `JOB_PUSH_RECEIPTS`; on in production like the other jobs, off on staging); delivered / failed, dead one-device tokens removed. Each send's own receipt check (every sender) already removes dead tokens; this catches what it missed on logged pushes | SERVER `b254e1e5` | push-receipts 13/13 (the test file landed in `f1a1405d`); SERVER 87/87 |
+
+## Release 1 (local, branch `release/r1` in each repo)
+
+`tdc-upgrade-v2/RELEASE-1.md`: contents, flags, changes for everyone, Railway values, deploy order, staging checklist,
+switch-on order, rollback, and the merge / test results (every merge clean, all tests green after each).
+Heads: SERVER `09d06818`, APP `07bd019`, ADMIN `efb2d8f`. Nothing pushed or deployed.
+
+## Phase A verification (read only, on release/r1)
+
+| Plan | What the plan assumes | What the code has | Differs? |
+|---|---|---|---|
+| R1 | one admin level; `User.role` student / brand / admin / traveler / employee | the same (`models/User.js` L28–31) | no |
+| R2 | ~20 route files, at least 4 admin-check implementations (`adminMiddleware.isAdmin`, 3 local `requireAdmin`, inline) | 22 route files check for admin, with **10 local implementations**: `isAdmin` copied in admin, adminCrew, adminEngagement, brandApproval, event routes; `requireAdmin` in adminActions, adminFeatures, adminUniversities; `isAdminOrEmployee` (jobs); `isAdminReq` / `isAdminUser` (event, social); the shared `middleware/adminMiddleware.js` is used by **one** file (adminSafety). Plus inline `role === 'admin'` in ~20 files incl. **services** (careerTimelineService 6, accountStatus, confessionStrikes, accountDeletion, jobAlerts); jobs.routes alone has 17 | **yes, bigger**: more checks to map; services decide things for admins too (e.g. "admins never locked out", career timeline views) and need a rule for members |
+| R3 | portal menu shows everything to every admin; `AppNavigator.js` L121 | the same: `ADMIN_MENU` 8 groups / 40 pages; role check at L124 | no (line) |
+| R4 | auth reads the user every request; `AdminActionLog`; `OtpCode` | the same: `REQ_USER_FIELDS` + a DB read per request (L66); `AdminActionLog` and `AdminAuditLog` (deletions only); `OtpCode` with a `purpose` (signup-verify, password-reset) | no: a new purpose `admin-login` is additive |
+| A-2 safety area | its own menu area | P4-7 put "safety" in the **general** group (portal check keeps "oversight" gone) | small: permissions `safety.*` map to a page in general |
+| A-6 invite | a new invite flow | **`POST /api/admin/users/create` lets any admin create any role, including another `admin`** (`role` comes from the body, default employee) | **yes**: privilege-escalation path today; Phase A must restrict it to `team.manage` (or recommend a fix before) |
+| A-8 | 12 h idle logout, new-device code | sign-in tokens last **180 days** for everyone, admins included; no login history, no device record | yes: needs a session/last-seen record for admins (additive) |
+| A-4 masking | `pii.view` masks phone / e-mail / documents | admin list routes return them in full today (e.g. `admin.routes.js` L297 selects phone) | expected (that's the work) |
+| migration | existing admins without `adminAccess` = super | needs the number of admin accounts in production: a read-only count script (like `count-account-status.js`) before shadow mode | add the count |
 
 ## Railway variables for the owner to set (never set by the developer)
 
