@@ -87,6 +87,17 @@ function loader(mocks) {
     ok(saved.some((p) => p.confessions === false) && saved.some((p) => p.skillshare === false), "confessions and skillshare save their own keys (the server's names)");
     const src = read("app/src/engagement/screens/NotificationSettingsScreen.js");
     ok(/sub: 'new confessions at your university'/.test(src), "the confessions row says it is your university only");
+    ok(!byLabel("messages"), "CHAT-1: no 'messages' switch when the server doesn't send it (no chatPushV1)");
+    // CHAT-1: the server sends "messages" only for accounts with chatPushV1
+    serverPrefs = { ...serverPrefs, messages: true };
+    const screen2 = mount(React.createElement(Screen));
+    await tick(40);
+    const sw2 = () => all(screen2.tree, (n) => n.type === "Switch");
+    const msg = () => sw2().find((s) => s.props.accessibilityLabel === "messages notifications");
+    ok(sw2().length === 9 && msg()?.props.value === true, "CHAT-1: with the server's 'messages' key: a 'messages' switch, on", sw2().map((s) => s.props.accessibilityLabel).join(", "));
+    msg().props.onValueChange(false);
+    await tick();
+    ok(JSON.stringify(saved.at(-1)) === JSON.stringify({ messages: false }) && msg().props.value === false, "…turning it off saves { messages: false }");
   }
 
   // ═════ 2. emoji / sound and where a tap opens ═════
