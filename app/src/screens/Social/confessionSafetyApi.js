@@ -13,6 +13,12 @@ export async function safetyMe(token) {
   return res.ok ? read(res) : null;
 }
 
+/** the text check before an image upload → { verdict: "ok" | "edit", reasons } or null (unreachable: post anyway) */
+export async function precheckText(token, text) {
+  const res = await fetchWithTimeout(`${API_URL}/confessions/precheck`, { method: "POST", headers: headers(token), body: JSON.stringify({ text }) });
+  return res.ok ? read(res) : null;
+}
+
 /** store "rules accepted" (once) → true when stored */
 export async function acceptRules(token) {
   const res = await fetchWithTimeout(`${API_URL}/confessions/rules/accept`, { method: "POST", headers: headers(token) });

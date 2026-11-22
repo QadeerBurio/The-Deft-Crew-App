@@ -216,6 +216,16 @@ async function snapshots(file, flag) {
   ok(ctx.alerts.some((x) => x.title === "couldn't post" && /until 2026-11-22/.test(x.text)), "a refused comment shows the server's sentence", JSON.stringify(ctx.alerts.map((x) => x.title)));
   ctx.restore();
 
+  console.log("── precheck before the image upload (source: the composer has no image button today, so it's dormant)");
+  {
+    const src = fs.readFileSync(SCREEN, "utf8").replace(/\r\n/g, "\n");
+    const post = src.slice(src.indexOf("const handlePost = useCallback("), src.indexOf("const resetForm = useCallback("));
+    const pre = post.indexOf("precheckText(token, newConfession.trim())");
+    const up = post.indexOf("await uploadToCloudinary(selectedImage)");
+    ok(pre > 0 && up > pre, "handlePost asks the precheck before uploading the image");
+    ok(/if \(safety && selectedImage && newConfession\.trim\(\)\) \{/.test(post) && /if \(pre\?\.verdict === "edit" && Array\.isArray\(pre\.reasons\)\) \{[\s\S]{0,160}setComposerIssues\(pre\.reasons\);[\s\S]{0,80}return;/.test(post), "…only with the flag on and an image; 'edit' shows the reasons and stops before the upload");
+  }
+
   console.log("── ReportModal");
   {
     const { React, mount } = H.makeReact();
