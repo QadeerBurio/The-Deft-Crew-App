@@ -52,6 +52,7 @@ function setup(file, { flag, server = {} }) {
   const funnels = [];
   const mocks = {
     react: React, "react-native": rn,
+    "../../push/pushAsk": { pushMoment: () => {} }, // N-3 (pushAskV2): the flag off here
     "../../ui/RemoteImage": "RemoteImage",
     "@react-navigation/native": { useIsFocused: () => true, useFocusEffect: (cb) => React.useEffect(() => cb(), [cb]) },
     "@expo/vector-icons": { Ionicons: "Icon" }, "../../ui/FlatGradient": { LinearGradient: "LinearGradient" },

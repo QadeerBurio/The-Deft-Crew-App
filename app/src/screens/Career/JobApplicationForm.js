@@ -20,6 +20,7 @@ import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 import api from "../../api/api";
 import { studioEnabled, studioApi } from "../../api/resumeStudioApi";
 import { metaEvents } from "../../analytics/metaEvents";
+import { pushMoment } from "../../push/pushAsk";
 import { AuthContext } from "../../context/AuthContext";
 import { backToJobsList } from "../../utils/careerNav";
 import { plainError } from "../../utils/plainError";
@@ -127,6 +128,7 @@ export default function JobApplicationForm({ navigation, route }) {
     // the server has the application: count it once, then the tailored version (if chosen)
     doneRef.current = true;
     metaEvents.jobApplied(jobId);
+    pushMoment("job"); // N-3 (pushAskV2): a good moment to ask for notifications
     let note = "The employer will see it in their candidates list.";
     if (resume.kind === "tailored" && resume.version && applicationId) {
       try { await studioApi.attachVersion(applicationId, resume.version.id); note = "Your tailored resume went with it."; } catch (e) { note = `It was sent, but your tailored resume couldn't be attached: ${e?.message || "try again from Resume Studio"}.`; }

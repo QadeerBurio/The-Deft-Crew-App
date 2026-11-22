@@ -27,7 +27,7 @@ import AppNavigator from "./app/src/navigation/AuthNavigator";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { StatusBar, View, Platform, InteractionManager, AppState } from "react-native";
-import { watchFlags } from "./app/src/api/appFlags";
+import { watchFlags, flagOn } from "./app/src/api/appFlags";
 import { APP_VERSION } from "./app/src/utils/appVersion";
 import ResumeProvider from "./app/src/context/ResumeContext";
 import api from "./app/src/api/api";
@@ -49,8 +49,10 @@ import {
   getRouteFromNotificationData,
   NOTIFICATION_TASK,
 } from "./app/src/utils/pushNotifications";
+import { reportPushOpened } from "./app/src/utils/pushOpened";
 
 import GlobalNotificationLayer from "./app/src/components/GlobalNotificationLayer";
+import PushAskHost from "./app/src/push/PushAskHost";
 import AppAlertHost, { installAppAlert } from "./app/src/components/AppAlert";
 
 // Every Alert.alert in the app now shows the tdc styled popup
@@ -204,7 +206,10 @@ function PushRegistration() {
 
         let expoPushToken = null;
         try {
-          expoPushToken = await registerForPushNotificationsAsync();
+          // N-3 (pushAskV2 on): no OS prompt on login; a phone that already allows notifications registers as
+          // before, the others are asked at a good moment (PushAskHost). Off or unknown: as today.
+          const askLater = await flagOn("pushAskV2").catch(() => false);
+          expoPushToken = await registerForPushNotificationsAsync(askLater ? { prompt: false } : undefined);
         } finally {
           releaseTour("push-permission");
         }
@@ -267,6 +272,7 @@ function ColdStartDeepLink() {
         if (!claimNotificationResponse(response)) return;
 
         const data = response?.notification?.request?.content?.data || {};
+        reportPushOpened(data); // N-6: only pushes that carry a pushLogId (pushOpenTracking)
         const { route, params } = getRouteFromNotificationData(data);
         if (!route) return;
 
@@ -368,6 +374,8 @@ function AppContent() {
             {/* Banner layer — mounted AFTER NavigationContainer so
                 navigationRef is always ready when a notification arrives */}
             <GlobalNotificationLayer />
+            {/* N-3: "turn on notifications?" after a good moment (pushAskV2) */}
+            <PushAskHost />
 
             <CelebrationHost />
             <TourOverlay />

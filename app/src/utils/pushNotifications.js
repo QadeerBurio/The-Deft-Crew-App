@@ -114,7 +114,8 @@ export function setupAndroidChannels() {
 // ═══════════════════════════════════════════════════════════════
 // PERMISSION + EXPO TOKEN
 // ═══════════════════════════════════════════════════════════════
-export async function registerForPushNotificationsAsync() {
+// prompt: false (N-3, pushAskV2 on login): no OS prompt; a phone that hasn't allowed notifications yet returns null
+export async function registerForPushNotificationsAsync({ prompt = true } = {}) {
   await setupAndroidChannels();
 
   if (!Device.isDevice) {
@@ -124,6 +125,10 @@ export async function registerForPushNotificationsAsync() {
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
+  if (existingStatus !== 'granted' && !prompt) {
+    console.log('[push] not asking on login (pushAskV2): asked at a good moment instead');
+    return null;
+  }
   if (existingStatus !== 'granted') {
     const { status } = await Notifications.requestPermissionsAsync({
       ios: { allowAlert: true, allowBadge: true, allowSound: true },

@@ -56,7 +56,7 @@ export default function InviteCodeExtras({ code, onCode, disabled = false }) {
       )}
       {inviter && (
         <Text style={{ fontFamily: F.body, fontSize: 12, color: T.textMuted, marginTop: -6, marginBottom: 10 }} maxFontSizeMultiplier={1.3}>
-          you both get 100 points when you start using tdc.
+          you get 100 points and your friend gets 150 when you join and verify your email.
         </Text>
       )}
       {pasteOn && !String(code || "").trim() && (

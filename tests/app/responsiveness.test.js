@@ -525,6 +525,7 @@ function hitTest(tree, rootBox, x, y) {
         "../../analytics/metaEvents": { metaEvents: new Proxy({}, { get: () => () => {} }) },
         // confession safety (P4-1) imports: the flag OFF here, so these checks keep measuring today's screen
         "../../hooks/useFlag": { __esModule: true, default: () => false },
+        "../../push/pushAsk": { pushMoment: () => {} }, // N-3 (pushAskV2): the flag off here
         "../../analytics/funnel": { funnel() {} },
         "./ReportModal": "ReportModal",
         "./confessionSafetyApi": { safetyMe: async () => null, acceptRules: async () => true, muteAuthor: async () => ({ ok: true }), deleteMyConfession: async () => true, myConfessionIds: async () => new Set() },

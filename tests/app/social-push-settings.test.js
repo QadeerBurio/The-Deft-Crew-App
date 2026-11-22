@@ -70,6 +70,9 @@ function loader(mocks) {
       "../../utils/pushNotifications": { registerForPushNotificationsAsync: async () => null, savePushTokenToServer: async () => ({}) },
       "../../ui": { ScreenHeader: "ScreenHeader", Skeleton: "Skeleton" },
       "../../utils/plainError": { plainError: (e) => String(e) },
+      // N-3 (pushAskV2): the flag off here
+      "../../hooks/useFlag": { __esModule: true, default: () => false },
+      "../../push/PushPermissionRow": { __esModule: true, default: () => null },
     });
     const Screen = load(path.join(SRC, "engagement/screens/NotificationSettingsScreen.js")).default;
     const screen = mount(React.createElement(Screen));

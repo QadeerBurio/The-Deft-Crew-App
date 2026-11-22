@@ -25,7 +25,7 @@ const asMock = { "@react-native-async-storage/async-storage": { __esModule: true
   const L = H.loader(asMock)(path.join(H.SRC, "growth/inviteLinks.js"));
   ok(L.inviteLink("aisha1", "wa") === "https://gettdc.pk/i/AISHA1?c=wa" && L.inviteLink("X1Y2Z3", "sms") === "https://gettdc.pk/i/X1Y2Z3?c=direct", "share link: gettdc.pk/i/CODE?c=<channel> (unknown channel → direct)");
   const msg = L.inviteMessage("aisha1", "wa");
-  ok(msg.includes("use my code: AISHA1") && msg.includes("you both get 100 points when your friend starts using tdc.") && msg.endsWith("https://gettdc.pk/i/AISHA1?c=wa"), "share text: the code, the owner's line, the link", msg);
+  ok(msg.includes("use my code: AISHA1") && msg.includes("your friend gets 100 points and you get 150 when they join and verify their email.") && msg.endsWith("https://gettdc.pk/i/AISHA1?c=wa"), "share text: the code, the owner's line, the link", msg);
   const parse = [["tdcapp://i/aisha1", "AISHA1"], ["https://gettdc.pk/i/AISHA1?c=wa", "AISHA1"], ["https://www.gettdc.pk/i/abc123/", "ABC123"], ["https://evil.example/i/AISHA1", null], ["tdcapp://post/123", null], ["https://gettdc.pk/i/a", null]];
   ok(parse.every(([u, want]) => L.inviteCodeFromUrl(u) === want), "link parsing: tdcapp:// and gettdc.pk only, codes 4–12 letters / digits", JSON.stringify(parse.map(([u]) => L.inviteCodeFromUrl(u))));
   ok(L.codeFromText("use my code: abc123\nyou both…") === "ABC123" && L.codeFromText("https://gettdc.pk/i/XYZ789?c=copy") === "XYZ789" && L.codeFromText("QWE456") === "QWE456" && L.codeFromText("hello there friend") === null, "pasted text: 'code: X', a link, or the code alone");
@@ -59,7 +59,7 @@ const asMock = { "@react-native-async-storage/async-storage": { __esModule: true
     const m = mount(React.createElement(Host));
     await tick(80); m.rerender(); await tick(60); m.rerender();
     ok(value === "AISHA1", "a code saved from an invite link fills the empty field");
-    ok(H.textOf(m.tree).includes("invited by aisha ✓ code AISHA1") && H.textOf(m.tree).includes("you both get 100 points when you start using tdc."), "…'invited by aisha ✓ code AISHA1' and the owner's line", H.textOf(m.tree));
+    ok(H.textOf(m.tree).includes("invited by aisha ✓ code AISHA1") && H.textOf(m.tree).includes("you get 100 points and your friend gets 150 when you join and verify your email."), "…'invited by aisha ✓ code AISHA1' and the owner's line", H.textOf(m.tree));
     ok(!H.byLabel(m.tree, "paste invite code"), "no paste button when the field has a code");
     ok(clipReads === 0, "the clipboard is never read on its own");
     m.unmount();
@@ -130,6 +130,7 @@ const asMock = { "@react-native-async-storage/async-storage": { __esModule: true
   ok(/if \(growth && referralCode\) return inviteLink\(referralCode, 'direct'\);/.test(pts) && /const msg = growth && referralCode \? inviteMessage\(referralCode, 'direct'\) :\s*`join the crew\./.test(pts), "…share link and text change only with growthV2 (today's text kept)");
   ok(/\{growth && \(\s*<TouchableOpacity onPress=\{onShareWhatsApp\}/.test(pts) && /\{growth && <ReferralLeaderboard/.test(pts) && /\{cardsOn && !!referralCode && \(\s*<ShareCardSheet/.test(pts), "…WhatsApp button and leaderboard only with growthV2; the share card only with shareCards");
   ok(/'friend joins: \+50 pts\. friend sorts first card: \+100 more\.'/.test(pts), "…flag off: today's code hint unchanged");
+  ok(/\? 'your friend gets 100 points and you get 150 when they join and verify their email\.'/.test(pts) && !/you both get 100 points/.test(pts), "…growthV2 code hint: the owner's reward line (friend 100, you 150, after the e-mail is verified)");
   // P1 follow-up: the App Store link is country-neutral for everyone (it was the Brazil store page)
   ok(/const APP_STORE_URL = `https:\/\/apps\.apple\.com\/app\/id\$\{APP_STORE_ID\}`;/.test(pts) && /APP_STORE_ID = '6765877675'/.test(pts), "App Store link: apps.apple.com/app/id6765877675 (no country)");
   ok(!/apps\.apple\.com\/[a-z]{2}\//.test(pts) && /itms-apps:\/\/apps\.apple\.com\/app\/id\$\{APP_STORE_ID\}/.test(pts), "…no country-specific store page in Points.js (web link and itms-apps)");

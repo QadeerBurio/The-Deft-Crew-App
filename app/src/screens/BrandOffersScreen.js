@@ -15,6 +15,7 @@ import { AuthContext } from "../context/AuthContext";
 import { useGuestGate } from "../guest/GuestGate";
 import { plainError } from "../utils/plainError";
 import { metaEvents } from "../analytics/metaEvents";
+import { pushMoment } from "../push/pushAsk";
 
 export default function BrandOffersScreen({ route }) {
   const { brandId, brandName } = route.params;
@@ -54,6 +55,7 @@ export default function BrandOffersScreen({ route }) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       metaEvents.offerClaimed(offerId);
+      pushMoment("deal"); // N-3 (pushAskV2): a good moment to ask for notifications
       Alert.alert("Success", res.data.message);
       fetchOffers(); // ✅ refresh offers to update claim count and button
     } catch (err) {

@@ -16,7 +16,7 @@ import api, {
 import { jwtDecode } from "jwt-decode";
 import { resetNotificationBaseline } from "../hooks/useNotifications";
 import { clearClaimedRegistry } from "../screens/OfferScreen";
-import { refreshFlags, clearFlags } from "../api/appFlags";
+import { refreshFlags, clearFlags, knownFlag } from "../api/appFlags";
 
 export const AuthContext = createContext();
 
@@ -241,8 +241,10 @@ export function AuthProvider({ children }) {
 
     try {
       // just the number (was the last 100 notifications, every 30 s, to count them here)
+      // N-4 (unifiedInbox on): one number for the bell and social lists; the server ignores scope otherwise
       const res = await api.get("/notification/unread-count", {
         headers: { Authorization: `Bearer ${activeToken}` },
+        ...(knownFlag("unifiedInbox") ? { params: { scope: "all" } } : {}),
       });
       const unread = Number(res.data?.count) || 0;
       setUnreadCount(unread);

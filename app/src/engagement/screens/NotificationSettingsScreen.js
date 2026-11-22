@@ -28,6 +28,9 @@ import {
 import { color as T, font as F } from "../../theme/tokens";
 import { ScreenHeader, Skeleton } from "../../ui";
 import { plainError } from "../../utils/plainError";
+import useFlag from "../../hooks/useFlag";
+import PushPermissionRow from "../../push/PushPermissionRow";
+import NotifModes from "../../push/NotifModes";
 // What went wrong with the push test, in plain words (the server's codes are not shown).
 // data: GET /notification/test-push → { ok, problem, results: [{ ticket, receipt, error }] }
 export function pushTestMessage(data) {
@@ -260,6 +263,11 @@ export default function NotificationSettingsScreen() {
   };
 
   const [testing, setTesting] = useState(false);
+  const askOn = useFlag("pushAskV2") === true; // N-3: PushPermissionRow replaces the warning below
+  // N-5 (notifSettingsV2): the server sends "mode" only for accounts with the flag; then the modes and the digest
+  // sit on top and the switches move under "fine-tune" (closed until tapped)
+  const modesOn = !!prefs && typeof prefs.mode === 'string';
+  const [fineTuneOpen, setFineTuneOpen] = useState(false);
 
   // the switches this account has (a pilot-only switch only when the server sends it)
   const rows = ROWS.filter((r) => !r.pilotOnly || (prefs && r.key in prefs));
@@ -310,7 +318,9 @@ export default function NotificationSettingsScreen() {
           </LinearGradient>
 
           {/* ── OS PERMISSION WARNING ─────────────────────────── */}
-          {osPermission === 'denied' && (
+          {/* N-3 (pushAskV2 on): this phone's own permission, with "turn on" or "turn on in settings" */}
+          <PushPermissionRow />
+          {!askOn && osPermission === 'denied' && (
             <TouchableOpacity
               style={styles.permissionRow}
               onPress={() => Linking.openSettings()}
@@ -331,12 +341,37 @@ export default function NotificationSettingsScreen() {
             </TouchableOpacity>
           )}
 
-          {/* ── WHAT YOU GET ─────────────────────────────────── */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>what you get</Text>
-            <View style={styles.sectionUnderline} />
-          </View>
+          {/* ── N-5: HOW OFTEN + DIGEST ──────────────────────── */}
+          {modesOn && (
+            <NotifModes
+              mode={prefs.mode}
+              digest={prefs.digest === true}
+              onMode={(v) => toggle('mode', v)}
+              onDigest={(v) => toggle('digest', v)}
+            />
+          )}
 
+          {/* ── WHAT YOU GET ─────────────────────────────────── */}
+          {modesOn ? (
+            <TouchableOpacity
+              style={[styles.sectionHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+              onPress={() => setFineTuneOpen((o) => !o)}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: fineTuneOpen }}
+              accessibilityLabel={`fine-tune, ${totalCount} switches`}
+            >
+              <Text style={styles.sectionTitle}>fine-tune · {totalCount}</Text>
+              <Ionicons name={fineTuneOpen ? 'chevron-up' : 'chevron-down'} size={16} color={MUTED} />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>what you get</Text>
+              <View style={styles.sectionUnderline} />
+            </View>
+          )}
+
+          {(!modesOn || fineTuneOpen) && (
           <View style={styles.card}>
             {rows.map((r, i) => (
               <PrefRow
@@ -348,6 +383,7 @@ export default function NotificationSettingsScreen() {
               />
             ))}
           </View>
+          )}
 
           {/* ── PUSH TEST ─────────────────────────────────────── */}
           <TouchableOpacity

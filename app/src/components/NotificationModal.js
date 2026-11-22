@@ -39,11 +39,14 @@ import {
   NotifEmpty,
 } from './notifications/NotifUI';
 import { navigateAnywhere } from "../navigation/routes";
+import useFlag from '../hooks/useFlag';
+// N-4 (flag unifiedInbox): one inbox for the bell and social lists
+import * as Unified from '../notifications/unifiedInbox';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Last loaded list per user (instant open)
-const cache = { userId: null, list: null };
+// Last loaded list per user (instant open); mode: 'bell' or 'unified' (N-4) so the two lists never mix
+const cache = { userId: null, list: null, mode: 'bell' };
 
 // ── type → icon + tone ──
 const LOOK = {
@@ -70,7 +73,7 @@ const LOOK = {
   Update: ['sparkles-outline', 'dark'],
   System: ['notifications-outline', 'dark'],
 };
-const lookFor = (type) => LOOK[type] || LOOK.System;
+const lookFor = (type) => LOOK[type] || Unified.SOCIAL_LOOK[type] || LOOK.System;
 
 const GROUPS = {
   offers: ['Offer', 'Brand', 'Promotion', 'Payment', 'Card'],
@@ -146,7 +149,9 @@ const NotificationModal = ({ visible: visibleProp, onClose: onCloseProp, navigat
   const onClose = onCloseProp || (() => navigation?.canGoBack?.() && navigation.goBack());
 
   const myId = user?._id?.toString();
-  const cached = cache.userId === myId ? cache.list : null;
+  const unified = useFlag(Unified.FLAG) === true;
+  const mode = unified ? 'unified' : 'bell';
+  const cached = cache.userId === myId && cache.mode === mode ? cache.list : null;
 
   const [filter, setFilter] = useState('all');
   const [notifications, setNotifications] = useState(cached || []);
@@ -164,10 +169,32 @@ const NotificationModal = ({ visible: visibleProp, onClose: onCloseProp, navigat
     setNotifications(list);
     cache.userId = myId;
     cache.list = list;
-  }, [myId]);
+    cache.mode = mode;
+  }, [myId, mode]);
+
+  // the same transport as the bell list (axios + BASE_URL + the token), for the N-4 helpers
+  const ax = useMemo(() => ({
+    get: (u, o = {}) => axios.get(`${BASE_URL}${u}`, { ...headers, ...o }),
+    put: (u) => axios.put(`${BASE_URL}${u}`, {}, headers),
+    patch: (u) => axios.patch(`${BASE_URL}${u}`, {}, headers),
+    delete: (u) => axios.delete(`${BASE_URL}${u}`, headers),
+  }), [headers]);
 
   const fetchNotifications = useCallback(async () => {
     if (!token || !user) return;
+    if (unified) {
+      try {
+        const { items, unread } = await Unified.fetchUnified(ax);
+        save(items);
+        if (typeof setUnreadCount === 'function') setUnreadCount(unread?.all ?? items.filter((n) => !n.isRead).length);
+      } catch (err) {
+        console.log('[NotificationModal] unified fetch error', err?.response?.status, err?.message);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+      return;
+    }
     try {
       const res = await axios.get(`${BASE_URL}/notification/my-notifications`, headers);
       const docs = Array.isArray(res.data) ? res.data : Array.isArray(res.data?.notifications) ? res.data.notifications : [];
@@ -182,7 +209,7 @@ const NotificationModal = ({ visible: visibleProp, onClose: onCloseProp, navigat
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token, user, headers, myId, save, setUnreadCount]);
+  }, [token, user, headers, myId, save, setUnreadCount, unified, ax]);
 
   // open / close
   useEffect(() => {
@@ -197,7 +224,7 @@ const NotificationModal = ({ visible: visibleProp, onClose: onCloseProp, navigat
         Animated.timing(backdrop, { toValue: 1, duration: 180, useNativeDriver: true }),
       ]).start();
       // fresh user list into state (another account may have signed in)
-      if (cache.userId === myId && cache.list) setNotifications(cache.list);
+      if (cache.userId === myId && cache.mode === mode && cache.list) setNotifications(cache.list);
       else setLoading(true);
       fetchNotifications();
     } else if (mounted) {
@@ -219,6 +246,7 @@ const NotificationModal = ({ visible: visibleProp, onClose: onCloseProp, navigat
   const markRead = (id) => {
     save(notifications.map((n) => (n._id === id ? { ...n, isRead: true } : n)));
     setUnreadCount?.((prev) => Math.max(0, (prev || 0) - 1));
+    if (unified) { const it = notifications.find((n) => n._id === id); if (it) Unified.actions.read(ax, it).catch(() => {}); return; }
     axios.patch(`${BASE_URL}/notification/mark-read/${id}`, {}, headers).catch(() => {});
   };
 
@@ -226,12 +254,14 @@ const NotificationModal = ({ visible: visibleProp, onClose: onCloseProp, navigat
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     save(notifications.map((n) => ({ ...n, isRead: true })));
     setUnreadCount?.(0);
+    if (unified) { Unified.actions.readAll(ax); return; }
     axios.put(`${BASE_URL}/notification/mark-all-read`, {}, headers).catch(() => {});
   };
 
   const deleteOne = (item) => {
     save(notifications.filter((n) => n._id !== item._id));
     if (!item.isRead) setUnreadCount?.((prev) => Math.max(0, (prev || 0) - 1));
+    if (unified) { Unified.actions.remove(ax, item).catch(() => {}); return; }
     axios.delete(`${BASE_URL}/notification/delete/${item._id}`, headers).catch(() => {});
   };
 
@@ -242,6 +272,13 @@ const NotificationModal = ({ visible: visibleProp, onClose: onCloseProp, navigat
         text: 'Clear all',
         style: 'destructive',
         onPress: () => {
+          if (unified) {
+            // social connection requests that still wait for an answer stay (the server keeps them too)
+            save(notifications.filter((n) => n.screenToOpen === 'SocialNotifications'));
+            setUnreadCount?.(0);
+            Unified.actions.clearAll(ax);
+            return;
+          }
           save([]);
           setUnreadCount?.(0);
           axios.delete(`${BASE_URL}/notification/clear-all`, headers).catch(() => {});
@@ -264,6 +301,7 @@ const NotificationModal = ({ visible: visibleProp, onClose: onCloseProp, navigat
 
   // ── list ──
   const counts = useMemo(() => {
+    if (unified) return Unified.counts(notifications);
     const c = { unread: 0, offers: 0, careers: 0, events: 0, other: 0 };
     notifications.forEach((n) => {
       if (!n.isRead) {
@@ -273,9 +311,10 @@ const NotificationModal = ({ visible: visibleProp, onClose: onCloseProp, navigat
       }
     });
     return c;
-  }, [notifications]);
+  }, [notifications, unified]);
 
   const data = useMemo(() => {
+    if (unified) return withSections(Unified.filterItems(notifications, filter));
     const list = notifications.filter((n) => {
       if (filter === 'all') return true;
       if (filter === 'unread') return !n.isRead;
@@ -283,7 +322,7 @@ const NotificationModal = ({ visible: visibleProp, onClose: onCloseProp, navigat
       return (GROUPS[filter] || []).includes(n.type);
     });
     return withSections(list);
-  }, [notifications, filter]);
+  }, [notifications, filter, unified]);
 
   const renderItem = ({ item }) => {
     if (item._section) return <NotifSection label={item.label} />;
@@ -318,7 +357,7 @@ const NotificationModal = ({ visible: visibleProp, onClose: onCloseProp, navigat
         showHandle={!isScreen}
       />
       <View>
-        <NotifFilters filters={FILTERS} value={filter} onChange={setFilter} counts={counts} />
+        <NotifFilters filters={unified ? Unified.UNIFIED_FILTERS : FILTERS} value={filter} onChange={setFilter} counts={counts} />
       </View>
       {loading ? (
         <NotifSkeleton />
