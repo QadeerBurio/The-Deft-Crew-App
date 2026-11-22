@@ -179,6 +179,7 @@ export default function InquiryChatScreen({ route, navigation }) {
   // Initialize socket
   useEffect(() => {
     const newSocket = io(SOCKET_URL, {
+      auth: { token }, // SEC-1: the server knows this socket by the token
       transports: ['websocket'],
       timeout: 10000,
       reconnection: true,

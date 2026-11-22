@@ -19,6 +19,7 @@ import { useNavigation, useFocusEffect, CommonActions } from '@react-navigation/
 import { AuthContext } from "../../context/AuthContext";
 import { setMessageUnread } from "../../hooks/useMessageUnread";
 import io from "socket.io-client";
+import useSocketAuth from "../../hooks/useSocketAuth";
 
 import { color as T, font as F } from "../../theme/tokens";
 import { ScreenHeader, HeaderIconButton, Input, Chip, EmptyState, SkeletonBlock } from "../../ui";
@@ -227,6 +228,7 @@ const ActionSheet = ({ visible, onClose, onAction, name, image, isBlocked }) => 
 export default function MessagesScreen() {
   const navigation = useNavigation();
   const { token, user: currentUser } = useContext(AuthContext);
+  useSocketAuth(socket, token); // SEC-1: the server knows this socket by the token
   const myId = currentUser?._id;
   const cacheHit = inboxCache.userId === myId && Array.isArray(inboxCache.conversations);
 

@@ -102,6 +102,47 @@ All server suites use in-memory fakes; they delete `MONGO_URI` and stub `dotenv`
 
 **Not done in P4-1, and why:** an "appeal" button for a suspended student (the 403 already says why; the button needs a login-screen change and an appeal inbox address from the owner); the live client-side pre-check hint (P4-4); handles (P4-2).
 
+## P4-1 follow-ups (branch `upgrade/p4-1-followups`, owner 21 Nov 2026)
+
+| # | What changed | Commit | Tests |
+|---|---|---|---|
+| 1 | Confession mentions anonymous **for everyone**: text "someone mentioned you…" and the notification's sender is a fixed id that matches no account (before: the commenter was the sender, so the app showed their name and photo and opened their profile) | SERVER `58421ded` | confession-precheck 51/51 |
+| 5 | Images were already sent to omni-moderation (image_url with the text); `violence/graphic` wasn't mapped, so a gory image passed. Now blocked (`graphic`). Tests prove the image reaches the call and sexual / graphic images are blocked | SERVER `eb426b36` | confession-precheck 55/55 |
+| 2 | Appeals: `SAFETY_APPEAL_EMAIL` → `appealEmail` in the locked-account 401 / 403 and in `CONFESSION_BANNED`; the sign-in screen shows "account paused / closed" with the reason and an "appeal" button (mailto, account e-mail filled in) | SERVER `c695348a`, APP `26753f2` | account-status 46/46, signin-appeal 6/6 |
+| 3 | Mode setting **off / observe / enforce** (default enforce = as signed off). Observe: every new confession / comment from **every** student is checked after saving and reports are re-checked; decisions logged (`SafetyObservation`, 90 days); nothing blocked, held, hidden, struck or banned; self-harm still e-mails admins. Admin: mode in settings, new tab "would have blocked" (counts by outcome / reason, items, anonymous authors) | SERVER `6238a5fc`, ADMIN `5decb9d` | confession-observe 36/36, AdminSafety 7/7 |
+| 4 | `POST /confessions/precheck` (text only, before an image upload); the app calls it first when an image is attached; server deletes the Cloudinary image when a post is blocked, removed after a confirmed report, or removed by an admin (our cloud only) | SERVER `6238a5fc`, APP `3dbe0f7` | confession-observe, confessions-v2 35/35 |
+| 6 | Helplines stay editable in admin (no change) | — | — |
+
+## SEC-1 socket identity (branch `upgrade/sec-1-socket`)
+
+| Step | What changed | Commit | Tests |
+|---|---|---|---|
+| move | socket.io chat and call handlers moved verbatim from `server.js` to `socket/chatHandlers.js` (only require paths changed) | SERVER `6af65f69` | moved lines diffed; cors-origins, career, live-security, security ok |
+| stage 1 + 2 | every event acts as the account of a **verified token** (handshake `auth.token`, `authenticate`, or `user_online`'s 2nd argument); a different client id is ignored and logged; a verified user must be a participant to join / send / read / type / delete in a conversation, deletes only their own messages, and calls / typing carry the real name. Without a token: as before (logged once per socket and event). Flag **`socketTokenRequired`** (server only, off): events without a verified token are refused (`auth_required`). A suspended / banned account's token is refused | SERVER `e1590090` | socket-sec1 25/25 (the old handlers: 7/25), socket-identity 16/16 |
+| app | `useSocketAuth(socket, token)` sends `authenticate` now and after each reconnect (ChatDetails before its join, MessageScreen); InquiryChat sends the token at the handshake; MatchChat already did | APP `20ece58` | socket-token 14/14 |
+
+**Before switching `socketTokenRequired` on:** most installs must run an app with SEC-1 (an older app's chats stop working: refused with `auth_required`). The server logs `[sec-1] … without a token (older app)` lines: when they become rare, it's time.
+
+## Railway variables for the owner to set (never set by the developer)
+
+| Variable | Value | Where | What it does |
+|---|---|---|---|
+| `SAFETY_ALERT_EMAILS` | **pending (owner: the recipients' addresses, comma-separated)** | production (+ staging later) | the safety e-mails (suspensions, threats, doxxing, self-harm) |
+| `SAFETY_APPEAL_EMAIL` | `safety@gettdc.pk` | production (+ staging) | the appeal address shown to suspended / banned students |
+| `OPENAI_API_KEY` | (already set) | — | the pre-post checks; without it every checked post is held |
+| `FLAG_ACCOUNT_STATUS_ENFORCE` | leave unset until the count is reviewed (P0-6) | — | suspended / banned accounts locked out |
+| `FLAG_SOCKET_TOKEN_REQUIRED` | leave unset until most installs run the SEC-1 app | — | socket events need a verified token |
+| `FLAG_CONFESSION_SAFETY` | not needed: turn on per account in admin → features | — | — |
+| Cloudinary | check that `CLOUDINARY_NAME` is the cloud the app uploads to (`decaxpera`); otherwise images aren't deleted (logged, nothing breaks) | — | image clean-up |
+
+## Found along the way (pre-existing, not changed; owner to decide)
+
+- **Chat pushes are probably never sent.** The live socket code (now `socket/chatHandlers.js`) sends no device push for a chat message; the code that does (`pushChatMessage` in `socket/chatSocket.js`) is never loaded, and `social.routes.js` says chat pushes come from there.
+- SkillShare chats emit a `typing` event the server doesn't handle (the social chat uses `typing_start` / `typing_stop`).
+- The confession composer has no image button since the redesign (`pickImage` / `showImageOptions` aren't rendered): today's app posts text-only confessions.
+- After a REST delete, ChatDetails' socket `delete_message` finds nothing (already deleted), so the other side isn't told (no `message_deleted`).
+- APP `tests/app/events-fresh-data` failed once while other suites ran in parallel (fixed 80 ms waits); 3/3 alone. Load-sensitive, not changed.
+
 ## Owner commands (P4-1)
 
 - Railway (production and staging): `SAFETY_ALERT_EMAILS=<admin inbox>,<second inbox>`. Unset = no safety e-mails (logged as a warning). `OPENAI_API_KEY` must be set for the checks; without it every post is held.

@@ -26,4 +26,33 @@ for (const f of ["screens/skillshare/InquiryChatScreen.js", "screens/skillshare/
   const src = fs.readFileSync(path.join(H.SRC, f), "utf8");
   ok(/const \{[^}]*\btoken\b[^}]*\} = useContext\(AuthContext\)/.test(src), `${f}: the token comes from AuthContext`);
 }
-done();
+
+// SEC-1: every chat socket tells the server who it is: the token at the handshake (auth: { token }) or
+// useSocketAuth(socket, token) ('authenticate' now and after each reconnect). Events.js only subscribes to public events.
+const CHAT = ["screens/Social/ChatDetails.js", "screens/Social/MessageScreen.js", "screens/skillshare/InquiryChatScreen.js", "screens/skillshare/MatchChatScreen.js"];
+for (const f of CHAT) {
+  const src = fs.readFileSync(path.join(H.SRC, f), "utf8");
+  const handshake = /io\([^)]*\{[^}]*auth:\s*\{\s*token\s*\}/s.test(src);
+  const hook = /useSocketAuth\(socket, token\)/.test(src);
+  ok(handshake || hook, `${f}: the socket identifies with the token (${handshake ? "handshake" : hook ? "authenticate" : "none"})`);
+}
+const cd = fs.readFileSync(path.join(H.SRC, "screens/Social/ChatDetails.js"), "utf8");
+ok(cd.indexOf("useSocketAuth(socket, token)") > 0 && cd.indexOf("useSocketAuth(socket, token)") < cd.indexOf('socket.emit("join_chat"'), "ChatDetails: authenticate is set up before the join");
+
+(async () => {
+  const { React, mount } = H.makeReact();
+  const hook = H.loader({ react: React })(path.join(H.SRC, "hooks/useSocketAuth.js")).default;
+  const sent = []; const handlers = {};
+  const socket = { connected: true, emit: (ev, t) => sent.push([ev, t]), on: (ev, fn) => { handlers[ev] = fn; }, off: (ev) => { delete handlers[ev]; } };
+  const C = () => { hook(socket, "tok-1"); return null; };
+  const m = mount(React.createElement(C));
+  ok(sent.length === 1 && sent[0][0] === "authenticate" && sent[0][1] === "tok-1", "useSocketAuth: 'authenticate' with the token at once");
+  handlers.connect();
+  ok(sent.length === 2, "…and again after a reconnect");
+  m.unmount();
+  ok(!handlers.connect, "…stops listening on unmount");
+  const none = []; const C2 = () => { hook({ emit: (e) => none.push(e), on() {}, off() {} }, null); return null; };
+  mount(React.createElement(C2));
+  ok(none.length === 0, "no token (guest): nothing sent");
+  done();
+})();
