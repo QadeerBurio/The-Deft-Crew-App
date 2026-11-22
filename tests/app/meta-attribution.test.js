@@ -38,7 +38,7 @@ if (cfg) {
   ok(/^tdc uses this to show you better student deals in ads on other apps, and to know which of our ads brought you here\.$/.test(ip.NSUserTrackingUsageDescription || ""), "NSUserTrackingUsageDescription in plain words", ip.NSUserTrackingUsageDescription);
   ok(ip.FacebookAdvertiserIDCollectionEnabled === false && ip.FacebookAutoLogAppEventsEnabled === false && ip.FacebookAutoInitEnabled === false, "native defaults off: no advertising ID or logging before the app decides at runtime", JSON.stringify({ a: ip.FacebookAdvertiserIDCollectionEnabled, l: ip.FacebookAutoLogAppEventsEnabled, i: ip.FacebookAutoInitEnabled }));
   ok(!Object.keys(ip).some((k) => /SKAdNetworkReportEnabled/i.test(k) && ip[k] === false), "the SDK's SKAdNetwork reporting isn't turned off (it's on by default: conversion values for sign-up and first redemption)");
-  ok(cfg.version === "1.2.1", "ships as 1.2.1 (a new native build: new runtime version)", cfg.version);
+  ok(cfg.version === "1.2.2", "ships as 1.2.2 (the current native build: app.json since cdf72e6)", cfg.version);
 }
 
 console.log("── plugins/withMetaAttribution.js");
