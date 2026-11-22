@@ -28,6 +28,8 @@ import { AuthContext } from "../context/AuthContext";
 import { enterAccount } from "../guest/accountRoutes";
 import { AuthShell, AuthInput, AuthButton, AUTH } from "../components/AuthShell";
 import UniversityPicker from "../components/UniversityPicker";
+import InviteCodeExtras from "../growth/InviteCodeExtras";
+import { clearPendingRef } from "../growth/inviteLinks";
 
 // universities: the shared list on the server (components/UniversityPicker.js), not a list in the app
 
@@ -413,6 +415,7 @@ export default function SignupScreen({ navigation }) {
 
       // STEP 1: signup (only this one can show an error)
       const signupResponse = await api.post("/auth/signup", body, { timeout: 25000 });
+      clearPendingRef(); // the account exists: a saved invite code has done its job
 
       // Email verification: backend sent a 6-digit code.
       // The account logs in after the code on SignupVerify.
@@ -758,6 +761,8 @@ export default function SignupScreen({ navigation }) {
         onSubmitEditing={handleSignup}
         editable={!loading}
       />
+      {/* P1: a code from an invite link fills in ("invited by … ✓"); "paste invite code" for the iPhone flow */}
+      <InviteCodeExtras code={referralCode} onCode={setReferralCode} disabled={loading} />
 
       <AuthButton title="create account" onPress={handleSignup} loading={loading} />
 

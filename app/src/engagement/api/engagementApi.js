@@ -119,8 +119,9 @@ getMyReferrals: async () => {
   return res.data;
 },
 
-getReferralLeaderboard: async () => {
-  const res = await api.get('/engagement/referrals/leaderboard');
+// params (P1, optional): { period: 'month' | 'all', university: <id> }
+getReferralLeaderboard: async (params = undefined) => {
+  const res = await api.get('/engagement/referrals/leaderboard', params ? { params } : undefined);
   return res.data;
 },
 

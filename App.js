@@ -67,6 +67,7 @@ import { holdTour, releaseTour } from "./app/src/engagement/tour/tourGate";
 
 // ─── Guest mode: one gate + sign-in return ───
 import { GuestGateProvider, openTarget } from "./app/src/guest";
+import { inviteCodeFromUrl, handleInviteUrl } from "./app/src/growth/inviteLinks";
 
 // ═══════════════════════════════════════════════════════════════
 // 1. NOTIFICATION HANDLER — set ONCE at module load.
@@ -288,6 +289,11 @@ function ExternalDeepLink() {
   useEffect(() => {
     const handleUrl = ({ url }) => {
       if (!url) return;
+      // P1 invite links (tdcapp://i/CODE, gettdc.pk/i/CODE): save the code for signup; signed out → Signup opens
+      if (inviteCodeFromUrl(url)) {
+        handleInviteUrl(url, { navigationRef }).catch(() => {});
+        return;
+      }
       try {
         const parsed = Linking.parse(url);
         const parts = (parsed.path || "").split("/").filter(Boolean);

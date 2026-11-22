@@ -50,6 +50,12 @@ All server suites use in-memory fakes; they delete `MONGO_URI` and stub `dotenv`
 | P4-1b "suspend account" | suspension only locks out while `accountStatusEnforce` is on (P0-6) | a suspension also sets a long confession ban, so confessions stop either way |
 | P4-1b e-mail shows "the author's handle" | handles come in P4-2 | an anonymous reference (`author-xxxxxxxxxx`), the same in e-mails and on the admin page |
 | (owner, P4-1b) socket: verify the token, ignore the client id | most app socket screens send no token | the token decides when present; without one: as before while `accountStatusEnforce` is off, refused once on. The app now sends its token |
+| §12 #6 "invitee reward: +50 points each" (and P2-7) | live system: the referrer gets +50 at signup; **both** get +100 when the friend starts using tdc (first card sorted) | **owner, 22 Nov 2026: keep the live system, no reward change.** Share and signup copy: "you both get 100 points when your friend starts using tdc" |
+| P1-2 `GET /i/:code` server-rendered page on gettdc.pk | gettdc.pk is the portal (React, on Vercel), not the server | a static page in the portal (`public/i/index.html`) + `POST /api/invites/:code/open` on the server (owner) |
+| P1-1 app links "verified host" | the Railway host's `autoVerify` fails (no assetlinks.json served); iOS has no associated domains | gettdc.pk app links prepared for 1.3.0 (`release-1.3.0.md`) |
+| P1-4 "uses the existing getReferralLeaderboard" | all-time only, full names and photos of the top 10 to every student, no rank, no campus | monthly / rank / campus params; first names, no photos for everyone (owner) |
+| P1-1 validate | public route returned the referrer's full name and photo (any code could be tried) | first name only, no photo, rate-limited, for everyone (owner) |
+| (found in P1) | `services/engagement/referral.js` logs `referral_credited` with `source: 'system'`, which the event model rejects (only server / client), so those events are probably never stored | not changed (the monthly leaderboard uses the points ledger); owner to decide |
 | (found in P4-1) | confession mention notifications named the commenter ("<name> mentioned you in a confession") | anonymous with `confessionSafety` on; **recommend making it unconditional** (owner) |
 | P0-1/P0-3/P0-5: add app helpers in Phase 0 | `tests/app/app-cleanup` fails on any `app/src` file nothing imports | written and tested in Phase 0, kept in `tdc-upgrade-v2/pending/`, moved into `app/src` with their first caller (P4-1) |
 | P0-6 (new, owner) "super admins are exempt" | no admin levels exist until Phase A (`User.adminAccess`) | every `role: 'admin'` is exempt for now (plan A-1: admins without `adminAccess` count as super); revisit in Phase A |
@@ -139,11 +145,16 @@ Quiet hours: the owner first asked for them on chat pushes, then corrected it (C
 - Confession composer image button returns in P4-3 (images are now moderated; the precheck and server clean-up are ready).
 - SkillShare `typing` event (server handles only `typing_start` / `typing_stop`); tell the other person when a message is deleted (polish phase).
 - Fix `tests/app/events-fresh-data` isolation properly (its fixed waits fail under load); no weakening.
+- SERVER tests that check replies for the text "0300" (a phone prefix) can fail when a random ObjectId contains it
+  (fixed so far: loyalty-visits, career). Same pattern still in: admin-delete-account, career-best-matches,
+  career-job-alerts, career-retention, feature-access, surplus-announce, surplus (×2). Fix each to its exact seeded
+  phone.
+- `referral_credited` events rejected by the event model (`source: 'system'`), see plan corrections.
 
 ## Release plan
 
 **Branches** (each repo; each built on the one before, so they merge in this order):
-`upgrade/p0-safety` → `upgrade/p4-1-safety` → `upgrade/p4-1-followups` → `upgrade/sec-1-socket` → `upgrade/chat-1-push` → (P1 next). ADMIN has changes only in `p4-1-safety` and `p4-1-followups`; its later branches equal `p4-1-followups`. Nothing is merged, pushed or deployed without the owner's written OK.
+`upgrade/p0-safety` → `upgrade/p4-1-safety` → `upgrade/p4-1-followups` → `upgrade/sec-1-socket` → `upgrade/chat-1-push` → `upgrade/p1-growth`. ADMIN has changes in `p4-1-safety`, `p4-1-followups` and `p1-growth`; its other branches equal the one before. P1 adds: a portal deploy with the new `vercel.json` (check on a preview first), and the 1.3.0 store build later for app links and the install referrer. Nothing is merged, pushed or deployed without the owner's written OK.
 
 **Before staging** (once the owner has created it, `server/docs/STAGING.md`):
 1. Staging Railway variables: `APP_ENV=staging`, its own `MONGO_URI`, new `JWT_SECRET`, `SAFETY_ALERT_EMAILS`, `SAFETY_APPEAL_EMAIL`, a capped `OPENAI_API_KEY`, `PUBLIC_BASE_URL`.
@@ -160,6 +171,27 @@ Quiet hours: the owner first asked for them on chat pushes, then corrected it (C
 5. Switch on, one at a time, watching 48 h each (plan §13): confession safety **observe** mode → review "would have blocked" → `confessionSafety` for test accounts → `enforce` → 10% → 50% → 100%; `chatPushV1` for test accounts → students; `FLAG_ACCOUNT_STATUS_ENFORCE` after the count review **and** once most installs send the socket token; `FLAG_SOCKET_TOKEN_REQUIRED` last, when the `[sec-1] … without a token` logs are rare.
 
 **Rollback:** turn the flag (or mode) off in admin / Railway: instant. Every new field is optional; old code can be redeployed without a migration.
+
+## P1 growth loop (branch `upgrade/p1-growth`)
+
+Owner decisions (22 Nov 2026): the invite page lives in the portal on gettdc.pk; app links prepared for 1.3.0;
+validate first name only and rate-limited; leaderboard monthly / rank / campus, first names, no photos, for everyone;
+**rewards stay as live** (see plan corrections).
+
+| Plan id | What changed | Commit | Tests |
+|---|---|---|---|
+| (flake) | `career` test checks the exact seeded phone, not "0300" (same as loyalty-visits) | SERVER `c285d73b` | 3/3 runs |
+| P1-2 / P1-4 server | `POST /api/invites/:code/open` (public, 60 per address per 10 min; ReferralClick with channel, user agent, salted address hash); `GET /api/invites/config` (growthV2 for signed-out phones; `/api/app/flags` unchanged). **For everyone:** validate → first name, no photo, 30 per address per 10 min; leaderboard → first names, no photos. Leaderboard params `period=month` (this Karachi month's `referral:verified` ledger rows), `university`; reply adds `period`, `me`, `next` | SERVER `a9fc2e34` | invites-referrals 25/25 |
+| P1-2 admin | the invite page `public/i/index.html` (one 7 KB file, 3 KB gzipped: no React, no web fonts; noindex; reports the open; first name when real; Android Play button with `referrer=ref%3D<CODE>`; iPhone "copy code & get the app"); `vercel.json` (rewrite `/i/:code`, SPA fallback, AASA content type, noindex); `/i/:code` React fallback route; `.well-known` files with placeholders | ADMIN `c855da1` | InvitePage 5/5; jest 22 / 118; portal 38/38 |
+| P1-1 / P1-4 / P1-5 app | `growth/inviteLinks.js` (links, owner's share text, opening links by sign-in state, `@tdc_pending_ref`), `App.js` handles `tdcapp://i/CODE` and `gettdc.pk/i/CODE` first; Signup: `InviteCodeExtras` ("invited by <first name> ✓", "paste invite code" on tap only); crew screen behind **growthV2**: share link `gettdc.pk/i/CODE?c=`, WhatsApp first, owner's text, `ReferralLeaderboard`; behind **shareCards**: `ui/ShareCard.js` (1080×1350, QR, invite / levelUp / resumeReady / savings / confession) | APP `0126fe2` | invite-link 28/28; APP run-all ok; export ok (9.77 MB, +30 KB) |
+| P1-3 | install referrer: waits for 1.3.0 (`tdc-upgrade-v2/release-1.3.0.md`) | — | — |
+
+**Before production:** check `vercel.json` on a Vercel **preview** of the portal first (it is new to the repo): the
+landing page, `/ambassador`, a deep page reload, `/i/ABC123`, and both `.well-known` files.
+
+**Funnel note:** an invitee is signed out until they sign up, so `invite_link_opened` / `invite_code_prefilled` /
+`signup_with_ref` can't be app events; they are measured on the server instead: `ReferralClick` (opens, by channel) and
+`User.referredBy` (signups with a code).
 
 ## Railway variables for the owner to set (never set by the developer)
 
