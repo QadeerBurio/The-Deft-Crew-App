@@ -273,6 +273,12 @@ tests, portal 38/38.
 switch-on order, rollback, and the merge / test results (every merge clean, all tests green after each).
 Heads: SERVER `09d06818`, APP `07bd019`, ADMIN `efb2d8f`. Nothing pushed or deployed.
 
+## SEC-2 admin creation (branch `upgrade/sec-2-admin`, server only; merged into `release/r1`)
+
+| What changed | Commit | Tests |
+|---|---|---|
+| `POST /api/admin/users/create` (role admin, any case) and `PUT /api/admin/users/role/:id` (to admin, or changing an admin's role): only accounts in `SUPER_ADMIN_IDS` (empty / no valid id = nobody, fail closed), else 403 `SUPER_ADMIN_REQUIRED`; every attempt in AdminActionLog (`admin.create` / `admin.promote` / `admin.demote`, before / after, reason). Other roles: any admin, as before. The create reply no longer carries the User fields hidden by default (found by the leak scan; the same shape otherwise). `scripts/count-admins.js` (read only). The portal never calls these two routes | SERVER `6f29bd26`; release/r1 `e89c78cb` | sec2-admin-create 23/23; SERVER 88/88 (branch and release/r1) |
+
 ## Phase A verification (read only, on release/r1)
 
 | Plan | What the plan assumes | What the code has | Differs? |

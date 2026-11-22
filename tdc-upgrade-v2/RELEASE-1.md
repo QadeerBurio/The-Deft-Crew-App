@@ -1,13 +1,13 @@
 # Release 1
 
 Release 1 bundles every upgrade phase signed off so far: P0, P4-1 (+ follow-ups), SEC-1, CHAT-1, P1 (+ follow-ups)
-and Phase N (+ its two fixes). It is prepared **locally only**: branch `release/r1` in each repo, made from `main`, with
+Phase N (+ its two fixes) and the security fix SEC-2. It is prepared **locally only**: branch `release/r1` in each repo, made from `main`, with
 the upgrade branches merged in order. Nothing is pushed, merged into `main` or deployed until the owner says so in
 writing.
 
 Branches merged into `release/r1`, in this order (each repo; a branch that doesn't exist in a repo had no changes for
 it): `upgrade/p0-safety` → `p4-1-safety` → `p4-1-followups` → `sec-1-socket` → `chat-1-push` → `p1-growth` →
-`p1-followups` → `phase-n`. Merge and test results: section (i).
+`p1-followups` → `phase-n` → `sec-2-admin` (server only). Merge and test results: section (i).
 
 ## (a) What's in it, in plain words
 
@@ -17,6 +17,10 @@ admin. Students can report a confession or a comment (with evidence), mute an au
 Repeated breaks lead to strikes, then a pause or a ban, with an appeal by e-mail. Admins get a Safety page: reported,
 held, resolved, the settings, and an "observe" mode that only logs what the check *would* have done. A student in
 distress gets helpline numbers and admins get an e-mail.
+
+**Admin accounts (SEC-2).** Only the owner's accounts listed in `SUPER_ADMIN_IDS` can create an admin, make someone an
+admin or change an admin's role through the API; every attempt is logged in admin actions. Other accounts (brands,
+employees…) are created as before by any admin.
 
 **Accounts.** Suspended or banned accounts can be locked out of the app and the chat (switched on separately, after a
 count). The sign-in screen tells a paused student why and offers an appeal.
@@ -74,6 +78,9 @@ students with `confessionSafety`). Background job: `pushReceipts` (on in product
   were and are paid exactly as before.
 - **Socket stage 1.** When an app sends its sign-in token (the new app does), the socket acts as that account, ignores
   any other id, and only lets participants into a chat. Older apps without a token: as before (logged).
+- **Admin creation (SEC-2).** Creating, promoting or demoting an admin needs `SUPER_ADMIN_IDS` (empty = nobody can,
+  through the API); the admin "create user" reply no longer includes the hidden fields (push tokens, ID-card images,
+  webhook secret). The portal never used these calls, so no screen changes.
 - **Read-side status filters.** Every confession reader (the feed, comments, liking, commenting, the likes list, the
   daily drop) shows and accepts only live items; old items have no status and count as live, so nothing disappears unless a check or an admin
   held or removed it.
@@ -92,6 +99,7 @@ Set by the owner, never by the developer. Production (and staging when it exists
 |---|---|---|
 | `SAFETY_ALERT_EMAILS` | the owner's recipients | yes, before `confessionSafety` reaches students |
 | `SAFETY_APPEAL_EMAIL` | `safety@gettdc.pk` | yes |
+| `SUPER_ADMIN_IDS` | the owner's admin account id(s), comma separated (from `scripts/count-admins.js`, read only) | yes, if admins are ever created through the API; empty = nobody can (fail closed). Phase A replaces it with `adminAccess.level = super` |
 | `OPENAI_API_KEY` | already set | check it's there (without it every checked post is held) |
 | `CLOUDINARY_NAME` | check it's `decaxpera` | check (image clean-up) |
 | `SOCIAL_PUSH_GROUP_MINUTES=180`, `SOCIAL_PUSH_DAILY_MAX=2` | plan N-1, at a quiet hour | yes (owner action) |
@@ -131,16 +139,18 @@ phone and an iPhone.
 5. **Socket**: the new app on both phones: chat works; another account's chat can't be joined (logged).
    `socketTokenRequired` on staging: an old app build's chat is refused, the new one works.
 6. **chatPushV1** for B: A sends a message → B gets a push (not while B has that chat open).
-7. **growthV2 / shareCards** for A: share link, invite page on a phone (Android Play button, iPhone copy code), signup
+7. **SEC-2**: with `SUPER_ADMIN_IDS` empty, `POST /api/admin/users/create {role: "admin"}` → 403 for every admin;
+   with the owner's id listed: the owner → 201, another admin → 403; admin actions show every attempt.
+8. **growthV2 / shareCards** for A: share link, invite page on a phone (Android Play button, iPhone copy code), signup
    prefill, leaderboard, share card.
-8. **referralVerifyGate** (`ids:<test referrer>`): signup with the code → no points; enter the e-mail code → +150 / +100,
+9. **referralVerifyGate** (`ids:<test referrer>`): signup with the code → no points; enter the e-mail code → +150 / +100,
    once.
-9. **Phase N**, each for A: `pushOpenTracking` (tap a push → the push report counts it later), `pushBudgetV1` (4th
+10. **Phase N**, each for A: `pushOpenTracking` (tap a push → the push report counts it later), `pushBudgetV1` (4th
    relevant / 3rd broadcast push of the day held; chat always), `pushAskV2` (fresh install: no prompt at login, sheet
    after claiming a deal), `unifiedInbox` (one list, one badge), `notifSettingsV2` (quiet: only personal; digest at 6 pm),
    `pushCopyV2` (a friend-joined push names the friend; the admin win-back nudge sends only real numbers or nothing).
-10. **Receipts job**: after 30 minutes the log shows `[pushGateway] receipts: …`.
-11. **Admin**: Safety page tabs, features tab lists every new flag, engagement → push report ("push tracking is off" /
+11. **Receipts job**: after 30 minutes the log shows `[pushGateway] receipts: …`.
+12. **Admin**: Safety page tabs, features tab lists every new flag, engagement → push report ("push tracking is off" /
     "not enough data yet"), the portal's 38 checks.
 
 ## (g) Flag switch-on order in production
@@ -170,7 +180,9 @@ problem.
 - **Safety mode**: admin → Safety → settings → `off` or `observe`. Held posts stay held until an admin decides.
 - **The server**: redeploy the previous `main` commit on Railway. No migration to undo: new fields are optional, new
   collections are only read by the new code. The push receipts job stops with `JOB_PUSH_RECEIPTS=off`.
-- **Variables**: remove them; unset = the behaviour before.
+- **Variables**: remove them; unset = the behaviour before (except `SUPER_ADMIN_IDS`: unset = nobody may create admins).
+- **SEC-2**: redeploying the previous server code restores the old (unsafe) behaviour; not recommended. To let someone
+  create admins, add their id to `SUPER_ADMIN_IDS`.
 - **The admin portal**: Vercel → Deployments → promote the previous production deployment (it has no `vercel.json`).
 - **The app (OTA)**: `eas update:rollback` (or republish the previous update) for that runtime version; the server keeps
   serving older apps (every new field optional, old endpoints kept).
@@ -192,9 +204,11 @@ that changed files; a merge that changed nothing (the branch equals the step bef
 | chat-1-push | `ea0921c1`: 77/77 | `7dd5cc3`: 51 ok, export ok | no changes |
 | p1-growth | `628b79ce`: 78/78 | `8e5227e`: 52 ok, export ok | `530a18a`: 118/118, 38/38 |
 | p1-followups | `e5369465`: 79/79 | `f1a5b0b`: 52 ok, export ok | no changes |
-| phase-n | `09d06818`: **87/87** | `07bd019`: **56 ok**, export ok | `efb2d8f`: **124/124, 38/38** |
+| phase-n | `09d06818`: 87/87 | `07bd019`: **56 ok**, export ok | `efb2d8f`: **124/124, 38/38** |
+
+| sec-2-admin (server only) | `e89c78cb`: **88/88** | — | — |
 
 SERVER counts are runnable suites (shopify-review is always skipped: it needs a disposable local MongoDB). The owner's
 uncommitted `app.json` edit stays unstaged in the APP working copy; nothing in Release 1 changes `app.json`.
 
-Release heads: SERVER `09d06818`, APP `07bd019` (+ this document), ADMIN `efb2d8f`. Nothing pushed.
+Release heads: SERVER `e89c78cb` (with SEC-2), APP `07bd019` (+ this document), ADMIN `efb2d8f`. Nothing pushed.
