@@ -134,7 +134,7 @@ const MessageRow = React.memo(function MessageRow({ item, isOwn, divider, groupe
 
 // ==================== MAIN COMPONENT ====================
 export default function InquiryChatScreen({ route, navigation }) {
-  const { getCurrentUserId } = useContext(AuthContext);
+  const { getCurrentUserId, token } = useContext(AuthContext);
   // otherParticipantId is passed by callers; kept in the params contract
   const { threadId, listingTitle, otherParticipantId, listingId } = route.params || {};
   const insets = useSafeAreaInsets();
@@ -188,7 +188,7 @@ export default function InquiryChatScreen({ route, navigation }) {
     newSocket.on('connect', () => {
       setIsConnected(true);
       if (userId) {
-        newSocket.emit('user_online', userId);
+        newSocket.emit('user_online', userId, token); // the token proves who this is (server P4-1b)
       }
     });
 

@@ -338,7 +338,7 @@ export default function MatchChatScreen({ route, navigation }) {
 
     newSocket.on('connect', () => {
       setIsConnected(true);
-      if (userId) newSocket.emit('user_online', userId);
+      if (userId) newSocket.emit('user_online', userId, token); // the token proves who this is (server P4-1b)
     });
 
     newSocket.on('disconnect', () => setIsConnected(false));
@@ -346,7 +346,7 @@ export default function MatchChatScreen({ route, navigation }) {
 
     newSocket.on('reconnect', () => {
       setIsConnected(true);
-      if (userId) newSocket.emit('user_online', userId);
+      if (userId) newSocket.emit('user_online', userId, token); // the token proves who this is (server P4-1b)
       if (conversationIdRef.current) newSocket.emit('join_chat', conversationIdRef.current);
     });
 
