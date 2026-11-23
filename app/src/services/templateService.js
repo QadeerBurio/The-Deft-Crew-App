@@ -8,6 +8,15 @@
 // P3-3: the fresher sections (activities, volunteering, awards, coursework) print only when they have content, in
 // the track's order (resume.settings.track "fresher": education and projects first, experience last). A resume
 // without them renders exactly as before (tests/app/resume-v2.test.js compares against the frozen output).
+// P3c: a layout + theme engine. A template = a layout (single column, ATS-safe) + a theme (the look's keys below);
+// the five looks are themes, and every new theme key is optional: a theme without it renders exactly as before
+// (tests/app/resume-templates.test.js compares 395 frozen outputs). New templates are config in ./templates/library.js.
+//   theme keys (all optional): accent / heading / text (default colours), second (headings in a second colour),
+//   band (the header on a colour band), nameAccent, h2x ("bar-left" | "caps-spaced" | "thin-rule" | "smallcaps-rule"
+//   | "underline-accent"), dateAccent, subPlain, margin ("12mm 13mm"), order (section order), headings ({ key: title }),
+//   skillSep (" · ")
+
+import { LIBRARY } from './templates/library';
 
 export const TEMPLATES = [
   { id: 'modern_ats', name: 'Modern', description: 'clean sans-serif, coloured headings' },
@@ -19,6 +28,13 @@ export const TEMPLATES = [
 
 const LEGACY = { modern: 'modern_ats', classic: 'stanford', creative: 'modern_ats', canva: 'modern_ats', flowcv: 'modern_ats', reactive: 'jakes', minimal: 'rezi', professional: 'faang' };
 export const canonicalTemplate = (id) => (TEMPLATES.some((t) => t.id === id) ? id : LEGACY[id] || 'modern_ats');
+// the template for an id: a library template (P3c) by its own id, else one of the five (old ids map as before)
+export const templateOf = (id) => {
+  const t = LIBRARY.find((x) => x.id === id);
+  if (t) return { id: t.id, look: t.look };
+  const c = canonicalTemplate(id);
+  return { id: c, look: LOOKS[c] };
+};
 
 const SANS = "'Helvetica Neue', Helvetica, Arial, 'Noto Sans', 'Noto Naskh Arabic', sans-serif";
 const SERIF = "Georgia, 'Times New Roman', 'Noto Serif', 'Noto Naskh Arabic', serif";
@@ -90,8 +106,9 @@ const entry = (title, sub, date, body) => `
 
 const section = (title, inner) => (inner ? `<section><h2>${esc(title)}</h2>${inner}</section>` : '');
 
-function body(resume) {
+function body(resume, look = {}) {
   const r = resume || {};
+  const H = (k, d) => (look.headings && look.headings[k]) || d;
   const pi = r.personalInfo || {};
   const name = [str(pi.firstName), str(pi.lastName)].filter(Boolean).join(' ');
   const title = str(pi.title) || str(r.professionalSummary?.title);
@@ -142,29 +159,29 @@ function body(resume) {
     ${title ? `<div class="title" dir="auto">${esc(title)}</div>` : ''}
     ${contact.length ? `<div class="contact">${contact.join('<span class="sep"> | </span>')}</div>` : ''}
   </header>
-  ${section('Summary', summary ? `<p dir="auto">${esc(summary)}</p>` : '')}
+  ${section(H('summary', 'Summary'), summary ? `<p dir="auto">${esc(summary)}</p>` : '')}
   ${ordered(r, workFirst, {
-    experience: section('Experience', work),
-    education: section('Education', eduWithCourses),
-    projects: section('Projects', projects),
-    skills: section('Skills', skills.length ? `<p class="skills" dir="auto">${skills.map(esc).join(', ')}</p>` : ''),
-    certifications: section('Certifications', certs),
-    languages: section('Languages', langs.length ? `<p dir="auto">${langs.join(', ')}</p>` : ''),
-    activities: section('Leadership & Activities', activities),
-    volunteering: section('Volunteering', volunteering),
-    awards: section('Awards', awards),
-  })}
-  ${section('Achievements', achievements.length ? `<ul>${achievements.map((a) => `<li dir="auto">${esc(a)}</li>`).join('')}</ul>` : '')}
+    experience: section(H('experience', 'Experience'), work),
+    education: section(H('education', 'Education'), eduWithCourses),
+    projects: section(H('projects', 'Projects'), projects),
+    skills: section(H('skills', 'Skills'), skills.length ? `<p class="skills" dir="auto">${skills.map(esc).join(look.skillSep || ', ')}</p>` : ''),
+    certifications: section(H('certifications', 'Certifications'), certs),
+    languages: section(H('languages', 'Languages'), langs.length ? `<p dir="auto">${langs.join(', ')}</p>` : ''),
+    activities: section(H('activities', 'Leadership & Activities'), activities),
+    volunteering: section(H('volunteering', 'Volunteering'), volunteering),
+    awards: section(H('awards', 'Awards'), awards),
+  }, look.order)}
+  ${section(H('achievements', 'Achievements'), achievements.length ? `<ul>${achievements.map((a) => `<li dir="auto">${esc(a)}</li>`).join('')}</ul>` : '')}
   ${section('Additional information', str(r.otherNotes) ? lines(r.otherNotes) : '')}`;
 }
 
 // the sections in the order a tailored version chose (sectionOrder), else experience first when there is some
-function ordered(r, workFirst, html) {
+function ordered(r, workFirst, html, themeOrder) {
   const chosen = Array.isArray(r.sectionOrder) ? r.sectionOrder.filter((k) => k in html) : [];
   // P3-3: the fresher track leads with what a student has; experience (optional) goes last. The new sections are
   // empty strings on every older resume, so their order there changes nothing.
   const fresher = r.settings?.track === 'fresher';
-  const fallback = fresher
+  const fallback = Array.isArray(themeOrder) ? themeOrder : fresher
     ? ['education', 'projects', 'activities', 'volunteering', 'skills', 'awards', 'certifications', 'languages', 'experience']
     : [...(workFirst ? ['experience', 'education', 'projects', 'skills', 'certifications', 'languages'] : ['education', 'experience', 'projects', 'skills', 'certifications', 'languages']), 'activities', 'volunteering', 'awards'];
   const order = [...chosen, ...fallback.filter((k) => !chosen.includes(k))];
@@ -172,9 +189,9 @@ function ordered(r, workFirst, html) {
 }
 
 function css(look, styles) {
-  const accent = look.mono ? '#111111' : str(styles.accentColor) || '#1E3A8A';
-  const heading = look.mono ? '#111111' : str(styles.headingColor) || '#0F172A';
-  const text = look.mono ? '#222222' : str(styles.textColor) || '#334155';
+  const accent = look.mono ? '#111111' : str(styles.accentColor) || look.accent || '#1E3A8A';
+  const heading = look.mono ? '#111111' : str(styles.headingColor) || look.heading || '#0F172A';
+  const text = look.mono ? '#222222' : str(styles.textColor) || look.text || '#334155';
   const h2 = {
     'accent-rule': `color:${accent}; border-bottom: 1.5px solid ${accent}; padding-bottom: 2px;`,
     'full-rule': `color:${heading}; border-bottom: 1px solid ${heading}; padding-bottom: 1px; font-variant: small-caps; letter-spacing: 0.04em;`,
@@ -203,7 +220,7 @@ function css(look, styles) {
   ul { margin: 2px 0 0; padding-left: 16px; }
   li { margin: 1px 0; break-inside: avoid; page-break-inside: avoid; }
   section > p, section > ul { break-inside: avoid; page-break-inside: avoid; }
-  [dir="auto"] { unicode-bidi: plaintext; }
+  [dir="auto"] { unicode-bidi: plaintext; }${extras(look, { accent, heading, text })}
   @media screen {
     html { background: #525659; }
     body { padding: 16px 0; }
@@ -211,18 +228,38 @@ function css(look, styles) {
   }`;
 }
 
-export const renderResumeHTML = (resume, templateId, customStyles = {}, _isPrinting = false) => {
-  const id = canonicalTemplate(templateId);
-  const look = LOOKS[id];
+// P3c: the theme's extra rules ('' for the five looks, so their CSS is unchanged)
+function extras(look, { accent, heading, text }) {
+  const out = [];
+  const second = look.second || heading;
+  if (look.margin) out.push(`@page { margin: ${look.margin}; }`);
+  if (look.band) out.push(`header { background: ${accent}; color: #ffffff; padding: 14px 16px 12px; border-radius: 6px; }`, 'header h1, header .title, header .contact, header .contact a { color: #ffffff; }', 'header .sep { opacity: 0.8; }');
+  if (look.nameAccent && !look.band) out.push(`h1 { color: ${accent}; }`);
+  if (look.second) out.push(`h2 { color: ${second}; }`);
+  const h2x = {
+    'bar-left': `h2 { border-bottom: none; border-left: 4px solid ${accent}; padding: 0 0 0 8px; }`,
+    'caps-spaced': `h2 { border-bottom: none; color: ${accent}; letter-spacing: 0.18em; font-size: ${look.size + 0.5}pt; }`,
+    'thin-rule': `h2 { border-bottom: 0.75px solid ${look.second || '#CBD5E1'}; padding-bottom: 2px; }`,
+    'smallcaps-rule': `h2 { text-transform: none; font-variant: small-caps; letter-spacing: 0.06em; color: ${heading}; border-bottom: 1px solid ${heading}; padding-bottom: 1px; font-size: ${look.size + 2}pt; }`,
+    'underline-accent': `h2 { display: inline-block; border-bottom: 2.5px solid ${accent}; padding-bottom: 1px; }`,
+  }[look.h2x];
+  if (h2x) out.push(h2x);
+  if (look.dateAccent) out.push(`.d { color: ${accent}; font-weight: 600; }`);
+  if (look.subPlain) out.push(`.sub { font-style: normal; color: ${text}; opacity: 0.85; }`);
+  return out.length ? `\n  ${out.join('\n  ')}` : '';
+}
+
+export const renderResumeHTML = (resume, templateId, customStyles = {}, _isPrinting = false, opts = {}) => {
+  const { id, look } = templateOf(templateId);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=794">
 <title>${esc([str(resume?.personalInfo?.firstName), str(resume?.personalInfo?.lastName)].filter(Boolean).join(' ') || 'Resume')} Resume</title>
-<style>${css(look, customStyles || resume?.customStyles || {})}</style>
+<style>${opts.fontCss || ''}${css(look, customStyles || resume?.customStyles || {})}</style>
 </head>
-<body data-template="${id}"><main class="page">${body(resume)}</main></body>
+<body data-template="${id}"><main class="page">${body(resume, look)}</main></body>
 </html>`;
 };
 
