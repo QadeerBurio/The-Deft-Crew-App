@@ -439,6 +439,26 @@ rules. "Fit on one page" only trims to 3 lines per entry; it never rewrites.
 Full runs at the end of P3b: SERVER 99/99 suites; APP 60 suites + `expo export` android + ios; ADMIN unchanged (the
 two new flags appear in admin → features through the existing list).
 
+## Fixes after P3b (owner, branch `upgrade/fixes-p3b`)
+
+| Fix | What changed | Commits | Tests |
+|---|---|---|---|
+| post composer | no "Karachi" fallback: the student's location or none; the row is hidden without one. The server stores what is sent (it used to add "Karachi") | APP `d4a469b`, SERVER `5adcc8ad` | post-location 3/3 (app), 7/7 (server) |
+| signup reply | brand / employer signup reply through `utils/safeRecord` (as admin replies): no codes, push tokens, store secrets, ID-card pictures; same shape otherwise | SERVER `a53345cc` | signup-safe-reply 12/12; SERVER 101/101 |
+
+Not changed (reported): `/signup/verify-otp`, `/profile/me`, `/me` and `/admin-login-as-brand` also reply with the
+whole account minus the password (the signed-in person's own record).
+
+## P3c step 1: engine + first 10 templates for approval (branch `upgrade/p3c-templates` from `upgrade/fixes-p3b`)
+
+| Step | What changed | Commits | Tests |
+|---|---|---|---|
+| puppeteer | devDependency 24.43.1 (25.x needs Node 22), never imported by the app; `.puppeteerrc.cjs` skips the browser download (EAS and npm install unchanged); scripts use the local Chrome / Edge | APP `b1d799f` | — |
+| engine | the five looks are themes; optional theme keys render nothing for themes without them; `templateOf(id)`; 395 frozen outputs identical; 10 new templates as config (`services/templates/library.js`), not selectable until step 2 | APP `d186686` | resume-templates 38/38 |
+| previews | `tdc-upgrade-v2/template-previews/`: 10 PNGs + contact sheet + README, all filled with the SAMPLE resume (Sara Example); all 10 fit one A4 page | APP `b38edf4` | (in a browser: one page, no side-by-side text) |
+
+Waiting for the owner's approval per template before step 2.
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |
