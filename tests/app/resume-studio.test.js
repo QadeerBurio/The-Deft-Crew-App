@@ -1,526 +1,168 @@
-// AI Resume Studio in the app (FLAG_RESUME_STUDIO_V2): the flags gate, polling, decisions saved offline
-// and sent later (409 reloads), and the screen: start, checking an uploaded resume, review with
-// confirmations and the coaching panel, DRAFT preview, approval with two confirmations, sending the
-// version with the application, versions, 'insufficient information', accessibility, placement.
+// P3c step 2: the template studio (flags resumeV2 + resumeTemplatesV2)
+//   gallery: only the five + the library templates the owner approved (all unapproved today → only the five)
+//   recommend(): up to 3, each with a reason, only templates in the gallery; fresher / projects / activities / target
+//   badges: ATS-safe from the real-PDF test (resume-ats.test.js); the older Minimal has none
+//   the template screen: flags off (or loading) → today's picker, untouched; both on → the studio
+//   the studio: recommended row with reasons, tabs, "ATS-safe only", pick + "use this template" saves the template,
+//     funnel template_previewed / template_selected / resume_ats_badge_safe, then the preview; long-press two → compare
+//   the customise sheet: nothing saved until "save"; only the changed keys are sent; a custom colour must be readable
+//     (≥ 4.5:1); the photo only from an https profile photo; "reset" sends null for the studio keys; funnel per key
 //   node tests/app/resume-studio.test.js
-// Real app modules (Babel) with fakes for React Native, phone storage and the network.
 const path = require("path");
-const fs = require("fs");
-const Module = require("module");
-const APP = require("../paths").APP;
-const SRC = path.join(APP, "app/src");
-const reqApp = Module.createRequire(path.join(APP, "package.json"));
-const babel = reqApp("@babel/core");
-const tick = (ms = 20) => new Promise((r) => setTimeout(r, ms));
-let failed = 0, passed = 0;
-const ok = (c, l, x = "") => { c ? passed++ : failed++; console.log(`${c ? "ok  " : "FAIL"}  ${l}${!c && x ? "  \u2192 " + String(x).slice(0, 400) : ""}`); };
-const read = (rel) => fs.readFileSync(path.join(APP, rel), "utf8");
+const H = require("./harness");
+const { ok, done } = H.counter();
 global.__DEV__ = false;
 
-// (helpers copied from tests/app/responsiveness.test.js)
-// \u2500\u2500 hook runtime \u2500\u2500
-function makeReact() {
-  const hooks = new Map(); let cur = null; let pending = []; const roots = new Map(); const renders = {};
-  const slot = (init) => { const l = hooks.get(cur.path) || hooks.set(cur.path, []).get(cur.path); const i = cur.i++; if (!(i in l)) l[i] = init(); return [l, i]; };
-  const contexts = new Map();
-  const React = {
-    createElement: (type, props, ...children) => ({ type, props: { ...(props || {}), children: children.length <= 1 ? children[0] : children } }),
-    Fragment: "Fragment",
-    createContext: (dflt) => { const c = { _default: dflt, Provider: "Provider" }; return c; },
-    useState(init) { const [l, i] = slot(() => ({ v: typeof init === "function" ? init() : init })); const root = cur.path.split("/")[0]; return [l[i].v, (v) => { const nv = typeof v === "function" ? v(l[i].v) : v; if (Object.is(nv, l[i].v)) return; l[i].v = nv; roots.get(root)?.(); }]; },
-    useRef(init) { const [l, i] = slot(() => ({ current: init })); return l[i]; },
-    useMemo(fn, deps) { const [l, i] = slot(() => ({ deps: undefined, v: undefined })); const s = l[i]; if (!s.deps || !deps || deps.some((d, k) => !Object.is(d, s.deps[k]))) { s.v = fn(); s.deps = deps; } return s.v; },
-    useCallback(fn, deps) { return React.useMemo(() => fn, deps); },
-    useContext(ctx) { return contexts.has(ctx) ? contexts.get(ctx) : ctx?._default ?? {}; },
-    useEffect(fn, deps) { const [l, i] = slot(() => ({ deps: undefined, cleanup: null })); const s = l[i]; if (!deps || !s.deps || deps.some((d, k) => !Object.is(d, s.deps[k]))) pending.push(() => { if (s.cleanup) s.cleanup(); s.deps = deps; s.cleanup = fn() || null; }); },
-    memo: (c) => c,
-    forwardRef: (c) => c,
-    useSyncExternalStore(subscribe, getSnapshot) {
-      const [l, i] = slot(() => ({ unsub: null }));
-      const [, force] = React.useState(0);
-      if (!l[i].unsub) l[i].unsub = subscribe(() => force((x) => x + 1));
-      return getSnapshot();
-    },
-  };
-  React.useLayoutEffect = React.useEffect;
-  React.default = React;
-  const expand = (el, p) => {
-    if (el == null || typeof el !== "object") return el;
-    if (Array.isArray(el)) return el.map((c, k) => expand(c, `${p}.${k}`));
-    if (typeof el.type === "function") { const prev = cur; const np = p + "/" + (el.type.name || "C"); cur = { path: np, i: 0 }; renders[el.type.name] = (renders[el.type.name] || 0) + 1; const out = el.type(el.props); cur = prev; return expand(out, np); }
-    const out = { type: el.type, props: { ...el.props, children: expand(el.props.children, p + "." + (el.type?.displayName || el.type)) } };
-    // host refs (React 19: ref is a prop): point them at the expanded node
-    const ref = el.props?.ref;
-    if (ref && typeof ref === "object" && "current" in ref) ref.current = out;
-    else if (typeof ref === "function") ref(out);
-    return out;
-  };
-  const mount = (element) => {
-    const root = "r" + Math.random().toString(36).slice(2); let tree = null;
-    const render = () => { tree = expand(element, root); const fx = pending; pending = []; fx.forEach((f) => f()); };
-    roots.set(root, render); render();
-    return { get tree() { return tree; }, rerender: (el) => { if (el) element = el; render(); } };
-  };
-  return { React, mount, renders, contexts };
-}
+const RESUME = {
+  _id: "r1", template: "modern_ats",
+  personalInfo: { firstName: "Sara", lastName: "Example", email: "sara@example.com" },
+  education: [{ institution: "Sample University", degree: "BS", fieldOfStudy: "Computer Science", startDate: "2022-09", endDate: "2026-06" }],
+  projects: [{ title: "Bus tracker" }, { title: "Notes app" }], activities: [], volunteering: [], skills: [{ name: "Python" }],
+  workExperience: [], certifications: [], languages: [], achievements: [], settings: { track: "fresher" },
+};
 
-function loader(mocks) {
-  const cache = new Map();
-  const load = (file) => {
-    if (cache.has(file)) return cache.get(file).exports;
-    const { code } = babel.transformSync(fs.readFileSync(file, "utf8"), {
-      filename: file, babelrc: false, configFile: false,
-      plugins: [[reqApp.resolve("@babel/plugin-transform-react-jsx"), { runtime: "classic" }], reqApp.resolve("@babel/plugin-transform-modules-commonjs")],
-    });
-    const m = new Module(file); m.filename = file;
-    m.require = (id) => {
-      if (id in mocks) return mocks[id];
-      if (id.startsWith(".")) {
-        const abs = path.resolve(path.dirname(file), id);
-        for (const key of Object.keys(mocks)) if (key.startsWith("/") && abs.replace(/\\/g, "/").endsWith(key)) return mocks[key];
-        return load(require.resolve(abs.replace(/(\.js)?$/, ".js")));
-      }
-      return reqApp(id);
-    };
-    cache.set(file, m); m._compile(code, file);
-    return m.exports;
-  };
-  return load;
+function setup({ flags = { resumeV2: true, resumeTemplatesV2: true }, resume = RESUME, user = { profileImage: "https://res.cloudinary.com/x/me.jpg" } } = {}) {
+  const { React, mount, contexts } = H.makeReact();
+  const { rn } = H.makeRN();
+  const puts = []; const events = []; const nav = { calls: [], goBack() {}, navigate: (...a) => nav.calls.push(a) };
+  const ResumeContext = { _default: {} }; const AuthContext = { _default: {} };
+  const el = (type) => (p) => ({ type, props: { ...p, accessibilityLabel: p.accessibilityLabel || p.label || p.title, children: p.children ?? null } });
+  const load = H.loader({
+    react: React, "react-native": rn,
+    "@expo/vector-icons": { Ionicons: "Icon" },
+    "react-native-safe-area-context": { SafeAreaView: "SafeAreaView" },
+    "react-native-webview": { WebView: "WebView" },
+    "@react-navigation/native": { useRoute: () => ({ params: { resumeId: "r1" } }), useNavigation: () => nav },
+    "@react-native-async-storage/async-storage": { __esModule: true, default: { getItem: async () => null, setItem: async () => {}, removeItem: async () => {} } },
+    "/context/ResumeContext": { ResumeContext },
+    "/context/AuthContext": { AuthContext },
+    "/hooks/useFlag": { __esModule: true, default: (name) => flags[name] ?? null },
+    "/analytics/funnel": { __esModule: true, funnel: async (name, meta) => { events.push([name, meta]); }, default: async () => {} },
+    "/ui/ScreenHeader": { __esModule: true, default: (p) => ({ type: "Header", props: { title: p.title, onBack: p.onBack, children: null } }) },
+    "/ui/Chip": { __esModule: true, default: el("Chip") },
+    "/ui/Button": { __esModule: true, default: el("Button") },
+    "/ui/Input": { __esModule: true, default: el("Input") },
+    "/ui/Sheet": { __esModule: true, default: (p) => ({ type: "Sheet", props: { visible: p.visible, title: p.title, children: p.visible ? p.children : null } }) },
+    "/studio/TemplateThumb": { __esModule: true, default: (p) => ({ type: "Thumb", props: { templateId: p.templateId, styles: p.styles, resume: p.resume, children: null } }) },
+  });
+  let current = JSON.parse(JSON.stringify(resume));
+  contexts.set(ResumeContext, { resumes: [current], updateResume: async (id, ch) => { puts.push([id, ch]); current = { ...current, ...ch }; return current; } });
+  contexts.set(AuthContext, { user });
+  return { React, mount, load, puts, events, nav };
 }
-
-// \u2500\u2500 react-native fakes \u2500\u2500
-const flat = (st) => (Array.isArray(st) ? Object.assign({}, ...st.flat(Infinity).filter(Boolean)) : st || {});
-function makeRN(extra = {}) {
-  class Value { constructor(v) { this.v = v; } setValue(v) { this.v = v; } interpolate() { return this; } stopAnimation() {} }
-  const anim = () => ({ start: (cb) => cb && cb({ finished: true }), stop() {} });
-  const loops = { started: 0, stopped: 0 };
-  return {
-    loops,
-    rn: {
-      View: "View", Text: "Text", Pressable: "Pressable", TouchableOpacity: "TouchableOpacity", Image: "Image", ScrollView: "ScrollView", FlatList: "FlatList", Modal: "Modal", TextInput: "TextInput", ActivityIndicator: "ActivityIndicator", RefreshControl: "RefreshControl", KeyboardAvoidingView: "KeyboardAvoidingView", StatusBar: "StatusBar",
-      StyleSheet: { create: (x) => x, flatten: flat, absoluteFill: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }, absoluteFillObject: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }, hairlineWidth: 1 },
-      Dimensions: { get: () => ({ width: 390, height: 844 }) },
-      Platform: { OS: "android", select: (o) => o.android ?? o.default },
-      AppState: { currentState: "active", addEventListener: () => ({ remove() {} }) },
-      Animated: { Value, View: "Animated.View", Text: "Animated.Text", spring: anim, timing: anim, parallel: anim, sequence: anim, loop: () => ({ start() { loops.started++; }, stop() { loops.stopped++; } }), event: () => () => {} },
-      Easing: { bezier: () => (x) => x, out: (f) => f, in: (f) => f, inOut: (f) => f, cubic: (x) => x, ease: (x) => x, linear: (x) => x },
-      ...extra,
-    },
-  };
-}
-
-const textOf = (n) => (n == null || n === false ? "" : typeof n === "string" || typeof n === "number" ? String(n) : Array.isArray(n) ? n.map(textOf).join("") : textOf(n.props?.children));
-const find = (n, pred) => { let hit = null; (function w(x) { if (!x || hit || typeof x !== "object") return; if (Array.isArray(x)) return x.forEach(w); if (pred(x)) { hit = x; return; } w(x.props?.children); })(n); return hit; };
-const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel === label);
-const findAll = (n, pred) => { const out = []; (function w(x) { if (!x || typeof x !== "object") return; if (Array.isArray(x)) return x.forEach(w); if (pred(x)) out.push(x); w(x.props?.children); })(n); return out; };
 
 (async () => {
-  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 api/resumeStudioApi.js \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-  console.log("\u2500\u2500 the flags gate, polling and offline decisions (api/resumeStudioApi.js)");
-  const store = { token: null, isGuest: null };
-  const calls = [];
-  let flagOn = true;
-  let online = true;
-  let serverRevision = 3;
-  const offline = () => Object.assign(new Error("Network Error"), { response: undefined });
-  const refuse = (status, error) => Object.assign(new Error("refused"), { response: { status, data: { success: false, error } } });
-  let pollStatuses = ["queued", "running", "succeeded"];
-  const api = {
-    get: async (url) => {
-      calls.push(["GET", url]);
-      if (url === "/app/flags/me") return { data: { resumeStudioV2: flagOn } };
-      if (!online) throw offline();
-      if (url.startsWith("/career/resume/tailor-jobs/")) { const s = pollStatuses.shift() || "succeeded"; return { data: { success: true, data: { id: "tj1", status: s, draftId: s === "succeeded" ? "d1" : null, pollAfterMs: 1 } } }; }
-      if (url.startsWith("/career/resume/drafts/")) return { data: { success: true, data: { id: "d1", revision: serverRevision, suggestions: [] } } };
-      return { data: { success: true, data: {} } };
-    },
-    patch: async (url, body) => {
-      calls.push(["PATCH", url, body]);
-      if (!online) throw offline();
-      if (body.revision !== serverRevision) throw refuse(409, { code: "STALE_REVISION", message: "changed", current: serverRevision });
-      serverRevision++;
-      return { data: { success: true, data: { id: "d1", revision: serverRevision, decided: body.decisions } } };
-    },
-    post: async (url, body) => { calls.push(["POST", url, body]); if (!online) throw offline(); return { data: { success: true, data: { id: "tj1", status: "queued" } } }; },
-    delete: async () => ({ data: { success: true, data: {} } }),
-  };
-  const storage = new Map();
-  const AsyncStorage = { getItem: async (k) => (k in store ? store[k] : storage.has(k) ? storage.get(k) : null), setItem: async (k, v) => { storage.set(k, v); }, removeItem: async (k) => { storage.delete(k); } };
-  const loadA = loader({ "@react-native-async-storage/async-storage": AsyncStorage, "./api": { __esModule: true, default: api, BASE_URL: "https://x.test/api" }, "expo-file-system/legacy": {}, "expo-sharing": {} });
-  const S = loadA(path.join(SRC, "api/resumeStudioApi.js"));
-  ok((await S.studioEnabled()) === false && calls.length === 0, "signed out: off, no request");
-  store.token = "g"; store.isGuest = "true";
-  ok((await S.studioEnabled()) === false && calls.length === 0, "guest: off, no request");
-  store.token = "tok-a"; store.isGuest = "false";
-  ok((await S.studioEnabled()) === true && (await S.studioEnabled()) === true && calls.filter((c) => c[1] === "/app/flags/me").length === 1, "pilot student: on, /flags/me asked once");
-  store.token = "tok-b"; flagOn = false;
-  ok((await S.studioEnabled()) === false, "another account outside the pilot: off");
+  const load0 = setup().load;
+  const studio = load0(path.join(H.SRC, "resume/studio.js"));
+  const lib = load0(path.join(H.SRC, "services/templates/library.js"));
 
-  const ticks = [];
-  const job = await S.waitForTailoring("tj1", { onTick: (s) => ticks.push(s), wait: async () => {} });
-  ok(job.status === "succeeded" && job.draftId === "d1" && ticks.join(",") === "queued,running,succeeded", "polling until the tailoring is done", ticks.join());
+  console.log("── gallery");
+  let g = studio.galleryTemplates();
+  ok(g.length === 5 && g.every((t) => t.older), "nothing approved yet: the gallery is today's five", g.map((t) => t.id).join());
+  ok(g.filter((t) => t.ats === "safe").length === 4 && studio.badgeOf("rezi") === null && studio.badgeOf("modern_ats") === "safe", "badges: four of the five ATS-safe (the real-PDF test); the older Minimal has none");
+  lib.LIBRARY.find((t) => t.id === "campus").approved = true;
+  lib.LIBRARY.find((t) => t.id === "harvard").approved = true;
+  g = studio.galleryTemplates();
+  ok(g.length === 7 && g.some((t) => t.id === "campus" && t.collection === "fresher" && t.ats === "safe") && g.some((t) => t.id === "harvard" && t.collection === "ats"), "an approved template joins its collection, with its badge", g.map((t) => t.id).join());
+  ok(!g.some((t) => t.id === "scholar"), "…an unapproved one stays out");
 
-  let r = await S.saveDecisions("d1", 3, [{ suggestionId: "s1", decision: "accepted" }]);
-  ok(r.draft?.revision === 4 && calls.at(-1)[2].revision === 3, "online: a decision is saved with the revision the screen saw");
-  online = false;
-  r = await S.saveDecisions("d1", 4, [{ suggestionId: "s2", decision: "rejected" }]);
-  ok(r.queued === true && (await S.hasPending("d1")), "offline: the decision waits on the phone");
-  r = await S.saveDecisions("d1", 4, [{ suggestionId: "s3", decision: "edited", editedText: "x", confirmTrue: true }]);
-  ok(r.queued === true && JSON.parse(storage.get("resumeStudio:pending:d1")).decisions.length === 2, "offline: later decisions join the waiting ones");
-  online = true;
-  r = await S.flushPending("d1");
-  const sentFlush = calls.at(-1)[2];
-  ok(r.flushed === true && sentFlush.revision === 4 && sentFlush.decisions.map((d) => d.suggestionId).join() === "s2,s3" && !(await S.hasPending("d1")), "back online: the waiting decisions are sent together", JSON.stringify(sentFlush));
-  online = false;
-  await S.saveDecisions("d1", 5, [{ suggestionId: "s4", decision: "accepted" }]);
-  online = true;
-  serverRevision = 9; // changed on another device meanwhile
-  r = await S.flushPending("d1");
-  ok(r.dropped === true && r.draft.revision === 9 && !(await S.hasPending("d1")), "changed on another device: waiting decisions dropped, the draft reloads");
-  r = await S.saveDecisions("d1", 2, [{ suggestionId: "s5", decision: "accepted" }]);
-  ok(r.conflict === true && r.draft.revision === 9, "a stale revision (409) reloads the draft instead of overwriting");
+  console.log("── recommend");
+  let rec = studio.recommend(RESUME, g);
+  ok(rec.length === 3 && rec.every((r) => r.reason && g.some((t) => t.id === r.id)), "3, each with a reason, only gallery templates", JSON.stringify(rec));
+  ok(rec[0].id === "campus" && rec.some((r) => r.id === "modern_ats"), "fresher (project_first not approved): Campus first, then the safe five", JSON.stringify(rec));
+  const five = studio.galleryTemplates().filter((t) => t.older);
+  rec = studio.recommend(RESUME, five);
+  ok(rec.map((r) => r.id).join() === "modern_ats,stanford,jakes", "with only the five: Modern, Classic, Compact", JSON.stringify(rec));
+  lib.LIBRARY.forEach((t) => { t.approved = true; });
+  rec = studio.recommend(RESUME, studio.galleryTemplates());
+  ok(rec[0].id === "project_first" && /projects/.test(rec[0].reason), "two projects, no activities: Project First, 'your projects are your strongest section'", JSON.stringify(rec));
+  rec = studio.recommend({ ...RESUME, settings: { track: "experienced" }, workExperience: [{ company: "A" }, { company: "B" }], targetJob: { jobTitle: "Research assistant" } }, studio.galleryTemplates());
+  ok(rec[0].id === "scholar" && rec.some((r) => r.id === "harvard"), "research target: Scholar first; experienced: Harvard", JSON.stringify(rec));
+  lib.LIBRARY.forEach((t) => { t.approved = false; });
 
-  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 screens/Resume/ResumeStudio.js \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-  const { React, mount } = makeReact();
-  const alerts = [];
-  const { rn } = makeRN({ Alert: { alert: (title, text, buttons) => { alerts.push({ title, text }); const yes = (buttons || []).find((b) => b.text === "yes"); if (yes) yes.onPress(); } }, Switch: "Switch", TextInput: "TextInput" });
-  const icons = { "@expo/vector-icons": { Ionicons: "Icon", MaterialCommunityIcons: "Icon" } };
-  const sent = [];
-  const savedPdfs = [];
-  let enabled = true;
-  let draftState;
-  const freshDraft = () => ({
-    id: "d1", resumeId: "r1", status: "open", revision: 1, target: { kind: "tdc_job", jobId: "j1", title: "Frontend Developer" }, provenance: "user_entered_resume",
-    facts: [{ factId: "fact_4", type: "achievement", value: "Built a React page for order tracking" }, { factId: "fact_9", type: "skill", value: "JavaScript" }, { factId: "fact_10", type: "skill", value: "React" }],
-    suggestions: [
-      { suggestionId: "s1", kind: "reword", fieldPath: "workExperience[0].achievements[0]", original: "Built a React page for order tracking", proposed: "Built an order-tracking page in React", reason: "clearer", sourceFactIds: ["fact_4"], status: "ok", riskFlags: [], decision: "pending" },
-      { suggestionId: "s2", kind: "reword", fieldPath: "professionalSummary.summary", original: "Student who builds web apps.", proposed: "Student who builds web apps with TypeScript.", reason: "matches", sourceFactIds: [], status: "needs_user_confirmation", riskFlags: [{ flag: "new_skill", values: ["TypeScript"] }], decision: "pending" },
-      { suggestionId: "s3", kind: "reword", fieldPath: "workExperience[0].description", original: "Worked on the dashboard.", proposed: "Worked on the dashboard since 2019.", reason: "tenure", sourceFactIds: [], status: "blocked", riskFlags: [{ flag: "new_date", values: ["2019"] }], decision: "pending" },
-      { suggestionId: "s4", kind: "reorder", fieldPath: "order.skills", original: "", proposed: "[1,0]", reason: "React first", sourceFactIds: [], status: "ok", riskFlags: [], decision: "pending" },
-    ],
-    match: { matched: [{ requirement: "React", kind: "skill", evidenceFactIds: ["fact_10"] }], missing: [{ requirement: "TypeScript", kind: "skill", coachingNote: "a small typescript project would show this." }], unknown: [{ requirement: "2+ years of experience", kind: "experience" }] },
-    warnings: ["Some lines in the job description looked like instructions to the AI and were ignored."], aiSuggestions: "available", fallback: null, unresolved: 4, approvedVersionId: null,
-  });
-  let startError = null;
-  let attachedState = null;
-  const studioMock = {
-    studioEnabled: async () => enabled,
-    newKey: () => "key-1",
-    studioApi: {
-      source: async (id) => ({ resumeId: id, provenance: "parsed_upload", verified: false, revisionHash: "h1", facts: [{ factId: "fact_1", value: "Frontend Intern at Bright Labs (2025-06 to 2025-08)" }] }),
-      confirmSource: async (id, hash) => { sent.push({ what: "confirm", id, hash }); startError = null; return { verified: true }; },
-      startTailoring: async (body, key) => { sent.push({ what: "start", body, key }); if (startError) throw startError; return { id: "tj1", status: "queued" }; },
-      draft: async () => draftState,
-      // accept / undo a section (or everything): accept takes only the checked ("ok") changes
-      decideBulk: async (id, revision, bulk) => {
-        sent.push({ what: "bulk", id, revision, bulk });
-        for (const s of draftState.suggestions) {
-          if (bulk.section && (s.section || "") !== bulk.section) continue;
-          if (bulk.decision === "accepted" && s.status !== "ok") continue;
-          s.decision = bulk.decision;
-        }
-        draftState = { ...draftState, revision: draftState.revision + 1, unresolved: draftState.suggestions.filter((x) => x.decision === "pending").length };
-        return draftState;
-      },
-      approve: async (id, body) => { sent.push({ what: "approve", id, body }); return { version: { id: "v1", label: body.label, templateId: body.templateId === "jakes" ? "jakes" : undefined, target: { kind: "tdc_job", jobId: "j1", title: "Frontend Developer" } }, created: true }; },
-      deleteDraft: async () => ({}),
-      versions: async () => [{ id: "v1", label: "Frontend - Bright", target: { kind: "tdc_job" }, approvedAt: "2026-11-03T00:00:00Z", usedInApplication: true, deletable: false }, { id: "v2", label: "Pasted role", target: { kind: "pasted" }, approvedAt: "2026-11-02T00:00:00Z", usedInApplication: false, deletable: true }],
-      deleteVersion: async (id) => { sent.push({ what: "deleteVersion", id }); return {}; },
-      version: async (id) => ({ id, pdf: { urdu: "none", message: null } }),
-      attachVersion: async (appId, versionId) => { sent.push({ what: "attach", appId, versionId }); attachedState = { applicationId: appId, versionId, label: "Frontend - Bright", contentHash: "abcdef1234567890", attachedAt: "2026-11-03T10:00:00Z" }; return attachedState; },
-      applicationResume: async () => { if (!attachedState) throw Object.assign(new Error("none"), { code: "NOT_FOUND" }); return attachedState; },
-    },
-    waitForTailoring: async () => ({ status: "succeeded", draftId: "d1" }),
-    saveDecisions: async (id, revision, decisions) => {
-      sent.push({ what: "decide", id, revision, decisions });
-      const d = decisions[0];
-      const s = draftState.suggestions.find((x) => x.suggestionId === d.suggestionId);
-      if (d.decision === "accepted" && s.status === "needs_user_confirmation" && !d.confirmTrue) throw Object.assign(new Error("is it true?"), { code: "CONFIRMATION_REQUIRED" });
-      s.decision = d.decision;
-      draftState = { ...draftState, revision: draftState.revision + 1, unresolved: draftState.suggestions.filter((x) => x.decision === "pending").length };
-      return { draft: draftState };
-    },
-    flushPending: async () => ({ draft: null }),
-    rememberDraft: () => {},
-    lastDraft: async () => null,
-    openPdf: async (p, name) => { sent.push({ what: "pdf", p, name }); },
-  };
-  const resumeApiMock = { __esModule: true, default: { getResumes: async () => ({ data: [{ _id: "r1", title: "My resume", isPrimary: true }, { _id: "r2", title: "Second" }] }), getMyApplications: async () => [{ _id: "app1", jobId: { _id: "j1" } }] } };
-  const load = loader({
-    react: React, "react-native": rn, ...icons,
-    "react-native-safe-area-context": { useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) },
-    "react-native-keyboard-controller": { KeyboardAwareScrollView: "ScrollView" }, // native module; renders as a scroll view here
-    "../../ui": { ScreenHeader: (p) => React.createElement("Header", { accessibilityLabel: "header" }, p.title) },
-    "../../api/resumeApi": resumeApiMock,
-    "../../api/resumeStudioApi": studioMock,
-    "react-native-webview": { WebView: "WebView" },
-    "../../utils/resumeFiles": { makeResumePdf: async (r) => { savedPdfs.push(r); return { uri: "file:///cache/x.pdf", name: "x.pdf", pages: 1 }; }, saveResumePdf: async (f) => { savedPdfs.push(f); return { status: "saved", message: "Saved to Downloads" }; } },
-  });
-  const ResumeStudio = load(path.join(SRC, "screens/Resume/ResumeStudio.js")).default;
-  const settle = async (root) => { for (let i = 0; i < 4; i++) { await tick(15); root.rerender(); } };
-  const navs = [];
-  const navigation = { navigate: (...a) => navs.push(a), goBack: () => navs.push(["back"]) };
+  console.log("── the template screen: flags");
+  for (const [flags, label] of [[{ resumeV2: false, resumeTemplatesV2: true }, "resumeV2 off"], [{ resumeV2: true, resumeTemplatesV2: false }, "resumeTemplatesV2 off"], [{ resumeV2: null, resumeTemplatesV2: null }, "flags loading"]]) {
+    const t = setup({ flags });
+    const m = t.mount(t.React.createElement(t.load(path.join(H.SRC, "screens/Resume/ResumeTemplate.js")).default));
+    await H.tick(3);
+    ok(H.findAll(m.tree, (n) => n.type === "WebView").length === 5 && !/recommended for you/.test(H.textOf(m.tree)), `${label}: today's picker (5 cards), no studio`);
+    m.unmount();
+  }
 
-  console.log("\u2500\u2500 flag off");
-  enabled = false;
-  let root = mount(React.createElement(ResumeStudio, { route: { params: { jobId: "j1", jobTitle: "Frontend Developer" } }, navigation }));
-  await settle(root);
-  ok(textOf(root.tree).includes("isn't available for your account"), "flag off: the screen says it isn't available, nothing is sent", textOf(root.tree).slice(0, 100));
-  ok(!sent.length, "flag off: no request");
-
-  console.log("\u2500\u2500 A start, an unverified upload, B tailoring");
-  enabled = true;
-  draftState = freshDraft();
-  startError = Object.assign(new Error("check first"), { code: "SOURCE_UNVERIFIED" });
-  root = mount(React.createElement(ResumeStudio, { route: { params: { jobId: "j1", jobTitle: "Frontend Developer" } }, navigation }));
-  await settle(root);
-  let t = textOf(root.tree);
-  ok(t.includes("tailor for Frontend Developer") && t.includes("nothing is added without you"), "start: for the job from its details, with the promise", t.slice(0, 200));
-  ok(find(root.tree, (x) => x.props?.accessibilityRole === "radio" && x.props.accessibilityState?.checked && x.props.accessibilityLabel === "resume My resume"), "start: the primary resume is picked");
-  byLabel(root.tree, "tailor my resume").props.onPress();
-  await settle(root);
-  t = textOf(root.tree);
-  ok(t.includes("check your details first") && t.includes("Frontend Intern at Bright Labs"), "an unconfirmed upload: the details read from it are shown first", t.slice(0, 200));
-  byLabel(root.tree, "these details are correct").props.onPress();
-  await settle(root);
-  ok(sent.some((s) => s.what === "confirm" && s.id === "r1" && s.hash === "h1"), "confirming sends the exact revision");
-  const starts = sent.filter((s) => s.what === "start");
-  ok(starts.length === 2 && starts.every((s) => s.key === "key-1" && s.body.jobId === "j1" && s.body.resumeId === "r1"), "tailoring starts again with the same idempotency key (a double tap is one job)");
-
-  console.log("\u2500\u2500 C review: statuses, confirmations, coaching");
-  t = textOf(root.tree);
-  ok(t.includes("review the changes") && t.includes("4 left to review"), "review: how many are left", t.slice(0, 200));
-  ok(t.includes("from your resume") && t.includes("not in your resume") && t.includes("can't be used"), "each change says where it stands");
-  ok(t.includes("a skill that isn't in your resume: TypeScript") && t.includes("a date that isn't in your resume: 2019"), "the risk is explained in plain words");
-  ok(t.includes("from your resume: Built a React page for order tracking"), "the fact behind a change is shown");
-  ok(t.includes("looked like instructions to the AI"), "the injection warning is shown");
-  ok(t.includes("no hiring predictions") && t.includes("\u2713 React") && t.includes("\u2013 TypeScript") && t.includes("a small typescript project") && t.includes("? 2+ years"), "coaching panel: matched with evidence, missing with a note, unknown");
-  ok(!/percentile|hire probability|shortlist/i.test(t) && !/\b\d{1,3}%/.test(t.replace(/match (before \d{1,3}% → after \d{1,3}%|\d{1,3}%)/g, "")), "no hiring verdicts; the only percentage is the match estimate");
-  ok(t.includes("React, JavaScript"), "a reorder is shown as the new order");
-  ok(byLabel(root.tree, "accept summary").props.disabled === true, "a 'not in your resume' change can't be accepted until 'this is true' is on");
-  ok(!byLabel(root.tree, "accept experience 1") && byLabel(root.tree, "reject experience 1") && textOf(byLabel(root.tree, "reject experience 1")) === "keep my original", "a blocked change can only be rejected (keep my original)");
-  ok(!byLabel(root.tree, "edit experience 1"), "a blocked change can't be edited into the resume");
-  ok(byLabel(root.tree, "continue to approve").props.disabled === true, "approve stays off until every change is decided");
-  byLabel(root.tree, "accept experience 1 \u00b7 point 1").props.onPress();
-  await settle(root);
-  ok(sent.some((s) => s.what === "decide" && s.revision === 1 && s.decisions[0].suggestionId === "s1" && s.decisions[0].decision === "accepted"), "accepting sends the revision the screen saw");
-  find(root.tree, (x) => x.type === "Switch" && x.props.accessibilityLabel === "this is true: summary").props.onValueChange(true);
-  root.rerender();
-  ok(byLabel(root.tree, "accept summary").props.disabled === false, "with 'this is true' on, it can be accepted");
-  byLabel(root.tree, "accept summary").props.onPress();
-  await settle(root);
-  ok(sent.some((s) => s.what === "decide" && s.decisions[0].suggestionId === "s2" && s.decisions[0].confirmTrue === true), "the confirmation goes with the decision");
-  byLabel(root.tree, "reject experience 1").props.onPress();
-  await settle(root);
-  byLabel(root.tree, "accept order of your skills").props.onPress();
-  await settle(root);
-  t = textOf(root.tree);
-  ok(t.includes("all reviewed") && byLabel(root.tree, "continue to approve").props.disabled === false, "all decided: approve is open", t.slice(0, 120));
-
-  console.log("── tailoring fix: before → after %, skills, what changed, try again");
+  console.log("── the studio");
   {
-    const keep = draftState;
-    draftState = { ...freshDraft(), suggestions: [], unresolved: 0,
-      scores: { before: 50, after: 50 },
-      surfacedSkills: [{ skill: "React", evidence: ["Built a React.js page for order tracking"] }],
-      confirmedSkills: [], missingSkills: ["TypeScript"],
-      changes: [{ section: "skills", label: "skills", before: "JavaScript", after: "React\nJavaScript" }, { section: "summary", label: "summary", before: "Student.", after: "Student who builds web apps." }],
-      sections: { workExperience: 2, education: 1, projects: 2, skills: 2, certifications: 1, languages: 0 } };
-    const skillCalls = [];
-    studioMock.studioApi.confirmSkill = async (id, body) => {
-      skillCalls.push({ id, body });
-      draftState = { ...draftState, revision: draftState.revision + 1, scores: { before: 50, after: 75 }, missingSkills: [], confirmedSkills: [{ skill: body.skill, proof: body.proof, confirmedAt: "2026-11-14T00:00:00Z" }] };
-      return draftState;
-    };
-    let r2 = mount(React.createElement(ResumeStudio, { route: { params: { jobId: "j1", jobTitle: "Frontend Developer" } }, navigation }));
-    await settle(r2);
-    byLabel(r2.tree, "tailor my resume").props.onPress();
-    await settle(r2);
-    let tt = textOf(r2.tree);
-    ok(tt.includes("match 50% (the same skills, better worded)"), "the % on the tailored version: unchanged when tailoring only rewords and moves skills", tt.slice(0, 300));
-    ok(tt.includes("added to your skills") && tt.includes('React · from "Built a React.js page for order tracking"'), "skills found in projects / experience: listed with where they're shown");
-    ok(tt.includes("skills this job asks for that your resume doesn't show") && tt.includes("we never add a skill for you"), "the missing-skills checklist, with the promise");
-    ok(tt.includes("what changed") && tt.includes("before") && tt.includes("after") && tt.includes("Student who builds web apps."), "what changed: before and after side by side");
-    ok(tt.includes("keeps everything: 2 jobs, 1 schools, 2 projects, 2 skills, 1 certifications"), "it says the tailored resume keeps every section");
-    find(r2.tree, (x) => x.type === "Switch" && x.props.accessibilityLabel === "I have TypeScript").props.onValueChange(true);
-    r2.rerender();
-    const proof = find(r2.tree, (x) => x.type === "TextInput" && x.props.accessibilityLabel === "proof for TypeScript");
-    ok(!!proof && byLabel(r2.tree, "add TypeScript").props.disabled === true, "'I have this' asks for a proof line; add stays off until there is one");
-    proof.props.onChangeText("the admin panel of Campus Eats is in TypeScript");
-    r2.rerender();
-    byLabel(r2.tree, "add TypeScript").props.onPress();
-    await settle(r2);
-    ok(skillCalls.length === 1 && skillCalls[0].body.skill === "TypeScript" && skillCalls[0].body.confirmTrue === true && /Campus Eats/.test(skillCalls[0].body.proof), "the skill goes to the server with the proof and the confirmation", JSON.stringify(skillCalls));
-    tt = textOf(r2.tree);
-    ok(tt.includes("match before 50% → after 75%") && tt.includes("✓ TypeScript: the admin panel of Campus Eats is in TypeScript"), "…the % recalculates: before 50% → after 75%", tt.slice(0, 400));
-
-    // a failed tailoring: nothing saved, "try again"
-    studioMock.waitForTailoring = async () => ({ status: "failed", errorCode: "AI_TIMEOUT", errorMessage: "Tailoring took too long. Nothing was saved. Please try again.", retryable: true });
-    const startsBefore = sent.filter((s) => s.what === "start").length;
-    r2 = mount(React.createElement(ResumeStudio, { route: { params: { jobId: "j1", jobTitle: "Frontend Developer" } }, navigation }));
-    await settle(r2);
-    byLabel(r2.tree, "tailor my resume").props.onPress();
-    await settle(r2);
-    tt = textOf(r2.tree);
-    ok(tt.includes("Tailoring took too long. Nothing was saved. Please try again.") && !!byLabel(r2.tree, "try tailoring again"), "a timeout: the message and 'try again'", tt.slice(0, 200));
-    studioMock.waitForTailoring = async () => ({ status: "succeeded", draftId: "d1" });
-    byLabel(r2.tree, "try tailoring again").props.onPress();
-    await settle(r2);
-    ok(sent.filter((s) => s.what === "start").length === startsBefore + 2 && textOf(r2.tree).includes("review the changes"), "try again starts a new tailoring");
-    draftState = keep;
+    const t = setup();
+    t.load(path.join(H.SRC, "services/templates/library.js")).LIBRARY.find((x) => x.id === "campus").approved = true; // this copy of the module
+    const m = t.mount(t.React.createElement(t.load(path.join(H.SRC, "screens/Resume/ResumeTemplate.js")).default));
+    await H.tick(3);
+    const text = () => H.textOf(m.tree);
+    ok(/recommended for you/.test(text()) && /made for students/.test(text()), "both flags on: the studio, recommended row with the reason", text().slice(0, 200));
+    const gridIds = () => H.findAll(m.tree, (n) => n.type === "Thumb").map((n) => n.props.templateId);
+    ok(gridIds().filter((id) => id === "campus").length === 2 && gridIds().length === 3 + 6, "recommended (3) + gallery (the five + Campus)", gridIds().join());
+    ok(H.findAll(m.tree, (n) => n.type === "Thumb").every((n) => n.props.resume._id === "r1"), "every card is the student's own resume");
+    H.byLabel(m.tree, "ATS Pro").props.onPress();
+    ok(gridIds().length === 3 + 5 && !gridIds().slice(3).includes("campus"), "tab ATS Pro: the five");
+    H.byLabel(m.tree, "ATS-safe only").props.onPress();
+    ok(gridIds().length === 3 + 4 && !gridIds().slice(3).includes("rezi"), "ATS-safe only: Minimal drops out");
+    H.byLabel(m.tree, "all").props.onPress(); H.byLabel(m.tree, "ATS-safe only").props.onPress();
+    H.find(m.tree, (n) => n.props?.testID === "template-campus").props.onPress();
+    ok(t.events.some((e) => e[0] === "template_previewed" && e[1].refId === "campus"), "a tap previews: template_previewed");
+    H.byLabel(m.tree, "use this template").props.onPress();
+    await H.tick(10);
+    ok(t.puts[0]?.[1]?.template === "campus" && Object.keys(t.puts[0][1]).join() === "template", "use this template: only the template is saved (content never changes)", JSON.stringify(t.puts));
+    ok(t.events.some((e) => e[0] === "template_selected") && t.events.some((e) => e[0] === "resume_ats_badge_safe"), "funnel: template_selected + resume_ats_badge_safe", JSON.stringify(t.events.map((e) => e[0])));
+    ok(t.nav.calls.some((c) => c[0] === "ResumeView" && c[1].resumeId === "r1"), "then the preview opens");
+    H.find(m.tree, (n) => n.props?.testID === "template-jakes").props.onLongPress();
+    H.find(m.tree, (n) => n.props?.testID === "template-stanford").props.onLongPress();
+    const modal = H.find(m.tree, (n) => n.type === "Modal");
+    ok(modal.props.visible && H.findAll(modal, (n) => n.type === "Thumb").map((n) => n.props.templateId).join() === "jakes,stanford", "long-press two: side by side");
+    m.unmount();
   }
 
-  console.log("\u2500\u2500 D preview, E approve, F send with the application");
-  byLabel(root.tree, "preview pdf").props.onPress();
-  await tick(5);
-  ok(sent.some((s) => s.what === "pdf" && s.p === "drafts/d1/preview.pdf" && /DRAFT/.test(s.name)), "the preview is the DRAFT pdf");
-  byLabel(root.tree, "continue to approve").props.onPress();
-  root.rerender();
-  ok(textOf(root.tree).includes("once approved it never changes"), "approval says the version is final");
-  ok(byLabel(root.tree, "approve").props.disabled === true, "approve needs both confirmations");
-  find(root.tree, (x) => x.type === "Switch" && x.props.accessibilityLabel === "everything in this resume is true").props.onValueChange(true);
-  root.rerender();
-  ok(byLabel(root.tree, "approve").props.disabled === true, "one confirmation is not enough");
-  find(root.tree, (x) => x.type === "Switch" && x.props.accessibilityLabel === "i reviewed every change").props.onValueChange(true);
-  root.rerender();
-  byLabel(root.tree, "approve").props.onPress();
-  await settle(root);
-  const ap = sent.find((s) => s.what === "approve");
-  ok(ap && ap.body.confirmAccurate === true && ap.body.confirmReviewed === true && ap.body.revision === draftState.revision, "approve sends both confirmations and the revision", JSON.stringify(ap));
-  t = textOf(root.tree);
-  ok(t.includes("approved") && t.includes("send this version with your application?"), "approved: offers to send it with the application for this job", t.slice(0, 200));
-  byLabel(root.tree, "send with my application").props.onPress();
-  await settle(root);
-  ok(sent.some((s) => s.what === "attach" && s.appId === "app1" && s.versionId === "v1"), "sending attaches this version to that application");
-  t = textOf(root.tree);
-  ok(t.includes("sent with your application") && t.includes("snapshot abcdef12") && t.includes("kept for 2 years") && t.includes("application timeline"), "confirmation shows the snapshot and points to the timeline", t.slice(-300));
-
-  console.log("\u2500\u2500 G versions");
-  root = mount(React.createElement(ResumeStudio, { route: { params: { view: "versions" } }, navigation }));
-  await settle(root);
-  t = textOf(root.tree);
-  ok(t.includes("Frontend - Bright") && t.includes("sent with an application, kept 2 years") && t.includes("Pasted role"), "versions: label, sent ones kept 2 years", t.slice(0, 300));
-  ok(!byLabel(root.tree, "delete Frontend - Bright") && !!byLabel(root.tree, "delete Pasted role"), "only a version never sent can be deleted");
-  byLabel(root.tree, "delete Pasted role").props.onPress();
-  await tick(10);
-  ok(sent.some((s) => s.what === "deleteVersion" && s.id === "v2") && alerts.some((a) => a.title === "delete this version?"), "delete asks first");
-  byLabel(root.tree, "download Frontend - Bright").props.onPress();
-  await tick(5);
-  ok(sent.some((s) => s.what === "pdf" && s.p === "versions/v1/export.pdf"), "download is the approved pdf (no DRAFT)");
-
-  console.log("\u2500\u2500 no AI answer: insufficient information");
-  draftState = { ...freshDraft(), suggestions: [], unresolved: 0, aiSuggestions: "insufficient_information", fallback: "no_model", warnings: [] };
-  studioMock.lastDraft = async () => "d1";
-  studioMock.flushPending = async () => ({ draft: draftState });
-  root = mount(React.createElement(ResumeStudio, { route: { params: {} }, navigation }));
-  await settle(root);
-  t = textOf(root.tree);
-  ok(t.includes("insufficient information") && !/\b50\b/.test(t), "no ai suggestions: says insufficient information, no made-up numbers", t.slice(0, 300));
-  ok(byLabel(root.tree, "continue to approve").props.disabled === false, "the student's own resume can still be approved in the ats layout");
-
-
-  console.log("\u2500\u2500 strong tailoring review: sections, accept all / undo, highlights, keywords, template");
+  console.log("── the customise sheet");
   {
-    const S = load(path.join(SRC, "screens/Resume/ResumeStudio.js"));
-    const cw = S.changedWords("Helped with screening 120 CVs for three roles", "Screened 120 CVs for three open roles");
-    ok(cw.filter((x) => x.isNew).map((x) => x.w).join(" ") === "Screened open" && cw.map((x) => x.w).join("") === "Screened 120 CVs for three open roles", "the new words are highlighted, the text stays whole", JSON.stringify(cw));
-    ok(S.keywordLine({ before: { covered: ["a"], total: 17 }, after: { covered: ["a", "b", "c"], missing: [], total: 17 } }) === "keywords covered 1 → 3 of 17", "'keywords covered 1 → 3 of 17'");
-    ok(S.pagesLine({ after: 1.1, budget: 1 }) === "about 1 page" && /aim for 1/.test(S.pagesLine({ after: 1.6, budget: 1 })), "about how many pages, and a nudge when it's over the budget");
-    ok(S.sectionOfPath("personalInfo.title") === "headline" && S.sectionOfPath("condense.workExperience[2]") === "experience" && S.sectionOfPath("order.sections") === "layout" && S.sectionOfPath("workExperience[0].achievements[1]") === "experience", "every change belongs to a section");
-    const base = freshDraft();
-    draftState = {
-      ...base, unresolved: 6, defaultLabel: "Ayesha Khan – HR Intern (Engro Corporation)", target: { ...base.target, title: "HR Intern", company: "Engro Corporation" },
-      content: { personalInfo: { firstName: "Ayesha", lastName: "Khan", title: "BBA (HRM) student | aspiring HR Intern" }, professionalSummary: { summary: "BBA student in Human Resource Management." }, workExperience: [], education: [], projects: [], skills: [], certifications: [], languages: [], sectionOrder: ["experience", "projects"] },
-      scores: { before: 65, after: 74 },
-      keywords: { before: { covered: ["Excel"], missing: [], total: 17 }, after: { covered: ["Excel", "Screen CVs", "interviews"], missing: ["onboarding"], total: 17 } },
-      pages: { before: 1.2, after: 0.9, budget: 1 },
-      suggestions: [
-        { suggestionId: "h1", kind: "reword", section: "headline", fieldPath: "personalInfo.title", original: "BBA Student", proposed: "BBA (HRM) student | aspiring HR Intern", reason: "aims at the job", sourceFactIds: ["fact_1"], status: "ok", riskFlags: [], decision: "pending" },
-        { suggestionId: "e1", kind: "reword", section: "experience", fieldPath: "workExperience[0].achievements[0]", original: "Helped with screening 120 CVs for three roles", proposed: "Screened 120 CVs for three open roles", reason: "job words", sourceFactIds: ["fact_4"], status: "ok", riskFlags: [], decision: "pending" },
-        { suggestionId: "e2", kind: "reword", section: "experience", fieldPath: "workExperience[0].achievements[2]", original: "Updated employee records in Excel", proposed: "Maintained employee records, cutting hiring time by 30%", reason: "impact", sourceFactIds: [], status: "needs_user_confirmation", riskFlags: [{ flag: "new_number", values: ["30%"] }], decision: "pending" },
-        { suggestionId: "e3", kind: "condense", section: "experience", fieldPath: "condense.workExperience[2]", original: "Handled cash and card payments\nTrained 2 new cashiers on the till", proposed: "Handled cash and card payments; trained 2 new cashiers.", reason: "less relevant", sourceFactIds: [], status: "ok", riskFlags: [], decision: "pending" },
-        { suggestionId: "e4", kind: "reorder", section: "experience", fieldPath: "order.workExperience", original: "", proposed: "[1,0,2]", reason: "most relevant first", sourceFactIds: [], status: "ok", riskFlags: [], decision: "pending" },
-        { suggestionId: "l1", kind: "reorder", section: "layout", fieldPath: "order.sections", original: "", proposed: "[\"experience\",\"projects\"]", reason: "projects up", sourceFactIds: [], status: "ok", riskFlags: [], decision: "pending" },
-      ],
-    };
-    studioMock.lastDraft = async () => "d1";
-    studioMock.flushPending = async () => ({ draft: draftState });
-    let r = mount(React.createElement(ResumeStudio, { route: { params: {} }, navigation }));
-    await settle(r);
-    let tx = textOf(r.tree);
-    ok(tx.includes("match before 65% → after 74%") && tx.includes("keywords covered 1 → 3 of 17") && tx.includes("not in your resume: onboarding") && tx.includes("about 1 page"), "match before → after, keywords covered N of M (and which), about how many pages", tx.slice(0, 400));
-    ok(["headline", "experience", "layout"].every((k) => find(r.tree, (x) => x.props?.testID === `section-${k}`)) && !find(r.tree, (x) => x.props?.testID === "section-summary"), "changes are grouped by section");
-    ok(tx.includes("experience 3 · one line") && tx.includes("as one line (less relevant for this job; kept, shorter)"), "a one-line entry says it's kept, only shorter");
-    const hl = findAll(r.tree, (x) => x.type === "Text" && x.props?.style && x.props.style.backgroundColor);
-    ok(hl.some((x) => textOf(x) === "Screened") && hl.some((x) => textOf(x) === "open"), "the suggested bullet highlights its new words");
-    byLabel(r.tree, "accept all checked changes").props.onPress();
-    await settle(r);
-    const bulk = sent.filter((s) => s.what === "bulk").at(-1);
-    ok(bulk && bulk.bulk.decision === "accepted" && !bulk.bulk.section && draftState.suggestions.find((s) => s.suggestionId === "e2").decision === "pending" && draftState.suggestions.filter((s) => s.decision === "accepted").length === 5, "accept all: every checked change; the '30%' one still waits for the student", JSON.stringify(bulk));
-    byLabel(r.tree, "undo experience section").props.onPress();
-    await settle(r);
-    ok(sent.filter((s) => s.what === "bulk").at(-1).bulk.section === "experience" && draftState.suggestions.filter((s) => s.section === "experience").every((s) => s.decision === "rejected") && draftState.suggestions.find((s) => s.suggestionId === "h1").decision === "accepted", "undo one section: only that section goes back to the original");
-    byLabel(r.tree, "accept experience section").props.onPress();
-    await settle(r);
-    ok(draftState.suggestions.filter((s) => s.section === "experience" && s.status === "ok").every((s) => s.decision === "accepted"), "accept that section again");
-    byLabel(r.tree, "edit experience 3 · one line").props.onPress();
-    await settle(r);
-    ok(!!byLabel(r.tree, "edit experience 3 · one line") && find(r.tree, (x) => x.type === "TextInput" && x.props.accessibilityLabel === "edit experience 3 · one line"), "a one-line entry can be edited by hand too");
-    byLabel(r.tree, "cancel edit").props.onPress();
-    await settle(r);
-    // approve: the chosen template, preview in it, the default name
-    draftState.suggestions.find((s) => s.suggestionId === "e2").decision = "rejected";
-    draftState = { ...draftState, unresolved: 0 };
-    r.rerender();
-    await settle(r);
-    byLabel(r.tree, "continue to approve").props.onPress();
-    await settle(r);
-    tx = textOf(r.tree);
-    ok(find(r.tree, (x) => x.type === "TextInput" && x.props.accessibilityLabel === "version name").props.value === "Ayesha Khan – HR Intern (Engro Corporation)", "the version is named '<Name> – <Job title> (<Company>)'");
-    ok(["Modern", "Classic", "Compact", "Minimal", "Executive"].every((n) => byLabel(r.tree, `template ${n}`)), "the five templates to choose from");
-    byLabel(r.tree, "template Compact").props.onPress();
-    await settle(r);
-    byLabel(r.tree, "preview in this template").props.onPress();
-    await settle(r);
-    const wv = find(r.tree, (x) => x.props?.testID === "studio-template-preview");
-    ok(wv && /data-template="jakes"/.test(wv.props.source.html) && wv.props.source.html.includes("aspiring HR Intern"), "preview: the tailored resume in the chosen template");
-    byLabel(r.tree, "close preview").props.onPress();
-    for (const sw of findAll(r.tree, (x) => x.type === "Switch")) sw.props.onValueChange(true);
-    await settle(r);
-    byLabel(r.tree, "approve").props.onPress();
-    await settle(r);
-    const ap = sent.filter((s) => s.what === "approve").at(-1);
-    ok(ap.body.templateId === "jakes" && ap.body.label === "Ayesha Khan – HR Intern (Engro Corporation)", "approve saves the template and the name", JSON.stringify(ap.body));
-    byLabel(r.tree, "download pdf").props.onPress();
-    await settle(r);
-    ok(savedPdfs.some((x) => x.template === "jakes" && x.personalInfo?.title?.includes("aspiring")) && savedPdfs.some((x) => x.name === "Ayesha Khan – HR Intern (Engro Corporation).pdf"), "download: the same template, saved on the phone with the version's name", JSON.stringify(savedPdfs.map((x) => x.template || x.name)));
+    const t = setup();
+    const CS = t.load(path.join(H.SRC, "screens/Resume/studio/CustomiseSheet.js"));
+    ok(CS.contrastOnWhite("#FFFF00") < 4.5 && CS.contrastOnWhite("#1E6B3A") >= 4.5 && CS.contrastOnWhite("blue") === 0, "contrast check: yellow fails, dark green passes, not a colour → 0");
+    ok(JSON.stringify(CS.changesFrom({ palette: "ocean", size: "S", font: "Inter" }, { size: "S", density: "airy", font: "Inter" })) === JSON.stringify({ palette: null, density: "airy" }), "changesFrom: only changed studio keys, null for a removed one");
+    let closed = 0;
+    const m = t.mount(t.React.createElement(CS.default, { visible: true, onClose: () => closed++, resume: RESUME, templateId: "modern_ats", updateResume: async (id, ch) => { t.puts.push([id, ch]); } }));
+    await H.tick(2);
+    H.byLabel(m.tree, "save these changes").props.onPress();
+    await H.tick(2);
+    ok(t.puts.length === 0 && closed === 1, "nothing changed: save just closes (no request)");
+    H.byLabel(m.tree, "Ocean colour").props.onPress();
+    H.byLabel(m.tree, "small").props.onPress();
+    const thumb = H.find(m.tree, (n) => n.type === "Thumb");
+    ok(thumb.props.styles.palette === "ocean" && thumb.props.styles.size === "S" && t.puts.length === 0, "the preview shows each change live; nothing saved yet");
+    H.find(m.tree, (n) => n.type === "Input" && n.props.accessibilityLabel === "a custom colour").props.onChangeText("#FFEE00");
+    H.byLabel(m.tree, "use colour").props.onPress();
+    ok(/too light to read/.test(H.textOf(m.tree)) && H.find(m.tree, (n) => n.type === "Thumb").props.styles.palette === "ocean", "a custom colour too light (< 4.5:1): refused with the reason");
+    H.byLabel(m.tree, "show Languages").props.onValueChange(false);
+    H.byLabel(m.tree, "move Projects up").props.onPress();
+    H.byLabel(m.tree, "rounded").props.onPress();
+    ok(H.find(m.tree, (n) => n.type === "Thumb").props.resume.personalInfo.photoUrl === "https://res.cloudinary.com/x/me.jpg", "photo on: the preview uses the profile photo");
+    H.byLabel(m.tree, "save these changes").props.onPress();
+    await H.tick(5);
+    const [id, patch] = t.puts[0] || [];
+    const cs = patch?.customStyles || {};
+    ok(id === "r1" && cs.palette === "ocean" && cs.size === "S" && cs.hiddenSections.join() === "languages" && cs.sectionOrder.indexOf("projects") < cs.sectionOrder.indexOf("education") && cs.photo.on && cs.photo.shape === "rounded", "save: palette, size, hidden, order and photo sent", JSON.stringify(patch));
+    ok(Object.keys(cs).sort().join() === "hiddenSections,palette,photo,sectionOrder,size" && patch.personalInfo?.photoUrl === "https://res.cloudinary.com/x/me.jpg", "…only the changed keys, plus the photo link", JSON.stringify(patch));
+    ok(["palette", "size", "hiddensections", "sectionorder", "photo"].every((k) => t.events.some((e) => e[0] === `template_customised_${k}`)), "funnel: template_customised_<key> per change", JSON.stringify(t.events.map((e) => e[0])));
+    m.unmount();
   }
-
-  console.log("\u2500\u2500 accessibility");
-  const all = [];
-  (function walk(x) { if (!x || typeof x !== "object") return; if (Array.isArray(x)) return x.forEach(walk); all.push(x); walk(x.props?.children); })(root.tree);
-  const src = read("app/src/screens/Resume/ResumeStudio.js");
-  ok(/btn: \{[^}]*minHeight: 44/.test(src) && /function Button[\s\S]*?accessibilityRole="button" accessibilityLabel=\{label\} accessibilityState=\{\{ disabled/.test(src) && all.filter((x) => x.props?.accessibilityRole === "button").length >= 3, "buttons are 44 pt, announced as buttons with their state");
-  ok(/accessibilityLiveRegion="polite"/.test(src) && /accessibilityRole="switch"/.test(src) && /accessibilityRole="radio"/.test(src), "live updates, switches and radio choices are announced");
-  ok(all.filter((x) => x.type === "Text").every((x) => x.props.maxFontSizeMultiplier), "every text caps its font scale (large fonts stay readable)");
-
-  console.log("\u2500\u2500 placement");
-  // the job's own screen (JobDetails) and its apply form (JobApplicationForm) took over from Career.js's modal
-  const details = read("app/src/screens/Career/JobDetails.js");
-  const form = read("app/src/screens/Career/JobApplicationForm.js");
-  ok(/studioOn && state === "open"/.test(details) && details.includes('navigation.navigate("ResumeStudio", { jobId: job._id'), "job details: 'tailor my resume' only for pilot students on an open job, opens the studio for that job");
-  ok(/x\.target\?\.kind === "tdc_job" && String\(x\.target\.jobId\) === jobId/.test(form) && /studioApi\.attachVersion\(applicationId, resume\.version\.id\)/.test(form) && form.indexOf("studioApi.attachVersion") > form.indexOf("metaEvents.jobApplied"), "apply form: the version tailored for that job can be sent; attached only after the server has the application");
-  const dash = read("app/src/screens/Resume/ResumeDashboard.js");
-  ok(/studioOn && \(/.test(dash) && dash.includes("navigation.navigate('ResumeStudio', { resumeId: selectedResume._id, fresh: true })") && dash.includes("{ view: 'versions' }"), "resume dashboard: 'tailor for a job' and 'my versions' only for pilot students");
-  ok(read("app/src/navigation/ResumeNavigator.js").includes('name="ResumeStudio"') && read("app/src/navigation/DrawerNavigator.js").includes('name="ResumeStudio"'), "the screen is registered in the resume stack and next to the jobs screen");
-  ok(read("app/src/navigation/TabNavigator.js").includes('"ResumeStudio"') && read("app/src/navigation/DrawerNavigator.js").includes("'ResumeStudio',"), "full screen: tab bar and drawer header hidden");
-  const babel2 = reqApp("@babel/core");
-  let parsed = 0;
-  for (const f of ["app/src/components/Career.js", "app/src/screens/Career/JobDetails.js", "app/src/screens/Career/JobApplicationForm.js", "app/src/screens/Resume/ResumeDashboard.js", "app/src/navigation/ResumeNavigator.js", "app/src/navigation/DrawerNavigator.js", "app/src/navigation/TabNavigator.js"]) {
-    try { babel2.transformSync(read(f), { filename: f, babelrc: false, configFile: false, plugins: [reqApp.resolve("@babel/plugin-transform-react-jsx"), reqApp.resolve("@babel/plugin-transform-modules-commonjs")] }); parsed++; } catch (e) { console.log(e.message.slice(0, 200)); }
+  {
+    const t = setup({ user: { profileImage: "" } });
+    const CS = t.load(path.join(H.SRC, "screens/Resume/studio/CustomiseSheet.js"));
+    const saved = { ...RESUME, customStyles: { font: "Inter", accentColor: "#1E3A8A", palette: "ocean", size: "L", hiddenSections: ["languages"] } };
+    const m = t.mount(t.React.createElement(CS.default, { visible: true, onClose() {}, resume: saved, templateId: "campus", updateResume: async (id, ch) => { t.puts.push([id, ch]); } }));
+    await H.tick(2);
+    ok(!H.byLabel(m.tree, "rounded") && /add a profile photo/.test(H.textOf(m.tree)), "no https profile photo: no photo choice, a hint instead");
+    H.byLabel(m.tree, "reset to the template's look").props.onPress();
+    H.byLabel(m.tree, "save these changes").props.onPress();
+    await H.tick(5);
+    ok(JSON.stringify(t.puts[0]?.[1]) === JSON.stringify({ customStyles: { palette: null, size: null, hiddenSections: null } }), "reset: null for each studio key (the server clears them); the older keys untouched", JSON.stringify(t.puts));
+    m.unmount();
   }
-  ok(parsed === 7, "the changed app files compile (jsx)");
-
-  console.log(`\n${passed} passed, ${failed} failed`);
-  process.exit(failed ? 1 : 0);
-})().catch((e) => { console.error("FATAL", e); process.exit(2); });
+  done();
+})().catch((e) => { console.error(e); process.exit(1); });
