@@ -13,11 +13,14 @@ import Input from '../../../ui/Input';
 import Button from '../../../ui/Button';
 import { AuthContext } from '../../../context/AuthContext';
 import { color as T, font as F, MAX_FONT_SCALE as M } from '../../../theme/tokens';
-import { PALETTES, FONT_PAIRS, SECTION_KEYS } from '../../../services/templates/styles';
+import { PALETTES, FONT_PAIRS, SECTION_KEYS, MODEL_DEFAULT_COLOURS } from '../../../services/templates/styles';
 import { funnel } from '../../../analytics/funnel';
 import TemplateThumb from './TemplateThumb';
 
 export const STUDIO_KEYS = ['palette', 'fontPair', 'size', 'density', 'margins', 'headingCase', 'headingStyle', 'sectionOrder', 'hiddenSections', 'headings', 'photo', 'dateFormat', 'pageSize', 'linkStyle', 'accentColor'];
+// the older colour keys can't be cleared (older apps send them); "no custom colour" = the model's defaults, which the
+// five always rendered with and the library templates read as "not chosen" (their own colours show)
+export const COLOUR_KEYS = ['headingColor', 'textColor'];
 const NAMES = { summary: 'Summary', experience: 'Experience', education: 'Education', projects: 'Projects', activities: 'Leadership & Activities', volunteering: 'Volunteering', skills: 'Skills', awards: 'Awards', certifications: 'Certifications', languages: 'Languages', achievements: 'Achievements' };
 
 // readable on white (WCAG AA for text)
@@ -29,7 +32,7 @@ export function contrastOnWhite(hex) {
 /** what "save" sends: the changed keys, null for a key the student reset */
 export function changesFrom(start, draft) {
   const out = {};
-  for (const k of STUDIO_KEYS) {
+  for (const k of [...STUDIO_KEYS, ...COLOUR_KEYS]) {
     const a = JSON.stringify(start[k] ?? null); const b = JSON.stringify(draft[k] ?? null);
     if (a !== b) out[k] = draft[k] ?? null;
   }
@@ -75,8 +78,9 @@ export default function CustomiseSheet({ visible, onClose, resume, templateId, u
       onClose?.();
     } catch { setMsg('not saved. check your connection and try again.'); } finally { setBusy(false); }
   };
-  // the studio keys go (save sends null for each, so the template's own look returns); the older colour keys stay as saved
-  const reset = () => { setDraft(Object.fromEntries(Object.entries(start).filter(([k]) => !STUDIO_KEYS.includes(k) || k === 'accentColor'))); setCustom(''); setMsg(''); };
+  // the template's own look, completely: the studio keys go (save sends null for each) and the colours go back to the
+  // "no custom colour" defaults (a typed custom colour included)
+  const reset = () => { setDraft({ ...Object.fromEntries(Object.entries(start).filter(([k]) => !STUDIO_KEYS.includes(k))), ...MODEL_DEFAULT_COLOURS }); setCustom(''); setMsg(''); };
 
   const Row = ({ title, children }) => (<View style={s.row}><Text style={s.label} maxFontSizeMultiplier={M}>{title}</Text><View style={s.chips}>{children}</View></View>);
   return (

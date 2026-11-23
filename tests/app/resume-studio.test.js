@@ -6,7 +6,7 @@
 //   the studio: recommended row with reasons, tabs, "ATS-safe only", pick + "use this template" saves the template,
 //     funnel template_previewed / template_selected / resume_ats_badge_safe, then the preview; long-press two → compare
 //   the customise sheet: nothing saved until "save"; only the changed keys are sent; a custom colour must be readable
-//     (≥ 4.5:1); the photo only from an https profile photo; "reset" sends null for the studio keys; funnel per key
+//     (≥ 4.5:1); the photo only from an https profile photo; "reset" sends null for the studio keys and the default colours (a typed custom colour included: byte-identical to never customised); funnel per key
 //   node tests/app/resume-studio.test.js
 const path = require("path");
 const H = require("./harness");
@@ -163,8 +163,38 @@ function setup({ flags = { resumeV2: true, resumeTemplatesV2: true }, resume = R
     H.byLabel(m.tree, "reset to the template's look").props.onPress();
     H.byLabel(m.tree, "save these changes").props.onPress();
     await H.tick(5);
-    ok(JSON.stringify(t.puts[0]?.[1]) === JSON.stringify({ customStyles: { palette: null, size: null, hiddenSections: null } }), "reset: null for each studio key (the server clears them); the older keys untouched", JSON.stringify(t.puts));
+    ok(JSON.stringify(t.puts[0]?.[1]) === JSON.stringify({ customStyles: { palette: null, size: null, hiddenSections: null, headingColor: "#0F172A", textColor: "#334155" } }), "reset: null for each studio key, the colours back to the defaults (only what differs is sent)", JSON.stringify(t.puts));
     m.unmount();
+  }
+  console.log("── reset after a typed custom colour (owner: the template's own look, completely)");
+  {
+    const t = setup({ user: { profileImage: "" } });
+    const CS = t.load(path.join(H.SRC, "screens/Resume/studio/CustomiseSheet.js"));
+    const svc = t.load(path.join(H.SRC, "services/templateService.js"));
+    const DEF = { accentColor: "#1E3A8A", headingColor: "#0F172A", textColor: "#334155" };
+    const never = { font: "Inter", ...DEF, bgColor: "#FFFFFF" }; // what every resume carries from the model
+    let stored = { ...never };
+    // what the server does with an update (config/resumeTemplates.js): set the sent keys, null removes a studio key
+    const put = (cs) => { for (const [k, v] of Object.entries(cs)) { if (v === null) { if (!(k in DEF)) delete stored[k]; } else stored[k] = v; } };
+    let m = t.mount(t.React.createElement(CS.default, { visible: true, onClose() {}, resume: { ...RESUME, customStyles: stored }, templateId: "campus", updateResume: async (id, ch) => { t.puts.push([id, ch]); put(ch.customStyles); } }));
+    await H.tick(2);
+    H.find(m.tree, (n) => n.type === "Input" && n.props.accessibilityLabel === "a custom colour").props.onChangeText("#7A1F5C");
+    H.byLabel(m.tree, "use colour").props.onPress();
+    H.byLabel(m.tree, "save these changes").props.onPress();
+    await H.tick(5);
+    m.unmount();
+    ok(stored.palette === "custom" && stored.accentColor === "#7A1F5C", "a typed custom colour is saved", JSON.stringify(stored));
+    ok(svc.renderResumeHTML(RESUME, "campus", stored).includes("#7A1F5C"), "…and shows");
+    m = t.mount(t.React.createElement(CS.default, { visible: true, onClose() {}, resume: { ...RESUME, customStyles: { ...stored } }, templateId: "campus", updateResume: async (id, ch) => { t.puts.push([id, ch]); put(ch.customStyles); } }));
+    await H.tick(2);
+    H.byLabel(m.tree, "reset to the template's look").props.onPress();
+    ok(!JSON.stringify(H.find(m.tree, (n) => n.type === "Thumb").props.styles).includes("#7A1F5C"), "reset: the preview drops the custom colour at once");
+    H.byLabel(m.tree, "save these changes").props.onPress();
+    await H.tick(5);
+    m.unmount();
+    ok(JSON.stringify(stored) === JSON.stringify(never), "after reset the stored styles are the never-customised ones (\"no custom colour\" = the model's defaults)", JSON.stringify(stored));
+    const same = ["campus", "harvard", "modern_ats", "rezi"].filter((id) => svc.renderResumeHTML(RESUME, id, stored) === svc.renderResumeHTML(RESUME, id, never));
+    ok(same.length === 4 && !svc.renderResumeHTML(RESUME, "campus", stored).includes("#7A1F5C"), "…so every template renders byte-identical to a never-customised resume (library and the five)", same.join());
   }
   done();
 })().catch((e) => { console.error(e); process.exit(1); });
