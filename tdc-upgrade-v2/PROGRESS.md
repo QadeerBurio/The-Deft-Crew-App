@@ -156,6 +156,9 @@ Quiet hours: the owner first asked for them on chat pushes, then corrected it (C
 - Fix `tests/app/events-fresh-data` isolation properly (its fixed waits fail under load); no weakening.
 - ~~SERVER tests checking for the text "0300"~~: all fixed (loyalty-visits, career, then the remaining 7 suites in SERVER `3c62524c`).
 - ~~`referral_credited` events rejected~~: fixed in P1 follow-ups (SERVER `bed92851`).
+- Migrate `expo-av` to `expo-audio` before the next Expo SDK upgrade (owner, P3 #11; speak mode and chat voice use expo-av).
+- Account defaults that look like real data: `User.location` "Karachi, Pakistan" and `User.city` "Karachi" are set on every account (models/User.js). Resumes no longer copy them (P3 #7); the social profile still shows them. Owner to decide (changing a default affects live profiles).
+- Job ingestion adapters fall back to the title "Software Engineer" when a feed has none (greenhouse / lever / workable). Not resume data; noted only.
 
 ## Release plan
 
@@ -360,6 +363,43 @@ off). Flag off: the student routes answer 404, the crew screen keeps the Google 
 
 Full runs at the end of P2: SERVER 94/94 suites (shopify-review skipped as always); APP 57/57 suites + `expo export`
 android + ios; ADMIN jest 27 suites / 151 tests, portal checks 38/38.
+
+## P3a: fresher foundation of the resume builder (branch `upgrade/p3a-resume` from `upgrade/p2-ambassador`, owner 23 Nov 2026)
+
+Owner decisions for P3: #1 public resume page private by default (P3d), #2 puppeteer as a devDependency only (P3c),
+#3 fonts as bundled assets (P3c), #6 fresher education 20 in total, #7 fake defaults fixed for everyone now, #9
+`proficiency`, #10 template snapshot on applications (P3d), #11 `resumeSpeak` (P3b), #12 auto-fixes on the server
+(P3b); four sub-phases, sub-flags `resumeCoach`, `resumeSpeak`, `resumeTemplatesV2` under `resumeV2` (each added with
+its sub-phase).
+
+**#1 first check (read only, nothing changed):** `Resume.settings.visibility` (default `'public'`) is written by
+create / update but never read for access anywhere. Every `/api/resume/:id…` route (17) and the tailor / optimize
+services filter by the owner; job routes that take a `resumeId` check ownership before the skill-gap or
+recommendation services (which load by id) run. Employers see a resume's content only when the student applies
+(applicant matching); "suggested candidates" (careerMatching pilot) are opt-in (`ProfessionalProfile.discoverable`,
+off by default) and anonymous (no name, contact, university or resume text). Admin routes see resumes (admin). So
+nothing exposes resumes because of the default; the public page (P3d) will need its own switch (off by default) and
+must not use `visibility`.
+
+| Step | What changed | Commits | Tests |
+|---|---|---|---|
+| #7 server | `services/resumeAi.js`: enhance-text and suggest-skills use `OPENAI_MODEL`; enhance never asks for numbers / tools / employers / results (a rewrite that adds a number is not used); the builder's summary request is written from its facts only; suggest-skills assumes no role (no role and no skills → `[]`); one shared per-user limit `resume_ai` (120 an hour). Resume create no longer copies the account default "Karachi, Pakistan" as the city | SERVER `8ebc2178` | resume-ai-defaults 21/21 |
+| #7 app | a guest's resume: no "Software Engineer" / "Karachi, Pakistan"; no assumed target role | APP `1bf0075` | resume-defaults 5/5 |
+| P3-2 rules | `utils/resumeRules.js` (both repos, byte for byte): fresher track (education 20 incl. graduation date, projects 15, activities / volunteering 10, experience a bonus up to 5, awards as extras; fresher sentences); missing / experienced track = the old score; `stepKey` on every missing item | APP `f21b9fe`, SERVER `d4d860d6` | resume-fresher-track 37/37 (14 resumes frozen from the old file score exactly as before) |
+| P3-1/P3-3 server | Resume: `settings.track`, `activities[]`, `volunteering[]`, `awards[]`, `coursework[]` (additive), accepted on create and save; an unknown track is ignored | SERVER `ecc7609d` | resume-fresher-fields 14/14 |
+| split-only | `ResumeBuilder.js` 2583 → 1010 lines: the 7 steps to `screens/Resume/steps/Step1…7*.js` (bodies unchanged, babel scope analysis), shared styles / lists to `steps/builderShared.js` | APP `2ad7e20` | all app suites |
+| P3-3/P3-5 | `resume/resumeV2.js` (order per track, minutes left, profile prefill, one-page estimate, month + year); renderer prints the new sections (older resumes byte for byte as before: 35 frozen outputs); new steps (activities, volunteering, awards & achievements, languages, coursework) with a month + year picker; the builder follows the track (fresher: experience last), progress line, "fits on 1 page", "saved ✓" | APP `10e02ff`, `f68d12c` | resume-v2 |
+| P3-1 | `ResumeStart`: upload my cv / build from my tdc profile / start fresh, then "have you done an internship or job yet?"; dashboard's new-resume buttons go there with the flag | APP `d617821` | **resume-v2 51/51** |
+
+**Notes / not in P3a:**
+- P3-5 "next pinned above the keyboard": not done. The footer sits inside the scroll view, and pinning it changes the layout for every step; it goes with the coach screens (P3b). The focused field still scrolls above the keyboard.
+- Profile prefill: no graduation date (the account has only a year; a month would be made up) and no city (account defaults). Completed tdc events are not added (no attendance record to rely on); the ambassador certificate is added in P3d with "verified by tdc".
+- The server PDF (Resume Studio, `pdfService`) and the matching profile don't use the new sections yet (plan: server PDFs stay as they are in this phase).
+- An older app opening a fresher resume shows its 7 steps and scores it with its own (older) rules, so its strength number differs from the new app's and the server's.
+- The start screen no longer promises "about 6 minutes" (not measured); the progress line's "~N min" is an estimate per step.
+
+Full runs at the end of P3a: SERVER 97/97 suites; APP 59 suites + `expo export` android + ios (an Android export from
+the warm cache once reported fewer modules; with `--clear` the count is right); ADMIN unchanged (no admin code in P3a).
 
 ## Railway variables for the owner to set (never set by the developer)
 
