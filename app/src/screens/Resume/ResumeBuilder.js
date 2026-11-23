@@ -35,6 +35,14 @@ import { color as T, font as F } from "../../theme/tokens";
 import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
 import { plainError } from "../../utils/plainError";
 import { INDUSTRIES, keyOf, indexOfKey, styles } from './steps/builderShared';
+// P3a (flag resumeV2): the track's step order, the new sections, progress, one-page estimate, "saved"
+import useFlag from '../../hooks/useFlag';
+import { FLAGS } from '../../api/upgradeFlags';
+import { EXTRA_STEPS, stepOrder, nextStep, prevStep, stepIdFor, minutesLeft, pageEstimate, fitLine } from '../../resume/resumeV2';
+import ActivitiesStep from './steps/ActivitiesStep';
+import AwardsStep from './steps/AwardsStep';
+import LanguagesStep from './steps/LanguagesStep';
+import CourseworkSection from './steps/CourseworkSection';
 import renderStep1File from './steps/Step1Personal';
 import renderStep2File from './steps/Step2Education';
 import renderStep3File from './steps/Step3Experience';
@@ -94,7 +102,7 @@ const ResumeBuilderScreen = () => {
     resumes = [],
     creationsUsed = 0,
     createResume,
-    updateResume,
+    updateResume: updateResumeInContext,
     uploadResume,
     loading,
     uploadProgress,
@@ -104,10 +112,15 @@ const ResumeBuilderScreen = () => {
     setCurrentResume,
     loadResume,
   } = useContext(ResumeContext);
+  // P3-5: every save goes through here, so the builder can show "saved ✓" (resumeV2); nothing else changes
+  const [savedAt, setSavedAt] = useState(0);
+  const updateResume = (...args) => Promise.resolve(updateResumeInContext(...args)).then((r) => { if (r) setSavedAt(Date.now()); return r; });
 
   const navigation = useNavigation();
   const route = useRoute();
   const { resumeId, step: startStep } = route.params || {};
+  // P3-1: the track chosen on the start screen for a new resume ("have you done an internship or job yet?")
+  const newTrack = ['fresher', 'experienced'].includes(route.params?.track) ? route.params.track : null;
   // no resumeId = a new resume: nothing is created until the student saves something
   const isNew = !resumeId;
   const createdIdRef = useRef(null);
@@ -134,6 +147,13 @@ const ResumeBuilderScreen = () => {
   const [activeStep, setActiveStep] = useState(startStep >= 1 && startStep <= 7 ? startStep : 1);
   // "edit" from the preview / the upload review opens the builder at that section
   useEffect(() => { if (startStep >= 1 && startStep <= 7) setActiveStep(startStep); }, [startStep]);
+  // P3-1 (resumeV2): "upload my cv" on the start screen opens the builder's own upload once
+  const autoUploadDone = useRef(false);
+  useEffect(() => {
+    if (!route.params?.autoUpload || autoUploadDone.current) return;
+    autoUploadDone.current = true;
+    handleAutoFillUpload();
+  }, [route.params?.autoUpload]); // eslint-disable-line react-hooks/exhaustive-deps
   // missing required fields: only after the student tries to finish
   const [finishTried, setFinishTried] = useState(false);
   // the resume's name (empty = the default "<Full name> – <title>")
@@ -290,6 +310,16 @@ const ResumeBuilderScreen = () => {
     { id: 6, name: 'Summary', icon: 'locate-outline', title: 'Summary & goal', desc: 'The job you want and 2–3 lines about you (optional)' },
     { id: 7, name: 'Skills', icon: 'hammer-outline', title: 'Skills', desc: 'What you are good at — any field (optional)' },
   ];
+
+  // P3-3 (resumeV2): the steps in the track's order (fresher: education, projects and activities first, experience
+  // last); the new sections are steps 8–11. Flag off: today's 1..7, unchanged.
+  const v2 = useFlag(FLAGS.resumeV2) === true;
+  const order = stepOrder(isNew && !createdIdRef.current ? { settings: { track: newTrack } } : currentResume, v2);
+  const stepDef = (id) => steps.find((s) => s.id === id) || EXTRA_STEPS[id] || steps[0];
+  const firstStep = order[0];
+  const lastStep = order[order.length - 1];
+  // the new steps save through the builder (a new resume is created first)
+  const stepIo = { ensureResume: () => ensureResume(), updateResume: (...a) => updateResume(...a) };
 
   // Date format helper
   const formatDateForInput = (dateStr) => {
@@ -462,7 +492,7 @@ const ResumeBuilderScreen = () => {
     if (creatingRef.current) return creatingRef.current;
     creatingRef.current = (async () => {
       try {
-        const created = await createResume({ personalInfo: currentPersonal(), template: 'modern_ats' }, { alert: false });
+        const created = await createResume({ personalInfo: currentPersonal(), template: 'modern_ats', ...(newTrack ? { settings: { track: newTrack } } : {}) }, { alert: false });
         if (created?._id) {
           createdIdRef.current = created._id;
           lastPersonalRef.current = JSON.stringify(currentPersonal());
@@ -639,7 +669,7 @@ const ResumeBuilderScreen = () => {
   });
 
   const handleStepChange = (newStep) => goToStep(newStep);
-  const handlePrevStep = () => goToStep((prev) => Math.max(1, prev - 1));
+  const handlePrevStep = () => goToStep((prev) => prevStep(order, prev));
   // back: the leave check below saves or asks
   const handleGoBack = () => navigation.goBack();
 
@@ -663,20 +693,21 @@ const ResumeBuilderScreen = () => {
 
   // the add-item buttons of each step (defined with their forms), so "continue" can add what is typed
   const addHandlers = useRef({});
-  const optionalStep = (s) => s >= 2 && s <= 6;
+  const optionalStep = (s) => s !== lastStep && ((s >= 2 && s <= 6) || (v2 && s >= 8));
 
   // Continue: an item typed but not added is added first (never lost, never blocks)
   const handleNextStep = () => {
     const item = unsavedItem();
-    const add = item && { education: 2, experience: 3, project: 4, certification: 5 }[item] === activeStep && addHandlers.current[activeStep];
+    // the new steps (8–11) add what is typed themselves (nothing typed: nothing happens)
+    const add = (item && { education: 2, experience: 3, project: 4, certification: 5 }[item] === activeStep && addHandlers.current[activeStep]) || (activeStep >= 8 && addHandlers.current[activeStep]);
     if (add) {
-      Promise.resolve(add({ quiet: true })).finally(() => goToStep((prev) => Math.min(7, prev + 1)));
+      Promise.resolve(add({ quiet: true })).finally(() => goToStep((prev) => nextStep(order, prev)));
       return;
     }
-    goToStep((prev) => Math.min(7, prev + 1));
+    goToStep((prev) => nextStep(order, prev));
   };
   // skip for now: optional sections never block; what is typed stays on the phone for later
-  const handleSkipStep = () => goToStep((prev) => Math.min(7, prev + 1));
+  const handleSkipStep = () => goToStep((prev) => nextStep(order, prev));
 
   // Finish: only now are missing required fields shown (name, email or phone, one of education/experience/projects)
   const finishProblems = () => requiredForFinish(buildLiveResume());
@@ -837,7 +868,17 @@ const ResumeBuilderScreen = () => {
         }
       />
 
+      {/* P3-5 (resumeV2): a progress bar with the step and minutes left, instead of the icons */}
+      {v2 && (
+        <View style={{ paddingHorizontal: 16, paddingTop: 8 }} accessible accessibilityLabel={`step ${order.indexOf(activeStep) + 1} of ${order.length}, about ${minutesLeft(order, activeStep)} minutes left`}>
+          <View style={{ height: 6, borderRadius: 3, backgroundColor: T.line, overflow: 'hidden' }}>
+            <View style={{ height: 6, borderRadius: 3, backgroundColor: T.yellow, width: `${Math.round(((order.indexOf(activeStep) + 1) / order.length) * 100)}%` }} />
+          </View>
+          <Text style={{ fontFamily: F.bodyMedium, fontSize: 12, color: T.textMuted, marginTop: 6 }}>{`step ${order.indexOf(activeStep) + 1} of ${order.length} · ~${minutesLeft(order, activeStep)} min left`}</Text>
+        </View>
+      )}
       {/* Stepper icons */}
+      {!v2 && (
       <View style={styles.stepperContainer}>
         {steps.map((s, idx) => (
           <React.Fragment key={s.id}>
@@ -866,18 +907,28 @@ const ResumeBuilderScreen = () => {
           </React.Fragment>
         ))}
       </View>
+      )}
 
       {/* The White Card containing the active step form */}
       <KeyboardAwareScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} bottomOffset={24} keyboardShouldPersistTaps="handled">
         <View style={styles.cardContainer}>
           <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>{steps[activeStep - 1].title}</Text>
+            <Text style={styles.cardTitle}>{stepDef(activeStep).title}</Text>
             <View style={styles.cardStepBadge}>
-              <Text style={styles.cardStepBadgeText}>{activeStep}/7</Text>
+              <Text style={styles.cardStepBadgeText}>{v2 ? `${order.indexOf(activeStep) + 1}/${order.length}` : `${activeStep}/7`}</Text>
             </View>
           </View>
-          <Text style={styles.cardSubtitle}>{steps[activeStep - 1].desc}</Text>
-          <ResumeStrength resume={buildLiveResume()} compact style={{ marginBottom: 12 }} onGoTo={(s) => goToStep(s)} />
+          <Text style={styles.cardSubtitle}>{stepDef(activeStep).desc}</Text>
+          {v2 && (() => {
+            const est = pageEstimate(buildLiveResume());
+            return (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }} testID="v2-status">
+                <Text style={{ fontFamily: F.bodyMedium, fontSize: 12.5, color: est.fits ? T.success : '#8A5A00', flex: 1 }} accessibilityLiveRegion="polite">{fitLine(est)}</Text>
+                {!!savedAt && <Text style={{ fontFamily: F.bodyMedium, fontSize: 12.5, color: T.success }} accessibilityLiveRegion="polite">saved ✓</Text>}
+              </View>
+            );
+          })()}
+          <ResumeStrength resume={buildLiveResume()} compact style={{ marginBottom: 12 }} onGoTo={(s, _key, stepKey) => goToStep(stepIdFor(s, stepKey, v2))} />
           {problems.length > 0 && (
             <View style={styles.problemBox} accessibilityRole="alert" testID="finish-problems">
               <Text style={styles.problemTitle}>to finish, please add:</Text>
@@ -900,13 +951,19 @@ const ResumeBuilderScreen = () => {
           {activeStep === 5 && renderStep5()}
           {activeStep === 6 && renderStep6()}
           {activeStep === 7 && renderStep7()}
+          {/* P3-3 (resumeV2): coursework under education; the new sections */}
+          {v2 && activeStep === 2 && <CourseworkSection resume={currentResume} io={stepIo} />}
+          {activeStep === 8 && <ActivitiesStep kind="activities" resume={currentResume} io={stepIo} registerAdd={(fn) => { addHandlers.current[8] = fn; }} />}
+          {activeStep === 9 && <ActivitiesStep kind="volunteering" resume={currentResume} io={stepIo} registerAdd={(fn) => { addHandlers.current[9] = fn; }} />}
+          {activeStep === 10 && <AwardsStep resume={currentResume} io={stepIo} registerAdd={(fn) => { addHandlers.current[10] = fn; }} />}
+          {activeStep === 11 && <LanguagesStep resume={currentResume} io={stepIo} registerAdd={(fn) => { addHandlers.current[11] = fn; }} />}
         </View>
 
         {/* Bottom Stepper Navigation buttons */}
         <View style={styles.footerContainer}>
           <TouchableOpacity 
-            style={[styles.backButton, activeStep === 1 && { opacity: 0.5 }]}
-            disabled={activeStep === 1 || moveStep.running}
+            style={[styles.backButton, activeStep === firstStep && { opacity: 0.5 }]}
+            disabled={activeStep === firstStep || moveStep.running}
             onPress={handlePrevStep}
           >
             <Ionicons name="arrow-back" size={16} color={T.white} />
@@ -914,12 +971,12 @@ const ResumeBuilderScreen = () => {
           </TouchableOpacity>
 
           <TouchableOpacity 
-  style={[styles.continueButton, activeStep === 7 && { backgroundColor: T.success }]}
+  style={[styles.continueButton, activeStep === lastStep && { backgroundColor: T.success }]}
   disabled={moveStep.running || finish.running}
   accessibilityRole="button"
   accessibilityState={{ busy: moveStep.running || finish.running }}
   onPress={() => {
-    if (activeStep === 7) {
+    if (activeStep === lastStep) {
       // skills are saved on every add; a new resume that was never saved is created first
       handleFinish();
     } else {
@@ -927,13 +984,13 @@ const ResumeBuilderScreen = () => {
     }
   }}
 >
-            <Text style={[styles.continueButtonText, activeStep === 7 && { color: T.white }]}>
-              {activeStep === 7 ? 'Finish & Preview 🚀' : 'Continue'}
+            <Text style={[styles.continueButtonText, activeStep === lastStep && { color: T.white }]}>
+              {activeStep === lastStep ? 'Finish & Preview 🚀' : 'Continue'}
             </Text>
             <Ionicons 
-              name={activeStep === 7 ? "checkmark-done" : "arrow-forward"} 
+              name={activeStep === lastStep ? "checkmark-done" : "arrow-forward"} 
               size={16} 
-              color={activeStep === 7 ? T.white : T.ink} 
+              color={activeStep === lastStep ? T.white : T.ink} 
             />
           </TouchableOpacity>
         </View>

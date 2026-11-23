@@ -49,7 +49,7 @@ export default function ResumeStrength({ resume, onGoTo, compact = false, dark =
                   <Text style={styles.itemText} maxFontSizeMultiplier={M}>{m.text}</Text>
                   <Text style={styles.points} maxFontSizeMultiplier={M}>+{m.points}</Text>
                   {onGoTo ? (
-                    <TouchableOpacity onPress={() => { setOpen(false); onGoTo(m.step, m.key); }} accessibilityRole="button" accessibilityLabel={`go to field: ${m.text}`} hitSlop={6} style={styles.go}>
+                    <TouchableOpacity onPress={() => { setOpen(false); onGoTo(m.step, m.key, m.stepKey); }} accessibilityRole="button" accessibilityLabel={`go to field: ${m.text}`} hitSlop={6} style={styles.go}>
                       <Text style={styles.goText} maxFontSizeMultiplier={M}>go to field</Text>
                     </TouchableOpacity>
                   ) : null}
