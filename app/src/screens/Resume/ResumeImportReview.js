@@ -26,6 +26,7 @@ export default function ResumeImportReview() {
   const sections = Array.isArray(report.sections) ? report.sections : [];
   const filled = sections.filter((s) => s.status !== 'empty').length;
   const partial = report.status === 'partial';
+  const fromProfile = report.source === 'profile'; // P3-1: "build from my tdc profile"
 
   const openBuilder = (step) => navigation.replace
     ? navigation.replace('ResumeBuilder', { resumeId, step: step || 1 })
@@ -41,7 +42,9 @@ export default function ResumeImportReview() {
         <Text style={styles.line} maxFontSizeMultiplier={M}>
           {partial
             ? report.message || 'we couldn\'t read all of it, so we kept what we found. please fill in the rest.'
-            : 'we only copied what is in your file. nothing was added or rewritten.'}
+            : fromProfile
+              ? 'we only copied what is on your tdc account and profile. nothing was added or guessed.'
+              : 'we only copied what is in your file. nothing was added or rewritten.'}
         </Text>
 
         {sections.map((s) => {
@@ -61,6 +64,7 @@ export default function ResumeImportReview() {
                 <Text style={[styles.rowSub, { color: st.tint }]} maxFontSizeMultiplier={M}>
                   {st.text}{s.count > 1 ? ` · ${s.count} items` : ''}
                 </Text>
+                {!!s.note && <Text style={styles.rowSub} maxFontSizeMultiplier={M}>{s.note}</Text>}
               </View>
               <Ionicons name="chevron-forward" size={18} color={T.textMuted} />
             </TouchableOpacity>

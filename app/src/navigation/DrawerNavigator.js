@@ -230,6 +230,7 @@ const FULLSCREEN_SCREENS = [
   'ResumeSettings',
   'ResumeView',
   'ResumeImportReview',
+  'ResumeStart',
   'ResumeStudio',
   'JobDetails',
   'JobApplicationForm',
