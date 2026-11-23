@@ -1,0 +1,178 @@
+{
+ "resumes": {
+  "empty": {},
+  "basic": {
+   "personalInfo": {
+    "firstName": "Ayesha",
+    "lastName": "Khan",
+    "title": "HR Intern",
+    "email": "ayesha@x.co",
+    "phone": "0300",
+    "city": "Karachi"
+   },
+   "professionalSummary": {
+    "summary": "Final-year BBA student."
+   },
+   "education": [
+    {
+     "institution": "IBA",
+     "degree": "BBA",
+     "startDate": "2024-09-01T00:00:00.000Z",
+     "current": true,
+     "grade": "3.5/4"
+    }
+   ],
+   "skills": [
+    {
+     "name": "Excel"
+    },
+    "Canva"
+   ]
+  },
+  "full": {
+   "personalInfo": {
+    "firstName": "Bilal",
+    "lastName": "Ahmed",
+    "title": "Software Engineer",
+    "email": "b@x.co",
+    "phone": "0300",
+    "location": "Lahore",
+    "linkedin": "linkedin.com/in/bilal",
+    "github": "https://github.com/bilal",
+    "portfolio": "bilal.dev"
+   },
+   "professionalSummary": {
+    "summary": "Engineer.\n- builds apps"
+   },
+   "workExperience": [
+    {
+     "company": "Daraz",
+     "position": "Intern",
+     "location": "Karachi",
+     "startDate": "2024-09-01T00:00:00.000Z",
+     "endDate": "2025-01-01T00:00:00.000Z",
+     "description": "Worked on search.\n- fixed bugs",
+     "achievements": [
+      "shipped a feature"
+     ]
+    }
+   ],
+   "education": [
+    {
+     "institution": "NED",
+     "degree": "BE",
+     "fieldOfStudy": "Software",
+     "startDate": "2024-09-01T00:00:00.000Z",
+     "endDate": "2024-09-01T00:00:00.000Z",
+     "gpa": 3.4
+    }
+   ],
+   "projects": [
+    {
+     "name": "App",
+     "url": "app.com",
+     "githubUrl": "github.com/b/app",
+     "technologies": [
+      "React",
+      "Node"
+     ],
+     "startDate": "2024-09-01T00:00:00.000Z",
+     "description": "A campus app"
+    }
+   ],
+   "certifications": [
+    {
+     "name": "CCNA",
+     "organization": "Cisco",
+     "issueDate": "2024-09-01T00:00:00.000Z",
+     "credentialUrl": "cisco.com/x"
+    }
+   ],
+   "languages": [
+    {
+     "name": "Urdu",
+     "proficiency": "Native"
+    },
+    {
+     "name": "English"
+    }
+   ],
+   "achievements": [
+    "Dean's list"
+   ],
+   "otherNotes": "Hobbies: chess"
+  },
+  "ordered": {
+   "personalInfo": {
+    "firstName": "C"
+   },
+   "sectionOrder": [
+    "skills",
+    "projects"
+   ],
+   "skills": [
+    {
+     "name": "Go"
+    }
+   ],
+   "projects": [
+    {
+     "name": "P"
+    }
+   ],
+   "workExperience": [
+    {
+     "company": "X"
+    }
+   ]
+  },
+  "urdu": {
+   "personalInfo": {
+    "firstName": "عائشہ",
+    "lastName": "خان"
+   },
+   "education": [
+    {
+     "institution": "جامعہ کراچی"
+    }
+   ]
+  }
+ },
+ "hashes": {
+  "empty:modern_ats": "4af4523a46d961fa7aa341426c827daf1c74bbc66522ce594a48723717f5ceef",
+  "empty:stanford": "fc0ed8aee78c8160dc043958d8bddbebb48d32b8b1a79553564f5afebb4a6936",
+  "empty:jakes": "f1f8bb5f62149bebe02bd787513c2995fbd6449991ab213905fcec6bc82fdf56",
+  "empty:rezi": "85f29153b63d449d60936d80d2145cbae1e3f2346e706faaae01efb5907cb3aa",
+  "empty:faang": "a8a377c6d37bf5efe1c0fbb77dd6daeb37fd8339724abdb65505de67b92c465f",
+  "empty:modern": "4af4523a46d961fa7aa341426c827daf1c74bbc66522ce594a48723717f5ceef",
+  "empty:unknown": "4af4523a46d961fa7aa341426c827daf1c74bbc66522ce594a48723717f5ceef",
+  "basic:modern_ats": "5dc3a14305a72f55f246789477e9414637314616b95f94889e13680045090b3d",
+  "basic:stanford": "6d8c629e8180d57c6323177ba2cd46de5627f608a8fef61636e8397fcdb38b0f",
+  "basic:jakes": "7b1add7bc0aa345cc3b24ff880dbc3c53c49e62193856b38a4968a595f16a7fb",
+  "basic:rezi": "83ca1e3cc99daa44e18df35a1076efc3fc001b1c7a7d308e90e7730e1f039aa2",
+  "basic:faang": "063308583b7c51f73caff8d6f8b2f6d186f6f2162865f5f1407f2fdb6f0902f3",
+  "basic:modern": "5dc3a14305a72f55f246789477e9414637314616b95f94889e13680045090b3d",
+  "basic:unknown": "5dc3a14305a72f55f246789477e9414637314616b95f94889e13680045090b3d",
+  "full:modern_ats": "6372c6f6e11f99cfb3c3a90e4c96e46c2daed7ea9c9b53715143af96868279d1",
+  "full:stanford": "695223b3045f597e2405344e9c1e3afb5b86a1824086e305e96144de096e765b",
+  "full:jakes": "5ce8a40890cc80be20b75fa5d6bad0f7c5a2cd5f1e46a2b0e2b32698d963b2c3",
+  "full:rezi": "18e697fc1bc5cbdf888d4776a07de6aa93fe70a4feb0bedec4744280866da15c",
+  "full:faang": "d25af6c6ebc04e6c29df63e0379fd92f4f5c73eb86351681f63f45442d6f0023",
+  "full:modern": "6372c6f6e11f99cfb3c3a90e4c96e46c2daed7ea9c9b53715143af96868279d1",
+  "full:unknown": "6372c6f6e11f99cfb3c3a90e4c96e46c2daed7ea9c9b53715143af96868279d1",
+  "ordered:modern_ats": "6f7bb6453a3eee0a6ec730f435e2bbd73f66adf5cbfbb7145043f52f8fe99397",
+  "ordered:stanford": "ebc33e3047707356eadb24bf24c11ae862fe40ca708b552364ee4b79b24b8c54",
+  "ordered:jakes": "c198f14855737a771b54f27f93e40ebf927faf318bbf2d358d3ab0fe9e5b72b6",
+  "ordered:rezi": "e3a379c1378cbd7dbd1b660c0faac5e7f650f4e1e0af715b1a174f3ddc9f2fb9",
+  "ordered:faang": "c032af2c8238401c012cb2c07b7bc15f902e1cd5f58820bad0edcfaf47f21c68",
+  "ordered:modern": "6f7bb6453a3eee0a6ec730f435e2bbd73f66adf5cbfbb7145043f52f8fe99397",
+  "ordered:unknown": "6f7bb6453a3eee0a6ec730f435e2bbd73f66adf5cbfbb7145043f52f8fe99397",
+  "urdu:modern_ats": "04d0785f1b7814291429658b33cec561457364229f9621c2928694e80c767225",
+  "urdu:stanford": "31618ab691c647bf090e7ef9bf8d44dbe9c607e30c7c002d6fee3c2ea8a6f09c",
+  "urdu:jakes": "4ef8b537e2f25a5e81e57dfa5f8b80f6881e11cd94e92473ccd0d1de107427dd",
+  "urdu:rezi": "3b1e895330799a3a07a3e319e75ab4bc772e88d2a27477acd89a3f4a6342bfa6",
+  "urdu:faang": "d744c07fd5ebf260cf09070ecb304c8957a5df04cc14538539e39895061bbb38",
+  "urdu:modern": "04d0785f1b7814291429658b33cec561457364229f9621c2928694e80c767225",
+  "urdu:unknown": "04d0785f1b7814291429658b33cec561457364229f9621c2928694e80c767225"
+ }
+}

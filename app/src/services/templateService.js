@@ -5,6 +5,9 @@
 //   renderResumeHTML(resume, templateId, customStyles?) -> full HTML document
 //   TEMPLATES                                            -> [{ id, name, description }] for the picker
 //   canonicalTemplate(id)                                -> one of the five ids (old ids map to their closest)
+// P3-3: the fresher sections (activities, volunteering, awards, coursework) print only when they have content, in
+// the track's order (resume.settings.track "fresher": education and projects first, experience last). A resume
+// without them renders exactly as before (tests/app/resume-v2.test.js compares against the frozen output).
 
 export const TEMPLATES = [
   { id: 'modern_ats', name: 'Modern', description: 'clean sans-serif, coloured headings' },
@@ -118,6 +121,18 @@ function body(resume) {
   const certs = list(r.certifications).filter((c) => c && str(c.name)).map((c) => entry(esc(str(c.name)), esc(str(c.organization)), formatDate(c.issueDate), str(c.credentialUrl) ? `<p>${link(c.credentialUrl)}</p>` : '')).join('');
   const langs = list(r.languages).filter((l) => l && str(l.name)).map((l) => esc(str(l.name)) + (str(l.proficiency) ? ` (${esc(str(l.proficiency))})` : ''));
   const achievements = list(r.achievements).map(str).filter(Boolean);
+  // P3-3: societies / clubs / leadership and volunteering (same shape), awards, relevant coursework
+  const roleEntries = (items) => list(items).filter((a) => a && (str(a.organisation) || str(a.role))).map((a) => entry(
+    esc(str(a.role) || str(a.organisation)),
+    esc(str(a.role) ? str(a.organisation) : ''),
+    formatDateRange(a.startDate, a.endDate, a.current),
+    lines(a.description, list(a.bullets)),
+  )).join('');
+  const activities = roleEntries(r.activities);
+  const volunteering = roleEntries(r.volunteering);
+  const awards = list(r.awards).filter((a) => a && str(a.title)).map((a) => entry(esc(str(a.title)), esc(str(a.issuer)), formatDate(a.date), str(a.note) ? `<p dir="auto">${esc(str(a.note))}</p>` : '')).join('');
+  const coursework = list(r.coursework).map(str).filter(Boolean);
+  const eduWithCourses = edu + (coursework.length ? `<p class="coursework" dir="auto">Relevant coursework: ${coursework.map(esc).join(', ')}</p>` : '');
   const summary = str(r.professionalSummary?.summary);
 
   const workFirst = work.length > 0;
@@ -130,11 +145,14 @@ function body(resume) {
   ${section('Summary', summary ? `<p dir="auto">${esc(summary)}</p>` : '')}
   ${ordered(r, workFirst, {
     experience: section('Experience', work),
-    education: section('Education', edu),
+    education: section('Education', eduWithCourses),
     projects: section('Projects', projects),
     skills: section('Skills', skills.length ? `<p class="skills" dir="auto">${skills.map(esc).join(', ')}</p>` : ''),
     certifications: section('Certifications', certs),
     languages: section('Languages', langs.length ? `<p dir="auto">${langs.join(', ')}</p>` : ''),
+    activities: section('Leadership & Activities', activities),
+    volunteering: section('Volunteering', volunteering),
+    awards: section('Awards', awards),
   })}
   ${section('Achievements', achievements.length ? `<ul>${achievements.map((a) => `<li dir="auto">${esc(a)}</li>`).join('')}</ul>` : '')}
   ${section('Additional information', str(r.otherNotes) ? lines(r.otherNotes) : '')}`;
@@ -143,7 +161,12 @@ function body(resume) {
 // the sections in the order a tailored version chose (sectionOrder), else experience first when there is some
 function ordered(r, workFirst, html) {
   const chosen = Array.isArray(r.sectionOrder) ? r.sectionOrder.filter((k) => k in html) : [];
-  const fallback = workFirst ? ['experience', 'education', 'projects', 'skills', 'certifications', 'languages'] : ['education', 'experience', 'projects', 'skills', 'certifications', 'languages'];
+  // P3-3: the fresher track leads with what a student has; experience (optional) goes last. The new sections are
+  // empty strings on every older resume, so their order there changes nothing.
+  const fresher = r.settings?.track === 'fresher';
+  const fallback = fresher
+    ? ['education', 'projects', 'activities', 'volunteering', 'skills', 'awards', 'certifications', 'languages', 'experience']
+    : [...(workFirst ? ['experience', 'education', 'projects', 'skills', 'certifications', 'languages'] : ['education', 'experience', 'projects', 'skills', 'certifications', 'languages']), 'activities', 'volunteering', 'awards'];
   const order = [...chosen, ...fallback.filter((k) => !chosen.includes(k))];
   return order.map((k) => html[k]).join('');
 }
