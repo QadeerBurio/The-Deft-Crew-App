@@ -53,6 +53,7 @@ import { reportPushOpened } from "./app/src/utils/pushOpened";
 
 import GlobalNotificationLayer from "./app/src/components/GlobalNotificationLayer";
 import PushAskHost from "./app/src/push/PushAskHost";
+import AmbassadorInviteHost from "./app/src/crew/AmbassadorInviteHost";
 import AppAlertHost, { installAppAlert } from "./app/src/components/AppAlert";
 
 // Every Alert.alert in the app now shows the tdc styled popup
@@ -376,6 +377,8 @@ function AppContent() {
             <GlobalNotificationLayer />
             {/* N-3: "turn on notifications?" after a good moment (pushAskV2) */}
             <PushAskHost />
+            {/* P2-1: "be a tdc ambassador?" after a good moment (ambassadorV2; the server decides) */}
+            <AmbassadorInviteHost />
 
             <CelebrationHost />
             <TourOverlay />
