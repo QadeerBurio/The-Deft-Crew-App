@@ -19,6 +19,8 @@ import { ResumeContext } from "../../context/ResumeContext";
 import { getMyProfessionalProfile } from "../../api/profileApi";
 import { prefillFromProfile } from "../../resume/resumeV2";
 import { errorMessage } from "../../hooks/useAction";
+import useFlag from "../../hooks/useFlag";
+import { COACH_FLAG } from "../../resume/coach";
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
 
 const LIMIT_TITLE = "you already have 2 resumes";
@@ -29,6 +31,8 @@ const CARDS = [
   { key: "profile", icon: "person-circle-outline", title: "build from my tdc profile", line: "your name, contact, university and skills are already here. one tap." },
   { key: "fresh", icon: "create-outline", title: "start fresh", line: "a few quick steps, one card at a time." },
 ];
+// P3b (resumeCoach): a fourth way, "build it by chatting"
+const CHAT_CARD = { key: "chat", icon: "chatbubbles-outline", title: "build it by chatting", line: "answer a few questions. we write it, you check it." };
 
 export default function ResumeStart() {
   const navigation = useNavigation();
@@ -36,6 +40,8 @@ export default function ResumeStart() {
   const { createResume, creationsUsed = 0, fetchResumes } = useContext(ResumeContext) || {};
   const [asking, setAsking] = useState(null); // "profile" | "fresh" while the track question shows
   const [busy, setBusy] = useState(false);
+  const coachOn = useFlag(COACH_FLAG) === true;
+  const cards = coachOn ? [...CARDS, CHAT_CARD] : CARDS;
 
   const limit = () => { Alert.alert(LIMIT_TITLE, LIMIT_TEXT); };
 
@@ -47,6 +53,7 @@ export default function ResumeStart() {
 
   const withTrack = async (track) => {
     if (asking === "fresh") { navigation.replace("ResumeBuilder", { track }); return; }
+    if (asking === "chat") { navigation.replace("ResumeCoachChat", { track }); return; }
     setBusy(true);
     try {
       let profile = null;
@@ -77,7 +84,7 @@ export default function ResumeStart() {
             <Button title="back" variant="ghost" onPress={() => setAsking(null)} disabled={busy} style={{ marginTop: 6 }} />
           </View>
         ) : (
-          CARDS.map((c) => (
+          cards.map((c) => (
             <Card key={c.key} onPress={() => choose(c.key)} style={s.card} accessibilityRole="button" accessibilityLabel={`${c.title}. ${c.line}`} testID={`start-${c.key}`}>
               <View style={s.row}>
                 <View style={s.icon}><Ionicons name={c.icon} size={24} color={T.ink} /></View>
