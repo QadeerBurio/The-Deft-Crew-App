@@ -335,6 +335,32 @@ hook granted nothing when a mock server answered `/admin/me/access` with somethi
 `X-Device-Id` header failed the mocks' cross-origin preflight. Fixed (any non-access reply = every page as before; the
 device id goes in the login body), then 38/38.
 
+## Phase A follow-ups (owner, Phase A sign-off)
+
+| Item | What changed | Commit | Tests |
+|---|---|---|---|
+| lock-out on own sign-ins | `jobs.routes.js` and `auth.routes.js` sign in on their own and missed P0-6: suspended / banned accounts now refused there too (behind `accountStatusEnforce`; `accountStatus.lockOfId` reads the account only while the flag is configured) | SERVER `a01c3fca` | local-signin-lockout 10/10; SERVER 93/93 |
+| release/r2 | `release/r1` + `upgrade/phase-a`, all tests; `RELEASE-2.md` (portal before `FLAG_ADMIN_SESSIONS_V1`; a week of shadow mode before `FLAG_ADMIN_RBAC_ENFORCE`) | SERVER `7202857f`, APP `a8f2421`, ADMIN `e8ea924` | see RELEASE-2.md (h) |
+| geo-IP | owner: no package; hashed IP / device is enough | — | — |
+
+Backlog: in-page buttons follow permissions (polish phase).
+
+## P2 ambassador verification (read only, on upgrade/phase-a)
+
+| Plan | What the plan assumes | What the code has | Differs? |
+|---|---|---|---|
+| B1 | `PartnerApplication` exists, no student route to create one; review route only | as described: `models/PartnerApplication` (user unique, `university` **String**, why, handle, status, reviewNote); `POST /api/admin/crew/partners/applications/:appId/review` sets status (+ `EngagementProfile.partner` on approve), **no note, no push**; no student route | no (the note and push are planned work) |
+| B2 / B3 / B4 | phone-only "applied" key; web `/ambassador` mailto to hr@gettdc.pk; drawer item "the crew" | as described (`@tdc_ambassador_applied:<id>`, Google Form `forms.gle/…`; `Ambassador.js` mailto; drawer label "the crew") | no |
+| B5 / B6 / P2-4 | app `LEVELS` mirrors `config/badges.config.js`; level ids differ; read tiers from `/engagement/me` if it returns them | the file is `config/badges.js` (rookie → starter → silver 10% → gold 15% → platinum 20% → founder 25%, as the plan's tiers); `/engagement/me` returns `tiersIssued` + next-tier status, not the tier list; a **second** level list exists in `services/engagement/points.js` (member → deft rookie → main character → pro → goat → founder circle, by points) | small: two server level systems; the crew screen uses the badges one |
+| P2-1 | popups with `/ack`, tour gate; eligibility signals | `POST /api/engagement/popups/:id/ack` and `tourGate` (hold / release) exist; signals exist: referrals (`User.referredBy`), deal claims (`Offer.claimedBy`), level `starter` (`tiersIssued`; needs 1000 points + 10 referrals), confession `likes` | no |
+| P2-2 | intro cards; "a tiny animated mock (Lottie or Reanimated)"; "who's already in" = approved ambassadors at the student's university | Lottie and Reanimated are installed (no new package). Ambassadors' university is stored as **free text** (`PartnerApplication.university`, `EngagementProfile.partner.university`), not the university id | **yes, small**: the count needs the university id: store it (additive field) on new applications; older ambassadors counted by name match |
+| P2-3 | `POST /api/crew/applications`, `GET …/me`, `perUser('crew_apply')`, re-apply after 30 days, push + note on review | `utils/userRateLimit.perUser` exists; the model's unique `user` fits "update, never insert" | no |
+| P2-5 | dashboard: campaigns (`GET /api/crew/campaigns/me`), credentials with **PDF download**, "campus moment" photo + caption → Crew Inbox post | `Campaign` (name, brand, partner, followerPercent, startsAt, endsAt, cap, status) fits. **`Credential` has only `fileUrl`, and the admin route never sets it** (type + note only): there is no file to download. **Crew "posts" are `PartnerPost` = a link to a social post** (platform + url required, optional screenshot), not a photo + caption | **yes**: credentials need a generated certificate PDF (pdfkit is already used by `services/pdfService.js`) or "download" is hidden; campus moments need additive fields on `PartnerPost` (kind "moment", caption, image) or the link-based form |
+| P2-6 | drafts, close, label "the crew · ambassador" | nothing in the way | no |
+| P2-7 | **"+50 for you both" at signup** for every referral | the live rule (owner decision #6, updated in P1 follow-ups): referrer **+150**, new student **+100**, paid after the e-mail code with `referralVerifyGate` | **yes**: contradicts decision #6; the celebration copy must use the real amounts |
+| P2-7 | "bring your squad" mission in the existing missions system, weekly reset | the missions system (`services/engagement/missions.js`) is one-time "try this feature" cards (discounts, resume, jobs…), no weekly goals | **yes**: a weekly mission is a new small feature, not a mission config |
+| P2-7 | copy example "2 more friends to deft insider" | no level is called "deft insider" | small: the next real level name |
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |
