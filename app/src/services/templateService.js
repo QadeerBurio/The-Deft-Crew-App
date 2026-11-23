@@ -17,6 +17,7 @@
 //   skillSep (" · ")
 
 import { LIBRARY } from './templates/library';
+import { PALETTES, FONT_PAIRS, SIZES, DENSITY, MARGINS, HEADING_STYLES, MODEL_DEFAULT_COLOURS } from './templates/styles';
 
 export const TEMPLATES = [
   { id: 'modern_ats', name: 'Modern', description: 'clean sans-serif, coloured headings' },
@@ -85,6 +86,25 @@ const link = (u) => {
   return `<a href="${esc(href)}">${esc(t.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, ''))}</a>`;
 };
 
+// P3-6 customisation: dates as 01/2026, links as short labels (the defaults above are unchanged)
+const BASE_HELPERS = { formatDate, formatDateRange, link };
+const formatDateMM = (d) => {
+  const t = str(d);
+  const m = t.match(/^(\d{4})-(\d{2})(?:-(\d{2}))?(?:T.*)?$/);
+  if (!m) return t;
+  return t.length > 7 && m[2] === '01' && m[3] === '01' && /T00:00:00/.test(t) ? m[1] : `${m[2]}/${m[1]}`;
+};
+const SHORT_LABEL = [[/linkedin\.com/i, 'LinkedIn'], [/github\.com/i, 'GitHub'], [/behance\.net/i, 'Behance'], [/dribbble\.com/i, 'Dribbble']];
+const shortLink = (u) => {
+  const t = str(u);
+  if (!t) return '';
+  const href = /^https?:\/\//i.test(t) ? t : `https://${t}`;
+  const label = (SHORT_LABEL.find(([re]) => re.test(t)) || [null, 'Portfolio'])[1];
+  return `<a href="${esc(href)}">${label}</a>`;
+};
+// hidden sections: a copy of the resume without them (the section code stays the same)
+const HIDE = { summary: (r) => ({ ...r, professionalSummary: { ...(r.professionalSummary || {}), summary: '' } }), experience: (r) => ({ ...r, workExperience: [] }), education: (r) => ({ ...r, education: [], coursework: [] }), projects: (r) => ({ ...r, projects: [] }), skills: (r) => ({ ...r, skills: [] }), certifications: (r) => ({ ...r, certifications: [] }), languages: (r) => ({ ...r, languages: [] }), activities: (r) => ({ ...r, activities: [] }), volunteering: (r) => ({ ...r, volunteering: [] }), awards: (r) => ({ ...r, awards: [] }), achievements: (r) => ({ ...r, achievements: [] }) };
+
 // a description: lines starting with -, • or * become bullets, other lines stay paragraphs
 const lines = (text, extra = []) => {
   const all = [...str(text).split(/\n+/), ...list(extra)].map(str).filter(Boolean);
@@ -107,7 +127,12 @@ const entry = (title, sub, date, body) => `
 const section = (title, inner) => (inner ? `<section><h2>${esc(title)}</h2>${inner}</section>` : '');
 
 function body(resume, look = {}) {
-  const r = resume || {};
+  let r = resume || {};
+  for (const k of look.hidden || []) if (HIDE[k]) r = HIDE[k](r);
+  if (look.sectionOrder && !Array.isArray(r.sectionOrder)) r = { ...r, sectionOrder: look.sectionOrder };
+  const formatDate = look.dateFormat === 'mm/yyyy' ? formatDateMM : BASE_HELPERS.formatDate;
+  const formatDateRange = look.dateFormat === 'mm/yyyy' ? (a0, b0, cur) => { const a = formatDate(a0); const b = cur ? 'Present' : formatDate(b0); return a && b ? `${a} – ${b}` : a || b || ''; } : BASE_HELPERS.formatDateRange;
+  const link = look.linkStyle === 'short' ? shortLink : BASE_HELPERS.link;
   const H = (k, d) => (look.headings && look.headings[k]) || d;
   const pi = r.personalInfo || {};
   const name = [str(pi.firstName), str(pi.lastName)].filter(Boolean).join(' ');
@@ -154,7 +179,7 @@ function body(resume, look = {}) {
 
   const workFirst = work.length > 0;
   return `
-  <header>
+  <header>${look.photoUrl ? `<img class="photo" src="${esc(look.photoUrl)}" alt="">` : ''}
     <h1 dir="auto">${esc(name || 'Your name')}</h1>
     ${title ? `<div class="title" dir="auto">${esc(title)}</div>` : ''}
     ${contact.length ? `<div class="contact">${contact.join('<span class="sep"> | </span>')}</div>` : ''}
@@ -246,20 +271,61 @@ function extras(look, { accent, heading, text }) {
     'short-rule': `h2 { border-bottom: none; color: ${accent}; letter-spacing: 0.1em; font-size: ${look.size + 0.5}pt; } h2::after { content: ''; display: block; width: 36px; border-bottom: 2px solid ${accent}; margin-top: 3px; }`,
   }[look.h2x];
   if (h2x) out.push(h2x);
+  if (look.h2x === 'none') out.push('h2 { border: none; padding: 0; }');
+  if (look.h2case === 'title') out.push('h2 { text-transform: none; letter-spacing: 0.01em; }');
+  if (look.pageSize === 'Letter') out.push('@page { size: Letter; }');
+  if (look.photoUrl) out.push(`header .photo { float: right; width: 72px; height: 72px; object-fit: cover; margin: 0 0 6px 12px; border-radius: ${{ circle: '50%', rounded: '10px', square: '0' }[look.photoShape] || '50%'}; }`);
   if (look.dateAccent) out.push(`.d { color: ${accent}; font-weight: 600; }`);
   if (look.subPlain) out.push(`.sub { font-style: normal; color: ${text}; opacity: 0.85; }`);
   return out.length ? `\n  ${out.join('\n  ')}` : '';
 }
 
+/**
+ * The student's customisation (P3-6) on top of the template's theme. With none of the studio's keys, the theme comes
+ * back unchanged (the five render exactly as before). Library templates read the model's default colours as "not
+ * chosen", so their own colours show.
+ */
+export function customise(look, styles = {}, { library = false, resume } = {}) {
+  const st = styles || {};
+  const keys = ['palette', 'fontPair', 'size', 'density', 'margins', 'headingCase', 'headingStyle', 'sectionOrder', 'hiddenSections', 'headings', 'photo', 'dateFormat', 'pageSize', 'linkStyle'];
+  const colours = { ...st };
+  if (library) for (const [k, v] of Object.entries(MODEL_DEFAULT_COLOURS)) if (str(colours[k]).toUpperCase() === v) delete colours[k];
+  const pal = PALETTES.find((x) => x.id === st.palette);
+  if (pal) { delete colours.accentColor; delete colours.headingColor; delete colours.textColor; }
+  if (!keys.some((k) => st[k] !== undefined && st[k] !== null) && !library) return { look, styles: st };
+  const l = { ...look };
+  if (pal) Object.assign(l, { accent: pal.accent, heading: pal.heading, text: pal.text });
+  const fp = FONT_PAIRS.find((x) => x.id === st.fontPair);
+  if (fp) Object.assign(l, { body: fp.body, head: fp.head, fontPair: fp.id });
+  if (SIZES[st.size]) { l.size = look.size + SIZES[st.size]; l.nameSize = look.nameSize + SIZES[st.size] * 2; }
+  if (DENSITY[st.density] && st.density !== 'normal') { l.gap = Math.round(look.gap * DENSITY[st.density].gap); l.line = Math.round(look.line * DENSITY[st.density].line * 100) / 100; }
+  if (MARGINS[st.margins]) l.margin = MARGINS[st.margins];
+  if (st.headingCase === 'title') l.h2case = 'title';
+  if (HEADING_STYLES[st.headingStyle]) l.h2x = HEADING_STYLES[st.headingStyle];
+  if (Array.isArray(st.hiddenSections) && st.hiddenSections.length) l.hidden = st.hiddenSections;
+  if (Array.isArray(st.sectionOrder) && st.sectionOrder.length) l.sectionOrder = st.sectionOrder;
+  if (st.headings && typeof st.headings === 'object') l.headings = { ...(look.headings || {}), ...st.headings };
+  const photo = str(resume?.personalInfo?.photoUrl);
+  if (st.photo && st.photo.on && /^https:\/\//i.test(photo)) { l.photoUrl = photo; l.photoShape = st.photo.shape; }
+  if (st.dateFormat === 'mm/yyyy') l.dateFormat = 'mm/yyyy';
+  if (st.pageSize === 'Letter') l.pageSize = 'Letter';
+  if (st.linkStyle === 'short') l.linkStyle = 'short';
+  return { look: l, styles: colours };
+}
+
 export const renderResumeHTML = (resume, templateId, customStyles = {}, _isPrinting = false, opts = {}) => {
-  const { id, look } = templateOf(templateId);
+  const base = templateOf(templateId);
+  const library = LIBRARY.some((t) => t.id === base.id);
+  const chosen = customStyles || resume?.customStyles || {};
+  const { look, styles: cleanStyles } = customise(base.look, chosen, { library, resume });
+  const id = base.id;
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=794">
 <title>${esc([str(resume?.personalInfo?.firstName), str(resume?.personalInfo?.lastName)].filter(Boolean).join(' ') || 'Resume')} Resume</title>
-<style>${opts.fontCss || ''}${css(look, customStyles || resume?.customStyles || {})}</style>
+<style>${opts.fontCss || ''}${css(look, library || look !== base.look ? cleanStyles : customStyles || resume?.customStyles || {})}</style>
 </head>
 <body data-template="${id}"><main class="page">${body(resume, look)}</main></body>
 </html>`;
