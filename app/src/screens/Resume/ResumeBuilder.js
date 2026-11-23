@@ -806,7 +806,7 @@ const ResumeBuilderScreen = () => {
 
   const getTargetRoleFallback = () => {
     const roles = currentResume?.targetJobs || [];
-    return roles.map(r => r.jobTitle).join(', ') || currentResume?.targetJob?.jobTitle || 'Software Engineer';
+    return roles.map(r => r.jobTitle).join(', ') || currentResume?.targetJob?.jobTitle || ''; // P3 #7: no assumed role
   };
 
   // ============================================================
