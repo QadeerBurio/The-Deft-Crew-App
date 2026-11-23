@@ -26,8 +26,8 @@ if (fs.existsSync(authRoutes)) {
   const a = fs.readFileSync(authRoutes, "utf8");
   const i = a.indexOf('router.get("/profile/me"');
   const body = a.slice(i, a.indexOf("\n});", i));
-  ok(i > 0 && /authMiddleware/.test(body) && /res\.json\(userData\)/.test(body) && /\.\.\.user\.toObject\(\)/.test(body) && /select\("-password"\)/.test(body),
-    "server: GET /api/auth/profile/me exists, needs a login, replies with the user (no password)");
+  ok(i > 0 && /authMiddleware/.test(body) && /res\.json\(userData\)/.test(body) && /\.\.\.\(require\("\.\.\/utils\/safeRecord"\)\.safeRecord\(user\.toObject\(\)\)\)/.test(body) && /select\("-password"\)/.test(body),
+    "server: GET /api/auth/profile/me exists, needs a login, replies with the user in the safe shape (no password, secrets or ID cards)");
 } else ok(false, "server repo available for the route check", authRoutes);
 
 // ── 2. keyboard ──
