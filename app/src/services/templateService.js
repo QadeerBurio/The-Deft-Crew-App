@@ -261,17 +261,19 @@ function extras(look, { accent, heading, text }) {
   if (look.band) out.push(`header { background: ${accent}; color: #ffffff; padding: 14px 16px 12px; border-radius: 6px; }`, 'header h1, header .title, header .contact, header .contact a { color: #ffffff; }', 'header .sep { opacity: 0.8; }');
   if (look.nameAccent && !look.band) out.push(`h1 { color: ${accent}; }`);
   if (look.second) out.push(`h2 { color: ${second}; }`);
+  // heading letter-spacing stays small (≤ 0.06em): wider spacing comes out of the PDF as "E D U C A T I O N", which
+  // job portals can't read (tests/app/resume-ats.test.js)
   const h2x = {
-    'bar-left': `h2 { border-bottom: none; border-left: 4px solid ${accent}; padding: 0 0 0 8px; }`,
-    'caps-spaced': `h2 { border-bottom: none; color: ${accent}; letter-spacing: 0.18em; font-size: ${look.size + 0.5}pt; }`,
-    'thin-rule': `h2 { border-bottom: 0.75px solid ${look.second || '#CBD5E1'}; padding-bottom: 2px; }`,
+    'bar-left': `h2 { border-bottom: none; border-left: 4px solid ${accent}; padding: 0 0 0 8px; letter-spacing: 0.02em; }`,
+    'caps-spaced': `h2 { border-bottom: none; color: ${accent}; letter-spacing: 0.05em; font-size: ${look.size + 0.5}pt; }`,
+    'thin-rule': `h2 { border-bottom: 0.75px solid ${look.second || '#CBD5E1'}; padding-bottom: 2px; letter-spacing: 0.02em; }`,
     'smallcaps-rule': `h2 { text-transform: none; font-variant: small-caps; letter-spacing: 0.06em; color: ${heading}; border-bottom: 1px solid ${heading}; padding-bottom: 1px; font-size: ${look.size + 2}pt; }`,
-    'underline-accent': `h2 { display: inline-block; border-bottom: 2.5px solid ${accent}; padding-bottom: 1px; }`,
+    'underline-accent': `h2 { display: inline-block; border-bottom: 2.5px solid ${accent}; padding-bottom: 1px; letter-spacing: 0.02em; }`,
     // a short accent line under the heading (no full-width rule): Scholar
-    'short-rule': `h2 { border-bottom: none; color: ${accent}; letter-spacing: 0.1em; font-size: ${look.size + 0.5}pt; } h2::after { content: ''; display: block; width: 36px; border-bottom: 2px solid ${accent}; margin-top: 3px; }`,
+    'short-rule': `h2 { border-bottom: none; color: ${accent}; letter-spacing: 0.06em; font-size: ${look.size + 0.5}pt; } h2::after { content: ''; display: block; width: 36px; border-bottom: 2px solid ${accent}; margin-top: 3px; }`,
   }[look.h2x];
   if (h2x) out.push(h2x);
-  if (look.h2x === 'none') out.push('h2 { border: none; padding: 0; }');
+  if (look.h2x === 'none') out.push('h2 { border: none; padding: 0; letter-spacing: 0.02em; }');
   if (look.h2case === 'title') out.push('h2 { text-transform: none; letter-spacing: 0.01em; }');
   if (look.pageSize === 'Letter') out.push('@page { size: Letter; }');
   if (look.photoUrl) out.push(`header .photo { float: right; width: 72px; height: 72px; object-fit: cover; margin: 0 0 6px 12px; border-radius: ${{ circle: '50%', rounded: '10px', square: '0' }[look.photoShape] || '50%'}; }`);

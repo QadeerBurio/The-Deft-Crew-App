@@ -1,0 +1,79 @@
+// P3-6 §4: the ATS-safe badge, tested on the real PDF (owner #2: puppeteer as a devDependency). For every template
+// (the five + the library) and two resumes (the SAMPLE fresher and an experienced one), Chrome prints the PDF and
+// pdftotext (xpdf / poppler: how most portals read PDFs) extracts the text. A template earns "ATS-safe" when the name,
+// e-mail, phone, every section heading and every entry title come out, in the order of the document (two columns
+// would interleave). The library's badges (library.js `ats`) must match what this finds.
+// Needs Chrome / Edge and pdftotext on the machine; skips (with a note) when either is missing.
+//   node tests/app/resume-ats.test.js
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+const { execFileSync } = require("child_process");
+const H = require("./harness");
+const { ok, done } = H.counter();
+
+const pdftotext = (() => { for (const c of [process.env.PDFTOTEXT, "pdftotext", "C:/Program Files/Git/mingw64/bin/pdftotext.exe", "/usr/bin/pdftotext", "/opt/homebrew/bin/pdftotext"]) { if (!c) continue; try { execFileSync(c, ["-v"], { stdio: "pipe" }); return c; } catch (e) { if (/pdftotext version/i.test(String(e.stderr || "") + String(e.stdout || ""))) return c; /* xpdf exits 99 on -v */ } } return null; })();
+
+const EXPERIENCED = {
+  personalInfo: { firstName: "Bilal", lastName: "Sample", title: "Software Engineer", email: "bilal.sample@example.com", phone: "+92 300 1111111", city: "Lahore", linkedin: "linkedin.com/in/bilal-sample" },
+  professionalSummary: { summary: "Engineer with two years of backend work on payments and search." },
+  workExperience: [
+    { company: "Sample Payments", position: "Backend Engineer", startDate: "2024-07-15T00:00:00.000Z", current: true, achievements: ["Built the refunds service", "Cut checkout errors by a third"] },
+    { company: "Sample Labs", position: "Software Intern", startDate: "2023-06-15T00:00:00.000Z", endDate: "2023-08-15T00:00:00.000Z", achievements: ["Wrote the search indexer"] },
+  ],
+  education: [{ institution: "Sample University", degree: "BS", fieldOfStudy: "Computer Science", startDate: "2019-09-15T00:00:00.000Z", endDate: "2023-06-15T00:00:00.000Z" }],
+  projects: [{ name: "Budget Bot", technologies: ["Node.js"], description: "- A chat bot for monthly budgets" }],
+  skills: ["Node.js", "PostgreSQL", "Redis", "Docker"].map((name) => ({ name })),
+  certifications: [{ name: "AWS Cloud Practitioner", organization: "Amazon", issueDate: "2024-01-15T00:00:00.000Z" }],
+  languages: [{ name: "English", proficiency: "Fluent" }],
+};
+
+(async () => {
+  const { executable, launch } = require("../templates/browser");
+  if (!executable() || !pdftotext) {
+    console.log(`   skipped: ${!executable() ? "no Chrome / Edge" : "no pdftotext (poppler)"} on this machine`);
+    ok(true, "ATS test skipped on this machine (not a pass mark)");
+    return done();
+  }
+  const svc = H.loader({})(path.join(H.SRC, "services/templateService.js"));
+  const { LIBRARY, OLD_BADGES } = H.loader({})(path.join(H.SRC, "services/templates/library.js"));
+  const { FRESHER_SAMPLE } = require("../templates/sample");
+  const ids = [...svc.TEMPLATES.map((t) => t.id), ...LIBRARY.map((t) => t.id)];
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "tdc-ats-"));
+  const browser = await launch();
+  const page = await browser.newPage();
+  const norm = (s) => s.replace(/\s+/g, " ").replace(/[‐-―]/g, "-").toLowerCase();
+  const results = {};
+  for (const id of ids) {
+    let safe = true;
+    const why = [];
+    for (const [label, resume] of [["fresher", FRESHER_SAMPLE], ["experienced", EXPERIENCED]]) {
+      const html = svc.renderResumeHTML(resume, id);
+      await page.setContent(html, { waitUntil: "load" });
+      const file = path.join(tmp, `${id}-${label}.pdf`);
+      await page.pdf({ path: file, format: "A4", printBackground: true, preferCSSPageSize: true });
+      const text = norm(execFileSync(pdftotext, ["-enc", "UTF-8", file, "-"]).toString("utf8"));
+      // what must come out, in document order: name, contact, then each heading and each entry title as the HTML has them
+      const expected = await page.evaluate(() => [...document.querySelectorAll("h1, .contact, h2, .entry .t")].map((e) => e.innerText.replace(/\s+/g, " ").trim()).filter(Boolean));
+      let at = -1;
+      for (const want of expected) {
+        const needle = norm(want).slice(0, 28);
+        const i = text.indexOf(needle, at + 1);
+        if (i < 0) { safe = false; why.push(`${label}: "${want.slice(0, 30)}" missing or out of order`); break; }
+        at = i;
+      }
+      for (const must of [resume.personalInfo.email, resume.personalInfo.phone]) if (!text.includes(norm(must))) { safe = false; why.push(`${label}: ${must} missing`); }
+    }
+    results[id] = { safe, why };
+    const old = svc.TEMPLATES.some((t) => t.id === id);
+    // the five older templates: their recorded result (OLD_BADGES) must still be what the PDF shows; Minimal (rezi)
+    // is recorded as not safe (letter-spaced headings), reported to the owner, so a change either way is noticed
+    if (old) ok((OLD_BADGES[id] === "safe") === safe, `${id} (older): ${safe ? "ATS-safe" : "not ATS-safe"}, as recorded`, why.join(" | "));
+    else ok(safe, `${id}: ATS-safe (name, contact, every heading and entry in reading order, both resumes)`, why.join(" | "));
+  }
+  await browser.close();
+  fs.rmSync(tmp, { recursive: true, force: true });
+  const wrong = LIBRARY.filter((t) => (t.ats === "safe") !== results[t.id].safe).map((t) => `${t.id}: says ${t.ats}, test ${results[t.id].safe ? "safe" : "not safe"}`);
+  ok(LIBRARY.every((t) => t.ats === "safe" || t.ats === "design") && wrong.length === 0, "every library template's badge matches the test", wrong.join(", "));
+  done();
+})().catch((e) => { console.error(e); process.exit(1); });
