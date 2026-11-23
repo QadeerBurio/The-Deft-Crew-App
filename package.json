@@ -115,6 +115,7 @@
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "patch-package": "^8.0.1",
+    "puppeteer": "24.43.1",
     "typescript": "~5.9.2"
   },
   "expo": {
