@@ -43,6 +43,7 @@ import { useTour } from "../engagement/tour/TourProvider";
 import { perfMark } from "../lib/perf";
 import { hydrateQuery, writeHomeCache, pruneHomeCache } from "../lib/homeCache";
 import { navigateAnywhere } from "../navigation/routes";
+import CrewDailyCard from "../crew/CrewDailyCard";
 
 // The latest-confession section (HomeCampus) is commented out below; while it is, its
 // request (the whole confessions feed) does not run. Set true together with the section.
@@ -418,6 +419,9 @@ export default function Home({ navigation }) {
               <DailyDropCard variant="home" />
             </FadeInView>
           )}
+
+          {/* P2-7: an ambassador's campaign to share today (ambassadorV2; nothing without a real campaign) */}
+          {signedIn && <CrewDailyCard />}
 
           {/* {signedIn && !!latestConfession && (
             <FadeInView delay={100}>

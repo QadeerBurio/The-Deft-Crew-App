@@ -54,6 +54,8 @@ import { funnel } from '../analytics/funnel';
 import { LEVELS } from './crew/levels';
 import { SkeletonLoader, HeroPointsCard, MembersCard, LevelCard, FounderApplyBanner } from './crew/PointsCards';
 import { styles } from './crew/pointsStyles';
+import SquadCard from '../crew/SquadCard';
+import { myApplication } from '../crew/crew';
 const { width } = Dimensions.get('window');
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -77,31 +79,53 @@ const AMBASSADOR_KEY = (userId) => `@tdc_ambassador_applied:${userId}`;
 // ═══════════════════════════════════════════════════════════════════════
 // "join as ambassador": the download card's own container (same width and look) as one
 // pressable row, icon box like the store buttons'. Disabled look once applied.
-const AmbassadorCard = memo(({ applied, onPress }) => (
+// P2 (ambassadorV2, `live`): always opens the in-app programme: the hub once approved, the application's status once
+// applied, the intro otherwise. Without `live` (flag off): exactly as before (the Google Form, disabled once applied).
+const AmbassadorCard = memo(({ applied: appliedOnPhone, onPress, hub = false, live = false }) => {
+  if (live && hub) {
+    return (
+      <PressScale onPress={onPress} scaleTo={0.98} style={[styles.downloadCard, styles.ambassadorCard]} accessibilityRole="button" accessibilityLabel="your ambassador hub">
+        <View style={[styles.storeIconBox, styles.ambassadorIcon]}>
+          <Ionicons name="megaphone-outline" size={20} color={T.yellow} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.downloadTitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+            your ambassador hub<Text style={{ color: T.yellow }}>.</Text>
+          </Text>
+          <Text style={styles.ambassadorSub} maxFontSizeMultiplier={MAX_FONT_SCALE}>invites, campaigns and credentials.</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={T.ink} />
+      </PressScale>
+    );
+  }
+  const applied = appliedOnPhone && !live;
+  const shownApplied = appliedOnPhone;
+  return (
   <PressScale
     onPress={applied ? undefined : onPress}
     disabled={applied}
     scaleTo={0.98}
-    style={[styles.downloadCard, styles.ambassadorCard, applied && styles.ambassadorApplied]}
+    style={[styles.downloadCard, styles.ambassadorCard, shownApplied && styles.ambassadorApplied]}
     accessibilityRole="button"
     accessibilityState={{ disabled: !!applied }}
-    accessibilityLabel={applied ? 'applied as ambassador' : 'join as ambassador, opens the application form'}
+    accessibilityLabel={shownApplied ? (live ? 'applied as ambassador, see your application' : 'applied as ambassador') : live ? 'join as ambassador' : 'join as ambassador, opens the application form'}
   >
-    <View style={[styles.storeIconBox, styles.ambassadorIcon, applied && styles.ambassadorIconApplied]}>
-      <Ionicons name={applied ? 'checkmark' : 'megaphone-outline'} size={20} color={applied ? T.textFaint : T.yellow} />
+    <View style={[styles.storeIconBox, styles.ambassadorIcon, shownApplied && styles.ambassadorIconApplied]}>
+      <Ionicons name={shownApplied ? 'checkmark' : 'megaphone-outline'} size={20} color={shownApplied ? T.textFaint : T.yellow} />
     </View>
     <View style={{ flex: 1 }}>
-      <Text style={[styles.downloadTitle, applied && { color: T.textFaint }]} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-        {applied ? 'applied' : 'join as ambassador'}
-        {!applied && <Text style={{ color: T.yellow }}>.</Text>}
+      <Text style={[styles.downloadTitle, shownApplied && { color: T.textFaint }]} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+        {shownApplied ? 'applied' : 'join as ambassador'}
+        {!shownApplied && <Text style={{ color: T.yellow }}>.</Text>}
       </Text>
       <Text style={styles.ambassadorSub} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-        {applied ? "we'll be in touch." : 'bring the crew to your campus.'}
+        {shownApplied ? (live ? 'see your application.' : "we'll be in touch.") : 'bring the crew to your campus.'}
       </Text>
     </View>
     {!applied && <Ionicons name="chevron-forward" size={18} color={T.ink} />}
   </PressScale>
-));
+  );
+});
 
 const DownloadCard = memo(({ referralCode, style }) => {
   const buildIosLink = () =>
@@ -175,6 +199,27 @@ const PointsScreen = () => {
   // this student's own applied flag; another account (or a guest) never sees it
   const ambassadorUserId = token ? user?._id || user?.id || null : null;
   const [ambassadorApplied, setAmbassadorApplied] = useState(false);
+  // P2 (ambassadorV2): the in-app programme replaces the Google Form; the status comes from the server
+  const ambassadorV2 = useFlag(FLAGS.ambassadorV2) === true;
+  const [crewStatus, setCrewStatus] = useState(null);
+  const readCrewStatus = useCallback(() => {
+    if (!ambassadorV2 || !ambassadorUserId) {
+      setCrewStatus(null);
+      return undefined;
+    }
+    let alive = true;
+    myApplication().then((s) => alive && setCrewStatus(s?.status || null)).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [ambassadorV2, ambassadorUserId]);
+  useFocusEffect(readCrewStatus);
+  const onAmbassadorPress = useCallback(() => {
+    if (!ambassadorV2) return setAmbassadorFormOpen(true);
+    if (crewStatus === 'approved') return navigation.navigate('AmbassadorHub');
+    if (crewStatus === 'pending' || crewStatus === 'rejected') return navigation.navigate('AmbassadorApply');
+    return navigation.navigate('AmbassadorIntro');
+  }, [ambassadorV2, crewStatus, navigation]);
   const readAmbassador = useCallback(() => {
     if (!ambassadorUserId) {
       setAmbassadorApplied(false);
@@ -295,13 +340,15 @@ const PointsScreen = () => {
       const msg = growth && referralCode ? inviteMessage(referralCode, 'direct') :
         `join the crew.\n\n` +
         `use my code: ${referralCode || 'TDC'}\n\n` +
-        `friend joins: you get +50. friend sorts a card: +100 more.\n\n` +
+        (ambassadorV2
+          ? `your friend gets 100 points and you get 150 when they join and verify their email.\n\n`
+          : `friend joins: you get +50. friend sorts a card: +100 more.\n\n`) +
         `${getShareLink()}`;
       await Share.share({ message: msg, title: 'The Deft Crew' });
     } catch (e) {
       if (e.message !== 'User did not share') Alert.alert('Error', plainError(e, "Couldn't open sharing. Please try again."));
     }
-  }, [referralCode, getShareLink, shareScale, growth]);
+  }, [referralCode, getShareLink, shareScale, growth, ambassadorV2]);
 
   // P1 (growthV2): WhatsApp first (most used in Pakistan); without WhatsApp, the normal share sheet
   const onShareWhatsApp = useCallback(async () => {
@@ -445,8 +492,13 @@ const PointsScreen = () => {
 
               <View style={styles.earnList}>
                 {[
-                  { mood: 'cheeky', label: 'a friend joins with your code', value: '+50' },
-                  { mood: 'hype', label: 'they sort their first card', value: '+100 each' },
+                  // P2 (growthV2 / ambassadorV2): the real amount, paid when the friend verifies their email
+                  ...(growth || ambassadorV2
+                    ? [{ mood: 'cheeky', label: 'a friend joins and verifies their email', value: '+150' }]
+                    : [
+                      { mood: 'cheeky', label: 'a friend joins with your code', value: '+50' },
+                      { mood: 'hype', label: 'they sort their first card', value: '+100 each' },
+                    ]),
                   { mood: 'sorted', label: 'each mission you sort', value: '+50' },
                   { mood: 'excited', label: '7 / 30 / 100 day streak', value: '+50 / +250 / +1,000' },
                 ].map((row, i) => (
@@ -485,11 +537,16 @@ const PointsScreen = () => {
 
             {applyAvailable && <FounderApplyBanner onApply={handleFounderApply} />}
 
-            {AMBASSADOR_FORM_READY && (
+            {/* P2-7: the weekly squad (squadMission; nothing until the server answers) */}
+            <SquadCard style={{ marginHorizontal: 16, marginTop: 16 }} />
+
+            {ambassadorV2 ? (
+              <AmbassadorCard live applied={ambassadorApplied || crewStatus === 'pending' || crewStatus === 'rejected'} hub={crewStatus === 'approved'} onPress={onAmbassadorPress} />
+            ) : AMBASSADOR_FORM_READY && (
               <AmbassadorCard applied={ambassadorApplied} onPress={() => setAmbassadorFormOpen(true)} />
             )}
             {/* 12 apart when the ambassador card sits above it, so the two read as a pair */}
-            <DownloadCard referralCode={referralCode} style={AMBASSADOR_FORM_READY ? styles.downloadAfterAmbassador : null} />
+            <DownloadCard referralCode={referralCode} style={AMBASSADOR_FORM_READY || ambassadorV2 ? styles.downloadAfterAmbassador : null} />
 
             <Text style={styles.footerNote}>
               <Ionicons name="information-circle-outline" size={13} color={T.yellow} />{' '}
