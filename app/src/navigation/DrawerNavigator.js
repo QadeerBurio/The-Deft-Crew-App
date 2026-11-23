@@ -152,6 +152,12 @@ const DigitalBadgeScreen = accountOnly(DigitalBadgeScreenBase, { title: "digital
 import MainCharacterScreen from '../components/MainCharacterScreen';
 import DeftProScreen from '../components/DeftProScreen';
 import FounderCircleScreen from '../components/FounderCircleScreen';
+// P2 (flag ambassadorV2): the ambassador programme's screens (reached only from flagged entry points)
+import AmbassadorIntro from '../screens/Crew/AmbassadorIntro';
+import AmbassadorApply from '../screens/Crew/AmbassadorApply';
+import AmbassadorHub from '../screens/Crew/AmbassadorHub';
+import useFlag from '../hooks/useFlag';
+import { FLAGS } from '../api/upgradeFlags';
 import CreatePostScreenBase from '../screens/Social/CreatePostScreen';
 const CreatePostScreen = accountOnly(CreatePostScreenBase, { title: "new post" });
 import ChangePasswordBase from '../screens/Social/ChangePassword';
@@ -501,6 +507,9 @@ function CustomDrawerContent(props) {
   const { logout, isGuest } = useContext(AuthContext);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [activeRoute, setActiveRoute] = useState('HomeTabs');
+  // P2 (ambassadorV2): the crew row reads "the crew · ambassador" (same route, same key)
+  const ambassadorOn = useFlag(FLAGS.ambassadorV2) === true;
+  const labelOf = (item) => (ambassadorOn && item.route === 'Points' ? 'the crew · ambassador' : item.label).toLowerCase();
 
   // Highlight the item for the screen that is really open
   // (Points, About, etc. live inside the HomeTabs stack, so the drawer's own
@@ -634,7 +643,7 @@ function CustomDrawerContent(props) {
             return (
               <AnimatedDrawerItem
                 key={item.label}
-                label={item.label.toLowerCase()}
+                label={labelOf(item)}
                 icon={item.icon}
                 delay={delay}
                 isActive={isActive}
@@ -1298,6 +1307,9 @@ function HomeStackNavigator() {
       <Stack.Screen name="MainCharacter" component={MainCharacterScreen} />
       <Stack.Screen name="DeftPro" component={DeftProScreen} />
       <Stack.Screen name="FounderCircle" component={FounderCircleScreen} />
+      <Stack.Screen name="AmbassadorIntro" component={AmbassadorIntro} />
+      <Stack.Screen name="AmbassadorApply" component={AmbassadorApply} />
+      <Stack.Screen name="AmbassadorHub" component={AmbassadorHub} />
       <Stack.Screen name="SocialStack" component={SocialStackNavigator} />
       <Stack.Screen name="Social" component={Social} />
       <Stack.Screen name="Messages" component={Social} />
