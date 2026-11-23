@@ -46,7 +46,8 @@ export const LIBRARY = [
   },
   {
     id: 'scholar', name: 'Scholar', collection: 'fresher', description: 'academic: education, awards and research first',
-    look: { ...BASE, body: SERIF, head: SERIF, nameSize: 22, align: 'center', h2x: 'smallcaps-rule', accent: '#1F2937', heading: '#111111', text: '#222222',
+    // owner: distinct from Harvard: a short burgundy line under letter-spaced headings, the name in burgundy
+    look: { ...BASE, body: SERIF, head: SERIF, nameSize: 22, align: 'center', h2x: 'short-rule', nameAccent: true, accent: '#7F1D1D', heading: '#111111', text: '#222222',
       order: ['education', 'awards', 'projects', 'activities', 'volunteering', 'skills', 'languages', 'certifications', 'experience'],
       headings: { projects: 'Research & Projects', awards: 'Honours & Awards' } },
   },

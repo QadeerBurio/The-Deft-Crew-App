@@ -13,7 +13,7 @@
 // (tests/app/resume-templates.test.js compares 395 frozen outputs). New templates are config in ./templates/library.js.
 //   theme keys (all optional): accent / heading / text (default colours), second (headings in a second colour),
 //   band (the header on a colour band), nameAccent, h2x ("bar-left" | "caps-spaced" | "thin-rule" | "smallcaps-rule"
-//   | "underline-accent"), dateAccent, subPlain, margin ("12mm 13mm"), order (section order), headings ({ key: title }),
+//   | "underline-accent" | "short-rule"), dateAccent, subPlain, margin ("12mm 13mm"), order (section order), headings ({ key: title }),
 //   skillSep (" · ")
 
 import { LIBRARY } from './templates/library';
@@ -242,6 +242,8 @@ function extras(look, { accent, heading, text }) {
     'thin-rule': `h2 { border-bottom: 0.75px solid ${look.second || '#CBD5E1'}; padding-bottom: 2px; }`,
     'smallcaps-rule': `h2 { text-transform: none; font-variant: small-caps; letter-spacing: 0.06em; color: ${heading}; border-bottom: 1px solid ${heading}; padding-bottom: 1px; font-size: ${look.size + 2}pt; }`,
     'underline-accent': `h2 { display: inline-block; border-bottom: 2.5px solid ${accent}; padding-bottom: 1px; }`,
+    // a short accent line under the heading (no full-width rule): Scholar
+    'short-rule': `h2 { border-bottom: none; color: ${accent}; letter-spacing: 0.1em; font-size: ${look.size + 0.5}pt; } h2::after { content: ''; display: block; width: 36px; border-bottom: 2px solid ${accent}; margin-top: 3px; }`,
   }[look.h2x];
   if (h2x) out.push(h2x);
   if (look.dateAccent) out.push(`.d { color: ${accent}; font-weight: 600; }`);
