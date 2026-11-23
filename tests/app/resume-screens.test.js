@@ -32,7 +32,7 @@ global.__DEV__ = false;
         saveResumePdf: async () => { state.saves++; return state.saveResult; },
         shareResumePdf: async () => { state.shares++; return { status: "shared" }; },
         openSavedPdf: async () => { state.opened++; return true; },
-        nativePdfView: () => null, canSaveToFilesDialog: () => true, resumeHtml: () => "<html>same html</html>",
+        nativePdfView: () => null, canSaveToFilesDialog: () => true, resumeHtml: () => "<html>same html</html>", resumeHtmlAsync: async () => "<html>same html</html>", // P3-6: the preview with fonts
       },
       "react-native-webview": { WebView: "WebView" },
       "../../ui/ScreenHeader": { __esModule: true, default: (p) => ({ type: "Header", props: { title: p.title, children: null } }) },

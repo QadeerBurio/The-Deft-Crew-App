@@ -28,6 +28,7 @@ import * as Print from 'expo-print';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { renderResumeHTML } from '../../services/templateService';
+import { resumeHtmlWithFonts } from '../../services/templates/print'; // P3-6: fonts embedded (library templates / chosen pair)
 import { useFocusEffect } from '@react-navigation/native';
 
 import { color as T, font as F, MAX_FONT_SCALE } from "../../theme/tokens";
@@ -348,7 +349,7 @@ const ResumeDashboardScreen = ({ navigation, route }) => {
     if (!requireAccount()) return;
     if (!resume) return Alert.alert('Error', 'No resume selected');
     exporter.run(async () => {
-      const html = renderResumeHTML(resume, resume.template || 'modern_ats', resume.customStyles || {}, true);
+      const html = await resumeHtmlWithFonts(resume, resume.template || 'modern_ats', resume.customStyles || {});
       setDownloadProgress(50);
       const name = `Resume_${resume.personalInfo?.firstName || 'Resume'}_${Date.now()}.html`;
       const fileUri = FileSystem.documentDirectory + name;
@@ -436,7 +437,7 @@ Resume strength: ${resumeStrength(resume).score}%
       });
       if (!tailored) throw new Error('AI tailoring returned empty results.');
       setDownloadProgress(75);
-      const html = renderResumeHTML(tailored, tailored.template || 'modern_ats', tailored.customStyles || {}, true);
+      const html = await resumeHtmlWithFonts(tailored, tailored.template || 'modern_ats', tailored.customStyles || {});
       setDownloadProgress(85);
       const { uri } = await withTimeout(Print.printToFileAsync({ html, base64: false }), TIMEOUT.PDF, 'pdf');
       const f = fileName(tailored, 'Optimized_Resume.pdf');

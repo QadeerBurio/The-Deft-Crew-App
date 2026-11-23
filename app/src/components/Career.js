@@ -35,6 +35,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { renderResumeHTML } from '../services/templateService';
+import { resumeHtmlWithFonts } from '../services/templates/print'; // P3-6: fonts embedded (library templates / chosen pair)
 import { ResumeContext } from '../context/ResumeContext';
 import { BASE_URL } from '../api/api';
 
@@ -785,7 +786,7 @@ const Career = ({ navigation, route }) => {
 
       if (!tailored) throw new Error('AI tailoring returned empty results.');
 
-      const html = renderResumeHTML(tailored, tailored.template || 'modern_ats', tailored.customStyles || {}, true);
+      const html = await resumeHtmlWithFonts(tailored, tailored.template || 'modern_ats', tailored.customStyles || {});
       const { uri } = await Print.printToFileAsync({ html, base64: false });
 
       const firstName = (tailored.personalInfo?.firstName || 'User').trim().replace(/[^a-zA-Z0-9]/g, '_');

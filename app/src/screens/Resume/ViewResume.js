@@ -19,7 +19,7 @@ import ResumeStrength from '../../components/ResumeStrength';
 import useAction from '../../hooks/useAction';
 import { resumeName } from '../../utils/resumeRules';
 import { TEMPLATES, canonicalTemplate } from '../../services/templateService';
-import { makeResumePdf, saveResumePdf, shareResumePdf, openSavedPdf, nativePdfView, canSaveToFilesDialog, resumeHtml } from '../../utils/resumeFiles';
+import { makeResumePdf, saveResumePdf, shareResumePdf, openSavedPdf, nativePdfView, canSaveToFilesDialog, resumeHtml, resumeHtmlAsync } from '../../utils/resumeFiles';
 import { color as T, font as F, MAX_FONT_SCALE as M } from '../../theme/tokens';
 
 export const EDIT_TARGETS = [
@@ -38,6 +38,14 @@ const ResumeViewScreen = () => {
   const [loadState, setLoadState] = useState('loading');
   const [attempt, setAttempt] = useState(0);
   const [pdf, setPdf] = useState(null); // { uri, name, pages, key }
+  // P3-6: the preview with its fonts embedded (library templates / a chosen pair); system fonts until it is ready
+  const [previewHtml, setPreviewHtml] = useState(null);
+  useEffect(() => {
+    let live = true;
+    setPreviewHtml(null);
+    if (resume) resumeHtmlAsync(resume).then((h) => { if (live) setPreviewHtml(h); }).catch(() => {});
+    return () => { live = false; };
+  }, [resume]);
   const [pages, setPages] = useState(null);
   const PdfView = useRef(nativePdfView()).current;
 
@@ -178,7 +186,7 @@ const ResumeViewScreen = () => {
       <WebView
         testID="pdf-html"
         originWhitelist={['*']}
-        source={{ html: resumeHtml(resume) }}
+        source={{ html: previewHtml || resumeHtml(resume) }}
         style={styles.viewer}
         scalesPageToFit
         setBuiltInZoomControls

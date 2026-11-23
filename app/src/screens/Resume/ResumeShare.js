@@ -19,6 +19,7 @@ import { ResumeContext } from '../../context/ResumeContext';
 import { AuthContext } from '../../context/AuthContext';
 import * as Print from 'expo-print';
 import { renderResumeHTML } from '../../services/templateService';
+import { resumeHtmlWithFonts } from '../../services/templates/print'; // P3-6: fonts embedded (library templates / chosen pair)
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import QRCode from 'react-native-qrcode-svg';
@@ -112,7 +113,7 @@ View full resume: ${shareLink}
 
   const handleSharePDF = async () => {
     try {
-      const html = renderResumeHTML(resume, resume?.template || 'modern_ats', resume?.customStyles || {}, true);
+      const html = await resumeHtmlWithFonts(resume, resume?.template || 'modern_ats', resume?.customStyles || {});
       const { uri } = await Print.printToFileAsync({ html });
       
       if (await Sharing.isAvailableAsync()) {
