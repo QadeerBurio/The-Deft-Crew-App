@@ -157,7 +157,10 @@ Quiet hours: the owner first asked for them on chat pushes, then corrected it (C
 - ~~SERVER tests checking for the text "0300"~~: all fixed (loyalty-visits, career, then the remaining 7 suites in SERVER `3c62524c`).
 - ~~`referral_credited` events rejected~~: fixed in P1 follow-ups (SERVER `bed92851`).
 - Migrate `expo-av` to `expo-audio` before the next Expo SDK upgrade (owner, P3 #11; speak mode and chat voice use expo-av).
-- Account defaults that look like real data: `User.location` "Karachi, Pakistan" and `User.city` "Karachi" are set on every account (models/User.js). Resumes no longer copy them (P3 #7); the social profile still shows them. Owner to decide (changing a default affects live profiles).
+- ~~Account defaults that look like real data~~: new student accounts now start with no city / location (P3b, SERVER `4d7e6da3`); brands / employers and existing accounts unchanged.
+- Polish phase (owner): a one-time "is your city right?" prompt for existing students (their city may be the old "Karachi" default).
+- The social post composer falls back to "Karachi" when the student has no location (`CreatePostScreen.js`); new students without a city will see that. Pre-existing; owner to decide (polish).
+- The brand / employer signup reply returns the whole new account document (minus the password), including empty hidden fields (`webhookSecret`, `pushTokens`, ID-card fields). No secret has a value at signup, but the reply should be the safe shape. Pre-existing (seen by the leak scan in P3b); owner to decide.
 - Job ingestion adapters fall back to the title "Software Engineer" when a feed has none (greenhouse / lever / workable). Not resume data; noted only.
 
 ## Release plan
@@ -401,6 +404,41 @@ must not use `visibility`.
 Full runs at the end of P3a: SERVER 97/97 suites; APP 59 suites + `expo export` android + ios (an Android export from
 the warm cache once reported fewer modules; with `--clear` the count is right); ADMIN unchanged (no admin code in P3a).
 
+## P3b: resume coach (branch `upgrade/p3b-coach` from `upgrade/p3a-resume`, owner 23 Nov 2026)
+
+Flags (per student, off): `resumeCoach` and `resumeSpeak`, both under `resumeV2` (the coach needs resumeV2 too).
+
+**Karachi default check (owner, before the change):** readers of `User.city` / `User.location`: Surprise Boxes "my
+city" (`surplus.routes`, `scope=city`): an empty location falls back to every city, no error; brand address
+geocoding (`geocoder.brandCity`) and brand city lists (`brandCities`) read the BRAND's city, so brands keep
+"Karachi"; resume create no longer copies the default (P3 #7); the app's "your account" hides an empty location; the
+social post composer falls back to "Karachi" itself (backlog). Nothing breaks with an empty value for students.
+
+| Step | What changed | Commits | Tests |
+|---|---|---|---|
+| city default | new **student** accounts: city / location empty (model default by role, only for new documents: an existing account that never stored the field reads as before); signup: a student without a city gets none; brands / employers unchanged | SERVER `4d7e6da3` | account-city-default 11/11 |
+| coach API | `/api/resume/ai`: coach (bullets, summary, stronger, skills + soft skills linked to where shown, extract for chat, fit), check (first person, verb, tense, length, vague words, informal e-mail, +92 phone, LinkedIn, spelling cached by text), autofix (owner #12: order, capitals via the skill names, bullet endings, junk lines, home address, empty entries; previewed, the app saves the patch), transcribe (resumeSpeak; memory only, 60 s / 2 MB). **Fact guardrail:** every AI suggestion goes through the Studio validator against the student's own facts; anything new (number, date, link, name, tool, claim, first person) is dropped and logged (flags only); missing facts → a question. Shared `resume_ai` limit; coach funnel events | SERVER `366a350d` | resume-coach 45/45 |
+| coach pieces | tap mode (StoryPrompt), keep / edit / remove, live checks (debounced, one-tap fix), tips + labelled examples, memory joggers (all 14, per programme), write my summary, suggest my skills, fix everything / fit on one page (previewed), ready to send (advice), hold to talk (expo-av loaded only when used; the recording deleted after sending; "your voice is turned into text and not kept.") | APP `ac03b6c` | resume-coach |
+| chat mode | `ResumeCoachChat`: study, target job, society, project, work; fields filled as they go (only what was said); lines kept only when tapped | APP `ff5d410` | resume-coach |
+| builder | the coach on each step; **the step buttons pinned above the keyboard** (KeyboardStickyView; coach on only); "ready to send?" before the finish; no minutes in the copy | APP `b627dec` | resume-v2 55/55, resume-coach 45/45 |
+
+**Measured (tests, owner: "measure where possible"):** a first-time fresher with no experience, from the account's
+contact details to a strong one-page resume (strength 91):
+- tap mode (profile prefill, two memory joggers with chips, write my summary, suggest my skills): **26 characters
+  typed, 21 taps** (the plan's exit check: under 100 characters);
+- chat mode (5 typed answers): **159 characters typed, 19 taps**. Chat is typing by nature; tap mode is the path that
+  meets the "under 100 characters" check.
+Real minutes can't be measured in tests: the app records them (`resume_one_page_ready`: seconds, typed, taps, mode,
+once per resume), so a time can be claimed only after real students use it. The copy promises no minutes (the
+P3a "~N min left" was removed).
+
+**Notes:** the typing counter in the app counts the coach's inputs (story prompts, joggers, chat), not every builder
+field; the test counts every character. The check's spelling uses the AI (cached per text); the other checks are
+rules. "Fit on one page" only trims to 3 lines per entry; it never rewrites.
+
+Full runs at the end of P3b: SERVER 99/99 suites; APP 60 suites + `expo export` android + ios; ADMIN unchanged (the
+two new flags appear in admin → features through the existing list).
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |
@@ -427,6 +465,9 @@ the warm cache once reported fewer modules; with `--clear` the count is right); 
 | `SQUAD_REWARD_POINTS` | optional; default 100 (1–1000) | — | the weekly squad reward |
 | `RATE_LIMIT_CREDENTIAL_VERIFY_MAX` | optional; default 30 per 10 minutes per address | — | the public credential check |
 | `PUBLIC_BASE_URL` | optional; default the Railway production URL | — | the 10-minute credential PDF link the app opens |
+| `FLAG_RESUME_COACH` / `FLAG_RESUME_SPEAK` | not needed: per account in admin → features ("Resume coach", "Resume speak mode"; both need "Resume v2") | — | P3b |
+| `OPENAI_TRANSCRIBE_MODEL` | optional; default `whisper-1` | — | speak mode |
+| `RATE_LIMIT_RESUME_AI_MAX` | optional; default 120 an hour per student (enhance, suggest-skills and the coach together) | — | P3 #7 / P3b |
 | Cloudinary | check that `CLOUDINARY_NAME` is the cloud the app uploads to (`decaxpera`); otherwise images aren't deleted (logged, nothing breaks) | — | image clean-up |
 
 ## Found along the way (pre-existing, not changed; owner to decide)
