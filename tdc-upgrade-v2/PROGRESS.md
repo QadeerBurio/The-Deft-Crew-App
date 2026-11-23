@@ -335,6 +335,32 @@ hook granted nothing when a mock server answered `/admin/me/access` with somethi
 `X-Device-Id` header failed the mocks' cross-origin preflight. Fixed (any non-access reply = every page as before; the
 device id goes in the login body), then 38/38.
 
+## P2: the ambassador programme (branch `upgrade/p2-ambassador` from `upgrade/phase-a`, owner 23 Nov 2026)
+
+Everything is behind `ambassadorV2` (per student, off) and the weekly squad behind its own `squadMission` (per student,
+off). Flag off: the student routes answer 404, the crew screen keeps the Google Form, today's copy everywhere.
+
+| Step | What changed | Commits | Tests |
+|---|---|---|---|
+| models (additive) | PartnerApplication `universityId`, `groups`, `whyChips`, `source`, `appliedAt`; PartnerPost `kind` (link / moment), `caption`, `imageUrl` (platform + url still required for link posts); Credential `letterText`, `approvedBy/At`, `revokedAt/By`; EngagementProfile `partner.universityId`, `ambassadorInvite`; per-user limits `crew_apply` 5/h, `crew_moment` 10/h | SERVER `9f2f86d9` | — |
+| P2-1…P2-7 student routes | `/api/crew`: invitation (server decides: verified student, account ≥ 7 days, not a partner / applicant, a good moment in 48 h; asked at most twice, "not now" → 30 days, "never" → never), application + status (university id stored; re-apply 30 days after a rejection), campus count (by id, older ambassadors by name), hub, daily card (only a real live campaign), credential PDF link (10-minute token), campus moments (confession moderation on photo + caption; blocked → photo deleted, 422), squad (3 e-mail-verified friends in a Karachi week → `SQUAD_REWARD_POINTS`, default 100, once). Public: `GET /api/crew/verify/:id` (rate-limited per IP; name, role, university, dates, valid / revoked only) and `GET /api/crew/config` (web page). PDFs: pdfkit + qrcode (already dependencies), verify URL `PORTAL_URL/verify/<id>` | SERVER `cc80e8ac` | crew-ambassador (in the next commit); feature-access counts updated (21 grantable flags) |
+| admin crew | review: `note` → `reviewNote`, `partner.universityId` (older applications matched by name), a personal push to the student (ambassadorV2); letters start as drafts for students with the programme (admin writes, edits, approves; never generated), `PUT` / `approve` / `revoke` / PDF preview (`credentials.issue`); inbox shows moments and application details; partners `?university=` and verified invites. Referral: the squad is checked when a friend verifies; the new student's welcome popup "+100 pts" (ambassadorV2) | SERVER `c0fcccab` | **crew-ambassador 94/94** |
+| app split-only | `Points.js` 1366 → 518 lines: `crew/levels.js`, `crew/PointsCards.js`, `crew/pointsStyles.js` (moved unchanged) | APP `0fb72a8` | all app suites |
+| app screens | `crew/crew.js`; `AmbassadorIntro` (4 cards; real campus count or "be the first at <uni>", none when unknown), `AmbassadorApply` (prefilled, chips, draft on the phone, server status, writes the old applied key), `AmbassadorHub` (stats, rank, campaigns, credentials, campus moment via the Cloudinary upload, next real level name); home stack + `routes.js`; drawer "the crew · ambassador" | APP `e634df4` | crew-ambassador |
+| P2-1 invitation | `AmbassadorInviteHost` (App.js): checks every 6 h per account, never during the tour or while it's held; holds the tour while shown | APP `c2234b0` | crew-ambassador |
+| P2-5 / P2-7 entry | Points: ambassador card → intro / status / hub (flag off: the Google Form); squad card; real amounts (+150 / +100, after e-mail verification) with growthV2 / ambassadorV2. Home: the ambassador's daily campaign card | APP `c1d73e3` | **app crew-ambassador 45/45** |
+| portal | inbox (moments with photo, application details, note to the student), credentials (draft letter editor, approve & issue, PDF preview, verify link), partners filter + verified (month); public `/verify/:id` (all route blocks, noindex); web `/ambassador` → "apply in the app" + store buttons only when `/api/crew/config` says so | ADMIN `9f48946`, `e5876fe`, `50c8e27` | **CrewP2 9/9** |
+
+**Decisions / notes (P2):**
+- Levels: the badge levels (`config/badges.js`, the discount tiers) are the ones shown; "next level" is the real next name.
+- An approved campus moment goes through the existing post review, which awards 50 points (as for link posts).
+- The application push opens the crew screen (`Points`), which exists in every app version (no new route in a push).
+- The web App Store link (`site.js`) is still the `/pk/` one; the app's was made country-neutral in P1. Unchanged.
+- `npx expo export` for web fails on `react-native-pdf` (pre-existing; android + ios bundle fine, as in earlier phases).
+
+Full runs at the end of P2: SERVER 94/94 suites (shopify-review skipped as always); APP 57/57 suites + `expo export`
+android + ios; ADMIN jest 27 suites / 151 tests, portal checks 38/38.
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |
@@ -349,13 +375,18 @@ device id goes in the login body), then 38/38.
 | `SUPER_ADMIN_IDS` | the owner's admin account id(s) from `scripts/count-admins.js` (read only) | production | SEC-2: who may create / promote admins; Phase A: the bootstrap super admins (team & access page) |
 | `FLAG_ADMIN_RBAC_ENFORCE` | leave unset (shadow mode) until a week of "would deny" is reviewed (team page) | production | admin permissions enforced |
 | `FLAG_ADMIN_SESSIONS_V1` | leave unset until the Phase A portal (code screen) is live | production | admin sign-in code, 12-hour idle sign-out, login history |
-| `PORTAL_URL` | optional; default `https://gettdc.pk` | — | the link in admin invitation e-mails |
+| `PORTAL_URL` | optional; default `https://gettdc.pk` | — | the link in admin invitation e-mails; the verify link + QR on credentials (P2) |
 | `FLAG_CONFESSION_SAFETY` | not needed: turn on per account in admin → features | — | — |
 | `FLAG_REFERRAL_VERIFY_GATE` | leave unset; after reviewing `count-referral-credits.js`: `ids:<test referrer id>`, then `on` | production | referral rewards wait for the e-mail code |
 | `PUSH_BUDGET_RELEVANT_MAX` / `PUSH_BUDGET_BROADCAST_MAX` | optional; defaults 3 and 2 (broadcast only 1 or 2) | — | the N-2 daily caps |
 | `PUSH_REPORT_MIN_SENT` | optional; default 50 | — | pushes of a type before the report shows its rates |
 | Phase N flags (`pushOpenTracking`, `pushBudgetV1`, `pushAskV2`, `unifiedInbox`, `notifSettingsV2`, `pushCopyV2`) | not needed: per account in admin → features | — | — |
 | N-1: `SOCIAL_PUSH_GROUP_MINUTES=180`, `SOCIAL_PUSH_DAILY_MAX=2` | owner action (plan N-1), at a quiet hour (a change restarts the service) | production | grouped social pushes, max 2 a day |
+| `FLAG_AMBASSADOR_V2` | not needed for a pilot: per account in admin → features ("Ambassador v2"). `on` (everyone) also switches the web /ambassador page to "apply in the app" | — | P2 ambassador programme |
+| `FLAG_SQUAD_MISSION` | not needed: per account in admin → features ("Squad mission") | — | P2-7 bring your squad |
+| `SQUAD_REWARD_POINTS` | optional; default 100 (1–1000) | — | the weekly squad reward |
+| `RATE_LIMIT_CREDENTIAL_VERIFY_MAX` | optional; default 30 per 10 minutes per address | — | the public credential check |
+| `PUBLIC_BASE_URL` | optional; default the Railway production URL | — | the 10-minute credential PDF link the app opens |
 | Cloudinary | check that `CLOUDINARY_NAME` is the cloud the app uploads to (`decaxpera`); otherwise images aren't deleted (logged, nothing breaks) | — | image clean-up |
 
 ## Found along the way (pre-existing, not changed; owner to decide)
