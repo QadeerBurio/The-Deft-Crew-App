@@ -480,14 +480,19 @@ The owner said "continue" while the template decisions were pending, so step 2 i
 Funnel: `template_previewed`, `template_selected`, `resume_ats_badge_safe|design`, `template_customised_<key>` (all on
 the server allowlist).
 
-Open for the owner:
-- the per-template decisions (approve / reject / change) for the 10 library templates;
-- the older Minimal (`rezi`) has no ATS-safe badge: its headings are letter-spaced 0.08em and extract as
-  "E D U C A T I O N"; a fix changes its look (needs OK, it's one of the frozen five);
-- `headingIcons` is accepted by the server but not drawn yet; filters for photo / two-column / one-page wait for such
-  templates (none in the first 10);
-- a custom colour picked then "reset" keeps that colour in the older `accentColor` key (older keys can't be cleared,
-  by design); picking a palette overrides it.
+Owner sign-off (P3c step 2), done:
+- Minimal (`rezi`): headings 0.08em → 0.05em, so portals read "EDUCATION"; real-PDF test passes, ATS-safe badge.
+  Only Minimal's 53 frozen outputs re-recorded (each differs only by that spacing); the other four byte-identical
+  (modern_ats 183, stanford 53, jakes 53, faang 53). APP `0183c6c`, resume-templates 40/40, resume-ats 16/16.
+- Reset: back to the template's own look completely, a typed custom colour included. The older colour keys can't be
+  cleared (older apps send them), so "no custom colour" = the model's default colours, which the five always rendered
+  with and the library templates read as "not chosen". Tested byte-identical to a never-customised resume (library and
+  the five) and through the real route. APP `8e09d18` (resume-studio 38/38), SERVER `a10499f2` (resume-templates-server
+  20/20).
+- The 10 library templates stay hidden (`approved: false`) until the owner's decisions.
+
+Backlog (owner, P3c): heading icons drawn on the resume (`headingIcons` is saved, not drawn); gallery filters for
+photo / two-column / one-page (once such templates exist).
 
 ## Railway variables for the owner to set (never set by the developer)
 
