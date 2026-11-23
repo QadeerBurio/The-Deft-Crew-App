@@ -6,7 +6,7 @@ const H = require("./harness");
 const { ok, done } = H.counter();
 
 const ctx = H.read("app/src/context/ResumeContext.js");
-const builder = H.read("app/src/screens/Resume/ResumeBuilder.js");
+const builder = H.read("app/src/screens/Resume/ResumeBuilder.js") + H.read("app/src/screens/Resume/steps/Step1Personal.js"); // P3a: the steps live in steps/
 ok(!/\|\| 'Software Engineer'/.test(ctx) && !/\|\| 'Karachi, Pakistan'/.test(ctx), "guest resume: no 'Software Engineer' / 'Karachi, Pakistan' fallbacks");
 ok(/title: user\?\.headline \|\| '',/.test(ctx), "…the title is the student's headline or empty");
 ok(/location: user\?\.location && String\(user\.location\)\.trim\(\)\.toLowerCase\(\) !== 'karachi, pakistan' \? user\.location : '',/.test(ctx), "…the account's default location isn't used as the resume's city");
