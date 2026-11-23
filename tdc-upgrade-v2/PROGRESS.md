@@ -293,6 +293,48 @@ Heads: SERVER `09d06818`, APP `07bd019`, ADMIN `efb2d8f`. Nothing pushed or depl
 | A-4 masking | `pii.view` masks phone / e-mail / documents | admin list routes return them in full today (e.g. `admin.routes.js` L297 selects phone) | expected (that's the work) |
 | migration | existing admins without `adminAccess` = super | needs the number of admin accounts in production: a read-only count script (like `count-account-status.js`) before shadow mode | add the count |
 
+## Phase A: team access for the admin portal (branch `upgrade/phase-a`, owner 23 Nov 2026)
+
+Built on `upgrade/sec-2-admin` (SERVER) and `upgrade/phase-n` (ADMIN). Nothing changes for today's admins: every admin
+without `adminAccess` keeps every permission except `team.manage`, and enforcement is off (shadow mode).
+
+| Step | What changed | Commits | Tests |
+|---|---|---|---|
+| A-1 / A-2 / A-3 core | `config/adminPermissions.js` (40 permissions, menu groups with **safety** its own, 9 templates; shared byte for byte with the portal's `src/portal/adminPermissions.js`); `User.adminAccess` (optional); levels: `SUPER_ADMIN_IDS` or level super = everything; an admin today = everything but `team.manage`; member = its list; suspended = nothing. `permit()` / `applyPermissions()`; shadow mode (`adminRbacEnforce`, server only, off) logs "would deny" (`AdminAccessShadow`, 30 days); a member's writes logged with the permission | SERVER `83d7a011` | admin-access 19/19 |
+| A-4 every check mapped | 224 routes in 26 route files carry a permission (20 own-or-admin routes checked inline); the 10 local admin gates keep their replies (via `isAdminAccount`); every inline admin power → `adminCan` / `allowedFor`; target checks → `isAdminAccount`; the chat service's admin gate (src + dist) checks `features.manage`. **Sensitive actions check their own permission inside the action:** deletion (`students.delete`, in the service), suspend / ban (`students.suspend`, Safety and the old reports), identity reveal (`identity.reveal`), hiring timeline (`hiring.manage`) | SERVER `3a16328e` | **admin-route-coverage 13/13**: calls all 634 routes; a route an admin passes and a student doesn't without a permission fails (proved by removing one mapping); enforced, a member with no permissions gets 403 on all 221 mapped routes; shadow logged; no raw `role === "admin"` left |
+| owner: safe fields | `utils/safeRecord.js`, applied to every mapped admin reply: never passwords, codes, push tokens, webhook / store secrets; ID cards only with `pii.view` or the route's verify permission; phone / e-mail masked without `pii.view` while enforced | SERVER `83d7a011`, `3a16328e` | **admin-safe-fields 9/9**: 93 admin GET routes scanned with sentinel secrets (an admin today and a member) |
+| A-6 team & access | `/api/admin/team` (super admins only; `team.manage` is **never shadowed**, like SEC-2): members, templates, invite (72-hour link, hash only; an e-mail with an account isn't promoted), access edits, levels (a second super confirms while two or more exist), suspend / restore / remove (sessions end at once), activity, sign-ins, "would deny" log; nobody changes their own access; the last super can't be demoted or suspended; every change in AdminActionLog. `/api/admin/me` (own access, sessions). `POST /api/auth/admin/accept-invite`. SEC-2 now asks "a super admin?" (`SUPER_ADMIN_IDS` stays the bootstrap) | SERVER `10847655` | admin-team 46/46 |
+| A-8 sessions | `adminSessionsV1` (server only, off): new device (`X-Device-Id`) or 30 days → an e-mailed 6-digit code; tokens carry the session; 12 hours idle ends it; revoked / missing sessions → 401 (shared auth, auth.routes' and jobs.routes' own sign-ins, the chat service); login history; hashes only | SERVER `10847655`, `44ecd3d0` | admin-team (sessions part) |
+| A-7 portal | `portal/adminAccess.js` (page → permission, `/admin/me/access` on sign-in and focus; an older server → every page as before); menu filtered, **safety its own group**, settings "team & access"; a page without access → "you don't have access to this"; paused → "your admin access is paused"; dashboard cards only for their areas; `AdminTeam` page; sign-in code step + "signed out after 12 hours" message; `AcceptInvite` page | ADMIN `798db5f`; SERVER `44ecd3d0` (device id in the login body) | adminAccess 7/7, AdminTeam 4/4, AdminSignIn 5/5; PortalNav and the admin-menu portal check expect the new menu |
+
+**Plan corrections (Phase A):**
+- R2: not ~20 files / 4 implementations: 26 route files, 10 local gates, inline checks in services; all mapped (above).
+- An admin without `adminAccess` is "everything except `team.manage`", not "super": otherwise every admin today could
+  make admins (that's what SEC-2 closed). Super = `SUPER_ADMIN_IDS` or an explicit level set by a super admin.
+- `team.manage` is always enforced (no shadow mode), for the same reason.
+- A-5 scopes (universities / cities): optional in the plan, not built.
+- A-7 "buttons follow actions": the menu, the page guard and the dashboard cards follow permissions; buttons inside
+  each page don't yet (the server refuses the action, with "you don't have access to this"). Follow-up.
+- A-8 "city from IP": no geo-IP lookup without a new package (rule 8): the history shows time, browser and new / known
+  device; the address is stored only as a salted hash.
+- Remove = paused for good, marked removed (the account and its history stay; restore works).
+- Masking phone / e-mail applies only while enforcing (shadow mode allows everything); secrets are always removed.
+
+**Found along the way:** `jobs.routes.js` signs in with its own middleware, which never checked suspended / banned
+accounts (P0-6): now it checks admin sessions; the account lock-out there is still missing (pre-existing, owner).
+Admin sessions aren't checked on socket.io connections (admins don't use the chat sockets from the portal).
+
+**Release order for Phase A** (after Release 1): server (all flags off: nothing changes) → set `SUPER_ADMIN_IDS` →
+portal (menu by permission, team page, code screen) → super admin assigns member roles → a week of shadow mode,
+review "would deny" → `FLAG_ADMIN_RBAC_ENFORCE=on` → `FLAG_ADMIN_SESSIONS_V1=on` (after the portal with the code screen
+is live). Rollback: the flags off; `adminAccess` rows are optional and ignored by older code.
+
+Full runs at the end of Phase A: SERVER 92/92 suites (shopify-review skipped as always); ADMIN jest 26 suites / 142
+tests, portal checks 38/38; APP run-all ok (no app change). The first portal-check run failed 25 checks: the access
+hook granted nothing when a mock server answered `/admin/me/access` with something else, and the login's new
+`X-Device-Id` header failed the mocks' cross-origin preflight. Fixed (any non-access reply = every page as before; the
+device id goes in the login body), then 38/38.
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |
@@ -304,6 +346,10 @@ Heads: SERVER `09d06818`, APP `07bd019`, ADMIN `efb2d8f`. Nothing pushed or depl
 | `FLAG_SOCKET_TOKEN_REQUIRED` | leave unset until most installs run the SEC-1 app | — | socket events need a verified token |
 | `FLAG_CHAT_PUSH_V1` | not needed: turn on per account in admin → features ("Chat pushes") | — | chat message pushes |
 | `CHAT_PUSH_QUIET_HOURS` | leave unset (no quiet hours for chat, as planned) | — | optional override: `on` skips chat pushes 23:00–09:00 Karachi |
+| `SUPER_ADMIN_IDS` | the owner's admin account id(s) from `scripts/count-admins.js` (read only) | production | SEC-2: who may create / promote admins; Phase A: the bootstrap super admins (team & access page) |
+| `FLAG_ADMIN_RBAC_ENFORCE` | leave unset (shadow mode) until a week of "would deny" is reviewed (team page) | production | admin permissions enforced |
+| `FLAG_ADMIN_SESSIONS_V1` | leave unset until the Phase A portal (code screen) is live | production | admin sign-in code, 12-hour idle sign-out, login history |
+| `PORTAL_URL` | optional; default `https://gettdc.pk` | — | the link in admin invitation e-mails |
 | `FLAG_CONFESSION_SAFETY` | not needed: turn on per account in admin → features | — | — |
 | `FLAG_REFERRAL_VERIFY_GATE` | leave unset; after reviewing `count-referral-credits.js`: `ids:<test referrer id>`, then `on` | production | referral rewards wait for the e-mail code |
 | `PUSH_BUDGET_RELEVANT_MAX` / `PUSH_BUDGET_BROADCAST_MAX` | optional; defaults 3 and 2 (broadcast only 1 or 2) | — | the N-2 daily caps |
