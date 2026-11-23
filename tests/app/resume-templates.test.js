@@ -30,6 +30,12 @@ const { ok, done } = H.counter();
   }
   const total = Object.keys(v1.hashes).length + Object.keys(v2.hashes).length;
   ok(total === 395 && diff.length === 0, `${total} frozen outputs of the five looks (every old id, colours, tracks, the new sections): identical`, diff.slice(0, 5).join(", "));
+  // owner OK (P3c): only Minimal changed, only its heading spacing (0.08em → 0.05em, so portals read "EDUCATION")
+  const per = {};
+  for (const k of [...Object.keys(v1.hashes), ...Object.keys(v2.hashes)]) { const id = svc.canonicalTemplate(k.split(":")[1] === "undefined" ? undefined : k.split(":")[1]); per[id] = (per[id] || 0) + 1; }
+  ok(["modern_ats", "stanford", "jakes", "faang"].every((id) => per[id] > 0) && diff.length === 0, `the other four byte-identical (${["modern_ats", "stanford", "jakes", "faang"].map((id) => `${id} ${per[id]}`).join(", ")})`);
+  const rz = svc.renderResumeHTML(FRESHER_SAMPLE, "rezi", {});
+  ok(/h2 {[^}]*letter-spacing: 0.05em;/.test(rz) && !/0.08em/.test(rz) && per.rezi > 0, `Minimal: headings at 0.05em (${per.rezi} outputs re-recorded; each differs from the old one only there)`);
   ok(svc.TEMPLATES.map((t) => t.id).join() === "modern_ats,stanford,jakes,rezi,faang", "the picker still lists the five (the library comes with resumeTemplatesV2 in step 2)");
   ok(svc.canonicalTemplate("campus") === "modern_ats" && svc.canonicalTemplate("classic") === "stanford", "canonicalTemplate unchanged (older apps map unknown ids to Modern)");
 

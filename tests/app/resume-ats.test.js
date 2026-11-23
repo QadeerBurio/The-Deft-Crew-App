@@ -67,7 +67,7 @@ const EXPERIENCED = {
     results[id] = { safe, why };
     const old = svc.TEMPLATES.some((t) => t.id === id);
     // the five older templates: their recorded result (OLD_BADGES) must still be what the PDF shows; Minimal (rezi)
-    // is recorded as not safe (letter-spaced headings), reported to the owner, so a change either way is noticed
+    // is safe since its headings went from 0.08em to 0.05em (owner OK, P3c); a change either way is noticed
     if (old) ok((OLD_BADGES[id] === "safe") === safe, `${id} (older): ${safe ? "ATS-safe" : "not ATS-safe"}, as recorded`, why.join(" | "));
     else ok(safe, `${id}: ATS-safe (name, contact, every heading and entry in reading order, both resumes)`, why.join(" | "));
   }

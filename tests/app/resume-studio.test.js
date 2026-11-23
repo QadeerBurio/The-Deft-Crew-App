@@ -1,7 +1,7 @@
 // P3c step 2: the template studio (flags resumeV2 + resumeTemplatesV2)
 //   gallery: only the five + the library templates the owner approved (all unapproved today → only the five)
 //   recommend(): up to 3, each with a reason, only templates in the gallery; fresher / projects / activities / target
-//   badges: ATS-safe from the real-PDF test (resume-ats.test.js); the older Minimal has none
+//   badges: ATS-safe from the real-PDF test (resume-ats.test.js); all five (Minimal since its headings went 0.08em → 0.05em)
 //   the template screen: flags off (or loading) → today's picker, untouched; both on → the studio
 //   the studio: recommended row with reasons, tabs, "ATS-safe only", pick + "use this template" saves the template,
 //     funnel template_previewed / template_selected / resume_ats_badge_safe, then the preview; long-press two → compare
@@ -59,7 +59,7 @@ function setup({ flags = { resumeV2: true, resumeTemplatesV2: true }, resume = R
   console.log("── gallery");
   let g = studio.galleryTemplates();
   ok(g.length === 5 && g.every((t) => t.older), "nothing approved yet: the gallery is today's five", g.map((t) => t.id).join());
-  ok(g.filter((t) => t.ats === "safe").length === 4 && studio.badgeOf("rezi") === null && studio.badgeOf("modern_ats") === "safe", "badges: four of the five ATS-safe (the real-PDF test); the older Minimal has none");
+  ok(g.filter((t) => t.ats === "safe").length === 5 && studio.badgeOf("rezi") === "safe" && studio.badgeOf("modern_ats") === "safe", "badges: all five ATS-safe (the real-PDF test; Minimal since its 0.05em headings)");
   lib.LIBRARY.find((t) => t.id === "campus").approved = true;
   lib.LIBRARY.find((t) => t.id === "harvard").approved = true;
   g = studio.galleryTemplates();
@@ -92,18 +92,20 @@ function setup({ flags = { resumeV2: true, resumeTemplatesV2: true }, resume = R
   console.log("── the studio");
   {
     const t = setup();
-    t.load(path.join(H.SRC, "services/templates/library.js")).LIBRARY.find((x) => x.id === "campus").approved = true; // this copy of the module
+    const L = t.load(path.join(H.SRC, "services/templates/library.js")).LIBRARY; // this copy of the module
+    L.find((x) => x.id === "campus").approved = true;
+    Object.assign(L.find((x) => x.id === "two_tone"), { approved: true, ats: "design" }); // test only: a template without the badge
     const m = t.mount(t.React.createElement(t.load(path.join(H.SRC, "screens/Resume/ResumeTemplate.js")).default));
     await H.tick(3);
     const text = () => H.textOf(m.tree);
     ok(/recommended for you/.test(text()) && /made for students/.test(text()), "both flags on: the studio, recommended row with the reason", text().slice(0, 200));
     const gridIds = () => H.findAll(m.tree, (n) => n.type === "Thumb").map((n) => n.props.templateId);
-    ok(gridIds().filter((id) => id === "campus").length === 2 && gridIds().length === 3 + 6, "recommended (3) + gallery (the five + Campus)", gridIds().join());
+    ok(gridIds().filter((id) => id === "campus").length === 2 && gridIds().length === 3 + 7, "recommended (3) + gallery (the five + Campus + Two-tone)", gridIds().join());
     ok(H.findAll(m.tree, (n) => n.type === "Thumb").every((n) => n.props.resume._id === "r1"), "every card is the student's own resume");
     H.byLabel(m.tree, "ATS Pro").props.onPress();
-    ok(gridIds().length === 3 + 5 && !gridIds().slice(3).includes("campus"), "tab ATS Pro: the five");
+    ok(gridIds().length === 3 + 6 && !gridIds().slice(3).includes("campus"), "tab ATS Pro: the five + Two-tone");
     H.byLabel(m.tree, "ATS-safe only").props.onPress();
-    ok(gridIds().length === 3 + 4 && !gridIds().slice(3).includes("rezi"), "ATS-safe only: Minimal drops out");
+    ok(gridIds().length === 3 + 5 && !gridIds().slice(3).includes("two_tone") && gridIds().slice(3).includes("rezi"), "ATS-safe only: a template without the badge drops out (Minimal now stays)");
     H.byLabel(m.tree, "all").props.onPress(); H.byLabel(m.tree, "ATS-safe only").props.onPress();
     H.find(m.tree, (n) => n.props?.testID === "template-campus").props.onPress();
     ok(t.events.some((e) => e[0] === "template_previewed" && e[1].refId === "campus"), "a tap previews: template_previewed");

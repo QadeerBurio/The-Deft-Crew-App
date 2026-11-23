@@ -70,7 +70,7 @@ export const LIBRARY = [
 
 // the five older templates' ATS result (Minimal's letter-spaced headings come out of the PDF as "E D U C A T I O N":
 // reported to the owner; no badge until that changes)
-export const OLD_BADGES = Object.freeze({ modern_ats: 'safe', stanford: 'safe', jakes: 'safe', faang: 'safe', rezi: null });
+export const OLD_BADGES = Object.freeze({ modern_ats: 'safe', stanford: 'safe', jakes: 'safe', faang: 'safe', rezi: 'safe' }); // rezi: since its headings went 0.08em → 0.05em (P3c)
 export const approvedLibrary = () => LIBRARY.filter((t) => t.approved === true);
 
 export const COLLECTIONS = Object.freeze({ fresher: 'Fresher & Student', ats: 'ATS Pro' });

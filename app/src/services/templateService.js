@@ -45,7 +45,8 @@ const LOOKS = {
   modern_ats: { body: SANS, head: SANS, size: 10.5, line: 1.4, nameSize: 22, align: 'left', h2: 'accent-rule', gap: 10 },
   stanford: { body: SERIF, head: SERIF, size: 10.5, line: 1.38, nameSize: 22, align: 'center', h2: 'full-rule', gap: 10 },
   jakes: { body: SANS, head: SANS, size: 9.5, line: 1.3, nameSize: 19, align: 'center', h2: 'full-rule', gap: 7 },
-  rezi: { body: SANS, head: SANS, size: 10.5, line: 1.4, nameSize: 21, align: 'left', h2: 'plain', gap: 10, mono: true },
+  // h2ls: heading letter-spacing (owner OK, P3c): 0.08em came out of the PDF as "E D U C A T I O N"; 0.05em reads as one word
+  rezi: { body: SANS, head: SANS, size: 10.5, line: 1.4, nameSize: 21, align: 'left', h2: 'plain', gap: 10, mono: true, h2ls: '0.05em' },
   faang: { body: SANS, head: SERIF, size: 10.5, line: 1.4, nameSize: 23, align: 'left', h2: 'accent-rule', gap: 10, nameBar: true },
 };
 
@@ -220,7 +221,7 @@ function css(look, styles) {
   const h2 = {
     'accent-rule': `color:${accent}; border-bottom: 1.5px solid ${accent}; padding-bottom: 2px;`,
     'full-rule': `color:${heading}; border-bottom: 1px solid ${heading}; padding-bottom: 1px; font-variant: small-caps; letter-spacing: 0.04em;`,
-    plain: `color:${heading}; letter-spacing: 0.08em;`,
+    plain: `color:${heading}; letter-spacing: ${look.h2ls || '0.08em'};`,
   }[look.h2];
   return `
   @page { size: A4; margin: 14mm 15mm; }
