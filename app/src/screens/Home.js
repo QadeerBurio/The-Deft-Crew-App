@@ -44,6 +44,7 @@ import { perfMark } from "../lib/perf";
 import { hydrateQuery, writeHomeCache, pruneHomeCache } from "../lib/homeCache";
 import { navigateAnywhere } from "../navigation/routes";
 import CrewDailyCard from "../crew/CrewDailyCard";
+import CityCheckCard from "./home/CityCheckCard"; // P5b (flag cityCheck)
 
 // The latest-confession section (HomeCampus) is commented out below; while it is, its
 // request (the whole confessions feed) does not run. Set true together with the section.
@@ -441,6 +442,9 @@ export default function Home({ navigation }) {
               onFeaturePress={handleFeaturePress}
             />
           </FadeInView>
+
+          {/* P5b (cityCheck, off): "is your city right?" once, right above the deals that use it */}
+          {signedIn && <CityCheckCard />}
 
           {/* near me / top discounts (guests: top discounts from public data) */}
           <View

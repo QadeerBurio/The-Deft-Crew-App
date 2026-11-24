@@ -753,6 +753,7 @@ function CustomDrawerContent(props) {
 // CUSTOM HEADER
 // ============================================================
 function CustomHeader({ navigation }) {
+  const headerSearchOn = useFlag('headerSearch') === true; // P5-6: the search button (off: no button, as before)
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchWidth = useRef(new Animated.Value(0)).current;
@@ -953,9 +954,32 @@ function CustomHeader({ navigation }) {
         </View>
 
         <View style={styles.headerRight}>
+          {/* P5-6 (flag headerSearch, off): close the brand search without searching */}
+          {searchVisible && headerSearchOn && (
+            <TouchableOpacity
+              onPress={toggleSearch}
+              style={styles.headerCircleBtn}
+              hitSlop={4}
+              accessibilityRole="button"
+              accessibilityLabel="close search"
+            >
+              <Ionicons name="close" size={19} color={T.ink} />
+            </TouchableOpacity>
+          )}
           {!searchVisible && (
             <>
-              
+              {/* P5-6 (flag headerSearch, off): the header's brand search (owner: add the button) */}
+              {headerSearchOn && (
+                <TouchableOpacity
+                  onPress={toggleSearch}
+                  style={styles.headerCircleBtn}
+                  hitSlop={4}
+                  accessibilityRole="button"
+                  accessibilityLabel="search brands"
+                >
+                  <Ionicons name="search-outline" size={19} color={T.ink} />
+                </TouchableOpacity>
+              )}
               {!isGuest && (
                 <StreakChip onPress={() => setStreakSheetVisible(true)} />
               )}
