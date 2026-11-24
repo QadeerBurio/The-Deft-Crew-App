@@ -707,6 +707,15 @@ Note: `HelpCenter.js` still opens the website `thedeftcrew.com` (a link, not an 
 | remote pictures (Q-3i) | job company logo, Surprise Box photos, SkillShare profile photo, chat full-screen viewer → RemoteImage (cache; sized except the viewer). react-native Image stays for app pictures and files just picked on the phone (6 files, listed in the test) | APP `8bd533c` | remote-images (new), job-details 71, surprise-box 53 |
 | low-data pictures (Q-3i) | flag `lowDataImages` (student, off): on 2G / 3G mobile, sized Cloudinary pictures 40% narrower at q_auto:eco; anything else unchanged | SERVER `3301d0c3` (flag; grantable 34, student view 33), APP `a201e99` | low-data-images 13/13; feature-access 96/96 |
 
+## Q-c: instant feel (branch `upgrade/qc-instant` from `upgrade/qb-lists`; SERVER `upgrade/qc-flags` from `upgrade/qb-flags`)
+
+| Step | What changed | Commits | Tests |
+|---|---|---|---|
+| flags | `persistCache`, `optimisticActions`, `prefetchDetails` (student, off; app only); grantable 37, student view 36 | SERVER `e50f259e` | feature-access; all 114 suites |
+| instant reopen (Q-3c) | `lib/persistedQueries.js`: Home's deals (personal + public), the engagement summary and today's drop saved on the phone, restored for the same account within 24 h; never location (nearby), confession text, referrals or savings; deleted on sign-out (also in AuthContext), account change or flag off; nothing deleted while the flags / account are still loading. Approved package `@tanstack/query-async-storage-persister@5.95.2` (+ its own core); React Query's dehydrate / hydrate do the rest (no other package). Only Home uses React Query today: brands / events keep their own in-memory caches | APP `67324f2` (tested on its own as well) | persisted-queries 15/15 |
+| optimistic actions (Q-3d) | checked: confession like / me-too / follow / save and the post like were already instant with roll-back; event save is local. New: a post's save (bookmark) under `optimisticActions` | APP `b470b2d` | qc-instant |
+| prefetch (Q-3e) | event details: touching a card starts GET /api/events/:id; opening within 5 s uses it, else a new request as before; a failed prefetch is forgotten (`prefetchDetails`). Other details screens (deal, job, confession) don't fetch through a shared cache: not changed | APP `b470b2d` | qc-instant 17/17 |
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |
