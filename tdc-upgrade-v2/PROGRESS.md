@@ -668,6 +668,22 @@ Notes:
 - End of P5a: SERVER 112/112 suites; APP 68/68 suites + export (android 9,913 KB, ios 9,929 KB, as before); ADMIN jest
   32 / 184, build OK, portal checks 39/39.
 
+- Reporting note (P5a): "portal checks 39/39" was first reported while the run was still going; it finished later
+  with 39/39 (643 s).
+
+## Q-a: groundwork (branch `upgrade/qa-groundwork` from `upgrade/p5a-fixes`, owner 25 Nov 2026)
+
+| Step | What changed | Commits | Tests |
+|---|---|---|---|
+| crew render tests | the three crew screens rendered by a test (with and without crew.manage); every portal .js file must parse, so a syntax error fails jest, not only the build (both fail on the P5a CrewCampaigns slip) | ADMIN `86b128b` | jest 33 / 384 |
+| back targets | `routes.js` `BACK`: per navigator (all 10, 170 screens) the start screens / tabs and a parent for every other screen (where back leads with nothing behind it); `backParent()`. Data only, nothing reads it yet (Q-2 wires it in). back-navigation checks every registered screen has one, chains end at a start / tab with no loops, no navigator disables swipe back | APP `c52c0aa` | back-navigation 63/63 |
+| Maestro | `e2e/maestro`: 8 core flows (plan Q-7), sign-in / back subflows, 2 perf helpers, README (setup, accounts via -e, staging-only tags); `tests/app/maestro-flows.test.js` checks every plain label a flow taps exists in the app. Not yet run on an emulator (CALIBRATE steps) | APP `2bed9d6` | maestro-flows 58/58 |
+| perf baseline | `PERF-BASELINE.md` (budgets, method, results table), `scripts/perf/android-baseline.sh` (cold / warm start medians from logcat, frame stats) | APP `000234a` | — |
+| terms contact | owner: `support@gettdc.pk` on the terms screen | APP `c982ffd` | privacy-contact 7/7 |
+
+Not done in Q-a: the split-only commits for the 4 giant screens (moved to the start of Part 2, owner 25 Nov 2026).
+Note: `HelpCenter.js` still opens the website `thedeftcrew.com` (a link, not an e-mail): owner to decide.
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |
