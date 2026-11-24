@@ -681,7 +681,22 @@ Notes:
 | perf baseline | `PERF-BASELINE.md` (budgets, method, results table), `scripts/perf/android-baseline.sh` (cold / warm start medians from logcat, frame stats) | APP `000234a` | — |
 | terms contact | owner: `support@gettdc.pk` on the terms screen | APP `c982ffd` | privacy-contact 7/7 |
 
-Not done in Q-a: the split-only commits for the 4 giant screens (moved to the start of Part 2, owner 25 Nov 2026).
+Q-a splits (Part 2, branch `upgrade/qa-splits` from the new `main` `c53000a`): split-only, done with a scratch
+splitter that moves top-level declarations byte for byte into sibling files (same folder, so every import path and
+test mock stays the same), keeps the original's imports untouched, re-exports anything the original exported, and
+refuses when moved code needs something that stays or when staying code assigns a moved variable. Each split was
+then checked line by line (every original line in exactly one file; only import / re-export lines added).
+
+| Screen | Now | Moved to | Commit |
+|---|---|---|---|
+| Events.js | 2680 → 1588 | eventsFormat.js (helpers), eventsStyles.js, EventCards.js (skeleton, save button, card, row, registration status, header) | APP `a5f9e96` (responsiveness / ticket-screen read the whole folder) |
+| OfferScreen.js | 1921 → 1065 | offerClaims.js (claimed-ids registry, listeners, stats helpers; re-exported from OfferScreen.js), offerStyles.js, OfferParts.js (success sheet, branch picker, hold-to-claim) | APP `9c9c2cb` |
+| Brands.js | 1886 → 1386 | brandsData.js (categories, helpers), brandsStyles.js (+ grid sizes), BrandParts.js (tile, stats bar, card, skeleton, gap, preloaded set) | APP `49aef95` |
+| ResumeDashboard.js | 1846 → 1185 | resumeDashboardStyles.js (+ window width), ScoreRing.js | APP `dbd0289` |
+
+The screen components themselves (one function each) are not split: that would change code, not move it.
+Bundle after the splits: android 10,173,498 / ios 10,190,055 bytes (+21 KB: the 12 new modules' overhead).
+Tests after each: all 69 app suites + `expo export -p android -p ios`.
 Note: `HelpCenter.js` still opens the website `thedeftcrew.com` (a link, not an e-mail): owner to decide.
 
 ## Railway variables for the owner to set (never set by the developer)
