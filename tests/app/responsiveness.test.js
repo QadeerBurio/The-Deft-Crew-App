@@ -73,6 +73,7 @@ function loader(mocks) {
     const m = new Module(file); m.filename = file;
     m.require = (id) => {
       if (id in mocks) return mocks[id];
+      if (/\.(png|jpe?g|gif|webp|wav|mp3|ttf|otf)$/i.test(id)) return { uri: id }; // assets (as the shared harness)
       if (id.startsWith(".")) {
         const abs = path.resolve(path.dirname(file), id);
         for (const key of Object.keys(mocks)) if (key.startsWith("/") && abs.replace(/\\/g, "/").endsWith(key)) return mocks[key];

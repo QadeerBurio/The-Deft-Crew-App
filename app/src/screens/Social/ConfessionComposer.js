@@ -9,13 +9,21 @@ import { LinearGradient } from "../../ui/FlatGradient"; // flat fills, no gradie
 import { soundTap } from "../../lib/tdcSounds";
 import { color as T } from "../../theme/tokens";
 import styles from "./confessionStyles";
+import { MOOD_IMAGES } from "../../engagement/utils/mood";
 
 export default function ConfessionComposer({
   modalVisible, resetForm, modalSlide, myUniName, postVisibility, setPostVisibility, confessionInputRef,
   newConfession, setNewConfession, selectedImage, setSelectedImage, handlePost, posting,
   // plan P4-1 (flag confessionSafety): why the pre-post check asked for an edit; empty = nothing shown
   issues = [],
+  // P4a: onPickImage (flag confessionSafety: images are checked): the "add a photo" button. v2 (flag confessionsV2): the
+  // composer config { tags, prompts, moods, maxLength, handle }; with it: prompt chips, tag, mood, post as, 500 chars.
+  // Without them the sheet is exactly as before.
+  onPickImage = null, v2 = null, tag = null, setTag = () => {}, mood = null, setMood = () => {}, postAs = "anon", setPostAs = () => {},
 }) {
+  const maxLength = v2 ? (v2.maxLength || 500) : 1000;
+  const chip = (active) => [styles.visibilityChip, active && styles.visibilityChipActive];
+  const chipText = (active) => [styles.visibilityChipText, active && styles.visibilityChipTextActive];
   return (
       <Modal visible={modalVisible} animationType="fade" transparent onRequestClose={resetForm}>
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
@@ -96,6 +104,18 @@ export default function ConfessionComposer({
                       ))}
                     </View>
                   )}
+                  {v2 && !newConfession && Array.isArray(v2.prompts) && v2.prompts.length > 0 && (
+                    <View style={{ marginBottom: 8 }}>
+                      <Text style={styles.visibilityLabel}>not sure where to start?</Text>
+                      <View style={[styles.visibilityChips, { flexWrap: 'wrap' }]}>
+                        {v2.prompts.map((p) => (
+                          <TouchableOpacity key={p} style={chip(false)} onPress={() => { soundTap(); setNewConfession(`${p}: `); }} accessibilityRole="button" accessibilityLabel={`start with: ${p}`}>
+                            <Text style={chipText(false)}>{p}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  )}
                   <TextInput
                     ref={confessionInputRef}
                     style={styles.input}
@@ -104,9 +124,55 @@ export default function ConfessionComposer({
                     multiline
                     value={newConfession}
                     onChangeText={setNewConfession}
-                    maxLength={1000}
+                    maxLength={maxLength}
                   />
-                  <Text style={styles.charCount}>{newConfession.length}/1000</Text>
+                  {v2
+                    ? <Text style={styles.charCount}>{`${newConfession.length}/${maxLength}`}</Text>
+                    : <Text style={styles.charCount}>{newConfession.length}/1000</Text>}
+                  {onPickImage && !selectedImage && (
+                    <TouchableOpacity style={[chip(false), { alignSelf: 'flex-start', marginBottom: 10 }]} onPress={onPickImage} accessibilityRole="button" accessibilityLabel="add a photo">
+                      <Ionicons name="image-outline" size={14} color={T.textMuted} />
+                      <Text style={chipText(false)}>add a photo</Text>
+                    </TouchableOpacity>
+                  )}
+                  {v2 && Array.isArray(v2.tags) && v2.tags.length > 0 && (
+                    <View style={{ marginBottom: 10 }}>
+                      <Text style={styles.visibilityLabel}>tag</Text>
+                      <View style={[styles.visibilityChips, { flexWrap: 'wrap' }]}>
+                        {v2.tags.map((t) => (
+                          <TouchableOpacity key={t.id} style={chip(tag === t.id)} onPress={() => { soundTap(); setTag(tag === t.id ? null : t.id); }} accessibilityRole="button" accessibilityState={{ selected: tag === t.id }} accessibilityLabel={`tag ${t.label}`}>
+                            <Text style={chipText(tag === t.id)}>#{t.label}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                  {v2 && Array.isArray(v2.moods) && v2.moods.length > 0 && (
+                    <View style={{ marginBottom: 10 }}>
+                      <Text style={styles.visibilityLabel}>mood</Text>
+                      <View style={[styles.visibilityChips, { flexWrap: 'wrap' }]}>
+                        {v2.moods.map((m) => (
+                          <TouchableOpacity key={m} style={chip(mood === m)} onPress={() => { soundTap(); setMood(mood === m ? null : m); }} accessibilityRole="button" accessibilityState={{ selected: mood === m }} accessibilityLabel={`mood ${m}`}>
+                            <Image source={MOOD_IMAGES[m]} style={{ width: 16, height: 16 }} />
+                            <Text style={chipText(mood === m)}>{m}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                  {v2?.handle?.enabled && v2.handle.handle ? (
+                    <View style={{ marginBottom: 10 }}>
+                      <Text style={styles.visibilityLabel}>post as</Text>
+                      <View style={styles.visibilityChips}>
+                        {[['handle', `@${v2.handle.handle}`], ['anon', 'fully anon']].map(([k, label]) => (
+                          <TouchableOpacity key={k} style={chip(postAs === k)} onPress={() => { soundTap(); setPostAs(k); }} accessibilityRole="button" accessibilityState={{ selected: postAs === k }} accessibilityLabel={`post as ${label}`}>
+                            <Text style={chipText(postAs === k)}>{label}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      <Text style={styles.visibilityHint}>{postAs === 'handle' ? 'your handle, never your name. your posts as @handle can be linked to each other.' : 'no name, no handle: anon., as always.'}</Text>
+                    </View>
+                  ) : null}
                   {selectedImage && (
                     <View style={styles.previewContainer}>
                       <Image source={{ uri: selectedImage }} style={styles.previewImage} />

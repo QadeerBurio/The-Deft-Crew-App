@@ -49,3 +49,20 @@ export const uploadToCloudinary = async (fileUri) => {
   const json = await res.json();
   return json.secure_url;
 };
+
+// ============ P4a (flag confessionsV2) ============
+// the composer's config: { tags, prompts, moods, maxLength, handle: { enabled, handle } } (null when it can't be read)
+export const getV2Config = async (token) => {
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/confessions/v2/config`, { headers: { Authorization: `Bearer ${token}` } });
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+};
+// "me too" on / off → { meToo, meTooCount }
+export const toggleMeToo = async (token, id) => {
+  const res = await fetchWithTimeout(`${API_URL}/confessions/${encodeURIComponent(id)}/metoo`, { method: "PUT", headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+};

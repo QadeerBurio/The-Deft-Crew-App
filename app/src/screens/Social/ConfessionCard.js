@@ -1,15 +1,21 @@
 // ConfessionCard.js: one confession in the feed (moved unchanged from ConfessionScreen.js).
 import React from "react";
-import { View, Text, TouchableOpacity, Animated, Share } from "react-native";
+import { View, Text, TouchableOpacity, Animated, Share, Image } from "react-native";
 import RemoteImage from "../../ui/RemoteImage";
 import { Ionicons } from '@expo/vector-icons';
 import { soundTap } from "../../lib/tdcSounds";
 import { color as T } from "../../theme/tokens";
 import styles from "./confessionStyles";
+import { MOOD_IMAGES } from "../../engagement/utils/mood";
+import { avatarFor } from "./confessionV2";
 
 // safety / onMore (plan P4-1, flag confessionSafety): a "more" button (report, mute, delete mine) and the
 // "under review" chip on my held posts. Without them the card is exactly as before.
-export default function ConfessionCard({ item, isExpanded, lineCount, scope, highlightId, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, safety = false, onMore = null }) {
+// v2 / onMeToo / tagLabel (P4a, flag confessionsV2): the handle (with its Dot avatar and a verified tick), the tag,
+// the mood and "me too". Without them the card is exactly as before.
+export default function ConfessionCard({ item, isExpanded, lineCount, scope, highlightId, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, safety = false, onMore = null, v2 = false, onMeToo = null, tagLabel = null }) {
+    const handle = v2 && item.handle ? item.handle : null;
+    const av = handle ? avatarFor(handle) : null;
     const isLiked = item.likedByCurrentUser;
     const shouldShowMore = lineCount > 7 || (item.text?.length || 0) > 250;
     const isCampus = item.visibility === 'campus';
@@ -26,12 +32,22 @@ export default function ConfessionCard({ item, isExpanded, lineCount, scope, hig
       <Animated.View style={[styles.card, highlightId === String(item._id) && styles.cardHighlight, { opacity: fadeAnim }]}>
         <View style={styles.cardHeader}>
           <View style={styles.headerLeft}>
+            {av ? (
+              <View style={[styles.avatarCircle, { backgroundColor: av.color }]} accessibilityElementsHidden>
+                <Image source={MOOD_IMAGES[av.mood]} style={{ width: 26, height: 26 }} />
+              </View>
+            ) : (
             <View style={styles.avatarCircle}>
               <Text style={styles.avatarQ}>?</Text>
             </View>
+            )}
             <View style={{ flexShrink: 1 }}>
               <View style={styles.nameRow}>
+                {handle ? (
+                  <Text style={styles.anonymousName} numberOfLines={1} accessibilityLabel={`@${handle}${item.handleVerified ? ", verified student" : ""}`}>@{handle}{item.handleVerified ? <Text style={{ color: T.yellow }}> ✓</Text> : null}</Text>
+                ) : (
                 <Text style={styles.anonymousName}>anon.</Text>
+                )}
                 <Text style={styles.nameDot}>·</Text>
                 <Text style={[styles.postTime, { marginTop: 0 }]}>{formatPostTime(item.createdAt)}</Text>
               </View>
@@ -68,6 +84,18 @@ export default function ConfessionCard({ item, isExpanded, lineCount, scope, hig
             <Text style={[styles.campusPillText, { color: T.yellow }]}>under review · only you can see this</Text>
           </View>
         )}
+
+        {v2 && (tagLabel || item.mood) ? (
+          <View style={{ flexDirection: "row", gap: 6, marginBottom: 8, alignItems: "center" }}>
+            {tagLabel ? <View style={styles.campusPill}><Text style={styles.campusPillText}>#{tagLabel}</Text></View> : null}
+            {item.mood && MOOD_IMAGES[item.mood] ? (
+              <View style={styles.campusPill} accessibilityLabel={`mood: ${item.mood}`}>
+                <Image source={MOOD_IMAGES[item.mood]} style={{ width: 14, height: 14 }} />
+                <Text style={styles.campusPillText}>{item.mood}</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
 
         {item.text && (
           <View>
@@ -117,6 +145,18 @@ export default function ConfessionCard({ item, isExpanded, lineCount, scope, hig
               {item.comments?.length > 0 ? item.comments.length : 'comment'}
             </Text>
           </TouchableOpacity>
+
+          {v2 && onMeToo ? (
+            <TouchableOpacity
+              style={[styles.actionBtn, item.meTooByCurrentUser && styles.actionBtnLiked]}
+              onPress={() => onMeToo(item._id)}
+              accessibilityRole="button"
+              accessibilityLabel={item.meTooByCurrentUser ? `me too, ${item.meTooCount || 0}, tap to undo` : `me too, ${item.meTooCount || 0}`}
+            >
+              <Ionicons name={item.meTooByCurrentUser ? "hand-left" : "hand-left-outline"} size={18} color={item.meTooByCurrentUser ? T.yellow : T.onInkMuted} />
+              <Text style={[styles.actionText, item.meTooByCurrentUser && { color: T.yellow }]}>{item.meTooCount > 0 ? `me too ${item.meTooCount}` : "me too"}</Text>
+            </TouchableOpacity>
+          ) : null}
 
           {/* No share on campus posts: it would leak them outside the campus */}
           {!isCampus && (
