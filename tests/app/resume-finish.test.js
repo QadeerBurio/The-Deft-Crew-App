@@ -86,5 +86,46 @@ function setup({ params = { resumeId: "r1" }, api = {} } = {}) {
     ok(/useEffect\(\(\) => \{ if \(v2 && startKey && KEY_TO_ID\[startKey\]\) setActiveStep\(KEY_TO_ID\[startKey\]\); \}, \[v2, startKey\]\);/.test(b), "builder: stepKey opens that section only with resumeV2 (the step param as before)");
     ok(/name="ResumeFeedback"/.test(H.read("app/src/navigation/ResumeNavigator.js")) && /'ResumeFeedback',/.test(H.read("app/src/navigation/DrawerNavigator.js")), "ResumeFeedback registered (full screen)");
   }
+  console.log("── verified by tdc");
+  {
+    const load = H.loader({});
+    const P = load(path.join(H.SRC, "services/templates/print.js"));
+    const svc = load(path.join(H.SRC, "services/templateService.js"));
+    const r = { _id: "r1", personalInfo: { firstName: "Sana", lastName: "Malik" }, settings: { track: "fresher" } };
+    const facts = [{ kind: "student", text: "verified student at Sample University" }, { kind: "ambassador", text: "campus ambassador", url: "https://gettdc.pk/verify/abc" }];
+    const plain = svc.renderResumeHTML(r, "modern_ats", {});
+    let asked = 0;
+    const off = await P.resumeHtmlWithFonts(r, "modern_ats", {}, { verifiedFacts: async () => { asked++; return facts; } });
+    ok(off === plain && asked === 0, "line off (the default): the same HTML as before, the facts not even asked for");
+    const onHtml = await P.resumeHtmlWithFonts({ ...r, settings: { ...r.settings, verifiedLine: true } }, "modern_ats", {}, { verifiedFacts: async () => facts });
+    ok(/✓ verified by tdc: verified student at Sample University · campus ambassador \(<a href="https:\/\/gettdc\.pk\/verify\/abc"/.test(onHtml), "line on: the facts in the header, with the verify link");
+    const failed = await P.resumeHtmlWithFonts({ ...r, settings: { verifiedLine: true } }, "modern_ats", {}, { verifiedFacts: async () => { throw new Error("404"); } });
+    ok(!/verified by tdc/.test(failed), "flag off on the server / no connection: no line, never a failed PDF");
+    const none = await P.resumeHtmlWithFonts({ ...r, settings: { verifiedLine: true } }, "modern_ats", {}, { verifiedFacts: async () => [] });
+    ok(!/verified by tdc/.test(none), "no verified fact: no line (nothing made up)");
+  }
+  for (const suggest of [false, true]) {
+    const saves = [];
+    const t = setup({ api: { verifiedFacts: async () => ({ facts: [{ kind: "student", text: "verified student at Sample University" }] }) } });
+    const VL = t.load(path.join(H.SRC, "screens/Resume/finish/VerifiedLine.js")).default;
+    const resume = { _id: "r1", settings: { track: "fresher" } };
+    const m = t.mount(t.React.createElement(VL, { resume, suggest, updateResume: async (id, ch) => { saves.push([id, ch]); } }));
+    await H.tick(3);
+    ok(/verified student at Sample University/.test(H.textOf(m.tree)), `${suggest ? "finish (suggest)" : "switch"}: the facts are shown`);
+    if (suggest) H.byLabel(m.tree, "add verified by tdc to my resume").props.onPress();
+    else H.byLabel(m.tree, "show verified by tdc on my resume").props.onValueChange(true);
+    await H.tick(3);
+    ok(JSON.stringify(saves[0]) === JSON.stringify(["r1", { settings: { track: "fresher", verifiedLine: true } }]) && t.events.some((e) => e[0] === "resume_verified_added"), "one tap: verifiedLine saved (the track kept), funnel resume_verified_added", JSON.stringify(saves));
+    if (suggest) ok(/added ✓/.test(H.textOf(m.tree)) && !H.byLabel(m.tree, "add verified by tdc to my resume"), "finish: then 'added ✓'");
+    m.unmount();
+  }
+  {
+    const t = setup({ api: { verifiedFacts: async () => ({ facts: [] }) } });
+    const VL = t.load(path.join(H.SRC, "screens/Resume/finish/VerifiedLine.js")).default;
+    const m = t.mount(t.React.createElement(VL, { resume: { _id: "r1" }, updateResume: async () => {} }));
+    await H.tick(3);
+    ok(m.tree == null, "no verified fact: nothing shown at all");
+    m.unmount();
+  }
   done();
 })().catch((e) => { console.error(e); process.exit(1); });

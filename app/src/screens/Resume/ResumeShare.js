@@ -28,12 +28,17 @@ import { color as T, font as F } from "../../theme/tokens";
 import ScreenHeader from "../../ui/ScreenHeader";
 import { copyToClipboard } from '../../utils/clipboard';
 import { resumeStrength, resumeName } from '../../utils/resumeRules';
+import useFlag from '../../hooks/useFlag';
+import VerifiedLine from './finish/VerifiedLine'; // P3d (resumeVerified)
 const ResumeShareScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { resumeId } = route.params || {};
   const { user, isGuest } = useContext(AuthContext);
   const { resumes, currentResume, loading, updateResume } = useContext(ResumeContext);
+  // P3d: the "verified by tdc" switch (resumeV2 + resumeVerified)
+  const v2 = useFlag('resumeV2') === true;
+  const verifiedOn = useFlag('resumeVerified') === true;
 
   const [resume, setResume] = useState(null);
   const [shareLink, setShareLink] = useState('');
@@ -278,6 +283,8 @@ View full resume: ${shareLink}
             </Text>
           </View>
         </View>
+
+        {v2 && verifiedOn && <VerifiedLine resume={resume} updateResume={updateResume} style={{ marginHorizontal: 20, marginTop: 12 }} />}
 
         {/* QR Code (only with a real link) */}
         {linkReady && (
