@@ -323,6 +323,11 @@ function ExternalDeepLink() {
           openTarget("MatchChat", { matchId: parts[1] });
         } else if (parts[0] === "inquiry" && parts[1]) {
           openTarget("InquiryChat", { inquiryId: parts[1] });
+        } else if (parts[0] === "confession" && /^[0-9a-f]{24}$/i.test(parts[1] || "")) {
+          // P4c: "read the replies in the app" on a shared confession's page → the confession feed with it pinned
+          // (the same screen a push or the Daily Drop opens)
+          openTarget("FeedScreen", { tab: "Confession", postId: parts[1] });
+          try { require("./app/src/analytics/funnel").funnel("confession_link_opened"); } catch { /* never blocks the link */ }
         }
       } catch (e) {
         console.warn("[ExternalDeepLink] parse error:", e.message);

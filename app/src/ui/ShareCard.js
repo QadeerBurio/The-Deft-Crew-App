@@ -6,7 +6,9 @@
 //   levelUp      data.level: "I just reached <level> on tdc"
 //   resumeReady  "my resume is ready" (no personal data at all)
 //   savings      data.amount (PKR, from /offers/my-total-savings): "I saved rs X this month with tdc"
-//   confession   data.text: the confession text only, never a handle or name (P4-5)
+//   confession   data.text: the confession text only, never a handle or name (P4-5); with data.url (P4c) the QR and the
+//                link are the confession's own page (gettdc.pk/c/<id>) and no invite code is printed, so the card can't
+//                point at whoever shared it
 // The sheet has a visible close button and closes with Android back.
 import React, { useRef, useState } from "react";
 import { View, Text, Modal, TouchableOpacity, ActivityIndicator } from "react-native";
@@ -31,7 +33,9 @@ function lines(variant, data) {
 }
 
 export function ShareCardView({ variant = "invite", code, data }) {
-  const link = inviteLink(code, "direct");
+  const own = variant === "confession" && /^https:\/\//.test(String(data?.url || ""));
+  const link = own ? String(data.url) : inviteLink(code, "direct");
+  if (own) code = null;
   const t = lines(variant, data);
   return (
     <View style={{ width: W, height: H, backgroundColor: T.ink, borderRadius: 24, padding: 22, justifyContent: "space-between" }} collapsable={false}>

@@ -46,7 +46,8 @@ import ConfessionCommentThread from "./ConfessionCommentThread";
 import ConfessionComposer from "./ConfessionComposer";
 import ConfessionComments from "./ConfessionComments";
 import ConfessionFeed from "./ConfessionFeed";
-import { API_URL, CONFESSIONS_POLL_INTERVAL, feedCache, confessionsChanged, commentsChanged, uploadToCloudinary, getV2Config, toggleMeToo, votePoll, setFollowing, setSavedConfession } from "./confessionApi";
+import { API_URL, CONFESSIONS_POLL_INTERVAL, feedCache, confessionsChanged, commentsChanged, uploadToCloudinary, getV2Config, toggleMeToo, votePoll, setFollowing, setSavedConfession, shareConfession } from "./confessionApi";
+// P4c: the confession share card (text only, its own page's QR), loaded only when sharing is on
 import { feedQuery, viewKey } from "./confessionV2";
 // confession safety (plan P4-1): everything below is used only while useFlag(FLAGS.confessionSafety) is true
 import useFlag from "../../hooks/useFlag";
@@ -167,6 +168,9 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
   const followFlag = useFlag('confessionFollow') === true;
   const [pollOptions, setPollOptions] = useState(null);
   const [savedOnly, setSavedOnly] = useState(false);
+  // P4c: share as an image card (confessionShare)
+  const shareFlag = useFlag('confessionShare') === true;
+  const [shareCard, setShareCard] = useState(null); // { text, url } for the card sheet
   const savedRef = useRef(false);
   // the list on screen: the scope (as before), plus sort and tag with v2
   const currentKey = () => viewKey({ scope: scopeRef.current, v2: v2Ref.current, sort: sortRef.current, tag: tagRef.current, saved: savedRef.current });
@@ -466,6 +470,17 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
       patchItem(id, { saved: !!r.saved });
       funnel(on ? 'confession_saved' : 'confession_unsaved');
     } catch (e) { patchItem(id, { saved: !on }); reportError('confessionsV2', e, { step: 'save' }); }
+  }, [token]);
+  const handleShareImage = useCallback(async (item) => {
+    soundTap();
+    try {
+      const r = await shareConfession(token, item._id);
+      funnel('confession_share_link');
+      setShareCard({ text: r.text || item.text || '', url: r.url });
+    } catch (e) {
+      funnel('confession_share_refused');
+      Alert.alert("can't share this one", e?.status === 409 || e?.status === 404 ? e.message : "check your connection and try again.");
+    }
   }, [token]);
   const onSaved = useCallback((on) => { soundTap(); savedRef.current = !!on; setSavedOnly(!!on); }, []);
   const tagLabelOf = useCallback((id) => (id && v2Config?.tags?.find((t) => t.id === id)?.label) || null, [v2Config]);
@@ -1098,13 +1113,14 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
       openComments={openComments}
       safety={safety}
       onMore={safety ? handleMore : null}
-      {...(v2 ? { v2: true, onMeToo: handleMeToo, tagLabel: tagLabelOf(item.tag), onSave: handleSave, ...(pollsFlag ? { onVote: handleVote } : {}), ...(followFlag ? { onFollow: handleFollow } : {}) } : {})}
+      {...(v2 ? { v2: true, onMeToo: handleMeToo, tagLabel: tagLabelOf(item.tag), onSave: handleSave, ...(pollsFlag ? { onVote: handleVote } : {}), ...(followFlag ? { onFollow: handleFollow } : {}), ...(shareFlag ? { onShareImage: handleShareImage } : {}) } : {})}
     />
-  ), [expandedPosts, textLayouts, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, highlightId, scope, safety, handleMore, v2, handleMeToo, tagLabelOf, handleSave, pollsFlag, handleVote, followFlag, handleFollow]);
+  ), [shareFlag, handleShareImage, expandedPosts, textLayouts, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, highlightId, scope, safety, handleMore, v2, handleMeToo, tagLabelOf, handleSave, pollsFlag, handleVote, followFlag, handleFollow]);
 
   // No skeleton: tabs + list render right away, a small loader only while
   // a tab is loading for the very first time.
   const firstLoad = loading && confessions.length === 0;
+  const ShareCardSheet = v2 && shareFlag ? require("../../ui/ShareCard").default : null;
 
   return (
     <View style={styles.container}>
@@ -1144,6 +1160,17 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
         {...(safety ? { onPickImage: showImageOptions } : {})}
         {...(v2 ? { v2: v2Config, tag: postTag, setTag: setPostTag, mood: postMood, setMood: setPostMood, postAs, setPostAs, ...(pollsFlag ? { pollOptions, setPollOptions } : {}) } : {})}
       />
+
+      {/* P4c: the confession share card (text only; the QR is its own page, never an invite code) */}
+      {ShareCardSheet && (
+        <ShareCardSheet
+          visible={!!shareCard}
+          onClose={() => setShareCard(null)}
+          variant="confession"
+          data={shareCard || {}}
+          onShared={(v) => { funnel('confession_shared_card'); funnel(`share_card_${String(v).toLowerCase()}`); }}
+        />
+      )}
 
       {/* COMMENTS MODAL */}
       <ConfessionComments

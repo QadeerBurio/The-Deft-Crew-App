@@ -14,7 +14,7 @@ import { avatarFor } from "./confessionV2";
 // v2 / onMeToo / tagLabel (P4a, flag confessionsV2): the handle (with its Dot avatar and a verified tick), the tag,
 // the mood and "me too". Without them the card is exactly as before.
 // onVote / onFollow / onSave (P4b): the poll (flag confessionPolls), the follow bell (confessionFollow) and save.
-export default function ConfessionCard({ item, isExpanded, lineCount, scope, highlightId, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, safety = false, onMore = null, v2 = false, onMeToo = null, tagLabel = null, onVote = null, onFollow = null, onSave = null }) {
+export default function ConfessionCard({ item, isExpanded, lineCount, scope, highlightId, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, safety = false, onMore = null, v2 = false, onMeToo = null, tagLabel = null, onVote = null, onFollow = null, onSave = null, onShareImage = null }) {
     const poll = v2 && onVote && item.poll && Array.isArray(item.poll.options) ? item.poll : null;
     const voted = poll && poll.myVote != null;
     const handle = v2 && item.handle ? item.handle : null;
@@ -208,8 +208,16 @@ export default function ConfessionCard({ item, isExpanded, lineCount, scope, hig
             </TouchableOpacity>
           ) : null}
 
+          {/* P4c (confessionShare): share as an image card, only when the server says it may be (public, live, no open
+              report); then the plain-text share below is not offered */}
+          {v2 && onShareImage && item.shareable === true ? (
+            <TouchableOpacity style={styles.actionBtn} onPress={() => onShareImage(item)} accessibilityRole="button" accessibilityLabel="share as an image">
+              <Ionicons name="share-social-outline" size={18} color={T.onInkMuted} />
+            </TouchableOpacity>
+          ) : null}
+
           {/* No share on campus posts: it would leak them outside the campus */}
-          {!isCampus && (
+          {!isCampus && !(v2 && onShareImage) && (
             <TouchableOpacity
               style={styles.actionBtn}
               onPress={() => {
