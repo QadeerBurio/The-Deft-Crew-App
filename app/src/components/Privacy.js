@@ -6,6 +6,8 @@ import { DocScreen, DocHero, DocSection, DocCard, DocFooter } from "../ui/DocPag
 import { color as T, font as F, MAX_FONT_SCALE } from "../theme/tokens";
 
 export const PRIVACY_URL = "https://gettdc.pk/privacy";
+// P5a (owner): the one privacy contact, on every privacy screen (it used to show one address and mail another)
+export const PRIVACY_EMAIL = "privacy@gettdc.pk";
 
 const privacyPoints = [
   {
@@ -41,7 +43,7 @@ const privacyPoints = [
 ];
 
 export default function PrivacyScreen() {
-  const openEmail = () => Linking.openURL("mailto:info@thedeftcrew.com");
+  const openEmail = () => Linking.openURL(`mailto:${PRIVACY_EMAIL}`);
   // the full policy (the store listings use the same page)
   const openPolicy = () => Linking.openURL(PRIVACY_URL);
 
@@ -85,7 +87,7 @@ export default function PrivacyScreen() {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={s.contactTitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>Have Questions?</Text>
-          <Text style={s.contactText} maxFontSizeMultiplier={MAX_FONT_SCALE}>info@gettdc.pk</Text>
+          <Text style={s.contactText} maxFontSizeMultiplier={MAX_FONT_SCALE}>{PRIVACY_EMAIL}</Text>
         </View>
         <Ionicons name="arrow-forward" size={18} color={T.yellow} />
       </TouchableOpacity>

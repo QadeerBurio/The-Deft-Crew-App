@@ -14,7 +14,7 @@ const privacyData = [
   { num: '07', title: 'Data Retention', text: 'We retain data as long as necessary for services, legal obligations, and dispute resolution.' },
   { num: '08', title: "Children's Privacy", text: 'Services not for under 13. We do not knowingly collect data from children.' },
   { num: '09', title: 'Policy Changes', text: 'We may update this policy. Changes will be posted here with updated date.' },
-  { num: '10', title: 'Contact Us', text: 'privacy@thedeftcrew.com\nKarachi, Pakistan' },
+  { num: '10', title: 'Contact Us', text: 'privacy@gettdc.pk\nKarachi, Pakistan' }, // P5a: the one privacy contact (components/Privacy.js PRIVACY_EMAIL)
 ];
 export default function PrivacyScreen({ navigation }) {
   return (
