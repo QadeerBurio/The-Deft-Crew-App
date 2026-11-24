@@ -4,7 +4,7 @@ Handles are `adjective-noun-number`, e.g. `chill-samosa-343`, `ziddi-kitab-512`.
 never the name or e-mail. **Off until you approve this list** (`config/confessionHandles.js`, `APPROVED = false`):
 until then every confession is "anon." as today, even with `confessionsV2` on.
 
-64 adjectives × 64 nouns × 876 numbers ≈ 3.6 million handles.
+62 adjectives × 64 nouns × 876 numbers ≈ 3.5 million handles.
 
 ## Rules applied (owner P4a #6)
 
@@ -18,14 +18,13 @@ until then every confession is "anon." as today, even with `confessionsV2` on.
 - Every handle is also run through the confession word filter (the profanity list + the admin's banned words) before
   it's given, as a whole and word by word. Adding a word to the admin's banned words stops new handles with it.
 
-## Adjectives (64)
+## Adjectives (62)
 
 **English (38):** chill, sleepy, curious, brave, quiet, sunny, lucky, cosmic, fuzzy, witty, clever, mellow, bold,
 swift, gentle, happy, calm, bright, golden, silver, misty, breezy, cozy, nerdy, snappy, zesty, jolly, plucky, cheerful,
 dreamy, sparkly, crispy, tiny, mighty, stellar, electric, minty, rapid
 
-**Roman Urdu (26):** ziddi (stubborn, playful), khush (happy), nayab (rare), thanda (cool), pyara (sweet), chhota
-(small), bara (big), neela (blue), peela (yellow), hara (green), sunehra (golden), hoshiyar (smart), bahadur (brave),
+**Roman Urdu (24):** ziddi (stubborn, playful), khush (happy), nayab (rare), thanda (cool), pyara (sweet), neela (blue), peela (yellow), hara (green), sunehra (golden), hoshiyar (smart), bahadur (brave),
 sharmila (shy), chulbula (playful), nirala (unique), albela (carefree), masoom (innocent), tez (quick), dheema (slow,
 calm), anokha (unusual), zabardast (great), kamaal (amazing), jugaari (resourceful), befikr (carefree), chamakta
 (shining)
@@ -40,11 +39,14 @@ compass, teacup, cookie, donut, pancake, pretzel, mango, kite, planet, meteor, s
 badal (cloud), titli (butterfly), tota (parrot), koel (cuckoo), mor (peacock), bulbul, chirya (sparrow), kitab (book),
 qalam (pen), basta (school bag), chashma (glasses), chabi (key), lassi, nimko, chaat, chandni (moonlight)
 
+## Owner review
+
+- 25 Nov 2026: **chhota** and **bara** removed; **ziddi** and **masoom** kept. Handles stay off until the full list is approved.
+
 ## Words I'd like you to look at closely
 
 - **ziddi** (stubborn): it's the plan's own example and is usually playful, but some may read it as a mild jab.
 - **masoom** (innocent): fine on its own; worth a check in combinations.
-- **chhota / bara** (small / big): neutral words, but they're size words next to a person's handle.
 
 To approve: tell me "approve the handle list" (with any words to remove or add). I'll set `APPROVED = true` in one
 commit, and handles then appear for students who have `confessionsV2` on.

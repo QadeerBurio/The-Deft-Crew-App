@@ -153,7 +153,7 @@ Quiet hours: the owner first asked for them on chat pushes, then corrected it (C
 
 - Confession composer image button returns in P4-3 (images are now moderated; the precheck and server clean-up are ready).
 - SkillShare `typing` event (server handles only `typing_start` / `typing_stop`); tell the other person when a message is deleted (polish phase).
-- Fix `tests/app/events-fresh-data` isolation properly (its fixed waits fail under load); no weakening.
+- Fix `tests/app/events-fresh-data` isolation properly (its fixed waits fail under load); no weakening. Polish phase (owner, 25 Nov 2026).
 - ~~SERVER tests checking for the text "0300"~~: all fixed (loyalty-visits, career, then the remaining 7 suites in SERVER `3c62524c`).
 - ~~`referral_credited` events rejected~~: fixed in P1 follow-ups (SERVER `bed92851`).
 - Migrate `expo-av` to `expo-audio` before the next Expo SDK upgrade (owner, P3 #11; speak mode and chat voice use expo-av).
@@ -579,18 +579,36 @@ word filter); sub-phases P4a / P4b / P4c; voting in the backlog.
 |---|---|---|---|
 | split-only | `ConfessionScreen.js` (1,216 → 1,091 lines) → `ConfessionFeed.js` (the feed list) + `confessionApi.js` (helpers, image upload), moved verbatim | APP `488b340` | the rendered screen (feed, composer, comments) identical to before, confessionSafety off and on |
 | for everyone | a confession at most 1,000 characters (400 TOO_LONG); an image only from our Cloudinary account (400 BAD_IMAGE: another site, http, another account); the two unreachable duplicate routes (`my-confessions`, `likes/:id`) removed | SERVER `2e904a5e` | confession-p4a; confession-observe 36/36 (the other-account image is now refused up front) |
-| handles | `config/confessionHandles.js` (64 adjectives + 64 nouns, English + Roman Urdu; left-out numbers 786, 313, 666, 420, 455, *69*), `services/confessionHandles.js` (word filter + banned words, unique, made on first use), `User.confessionHandle` (never sent). **`APPROVED = false`**: no handle until the owner signs off (`tdc-upgrade-v2/confession-handle-words.md`) | SERVER `b29658f9` | confession-p4a (approval simulated): stable, unique, verified tick, 3,000 generated all clean |
-| v2 server | `confessionsV2.routes.js` (config: visible tags, this week's 3 prompts, moods, 500, handle; me too toggle), mounted before social.routes (new paths only); feed `sort=hot|top|new`, `tag=`, `page=`; create keeps a visible tag, a known mood and "post as @handle" (once approved); Confession `handle`, `handleVerified`, `tag`, `mood`, `meTooCount`, `meTooBy` (never sent); Safety settings `tags` (stable ids) and `prompts`, rotated 3 a week. Flag off: the feed and create exactly as before (no v2 field for flag-off viewers) | SERVER `f04c1958` | confession-p4a 43/43; confession-visibility / -reports / -precheck / -observe, admin-safety, social-push, feature-access |
+| handles | `config/confessionHandles.js` (64 adjectives + 64 nouns, English + Roman Urdu; left-out numbers 786, 313, 666, 420, 455, *69*), `services/confessionHandles.js` (word filter + banned words, unique, made on first use), `User.confessionHandle` (never sent). **`APPROVED = false`**: no handle until the owner signs off (`tdc-upgrade-v2/confession-handle-words.md`) | SERVER `0aa55069` | confession-p4a (approval simulated): stable, unique, verified tick, 3,000 generated all clean |
+| v2 server | `confessionsV2.routes.js` (config: visible tags, this week's 3 prompts, moods, 500, handle; me too toggle), mounted before social.routes (new paths only); feed `sort=hot|top|new`, `tag=`, `page=`; create keeps a visible tag, a known mood and "post as @handle" (once approved); Confession `handle`, `handleVerified`, `tag`, `mood`, `meTooCount`, `meTooBy` (never sent); Safety settings `tags` (stable ids) and `prompts`, rotated 3 a week. Flag off: the feed and create exactly as before (no v2 field for flag-off viewers) | SERVER `4582b6f0` | confession-p4a 43/43; confession-visibility / -reports / -precheck / -observe, admin-safety, social-push, feature-access |
 | v2 app | sort chips (hot default, new, top this week) and tag chips; card: handle with a Dot avatar (picked from the handle) and verified tick, tag, mood, me too; composer: prompt chips when empty, tag, mood, post as (only when handles are on), 500 characters; confessionSafety: the photo button is back; for everyone: the photo / camera permission check works ("denied" was never caught) | APP `c9c1e30` | confessions-v2 67/67 (flags off: identical to before P4a; safety only: the photo button is the one difference); responsiveness 89/89 |
 | portal | Safety settings: rename / hide / add post tags, prompt chips (one per line); an older server gets the same save | ADMIN `4162aaf` | AdminSafety 9/9 (axe clean) |
 
 Notes / for the owner:
-- **Someone else committed on this branch**: SERVER `c6e40ae9` "Shopify connect flow fixes + review account seed"
-  (routes/shopifyLink.js, scripts/seed-shopify-review-account.js) sits between my commits, and `stash@{0}` holds a
-  change to `tests/shopify-review-149610/run.cjs` plus copies of my then-uncommitted P4a files (restored from it; the
-  stash is left as it is). Not mine; decide where it belongs before P4a is merged.
+- The foreign commit `c6e40ae9` (Shopify connect fixes) was moved to its own branch `shopify/connect-fixes` (owner,
+  25 Nov 2026); P4a's two later commits were replayed without it (`b29658f9` → `0aa55069`, `f04c1958` → `4582b6f0`).
+  `stash@{0}` left untouched for the owner.
 - Feed paging: hot / top return the top 50 (server pages exist: `page=`); the app shows page 0 only for now.
 - `events-fresh-data` (app) failed once in the full run while other suites ran; 3/3 alone (known load-sensitive).
+
+## P4b: confessions v2, part 2 (branch `upgrade/p4b-confessions` from `upgrade/p4a-confessions`, owner 25 Nov 2026)
+
+Owner, first: the foreign commit `c6e40ae9` moved to `shopify/connect-fixes` (see P4a); handle words without
+**chhota** / **bara** (SERVER `c2d4aa32`; handles still off until the full list is approved); working rule: changes in a
+working tree I didn't make → stop and tell the owner before any git operation.
+
+| Step | What changed | Commits | Tests |
+|---|---|---|---|
+| flags | `confessionPolls`, `confessionFollow` (student, off; grantable 31, student view 30) + funnel names (poll created / voted, unfollowed, saved / unsaved) | SERVER `1f7ac6c0` | feature-access 96/96, funnel-events 25/25 |
+| server | **Polls** (confessionsV2 + confessionPolls): 2-4 different options, up to 60 characters, a question needed; the options go through the pre-post check with the text; `PUT /confessions/:id/poll` (one vote, can be changed); the counts and my vote are sent, who voted never (`pollVoters`, select: false). **Follow** (confessionFollow): `ConfessionFollow` (user, confession, on, author, lastPushAt); the author follows their own automatically (owner #3); `PUT /confessions/:id/follow { on }` (mute = off); a live reply → a push to followers: "new reply on a confession you follow", no name, no text (the confession push rule), not to the one who replied, at most once per confession per 30 minutes per follower, type `confession_follow` (push budget: relevant; quiet hours), the confession sound, not with the confessions switch off, not for held replies, not without the flag. **Save** (confessionsV2): `PUT /confessions/:id/save { on }` (SavedItem kind `confession`); the list is the feed with `saved=1` (hidden / removed ones drop out). Feed: `poll`, `following`, `saved` only with the flags | SERVER `e3ef87ed` | confession-p4b 41/41; confession-p4a 43/43; visibility / reports / precheck / observe, social-push, admin-safety |
+| account deletion | also the student's follows and the follows on their confessions | SERVER `750a07aa` | admin-delete-account 83/83 |
+| app | card: the poll (vote, results with %, mine marked, change), the follow bell (mine already followed: one tap mutes), save; header: "saved" view; composer: "add a poll" (2-4 option fields); confessionPolls / confessionFollow off: none of it | APP `df1ef2f` | confessions-v2 81/81 (the flags-off identity checks still pass) |
+
+Notes:
+- N-5 "mute per confession thread" is now possible: the bell is that mute (follow off). Notification settings don't
+  list threads.
+- The portal needs nothing for P4b: the two flags show in admin → features from the server.
+- End of P4b: SERVER 110/110 suites; APP all suites + expo export (android + ios) ok.
 
 ## Railway variables for the owner to set (never set by the developer)
 

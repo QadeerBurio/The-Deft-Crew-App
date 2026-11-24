@@ -66,3 +66,16 @@ export const toggleMeToo = async (token, id) => {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 };
+
+// ============ P4b ============
+const putJson = async (token, path, body) => {
+  const res = await fetchWithTimeout(`${API_URL}${path}`, { method: "PUT", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+};
+// a vote (or a changed vote) → { poll: { options: [{ text, votes }], total, myVote } }   (flag confessionPolls)
+export const votePoll = (token, id, option) => putJson(token, `/confessions/${encodeURIComponent(id)}/poll`, { option });
+// follow / unfollow, the author: mute / unmute → { following }   (flag confessionFollow)
+export const setFollowing = (token, id, on) => putJson(token, `/confessions/${encodeURIComponent(id)}/follow`, { on });
+// save / unsave → { saved }   (confessionsV2; the list: the feed with saved=1)
+export const setSavedConfession = (token, id, on) => putJson(token, `/confessions/${encodeURIComponent(id)}/save`, { on });

@@ -12,7 +12,7 @@ import { SORTS } from "./confessionV2";
 
 // v2 (P4a, flag confessionsV2): sort chips (hot · new · top this week) and tag filter chips under the scope tabs.
 // Without it the header is exactly as before.
-export default function ConfessionFeed({ flatListRef, listData, highlightId, scope, renderConfession, switchScope, myUniName, refreshing, setRefreshing, fetchConfessions, firstLoad, navigation, handleFabPress, v2 = false, sort = "hot", onSort = () => {}, tags = [], tagFilter = null, onTag = () => {} }) {
+export default function ConfessionFeed({ flatListRef, listData, highlightId, scope, renderConfession, switchScope, myUniName, refreshing, setRefreshing, fetchConfessions, firstLoad, navigation, handleFabPress, v2 = false, sort = "hot", onSort = () => {}, tags = [], tagFilter = null, onTag = () => {}, savedOnly = false, onSaved = null }) {
   return (
       <FlatList
         ref={flatListRef}
@@ -60,6 +60,14 @@ export default function ConfessionFeed({ flatListRef, listData, highlightId, sco
                   </TouchableOpacity>
                 ))}
               </View>
+              {onSaved ? (
+                <View style={[styles.scopeTabs, { marginTop: 0 }]}>
+                  <TouchableOpacity style={[styles.scopeTab, savedOnly && styles.scopeTabActive]} onPress={() => onSaved(!savedOnly)} activeOpacity={0.8} accessibilityRole="button" accessibilityState={{ selected: savedOnly }} accessibilityLabel={savedOnly ? "showing saved, tap for all" : "show saved"}>
+                    <Ionicons name={savedOnly ? "bookmark" : "bookmark-outline"} size={14} color={savedOnly ? T.ink : T.onInkMuted} />
+                    <Text style={[styles.scopeTabText, savedOnly && styles.scopeTabTextActive]}>saved</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
               {tags.length > 0 && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingBottom: 8 }}>
                   {tags.map((t) => (

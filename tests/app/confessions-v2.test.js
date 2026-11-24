@@ -30,7 +30,7 @@ const baseFeed = () => [
   { _id: "p3", text: "my held post", visibility: "public", likes: 0, comments: [], createdAt: now, status: "pending" },
 ];
 
-function setup(file, { flag, v2 = false, server = {}, picker = null }) {
+function setup(file, { flag, v2 = false, flags = {}, server = {}, picker = null }) {
   const { React, mount } = H.makeReact();
   const { rn, alerts } = H.makeRN({ Share: { share: async () => ({}) }, Keyboard: { dismiss() {}, addListener: () => ({ remove() {} }) }, TouchableWithoutFeedback: "TWF", KeyboardAvoidingView: "KAV", RefreshControl: "RefreshControl", Linking: { openURL: async () => {} } });
   const calls = [];
@@ -41,6 +41,9 @@ function setup(file, { flag, v2 = false, server = {}, picker = null }) {
     if (url.includes("/confessions/feed")) return reply(200, server.feed ? server.feed() : baseFeed());
     if (url.endsWith("/confessions/v2/config")) return reply(200, server.config || null);
     if (/\/confessions\/[^/]+\/metoo$/.test(url) && method === "PUT") return reply(200, { meToo: true, meTooCount: 4 });
+    if (/\/confessions\/[^/]+\/poll$/.test(url) && method === "PUT") return reply(200, { poll: { options: [{ text: "chai", votes: 3 }, { text: "coffee", votes: 1 }], total: 4, myVote: 0 } });
+    if (/\/confessions\/[^/]+\/follow$/.test(url) && method === "PUT") { const b = JSON.parse(opts.body || "{}"); return reply(200, { following: b.on !== false }); }
+    if (/\/confessions\/[^/]+\/save$/.test(url) && method === "PUT") { const b = JSON.parse(opts.body || "{}"); return reply(200, { saved: b.on !== false }); }
     if (url.includes("/confessions/create")) return server.create ? server.create() : reply(201, { confession: { _id: "new" } });
     if (/\/confessions\/comment\/[^/]+$/.test(url) && method === "POST") return server.comment ? server.comment() : reply(200, { _id: "p1", comments: [] });
     if (url.endsWith("/confessions/safety/me")) return reply(200, { rulesAcceptedAt: server.rulesAccepted ? now : null, helplines: [{ name: "x", number: "1166" }] });
@@ -62,7 +65,7 @@ function setup(file, { flag, v2 = false, server = {}, picker = null }) {
     "../../lib/tdcSounds": new Proxy({}, { get: () => () => {} }),
     "../../engagement/engagementBus": { engagementBus: { emit() {} }, ENGAGEMENT_EVENTS: {} },
     "../../analytics/metaEvents": { metaEvents: new Proxy({}, { get: () => () => {} }) },
-    "../../hooks/useFlag": { __esModule: true, default: (name) => (name === "confessionsV2" ? v2 : flag) }, // flag = confessionSafety
+    "../../hooks/useFlag": { __esModule: true, default: (name) => (name === "confessionsV2" ? v2 : name in flags ? flags[name] : name === "confessionSafety" ? flag : false) }, // flag = confessionSafety; flags: the P4b ones
     "../../analytics/funnel": { funnel: (n) => funnels.push(n) },
     "./ReportModal": function ReportModal(p) { return React.createElement("ReportModal", p); },
   };
@@ -351,6 +354,57 @@ async function snapshots(file, flag, v2 = false) {
     await sheet.buttons.find((b) => b.text === "Gallery").onPress(); await tick(30);
     const denied = ctx.alerts.pop();
     ok(denied?.title === "Permission required", "…photos denied → 'Permission required' (the check works now)", JSON.stringify(denied));
+    ctx.restore();
+  }
+
+  console.log("── P4b: polls, follow, save");
+  {
+    const p4bFeed = () => baseFeed().map((c, i) => (i === 0
+      ? { ...c, meTooCount: 0, meTooByCurrentUser: false, poll: { options: [{ text: "chai", votes: 2 }, { text: "coffee", votes: 1 }], total: 3, myVote: null }, following: false, saved: false }
+      : { ...c, meTooCount: 0, meTooByCurrentUser: false, following: i === 1, saved: false }));
+    const ctx = setup(SCREEN, { flag: false, v2: true, flags: { confessionPolls: true, confessionFollow: true }, server: { config: { tags: [], prompts: [], moods: [], maxLength: 500, handle: { enabled: false } }, feed: p4bFeed } });
+    await tick(150);
+    let r = rows(ctx);
+    ok(find(r[0].tree, (x) => x.props.accessibilityLabel === "vote: chai") && find(r[0].tree, (x) => x.props.accessibilityLabel === "vote: coffee") && H.textOf(r[0].tree).includes("3 votes · anonymous"), "a poll: one button per option, the total, 'anonymous'");
+    await press(r[0].tree, "vote: chai"); await tick(80);
+    const vote = ctx.calls.find((c) => /\/confessions\/p1\/poll$/.test(c.url));
+    ok(vote && vote.method === "PUT" && JSON.stringify(vote.body) === JSON.stringify({ option: 0 }), "vote → PUT /confessions/p1/poll { option: 0 }", JSON.stringify(vote));
+    r = rows(ctx);
+    ok(find(r[0].tree, (x) => x.props.accessibilityLabel === "chai, 75 percent, your vote") && H.textOf(r[0].tree).includes("tap to change"), "…then the results (75%), mine marked, can be changed");
+    ok(ctx.funnels.includes("confession_poll_voted"), "funnel confession_poll_voted");
+    await press(r[0].tree, "follow replies"); await tick(60);
+    const fol = ctx.calls.find((c) => /\/confessions\/p1\/follow$/.test(c.url));
+    ok(fol && JSON.stringify(fol.body) === JSON.stringify({ on: true }) && find(rows(ctx)[0].tree, (x) => x.props.accessibilityLabel === "following replies, tap to mute"), "the bell → follow (PUT { on: true }); then 'following, tap to mute'");
+    ok(find(rows(ctx)[1].tree, (x) => x.props.accessibilityLabel === "following replies, tap to mute"), "my own post: already followed (the author follows it), one tap mutes");
+    await press(rows(ctx)[1].tree, "following replies, tap to mute"); await tick(60);
+    ok(ctx.calls.some((c) => /\/confessions\/p2\/follow$/.test(c.url) && c.body?.on === false) && ctx.funnels.includes("confession_unfollowed"), "mute → PUT { on: false }; funnel confession_unfollowed");
+    await press(rows(ctx)[0].tree, "save"); await tick(60);
+    ok(ctx.calls.some((c) => /\/confessions\/p1\/save$/.test(c.url) && c.body?.on === true) && find(rows(ctx)[0].tree, (x) => x.props.accessibilityLabel === "saved, tap to unsave") && ctx.funnels.includes("confession_saved"), "save → PUT { on: true }; the bookmark fills");
+    const header = () => expand(ctx, find(ctx.root.tree, (x) => x.type === "FlatList").props.ListHeaderComponent);
+    await press(header(), "show saved"); await tick(150);
+    ok(ctx.calls.some((c) => c.url.includes("/confessions/feed") && /&saved=1/.test(c.url)), "header 'saved' → the feed with saved=1", ctx.calls.filter((c) => c.url.includes("/feed")).slice(-1)[0]?.url);
+
+    console.log("── P4b composer: the poll");
+    await press(ctx.root.tree, "confess"); await tick(300);
+    await press(ctx.root.tree, "add a poll"); await tick(30);
+    const opt = (i) => find(ctx.root.tree, (x) => x.type === "TextInput" && x.props.accessibilityLabel === `poll option ${i}`);
+    ok(opt(1) && opt(2) && !opt(3), "add a poll → two option fields");
+    await press(ctx.root.tree, "add an option"); await tick(30);
+    ok(opt(3) && opt(3).props.maxLength === 60, "+ option → a third (60 characters each)");
+    opt(1).props.onChangeText("chai"); opt(2).props.onChangeText("coffee"); opt(3).props.onChangeText(" "); await tick(30);
+    find(ctx.root.tree, (x) => x.type === "TextInput" && x.props.placeholder === "What's on your mind? 🤔").props.onChangeText("chai or coffee before class?"); await tick(30);
+    await find(ctx.root.tree, (x) => x.type === "TouchableOpacity" && H.textOf(x).includes("post confession")).props.onPress(); await tick(200);
+    const sent = ctx.calls.find((c) => c.url.includes("/confessions/create"));
+    ok(sent && JSON.stringify(sent.body.poll) === JSON.stringify({ options: ["chai", "coffee"] }), "post → the poll's filled options (an empty one dropped)", JSON.stringify(sent?.body));
+    ctx.restore();
+  }
+  {
+    const ctx = setup(SCREEN, { flag: false, v2: true, flags: { confessionPolls: false, confessionFollow: false }, server: { config: { tags: [], prompts: [], moods: [], maxLength: 500, handle: { enabled: false } }, feed: () => baseFeed().map((c, i) => (i === 0 ? { ...c, poll: { options: [{ text: "chai", votes: 1 }, { text: "tea", votes: 0 }], total: 1, myVote: null } } : c)) } });
+    await tick(150);
+    const r0 = rows(ctx)[0].tree;
+    ok(!find(r0, (x) => /^vote: /.test(x.props.accessibilityLabel || "")) && !find(r0, (x) => x.props.accessibilityLabel === "follow replies"), "polls / follow flags off: no vote buttons, no bell");
+    await press(ctx.root.tree, "confess"); await tick(300);
+    ok(!find(ctx.root.tree, (x) => x.props.accessibilityLabel === "add a poll"), "…and no 'add a poll'");
     ctx.restore();
   }
 

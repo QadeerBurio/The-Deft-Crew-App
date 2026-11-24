@@ -46,7 +46,7 @@ import ConfessionCommentThread from "./ConfessionCommentThread";
 import ConfessionComposer from "./ConfessionComposer";
 import ConfessionComments from "./ConfessionComments";
 import ConfessionFeed from "./ConfessionFeed";
-import { API_URL, CONFESSIONS_POLL_INTERVAL, feedCache, confessionsChanged, commentsChanged, uploadToCloudinary, getV2Config, toggleMeToo } from "./confessionApi";
+import { API_URL, CONFESSIONS_POLL_INTERVAL, feedCache, confessionsChanged, commentsChanged, uploadToCloudinary, getV2Config, toggleMeToo, votePoll, setFollowing, setSavedConfession } from "./confessionApi";
 import { feedQuery, viewKey } from "./confessionV2";
 // confession safety (plan P4-1): everything below is used only while useFlag(FLAGS.confessionSafety) is true
 import useFlag from "../../hooks/useFlag";
@@ -162,8 +162,14 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
   const [postTag, setPostTag] = useState(null);
   const [postMood, setPostMood] = useState(null);
   const [postAs, setPostAs] = useState('anon');
+  // P4b: polls (confessionPolls), follow (confessionFollow), the saved view (confessionsV2); hooks always called
+  const pollsFlag = useFlag('confessionPolls') === true;
+  const followFlag = useFlag('confessionFollow') === true;
+  const [pollOptions, setPollOptions] = useState(null);
+  const [savedOnly, setSavedOnly] = useState(false);
+  const savedRef = useRef(false);
   // the list on screen: the scope (as before), plus sort and tag with v2
-  const currentKey = () => viewKey({ scope: scopeRef.current, v2: v2Ref.current, sort: sortRef.current, tag: tagRef.current });
+  const currentKey = () => viewKey({ scope: scopeRef.current, v2: v2Ref.current, sort: sortRef.current, tag: tagRef.current, saved: savedRef.current });
   const [safetyInfo, setSafetyInfo] = useState(null); // { rulesAcceptedAt, helplines, … } from the server
   const [myIds, setMyIds] = useState(() => new Set()); // my own confessions (for "delete" in the ⋯ menu)
   const [reportTarget, setReportTarget] = useState(null); // { type: 'Confession' | 'ConfessionComment', id }
@@ -302,7 +308,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     const requestScope = scopeRef.current;
     const requestKey = currentKey();
     try {
-      const response = await fetchWithTimeout(`${API_URL}/confessions/feed?${feedQuery({ scope: requestScope, v2: v2Ref.current, sort: sortRef.current, tag: tagRef.current })}`, {
+      const response = await fetchWithTimeout(`${API_URL}/confessions/feed?${feedQuery({ scope: requestScope, v2: v2Ref.current, sort: sortRef.current, tag: tagRef.current, saved: savedRef.current })}`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -395,7 +401,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     lastConfessionsFetchRef.current = 0; // allow an immediate refresh
     fetchConfessions(!!cached); // first visit: loader is cleared when the fetch ends
     flatListRef.current?.scrollToOffset?.({ offset: 0, animated: false });
-  }, [scope, sort, tagFilter, v2]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [scope, sort, tagFilter, v2, savedOnly]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // P4a: the composer config, once the flag is on
   useEffect(() => {
@@ -433,6 +439,35 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
       meTooInFlight.current.delete(id);
     }
   }, [token]);
+  // P4b: vote / follow / save, shown at once and put back if the server says no
+  const patchItem = (id, patch) => setConfessions((list) => list.map((c) => (c._id === id ? { ...c, ...(typeof patch === 'function' ? patch(c) : patch) } : c)));
+  const handleVote = useCallback(async (id, option) => {
+    soundTap();
+    try {
+      const r = await votePoll(token, id, option);
+      if (r?.poll) patchItem(id, { poll: r.poll });
+      funnel('confession_poll_voted');
+    } catch (e) { reportError('confessionsV2', e, { step: 'poll' }); }
+  }, [token]);
+  const handleFollow = useCallback(async (id, on) => {
+    soundTap();
+    patchItem(id, { following: on });
+    try {
+      const r = await setFollowing(token, id, on);
+      patchItem(id, { following: !!r.following });
+      funnel(on ? 'confession_followed' : 'confession_unfollowed');
+    } catch (e) { patchItem(id, { following: !on }); reportError('confessionsV2', e, { step: 'follow' }); }
+  }, [token]);
+  const handleSave = useCallback(async (id, on) => {
+    soundTap();
+    patchItem(id, { saved: on });
+    try {
+      const r = await setSavedConfession(token, id, on);
+      patchItem(id, { saved: !!r.saved });
+      funnel(on ? 'confession_saved' : 'confession_unsaved');
+    } catch (e) { patchItem(id, { saved: !on }); reportError('confessionsV2', e, { step: 'save' }); }
+  }, [token]);
+  const onSaved = useCallback((on) => { soundTap(); savedRef.current = !!on; setSavedOnly(!!on); }, []);
   const tagLabelOf = useCallback((id) => (id && v2Config?.tags?.find((t) => t.id === id)?.label) || null, [v2Config]);
 
   const switchScope = useCallback((next) => {
@@ -843,7 +878,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(v2
-          ? { text: newConfession.trim(), image: imageUrl, visibility: postVisibility, ...(postTag ? { tag: postTag } : {}), ...(postMood ? { mood: postMood } : {}), postAs }
+          ? { text: newConfession.trim(), image: imageUrl, visibility: postVisibility, ...(postTag ? { tag: postTag } : {}), ...(postMood ? { mood: postMood } : {}), postAs, ...(pollsFlag && pollOptions ? { poll: { options: pollOptions.map((o) => o.trim()).filter(Boolean) } } : {}) }
           : { text: newConfession.trim(), image: imageUrl, visibility: postVisibility })
       });
 
@@ -894,7 +929,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     } finally {
       setPosting(false);
     }
-  }, [newConfession, selectedImage, token, fetchConfessions, postVisibility, safety, v2, postTag, postMood, postAs]);
+  }, [newConfession, selectedImage, token, fetchConfessions, postVisibility, safety, v2, postTag, postMood, postAs, pollsFlag, pollOptions]);
 
   const resetForm = useCallback(() => {
     setNewConfession("");
@@ -903,6 +938,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     setPostTag(null);
     setPostMood(null);
     setPostAs('anon');
+    setPollOptions(null);
     setModalVisible(false);
     Keyboard.dismiss();
   }, []);
@@ -1062,9 +1098,9 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
       openComments={openComments}
       safety={safety}
       onMore={safety ? handleMore : null}
-      {...(v2 ? { v2: true, onMeToo: handleMeToo, tagLabel: tagLabelOf(item.tag) } : {})}
+      {...(v2 ? { v2: true, onMeToo: handleMeToo, tagLabel: tagLabelOf(item.tag), onSave: handleSave, ...(pollsFlag ? { onVote: handleVote } : {}), ...(followFlag ? { onFollow: handleFollow } : {}) } : {})}
     />
-  ), [expandedPosts, textLayouts, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, highlightId, scope, safety, handleMore, v2, handleMeToo, tagLabelOf]);
+  ), [expandedPosts, textLayouts, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, highlightId, scope, safety, handleMore, v2, handleMeToo, tagLabelOf, handleSave, pollsFlag, handleVote, followFlag, handleFollow]);
 
   // No skeleton: tabs + list render right away, a small loader only while
   // a tab is loading for the very first time.
@@ -1077,7 +1113,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
         renderConfession={renderConfession} switchScope={switchScope} myUniName={myUniName} refreshing={refreshing}
         setRefreshing={setRefreshing} fetchConfessions={fetchConfessions} firstLoad={firstLoad} navigation={navigation}
         handleFabPress={handleFabPress}
-        {...(v2 ? { v2: true, sort, onSort, tags: v2Config?.tags || [], tagFilter, onTag } : {})}
+        {...(v2 ? { v2: true, sort, onSort, tags: v2Config?.tags || [], tagFilter, onTag, savedOnly, onSaved } : {})}
       />
 
       {/* FAB */}
@@ -1106,7 +1142,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
         handlePost={handlePost}
         posting={posting}
         {...(safety ? { onPickImage: showImageOptions } : {})}
-        {...(v2 ? { v2: v2Config, tag: postTag, setTag: setPostTag, mood: postMood, setMood: setPostMood, postAs, setPostAs } : {})}
+        {...(v2 ? { v2: v2Config, tag: postTag, setTag: setPostTag, mood: postMood, setMood: setPostMood, postAs, setPostAs, ...(pollsFlag ? { pollOptions, setPollOptions } : {}) } : {})}
       />
 
       {/* COMMENTS MODAL */}

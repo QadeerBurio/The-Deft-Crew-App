@@ -20,6 +20,8 @@ export default function ConfessionComposer({
   // composer config { tags, prompts, moods, maxLength, handle }; with it: prompt chips, tag, mood, post as, 500 chars.
   // Without them the sheet is exactly as before.
   onPickImage = null, v2 = null, tag = null, setTag = () => {}, mood = null, setMood = () => {}, postAs = "anon", setPostAs = () => {},
+  // P4b (flag confessionPolls): pollOptions null = no poll yet ("add a poll"); an array = the 2-4 option fields
+  setPollOptions = null, pollOptions = null,
 }) {
   const maxLength = v2 ? (v2.maxLength || 500) : 1000;
   const chip = (active) => [styles.visibilityChip, active && styles.visibilityChipActive];
@@ -135,6 +137,46 @@ export default function ConfessionComposer({
                       <Text style={chipText(false)}>add a photo</Text>
                     </TouchableOpacity>
                   )}
+                  {v2 && setPollOptions ? (
+                    pollOptions ? (
+                      <View style={{ marginBottom: 10 }}>
+                        <Text style={styles.visibilityLabel}>poll (votes are anonymous)</Text>
+                        {pollOptions.map((o, i) => (
+                          <View key={`opt-${i}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                            <TextInput
+                              style={[styles.input, { flex: 1, minHeight: 44, marginBottom: 0 }]}
+                              value={o}
+                              onChangeText={(t) => setPollOptions(pollOptions.map((x, j) => (j === i ? t : x)))}
+                              placeholder={`option ${i + 1}`}
+                              placeholderTextColor={T.textFaint}
+                              maxLength={60}
+                              accessibilityLabel={`poll option ${i + 1}`}
+                            />
+                            {pollOptions.length > 2 ? (
+                              <TouchableOpacity onPress={() => setPollOptions(pollOptions.filter((_, j) => j !== i))} accessibilityRole="button" accessibilityLabel={`remove option ${i + 1}`} hitSlop={8} style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+                                <Ionicons name="close-circle-outline" size={20} color={T.textMuted} />
+                              </TouchableOpacity>
+                            ) : null}
+                          </View>
+                        ))}
+                        <View style={styles.visibilityChips}>
+                          {pollOptions.length < 4 ? (
+                            <TouchableOpacity style={chip(false)} onPress={() => setPollOptions([...pollOptions, ''])} accessibilityRole="button" accessibilityLabel="add an option">
+                              <Text style={chipText(false)}>+ option</Text>
+                            </TouchableOpacity>
+                          ) : null}
+                          <TouchableOpacity style={chip(false)} onPress={() => setPollOptions(null)} accessibilityRole="button" accessibilityLabel="remove the poll">
+                            <Text style={chipText(false)}>remove poll</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ) : (
+                      <TouchableOpacity style={[chip(false), { alignSelf: 'flex-start', marginBottom: 10 }]} onPress={() => { soundTap(); setPollOptions(['', '']); }} accessibilityRole="button" accessibilityLabel="add a poll">
+                        <Ionicons name="stats-chart-outline" size={14} color={T.textMuted} />
+                        <Text style={chipText(false)}>add a poll</Text>
+                      </TouchableOpacity>
+                    )
+                  ) : null}
                   {v2 && Array.isArray(v2.tags) && v2.tags.length > 0 && (
                     <View style={{ marginBottom: 10 }}>
                       <Text style={styles.visibilityLabel}>tag</Text>

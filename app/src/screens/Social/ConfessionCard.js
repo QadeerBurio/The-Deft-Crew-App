@@ -13,7 +13,10 @@ import { avatarFor } from "./confessionV2";
 // "under review" chip on my held posts. Without them the card is exactly as before.
 // v2 / onMeToo / tagLabel (P4a, flag confessionsV2): the handle (with its Dot avatar and a verified tick), the tag,
 // the mood and "me too". Without them the card is exactly as before.
-export default function ConfessionCard({ item, isExpanded, lineCount, scope, highlightId, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, safety = false, onMore = null, v2 = false, onMeToo = null, tagLabel = null }) {
+// onVote / onFollow / onSave (P4b): the poll (flag confessionPolls), the follow bell (confessionFollow) and save.
+export default function ConfessionCard({ item, isExpanded, lineCount, scope, highlightId, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, safety = false, onMore = null, v2 = false, onMeToo = null, tagLabel = null, onVote = null, onFollow = null, onSave = null }) {
+    const poll = v2 && onVote && item.poll && Array.isArray(item.poll.options) ? item.poll : null;
+    const voted = poll && poll.myVote != null;
     const handle = v2 && item.handle ? item.handle : null;
     const av = handle ? avatarFor(handle) : null;
     const isLiked = item.likedByCurrentUser;
@@ -121,6 +124,32 @@ export default function ConfessionCard({ item, isExpanded, lineCount, scope, hig
           </View>
         )}
 
+        {poll ? (
+          <View style={{ marginTop: 10, gap: 8 }} accessibilityLabel={`poll, ${poll.total} ${poll.total === 1 ? "vote" : "votes"}`}>
+            {poll.options.map((o, i) => {
+              const pct = poll.total > 0 ? Math.round((o.votes / poll.total) * 100) : 0;
+              const mine = poll.myVote === i;
+              return (
+                <TouchableOpacity
+                  key={`${item._id}-o${i}`}
+                  onPress={() => onVote(item._id, i)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: mine }}
+                  accessibilityLabel={voted ? `${o.text}, ${pct} percent${mine ? ", your vote" : ""}` : `vote: ${o.text}`}
+                  style={{ borderRadius: 12, borderWidth: 1, borderColor: mine ? T.yellow : T.onInkMuted, overflow: "hidden", minHeight: 44, justifyContent: "center" }}
+                >
+                  {voted ? <View style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pct}%`, backgroundColor: mine ? T.yellow : T.onInkMuted, opacity: 0.25 }} /> : null}
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 12, gap: 8 }}>
+                    <Text style={[styles.actionText, { color: T.white, flexShrink: 1 }]}>{o.text}</Text>
+                    {voted ? <Text style={[styles.actionText, mine && { color: T.yellow }]}>{pct}%</Text> : null}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+            <Text style={[styles.postTime, { marginTop: 0 }]}>{poll.total} {poll.total === 1 ? "vote" : "votes"} · anonymous{voted ? " · tap to change" : ""}</Text>
+          </View>
+        ) : null}
+
         <View style={styles.cardFooter}>
           <TouchableOpacity
             style={[styles.actionBtn, isLiked && styles.actionBtnLiked]}
@@ -155,6 +184,27 @@ export default function ConfessionCard({ item, isExpanded, lineCount, scope, hig
             >
               <Ionicons name={item.meTooByCurrentUser ? "hand-left" : "hand-left-outline"} size={18} color={item.meTooByCurrentUser ? T.yellow : T.onInkMuted} />
               <Text style={[styles.actionText, item.meTooByCurrentUser && { color: T.yellow }]}>{item.meTooCount > 0 ? `me too ${item.meTooCount}` : "me too"}</Text>
+            </TouchableOpacity>
+          ) : null}
+
+          {v2 && onFollow && typeof item.following === "boolean" ? (
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => onFollow(item._id, !item.following)}
+              accessibilityRole="button"
+              accessibilityLabel={item.following ? "following replies, tap to mute" : "follow replies"}
+            >
+              <Ionicons name={item.following ? "notifications" : "notifications-outline"} size={18} color={item.following ? T.yellow : T.onInkMuted} />
+            </TouchableOpacity>
+          ) : null}
+          {v2 && onSave && typeof item.saved === "boolean" ? (
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => onSave(item._id, !item.saved)}
+              accessibilityRole="button"
+              accessibilityLabel={item.saved ? "saved, tap to unsave" : "save"}
+            >
+              <Ionicons name={item.saved ? "bookmark" : "bookmark-outline"} size={18} color={item.saved ? T.yellow : T.onInkMuted} />
             </TouchableOpacity>
           ) : null}
 
