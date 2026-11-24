@@ -41,6 +41,8 @@ import { plainError } from "../../utils/plainError";
 import { metaEvents } from "../../analytics/metaEvents";
 import { SERVER_ORIGIN } from "../../config/server";
 import { acceptRequestFrom } from "../../utils/connectionRequests";
+import useFlag from "../../hooks/useFlag"; // Q-3d (optimisticActions)
+import { toggleId } from "../../utils/toggleId";
 const { width, height } = Dimensions.get('window');
 const API_URL = `${SERVER_ORIGIN}/api/social`;
 
@@ -138,6 +140,7 @@ function PostCard({ post, onBlock, onReport, onPostUpdate }) {
 
   const [likes, setLikes] = useState(() => normalizeLikes(post.likes));
   const [favorites, setFavorites] = useState(() => Array.isArray(post.favorites) ? post.favorites : []);
+  const optimisticFlag = useFlag("optimisticActions") === true; // Q-3d: save shows at once
   const [commentsList, setCommentsList] = useState(() => normalizeComments(post.comments));
   const [commentText, setCommentText] = useState("");
   const [showComments, setShowComments] = useState(false);
@@ -498,13 +501,23 @@ function PostCard({ post, onBlock, onReport, onPostUpdate }) {
       Animated.timing(saveScale, { toValue: 1, duration: 100, useNativeDriver: true }),
     ]).start();
 
+    // Q-3d (flag optimisticActions): the bookmark changes at once, the server confirms, a failure puts it back.
+    // Flag off: exactly as before (the bookmark changes when the server answers).
+    const before = favorites;
+    if (optimisticFlag) {
+      setFavorites((list) => toggleId(list, uid));
+      setShowMenu(false);
+    }
     try {
       const res = await axios.post(`${API_URL}/posts/favorite/${post._id}`, {}, config);
       if (res.data.success) {
         setFavorites(Array.isArray(res.data.favorites) ? res.data.favorites : []);
         setShowMenu(false);
+      } else if (optimisticFlag) {
+        setFavorites(before);
       }
     } catch (err) {
+      if (optimisticFlag) setFavorites(before);
       soundError();
       Alert.alert("Error", "Save action failed");
     }

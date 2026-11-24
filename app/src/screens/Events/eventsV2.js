@@ -31,6 +31,28 @@ export async function fetchEvent(id, get = axios.get) {
   return r.data;
 }
 
+// ── Q-3e (flag prefetchDetails): start the details request when the finger touches a card ──
+// Opening the details then uses that request if it started at most PREFETCH_FRESH_MS ago (still the latest copy);
+// otherwise a new request, exactly as before. Each prefetched request is used once.
+export const PREFETCH_FRESH_MS = 5000;
+const prefetched = new Map(); // id → { at, promise }
+export function prefetchEvent(id, get = axios.get, now = Date.now) {
+  const key = String(id || "");
+  if (!key) return;
+  const p = prefetched.get(key);
+  if (p && now() - p.at <= PREFETCH_FRESH_MS) return; // already on its way
+  const promise = fetchEvent(key, get);
+  // a failed prefetch is forgotten, so opening makes a normal request
+  promise.catch(() => { if (prefetched.get(key)?.promise === promise) prefetched.delete(key); });
+  prefetched.set(key, { at: now(), promise });
+}
+export function takePrefetchedEvent(id, now = Date.now) {
+  const key = String(id || "");
+  const p = prefetched.get(key);
+  prefetched.delete(key);
+  return p && now() - p.at <= PREFETCH_FRESH_MS ? p.promise : null;
+}
+
 // ── category templates: fetched once, shared ────────────────────
 // Labels only: an event's own details / registrationForm always come from the event.
 let templatesCache = null;

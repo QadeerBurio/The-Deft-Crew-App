@@ -67,7 +67,10 @@ import {
   PAYMENT_LABEL,
   fetchEvent,
   LIST_FRESH_MS,
+  prefetchEvent,
+  takePrefetchedEvent,
 } from "./eventsV2";
+import useFlag from "../../hooks/useFlag";
 import { SERVER_ORIGIN } from "../../config/server";
 import { isImportedEvent, getCategoryTheme, COLORS, formatCategoryLabel, real, eventImage, eventWhen, dateText, eventMeta, isPastEvent } from "./eventsFormat";
 import { styles, EV } from "./eventsStyles";
@@ -754,7 +757,8 @@ export default function EventsScreen() {
     openIdRef.current = id;
     setSelectedEvent(ev);
     setDetailStatus("loading");
-    fetchEvent(id)
+    // Q-3e: a request started when the finger touched the card (at most 5 s ago) is used; otherwise a new one
+    ((prefetchFlag && takePrefetchedEvent(id)) || fetchEvent(id))
       .then((fresh) => {
         if (openIdRef.current !== id) return; // closed or another event opened
         setSelectedEvent((cur) => (cur && String(cur._id) === id ? { ...fresh, registration: cur.registration } : cur));
@@ -787,6 +791,9 @@ export default function EventsScreen() {
 
   // List rows (EventRow is memoised): stable callbacks and renderItem
   const rowOpen = useStableCallback((ev) => openEvent(ev));
+  // Q-3e (flag prefetchDetails): touching a card starts the details request
+  const prefetchFlag = useFlag("prefetchDetails") === true;
+  const rowPressIn = useStableCallback((ev) => prefetchEvent(ev?._id));
   const rowRegister = useStableCallback((ev) => handleRegister(ev));
   const rowCancel = useStableCallback((ev) => handleCancelRegistration(ev));
   const rowTicket = useStableCallback((reg) => openTicket(reg));
@@ -816,6 +823,7 @@ export default function EventsScreen() {
         saved={isSaved(ev._id)}
         registered={registeredEventIds.includes(ev._id)}
         onOpen={rowOpen}
+        onPressIn={prefetchFlag ? rowPressIn : undefined}
         onRegister={rowRegister}
         onCancel={rowCancel}
         onTicket={rowTicket}
@@ -823,7 +831,7 @@ export default function EventsScreen() {
         onProof={rowProof}
       />
     );
-  }, [showApplied, isSaved, registeredEventIds, rowOpen, rowRegister, rowCancel, rowTicket, rowSave, rowProof]);
+  }, [showApplied, isSaved, registeredEventIds, rowOpen, rowRegister, rowCancel, rowTicket, rowSave, rowProof, prefetchFlag, rowPressIn]);
   const registrationFor = (eventId) =>
     appliedEventsData.find((x) => String(x?.event?._id || x?.event) === String(eventId))?.registration || null;
 

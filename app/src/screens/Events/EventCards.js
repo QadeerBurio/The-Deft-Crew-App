@@ -58,7 +58,8 @@ export const SaveButton = ({ saved, onPress, dark = false }) => (
 // ─── Event card: featured (top event, dark, design) or list size (white) ──────
 // Same parts in both: banner (event image or sand) with the date and prize pills,
 // title, place line, tags, register / registered button and the slot on its right.
-export const EventCard = ({ item, onOpen, onRegister, isRegistered, onCancel, featured, side, registration, onProof, onTicket }) => {
+// onPressIn (Q-3e, flag prefetchDetails): the finger touched the card (the details request starts); absent = as before
+export const EventCard = ({ item, onOpen, onPressIn, onRegister, isRegistered, onCancel, featured, side, registration, onProof, onTicket }) => {
   const [imgFailed, setImgFailed] = useState(false);
   const imported = isImportedEvent(item);
   // events v2: price, seats, open / closed (not for external events)
@@ -116,6 +117,7 @@ export const EventCard = ({ item, onOpen, onRegister, isRegistered, onCancel, fe
   return (
     <PressScale
       onPress={() => onOpen(item)}
+      onPressIn={onPressIn ? () => onPressIn(item) : undefined}
       scaleTo={0.98}
       style={featured ? EV.featured : EV.card}
       accessibilityLabel={[item.title, when, meta].filter(Boolean).join(", ")}
@@ -199,7 +201,7 @@ export const EventCard = ({ item, onOpen, onRegister, isRegistered, onCancel, fe
 // its place in the list changes (the screen passes stable callbacks). Before, an inline
 // renderItem built a new `side` element and onProof arrow per row, so every visible card
 // re-rendered on every screen render.
-export const EventRow = memo(function EventRow({ ev, index, showApplied, saved, registered, onOpen, onRegister, onCancel, onTicket, onSave, onProof }) {
+export const EventRow = memo(function EventRow({ ev, index, showApplied, saved, registered, onOpen, onPressIn, onRegister, onCancel, onTicket, onSave, onProof }) {
   const featured = index === 0 && !showApplied;
   return (
     <>
@@ -212,6 +214,7 @@ export const EventRow = memo(function EventRow({ ev, index, showApplied, saved, 
         item={ev}
         featured={featured}
         onOpen={onOpen}
+        onPressIn={onPressIn}
         onRegister={onRegister}
         isRegistered={registered}
         onCancel={onCancel}
