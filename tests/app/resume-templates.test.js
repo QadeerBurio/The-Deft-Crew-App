@@ -18,6 +18,15 @@ const { ok, done } = H.counter();
   const { FRESHER_SAMPLE } = require("../templates/sample");
   const sha = (s) => crypto.createHash("sha256").update(s).digest("hex");
 
+  console.log("── one renderer for the app and the server (P3d: the public resume page)");
+  const fs = require("fs");
+  const { SERVER } = require("../paths");
+  const norm = (s) => s.replace(/\r\n/g, "\n");
+  const serverCopy = path.join(SERVER, "utils", "resumeRender.js");
+  if (fs.existsSync(serverCopy)) ok(norm(H.read("app/src/utils/resumeRender.js")) === norm(fs.readFileSync(serverCopy, "utf8")), "app/src/utils/resumeRender.js is the server's utils/resumeRender.js, byte for byte");
+  else ok(true, "server repo not beside the app: identity checked by the server's own test");
+  ok(!/^\s*(import|export)\b/m.test(H.read("app/src/utils/resumeRender.js")) && !/require\(/.test(H.read("app/src/utils/resumeRender.js")), "the shared renderer is pure: no imports, no require");
+
   console.log("── the five looks, byte for byte");
   const v1 = require("./fixtures-renderer-v1.json");
   const v2 = require("./fixtures-renderer-v2.json");

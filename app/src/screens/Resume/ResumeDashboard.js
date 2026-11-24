@@ -84,6 +84,8 @@ const ResumeDashboardScreen = ({ navigation, route }) => {
   // P3-1: with resumeV2 a new resume starts on ResumeStart (upload / from my tdc profile / start fresh)
   const resumeV2 = useFlag("resumeV2") === true;
   const newResumeScreen = resumeV2 ? 'ResumeStart' : 'ResumeBuilder';
+  // P3d (resumeV2 + resumeFeedback): recruiter-style feedback on the selected resume
+  const feedbackOn = useFlag("resumeFeedback") === true && resumeV2;
   // an invite push without a job: { openInvites: true } scrolls to the invites card
   const openInvites = !!route?.params?.openInvites;
   const scrollRef = useRef(null);
@@ -97,6 +99,16 @@ const ResumeDashboardScreen = ({ navigation, route }) => {
     }
   };
   useEffect(() => { if (openInvites) scrolledToInvites.current = false; }, [openInvites, route?.params?.at]);
+  // P3d finish moment: "apply to matching jobs" opens the dashboard at "recommended for you" ({ openMatches: true })
+  const openMatches = !!route?.params?.openMatches;
+  const scrolledToMatches = useRef(false);
+  const onMatchesLayout = (e) => {
+    if (openMatches && !scrolledToMatches.current) {
+      scrolledToMatches.current = true;
+      scrollRef.current?.scrollTo?.({ y: Math.max(0, e.nativeEvent.layout.y - 12), animated: true });
+    }
+  };
+  useEffect(() => { if (openMatches) scrolledToMatches.current = false; }, [openMatches, route?.params?.at]);
   const { user, isGuest } = useContext(AuthContext);
   const { requireAccount } = useGuestGate();
   const insets = useSafeAreaInsets();
@@ -944,6 +956,15 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                     </View>
                   )}
 
+                  {feedbackOn && (
+                    <View style={RD.section}>
+                      <TouchableOpacity style={[RD.studioBtn, RD.studioBtnLight]} accessibilityRole="button" accessibilityLabel="get recruiter feedback on this resume"
+                        onPress={() => navigation.navigate('ResumeFeedback', { resumeId: selectedResume._id })}>
+                        <Text style={[RD.studioBtnText, { color: T.ink }]} maxFontSizeMultiplier={MAX_FONT_SCALE}>get recruiter feedback</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
                   {/* Dark card: score ring + actions */}
                   <View style={RD.section}>
                     <View style={RD.dark}>
@@ -1052,7 +1073,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
 
                   {/* Recommended for you (FLAG_CAREER_MATCHING) */}
                   {matchingOn && (
-                    <View style={RD.section} testID="resume-recommended">
+                    <View style={RD.section} testID="resume-recommended" onLayout={onMatchesLayout}>
                       <Text style={RD.h2} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
                         recommended for you<Text style={{ color: T.yellow }}>.</Text>
                       </Text>

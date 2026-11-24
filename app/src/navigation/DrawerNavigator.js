@@ -232,6 +232,8 @@ const FULLSCREEN_SCREENS = [
   'ResumeImportReview',
   'ResumeStart',
   'ResumeCoachChat',
+  'ResumeFeedback', // P3d
+  'ResumeFinish', // P3d
   'ResumeStudio',
   'JobDetails',
   'JobApplicationForm',

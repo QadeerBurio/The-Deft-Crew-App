@@ -520,6 +520,42 @@ Owner sign-off (P3c step 2), done:
 Backlog (owner, P3c): heading icons drawn on the resume (`headingIcons` is saved, not drawn); gallery filters for
 photo / two-column / one-page (once such templates exist).
 
+## P3d: feedback, finish moment, public page, outcome snapshot, verified by tdc (branch `upgrade/p3d-finish` from `upgrade/p3c-templates`, owner 24 Nov 2026)
+
+Owner decisions: public page = the PDF's design (shared renderer, OFL fonts served by the server); address
+gettdc.pk/r/<link> forwarded by the portal (Vercel rewrite, like /i/); phone / e-mail off until chosen, city only if
+typed on the resume, never street / postal; a real view count only for the student (not their own visits, no IP
+stored); feedback may ask "did this save time or money? if yes, add it" as a question only; "verified by tdc" off
+by default with a one-tap suggestion on the finish screen; "my tdc resume" in the job form; rates only from 30
+applications and 10 interviews per template; a read-only admin table (analytics.view). Each feature behind its own
+flag under resumeV2 (student, off): `resumeFeedback`, `resumeFinish`, `resumeVerified`, `resumePublicPage`,
+`resumeOutcomeStats`.
+
+| Step | What changed | Commits | Tests |
+|---|---|---|---|
+| shared renderer | the renderer + styles + library move to `utils/resumeRender.js`, byte for byte in app and server (like resumeRules); the app's templateService / styles / library re-export the same names; approval stays app-only | APP `914cb03`, SERVER `a44bf011` | 395 frozen outputs identical; ATS 16/16; identity checked in both repos |
+| flags + funnel | 5 flags (grantable: 29, student view 28); funnel names for feedback, finish, verified, public page, applying with a tdc resume | SERVER `e04d0f1d` | feature-access 96/96, funnel-events 25/25 |
+| feedback | `POST /api/resume/:id/feedback`: rules first (strong / weak / improvements with the step to fix), then one AI pass checked against the resume's own text with the Studio validator, cached per content hash (a template change doesn't re-ask), a missing result only as the question; AI down → the rules alone. App: `ResumeFeedback` screen, "get recruiter feedback" on the dashboard, "fix it" opens the builder at that section (new optional `stepKey` param, the fresher steps too) | SERVER `0d854b33`, APP `2df94c3` | resume-feedback 23/23; resume-finish (feedback) |
+| verified by tdc | `GET /api/resume/verified-facts`: verified student at the university (status "Verified"), issued ambassador / founder credential with its verify link; never letters, badges, drafts, revoked. `settings.verifiedLine` (off by default; only true / false). The shared renderer prints the line only when facts are passed (the five unchanged); the app's print path adds it only when the line is on; switch on the share screen | SERVER `b208f2ee`, APP `c242df3` | resume-verified 17/17 |
+| public page | `Resume.publicPage` (off; 22-character random link and a self key, both never sent with the resume); controls `GET/PUT /api/resume/:id/public-page`, `POST …/new-link`; the page `/r/<link>`: the PDF's HTML + noindex + a footer, headers like the ticket page (noindex, no-store, no referrer, CSP without scripts), rate-limited; not available (one page) for an unknown link, off, the owner's flag off, a suspended owner; OFL fonts at `/r/fonts` (42 files incl. licences, 1.4 MB); views: not the owner's (self key), not previews / crawlers / HEAD, once per visitor per 30 minutes via a salted hash kept in memory only; a duplicated resume starts off. Portal: Vercel rewrite `/r/*` → server `/r/*` + noindex, React fallback. App: the share screen's card (on/off, link, open my page, phone / e-mail, new link, views); its link drives the existing QR / copy / LinkedIn | SERVER `9590bfc3` (harness returns headers), `5bcc2078`; ADMIN `2fd6cee`; APP `e80808f` | resume-public-page 42/42; ResumePageRedirect 4/4 |
+| finish moment | `ResumeFinish`, once per resume (remembered on the phone): the app's celebration popup + tdc_success, download pdf · share link (public page on) · apply to matching jobs (careerMatching; the dashboard at "recommended for you"), "verified by tdc" one tap, the resume-ready card with the student's invite code (shareCards). Builder: the first finish opens it; else the preview as before | APP `52be5cd` | resume-finish 46/46 |
+| outcome snapshot | `JobApplication.resumeSource` (optional): applying with "my tdc resume" sends the PDF made in the student's template plus `tdcResumeId`; the server reads the template from the student's own resume at that moment (older ids → their template; a foreign id is ignored, never a failed application). Interviews: status interview / hired, a scheduled interview or a recorded outcome (revoked not counted). `GET /api/resume/template-outcomes` shows a template only from 30 applications and 10 interviews; the gallery shows "33% got an interview (30 applications)" only then | SERVER `af655e32`, APP `87750a3`, `94283af` | resume-outcomes 19/19; job-details 71/71; resume-studio 40/40 |
+| admin metrics | `GET /api/analytics/admin/resume-metrics` (admin, analytics.view): per template resumes now / applications / interviews / hires / rate shown; public pages on + views. Portal page "resume metrics" in the general menu | SERVER `2e8e8a5f`, ADMIN `4077216`, `7ca6e47`, `fd367b9` | AdminResumeMetrics 3/3 (axe clean); admin-menu check |
+
+End of P3d: APP all 65 suites, `expo export` android + ios ok; ADMIN jest 29 suites / 158 tests, portal checks 39/39;
+SERVER 108/108 suites (on its own). admin-access failed once while the portal browser checks ran at the same time
+(a fixed 30 ms wait for an async log write; pre-existing, unchanged): 19/19 alone, 3 of 3, and in the clean full run.
+
+Notes / for the owner:
+- The page's rate limit and visitor counting read the visitor address from X-Forwarded-For (the last entry, as the
+  login guard does). Behind the Vercel rewrite that may be Vercel's address: after deploy, check that two phones
+  count as two views and that busy times don't hit the limit (`RATE_LIMIT_RESUME_PAGE_MAX`, default 120 a minute).
+- Vercel rewrite target is the production server; a staging portal would need its own target.
+- Old apps: the new fields are optional; nothing they send or read changed. The share screen's placeholder link
+  stays hidden with the flag off, exactly as today.
+- Gallery rates are each template's own rate only; no "2× more" comparisons until the data supports a comparison.
+- No event certificates in "verified by tdc": there is still no attendance record to rely on.
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |
@@ -548,6 +584,8 @@ photo / two-column / one-page (once such templates exist).
 | `PUBLIC_BASE_URL` | optional; default the Railway production URL | — | the 10-minute credential PDF link the app opens |
 | `FLAG_RESUME_COACH` / `FLAG_RESUME_SPEAK` | not needed: per account in admin → features ("Resume coach", "Resume speak mode"; both need "Resume v2") | — | P3b |
 | `FLAG_RESUME_TEMPLATES_V2` | not needed: per account in admin → features ("Resume template studio"; needs "Resume v2") | — | P3c template studio |
+| P3d flags (`resumeFeedback`, `resumeFinish`, `resumeVerified`, `resumePublicPage`, `resumeOutcomeStats`) | not needed: per account in admin → features (each needs "Resume v2") | — | P3d |
+| `RATE_LIMIT_RESUME_PAGE_MAX` | optional; default 120 a minute per visitor address | — | the public resume page |
 | `OPENAI_TRANSCRIBE_MODEL` | optional; default `whisper-1` | — | speak mode |
 | `RATE_LIMIT_RESUME_AI_MAX` | optional; default 120 an hour per student (enhance, suggest-skills and the coach together) | — | P3 #7 / P3b |
 | Cloudinary | check that `CLOUDINARY_NAME` is the cloud the app uploads to (`decaxpera`); otherwise images aren't deleted (logged, nothing breaks) | — | image clean-up |

@@ -28,15 +28,27 @@ import { color as T, font as F } from "../../theme/tokens";
 import ScreenHeader from "../../ui/ScreenHeader";
 import { copyToClipboard } from '../../utils/clipboard';
 import { resumeStrength, resumeName } from '../../utils/resumeRules';
+import useFlag from '../../hooks/useFlag';
+import VerifiedLine from './finish/VerifiedLine'; // P3d (resumeVerified)
+import PublicPageCard from './finish/PublicPageCard'; // P3d (resumePublicPage)
 const ResumeShareScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { resumeId } = route.params || {};
   const { user, isGuest } = useContext(AuthContext);
   const { resumes, currentResume, loading, updateResume } = useContext(ResumeContext);
+  // P3d: the "verified by tdc" switch (resumeV2 + resumeVerified)
+  const v2 = useFlag('resumeV2') === true;
+  const verifiedOn = useFlag('resumeVerified') === true;
+  // P3d: the public resume page (resumeV2 + resumePublicPage): its link replaces the placeholder, so the QR, copy and
+  // LinkedIn options below appear only once the student turns the page on. Flag off: the placeholder, as before (hidden).
+  const pageFlag = useFlag('resumePublicPage') === true; // always called (hook order)
+  const pageOn = v2 && pageFlag;
+  const [pageUrl, setPageUrl] = useState('');
 
   const [resume, setResume] = useState(null);
-  const [shareLink, setShareLink] = useState('');
+  const [placeholderLink, setShareLink] = useState('');
+  const shareLink = pageOn ? pageUrl : placeholderLink;
   const [isGenerating, setIsGenerating] = useState(false);
   const [shareOptions, setShareOptions] = useState({
     shareLink: true,
@@ -278,6 +290,9 @@ View full resume: ${shareLink}
             </Text>
           </View>
         </View>
+
+        {pageOn && <PublicPageCard resume={resume} onLink={setPageUrl} style={{ marginHorizontal: 20, marginTop: 12 }} />}
+        {v2 && verifiedOn && <VerifiedLine resume={resume} updateResume={updateResume} style={{ marginHorizontal: 20, marginTop: 12 }} />}
 
         {/* QR Code (only with a real link) */}
         {linkReady && (
