@@ -12,7 +12,7 @@ const termsData = [
   { num: '05', title: 'Limitation of Liability', text: 'TDC is provided "as is" without warranties. We are not liable for any damages arising from use of our services.' },
   { num: '06', title: 'Termination', text: 'We reserve the right to terminate or suspend your account for violations of these terms or Community Guidelines.' },
   { num: '07', title: 'Changes to Terms', text: 'TDC may update these terms at any time. You will be notified of significant changes.' },
-  { num: '08', title: 'Contact', text: 'support@thedeftcrew.com\nKarachi, Pakistan' },
+  { num: '08', title: 'Contact', text: 'support@gettdc.pk\nKarachi, Pakistan' }, // owner (25 Nov 2026): the gettdc.pk support address
   { num: '09', title: 'Governing Law', text: 'These terms are governed by the laws of Pakistan. Disputes resolved in Karachi, Pakistan.' },
 ];
 

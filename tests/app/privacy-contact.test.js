@@ -18,6 +18,10 @@ ok((center.match(ADDR) || []).every((a) => a === "privacy@gettdc.pk"), "…no ot
 const policy = read("screens/Social/PrivacyAndSafety.js");
 ok((policy.match(ADDR) || []).join(",") === "privacy@gettdc.pk", "privacy policy (settings): contact is privacy@gettdc.pk only", (policy.match(ADDR) || []).join(", "));
 
+// owner (25 Nov 2026): the terms' contact is support@gettdc.pk
+const terms = read("screens/Social/Terrms.js");
+ok((terms.match(ADDR) || []).join(",") === "support@gettdc.pk", "terms: contact is support@gettdc.pk only", (terms.match(ADDR) || []).join(", "));
+
 // no privacy screen anywhere in the app still names an old privacy address
 const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : e.name.endsWith(".js") ? [path.join(d, e.name)] : []));
 const old = walk(path.join(APP, "app/src")).filter((f) => /privacy@thedeftcrew\.com|info@thedeftcrew\.com|info@gettdc\.pk/.test(fs.readFileSync(f, "utf8")));
