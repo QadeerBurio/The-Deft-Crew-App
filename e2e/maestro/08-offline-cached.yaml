@@ -1,0 +1,27 @@
+# Q-7 flow 8: airplane mode → screens opened before still show their content, nothing is blank, the app doesn't crash.
+# Android only (Maestro switches airplane mode on Android; on iOS turn it on by hand and run the same checks).
+# The "you're offline" banner (plan Q-5) isn't built yet: its check is optional until Q-5 ships.
+appId: com.aqkhan110.tdc
+name: offline, cached screens
+tags:
+  - core
+  - offline
+  - android-only
+---
+- runFlow: subflows/sign-in.yaml
+# visit screens while online so they are cached
+- tapOn: "explore"
+- tapOn: "(?i)exclusive discounts"
+- runFlow: subflows/back.yaml
+- tapOn: "profile"
+- tapOn: "home"
+- setAirplaneMode: enabled
+- tapOn: "explore"
+- assertVisible: "(?i)exclusive discounts"
+- tapOn: "profile"
+- assertVisible: "your rewards balance"
+- tapOn: "home"
+- assertVisible:
+    text: "(?i).*offline.*"
+    optional: true # Q-5: the offline banner
+- setAirplaneMode: disabled

@@ -1,0 +1,38 @@
+# Perf helper (PERF-BASELINE.md, "list scroll"): fast scrolls down and up the long lists (brands, events), for the
+# frame stats. Signed in already; start it right after `android-baseline.sh frames` resets. The feed and confessions
+# lists are measured the same way by hand (or add them here once Q-b converts them).
+appId: com.aqkhan110.tdc
+---
+- tapOn: "explore"
+- tapOn: "(?i)exclusive discounts"
+- repeat:
+    times: 6
+    commands:
+      - swipe:
+          start: 50%, 85%
+          end: 50%, 15%
+          duration: 250
+- repeat:
+    times: 6
+    commands:
+      - swipe:
+          start: 50%, 15%
+          end: 50%, 85%
+          duration: 250
+- back
+- tapOn: "(?i)events hub"
+- repeat:
+    times: 6
+    commands:
+      - swipe:
+          start: 50%, 85%
+          end: 50%, 15%
+          duration: 250
+- repeat:
+    times: 6
+    commands:
+      - swipe:
+          start: 50%, 15%
+          end: 50%, 85%
+          duration: 250
+- back

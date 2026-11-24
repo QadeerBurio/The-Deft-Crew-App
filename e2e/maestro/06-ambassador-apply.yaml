@@ -1,0 +1,37 @@
+# Q-7 flow 6: from an ambassador's invite to an application. A fresh install opens a test ambassador's invite link
+# (TDC_AMBASSADOR_CODE) and lands on signup with the code; then the test student applies to be an ambassador.
+# Sends a real application: staging only.
+appId: com.aqkhan110.tdc
+name: ambassador invite then apply
+tags:
+  - core
+  - crew
+  - staging-only
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "sign in"
+    timeout: 20000
+- openLink: tdcapp://i/${TDC_AMBASSADOR_CODE}
+- extendedWaitUntil:
+    visible: "about you"
+    timeout: 15000
+- scrollUntilVisible:
+    element: ${TDC_AMBASSADOR_CODE}
+    direction: DOWN
+- runFlow: subflows/sign-in.yaml
+- tapOn: "profile"
+- tapOn: "your rewards balance"
+- tapOn: "(?i).*ambassador.*"
+- extendedWaitUntil:
+    visible: "tdc ambassadors"
+    timeout: 10000
+- tapOn: "apply to be an ambassador"
+- tapOn: "campus groups or societies (optional)"
+- inputText: "maestro society"
+- hideKeyboard
+- tapOn: "send application"
+- extendedWaitUntil:
+    visible: "your application"
+    timeout: 15000

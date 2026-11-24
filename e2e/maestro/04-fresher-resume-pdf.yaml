@@ -1,0 +1,31 @@
+# Q-7 flow 4: a fresher builds a resume and downloads the PDF.
+appId: com.aqkhan110.tdc
+name: fresher resume to pdf
+tags:
+  - core
+  - resume
+---
+- runFlow: subflows/sign-in.yaml
+- tapOn: "campus"
+- tapOn: "(?i)resume"
+- tapOn: "new resume"
+- tapOn: "not yet: build a fresher resume"
+- extendedWaitUntil:
+    visible: "resume builder"
+    timeout: 15000
+# CALIBRATE on the first run: the builder's steps are labelled "step N: <name>"; fill each step's required fields.
+# The test account's profile already fills name, e-mail and university.
+- tapOn: "preview resume"
+- extendedWaitUntil:
+    visible: "(?i)preview"
+    timeout: 20000
+- runFlow: subflows/back.yaml
+# the finish screen (resumeFinish on for the test account) has the download
+- scrollUntilVisible:
+    element: "download my resume as a pdf"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "download my resume as a pdf"
+# Android: the system save / share sheet opens; iOS: the share sheet. Close it: the app is still running.
+- runFlow: subflows/back.yaml
+- assertVisible: "download my resume as a pdf"

@@ -1,0 +1,37 @@
+# Q-7 flow 5: post a confession with a phone number → blocked with a reason; edit it out → posts; report it.
+# Needs confessionSafety on for the test account. Posts a real confession: staging only.
+appId: com.aqkhan110.tdc
+name: confession blocked for a phone number, edit, post, report
+tags:
+  - core
+  - safety
+  - staging-only
+---
+- runFlow: subflows/sign-in.yaml
+- tapOn: "social"
+- tapOn: "(?i)confessions"
+- tapOn: "confess"
+- extendedWaitUntil:
+    visible: "share confession"
+    timeout: 10000
+- tapOn: "(?i)what.*" # the composer's text box (its placeholder starts with "What")
+- inputText: "maestro test, call me on 0300 1234567"
+- tapOn: "post confession"
+- extendedWaitUntil:
+    visible: "edit to post:.*" # the composer names what to change
+    timeout: 10000
+- eraseText: 30
+- inputText: "maestro test, no number this time"
+- tapOn: "post confession"
+- extendedWaitUntil:
+    visible: "maestro test, no number this time"
+    timeout: 15000
+# report it from the card's menu (CALIBRATE on the first run: the menu's report wording)
+- tapOn:
+    text: "more options"
+    index: 0
+- tapOn: "(?i)report.*"
+- tapOn:
+    text: "(?i)spam|other"
+    index: 0
+- assertVisible: "(?i).*(thanks|report).*"

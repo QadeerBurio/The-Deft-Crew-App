@@ -1,0 +1,33 @@
+# Q-7 flow 7: turn notifications on from the reason sheet (Android 13+ and iOS then show the system prompt).
+# Run on a fresh install where notifications were never asked.
+appId: com.aqkhan110.tdc
+name: notifications from the reason sheet
+tags:
+  - core
+  - push
+---
+- runFlow: subflows/sign-in.yaml
+- tapOn: "profile"
+- tapOn: "notifications, privacy, account"
+- scrollUntilVisible:
+    element: "turn on notifications"
+    direction: DOWN
+- tapOn: "turn on notifications"
+# the app's own sheet first ("turn on notifications?"), when it shows
+- runFlow:
+    when:
+      visible: "turn on notifications?"
+    commands:
+      - tapOn: "turn on"
+# then the system prompt
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn: "(?i)allow"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn: "Allow"
+- assertNotVisible: "turn on notifications"

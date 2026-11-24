@@ -1,0 +1,22 @@
+# Q-7 flow 1: open an invite link on a fresh install → signup opens with the code filled in.
+# Doesn't create an account (it stops before "create account"), so it is safe anywhere.
+#   maestro test -e TDC_INVITE_CODE=ABC123 e2e/maestro/01-signup-invite-link.yaml
+appId: com.aqkhan110.tdc
+name: signup from an invite link
+tags:
+  - core
+  - signed-out
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "sign in"
+    timeout: 20000
+- openLink: tdcapp://i/${TDC_INVITE_CODE}
+- extendedWaitUntil:
+    visible: "about you" # the signup form's first section
+    timeout: 15000
+- scrollUntilVisible:
+    element: "Referral code (optional)"
+    direction: DOWN
+- assertVisible: ${TDC_INVITE_CODE}

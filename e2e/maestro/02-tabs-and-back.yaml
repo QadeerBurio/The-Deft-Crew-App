@@ -1,0 +1,70 @@
+# Q-7 flow 2: every tab, then key screens, pressing back each time. Back never closes the app and never gets stuck:
+# after each back, the screen it came from is visible again.
+appId: com.aqkhan110.tdc
+name: tabs and back from key screens
+tags:
+  - core
+  - navigation
+---
+- runFlow: subflows/sign-in.yaml
+
+# the five tabs
+- tapOn: "explore"
+- tapOn: "social"
+- tapOn: "campus"
+- tapOn: "profile"
+- tapOn: "home"
+
+# explore → each section → back
+- tapOn: "explore"
+- tapOn: "(?i)exclusive discounts"
+- runFlow: subflows/back.yaml
+- assertVisible: "(?i)events hub"
+- tapOn: "(?i)events hub"
+- runFlow: subflows/back.yaml
+- assertVisible: "(?i)travel & explore"
+- tapOn: "(?i)travel & explore"
+- runFlow: subflows/back.yaml
+- assertVisible: "(?i)social connect"
+
+# campus → each tool → back
+- tapOn: "campus"
+- tapOn: "(?i)resume"
+- runFlow: subflows/back.yaml
+- assertVisible: "(?i)jobs"
+- tapOn: "(?i)jobs"
+- runFlow: subflows/back.yaml
+- assertVisible: "(?i)skillsshare"
+- tapOn: "(?i)skillsshare"
+- runFlow: subflows/back.yaml
+- assertVisible: "(?i)scholarship events"
+- tapOn: "(?i)scholarship events"
+- runFlow: subflows/back.yaml
+- assertVisible: "(?i)resume"
+
+# profile → each row → back
+- tapOn: "profile"
+- tapOn: "view and edit your info"
+- runFlow: subflows/back.yaml
+- assertVisible: "your rewards balance"
+- tapOn: "your rewards balance"
+- runFlow: subflows/back.yaml
+- assertVisible: "your collection"
+- tapOn: "your collection"
+- runFlow: subflows/back.yaml
+- assertVisible: "codes, qr and redemptions"
+- tapOn: "codes, qr and redemptions"
+- runFlow: subflows/back.yaml
+- assertVisible: "notifications, privacy, account"
+- tapOn: "notifications, privacy, account"
+- runFlow: subflows/back.yaml
+- assertVisible: "notifications, privacy, account"
+
+# Android: back on a non-Home tab goes Home (plan Q-2 rule 4), and the app is still open
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn: "explore"
+      - back
+      - assertVisible: "home"

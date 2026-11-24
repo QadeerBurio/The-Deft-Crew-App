@@ -1,0 +1,14 @@
+# Perf helper (PERF-BASELINE.md, "transitions"): 10 times in and out of three sections, for the frame stats.
+# Signed in already (run subflows/sign-in.yaml once first); start it right after `android-baseline.sh frames` resets.
+appId: com.aqkhan110.tdc
+---
+- tapOn: "explore"
+- repeat:
+    times: 10
+    commands:
+      - tapOn: "(?i)exclusive discounts"
+      - back
+      - tapOn: "(?i)events hub"
+      - back
+      - tapOn: "(?i)travel & explore"
+      - back

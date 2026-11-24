@@ -1,0 +1,18 @@
+# Signs in with the test student account (TDC_EMAIL / TDC_PASSWORD, passed with -e; never in the repo).
+# Starts from a fresh app (clearState) so every flow begins the same way.
+appId: com.aqkhan110.tdc
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "sign in"
+    timeout: 20000
+- tapOn: "email"
+- inputText: ${TDC_EMAIL}
+- tapOn: "password"
+- inputText: ${TDC_PASSWORD}
+- hideKeyboard
+- tapOn: "sign in"
+- extendedWaitUntil:
+    visible: "home" # the home tab (its accessibility label)
+    timeout: 30000

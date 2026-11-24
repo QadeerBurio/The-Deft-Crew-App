@@ -1,0 +1,29 @@
+# Q-7 flow 3: claim a deal end to end (brands → a brand's offer → press and hold to claim → it's in my discounts).
+# Use a staging / test brand with a claimable offer: TDC_BRAND is its name as shown in the list.
+appId: com.aqkhan110.tdc
+name: claim a deal
+tags:
+  - core
+  - money
+---
+- runFlow: subflows/sign-in.yaml
+- tapOn: "explore"
+- tapOn: "(?i)exclusive discounts"
+- scrollUntilVisible:
+    element: ${TDC_BRAND}
+    direction: DOWN
+    timeout: 30000
+- tapOn: ${TDC_BRAND}
+# CALIBRATE on the first run: the brand page lists its offers; the first one opens the offer screen
+- tapOn:
+    text: "(?i).*off.*"
+    index: 0
+- extendedWaitUntil:
+    visible: "press and hold to claim"
+    timeout: 15000
+- longPressOn: "press and hold to claim"
+- extendedWaitUntil:
+    visible: "claimed. find it in my discounts"
+    timeout: 15000
+- tapOn: "claimed. find it in my discounts"
+- assertVisible: ${TDC_BRAND}
