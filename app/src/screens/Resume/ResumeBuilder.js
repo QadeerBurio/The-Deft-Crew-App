@@ -38,7 +38,7 @@ import { INDUSTRIES, keyOf, indexOfKey, styles } from './steps/builderShared';
 // P3a (flag resumeV2): the track's step order, the new sections, progress, one-page estimate, "saved"
 import useFlag from '../../hooks/useFlag';
 import { FLAGS } from '../../api/upgradeFlags';
-import { EXTRA_STEPS, stepOrder, nextStep, prevStep, stepIdFor, pageEstimate, fitLine } from '../../resume/resumeV2';
+import { EXTRA_STEPS, stepOrder, nextStep, prevStep, stepIdFor, pageEstimate, fitLine, KEY_TO_ID } from '../../resume/resumeV2';
 import ActivitiesStep from './steps/ActivitiesStep';
 import AwardsStep from './steps/AwardsStep';
 import LanguagesStep from './steps/LanguagesStep';
@@ -323,6 +323,9 @@ const ResumeBuilderScreen = () => {
   // P3-3 (resumeV2): the steps in the track's order (fresher: education, projects and activities first, experience
   // last); the new sections are steps 8–11. Flag off: today's 1..7, unchanged.
   const v2 = useFlag(FLAGS.resumeV2) === true;
+  // P3d: "fix it" (feedback) opens the builder at a section by name, the fresher steps (8-11) too; older params unchanged
+  const startKey = route.params?.stepKey;
+  useEffect(() => { if (v2 && startKey && KEY_TO_ID[startKey]) setActiveStep(KEY_TO_ID[startKey]); }, [v2, startKey]);
   const order = stepOrder(isNew && !createdIdRef.current ? { settings: { track: newTrack } } : currentResume, v2);
   const stepDef = (id) => steps.find((s) => s.id === id) || EXTRA_STEPS[id] || steps[0];
   const firstStep = order[0];
