@@ -198,7 +198,8 @@ export default function CreatePostScreen({ navigation, route }) {
     try {
       const payload = {
         content: text.trim(),
-        location: user?.location || "Karachi",
+        // owner (after P3b): no made-up "Karachi": the student's own location, or none
+        location: String(user?.location || "").trim(),
       };
 
       const response = await fetchWithTimeout(`${API_URL}/create-post`, {
@@ -398,12 +399,14 @@ export default function CreatePostScreen({ navigation, route }) {
                         <Text style={styles.authorName} numberOfLines={1}>
                           {user?.name || "Community Member"}
                         </Text>
-                        <View style={styles.authorSub}>
-                          <Ionicons name="location-sharp" size={11} color={T.yellow} />
-                          <Text style={styles.authorLoc} numberOfLines={1}>
-                            {user?.location || "Karachi"}
-                          </Text>
-                        </View>
+                        {!!String(user?.location || "").trim() && (
+                          <View style={styles.authorSub}>
+                            <Ionicons name="location-sharp" size={11} color={T.yellow} />
+                            <Text style={styles.authorLoc} numberOfLines={1}>
+                              {String(user.location).trim()}
+                            </Text>
+                          </View>
+                        )}
                       </View>
 
                       <View style={styles.visibilityPill}>
