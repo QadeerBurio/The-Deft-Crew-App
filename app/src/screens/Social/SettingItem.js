@@ -84,9 +84,8 @@ const Group = ({ title, children }) => (
 // ══════════════════════════════════════════════════════════════════════════
 const PrivacyAndSafetyScreen = ({ navigation }) => {
   const { user } = useContext(AuthContext);
-  const [isPrivate, setIsPrivate] = useState(false);
-  const [showOnlineStatus, setShowOnlineStatus] = useState(true);
-  const [showLastSeen, setShowLastSeen] = useState(true);
+  // P5a (owner): the "privacy controls" group (private account, show online status, show last seen) is removed: its
+  // switches only changed on screen, nothing was saved and nothing honoured them. Real privacy settings: backlog.
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -94,31 +93,6 @@ const PrivacyAndSafetyScreen = ({ navigation }) => {
       <ScreenHeader title="privacy & safety" onBack={() => navigation.goBack()} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.compactContent}>
-        <Group title="privacy controls">
-          <ToggleItem
-            icon="lock-closed-outline"
-            label="private account"
-            subLabel="Only connections can see your posts"
-            value={isPrivate}
-            onToggle={() => setIsPrivate(!isPrivate)}
-          />
-          <ToggleItem
-            icon="eye-outline"
-            label="show online status"
-            subLabel="Let others see when you're online"
-            value={showOnlineStatus}
-            onToggle={() => setShowOnlineStatus(!showOnlineStatus)}
-          />
-          <ToggleItem
-            icon="time-outline"
-            label="show last seen"
-            subLabel="Show when you were last active"
-            value={showLastSeen}
-            onToggle={() => setShowLastSeen(!showLastSeen)}
-            last
-          />
-        </Group>
-
         <Group title="safety">
           <SettingItem
             icon="ban-outline"
