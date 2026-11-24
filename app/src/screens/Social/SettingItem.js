@@ -84,7 +84,7 @@ const Group = ({ title, children }) => (
 // ══════════════════════════════════════════════════════════════════════════
 const PrivacyAndSafetyScreen = ({ navigation }) => {
   const { user } = useContext(AuthContext);
-  // P5a (owner): the "privacy controls" group (private account, show online status, show last seen) is removed: its
+  // P5a (owner): the privacy-controls group (private account, show online status, show last seen) is removed: its
   // switches only changed on screen, nothing was saved and nothing honoured them. Real privacy settings: backlog.
 
   return (
