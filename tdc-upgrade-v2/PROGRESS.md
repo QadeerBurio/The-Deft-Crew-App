@@ -699,6 +699,14 @@ Bundle after the splits: android 10,173,498 / ios 10,190,055 bytes (+21 KB: the 
 Tests after each: all 69 app suites + `expo export -p android -p ios`.
 Note: `HelpCenter.js` still opens the website `thedeftcrew.com` (a link, not an e-mail): owner to decide.
 
+## Q-b: lists and images (branch `upgrade/qb-lists` from `upgrade/qa-splits`; SERVER `upgrade/qb-flags` from `main`)
+
+| Step | What changed | Commits | Tests |
+|---|---|---|---|
+| lists (Q-3b) | checked against the code: the plan's six priority lists (deals = MyDiscountScreen, brands, events, feed, jobs = Career, confessions) already render through FlatList (earlier work); the ScrollView + map left in them are short chip rows. The other ScrollView + map screens are forms or short sections (Surprise Boxes: today's boxes + own orders): no conversion, no churn | — | — |
+| remote pictures (Q-3i) | job company logo, Surprise Box photos, SkillShare profile photo, chat full-screen viewer → RemoteImage (cache; sized except the viewer). react-native Image stays for app pictures and files just picked on the phone (6 files, listed in the test) | APP `8bd533c` | remote-images (new), job-details 71, surprise-box 53 |
+| low-data pictures (Q-3i) | flag `lowDataImages` (student, off): on 2G / 3G mobile, sized Cloudinary pictures 40% narrower at q_auto:eco; anything else unchanged | SERVER `3301d0c3` (flag; grantable 34, student view 33), APP `a201e99` | low-data-images 13/13; feature-access 96/96 |
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |
