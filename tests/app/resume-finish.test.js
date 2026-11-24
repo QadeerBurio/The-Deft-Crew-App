@@ -9,7 +9,7 @@ const H = require("./harness");
 const { ok, done } = H.counter();
 global.__DEV__ = false;
 
-function setup({ params = { resumeId: "r1" }, api = {}, rnExtra = {} } = {}) {
+function setup({ params = { resumeId: "r1" }, api = {}, rnExtra = {}, mocks = {}, store = new Map() } = {}) {
   const { React, mount, contexts } = H.makeReact();
   const { rn } = H.makeRN(rnExtra);
   const nav = { calls: [], goBack() {}, navigate: (...a) => nav.calls.push(a) };
@@ -20,13 +20,14 @@ function setup({ params = { resumeId: "r1" }, api = {}, rnExtra = {} } = {}) {
     "@expo/vector-icons": { Ionicons: "Icon" },
     "react-native-safe-area-context": { SafeAreaView: "SafeAreaView" },
     "@react-navigation/native": { useRoute: () => ({ params }), useNavigation: () => nav },
-    "@react-native-async-storage/async-storage": { __esModule: true, default: { getItem: async () => null, setItem: async () => {} } },
+    "@react-native-async-storage/async-storage": { __esModule: true, default: { getItem: async (k) => (store.has(k) ? store.get(k) : null), setItem: async (k, v) => { store.set(k, v); } } },
     "/analytics/funnel": { __esModule: true, funnel: async (name, meta) => { events.push([name, meta]); }, default: async () => {} },
     "/ui/ScreenHeader": { __esModule: true, default: (p) => ({ type: "Header", props: { title: p.title, children: null } }) },
     "/ui/Card": { __esModule: true, default: (p) => ({ type: "Card", props: { children: p.children } }) },
     "/ui/Button": { __esModule: true, default: el("Button") },
     "/ui/Skeleton": { __esModule: true, default: () => ({ type: "Skeleton", props: { children: null } }) },
     "/resume/finishApi": { __esModule: true, ...api },
+    ...mocks,
   });
   return { React, mount, contexts, load, nav, events };
 }
@@ -169,6 +170,68 @@ function setup({ params = { resumeId: "r1" }, api = {}, rnExtra = {} } = {}) {
     m.unmount();
     const share = H.read("app/src/screens/Resume/ResumeShare.js");
     ok(/const pageFlag = useFlag\('resumePublicPage'\) === true;/.test(share) && /const pageOn = v2 && pageFlag;/.test(share) && /const shareLink = pageOn \? pageUrl : placeholderLink;/.test(share), "share screen: the flag hook always called; the page's link only with resumeV2 + resumePublicPage (else today's hidden placeholder)");
+  }
+
+  console.log("── finish moment");
+  const finishSetup = (flags, { referralCode = "SANA25", store = new Map() } = {}) => {
+    const sounds = []; const saves = [];
+    const ResumeContext = { _default: {} };
+    const t = setup({
+      store,
+      api: { verifiedFacts: async () => ({ facts: [{ kind: "student", text: "verified student at Sample University" }] }) },
+      mocks: {
+        "/context/ResumeContext": { ResumeContext },
+        "/hooks/useFlag": { __esModule: true, default: (name) => flags[name] === true },
+        "/api/matchingApi": { __esModule: true, matchingEnabled: async () => flags.careerMatching === true },
+        "/lib/tdcSounds": { __esModule: true, soundSuccess: () => sounds.push("tdc_success") },
+        "/engagement/hooks/useReferrals": { __esModule: true, useReferrals: () => ({ referralCode }) },
+        "/engagement/components/CelebrationPopup": { __esModule: true, default: (p) => ({ type: "Celebration", props: { popup: p.popup, onClose: p.onClose, children: null } }) },
+        "/ui/ShareCard": { __esModule: true, default: (p) => ({ type: "ShareCard", props: { visible: p.visible, variant: p.variant, code: p.code, children: null } }) },
+      },
+    });
+    t.contexts.set(ResumeContext, { resumes: [{ _id: "r1", personalInfo: { firstName: "Sana", lastName: "Malik", title: "BBA Student" }, settings: { track: "fresher" } }], updateResume: async (id, ch) => { saves.push([id, ch]); } });
+    return { ...t, sounds, saves, store };
+  };
+  const ALL = { resumePublicPage: true, resumeVerified: true, careerMatching: true, shareCards: true };
+  {
+    const t = finishSetup(ALL);
+    const m = t.mount(t.React.createElement(t.load(path.join(H.SRC, "screens/Resume/ResumeFinish.js")).default));
+    await H.tick(5);
+    const text = H.textOf(m.tree);
+    const pop = H.find(m.tree, (n) => n.type === "Celebration");
+    ok(/your resume is ready\./.test(text) && pop?.props.popup.line === "your resume is ready." && t.sounds.join() === "tdc_success", "the celebration: the app's popup and the success sound");
+    ok(t.events.some((e) => e[0] === "resume_finish_shown" && e[1].refId === "r1"), "funnel: resume_finish_shown");
+    ok(["download my resume as a pdf", "share a link to my resume page", "see jobs that match my resume"].every((l) => H.byLabel(m.tree, l)), "three buttons: download pdf, share link, apply to matching jobs");
+    ok(/verified student at Sample University/.test(text) && H.byLabel(m.tree, "add verified by tdc to my resume"), "'verified by tdc' offered as one tap (off until added)");
+    H.byLabel(m.tree, "add verified by tdc to my resume").props.onPress();
+    await H.tick(3);
+    ok(t.saves[0]?.[1]?.settings?.verifiedLine === true && t.saves[0][1].settings.track === "fresher", "one tap adds it to this resume");
+    H.byLabel(m.tree, "share a 'my resume is ready' card").props.onPress();
+    const card = H.find(m.tree, (n) => n.type === "ShareCard");
+    ok(card.props.visible && card.props.variant === "resumeReady" && card.props.code === "SANA25" && t.events.some((e) => e[0] === "resume_ready_card"), "the 'my resume is ready' card, with the student's own invite code");
+    H.byLabel(m.tree, "download my resume as a pdf").props.onPress();
+    H.byLabel(m.tree, "share a link to my resume page").props.onPress();
+    H.byLabel(m.tree, "see jobs that match my resume").props.onPress();
+    const navs = t.nav.calls.map((c) => c[0]);
+    ok(navs.join() === "ResumeView,ResumeShare,ResumeDashboard" && t.nav.calls[0][1].resumeId === "r1" && t.nav.calls[2][1].openMatches === true, "download → the preview; share link → the share screen; jobs → the dashboard at 'recommended for you'", JSON.stringify(t.nav.calls));
+    ok(["resume_finish_download", "resume_finish_share_link", "resume_finish_jobs"].every((n) => t.events.some((e) => e[0] === n)), "funnel per button");
+    const FM = t.load(path.join(H.SRC, "resume/finishMoment.js"));
+    ok(await FM.finishShown("r1") === true && await FM.finishShown("r2") === false, "remembered for this resume only: next time the builder goes straight to the preview");
+    m.unmount();
+  }
+  {
+    const t = finishSetup({}, { referralCode: null });
+    const m = t.mount(t.React.createElement(t.load(path.join(H.SRC, "screens/Resume/ResumeFinish.js")).default));
+    await H.tick(5);
+    ok(H.byLabel(m.tree, "download my resume as a pdf") && !H.byLabel(m.tree, "share a link to my resume page") && !H.byLabel(m.tree, "see jobs that match my resume") && !/verified by tdc/.test(H.textOf(m.tree)) && !H.find(m.tree, (n) => n.type === "ShareCard"), "other flags off: only download (no share link, jobs, verified line or card)");
+    m.unmount();
+  }
+  {
+    const b = H.read("app/src/screens/Resume/ResumeBuilder.js");
+    ok(/const finishFlag = useFlag\('resumeFinish'\) === true;/.test(b) && /if \(v2 && finishFlag && !\(await finishShown\(resume\._id\)\)\) \{\s*navigation\.navigate\('ResumeFinish', \{ resumeId: resume\._id \}\);\s*return;\s*\}\s*navigation\.navigate\('ResumeView', \{ resumeId: resume\._id \}\);/.test(b), "builder: finish → the moment only with resumeV2 + resumeFinish and only the first time; else the preview, as before");
+    const d = H.read("app/src/screens/Resume/ResumeDashboard.js");
+    ok(/const openMatches = !!route\?\.params\?\.openMatches;/.test(d) && /testID="resume-recommended" onLayout=\{onMatchesLayout\}/.test(d), "dashboard: { openMatches } scrolls to 'recommended for you'");
+    ok(/name="ResumeFinish"/.test(H.read("app/src/navigation/ResumeNavigator.js")) && /'ResumeFinish',/.test(H.read("app/src/navigation/DrawerNavigator.js")), "ResumeFinish registered (full screen)");
   }
   done();
 })().catch((e) => { console.error(e); process.exit(1); });

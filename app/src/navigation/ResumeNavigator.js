@@ -20,6 +20,7 @@ import ResumeImportReviewScreen from "../screens/Resume/ResumeImportReview";
 import ResumeStartScreen from "../screens/Resume/ResumeStart"; // P3-1 (resumeV2): how a new resume starts
 import ResumeCoachChatScreen from "../screens/Resume/ResumeCoachChat"; // P3b (resumeCoach): build it by chatting
 import ResumeFeedbackScreen from "../screens/Resume/ResumeFeedback"; // P3d (resumeFeedback): recruiter-style feedback
+import ResumeFinishScreen from "../screens/Resume/ResumeFinish"; // P3d (resumeFinish): the finish moment
 const ResumeShareScreen = accountOnly(ResumeShareScreenBase, { title: "share resume" });
 const ResumeStudioScreen = accountOnly(ResumeStudioScreenBase, { title: "resume studio" }); // FLAG_RESUME_STUDIO_V2
 
@@ -79,6 +80,12 @@ export default function ResumeStack() {
       <Stack.Screen
         name="ResumeCoachChat"
         component={ResumeCoachChatScreen}
+        options={{ headerShown: false }}
+      />
+
+      <Stack.Screen
+        name="ResumeFinish"
+        component={ResumeFinishScreen}
         options={{ headerShown: false }}
       />
 

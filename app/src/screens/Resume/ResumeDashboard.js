@@ -99,6 +99,16 @@ const ResumeDashboardScreen = ({ navigation, route }) => {
     }
   };
   useEffect(() => { if (openInvites) scrolledToInvites.current = false; }, [openInvites, route?.params?.at]);
+  // P3d finish moment: "apply to matching jobs" opens the dashboard at "recommended for you" ({ openMatches: true })
+  const openMatches = !!route?.params?.openMatches;
+  const scrolledToMatches = useRef(false);
+  const onMatchesLayout = (e) => {
+    if (openMatches && !scrolledToMatches.current) {
+      scrolledToMatches.current = true;
+      scrollRef.current?.scrollTo?.({ y: Math.max(0, e.nativeEvent.layout.y - 12), animated: true });
+    }
+  };
+  useEffect(() => { if (openMatches) scrolledToMatches.current = false; }, [openMatches, route?.params?.at]);
   const { user, isGuest } = useContext(AuthContext);
   const { requireAccount } = useGuestGate();
   const insets = useSafeAreaInsets();
@@ -1063,7 +1073,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
 
                   {/* Recommended for you (FLAG_CAREER_MATCHING) */}
                   {matchingOn && (
-                    <View style={RD.section} testID="resume-recommended">
+                    <View style={RD.section} testID="resume-recommended" onLayout={onMatchesLayout}>
                       <Text style={RD.h2} accessibilityRole="header" maxFontSizeMultiplier={MAX_FONT_SCALE}>
                         recommended for you<Text style={{ color: T.yellow }}>.</Text>
                       </Text>

@@ -38,6 +38,7 @@ import { INDUSTRIES, keyOf, indexOfKey, styles } from './steps/builderShared';
 // P3a (flag resumeV2): the track's step order, the new sections, progress, one-page estimate, "saved"
 import useFlag from '../../hooks/useFlag';
 import { FLAGS } from '../../api/upgradeFlags';
+import { finishShown } from '../../resume/finishMoment'; // P3d
 import { EXTRA_STEPS, stepOrder, nextStep, prevStep, stepIdFor, pageEstimate, fitLine, KEY_TO_ID } from '../../resume/resumeV2';
 import ActivitiesStep from './steps/ActivitiesStep';
 import AwardsStep from './steps/AwardsStep';
@@ -335,6 +336,7 @@ const ResumeBuilderScreen = () => {
   // P3b: the coach (under resumeV2), speak mode (resumeSpeak) inside it
   const coachFlag = useFlag(COACH_FLAG) === true; // hooks always called, in the same order
   const speakFlag = useFlag('resumeSpeak') === true;
+  const finishFlag = useFlag('resumeFinish') === true; // P3d: the finish moment, once per resume
   const coachOn = v2 && coachFlag;
   const speakOn = coachOn && speakFlag;
   const programme = programmeOf(currentResume);
@@ -756,6 +758,11 @@ const ResumeBuilderScreen = () => {
     if (!resume?._id) return;
     if (personalUnsaved()) await savePersonalInfo().catch(() => {});
     if (summaryUnsaved()) await saveTargetSummary().catch(() => {});
+    // P3d (resumeV2 + resumeFinish): the first finish of a resume celebrates it; afterwards the preview, as before
+    if (v2 && finishFlag && !(await finishShown(resume._id))) {
+      navigation.navigate('ResumeFinish', { resumeId: resume._id });
+      return;
+    }
     navigation.navigate('ResumeView', { resumeId: resume._id });
   });
   const problems = finishTried ? finishProblems() : [];
