@@ -3,7 +3,7 @@
 // the gallery by collection with the student's own resume in every card, an "ATS-safe only" filter, a badge on each
 // (ATS-safe: tested on the real PDF), long-press two to compare them side by side, "customise" and "use this
 // template". Content never changes when the template does. Only the five and the templates the owner approved show.
-import React, { useContext, useMemo, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +19,8 @@ import { funnel } from '../../../analytics/funnel';
 import { galleryTemplates, recommend, COLLECTIONS } from '../../../resume/studio';
 import TemplateThumb from './TemplateThumb';
 import CustomiseSheet from './CustomiseSheet';
+import useFlag from '../../../hooks/useFlag';
+import { templateOutcomes } from '../../../resume/finishApi';
 
 const W = Dimensions.get('window').width;
 const CARD_W = Math.floor((W - 16 * 2 - 12) / 2);
@@ -47,6 +49,16 @@ export default function TemplateStudio() {
   const [compare, setCompare] = useState([]);
   const [customising, setCustomising] = useState(false);
   const recs = useMemo(() => recommend(resume || {}, list), [resume, list]);
+  // P3d (resumeOutcomeStats): the real interview rate, only for templates the server says have enough data (>= 30
+  // applications and >= 10 interviews); nothing at all for the rest
+  const statsOn = useFlag('resumeOutcomeStats') === true;
+  const [stats, setStats] = useState({});
+  useEffect(() => {
+    let live = true;
+    if (!statsOn) { setStats({}); return undefined; }
+    templateOutcomes().then((d) => { if (live) setStats(Object.fromEntries((d?.templates || []).filter((t) => t && t.id && t.applications > 0).map((t) => [t.id, t]))); }).catch(() => {});
+    return () => { live = false; };
+  }, [statsOn]);
 
   const pick = (id) => { setSelected(id); funnel(`template_previewed`, { refId: id }); };
   const toggleCompare = (id) => setCompare((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c.slice(-1), id]));
@@ -94,6 +106,7 @@ export default function TemplateStudio() {
           {applied === t.id ? <Text style={s.inUse} maxFontSizeMultiplier={M}>in use</Text> : null}
           {cmp ? <Text style={s.inUse} maxFontSizeMultiplier={M}>comparing</Text> : null}
         </View>
+        {stats[t.id] ? <Text style={s.stat} maxFontSizeMultiplier={M} accessibilityLabel={`${stats[t.id].rate} percent of ${stats[t.id].applications} applications on tdc jobs got an interview`}>{stats[t.id].rate}% got an interview ({stats[t.id].applications} applications)</Text> : null}
       </TouchableOpacity>
     );
   };
@@ -170,6 +183,7 @@ const s = StyleSheet.create({
   badgeSafe: { fontFamily: F.bodySemi, fontSize: 11, color: T.success },
   badgeDesign: { fontFamily: F.bodySemi, fontSize: 11, color: '#8A5A00' },
   inUse: { fontFamily: F.bodySemi, fontSize: 11, color: T.textMuted },
+  stat: { fontFamily: F.body, fontSize: 11, color: T.textMuted, marginTop: 2 },
   footer: { flexDirection: 'row', gap: 10, alignItems: 'center', padding: 16, borderTopWidth: 1, borderTopColor: T.line },
   compareRow: { flexDirection: 'row', gap: 16, padding: 16 },
 });

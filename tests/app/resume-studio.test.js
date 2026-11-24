@@ -21,7 +21,7 @@ const RESUME = {
   workExperience: [], certifications: [], languages: [], achievements: [], settings: { track: "fresher" },
 };
 
-function setup({ flags = { resumeV2: true, resumeTemplatesV2: true }, resume = RESUME, user = { profileImage: "https://res.cloudinary.com/x/me.jpg" } } = {}) {
+function setup({ flags = { resumeV2: true, resumeTemplatesV2: true }, resume = RESUME, user = { profileImage: "https://res.cloudinary.com/x/me.jpg" }, outcomes = [] } = {}) {
   const { React, mount, contexts } = H.makeReact();
   const { rn } = H.makeRN();
   const puts = []; const events = []; const nav = { calls: [], goBack() {}, navigate: (...a) => nav.calls.push(a) };
@@ -43,6 +43,7 @@ function setup({ flags = { resumeV2: true, resumeTemplatesV2: true }, resume = R
     "/ui/Button": { __esModule: true, default: el("Button") },
     "/ui/Input": { __esModule: true, default: el("Input") },
     "/ui/Sheet": { __esModule: true, default: (p) => ({ type: "Sheet", props: { visible: p.visible, title: p.title, children: p.visible ? p.children : null } }) },
+    "/resume/finishApi": { __esModule: true, templateOutcomes: async () => ({ templates: outcomes }) }, // P3d (resumeOutcomeStats)
     "/studio/TemplateThumb": { __esModule: true, default: (p) => ({ type: "Thumb", props: { templateId: p.templateId, styles: p.styles, resume: p.resume, children: null } }) },
   });
   let current = JSON.parse(JSON.stringify(resume));
@@ -118,6 +119,17 @@ function setup({ flags = { resumeV2: true, resumeTemplatesV2: true }, resume = R
     H.find(m.tree, (n) => n.props?.testID === "template-stanford").props.onLongPress();
     const modal = H.find(m.tree, (n) => n.type === "Modal");
     ok(modal.props.visible && H.findAll(modal, (n) => n.type === "Thumb").map((n) => n.props.templateId).join() === "jakes,stanford", "long-press two: side by side");
+    m.unmount();
+  }
+
+  console.log("── interview rates (P3d, resumeOutcomeStats)");
+  for (const on of [false, true]) {
+    const t = setup({ flags: { resumeV2: true, resumeTemplatesV2: true, resumeOutcomeStats: on }, outcomes: [{ id: "jakes", applications: 30, interviews: 10, rate: 33 }] });
+    const m = t.mount(t.React.createElement(t.load(path.join(H.SRC, "screens/Resume/ResumeTemplate.js")).default));
+    await H.tick(5);
+    const card = (id) => H.textOf(H.find(m.tree, (n) => n.props?.testID === `template-${id}`));
+    if (on) ok(/33% got an interview \(30 applications\)/.test(card("jakes")) && !/got an interview/.test(card("modern_ats")), "flag on: the real rate only on the template the server returned (>= 30 / >= 10); nothing on the others");
+    else ok(!/got an interview/.test(H.textOf(m.tree)), "flag off: no rates at all");
     m.unmount();
   }
 
