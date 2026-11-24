@@ -30,6 +30,7 @@ import { AuthShell, AuthInput, AuthButton, AUTH } from "../components/AuthShell"
 import UniversityPicker from "../components/UniversityPicker";
 import InviteCodeExtras from "../growth/InviteCodeExtras";
 import { clearPendingRef } from "../growth/inviteLinks";
+import { CITIES } from "./pkCities";
 
 // universities: the shared list on the server (components/UniversityPicker.js), not a list in the app
 
@@ -45,87 +46,6 @@ const ACADEMIC_LEVELS = [
   "5th year",
 ];
 
-const CITIES = [
-  // --- Major metros (original) ---
-  "Karachi",
-  "Lahore",
-  "Islamabad",
-  "Rawalpindi",
-  "Faisalabad",
-  "Multan",
-  "Peshawar",
-  "Quetta",
-  "Hyderabad",
-  "Gujranwala",
-  "Sialkot",
-  "Sukkur",
-  "Larkana",
-  "Nawabshah",
-  "Bahawalpur",
-  "Sargodha",
-  "Mirpur Khas",
-  "Abbottabad",
-  "Mardan",
-  "Gujrat",
-  "Kasur",
-  "Rahim Yar Khan",
-  "Sahiwal",
-  "Okara",
-  "Wah Cantt",
-  "Dera Ghazi Khan",
-  "Mingora",
-  "Chiniot",
-  "Kamoke",
-  "Sheikhupura",
-  "Jhang",
-  "Dera Ismail Khan",
-  "Kohat",
-  "Muzaffarabad",
-  "Gilgit",
-  "Skardu",
-
-  // --- Previously added (earlier CSV) ---
-  "Gharo",
-  "Attock",
-  "Vehari",
-  "Kamra",
-  "Malakand",
-  "Narowal",
-  "Pattoki",
-  "Taxila",
-  "Chakwal",
-  "Risalpur",
-  "Swat",
-  "Chakdara",
-  "Mansehra",
-  "Khairpur",
-  "Jamshoro",
-  "Turbat",
-  "Hunza",
-  "Chilas",
-  "Ghizer",
-  "Neelum",
-  "Mirpur",
-  "Rawalakot",
-  "Kotli",
-  "Jhelum",
-
-  // --- Added from latest Excel sheet (cities not yet in list) ---
-  "Badin",
-  "Bhitshah",
-  "Dadu",
-  "Ghotki",
-  "Kandhkot",
-  "Mirpurkhas",
-  "Mithi",
-  "Naushahro Feroze",
-  "Sakrand",
-  "Shahdadkot",
-  "Shaheed Benazirabad",
-  "Shikarpur",
-  "Tandojam",
-  "Umerkot",
-];
 
 const RULES = [
   { key: "len", label: "6+ characters", test: (p) => p.length >= 6 },
