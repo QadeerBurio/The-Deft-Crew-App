@@ -3,8 +3,12 @@
 
 import MetaEventsHost from "./app/src/analytics/MetaConsent"; // Meta App Events consent + switch
 
+import { installSafeConsole } from "./app/src/lib/safeConsole";
+
 // Release builds: no console.log / info / debug output (warn and error stay).
 if (!__DEV__) { console.log = () => {}; console.info = () => {}; console.debug = () => {}; }
+// P5a: …and what warn / error print in release is scrubbed (no request bodies, tokens or Authorization headers)
+if (!__DEV__) installSafeConsole(console);
 
 import React, { useEffect, useState, useRef, useContext } from "react";
 import * as SplashScreen from "expo-splash-screen";
