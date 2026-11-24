@@ -30,7 +30,7 @@ const baseFeed = () => [
   { _id: "p3", text: "my held post", visibility: "public", likes: 0, comments: [], createdAt: now, status: "pending" },
 ];
 
-function setup(file, { flag, v2 = false, flags = {}, server = {}, picker = null }) {
+function setup(file, { flag, v2 = false, flags = {}, server = {}, picker = null, extraMocks = {} }) {
   const { React, mount } = H.makeReact();
   const { rn, alerts } = H.makeRN({ Share: { share: async () => ({}) }, Keyboard: { dismiss() {}, addListener: () => ({ remove() {} }) }, TouchableWithoutFeedback: "TWF", KeyboardAvoidingView: "KAV", RefreshControl: "RefreshControl", Linking: { openURL: async () => {} } });
   const calls = [];
@@ -43,6 +43,7 @@ function setup(file, { flag, v2 = false, flags = {}, server = {}, picker = null 
     if (/\/confessions\/[^/]+\/metoo$/.test(url) && method === "PUT") return reply(200, { meToo: true, meTooCount: 4 });
     if (/\/confessions\/[^/]+\/poll$/.test(url) && method === "PUT") return reply(200, { poll: { options: [{ text: "chai", votes: 3 }, { text: "coffee", votes: 1 }], total: 4, myVote: 0 } });
     if (/\/confessions\/[^/]+\/follow$/.test(url) && method === "PUT") { const b = JSON.parse(opts.body || "{}"); return reply(200, { following: b.on !== false }); }
+    if (/\/confessions\/[^/]+\/share$/.test(url) && method === "POST") { const [st, js] = server.share ? server.share(url.split("/").slice(-2)[0]) : [200, { url: "https://gettdc.pk/c/x", text: "" }]; return reply(st, js); }
     if (/\/confessions\/[^/]+\/save$/.test(url) && method === "PUT") { const b = JSON.parse(opts.body || "{}"); return reply(200, { saved: b.on !== false }); }
     if (url.includes("/confessions/create")) return server.create ? server.create() : reply(201, { confession: { _id: "new" } });
     if (/\/confessions\/comment\/[^/]+$/.test(url) && method === "POST") return server.comment ? server.comment() : reply(200, { _id: "p1", comments: [] });
@@ -68,6 +69,7 @@ function setup(file, { flag, v2 = false, flags = {}, server = {}, picker = null 
     "../../hooks/useFlag": { __esModule: true, default: (name) => (name === "confessionsV2" ? v2 : name in flags ? flags[name] : name === "confessionSafety" ? flag : false) }, // flag = confessionSafety; flags: the P4b ones
     "../../analytics/funnel": { funnel: (n) => funnels.push(n) },
     "./ReportModal": function ReportModal(p) { return React.createElement("ReportModal", p); },
+    ...extraMocks,
   };
   const load = H.loader(mocks);
   const Screen = load(file).default;
@@ -405,6 +407,38 @@ async function snapshots(file, flag, v2 = false) {
     ok(!find(r0, (x) => /^vote: /.test(x.props.accessibilityLabel || "")) && !find(r0, (x) => x.props.accessibilityLabel === "follow replies"), "polls / follow flags off: no vote buttons, no bell");
     await press(ctx.root.tree, "confess"); await tick(300);
     ok(!find(ctx.root.tree, (x) => x.props.accessibilityLabel === "add a poll"), "…and no 'add a poll'");
+    ctx.restore();
+  }
+
+  console.log("── P4c: share as an image card");
+  {
+    const p4cFeed = () => baseFeed().map((c, i) => ({ ...c, meTooCount: 0, meTooByCurrentUser: false, saved: false, shareable: i === 0 }));
+    const cards = [];
+    const ctx = setup(SCREEN, { flag: false, v2: true, flags: { confessionShare: true }, server: { config: { tags: [], prompts: [], moods: [], maxLength: 500, handle: { enabled: false } }, feed: p4cFeed, share: (id) => (id === "p1" ? [200, { url: "https://gettdc.pk/c/p1", text: "someone else's post" }] : [409, { code: "UNDER_REVIEW", error: "this confession can't be shared while it's being reviewed." }]) }, extraMocks: { "../../ui/ShareCard": { __esModule: true, default: function ShareCardSheet(p) { cards.push(p); return { type: "ShareCardSheet", props: { visible: p.visible, variant: p.variant, data: p.data, children: null } }; } } } });
+    await tick(150);
+    let r = rows(ctx);
+    ok(find(r[0].tree, (x) => x.props.accessibilityLabel === "share as an image") && !find(r[1].tree, (x) => x.props.accessibilityLabel === "share as an image"), "the image share only on a shareable confession (the server's shareable)");
+    ok(H.findAll(r[0].tree, (x) => x?.props?.name === "share-social-outline").length === 1, "…the plain-text share isn't offered then (one share button: the image)");
+    await press(r[0].tree, "share as an image"); await tick(80);
+    const call = ctx.calls.find((c) => /\/confessions\/p1\/share$/.test(c.url));
+    const sheet = find(ctx.root.tree, (x) => x.type === "ShareCardSheet");
+    ok(call && call.method === "POST" && sheet && sheet.props.visible === true && sheet.props.variant === "confession" && sheet.props.data.url === "https://gettdc.pk/c/p1" && sheet.props.data.text === "someone else's post" && !("handle" in sheet.props.data), "share → POST /confessions/p1/share → the confession card with its page's link, no handle");
+    ok(ctx.funnels.includes("confession_share_link"), "funnel confession_share_link");
+    ctx.restore();
+  }
+  {
+    const ctx = setup(SCREEN, { flag: false, v2: true, flags: { confessionShare: true }, server: { config: { tags: [], prompts: [], moods: [], maxLength: 500, handle: { enabled: false } }, feed: () => baseFeed().map((c) => ({ ...c, shareable: true })), share: () => [409, { code: "UNDER_REVIEW", error: "this confession can't be shared while it's being reviewed." }] }, extraMocks: { "../../ui/ShareCard": { __esModule: true, default: () => null } } });
+    await tick(150);
+    await press(rows(ctx)[0].tree, "share as an image"); await tick(80);
+    const a = ctx.alerts.pop();
+    ok(a && a.title === "can't share this one" && a.text === "this confession can't be shared while it's being reviewed." && ctx.funnels.includes("confession_share_refused"), "refused by the server → its reason, plainly");
+    ctx.restore();
+  }
+  {
+    const ctx = setup(SCREEN, { flag: false, v2: true, flags: { confessionShare: false }, server: { config: { tags: [], prompts: [], moods: [], maxLength: 500, handle: { enabled: false } }, feed: () => baseFeed().map((c) => ({ ...c, shareable: true })) } });
+    await tick(150);
+    const r0 = rows(ctx)[0].tree;
+    ok(!find(r0, (x) => x.props.accessibilityLabel === "share as an image") && find(r0, (x) => x.props?.name === "share-social-outline"), "confessionShare off: no image share; the plain-text share as today");
     ctx.restore();
   }
 

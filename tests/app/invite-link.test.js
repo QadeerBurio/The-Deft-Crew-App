@@ -118,11 +118,16 @@ const asMock = { "@react-native-async-storage/async-storage": { __esModule: true
     ok(captured === 1 && shared[0]?.u === "file:///card.png" && shared[0].o.mimeType === "image/png" && done2[0] === "invite", "share: capture → expo-sharing (png) → onShared('invite')");
     const c = mount(React.createElement(SC.ShareCardView, { variant: "confession", code: "AISHA1", data: { text: "the canteen chai is elite", handle: "@ziddi-project-343" } }));
     ok(H.textOf(c.tree).includes("the canteen chai is elite") && !H.textOf(c.tree).includes("ziddi") && H.textOf(c.tree).includes("sent from tdc confessions"), "confession card: the text only, never a handle");
+    // P4c: with the confession's own page, the QR and the link are that page and no invite code is printed
+    const c2 = mount(React.createElement(SC.ShareCardView, { variant: "confession", code: "AISHA1", data: { text: "chai or coffee?", url: "https://gettdc.pk/c/0123456789abcdef01234567" } }));
+    const qr2 = H.find(c2.tree, (x) => x.type === "QRCode");
+    ok(qr2 && qr2.props.value === "https://gettdc.pk/c/0123456789abcdef01234567" && !H.textOf(c2.tree).includes("AISHA1") && H.textOf(c2.tree).includes("gettdc.pk/c/0123456789abcdef01234567"), "confession card with its page (P4c): the QR is the confession's page, no invite code (it can't point at the sharer)");
   }
 
   console.log("── wiring (source)");
   const app = H.read("App.js");
   ok(/if \(inviteCodeFromUrl\(url\)\) \{\s*handleInviteUrl\(url, \{ navigationRef \}\)/.test(app) && app.indexOf("inviteCodeFromUrl(url)") < app.indexOf("Linking.parse(url)"), "App.js: invite links handled before the other deep links");
+  ok(/parts\[0\] === "confession" && \/\^\[0-9a-f\]\{24\}\$\/i\.test\(parts\[1\] \|\| ""\)\) \{[\s\S]{0,260}openTarget\("FeedScreen", \{ tab: "Confession", postId: parts\[1\] \}\)/.test(app), "App.js (P4c): tdcapp://confession/<id> (a real id only) opens the confession feed with it pinned");
   const su = H.read("app/src/screens/SignupScreen.js");
   ok(/<InviteCodeExtras code=\{referralCode\} onCode=\{setReferralCode\}/.test(su) && /await api\.post\("\/auth\/signup", body[^\n]*\n\s*clearPendingRef\(\);/.test(su), "Signup: the extras under the code field; the saved code cleared once the account exists");
   const pts = H.read("app/src/components/Points.js");

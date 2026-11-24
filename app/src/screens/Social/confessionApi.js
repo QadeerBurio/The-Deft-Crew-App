@@ -79,3 +79,13 @@ export const votePoll = (token, id, option) => putJson(token, `/confessions/${en
 export const setFollowing = (token, id, on) => putJson(token, `/confessions/${encodeURIComponent(id)}/follow`, { on });
 // save / unsave → { saved }   (confessionsV2; the list: the feed with saved=1)
 export const setSavedConfession = (token, id, on) => putJson(token, `/confessions/${encodeURIComponent(id)}/save`, { on });
+
+// ============ P4c ============
+// share as an image card → { url, text } (the server checks the rules: public, live, no open report);
+// refused → an Error with .status and .message (the server's sentence)
+export const shareConfession = async (token, id) => {
+  const res = await fetchWithTimeout(`${API_URL}/confessions/${encodeURIComponent(id)}/share`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(json?.error || json?.message || "this confession can't be shared."), { status: res.status, code: json?.code });
+  return json;
+};
