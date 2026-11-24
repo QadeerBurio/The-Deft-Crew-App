@@ -695,7 +695,8 @@ function hitTest(tree, rootBox, x, y) {
     ok(/export default React\.memo\(PostCard\);/.test(src("app/src/screens/Social/PostCard.js")), "PostCard is memoised");
     const career = src("app/src/components/Career.js");
     ok(/renderItem=\{renderJob\}/.test(career) && /const renderJob = useCallback\(/.test(career) && /onPress=\{\(\) => onPress\(item\)\}/.test(career) && /onOptimizePress\(item\);/.test(career) && /const openJob = useStableCallback/.test(career), "Career: memoised cards get stable callbacks (open, location, optimize) and renderItem");
-    const events = src("app/src/screens/Events/Events.js");
+    // Q-a: the Events screen is split (Events.js + EventCards.js, eventsFormat.js, eventsStyles.js): the same checks on all of it
+    const events = ["Events.js", "EventCards.js", "eventsFormat.js", "eventsStyles.js"].map((f) => src(`app/src/screens/Events/${f}`)).join("\n");
     ok(/renderItem=\{renderRow\}/.test(events) && /const EventRow = memo\(function EventRow/.test(events) && /saved=\{isSaved\(ev\._id\)\}/.test(events) && /registered=\{registeredEventIds\.includes\(ev\._id\)\}/.test(events), "Events: memoised EventRow with boolean saved/registered and stable callbacks");
     const md = src("app/src/screens/MyDiscountScreen.js");
     ok(/renderItem=\{renderDiscount\}/.test(md) && /const renderDiscount = useCallback\(/.test(md), "MyDiscount: stable renderItem (cards and handlers were already memoised)");

@@ -248,7 +248,8 @@ async function show(registrationId, who) {
     ok(btn({ payment: { status: "verified" } }) == null && btn(null) == null, "verified without a ticket yet → nothing");
     const freeLive = { payment: { status: "not_required" }, tickets: [{ code: "TDC-2345-6789", status: "valid" }] };
     ok(text(btn(freeLive)) === "download ticket" && D.ticketButtonState({ tickets: [{ status: "valid" }] })?.kind === "download", "free event (no payment) → 'download ticket'");
-    const evSrc = fs.readFileSync(path.join(SRC, "screens/Events/Events.js"), "utf8");
+    // Q-a: the Events screen is split (Events.js + EventCards.js …): the same checks on all of it
+    const evSrc = ["Events.js", "EventCards.js", "eventsFormat.js", "eventsStyles.js"].map((f) => fs.readFileSync(path.join(SRC, "screens/Events", f), "utf8")).join("\n");
     ok(/<TicketButton registration=\{registration\} onOpen=\{onTicket\} \/>/.test(evSrc) && /<TicketButton\s+registration=\{registrationFor\(selectedEvent\._id\)\}/.test(evSrc) && /download: true/.test(evSrc), "Events: under the payment status, and in the details sheet of a registered event; opens with download ready");
   }
   console.log("── push tap → the ticket");
@@ -266,7 +267,7 @@ async function show(registrationId, who) {
   const r2 = pm.exports.getRouteFromNotificationData({ route: "Events", params: { openEventId: "e1" } });
   ok(r1.route === "EventTicket" && r1.params.registrationId === "abc", "ticket push → EventTicket { registrationId }", JSON.stringify(r1));
   ok(r2.route === "Events" && r2.params.openEventId === "e1", "other pushes unchanged");
-  const ev = fs.readFileSync(path.join(SRC, "screens/Events/Events.js"), "utf8");
+  const ev = ["Events.js", "EventCards.js", "eventsFormat.js", "eventsStyles.js"].map((f) => fs.readFileSync(path.join(SRC, "screens/Events", f), "utf8")).join("\n");
   const dn = fs.readFileSync(path.join(SRC, "navigation/DrawerNavigator.js"), "utf8");
   ok(/useOpenFromParams\("ticketRegistrationId"/.test(ev) && /name="EventTicket" component=\{EventTicket\}/.test(dn), "Events opens the ticket from { ticketRegistrationId } (in-app list / banner); screen registered");
 
