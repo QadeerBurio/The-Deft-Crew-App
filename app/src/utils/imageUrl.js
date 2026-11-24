@@ -59,9 +59,19 @@ export const IMAGE_WIDTHS = { avatar: 120, logo: 120, card: 480, banner: 800 };
 
 const CLOUDINARY_UPLOAD = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(v\d+\/.+)$/;
 
+// Q-3i (flag lowDataImages, off by default): on a slow mobile connection (lib/lowDataImages.js decides) sized
+// Cloudinary pictures come 40% narrower and at Cloudinary's "eco" quality. Off (the default, and always without the
+// flag): exactly the URLs above. Pictures without a size (full-screen viewers) are never changed.
+let lowData = false;
+export const setLowDataImages = (on) => { lowData = !!on; };
+export const lowDataImagesOn = () => lowData;
+const LOW_DATA_SCALE = 0.6;
+
 export function sizedImageUrl(url, size) {
-  const w = typeof size === "number" ? Math.round(size) : IMAGE_WIDTHS[size];
+  let w = typeof size === "number" ? Math.round(size) : IMAGE_WIDTHS[size];
   if (!w || w <= 0 || typeof url !== "string") return url;
   const m = url.match(CLOUDINARY_UPLOAD);
-  return m ? `${m[1]}w_${w},c_limit,f_auto,q_auto/${m[2]}` : url;
+  if (!m) return url;
+  if (lowData) w = Math.max(60, Math.round(w * LOW_DATA_SCALE));
+  return `${m[1]}w_${w},c_limit,f_auto,${lowData ? "q_auto:eco" : "q_auto"}/${m[2]}`;
 }
