@@ -16,6 +16,7 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { renderResumeHTML, canonicalTemplate } from '../services/templateService';
+import { resumeHtmlWithFonts } from '../services/templates/print'; // P3-6: fonts embedded (library templates / chosen pair)
 import { pdfFileName } from './resumeRules';
 import { TIMEOUT } from '../config/timeouts';
 
@@ -40,14 +41,19 @@ const withTimeout = (p, ms) => new Promise((resolve, reject) => {
   p.then((v) => { clearTimeout(t); resolve(v); }, (e) => { clearTimeout(t); reject(e); });
 });
 
+// the resume's own template id (a P3-6 library template renders as itself; older ids map inside the renderer, as
+// before); the sync version uses system fonts (the first paint of the preview), the async one embeds the fonts
 export function resumeHtml(resume) {
-  return renderResumeHTML(resume, canonicalTemplate(resume?.template), resume?.customStyles || {});
+  return renderResumeHTML(resume, resume?.template, resume?.customStyles || {});
+}
+export function resumeHtmlAsync(resume) {
+  return resumeHtmlWithFonts(resume, resume?.template, resume?.customStyles || {});
 }
 
 /** The PDF in the app's cache, named "<Full name> Resume.pdf" */
 // iOS ignores CSS @page margins when printing, so the same 14/15 mm margins are passed to expo-print there
 export async function makeResumePdf(resume) {
-  const html = resumeHtml(resume);
+  const html = await resumeHtmlAsync(resume);
   const out = await withTimeout(Print.printToFileAsync({ html, width: 595, height: 842, ...(Platform.OS === 'ios' ? { margins: { left: 42, right: 42, top: 40, bottom: 40 } } : {}) }), TIMEOUT.PDF);
   const name = pdfFileName(resume);
   const uri = `${FileSystem.cacheDirectory}${encodeURIComponent(name)}`;

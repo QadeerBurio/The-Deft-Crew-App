@@ -465,6 +465,61 @@ rules. "Fit on one page" only trims to 3 lines per entry; it never rewrites.
 Full runs at the end of P3b: SERVER 99/99 suites; APP 60 suites + `expo export` android + ios; ADMIN unchanged (the
 two new flags appear in admin → features through the existing list).
 
+## Fixes after P3b (owner, branch `upgrade/fixes-p3b`)
+
+| Fix | What changed | Commits | Tests |
+|---|---|---|---|
+| post composer | no "Karachi" fallback: the student's location or none; the row is hidden without one. The server stores what is sent (it used to add "Karachi") | APP `d4a469b`, SERVER `5adcc8ad` | post-location 3/3 (app), 7/7 (server) |
+| signup reply | brand / employer signup reply through `utils/safeRecord` (as admin replies): no codes, push tokens, store secrets, ID-card pictures; same shape otherwise | SERVER `a53345cc` | signup-safe-reply 12/12; SERVER 101/101 |
+
+Not changed (reported): `/signup/verify-otp`, `/profile/me`, `/me` and `/admin-login-as-brand` also reply with the
+whole account minus the password (the signed-in person's own record).
+
+## P3c step 1: engine + first 10 templates for approval (branch `upgrade/p3c-templates` from `upgrade/fixes-p3b`)
+
+| Step | What changed | Commits | Tests |
+|---|---|---|---|
+| puppeteer | devDependency 24.43.1 (25.x needs Node 22), never imported by the app; `.puppeteerrc.cjs` skips the browser download (EAS and npm install unchanged); scripts use the local Chrome / Edge | APP `b1d799f` | — |
+| engine | the five looks are themes; optional theme keys render nothing for themes without them; `templateOf(id)`; 395 frozen outputs identical; 10 new templates as config (`services/templates/library.js`), not selectable until step 2 | APP `d186686` | resume-templates 38/38 |
+| previews | `tdc-upgrade-v2/template-previews/`: 10 PNGs + contact sheet + README, all filled with the SAMPLE resume (Sara Example); all 10 fit one A4 page | APP `b38edf4` | (in a browser: one page, no side-by-side text) |
+
+Waiting for the owner's approval per template before step 2.
+
+## P3c step 2: studio, customisation, fonts, ATS badges (same branch; flag `resumeTemplatesV2`, needs `resumeV2`)
+
+The owner said "continue" while the template decisions were pending, so step 2 is built with every library template
+`approved: false`: with both flags on, the studio shows today's five only. Approving a template = `approved: true` in
+`services/templates/library.js` (one line each, no server change: the server already accepts all 23 ids).
+
+| Step | What changed | Commits | Tests |
+|---|---|---|---|
+| server: ids + styles | `config/resumeTemplates.js`: the 13 older + 10 library ids; `customStyles` studio keys (palette, fontPair, size, density, margins, heading case / style / icons, section order / hidden / names, photo, date format, page size, link style) saved when valid, dropped when not (never a failed save); flag `resumeTemplatesV2` (student, off) | SERVER `93278205` | resume-templates-server, feature-access |
+| server: photo link | `personalInfo.photoUrl`, https only | SERVER `70f4b0ef` | resume-templates-server |
+| server: reset | `null` clears a studio key; the five older keys can't be cleared | SERVER `a17979c6` | resume-templates-server 18/18 |
+| engine: customise | `services/templates/styles.js` (12 palettes, all ≥ 4.5:1; 8 font pairs; sizes, spacing, margins, heading styles); `customise()`: no studio keys = the same theme object (the five unchanged) | APP `2097791` | resume-customise |
+| fonts | 22 Latin-subset TTFs (~1 MB) + OFL licences in `app/assets/resume-fonts/`; only the chosen pair is embedded at print time; Noto Naskh Arabic only for an Urdu-script name; the five embed nothing (identical HTML) | APP `fe745d5` | resume-customise 28/28 |
+| ATS badge | real PDF (Chrome) → pdftotext: name, contact, headings and dates read in order for each template; heading letter-spacing capped on the new templates; approval gate (`approved`) | APP `0a22bc3` | resume-ats 16/16 |
+| studio | `resume/studio.js` (gallery = five + approved, `recommend()` with reasons, badges); `TemplateStudio` (recommended row, tabs all / ATS Pro / Fresher & Student, "ATS-safe only", long-press two to compare, "use this template" saves only the template) | APP `e3778c0` | resume-studio |
+| customise sheet | colour (12 + a custom colour refused under 4.5:1), font, size, spacing, margins, heading case / style, sections (show, rename, move), photo (profile photo, https, off by default, ATS note), dates, page, links; live preview on the student's own resume; saved only on "save", only the changed keys; "reset" sends null | APP `4d77197` | resume-studio |
+| switch | `ResumeTemplate` default export: both flags on → the studio (loaded only then); otherwise, and while flags load, today's picker unchanged; same route name and params | APP `d80d492` | resume-studio 33/33, resume-flow 23/23 |
+
+Funnel: `template_previewed`, `template_selected`, `resume_ats_badge_safe|design`, `template_customised_<key>` (all on
+the server allowlist).
+
+Owner sign-off (P3c step 2), done:
+- Minimal (`rezi`): headings 0.08em → 0.05em, so portals read "EDUCATION"; real-PDF test passes, ATS-safe badge.
+  Only Minimal's 53 frozen outputs re-recorded (each differs only by that spacing); the other four byte-identical
+  (modern_ats 183, stanford 53, jakes 53, faang 53). APP `0183c6c`, resume-templates 40/40, resume-ats 16/16.
+- Reset: back to the template's own look completely, a typed custom colour included. The older colour keys can't be
+  cleared (older apps send them), so "no custom colour" = the model's default colours, which the five always rendered
+  with and the library templates read as "not chosen". Tested byte-identical to a never-customised resume (library and
+  the five) and through the real route. APP `8e09d18` (resume-studio 38/38), SERVER `a10499f2` (resume-templates-server
+  20/20).
+- The 10 library templates stay hidden (`approved: false`) until the owner's decisions.
+
+Backlog (owner, P3c): heading icons drawn on the resume (`headingIcons` is saved, not drawn); gallery filters for
+photo / two-column / one-page (once such templates exist).
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |
@@ -492,6 +547,7 @@ two new flags appear in admin → features through the existing list).
 | `RATE_LIMIT_CREDENTIAL_VERIFY_MAX` | optional; default 30 per 10 minutes per address | — | the public credential check |
 | `PUBLIC_BASE_URL` | optional; default the Railway production URL | — | the 10-minute credential PDF link the app opens |
 | `FLAG_RESUME_COACH` / `FLAG_RESUME_SPEAK` | not needed: per account in admin → features ("Resume coach", "Resume speak mode"; both need "Resume v2") | — | P3b |
+| `FLAG_RESUME_TEMPLATES_V2` | not needed: per account in admin → features ("Resume template studio"; needs "Resume v2") | — | P3c template studio |
 | `OPENAI_TRANSCRIBE_MODEL` | optional; default `whisper-1` | — | speak mode |
 | `RATE_LIMIT_RESUME_AI_MAX` | optional; default 120 an hour per student (enhance, suggest-skills and the coach together) | — | P3 #7 / P3b |
 | Cloudinary | check that `CLOUDINARY_NAME` is the cloud the app uploads to (`decaxpera`); otherwise images aren't deleted (logged, nothing breaks) | — | image clean-up |

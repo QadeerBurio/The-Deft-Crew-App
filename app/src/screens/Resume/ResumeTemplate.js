@@ -12,6 +12,7 @@ import { renderResumeHTML, TEMPLATES, canonicalTemplate } from '../../services/t
 import { color as T, font as F, MAX_FONT_SCALE as M } from '../../theme/tokens';
 import ScreenHeader from '../../ui/ScreenHeader';
 import useAction from '../../hooks/useAction';
+import useFlag from '../../hooks/useFlag';
 
 const CARD_W = Math.floor((Dimensions.get('window').width - 16 * 2 - 12) / 2);
 const CARD_H = Math.round((CARD_W - 16) * 1.414); // A4
@@ -110,4 +111,15 @@ const styles = StyleSheet.create({
   ctaText: { fontFamily: F.bodyBold, fontSize: 16, color: T.ink },
 });
 
-export default ResumeTemplateScreen;
+// P3-6: with resumeV2 + resumeTemplatesV2 on, the template studio; otherwise (and while the flags load) the picker above,
+// exactly as before. Same route name and params either way. The studio is loaded only when it is shown.
+export default function ResumeTemplate(props) {
+  const v2 = useFlag('resumeV2');
+  const studio = useFlag('resumeTemplatesV2');
+  if (v2 && studio) {
+    const TemplateStudio = require('./studio/TemplateStudio').default;
+    return <TemplateStudio {...props} />;
+  }
+  return <ResumeTemplateScreen {...props} />;
+}
+
