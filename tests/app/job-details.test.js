@@ -175,6 +175,8 @@ const deferred = () => { let resolve, reject; const p = new Promise((a, b) => { 
     Input: function Input(p) { return React.createElement("Input", p, p.error ? React.createElement("Text", { role: "error" }, p.error) : null); },
   };
   const AuthContext = { _default: {}, Provider: "Provider" };
+  const ResumeContext = { _default: {} };
+  const formFlags = { resumeV2: false }; const formEvents = []; const pdfs = []; let pdfFails = false;
   const meta = [];
   const studio = { on: false, versions: [], attached: [] };
   const net = { posts: [], gets: [], post: null, get: async () => ({ data: {} }) };
@@ -201,6 +203,11 @@ const deferred = () => { let resolve, reject; const p = new Promise((a, b) => { 
     "../../api/matchingApi": { matchingEnabled: async () => net.matchingOn, myJobMatch: async (id) => net.match(id) },
     "../../guest/GuestGate": { useGuestGate: () => ({ requireAccount: () => net.allowAccount !== false }) },
     "../../components/CareerRatings": { EmployerRating: function EmployerRating() { return null; } },
+    // P3d: "my tdc resume" (resumeV2): off unless a case turns it on
+    "../../hooks/useFlag": { __esModule: true, default: (n) => formFlags[n] === true },
+    "../../context/ResumeContext": { ResumeContext },
+    "../../analytics/funnel": { __esModule: true, funnel: async (n, m) => { formEvents.push([n, m]); }, default: async () => {} },
+    "../../utils/resumeFiles": { makeResumePdf: async (r) => { pdfs.push(r?._id); if (pdfFails) throw new Error("print failed"); return { uri: "file:///cache/Sana%20Ali%20Resume.pdf", name: "Sana Ali Resume.pdf", pages: 1 }; } },
     "../../components/career/JobWebView": { WebViewModal: function WebViewModal(p) { return React.createElement("WebViewModal", p); }, buildLocationUrl: (x) => (x ? `maps:${x}` : null) },
   };
   const load = loader(mocks);
@@ -268,6 +275,37 @@ const deferred = () => { let resolve, reject; const p = new Promise((a, b) => { 
     ok(navi.dispatched.length === 0 && navi.navigated.length === 0, "…and it stays on the form");
     ok(meta.length === 0, "…no Meta SubmitApplication");
     ok(submitBtn(root.tree).props.disabled === false, "…and it can be sent again");
+  }
+
+  // P3d: "my tdc resume" (resumeV2): the PDF in the student's template, sent as the file, with tdcResumeId
+  {
+    const { validate, buildBody } = FormMod;
+    ok(validate({ fullName: "a", email: "b", phone: "c", coverLetter: "d" }, { kind: "tdc", resumeId: "r1" }).resume === undefined && validate({ fullName: "a", email: "b", phone: "c", coverLetter: "d" }, { kind: "tdc" }).resume === "Choose a resume to send", "validate: my tdc resume counts as a resume (with its id)");
+    const b3 = buildBody({ fullName: "Sana" }, { kind: "tdc", resumeId: "r1", file: { uri: "file:///cache/x.pdf", name: "x.pdf" } }, () => new FakeFormData());
+    ok(b3.get("resume").type === "application/pdf" && b3.get("resume").name === "x.pdf" && b3.get("tdcResumeId") === "r1", "buildBody: the made PDF as the file, and tdcResumeId");
+    contexts.set(ResumeContext, { resumes: [{ _id: "r1", personalInfo: { firstName: "Sana", lastName: "Ali", title: "React Intern" } }] });
+    const off = mount(React.createElement(Form, { navigation: makeNav(stack()), route: { params: { jobId: "j1", job: { title: "React intern" } } } }));
+    await settle(off);
+    ok(!/my tdc resume/.test(textOf(off.tree)), "resumeV2 off: no tdc resume choice (the form as before)");
+    formFlags.resumeV2 = true;
+    const navi = makeNav(stack());
+    net.posts.length = 0; meta.length = 0;
+    net.post = async () => ({ data: { application: { _id: "a9" } } });
+    const root = mount(React.createElement(Form, { navigation: navi, route: { params: { jobId: "j9", job: { title: "React intern" } } } }));
+    await settle(root);
+    ok(/my tdc resume/.test(textOf(root.tree)) && /Sana Ali – React Intern: sent as a PDF in your template/.test(textOf(root.tree)), "resumeV2 on: 'my tdc resume' for each of the student's resumes", textOf(root.tree).slice(-400));
+    await fill(root, { Phone: "0300 1234567", "Cover letter": "I build React apps." });
+    pdfFails = true;
+    all(root.tree, (x) => x.props?.accessibilityLabel === "send my tdc resume Sana Ali – React Intern")[0].props.onPress(); await settle(root);
+    submitBtn(root.tree).props.onPress(); await settle(root);
+    ok(net.posts.length === 0 && /PDF couldn't be made/.test(textOf(root.tree)) && submitBtn(root.tree).props.disabled === false, "the PDF can't be made → nothing sent, says so, can try again");
+    pdfFails = false;
+    submitBtn(root.tree).props.onPress(); await settle(root);
+    const sent = net.posts[0]?.body;
+    ok(net.posts.length === 1 && pdfs[pdfs.length - 1] === "r1" && sent.get("resume").name === "Sana Ali Resume.pdf" && sent.get("resume").type === "application/pdf" && sent.get("tdcResumeId") === "r1", "send → the PDF made from that resume, as the file, with tdcResumeId");
+    ok(formEvents.some((e) => e[0] === "job_apply_tdc_resume") && meta.length === 1, "funnel job_apply_tdc_resume after the server confirmed; Meta once");
+    formFlags.resumeV2 = false;
+    contexts.set(ResumeContext, {});
   }
 
   // 3. success: one send even with a double tap, back held while sending, Meta once after the server, back to the list

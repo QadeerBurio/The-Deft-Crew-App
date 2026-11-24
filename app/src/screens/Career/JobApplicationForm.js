@@ -4,6 +4,8 @@
 // required. The resume: a file (PDF / DOC / DOCX, 10 MB max) or, when Resume Studio is on and has an approved
 // version tailored for this job, that version (sent with the application once the server has it). Jobs have no
 // custom questions, so there are none to show.
+// P3d (resumeV2): or "my tdc resume": the app makes the PDF in the student's template and sends it as the file, with
+// tdcResumeId so the server can note which template went with the application (owner #10).
 // Keyboard-safe and scrollable; each error sits under its field. Submit is disabled while sending and can't send
 // twice; back is held while sending.
 //   success: the server confirmed → Meta SubmitApplication (once) → "application sent" → the jobs list, which marks
@@ -25,6 +27,10 @@ import { AuthContext } from "../../context/AuthContext";
 import { backToJobsList } from "../../utils/careerNav";
 import { plainError } from "../../utils/plainError";
 import { TIMEOUT } from "../../config/timeouts";
+import useFlag from "../../hooks/useFlag";
+import { ResumeContext } from "../../context/ResumeContext";
+import { resumeName } from "../../utils/resumeRules";
+import { funnel } from "../../analytics/funnel";
 
 export const REQUIRED = { fullName: "Full name", email: "Email", phone: "Phone", coverLetter: "Cover letter" };
 export const EMPTY_FORM = {
@@ -40,7 +46,7 @@ const MAX_FILE = 10 * 1024 * 1024;
 export function validate(form, resume) {
   const errors = {};
   for (const [k, label] of Object.entries(REQUIRED)) if (!String(form[k] || "").trim()) errors[k] = `${label} is required`;
-  if (!resume || (resume.kind === "file" && !resume.file) || (resume.kind === "tailored" && !resume.version)) errors.resume = "Choose a resume to send";
+  if (!resume || (resume.kind === "file" && !resume.file) || (resume.kind === "tailored" && !resume.version) || (resume.kind === "tdc" && !resume.resumeId)) errors.resume = "Choose a resume to send";
   return errors;
 }
 
@@ -49,6 +55,8 @@ export function buildBody(form, resume, makeFormData = () => new FormData()) {
   const body = makeFormData();
   for (const [k, v] of Object.entries(form)) body.append(k, typeof v === "string" ? v.trim() : v == null ? "" : String(v));
   if (resume?.kind === "file" && resume.file) body.append("resume", { uri: resume.file.uri, type: resume.file.mimeType || "application/octet-stream", name: resume.file.name });
+  // P3d: my tdc resume: its PDF (made at send time) as the file, and which resume it is
+  if (resume?.kind === "tdc" && resume.file) { body.append("resume", { uri: resume.file.uri, type: "application/pdf", name: resume.file.name }); body.append("tdcResumeId", String(resume.resumeId)); }
   return body;
 }
 
@@ -60,6 +68,10 @@ export default function JobApplicationForm({ navigation, route }) {
   const [form, setForm] = useState(() => ({ ...EMPTY_FORM, fullName: user?.name || "", email: user?.email || "" }));
   const [errors, setErrors] = useState({});
   const [tailored, setTailored] = useState(null); // an approved Resume Studio version for this job
+  // P3d (resumeV2): the student's own tdc resumes, sent as a PDF in their template
+  const v2 = useFlag("resumeV2") === true;
+  const { resumes: myResumes = [] } = useContext(ResumeContext) || {};
+  const tdcResumes = v2 ? (Array.isArray(myResumes) ? myResumes : []).filter((r) => r && r._id) : [];
   const [resume, setResume] = useState({ kind: "file", file: null });
   const [sending, setSending] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -112,8 +124,21 @@ export default function JobApplicationForm({ navigation, route }) {
     sendingRef.current = true;
     setSending(true); setServerError(null); setProgress(0);
     let applicationId = null;
+    let sendAs = resume;
+    if (resume.kind === "tdc") {
+      try {
+        const r = tdcResumes.find((x) => x._id === resume.resumeId);
+        const pdf = await require("../../utils/resumeFiles").makeResumePdf(r); // loaded on first use
+        sendAs = { ...resume, file: { uri: pdf.uri, name: pdf.name } };
+      } catch {
+        sendingRef.current = false;
+        setSending(false);
+        setServerError("Your resume PDF couldn't be made. Try again, or upload a file instead.");
+        return;
+      }
+    }
     try {
-      const res = await api.post(`/jobs/apply/${encodeURIComponent(jobId)}`, buildBody(form, resume), {
+      const res = await api.post(`/jobs/apply/${encodeURIComponent(jobId)}`, buildBody(form, sendAs), {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (e) => e?.total && setProgress(Math.round((e.loaded * 100) / e.total)),
         timeout: TIMEOUT.UPLOAD,
@@ -129,6 +154,7 @@ export default function JobApplicationForm({ navigation, route }) {
     doneRef.current = true;
     metaEvents.jobApplied(jobId);
     pushMoment("job"); // N-3 (pushAskV2): a good moment to ask for notifications
+    if (resume.kind === "tdc") funnel("job_apply_tdc_resume", { refId: String(jobId) });
     let note = "The employer will see it in their candidates list.";
     if (resume.kind === "tailored" && resume.version && applicationId) {
       try { await studioApi.attachVersion(applicationId, resume.version.id); note = "Your tailored resume went with it."; } catch (e) { note = `It was sent, but your tailored resume couldn't be attached: ${e?.message || "try again from Resume Studio"}.`; }
@@ -194,15 +220,32 @@ export default function JobApplicationForm({ navigation, route }) {
             </View>
           </TouchableOpacity>
         )}
+        {tdcResumes.map((r) => (
+          <TouchableOpacity
+            key={r._id}
+            style={[styles.choice, resume.kind === "tdc" && resume.resumeId === r._id && styles.choiceOn]}
+            onPress={() => { setResume({ kind: "tdc", resumeId: r._id }); setErrors((e) => { const n = { ...e }; delete n.resume; return n; }); }}
+            disabled={sending}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: resume.kind === "tdc" && resume.resumeId === r._id, disabled: sending }}
+            accessibilityLabel={`send my tdc resume ${resumeName(r)}`}
+          >
+            <Ionicons name={resume.kind === "tdc" && resume.resumeId === r._id ? "radio-button-on" : "radio-button-off"} size={20} color={T.ink} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.choiceTitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>my tdc resume</Text>
+              <Text style={styles.choiceSub} maxFontSizeMultiplier={MAX_FONT_SCALE}>{resumeName(r)}: sent as a PDF in your template</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
         <TouchableOpacity
           style={[styles.choice, resume.kind === "file" && styles.choiceOn, errors.resume && styles.choiceError]}
           onPress={() => (resume.kind === "file" ? pickFile() : setResume({ kind: "file", file: null }))}
           disabled={sending}
-          accessibilityRole={tailored ? "radio" : "button"}
-          accessibilityState={tailored ? { checked: resume.kind === "file", disabled: sending } : { disabled: sending }}
+          accessibilityRole={tailored || tdcResumes.length ? "radio" : "button"}
+          accessibilityState={tailored || tdcResumes.length ? { checked: resume.kind === "file", disabled: sending } : { disabled: sending }}
           accessibilityLabel={resume.kind === "file" && resume.file ? `resume file ${resume.file.name}, tap to change` : "upload a resume file, PDF, DOC or DOCX"}
         >
-          <Ionicons name={tailored ? (resume.kind === "file" ? "radio-button-on" : "radio-button-off") : "document-attach-outline"} size={20} color={T.ink} />
+          <Ionicons name={tailored || tdcResumes.length ? (resume.kind === "file" ? "radio-button-on" : "radio-button-off") : "document-attach-outline"} size={20} color={T.ink} />
           <View style={{ flex: 1 }}>
             <Text style={styles.choiceTitle} maxFontSizeMultiplier={MAX_FONT_SCALE}>{resume.kind === "file" && resume.file ? resume.file.name : "upload a file"}</Text>
             <Text style={styles.choiceSub} maxFontSizeMultiplier={MAX_FONT_SCALE}>{resume.kind === "file" && resume.file?.size ? `${(resume.file.size / 1024).toFixed(0)} KB · tap to change` : "PDF, DOC or DOCX, up to 10 MB"}</Text>
