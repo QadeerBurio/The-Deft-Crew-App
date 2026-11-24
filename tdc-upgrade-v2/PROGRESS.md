@@ -584,6 +584,32 @@ Notes:
 - The portal needs nothing for P4b: the two flags show in admin → features from the server.
 - End of P4b: SERVER 110/110 suites; APP all suites + expo export (android + ios) ok.
 
+## P4c: confessions v2, part 3 (branch `upgrade/p4c-confessions` from `upgrade/p4b-confessions`, owner 25 Nov 2026)
+
+Owner rules: share as an image only for public confessions (not campus-only, held, hidden or with an open report), no
+handle on the card; the `tdcapp://confession/<id>` deep link; the `gettdc.pk/c/<id>` preview (text only, public and
+live only, noindex, forwarded like /r/ with the same visitor-address handling); the weekly recap (numbers only, a
+campus with at least 5 confessions).
+
+| Step | What changed | Commits | Tests |
+|---|---|---|---|
+| flags | `confessionShare`, `confessionRecap` (student, off; grantable 33, student view 32); funnel names; `confession_recap` = a broadcast in the push budget | SERVER `2b5203aa` | feature-access 96/96, funnel-events 25/25, push-budget 25/25 |
+| share + page | `POST /api/social/confessions/:id/share` (confessionsV2 + confessionShare): the server checks public, live, no open report on it (a report on one of its comments doesn't block) → `{ url, text }`; Confession `sharedAt`, `sharedBy` (never sent), `shareCount`; feed `shareable`. The page `/c/<id>` (mounted at /c): text only (no handle, image, campus or replies), "read the replies in the app" (`tdcapp://confession/<id>`) + store links, noindex / no-store / no referrer / CSP without scripts, rate-limited per visitor (the real one behind the portal only with `PORTAL_PROXY_SECRET`); "not available" when never shared, campus-only, held / hidden / removed, an open report, or the latest sharer's flag is off | SERVER `02245251` | confession-p4c |
+| recap | `services/confessionRecap.js`: live confessions of the last 7 days per campus; >= 5 → "your campus this week" · "N confessions this week. the top one got M likes. tap to read." (no top sentence at 0 likes); opens the top one; students with confessionsV2 + confessionRecap and the confessions switch not off; Sunday 18:30 Karachi, once a week (JobLock) in the engagement scheduler | SERVER `cb404c0e` | confession-p4c 33/33 |
+| portal | `middleware.js` matcher `/r/*` and `/c/*` (the visitor's address + secret), `vercel.json` `/c/*` rewrite + noindex, React fallback `/c/:id` | ADMIN `2691acf` | resumeProxy, ConfessionPageRedirect, ResumePageRedirect 12/12; jest 31 / 168 |
+| app | card: "share as an image" only on the server's `shareable` confessions (then no plain-text share); the card: the text, "sent from tdc confessions", its QR = the confession's own page, **no invite code** (so it can't point at whoever shared it); refusals: the server's sentence; `tdcapp://confession/<id>` (a real id only) opens the confession feed with it pinned (no flag: it only opens an existing screen, and links exist only where sharing is on); the share card is loaded only when sharing is on | APP `78ab593` | confessions-v2 87/87, invite-link 33/33 |
+
+Notes:
+- Branches: P4c was first committed on top of the `upgrade/p4b-confessions` branches by mistake; `upgrade/p4c-confessions` was
+  made at those tips and the P4b branches moved back to their signed-off commits (SERVER `750a07aa`, APP `66ae7cd`,
+  ADMIN `4162aaf`). Local branch pointers only.
+- `gettdc.pk/c/<id>` opens the app directly only after the 1.3.0 build adds gettdc.pk as an app-link domain; until
+  then the page's button uses `tdcapp://`.
+- The funnel name `confession_recap_opened` is allowed but not sent yet (the recap opens through the normal push
+  path, counted by N-6 push-open tracking).
+
+- End of P4c: SERVER 111/111 suites; APP all suites + expo export (android + ios); ADMIN jest 31 / 168, portal checks 39/39.
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |
@@ -614,6 +640,7 @@ Notes:
 | `FLAG_RESUME_TEMPLATES_V2` | not needed: per account in admin → features ("Resume template studio"; needs "Resume v2") | — | P3c template studio |
 | P3d flags (`resumeFeedback`, `resumeFinish`, `resumeVerified`, `resumePublicPage`, `resumeOutcomeStats`) | not needed: per account in admin → features (each needs "Resume v2") | — | P3d |
 | `PORTAL_PROXY_SECRET` | a long random value, the same in Railway and Vercel (owner sets; never in the repo) | production (+ its own in staging) | the real visitor behind gettdc.pk/r/ (views, rate limit); set before `resumePublicPage` |
+| `RATE_LIMIT_CONFESSION_PAGE_MAX` | optional; default 120 a minute per visitor | — | the shared confession page (P4c) |
 | `RATE_LIMIT_RESUME_PAGE_MAX` | optional; default 120 a minute per visitor address | — | the public resume page |
 | `OPENAI_TRANSCRIBE_MODEL` | optional; default `whisper-1` | — | speak mode |
 | `RATE_LIMIT_RESUME_AI_MAX` | optional; default 120 an hour per student (enhance, suggest-skills and the coach together) | — | P3 #7 / P3b |
