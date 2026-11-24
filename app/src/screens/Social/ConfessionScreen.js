@@ -45,6 +45,9 @@ import ConfessionCard from "./ConfessionCard";
 import ConfessionCommentThread from "./ConfessionCommentThread";
 import ConfessionComposer from "./ConfessionComposer";
 import ConfessionComments from "./ConfessionComments";
+import ConfessionFeed from "./ConfessionFeed";
+import { API_URL, CONFESSIONS_POLL_INTERVAL, feedCache, confessionsChanged, commentsChanged, uploadToCloudinary, getV2Config, toggleMeToo } from "./confessionApi";
+import { feedQuery, viewKey } from "./confessionV2";
 // confession safety (plan P4-1): everything below is used only while useFlag(FLAGS.confessionSafety) is true
 import useFlag from "../../hooks/useFlag";
 import { FLAGS } from "../../api/upgradeFlags";
@@ -55,41 +58,6 @@ import ConfessionSupportSheet from "./ConfessionSupportSheet";
 import ConfessionRulesSheet from "./ConfessionRulesSheet";
 import { safetyMe, acceptRules, muteAuthor, deleteMyConfession, myConfessionIds, precheckText } from "./confessionSafetyApi";
 const { height, width } = Dimensions.get('window');
-const API_URL = `${SERVER_ORIGIN}/api/social`;
-
-// One poll while the confessions are on screen. It also refreshes the open comments sheet
-// (was: the whole feed every 8 s, plus the whole feed again every 6 s for open comments).
-const CONFESSIONS_POLL_INTERVAL = 20000;
-
-// Last list per tab, kept for the whole app session, so switching tabs or
-// coming back to the screen shows posts instantly (no skeleton).
-const feedCache = { all: null, campus: null };
-
-// ============ HELPERS ============
-const confessionsChanged = (oldList, newList) => {
-  if (!Array.isArray(oldList) || !Array.isArray(newList)) return true;
-  if (oldList.length !== newList.length) return true;
-  for (let i = 0; i < newList.length; i++) {
-    const a = oldList[i], b = newList[i];
-    if (!a || !b || a._id !== b._id) return true;
-    if (a.likes !== b.likes) return true;
-    if ((a.comments?.length || 0) !== (b.comments?.length || 0)) return true;
-    if (a.text !== b.text) return true;
-  }
-  return false;
-};
-
-const commentsChanged = (oldComments, newComments) => {
-  if (!Array.isArray(oldComments) || !Array.isArray(newComments)) return true;
-  if (oldComments.length !== newComments.length) return true;
-  for (let i = 0; i < newComments.length; i++) {
-    const a = oldComments[i], b = newComments[i];
-    if (!a || !b || a._id !== b._id) return true;
-    if (a.text !== b.text) return true;
-    if (a.parentComment !== b.parentComment) return true;
-  }
-  return false;
-};
 
 // ============ FAST OPTIMIZED SKELETON ============
 const SkeletonRow = memo(({ opacity }) => (
@@ -182,6 +150,20 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
 
   // ---- confession safety (plan P4-1, flag confessionSafety). Flag off: none of this runs or renders. ----
   const safety = useFlag(FLAGS.confessionSafety) === true;
+  // P4a (flag confessionsV2): the composer config (tags, prompts, moods, handle), sort / tag view, me too
+  const v2 = useFlag(FLAGS.confessionsV2) === true;
+  const v2Ref = useRef(false);
+  v2Ref.current = v2;
+  const [v2Config, setV2Config] = useState(null);
+  const [sort, setSort] = useState('hot');
+  const sortRef = useRef('hot');
+  const [tagFilter, setTagFilter] = useState(null);
+  const tagRef = useRef(null);
+  const [postTag, setPostTag] = useState(null);
+  const [postMood, setPostMood] = useState(null);
+  const [postAs, setPostAs] = useState('anon');
+  // the list on screen: the scope (as before), plus sort and tag with v2
+  const currentKey = () => viewKey({ scope: scopeRef.current, v2: v2Ref.current, sort: sortRef.current, tag: tagRef.current });
   const [safetyInfo, setSafetyInfo] = useState(null); // { rulesAcceptedAt, helplines, … } from the server
   const [myIds, setMyIds] = useState(() => new Set()); // my own confessions (for "delete" in the ⋯ menu)
   const [reportTarget, setReportTarget] = useState(null); // { type: 'Confession' | 'ConfessionComment', id }
@@ -318,18 +300,19 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     
     // Ref, not state: the 8s poll always uses the tab that is open now
     const requestScope = scopeRef.current;
+    const requestKey = currentKey();
     try {
-      const response = await fetchWithTimeout(`${API_URL}/confessions/feed?scope=${requestScope}`, {
+      const response = await fetchWithTimeout(`${API_URL}/confessions/feed?${feedQuery({ scope: requestScope, v2: v2Ref.current, sort: sortRef.current, tag: tagRef.current })}`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       if (!isMountedRef.current) return;
       // Tab changed while this request was in flight → drop the old answer
-      if (requestScope !== scopeRef.current) return;
+      if (requestKey !== currentKey()) return;
       
       const data = await response.json();
       const freshData = Array.isArray(data) ? data : [];
-      feedCache[requestScope] = freshData;
+      feedCache[requestKey] = freshData;
 
       setConfessions(prev => {
         if (silent && !confessionsChanged(prev, freshData)) return prev;
@@ -351,7 +334,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     } catch (err) {
       if (!silent) console.error("Fetch Error:", err);
     } finally {
-      if (!silent && isMountedRef.current && requestScope === scopeRef.current) {
+      if (!silent && isMountedRef.current && requestKey === currentKey()) {
         setLoading(false);
         setRefreshing(false);
       }
@@ -405,14 +388,52 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
   const firstScopeRunRef = useRef(true);
   useEffect(() => {
     if (firstScopeRunRef.current) { firstScopeRunRef.current = false; return; }
-    const cached = feedCache[scope];
+    const cached = feedCache[currentKey()];
     // Cached list shows instantly; first visit shows a small loader only
     setConfessions(cached || []);
     setLoading(!cached);
     lastConfessionsFetchRef.current = 0; // allow an immediate refresh
     fetchConfessions(!!cached); // first visit: loader is cleared when the fetch ends
     flatListRef.current?.scrollToOffset?.({ offset: 0, animated: false });
-  }, [scope]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [scope, sort, tagFilter, v2]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // P4a: the composer config, once the flag is on
+  useEffect(() => {
+    if (!v2 || !token) return undefined;
+    let live = true;
+    getV2Config(token).then((c) => { if (live) setV2Config(c); });
+    return () => { live = false; };
+  }, [v2, token]);
+  const onSort = useCallback((k) => {
+    if (k === sortRef.current) return;
+    soundTap();
+    sortRef.current = k;
+    setSort(k);
+  }, []);
+  const onTag = useCallback((t) => {
+    soundTap();
+    tagRef.current = t || null;
+    setTagFilter(t || null);
+  }, []);
+  // me too: shown at once, put back if the server says no
+  const meTooInFlight = useRef(new Set());
+  const handleMeToo = useCallback(async (id) => {
+    if (meTooInFlight.current.has(id)) return;
+    meTooInFlight.current.add(id);
+    soundTap();
+    const flip = (list) => list.map((c) => (c._id === id ? { ...c, meTooByCurrentUser: !c.meTooByCurrentUser, meTooCount: Math.max(0, (c.meTooCount || 0) + (c.meTooByCurrentUser ? -1 : 1)) } : c));
+    setConfessions(flip);
+    try {
+      const r = await toggleMeToo(token, id);
+      setConfessions((list) => list.map((c) => (c._id === id ? { ...c, meTooByCurrentUser: !!r.meToo, meTooCount: r.meTooCount } : c)));
+    } catch (e) {
+      setConfessions(flip);
+      reportError("confessionsV2", e, { step: "metoo" });
+    } finally {
+      meTooInFlight.current.delete(id);
+    }
+  }, [token]);
+  const tagLabelOf = useCallback((id) => (id && v2Config?.tags?.find((t) => t.id === id)?.label) || null, [v2Config]);
 
   const switchScope = useCallback((next) => {
     if (next === scopeRef.current) return;
@@ -791,14 +812,6 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
   }, [selectedPost, token]);
 
   // ============ POST CONFESSION — send + success sounds ============
-  const uploadToCloudinary = async (fileUri) => {
-    const data = new FormData();
-    data.append("file", { uri: fileUri, name: 'upload.jpg', type: 'image/jpeg' });
-    data.append("upload_preset", "tdc_profiles");
-    const res = await fetchWithTimeout("https://api.cloudinary.com/v1_1/decaxpera/image/upload", { method: "POST", body: data });
-    const json = await res.json();
-    return json.secure_url;
-  };
 
   const handlePost = useCallback(async () => {
     if (!newConfession.trim() && !selectedImage) {
@@ -829,7 +842,9 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
       const response = await fetchWithTimeout(`${API_URL}/confessions/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ text: newConfession.trim(), image: imageUrl, visibility: postVisibility })
+        body: JSON.stringify(v2
+          ? { text: newConfession.trim(), image: imageUrl, visibility: postVisibility, ...(postTag ? { tag: postTag } : {}), ...(postMood ? { mood: postMood } : {}), postAs }
+          : { text: newConfession.trim(), image: imageUrl, visibility: postVisibility })
       });
 
       if (response.ok) {
@@ -879,12 +894,15 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
     } finally {
       setPosting(false);
     }
-  }, [newConfession, selectedImage, token, fetchConfessions, postVisibility, safety]);
+  }, [newConfession, selectedImage, token, fetchConfessions, postVisibility, safety, v2, postTag, postMood, postAs]);
 
   const resetForm = useCallback(() => {
     setNewConfession("");
     setSelectedImage(null);
     setPostVisibility('public');
+    setPostTag(null);
+    setPostMood(null);
+    setPostAs('anon');
     setModalVisible(false);
     Keyboard.dismiss();
   }, []);
@@ -982,7 +1000,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!status) {
+    if (status !== "granted") {
       soundNope();
       return Alert.alert("Permission required", "Allow access to your photos.");
     }
@@ -995,7 +1013,7 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
 
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (!status) {
+    if (status !== "granted") {
       soundNope();
       return Alert.alert("Permission required", "Allow access to your camera.");
     }
@@ -1044,8 +1062,9 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
       openComments={openComments}
       safety={safety}
       onMore={safety ? handleMore : null}
+      {...(v2 ? { v2: true, onMeToo: handleMeToo, tagLabel: tagLabelOf(item.tag) } : {})}
     />
-  ), [expandedPosts, textLayouts, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, highlightId, scope, safety, handleMore]);
+  ), [expandedPosts, textLayouts, fadeAnim, formatPostTime, handleTextLayout, toggleExpand, handleLike, openComments, highlightId, scope, safety, handleMore, v2, handleMeToo, tagLabelOf]);
 
   // No skeleton: tabs + list render right away, a small loader only while
   // a tab is loading for the very first time.
@@ -1053,95 +1072,12 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
 
   return (
     <View style={styles.container}>
-      <FlatList
-        ref={flatListRef}
-        data={listData}
-        extraData={`${highlightId}-${scope}`}
-        renderItem={renderConfession}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.listContent}
-        removeClippedSubviews={true}
-        initialNumToRender={5}
-        maxToRenderPerBatch={8}
-        windowSize={7}
-        updateCellsBatchingPeriod={50}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={true}
-        ListHeaderComponent={
-          <View style={styles.scopeTabs}>
-            {[
-              { key: 'all', label: 'everyone', icon: 'earth-outline' },
-              { key: 'campus', label: 'my campus', icon: 'school-outline' },
-            ].map((t) => {
-              const active = scope === t.key;
-              return (
-                <TouchableOpacity
-                  key={t.key}
-                  style={[styles.scopeTab, active && styles.scopeTabActive]}
-                  onPress={() => switchScope(t.key)}
-                  activeOpacity={0.8}
-                hitSlop={{ top: 2, bottom: 2 }}>
-                  <Ionicons name={t.icon} size={14} color={active ? T.ink : T.onInkMuted} />
-                  <Text style={[styles.scopeTabText, active && styles.scopeTabTextActive]} numberOfLines={1}>
-                    {t.key === 'campus' && myUniName && active ? myUniName : t.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        }
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => { setRefreshing(true); fetchConfessions(false); }}
-            tintColor={T.yellow}
-            colors={[T.ink]}
-          />
-        }
-        ListEmptyComponent={
-          firstLoad ? (
-            <View style={styles.inlineLoader}>
-              <ActivityIndicator size="small" color={T.yellow} />
-            </View>
-          ) : scope === 'campus' && !myUniName ? (
-            <View style={styles.emptyContainer}>
-              <View style={styles.emptyIconCircle}>
-                <Ionicons name="school-outline" size={40} color={T.yellow} />
-              </View>
-              <Text style={styles.emptyTitle}>add your university</Text>
-              <Text style={styles.emptySubtitle}>
-                add your university in your profile to see your campus
-              </Text>
-              <TouchableOpacity
-                style={styles.emptyBtn}
-                onPress={() => { soundTap(); navigation?.navigate?.('EditProfileScreen'); }}
-              >
-                <LinearGradient colors={[T.yellow]} style={styles.emptyBtnGradient}>
-                  <Text style={styles.emptyBtnText}>edit profile</Text>
-                  <Ionicons name="arrow-forward" size={18} color={T.ink} />
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          ) : (
-          <View style={styles.emptyContainer}>
-            <View style={styles.emptyIconCircle}>
-              <Ionicons name="chatbubble-ellipses-outline" size={40} color={T.yellow} />
-            </View>
-            <Text style={styles.emptyTitle}>
-              {scope === 'campus' ? 'nothing from your campus yet' : 'no confessions yet'}
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              {scope === 'campus' ? `be the first from ${myUniName || 'your campus'}.` : "confess. nobody will know it's you."}
-            </Text>
-            <TouchableOpacity style={styles.emptyBtn} onPress={handleFabPress}>
-              <LinearGradient colors={[T.yellow]} style={styles.emptyBtnGradient}>
-                <Text style={styles.emptyBtnText}>create confession</Text>
-                <Ionicons name="arrow-forward" size={18} color={T.ink} />
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-          )
-        }
+      <ConfessionFeed
+        flatListRef={flatListRef} listData={listData} highlightId={highlightId} scope={scope}
+        renderConfession={renderConfession} switchScope={switchScope} myUniName={myUniName} refreshing={refreshing}
+        setRefreshing={setRefreshing} fetchConfessions={fetchConfessions} firstLoad={firstLoad} navigation={navigation}
+        handleFabPress={handleFabPress}
+        {...(v2 ? { v2: true, sort, onSort, tags: v2Config?.tags || [], tagFilter, onTag } : {})}
       />
 
       {/* FAB */}
@@ -1169,6 +1105,8 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
         setSelectedImage={setSelectedImage}
         handlePost={handlePost}
         posting={posting}
+        {...(safety ? { onPickImage: showImageOptions } : {})}
+        {...(v2 ? { v2: v2Config, tag: postTag, setTag: setPostTag, mood: postMood, setMood: setPostMood, postAs, setPostAs } : {})}
       />
 
       {/* COMMENTS MODAL */}

@@ -568,6 +568,30 @@ Notes / for the owner:
 Not verifiable before deploy (RELEASE-4 (e) 2 and (f) 8): that Vercel builds the plain `middleware.js` for this CRA
 project, and the two-phone view check.
 
+## P4a: confessions v2, part 1 (branch `upgrade/p4a-confessions` from `upgrade/p3d-finish`, owner 24 Nov 2026)
+
+Owner decisions: the image button only where `confessionSafety` is on, the permission check fixed, only our Cloudinary
+links accepted (for everyone); the new composer 500 characters, the server 1,000 for everyone; handles from a word list
+the owner signs off (nothing religious, sectarian, ethnic, political, sexual or insulting; every handle through the
+word filter); sub-phases P4a / P4b / P4c; voting in the backlog.
+
+| Step | What changed | Commits | Tests |
+|---|---|---|---|
+| split-only | `ConfessionScreen.js` (1,216 → 1,091 lines) → `ConfessionFeed.js` (the feed list) + `confessionApi.js` (helpers, image upload), moved verbatim | APP `488b340` | the rendered screen (feed, composer, comments) identical to before, confessionSafety off and on |
+| for everyone | a confession at most 1,000 characters (400 TOO_LONG); an image only from our Cloudinary account (400 BAD_IMAGE: another site, http, another account); the two unreachable duplicate routes (`my-confessions`, `likes/:id`) removed | SERVER `2e904a5e` | confession-p4a; confession-observe 36/36 (the other-account image is now refused up front) |
+| handles | `config/confessionHandles.js` (64 adjectives + 64 nouns, English + Roman Urdu; left-out numbers 786, 313, 666, 420, 455, *69*), `services/confessionHandles.js` (word filter + banned words, unique, made on first use), `User.confessionHandle` (never sent). **`APPROVED = false`**: no handle until the owner signs off (`tdc-upgrade-v2/confession-handle-words.md`) | SERVER `b29658f9` | confession-p4a (approval simulated): stable, unique, verified tick, 3,000 generated all clean |
+| v2 server | `confessionsV2.routes.js` (config: visible tags, this week's 3 prompts, moods, 500, handle; me too toggle), mounted before social.routes (new paths only); feed `sort=hot|top|new`, `tag=`, `page=`; create keeps a visible tag, a known mood and "post as @handle" (once approved); Confession `handle`, `handleVerified`, `tag`, `mood`, `meTooCount`, `meTooBy` (never sent); Safety settings `tags` (stable ids) and `prompts`, rotated 3 a week. Flag off: the feed and create exactly as before (no v2 field for flag-off viewers) | SERVER `f04c1958` | confession-p4a 43/43; confession-visibility / -reports / -precheck / -observe, admin-safety, social-push, feature-access |
+| v2 app | sort chips (hot default, new, top this week) and tag chips; card: handle with a Dot avatar (picked from the handle) and verified tick, tag, mood, me too; composer: prompt chips when empty, tag, mood, post as (only when handles are on), 500 characters; confessionSafety: the photo button is back; for everyone: the photo / camera permission check works ("denied" was never caught) | APP `c9c1e30` | confessions-v2 67/67 (flags off: identical to before P4a; safety only: the photo button is the one difference); responsiveness 89/89 |
+| portal | Safety settings: rename / hide / add post tags, prompt chips (one per line); an older server gets the same save | ADMIN `4162aaf` | AdminSafety 9/9 (axe clean) |
+
+Notes / for the owner:
+- **Someone else committed on this branch**: SERVER `c6e40ae9` "Shopify connect flow fixes + review account seed"
+  (routes/shopifyLink.js, scripts/seed-shopify-review-account.js) sits between my commits, and `stash@{0}` holds a
+  change to `tests/shopify-review-149610/run.cjs` plus copies of my then-uncommitted P4a files (restored from it; the
+  stash is left as it is). Not mine; decide where it belongs before P4a is merged.
+- Feed paging: hot / top return the top 50 (server pages exist: `page=`); the app shows page 0 only for now.
+- `events-fresh-data` (app) failed once in the full run while other suites ran; 3/3 alone (known load-sensitive).
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |

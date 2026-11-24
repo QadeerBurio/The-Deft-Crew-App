@@ -30,7 +30,7 @@ const baseFeed = () => [
   { _id: "p3", text: "my held post", visibility: "public", likes: 0, comments: [], createdAt: now, status: "pending" },
 ];
 
-function setup(file, { flag, server = {} }) {
+function setup(file, { flag, v2 = false, server = {}, picker = null }) {
   const { React, mount } = H.makeReact();
   const { rn, alerts } = H.makeRN({ Share: { share: async () => ({}) }, Keyboard: { dismiss() {}, addListener: () => ({ remove() {} }) }, TouchableWithoutFeedback: "TWF", KeyboardAvoidingView: "KAV", RefreshControl: "RefreshControl", Linking: { openURL: async () => {} } });
   const calls = [];
@@ -38,7 +38,9 @@ function setup(file, { flag, server = {} }) {
     const method = (opts.method || "GET").toUpperCase();
     calls.push({ url, method, body: opts.body ? JSON.parse(opts.body) : null });
     const reply = (status, json) => ({ ok: status < 400, status, json: async () => json });
-    if (url.includes("/confessions/feed")) return reply(200, baseFeed());
+    if (url.includes("/confessions/feed")) return reply(200, server.feed ? server.feed() : baseFeed());
+    if (url.endsWith("/confessions/v2/config")) return reply(200, server.config || null);
+    if (/\/confessions\/[^/]+\/metoo$/.test(url) && method === "PUT") return reply(200, { meToo: true, meTooCount: 4 });
     if (url.includes("/confessions/create")) return server.create ? server.create() : reply(201, { confession: { _id: "new" } });
     if (/\/confessions\/comment\/[^/]+$/.test(url) && method === "POST") return server.comment ? server.comment() : reply(200, { _id: "p1", comments: [] });
     if (url.endsWith("/confessions/safety/me")) return reply(200, { rulesAcceptedAt: server.rulesAccepted ? now : null, helplines: [{ name: "x", number: "1166" }] });
@@ -56,11 +58,11 @@ function setup(file, { flag, server = {} }) {
     "../../ui/RemoteImage": "RemoteImage",
     "@react-navigation/native": { useIsFocused: () => true, useFocusEffect: (cb) => React.useEffect(() => cb(), [cb]) },
     "@expo/vector-icons": { Ionicons: "Icon" }, "../../ui/FlatGradient": { LinearGradient: "LinearGradient" },
-    "expo-image-picker": {}, "../../context/AuthContext": { AuthContext: { _default: { token: "tok", user: { _id: "me", university: { name: "U" } }, isGuest: false } } },
+    "expo-image-picker": picker || {}, "../../context/AuthContext": { AuthContext: { _default: { token: "tok", user: { _id: "me", university: { name: "U" } }, isGuest: false } } },
     "../../lib/tdcSounds": new Proxy({}, { get: () => () => {} }),
     "../../engagement/engagementBus": { engagementBus: { emit() {} }, ENGAGEMENT_EVENTS: {} },
     "../../analytics/metaEvents": { metaEvents: new Proxy({}, { get: () => () => {} }) },
-    "../../hooks/useFlag": { __esModule: true, default: () => flag },
+    "../../hooks/useFlag": { __esModule: true, default: (name) => (name === "confessionsV2" ? v2 : flag) }, // flag = confessionSafety
     "../../analytics/funnel": { funnel: (n) => funnels.push(n) },
     "./ReportModal": function ReportModal(p) { return React.createElement("ReportModal", p); },
   };
@@ -79,12 +81,14 @@ const press = async (n, label) => { const b = find(n, (x) => x.props.accessibili
 // serialise for the flag-off comparison (as the split check did). Children that React Native draws as nothing
 // (false, null, undefined, true from `{flag && …}`) are left out, and a one-child list is the child itself.
 const drawn = (c) => !(c === false || c === true || c == null);
+let SKIP = new Set(); // accessibility labels of nodes left out of a comparison (P4a: the new photo button)
+const skipped = (x) => !!(x && x.props && SKIP.has(x.props.accessibilityLabel));
 function ser(ctx, n) {
   if (n == null || typeof n !== "object") return n;
-  if (Array.isArray(n)) { const kept = n.flat(Infinity).filter(drawn); return kept.length === 1 ? ser(ctx, kept[0]) : kept.map((x) => ser(ctx, x)); }
+  if (Array.isArray(n)) { const kept = n.flat(Infinity).filter(drawn).filter((x) => !skipped(x)); return kept.length === 1 ? ser(ctx, kept[0]) : kept.map((x) => ser(ctx, x)); }
   const out = { type: n.type, props: {} };
   for (const [k, v] of Object.entries(n.props || {})) {
-    if (k === "children") continue;
+    if (k === "children" || v === undefined) continue; // an undefined prop draws nothing (flag-on trees have some)
     if (typeof v === "function") out.props[k] = "[fn]";
     else if (v && typeof v === "object" && v.type !== undefined) out.props[k] = ser(ctx, expand(ctx, v));
     else if (v && typeof v === "object" && "current" in v && Object.keys(v).length === 1) out.props[k] = "[ref]";
@@ -95,8 +99,8 @@ function ser(ctx, n) {
   out.children = ser(ctx, n.props?.children);
   return out;
 }
-async function snapshots(file, flag) {
-  const ctx = setup(file, { flag });
+async function snapshots(file, flag, v2 = false) {
+  const ctx = setup(file, { flag, v2 });
   await tick(80);
   const feed = JSON.stringify(ser(ctx, ctx.root.tree));
   await press(ctx.root.tree, "confess"); await tick(300);
@@ -121,6 +125,32 @@ async function snapshots(file, flag) {
   } finally { fs.rmSync(oldDir, { recursive: true, force: true }); }
   after = await snapshots(SCREEN, false);
   for (const k of ["feed", "composer", "comments"]) ok(before[k] === after[k], `flag off: ${k} identical to before (${after[k].length} chars)`);
+
+  console.log("── P4 split-only commit 488b340 (ConfessionFeed.js + confessionApi.js): exactly the screen before it (cb1e5f8)");
+  const fromGit = (rev, files, into) => { fs.mkdirSync(into, { recursive: true }); for (const f of files) { try { fs.writeFileSync(path.join(into, `${f}.js`), execSync(`git show ${rev}:app/src/screens/Social/${f}.js`, { cwd: APP, stdio: ["ignore", "pipe", "ignore"] }).toString()); } catch { /* not in that commit */ } } };
+  const preFiles = ["ConfessionScreen", "ConfessionCard", "ConfessionCommentThread", "ConfessionComposer", "ConfessionComments", "confessionStyles", "ConfessionSupportSheet", "ConfessionRulesSheet", "confessionSafetyApi"];
+  const preDir = path.join(dir, "..", "__presplit");
+  const splitDir = path.join(dir, "..", "__split");
+  const pre = {};
+  try {
+    fromGit("cb1e5f8", preFiles, preDir);
+    fromGit("488b340", [...preFiles, "ConfessionFeed", "confessionApi"], splitDir);
+    for (const flagValue of [false, true]) {
+      pre[flagValue] = await snapshots(path.join(preDir, "ConfessionScreen.js"), flagValue);
+      const sp = await snapshots(path.join(splitDir, "ConfessionScreen.js"), flagValue);
+      for (const k of ["feed", "composer", "comments"]) ok(pre[flagValue][k] === sp[k], `split: confessionSafety ${flagValue ? "on" : "off"}, ${k} identical (${sp[k].length} chars)`);
+    }
+  } finally { fs.rmSync(preDir, { recursive: true, force: true }); fs.rmSync(splitDir, { recursive: true, force: true }); }
+
+  console.log("── P4a with confessionsV2 off: the screen as before the split; with confessionSafety only the photo button is new");
+  const nowOff = await snapshots(SCREEN, false);
+  for (const k of ["feed", "composer", "comments"]) ok(nowOff[k] === pre[false][k], `both flags off: ${k} identical to before P4a`);
+  const nowSafety = await snapshots(SCREEN, true);
+  SKIP = new Set(["add a photo"]);
+  const nowSafetyNoPhoto = await snapshots(SCREEN, true);
+  SKIP = new Set();
+  for (const k of ["feed", "composer", "comments"]) ok(nowSafetyNoPhoto[k] === pre[true][k], `confessionSafety on, confessionsV2 off: ${k} identical to before P4a apart from the photo button`);
+  ok(nowSafety.composer.includes('"accessibilityLabel":"add a photo"') && !pre[true].composer.includes("add a photo"), "…the composer has the new 'add a photo' button (confessionSafety: images are checked)");
 
   console.log("── flag on");
   let ctx = setup(SCREEN, { flag: true, server: { rulesAccepted: false } });
@@ -255,6 +285,73 @@ async function snapshots(file, flag) {
     await find(m.tree, (x) => x.type === "TouchableOpacity" && H.textOf(x).includes("submit report")).props.onPress(); await tick(40);
     ok(posts[2]?.url.endsWith("/api/social/posts/report/post1") && JSON.stringify(Object.keys(posts[2].body).sort()) === '["description","reason"]', "…same endpoint and body as before", JSON.stringify(posts[2]));
     m.unmount();
+  }
+
+  console.log("── P4a confessionsV2 on");
+  {
+    const CONFIG = { tags: [{ id: "rant", label: "rant" }, { id: "food", label: "food" }], prompts: ["a hostel story nobody believes", "the class you'd drop if you could", "a small win this week"], moods: ["excited", "broke", "panic", "sus", "shook", "sleepy", "cheeky", "sorted"], maxLength: 500, handle: { enabled: true, handle: "chill-samosa-343" } };
+    const v2Feed = () => baseFeed().map((c, i) => (i === 0 ? { ...c, handle: "brave-kitab-512", handleVerified: true, tag: "rant", mood: "sus", meTooCount: 3, meTooByCurrentUser: false } : { ...c, meTooCount: 0, meTooByCurrentUser: false }));
+    const ctx = setup(SCREEN, { flag: false, v2: true, server: { config: CONFIG, feed: v2Feed } });
+    await tick(150);
+    const feedCalls = () => ctx.calls.filter((c) => c.url.includes("/confessions/feed"));
+    ok(ctx.calls.some((c) => c.url.endsWith("/confessions/v2/config")), "the composer config is read");
+    ok(feedCalls().some((c) => /scope=all&sort=hot&limit=50$/.test(c.url)), "the feed: hot by default (top 50)", feedCalls().map((c) => c.url).join(" | "));
+    let r = rows(ctx);
+    const first = H.textOf(r[0].tree);
+    ok(first.includes("@brave-kitab-512") && first.includes("✓") && first.includes("#rant") && first.includes("sus"), "card: the handle with the verified tick, the tag, the mood", first.slice(0, 200));
+    ok(H.textOf(r[1].tree).includes("anon.") && !H.textOf(r[1].tree).includes("@"), "…a post without a handle stays anon.");
+    ok(find(r[0].tree, (x) => x.props.accessibilityLabel === "me too, 3"), "card: me too with the count");
+    await press(r[0].tree, "me too, 3"); await tick(60);
+    ok(ctx.calls.some((c) => c.method === "PUT" && /\/confessions\/p1\/metoo$/.test(c.url)), "me too → PUT /confessions/p1/metoo");
+    r = rows(ctx);
+    ok(find(r[0].tree, (x) => /^me too, 4, tap to undo$/.test(x.props.accessibilityLabel || "")), "…then the server's count, marked as mine");
+    const header = () => expand(ctx, find(ctx.root.tree, (x) => x.type === "FlatList").props.ListHeaderComponent);
+    ok(find(header(), (x) => x.props.accessibilityLabel === "sort: hot")?.props.accessibilityState?.selected === true && find(header(), (x) => x.props.accessibilityLabel === "sort: top this week"), "header: sort chips (hot selected) and the tag chips");
+    await press(header(), "sort: new"); await tick(120);
+    ok(feedCalls().some((c) => /scope=all&sort=new$/.test(c.url)), "sort: new → ?sort=new (the whole feed, as today)", feedCalls().slice(-1)[0]?.url);
+    await press(header(), "show #rant"); await tick(120);
+    ok(feedCalls().some((c) => /scope=all&sort=new&tag=rant$/.test(c.url)), "tag chip → ?tag=rant", feedCalls().slice(-1)[0]?.url);
+
+    console.log("── P4a composer");
+    await press(ctx.root.tree, "confess"); await tick(300);
+    const tree = () => ctx.root.tree;
+    ok(H.textOf(tree()).includes("not sure where to start?") && find(tree(), (x) => x.props.accessibilityLabel === "start with: a small win this week"), "empty: this week's prompt chips");
+    await press(tree(), "start with: a small win this week"); await tick(40);
+    const input = () => find(tree(), (x) => x.type === "TextInput" && x.props.placeholder === "What's on your mind? 🤔");
+    ok(input().props.value === "a small win this week: " && input().props.maxLength === 500 && !H.textOf(tree()).includes("not sure where to start?"), "a prompt starts the text; 500 characters; the prompts go away once typing");
+    await press(tree(), "tag food"); await tick(30);
+    await press(tree(), "mood sleepy"); await tick(30);
+    ok(H.textOf(tree()).includes("@chill-samosa-343") && H.textOf(tree()).includes("fully anon"), "post as: @handle or fully anon (handles approved)");
+    await press(tree(), "post as @chill-samosa-343"); await tick(30);
+    ok(H.textOf(tree()).includes("your handle, never your name"), "…with what that means");
+    input().props.onChangeText("a small win this week: passed stats"); await tick(30);
+    const submit = find(tree(), (x) => x.type === "TouchableOpacity" && H.textOf(x).includes("post confession"));
+    await submit.props.onPress(); await tick(200);
+    const sent = ctx.calls.find((c) => c.url.includes("/confessions/create"));
+    ok(sent && JSON.stringify(sent.body) === JSON.stringify({ text: "a small win this week: passed stats", image: "", visibility: "public", tag: "food", mood: "sleepy", postAs: "handle" }), "post → text, tag, mood, post as", JSON.stringify(sent?.body));
+    ok(!find(tree(), (x) => x.props.accessibilityLabel === "add a photo"), "no photo button without confessionSafety");
+    ctx.restore();
+  }
+  {
+    const ctx = setup(SCREEN, { flag: false, v2: true, server: { config: { ...{ tags: [], prompts: [], moods: [], maxLength: 500 }, handle: { enabled: false, handle: null } } } });
+    await tick(150);
+    await press(ctx.root.tree, "confess"); await tick(300);
+    ok(!H.textOf(ctx.root.tree).includes("post as") && !H.textOf(ctx.root.tree).includes("fully anon"), "handles not approved: no 'post as' choice (anon., as today)");
+    ctx.restore();
+  }
+
+  console.log("── photo button (confessionSafety) and the permission check");
+  {
+    const ctx = setup(SCREEN, { flag: true, server: { rulesAccepted: true }, picker: { requestMediaLibraryPermissionsAsync: async () => ({ status: "denied" }), requestCameraPermissionsAsync: async () => ({ status: "denied" }), MediaTypeOptions: { Images: "Images" } } });
+    await tick(150);
+    await press(ctx.root.tree, "confess"); await tick(300);
+    await press(ctx.root.tree, "add a photo"); await tick(30);
+    const sheet = ctx.alerts.pop();
+    ok(sheet && sheet.buttons.map((b) => b.text).join("|") === "Camera|Gallery|Cancel", "add a photo → camera / gallery / cancel");
+    await sheet.buttons.find((b) => b.text === "Gallery").onPress(); await tick(30);
+    const denied = ctx.alerts.pop();
+    ok(denied?.title === "Permission required", "…photos denied → 'Permission required' (the check works now)", JSON.stringify(denied));
+    ctx.restore();
   }
 
   done();
