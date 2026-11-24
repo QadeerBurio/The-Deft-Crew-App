@@ -84,7 +84,7 @@ function ser(ctx, n) {
   if (Array.isArray(n)) { const kept = n.flat(Infinity).filter(drawn); return kept.length === 1 ? ser(ctx, kept[0]) : kept.map((x) => ser(ctx, x)); }
   const out = { type: n.type, props: {} };
   for (const [k, v] of Object.entries(n.props || {})) {
-    if (k === "children") continue;
+    if (k === "children" || v === undefined) continue; // an undefined prop draws nothing (flag-on trees have some)
     if (typeof v === "function") out.props[k] = "[fn]";
     else if (v && typeof v === "object" && v.type !== undefined) out.props[k] = ser(ctx, expand(ctx, v));
     else if (v && typeof v === "object" && "current" in v && Object.keys(v).length === 1) out.props[k] = "[ref]";
@@ -121,6 +121,19 @@ async function snapshots(file, flag) {
   } finally { fs.rmSync(oldDir, { recursive: true, force: true }); }
   after = await snapshots(SCREEN, false);
   for (const k of ["feed", "composer", "comments"]) ok(before[k] === after[k], `flag off: ${k} identical to before (${after[k].length} chars)`);
+
+  console.log("── P4 split-only (ConfessionFeed.js + confessionApi.js): exactly the screen before the split (cb1e5f8), flag off and on");
+  const preDir = path.join(dir, "..", "__presplit");
+  fs.mkdirSync(preDir, { recursive: true });
+  const preFiles = ["ConfessionScreen", "ConfessionCard", "ConfessionCommentThread", "ConfessionComposer", "ConfessionComments", "confessionStyles", "ConfessionSupportSheet", "ConfessionRulesSheet", "confessionSafetyApi"];
+  try {
+    for (const f of preFiles) fs.writeFileSync(path.join(preDir, `${f}.js`), execSync(`git show cb1e5f8:app/src/screens/Social/${f}.js`, { cwd: APP }).toString());
+    for (const flagValue of [false, true]) {
+      const b = await snapshots(path.join(preDir, "ConfessionScreen.js"), flagValue);
+      const n = await snapshots(SCREEN, flagValue);
+      for (const k of ["feed", "composer", "comments"]) ok(b[k] === n[k], `split: flag ${flagValue ? "on" : "off"}, ${k} identical (${n[k].length} chars)`);
+    }
+  } finally { fs.rmSync(preDir, { recursive: true, force: true }); }
 
   console.log("── flag on");
   let ctx = setup(SCREEN, { flag: true, server: { rulesAccepted: false } });

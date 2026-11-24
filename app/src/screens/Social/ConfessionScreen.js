@@ -45,6 +45,8 @@ import ConfessionCard from "./ConfessionCard";
 import ConfessionCommentThread from "./ConfessionCommentThread";
 import ConfessionComposer from "./ConfessionComposer";
 import ConfessionComments from "./ConfessionComments";
+import ConfessionFeed from "./ConfessionFeed";
+import { API_URL, CONFESSIONS_POLL_INTERVAL, feedCache, confessionsChanged, commentsChanged, uploadToCloudinary } from "./confessionApi";
 // confession safety (plan P4-1): everything below is used only while useFlag(FLAGS.confessionSafety) is true
 import useFlag from "../../hooks/useFlag";
 import { FLAGS } from "../../api/upgradeFlags";
@@ -55,41 +57,6 @@ import ConfessionSupportSheet from "./ConfessionSupportSheet";
 import ConfessionRulesSheet from "./ConfessionRulesSheet";
 import { safetyMe, acceptRules, muteAuthor, deleteMyConfession, myConfessionIds, precheckText } from "./confessionSafetyApi";
 const { height, width } = Dimensions.get('window');
-const API_URL = `${SERVER_ORIGIN}/api/social`;
-
-// One poll while the confessions are on screen. It also refreshes the open comments sheet
-// (was: the whole feed every 8 s, plus the whole feed again every 6 s for open comments).
-const CONFESSIONS_POLL_INTERVAL = 20000;
-
-// Last list per tab, kept for the whole app session, so switching tabs or
-// coming back to the screen shows posts instantly (no skeleton).
-const feedCache = { all: null, campus: null };
-
-// ============ HELPERS ============
-const confessionsChanged = (oldList, newList) => {
-  if (!Array.isArray(oldList) || !Array.isArray(newList)) return true;
-  if (oldList.length !== newList.length) return true;
-  for (let i = 0; i < newList.length; i++) {
-    const a = oldList[i], b = newList[i];
-    if (!a || !b || a._id !== b._id) return true;
-    if (a.likes !== b.likes) return true;
-    if ((a.comments?.length || 0) !== (b.comments?.length || 0)) return true;
-    if (a.text !== b.text) return true;
-  }
-  return false;
-};
-
-const commentsChanged = (oldComments, newComments) => {
-  if (!Array.isArray(oldComments) || !Array.isArray(newComments)) return true;
-  if (oldComments.length !== newComments.length) return true;
-  for (let i = 0; i < newComments.length; i++) {
-    const a = oldComments[i], b = newComments[i];
-    if (!a || !b || a._id !== b._id) return true;
-    if (a.text !== b.text) return true;
-    if (a.parentComment !== b.parentComment) return true;
-  }
-  return false;
-};
 
 // ============ FAST OPTIMIZED SKELETON ============
 const SkeletonRow = memo(({ opacity }) => (
@@ -791,14 +758,6 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
   }, [selectedPost, token]);
 
   // ============ POST CONFESSION — send + success sounds ============
-  const uploadToCloudinary = async (fileUri) => {
-    const data = new FormData();
-    data.append("file", { uri: fileUri, name: 'upload.jpg', type: 'image/jpeg' });
-    data.append("upload_preset", "tdc_profiles");
-    const res = await fetchWithTimeout("https://api.cloudinary.com/v1_1/decaxpera/image/upload", { method: "POST", body: data });
-    const json = await res.json();
-    return json.secure_url;
-  };
 
   const handlePost = useCallback(async () => {
     if (!newConfession.trim() && !selectedImage) {
@@ -1053,95 +1012,11 @@ export default function ConfessionScreen({ navigation, focusPostId = null }) {
 
   return (
     <View style={styles.container}>
-      <FlatList
-        ref={flatListRef}
-        data={listData}
-        extraData={`${highlightId}-${scope}`}
-        renderItem={renderConfession}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.listContent}
-        removeClippedSubviews={true}
-        initialNumToRender={5}
-        maxToRenderPerBatch={8}
-        windowSize={7}
-        updateCellsBatchingPeriod={50}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={true}
-        ListHeaderComponent={
-          <View style={styles.scopeTabs}>
-            {[
-              { key: 'all', label: 'everyone', icon: 'earth-outline' },
-              { key: 'campus', label: 'my campus', icon: 'school-outline' },
-            ].map((t) => {
-              const active = scope === t.key;
-              return (
-                <TouchableOpacity
-                  key={t.key}
-                  style={[styles.scopeTab, active && styles.scopeTabActive]}
-                  onPress={() => switchScope(t.key)}
-                  activeOpacity={0.8}
-                hitSlop={{ top: 2, bottom: 2 }}>
-                  <Ionicons name={t.icon} size={14} color={active ? T.ink : T.onInkMuted} />
-                  <Text style={[styles.scopeTabText, active && styles.scopeTabTextActive]} numberOfLines={1}>
-                    {t.key === 'campus' && myUniName && active ? myUniName : t.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        }
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => { setRefreshing(true); fetchConfessions(false); }}
-            tintColor={T.yellow}
-            colors={[T.ink]}
-          />
-        }
-        ListEmptyComponent={
-          firstLoad ? (
-            <View style={styles.inlineLoader}>
-              <ActivityIndicator size="small" color={T.yellow} />
-            </View>
-          ) : scope === 'campus' && !myUniName ? (
-            <View style={styles.emptyContainer}>
-              <View style={styles.emptyIconCircle}>
-                <Ionicons name="school-outline" size={40} color={T.yellow} />
-              </View>
-              <Text style={styles.emptyTitle}>add your university</Text>
-              <Text style={styles.emptySubtitle}>
-                add your university in your profile to see your campus
-              </Text>
-              <TouchableOpacity
-                style={styles.emptyBtn}
-                onPress={() => { soundTap(); navigation?.navigate?.('EditProfileScreen'); }}
-              >
-                <LinearGradient colors={[T.yellow]} style={styles.emptyBtnGradient}>
-                  <Text style={styles.emptyBtnText}>edit profile</Text>
-                  <Ionicons name="arrow-forward" size={18} color={T.ink} />
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          ) : (
-          <View style={styles.emptyContainer}>
-            <View style={styles.emptyIconCircle}>
-              <Ionicons name="chatbubble-ellipses-outline" size={40} color={T.yellow} />
-            </View>
-            <Text style={styles.emptyTitle}>
-              {scope === 'campus' ? 'nothing from your campus yet' : 'no confessions yet'}
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              {scope === 'campus' ? `be the first from ${myUniName || 'your campus'}.` : "confess. nobody will know it's you."}
-            </Text>
-            <TouchableOpacity style={styles.emptyBtn} onPress={handleFabPress}>
-              <LinearGradient colors={[T.yellow]} style={styles.emptyBtnGradient}>
-                <Text style={styles.emptyBtnText}>create confession</Text>
-                <Ionicons name="arrow-forward" size={18} color={T.ink} />
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-          )
-        }
+      <ConfessionFeed
+        flatListRef={flatListRef} listData={listData} highlightId={highlightId} scope={scope}
+        renderConfession={renderConfession} switchScope={switchScope} myUniName={myUniName} refreshing={refreshing}
+        setRefreshing={setRefreshing} fetchConfessions={fetchConfessions} firstLoad={firstLoad} navigation={navigation}
+        handleFabPress={handleFabPress}
       />
 
       {/* FAB */}
