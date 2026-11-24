@@ -15,6 +15,7 @@ import {
   StatusBar,
   BackHandler,
 } from 'react-native';
+import RemoteImage from '../../../ui/RemoteImage'; // Q-3i: cached, sized remote pictures (a just-picked file works too)
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -436,7 +437,7 @@ function StepBasicInfo({
 
       <TouchableOpacity style={styles.photoUpload} onPress={onPickPhoto} activeOpacity={0.8}>
         {photoUrl ? (
-          <Image source={{ uri: photoUrl }} style={styles.photoImage} />
+          <RemoteImage source={{ uri: photoUrl }} size="avatar" style={styles.photoImage} />
         ) : (
           <>
             <Ionicons name="camera-outline" size={26} color={MUTED} />

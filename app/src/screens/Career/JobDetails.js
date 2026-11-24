@@ -10,6 +10,7 @@
 // Opened from the jobs list, pushes, invites, the Daily Drop and "recommended for you" (utils/careerNav.js).
 import React, { useCallback, useEffect, useState } from "react";
 import { View, Text, ScrollView, StyleSheet, Image, ActivityIndicator, TouchableOpacity, Linking, Share, RefreshControl } from "react-native";
+import RemoteImage from "../../ui/RemoteImage"; // Q-3i: cached, sized remote pictures
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader, HeaderIconButton, Button } from "../../ui";
@@ -234,7 +235,7 @@ export default function JobDetails({ navigation, route }) {
       >
         <View style={styles.top}>
           {job.companyLogo ? (
-            <Image source={{ uri: job.companyLogo }} style={styles.logo} accessibilityIgnoresInvertColors accessibilityLabel={`${company} logo`} />
+            <RemoteImage source={{ uri: job.companyLogo }} size="logo" style={styles.logo} accessibilityIgnoresInvertColors accessibilityLabel={`${company} logo`} />
           ) : (
             <View style={[styles.logo, styles.logoBlank]}><Ionicons name="business-outline" size={24} color={T.textMuted} /></View>
           )}

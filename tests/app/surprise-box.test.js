@@ -178,6 +178,7 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
     "react-native-qrcode-svg": { __esModule: true, default: "QRCode" },
     "react-native-safe-area-context": { useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) },
     "../ui": { ScreenHeader: (p) => React.createElement("Header", { accessibilityLabel: "header" }, p.title) },
+    "../ui/RemoteImage": { __esModule: true, default: "RemoteImage" }, // Q-3i: box photos are cached, sized RemoteImages
     "../api/surplusApi": studioMock,
   });
   const SurpriseBoxes = load(path.join(SRC, "screens/SurpriseBoxes.js")).default;
@@ -232,7 +233,7 @@ const byLabel = (tree, label) => find(tree, (x) => x.props?.accessibilityLabel =
   ok(sent.filter((s) => s.what === "listings").pop().params.scope === "city" && textOf(root.tree).includes("boxes in Karachi"), "'only Karachi': back to the student's city");
   listCity = null;
 
-  const images = (tree) => { const out = []; const walk = (x) => { if (!x || typeof x !== "object") return; if (Array.isArray(x)) return x.forEach(walk); if (x.type === "Image") out.push(x.props); walk(x.props?.children); }; walk(tree); return out; };
+  const images = (tree) => { const out = []; const walk = (x) => { if (!x || typeof x !== "object") return; if (Array.isArray(x)) return x.forEach(walk); if (x.type === "RemoteImage") out.push(x.props); walk(x.props?.children); }; walk(tree); return out; };
   ok(images(root.tree).length === 1 && images(root.tree)[0].source?.uri === listing.image, "photo: the box with a photo shows it in the list; the one without shows none (as before)", JSON.stringify(images(root.tree).map((i) => i.source)));
   console.log("\u2500\u2500 detail: every disclosure before confirming");
   find(root.tree, (x) => typeof x.props?.accessibilityLabel === "string" && x.props.accessibilityLabel.startsWith("Evening bakery box from Alpha Bakery")).props.onPress();

@@ -1292,7 +1292,7 @@ export default function ChatDetailScreen() {
         <View style={styles.fullscreenOverlay}>
           <Pressable style={styles.fullscreenTouchable} onPress={() => setIsImageFullscreen(false)}>
             {fullscreenImage ? (
-              <Image source={{ uri: fullscreenImage }} style={styles.fullscreenImage} resizeMode="contain" />
+              <RemoteImage source={{ uri: fullscreenImage }} style={styles.fullscreenImage} resizeMode="contain" />
             ) : null}
           </Pressable>
           <TouchableOpacity

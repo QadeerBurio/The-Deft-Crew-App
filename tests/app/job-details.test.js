@@ -195,6 +195,7 @@ const deferred = () => { let resolve, reject; const p = new Promise((a, b) => { 
     "@expo/vector-icons": { Ionicons: "Ionicons" },
     "expo-document-picker": { getDocumentAsync: async () => nextPick },
     "../../ui": ui,
+    "../../ui/RemoteImage": { __esModule: true, default: "RemoteImage" }, // Q-3i: the logo is a cached, sized RemoteImage
     "../../api/api": { __esModule: true, default: api },
     "../../api/resumeStudioApi": { studioEnabled: async () => studio.on, studioApi: { versions: async () => studio.versions, attachVersion: async (a, v) => { studio.attached.push([a, v]); if (studio.attachFails) throw new Error("version changed"); return {}; } } },
     "../../analytics/metaEvents": { metaEvents: { jobApplied: (id) => meta.push({ id, posts: net.posts.length, settled: net.settled }) } },
@@ -378,7 +379,7 @@ const deferred = () => { let resolve, reject; const p = new Promise((a, b) => { 
     const t = textOf(root.tree);
     ok(net.gets.includes("/jobs/public/job/j1"), "loads the job (GET /jobs/public/job/:id)");
     ok(["React intern", "HireCo", "Lahore", "Internship", "PKR 40,000", "apply by", "Build things.", "Ship features", "React", "JavaScript", "Must know React", "Mentorship"].every((s) => t.includes(s)), "title, company, location, type, salary, deadline, description, responsibilities, skills, requirements, benefits", t.slice(0, 300));
-    ok(all(root.tree, (x) => x.type === "Image" && x.props.source?.uri === "https://x/logo.png").length === 1, "the company logo");
+    ok(all(root.tree, (x) => x.type === "RemoteImage" && x.props.source?.uri === "https://x/logo.png" && x.props.size === "logo").length === 1, "the company logo (RemoteImage, logo size)");
     ok(t.includes("your match") && t.includes("83%") && t.includes("strong match") && t.includes("Matches 5 of 6 skills, missing MongoDB, meets all requirements") && t.includes('"A web app built with React"') && t.includes("MongoDB") && /estimate/.test(t), "your match: estimate, band, one line, a strength with the resume line, the gap, an honest note");
     const b = applyBtn(root.tree);
     ok(b.props.title === "Apply" && b.props.disabled === false, "open job: Apply");

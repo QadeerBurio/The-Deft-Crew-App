@@ -10,6 +10,7 @@
 // { view: "orders" } opens my orders. Notifications carry screen "SurpriseBoxes" + params { orderId }.
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View, Text, TouchableOpacity, TextInput, ScrollView, Switch, ActivityIndicator, Alert, RefreshControl, StyleSheet, Image } from "react-native";
+import RemoteImage from "../ui/RemoteImage"; // Q-3i: cached, sized remote pictures
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import QRCode from "react-native-qrcode-svg";
@@ -202,7 +203,7 @@ export default function SurpriseBoxes({ route, navigation }) {
       {listings?.map((l) => (
         <TouchableOpacity key={l.id} style={[styles.card, !l.available && { opacity: 0.6 }]} onPress={() => openListing(l.id)} accessibilityRole="button"
           accessibilityLabel={`${l.title} from ${l.brand.name}. ${money(l.price, l.currency)}, usually ${money(l.listPrice, l.currency)}. pickup ${span(l.pickupStart, l.pickupEnd)}. ${l.available ? `${l.quantityLeft} left` : "sold out"}${l.distanceKm != null ? `. ${l.distanceKm} km away` : ""}`}>
-          {photoUri(l.image) && <Image source={{ uri: photoUri(l.image) }} style={styles.thumb} resizeMode="cover" accessible={false} />}
+          {photoUri(l.image) && <RemoteImage source={{ uri: photoUri(l.image) }} size="card" style={styles.thumb} resizeMode="cover" accessible={false} />}
           <View style={styles.row}>
             <Text style={styles.title} maxFontSizeMultiplier={M}>{l.title}</Text>
             <Text style={styles.price} maxFontSizeMultiplier={M}>{money(l.price, l.currency)}</Text>
@@ -221,7 +222,7 @@ export default function SurpriseBoxes({ route, navigation }) {
   if (view === "detail") return frame(scroll(
     !listing ? <ActivityIndicator color={T.ink} accessibilityLabel="loading" /> : (
       <View>
-        {photoUri(listing.image) && <Image source={{ uri: photoUri(listing.image) }} style={styles.hero} resizeMode="cover" accessibilityLabel={`photo of ${listing.title}`} />}
+        {photoUri(listing.image) && <RemoteImage source={{ uri: photoUri(listing.image) }} size="banner" style={styles.hero} resizeMode="cover" accessibilityLabel={`photo of ${listing.title}`} />}
         <Text style={styles.h1} accessibilityRole="header" maxFontSizeMultiplier={M}>{listing.title}</Text>
         <Text style={styles.muted} maxFontSizeMultiplier={M}>{listing.brand.name} · {listing.branch.name}{listing.branch.address ? `, ${listing.branch.address}` : ""}</Text>
         <View style={styles.row}><Text style={styles.priceBig} maxFontSizeMultiplier={M}>{money(listing.price, listing.currency)}</Text><Text style={styles.strike} maxFontSizeMultiplier={M}>usually {money(listing.listPrice, listing.currency)}</Text></View>
