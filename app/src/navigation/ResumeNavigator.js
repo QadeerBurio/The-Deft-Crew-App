@@ -17,6 +17,7 @@ import ResumeAnalyticsScreen from "../screens/Resume/ResumeAnalytics";
 import ResumeShareScreenBase from "../screens/Resume/ResumeShare";
 import ResumeStudioScreenBase from "../screens/Resume/ResumeStudio";
 import ResumeImportReviewScreen from "../screens/Resume/ResumeImportReview";
+import ResumeStartScreen from "../screens/Resume/ResumeStart"; // P3-1 (resumeV2): how a new resume starts
 const ResumeShareScreen = accountOnly(ResumeShareScreenBase, { title: "share resume" });
 const ResumeStudioScreen = accountOnly(ResumeStudioScreenBase, { title: "resume studio" }); // FLAG_RESUME_STUDIO_V2
 
@@ -67,6 +68,12 @@ export default function ResumeStack() {
         }}
       />
       
+      <Stack.Screen
+        name="ResumeStart"
+        component={ResumeStartScreen}
+        options={{ headerShown: false }}
+      />
+
       <Stack.Screen
         name="ResumeImportReview"
         component={ResumeImportReviewScreen}

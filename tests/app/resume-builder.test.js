@@ -276,7 +276,9 @@ global.__DEV__ = false;
   m.unmount();
 
   console.log("── source");
-  const src = H.read("app/src/screens/Resume/ResumeBuilder.js");
+  // the builder and its step files (P3a moved the 7 steps to screens/Resume/steps/, unchanged)
+  const stepDir = require("path").join(H.APP, "app/src/screens/Resume/steps");
+  const src = [H.read("app/src/screens/Resume/ResumeBuilder.js"), ...require("fs").readdirSync(stepDir).filter((f) => f.endsWith(".js")).map((f) => H.read(`app/src/screens/Resume/steps/${f}`))].join("\n");
   ok(!/aiProcessing|savingStep1|savingStep6/.test(src), "no shared loading flags left");
   ok(!/items\.filter\(\(_, i\) => i !== index\)/.test(src) && !/updated\[editing\w+Index\]/.test(src), "no position-based edits or deletes");
   ok(!/onBlur=\{savePersonalInfo\}/.test(src) && (src.match(/onBlur=\{savePersonalQuietly\}/g) || []).length === 8, "field blur saves in the background (errors logged, never unhandled)");

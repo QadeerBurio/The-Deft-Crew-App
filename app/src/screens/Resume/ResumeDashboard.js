@@ -80,6 +80,9 @@ const ScoreRing = ({ value, label }) => {
 
 const ResumeDashboardScreen = ({ navigation, route }) => {
   const matchingOn = useFlag("careerMatching", matchingEnabled) === true;
+  // P3-1: with resumeV2 a new resume starts on ResumeStart (upload / from my tdc profile / start fresh)
+  const resumeV2 = useFlag("resumeV2") === true;
+  const newResumeScreen = resumeV2 ? 'ResumeStart' : 'ResumeBuilder';
   // an invite push without a job: { openInvites: true } scrolls to the invites card
   const openInvites = !!route?.params?.openInvites;
   const scrollRef = useRef(null);
@@ -586,7 +589,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
               // no resume yet = a new one (needs an account)
               if (!selectedResume && !requireAccount()) return;
               navigation.navigate(
-                'ResumeBuilder',
+                selectedResume ? 'ResumeBuilder' : newResumeScreen,
                 selectedResume ? { resumeId: selectedResume._id } : undefined
               );
             }}
@@ -863,7 +866,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                 );
                 return;
               }
-              navigation.navigate('ResumeBuilder');
+              navigation.navigate(newResumeScreen);
             }}
           >
             <Ionicons name="add" size={18} color={T.ink} />
@@ -1084,7 +1087,7 @@ const resumeApi = resumeApiModule.default || resumeApiModule.resumeApi || resume
                     );
                     return;
                   }
-                  navigation.navigate('ResumeBuilder');
+                  navigation.navigate(newResumeScreen);
                 }}
               >
                 <Text style={RD.btnYellowText}>create resume</Text>

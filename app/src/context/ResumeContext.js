@@ -222,12 +222,13 @@ export default function ResumeProvider({ children }) {
           personalInfo: {
             firstName: user?.name?.split(' ')[0] || '',
             lastName: user?.name?.split(' ')[1] || '',
-            title: user?.headline || 'Software Engineer',
-            location: user?.location || 'Karachi, Pakistan',
+            // P3 #7 (owner): nothing made up: empty unless the student gave it
+            title: user?.headline || '',
+            location: user?.location && String(user.location).trim().toLowerCase() !== 'karachi, pakistan' ? user.location : '',
             ...(resumeData.personalInfo || {})
           },
           professionalSummary: {
-            title: resumeData.personalInfo?.title || user?.headline || 'Software Engineer',
+            title: resumeData.personalInfo?.title || user?.headline || '',
             ...(resumeData.professionalSummary || {})
           },
           education: resumeData.education || [],

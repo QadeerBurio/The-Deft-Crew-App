@@ -34,93 +34,26 @@ import { finishErrors as requiredForFinish, defaultResumeName } from '../../util
 import { color as T, font as F } from "../../theme/tokens";
 import ScreenHeader, { HeaderIconButton } from "../../ui/ScreenHeader";
 import { plainError } from "../../utils/plainError";
+import { INDUSTRIES, keyOf, indexOfKey, styles } from './steps/builderShared';
+// P3a (flag resumeV2): the track's step order, the new sections, progress, one-page estimate, "saved"
+import useFlag from '../../hooks/useFlag';
+import { FLAGS } from '../../api/upgradeFlags';
+import { EXTRA_STEPS, stepOrder, nextStep, prevStep, stepIdFor, minutesLeft, pageEstimate, fitLine } from '../../resume/resumeV2';
+import ActivitiesStep from './steps/ActivitiesStep';
+import AwardsStep from './steps/AwardsStep';
+import LanguagesStep from './steps/LanguagesStep';
+import CourseworkSection from './steps/CourseworkSection';
+import renderStep1File from './steps/Step1Personal';
+import renderStep2File from './steps/Step2Education';
+import renderStep3File from './steps/Step3Experience';
+import renderStep4File from './steps/Step4Projects';
+import renderStep5File from './steps/Step5Certificates';
+import renderStep6File from './steps/Step6Summary';
+import renderStep7File from './steps/Step7Skills';
+export { keyOf, indexOfKey }; // were defined here; tests and other screens import them from the builder
 const { width, height } = Dimensions.get('window');
 
-const INDUSTRIES = [
-  {
-    name: 'Technology',
-    roles: [
-      'Software Engineer', 'Frontend Developer', 'Backend Developer', 
-      'Full Stack Developer', 'Mobile Developer', 'DevOps Engineer', 
-      'Data Scientist', 'Machine Learning Engineer', 'AI Engineer', 
-      'Cloud Architect', 'Cybersecurity Analyst', 'QA Engineer', 
-      'Database Administrator', 'Systems Administrator', 'IT Support Specialist'
-    ]
-  },
-  {
-    name: 'Healthcare & Medicine',
-    roles: [
-      'Registered Nurse', 'Physician', 'Pharmacist', 'Medical Assistant', 
-      'Physical Therapist', 'Dentist', 'Radiologist', 'Surgeon', 
-      'Healthcare Administrator', 'Clinical Research Associate', 
-      'Occupational Therapist', 'Paramedic', 'Nutritionist / Dietitian'
-    ]
-  },
-  {
-    name: 'Business & Finance',
-    roles: [
-      'Financial Analyst', 'Accountant', 'Investment Banker', 'Business Analyst', 
-      'Management Consultant', 'Auditor', 'Financial Planner', 'Risk Analyst', 
-      'Operations Manager', 'Supply Chain Manager', 'Procurement Specialist', 'Actuary'
-    ]
-  },
-  {
-    name: 'Marketing & Sales',
-    roles: [
-      'Marketing Manager', 'Digital Marketing Specialist', 'Content Strategist', 
-      'SEO / SEM Specialist', 'Social Media Manager', 'Brand Manager', 
-      'Sales Manager', 'Account Executive', 'Sales Representative', 
-      'Growth Hacker', 'Email Marketing Specialist', 'Product Marketer'
-    ]
-  },
-  {
-    name: 'Design & Creative',
-    roles: [
-      'UX Designer', 'UI Designer', 'Graphic Designer', 'Product Designer', 
-      'Motion Designer', 'Illustrator', '3D Artist', 'Art Director', 
-      'Creative Director', 'Video Editor', 'Photographer', 'Interior Designer', 'Fashion Designer'
-    ]
-  },
-  {
-    name: 'Education',
-    roles: [
-      'Teacher', 'University Lecturer', 'Academic Researcher', 'School Principal', 
-      'Education Consultant', 'Curriculum Developer', 'Instructional Designer', 
-      'School Counselor', 'Special Education Teacher', 'ESL / Language Instructor', 'Librarian'
-    ]
-  },
-  {
-    name: 'Engineering',
-    roles: [
-      'Mechanical Engineer', 'Civil Engineer', 'Electrical Engineer', 'Chemical Engineer', 
-      'Aerospace Engineer', 'Structural Engineer', 'Environmental Engineer', 
-      'Biomedical Engineer', 'Industrial Engineer', 'Manufacturing Engineer', 
-      'Petroleum Engineer', 'Robotics Engineer'
-    ]
-  },
-  {
-    name: 'Law & Legal',
-    roles: [
-      'Lawyer / Attorney', 'Paralegal', 'Legal Assistant', 'Corporate Counsel', 
-      'Compliance Officer', 'Judge', 'Legal Researcher', 'Contract Manager', 'IP Specialist'
-    ]
-  },
-  {
-    name: 'Human Resources',
-    roles: [
-      'HR Manager', 'Recruiter / Talent Acquisition', 'HR Business Partner', 
-      'Compensation & Benefits Specialist', 'Training & Development Manager', 
-      'HR Generalist', 'People Operations Manager', 'Labour Relations Specialist'
-    ]
-  },
-  {
-    name: 'Media & Communication',
-    roles: [
-      'Journalist', 'Content Writer', 'Copywriter', 'Public Relations Specialist', 
-      'Editor', 'Broadcast Producer', 'Podcast Producer', 'Technical Writer', 'Communications Manager'
-    ]
-  }
-];
+
 
 const FONTS = ['Inter (Modern Sans)', 'Roboto', 'Playfair Display', 'Open Sans', 'Outfit'];
 const PRESETS = [
@@ -145,8 +78,8 @@ const SYSTEM_TEMPLATES = [
 
 // A list item's identity: the server's _id, else its content (guest items). Never its position,
 // so deleting one item can't make "Update" overwrite another.
-export const keyOf = (item) => (item?._id ? `id:${item._id}` : `v:${JSON.stringify(item)}`);
-export const indexOfKey = (list, key) => (key == null ? -1 : (list || []).findIndex((x) => keyOf(x) === key));
+
+
 
 // The personal-info fields as the server stores them
 export const buildPersonal = ({ name, title, email, phone, location, linkedin, github, portfolio }) => {
@@ -169,7 +102,7 @@ const ResumeBuilderScreen = () => {
     resumes = [],
     creationsUsed = 0,
     createResume,
-    updateResume,
+    updateResume: updateResumeInContext,
     uploadResume,
     loading,
     uploadProgress,
@@ -179,10 +112,15 @@ const ResumeBuilderScreen = () => {
     setCurrentResume,
     loadResume,
   } = useContext(ResumeContext);
+  // P3-5: every save goes through here, so the builder can show "saved ✓" (resumeV2); nothing else changes
+  const [savedAt, setSavedAt] = useState(0);
+  const updateResume = (...args) => Promise.resolve(updateResumeInContext(...args)).then((r) => { if (r) setSavedAt(Date.now()); return r; });
 
   const navigation = useNavigation();
   const route = useRoute();
   const { resumeId, step: startStep } = route.params || {};
+  // P3-1: the track chosen on the start screen for a new resume ("have you done an internship or job yet?")
+  const newTrack = ['fresher', 'experienced'].includes(route.params?.track) ? route.params.track : null;
   // no resumeId = a new resume: nothing is created until the student saves something
   const isNew = !resumeId;
   const createdIdRef = useRef(null);
@@ -209,6 +147,13 @@ const ResumeBuilderScreen = () => {
   const [activeStep, setActiveStep] = useState(startStep >= 1 && startStep <= 7 ? startStep : 1);
   // "edit" from the preview / the upload review opens the builder at that section
   useEffect(() => { if (startStep >= 1 && startStep <= 7) setActiveStep(startStep); }, [startStep]);
+  // P3-1 (resumeV2): "upload my cv" on the start screen opens the builder's own upload once
+  const autoUploadDone = useRef(false);
+  useEffect(() => {
+    if (!route.params?.autoUpload || autoUploadDone.current) return;
+    autoUploadDone.current = true;
+    handleAutoFillUpload();
+  }, [route.params?.autoUpload]); // eslint-disable-line react-hooks/exhaustive-deps
   // missing required fields: only after the student tries to finish
   const [finishTried, setFinishTried] = useState(false);
   // the resume's name (empty = the default "<Full name> – <title>")
@@ -365,6 +310,16 @@ const ResumeBuilderScreen = () => {
     { id: 6, name: 'Summary', icon: 'locate-outline', title: 'Summary & goal', desc: 'The job you want and 2–3 lines about you (optional)' },
     { id: 7, name: 'Skills', icon: 'hammer-outline', title: 'Skills', desc: 'What you are good at — any field (optional)' },
   ];
+
+  // P3-3 (resumeV2): the steps in the track's order (fresher: education, projects and activities first, experience
+  // last); the new sections are steps 8–11. Flag off: today's 1..7, unchanged.
+  const v2 = useFlag(FLAGS.resumeV2) === true;
+  const order = stepOrder(isNew && !createdIdRef.current ? { settings: { track: newTrack } } : currentResume, v2);
+  const stepDef = (id) => steps.find((s) => s.id === id) || EXTRA_STEPS[id] || steps[0];
+  const firstStep = order[0];
+  const lastStep = order[order.length - 1];
+  // the new steps save through the builder (a new resume is created first)
+  const stepIo = { ensureResume: () => ensureResume(), updateResume: (...a) => updateResume(...a) };
 
   // Date format helper
   const formatDateForInput = (dateStr) => {
@@ -537,7 +492,7 @@ const ResumeBuilderScreen = () => {
     if (creatingRef.current) return creatingRef.current;
     creatingRef.current = (async () => {
       try {
-        const created = await createResume({ personalInfo: currentPersonal(), template: 'modern_ats' }, { alert: false });
+        const created = await createResume({ personalInfo: currentPersonal(), template: 'modern_ats', ...(newTrack ? { settings: { track: newTrack } } : {}) }, { alert: false });
         if (created?._id) {
           createdIdRef.current = created._id;
           lastPersonalRef.current = JSON.stringify(currentPersonal());
@@ -714,7 +669,7 @@ const ResumeBuilderScreen = () => {
   });
 
   const handleStepChange = (newStep) => goToStep(newStep);
-  const handlePrevStep = () => goToStep((prev) => Math.max(1, prev - 1));
+  const handlePrevStep = () => goToStep((prev) => prevStep(order, prev));
   // back: the leave check below saves or asks
   const handleGoBack = () => navigation.goBack();
 
@@ -738,20 +693,21 @@ const ResumeBuilderScreen = () => {
 
   // the add-item buttons of each step (defined with their forms), so "continue" can add what is typed
   const addHandlers = useRef({});
-  const optionalStep = (s) => s >= 2 && s <= 6;
+  const optionalStep = (s) => s !== lastStep && ((s >= 2 && s <= 6) || (v2 && s >= 8));
 
   // Continue: an item typed but not added is added first (never lost, never blocks)
   const handleNextStep = () => {
     const item = unsavedItem();
-    const add = item && { education: 2, experience: 3, project: 4, certification: 5 }[item] === activeStep && addHandlers.current[activeStep];
+    // the new steps (8–11) add what is typed themselves (nothing typed: nothing happens)
+    const add = (item && { education: 2, experience: 3, project: 4, certification: 5 }[item] === activeStep && addHandlers.current[activeStep]) || (activeStep >= 8 && addHandlers.current[activeStep]);
     if (add) {
-      Promise.resolve(add({ quiet: true })).finally(() => goToStep((prev) => Math.min(7, prev + 1)));
+      Promise.resolve(add({ quiet: true })).finally(() => goToStep((prev) => nextStep(order, prev)));
       return;
     }
-    goToStep((prev) => Math.min(7, prev + 1));
+    goToStep((prev) => nextStep(order, prev));
   };
   // skip for now: optional sections never block; what is typed stays on the phone for later
-  const handleSkipStep = () => goToStep((prev) => Math.min(7, prev + 1));
+  const handleSkipStep = () => goToStep((prev) => nextStep(order, prev));
 
   // Finish: only now are missing required fields shown (name, email or phone, one of education/experience/projects)
   const finishProblems = () => requiredForFinish(buildLiveResume());
@@ -806,1018 +762,43 @@ const ResumeBuilderScreen = () => {
 
   const getTargetRoleFallback = () => {
     const roles = currentResume?.targetJobs || [];
-    return roles.map(r => r.jobTitle).join(', ') || currentResume?.targetJob?.jobTitle || 'Software Engineer';
+    return roles.map(r => r.jobTitle).join(', ') || currentResume?.targetJob?.jobTitle || ''; // P3 #7: no assumed role
   };
 
   // ============================================================
   // STEP 1: PERSONAL INFO
   // ============================================================
-  const renderStep1 = () => {
-    return (
-      <View style={styles.formContainer}>
-        <View style={styles.bannerCard}>
-          <Text style={styles.bannerTitle}>already have a resume?</Text>
-          <Text style={styles.bannerText}>
-            Upload it and AI will auto-fill all fields — no manual typing needed.
-          </Text>
-          <View style={styles.bannerButtons}>
-            <TouchableOpacity style={styles.bannerUploadBtn} onPress={handleAutoFillUpload}>
-              <Text style={styles.bannerUploadBtnText}>upload & auto-fill</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.bannerSkipBtn} onPress={() => {
-              savePersonalQuietly();
-              setPreviewTemplateId(currentResume?.template || 'modern_ats');
-              setPreviewVisible(true);
-            }}>
-              <Text style={styles.bannerSkipBtnText}>skip to preview</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <Text style={styles.inputLabel}>full name *</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="e.g. John Doe"
-          placeholderTextColor={T.textFaint}
-          value={pName}
-          onChangeText={setPName}
-          onBlur={savePersonalQuietly}
-          accessibilityLabel="full name"
-        />
-        {fieldError('name')}
-
-        <Text style={styles.inputLabel}>title (like "HR Intern")</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="e.g. Senior Software Engineer"
-          placeholderTextColor={T.textFaint}
-          value={pTitle}
-          onChangeText={setPTitle}
-          onBlur={savePersonalQuietly}
-        />
-
-        <View style={styles.inputGridRow}>
-          <View style={{ flex: 1, marginRight: 8 }}>
-            <Text style={styles.inputLabel}>email</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="john@example.com"
-              placeholderTextColor={T.textFaint}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={pEmail}
-              onChangeText={setPEmail}
-              onBlur={savePersonalQuietly}
-            />
-          </View>
-          <View style={{ flex: 1, marginLeft: 8 }}>
-            <Text style={styles.inputLabel}>phone</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="+92 301 0000000"
-              placeholderTextColor={T.textFaint}
-              keyboardType="phone-pad"
-              value={pPhone}
-              onChangeText={setPPhone}
-              onBlur={savePersonalQuietly}
-            />
-          </View>
-        </View>
-        <Text style={styles.fieldHint}>email or phone is needed so employers can reach you</Text>
-        {fieldError('contact')}
-
-        <View style={styles.inputGridRow}>
-          <View style={{ flex: 1, marginRight: 8 }}>
-            <Text style={styles.inputLabel}>city</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Karachi, Pakistan"
-              placeholderTextColor={T.textFaint}
-              value={pLocation}
-              onChangeText={setPLocation}
-              onBlur={savePersonalQuietly}
-            />
-          </View>
-          <View style={{ flex: 1, marginLeft: 8 }}>
-            <Text style={styles.inputLabel}>LinkedIn profile</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="linkedin.com/in/johndoe"
-              placeholderTextColor={T.textFaint}
-              autoCapitalize="none"
-              value={pLinkedin}
-              onChangeText={setPLinkedin}
-              onBlur={savePersonalQuietly}
-            />
-          </View>
-        </View>
-
-        <View style={styles.inputGridRow}>
-          <View style={{ flex: 1, marginRight: 8 }}>
-            <Text style={styles.inputLabel}>GitHub profile</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="github.com/johndoe"
-              placeholderTextColor={T.textFaint}
-              autoCapitalize="none"
-              value={pGithub}
-              onChangeText={setPGithub}
-              onBlur={savePersonalQuietly}
-            />
-          </View>
-          <View style={{ flex: 1, marginLeft: 8 }}>
-            <Text style={styles.inputLabel}>portfolio website</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="johndoe.dev"
-              placeholderTextColor={T.textFaint}
-              autoCapitalize="none"
-              value={pPortfolio}
-              onChangeText={setPPortfolio}
-              onBlur={savePersonalQuietly}
-            />
-          </View>
-        </View>
-
-        <Text style={styles.inputLabel}>resume name</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder={defaultResumeName(buildLiveResume())}
-          placeholderTextColor={T.textFaint}
-          value={resumeNameInput}
-          onChangeText={setResumeNameInput}
-          onBlur={saveResumeName}
-          accessibilityLabel="resume name"
-        />
-        <Text style={styles.fieldHint}>only you see this. leave it empty to use "{defaultResumeName(buildLiveResume())}".</Text>
-
-        <TouchableOpacity 
-          style={[styles.yellowButton, { marginTop: 20 }]} 
-          onPress={handleSaveStep1}
-          disabled={saveStep1.running}
-          accessibilityRole="button"
-          accessibilityLabel="save personal information"
-          accessibilityState={{ busy: saveStep1.running }}
-        >
-          {saveStep1.running ? (
-            <ActivityIndicator color={T.ink} size="small" />
-          ) : (
-            <Text style={styles.yellowButtonText}>💾 Save Personal Information</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    );
-  };
+  const renderStep1 = () => renderStep1File({ buildLiveResume, currentResume, fieldError, handleAutoFillUpload, handleSaveStep1, pEmail, pGithub, pLinkedin, pLocation, pName, pPhone, pPortfolio, pTitle, resumeNameInput, savePersonalQuietly, saveResumeName, saveStep1, setPEmail, setPGithub, setPLinkedin, setPLocation, setPName, setPPhone, setPPortfolio, setPTitle, setPreviewTemplateId, setPreviewVisible, setResumeNameInput });
 
   // ============================================================
   // STEP 2: EDUCATION
   // ============================================================
-  const renderStep2 = () => {
-    const items = currentResume?.education || [];
-
-    const handleAddEducation = ({ quiet } = {}) => saveItem.run(async () => {
-      if (!eduDegree.trim() && !eduInstitution.trim()) {
-        if (!quiet) Alert.alert('add a school or degree', 'type your school, college or university (or your degree) to add it.');
-        return;
-      }
-      const gradeText = eduGpa.trim();
-      const gpaNum = Number((gradeText.match(/^(\d(?:\.\d{1,2})?)(?:\s*\/\s*\d(?:\.\d{1,2})?)?$/) || [])[1]);
-      const newItem = {
-        degree: eduDegree.trim(),
-        fieldOfStudy: eduField.trim(),
-        institution: eduInstitution.trim(),
-        // the grade as typed ("3.5/4", "A", "First Division"); a plain number also as gpa
-        grade: gradeText,
-        gpa: gpaNum > 0 && gpaNum <= 5 ? gpaNum : undefined,
-        currentSemester: eduSemester.trim(),
-        startDate: eduStartDate.trim(),
-        endDate: eduCurrent ? '' : eduEndDate.trim(),
-        current: eduCurrent
-      };
-      
-      if (!(await saveListItem('education', newItem, editingEduIndex))) return;
-      
-      setEduDegree('');
-      setEduField('');
-      setEduInstitution('');
-      setEduGpa('');
-      setEduSemester('');
-      setEduStartDate('');
-      setEduEndDate('');
-      setEduCurrent(false);
-      setEditingEduIndex(null);
-    });
-    addHandlers.current[2] = handleAddEducation;
-
-    return (
-      <View style={styles.formContainer}>
-        {items.map((item, index) => (
-          <View key={item?._id || `i${index}`} style={styles.itemRowBadge}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.itemBadgeTitle}>{item.degree} in {item.fieldOfStudy}</Text>
-              <Text style={styles.itemBadgeSub}>{item.institution} • {item.startDate} - {item.current ? 'Currently studying' : item.endDate}</Text>
-              {item.gpa ? <Text style={styles.itemBadgeSub}>GPA: {item.gpa}</Text> : null}
-            </View>
-            <View style={{ flexDirection: 'row' }}>
-              <TouchableOpacity onPress={() => {
-                setEduDegree(item.degree);
-                setEduField(item.fieldOfStudy);
-                setEduInstitution(item.institution);
-                setEduGpa(item.gpa || '');
-                setEduSemester(item.currentSemester || '');
-                setEduStartDate(formatDateForInput(item.startDate));
-                setEduEndDate(formatDateForInput(item.endDate));
-                setEduCurrent(item.current || false);
-                setEditingEduIndex(keyOf(item));
-              }} style={{ marginRight: 12 }}>
-                <Ionicons name="create-outline" size={20} color={T.ink} />
-              </TouchableOpacity>
-              <TouchableOpacity accessibilityRole="button" accessibilityLabel={`delete education ${index + 1}`} disabled={removeItem.running} hitSlop={8} onPress={() => confirmRemove('education', item, 'education', (k) => {
-                if (editingEduIndex === k) { setEduDegree(''); setEduField(''); setEduInstitution(''); setEduGpa(''); setEduSemester(''); setEduStartDate(''); setEduEndDate(''); setEduCurrent(false); setEditingEduIndex(null); }
-              })}>
-                <Ionicons name="trash-outline" size={20} color={T.danger} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
-
-        <Text style={styles.certificationHeading}>
-          {editingEduIndex !== null ? `Edit Education #${indexOfKey(items, editingEduIndex) + 1}` : `Education #${items.length + 1}`}
-        </Text>
-
-        <Text style={styles.inputLabel}>degree</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="e.g. Bachelor of Science"
-          placeholderTextColor={T.textFaint}
-          value={eduDegree}
-          onChangeText={setEduDegree}
-        />
-
-        <Text style={styles.inputLabel}>field of study</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="e.g. Computer Science"
-          placeholderTextColor={T.textFaint}
-          value={eduField}
-          onChangeText={setEduField}
-        />
-
-        <Text style={styles.inputLabel}>University / Institution</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="e.g. Massachusetts Institute of Technology"
-          placeholderTextColor={T.textFaint}
-          value={eduInstitution}
-          onChangeText={setEduInstitution}
-        />
-
-        <View style={styles.inputGridRow}>
-          <View style={{ flex: 1, marginRight: 8 }}>
-            <Text style={styles.inputLabel}>CGPA / GPA</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="e.g. 3.8 / 4.0"
-              placeholderTextColor={T.textFaint}
-              value={eduGpa}
-              onChangeText={setEduGpa}
-            />
-          </View>
-          <View style={{ flex: 1, marginLeft: 8 }}>
-            <Text style={styles.inputLabel}>Current Semester (Optional)</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="e.g. 6th Semester"
-              placeholderTextColor={T.textFaint}
-              value={eduSemester}
-              onChangeText={setEduSemester}
-            />
-          </View>
-        </View>
-
-        <Text style={styles.inputLabel}>start date</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="e.g. Sep 2020"
-          placeholderTextColor={T.textFaint}
-          value={eduStartDate}
-          onChangeText={setEduStartDate}
-        />
-
-        <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>currently studying here</Text>
-          <Switch
-            value={eduCurrent}
-            onValueChange={setEduCurrent}
-            trackColor={{ false: T.line, true: T.yellow }}
-            thumbColor={eduCurrent ? T.white : T.sand}
-          />
-        </View>
-
-        {!eduCurrent && (
-          <>
-            <Text style={styles.inputLabel}>end date</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="e.g. May 2024"
-              placeholderTextColor={T.textFaint}
-              value={eduEndDate}
-              onChangeText={setEduEndDate}
-            />
-          </>
-        )}
-
-        <TouchableOpacity style={styles.yellowButton} onPress={handleAddEducation} disabled={saveItem.running} accessibilityRole="button" accessibilityLabel={editingEduIndex !== null ? 'update education' : 'add education'} accessibilityState={{ busy: saveItem.running }}>
-          {saveItem.running ? <ActivityIndicator color={T.ink} size="small" /> : <Text style={styles.yellowButtonText}>
-            {editingEduIndex !== null ? 'Update Education' : 'Add Education'}
-          </Text>}
-        </TouchableOpacity>
-      </View>
-    );
-  };
+  const renderStep2 = () => renderStep2File({ addHandlers, confirmRemove, currentResume, editingEduIndex, eduCurrent, eduDegree, eduEndDate, eduField, eduGpa, eduInstitution, eduSemester, eduStartDate, formatDateForInput, removeItem, saveItem, saveListItem, setEditingEduIndex, setEduCurrent, setEduDegree, setEduEndDate, setEduField, setEduGpa, setEduInstitution, setEduSemester, setEduStartDate });
 
   // ============================================================
   // STEP 3: WORK EXPERIENCE
   // ============================================================
-  const renderStep3 = () => {
-    const items = currentResume?.workExperience || [];
-
-    const handleAddWork = ({ quiet } = {}) => saveItem.run(async () => {
-      if (!workCompany.trim() && !workPosition.trim()) {
-        if (!quiet) Alert.alert('add a company or role', 'type where you worked (or your role) to add it.');
-        return;
-      }
-      const newItem = {
-        company: workCompany.trim(),
-        position: workPosition.trim(),
-        location: workLocation.trim(),
-        startDate: workStartDate.trim(),
-        endDate: workCurrent ? '' : workEndDate.trim(),
-        current: workCurrent,
-        description: workDesc.trim(),
-        achievements: [] // bullets from an upload are in the description box now
-      };
-
-      if (!(await saveListItem('workExperience', newItem, editingWorkIndex))) return;
-      
-      setWorkCompany('');
-      setWorkPosition('');
-      setWorkLocation('');
-      setWorkStartDate('');
-      setWorkEndDate('');
-      setWorkCurrent(false);
-      setWorkDesc('');
-      setEditingWorkIndex(null);
-    });
-    addHandlers.current[3] = handleAddWork;
-
-    const handleAIEnhanceWork = () => {
-      if (!requireAccount()) return;
-      if (!workDesc.trim()) {
-        Alert.alert('Empty', 'Please type in your responsibilities first before enhancing.');
-        return;
-      }
-      aiWork.run(async () => {
-        const result = await resumeApi.enhanceText(
-          workDesc,
-          `Work experience as ${workPosition || 'professional'} at ${workCompany || 'a company'}`
-        );
-        if (result?.enhanced) setWorkDesc(result.enhanced);
-      });
-    };
-
-    return (
-      <View style={styles.formContainer}>
-        {items.map((item, index) => (
-          <View key={item?._id || `i${index}`} style={styles.itemRowBadge}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.itemBadgeTitle}>{item.position} at {item.company}</Text>
-              <Text style={styles.itemBadgeSub}>{item.location} • {item.startDate} - {item.current ? 'Present' : item.endDate}</Text>
-            </View>
-            <View style={{ flexDirection: 'row' }}>
-              <TouchableOpacity onPress={() => {
-                setWorkCompany(item.company);
-                setWorkPosition(item.position);
-                setWorkLocation(item.location || '');
-                setWorkStartDate(formatDateForInput(item.startDate));
-                setWorkEndDate(formatDateForInput(item.endDate));
-                setWorkCurrent(item.current || false);
-                setWorkDesc([item.description || '', ...(item.achievements || []).map((b) => `• ${b}`)].filter(Boolean).join('\n'));
-                setEditingWorkIndex(keyOf(item));
-              }} style={{ marginRight: 12 }}>
-                <Ionicons name="create-outline" size={20} color={T.ink} />
-              </TouchableOpacity>
-              <TouchableOpacity accessibilityRole="button" accessibilityLabel={`delete experience ${index + 1}`} disabled={removeItem.running} hitSlop={8} onPress={() => confirmRemove('workExperience', item, 'experience', (k) => {
-                if (editingWorkIndex === k) { setWorkCompany(''); setWorkPosition(''); setWorkLocation(''); setWorkStartDate(''); setWorkEndDate(''); setWorkCurrent(false); setWorkDesc(''); setEditingWorkIndex(null); }
-              })}>
-                <Ionicons name="trash-outline" size={20} color={T.danger} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
-
-        <Text style={styles.certificationHeading}>
-          {editingWorkIndex !== null ? `Edit Experience #${indexOfKey(items, editingWorkIndex) + 1}` : `Experience #${items.length + 1}`}
-        </Text>
-
-        <Text style={styles.inputLabel}>company name</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="e.g. Google"
-          placeholderTextColor={T.textFaint}
-          value={workCompany}
-          onChangeText={setWorkCompany}
-        />
-
-        <Text style={styles.inputLabel}>Job Title / Role</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="e.g. Software Engineer"
-          placeholderTextColor={T.textFaint}
-          value={workPosition}
-          onChangeText={setWorkPosition}
-        />
-
-        <Text style={styles.inputLabel}>location</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="e.g. Mountain View, CA"
-          placeholderTextColor={T.textFaint}
-          value={workLocation}
-          onChangeText={setWorkLocation}
-        />
-
-        <Text style={styles.inputLabel}>start date</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="e.g. Jan 2022"
-          placeholderTextColor={T.textFaint}
-          value={workStartDate}
-          onChangeText={setWorkStartDate}
-        />
-
-        <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>currently working here</Text>
-          <Switch
-            value={workCurrent}
-            onValueChange={setWorkCurrent}
-            trackColor={{ false: T.line, true: T.yellow }}
-            thumbColor={workCurrent ? T.white : T.sand}
-          />
-        </View>
-
-        {!workCurrent && (
-          <>
-            <Text style={styles.inputLabel}>end date</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="e.g. Dec 2023"
-              placeholderTextColor={T.textFaint}
-              value={workEndDate}
-              onChangeText={setWorkEndDate}
-            />
-          </>
-        )}
-
-        <View style={styles.labelWithAction}>
-          <Text style={styles.inputLabel}>responsibilities & achievements</Text>
-          <TouchableOpacity style={styles.aiEnhanceMiniBtn} onPress={handleAIEnhanceWork} disabled={aiWork.running} accessibilityRole="button" accessibilityLabel="ai enhance experience" accessibilityState={{ busy: aiWork.running }}>
-            {aiWork.running ? <ActivityIndicator color={T.ink} size="small" /> : <Ionicons name="sparkles" size={14} color={T.ink} />}
-            <Text style={styles.aiEnhanceMiniBtnText}>ai enhance</Text>
-          </TouchableOpacity>
-        </View>
-        <TextInput
-          style={[styles.textInput, styles.summaryTextarea]}
-          multiline
-          placeholder="Describe your key responsibilities and achievements. The AI can convert these into polished ATS-friendly bullet points."
-          placeholderTextColor={T.textFaint}
-          value={workDesc}
-          onChangeText={setWorkDesc}
-        />
-
-        <TouchableOpacity style={styles.yellowButton} onPress={handleAddWork} disabled={saveItem.running} accessibilityRole="button" accessibilityLabel={editingWorkIndex !== null ? 'update experience' : 'add experience'} accessibilityState={{ busy: saveItem.running }}>
-          {saveItem.running ? <ActivityIndicator color={T.ink} size="small" /> : <Text style={styles.yellowButtonText}>
-            {editingWorkIndex !== null ? 'Update Experience' : 'Add Experience'}
-          </Text>}
-        </TouchableOpacity>
-      </View>
-    );
-  };
+  const renderStep3 = () => renderStep3File({ addHandlers, aiWork, confirmRemove, currentResume, editingWorkIndex, formatDateForInput, removeItem, requireAccount, saveItem, saveListItem, setEditingWorkIndex, setWorkCompany, setWorkCurrent, setWorkDesc, setWorkEndDate, setWorkLocation, setWorkPosition, setWorkStartDate, workCompany, workCurrent, workDesc, workEndDate, workLocation, workPosition, workStartDate });
 
   // ============================================================
   // STEP 4: PROJECTS
   // ============================================================
-  const renderStep4 = () => {
-    const items = currentResume?.projects || [];
-
-    const handleAddProj = ({ quiet } = {}) => saveItem.run(async () => {
-      if (!projName.trim()) {
-        if (!quiet) Alert.alert('add a project name', 'give your project a short name to add it.');
-        return;
-      }
-      const newItem = {
-        name: projName.trim(),
-        technologies: projTech.split(',').map(s => s.trim()).filter(Boolean),
-        githubUrl: projGithub.trim(),
-        url: projLive.trim(),
-        description: projDesc.trim()
-      };
-
-      if (!(await saveListItem('projects', newItem, editingProjIndex))) return;
-      
-      setProjName('');
-      setProjTech('');
-      setProjGithub('');
-      setProjLive('');
-      setProjDesc('');
-      setEditingProjIndex(null);
-    });
-    addHandlers.current[4] = handleAddProj;
-
-    const handleAIEnhanceProj = () => {
-      if (!requireAccount()) return;
-      if (!projDesc.trim()) {
-        Alert.alert('Empty', 'Please describe your project first.');
-        return;
-      }
-      aiProj.run(async () => {
-        const result = await resumeApi.enhanceText(
-          projDesc,
-          `Project description for ${projName || 'a software project'} using ${projTech || 'various technologies'}`
-        );
-        if (result?.enhanced) setProjDesc(result.enhanced);
-      });
-    };
-
-    return (
-      <View style={styles.formContainer}>
-        {items.map((item, index) => (
-          <View key={item?._id || `i${index}`} style={styles.itemRowBadge}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.itemBadgeTitle}>{item.name}</Text>
-              <Text style={styles.itemBadgeSub}>{Array.isArray(item.technologies) ? item.technologies.join(', ') : item.technologies}</Text>
-            </View>
-            <View style={{ flexDirection: 'row' }}>
-              <TouchableOpacity onPress={() => {
-                setProjName(item.name);
-                setProjTech(Array.isArray(item.technologies) ? item.technologies.join(', ') : item.technologies || '');
-                setProjGithub(item.githubUrl || '');
-                setProjLive(item.url || '');
-                setProjDesc(item.description || '');
-                setEditingProjIndex(keyOf(item));
-              }} style={{ marginRight: 12 }}>
-                <Ionicons name="create-outline" size={20} color={T.ink} />
-              </TouchableOpacity>
-              <TouchableOpacity accessibilityRole="button" accessibilityLabel={`delete project ${index + 1}`} disabled={removeItem.running} hitSlop={8} onPress={() => confirmRemove('projects', item, 'project', (k) => {
-                if (editingProjIndex === k) { setProjName(''); setProjTech(''); setProjGithub(''); setProjLive(''); setProjDesc(''); setEditingProjIndex(null); }
-              })}>
-                <Ionicons name="trash-outline" size={20} color={T.danger} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
-
-        <Text style={styles.certificationHeading}>
-          {editingProjIndex !== null ? `Edit Project #${indexOfKey(items, editingProjIndex) + 1}` : `Project #${items.length + 1}`}
-        </Text>
-
-        <Text style={styles.inputLabel}>project name</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="e.g. AI Resume Builder"
-          placeholderTextColor={T.textFaint}
-          value={projName}
-          onChangeText={setProjName}
-        />
-
-        <Text style={styles.inputLabel}>tech stack</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="e.g. React, Next.js, OpenAI, TailwindCSS, PostgreSQL"
-          placeholderTextColor={T.textFaint}
-          value={projTech}
-          onChangeText={setProjTech}
-        />
-
-        <Text style={styles.inputLabel}>GitHub url</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="github.com/user/project"
-          placeholderTextColor={T.textFaint}
-          autoCapitalize="none"
-          value={projGithub}
-          onChangeText={setProjGithub}
-        />
-
-        <Text style={styles.inputLabel}>live url</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="project.vercel.app"
-          placeholderTextColor={T.textFaint}
-          autoCapitalize="none"
-          value={projLive}
-          onChangeText={setProjLive}
-        />
-
-        <View style={styles.labelWithAction}>
-          <Text style={styles.inputLabel}>description</Text>
-          <TouchableOpacity style={styles.aiEnhanceMiniBtn} onPress={handleAIEnhanceProj} disabled={aiProj.running} accessibilityRole="button" accessibilityLabel="ai enhance project" accessibilityState={{ busy: aiProj.running }}>
-            {aiProj.running ? <ActivityIndicator color={T.ink} size="small" /> : <Ionicons name="sparkles" size={14} color={T.ink} />}
-            <Text style={styles.aiEnhanceMiniBtnText}>ai enhance</Text>
-          </TouchableOpacity>
-        </View>
-        <TextInput
-          style={[styles.textInput, styles.summaryTextarea]}
-          multiline
-          placeholder="What did you build? What problem did it solve? What was the impact?"
-          placeholderTextColor={T.textFaint}
-          value={projDesc}
-          onChangeText={setProjDesc}
-        />
-
-        <TouchableOpacity style={styles.yellowButton} onPress={handleAddProj} disabled={saveItem.running} accessibilityRole="button" accessibilityLabel={editingProjIndex !== null ? 'update project' : 'add project'} accessibilityState={{ busy: saveItem.running }}>
-          {saveItem.running ? <ActivityIndicator color={T.ink} size="small" /> : <Text style={styles.yellowButtonText}>
-            {editingProjIndex !== null ? 'Update Project' : 'Add Project'}
-          </Text>}
-        </TouchableOpacity>
-      </View>
-    );
-  };
+  const renderStep4 = () => renderStep4File({ addHandlers, aiProj, confirmRemove, currentResume, editingProjIndex, projDesc, projGithub, projLive, projName, projTech, removeItem, requireAccount, saveItem, saveListItem, setEditingProjIndex, setProjDesc, setProjGithub, setProjLive, setProjName, setProjTech });
 
   // ============================================================
   // STEP 5: CERTIFICATIONS (NEW POSITION)
   // ============================================================
-  const renderStep5 = () => {
-    const items = currentResume?.certifications || [];
-
-    const handleAddCertification = ({ quiet } = {}) => saveItem.run(async () => {
-      if (!certName.trim()) {
-        if (!quiet) Alert.alert('add a certificate name', 'type the certificate or course name to add it.');
-        return;
-      }
-      // the model's field names (date/url were silently dropped before)
-      const newCert = {
-        name: certName.trim(),
-        organization: certIssuer.trim(),
-        issueDate: certIssueDate.trim() || undefined,
-        credentialUrl: certUrl.trim(),
-        expiryDate: certExpiryDate.trim() || undefined
-      };
-
-      if (!(await saveListItem('certifications', newCert, editingCertIndex))) return;
-      
-      setCertName('');
-      setCertIssuer('');
-      setCertIssueDate('');
-      setCertUrl('');
-      setCertExpiryDate('');
-      setEditingCertIndex(null);
-    });
-    addHandlers.current[5] = handleAddCertification;
-
-    return (
-      <View style={styles.formContainer}>
-        {items.map((item, index) => (
-          <View key={item?._id || `i${index}`} style={styles.itemRowBadge}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.itemBadgeTitle}>{item.name}</Text>
-              <Text style={styles.itemBadgeSub}>{item.organization} • {item.date}</Text>
-            </View>
-            <View style={{ flexDirection: 'row' }}>
-              <TouchableOpacity onPress={() => {
-                setCertName(item.name);
-                setCertIssuer(item.organization);
-                setCertIssueDate(item.date || '');
-                setCertUrl(item.url || '');
-                setCertExpiryDate(item.expiryDate || '');
-                setEditingCertIndex(keyOf(item));
-              }} style={{ marginRight: 12 }}>
-                <Ionicons name="create-outline" size={20} color={T.ink} />
-              </TouchableOpacity>
-              <TouchableOpacity accessibilityRole="button" accessibilityLabel={`delete certification ${index + 1}`} disabled={removeItem.running} hitSlop={8} onPress={() => confirmRemove('certifications', item, 'certification', (k) => {
-                if (editingCertIndex === k) { setCertName(''); setCertIssuer(''); setCertIssueDate(''); setCertUrl(''); setCertExpiryDate(''); setEditingCertIndex(null); }
-              })}>
-                <Ionicons name="trash-outline" size={20} color={T.danger} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
-
-        <Text style={styles.certificationHeading}>
-          {editingCertIndex !== null ? `Edit Certification #${indexOfKey(items, editingCertIndex) + 1}` : `Certification #${items.length + 1}`}
-        </Text>
-
-        <Text style={styles.inputLabel}>certification name</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="e.g. AWS Certified Solutions Architect"
-          placeholderTextColor={T.textFaint}
-          value={certName}
-          onChangeText={setCertName}
-        />
-
-        <Text style={styles.inputLabel}>issuer</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="e.g. Amazon Web Services"
-          placeholderTextColor={T.textFaint}
-          value={certIssuer}
-          onChangeText={setCertIssuer}
-        />
-
-        <Text style={styles.inputLabel}>issue date</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="e.g. March 2024"
-          placeholderTextColor={T.textFaint}
-          value={certIssueDate}
-          onChangeText={setCertIssueDate}
-        />
-
-        <Text style={styles.inputLabel}>Credential URL (Optional)</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="credly.com/badges/..."
-          placeholderTextColor={T.textFaint}
-          autoCapitalize="none"
-          value={certUrl}
-          onChangeText={setCertUrl}
-        />
-
-        <Text style={styles.inputLabel}>Expiry Date (Optional)</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="e.g. March 2027"
-          placeholderTextColor={T.textFaint}
-          value={certExpiryDate}
-          onChangeText={setCertExpiryDate}
-        />
-
-        <TouchableOpacity style={styles.yellowButton} onPress={handleAddCertification} disabled={saveItem.running} accessibilityRole="button" accessibilityLabel={editingCertIndex !== null ? 'update certification' : 'add certification'} accessibilityState={{ busy: saveItem.running }}>
-          {saveItem.running ? <ActivityIndicator color={T.ink} size="small" /> : <Text style={styles.yellowButtonText}>
-            {editingCertIndex !== null ? 'Update Certification' : 'Add Certification'}
-          </Text>}
-        </TouchableOpacity>
-      </View>
-    );
-  };
+  const renderStep5 = () => renderStep5File({ addHandlers, certExpiryDate, certIssueDate, certIssuer, certName, certUrl, confirmRemove, currentResume, editingCertIndex, removeItem, saveItem, saveListItem, setCertExpiryDate, setCertIssueDate, setCertIssuer, setCertName, setCertUrl, setEditingCertIndex });
 
   // ============================================================
   // STEP 6: TARGET JOB (NEW POSITION)
   // ============================================================
-  const renderStep6 = () => {
-    const selectedRoles = currentResume?.targetJobs || [];
-
-    // roles: toggled on the latest saved list
-    const handleSelectRole = (role) => toggleRole.run(async () => {
-      const resume = await ensureResume();
-      if (!resume?._id) return;
-      const industry = expandedIndustry || '';
-      await updateResume(resume._id, (latest) => {
-        const list = latest?.targetJobs || [];
-        const exist = list.some(r => r.jobTitle.toLowerCase() === role.toLowerCase());
-        const updated = exist
-          ? list.filter(r => r.jobTitle.toLowerCase() !== role.toLowerCase())
-          : [...list, { jobTitle: role, industry, jobType: 'Full-time' }];
-        return { targetJobs: updated, targetJob: updated[0] || { jobTitle: role, industry, jobType: 'Full-time' } };
-      });
-    });
-
-    const handleClearRole = (role) => toggleRole.run(async () => {
-      if (!currentResume?._id) return;
-      await updateResume(currentResume._id, (latest) => {
-        const updated = (latest?.targetJobs || []).filter(r => r.jobTitle.toLowerCase() !== role.toLowerCase());
-        return { targetJobs: updated, targetJob: updated[0] || {} };
-      });
-    });
-
-    const handleAIGenerateSummary = () => {
-      if (!requireAccount()) return;
-      const jobTitle = getTargetRoleFallback();
-      if (!jobTitle || selectedRoles.length === 0) {
-        Alert.alert('Required', 'Please select at least one target role first.');
-        return;
-      }
-      aiSummary.run(async () => {
-        const skillNames = (currentResume?.skills || []).map(s => s.name).join(', ');
-        const expSummary = (currentResume?.workExperience || []).map(w => `${w.position} at ${w.company}`).join(', ');
-        const prompt = `Write a concise, powerful 3-4 sentence professional summary for a ${jobTitle} resume. Skills: ${skillNames || 'not specified'}. Experience: ${expSummary || 'not specified'}. Make it ATS-optimized.`;
-        const result = await resumeApi.enhanceText(prompt, `professional summary for ${jobTitle}`);
-        if (result?.enhanced) {
-          setTargetSummary(result.enhanced);
-          await updateResume(currentResume._id, { professionalSummary: { summary: result.enhanced } });
-          lastSummaryRef.current = result.enhanced;
-        }
-      });
-    };
-
-    return (
-      <View style={styles.formContainer}>
-        <Text style={styles.inputLabel}>Search roles or type a custom role & press Enter...</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="Search roles..."
-          placeholderTextColor={T.textFaint}
-          value={roleSearchQuery}
-          onChangeText={setRoleSearchQuery}
-        />
-
-        {selectedRoles.length > 0 && (
-          <View style={{ marginBottom: 16 }}>
-            <Text style={styles.inputLabel}>selected:</Text>
-            <View style={styles.skillsTagRow}>
-              {selectedRoles.map((role, idx) => (
-                <View key={idx} style={styles.skillTag}>
-                  <Text style={styles.skillTagText}>{role.jobTitle}</Text>
-                  <TouchableOpacity onPress={() => handleClearRole(role.jobTitle)}>
-                    <Text style={{ marginLeft: 6, color: T.danger, fontWeight: 'bold' }}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
-        <View style={styles.rolesListContainer}>
-          {INDUSTRIES.map(ind => {
-            const matched = ind.roles.filter(r => r.toLowerCase().includes(roleSearchQuery.toLowerCase()));
-            if (matched.length === 0) return null;
-
-            return (
-              <View key={ind.name} style={styles.industryBlock}>
-                <TouchableOpacity 
-                  style={styles.industryHeader}
-                  onPress={() => setExpandedIndustry(expandedIndustry === ind.name ? null : ind.name)}
-                >
-                  <Text style={styles.industryHeaderTitle}>{ind.name}</Text>
-                  <Ionicons 
-                    name={expandedIndustry === ind.name ? 'chevron-up' : 'chevron-down'} 
-                    size={16} 
-                    color={T.textMuted} 
-                  />
-                </TouchableOpacity>
-
-                {expandedIndustry === ind.name && (
-                  <View style={styles.industryRolesGrid}>
-                    {matched.map(role => {
-                      const isActive = selectedRoles.some(r => r.jobTitle.toLowerCase() === role.toLowerCase());
-                      return (
-                        <TouchableOpacity 
-                          key={role} 
-                          style={[styles.roleSelectBtn, isActive && styles.roleSelectBtnActive]}
-                          onPress={() => handleSelectRole(role)}
-                          disabled={toggleRole.running}
-                        >
-                          <Text style={[styles.roleSelectText, isActive && styles.roleSelectTextActive]}>
-                            {role}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                )}
-              </View>
-            );
-          })}
-        </View>
-
-        <Text style={[styles.inputLabel, { marginTop: 24 }]}>professional summary</Text>
-        <TextInput
-          style={[styles.textInput, styles.summaryTextarea]}
-          multiline
-          placeholder="Your professional summary will appear here after generation, or type manually..."
-          placeholderTextColor={T.textFaint}
-          value={targetSummary}
-          onChangeText={setTargetSummary}
-          onBlur={saveSummaryQuietly}
-        />
-
-        <TouchableOpacity 
-          style={styles.yellowButton} 
-          onPress={handleAIGenerateSummary}
-          disabled={aiSummary.running}
-          accessibilityRole="button"
-          accessibilityLabel="generate summary with ai"
-          accessibilityState={{ busy: aiSummary.running }}
-        >
-          {aiSummary.running ? (
-            <ActivityIndicator color={T.ink} size="small" />
-          ) : (
-            <Text style={styles.yellowButtonText}>⚡ Generate with AI</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.yellowButton, { marginTop: 12, backgroundColor: T.ink }]} 
-          onPress={handleSaveStep6}
-          disabled={saveStep6.running}
-          accessibilityRole="button"
-          accessibilityLabel="save target job and summary"
-          accessibilityState={{ busy: saveStep6.running }}
-        >
-          {saveStep6.running ? (
-            <ActivityIndicator color={T.white} size="small" />
-          ) : (
-            <Text style={[styles.yellowButtonText, { color: T.white }]}>💾 Save Target Job & Summary</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    );
-  };
+  const renderStep6 = () => renderStep6File({ aiSummary, currentResume, ensureResume, expandedIndustry, getTargetRoleFallback, handleSaveStep6, lastSummaryRef, requireAccount, roleSearchQuery, saveStep6, saveSummaryQuietly, setExpandedIndustry, setRoleSearchQuery, setTargetSummary, targetSummary, toggleRole, updateResume });
 
   // ============================================================
   // STEP 7: SKILLS (NEW POSITION - LAST)
   // ============================================================
-  const renderStep7 = () => {
-    const items = currentResume?.skills || [];
-
-    const handleAddSkill = () => {
-      const name = skillInput.trim();
-      if (!name) return;
-      addSkill.run(async () => {
-        const resume = await ensureResume();
-        if (!resume?._id) return;
-        await updateResume(resume._id, (latest) => {
-          const list = latest?.skills || [];
-          if (list.some(s => s.name.toLowerCase() === name.toLowerCase())) return null; // already there
-          return { skills: [...list, { name, level: 'Advanced' }] };
-        });
-        setSkillInput('');
-      });
-    };
-
-    return (
-      <View style={styles.formContainer}>
-        <View style={styles.skillInputWrapper}>
-          <TextInput
-            style={styles.skillTextInput}
-            placeholder="Type a skill and press Enter or comma..."
-            placeholderTextColor={T.textFaint}
-            value={skillInput}
-            onChangeText={setSkillInput}
-            onSubmitEditing={handleAddSkill}
-          />
-          <TouchableOpacity style={styles.skillAddBtn} onPress={handleAddSkill} disabled={addSkill.running} accessibilityRole="button" accessibilityLabel="add skill" accessibilityState={{ busy: addSkill.running }}>
-            {addSkill.running ? <ActivityIndicator color={T.ink} size="small" /> : <Ionicons name="add" size={22} color={T.ink} />}
-          </TouchableOpacity>
-        </View>
-
-        {items.length === 0 ? (
-          <View style={styles.emptyCardBody}>
-            <Text style={styles.emptyCardText}>No skills added yet — type above or use AI Suggestions</Text>
-          </View>
-        ) : (
-          <View style={styles.skillsTagRow}>
-            {items.map((skill, index) => (
-              <View key={skill?._id || skill.name || index} style={styles.skillTag}>
-                <Text style={styles.skillTagText}>{skill.name}</Text>
-                <TouchableOpacity accessibilityRole="button" accessibilityLabel={`remove ${skill.name}`} disabled={removeItem.running} hitSlop={8} onPress={() => confirmRemove('skills', skill, 'skill')}>
-                  <Ionicons name="close" size={14} color={T.textMuted} style={{ marginLeft: 4 }} />
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
-        )}
-
-        <TouchableOpacity 
-          style={[styles.yellowButton, { marginTop: 24 }]}
-          disabled={aiSkills.running}
-          accessibilityRole="button"
-          accessibilityLabel="ai skill suggestions"
-          accessibilityState={{ busy: aiSkills.running }}
-          onPress={() => {
-            if (!requireAccount()) return;
-            aiSkills.run(async () => {
-              const resume = await ensureResume();
-              if (!resume?._id) return;
-              const targetRole = getTargetRoleFallback();
-              const result = await resumeApi.suggestSkills((resume.skills || []).map(s => s.name), targetRole);
-              if (!(result?.suggestions && result.suggestions.length > 0)) {
-                Alert.alert('No Suggestions', 'Could not generate suggestions. Try adding a target role in the Target step.');
-                return;
-              }
-              let added = 0;
-              // added to the latest list (skills added meanwhile are kept, none twice)
-              await updateResume(resume._id, (latest) => {
-                const list = latest?.skills || [];
-                const existingNames = new Set(list.map(s => s.name.toLowerCase()));
-                const newSkills = [...new Set(result.suggestions)]
-                  .filter(s => !existingNames.has(String(s).toLowerCase()))
-                  .map(s => ({ name: s, level: 'Intermediate' }));
-                added = newSkills.length;
-                return newSkills.length ? { skills: [...list, ...newSkills] } : null;
-              });
-              if (added > 0) Alert.alert('Skills Added ✨', `${added} new skills added based on your target role.`);
-              else Alert.alert('All Caught Up ✓', 'No new skills to suggest — you already have them!');
-            });
-          }}
-        >
-          {aiSkills.running ? <ActivityIndicator color={T.ink} size="small" /> : <Text style={styles.yellowButtonText}>✨ AI Skill Suggestions</Text>}
-        </TouchableOpacity>
-        <Text style={styles.skillTipText}>💡 Press Enter or , to add a skill quickly</Text>
-      </View>
-    );
-  };
+  const renderStep7 = () => renderStep7File({ addSkill, aiSkills, confirmRemove, currentResume, ensureResume, getTargetRoleFallback, removeItem, requireAccount, setSkillInput, skillInput, updateResume });
 
   // Compile responsive WebView HTML for pure preview modal
   const renderPreviewHTMLMobile = () => {
@@ -1887,7 +868,17 @@ const ResumeBuilderScreen = () => {
         }
       />
 
+      {/* P3-5 (resumeV2): a progress bar with the step and minutes left, instead of the icons */}
+      {v2 && (
+        <View style={{ paddingHorizontal: 16, paddingTop: 8 }} accessible accessibilityLabel={`step ${order.indexOf(activeStep) + 1} of ${order.length}, about ${minutesLeft(order, activeStep)} minutes left`}>
+          <View style={{ height: 6, borderRadius: 3, backgroundColor: T.line, overflow: 'hidden' }}>
+            <View style={{ height: 6, borderRadius: 3, backgroundColor: T.yellow, width: `${Math.round(((order.indexOf(activeStep) + 1) / order.length) * 100)}%` }} />
+          </View>
+          <Text style={{ fontFamily: F.bodyMedium, fontSize: 12, color: T.textMuted, marginTop: 6 }}>{`step ${order.indexOf(activeStep) + 1} of ${order.length} · ~${minutesLeft(order, activeStep)} min left`}</Text>
+        </View>
+      )}
       {/* Stepper icons */}
+      {!v2 && (
       <View style={styles.stepperContainer}>
         {steps.map((s, idx) => (
           <React.Fragment key={s.id}>
@@ -1916,18 +907,28 @@ const ResumeBuilderScreen = () => {
           </React.Fragment>
         ))}
       </View>
+      )}
 
       {/* The White Card containing the active step form */}
       <KeyboardAwareScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} bottomOffset={24} keyboardShouldPersistTaps="handled">
         <View style={styles.cardContainer}>
           <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>{steps[activeStep - 1].title}</Text>
+            <Text style={styles.cardTitle}>{stepDef(activeStep).title}</Text>
             <View style={styles.cardStepBadge}>
-              <Text style={styles.cardStepBadgeText}>{activeStep}/7</Text>
+              <Text style={styles.cardStepBadgeText}>{v2 ? `${order.indexOf(activeStep) + 1}/${order.length}` : `${activeStep}/7`}</Text>
             </View>
           </View>
-          <Text style={styles.cardSubtitle}>{steps[activeStep - 1].desc}</Text>
-          <ResumeStrength resume={buildLiveResume()} compact style={{ marginBottom: 12 }} onGoTo={(s) => goToStep(s)} />
+          <Text style={styles.cardSubtitle}>{stepDef(activeStep).desc}</Text>
+          {v2 && (() => {
+            const est = pageEstimate(buildLiveResume());
+            return (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }} testID="v2-status">
+                <Text style={{ fontFamily: F.bodyMedium, fontSize: 12.5, color: est.fits ? T.success : '#8A5A00', flex: 1 }} accessibilityLiveRegion="polite">{fitLine(est)}</Text>
+                {!!savedAt && <Text style={{ fontFamily: F.bodyMedium, fontSize: 12.5, color: T.success }} accessibilityLiveRegion="polite">saved ✓</Text>}
+              </View>
+            );
+          })()}
+          <ResumeStrength resume={buildLiveResume()} compact style={{ marginBottom: 12 }} onGoTo={(s, _key, stepKey) => goToStep(stepIdFor(s, stepKey, v2))} />
           {problems.length > 0 && (
             <View style={styles.problemBox} accessibilityRole="alert" testID="finish-problems">
               <Text style={styles.problemTitle}>to finish, please add:</Text>
@@ -1950,13 +951,19 @@ const ResumeBuilderScreen = () => {
           {activeStep === 5 && renderStep5()}
           {activeStep === 6 && renderStep6()}
           {activeStep === 7 && renderStep7()}
+          {/* P3-3 (resumeV2): coursework under education; the new sections */}
+          {v2 && activeStep === 2 && <CourseworkSection resume={currentResume} io={stepIo} />}
+          {activeStep === 8 && <ActivitiesStep kind="activities" resume={currentResume} io={stepIo} registerAdd={(fn) => { addHandlers.current[8] = fn; }} />}
+          {activeStep === 9 && <ActivitiesStep kind="volunteering" resume={currentResume} io={stepIo} registerAdd={(fn) => { addHandlers.current[9] = fn; }} />}
+          {activeStep === 10 && <AwardsStep resume={currentResume} io={stepIo} registerAdd={(fn) => { addHandlers.current[10] = fn; }} />}
+          {activeStep === 11 && <LanguagesStep resume={currentResume} io={stepIo} registerAdd={(fn) => { addHandlers.current[11] = fn; }} />}
         </View>
 
         {/* Bottom Stepper Navigation buttons */}
         <View style={styles.footerContainer}>
           <TouchableOpacity 
-            style={[styles.backButton, activeStep === 1 && { opacity: 0.5 }]}
-            disabled={activeStep === 1 || moveStep.running}
+            style={[styles.backButton, activeStep === firstStep && { opacity: 0.5 }]}
+            disabled={activeStep === firstStep || moveStep.running}
             onPress={handlePrevStep}
           >
             <Ionicons name="arrow-back" size={16} color={T.white} />
@@ -1964,12 +971,12 @@ const ResumeBuilderScreen = () => {
           </TouchableOpacity>
 
           <TouchableOpacity 
-  style={[styles.continueButton, activeStep === 7 && { backgroundColor: T.success }]}
+  style={[styles.continueButton, activeStep === lastStep && { backgroundColor: T.success }]}
   disabled={moveStep.running || finish.running}
   accessibilityRole="button"
   accessibilityState={{ busy: moveStep.running || finish.running }}
   onPress={() => {
-    if (activeStep === 7) {
+    if (activeStep === lastStep) {
       // skills are saved on every add; a new resume that was never saved is created first
       handleFinish();
     } else {
@@ -1977,13 +984,13 @@ const ResumeBuilderScreen = () => {
     }
   }}
 >
-            <Text style={[styles.continueButtonText, activeStep === 7 && { color: T.white }]}>
-              {activeStep === 7 ? 'Finish & Preview 🚀' : 'Continue'}
+            <Text style={[styles.continueButtonText, activeStep === lastStep && { color: T.white }]}>
+              {activeStep === lastStep ? 'Finish & Preview 🚀' : 'Continue'}
             </Text>
             <Ionicons 
-              name={activeStep === 7 ? "checkmark-done" : "arrow-forward"} 
+              name={activeStep === lastStep ? "checkmark-done" : "arrow-forward"} 
               size={16} 
-              color={activeStep === 7 ? T.white : T.ink} 
+              color={activeStep === lastStep ? T.white : T.ink} 
             />
           </TouchableOpacity>
         </View>
@@ -2056,529 +1063,6 @@ const ResumeBuilderScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  fieldError: { color: T.danger, fontFamily: F.bodySemi, fontSize: 12.5, marginTop: 4 },
-  fieldHint: { color: T.textMuted, fontFamily: F.body, fontSize: 12, marginTop: 4 },
-  problemBox: { backgroundColor: T.dangerBg, borderRadius: 12, padding: 12, marginBottom: 12 },
-  problemTitle: { fontFamily: F.bodyBold, fontSize: 13.5, color: T.danger, marginBottom: 4 },
-  problemRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  problemText: { flex: 1, fontFamily: F.body, fontSize: 13, color: T.ink },
-  problemGo: { minHeight: 44, justifyContent: 'center' },
-  problemGoText: { fontFamily: F.bodyBold, fontSize: 13, color: T.ink, textDecorationLine: 'underline' },
-  skipLink: { alignSelf: 'center', minHeight: 44, justifyContent: 'center', paddingHorizontal: 16 },
-  skipLinkText: { fontFamily: F.bodySemi, fontSize: 14, color: T.textMuted, textDecorationLine: 'underline' },
-  safeArea: {
-    flex: 1,
-    backgroundColor: T.ink,
-  },
-  mainHeader: {
-    height: 60,
-    backgroundColor: T.ink,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: T.ink,
-  },
-  headerBackBtn: {
-    padding: 4,
-  },
-  mainHeaderTitle: {
-    fontSize: 18,
-    fontFamily: F.headingBold,
-    color: T.white,
-  },
-  previewFloatBtn: {
-    padding: 6,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  stepperContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: T.ink,
-  },
-  stepIndicatorWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    flexDirection: 'row',
-    flex: 1,
-  },
-  stepCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: T.inkSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: T.inkLine,
-    zIndex: 2,
-  },
-  stepCircleActive: {
-    backgroundColor: T.yellow,
-    borderColor: T.yellow,
-  },
-  stepCircleCompleted: {
-    backgroundColor: T.success,
-    borderColor: T.success,
-  },
-  stepLine: {
-    position: 'absolute',
-    height: 2,
-    backgroundColor: T.inkSoft,
-    left: '50%',
-    right: '-50%',
-    top: 15,
-    zIndex: 1,
-  },
-  stepLineCompleted: {
-    backgroundColor: T.success,
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-    paddingTop: 10,
-  },
-  cardContainer: {
-    backgroundColor: T.card,
-    borderRadius: 20,
-    marginHorizontal: 16,
-    padding: 24,
-    shadowColor: T.ink,
-    shadowOpacity: 0.06,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: T.line,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  cardTitle: {
-    fontSize: 22,
-    fontFamily: F.heading,
-    color: T.ink,
-  },
-  cardStepBadge: {
-    backgroundColor: T.sand,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  cardStepBadgeText: {
-    fontSize: 12,
-    fontFamily: F.bodyBold,
-    color: T.textMuted,
-  },
-  cardSubtitle: {
-    fontSize: 14, fontFamily: F.body,
-    color: T.textMuted,
-    marginBottom: 20,
-  },
-  bannerCard: {
-    backgroundColor: T.sand,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: T.line,
-    borderStyle: 'dashed',
-    padding: 16,
-    marginBottom: 20,
-  },
-  bannerTitle: {
-    fontSize: 15,
-    fontFamily: F.bodyBold,
-    color: T.ink,
-    marginBottom: 4,
-  },
-  bannerText: {
-    fontSize: 12, fontFamily: F.body,
-    color: T.textMuted,
-    lineHeight: 16,
-    marginBottom: 12,
-  },
-  bannerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  bannerUploadBtn: {
-    backgroundColor: T.yellow,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginRight: 10,
-  },
-  bannerUploadBtnText: {
-    color: T.ink,
-    fontSize: 12,
-    fontFamily: F.bodyBold,
-  },
-  bannerSkipBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  bannerSkipBtnText: {
-    color: T.textMuted,
-    fontSize: 12,
-    fontFamily: F.bodySemi,
-  },
-  formContainer: {
-    flex: 1,
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontFamily: F.bodyBold,
-    color: T.textMuted,
-    textTransform: 'none',
-    marginBottom: 6,
-    marginTop: 12,
-  },
-  textInput: {
-    backgroundColor: T.sand,
-    borderWidth: 1,
-    borderColor: T.line,
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 14, fontFamily: F.body,
-    color: T.ink,
-    marginBottom: 12,
-  },
-  inputGridRow: {
-    flexDirection: 'row',
-  },
-  yellowButton: {
-    backgroundColor: T.yellow,
-    borderRadius: 10,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 16,
-  },
-  yellowButtonText: {
-    color: T.ink,
-    fontSize: 14,
-    fontFamily: F.bodyBold,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginVertical: 12,
-  },
-  toggleLabel: {
-    fontSize: 13,
-    fontFamily: F.bodySemi,
-    color: T.textMuted,
-  },
-  labelWithAction: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  aiEnhanceMiniBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: T.yellow,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  aiEnhanceMiniBtnText: {
-    fontSize: 10,
-    fontFamily: F.bodyBold,
-    color: T.ink,
-    marginLeft: 4,
-  },
-  skillInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  skillTextInput: {
-    flex: 1,
-    backgroundColor: T.paper,
-    borderWidth: 1,
-    borderColor: T.line,
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 14, fontFamily: F.body,
-    color: T.ink,
-    marginRight: 10,
-  },
-  skillAddBtn: {
-    backgroundColor: T.yellow,
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  skillsTagRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  skillTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: T.sand,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  skillTagText: {
-    fontSize: 13,
-    color: T.textMuted,
-    fontFamily: F.bodySemi,
-  },
-  skillTipText: {
-    fontSize: 11, fontFamily: F.body,
-    color: T.textFaint,
-    textAlign: 'center',
-    marginTop: 12,
-  },
-  certificationHeading: {
-    fontSize: 15,
-    fontFamily: F.bodyBold,
-    color: T.ink,
-    marginTop: 20,
-    marginBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: T.line,
-    paddingBottom: 4,
-  },
-  emptyCardBody: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 32,
-    backgroundColor: T.sand,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: T.line,
-    marginBottom: 12,
-  },
-  emptyCardText: {
-    fontSize: 14,
-    fontFamily: F.bodyBold,
-    color: T.textMuted,
-  },
-  itemRowBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: T.sand,
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: T.line,
-    marginBottom: 10,
-  },
-  itemBadgeTitle: {
-    fontSize: 14,
-    fontFamily: F.bodyBold,
-    color: T.ink,
-  },
-  itemBadgeSub: {
-    fontSize: 12, fontFamily: F.body,
-    color: T.textMuted,
-    marginTop: 2,
-  },
-  rolesListContainer: {
-    marginTop: 10,
-  },
-  industryBlock: {
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: T.line,
-    borderRadius: 10,
-    backgroundColor: T.sand,
-    overflow: 'hidden',
-  },
-  industryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 12,
-  },
-  industryHeaderTitle: {
-    fontSize: 14,
-    fontFamily: F.bodyBold,
-    color: T.textMuted,
-  },
-  industryRolesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: 10,
-    borderTopWidth: 1,
-    borderTopColor: T.line,
-    backgroundColor: T.card,
-  },
-  roleSelectBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: T.line,
-    marginRight: 6,
-    marginBottom: 6,
-    backgroundColor: T.sand,
-  },
-  roleSelectBtnActive: {
-    backgroundColor: T.yellow,
-    borderColor: T.yellow,
-  },
-  roleSelectText: {
-    fontSize: 12, fontFamily: F.body,
-    color: T.textMuted,
-  },
-  roleSelectTextActive: {
-    color: T.ink,
-    fontFamily: F.bodyBold,
-  },
-  summaryTextarea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  footerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    marginTop: 20,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: T.inkSoft,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-  },
-  backButtonText: {
-    fontSize: 14,
-    fontFamily: F.bodyBold,
-    color: T.white,
-    marginLeft: 6,
-  },
-  continueButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: T.yellow,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 10,
-  },
-  continueButtonText: {
-    fontSize: 14,
-    fontFamily: F.bodyBold,
-    color: T.ink,
-    marginRight: 6,
-  },
-  bottomLabelsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    marginTop: 20,
-  },
-  bottomLabelText: {
-    fontSize: 9,
-    color: T.textMuted,
-    fontFamily: F.bodyMedium,
-  },
-  bottomLabelTextActive: {
-    color: T.yellow,
-    fontFamily: F.bodyBold,
-  },
-  previewOverlay: {
-    flex: 1,
-    backgroundColor: T.ink,
-  },
-  previewHeader: {
-    height: 50,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    backgroundColor: T.ink,
-  },
-  previewTitle: {
-    fontSize: 15,
-    fontFamily: F.bodySemi,
-    color: T.white,
-  },
-  previewWebView: {
-    flex: 1,
-    backgroundColor: T.card,
-  },
-  previewEmpty: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  previewEmptyText: {
-    color: T.textMuted,
-  },
-  aiModalOverlay: {
-    flex: 1,
-    backgroundColor: T.overlay,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  aiModalContent: {
-    width: width * 0.85,
-    backgroundColor: T.inkSoft,
-    borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
-    shadowColor: T.ink,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: T.inkLine,
-  },
-  aiModalTitle: {
-    fontSize: 20,
-    fontFamily: F.headingBold,
-    color: T.white,
-    marginBottom: 10,
-  },
-  aiModalStep: {
-    fontSize: 14, fontFamily: F.body,
-    color: T.textFaint,
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  aiProgressTrack: {
-    width: '100%',
-    height: 6,
-    backgroundColor: T.inkSoft,
-    borderRadius: 3,
-    overflow: 'hidden',
-    marginBottom: 10,
-  },
-  aiProgressBar: {
-    height: '100%',
-    backgroundColor: T.yellow,
-    borderRadius: 3,
-  },
-  aiModalPercent: {
-    fontSize: 14,
-    fontFamily: F.bodySemi,
-    color: T.yellow,
-  },
-});
+
 
 export default ResumeBuilderScreen;
