@@ -16,6 +16,7 @@ import api, {
 import { jwtDecode } from "jwt-decode";
 import { resetNotificationBaseline } from "../hooks/useNotifications";
 import { clearClaimedRegistry } from "../screens/OfferScreen";
+import { QUERY_CACHE_KEY } from "../lib/queryCacheKey"; // Q-3c: removed on sign-out
 import { refreshFlags, clearFlags, knownFlag } from "../api/appFlags";
 
 export const AuthContext = createContext();
@@ -105,6 +106,14 @@ export function AuthProvider({ children }) {
       } catch (e) {
         console.warn("clearClaimedRegistry warning (non-fatal):", e?.message);
       }
+    }
+
+    // Q-3c (persistCache): the saved copy of Home's data belongs to the outgoing account; nothing to remove when the
+    // flag was never on
+    try {
+      await AsyncStorage.removeItem(QUERY_CACHE_KEY);
+    } catch (e) {
+      console.warn("saved query copy not removed (non-fatal):", e?.message);
     }
 
     // ✅ Remove legacy unscoped key (pre-per-user builds)

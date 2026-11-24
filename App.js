@@ -58,6 +58,7 @@ import { reportPushOpened } from "./app/src/utils/pushOpened";
 import GlobalNotificationLayer from "./app/src/components/GlobalNotificationLayer";
 import PushAskHost from "./app/src/push/PushAskHost";
 import LowDataImagesHost from "./app/src/lib/lowDataImages"; // Q-3i (flag lowDataImages)
+import QueryPersistHost from "./app/src/lib/persistedQueries"; // Q-3c (flag persistCache)
 import AmbassadorInviteHost from "./app/src/crew/AmbassadorInviteHost";
 import AppAlertHost, { installAppAlert } from "./app/src/components/AppAlert";
 
@@ -396,6 +397,8 @@ function AppContent() {
             <MetaEventsHost />
             {/* Q-3i (lowDataImages, off by default): smaller pictures on a slow mobile connection */}
             <LowDataImagesHost />
+            {/* Q-3c (persistCache, off by default): Home opens with the last deals and points, then refreshes */}
+            <QueryPersistHost />
           </View>
         </ChatProvider>
       </ResumeProvider>
