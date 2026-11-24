@@ -9,7 +9,16 @@ const SRC = path.join(APP, "app/src");
 const reqApp = Module.createRequire(path.join(APP, "package.json"));
 const babel = reqApp("@babel/core");
 const H = require("../harness/events-harness.js");
-const tick = (ms = 15) => new Promise((r) => setTimeout(r, ms));
+// P5a (owner): no fixed waits. Every step waits until the screen's requests (real HTTP to the in-memory server) have
+// all finished and nothing new started for a few turns, so the test doesn't depend on how busy the machine is.
+// (The screen's only timers are entrance animations, which these checks don't read.)
+const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+const inflight = { n: 0 };
+const tick = async () => {
+  let quiet = 0;
+  for (let i = 0; i < 2000 && quiet < 5; i++) { await pause(5); quiet = inflight.n === 0 ? quiet + 1 : 0; }
+  if (inflight.n) throw new Error(`requests still running after 10 s (${inflight.n})`);
+};
 
 let failed = 0, passed = 0;
 const ok = (c, label, extra = "") => { c ? passed++ : failed++; console.log(`${c ? "ok  " : "FAIL"}  ${label}${!c && extra ? "  → " + String(extra).slice(0, 300) : ""}`); };
@@ -61,7 +70,9 @@ const http = (method) => async (url, a, b) => {
   const body = method === "GET" ? undefined : a;
   const cfg = method === "GET" ? a : b;
   requests.push({ method, url: url.replace(/^.*\/api\/events/, ""), params: cfg?.params, headers: cfg?.headers });
-  const r = await forward(method, url, body, cfg);
+  inflight.n++;
+  let r;
+  try { r = await forward(method, url, body, cfg); } finally { inflight.n--; }
   if (r.status >= 400) { const e = new Error("http " + r.status); e.response = { status: r.status, data: r.data }; throw e; }
   return { data: r.data };
 };
