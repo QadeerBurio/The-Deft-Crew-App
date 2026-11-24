@@ -530,6 +530,18 @@ Notes / for the owner:
 - Gallery rates are each template's own rate only; no "2× more" comparisons until the data supports a comparison.
 - No event certificates in "verified by tdc": there is still no attendance record to rely on.
 
+## After P3d (owner, 24 Nov 2026)
+
+| Step | What changed | Commits | Tests |
+|---|---|---|---|
+| visitor behind the portal | gettdc.pk/r/* goes through a Vercel routing middleware (`edu-boost/middleware.js`) that adds the visitor address Vercel's edge set (x-real-ip) and a shared secret (`PORTAL_PROXY_SECRET`, Vercel + Railway, never in the repo); the server (`services/clientAddress.js`) uses that address for views and the page's rate limit only when the secret matches, else the edge address as before. Why not a hop count: Vercel publishes no fixed addresses, Railway's X-Forwarded-For handling is documented both ways, and the page is reachable directly, so a hop count could be spoofed. The vercel.json rewrite stays as the fallback. `/i/` needs nothing: a static page whose one call goes from the browser straight to the server | SERVER `aa6899d2`, `d4905810`; ADMIN `4b0bb91` | resume-public-page 51/51 (two visitors behind the portal = two views; per-visitor limit; wrong / no secret, bad address → edge address, no bypass); resumeProxy 5/5 |
+| admin-access test | awaits the shadow log write (`_test.flushed()`) instead of a fixed 30 ms | SERVER `660e6eca` | admin-access 19/19 (3 of 3) |
+| staging guide | the staging portal's own target for /r/ (RESUME_PAGE_ORIGIN, the vercel.json fallback, its own PORTAL_PROXY_SECRET, PORTAL_URL); the invite page's server choice | SERVER `159b7cd7`, `dbaa708e` | — |
+| release/r4 | release/r3 + p3a + p3b + fixes-p3b + p3c + p3d, no conflicts; RELEASE-4.md | APP `2d40186` | SERVER 108/108; APP 65 suites + export; ADMIN jest 30 / 163, portal checks 39/39 |
+
+Not verifiable before deploy (RELEASE-4 (e) 2 and (f) 8): that Vercel builds the plain `middleware.js` for this CRA
+project, and the two-phone view check.
+
 ## Railway variables for the owner to set (never set by the developer)
 
 | Variable | Value | Where | What it does |
@@ -559,6 +571,7 @@ Notes / for the owner:
 | `FLAG_RESUME_COACH` / `FLAG_RESUME_SPEAK` | not needed: per account in admin → features ("Resume coach", "Resume speak mode"; both need "Resume v2") | — | P3b |
 | `FLAG_RESUME_TEMPLATES_V2` | not needed: per account in admin → features ("Resume template studio"; needs "Resume v2") | — | P3c template studio |
 | P3d flags (`resumeFeedback`, `resumeFinish`, `resumeVerified`, `resumePublicPage`, `resumeOutcomeStats`) | not needed: per account in admin → features (each needs "Resume v2") | — | P3d |
+| `PORTAL_PROXY_SECRET` | a long random value, the same in Railway and Vercel (owner sets; never in the repo) | production (+ its own in staging) | the real visitor behind gettdc.pk/r/ (views, rate limit); set before `resumePublicPage` |
 | `RATE_LIMIT_RESUME_PAGE_MAX` | optional; default 120 a minute per visitor address | — | the public resume page |
 | `OPENAI_TRANSCRIBE_MODEL` | optional; default `whisper-1` | — | speak mode |
 | `RATE_LIMIT_RESUME_AI_MAX` | optional; default 120 an hour per student (enhance, suggest-skills and the coach together) | — | P3 #7 / P3b |
