@@ -152,8 +152,9 @@ Quiet hours: the owner first asked for them on chat pushes, then corrected it (C
 ## Backlog (owner, not now)
 
 - Confession composer image button returns in P4-3 (images are now moderated; the precheck and server clean-up are ready).
-- SkillShare `typing` event (server handles only `typing_start` / `typing_stop`); tell the other person when a message is deleted (polish phase).
-- Fix `tests/app/events-fresh-data` isolation properly (its fixed waits fail under load); no weakening. Polish phase (owner, 25 Nov 2026).
+- ~~SkillShare `typing` event; tell the other person when a message is deleted~~: fixed in P5a (SERVER `a04d30f6`, `5a0b97f9`).
+- Build real privacy settings (private account, online status, last seen: saved on the server and honoured in feed, profiles and chat). Owner, 25 Nov 2026 (the old switches were removed in P5a).
+- ~~Fix `tests/app/events-fresh-data` isolation properly~~: fixed in P5a (APP `42a3e0e`).
 - ~~SERVER tests checking for the text "0300"~~: all fixed (loyalty-visits, career, then the remaining 7 suites in SERVER `3c62524c`).
 - ~~`referral_credited` events rejected~~: fixed in P1 follow-ups (SERVER `bed92851`).
 - Migrate `expo-av` to `expo-audio` before the next Expo SDK upgrade (owner, P3 #11; speak mode and chat voice use expo-av).
@@ -635,6 +636,37 @@ Notes:
   path, counted by N-6 push-open tracking).
 
 - End of P4c: SERVER 111/111 suites; APP all suites + expo export (android + ios); ADMIN jest 31 / 168, portal checks 39/39.
+
+## P5a: fixes (branch `upgrade/p5a-fixes` from `release/r5` in each repo, owner 25 Nov 2026)
+
+Owner decisions: privacy contact `privacy@gettdc.pk` on every privacy screen (support / contact addresses kept); the
+privacy switches that saved nothing removed (real privacy settings: backlog); iPad: check Apple's rules first;
+`@tanstack/query-async-storage-persister` approved (Q-c); order P5a → Q-a → Q-b → Q-c → P5b → P5c → Q-d.
+
+| Step | What changed | Commits | Tests |
+|---|---|---|---|
+| message deleted | the REST delete emitted `message_deleted` to the ObjectId room; sockets join with the string id, so nobody got it. `String(conversationId)`: the other person now sees the message go (same event and payload; every installed app already listens) | SERVER `5a0b97f9` | chat-p5a (fails on the old code: 0 events) |
+| SkillShare typing | the server relays `typing` `{ conversationId, userId, isTyping }` to the room (the SkillShare chats send and listen for it; the server only knew `typing_start`). Same checks as `typing_start`: the token's account, members only; older apps without a token as before | SERVER `a04d30f6` | chat-p5a 10/10, socket-sec1 |
+| events-fresh-data | no fixed waits: each step waits until every request has finished and nothing new started (same 18 checks) | APP `42a3e0e` | 18/18, also 6 copies in parallel |
+| privacy contact | Privacy Center (showed info@gettdc.pk, mailed info@thedeftcrew.com) and the privacy policy (privacy@thedeftcrew.com) → `privacy@gettdc.pk` (`PRIVACY_EMAIL`); the public policy page `gettdc.pk/privacy` too (the site footer keeps hello@ / hr@) | APP `8c2e504`, ADMIN `5010416` | privacy-contact 6/6, PrivacyPolicy 3/3 |
+| privacy switches | private account / show online status / show last seen removed from settings → privacy & safety (on-screen state only, never saved or honoured) | APP `c7b1417`, `5465150` | privacy-toggles 17/17 |
+| release logs (Q-3g) | console.log / info / debug were already silent in release (`App.js`). warn / error reach the phone's system log and ~111 calls pass whole axios errors (request body incl. passwords on change-password, Authorization header): `lib/safeConsole.js` scrubs every argument in release (errors → "name: message · status · METHOD /path"; secret-looking keys, Bearer / Expo push / JWT values hidden). No package | APP `bb4e6c6` | safe-console 15/15 (a real axios error) |
+| admin buttons | AdminDashboard shares its access (`AdminAccessContext`, `useAdminCan`); buttons follow the permission of the route they call: user list (verify, delete, features, export), profile (delete, features tab), brand approval (decisions, login as brand: brands.approve; delete: students.delete), safety (decide: safety.act; suspend / ban: students.suspend; who wrote it: identity.reveal; settings: safety.act), company verifications (documents, decisions: employers.verify), event registrations CSV (data.export), crew partners / inbox / campaigns (crew.manage). Only member admins see a difference (legacy and super admins hold every permission); before the access loads or outside the dashboard, everything shows as before | ADMIN `a17cd3b` … `9d37aea` (one per screen) | adminButtons 15/15 |
+
+Notes:
+- iPad (owner: check first): Apple doesn't let an update drop a device family an app already supports (App Store
+  Connect refuses the upload: "not possible to remove support for existing devices"); an iPhone-only app also still
+  runs on iPads in compatibility mode and is reviewed there. So: the centred layout (max ~600 pt) in Q-4, not
+  `supportsTablet: false`. Owner to confirm.
+- Scholarships "copy link" was already fixed (`ExchangeScreen.js` uses `copyToClipboard` since 8c91f3c): check on a phone.
+- Other addresses (kept, listed for the owner): Terms (`Terrms.js`) `support@thedeftcrew.com` (the only other
+  thedeftcrew.com address left); ContactUs `hello@gettdc.pk`; portal: `hello@` (site, brand / employer / travel
+  settings), `hr@` (site, company profile, ambassador page); server: `safety@gettdc.pk` (account status replies),
+  `noreply@gettdc.pk` (mailer).
+- `privacy@gettdc.pk` must exist as a mailbox before this ships.
+- Export: `npx expo export -p android -p ios` (the web target fails on react-native-pdf, as before; not shipped).
+- End of P5a: SERVER 112/112 suites; APP 68/68 suites + export (android 9,913 KB, ios 9,929 KB, as before); ADMIN jest
+  32 / 184, build OK, portal checks 39/39.
 
 ## Railway variables for the owner to set (never set by the developer)
 
